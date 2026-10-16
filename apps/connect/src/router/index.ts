@@ -39,5 +39,13 @@ export {
   stringifyConnectSearch,
 } from "./search.js";
 export type { ConnectSearch } from "./search.js";
+export type { CoreSettingsTabId } from "./route-components.js";
 export { navRoutes, useNavRoutes, useSidebarMode } from "./sidebar.js";
 export type { ConnectNavItem, NavRouteEntry, SidebarMode } from "./sidebar.js";
+export {
+  SETTINGS_ROUTE_ID,
+  settingsTabs,
+  settingsTitle,
+  useSettingsTabs,
+} from "./settings.js";
+export type { ConnectSettingsTab, SettingsTabEntry } from "./settings.js";

@@ -11,6 +11,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
 import type { ConnectRouteComponents } from "../router/route-components.js";
+import type * as SettingsModule from "./settings/index.js";
 import { AppLayout } from "./app-layout.js";
 import {
   bindConnectRouter,
@@ -18,6 +19,11 @@ import {
 } from "../router/connect-router.js";
 import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
 import { DrivePending, RouteError, RouterChrome } from "./route-views.js";
+
+const settingsModule = () => import("./settings/index.js");
+const lazySettings = (name: keyof typeof SettingsModule) =>
+  lazy(() => settingsModule().then((m) => ({ default: m[name] })));
+const SettingsPage = lazySettings("SettingsPage");
 
 export const connectRouteComponents: ConnectRouteComponents = {
   root: () => (
@@ -35,6 +41,20 @@ export const connectRouteComponents: ConnectRouteComponents = {
   drivePending: DrivePending,
   driveNotFound: DriveNotFoundPage,
   error: RouteError,
+  settings: () => (
+    <Suspense name="Settings">
+      <SettingsPage />
+    </Suspense>
+  ),
+  settingsTabs: {
+    ...(connectConfig.aiAssistantEnabled && {
+      "ai-assistant": lazySettings("AiAssistant"),
+    }),
+    "package-manager": lazySettings("ConnectPackageManager"),
+    "default-editors": lazySettings("DefaultEditor"),
+    "danger-zone": lazySettings("DangerZone"),
+    about: lazySettings("About"),
+  },
 };
 
 let connectRouter: ReturnType<typeof createConnectRouter> | undefined;

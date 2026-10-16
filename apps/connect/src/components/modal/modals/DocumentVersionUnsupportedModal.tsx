@@ -1,7 +1,7 @@
 import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
-  showPHModal,
+  openTarget,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 
@@ -24,7 +24,7 @@ export function DocumentVersionUnsupportedModal() {
       onCancel={() => closePHModal()}
       onContinue={() => {
         closePHModal();
-        showPHModal({ type: "settings" });
+        openTarget({ settings: "package-manager" });
       }}
       open={open}
       onOpenChange={(status: boolean) => {

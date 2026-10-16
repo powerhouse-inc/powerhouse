@@ -14,6 +14,7 @@ export const HOME_ROUTE_ID = "/_app/_content/" satisfies keyof FileRoutesById;
 export const APP_ROUTE_ID = "/_app";
 const CONTENT_ROUTE_ID = "/_app/_content";
 const DRIVE_PATH = "/d/$driveSlug/{-$nodeSlug}";
+const SETTINGS_ROUTE_ID = "/_app/settings";
 
 type RouteOptions = { id?: string; path?: string };
 
@@ -38,6 +39,7 @@ export type ConnectRoutes = {
   contentRoute: FileRoutesById[typeof CONTENT_ROUTE_ID];
   homeRoute: FileRoutesById[typeof HOME_ROUTE_ID];
   driveRoute: FileRoutesById[`${typeof CONTENT_ROUTE_ID}${typeof DRIVE_PATH}`];
+  settingsRoute: FileRoutesById[typeof SETTINGS_ROUTE_ID];
 };
 
 /** Connect's routes in the generated tree; deployment routes attach to these. */
@@ -54,6 +56,10 @@ export function connectRoutes(): ConnectRoutes {
       contentRoute,
       DRIVE_PATH,
     ) as ConnectRoutes["driveRoute"],
+    settingsRoute: findChild(
+      appRoute,
+      "/settings",
+    ) as ConnectRoutes["settingsRoute"],
   };
 }
 

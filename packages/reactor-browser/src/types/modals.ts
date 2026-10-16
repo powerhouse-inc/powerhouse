@@ -23,6 +23,7 @@ export type PHModal =
       type: "driveSettings";
       driveId: string;
     }
+  /** @deprecated Open `{ settings: true }` through the navigation instead. */
   | { type: "settings" }
   | { type: "clearStorage" }
   | { type: "debugSettings" }

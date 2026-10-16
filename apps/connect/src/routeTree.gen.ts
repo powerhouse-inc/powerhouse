@@ -12,7 +12,13 @@ import { Route as rootRouteImport } from "./routes/__root.js";
 import { Route as coreAppRouteImport } from "./routes/core/_app.js";
 import { Route as SplatRouteImport } from "./routes/core/_app/$.js";
 import { Route as ContentRouteImport } from "./routes/core/_app/_content.js";
+import { Route as SettingsRouteImport } from "./routes/core/_app/settings.js";
 import { Route as ContentIndexRouteImport } from "./routes/core/_app/_content/index.js";
+import { Route as SettingsAboutRouteImport } from "./routes/core/_app/settings/about.js";
+import { Route as SettingsAiAssistantRouteImport } from "./routes/core/_app/settings/ai-assistant.js";
+import { Route as SettingsDangerZoneRouteImport } from "./routes/core/_app/settings/danger-zone.js";
+import { Route as SettingsDefaultEditorsRouteImport } from "./routes/core/_app/settings/default-editors.js";
+import { Route as SettingsPackageManagerRouteImport } from "./routes/core/_app/settings/package-manager.js";
 import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/core/_app/_content/d/$driveSlug/{-$nodeSlug}.js";
 
 const coreAppRoute = coreAppRouteImport.update({
@@ -28,10 +34,40 @@ const ContentRoute = ContentRouteImport.update({
   id: "/_content",
   getParentRoute: () => coreAppRoute,
 } as any);
+const SettingsRoute = SettingsRouteImport.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => coreAppRoute,
+} as any);
 const ContentIndexRoute = ContentIndexRouteImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => ContentRoute,
+} as any);
+const SettingsAboutRoute = SettingsAboutRouteImport.update({
+  id: "/about",
+  path: "/about",
+  getParentRoute: () => SettingsRoute,
+} as any);
+const SettingsAiAssistantRoute = SettingsAiAssistantRouteImport.update({
+  id: "/ai-assistant",
+  path: "/ai-assistant",
+  getParentRoute: () => SettingsRoute,
+} as any);
+const SettingsDangerZoneRoute = SettingsDangerZoneRouteImport.update({
+  id: "/danger-zone",
+  path: "/danger-zone",
+  getParentRoute: () => SettingsRoute,
+} as any);
+const SettingsDefaultEditorsRoute = SettingsDefaultEditorsRouteImport.update({
+  id: "/default-editors",
+  path: "/default-editors",
+  getParentRoute: () => SettingsRoute,
+} as any);
+const SettingsPackageManagerRoute = SettingsPackageManagerRouteImport.update({
+  id: "/package-manager",
+  path: "/package-manager",
+  getParentRoute: () => SettingsRoute,
 } as any);
 const ContentDDriveSlugChar123NodeSlugChar125Route =
   ContentDDriveSlugChar123NodeSlugChar125RouteImport.update({
@@ -43,11 +79,23 @@ const ContentDDriveSlugChar123NodeSlugChar125Route =
 export interface FileRoutesByFullPath {
   "/": typeof ContentIndexRoute;
   "/$": typeof SplatRoute;
+  "/settings": typeof SettingsRouteWithChildren;
+  "/settings/about": typeof SettingsAboutRoute;
+  "/settings/ai-assistant": typeof SettingsAiAssistantRoute;
+  "/settings/danger-zone": typeof SettingsDangerZoneRoute;
+  "/settings/default-editors": typeof SettingsDefaultEditorsRoute;
+  "/settings/package-manager": typeof SettingsPackageManagerRoute;
   "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesByTo {
   "/": typeof ContentIndexRoute;
   "/$": typeof SplatRoute;
+  "/settings": typeof SettingsRouteWithChildren;
+  "/settings/about": typeof SettingsAboutRoute;
+  "/settings/ai-assistant": typeof SettingsAiAssistantRoute;
+  "/settings/danger-zone": typeof SettingsDangerZoneRoute;
+  "/settings/default-editors": typeof SettingsDefaultEditorsRoute;
+  "/settings/package-manager": typeof SettingsPackageManagerRoute;
   "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesById {
@@ -55,19 +103,49 @@ export interface FileRoutesById {
   "/_app": typeof coreAppRouteWithChildren;
   "/_app/$": typeof SplatRoute;
   "/_app/_content": typeof ContentRouteWithChildren;
+  "/_app/settings": typeof SettingsRouteWithChildren;
+  "/_app/settings/about": typeof SettingsAboutRoute;
+  "/_app/settings/ai-assistant": typeof SettingsAiAssistantRoute;
+  "/_app/settings/danger-zone": typeof SettingsDangerZoneRoute;
+  "/_app/settings/default-editors": typeof SettingsDefaultEditorsRoute;
+  "/_app/settings/package-manager": typeof SettingsPackageManagerRoute;
   "/_app/_content/": typeof ContentIndexRoute;
   "/_app/_content/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/$" | "/d/$driveSlug/{-$nodeSlug}";
+  fullPaths:
+    | "/"
+    | "/$"
+    | "/settings"
+    | "/settings/about"
+    | "/settings/ai-assistant"
+    | "/settings/danger-zone"
+    | "/settings/default-editors"
+    | "/settings/package-manager"
+    | "/d/$driveSlug/{-$nodeSlug}";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/$" | "/d/$driveSlug/{-$nodeSlug}";
+  to:
+    | "/"
+    | "/$"
+    | "/settings"
+    | "/settings/about"
+    | "/settings/ai-assistant"
+    | "/settings/danger-zone"
+    | "/settings/default-editors"
+    | "/settings/package-manager"
+    | "/d/$driveSlug/{-$nodeSlug}";
   id:
     | "__root__"
     | "/_app"
     | "/_app/$"
     | "/_app/_content"
+    | "/_app/settings"
+    | "/_app/settings/about"
+    | "/_app/settings/ai-assistant"
+    | "/_app/settings/danger-zone"
+    | "/_app/settings/default-editors"
+    | "/_app/settings/package-manager"
     | "/_app/_content/"
     | "/_app/_content/d/$driveSlug/{-$nodeSlug}";
   fileRoutesById: FileRoutesById;
@@ -99,12 +177,54 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ContentRouteImport;
       parentRoute: typeof coreAppRoute;
     };
+    "/_app/settings": {
+      id: "/_app/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof coreAppRoute;
+    };
     "/_app/_content/": {
       id: "/_app/_content/";
       path: "/";
       fullPath: "/";
       preLoaderRoute: typeof ContentIndexRouteImport;
       parentRoute: typeof ContentRoute;
+    };
+    "/_app/settings/about": {
+      id: "/_app/settings/about";
+      path: "/about";
+      fullPath: "/settings/about";
+      preLoaderRoute: typeof SettingsAboutRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/_app/settings/ai-assistant": {
+      id: "/_app/settings/ai-assistant";
+      path: "/ai-assistant";
+      fullPath: "/settings/ai-assistant";
+      preLoaderRoute: typeof SettingsAiAssistantRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/_app/settings/danger-zone": {
+      id: "/_app/settings/danger-zone";
+      path: "/danger-zone";
+      fullPath: "/settings/danger-zone";
+      preLoaderRoute: typeof SettingsDangerZoneRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/_app/settings/default-editors": {
+      id: "/_app/settings/default-editors";
+      path: "/default-editors";
+      fullPath: "/settings/default-editors";
+      preLoaderRoute: typeof SettingsDefaultEditorsRouteImport;
+      parentRoute: typeof SettingsRoute;
+    };
+    "/_app/settings/package-manager": {
+      id: "/_app/settings/package-manager";
+      path: "/package-manager";
+      fullPath: "/settings/package-manager";
+      preLoaderRoute: typeof SettingsPackageManagerRouteImport;
+      parentRoute: typeof SettingsRoute;
     };
     "/_app/_content/d/$driveSlug/{-$nodeSlug}": {
       id: "/_app/_content/d/$driveSlug/{-$nodeSlug}";
@@ -130,14 +250,36 @@ const ContentRouteChildren: ContentRouteChildren = {
 const ContentRouteWithChildren =
   ContentRoute._addFileChildren(ContentRouteChildren);
 
+interface SettingsRouteChildren {
+  SettingsAboutRoute: typeof SettingsAboutRoute;
+  SettingsAiAssistantRoute: typeof SettingsAiAssistantRoute;
+  SettingsDangerZoneRoute: typeof SettingsDangerZoneRoute;
+  SettingsDefaultEditorsRoute: typeof SettingsDefaultEditorsRoute;
+  SettingsPackageManagerRoute: typeof SettingsPackageManagerRoute;
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAboutRoute: SettingsAboutRoute,
+  SettingsAiAssistantRoute: SettingsAiAssistantRoute,
+  SettingsDangerZoneRoute: SettingsDangerZoneRoute,
+  SettingsDefaultEditorsRoute: SettingsDefaultEditorsRoute,
+  SettingsPackageManagerRoute: SettingsPackageManagerRoute,
+};
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+);
+
 interface coreAppRouteChildren {
   SplatRoute: typeof SplatRoute;
   ContentRoute: typeof ContentRouteWithChildren;
+  SettingsRoute: typeof SettingsRouteWithChildren;
 }
 
 const coreAppRouteChildren: coreAppRouteChildren = {
   SplatRoute: SplatRoute,
   ContentRoute: ContentRouteWithChildren,
+  SettingsRoute: SettingsRouteWithChildren,
 };
 
 const coreAppRouteWithChildren =

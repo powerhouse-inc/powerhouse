@@ -69,6 +69,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   FEATURE_FLAG_PARAM_PREFIX: "FEATURE_",
   GLOBAL_SEARCH_PARAMS: [],
   OPENED_FROM_STATE_KEY: "phOpenedFrom",
+  SETTINGS_PATH: "/settings",
   openRenown: vi.fn(),
   setPHAppConfig: vi.fn(),
   setPHDocumentEditorConfig: vi.fn(),

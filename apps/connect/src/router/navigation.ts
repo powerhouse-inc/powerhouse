@@ -2,22 +2,29 @@ import type {
   PHDriveTarget,
   PHNavigation,
   PHNavigationTarget,
+  PHSettingsTarget,
   SetSearchParams,
 } from "@powerhousedao/reactor-browser";
 import {
   applySearchUpdate,
   findDriveBySlugOrId,
+  isSettingsTarget,
   makeDriveSlug,
   OPENED_FROM_STATE_KEY,
   openedFromIndex,
   resolveSearchUpdate,
 } from "@powerhousedao/reactor-browser";
-import type { HistoryState, MakeRouteMatchUnion } from "@tanstack/react-router";
+import type {
+  AnyRouter,
+  HistoryState,
+  MakeRouteMatchUnion,
+} from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { ConnectRouterBundle } from "./connect-router.js";
 import { markNavigationClick } from "./perf-marks.js";
 import { definedSearch } from "./search.js";
+import { keepOpenedFrom, settingsTabs } from "./settings.js";
 
 // Hover intent: a pointer passing over cards doesn't preload each of them.
 const PRELOAD_DELAY_MS = 50;
@@ -27,7 +34,9 @@ const PRELOAD_DELAY_MS = 50;
 export function createConnectNavigation(
   connectRouter: ConnectRouterBundle,
 ): PHNavigation & { dispose(): void } {
-  const { router, homeRoute, driveRoute } = connectRouter;
+  const { router, homeRoute, driveRoute, settingsRoute } = connectRouter;
+  // Settings tabs can come from a project's routes, unknown to Connect's types.
+  const anyRouter = router as unknown as AnyRouter;
 
   // A listed drive is addressed by its canonical slug, whatever form came in.
   const driveParams = (target: PHDriveTarget) => {
@@ -41,6 +50,13 @@ export function createConnectNavigation(
     };
   };
 
+  // `true` is the first tab, so the URL names a tab without a redirect.
+  const settingsPath = ({ settings }: PHSettingsTarget) => {
+    const tab =
+      settings === true ? settingsTabs(anyRouter).at(0)?.id : settings;
+    return tab ? `${settingsRoute.fullPath}/${tab}` : settingsRoute.fullPath;
+  };
+
   // In-document writes keep the entry's state, so its opened-from index too.
   const setSearch: PHNavigation["setSearch"] = (update, options) => {
     void router.navigate({
@@ -52,19 +68,28 @@ export function createConnectNavigation(
     });
   };
 
-  // A push remembers the entry it leaves; a replace keeps what that one had.
-  const openedFromState = (replace: boolean | undefined) => {
+  const showsSettings = () =>
+    router.state.matches.some((match) => match.routeId === settingsRoute.id);
+
+  // A push remembers the entry it leaves; a replace keeps what that one had,
+  // as does a move between settings tabs.
+  const openedFromState = (
+    replace: boolean | undefined,
+    target: PHNavigationTarget | undefined,
+  ) => {
     const { state } = router.history.location;
-    const next = {
-      [OPENED_FROM_STATE_KEY]: replace
-        ? Reflect.get(state, OPENED_FROM_STATE_KEY)
-        : state.__TSR_index,
-    } as unknown as HistoryState;
+    const next =
+      replace || (isSettingsTarget(target) && showsSettings())
+        ? keepOpenedFrom(state)
+        : ({
+            [OPENED_FROM_STATE_KEY]: state.__TSR_index,
+          } as unknown as HistoryState);
     return () => next;
   };
 
   const targetKey = (target: PHNavigationTarget | undefined) => {
     if (!target) return homeRoute.id;
+    if (isSettingsTarget(target)) return settingsPath(target);
     const { driveSlug, nodeSlug } = driveParams(target);
     return JSON.stringify([driveSlug, nodeSlug ?? ""]);
   };
@@ -74,8 +99,14 @@ export function createConnectNavigation(
     if (matches === keyedMatches) return matchesKey;
     keyedMatches = matches;
     const drive = matches.find((match) => match.routeId === driveRoute.id);
+    const settings = matches.some(
+      (match) => match.routeId === settingsRoute.id,
+    );
     if (drive) {
       matchesKey = targetKey(drive.params as PHDriveTarget);
+    } else if (settings) {
+      // A tab's key is its path, as settingsPath builds it.
+      matchesKey = matches.at(-1)?.fullPath.replace(/\/$/, "");
     } else {
       matchesKey = matches.find(
         (match) => match.routeId === homeRoute.id,
@@ -99,10 +130,19 @@ export function createConnectNavigation(
       markNavigationClick();
       const search = applySearchUpdate({}, options?.search ?? {});
       const replace = options?.replace;
-      const state = openedFromState(replace);
+      const state = openedFromState(replace, target);
       if (!target) {
         void router.navigate({
           to: homeRoute.fullPath,
+          search,
+          replace,
+          state,
+        });
+        return;
+      }
+      if (isSettingsTarget(target)) {
+        void anyRouter.navigate({
+          to: settingsPath(target),
           search,
           replace,
           state,
@@ -129,11 +169,13 @@ export function createConnectNavigation(
       if (href === undefined) {
         const location = !target
           ? router.buildLocation({ to: homeRoute.fullPath, search: {} })
-          : router.buildLocation({
-              to: driveRoute.fullPath,
-              params: driveParams(target),
-              search: {},
-            });
+          : isSettingsTarget(target)
+            ? anyRouter.buildLocation({ to: settingsPath(target), search: {} })
+            : router.buildLocation({
+                to: driveRoute.fullPath,
+                params: driveParams(target),
+                search: {},
+              });
         href = location.publicHref;
         hrefs.set(key, href);
       }
@@ -141,22 +183,28 @@ export function createConnectNavigation(
     },
     // One key per shown matches, so each link's selector is a string compare.
     useIsCurrent: (target) => {
-      const key = targetKey(target);
+      // The settings page itself is current on any of its tabs.
+      const anyTab = isSettingsTarget(target) && target.settings === true;
+      const key = anyTab ? `${settingsRoute.fullPath}/` : targetKey(target);
       return useRouterState({
         router,
-        select: (state) => currentKey(state.matches) === key,
+        select: (state) => {
+          const current = currentKey(state.matches);
+          return anyTab ? !!current?.startsWith(key) : current === key;
+        },
       });
     },
     preload: (target) => {
       clearTimeout(preloadTimer);
       if (!target) return;
       preloadTimer = setTimeout(() => {
-        router
-          .preloadRoute({
-            to: driveRoute.fullPath,
-            params: driveParams(target),
-          })
-          .catch(() => undefined);
+        const preloading = isSettingsTarget(target)
+          ? anyRouter.preloadRoute({ to: settingsPath(target) })
+          : router.preloadRoute({
+              to: driveRoute.fullPath,
+              params: driveParams(target),
+            });
+        preloading.catch(() => undefined);
       }, PRELOAD_DELAY_MS);
     },
     setSearch,

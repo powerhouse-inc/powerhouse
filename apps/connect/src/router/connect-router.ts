@@ -59,14 +59,14 @@ export type ConnectRouterFor<TRouteTree extends AnyRoute> = Router<
 export type ConnectRouter = ConnectRouterFor<ConnectRootRoute>;
 export type ConnectRouterBundle = Pick<
   ConnectRoutes,
-  "homeRoute" | "driveRoute"
+  "homeRoute" | "driveRoute" | "settingsRoute"
 > & { router: ConnectRouter };
 
 export function createConnectRouter(
   options: ConnectRouterOptions,
 ): ConnectRouterBundle {
   if (options.routes) addConnectRoutes(options.routes);
-  const { routeTree, homeRoute, driveRoute } = connectRoutes();
+  const { routeTree, homeRoute, driveRoute, settingsRoute } = connectRoutes();
   const router = createRouter({
     routeTree,
     basepath: options.basepath,
@@ -91,7 +91,7 @@ export function createConnectRouter(
         : createElement(NotFoundView),
     defaultOnCatch: options.onCatch ?? reportRouteError,
   });
-  return { router, homeRoute, driveRoute };
+  return { router, homeRoute, driveRoute, settingsRoute };
 }
 
 function writeSelection(store: PHStore, data: DriveRouteData | undefined) {
@@ -109,7 +109,7 @@ export function bindConnectRouter(
   connectRouter: ConnectRouterBundle,
   store: PHStore,
 ) {
-  const { router, homeRoute, driveRoute } = connectRouter;
+  const { router, homeRoute, driveRoute, settingsRoute } = connectRouter;
 
   // Only committed matches select; pending ones keep the open view.
   const commitSelection = () => {
@@ -124,8 +124,12 @@ export function bindConnectRouter(
       }
       return;
     }
-    const home = matches.find((match) => match.routeId === homeRoute.id);
-    if (home?.status === "success") writeSelection(store, undefined);
+    // Settings shows no drive, so none stays marked in the sidebar.
+    const unselected = matches.find(
+      (match) =>
+        match.routeId === homeRoute.id || match.routeId === settingsRoute.id,
+    );
+    if (unselected?.status === "success") writeSelection(store, undefined);
   };
 
   // Set once, before the first render; selection setters navigate from the start.
