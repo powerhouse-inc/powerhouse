@@ -66,6 +66,8 @@ Connect's runtime settings (renown URL, package registry, default drives, log le
 
 Connect routes with [TanStack Router](https://tanstack.com/router) file routes. Its own routes live in `src/routes`: the root route (`__root.tsx`: global search params, titles, the not-found default), the pathless `_app` layout (`core/_app.tsx`: the sidebar) and the core routes inside it in `src/routes/core/_app` (`/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings/*` and the 404 catch-all `$`). `src/routeTree.gen.ts` is generated from them (`pnpm exec tsr generate`, or `vite dev`) and committed.
 
+For a task-by-task guide to customizing Connect from a project (pages, sidebar links, layouts, settings tabs, data, titles, navigation), see [CUSTOMIZING.md](./CUSTOMIZING.md).
+
 ### Adding routes to a deployment
 
 A project built with `ph connect build` (or served by `ph connect studio`/`preview`, or `ph run connect`) adds routes by placing file routes in `hosts/connect/routes/`. A plain `ph build` reads the same folder.
