@@ -41,8 +41,3 @@ export async function loadRuntimeConfig(): Promise<RuntimePowerhouseConfig> {
 export function getRuntimeConfig(): RuntimePowerhouseConfig {
   return loader.getCached() as RuntimePowerhouseConfig;
 }
-
-export function applyConnectBranding(config: RuntimePowerhouseConfig): void {
-  const appName = config.connect.branding?.appName;
-  if (appName) document.title = appName;
-}

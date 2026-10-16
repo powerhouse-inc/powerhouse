@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from "./routes/__root.js";
 import { Route as coreAppRouteImport } from "./routes/core/_app.js";
+import { Route as SplatRouteImport } from "./routes/core/_app/$.js";
 import { Route as ContentRouteImport } from "./routes/core/_app/_content.js";
 import { Route as ContentIndexRouteImport } from "./routes/core/_app/_content/index.js";
 import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/core/_app/_content/d/$driveSlug/{-$nodeSlug}.js";
@@ -17,6 +18,11 @@ import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./r
 const coreAppRoute = coreAppRouteImport.update({
   id: "/_app",
   getParentRoute: () => rootRouteImport,
+} as any);
+const SplatRoute = SplatRouteImport.update({
+  id: "/$",
+  path: "/$",
+  getParentRoute: () => coreAppRoute,
 } as any);
 const ContentRoute = ContentRouteImport.update({
   id: "/_content",
@@ -36,27 +42,31 @@ const ContentDDriveSlugChar123NodeSlugChar125Route =
 
 export interface FileRoutesByFullPath {
   "/": typeof ContentIndexRoute;
+  "/$": typeof SplatRoute;
   "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesByTo {
   "/": typeof ContentIndexRoute;
+  "/$": typeof SplatRoute;
   "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/_app": typeof coreAppRouteWithChildren;
+  "/_app/$": typeof SplatRoute;
   "/_app/_content": typeof ContentRouteWithChildren;
   "/_app/_content/": typeof ContentIndexRoute;
   "/_app/_content/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/d/$driveSlug/{-$nodeSlug}";
+  fullPaths: "/" | "/$" | "/d/$driveSlug/{-$nodeSlug}";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/d/$driveSlug/{-$nodeSlug}";
+  to: "/" | "/$" | "/d/$driveSlug/{-$nodeSlug}";
   id:
     | "__root__"
     | "/_app"
+    | "/_app/$"
     | "/_app/_content"
     | "/_app/_content/"
     | "/_app/_content/d/$driveSlug/{-$nodeSlug}";
@@ -74,6 +84,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/";
       preLoaderRoute: typeof coreAppRouteImport;
       parentRoute: typeof rootRouteImport;
+    };
+    "/_app/$": {
+      id: "/_app/$";
+      path: "/$";
+      fullPath: "/$";
+      preLoaderRoute: typeof SplatRouteImport;
+      parentRoute: typeof coreAppRoute;
     };
     "/_app/_content": {
       id: "/_app/_content";
@@ -114,10 +131,12 @@ const ContentRouteWithChildren =
   ContentRoute._addFileChildren(ContentRouteChildren);
 
 interface coreAppRouteChildren {
+  SplatRoute: typeof SplatRoute;
   ContentRoute: typeof ContentRouteWithChildren;
 }
 
 const coreAppRouteChildren: coreAppRouteChildren = {
+  SplatRoute: SplatRoute,
   ContentRoute: ContentRouteWithChildren,
 };
 

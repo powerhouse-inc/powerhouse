@@ -9,12 +9,14 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
+import { getRuntimeConfig } from "../runtime-config.js";
 import type { ConnectRouteComponents } from "../router/route-components.js";
 import { AppLayout } from "./app-layout.js";
 import {
   bindConnectRouter,
   createConnectRouter,
 } from "../router/connect-router.js";
+import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
 import { DrivePending, RouteError, RouterChrome } from "./route-views.js";
 
 export const connectRouteComponents: ConnectRouteComponents = {
@@ -29,7 +31,9 @@ export const connectRouteComponents: ConnectRouteComponents = {
       <Content />
     </Suspense>
   ),
+  notFound: NotFoundPage,
   drivePending: DrivePending,
+  driveNotFound: DriveNotFoundPage,
   error: RouteError,
 };
 
@@ -56,6 +60,7 @@ function getConnectRouterFor(store: PHStore) {
     components: connectRouteComponents,
     basepath: connectConfig.routerBasename,
     InnerWrap: RouterChrome,
+    appName: getRuntimeConfig().connect.branding?.appName,
   });
   unbindConnectRouter = bindConnectRouter(connectRouter, store);
   return connectRouter;

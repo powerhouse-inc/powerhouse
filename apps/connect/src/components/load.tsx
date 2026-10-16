@@ -10,7 +10,7 @@ import type { PHStore } from "@powerhousedao/reactor-browser";
 import { initTheme } from "@powerhousedao/reactor-browser";
 import type { DocumentModelLib } from "document-model";
 import { type ReactNode } from "react";
-import { applyConnectBranding, loadRuntimeConfig } from "../runtime-config.js";
+import { loadRuntimeConfig } from "../runtime-config.js";
 
 export async function loadComponent(
   localPackage: DocumentModelLib | undefined,
@@ -18,8 +18,7 @@ export async function loadComponent(
 ) {
   await seedPendingPgVersion();
   await Promise.all([detectReactorPgMajor(), detectMigrationMajor()]);
-  const runtimeConfig = await loadRuntimeConfig();
-  applyConnectBranding(runtimeConfig);
+  await loadRuntimeConfig();
   await createReactor(localPackage, store);
   return {
     default: ({ children }: { children?: ReactNode }) => {

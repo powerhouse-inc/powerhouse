@@ -102,10 +102,8 @@ test.describe("runtime-config-preview", () => {
   test("Connect SPA applies branding.appName to document.title after boot", async ({
     page,
   }) => {
-    // applyConnectBranding() is called in apps/connect/src/components/load.tsx
-    // during boot; it writes runtimeConfig.connect.branding.appName to
-    // document.title. toHaveTitle retries with timeout so this tolerates the
-    // async boot chain.
+    // The root route's head titles the page with branding.appName once the
+    // router mounts; toHaveTitle retries through the boot.
     await page.goto("/");
     await expect(page).toHaveTitle("Vetra E2E");
   });

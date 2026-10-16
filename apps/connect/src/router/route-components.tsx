@@ -2,7 +2,8 @@ import type {
   ErrorRouteComponent,
   RouteComponent,
 } from "@tanstack/react-router";
-import { Outlet, useRouter } from "@tanstack/react-router";
+import { HeadContent, Outlet, useRouter } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 
 export type ConnectRouteComponents = {
   /** What every page shares; it renders an `<Outlet />`. */
@@ -11,7 +12,11 @@ export type ConnectRouteComponents = {
   app?: RouteComponent;
   /** Stays mounted between the home and drive views. */
   content: RouteComponent;
+  /** Unknown paths and loaders' notFound(), inside the layout. */
+  notFound?: RouteComponent;
   drivePending?: RouteComponent;
+  /** A drive that is not listed once arrivals settle; `notFound` without it. */
+  driveNotFound?: ComponentType<{ driveSlug: string }>;
   /** Any route's loader or render error. */
   error?: ErrorRouteComponent;
 };
@@ -26,7 +31,13 @@ function useShellComponents(): Partial<ConnectRouteComponents> {
 
 export function RootView() {
   const { root: Root = Outlet } = useShellComponents();
-  return <Root />;
+  return (
+    <>
+      {/* The matched routes' head: the document title. */}
+      <HeadContent />
+      <Root />
+    </>
+  );
 }
 
 export function AppLayoutView() {
@@ -39,7 +50,19 @@ export function ContentView() {
   return <Content />;
 }
 
+export function NotFoundView() {
+  const { notFound: NotFound } = useShellComponents();
+  return NotFound ? <NotFound /> : null;
+}
+
 export function DrivePendingView() {
   const { drivePending: DrivePending } = useShellComponents();
   return DrivePending ? <DrivePending /> : null;
+}
+
+export function DriveNotFoundView({ driveSlug }: { driveSlug: string }) {
+  const { driveNotFound: DriveNotFound, notFound: NotFound } =
+    useShellComponents();
+  if (DriveNotFound) return <DriveNotFound driveSlug={driveSlug} />;
+  return NotFound ? <NotFound /> : null;
 }

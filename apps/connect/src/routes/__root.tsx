@@ -6,6 +6,7 @@ import {
   connectSearchMiddlewares,
   validateConnectSearch,
 } from "../router/search.js";
+import { appTitle, notFoundTitle } from "../router/titles.js";
 
 export const Route = createRootRouteWithContext<ConnectRouterContext>()({
   // Passes every param through; only the global ones outlive a navigation.
@@ -13,5 +14,15 @@ export const Route = createRootRouteWithContext<ConnectRouterContext>()({
   validateSearch: (search: Record<string, unknown>) =>
     validateConnectSearch(search) as Record<string, string | undefined>,
   search: { middlewares: connectSearchMiddlewares },
+  // Child routes' titles replace this one; a notFound() skips the heads below it.
+  head: ({ match, matches }) => ({
+    meta: [
+      {
+        title: matches.some((m) => m.status === "notFound")
+          ? notFoundTitle(match.context.appName)
+          : appTitle(match.context.appName),
+      },
+    ],
+  }),
   component: RootView,
 });
