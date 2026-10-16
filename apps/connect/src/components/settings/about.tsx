@@ -14,6 +14,7 @@ import {
   useDrives,
   useDriveSystemInfo,
   useSyncList,
+  getDriveName,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
@@ -114,7 +115,7 @@ function ConnectedDrives() {
 
 function DriveAboutEntry({ drive }: { drive: DocumentDriveDocument }) {
   const info = useDriveSystemInfo(drive);
-  const name = drive.state.global.name || drive.header.name;
+  const name = getDriveName(drive);
 
   return (
     <li className="text-sm text-foreground">

@@ -1,3 +1,4 @@
+import { getDriveName } from "@powerhousedao/reactor-browser";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 type Sort = "name" | "count";
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_app/reports")({
   loader: ({ context, deps }) => {
     const drives = (context.store.drives ?? []).map((drive) => ({
       slug: drive.header.slug,
-      name: drive.header.name,
+      name: getDriveName(drive),
       count: drive.state.global.nodes.length,
     }));
     drives.sort((a, b) =>

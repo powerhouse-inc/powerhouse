@@ -78,6 +78,10 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useDrives: () => mockDrives.drives,
   useIsAddDriveEnabled: () => false,
   makeDriveSlug: (drive: { header: { slug: string } }) => drive.header.slug,
+  getDriveName: (drive: {
+    header: { name: string };
+    state: { global: { name: string } };
+  }) => drive.header.name || drive.state.global.name,
   useLinkProps: () => ({ href: "/", onClick: vi.fn() }),
   useRenownAuth: () => ({ login: vi.fn(), pending: false, error: undefined }),
   useRenownLoginMethods: () => [],

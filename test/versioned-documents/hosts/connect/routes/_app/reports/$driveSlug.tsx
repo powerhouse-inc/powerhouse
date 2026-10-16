@@ -1,3 +1,4 @@
+import { getDriveName } from "@powerhousedao/reactor-browser";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 // A nested project route with a path param; it links back into Connect's drive.
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/_app/reports/$driveSlug")({
       const type = "documentType" in node ? node.documentType : "folder";
       byType.set(type, (byType.get(type) ?? 0) + 1);
     }
-    return { name: drive.header.name, byType: [...byType] };
+    return { name: getDriveName(drive), byType: [...byType] };
   },
   notFoundComponent: () => <p className="p-6">No such drive.</p>,
   component: DriveReport,
