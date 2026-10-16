@@ -3,6 +3,7 @@ import type {
   PHNavigation,
   PHNavigationTarget,
   PHSearchUpdate,
+  PHSettingsTarget,
   SearchParamsUpdate,
 } from "@powerhousedao/reactor-browser";
 import { useMemo, useSyncExternalStore } from "react";
@@ -73,9 +74,24 @@ export function recordToSearch(record: Record<string, string>) {
   return search ? `?${search}` : "";
 }
 
+/** The settings page's path; its tabs are below it. */
+export const SETTINGS_PATH = "/settings";
+
+export function isSettingsTarget(
+  target: PHNavigationTarget | undefined,
+): target is PHSettingsTarget {
+  return !!target && "settings" in target;
+}
+
 /** The pathname a target opens at, base path included. */
 export function targetPathname(target: PHNavigationTarget | undefined) {
   if (!target) return resolveUrlPathname("/");
+  if (isSettingsTarget(target)) {
+    const { settings } = target;
+    return resolveUrlPathname(
+      settings === true ? SETTINGS_PATH : `${SETTINGS_PATH}/${settings}`,
+    );
+  }
   const { driveSlug, nodeSlug } = target;
   return resolveUrlPathname(
     nodeSlug ? `/d/${driveSlug}/${nodeSlug}` : `/d/${driveSlug}`,
@@ -273,7 +289,14 @@ export function openTargetWith(
   target: PHNavigationTarget | undefined,
   options?: PHNavigateOptions,
 ) {
-  const open = targetPathname(target) === navigation.location().pathname;
+  const pathname = navigation.location().pathname;
+  const targetPath = targetPathname(target);
+  // On any tab, the settings page is open.
+  const open =
+    targetPath === pathname ||
+    (isSettingsTarget(target) &&
+      target.settings === true &&
+      pathname.startsWith(`${targetPath}/`));
   if (!options?.search && open) return;
   navigation.open(target, options);
 }

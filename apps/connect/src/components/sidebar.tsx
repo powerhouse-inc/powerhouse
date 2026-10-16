@@ -130,9 +130,7 @@ export function Sidebar({ extraItems, collapsed }: SidebarProps = {}) {
 
   const ensInfo = useEns(!avatarUrl ? user?.address : undefined);
 
-  const onClickSettings = () => {
-    showPHModal({ type: "settings" });
-  };
+  const settingsLink = useLinkProps({ settings: true });
 
   const etherscanUrl = user?.address
     ? `https://etherscan.io/address/${user.address}`
@@ -144,7 +142,9 @@ export function Sidebar({ extraItems, collapsed }: SidebarProps = {}) {
         id="sidebar"
         data-collapsed={collapsed ? "" : undefined}
         onClick={() => setSelectedDrive(undefined)}
-        onClickSettings={onClickSettings}
+        onClickSettings={settingsLink.onClick}
+        settingsHref={settingsLink.href}
+        settingsCurrent={settingsLink["aria-current"]}
         address={user?.address}
         onLogin={openLogin}
         onDisconnect={() => {

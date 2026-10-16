@@ -56,8 +56,11 @@ export type LOADING = null;
 /** A drive, or a node in it. */
 export type PHDriveTarget = { driveSlug: string; nodeSlug?: string };
 
+/** A settings tab by id; `true` opens the first one. */
+export type PHSettingsTarget = { settings: string | true };
+
 /** What the app shows; `undefined` targets home. */
-export type PHNavigationTarget = PHDriveTarget;
+export type PHNavigationTarget = PHDriveTarget | PHSettingsTarget;
 
 /** Query params to write; an `undefined` value removes the param. */
 export type PHSearchUpdate = Record<string, string | undefined>;

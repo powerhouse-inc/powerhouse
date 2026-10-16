@@ -5,8 +5,8 @@ import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
+  openTarget,
   setRevisionHistoryVisible,
-  showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
@@ -64,7 +64,7 @@ function OpenPackageManagerButton() {
     <PowerhouseButton
       className="px-3 py-1.5 text-base font-medium"
       onClick={() => {
-        showPHModal({ type: "settings" });
+        openTarget({ settings: "package-manager" });
       }}
       type="button"
     >

@@ -19,7 +19,18 @@ export type ConnectRouteComponents = {
   driveNotFound?: ComponentType<{ driveSlug: string }>;
   /** Any route's loader or render error. */
   error?: ErrorRouteComponent;
+  /** The settings page around its tabs; it renders an `<Outlet />`. */
+  settings?: RouteComponent;
+  /** Connect's own settings tabs; one left out is not listed. */
+  settingsTabs?: Partial<Record<CoreSettingsTabId, RouteComponent>>;
 };
+
+export type CoreSettingsTabId =
+  | "ai-assistant"
+  | "package-manager"
+  | "default-editors"
+  | "danger-zone"
+  | "about";
 
 // Open views stay while a navigation loads; the pending view only after this.
 export const DRIVE_PENDING_MS = 200;
@@ -65,4 +76,23 @@ export function DriveNotFoundView({ driveSlug }: { driveSlug: string }) {
     useShellComponents();
   if (DriveNotFound) return <DriveNotFound driveSlug={driveSlug} />;
   return NotFound ? <NotFound /> : null;
+}
+
+export function SettingsView() {
+  const { settings: Settings = Outlet } = useShellComponents();
+  return <Settings />;
+}
+
+/** A core settings tab's view: the shell's component for `id`. */
+export function shellSettingsTab(id: CoreSettingsTabId) {
+  return function SettingsTabView() {
+    const Tab = useShellComponents().settingsTabs?.[id];
+    return Tab ? <Tab /> : null;
+  };
+}
+
+/** A core tab is listed only when the shell provides it. */
+export function shellProvidesTab(id: CoreSettingsTabId) {
+  return (context: { components?: ConnectRouteComponents }) =>
+    !!context.components?.settingsTabs?.[id];
 }

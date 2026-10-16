@@ -3,7 +3,6 @@ import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
   getTargetHref,
-  showPHModal,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-model";
@@ -41,7 +40,7 @@ export function ClearStorageModal() {
       continueLabel={t(
         "modals.connectSettings.clearStorage.confirmation.clearButton",
       )}
-      onCancel={() => showPHModal({ type: "settings" })}
+      onCancel={() => closePHModal()}
       onContinue={clearStorage}
       onOpenChange={(status: boolean) => {
         if (!status) return closePHModal();
