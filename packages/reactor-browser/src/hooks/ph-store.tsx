@@ -1,6 +1,6 @@
 import type { PHGlobal, PHGlobalKey } from "@powerhousedao/reactor-browser";
 import type { ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect } from "react";
 
 /** PH state of one app (or one server request); assigning a key notifies. */
 export type PHStore = PHGlobal;
@@ -53,6 +53,7 @@ export function createPHStore(initial: PHGlobal = {}): PHStore {
 export const SCOPED_PH_KEYS = [
   "selectedDriveId",
   "selectedNodeId",
+  "navigation",
 ] as const satisfies readonly PHGlobalKey[];
 
 export type ScopedPHKey = (typeof SCOPED_PH_KEYS)[number];
@@ -61,7 +62,7 @@ export type ScopedPHStoreOverrides = Pick<PHGlobal, ScopedPHKey>;
 const scopedKeys = new Set<PropertyKey>(SCOPED_PH_KEYS);
 const parentOfScope = new WeakMap<PHStore, PHStore>();
 
-/** A store with its own selection over `parent`, e.g. for an
+/** A store with its own selection and navigation over `parent`, e.g. for an
  * editor shown beside others; provide it with {@link PHStoreProvider}. */
 export function createScopedPHStore(
   parent: PHStore,
@@ -204,11 +205,40 @@ export function bindPHStoreToWindow(store: PHStore) {
 
 const PHStoreContext = createContext<PHStore | undefined>(undefined);
 
+// Scoped stores provided right now; plain setters warn while any is.
+let mountedScopes = 0;
+const warned = new Set<string>();
+
+function isProduction() {
+  // `process` need not exist in a browser bundle.
+  return (
+    typeof process !== "undefined" && process.env?.NODE_ENV === "production"
+  );
+}
+
+/** Warns once in development when a global setter runs while a scoped store
+ * is mounted, since it acts on the app's store and not the scope's. */
+export function warnGlobalSetterInScope(setter: string, hook: string) {
+  if (mountedScopes === 0 || warned.has(setter) || isProduction()) return;
+  warned.add(setter);
+  console.warn(
+    `${setter} acts on the app's PH store while a scoped store is mounted; inside a scope, use ${hook}.`,
+  );
+}
+
 /** Hooks below read from `store`; without a provider they read `window.ph`. */
 export function PHStoreProvider(props: {
   store: PHStore;
   children: ReactNode;
 }) {
+  const scoped = isScopedPHStore(props.store);
+  useEffect(() => {
+    if (!scoped) return;
+    mountedScopes++;
+    return () => {
+      mountedScopes--;
+    };
+  }, [scoped]);
   return (
     <PHStoreContext.Provider value={props.store}>
       {props.children}

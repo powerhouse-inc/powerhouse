@@ -19,8 +19,8 @@ import {
 import { setDocumentCache } from "./document-cache.js";
 import { setDrives } from "./drives.js";
 import { setGraphQLReactorClient } from "./graphql-reactor-client.js";
-import { setSelectedDrive } from "./selected-drive.js";
-import { setSelectedNode } from "./selected-node.js";
+import { selectDrive } from "./selected-drive.js";
+import { selectNode } from "./set-selected-node.js";
 
 export function useInitReactorGraphqlClient(
   switchboardUrl = DEFAULT_SWITCHBOARD_URL,
@@ -73,7 +73,7 @@ async function reactorGraphqlSyncDrive(driveId: string) {
   }
   const drive = await reactorGraphqlFetchDrive(driveId);
   setDrives([drive]);
-  setSelectedDrive(drive);
+  selectDrive(drive);
 }
 
 async function initGraphQLReactorClientWithDocumentCache(
@@ -85,7 +85,7 @@ async function initGraphQLReactorClientWithDocumentCache(
   const client = createClient(switchboardUrl, documentCacheClientMiddleware);
   setGraphQLReactorClient(client);
   await reactorGraphqlSyncDrive(driveId);
-  setSelectedNode(undefined);
+  selectNode(undefined);
   setDocumentCache(new GraphQLClientDocumentCache());
 
   forEach(graphqlEventsToSyncDrive, (name) => {

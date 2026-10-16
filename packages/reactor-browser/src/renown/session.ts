@@ -1,3 +1,4 @@
+import { getPHNavigation, setSearchParams } from "../hooks/navigation.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type { IRenown, User } from "@renown/sdk";
 import type { WalletSession } from "@renown/sdk/wallet";
@@ -111,25 +112,23 @@ function resetSignInGuard(): void {
 // init has not consumed it yet, so an empty credential store is not the answer.
 export function hasRedirectSignIn(): boolean {
   if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).has("user");
+  return new URLSearchParams(getPHNavigation().location().search).has("user");
 }
 
-// Reads the `?user=` DID from the URL if present, then strips the param.
-function consumeDidFromUrl(): string | undefined {
+// Reads the `?user=` DID from the URL if present.
+function readDidFromUrl(): string | undefined {
   if (typeof window === "undefined") return;
+  const { search } = getPHNavigation().location();
+  const userParam = new URLSearchParams(search).get("user");
+  return userParam ? decodeURIComponent(userParam) : undefined;
+}
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const userParam = urlParams.get("user");
-  if (!userParam) return;
-
-  const userDid = decodeURIComponent(userParam);
-
-  // Clean up the URL parameter
-  const cleanUrl = new URL(window.location.href);
-  cleanUrl.searchParams.delete("user");
-  window.history.replaceState({}, "", cleanUrl.toString());
-
-  return userDid;
+// Through the store's navigation, so a host router's location drops it too.
+function clearUserParamFromUrl() {
+  if (typeof window === "undefined") return;
+  const { search } = getPHNavigation().location();
+  if (!new URLSearchParams(search).has("user")) return;
+  setSearchParams((prev) => ({ ...prev, user: undefined }), { replace: true });
 }
 
 // Log in the user, resolving the DID from (in order): explicit arg, the `?user=`
@@ -142,7 +141,8 @@ export async function login(
     return;
   }
 
-  const did = userDid ?? consumeDidFromUrl();
+  const urlDid = readDidFromUrl();
+  const did = userDid ?? urlDid;
 
   try {
     const user = renown.user;
@@ -162,6 +162,9 @@ export async function login(
     logger.error(
       error instanceof Error ? error.message : JSON.stringify(error),
     );
+  } finally {
+    // Consumed, so a refresh or the next navigation doesn't sign in again.
+    if (urlDid) clearUserParamFromUrl();
   }
 }
 
@@ -183,9 +186,5 @@ export async function logout() {
   notifyReactorClientCredentialsChanged();
 
   // Clear the user parameter from URL to prevent auto-login on refresh
-  const url = new URL(window.location.href);
-  if (url.searchParams.has("user")) {
-    url.searchParams.delete("user");
-    window.history.replaceState(null, "", url.toString());
-  }
+  clearUserParamFromUrl();
 }

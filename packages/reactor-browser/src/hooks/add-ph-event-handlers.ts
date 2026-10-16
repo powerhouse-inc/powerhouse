@@ -72,15 +72,12 @@ import {
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
-import {
-  addSelectedDriveIdEventHandler,
-  addSetSelectedDriveOnPopStateEventHandler,
-} from "./selected-drive.js";
+import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
 import {
   addResetSelectedNodeEventHandler,
   addSelectedNodeIdEventHandler,
-  addSetSelectedNodeOnPopStateEventHandler,
 } from "./selected-node.js";
+import { addSyncSelectionOnPopStateEventHandler } from "./sync-selection.js";
 import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addToastEventHandler } from "./toast.js";
@@ -91,12 +88,11 @@ export const commonGlobalEventHandlerFunctions = {
   drives: addDrivesEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();
-    addSetSelectedDriveOnPopStateEventHandler();
+    addSyncSelectionOnPopStateEventHandler();
     addResetSelectedNodeEventHandler();
   },
   selectedNodeId: () => {
     addSelectedNodeIdEventHandler();
-    addSetSelectedNodeOnPopStateEventHandler();
   },
   documentCache: addDocumentCacheEventHandler,
   reactorGraphQLClient: addGraphQLReactorClientEventHandler,
@@ -173,6 +169,8 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   isExternalProcessorsEnabled: addIsExternalProcessorsEnabledEventHandler,
   isExternalPackagesEnabled: addIsExternalPackagesEnabledEventHandler,
   toast: addToastEventHandler,
+  // Set once by the host on its store; no event to listen for.
+  navigation: () => {},
 };
 export function addPHEventHandlers() {
   callEventHandlerRegisterFunctions(phGlobalEventHandlerRegisterFunctions);

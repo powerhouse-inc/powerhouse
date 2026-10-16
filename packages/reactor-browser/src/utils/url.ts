@@ -17,13 +17,17 @@ export function resolveUrlPathname(path: string) {
   ).pathname;
 }
 
-/** Returns the current path without the base path */
+/** Returns the path without a leading base path */
 export function getPathWithoutBase(path: string) {
   const basePath = getPHStore()?.basePath ?? "/";
-  return path.replace(basePath, basePath.endsWith("/") ? "/" : "");
+  if (!path.startsWith(basePath)) return path;
+  const rest = path.slice(basePath.length);
+  if (basePath.endsWith("/")) return `/${rest}`;
+  return rest === "" || rest.startsWith("/") ? rest : path;
 }
 
-/** Makes a URL component for a drive. */
+/** Makes a URL component for a drive.
+ * @deprecated Open drives through the store's `navigation`; it builds the path. */
 export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
 ) {
@@ -99,9 +103,8 @@ export function extractDriveIdFromPath(path: string) {
   return driveId;
 }
 
-/**
- * Creates a URL string with the given pathname while preserving existing query parameters.
- */
+/** Creates a URL string with the given pathname, keeping the query string.
+ * @deprecated The store's `navigation` keeps global params across navigations. */
 export function createUrlWithPreservedParams(pathname: string): string {
   const search = window.location.search;
   return search ? `${pathname}${search}` : pathname;
