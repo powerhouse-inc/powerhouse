@@ -245,6 +245,66 @@
       "type": "string",
       "description": "Project-wide package registry endpoint. Used by `ph install` / `ph publish` / `ph registry-login` and Switchboard, and copied verbatim into the runtime config so the Connect SPA's Package Manager UI reads the same registry."
     },
+    "icons": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Project icons for Connect and Desktop: app, drives, folders and documents.",
+      "properties": {
+        "app": {
+          "type": "string",
+          "description": "App icon master (1024x1024 recommended). Favicon variants are found next to it as <name>_16x16.png, _32x32.png, _64x64.png; the 64 px variant is the in-app logo."
+        },
+        "appVariants": {
+          "type": "array",
+          "description": "Filled in by the runner from `app` (favicon sizes found on disk). Not written by hand.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["size", "src"],
+            "properties": {
+              "size": {
+                "type": "number"
+              },
+              "src": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "localDrive": {
+          "type": "string",
+          "description": "Fallback icon for local drives without their own icon."
+        },
+        "remoteDrive": {
+          "type": "string",
+          "description": "Fallback icon for remote drives without their own icon."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Folder icon in the drive explorer."
+        },
+        "document": {
+          "type": "string",
+          "description": "Default document icon in the drive explorer."
+        },
+        "documents": {
+          "type": "object",
+          "description": "Per document type (e.g. \"acme/invoice\") document icons.",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI."
+          }
+        },
+        "drives": {
+          "type": "object",
+          "description": "Per drive slug: an icon written into the drive's own state when the host seeds it (synced — keep it small, 64 px).",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI."
+          }
+        }
+      }
+    },
     "connect": {
       "type": "object",
       "additionalProperties": false,
@@ -262,6 +322,66 @@
             "homeBackground": {
               "type": ["string", "null"],
               "description": "Hero image on the empty home screen. URL or path to override; null or omitted uses the bundled default image."
+            }
+          }
+        },
+        "icons": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Project icons for Connect and Desktop: app, drives, folders and documents.",
+          "properties": {
+            "app": {
+              "type": "string",
+              "description": "App icon master (1024x1024 recommended). Favicon variants are found next to it as <name>_16x16.png, _32x32.png, _64x64.png; the 64 px variant is the in-app logo."
+            },
+            "appVariants": {
+              "type": "array",
+              "description": "Filled in by the runner from `app` (favicon sizes found on disk). Not written by hand.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["size", "src"],
+                "properties": {
+                  "size": {
+                    "type": "number"
+                  },
+                  "src": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "localDrive": {
+              "type": "string",
+              "description": "Fallback icon for local drives without their own icon."
+            },
+            "remoteDrive": {
+              "type": "string",
+              "description": "Fallback icon for remote drives without their own icon."
+            },
+            "folder": {
+              "type": "string",
+              "description": "Folder icon in the drive explorer."
+            },
+            "document": {
+              "type": "string",
+              "description": "Default document icon in the drive explorer."
+            },
+            "documents": {
+              "type": "object",
+              "description": "Per document type (e.g. \"acme/invoice\") document icons.",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI."
+              }
+            },
+            "drives": {
+              "type": "object",
+              "description": "Per drive slug: an icon written into the drive's own state when the host seeds it (synced — keep it small, 64 px).",
+              "additionalProperties": {
+                "type": "string",
+                "description": "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI."
+              }
             }
           }
         },

@@ -1,6 +1,7 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
   DriveCollectionId,
+  useConnectIcons,
   useSyncList,
   useTheme,
 } from "@powerhousedao/reactor-browser";
@@ -14,6 +15,7 @@ export function DriveIcon({
 }) {
   const remotes = useSyncList();
   const { theme } = useTheme();
+  const projectIcons = useConnectIcons();
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
 
@@ -50,6 +52,24 @@ export function DriveIcon({
         width={32}
         style={{ colorScheme: theme }}
         onError={() => setFailedSrc(driveIconSrc)}
+      />
+    );
+  }
+
+  // Project fallbacks (proof of concept): a drive without its own icon gets
+  // the project's local/remote drive icon, else the built-in one.
+  const fallbackSrc = isRemoteDrive
+    ? projectIcons?.remoteDrive
+    : projectIcons?.localDrive;
+  if (fallbackSrc && fallbackSrc !== failedSrc) {
+    return (
+      <img
+        src={fallbackSrc}
+        alt={drive?.header.name ?? ""}
+        height={32}
+        width={32}
+        className="object-contain"
+        onError={() => setFailedSrc(fallbackSrc)}
       />
     );
   }

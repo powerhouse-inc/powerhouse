@@ -3,6 +3,7 @@ import { useIsPluginActive } from "../hooks/usePluginComposition.js";
 import { Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useSidebarMode } from "../router/sidebar.js";
+import { ProjectFavicon } from "./project-favicon.js";
 import { Sidebar } from "./sidebar.js";
 
 /** The generic shell plugin: without it in a declared composition, Connect's sidebar is hidden. */
@@ -27,6 +28,7 @@ export function AppLayout({ sidebar }: AppLayoutProps = {}) {
       role="presentation"
       tabIndex={0}
     >
+      <ProjectFavicon />
       {showSidebar &&
         (sidebar ??
           (genericActive && <Sidebar collapsed={mode === "collapsed"} />))}

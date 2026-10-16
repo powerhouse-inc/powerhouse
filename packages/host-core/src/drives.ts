@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { DRIVE_ICON_MAX_BYTES, resolveImageRef } from "./icons.js";
 import { z } from "zod";
 
 /**
@@ -87,7 +88,12 @@ export function resolveDriveDeclaration(
     id,
     slug,
     name: decl.name ?? decl.slug,
-    icon: decl.icon,
+    // A project path becomes a data URI here (the icon lives in synced drive
+    // state, so it is size-capped); URLs and data URIs pass through.
+    icon: resolveImageRef(projectRoot, decl.icon, {
+      maxBytes: DRIVE_ICON_MAX_BYTES,
+      warn: (m) => console.warn(m),
+    }),
     preferredEditor: decl.preferredEditor,
     sharingType: decl.sharingType ?? "public",
     availableOffline: decl.availableOffline ?? true,

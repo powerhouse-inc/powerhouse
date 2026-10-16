@@ -33,6 +33,31 @@ export type PHConnectBranding = {
   homeBackground?: string | null;
 };
 
+/** A project's icon set (proof of concept). Every value is an image
+ * reference: a project-relative file path in powerhouse.config.json / host.js,
+ * which the runners turn into a data URI before Connect sees it; a URL or a
+ * data URI passes through unchanged. */
+export type PHConnectIcons = {
+  /** App icon master (1024² recommended). Favicon variants are found next to
+   * it by the `<name>_16x16.png` / `_32x32` / `_64x64` naming convention; the
+   * 64 px variant doubles as the in-app logo. */
+  app?: string;
+  /** Filled in by the runner from `app`: the favicon sizes found on disk. */
+  appVariants?: { size: number; src: string }[];
+  /** Fallback icon for local drives without their own icon. */
+  localDrive?: string;
+  /** Fallback icon for remote drives without their own icon. */
+  remoteDrive?: string;
+  /** Folder icon in the drive explorer. */
+  folder?: string;
+  /** Default document icon in the drive explorer. */
+  document?: string;
+  /** Per document type (e.g. "acme/invoice") document icons. */
+  documents?: Record<string, string>;
+  /** Per drive slug: written into the drive's own state when seeded. */
+  drives?: Record<string, string>;
+};
+
 export type PHConnectDefaultDriveRemote = {
   url: string;
   name?: string | null;
@@ -319,6 +344,7 @@ export type PHConnectRuntimeConfig = {
    * classic defaults. */
   composition?: PHConnectCompositionEntry[];
   branding?: PHConnectBranding;
+  icons?: PHConnectIcons;
   app?: PHConnectApp;
   ai?: PHConnectAi;
   packages?: PHConnectPackages;
@@ -381,6 +407,9 @@ export type PowerhouseConfig = {
     };
     port?: number;
   };
+  /** The project's icon set (proof of concept): host files reference it,
+   * runners resolve the paths. See PHConnectIcons. */
+  icons?: PHConnectIcons;
   studio?: {
     port?: number;
     host?: string;

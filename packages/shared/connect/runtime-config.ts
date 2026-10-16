@@ -19,6 +19,8 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     appName: "Powerhouse Connect",
     homeBackground: null,
   },
+  // No project icons: every built-in icon renders (proof of concept).
+  icons: {},
   app: {
     logLevel: "info",
     basePath: "/",

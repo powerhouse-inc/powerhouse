@@ -14,6 +14,7 @@ import {
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
+  useConnectIcons,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -124,12 +125,20 @@ export function FileItem(props: Props) {
     setIsDropdownMenuOpen(false);
   }
 
-  const icon = customDocumentIconSrc ? (
+  // Project icons (proof of concept): a per-type icon, else the project's
+  // default document icon, else the built-in one. An explicit prop wins.
+  const projectIcons = useConnectIcons();
+  const documentIconSrc =
+    customDocumentIconSrc ??
+    projectIcons?.documents?.[fileNode.documentType] ??
+    projectIcons?.document;
+
+  const icon = documentIconSrc ? (
     <img
       alt="file icon"
-      className="max-w-none"
+      className="max-w-none object-contain"
       height={34}
-      src={customDocumentIconSrc}
+      src={documentIconSrc}
       width={32}
       /* HTML img elements are draggable by default, so we
        * must disable it here so that only the container

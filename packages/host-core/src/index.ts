@@ -128,6 +128,16 @@ export {
   type PluginContributionsPlan,
 } from "./plugins-resolve.js";
 export {
+  APP_ICON_VARIANT_SIZES,
+  DRIVE_ICON_MAX_BYTES,
+  UI_ICON_MAX_BYTES,
+  iconVariantPath,
+  resolveConnectIcons,
+  resolveImageRef,
+  type IconResolveOptions,
+  type ResolvedIcons,
+} from "./icons.js";
+export {
   driveDeclarationSchema,
   drivesSchema,
   projectDriveId,

@@ -11,6 +11,7 @@ import {
   useSetSelectedNode,
   useNodeActions,
   useUserPermissions,
+  useConnectIcons,
 } from "@powerhousedao/reactor-browser";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
@@ -27,6 +28,8 @@ export function FolderItem(props: {
   href?: string;
 }) {
   const { folderNode, className } = props;
+  // Project folder icon (proof of concept); built-in icon otherwise.
+  const folderIconSrc = useConnectIcons()?.folder;
   const store = usePHStore();
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();
@@ -131,7 +134,18 @@ export function FolderItem(props: {
         <div className="flex items-center overflow-hidden">
           <div className="p-1">
             <div className="relative text-foreground">
-              <Icon name="FolderClose" size={24} />
+              {folderIconSrc ? (
+                <img
+                  alt="folder icon"
+                  className="object-contain"
+                  src={folderIconSrc}
+                  width={24}
+                  height={24}
+                  draggable={false}
+                />
+              ) : (
+                <Icon name="FolderClose" size={24} />
+              )}
             </div>
           </div>
           {content}

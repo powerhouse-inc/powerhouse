@@ -95,6 +95,66 @@ const pwaIconSchema = {
   },
 } as const;
 
+const imageRefSchema = {
+  type: "string",
+  description:
+    "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI.",
+} as const;
+
+/** The project's icon set (proof of concept). Same shape in
+ * powerhouse.config.json (paths) and in the runtime config (resolved). */
+export const phConnectIconsSchema = {
+  type: "object",
+  additionalProperties: false,
+  description:
+    "Project icons for Connect and Desktop: app, drives, folders and documents.",
+  properties: {
+    app: {
+      ...imageRefSchema,
+      description:
+        "App icon master (1024x1024 recommended). Favicon variants are found next to it as <name>_16x16.png, _32x32.png, _64x64.png; the 64 px variant is the in-app logo.",
+    },
+    appVariants: {
+      type: "array",
+      description:
+        "Filled in by the runner from `app` (favicon sizes found on disk). Not written by hand.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["size", "src"],
+        properties: { size: { type: "number" }, src: { type: "string" } },
+      },
+    },
+    localDrive: {
+      ...imageRefSchema,
+      description: "Fallback icon for local drives without their own icon.",
+    },
+    remoteDrive: {
+      ...imageRefSchema,
+      description: "Fallback icon for remote drives without their own icon.",
+    },
+    folder: {
+      ...imageRefSchema,
+      description: "Folder icon in the drive explorer.",
+    },
+    document: {
+      ...imageRefSchema,
+      description: "Default document icon in the drive explorer.",
+    },
+    documents: {
+      type: "object",
+      description: 'Per document type (e.g. "acme/invoice") document icons.',
+      additionalProperties: imageRefSchema,
+    },
+    drives: {
+      type: "object",
+      description:
+        "Per drive slug: an icon written into the drive's own state when the host seeds it (synced — keep it small, 64 px).",
+      additionalProperties: imageRefSchema,
+    },
+  },
+} as const;
+
 export const phConnectRuntimeConfigSchema = {
   type: "object",
   additionalProperties: false,
@@ -118,6 +178,7 @@ export const phConnectRuntimeConfigSchema = {
         },
       },
     },
+    icons: phConnectIconsSchema,
     app: {
       type: "object",
       additionalProperties: false,

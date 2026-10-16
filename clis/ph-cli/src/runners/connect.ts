@@ -13,6 +13,7 @@ import {
   pluginEntrySchema,
   unresolvedDriveReferences,
   profileSchema,
+  resolveConnectIcons,
   resolveDriveDeclaration,
   type DriveDeclaration,
   type PluginEntry,
@@ -184,6 +185,13 @@ function callerOverride(
       }
     : base.drives;
   if (composition) base.composition = composition;
+  // Project icons (proof of concept): the host's config.icons names project
+  // paths; the browser gets data URIs (favicon variants found by naming).
+  if (base.icons && ctx) {
+    base.icons = resolveConnectIcons(ctx.projectRoot, base.icons, (m) =>
+      console.warn(m),
+    );
+  }
   if (reactorRenown)
     base.renown = { ...(reactorRenown as object), ...base.renown };
   if (reactorNamespace !== undefined)

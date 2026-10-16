@@ -9,6 +9,7 @@
 // schema (in builder-tools/connect-utils) stay in sync by construction.
 
 import {
+  phConnectIconsSchema,
   phConnectRuntimeConfigSchema,
   powerhousePackageSchema,
 } from "../connect/schema-fragments.js";
@@ -249,6 +250,7 @@ export const sourceConfigSchema = {
       description:
         "Project-wide package registry endpoint. Used by `ph install` / `ph publish` / `ph registry-login` and Switchboard, and copied verbatim into the runtime config so the Connect SPA's Package Manager UI reads the same registry.",
     },
+    icons: phConnectIconsSchema,
     connect: {
       ...phConnectRuntimeConfigSchema,
       description:
