@@ -279,10 +279,14 @@ export default {
         protocol: switchboard.reactor.protocol,
         backends: {
           main: {
-            // Per-user data dir; \${userData} resolves at the runner (a shell
-            // points it at the OS profile via PH_USER_DATA_DIR).
-            storage: { kind: "path", dataDir: "\${userData}/pglite" },
-            readModel: { url: "\${userData}/pglite" },
+            // The user's .ph tree, same names as the project's: \${userData}
+            // resolves at the runner — the project root in the CLI, the OS
+            // profile dir in a shell (PH_USER_DATA_DIR). The reactor store is
+            // named here for clarity; the read model (.ph/read-storage),
+            // identity and run records follow the same root by default.
+            // NEVER point readModel at this dir: two PGlite instances on one
+            // data dir corrupt it (the runner refuses the declaration).
+            storage: { kind: "path", dataDir: "\${userData}/.ph/reactor-storage" },
             // the reactor can fetch models Connect installs at runtime
             packages: { dynamic: true },
           },

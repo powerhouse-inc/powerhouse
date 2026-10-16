@@ -3,15 +3,19 @@ import path from "node:path";
 /**
  * `${userData}` resolution for host files (desktop shape): storage paths in a
  * host must not derive from the instance name (renames must stay safe), so
- * the host file writes `${userData}/pglite` and the RUNNER resolves it at
- * start. In the CLI the default userData is `<projectRoot>/.ph/user-data`;
- * a shell (Tauri) overrides it via PH_USER_DATA_DIR to the OS profile dir.
+ * the host file writes `${userData}/.ph/reactor-storage` and the RUNNER
+ * resolves it at start. `${userData}` is a PROJECT-SHAPED root: its `.ph`
+ * subtree carries the same names the classic commands use under
+ * `<project>/.ph` (see `resolvePhDir`). In the CLI it IS the project root, so
+ * `ph run desktop` in a project shares the one `.ph` tree `ph vetra` uses;
+ * a shell (Tauri) points it at the OS profile via PH_USER_DATA_DIR, and the
+ * whole `.ph` tree — stores, identity, run records — follows.
  */
 export function defaultUserDataDir(
   projectRoot: string,
   env: Record<string, string | undefined> = process.env,
 ): string {
-  return env.PH_USER_DATA_DIR ?? path.join(projectRoot, ".ph", "user-data");
+  return env.PH_USER_DATA_DIR ?? path.resolve(projectRoot);
 }
 
 const PLACEHOLDER = /\$\{userData\}/g;

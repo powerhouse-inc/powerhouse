@@ -32,46 +32,76 @@ export const reactorProtocolSchema = z.strictObject({
   unsupportedStoredDocuments: z.enum(["refuse", "read-only"]).optional(),
 });
 
-export const reactorBackendSchema = z.strictObject({
-  kind: z.enum(["in-process", "worker", "remote"]).optional(),
-  storage: z
-    .strictObject({
-      kind: z.enum(["idb", "memory", "path", "postgres"]),
-      dataDir: z.string().optional(),
-      url: z.string().optional(),
-    })
-    .optional(),
-  readModel: z.strictObject({ url: z.string().optional() }).optional(),
-  packages: z
-    .strictObject({
-      cdnUrl: z.string().optional(),
-      specs: z.array(z.string()).optional(),
-      dynamic: z.boolean().optional(),
-    })
-    .optional(),
-  remote: z
-    .strictObject({
-      host: z.string().optional(),
-      url: z.string().optional(),
-    })
-    .optional(),
-  // Deployment topology (R1): where reactor work runs — same family as the
-  // retired reactorWorker/multiReactor flags. Field names match the real
-  // switchboard options (projectionWorker / workerPool).
-  projection: z
-    .strictObject({
-      enabled: z.boolean().optional(),
-      dbPoolSize: z.number().int().positive().optional(),
-    })
-    .optional(),
-  executors: z
-    .strictObject({
-      numWorkers: z
-        .union([z.number().int().positive(), z.literal("auto")])
-        .optional(),
-    })
-    .optional(),
-});
+// Path-equality for the one-dir guard: pure string normalisation (the host
+// core stays Node-free); the server repeats the check with path.resolve.
+const samePath = (a: string, b: string): boolean => {
+  const norm = (p: string) =>
+    p.replace(/\\/g, "/").replace(/\/+$/, "").replace(/^\.\//, "");
+  return norm(a) === norm(b);
+};
+
+export const reactorBackendSchema = z
+  .strictObject({
+    kind: z.enum(["in-process", "worker", "remote"]).optional(),
+    storage: z
+      .strictObject({
+        kind: z.enum(["idb", "memory", "path", "postgres"]),
+        dataDir: z.string().optional(),
+        url: z.string().optional(),
+      })
+      .optional(),
+    readModel: z.strictObject({ url: z.string().optional() }).optional(),
+    packages: z
+      .strictObject({
+        cdnUrl: z.string().optional(),
+        specs: z.array(z.string()).optional(),
+        dynamic: z.boolean().optional(),
+      })
+      .optional(),
+    remote: z
+      .strictObject({
+        host: z.string().optional(),
+        url: z.string().optional(),
+      })
+      .optional(),
+    // Deployment topology (R1): where reactor work runs — same family as the
+    // retired reactorWorker/multiReactor flags. Field names match the real
+    // switchboard options (projectionWorker / workerPool).
+    projection: z
+      .strictObject({
+        enabled: z.boolean().optional(),
+        dbPoolSize: z.number().int().positive().optional(),
+      })
+      .optional(),
+    executors: z
+      .strictObject({
+        numWorkers: z
+          .union([z.number().int().positive(), z.literal("auto")])
+          .optional(),
+      })
+      .optional(),
+  })
+  // Two PGlite instances on one data dir corrupt it: the reactor store
+  // (storage.dataDir) and the read-model store (readModel.url) must differ.
+  // Absent readModel.url the server derives the read model next to the
+  // reactor under the same .ph root — the classic layout.
+  .superRefine((backend, ctx) => {
+    // Postgres is exempt: one database legitimately serves both stores
+    // (two pools, one server). The hazard is a PGlite data DIRECTORY.
+    const store = backend.storage;
+    const storeDir = store?.kind === "path" ? store.dataDir : undefined;
+    const readModel = backend.readModel?.url;
+    if (storeDir && readModel && samePath(storeDir, readModel)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["readModel", "url"],
+        message:
+          `readModel.url must not be the reactor's storage dir (${readModel}): ` +
+          "two PGlite instances on one data dir corrupt it. Omit readModel.url " +
+          "to get the classic <root>/.ph/read-storage next to the reactor store.",
+      });
+    }
+  });
 
 export const reactorSchema = z.strictObject({
   backends: z.record(z.string(), reactorBackendSchema).optional(),
