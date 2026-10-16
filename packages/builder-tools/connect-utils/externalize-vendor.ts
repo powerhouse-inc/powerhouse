@@ -45,7 +45,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname as pathDirname, join } from "node:path";
+import { dirname as pathDirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DYNAMIC_BASE_PLACEHOLDER } from "./vite-plugins/dynamic-base.js";
 
@@ -72,6 +72,9 @@ export interface VendorPrebuildOptions {
   base?: string;
   /** NODE_ENV define for the vendor build (default "development"). */
   nodeEnv?: "development" | "production";
+  /** The app's own deps the vendored packages also bundle: vendored as listed,
+   * resolved from `from` (projects don't install them). */
+  ownDeps?: { specs: string[]; from: string };
 }
 
 /**
@@ -132,20 +135,26 @@ export async function prebuildConnectVendor(
     options.dirname,
     options.include ?? DEFAULT_VENDOR_INCLUDE,
   );
+  const own = options.ownDeps
+    ? resolveOwnDeps(options.ownDeps.from, options.ownDeps.specs)
+    : {};
+  for (const spec of Object.keys(own)) {
+    if (!include.includes(spec)) include.push(spec);
+  }
   const external = options.external ?? VENDOR_EXTERNAL;
   const vendorDir =
     options.vendorDir ?? join(options.dirname, "node_modules/.ph-vendor");
   const importMapPath = join(vendorDir, "import-map.json");
   // A version change of any vendored dep must invalidate the cache, so the
   // resolved versions are part of the key (not just the specifier lists).
-  const versionDigest = resolveVersionDigest(options.dirname, [
-    ...include,
-    ...external,
-  ]);
-  const versions = resolveDepVersions(options.dirname, [
-    ...include,
-    ...external,
-  ]);
+  // One dist walk per linked package for both the versions and the digest.
+  const stamps = new Map<string, string>();
+  const versions = resolveDepVersions(
+    options.dirname,
+    [...include, ...external],
+    stamps,
+  );
+  const versionDigest = resolveVersionDigest(versions, own, stamps);
   const base = options.base ?? VENDOR_DYNAMIC_BASE;
   const nodeEnv = options.nodeEnv ?? "development";
 
@@ -188,6 +197,7 @@ export async function prebuildConnectVendor(
         versions,
         base,
         nodeEnv,
+        own,
       );
       return result ? { vendorDir, ...result } : null;
     } finally {
@@ -262,6 +272,15 @@ export function linkedBuildStamp(pkgRoot: string): string {
   return newest ? `+dist.${Math.trunc(newest)}` : "";
 }
 
+function cachedStamp(stamps: Map<string, string>, pkgRoot: string) {
+  let stamp = stamps.get(pkgRoot);
+  if (stamp === undefined) {
+    stamp = linkedBuildStamp(pkgRoot);
+    stamps.set(pkgRoot, stamp);
+  }
+  return stamp;
+}
+
 /**
  * Resolve the installed version of each spec's owning package, deduped by
  * package name. Resolution order per spec:
@@ -278,6 +297,7 @@ export function linkedBuildStamp(pkgRoot: string): string {
 function resolveDepVersions(
   dirname: string,
   specs: string[],
+  stamps = new Map<string, string>(),
 ): Record<string, string> {
   const req = createRequire(join(dirname, "noop.js"));
   const seen: Record<string, string> = {};
@@ -308,7 +328,8 @@ function resolveDepVersions(
         const meta = JSON.parse(
           readFileSync(join(pkgRoot, "package.json"), "utf8"),
         ) as { version?: string };
-        version = String(meta.version ?? "unknown") + linkedBuildStamp(pkgRoot);
+        version =
+          String(meta.version ?? "unknown") + cachedStamp(stamps, pkgRoot);
       } catch {
         try {
           const entry = req.resolve(spec);
@@ -342,8 +363,11 @@ function resolveDepVersions(
 // package.json). A bump or branch checkout that changes any version yields a
 // different digest, invalidating the cache. Unresolvable specs contribute a
 // sentinel so they don't silently collide.
-function resolveVersionDigest(dirname: string, specs: string[]): string {
-  const versions = resolveDepVersions(dirname, specs);
+function resolveVersionDigest(
+  versions: Record<string, string>,
+  own: Record<string, string>,
+  stamps: Map<string, string>,
+): string {
   const h = createHash("sha256");
   // Fold in the build worker so a logic/build-option change busts stale bundles,
   // not just a dep version bump.
@@ -353,6 +377,11 @@ function resolveVersionDigest(dirname: string, specs: string[]): string {
   h.update(`worker:${workerHash}\n`);
   for (const pkg of Object.keys(versions).sort()) {
     h.update(`${pkg}@${versions[pkg]}\n`);
+  }
+  // Own deps resolve outside the project; their real path carries the version.
+  for (const spec of Object.keys(own).sort()) {
+    const stamp = cachedStamp(stamps, ownPackageRoot(own[spec]));
+    h.update(`own:${spec}=${own[spec]}${stamp}\n`);
   }
   return h.digest("hex").slice(0, 16);
 }
@@ -473,6 +502,99 @@ function importTarget(value: unknown): string | null {
     }
   }
   return null;
+}
+
+/** The package root at or above `from` that Node would load `pkg` from, or null. */
+export function findPackageRoot(from: string, pkg: string): string | null {
+  let dir = from;
+  for (;;) {
+    const candidate = join(dir, "node_modules", pkg);
+    if (existsSync(join(candidate, "package.json"))) {
+      return realpathSync(candidate);
+    }
+    const parent = pathDirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+// Roots of the dependency-free own deps: a group also takes in its modules'
+// dependencies, so only these can get one chunk without absorbing others.
+function ownRoots(own: Record<string, string>): string[] {
+  const roots = new Set<string>();
+  for (const file of Object.values(own)) {
+    const root = ownPackageRoot(file);
+    try {
+      const meta = JSON.parse(
+        readFileSync(join(root, "package.json"), "utf8"),
+      ) as {
+        dependencies?: Record<string, string>;
+      };
+      if (Object.keys(meta.dependencies ?? {}).length === 0)
+        roots.add(root + sep);
+    } catch {
+      // no readable package.json: no group
+    }
+  }
+  return [...roots];
+}
+
+function ownPackageRoot(file: string): string {
+  let dir = pathDirname(file);
+  for (;;) {
+    try {
+      const meta = JSON.parse(
+        readFileSync(join(dir, "package.json"), "utf8"),
+      ) as { name?: string };
+      if (meta.name) return dir;
+    } catch {
+      // no package.json here
+    }
+    const parent = pathDirname(dir);
+    if (parent === dir) return dir;
+    dir = parent;
+  }
+}
+
+/** Each spec's browser/import entry file when resolved from `from`; unresolvable specs are left out. */
+export function resolveOwnDeps(
+  from: string,
+  specs: string[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const spec of specs) {
+    const { pkg, sub } = parsePkg(spec);
+    const root = findPackageRoot(from, pkg);
+    if (!root) continue;
+    try {
+      const meta = JSON.parse(
+        readFileSync(join(root, "package.json"), "utf8"),
+      ) as { exports?: unknown; module?: string; main?: string };
+      const key = sub ? `./${sub}` : ".";
+      let target: string | null = null;
+      if (meta.exports && typeof meta.exports === "object") {
+        const exp = meta.exports as Record<string, unknown>;
+        const keyed = Object.keys(exp).some((k) => k.startsWith("."));
+        target = keyed
+          ? key in exp
+            ? importTarget(exp[key])
+            : null
+          : sub
+            ? null
+            : importTarget(exp);
+      } else if (typeof meta.exports === "string") {
+        target = sub ? null : meta.exports;
+      } else if (!sub) {
+        target = meta.module ?? meta.main ?? null;
+      }
+      if (!target || /\.(css|json|scss)$/.test(target)) continue;
+      const file = join(root, target);
+      if (existsSync(file)) out[spec] = realpathSync(file);
+    } catch {
+      // unreadable package.json: leave the spec out
+    }
+  }
+  return out;
 }
 
 function parsePkg(spec: string): { pkg: string; sub: string } {
@@ -599,6 +721,7 @@ async function buildVendorAtomic(
   versions: Record<string, string>,
   base: string,
   nodeEnv: "development" | "production",
+  own: Record<string, string> = {},
 ): Promise<{
   imports: Record<string, string>;
   versions: Record<string, string>;
@@ -614,6 +737,7 @@ async function buildVendorAtomic(
       external,
       base,
       nodeEnv,
+      own,
     );
     const tmpMap = join(tmpDir, "import-map.json");
     if (!ok || !existsSync(tmpMap)) {
@@ -712,6 +836,7 @@ function runBuildWorker(
   external: string[],
   base: string,
   nodeEnv: "development" | "production",
+  own: Record<string, string> = {},
 ): Promise<{ ok: boolean; stderr: string }> {
   const workerPath = join(outDir, "build-worker.mjs");
   writeFileSync(workerPath, VENDOR_BUILD_WORKER);
@@ -733,6 +858,7 @@ function runBuildWorker(
         selfModulePath,
         base,
         nodeEnv,
+        JSON.stringify({ files: own, roots: ownRoots(own) }),
       ],
       { cwd: dirname, stdio: ["ignore", "pipe", "pipe"] },
     );
@@ -760,7 +886,12 @@ import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath, baseArg, nodeEnvArg] = process.argv.slice(2);
+const [dirname, vendorDir, includeJSON, urlPrefix, externalJSON, dynamicBase, selfModulePath, baseArg, nodeEnvArg, ownJSON] = process.argv.slice(2);
+// ownDeps: spec -> absolute entry file, plus each one's package root.
+const { files: own = {}, roots: ownRootList = [] } = JSON.parse(ownJSON || '{}');
+// One chunk per own-dep package: split between an entry and a shared chunk, a
+// barrel can re-export from the entry and run before the classes it extends.
+const ownGroups = ownRootList.map((root, i) => ({ name: 'own-' + i, test: (id) => id.startsWith(root) }));
 // Trailing argv are optional (older callers): base defaults to the dynamic
 // placeholder behavior, nodeEnv to development. baseArg is the APP base —
 // the same string the app build uses; the build base appends the vendor
@@ -785,23 +916,42 @@ const RESERVED = new Set('enum void null function in instanceof typeof new delet
 const input = {};
 for (const spec of include) {
   const name = entryName(spec);
+  const from = own[spec] ?? spec;
   let src;
   try {
     // Import the bare spec (not reqProj.resolve(spec)) so Node picks the same
     // import/browser-condition module the build resolves — resolving first can
     // pick a CJS sibling whose default-export shape differs from the ESM build.
-    const ns = await import(spec);
+    const ns = await import(own[spec] ? pathToFileURL(own[spec]).href : spec);
     // Only fall back to re-exporting from default when the module exposes NO
     // top-level named exports (a true CJS-interop module). If it does (e.g. zod
     // exposes \`z\`), \`export *\` captures them; destructuring default would miss
     // top-level names that aren't keys of the default object.
     const named = Object.keys(ns).filter((k) => k !== 'default');
     const cjs = named.length === 0 && ns.default && typeof ns.default === 'object';
-    if (cjs) {
+    // A strict entry keeps every export, and zod's \`locales\` (also reachable via \`z\`) pins
+    // ~50 locales; publish them without it. zod/locales stays its own entry.
+    const zodNs = (spec === 'zod' || spec.startsWith('zod/')) && !spec.includes('locales') && named.includes('locales');
+    if (zodNs) {
+      const keep = named.filter((k) => k !== 'locales' && k !== 'z' && /^[A-Za-z_$][\\w$]*$/.test(k));
+      // \`core\` is zod/v4/core's namespace, which exports locales too: rebuild it without them.
+      const coreKeys = keep.includes('core') ? Object.keys(await import('zod/v4/core')).filter((k) => k !== 'locales' && k !== 'default') : [];
+      const reexport = keep.filter((k) => !(k === 'core' && coreKeys.length));
+      src = 'export { ' + reexport.join(', ') + ' } from ' + JSON.stringify(from) + ';\\n'
+        + 'import { ' + reexport.map((k) => k + ' as __z_' + k).join(', ') + ' } from ' + JSON.stringify(from) + ';\\n';
+      if (coreKeys.length) {
+        src += 'import { ' + coreKeys.map((k) => k + ' as __c_' + k).join(', ') + ' } from "zod/v4/core";\\n'
+          + 'const __z_core = Object.freeze({ ' + coreKeys.map((k) => JSON.stringify(k) + ': __c_' + k).join(', ') + ' });\\n'
+          + 'export { __z_core as core };\\n';
+      }
+      src += 'const z = Object.freeze({ ' + keep.map((k) => JSON.stringify(k) + ': __z_' + k).join(', ') + ' });\\n'
+        + (named.includes('z') ? 'export { z };\\n' : '')
+        + (('default' in ns) && ns.default === ns.z ? 'export { z as default };\\n' : '');
+    } else if (cjs) {
       const names = Object.keys(ns.default).filter((k) => k !== 'default' && k !== '__esModule' && /^[A-Za-z_$][\\w$]*$/.test(k));
       const plain = names.filter((n) => !RESERVED.has(n));
       const reserved = names.filter((n) => RESERVED.has(n));
-      src = 'import d from ' + JSON.stringify(spec) + ';\\nexport default d;\\n'
+      src = 'import d from ' + JSON.stringify(from) + ';\\nexport default d;\\n'
         + (plain.length ? 'export const { ' + plain.join(', ') + ' } = d;\\n' : '');
       // reserved words are invalid as const-binding names but valid as export
       // aliases (export { x as enum }).
@@ -809,11 +959,11 @@ for (const spec of include) {
         src += 'const __r' + i + ' = d[' + JSON.stringify(n) + '];\\nexport { __r' + i + ' as ' + n + ' };\\n';
       });
     } else {
-      src = 'export * from ' + JSON.stringify(spec) + ';\\n'
-        + (('default' in ns) ? 'export { default } from ' + JSON.stringify(spec) + ';\\n' : '');
+      src = 'export * from ' + JSON.stringify(from) + ';\\n'
+        + (('default' in ns) ? 'export { default } from ' + JSON.stringify(from) + ';\\n' : '');
     }
   } catch {
-    src = 'export * from ' + JSON.stringify(spec) + ';\\n';
+    src = 'export * from ' + JSON.stringify(from) + ';\\n';
   }
   const file = join(srcDir, name + '.js');
   writeFileSync(file, src);
@@ -864,7 +1014,7 @@ await build({
     outDir: vendorDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext', cssCodeSplit: true,
     rollupOptions: {
       input, preserveEntrySignatures: 'strict',
-      output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
+      output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]', ...(ownGroups.length ? { codeSplitting: { groups: ownGroups } } : {}) },
     },
   },
 });

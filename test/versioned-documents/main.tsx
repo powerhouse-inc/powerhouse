@@ -3,9 +3,9 @@
  * This file is auto-generated and updated by codegen
  */
 import { startConnect, type ImportHmr } from "@powerhousedao/connect";
-import * as localPackage from "./index.js";
 
-const { updateLocalPackage } = startConnect(localPackage);
+// Loaded lazily so the package's models stay off Connect's boot path.
+const { updateLocalPackage } = startConnect(() => import("./index.js"));
 
 (import.meta as ImportHmr).hot?.accept(["./index.js"], ([newModule]) => {
   if (newModule) {
