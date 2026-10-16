@@ -47,7 +47,7 @@ function ConnectionEditor() {
     >
       <div className="flex h-full min-h-0 flex-col bg-background">
         <div className="flex items-center justify-between border-b border-solid border-foreground/10 px-4 py-2">
-          <BackButton />
+          <BackButton documentId={document.header.id} />
           <UndoRedo documentId={document.header.id} />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
