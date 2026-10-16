@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
   Node,
@@ -41,7 +42,7 @@ export async function expandBulkArchive(
     throw new Error("Archive contains no Powerhouse documents");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

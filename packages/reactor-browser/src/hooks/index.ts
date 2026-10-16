@@ -43,6 +43,7 @@ export * from "./reactor.js";
 export * from "./renown.js";
 export * from "./revision-history.js";
 export * from "./selected-document.js";
+export * from "./ph-store.js";
 export * from "./selected-drive.js";
 export * from "./selected-folder.js";
 export * from "./selected-node.js";

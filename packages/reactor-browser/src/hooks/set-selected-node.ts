@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import {
   createUrlWithPreservedParams,
@@ -7,7 +8,10 @@ import {
   makeNodeSlug,
   resolveUrlPathname,
 } from "../utils/url.js";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import {
+  makePHEventFunctions,
+  subscribeToPHValue,
+} from "./make-ph-event-functions.js";
 
 const selectedNodeIdEventFunctions = makePHEventFunctions("selectedNodeId");
 export const useSelectedNodeId = selectedNodeIdEventFunctions.useValue;
@@ -43,7 +47,7 @@ export function setSelectedNode(nodeOrNodeSlug: Node | string | undefined) {
 }
 
 export function addResetSelectedNodeEventHandler() {
-  window.addEventListener("ph:selectedDriveIdUpdated", () => {
+  subscribeToPHValue("selectedDriveId", () => {
     setSelectedNodeId(undefined);
   });
 }
@@ -54,7 +58,7 @@ export function addSetSelectedNodeOnPopStateEventHandler() {
     const nodeSlug = extractNodeSlugFromPath(pathname);
     // The slug embeds the id (`<name>-<uuid>`); compare ids, not slug vs id.
     const nodeId = extractNodeIdFromSlug(nodeSlug);
-    const selectedNodeId = window.ph?.selectedNodeId;
+    const selectedNodeId = getPHStore()?.selectedNodeId;
     if (nodeId !== selectedNodeId) {
       setSelectedNode(nodeSlug);
     }

@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { FileUploadProgressCallback } from "@powerhousedao/reactor-browser";
 import type {
   Action,
@@ -25,7 +26,7 @@ export async function queueActions(
     throw new Error("No actions provided");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -51,7 +52,7 @@ export async function queueOperations(
     throw new Error("No operations provided");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

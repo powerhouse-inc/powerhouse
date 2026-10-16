@@ -68,9 +68,11 @@ function getDocumentQueryState(promise: Promise<PHDocument>) {
  */
 export function useDocument(id: string | null | undefined) {
   const documentCache = useDocumentCache();
+  const getDocument = () => (id ? documentCache?.get(id) : undefined);
   const document = useSyncExternalStore(
     (cb) => (id && documentCache ? documentCache.subscribe(id, cb) : () => {}),
-    () => (id ? documentCache?.get(id) : undefined),
+    getDocument,
+    getDocument,
   );
   return document ? use(document) : undefined;
 }
@@ -98,12 +100,10 @@ export function useDocumentSafe(id: string | null | undefined) {
   const documentCache = useDocumentCache();
   const subscribe = (cb: () => void) =>
     id && documentCache ? documentCache.subscribe(id, cb) : () => {};
-  const promise = useSyncExternalStore(subscribe, () =>
-    id ? documentCache?.get(id) : undefined,
-  );
-  const refetch = useSyncExternalStore(subscribe, () =>
-    readRefetchState(documentCache, id),
-  );
+  const getPromise = () => (id ? documentCache?.get(id) : undefined);
+  const getRefetch = () => readRefetchState(documentCache, id);
+  const promise = useSyncExternalStore(subscribe, getPromise, getPromise);
+  const refetch = useSyncExternalStore(subscribe, getRefetch, getRefetch);
 
   // The cache notifies subscribers only when a document CHANGES (its stored
   // promise is replaced); the INITIAL fetch settles without a notification,
@@ -170,14 +170,16 @@ function readRefetchState(
  */
 export function useDocuments(ids: string[] | null | undefined) {
   const documentCache = useDocumentCache();
+  const getBatch = () =>
+    ids?.length && documentCache ? documentCache.getBatch(ids) : undefined;
 
   const documents = useSyncExternalStore(
     (cb) =>
       ids?.length && documentCache
         ? documentCache.subscribe(ids, cb)
         : () => {},
-    () =>
-      ids?.length && documentCache ? documentCache.getBatch(ids) : undefined,
+    getBatch,
+    getBatch,
   );
 
   return documents ? use(documents) : [];

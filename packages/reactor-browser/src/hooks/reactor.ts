@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
@@ -59,7 +60,9 @@ export const addFullReactorClientEventHandler: AddPHGlobalEventHandler =
 
 /** The client full-client actions use: the one set, else the module's. */
 export function getFullReactorClient(): IReactorClient | undefined {
-  return window.ph?.fullReactorClient ?? window.ph?.reactorClientModule?.client;
+  return (
+    getPHStore()?.fullReactorClient ?? getPHStore()?.reactorClientModule?.client
+  );
 }
 
 // The following are derived from the reactor client module:

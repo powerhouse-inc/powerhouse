@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { PHDocument } from "document-model";
 import { DEFAULT_DRIVE_ID } from "./constants.js";
 import type { ActionInput } from "./gen/schema.js";
@@ -5,7 +6,7 @@ import type { ActionInput } from "./gen/schema.js";
 export async function reactorGraphqlCreateDocument<
   TDocument extends PHDocument,
 >(document: TDocument, parentIdentifier = DEFAULT_DRIVE_ID) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -22,7 +23,7 @@ export async function reactorGraphqlCreateDocument<
 }
 
 export async function reactorGraphqlDeleteDocument(identifier: string) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -38,7 +39,7 @@ export async function reactorGraphqlDeleteDocument(identifier: string) {
 }
 
 export async function reactorGraphqlDeleteDocuments(identifiers: string[]) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -57,7 +58,7 @@ export async function reactorGraphqlMutateDocument(
   documentIdentifier: string,
   ...actions: ReadonlyArray<ActionInput>
 ) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(

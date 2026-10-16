@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { DocumentDriveDocument } from "@powerhousedao/shared";
 import { DriveDocumentSchema } from "@powerhousedao/shared/document-drive";
 import { useEffect, useState } from "react";
@@ -41,7 +42,7 @@ export function useInitReactorGraphqlClient(
 async function reactorGraphqlFetchDrive(
   identifier: string,
 ): Promise<DocumentDriveDocument> {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -63,7 +64,7 @@ async function reactorGraphqlFetchDrive(
 }
 
 async function reactorGraphqlSyncDrive(driveId: string) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -79,10 +80,6 @@ async function initGraphQLReactorClientWithDocumentCache(
   switchboardUrl: string,
   driveId: string,
 ) {
-  if (!window.ph) {
-    window.ph = {};
-  }
-
   callEventHandlerRegisterFunctions(commonGlobalEventHandlerFunctions);
 
   const client = createClient(switchboardUrl, documentCacheClientMiddleware);

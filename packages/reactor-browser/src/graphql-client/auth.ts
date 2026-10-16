@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { SdkFunctionWrapper } from "../graphql/gen/schema.js";
 
 /**
@@ -28,7 +29,7 @@ export async function ambientRenownTokenProvider(): Promise<
     return undefined;
   }
 
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   if (!renown?.user) {
     return undefined;
   }
