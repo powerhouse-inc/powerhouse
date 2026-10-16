@@ -118,7 +118,13 @@ export const BASE_PRECACHE: ConnectPrecacheOptions = {
   // precaching it would freeze runtime config; source maps don't belong
   // in the precache either. manifest.webmanifest is added at wiring time so
   // the SW's dynamic manifest route is the sole producer at that URL.
-  globIgnores: ["**/powerhouse.config.json", "**/*.map", "index.html"],
+  // `.gz` siblings of wasm/data are a transport encoding, not extra assets.
+  globIgnores: [
+    "**/powerhouse.config.json",
+    "**/*.map",
+    "index.html",
+    "**/*.gz",
+  ],
 };
 
 const SW_FILENAME = "service-worker.ts";

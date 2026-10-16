@@ -62,6 +62,10 @@ describe("BASE_PRECACHE", () => {
       "__reactor_worker__/**/*.json",
     );
   });
+
+  it("keeps precompressed siblings out of the precache", () => {
+    expect(BASE_PRECACHE.globIgnores).toContain("**/*.gz");
+  });
 });
 
 describe("pwa fragment collection", () => {
