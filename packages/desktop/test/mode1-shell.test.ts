@@ -117,6 +117,47 @@ describe("shell projection", () => {
     );
   });
 
+  it("shows the full-resolution app icon on the loading page", () => {
+    const dir = tempDir("ph-proj-logo-");
+    const icon = solidPng(1024, [79, 70, 229, 255]);
+    writeFileSync(path.join(dir, "icon.png"), icon);
+    const app = appJsonSchema.parse(validApp);
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain('<img class="logo" src="./logo.png"');
+    // the SOURCE bytes, not a downsampled tauri-icon output
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/logo.png")).equals(icon),
+    ).toBe(true);
+    // generated, not tracked
+    expect(
+      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
+    ).toContain("/ui/logo.png");
+    // unchanged icon → nothing rewritten
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      false,
+    );
+    // a new icon → the logo follows
+    const next = solidPng(1024, [1, 2, 3, 255]);
+    writeFileSync(path.join(dir, "icon.png"), next);
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      true,
+    );
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/logo.png")).equals(next),
+    ).toBe(true);
+  });
+
+  it("renders the loading page without a logo when the icon file is missing", () => {
+    const dir = tempDir("ph-proj-nologo-");
+    const app = appJsonSchema.parse(validApp);
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).not.toContain("<img");
+    expect(html).toContain("Starting Taco Tent");
+    expect(existsSync(path.join(res.shellDir, "ui/logo.png"))).toBe(false);
+  });
+
   it("bakes the connect port into the remote capability", () => {
     const { read } = projectInto({}, 7777);
     const cap = JSON.parse(read("capabilities/connect.json")) as {
