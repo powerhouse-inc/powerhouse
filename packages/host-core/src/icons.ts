@@ -80,6 +80,8 @@ export function iconVariantPath(
 export const DRIVE_ICON_MAX_BYTES = 64 * 1024;
 /** UI-only icons (runtime config): generous, but not a 1 MB master. */
 export const UI_ICON_MAX_BYTES = 256 * 1024;
+/** A splash/hero image is fetched once with the runtime config. */
+export const SPLASH_MAX_BYTES = 1024 * 1024;
 
 export interface ResolvedIcons {
   app?: string;

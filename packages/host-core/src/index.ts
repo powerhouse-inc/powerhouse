@@ -130,6 +130,7 @@ export {
 export {
   APP_ICON_VARIANT_SIZES,
   DRIVE_ICON_MAX_BYTES,
+  SPLASH_MAX_BYTES,
   UI_ICON_MAX_BYTES,
   iconVariantPath,
   resolveConnectIcons,

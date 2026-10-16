@@ -125,6 +125,11 @@ export const phConnectIconsSchema = {
         properties: { size: { type: "number" }, src: { type: "string" } },
       },
     },
+    splash: {
+      ...imageRefSchema,
+      description:
+        "Wide splash/hero image (e.g. 2048x1152, transparent). Connect's home-screen hero unless connect.branding.homeBackground names another.",
+    },
     localDrive: {
       ...imageRefSchema,
       description: "Fallback icon for local drives without their own icon.",

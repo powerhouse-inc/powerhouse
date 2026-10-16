@@ -59,6 +59,9 @@ export const appJsonSchema = z.strictObject({
   /** Single source image (square PNG, 1024×1024 recommended); the icon set
    * for every platform is generated from it via `tauri icon`. */
   icon: z.string().min(1),
+  /** Optional wide splash image (e.g. 2048x1152, transparent PNG) for the
+   * loading page, shown instead of the square icon. Relative to this file. */
+  splash: z.string().min(1).optional(),
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),
   shell: shellSourceSchema,

@@ -14,6 +14,8 @@ import {
   unresolvedDriveReferences,
   profileSchema,
   resolveConnectIcons,
+  resolveImageRef,
+  SPLASH_MAX_BYTES,
   resolveDriveDeclaration,
   type DriveDeclaration,
   type PluginEntry,
@@ -187,10 +189,20 @@ function callerOverride(
   if (composition) base.composition = composition;
   // Project icons (proof of concept): the host's config.icons names project
   // paths; the browser gets data URIs (favicon variants found by naming).
-  if (base.icons && ctx) {
-    base.icons = resolveConnectIcons(ctx.projectRoot, base.icons, (m) =>
-      console.warn(m),
+  if (ctx && (base.icons || base.branding?.homeBackground)) {
+    const warn = (m: string) => console.warn(m);
+    // The home-screen hero: branding.homeBackground, else the icon set's
+    // splash — a project path becomes a data URI like every other icon.
+    // (resolveConnectIcons does not repeat the splash in the icon set.)
+    const hero = resolveImageRef(
+      ctx.projectRoot,
+      base.branding?.homeBackground ?? base.icons?.splash,
+      { maxBytes: SPLASH_MAX_BYTES, warn },
     );
+    if (hero) base.branding = { ...base.branding, homeBackground: hero };
+    if (base.icons) {
+      base.icons = resolveConnectIcons(ctx.projectRoot, base.icons, warn);
+    }
   }
   if (reactorRenown)
     base.renown = { ...(reactorRenown as object), ...base.renown };

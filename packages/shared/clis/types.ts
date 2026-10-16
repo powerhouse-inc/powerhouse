@@ -44,6 +44,10 @@ export type PHConnectIcons = {
   app?: string;
   /** Filled in by the runner from `app`: the favicon sizes found on disk. */
   appVariants?: { size: number; src: string }[];
+  /** Wide splash/hero image (e.g. 2048x1152, transparent): Connect's home
+   * screen hero unless connect.branding.homeBackground names another; the
+   * desktop app.json `splash` can point at the same file. */
+  splash?: string;
   /** Fallback icon for local drives without their own icon. */
   localDrive?: string;
   /** Fallback icon for remote drives without their own icon. */

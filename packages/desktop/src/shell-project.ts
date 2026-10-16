@@ -121,17 +121,28 @@ fn main() {
  * it stays sharp on HiDPI screens. Generated, like the rest of ui/. */
 export const LOADING_LOGO = "logo.png";
 
+/** The loading page's splash (app.json `splash`), copied beside it; shown
+ * instead of the square logo when set. Generated, like the rest of ui/. */
+export const LOADING_SPLASH = "splash.png";
+
 /** CSS size of the logo; the 1024² source keeps it crisp up to 8x DPR. */
 const LOGO_CSS_PX = 128;
 
-function loadingHtml(productName: string, logo: string | null): string {
+/** The art the loading page shows: the wide splash, else the square logo. */
+type LoadingArt = { kind: "logo" | "splash"; file: string } | null;
+
+function loadingHtml(productName: string, art: LoadingArt): string {
   const name = productName.replace(/[<&]/g, (c) =>
     c === "<" ? "&lt;" : "&amp;",
   );
-  const logoTag = logo
-    ? `<img class="logo" src="./${logo}" width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}" alt="" />
+  const logoTag =
+    art?.kind === "splash"
+      ? `<img class="splash" src="./${art.file}" alt="" />
       `
-    : "";
+      : art
+        ? `<img class="logo" src="./${art.file}" width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}" alt="" />
+      `
+        : "";
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -151,6 +162,10 @@ function loadingHtml(productName: string, logo: string | null): string {
       }
       .logo {
         width: ${LOGO_CSS_PX}px; height: ${LOGO_CSS_PX}px;
+        object-fit: contain; display: block;
+      }
+      .splash {
+        width: min(720px, 80vw); max-height: 65vh;
         object-fit: contain; display: block;
       }
       .dot {
@@ -283,6 +298,7 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /gen
 /icons
 /ui/logo.png
+/ui/splash.png
 /dist-stack
 /binaries
 `;
@@ -314,15 +330,20 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const shellDir = path.join(hostDir, SHELL_DIR);
   const iconSrc = path.resolve(hostDir, app.icon);
   const iconBytes = fs.existsSync(iconSrc) ? fs.readFileSync(iconSrc) : null;
+  const splashSrc = app.splash ? path.resolve(hostDir, app.splash) : null;
+  const splashBytes =
+    splashSrc && fs.existsSync(splashSrc) ? fs.readFileSync(splashSrc) : null;
+  const art: LoadingArt = splashBytes
+    ? { kind: "splash", file: LOADING_SPLASH }
+    : iconBytes
+      ? { kind: "logo", file: LOADING_LOGO }
+      : null;
   const files: Array<[string, string]> = [
     ["Cargo.toml", cargoToml(app, binName)],
     ["src/main.rs", MAIN_RS],
     ["build.rs", BUILD_RS],
     ["tauri.conf.json", tauriConf(input)],
-    [
-      "ui/index.html",
-      loadingHtml(app.productName, iconBytes ? LOADING_LOGO : null),
-    ],
+    ["ui/index.html", loadingHtml(app.productName, art)],
     ["capabilities/default.json", defaultCapability()],
     ["capabilities/connect.json", connectCapability(connectPort)],
     [".gitignore", GITIGNORE],
@@ -333,17 +354,19 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     if (writeIfChanged(path.join(shellDir, rel), content)) changed = true;
   }
   // Stage the icon source next to the shell (tauri icon reads it at build),
-  // and the same full-resolution source as the loading page's logo.
-  if (iconBytes) {
-    for (const dest of [
-      path.join(shellDir, ICON_SOURCE),
-      path.join(shellDir, "ui", LOADING_LOGO),
-    ]) {
-      if (!fs.existsSync(dest) || !fs.readFileSync(dest).equals(iconBytes)) {
-        fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, iconBytes);
-        changed = true;
-      }
+  // the same full-resolution source as the loading page's logo, and the
+  // splash when app.json names one.
+  const copies: Array<[string, Buffer | null]> = [
+    [path.join(shellDir, ICON_SOURCE), iconBytes],
+    [path.join(shellDir, "ui", LOADING_LOGO), iconBytes],
+    [path.join(shellDir, "ui", LOADING_SPLASH), splashBytes],
+  ];
+  for (const [dest, bytes] of copies) {
+    if (!bytes) continue;
+    if (!fs.existsSync(dest) || !fs.readFileSync(dest).equals(bytes)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, bytes);
+      changed = true;
     }
   }
   return { shellDir, binName, changed };

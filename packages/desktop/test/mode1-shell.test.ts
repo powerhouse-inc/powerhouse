@@ -148,6 +148,37 @@ describe("shell projection", () => {
     ).toBe(true);
   });
 
+  it("shows the app.json splash on the loading page instead of the logo", () => {
+    const dir = tempDir("ph-proj-splash-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const splash = solidPng(64, [9, 9, 9, 255]);
+    mkdirSync(path.join(dir, "art"), { recursive: true });
+    writeFileSync(path.join(dir, "art", "splash.png"), splash);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: "./art/splash.png",
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain('<img class="splash" src="./splash.png"');
+    expect(html).not.toContain('class="logo"');
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/splash.png")).equals(splash),
+    ).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
+    ).toContain("/ui/splash.png");
+    // a missing splash file falls back to the logo
+    const fallback = projectShell({
+      hostDir: dir,
+      app: appJsonSchema.parse({ ...validApp, splash: "./art/none.png" }),
+      connectPort: 6494,
+    });
+    expect(
+      readFileSync(path.join(fallback.shellDir, "ui/index.html"), "utf8"),
+    ).toContain('class="logo"');
+  });
+
   it("renders the loading page without a logo when the icon file is missing", () => {
     const dir = tempDir("ph-proj-nologo-");
     const app = appJsonSchema.parse(validApp);
