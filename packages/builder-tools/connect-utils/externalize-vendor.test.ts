@@ -1,9 +1,11 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -12,6 +14,7 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  linkedBuildStamp,
   missingVendorEntries,
   prebuildConnectVendor,
   withVendorBase,
@@ -186,5 +189,41 @@ describe("missingVendorEntries", () => {
         url: "/__vendor__/_powerhousedao_shared_connect.js",
       },
     ]);
+  });
+});
+
+describe("linkedBuildStamp", () => {
+  it("ignores installed packages and follows a linked package's dist", () => {
+    const installed = join(dir, "node_modules", "pkg");
+    mkdirSync(join(installed, "dist"), { recursive: true });
+    writeFileSync(join(installed, "dist", "index.js"), "export {};");
+    expect(linkedBuildStamp(installed)).toBe("");
+
+    const linked = join(tmpdir(), `ph-linked-${Date.now()}`, "pkg");
+    expect(linkedBuildStamp(linked)).toBe("");
+    const dist = join(linked, "dist");
+    mkdirSync(join(dist, "hooks"), { recursive: true });
+    expect(linkedBuildStamp(linked)).toBe("");
+
+    const chunk = join(dist, "hooks", "chunk.js");
+    writeFileSync(join(dist, "index.js"), "export {};");
+    writeFileSync(chunk, "export {};");
+    const at = (seconds: number) => new Date(seconds * 1000);
+    utimesSync(join(dist, "index.js"), at(1000), at(1000));
+    utimesSync(chunk, at(1000), at(1000));
+    utimesSync(dist, at(1000), at(1000));
+    expect(linkedBuildStamp(linked)).toBe("+dist.1000000");
+
+    // Rebuilt in place: the nested file moves, dist's own mtime does not.
+    utimesSync(chunk, at(2000), at(2000));
+    utimesSync(dist, at(1000), at(1000));
+    expect(statSync(dist).mtimeMs).toBe(1000000);
+    expect(linkedBuildStamp(linked)).toBe("+dist.2000000");
+
+    // Source maps and declarations never reach the vendor bundle.
+    writeFileSync(join(dist, "index.js.map"), "{}");
+    writeFileSync(join(dist, "index.d.ts"), "export {};");
+    expect(linkedBuildStamp(linked)).toBe("+dist.2000000");
+    rmSync(dirname(linked), { recursive: true, force: true });
   });
 });

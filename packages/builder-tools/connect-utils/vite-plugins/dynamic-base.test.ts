@@ -146,11 +146,26 @@ describe("connectDynamicBasePlugin generateBundle assertion", () => {
     );
   });
 
-  it("fails the build when a CSS asset carries the token", () => {
+  it("rewrites CSS url()s relative to the stylesheet", () => {
     const css = {
       type: "asset",
       fileName: "assets/index.css",
-      source: `body{background:url(${DYNAMIC_BASE_PLACEHOLDER}bg.png)}`,
+      source:
+        `@font-face{src:url(${DYNAMIC_BASE_PLACEHOLDER}assets/inter.woff2)}` +
+        `body{background:url("${DYNAMIC_BASE_PLACEHOLDER}bg.png")}`,
+    };
+    const { error } = runGenerateBundle({ "assets/index.css": css });
+    expect(css.source).toBe(
+      `@font-face{src:url(./inter.woff2)}body{background:url("../bg.png")}`,
+    );
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("fails the build when a CSS asset carries the token outside url()", () => {
+    const css = {
+      type: "asset",
+      fileName: "assets/index.css",
+      source: `body::after{content:"${DYNAMIC_BASE_PLACEHOLDER}"}`,
     };
     expect(() => runGenerateBundle({ "assets/index.css": css })).toThrow(
       /unrewritten placeholder.*assets\/index\.css/,

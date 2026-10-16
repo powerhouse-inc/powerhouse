@@ -36,6 +36,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -237,6 +238,30 @@ function readCacheHit(
   return null;
 }
 
+// Files a vendor bundle never reads; their writes must not force a rebuild.
+const NON_RUNTIME_FILE = /\.(map|d\.[cm]?ts|tsbuildinfo)$/;
+
+// A linked (workspace) package keeps its version across rebuilds, so the
+// newest mtime in its dist joins the digest; installed packages add nothing.
+export function linkedBuildStamp(pkgRoot: string): string {
+  if (pkgRoot.split(/[\\/]/).includes("node_modules")) return "";
+  let newest = 0;
+  try {
+    const entries = readdirSync(join(pkgRoot, "dist"), {
+      recursive: true,
+      withFileTypes: true,
+    });
+    for (const entry of entries) {
+      if (!entry.isFile() || NON_RUNTIME_FILE.test(entry.name)) continue;
+      const { mtimeMs } = statSync(join(entry.parentPath, entry.name));
+      if (mtimeMs > newest) newest = mtimeMs;
+    }
+  } catch {
+    return "";
+  }
+  return newest ? `+dist.${Math.trunc(newest)}` : "";
+}
+
 /**
  * Resolve the installed version of each spec's owning package, deduped by
  * package name. Resolution order per spec:
@@ -283,7 +308,7 @@ function resolveDepVersions(
         const meta = JSON.parse(
           readFileSync(join(pkgRoot, "package.json"), "utf8"),
         ) as { version?: string };
-        version = String(meta.version ?? "unknown");
+        version = String(meta.version ?? "unknown") + linkedBuildStamp(pkgRoot);
       } catch {
         try {
           const entry = req.resolve(spec);

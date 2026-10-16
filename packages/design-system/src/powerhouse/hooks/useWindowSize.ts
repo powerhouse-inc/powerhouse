@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 
 export const useWindowSize = () => {
-  const [windowSize, setWindowSize] = useState({
-    innerWidth: window.innerWidth,
-    innerHeight: window.innerHeight,
-  });
+  // Zero on the server; the resize handler takes over in the browser.
+  const [windowSize, setWindowSize] = useState(() =>
+    typeof window === "undefined"
+      ? { innerWidth: 0, innerHeight: 0 }
+      : { innerWidth: window.innerWidth, innerHeight: window.innerHeight },
+  );
 
   useEffect(() => {
     const windowSizeHandler = () => {

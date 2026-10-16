@@ -28,6 +28,7 @@ export default defineConfig({
       "react-dom",
       "react/jsx-runtime",
       "react-dom/client",
+      "@powerhousedao/connect/fonts.css",
       // Resolved by the project build, which may swap in a tree with its routes.
       "@powerhousedao/connect/route-tree",
     ],

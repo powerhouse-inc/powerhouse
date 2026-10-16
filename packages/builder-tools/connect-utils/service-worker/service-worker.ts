@@ -176,26 +176,7 @@ registerRoute(
 // time (the token is written once, on the code line, never in prose).
 precacheAndRoute(self.__WB_MANIFEST);
 
-// ── runtime caching (ported 1:1 from the old BASE_WORKBOX, same order) ───────
-// Inter font stays on Google's CDN; cache it after the first online load.
-registerRoute(
-  ({ url }) => url.origin === "https://fonts.googleapis.com",
-  new StaleWhileRevalidate({ cacheName: "google-fonts-stylesheets" }),
-);
-registerRoute(
-  ({ url }) => url.origin === "https://fonts.gstatic.com",
-  new CacheFirst({
-    cacheName: "google-fonts-webfonts",
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 60 * 60 * 24 * 365,
-      }),
-      // statuses [0, 200]: 0 permits opaque cross-origin font responses.
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-    ],
-  }),
-);
+// ── runtime caching ──────────────────────────────────────────────────────────
 // Document-model editors/packages loaded at runtime from the registry CDN. The
 // registry ORIGIN is a runtime value, so match the stable "/-/cdn/" path. Two
 // rules (order matters): unversioned ENTRY points first (SWR — a newer editor
