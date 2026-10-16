@@ -22,6 +22,7 @@ export {
   connectRoutes,
   createConnectRouteTree,
   DRIVE_PENDING_MS,
+  APP_ROUTE_ID,
   HOME_ROUTE_ID,
 } from "./route-tree.js";
 export type {
@@ -38,3 +39,5 @@ export {
   stringifyConnectSearch,
 } from "./search.js";
 export type { ConnectSearch } from "./search.js";
+export { navRoutes, useNavRoutes, useSidebarMode } from "./sidebar.js";
+export type { ConnectNavItem, NavRouteEntry, SidebarMode } from "./sidebar.js";

@@ -10,6 +10,7 @@ export default defineConfig({
     "start-connect": "start-connect.tsx",
     main: "main.tsx",
     router: "src/router/index.ts",
+    layout: "src/layout/index.ts",
     "route-tree": "src/routeTree.gen.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",

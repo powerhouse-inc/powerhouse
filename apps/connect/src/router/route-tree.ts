@@ -9,8 +9,10 @@ export { DRIVE_PENDING_MS } from "./route-components.js";
 export type { ConnectRouteComponents } from "./route-components.js";
 
 /** The home route's id; a tree change that moves it is a type error here. */
-export const HOME_ROUTE_ID = "/_content/" satisfies keyof FileRoutesById;
-const CONTENT_ROUTE_ID = "/_content";
+export const HOME_ROUTE_ID = "/_app/_content/" satisfies keyof FileRoutesById;
+/** The sidebar layout's id; a project's _app/ routes nest in it. */
+export const APP_ROUTE_ID = "/_app";
+const CONTENT_ROUTE_ID = "/_app/_content";
 const DRIVE_PATH = "/d/$driveSlug/{-$nodeSlug}";
 
 type RouteOptions = { id?: string; path?: string };
@@ -32,6 +34,7 @@ export type ConnectRootRoute = typeof routeTree;
 export type ConnectRoutes = {
   routeTree: ConnectRootRoute;
   rootRoute: ConnectRootRoute;
+  appRoute: FileRoutesById[typeof APP_ROUTE_ID];
   contentRoute: FileRoutesById[typeof CONTENT_ROUTE_ID];
   homeRoute: FileRoutesById[typeof HOME_ROUTE_ID];
   driveRoute: FileRoutesById[`${typeof CONTENT_ROUTE_ID}${typeof DRIVE_PATH}`];
@@ -39,10 +42,12 @@ export type ConnectRoutes = {
 
 /** Connect's routes in the generated tree; deployment routes attach to these. */
 export function connectRoutes(): ConnectRoutes {
-  const contentRoute = findChild(routeTree, CONTENT_ROUTE_ID);
+  const appRoute = findChild(routeTree, APP_ROUTE_ID);
+  const contentRoute = findChild(appRoute, "/_content");
   return {
     routeTree,
     rootRoute: routeTree,
+    appRoute: appRoute as ConnectRoutes["appRoute"],
     contentRoute: contentRoute as ConnectRoutes["contentRoute"],
     homeRoute: findChild(contentRoute, "/") as ConnectRoutes["homeRoute"],
     driveRoute: findChild(
