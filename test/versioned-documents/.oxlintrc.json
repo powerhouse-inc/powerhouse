@@ -211,6 +211,20 @@
   },
   "overrides": [
     {
+      // Routes are typed by the tree a build generates, outside the lint's
+      // tsconfig; hosts/connect/routes/tsconfig.json type-checks them instead.
+      "files": ["hosts/connect/routes/**/*.{ts,tsx}"],
+      "rules": {
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        // notFound() and redirect() are router control flow.
+        "typescript/only-throw-error": "off"
+      }
+    },
+    {
       "files": ["**/*.js", "**/*.cjs", "**/*.mjs"],
       "rules": {
         "constructor-super": "error",

@@ -1,0 +1,23 @@
+{
+  // Types the routes with the generated tree, which the project config can't include
+  // (root tsc -b runs before a build writes it). Editors pick this file up for the routes.
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": [".", "../../../.ph/connect-routes.gen.ts"],
+  "exclude": [],
+  "references": [
+    { "path": "../../../../../apps/connect" },
+    { "path": "../../../../../clis/ph-cli" },
+    { "path": "../../../../../packages/analytics-engine/core" },
+    { "path": "../../../../../packages/design-system" },
+    { "path": "../../../../../packages/document-model" },
+    { "path": "../../../../../packages/reactor" },
+    { "path": "../../../../../packages/reactor-api" },
+    { "path": "../../../../../packages/reactor-browser" },
+    { "path": "../../../../../packages/shared" }
+  ]
+}

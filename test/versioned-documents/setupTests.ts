@@ -28,6 +28,10 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 
   // Mock action functions
   setSelectedNode: vi.fn(),
+  useSetSelectedNode: vi.fn(() => vi.fn()),
+  useOpenNode: vi.fn(() => vi.fn()),
+  usePHStore: vi.fn(() => undefined),
+  usePreloadNode: vi.fn(() => vi.fn()),
   setSelectedTimelineItem: vi.fn(),
   showRevisionHistory: vi.fn(),
   downloadDocument: vi.fn(),

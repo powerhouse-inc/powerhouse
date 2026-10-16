@@ -11,7 +11,9 @@
       "editors/*": ["./editors/*/index.ts"],
       "processors/*": ["./processors/*/index.ts"],
       "subgraphs": ["./subgraphs/index.ts"],
-      "subgraphs/*": ["./subgraphs/*/index.ts"]
+      "subgraphs/*": ["./subgraphs/*/index.ts"],
+      // Connect routes with the tree generated from hosts/connect/routes/ (see .ph below).
+      "@powerhousedao/connect/route-tree": ["./.ph/connect-routes.gen.ts"]
     },
     "module": "nodenext",
     "moduleDetection": "force",
@@ -31,8 +33,18 @@
     "noUncheckedSideEffectImports": true,
     "skipLibCheck": true
   },
-  "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"],
+  "include": [
+    "**/*",
+    "./powerhouse.manifest.json",
+    ".ph/connect-routes.gen.ts"
+  ],
+  // hosts/connect/routes/ joins through the generated tree; its own tsconfig.json checks it.
+  "exclude": [
+    "dist",
+    "node_modules",
+    "vitest.config.ts",
+    "hosts/connect/routes"
+  ],
   "references": [
     {
       "path": "../../apps/connect"
