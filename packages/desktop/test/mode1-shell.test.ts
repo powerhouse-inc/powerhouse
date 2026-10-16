@@ -189,6 +189,13 @@ describe("shell projection", () => {
     expect(existsSync(path.join(res.shellDir, "ui/logo.png"))).toBe(false);
   });
 
+  it("reruns the build script when the icon set changes (no stale compiled icon)", () => {
+    const { read } = projectInto();
+    expect(read("build.rs")).toContain(
+      'println!("cargo:rerun-if-changed=icons");',
+    );
+  });
+
   it("bakes the connect port into the remote capability", () => {
     const { read } = projectInto({}, 7777);
     const cap = JSON.parse(read("capabilities/connect.json")) as {
