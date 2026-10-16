@@ -7,6 +7,8 @@ import { Outlet, useRouter } from "@tanstack/react-router";
 export type ConnectRouteComponents = {
   /** What every page shares; it renders an `<Outlet />`. */
   root: RouteComponent;
+  /** The `_app` layout, e.g. the sidebar; it renders an `<Outlet />`. */
+  app?: RouteComponent;
   /** Stays mounted between the home and drive views. */
   content: RouteComponent;
   drivePending?: RouteComponent;
@@ -25,6 +27,11 @@ function useShellComponents(): Partial<ConnectRouteComponents> {
 export function RootView() {
   const { root: Root = Outlet } = useShellComponents();
   return <Root />;
+}
+
+export function AppLayoutView() {
+  const { app: AppLayout = Outlet } = useShellComponents();
+  return <AppLayout />;
 }
 
 export function ContentView() {

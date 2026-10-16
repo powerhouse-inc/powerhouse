@@ -6,7 +6,14 @@
     "type": "root",
     "file": "__root.tsx",
     "children": [
-      { "type": "physical", "pathPrefix": "", "directory": "core" }
+      {
+        "type": "layout",
+        "id": "_app",
+        "file": "core/_app.tsx",
+        "children": [
+          { "type": "physical", "pathPrefix": "", "directory": "core/_app" }
+        ]
+      }
     ]
   },
   "quoteStyle": "double",

@@ -10,6 +10,7 @@ import {
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import type { ConnectRouteComponents } from "../router/route-components.js";
+import { AppLayout } from "./app-layout.js";
 import {
   bindConnectRouter,
   createConnectRouter,
@@ -22,6 +23,7 @@ export const connectRouteComponents: ConnectRouteComponents = {
       <Root />
     </Suspense>
   ),
+  app: () => <AppLayout />,
   content: () => (
     <Suspense name="Drive">
       <Content />

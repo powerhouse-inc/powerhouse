@@ -9,13 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root.js";
-import { Route as ContentRouteImport } from "./routes/core/_content.js";
-import { Route as ContentIndexRouteImport } from "./routes/core/_content/index.js";
-import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/core/_content/d/$driveSlug/{-$nodeSlug}.js";
+import { Route as coreAppRouteImport } from "./routes/core/_app.js";
+import { Route as ContentRouteImport } from "./routes/core/_app/_content.js";
+import { Route as ContentIndexRouteImport } from "./routes/core/_app/_content/index.js";
+import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/core/_app/_content/d/$driveSlug/{-$nodeSlug}.js";
 
+const coreAppRoute = coreAppRouteImport.update({
+  id: "/_app",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const ContentRoute = ContentRouteImport.update({
   id: "/_content",
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => coreAppRoute,
 } as any);
 const ContentIndexRoute = ContentIndexRouteImport.update({
   id: "/",
@@ -39,9 +44,10 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
-  "/_content": typeof ContentRouteWithChildren;
-  "/_content/": typeof ContentIndexRoute;
-  "/_content/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
+  "/_app": typeof coreAppRouteWithChildren;
+  "/_app/_content": typeof ContentRouteWithChildren;
+  "/_app/_content/": typeof ContentIndexRoute;
+  "/_app/_content/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -50,33 +56,41 @@ export interface FileRouteTypes {
   to: "/" | "/d/$driveSlug/{-$nodeSlug}";
   id:
     | "__root__"
-    | "/_content"
-    | "/_content/"
-    | "/_content/d/$driveSlug/{-$nodeSlug}";
+    | "/_app"
+    | "/_app/_content"
+    | "/_app/_content/"
+    | "/_app/_content/d/$driveSlug/{-$nodeSlug}";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  ContentRoute: typeof ContentRouteWithChildren;
+  coreAppRoute: typeof coreAppRouteWithChildren;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/_content": {
-      id: "/_content";
+    "/_app": {
+      id: "/_app";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof coreAppRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_app/_content": {
+      id: "/_app/_content";
       path: "";
       fullPath: "/";
       preLoaderRoute: typeof ContentRouteImport;
-      parentRoute: typeof rootRouteImport;
+      parentRoute: typeof coreAppRoute;
     };
-    "/_content/": {
-      id: "/_content/";
+    "/_app/_content/": {
+      id: "/_app/_content/";
       path: "/";
       fullPath: "/";
       preLoaderRoute: typeof ContentIndexRouteImport;
       parentRoute: typeof ContentRoute;
     };
-    "/_content/d/$driveSlug/{-$nodeSlug}": {
-      id: "/_content/d/$driveSlug/{-$nodeSlug}";
+    "/_app/_content/d/$driveSlug/{-$nodeSlug}": {
+      id: "/_app/_content/d/$driveSlug/{-$nodeSlug}";
       path: "/d/$driveSlug/{-$nodeSlug}";
       fullPath: "/d/$driveSlug/{-$nodeSlug}";
       preLoaderRoute: typeof ContentDDriveSlugChar123NodeSlugChar125RouteImport;
@@ -99,8 +113,19 @@ const ContentRouteChildren: ContentRouteChildren = {
 const ContentRouteWithChildren =
   ContentRoute._addFileChildren(ContentRouteChildren);
 
-const rootRouteChildren: RootRouteChildren = {
+interface coreAppRouteChildren {
+  ContentRoute: typeof ContentRouteWithChildren;
+}
+
+const coreAppRouteChildren: coreAppRouteChildren = {
   ContentRoute: ContentRouteWithChildren,
+};
+
+const coreAppRouteWithChildren =
+  coreAppRoute._addFileChildren(coreAppRouteChildren);
+
+const rootRouteChildren: RootRouteChildren = {
+  coreAppRoute: coreAppRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

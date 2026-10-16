@@ -1,13 +1,15 @@
 // Types by package name, so a project's declarations can name them.
 import type { DriveRouteData } from "@powerhousedao/connect/router";
 import { createFileRoute } from "@tanstack/react-router";
-import { loadDriveRoute } from "../../../../../router/drive-route-loader.js";
+import { loadDriveRoute } from "../../../../../../router/drive-route-loader.js";
 import {
   DRIVE_PENDING_MS,
   DrivePendingView,
-} from "../../../../../router/route-components.js";
+} from "../../../../../../router/route-components.js";
 
-export const Route = createFileRoute("/_content/d/$driveSlug/{-$nodeSlug}")({
+export const Route = createFileRoute(
+  "/_app/_content/d/$driveSlug/{-$nodeSlug}",
+)({
   // Core routes stay in the main chunk when a project build splits its routes.
   codeSplitGroupings: [],
   loader: {
