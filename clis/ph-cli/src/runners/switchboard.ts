@@ -1,8 +1,4 @@
 import {
-  DEFAULT_SWITCHBOARD_PORT,
-  DEFAULT_VETRA_DRIVE_ID,
-} from "@powerhousedao/shared/clis";
-import {
   profileSchema,
   reactorSchema,
   type HostDefinition,
@@ -20,6 +16,7 @@ import {
 } from "@powerhousedao/host-core";
 import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
+import { classicSwitchboardArgs } from "../services/classic-args.js";
 import type { BuildArgs, SwitchboardArgs } from "../types.js";
 
 /**
@@ -49,26 +46,41 @@ export const hostSchema = z.looseObject({
   reactor: reactorSchema.optional(),
 });
 
-function toSwitchboardArgs(
+/** The classic arg shape with the one switch a composition may leave unset. */
+export type SwitchboardRunnerArgs = Omit<SwitchboardArgs, "mcp"> & {
+  mcp: boolean | undefined;
+};
+
+/**
+ * Start from the classic `ph switchboard` args (parsed by the classic
+ * definitions, no flags) and overlay ONLY the keys the host file owns. Every
+ * other key — including the ones the classic command carries as `undefined`,
+ * such as `dbPath` — reaches the service exactly as on the classic path. No
+ * cast: a key the classic shape has and this object lacks is a type error.
+ */
+async function toSwitchboardArgs(
   host: HostDefinition,
   devMode: boolean,
   dbPath: string | undefined,
   composed: boolean,
-): SwitchboardArgs {
+): Promise<SwitchboardRunnerArgs> {
+  const classic = await classicSwitchboardArgs();
   const runner = host.runner;
-  const args: Partial<SwitchboardArgs> = {
-    port:
-      typeof runner.port === "number" ? runner.port : DEFAULT_SWITCHBOARD_PORT,
-    vetraDriveId: DEFAULT_VETRA_DRIVE_ID,
-    // A declared composition owns the carved switches; the plugins set them.
-    // Classic path keeps the bridge defaults.
-    mcp: composed ? undefined : true,
-    useVetraDrive: false,
-    remoteDrives: [],
-    dev: devMode || runner.dev === true,
-    ...(dbPath ? { dbPath } : {}),
+  return {
+    ...classic,
+    port: typeof runner.port === "number" ? runner.port : classic.port,
+    // The verb owns dev mode; `runner.dev` is the host-file spelling of it.
+    dev: devMode || runner.dev === true ? true : classic.dev,
+    // A declared composition owns the carved switches (R2): the mcp plugin's
+    // presence sets it, its absence must deactivate. Classic path: classic.
+    mcp: composed ? undefined : classic.mcp,
+    // The host file's readModel.url. Absent, the key stays present and
+    // undefined exactly as the classic command carries it, so the server's
+    // own split defaults (.ph/reactor-storage + .ph/read-storage) apply.
+    // Omitting the key resurrected a dead service default and put the
+    // reactor and the read model on ONE PGlite dir (two writers, one PGDATA).
+    dbPath: dbPath ?? classic.dbPath,
   };
-  return args as SwitchboardArgs;
 }
 
 /** The slug of the drive the switchboard creates by default
@@ -149,7 +161,7 @@ async function start(
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entriesDeclared =
     (host.runner as { plugins?: unknown }).plugins !== undefined;
-  const args = toSwitchboardArgs(
+  const args = await toSwitchboardArgs(
     host,
     devMode,
     options.dbPath,
@@ -196,7 +208,7 @@ async function start(
       : {}),
   };
 
-  const switchboard = await startSwitchboard(serverArgs as typeof args);
+  const switchboard = await startSwitchboard(serverArgs);
   const port = args.port;
 
   const localDrives = resolvedDrives.filter((d) => d.kind === "local");
