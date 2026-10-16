@@ -6,6 +6,7 @@ import {
   DRIVE_PENDING_MS,
   DrivePendingView,
 } from "../../../../../../router/route-components.js";
+import { driveTitle } from "../../../../../../router/titles.js";
 
 export const Route = createFileRoute(
   "/_app/_content/d/$driveSlug/{-$nodeSlug}",
@@ -35,5 +36,17 @@ export const Route = createFileRoute(
   // The pending view is empty on warm navigations; the router's 500 ms default
   // would hold their commit.
   pendingMinMs: 0,
+  // Names from the store; bindConnectRouter re-runs this when they change.
+  head: ({ match, loaderData }) => ({
+    meta: [
+      {
+        title: driveTitle(
+          match.context.store,
+          loaderData,
+          match.context.appName,
+        ),
+      },
+    ],
+  }),
   pendingComponent: DrivePendingView,
 });

@@ -1,19 +1,24 @@
 import type { DriveArrivals, PHStore } from "@powerhousedao/reactor-browser";
+import { getPHStoreSubscribe } from "@powerhousedao/reactor-browser";
 import type { AnyRoute, Router, RouterHistory } from "@tanstack/react-router";
 import { createRouter } from "@tanstack/react-router";
 import type { ErrorInfo, PropsWithChildren, ReactElement } from "react";
+import { createElement } from "react";
 import { captureException } from "../services/sentry.js";
 import { markRouterNavigations } from "./perf-marks.js";
 import { bindConnectScroll, connectScrollRestoration } from "./scroll.js";
 import type { DriveRouteData } from "./drive-route-loader.js";
+import { isDriveNotFound } from "./drive-route-loader.js";
 import type {
   ConnectRootRoute,
   ConnectRouteComponents,
   ConnectRoutes,
 } from "./route-tree.js";
 import { createConnectNavigation } from "./navigation.js";
+import { DriveNotFoundView, NotFoundView } from "./route-components.js";
 import { addConnectRoutes, connectRoutes } from "./route-tree.js";
 import { parseConnectSearch, stringifyConnectSearch } from "./search.js";
+import { driveTitle } from "./titles.js";
 
 /** The scroll container of the content view. */
 export const CONTENT_VIEW_ID = "content-view";
@@ -29,6 +34,8 @@ export type ConnectRouterOptions = {
   routes?: readonly AnyRoute[];
   /** Reports a route's loader or render error; Sentry by default. */
   onCatch?: (error: unknown, info?: ErrorInfo) => void;
+  /** Ends every document title; "Connect" without one. */
+  appName?: string;
 };
 
 function reportRouteError(error: unknown, info?: ErrorInfo) {
@@ -68,6 +75,7 @@ export function createConnectRouter(
       store: options.store,
       arrivals: options.arrivals,
       components: options.components,
+      appName: options.appName,
     },
     parseSearch: parseConnectSearch,
     stringifySearch: stringifyConnectSearch,
@@ -75,6 +83,12 @@ export function createConnectRouter(
     scrollToTopSelectors: [`#${CONTENT_VIEW_ID}`],
     InnerWrap: options.InnerWrap,
     defaultErrorComponent: options.components.error,
+    // Not per route: a route's notFoundComponent mounts a boundary that
+    // re-renders on every navigation.
+    defaultNotFoundComponent: ({ data }) =>
+      isDriveNotFound(data)
+        ? createElement(DriveNotFoundView, { driveSlug: data.driveSlug })
+        : createElement(NotFoundView),
     defaultOnCatch: options.onCatch ?? reportRouteError,
   });
   return { router, homeRoute, driveRoute };
@@ -104,6 +118,9 @@ export function bindConnectRouter(
     if (drive) {
       if (drive.status === "success" && drive.loaderData) {
         writeSelection(store, drive.loaderData);
+      } else if (matches.some((match) => match.status === "notFound")) {
+        // The drive's 404 page shows no drive.
+        writeSelection(store, undefined);
       }
       return;
     }
@@ -115,10 +132,27 @@ export function bindConnectRouter(
   const navigation = createConnectNavigation(connectRouter);
   store.navigation = navigation;
 
+  // The drive route's head reads names from the store; a rename re-runs it.
+  const shownTitle = () => {
+    const drive = router.state.matches.find((m) => m.routeId === driveRoute.id);
+    return driveTitle(store, drive?.loaderData, router.options.context.appName);
+  };
+  let title = shownTitle();
+  const retitle = () => {
+    const next = shownTitle();
+    if (next === title) return;
+    title = next;
+    void router.invalidate({ filter: (m) => m.routeId === driveRoute.id });
+  };
+
   // Before mount, so the view and scroll restoration see the new selection.
   const unsubscribes = [
     router.subscribe("onBeforeRouteMount", commitSelection),
     router.subscribe("onResolved", commitSelection),
+    router.subscribe("onResolved", () => {
+      title = shownTitle();
+    }),
+    getPHStoreSubscribe(store, "drives")(retitle),
     markRouterNavigations(router),
   ];
   const unbindScroll = bindConnectScroll(router, CONTENT_VIEW_ID);

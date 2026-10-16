@@ -6,7 +6,7 @@ import {
   makeNodeSlug,
   resolveDriveRoute,
 } from "@powerhousedao/reactor-browser";
-import { redirect } from "@tanstack/react-router";
+import { notFound, redirect } from "@tanstack/react-router";
 import type { ConnectRouteComponents } from "./route-components.js";
 
 export type ConnectRouterContext = {
@@ -15,15 +15,31 @@ export type ConnectRouterContext = {
   arrivals?: DriveArrivals;
   /** What the file routes render; `createConnectRouter` sets them. */
   components?: ConnectRouteComponents;
+  /** Ends every document title; "Connect" without one. */
+  appName?: string;
 };
+
+/** The route a missing drive's not-found page replaces: the content view. */
+export const DRIVE_NOT_FOUND_ROUTE_ID = "/_app/_content";
+
+/** A missing drive's not-found data. */
+export type DriveNotFoundData = { driveSlug: string };
+
+export function isDriveNotFound(data: unknown): data is DriveNotFoundData {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    typeof (data as { driveSlug?: unknown }).driveSlug === "string"
+  );
+}
 
 /** What the drive route resolved its params to. */
 export type DriveRouteData = { driveId: string; nodeId?: string };
 
 export type DriveRouteParams = { driveSlug: string; nodeSlug?: string };
 
-/** Resolves a drive route's slugs; a missing drive leads home and a missing
- * node to its drive. */
+/** Resolves a drive route's slugs; a missing drive is not found and a missing
+ * node leads to its drive. */
 export async function loadDriveRoute(options: {
   params: DriveRouteParams;
   context: ConnectRouterContext;
@@ -58,8 +74,12 @@ export async function loadDriveRoute(options: {
       return data;
     }
     case "drive-not-found":
+      // Shown in place of the content view, so no stale drive renders beside it.
       // oxlint-disable-next-line typescript/only-throw-error -- router control flow
-      throw redirect({ to: "/", search: true, replace: true });
+      throw notFound({
+        routeId: DRIVE_NOT_FOUND_ROUTE_ID as never,
+        data: { driveSlug: params.driveSlug } satisfies DriveNotFoundData,
+      });
     case "node-not-found":
       // oxlint-disable-next-line typescript/only-throw-error -- router control flow
       throw redirectTo({

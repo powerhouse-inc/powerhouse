@@ -65,6 +65,7 @@ import {
 import {
   createMemoryHistory,
   createRoute,
+  notFound,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -90,6 +91,7 @@ import {
 } from "../router/connect-router.js";
 import { addConnectRoutes, connectRoutes } from "../router/route-tree.js";
 import { setSentryModule } from "../services/sentry.js";
+import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
 import {
   DrivePending,
   RouteError,
@@ -315,7 +317,9 @@ function mount(
     components: {
       root: Outlet,
       content: ContentProbe,
+      notFound: NotFoundPage,
       drivePending: DrivePending,
+      driveNotFound: DriveNotFoundPage,
       error: RouteError,
       ...overrides,
     },
@@ -331,6 +335,16 @@ function mount(
 }
 
 const selection = () => screen.getByTestId("selection").textContent;
+
+// The _app layout as Connect's shell renders it: a sidebar beside the matches.
+function SidebarLayout() {
+  return (
+    <>
+      <nav data-testid="sidebar" />
+      <Outlet />
+    </>
+  );
+}
 
 // The content view as Connect's shell renders it, around the matches.
 function ScrollRoot() {
@@ -710,6 +724,56 @@ describe("Connect router", () => {
     );
   });
 
+  it("shows the drive's 404 page, inside the layout, when the drive is missing", async () => {
+    const drive = await createDrive("Shown");
+    store.drives = [drive];
+    const { router, history } = mount(
+      `/d/${drive.header.slug}`,
+      undefined,
+      undefined,
+      {
+        app: SidebarLayout,
+      },
+    );
+    await vi.waitFor(() => expect(selection()).toBe(`${drive.header.id}/-`));
+
+    act(() => {
+      void router.navigate({
+        to: "/d/$driveSlug/{-$nodeSlug}",
+        params: { driveSlug: "no-such-drive", nodeSlug: "doc" },
+      });
+    });
+    await vi.waitFor(() =>
+      expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+        "Drive no-such-drive not found",
+      ),
+    );
+    await settle(router);
+    expect(history.location.pathname).toBe("/d/no-such-drive/doc");
+    expect(screen.getByTestId("not-found-path").textContent).toBe(
+      "/d/no-such-drive/doc",
+    );
+    expect(screen.getByTestId("sidebar")).toBeTruthy();
+    // The content view and the drive it showed are gone.
+    expect(screen.queryByTestId("selection")).toBeNull();
+    expect(store.selectedDriveId).toBeUndefined();
+    await vi.waitFor(() => expect(document.title).toBe("Not found · Connect"));
+  });
+
+  it("shows the drive's 404 page only once a deep-linked drive's arrivals settle", async () => {
+    const release = holdArrivals();
+    const { router } = mount("/d/late-drive");
+    await vi.waitFor(() => screen.getByText("Loading drive"));
+    expect(screen.queryByRole("alert")).toBeNull();
+    act(() => release());
+    await vi.waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain(
+        "Drive late-drive not found",
+      ),
+    );
+    await settle(router);
+  });
+
   it("leads to the drive when the document is missing", async () => {
     const drive = await createDrive("Docless");
     store.drives = [drive];
@@ -722,6 +786,72 @@ describe("Connect router", () => {
     );
     await settle(router);
     expect(selection()).toBe(`${drive.header.id}/-`);
+  });
+
+  it("shows a 404 page for an unknown path, inside the layout, with a link home", async () => {
+    const { router, history } = mount(
+      "/no/such/path?theme=dark",
+      undefined,
+      undefined,
+      {
+        app: SidebarLayout,
+      },
+    );
+    await settle(router);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "Page not found",
+    );
+    expect(screen.getByTestId("not-found-path").textContent).toBe(
+      "/no/such/path",
+    );
+    expect(screen.getByTestId("sidebar")).toBeTruthy();
+    expect(history.location.pathname).toBe("/no/such/path");
+    await vi.waitFor(() => expect(document.title).toBe("Not found · Connect"));
+
+    const home = screen.getByRole("link", { name: "Go to the home page" });
+    expect(home.getAttribute("href")).toBe("/?theme=dark");
+    click(home);
+    await vi.waitFor(() => expect(history.location.pathname).toBe("/"));
+    await vi.waitFor(() => expect(screen.getByText("home")).toBeTruthy());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("tells a missing drive from an unknown path", async () => {
+    const views = {
+      notFound: () => <p data-testid="missing">path</p>,
+      driveNotFound: ({ driveSlug }: { driveSlug: string }) => (
+        <p data-testid="missing">drive {driveSlug}</p>
+      ),
+    };
+    const drive = mount("/d/no-such-drive", undefined, undefined, views);
+    await settle(drive.router);
+    expect(screen.getByTestId("missing").textContent).toBe(
+      "drive no-such-drive",
+    );
+    cleanup();
+    unbind?.();
+    const path = mount("/no/such/path", undefined, undefined, views);
+    await settle(path.router);
+    expect(screen.getByTestId("missing").textContent).toBe("path");
+  });
+
+  it("keeps a route's own notFoundComponent for its loader's notFound()", async () => {
+    const { rootRoute } = connectRoutes();
+    const reportRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "report/$driveSlug",
+      loader: () => {
+        // oxlint-disable-next-line typescript/only-throw-error -- router control flow
+        throw notFound();
+      },
+      component: () => <p>report</p>,
+      notFoundComponent: () => <p data-testid="report-missing">no drive</p>,
+    });
+    addConnectRoutes([reportRoute]);
+    const { router, history } = mount("/report/missing");
+    await settle(router);
+    expect(screen.getByTestId("report-missing")).toBeTruthy();
+    expect(history.location.pathname).toBe("/report/missing");
   });
 
   it("preloads without waiting, navigating, or selecting", async () => {
@@ -1292,6 +1422,8 @@ describe("Connect routers in scoped stores", () => {
         components: {
           root: Outlet,
           content: () => <ScopedEditor name={name} nodes={nodes} />,
+          notFound: NotFoundPage,
+          driveNotFound: DriveNotFoundPage,
         },
       });
       const unbindScope = bindConnectRouter(connectRouter, scope);
@@ -1396,6 +1528,49 @@ describe("Connect routes added in code", () => {
     act(() => history.back());
     await vi.waitFor(() => expect(screen.getByTestId("extra")).toBeTruthy());
     expect(history.location.pathname).toBe("/extra");
+  });
+});
+
+describe("Connect route titles", () => {
+  it("titles home, drive, folder and document, and follows a rename", async () => {
+    const created = await createDrive("Titles");
+    const { drive: withFolder, folder } = await createFolder(created, "Plans");
+    const { drive, node } = await createFile(withFolder, "Notes");
+    store.drives = [drive];
+    const { router } = mount("/");
+    await settle(router);
+    await vi.waitFor(() => expect(document.title).toBe("Connect"));
+
+    act(() => setSelectedDrive(drive));
+    await vi.waitFor(() => expect(document.title).toBe("Titles · Connect"));
+    act(() => setSelectedNode(folder));
+    await vi.waitFor(() =>
+      expect(document.title).toBe("Plans · Titles · Connect"),
+    );
+    act(() => setSelectedNode(node));
+    await vi.waitFor(() =>
+      expect(document.title).toBe("Notes · Titles · Connect"),
+    );
+
+    const renamed = await module.client.execute<DocumentDriveDocument>(
+      drive.header.id,
+      "main",
+      [
+        driveDocumentModelModule.actions.updateNode({
+          id: node.id,
+          name: "Minutes",
+        }),
+      ],
+    );
+    act(() => {
+      store.drives = [renamed];
+    });
+    await vi.waitFor(() =>
+      expect(document.title).toBe("Minutes · Titles · Connect"),
+    );
+
+    act(() => setSelectedDrive(undefined));
+    await vi.waitFor(() => expect(document.title).toBe("Connect"));
   });
 });
 
