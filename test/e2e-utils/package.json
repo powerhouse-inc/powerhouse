@@ -36,7 +36,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "tsdown": "catalog:"
+    "@powerhousedao/shared": "workspace:*",
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
   },
   "dependencies": {}
 }

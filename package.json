@@ -75,6 +75,7 @@
     "@powerhousedao/shared": "workspace:*",
     "@swc-node/register": "~1.10.9",
     "@swc/core": "~1.11.1",
+    "@tanstack/eslint-plugin-router": "1.162.0",
     "@types/node": "catalog:",
     "@types/semver": "^7.7.0",
     "@types/yargs": "^17.0.33",
@@ -102,7 +103,8 @@
     "typescript": "catalog:",
     "update-ts-references": "^6.0.0",
     "vitest": "catalog:",
-    "yargs": "^18.0.0"
+    "yargs": "^18.0.0",
+    "zod": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/connect": "workspace:*",
