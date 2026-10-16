@@ -35,12 +35,13 @@ import {
   Listeners,
   type MessageRouter,
 } from "@powerhousedao/reactor/rpc";
+import {
+  SYNC_REMOTES_CHANGED_EVENT,
+  SYNC_STATUS_CHANGED_EVENT,
+} from "./bus-event-ids.js";
 import { opChannel, type IOpChannel } from "./op-channel.js";
 
-// Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
-export const SYNC_STATUS_CHANGED_EVENT = 90001;
-// Carries the worker's remotes after a local peer is adopted or removed.
-export const SYNC_REMOTES_CHANGED_EVENT = 90002;
+export { SYNC_REMOTES_CHANGED_EVENT, SYNC_STATUS_CHANGED_EVENT };
 
 export type SyncStatusChangedBusEvent = {
   documentId: string;
