@@ -87,8 +87,16 @@ readdir(iconsDir, (err, files) => {
   for (const iconName of iconNames) {
     indexContent += `import ${iconName} from "./${iconName}.js";\n`;
   }
+  indexContent += `import { iconNames } from "./names.js";\n`;
   indexContent += `import type { IconName } from "./types.js";\n\n`;
-  indexContent += `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n\n`;
+  indexContent += `export { iconNames };\n\n`;
+  writeFileSync(
+    join(outputDirPath, "names.ts"),
+    prettier.format(
+      `export const iconNames = ${JSON.stringify(iconNames, null, 2)} as const;\n`,
+      { parser: "typescript" },
+    ),
+  );
   indexContent += `export const iconComponents: Record<IconName, (props: IconComponentProps) => React.JSX.Element> = {
     ${iconNames.map((name) => name).join(",\n    ")}
   } as const;\n`;

@@ -1,0 +1,139 @@
+import { Icon, PowerhouseButton } from "#design-system";
+import type { DriveSystemInfoState } from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SharingType } from "@powerhousedao/shared/document-drive";
+import { useState } from "react";
+import type { SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { Disclosure } from "../disclosure/disclosure.js";
+import { Divider } from "../divider/divider.js";
+import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
+import { DeleteDrive } from "./inputs/delete-drive.js";
+import { DriveNameInput } from "./inputs/drive-name-input.js";
+import { Label } from "./inputs/label.js";
+import { LocationInfo } from "./inputs/location-info.js";
+import { SharingTypeFormInput } from "./inputs/sharing-type-form-input.js";
+
+type Inputs = {
+  name: string;
+  sharingType: SharingType;
+  availableOffline: boolean;
+};
+
+type DriveSettingsFormProps = {
+  drive: DocumentDriveDocument;
+  sharingType: SharingType;
+  availableOffline: boolean;
+  systemInfo: DriveSystemInfoState;
+  onSubmit: DriveSettingsFormSubmitHandler;
+  handleCancel: () => void;
+  handleDeleteDrive: () => void;
+};
+
+export type DriveSettingsFormSubmitHandler = SubmitHandler<Inputs>;
+
+export function DriveSettingsForm(props: DriveSettingsFormProps) {
+  const {
+    drive,
+    sharingType,
+    availableOffline,
+    systemInfo,
+    onSubmit,
+    handleDeleteDrive,
+  } = props;
+  const name = drive.header.name;
+
+  const [showLocationSettings, setShowLocationSettings] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
+  const [showDeleteDrive, setShowDeleteDrive] = useState(false);
+
+  const { register, handleSubmit, control } = useForm<Inputs>({
+    mode: "onBlur",
+    defaultValues: {
+      name,
+      sharingType,
+      availableOffline,
+    },
+  });
+
+  const location = sharingType === "PUBLIC" ? "SWITCHBOARD" : sharingType;
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      <DriveNameInput {...register("name")} />
+      <Divider className="my-4" />
+      <Label htmlFor="sharingType">Sharing settings</Label>
+      <SharingTypeFormInput control={control} />
+      <Divider className="my-3" />
+      <Disclosure
+        isOpen={showLocationSettings}
+        onOpenChange={() => setShowLocationSettings(!showLocationSettings)}
+        title="Location"
+      >
+        <LocationInfo location={location} />
+        <AvailableOfflineToggle {...register("availableOffline")} />
+      </Disclosure>
+      <Divider className="my-3" />
+      <Disclosure
+        isOpen={showAbout}
+        onOpenChange={() => setShowAbout(!showAbout)}
+        title="About this drive"
+      >
+        {systemInfo.status === "local" && (
+          <p className="py-2 text-sm text-muted-foreground">
+            Local drive — N/A
+          </p>
+        )}
+        {systemInfo.status === "loading" && (
+          <p className="py-2 text-sm text-muted-foreground">Loading…</p>
+        )}
+        {systemInfo.status === "error" && (
+          <p className="py-2 text-sm text-destructive">
+            Could not load system info
+          </p>
+        )}
+        {systemInfo.status === "ready" && (
+          <div className="py-2 text-sm text-foreground">
+            <div>
+              <span className="font-medium">Version:</span> {systemInfo.version}
+            </div>
+            <div>
+              <span className="font-medium">Git hash:</span>{" "}
+              {systemInfo.gitHash}
+            </div>
+          </div>
+        )}
+      </Disclosure>
+      <Divider className="my-3" />
+      <Disclosure
+        isOpen={showDangerZone}
+        onOpenChange={() => setShowDangerZone(!showDangerZone)}
+        title="Danger zone"
+      >
+        <button
+          className="flex gap-2 py-3 font-semibold text-destructive transition hover:hover-effect"
+          onClick={() => setShowDeleteDrive(true)}
+          type="button"
+        >
+          <Icon name="Trash" />
+          Delete drive
+        </button>
+      </Disclosure>
+      {showDeleteDrive && showDangerZone ? (
+        <DeleteDrive
+          drive={drive}
+          handleDeleteDrive={handleDeleteDrive}
+          onCancel={() => setShowDeleteDrive(false)}
+        />
+      ) : (
+        <>
+          <Divider className="my-3" />
+          <PowerhouseButton className="mb-4 w-full" type="submit">
+            Confirm
+          </PowerhouseButton>
+        </>
+      )}
+    </form>
+  );
+}
