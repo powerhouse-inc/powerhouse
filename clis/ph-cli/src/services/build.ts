@@ -115,6 +115,15 @@ export async function runBuild(args: BuildArgs) {
   const detectResult = await detect();
   const agent = detectResult?.agent ?? "npm";
 
+  // Project routes type-check against the tree generated from them. The
+  // probes mirror resolveConnectRoutesDir, so builder-tools loads only when needed.
+  const routeProbes = ["hosts/connect/routes", ".ph/connect-routes.gen.ts"];
+  if (routeProbes.some((p) => existsSync(join(projectRoot, p)))) {
+    const { resolveConnectRoutesDir, syncConnectRoutes } =
+      await import("@powerhousedao/builder-tools");
+    await syncConnectRoutes(projectRoot, resolveConnectRoutesDir(projectRoot));
+  }
+
   // Before any bundler runs, so declining leaves nothing half built.
   const typesOk = emitTypes(agent, outDir);
   if (!typesOk && !args.ignoreTypeErrors) {

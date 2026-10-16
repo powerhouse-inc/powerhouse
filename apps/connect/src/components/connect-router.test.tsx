@@ -816,6 +816,19 @@ describe("Connect router", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("unselects the drive on an unknown path", async () => {
+    const drive = await createDrive("Lost");
+    store.drives = [drive];
+    const { router } = mount(`/d/${drive.header.slug}`);
+    await settle(router);
+    await vi.waitFor(() => expect(selection()).toBe(`${drive.header.id}/-`));
+    act(() => {
+      void router.navigate({ to: "/no/such/path" as never });
+    });
+    await settle(router);
+    await vi.waitFor(() => expect(store.selectedDriveId).toBeUndefined());
+  });
+
   it("tells a missing drive from an unknown path", async () => {
     const views = {
       notFound: () => <p data-testid="missing">path</p>,
@@ -1528,6 +1541,8 @@ describe("Connect routes added in code", () => {
     act(() => history.back());
     await vi.waitFor(() => expect(screen.getByTestId("extra")).toBeTruthy());
     expect(history.location.pathname).toBe("/extra");
+    // A project's page shows no drive.
+    await vi.waitFor(() => expect(store.selectedDriveId).toBeUndefined());
   });
 });
 

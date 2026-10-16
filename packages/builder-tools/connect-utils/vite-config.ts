@@ -32,6 +32,11 @@ import {
   connectDynamicBasePlugin,
 } from "./vite-plugins/dynamic-base.js";
 import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
+import {
+  connectRouterChunkGroups,
+  connectRoutes,
+  resolveConnectRoutesDir,
+} from "./vite-plugins/connect-routes.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -406,6 +411,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     })
     .filter((p): p is string => p !== null);
 
+  const routesDir = resolveConnectRoutesDir(options.dirname);
+  const routes = connectRoutes(options.dirname, routesDir);
+
   const config: InlineConfig = {
     configFile: false,
     mode,
@@ -431,7 +439,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       },
     },
     resolve: {
-      dedupe: ["react", "react-dom"],
+      alias: [routes.alias],
+      dedupe: ["react", "react-dom", ...routes.dedupe],
       tsconfigPaths: true,
     },
     define: {
@@ -468,11 +477,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       }),
       // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
-      devReactImportmapPlugin(options.dirname),
+      devReactImportmapPlugin(options.dirname, routesDir),
       // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
       // stable URL the tab probes; production builds emit it via
       // prebuildReactorWorker in `ph connect build`.
       reactorWorkerDevPlugin(options.dirname),
+      // The project's routes beside Connect's; ahead of react().
+      ...routes.plugins,
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().
@@ -537,7 +548,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       sourcemap: true,
       // npm can nest privy's optional Solana peers out of its reach; vite
       // stubs them, so named imports from the stub must not fail the build.
-      rolldownOptions: { shimMissingExports: true },
+      rolldownOptions: {
+        shimMissingExports: true,
+        output: {
+          codeSplitting: { groups: connectRouterChunkGroups(routesDir) },
+        },
+      },
     },
   };
   return config;

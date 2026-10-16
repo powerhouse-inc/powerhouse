@@ -41,7 +41,19 @@ export const oxlintConfigTemplate = json`
     "typescript/no-unsafe-unary-minus": "error",
     "typescript/no-unused-expressions": "error",
     "typescript/no-wrapper-object-types": "error",
-    "typescript/only-throw-error": "error",
+    "typescript/only-throw-error": [
+      "error",
+      {
+        // TanStack Router's notFound() and redirect() are thrown as control flow.
+        "allow": [
+          {
+            "from": "package",
+            "package": "@tanstack/router-core",
+            "name": ["NotFoundError", "Redirect"]
+          }
+        ]
+      }
+    ],
     "typescript/prefer-as-const": "error",
     "typescript/prefer-namespace-keyword": "error",
     "typescript/prefer-promise-reject-errors": "error",

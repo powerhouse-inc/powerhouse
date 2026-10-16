@@ -54,6 +54,19 @@ function readProjectPackageInfo(
   }
 }
 
+/** `html` with its `<title>` text set to `appName`, when one is configured. */
+export function withAppTitle(html: string, appName: string | undefined) {
+  if (!appName) return html;
+  const escaped = appName
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  return html.replace(
+    /<title>[^<]*<\/title>/,
+    () => `<title>${escaped}</title>`,
+  );
+}
+
 export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
@@ -114,6 +127,10 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
           return !importer.value?.file?.endsWith(".css");
         });
       },
+    },
+    // The tab shows the app's name before the app sets each page's title.
+    transformIndexHtml(html) {
+      return withAppTitle(html, runtimeConfig.connect.branding?.appName);
     },
     generateBundle() {
       this.emitFile({
