@@ -86,6 +86,13 @@ describe("previewCacheControl", () => {
       previewCacheControl("/__reactor_worker__/reactor.worker.js", ""),
     ).toBe("no-cache");
     expect(previewCacheControl("/index.html", "")).toBeUndefined();
+    for (const p of [
+      "/assets/index-abc.js",
+      "/fonts/inter-abc.woff2",
+      "/__reactor_worker__/assets/pglite-abc.wasm",
+    ]) {
+      expect(previewCacheControl(p, "")).toBe(IMMUTABLE);
+    }
   });
 });
 

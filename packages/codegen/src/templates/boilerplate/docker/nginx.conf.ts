@@ -18,7 +18,9 @@ http {
     gzip_comp_level 6;
     gzip_buffers 16 8k;
     gzip_http_version 1.1;
-    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss image/avif;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss image/avif application/wasm application/octet-stream;
+    # .gz siblings of wasm/data come from ph connect build; nginx:alpine lacks brotli.
+    gzip_static on;
 
     server {
         listen 0.0.0.0:\${PORT};
