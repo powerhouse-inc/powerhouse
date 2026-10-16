@@ -53,13 +53,21 @@ function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
   window.ph?.vetraPackageManager?.updateLocalPackage(pkg as DocumentModelLib);
 }
 
-export function startConnect(localPackage: DocumentModelLib<any>) {
+type LocalPackage = DocumentModelLib<any> | ModuleNamespace;
+
+/** The package itself, or a loader (`() => import("./index.js")`) that keeps it off the boot path. */
+export type LocalPackageSource = LocalPackage | (() => Promise<LocalPackage>);
+
+export function startConnect(localPackage: LocalPackageSource) {
   // Rendered into the same root the skeleton was painted into, so the swap is
   // a reconciliation rather than a second mount point.
   if (root && components) {
-    root.render(
-      <components.AppLoader localPackage={localPackage as DocumentModelLib} />,
-    );
+    const pkg = (
+      typeof localPackage === "function" ? localPackage() : localPackage
+    ) as DocumentModelLib | Promise<DocumentModelLib>;
+    // Load awaits it; this only stops an early rejection being reported as unhandled.
+    if (pkg instanceof Promise) pkg.catch(() => undefined);
+    root.render(<components.AppLoader localPackage={pkg} />);
   }
 
   return {

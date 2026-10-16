@@ -150,6 +150,13 @@ describe("productionVendorInclude", () => {
     expect(include).toContain("zod");
   });
 
+  // Connect imports these roots directly; unvendored, the app bundle duplicates
+  // the design-system icon chunk and the reactor already inside the vendor.
+  it("vendors the roots Connect imports alongside the vendored subpaths", () => {
+    expect(include).toContain("@powerhousedao/design-system");
+    expect(include).toContain("@powerhousedao/reactor");
+  });
+
   it("has no duplicates", () => {
     expect(include.length).toBe(new Set(include).size);
   });

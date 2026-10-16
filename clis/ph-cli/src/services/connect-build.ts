@@ -1,6 +1,7 @@
 import {
   DEFAULT_VENDOR_INCLUDE,
   DYNAMIC_BASE_PLACEHOLDER,
+  findPackageRoot,
   getConnectBaseViteConfig,
   missingVendorEntries,
   prebuildConnectVendor,
@@ -95,6 +96,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       base: appBase,
       nodeEnv: "production",
       errorRef,
+      ...connectOwnVendorDeps(dirname),
     });
     if (!vendor) {
       console.error(
@@ -219,8 +221,28 @@ export function productionVendorInclude(): string[] {
       ...DEFAULT_VENDOR_INCLUDE.filter((s) => s !== "@powerhousedao/connect"),
       ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
       ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+      // Connect imports these roots too; unvendored, the app re-bundles their shared chunks.
+      "@powerhousedao/design-system",
+      "@powerhousedao/reactor",
     ]),
   ];
+}
+
+/** Connect's own deps that vendored packages also bundle; projects don't install them. */
+export const CONNECT_OWN_VENDOR_DEPS = [
+  "kysely",
+  "tailwind-merge",
+  "@renown/sdk",
+  "@renown/sdk/crypto",
+  "@renown/sdk/trust",
+  "@powerhousedao/reactor-attachments/client",
+];
+
+export function connectOwnVendorDeps(dirname: string): {
+  ownDeps?: { specs: string[]; from: string };
+} {
+  const from = findPackageRoot(dirname, "@powerhousedao/connect");
+  return from ? { ownDeps: { specs: CONNECT_OWN_VENDOR_DEPS, from } } : {};
 }
 
 /**

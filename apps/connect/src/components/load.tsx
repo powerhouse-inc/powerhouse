@@ -13,13 +13,13 @@ import { type ReactNode } from "react";
 import { loadRuntimeConfig } from "../runtime-config.js";
 
 export async function loadComponent(
-  localPackage: DocumentModelLib | undefined,
+  localPackage: DocumentModelLib | Promise<DocumentModelLib> | undefined,
   store: PHStore,
 ) {
   await seedPendingPgVersion();
   await Promise.all([detectReactorPgMajor(), detectMigrationMajor()]);
   await loadRuntimeConfig();
-  await createReactor(localPackage, store);
+  await createReactor(await localPackage, store);
   return {
     default: ({ children }: { children?: ReactNode }) => {
       initTheme();

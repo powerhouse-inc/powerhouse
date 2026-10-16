@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   utimesSync,
@@ -14,9 +15,11 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  findPackageRoot,
   linkedBuildStamp,
   missingVendorEntries,
   prebuildConnectVendor,
+  resolveOwnDeps,
   withVendorBase,
   type PrebuiltVendor,
 } from "./externalize-vendor.js";
@@ -108,6 +111,30 @@ describe("prebuildConnectVendor production options", () => {
     const v = result as PrebuiltVendor;
     expect(v.imports["zod"]).toBe("/__vendor__/zod.js");
     expect(v.versions["zod"]).toBe(ZOD_VERSION);
+
+    // zod's entries drop the locales namespace (it pins every locale); zod/locales keeps them.
+    type ZodLike = {
+      locales?: unknown;
+      core: { locales?: unknown };
+      string(): {
+        safeParse(v: unknown): { error?: { issues: { message: string }[] } };
+      };
+    };
+    const zod = (await import(
+      pathToFileURL(join(vendorDir, "zod.js")).href
+    )) as { z: ZodLike; default: unknown };
+    expect("locales" in zod).toBe(false);
+    expect(zod.z.locales).toBeUndefined();
+    expect(zod.z.core.locales).toBeUndefined();
+    expect(zod.default).toBe(zod.z);
+    expect(zod.z.string().safeParse(1).error?.issues[0].message).toBe(
+      "Invalid input: expected string, received number",
+    );
+    expect(v.imports["zod/locales"]).toBe("/__vendor__/zod_locales.js");
+    const locales = (await import(
+      pathToFileURL(join(vendorDir, "zod_locales.js")).href
+    )) as Record<string, unknown>;
+    expect(typeof locales.fr).toBe("function");
   }, 240_000);
 
   it("serves a cache hit on an identical second call", async () => {
@@ -225,5 +252,37 @@ describe("linkedBuildStamp", () => {
     writeFileSync(join(dist, "index.d.ts"), "export {};");
     expect(linkedBuildStamp(linked)).toBe("+dist.2000000");
     rmSync(dirname(linked), { recursive: true, force: true });
+  });
+});
+
+describe("resolveOwnDeps", () => {
+  it("resolves an app's deps from the app's install dir, walking up node_modules", () => {
+    const base = mkdtempSync(join(tmpdir(), "own-deps-"));
+    const pkg = join(base, "node_modules", "lib");
+    mkdirSync(join(pkg, "esm"), { recursive: true });
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({
+        name: "lib",
+        exports: { ".": { import: "./esm/index.js" }, "./sub": "./sub.js" },
+      }),
+    );
+    writeFileSync(join(pkg, "esm", "index.js"), "export {};");
+    writeFileSync(join(pkg, "sub.js"), "export {};");
+    const app = join(base, "node_modules", "app");
+    mkdirSync(app, { recursive: true });
+
+    expect(findPackageRoot(app, "lib")).toBe(realpathSync(pkg));
+    const own = resolveOwnDeps(app, [
+      "lib",
+      "lib/sub",
+      "lib/missing",
+      "absent",
+    ]);
+    expect(own).toEqual({
+      lib: realpathSync(join(pkg, "esm", "index.js")),
+      "lib/sub": realpathSync(join(pkg, "sub.js")),
+    });
+    rmSync(base, { recursive: true, force: true });
   });
 });

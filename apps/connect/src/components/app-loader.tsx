@@ -32,7 +32,9 @@ function connectPHStore() {
   return store;
 }
 
-export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
+export const AppLoader = (props: {
+  localPackage?: DocumentModelLib | Promise<DocumentModelLib>;
+}) => {
   const phStore = connectPHStore();
   const Load = lazy(() =>
     import("./load.js").then((m) =>
