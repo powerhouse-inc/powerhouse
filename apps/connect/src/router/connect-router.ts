@@ -109,7 +109,7 @@ export function bindConnectRouter(
   connectRouter: ConnectRouterBundle,
   store: PHStore,
 ) {
-  const { router, homeRoute, driveRoute, settingsRoute } = connectRouter;
+  const { router, driveRoute } = connectRouter;
 
   // Only committed matches select; pending ones keep the open view.
   const commitSelection = () => {
@@ -124,12 +124,11 @@ export function bindConnectRouter(
       }
       return;
     }
-    // Settings shows no drive, so none stays marked in the sidebar.
-    const unselected = matches.find(
-      (match) =>
-        match.routeId === homeRoute.id || match.routeId === settingsRoute.id,
-    );
-    if (unselected?.status === "success") writeSelection(store, undefined);
+    // Any other page (home, settings, a project's, a 404) shows no drive.
+    const shown = matches.at(-1)?.status;
+    if (shown === "success" || shown === "notFound") {
+      writeSelection(store, undefined);
+    }
   };
 
   // Set once, before the first render; selection setters navigate from the start.

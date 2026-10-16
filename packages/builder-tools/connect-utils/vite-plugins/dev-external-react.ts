@@ -8,6 +8,7 @@ import {
   prebuildConnectVendor,
   type PrebuiltVendor,
 } from "../externalize-vendor.js";
+import { resolveConnectRoutesDir } from "./connect-routes.js";
 import { BUNDLED_PACKAGES_DEV_URL } from "./ph-bundled-packages.js";
 
 const REACT_DEPS = [
@@ -50,6 +51,11 @@ const VENDOR_EXTRA = (process.env.PH_CONNECT_VENDOR_EXTRA ?? "")
   .map((s) => s.trim())
   .filter(Boolean);
 const HEAVY_LIBS = [...DEFAULT_VENDOR_INCLUDE, ...VENDOR_EXTRA];
+// A project with routes compiles Connect's route tree, so Connect is not vendored.
+const heavyLibsFor = (routesDir: string | undefined) =>
+  routesDir
+    ? HEAVY_LIBS.filter((lib) => lib !== "@powerhousedao/connect")
+    : HEAVY_LIBS;
 
 // Vite serves dev module URLs under the resolved `base`. Join base + path
 // while collapsing the double slash so `base: "/"` stays byte-identical.
@@ -105,16 +111,18 @@ function externalizePlugin(externals: Externals): Plugin | undefined {
 // import map nor the externalizer touch them.
 export async function devReactImportmapPlugin(
   projectRoot: string = process.cwd(),
+  routesDir = resolveConnectRoutesDir(projectRoot),
 ): Promise<Plugin | Plugin[]> {
   let namedExports = new Map<string, string[]>();
   let base = "/";
   let vendor: PrebuiltVendor | null = null;
+  const heavyLibs = heavyLibsFor(routesDir);
 
   if (VENDOR_MODE) {
     const errorRef: { message?: string } = {};
     vendor = await prebuildConnectVendor({
       dirname: projectRoot,
-      include: HEAVY_LIBS,
+      include: heavyLibs,
       errorRef,
     });
     if (!vendor) {
@@ -149,9 +157,9 @@ export async function devReactImportmapPlugin(
         // them would pre-bundle them anyway (and leave their excluded deps —
         // e.g. zod subpaths — as unmapped bare imports). Drop them from include
         // and exclude them so the optimizer never touches them.
-        HEAVY_LIBS.forEach((d) => include.delete(d));
+        heavyLibs.forEach((d) => include.delete(d));
         cfg.optimizeDeps.exclude = [
-          ...new Set([...(cfg.optimizeDeps.exclude ?? []), ...HEAVY_LIBS]),
+          ...new Set([...(cfg.optimizeDeps.exclude ?? []), ...heavyLibs]),
         ];
       }
       cfg.optimizeDeps.include = [...include];

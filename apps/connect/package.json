@@ -10,6 +10,9 @@
   },
   "files": [
     "dist",
+    "src/routes",
+    "src/router",
+    "src/routeTree.gen.ts",
     "style.css",
     "fonts.css",
     "nginx.conf",
@@ -46,9 +49,11 @@
       "types": "./dist/route-tree.d.ts",
       "import": "./dist/route-tree.js"
     },
+    "./routes/*": "./src/routes/*.tsx",
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css",
-    "./fonts.css": "./fonts.css"
+    "./fonts.css": "./fonts.css",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "./dist/main.js",
