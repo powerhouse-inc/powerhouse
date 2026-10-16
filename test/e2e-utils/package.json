@@ -29,7 +29,8 @@
   "scripts": {
     "build": "tsdown",
     "tsc": "tsc",
-    "lint": "cd ../.. && oxlint test/e2e-utils"
+    "lint": "cd ../.. && oxlint test/e2e-utils",
+    "test": "vitest --run"
   },
   "peerDependencies": {
     "@playwright/test": "^1.60.0"
