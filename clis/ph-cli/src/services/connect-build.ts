@@ -26,6 +26,10 @@ import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
+import {
+  isPrecompressEnabled,
+  precompressAssets,
+} from "../utils/precompress.js";
 import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
@@ -200,6 +204,15 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
           unbacked.map((e) => `  ${e.spec} -> ${e.url}`).join("\n"),
       );
     }
+  }
+
+  // Runs after the PWA plugin, so the siblings never enter the precache list.
+  if (isPrecompressEnabled()) {
+    const r = await precompressAssets(outDirAbs);
+    console.log(
+      `ph connect build: precompressed ${r.files} wasm/data files ` +
+        `(${r.written} .gz written, ${(r.outputBytes / 1e6).toFixed(1)} MB) in ${(r.ms / 1000).toFixed(1)}s`,
+    );
   }
 }
 
