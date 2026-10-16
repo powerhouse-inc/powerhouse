@@ -72,6 +72,7 @@ export interface IChannel {
 
   /**
    * Registers a callback that fires when the connection state changes.
+   * It also fires when a pull first succeeds, or when paging starts or ends, even if the state stays "connected".
    * Returns an unsubscribe function.
    */
   onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void;

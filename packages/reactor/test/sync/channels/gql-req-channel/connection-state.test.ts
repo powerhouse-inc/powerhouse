@@ -660,6 +660,176 @@ describe("GqlRequestChannel Connection State", () => {
     expect(snapshots).toHaveLength(1);
   });
 
+  it("reports the end of a paged pull while staying connected", async () => {
+    let polls = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      polls++;
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: polls === 1,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+    const snapshots: ConnectionStateSnapshot[] = [];
+    channel.onConnectionStateChange((snapshot) => {
+      snapshots.push({ ...snapshot });
+    });
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(snapshots.map((s) => [s.state, s.receivingPages])).toEqual([
+      ["connected", true],
+    ]);
+    await manualTimer.tick();
+    expect(snapshots.map((s) => [s.state, s.receivingPages])).toEqual([
+      ["connected", true],
+      ["connected", false],
+    ]);
+    await manualTimer.tick();
+    expect(snapshots).toHaveLength(2);
+  });
+
+  it("reports a paused timer's first poll while it already reads connected", async () => {
+    global.fetch = successFetch() as unknown as typeof global.fetch;
+    class PausedPollTimer extends ManualPollTimer {
+      isPaused(): boolean {
+        return true;
+      }
+    }
+    const timer = new PausedPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      timer,
+    );
+    const snapshots: ConnectionStateSnapshot[] = [];
+    channel.onConnectionStateChange((snapshot) => {
+      snapshots.push({ ...snapshot });
+    });
+
+    await channel.init();
+    expect(snapshots.map((s) => s.state)).toEqual(["connected"]);
+    expect(snapshots[0].lastSuccessUtcMs).toBe(0);
+
+    await timer.tick();
+    expect(snapshots).toHaveLength(2);
+    expect(snapshots[1].state).toBe("connected");
+    expect(snapshots[1].lastSuccessUtcMs).toBeGreaterThan(0);
+
+    await timer.tick();
+    expect(snapshots).toHaveLength(2);
+    await channel.shutdown();
+  });
+
+  it("ends paging when polling is cut off and pushes what paging held back", async () => {
+    let polls = 0;
+    let pushes = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pushSyncEnvelopes")) {
+        pushes++;
+        return {
+          ok: true,
+          json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+        };
+      }
+      polls++;
+      if (polls === 2) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [{ message: "Channel not found" }],
+            }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+                hasMore: true,
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().receivingPages).toBe(true);
+
+    channel.outbox.add(createMockSyncOperation("op-1", "remote-1", 1));
+    await vi.advanceTimersByTimeAsync(600);
+    expect(pushes).toBe(0);
+
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("reconnecting");
+    expect(channel.getConnectionState().receivingPages).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(pushes).toBe(1);
+
+    await channel.shutdown();
+    expect(channel.getConnectionState().receivingPages).toBe(false);
+  });
+
   it("no-op transitions do not fire callbacks", async () => {
     global.fetch = successFetch() as unknown as typeof global.fetch;
     const manualTimer = new ManualPollTimer();
