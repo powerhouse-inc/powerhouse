@@ -110,10 +110,12 @@ export const VENDOR_EXTERNAL = [
 
 export interface PrebuiltVendor {
   vendorDir: string;
-  /** import map: bare specifier -> "/__vendor__/<entry>.js" (base-relative). */
+  /** import map: bare specifier -> "/__vendor__/<entry>-<hash>.js" (base-relative). */
   imports: Record<string, string>;
   /** Resolved versions of every included + external package. */
   versions: Record<string, string>;
+  /** Content-hashed shared-deps module ("/__vendor__/shared-deps-<hash>.js", base-relative). */
+  sharedDeps: string;
 }
 
 /** URL prefix the vendor bundle is served under by the dev middleware. */
@@ -154,9 +156,12 @@ export async function prebuildConnectVendor(
     [...include, ...external],
     stamps,
   );
-  const versionDigest = resolveVersionDigest(versions, own, stamps);
   const base = options.base ?? VENDOR_DYNAMIC_BASE;
   const nodeEnv = options.nodeEnv ?? "development";
+  const versionDigest = resolveVersionDigest(versions, own, stamps, {
+    base,
+    nodeEnv,
+  });
 
   try {
     const hit = readCacheHit(importMapPath, include, external, versionDigest);
@@ -217,7 +222,12 @@ interface VendorCacheMeta {
   versionDigest?: string;
   imports: Record<string, string>;
   versions?: Record<string, string>;
+  sharedDeps?: string;
+  base?: string;
+  nodeEnv?: string;
 }
+
+type VendorCacheHit = Omit<PrebuiltVendor, "vendorDir">;
 
 // Return the cached import map + versions iff the specifier sets AND the
 // resolved-version digest all match; otherwise null (forces a rebuild).
@@ -226,10 +236,7 @@ function readCacheHit(
   include: string[],
   external: string[],
   versionDigest: string,
-): {
-  imports: Record<string, string>;
-  versions: Record<string, string>;
-} | null {
+): VendorCacheHit | null {
   if (!existsSync(importMapPath)) return null;
   try {
     const cached = JSON.parse(
@@ -238,9 +245,14 @@ function readCacheHit(
     if (
       sameSet(cached.include, include) &&
       sameSet(cached.external, external) &&
-      cached.versionDigest === versionDigest
+      cached.versionDigest === versionDigest &&
+      typeof cached.sharedDeps === "string"
     ) {
-      return { imports: cached.imports, versions: cached.versions ?? {} };
+      return {
+        imports: cached.imports,
+        versions: cached.versions ?? {},
+        sharedDeps: cached.sharedDeps,
+      };
     }
   } catch {
     // partial/corrupt import-map.json → treat as miss
@@ -363,12 +375,15 @@ function resolveDepVersions(
 // package.json). A bump or branch checkout that changes any version yields a
 // different digest, invalidating the cache. Unresolvable specs contribute a
 // sentinel so they don't silently collide.
-function resolveVersionDigest(
+export function resolveVersionDigest(
   versions: Record<string, string>,
   own: Record<string, string>,
   stamps: Map<string, string>,
+  build: { base: string; nodeEnv: string },
 ): string {
   const h = createHash("sha256");
+  // The base is baked into emitted asset/preload URLs, NODE_ENV into the code.
+  h.update(`base:${build.base}\nnodeEnv:${build.nodeEnv}\n`);
   // Fold in the build worker so a logic/build-option change busts stale bundles,
   // not just a dep version bump.
   const workerHash = createHash("sha256")
@@ -471,10 +486,7 @@ async function waitForCacheHit(
   external: string[],
   versionDigest: string,
   lockDir: string,
-): Promise<{
-  imports: Record<string, string>;
-  versions: Record<string, string>;
-} | null> {
+): Promise<VendorCacheHit | null> {
   const deadline = Date.now() + LOCK_STALE_MS;
   while (Date.now() < deadline) {
     const hit = readCacheHit(importMapPath, include, external, versionDigest);
@@ -722,10 +734,7 @@ async function buildVendorAtomic(
   base: string,
   nodeEnv: "development" | "production",
   own: Record<string, string> = {},
-): Promise<{
-  imports: Record<string, string>;
-  versions: Record<string, string>;
-} | null> {
+): Promise<VendorCacheHit | null> {
   const parent = pathDirname(vendorDir);
   mkdirSync(parent, { recursive: true });
   const tmpDir = mkdtempSync(join(parent, ".ph-vendor.tmp-"));
@@ -765,7 +774,8 @@ async function buildVendorAtomic(
     }
     meta.versionDigest = versionDigest;
     meta.versions = versions;
-    writeFileSync(tmpMap, JSON.stringify(meta, null, 2));
+    meta.base = base;
+    meta.nodeEnv = nodeEnv;
 
     // The runtime data module: a real .js (not .json) so the Workbox precache
     // glob picks it up and the main thread can dynamic-import it without
@@ -775,12 +785,19 @@ async function buildVendorAtomic(
     // because the dev plugin applies the base itself). The worker resolves
     // these against the page origin, so a base-less path would point at
     // /__vendor__/ on a subpath deploy and 404.
-    writeFileSync(
-      join(tmpDir, "shared-deps.js"),
+    const sharedDepsSource =
       `export const imports = ${JSON.stringify(
         withVendorBase(meta.imports, base),
-      )};\n` + `export const versions = ${JSON.stringify(versions)};\n`,
-    );
+      )};\n` + `export const versions = ${JSON.stringify(versions)};\n`;
+    // The hashed copy is what production loads; the stable name serves dev.
+    const sharedDepsFile = `shared-deps-${createHash("sha256")
+      .update(sharedDepsSource)
+      .digest("hex")
+      .slice(0, 12)}.js`;
+    writeFileSync(join(tmpDir, sharedDepsFile), sharedDepsSource);
+    writeFileSync(join(tmpDir, "shared-deps.js"), sharedDepsSource);
+    meta.sharedDeps = VENDOR_URL_PREFIX + sharedDepsFile;
+    writeFileSync(tmpMap, JSON.stringify(meta, null, 2));
 
     // Swap: move any existing dir aside, rename temp into place, drop the old.
     const oldDir = `${vendorDir}.old-${process.pid}-${Date.now()}`;
@@ -796,7 +813,7 @@ async function buildVendorAtomic(
     // build output.
     chmodSync(vendorDir, 0o755);
     rmSync(oldDir, { recursive: true, force: true });
-    return { imports: meta.imports, versions };
+    return { imports: meta.imports, versions, sharedDeps: meta.sharedDeps };
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });
     throw err;
@@ -988,7 +1005,7 @@ const phVendorResolve = {
     return resolved;
   },
 };
-await build({
+const result = await build({
   root: dirname, configFile: false, logLevel: 'error',
   // Caller-provided build base (or the dynamic placeholder default):
   // connectDynamicBasePlugin rewrites emitted chunk/asset URLs to resolve
@@ -1014,12 +1031,20 @@ await build({
     outDir: vendorDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext', cssCodeSplit: true,
     rollupOptions: {
       input, preserveEntrySignatures: 'strict',
-      output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]', ...(ownGroups.length ? { codeSplitting: { groups: ownGroups } } : {}) },
+      // Content-hashed entry names: each build's import map points at new URLs.
+      output: { format: 'es', entryFileNames: '[name]-[hash].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]', ...(ownGroups.length ? { codeSplitting: { groups: ownGroups } } : {}) },
     },
   },
 });
 rmSync(srcDir, { recursive: true, force: true });
+const emitted = {};
+for (const out of Array.isArray(result) ? result : [result]) {
+  for (const chunk of out?.output ?? []) {
+    if (chunk.type === 'chunk' && chunk.isEntry) emitted[chunk.name] = chunk.fileName;
+  }
+}
 const imports = {};
-for (const spec of include) imports[spec] = urlPrefix + entryName(spec) + '.js';
+// An entry the build never emitted keeps its unhashed name; the caller reports it as missing.
+for (const spec of include) imports[spec] = urlPrefix + (emitted[entryName(spec)] ?? entryName(spec) + '.js');
 writeFileSync(join(vendorDir, 'import-map.json'), JSON.stringify({ include, external, imports }, null, 2));
 `;

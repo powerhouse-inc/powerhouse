@@ -1,6 +1,7 @@
 import {
   DEFAULT_VENDOR_INCLUDE,
   DYNAMIC_BASE_PLACEHOLDER,
+  directoryContentDigest,
   findPackageRoot,
   getConnectBaseViteConfig,
   missingVendorEntries,
@@ -155,7 +156,14 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       ? {
           imports: vendorImportMapEntries(vendor.imports, appBase),
           versions: vendor.versions,
+          sharedDeps: vendorImportMapEntries(
+            { sharedDeps: vendor.sharedDeps },
+            appBase,
+          ).sharedDeps,
         }
+      : undefined,
+    reactorWorkerVersion: reactorWorker
+      ? directoryContentDigest(join(outDirAbs, "__reactor_worker__"))
       : undefined,
   });
 

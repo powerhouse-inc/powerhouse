@@ -2,8 +2,11 @@
 // page import map at it, instead of resolving react/react-dom from esm.sh.
 import { spawn } from "node:child_process";
 import {
+  chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -71,30 +74,67 @@ export interface ReactSelfHostOptions {
   dev?: boolean;
 }
 
-// Emits one React variant (dev or prod, per options.dev) into the dist and
-// injects a static import map pointing every react/react-dom subpath at it.
+// Import map for the self-hosted React, from the build's spec -> emitted file table.
+export function reactImportMap(
+  base: string,
+  files: Record<string, string>,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const [spec, file] of Object.entries(files)) {
+    map[spec] = `${base}${REACT_URL_DIR}/${file}`;
+    // Subpaths imported with their extension resolve to the same instance.
+    if (spec.includes("/")) map[`${spec}.js`] = map[spec];
+  }
+  // No `react/` catch-all: emitted names are hashed, so it could only reach a 404.
+  return map;
+}
+
+// Content-hashed React entries: built before the HTML transform into staging
+// (the out dir may be emptied), copied into the dist at closeBundle.
 export function reactSelfHostPlugin(options: ReactSelfHostOptions): Plugin {
   const entries = resolveReactEntries(options.dirname);
   let absOutDir = resolve(options.dirname, "dist");
+  let base = "/";
+  let staging: string | undefined;
+  let files: Record<string, string> = {};
   let importMap: Record<string, string> = {};
   return {
     name: "ph-react-self-host",
     apply: "build",
     configResolved(config) {
       absOutDir = resolve(config.root, config.build.outDir);
-      // Entry URLs mirror the specifier (react-dom/client -> __react__/react-dom/client.js)
-      // so the trailing-slash catch-alls below resolve any subpath to the same file.
-      importMap = Object.fromEntries(
-        Object.keys(entries).map((spec) => [
-          spec,
-          `${config.base}${REACT_URL_DIR}/${spec}.js`,
-        ]),
+      base = config.base;
+    },
+    async buildStart() {
+      files = {};
+      importMap = {};
+      if (!Object.keys(entries).length) return;
+      // Inside the project: the generated entries import react bare.
+      const stagingParent = join(options.dirname, "node_modules");
+      staging = mkdtempSync(
+        join(
+          existsSync(stagingParent) ? stagingParent : options.dirname,
+          ".ph-react-self-host-",
+        ),
       );
-      // Catch-all per package: an unenumerated react/* import resolves to the single
-      // self-hosted instance (same-origin) instead of failing import-map resolution.
-      for (const pkg of REACT_PACKAGES) {
-        importMap[`${pkg}/`] = `${config.base}${REACT_URL_DIR}/${pkg}/`;
+      const { ok, stderr } = await runReactBuild(
+        options.dirname,
+        staging,
+        entries,
+        options.dev ? "development" : "production",
+      );
+      if (!ok) {
+        this.error(
+          `react self-host build failed${stderr.trim() ? `:\n${stderr.trim()}` : ""}`,
+        );
       }
+      const manifest = join(staging, FILES_MANIFEST);
+      files = JSON.parse(readFileSync(manifest, "utf8")) as Record<
+        string,
+        string
+      >;
+      rmSync(manifest, { force: true });
+      importMap = reactImportMap(base, files);
     },
     transformIndexHtml() {
       if (!Object.keys(importMap).length) return;
@@ -107,22 +147,31 @@ export function reactSelfHostPlugin(options: ReactSelfHostOptions): Plugin {
         },
       ];
     },
-    async closeBundle() {
-      if (!Object.keys(entries).length) return;
-      const { ok, stderr } = await runReactBuild(
-        options.dirname,
-        join(absOutDir, REACT_URL_DIR),
-        entries,
-        options.dev ? "development" : "production",
+    closeBundle() {
+      if (!staging) return;
+      const dest = join(absOutDir, REACT_URL_DIR);
+      rmSync(dest, { recursive: true, force: true });
+      mkdirSync(absOutDir, { recursive: true });
+      cpSync(staging, dest, { recursive: true });
+      // Newer Node cpSync keeps mkdtemp's 0700, which a server user can't read.
+      chmodSync(dest, 0o755);
+      rmSync(staging, { recursive: true, force: true });
+      staging = undefined;
+      const missing = Object.entries(files).filter(
+        ([, file]) => !existsSync(join(dest, file)),
       );
-      if (!ok) {
+      if (missing.length) {
         this.error(
-          `react self-host build failed${stderr.trim() ? `:\n${stderr.trim()}` : ""}`,
+          `react self-host: import map entries have no file in ${dest}:\n` +
+            missing.map(([spec, file]) => `  ${spec} -> ${file}`).join("\n"),
         );
       }
     },
   };
 }
+
+// spec -> emitted file, written by the build worker next to its output.
+const FILES_MANIFEST = "files.json";
 
 // Spawn a throwaway worker that builds the React family; peak build memory is
 // reclaimed when the subprocess exits.
@@ -193,7 +242,7 @@ for (const [spec, file] of Object.entries(entries)) {
   input[spec] = entryFile;
 }
 try {
-  await build({
+  const result = await build({
     root: dirname, configFile: false, logLevel: 'error',
     base: './', publicDir: false,
     define: { 'process.env.NODE_ENV': JSON.stringify(nodeEnv) },
@@ -202,11 +251,18 @@ try {
       outDir, emptyOutDir: false, minify: nodeEnv === 'production', target: 'esnext',
       rollupOptions: {
         input, preserveEntrySignatures: 'strict',
-        output: { format: 'es', entryFileNames: '[name].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
+        output: { format: 'es', entryFileNames: '[name]-[hash].js', chunkFileNames: 'chunks/[name]-[hash].js', assetFileNames: 'assets/[name]-[hash][extname]' },
       },
     },
   });
   rmSync(srcDir, { recursive: true, force: true });
+  const files = {};
+  for (const out of Array.isArray(result) ? result : [result]) {
+    for (const chunk of out?.output ?? []) {
+      if (chunk.type === 'chunk' && chunk.isEntry) files[chunk.name] = chunk.fileName;
+    }
+  }
+  writeFileSync(join(outDir, 'files.json'), JSON.stringify(files));
   // Force exit: rolldown can leave native worker threads alive that keep the
   // event loop open, hanging the parent's spawn() promise indefinitely.
   process.exit(0);

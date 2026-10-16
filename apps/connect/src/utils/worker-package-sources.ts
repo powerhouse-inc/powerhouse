@@ -1,5 +1,9 @@
 import type { WorkerPackageSource } from "@powerhousedao/reactor-browser/rpc";
-import { isWorkerBundleResponse, joinBase } from "./reactor-worker-url.js";
+import {
+  isWorkerBundleResponse,
+  joinBase,
+  workerFileUrl,
+} from "./reactor-worker-url.js";
 
 /**
  * Where `ph connect build` publishes the prebuilt local-package model bundles
@@ -36,7 +40,7 @@ async function probeJavaScript(url: URL): Promise<boolean> {
 async function fetchManifest(baseUrl: string): Promise<ManifestEntry[]> {
   try {
     const res = await fetch(
-      joinBase(baseUrl, WORKER_PACKAGES_MANIFEST, window.location.origin),
+      workerFileUrl(baseUrl, WORKER_PACKAGES_MANIFEST, window.location.origin),
     );
     if (!res.ok) return [];
     const parsed: unknown = await res.json();
@@ -87,7 +91,7 @@ export async function resolveLocalPackageSources(
   const sources: WorkerPackageSource[] = manifest.map((entry) => ({
     name: entry.name,
     version: entry.version,
-    url: joinBase(
+    url: workerFileUrl(
       baseUrl,
       `${WORKER_PACKAGES_DIR}${entry.file}`,
       window.location.origin,
