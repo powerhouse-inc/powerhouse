@@ -10,7 +10,7 @@ export const indexHtmlTemplate = html`<!doctype html>
         content="Connect is a hub for your most important documents and processes, translated into software. Easily capture data in a structured way with dedicated business process packages. Collaborate on shared documents with ease while using your preferred storage solution (decentralized, centralized, or local)."
       />
       <title>Powerhouse Connect</title>
-      <link rel="icon" href="/icon.ico" />
+      <link rel="icon" href="%BASE_URL%icon.ico" />
     </head>
     <body>
       <div id="root"></div>

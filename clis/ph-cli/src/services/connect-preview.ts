@@ -1,6 +1,6 @@
 import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { deepMerge } from "@powerhousedao/shared/connect";
+import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { InlineConfig, Plugin } from "vite";
@@ -106,15 +106,76 @@ export function patchCspScriptSrc(html: string, registryUrl: string): string {
   );
 }
 
+// The serve base: an explicit `--base`, else the basePath the dist was built with.
+export function resolvePreviewBase(
+  argBase: string | undefined,
+  outDirAbs: string,
+): string | undefined {
+  if (argBase && argBase !== "/") return normalizeBasePath(argBase);
+  try {
+    const built = JSON.parse(
+      readFileSync(path.join(outDirAbs, "powerhouse.config.json"), "utf8"),
+    ) as { connect?: { app?: { basePath?: unknown } } };
+    const basePath = built.connect?.app?.basePath;
+    if (typeof basePath === "string" && basePath) {
+      return normalizeBasePath(basePath);
+    }
+  } catch {
+    // no readable dist config
+  }
+  return undefined;
+}
+
+// `pathname` relative to the deploy base ("/" + rest), or itself when outside it.
+export function stripBase(pathname: string, base: string): string {
+  return base !== "/" && pathname.startsWith(base)
+    ? `/${pathname.slice(base.length)}`
+    : pathname;
+}
+
+const IMMUTABLE = "public, max-age=31536000, immutable";
+
+// The prebuilt dirs are content-addressed: hashed names, or a `v` query on the worker's.
+export function previewCacheControl(
+  pathname: string,
+  search: string,
+): string | undefined {
+  if (pathname.startsWith("/__vendor__/")) {
+    return /\/(shared-deps|import-map)\.js(on)?$/.test(pathname)
+      ? "no-cache"
+      : IMMUTABLE;
+  }
+  if (pathname.startsWith("/__react__/")) return IMMUTABLE;
+  if (pathname.startsWith("/__reactor_worker__/")) {
+    return new URLSearchParams(search).has("v") ? IMMUTABLE : "no-cache";
+  }
+  return undefined;
+}
+
+function previewCacheHeadersPlugin(base: string): Plugin {
+  return {
+    name: "ph:preview-cache-headers",
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const [rawPath, search = ""] = (req.url ?? "/").split("?");
+        const value = previewCacheControl(stripBase(rawPath, base), search);
+        if (value) res.setHeader("Cache-Control", value);
+        next();
+      });
+    },
+  };
+}
+
 function serveOverridePlugin(
   outDir: string,
   override: ConnectServeOverride,
+  base = "/",
 ): Plugin {
   return {
     name: "ph:serve-override",
     configurePreviewServer(server) {
       server.middlewares.use((req, res, next) => {
-        const urlPath = (req.url ?? "/").split("?")[0];
+        const urlPath = stripBase((req.url ?? "/").split("?")[0], base);
         if (urlPath === "/powerhouse.config.json") {
           res.writeHead(200, {
             "content-type": "application/json; charset=utf-8",
@@ -153,6 +214,7 @@ function serveOverridePlugin(
 export async function runConnectPreview(
   args: ConnectPreviewArgs,
   serveOverride?: ConnectServeOverride,
+  dirname = process.cwd(),
 ) {
   // A supervisor can drive the preview via env when no explicit override is
   // passed (the classic `ph connect preview` command path).
@@ -170,14 +232,19 @@ export async function runConnectPreview(
 
   const mode = "production";
 
-  const dirname = process.cwd();
-
   const baseConfig = getConnectBaseViteConfig({
     mode,
     dirname,
   });
 
+  const outDirAbs = path.resolve(dirname, outDir);
+  const base =
+    resolvePreviewBase(args.connectBasePath, outDirAbs) ??
+    baseConfig.base ??
+    "/";
+
   const previewConfig: InlineConfig = {
+    base,
     build: {
       outDir,
     },
@@ -188,13 +255,12 @@ export async function runConnectPreview(
       host,
       open,
     },
-    ...(serveOverride
-      ? {
-          plugins: [
-            serveOverridePlugin(path.resolve(dirname, outDir), serveOverride),
-          ],
-        }
-      : {}),
+    plugins: [
+      previewCacheHeadersPlugin(base),
+      ...(serveOverride
+        ? [serveOverridePlugin(outDirAbs, serveOverride, base)]
+        : []),
+    ],
   };
 
   const config = mergeConfig(baseConfig, previewConfig);
@@ -203,4 +269,5 @@ export async function runConnectPreview(
 
   if (printUrls) server.printUrls();
   if (bindCLIShortcuts) server.bindCLIShortcuts({ print: true });
+  return server;
 }
