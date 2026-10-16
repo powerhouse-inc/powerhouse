@@ -128,7 +128,12 @@ export const phConnectIconsSchema = {
     splash: {
       ...imageRefSchema,
       description:
-        "Wide splash/hero image (e.g. 2048x1152, transparent). Connect's home-screen hero unless connect.branding.homeBackground names another.",
+        "Wide splash/logo art (e.g. 2048x1152, transparent) for loading screens; the desktop app.json `splash` points at the same file.",
+    },
+    background: {
+      ...imageRefSchema,
+      description:
+        "Full-bleed background (e.g. 2048x1152, opaque; WebP keeps it light). Connect's home-screen background unless connect.branding.homeBackground names another.",
     },
     localDrive: {
       ...imageRefSchema,

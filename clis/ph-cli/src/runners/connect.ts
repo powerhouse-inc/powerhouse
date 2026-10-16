@@ -191,12 +191,13 @@ function callerOverride(
   // paths; the browser gets data URIs (favicon variants found by naming).
   if (ctx && (base.icons || base.branding?.homeBackground)) {
     const warn = (m: string) => console.warn(m);
-    // The home-screen hero: branding.homeBackground, else the icon set's
-    // splash — a project path becomes a data URI like every other icon.
-    // (resolveConnectIcons does not repeat the splash in the icon set.)
+    // The home-screen background: branding.homeBackground, else the icon
+    // set's background — a project path becomes a data URI like every other
+    // icon. (resolveConnectIcons does not repeat it in the icon set; the
+    // splash is loading-screen art, not a background.)
     const hero = resolveImageRef(
       ctx.projectRoot,
-      base.branding?.homeBackground ?? base.icons?.splash,
+      base.branding?.homeBackground ?? base.icons?.background,
       { maxBytes: SPLASH_MAX_BYTES, warn },
     );
     if (hero) base.branding = { ...base.branding, homeBackground: hero };
