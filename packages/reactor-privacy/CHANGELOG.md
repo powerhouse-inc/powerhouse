@@ -1,3 +1,14 @@
+## 6.2.3-dev.61 (2026-10-16)
+
+### 🚀 Features
+
+- **desktop:** builder-owned desktop identity via a generated tauri shell ([8b87d55db7](https://github.com/powerhouse-inc/powerhouse/commit/8b87d55db7))
+
+### ❤️ Thank You
+
+- Claude Opus 4.8
+- Wouter Kampmann
+
 ## 6.2.3-dev.60 (2026-10-15)
 
 This was a version bump only for @powerhousedao/reactor-privacy to align it with other projects, there were no code changes.
