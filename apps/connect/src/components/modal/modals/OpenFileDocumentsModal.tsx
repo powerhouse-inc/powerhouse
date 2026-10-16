@@ -1,15 +1,19 @@
-import { DriveIcon } from "@powerhousedao/connect/components";
 import {
   clearPendingImportFiles,
   getPendingImportFiles,
   pendingFileKey,
-  planOpenFileImports,
-  runOpenFileImports,
   subscribePendingImportFiles,
+} from "../../../utils/launch-queue.js";
+import {
+  planOpenFileImports,
   type ParsedFileInfo,
   type PlanEntry,
+} from "../../../utils/open-file-plan.js";
+import {
+  runOpenFileImports,
   type PlannedOpenFileImport,
-} from "@powerhousedao/connect/utils";
+} from "../../../utils/open-file-uploads.js";
+import { DriveIcon } from "../../drive-icon.js";
 import { Modal } from "@powerhousedao/design-system";
 import {
   Combobox,
@@ -26,6 +30,7 @@ import {
   useDrives,
   usePHModal,
   useUserPermissions,
+  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import { UnsupportedDocumentModelVersionError } from "@powerhousedao/shared/document-model";
 import { useEffect, useState, useSyncExternalStore } from "react";
@@ -95,7 +100,7 @@ export function OpenFileDocumentsModal() {
   // parse result; the effect re-runs when files change and drives arriving
   // re-render the modal anyway.
   useEffect(() => {
-    if (!window.ph?.reactorClient) return;
+    if (!getPHStore()?.reactorClient) return;
     let cancelled = false;
     const pendingKeys = new Set(pendingFiles.map(pendingFileKey));
     for (const key of parseCache.keys()) {

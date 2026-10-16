@@ -4,6 +4,7 @@ import {
   refreshReactorDataClient,
   setDrives,
   setFullReactorClient,
+  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
@@ -48,7 +49,7 @@ export async function selectAppReactorClient(
     return remote;
   }
   if (params.mode !== "router") {
-    if (window.ph?.fullReactorClient) {
+    if (getPHStore()?.fullReactorClient) {
       setFullReactorClient(undefined);
     }
     return requireModule(params).client;

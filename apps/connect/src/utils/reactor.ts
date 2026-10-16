@@ -2,10 +2,12 @@ import {
   addDrive,
   addRemoteDrive,
   getFullReactorClient,
+  getPHStore,
   isDriveAuthError,
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
+  untilDriveListed,
   waitForDocumentReady,
   type BrowserReactorClientModule,
   type IDocumentModelLoader,
@@ -191,6 +193,9 @@ async function addRemoteDefaultDrive(
       }
     }
   }
+  // Pending until listed: a finished first pull may not have listed it yet.
+  const store = getPHStore();
+  if (driveId && store) await untilDriveListed(store, driveId);
 
   if (driveId && (drive.name || drive.icon)) {
     try {

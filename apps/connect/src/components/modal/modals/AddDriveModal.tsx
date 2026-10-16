@@ -12,10 +12,12 @@ import {
   fetchDriveInfo,
   getFullReactorClient,
   getDrives,
+  getPHNavigation,
   setSelectedDrive,
   useAppModules,
   usePHModal,
   waitForDocumentReady,
+  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-options.js";
@@ -78,8 +80,8 @@ export function AddDriveModal() {
       // Only a still unselected, un-pinned (home) view gets pulled into the
       // new drive — the user may have navigated elsewhere meanwhile.
       const stillOnHome = () =>
-        !window.ph?.selectedDriveId &&
-        !extractDriveSlugFromPath(window.location.pathname);
+        !getPHStore()?.selectedDriveId &&
+        !extractDriveSlugFromPath(getPHNavigation().location().pathname);
       void (async () => {
         try {
           if (!reactorClient) {

@@ -3,22 +3,21 @@ import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 type Props = ComponentProps<typeof DefaultEditorLoader> & {
+  /** Delay before showing, so short loads show nothing; 0 shows at once. */
   loadingTimeout?: number;
   customEditorLoader?: ReactNode;
 };
 export function EditorLoader(props: Props) {
-  const [showLoading, setShowLoading] = useState(false);
+  const { customEditorLoader, loadingTimeout = 200, ...defaultProps } = props;
+  const [showLoading, setShowLoading] = useState(loadingTimeout <= 0);
 
-  // only shows the loader after some time has passed
   useEffect(() => {
-    setTimeout(() => {
-      setShowLoading(true);
-    }, props.loadingTimeout ?? 200);
-  }, [props]);
+    if (loadingTimeout <= 0) return;
+    const timer = setTimeout(() => setShowLoading(true), loadingTimeout);
+    return () => clearTimeout(timer);
+  }, [loadingTimeout]);
 
   if (!showLoading) return null;
-
-  const { customEditorLoader, ...defaultProps } = props;
 
   if (customEditorLoader) return <>{customEditorLoader}</>;
 

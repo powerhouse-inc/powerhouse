@@ -1,111 +1,43 @@
 // @vitest-environment happy-dom
 
+import { PGlite } from "@electric-sql/pglite";
+import type {
+  Database,
+  InProcessReactorClientModule,
+} from "@powerhousedao/reactor";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import type { PHStore } from "@powerhousedao/reactor-browser";
+import {
+  addPHEventHandlers,
+  bindPHStoreToWindow,
+  createPHStore,
+  PHStoreProvider,
+} from "@powerhousedao/reactor-browser";
+import type {
+  DocumentDriveDocument,
+  FileNode,
+} from "@powerhousedao/shared/document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+} from "@renown/sdk";
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-const mocks = vi.hoisted(() => ({
-  drives: [] as {
-    header: { id: string; name: string };
-    state: { global: { name: string; nodes: unknown[] } };
-  }[],
-  documentTypes: undefined as string[] | undefined,
-  loadFile: vi.fn(),
-  runOpenFileImports: vi.fn(),
-  setSelectedDrive: vi.fn(),
-  closePHModal: vi.fn(),
-  showPHModal: vi.fn(),
-  isAllowedToCreateDocuments: true,
-}));
-
-vi.mock("@powerhousedao/reactor-browser", () => {
-  class DocumentModelNotFoundError extends Error {
-    override readonly name = "DocumentModelNotFoundError";
-    static isError(error: unknown): error is DocumentModelNotFoundError {
-      return (
-        error instanceof Error && error.name === "DocumentModelNotFoundError"
-      );
-    }
-  }
-  return {
-    usePHModal: () => ({ type: "openFileDocuments" }),
-    useDrives: () => mocks.drives,
-    useDocumentTypes: () => mocks.documentTypes,
-    useUserPermissions: () => ({
-      isAllowedToCreateDocuments: mocks.isAllowedToCreateDocuments,
-      isAllowedToEditDocuments: mocks.isAllowedToCreateDocuments,
-    }),
-    loadFile: mocks.loadFile,
-    setSelectedDrive: mocks.setSelectedDrive,
-    closePHModal: mocks.closePHModal,
-    showPHModal: mocks.showPHModal,
-    DocumentModelNotFoundError,
-    isDocumentTypeSupported: (type: string, list?: string[]) =>
-      !list || list.length === 0 || list.includes(type),
-  };
-});
-
-vi.mock("@powerhousedao/connect/components", () => ({
-  DriveIcon: () => null,
-}));
-
-// The modal consumes the pending-files store, the planning logic and the
-// import driver through the utils barrel; route to the real modules (store +
-// pure planner) and stub only the driver, without dragging the whole barrel
-// (reactor, pglite, …) into the test.
-vi.mock("@powerhousedao/connect/utils", async () => {
-  const launchQueue = await vi.importActual("../../../utils/launch-queue.js");
-  const plan = await vi.importActual("../../../utils/open-file-plan.js");
-  return {
-    ...launchQueue,
-    ...plan,
-    runOpenFileImports: mocks.runOpenFileImports,
-  };
-});
-
-vi.mock("@powerhousedao/design-system", () => ({
-  Modal: ({ open, children }: { open?: boolean; children?: ReactNode }) =>
-    open ? <div role="dialog">{children}</div> : null,
-}));
-
-vi.mock("@powerhousedao/design-system/connect", () => ({
-  formatFileSize: (bytes: number) => `${bytes} B`,
-  ModalButton: ({
-    children,
-    disabled,
-    onClick,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    onClick?: () => void;
-  }) => (
-    <button disabled={disabled} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Combobox: ({
-    options,
-    value,
-    onChange,
-  }: {
-    options: { value: string; label: ReactNode }[];
-    value: { value: string } | null;
-    onChange: (option: { value: string }) => void;
-  }) => (
-    <div data-testid="drive-select" data-value={value?.value ?? ""}>
-      {options.map((option) => (
-        <button key={option.value} onClick={() => onChange(option)}>
-          {option.label}
-        </button>
-      ))}
-    </div>
-  ),
-}));
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
-
+import { createZip, documentModelDocumentModelModule } from "document-model";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { i18n } from "../../../i18n/index.js";
 import {
   addPendingImportFiles,
   clearPendingImportFiles,
@@ -113,243 +45,310 @@ import {
 } from "../../../utils/launch-queue.js";
 import { OpenFileDocumentsModal } from "./OpenFileDocumentsModal.js";
 
-const makeDrive = (id: string, name: string, nodes: unknown[] = []) => ({
-  header: { id, name },
-  state: { global: { name, nodes } },
+const t = (key: string, values?: Record<string, string>) => i18n.t(key, values);
+
+let module: InProcessReactorClientModule;
+let store: PHStore;
+
+beforeAll(async () => {
+  const db = new Kysely<Database>({
+    dialect: new PGliteDialect(new PGlite()),
+  });
+  const crypto = await new RenownCryptoBuilder()
+    .withKeyPairStorage(new MemoryKeyStorage())
+    .build();
+  module = await new ReactorClientBuilder()
+    .withReactorBuilder(
+      new ReactorBuilder()
+        .withDocumentModelSources([
+          driveDocumentModelModule,
+          documentModelDocumentModelModule,
+        ])
+        .withKysely(db),
+    )
+    .withSigner(new RenownCryptoSigner(crypto, "connect-test"))
+    .buildModule();
+  store = createPHStore();
+  bindPHStoreToWindow(store);
+  addPHEventHandlers();
+}, 60_000);
+
+afterAll(() => {
+  module.reactor.kill();
 });
 
-const rootFileNode = (
-  name: string,
-  documentType = "powerhouse/document-model",
-  id = `node-${name}`,
-) => ({ id, name, kind: "file", documentType, parentFolder: null });
+async function createDrive(name: string) {
+  const drive = driveDocumentModelModule.utils.createDocument();
+  drive.header.name = name;
+  drive.state.global.name = name;
+  return module.client.create<DocumentDriveDocument>(drive);
+}
 
-// The modal caches parse results by pending-file key at module level, so
-// every test file needs a unique identity.
+function createModel(name: string) {
+  const document = documentModelDocumentModelModule.utils.createDocument();
+  document.header.name = name;
+  return document;
+}
+
+// Stored first, so the export is what a user's file actually contains.
+function storedModel(name: string) {
+  return module.client.create(createModel(name));
+}
+
+// Every file needs its own identity: parse results are cached per file.
 let fileCounter = 0;
-const makeFile = (name: string) =>
-  new File(["x"], name, { lastModified: ++fileCounter });
+async function phdFile(fileName: string, document: PHDocument) {
+  const data = await createZip(document);
+  return new File([new Uint8Array(data)], fileName, {
+    lastModified: ++fileCounter,
+  });
+}
 
-const parsedDoc = (name: string, overrides: Record<string, unknown> = {}) => ({
-  header: {
-    id: `doc-${name}`,
-    documentType: "powerhouse/document-model",
-    name,
-    ...overrides,
-  },
-});
+function corruptFile(fileName: string) {
+  return new File(["not a zip"], fileName, { lastModified: ++fileCounter });
+}
+
+async function refreshDrives(...drives: DocumentDriveDocument[]) {
+  store.drives = await Promise.all(
+    drives.map((drive) =>
+      module.client.get<DocumentDriveDocument>(drive.header.id),
+    ),
+  );
+}
+
+async function fileNamesIn(drive: DocumentDriveDocument) {
+  const current = await module.client.get<DocumentDriveDocument>(
+    drive.header.id,
+  );
+  return current.state.global.nodes
+    .filter((node): node is FileNode => node.kind === "file")
+    .map((node) => node.name)
+    .sort();
+}
+
+function renderModal() {
+  return render(
+    <PHStoreProvider store={store}>
+      <OpenFileDocumentsModal />
+    </PHStoreProvider>,
+  );
+}
 
 const importButton = () =>
-  screen.queryByText("modals.openFileDocuments.import") ??
-  screen.getByText("modals.openFileDocuments.renameAndImport");
+  screen.queryByText(t("modals.openFileDocuments.import")) ??
+  screen.getByText(t("modals.openFileDocuments.renameAndImport"));
 
 async function waitForReady() {
   await vi.waitFor(() => {
-    expect(screen.queryByText("modals.openFileDocuments.checking")).toBeNull();
+    expect(
+      screen.queryByText(t("modals.openFileDocuments.checking")),
+    ).toBeNull();
   });
 }
 
 describe("OpenFileDocumentsModal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  let driveA: DocumentDriveDocument;
+
+  beforeEach(async () => {
     clearPendingImportFiles();
-    window.ph = { reactorClient: {} } as unknown as typeof window.ph;
-    mocks.drives = [makeDrive("drive-a", "Drive A")];
-    mocks.documentTypes = undefined;
-    mocks.isAllowedToCreateDocuments = true;
-    mocks.loadFile.mockImplementation((file: File) =>
-      Promise.resolve(parsedDoc(file.name.replace(/\..+/gim, ""))),
-    );
-    mocks.runOpenFileImports.mockResolvedValue(undefined);
+    driveA = await createDrive("Drive A");
+    Object.assign(store, {
+      reactorClient: module.client,
+      fullReactorClient: module.client,
+      drives: [driveA],
+      selectedDriveId: undefined,
+      allowedDocumentTypes: undefined,
+      allowList: undefined,
+      modal: { type: "openFileDocuments" },
+    });
   });
 
   it("disables Import while files are being checked, then enables it", async () => {
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
-    expect(screen.getByText("modals.openFileDocuments.checking")).toBeDefined();
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
+    expect(
+      screen.getByText(t("modals.openFileDocuments.checking")),
+    ).toBeDefined();
     expect((importButton() as HTMLButtonElement).disabled).toBe(true);
 
     await waitForReady();
     expect((importButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("imports into the selected drive: clears the queue, closes, navigates, runs the driver", async () => {
-    const file = makeFile("doc.phd");
-    addPendingImportFiles([file]);
-    render(<OpenFileDocumentsModal />);
+  it("imports into the selected drive, closes, and selects the drive", async () => {
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     await waitForReady();
 
     fireEvent.click(importButton());
     expect(getPendingImportFiles()).toHaveLength(0);
-    expect(mocks.closePHModal).toHaveBeenCalled();
-    expect(mocks.setSelectedDrive).toHaveBeenCalledWith(mocks.drives[0]);
-    expect(mocks.runOpenFileImports).toHaveBeenCalledWith({
-      driveId: "drive-a",
-      imports: [{ file, name: "doc" }],
-      documentTypes: undefined,
+    expect(store.modal).toBeUndefined();
+    expect(store.selectedDriveId).toBe(driveA.header.id);
+    await vi.waitFor(async () => {
+      expect(await fileNamesIn(driveA)).toEqual(["doc"]);
     });
   });
 
-  it("renames duplicates and labels the button accordingly", async () => {
-    mocks.drives = [makeDrive("drive-a", "Drive A", [rootFileNode("doc")])];
-    const file = makeFile("doc.phd");
-    addPendingImportFiles([file]);
-    render(<OpenFileDocumentsModal />);
+  it("renames name duplicates and labels the button accordingly", async () => {
+    await module.client.createDocumentInDrive(
+      driveA.header.id,
+      createModel("doc"),
+    );
+    await refreshDrives(driveA);
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     await waitForReady();
 
     expect(
-      screen.getByText("modals.openFileDocuments.duplicateHint"),
+      screen.getByText(
+        t("modals.openFileDocuments.duplicateHint", { name: "doc (copy) 1" }),
+      ),
     ).toBeDefined();
-    const button = screen.getByText("modals.openFileDocuments.renameAndImport");
-    fireEvent.click(button);
-    expect(mocks.runOpenFileImports).toHaveBeenCalledWith(
-      expect.objectContaining({
-        imports: [{ file, name: "doc (copy) 1" }],
-      }),
+    fireEvent.click(
+      screen.getByText(t("modals.openFileDocuments.renameAndImport")),
     );
+    await vi.waitFor(async () => {
+      expect(await fileNamesIn(driveA)).toEqual(["doc", "doc (copy) 1"]);
+    });
   });
 
   it("announces an id duplicate as a copy without renaming", async () => {
-    mocks.drives = [
-      makeDrive("drive-a", "Drive A", [
-        rootFileNode("other", "powerhouse/document-model", "doc-doc"),
-      ]),
-    ];
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
+    const existing = await module.client.createDocumentInDrive(
+      driveA.header.id,
+      createModel("other"),
+    );
+    await refreshDrives(driveA);
+    addPendingImportFiles([await phdFile("doc.phd", existing)]);
+    renderModal();
     await waitForReady();
 
     expect(
-      screen.getByText("modals.openFileDocuments.duplicateCopyHint"),
+      screen.getByText(t("modals.openFileDocuments.duplicateCopyHint")),
     ).toBeDefined();
-    expect(screen.getByText("modals.openFileDocuments.import")).toBeDefined();
+    expect(
+      screen.getByText(t("modals.openFileDocuments.import")),
+    ).toBeDefined();
   });
 
   it("labels a batch-internal name clash as a rename, not a drive duplicate", async () => {
-    // Two opened files normalize to the same name into an empty drive: the
-    // second is renamed to avoid clashing with its batch sibling, but nothing
-    // of that name is in the drive, so it must not say "Already in this drive".
-    const first = makeFile("doc.phd");
-    const second = makeFile("doc.phdm");
-    addPendingImportFiles([first, second]);
-    render(<OpenFileDocumentsModal />);
+    addPendingImportFiles([
+      await phdFile("doc.phd", await storedModel("doc")),
+      await phdFile("doc.phdm", await storedModel("doc")),
+    ]);
+    renderModal();
     await waitForReady();
 
     expect(
-      screen.getByText("modals.openFileDocuments.renamedHint"),
+      screen.getByText(
+        t("modals.openFileDocuments.renamedHint", { name: "doc (copy) 1" }),
+      ),
     ).toBeDefined();
     expect(
-      screen.queryByText("modals.openFileDocuments.duplicateHint"),
+      screen.queryByText(
+        t("modals.openFileDocuments.duplicateHint", { name: "doc (copy) 1" }),
+      ),
     ).toBeNull();
 
     fireEvent.click(importButton());
-    expect(mocks.runOpenFileImports).toHaveBeenCalledWith(
-      expect.objectContaining({
-        imports: [
-          { file: first, name: "doc" },
-          { file: second, name: "doc (copy) 1" },
-        ],
-      }),
-    );
+    await vi.waitFor(async () => {
+      expect(await fileNamesIn(driveA)).toEqual(["doc", "doc (copy) 1"]);
+    });
   });
 
   it("excludes invalid files from the import and flags them inline", async () => {
-    const bad = makeFile("bad.phd");
-    const good = makeFile("good.phd");
-    mocks.loadFile.mockImplementation((file: File) =>
-      file === bad
-        ? Promise.reject(new Error("corrupt zip"))
-        : Promise.resolve(parsedDoc("good")),
-    );
-    addPendingImportFiles([bad, good]);
-    render(<OpenFileDocumentsModal />);
+    addPendingImportFiles([
+      corruptFile("bad.phd"),
+      await phdFile("good.phd", await storedModel("good")),
+    ]);
+    renderModal();
     await waitForReady();
 
     expect(
-      screen.getByText("modals.openFileDocuments.invalidFile"),
+      screen.getByText(t("modals.openFileDocuments.invalidFile")),
     ).toBeDefined();
     fireEvent.click(importButton());
-    expect(mocks.runOpenFileImports).toHaveBeenCalledWith(
-      expect.objectContaining({
-        imports: [{ file: good, name: "good" }],
-      }),
-    );
+    await vi.waitFor(async () => {
+      expect(await fileNamesIn(driveA)).toEqual(["good"]);
+    });
   });
 
   it("blocks the import entirely when no file is importable", async () => {
-    mocks.loadFile.mockRejectedValue(new Error("corrupt zip"));
-    addPendingImportFiles([makeFile("bad.phd")]);
-    render(<OpenFileDocumentsModal />);
+    addPendingImportFiles([corruptFile("bad.phd")]);
+    renderModal();
     await waitForReady();
     expect((importButton() as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("flags unsupported document types", async () => {
-    mocks.documentTypes = ["some/other-type"];
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
+    store.allowedDocumentTypes = ["some/other-type"];
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     await waitForReady();
     expect(
-      screen.getByText("modals.openFileDocuments.unsupportedType"),
+      screen.getByText(t("modals.openFileDocuments.unsupportedType")),
     ).toBeDefined();
     expect((importButton() as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("preselects the first drive and lets the user switch before importing", async () => {
-    mocks.drives = [
-      makeDrive("drive-a", "Drive A"),
-      makeDrive("drive-b", "Drive B"),
-    ];
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
+    const driveB = await createDrive("Drive B");
+    store.drives = [driveA, driveB];
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     await waitForReady();
 
-    expect(screen.getByTestId("drive-select").dataset.value).toBe("drive-a");
-    fireEvent.click(screen.getByText("Drive B"));
+    expect(screen.getByText("Drive A")).toBeDefined();
+    const select = screen.getByRole("combobox");
+    fireEvent.keyDown(select, { key: "ArrowDown" });
+    fireEvent.click(await screen.findByText("Drive B"));
     fireEvent.click(importButton());
-    expect(mocks.runOpenFileImports).toHaveBeenCalledWith(
-      expect.objectContaining({ driveId: "drive-b" }),
-    );
+
+    expect(store.selectedDriveId).toBe(driveB.header.id);
+    await vi.waitFor(async () => {
+      expect(await fileNamesIn(driveB)).toEqual(["doc"]);
+    });
+    expect(await fileNamesIn(driveA)).toEqual([]);
   });
 
-  it("falls back to the global name for drives whose header has no name yet", () => {
-    mocks.drives = [
-      {
-        header: { id: "drive-new", name: "" },
-        state: { global: { name: "My Fresh Drive", nodes: [] } },
-      },
-    ];
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
+  it("falls back to the global name for drives whose header has no name yet", async () => {
+    const drive = driveDocumentModelModule.utils.createDocument();
+    drive.state.global.name = "My Fresh Drive";
+    store.drives = [await module.client.create(drive)];
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     expect(screen.getByText("My Fresh Drive")).toBeDefined();
   });
 
-  it("shows the empty state with Create drive when there are no drives", () => {
-    mocks.drives = [];
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
-    expect(screen.getByText("modals.openFileDocuments.noDrives")).toBeDefined();
-    fireEvent.click(screen.getByText("modals.openFileDocuments.createDrive"));
-    expect(mocks.showPHModal).toHaveBeenCalledWith({ type: "addDrive" });
+  it("shows the empty state with Create drive when there are no drives", async () => {
+    store.drives = [];
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
+    expect(
+      screen.getByText(t("modals.openFileDocuments.noDrives")),
+    ).toBeDefined();
+    fireEvent.click(
+      screen.getByText(t("modals.openFileDocuments.createDrive")),
+    );
+    expect(store.modal).toEqual({ type: "addDrive" });
     // The pending files survive the detour to the add-drive modal.
     expect(getPendingImportFiles()).toHaveLength(1);
   });
 
-  it("clears the pending store on cancel", () => {
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
-    fireEvent.click(screen.getByText("common.cancel"));
+  it("clears the pending store on cancel", async () => {
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
+    fireEvent.click(screen.getByText(t("common.cancel")));
     expect(getPendingImportFiles()).toHaveLength(0);
-    expect(mocks.closePHModal).toHaveBeenCalled();
+    expect(store.modal).toBeUndefined();
   });
 
-  it("shows a read-only notice when the user may not create documents", () => {
-    mocks.isAllowedToCreateDocuments = false;
-    addPendingImportFiles([makeFile("doc.phd")]);
-    render(<OpenFileDocumentsModal />);
+  it("shows a read-only notice when the user may not create documents", async () => {
+    store.allowList = ["0xsomeone-else"];
+    addPendingImportFiles([await phdFile("doc.phd", await storedModel("doc"))]);
+    renderModal();
     expect(
-      screen.getByText("modals.openFileDocuments.notAllowed"),
+      screen.getByText(t("modals.openFileDocuments.notAllowed")),
     ).toBeDefined();
-    expect(screen.queryByText("modals.openFileDocuments.import")).toBeNull();
+    expect(screen.queryByText(t("modals.openFileDocuments.import"))).toBeNull();
   });
 });

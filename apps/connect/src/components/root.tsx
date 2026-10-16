@@ -1,7 +1,7 @@
 import { IfPlugin, Sidebar } from "@powerhousedao/connect/components";
 import { useIsEmbedded } from "@powerhousedao/connect/hooks";
+import { Outlet } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { Outlet } from "react-router-dom";
 
 /** The generic shell's module id; the sidebar is its most visible surface. */
 const GENERIC_PLUGIN = "@powerhousedao/connect/plugins/generic";

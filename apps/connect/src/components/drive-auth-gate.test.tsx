@@ -1,6 +1,13 @@
 // @vitest-environment happy-dom
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as UseDriveAuthGateModule from "../components/use-drive-auth-gate.js";
 
@@ -59,6 +66,9 @@ vi.mock("../runtime-config.js", () => ({
 }));
 
 vi.mock("@powerhousedao/reactor-browser", () => ({
+  FEATURE_FLAG_PARAM_PREFIX: "FEATURE_",
+  GLOBAL_SEARCH_PARAMS: [],
+  OPENED_FROM_STATE_KEY: "phOpenedFrom",
   openRenown: vi.fn(),
   setPHAppConfig: vi.fn(),
   setPHDocumentEditorConfig: vi.fn(),
@@ -66,6 +76,8 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useAppModuleById: () => undefined,
   useDrives: () => mockDrives.drives,
   useIsAddDriveEnabled: () => false,
+  makeDriveSlug: (drive: { header: { slug: string } }) => drive.header.slug,
+  useLinkProps: () => ({ href: "/", onClick: vi.fn() }),
   useRenownAuth: () => ({ login: vi.fn(), pending: false, error: undefined }),
   useRenownLoginMethods: () => [],
   useSelectedDocumentId: () => undefined,
@@ -74,6 +86,19 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 }));
 
 import { Content } from "../pages/content.js";
+
+// Content renders route outlets, so it needs a router around it.
+async function renderContent() {
+  const rootRoute = createRootRoute({ component: Content });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([
+      createRoute({ getParentRoute: () => rootRoute, path: "/" }),
+    ]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+  await router.load();
+  return render(<RouterProvider router={router} />);
+}
 import {
   clearHiddenDrives,
   hideDriveForSession,
@@ -87,28 +112,28 @@ describe("Content drive auth gate wiring", () => {
     clearHiddenDrives();
   });
 
-  it("renders the login gate when gate is 'login'", () => {
+  it("renders the login gate when gate is 'login'", async () => {
     mockGate.gate = "login";
-    render(<Content />);
+    await renderContent();
     expect(screen.getByText("Log in to access this drive")).toBeDefined();
     expect(screen.queryByTestId("home-screen")).toBeNull();
   });
 
-  it("renders the home screen (not the gate) when gate is null", () => {
+  it("renders the home screen (not the gate) when gate is null", async () => {
     mockGate.gate = null;
-    render(<Content />);
+    await renderContent();
     expect(screen.queryByText("Log in to access this drive")).toBeNull();
     expect(screen.getByTestId("home-screen")).toBeDefined();
   });
 
-  it("gives the full-page gate a close control wired to dismiss", () => {
+  it("gives the full-page gate a close control wired to dismiss", async () => {
     mockGate.gate = "login";
-    render(<Content />);
+    await renderContent();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(mockGate.dismiss).toHaveBeenCalledOnce();
   });
 
-  it("drops a dismissed drive from the home screen and keeps Connect usable", () => {
+  it("drops a dismissed drive from the home screen and keeps Connect usable", async () => {
     mockDrives.drives = [
       {
         header: { id: "drive-refused", name: "Refused drive" },
@@ -119,7 +144,7 @@ describe("Content drive auth gate wiring", () => {
         state: { global: { name: "Healthy drive" } },
       },
     ];
-    render(<Content />);
+    await renderContent();
     expect(screen.getByText("Refused drive")).toBeDefined();
 
     act(() => {

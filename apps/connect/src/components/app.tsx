@@ -12,13 +12,19 @@ import {
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
 import { useEditorPreloader, useTheme } from "@powerhousedao/reactor-browser";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { ToastContainer } from "../services/toast.js";
-import { ConnectReactorChatFab } from "./reactor-chat.js";
 import { MissingModelBanner } from "./missing-model-banner.js";
 import { OpenFileUploadList } from "./open-file-upload-list.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
 import { RenownWalletProviders } from "./renown-wallet-providers.js";
+
+// Its AI and MCP packages load only when the assistant is on.
+const ConnectReactorChatFab = lazy(() =>
+  import("./reactor-chat.js").then((m) => ({
+    default: m.ConnectReactorChatFab,
+  })),
+);
 
 export const App = () => {
   useTheme(); // keeps the OS-preference change listener active
@@ -80,7 +86,11 @@ export const App = () => {
     <SentryProvider>
       <RenownWalletProviders>
         <ToastContainer position="bottom-right" />
-        {connectConfig.aiAssistantEnabled && <ConnectReactorChatFab />}
+        {connectConfig.aiAssistantEnabled && (
+          <Suspense name="ReactorChat" fallback={null}>
+            <ConnectReactorChatFab />
+          </Suspense>
+        )}
         <MissingModelBanner />
         <Router />
         <OpenFileUploadList />

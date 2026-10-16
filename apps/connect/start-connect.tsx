@@ -49,6 +49,7 @@ export type ImportHmr = ImportMeta & {
 };
 
 function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
+  // window.ph is the bound store; a reactor-browser import would join the boot chunk.
   window.ph?.vetraPackageManager?.updateLocalPackage(pkg as DocumentModelLib);
 }
 

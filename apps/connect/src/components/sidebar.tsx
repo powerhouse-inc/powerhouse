@@ -9,15 +9,40 @@ import {
 
 import {
   logout,
+  makeDriveSlug,
+  preloadDrive,
   setSelectedDrive,
   showPHModal,
   useIsAddDriveEnabled,
+  useLinkProps,
   useSelectedDriveSafe,
   useUser,
 } from "@powerhousedao/reactor-browser";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 import { useVisibleDrives } from "./use-drive-auth-gate.js";
 import { ErrorBoundary } from "./error-boundary.js";
+
+function DriveSidebarItem(props: {
+  drive: DocumentDriveDocument;
+  active: boolean;
+}) {
+  const { drive, active } = props;
+  const link = useLinkProps({ driveSlug: makeDriveSlug(drive) }, () =>
+    setSelectedDrive(drive),
+  );
+  return (
+    <SidebarItem
+      title={drive.header.name}
+      href={link.href}
+      aria-current={link["aria-current"]}
+      onClick={link.onClick}
+      onPreload={() => preloadDrive(drive)}
+      active={active}
+      icon={<DriveIcon drive={drive} />}
+    />
+  );
+}
 
 export function Sidebar() {
   const user = useUser();
@@ -73,12 +98,10 @@ export function Sidebar() {
           loggerContext={["Connect", "Sidebar"]}
         >
           {drives?.map((drive) => (
-            <SidebarItem
+            <DriveSidebarItem
               key={drive.header.id}
-              title={drive.header.name}
-              onClick={() => setSelectedDrive(drive)}
+              drive={drive}
               active={selectedDrive?.header.id === drive.header.id}
-              icon={<DriveIcon drive={drive} />}
             />
           ))}
           {isAddDriveEnabled && (
