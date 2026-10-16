@@ -24,6 +24,31 @@ const windowSchema = z
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     resizable: z.boolean().optional(),
+    /** Smallest size the window can be dragged to (logical pixels). */
+    minWidth: z.number().int().positive().optional(),
+    minHeight: z.number().int().positive().optional(),
+  })
+  .optional();
+
+const cssColorSchema = z
+  .string()
+  .regex(
+    /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
+    "use a hex color (#rgb, #rgba, #rrggbb or #rrggbbaa)",
+  );
+
+/** The loading page's look, so the window opens in the app's own colors
+ * instead of the default dark page. Every field is optional. */
+const loadingSchema = z
+  .strictObject({
+    /** Page background (default #0f1115). */
+    background: cssColorSchema.optional(),
+    /** Status text color (default #e6e8eb). */
+    color: cssColorSchema.optional(),
+    /** The pulsing status dot (default #4ade80). */
+    accent: cssColorSchema.optional(),
+    /** Status line under the art (default "Starting <productName>…"). */
+    message: z.string().min(1).optional(),
   })
   .optional();
 
@@ -62,6 +87,7 @@ export const appJsonSchema = z.strictObject({
   /** Optional wide splash image (e.g. 2048x1152, transparent PNG) for the
    * loading page, shown instead of the square icon. Relative to this file. */
   splash: z.string().min(1).optional(),
+  loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),
   shell: shellSourceSchema,

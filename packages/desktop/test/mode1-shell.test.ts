@@ -179,6 +179,46 @@ describe("shell projection", () => {
     ).toContain('class="logo"');
   });
 
+  it("themes the loading page and bounds the window from app.json", () => {
+    const dir = tempDir("ph-proj-theme-");
+    const app = appJsonSchema.parse({
+      ...validApp,
+      loading: {
+        background: "#f7f1e8",
+        color: "#2b2522",
+        accent: "#c8392b",
+        message: "Opening the <kitchen>…",
+      },
+      window: { minWidth: 1280, minHeight: 760 },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain("background: #f7f1e8; color: #2b2522;");
+    expect(html).toContain("background: #c8392b;");
+    expect(html).toContain("Opening the &lt;kitchen>…");
+    expect(html).not.toContain("#0f1115");
+    const conf = JSON.parse(
+      readFileSync(path.join(res.shellDir, "tauri.conf.json"), "utf8"),
+    ) as { app: { windows: Record<string, unknown>[] } };
+    expect(conf.app.windows[0]).toMatchObject({
+      minWidth: 1280,
+      minHeight: 760,
+    });
+    // defaults stay the dark page, and only hex colors validate
+    const plain = projectShell({
+      hostDir: tempDir("ph-proj-theme-default-"),
+      app: appJsonSchema.parse(validApp),
+      connectPort: 6494,
+    });
+    expect(
+      readFileSync(path.join(plain.shellDir, "ui/index.html"), "utf8"),
+    ).toContain("background: #0f1115; color: #e6e8eb;");
+    expect(
+      appJsonSchema.safeParse({ ...validApp, loading: { background: "red" } })
+        .success,
+    ).toBe(false);
+  });
+
   it("renders the loading page without a logo when the icon file is missing", () => {
     const dir = tempDir("ph-proj-nologo-");
     const app = appJsonSchema.parse(validApp);

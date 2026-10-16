@@ -136,10 +136,16 @@ const LOGO_CSS_PX = 128;
 /** The art the loading page shows: the wide splash, else the square logo. */
 type LoadingArt = { kind: "logo" | "splash"; file: string } | null;
 
-function loadingHtml(productName: string, art: LoadingArt): string {
-  const name = productName.replace(/[<&]/g, (c) =>
-    c === "<" ? "&lt;" : "&amp;",
-  );
+function loadingHtml(app: AppJson, art: LoadingArt): string {
+  const escape = (text: string) =>
+    text.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
+  const name = escape(app.productName);
+  const message = app.loading?.message
+    ? escape(app.loading.message)
+    : `Starting ${name}…`;
+  const background = app.loading?.background ?? "#0f1115";
+  const color = app.loading?.color ?? "#e6e8eb";
+  const accent = app.loading?.accent ?? "#4ade80";
   const logoTag =
     art?.kind === "splash"
       ? `<img class="splash" src="./${art.file}" alt="" />
@@ -159,7 +165,7 @@ function loadingHtml(productName: string, art: LoadingArt): string {
         margin: 0; height: 100vh;
         display: flex; align-items: center; justify-content: center;
         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #0f1115; color: #e6e8eb;
+        background: ${background}; color: ${color};
       }
       .box {
         text-align: center;
@@ -175,7 +181,7 @@ function loadingHtml(productName: string, art: LoadingArt): string {
       }
       .dot {
         width: 10px; height: 10px; border-radius: 50%;
-        background: #4ade80; display: inline-block; margin-right: 8px;
+        background: ${accent}; display: inline-block; margin-right: 8px;
         animation: pulse 1.2s ease-in-out infinite;
       }
       @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
@@ -184,7 +190,7 @@ function loadingHtml(productName: string, art: LoadingArt): string {
   </head>
   <body>
     <div class="box">
-      ${logoTag}<div><span class="dot"></span>Starting ${name}…</div>
+      ${logoTag}<div><span class="dot"></span>${message}</div>
     </div>
   </body>
 </html>
@@ -216,6 +222,8 @@ function tauriConf(input: ProjectShellInput): string {
           width: win.width ?? 1440,
           height: win.height ?? 900,
           resizable: win.resizable ?? true,
+          ...(win.minWidth ? { minWidth: win.minWidth } : {}),
+          ...(win.minHeight ? { minHeight: win.minHeight } : {}),
           visible: true,
           dragDropEnabled: false,
           create: false,
@@ -348,7 +356,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     ["src/main.rs", MAIN_RS],
     ["build.rs", BUILD_RS],
     ["tauri.conf.json", tauriConf(input)],
-    ["ui/index.html", loadingHtml(app.productName, art)],
+    ["ui/index.html", loadingHtml(app, art)],
     ["capabilities/default.json", defaultCapability()],
     ["capabilities/connect.json", connectCapability(connectPort)],
     [".gitignore", GITIGNORE],
