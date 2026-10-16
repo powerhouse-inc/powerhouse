@@ -6,6 +6,7 @@ import type { Node } from "@powerhousedao/shared/document-drive";
 import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
+  makeDriveSlug,
   makeNodeSlug,
 } from "../utils/url.js";
 import {
@@ -50,7 +51,7 @@ function openDriveSlug(store: PHStore | undefined, pathname: string) {
   const selected = store?.drives?.find(
     (d) => d.header.id === store.selectedDriveId,
   );
-  if (selected) return selected.header.slug;
+  if (selected) return makeDriveSlug(selected);
   const driveSlug = extractDriveSlugFromPath(pathname);
   return driveSlug ? decodeSlug(driveSlug) : undefined;
 }

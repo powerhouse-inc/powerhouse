@@ -2,8 +2,7 @@ import { clearReactorStorage } from "@powerhousedao/connect/store";
 import { ConnectConfirmationModal } from "@powerhousedao/design-system/connect";
 import {
   closePHModal,
-  setSelectedDrive,
-  setSelectedNode,
+  getTargetHref,
   showPHModal,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
@@ -24,9 +23,8 @@ export function ClearStorageModal() {
     clearReactorStorage()
       .then(() => {
         logger.info("Storage cleared");
-        setSelectedDrive(undefined);
-        setSelectedNode(undefined);
-        window.location.reload();
+        // A router writes the URL a tick later; load home directly instead.
+        window.location.assign(getTargetHref(undefined));
       })
       .catch((error) => {
         logger.error("Error clearing storage: @error", error);

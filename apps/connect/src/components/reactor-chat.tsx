@@ -1,3 +1,4 @@
+import { getPHStore } from "@powerhousedao/reactor-browser";
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp/tools";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
@@ -12,7 +13,7 @@ import {
  * (and its SharedWorker) do not need to be ready at render time.
  */
 function getReactorTools(): Promise<AiToolDescriptor[]> {
-  const ph = window.ph;
+  const ph = getPHStore();
   // The typed global is the minimal browser-client contract; the runtime
   // client (in-process or worker-backed) is always the full IReactorClient.
   const client = ph?.reactorClient as IReactorClient | undefined;

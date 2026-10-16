@@ -30,6 +30,16 @@
       "types": "./dist/main.d.ts",
       "import": "./dist/main.js"
     },
+    "./router": {
+      "source": "./src/router/index.ts",
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
+    },
+    "./route-tree": {
+      "source": "./src/routeTree.gen.ts",
+      "types": "./dist/route-tree.d.ts",
+      "import": "./dist/route-tree.js"
+    },
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css"
   },
@@ -56,7 +66,7 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css",
-    "build:bundle": "tsdown",
+    "build:bundle": "tsr generate && tsdown",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",

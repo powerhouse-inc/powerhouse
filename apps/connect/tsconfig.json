@@ -4,6 +4,7 @@
     "outDir": "./.tsbuild",
     "paths": {
       "@powerhousedao/connect/config": ["./src/connect.config.ts"],
+      "@powerhousedao/connect/route-tree": ["./src/routeTree.gen.ts"],
       "@powerhousedao/connect/assets/*": ["./assets/*"],
       "@powerhousedao/connect/*": ["./src/*/index.ts"]
     },
