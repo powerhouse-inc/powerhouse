@@ -456,7 +456,9 @@ export function createPowerhouseRouter(
         result.row.packageJsonVersion,
         { distTags: row?.distTags, versions: row?.versions },
       );
-      res.json(await withOwners(pkg, name));
+      // The requested npm name is the package's identity; its manifest may
+      // carry another package's name (one copied, or from before a rename)
+      res.json(await withOwners({ ...pkg, name }, name));
     }),
   );
 
