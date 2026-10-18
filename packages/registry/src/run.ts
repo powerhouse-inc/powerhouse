@@ -53,7 +53,10 @@ import type {
   WebhookConfig,
   WorkerCommandArgs,
 } from "./types.js";
-import { ignoreLateContentLength } from "./late-header-guard.js";
+import {
+  abortTarballOnClose,
+  ignoreLateContentLength,
+} from "./late-header-guard.js";
 import { installUplinkMissCache } from "./uplink-miss-cache.js";
 import { buildVerdaccioConfig, S3_STORAGE_PLUGIN } from "./verdaccio-config.js";
 import {
@@ -460,6 +463,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use(ignoreLateContentLength);
+  app.use(abortTarballOnClose);
   app.use((req, res) => verdaccioHandler(req, res));
 
   // A PGlite database lives in this process, so its jobs must run here too
