@@ -1,3 +1,25 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **builder-tools,ph-cli,codegen:** project routes from hosts/connect/routes ([1b7aeb2090](https://github.com/powerhouse-inc/powerhouse/commit/1b7aeb2090))
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **builder-tools:** recover from a waiting service worker when boot fails, and base the shell's links ([3acf22432d](https://github.com/powerhouse-inc/powerhouse/commit/3acf22432d))
+- **builder-tools,connect:** content-address vendor, react and worker urls per build ([6c51c1af1a](https://github.com/powerhouse-inc/powerhouse/commit/6c51c1af1a))
+
+### 🔥 Performance
+
+- **connect,builder-tools,ph-cli:** share connect's libraries through the vendor and load the local package lazily ([22de730217](https://github.com/powerhouse-inc/powerhouse/commit/22de730217))
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.62 (2026-10-16)
 
 ### 🚀 Features

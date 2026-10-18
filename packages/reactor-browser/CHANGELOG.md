@@ -1,3 +1,26 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+- **connect,reactor-browser:** settings page as routes ([2d32484c40](https://github.com/powerhouse-inc/powerhouse/commit/2d32484c40))
+- **connect:** replace react-router with tanstack file routes ([3784d22e85](https://github.com/powerhouse-inc/powerhouse/commit/3784d22e85))
+- **reactor-browser:** resolve drive routes, waiting for drives to arrive ([d21d2fe064](https://github.com/powerhouse-inc/powerhouse/commit/d21d2fe064))
+- **reactor-browser:** a navigator api the app shell owns ([a3df324e36](https://github.com/powerhouse-inc/powerhouse/commit/a3df324e36))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **connect,reactor-browser:** name drives by header, else by the name given at creation ([6def973bf7](https://github.com/powerhouse-inc/powerhouse/commit/6def973bf7))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.62 (2026-10-16)
 
 ### 🚀 Features

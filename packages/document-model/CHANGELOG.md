@@ -1,3 +1,22 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+- **document-model:** build the logger's time formatter on first use ([4bac3e3188](https://github.com/powerhouse-inc/powerhouse/commit/4bac3e3188))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.62 (2026-10-16)
 
 ### 🚀 Features
