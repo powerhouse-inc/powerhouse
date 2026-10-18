@@ -1,5 +1,7 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import S3Database from "@powerhousedao/verdaccio-s3-storage";
 import S3DatabasePostgres from "@powerhousedao/verdaccio-s3-storage/postgres";
+import { LocalDatabase } from "@verdaccio/local-storage";
 import express from "express";
 import { findUp } from "find-up";
 import { mkdir } from "node:fs/promises";
@@ -43,6 +45,7 @@ import {
 import { SSEChannel } from "./notifications/sse.js";
 import { WebhookStore } from "./notifications/webhook.js";
 import type { ProcessorContext } from "./processor.js";
+import { PublishGuard, type PackageStore } from "./publish-guard.js";
 import type {
   RegistryCommandArgs,
   RegistryConfig,
@@ -52,7 +55,7 @@ import type {
 } from "./types.js";
 import { ignoreLateContentLength } from "./late-header-guard.js";
 import { installUplinkMissCache } from "./uplink-miss-cache.js";
-import { buildVerdaccioConfig } from "./verdaccio-config.js";
+import { buildVerdaccioConfig, S3_STORAGE_PLUGIN } from "./verdaccio-config.js";
 import {
   enqueueSweep,
   pruneCachedPackages,
@@ -208,6 +211,23 @@ async function seedVerdaccioSecret(
   }
 }
 
+// A second handle on the storage Verdaccio publishes into, for the publish
+// guard. The S3 plugin locks a package across processes through Postgres.
+function packageStoreFor(
+  verdaccioConfig: Record<string, unknown>,
+): PackageStore {
+  const s3 = (verdaccioConfig.store as Record<string, object> | undefined)?.[
+    S3_STORAGE_PLUGIN
+  ];
+  const store = s3
+    ? new S3Database(
+        { ...s3, postgresPoolMax: 1, postgresLockPoolMax: 1 } as never,
+        { logger: pluginLogger } as never,
+      )
+    : new LocalDatabase(verdaccioConfig as never, pluginLogger as never);
+  return store as unknown as PackageStore;
+}
+
 const MIB = 1024 * 1024;
 
 // Longer than a readiness probe period, so the Service drops the pod first
@@ -318,9 +338,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   await installUplinkMissCache();
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
-  const verdaccioServer = (await runServer(
-    buildVerdaccioConfig(config) as never,
-  )) as Server;
+  const verdaccioConfig = buildVerdaccioConfig(config);
+  const verdaccioServer = (await runServer(verdaccioConfig as never)) as Server;
 
   // Fail fast: a configured auth store that the plugin never loaded means
   // verdaccio silently fell back to no auth — refuse to run without ownership.
@@ -383,6 +402,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     artifacts,
     webhooks: runtime.webhooks,
     sse,
+    publishGuard: new PublishGuard(packageStoreFor(verdaccioConfig)),
     ...(sharedAuthStore ? { ownerStore: sharedAuthStore } : {}),
   };
 
