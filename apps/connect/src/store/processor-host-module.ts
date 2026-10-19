@@ -1,3 +1,4 @@
+import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import {
   createReactorHostModuleBase,
   type IReadModel,
@@ -13,6 +14,7 @@ import {
   createAnalyticsStore,
   type IProcessorHostModule,
   type IReactorClient,
+  setPGliteDB,
 } from "@powerhousedao/reactor-browser";
 import { getDb } from "../pglite.db.js";
 
@@ -49,6 +51,14 @@ export async function createProcessorHostModule(
 ): Promise<IProcessorHostModule | undefined> {
   try {
     const { pgLite, relationalDb } = await getDb();
+    // Publish the tab's PGlite for the relational hooks (useRelationalDb /
+    // useRelationalQuery). The worker path seeds a proxy in
+    // reactor-worker-client; the in-process path has the instance itself.
+    setPGliteDB({
+      db: pgLite as unknown as PGliteWithLive,
+      isLoading: false,
+      error: null,
+    });
     const { store: analyticsStore } = await createAnalyticsStore({
       pgLite,
     });
