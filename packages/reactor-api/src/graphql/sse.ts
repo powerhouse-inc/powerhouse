@@ -1,7 +1,9 @@
 import {
   type DefinitionNode,
+  type DirectiveNode,
   type DocumentNode,
   type GraphQLSchema,
+  type ObjectValueNode,
   Kind,
   parse,
   visit,
@@ -81,9 +83,69 @@ const FEDERATION_DIRECTIVES = new Set([
   "tag",
 ]);
 
-function isFederationDirective(name: string, declared: Set<string>): boolean {
+const FEDERATION_SPEC_URL = "https://specs.apollo.dev/federation/";
+
+type FederationNames = { names: Set<string>; prefixes: string[] };
+
+function stringArgument(
+  node: DirectiveNode | ObjectValueNode,
+  name: string,
+): string | undefined {
+  const args = node.kind === Kind.DIRECTIVE ? node.arguments : node.fields;
+  const value = args?.find((arg) => arg.name.value === name)?.value;
+  return value?.kind === Kind.STRING ? value.value : undefined;
+}
+
+function withoutAt(name: string): string | undefined {
+  return name.startsWith("@") ? name.slice(1) : undefined;
+}
+
+/** Includes names a federation `@link` imports under an alias or `as` prefix. */
+function federationNames(typeDefs: DocumentNode): FederationNames {
+  const names = new Set(FEDERATION_DIRECTIVES);
+  const prefixes = ["federation__"];
+  for (const def of typeDefs.definitions) {
+    if (
+      def.kind !== Kind.SCHEMA_DEFINITION &&
+      def.kind !== Kind.SCHEMA_EXTENSION
+    ) {
+      continue;
+    }
+    for (const link of def.directives ?? []) {
+      if (link.name.value !== "link") continue;
+      if (!stringArgument(link, "url")?.startsWith(FEDERATION_SPEC_URL)) {
+        continue;
+      }
+      prefixes.push(`${stringArgument(link, "as") ?? "federation"}__`);
+      const imports = link.arguments?.find(
+        (arg) => arg.name.value === "import",
+      )?.value;
+      if (imports?.kind !== Kind.LIST) continue;
+      for (const item of imports.values) {
+        const name =
+          item.kind === Kind.STRING
+            ? item.value
+            : item.kind === Kind.OBJECT
+              ? (stringArgument(item, "as") ?? stringArgument(item, "name"))
+              : undefined;
+        const directive = name === undefined ? undefined : withoutAt(name);
+        if (directive !== undefined) names.add(directive);
+      }
+    }
+  }
+  return { names, prefixes };
+}
+
+function isFederationDirective(
+  name: string,
+  declared: Set<string>,
+  federation: FederationNames,
+): boolean {
   if (declared.has(name)) return false;
-  return FEDERATION_DIRECTIVES.has(name) || name.startsWith("federation__");
+  return (
+    federation.names.has(name) ||
+    federation.prefixes.some((prefix) => name.startsWith(prefix))
+  );
 }
 
 function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
@@ -91,9 +153,12 @@ function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
   for (const def of typeDefs.definitions) {
     if (def.kind === Kind.DIRECTIVE_DEFINITION) declared.add(def.name.value);
   }
+  const federation = federationNames(typeDefs);
   return visit(typeDefs, {
     Directive: (node) =>
-      isFederationDirective(node.name.value, declared) ? null : undefined,
+      isFederationDirective(node.name.value, declared, federation)
+        ? null
+        : undefined,
     SchemaExtension: {
       leave: (node) =>
         !node.directives?.length && !node.operationTypes?.length
