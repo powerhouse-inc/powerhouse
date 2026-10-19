@@ -35,8 +35,7 @@ const listReducer: StateReducer<ListState> = (state, action) => {
   }
 };
 
-const reducerFor: ReducerFor = () =>
-  listReducer as unknown as StateReducer<PHBaseState>;
+const reducerFor: ReducerFor<ListState> = () => listReducer;
 
 const emptyDocument = (): PHDocument<ListState> =>
   baseCreateDocument<ListState>(

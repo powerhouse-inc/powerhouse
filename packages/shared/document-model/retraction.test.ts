@@ -89,19 +89,22 @@ const listReducer: StateReducer<ListState> = (state, act) => {
   }
 };
 
-function countingReducerFor(): { reducerFor: ReducerFor; calls: () => number } {
+function countingReducerFor(): {
+  reducerFor: ReducerFor<ListState>;
+  calls: () => number;
+} {
   let calls = 0;
   const counted: StateReducer<ListState> = (state, act) => {
     calls++;
     return listReducer(state, act);
   };
   return {
-    reducerFor: () => counted as unknown as StateReducer,
+    reducerFor: () => counted,
     calls: () => calls,
   };
 }
 
-const reducerFor: ReducerFor = () => listReducer as unknown as StateReducer;
+const reducerFor: ReducerFor<ListState> = () => listReducer;
 
 function createDoc(
   current?: Partial<Pick<ListState, "global" | "local">>,
@@ -410,7 +413,7 @@ describe("deriveScope", () => {
     const { document } = deriveScope(
       createDoc(),
       stream(inc("i"), fail("f"), inc("j")),
-      () => midway as unknown as StateReducer,
+      () => midway,
     );
     expect(document.state.global.count).toBe(2);
   });

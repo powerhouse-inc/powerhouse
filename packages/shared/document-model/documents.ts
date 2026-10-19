@@ -611,7 +611,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
   checkHashes: boolean,
   skipIndexValidation: boolean | undefined,
 ): PHDocument<TState> {
-  let reducerFor: ReducerFor | undefined;
+  let reducerFor: ReducerFor<TState> | undefined;
   let result = document;
   for (const [scope, rows = []] of Object.entries(operations)) {
     if (rows.length === 0) {
@@ -642,7 +642,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
       const stateReducer = requireStateReducer(
         reducer,
         document.header.documentType,
-      ) as StateReducer;
+      );
       reducerFor = () => stateReducer;
     }
     result = deriveScope(result, rows, reducerFor, scope).document;

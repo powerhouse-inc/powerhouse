@@ -112,7 +112,7 @@ function oracle(rows: Operation[]): PHDocument<TestState> {
       clipboard: [],
     },
     rows,
-    () => stateReducer as StateReducer,
+    () => stateReducer,
   ).document;
 }
 

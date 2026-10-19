@@ -2,6 +2,8 @@ import type {
   Action,
   DeriveScope,
   Operation,
+  PHBaseState,
+  ReducerFor,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -50,6 +52,13 @@ function globalOps(document: CountDocument): Operation[] {
 
 function last(document: CountDocument): Operation {
   return globalOps(document).at(-1)!;
+}
+
+// Version-aware stand-in: rows apply under reducers of differing state types.
+function erased<TState extends PHBaseState>(
+  reducerFor: ReducerFor,
+): ReducerFor<TState> {
+  return reducerFor as unknown as ReducerFor<TState>;
 }
 
 function targetOf(operation: Operation): string {
@@ -285,7 +294,7 @@ describe("base-reducer 3", () => {
     const derived = deriveScope(
       document,
       globalOps(document),
-      () => baseCountReducer as unknown as StateReducer,
+      () => baseCountReducer,
     );
     expect(document.state.global).toEqual(derived.document.state.global);
     expect(last(document).hash).toBe(
@@ -324,10 +333,11 @@ describe("base-reducer 3", () => {
         return deriveScope(
           document,
           operations,
-          (operation) =>
+          erased((operation) =>
             operation.index === 0
               ? older
               : (baseCountReducer as unknown as StateReducer),
+          ),
           scope,
           onThrow,
         );
@@ -358,12 +368,13 @@ describe("base-reducer 3", () => {
         deriveScope(
           document,
           operations,
-          (operation) =>
+          erased((operation) =>
             operation.index === 1
               ? ((() => {
                   throw new Error("older version refuses");
                 }) as StateReducer)
               : (baseCountReducer as unknown as StateReducer),
+          ),
           scope,
           onThrow,
         );

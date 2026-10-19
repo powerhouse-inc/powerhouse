@@ -24,7 +24,6 @@ import type {
   Reducer,
   ReplayDocumentOptions,
   SignalDispatch,
-  StateReducer,
   UpgradeDocumentAction,
 } from "./types.js";
 import {
@@ -267,7 +266,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           reducer,
           header.documentType,
           currentVersion,
-        ) as StateReducer;
+        );
         const reducerFor = () => stateReducer;
         document = updateHeaderRevision(
           appendRows(document, s, segOps),

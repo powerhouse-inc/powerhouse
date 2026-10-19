@@ -113,13 +113,15 @@ export function appliedOperations(stream: readonly Operation[]): Operation[] {
 }
 
 /** Resolves the state reducer for a row, by the row's module version. */
-export type ReducerFor = (operation: Operation) => StateReducer;
+export type ReducerFor<TState extends PHBaseState = PHBaseState> = (
+  operation: Operation,
+) => StateReducer<TState>;
 
 /** Applies one row's action to the scope state; throws when the action throws. */
 export function reduceOne<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   operation: Operation,
-  reducerFor: ReducerFor,
+  reducerFor: ReducerFor<TState>,
 ): PHDocument<TState> {
   assertDerivedScope(operation.action.scope);
   return applyRow(document, operation, rowReducer(operation, reducerFor));
@@ -154,7 +156,7 @@ export function scopeDeriver(
   advance<TState extends PHBaseState>(
     document: PHDocument<TState>,
     rows: readonly Operation[],
-    reducerFor: ReducerFor,
+    reducerFor: ReducerFor<TState>,
   ): PHDocument<TState>;
 } {
   // By reference: a rewound row and its re-appended copy share an id.
@@ -198,7 +200,7 @@ function resetScope<TState extends PHBaseState>(
 export function deriveScope<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   stream: readonly Operation[],
-  reducerFor: ReducerFor,
+  reducerFor: ReducerFor<TState>,
   scope: string | undefined = stream.at(0)?.action.scope,
   onThrow?: OnThrow,
 ): { document: PHDocument<TState>; applied: ReadonlySet<string> } {
@@ -235,8 +237,11 @@ export function deriveScopeVersioned<TState extends PHBaseState = PHBaseState>(
   for (const operation of sortOperations([...stream])) {
     const version = versions.versionOf(operation);
     next = versions.upgradeTo(next, version);
-    next = deriver.advance(next, [operation], () =>
-      versions.reducerOf(version),
+    // Versions differ in state type; each reducer applies to its own version's state.
+    next = deriver.advance(
+      next,
+      [operation],
+      () => versions.reducerOf(version) as unknown as StateReducer<TState>,
     );
   }
   return { document: next, applied: deriver.applied };
@@ -248,10 +253,10 @@ function assertDerivedScope(scope: string): void {
   }
 }
 
-function rowReducer(
+function rowReducer<TState extends PHBaseState>(
   operation: Operation,
-  reducerFor: ReducerFor,
-): StateReducer | undefined {
+  reducerFor: ReducerFor<TState>,
+): StateReducer<TState> | undefined {
   const action = operation.action;
   if (
     action.type === "NOOP" ||
@@ -266,7 +271,7 @@ function rowReducer(
 function applyRow<TState extends PHBaseState>(
   document: PHDocument<TState>,
   operation: Operation,
-  reducer: StateReducer | undefined,
+  reducer: StateReducer<TState> | undefined,
 ): PHDocument<TState> {
   const action = operation.action;
   if (isDocumentAction(action)) {
@@ -275,9 +280,8 @@ function applyRow<TState extends PHBaseState>(
   if (reducer === undefined) {
     return document;
   }
-  const stateReducer = reducer as unknown as StateReducer<TState>;
   return create(document, (draft) => {
-    const next = stateReducer(draft.state, action);
+    const next = reducer(draft.state, action);
     if (next) {
       unsafe(() => {
         draft.state = castDraft(next);

@@ -299,12 +299,7 @@ function resolveRetraction<TState extends PHBaseState>(
   const operations = document.operations[action.scope] ?? [];
   const { applied } = derive
     ? derive(document, operations, action.scope)
-    : deriveScope(
-        document,
-        operations,
-        () => customReducer as StateReducer,
-        action.scope,
-      );
+    : deriveScope(document, operations, () => customReducer, action.scope);
   const target =
     action.type === "UNDO"
       ? undoTarget(operations, applied)
@@ -769,10 +764,8 @@ function applyByRule<TState extends PHBaseState>(
 
   const appendedReducer: StateReducer<TState> = (state, action) =>
     customReducer(state, action, dispatch);
-  const reducerFor: ReducerFor = (operation) =>
-    (operation.action.id === appendedId
-      ? appendedReducer
-      : customReducer) as StateReducer;
+  const reducerFor: ReducerFor<TState> = (operation) =>
+    operation.action.id === appendedId ? appendedReducer : customReducer;
 
   const targeted =
     options.targeted ?? retractedActionIds(positionalOperations(operations));
