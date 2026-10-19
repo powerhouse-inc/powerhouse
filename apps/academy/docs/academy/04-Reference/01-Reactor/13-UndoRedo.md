@@ -24,6 +24,7 @@ Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor 
 | Switchboard | `REACTOR_UNDO_V3=false`                                                   |
 | Connect     | `connect.reactor.featureFlags.undoV3: false` in `powerhouse.config.json`  |
 | Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: false } })` |
+| ph-cli host  | `protocol.featureFlags.undoV3: false` in the host file (projected to `REACTOR_UNDO_V3`) |
 
 `undoV3` has no prerequisites. A peer that runs without it is held from version 3 documents until it upgrades.
 
