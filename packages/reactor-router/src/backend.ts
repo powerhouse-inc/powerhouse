@@ -17,6 +17,7 @@ import {
   type PropagationMode,
   type ReactorInfo,
   type SearchFilter,
+  type UndoRedoAvailability,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -215,6 +216,25 @@ export interface IRoutableBackend {
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>>;
   getDocumentModelModule?(documentType: string): Promise<DocumentModelModule>;
+  /** The backend's own client signs what it submits. */
+  undo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  redo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  undoRedoAvailability?(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 }
 
 export type RoutableBackendConfig = {
@@ -326,6 +346,12 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
       client.getDocumentModelModules(namespace, paging, signal),
     getDocumentModelModule: (documentType) =>
       client.getDocumentModelModule(documentType),
+    undo: (identifier, scope, branch, signal) =>
+      client.undo(identifier, scope, branch, signal),
+    redo: (identifier, scope, branch, signal) =>
+      client.redo(identifier, scope, branch, signal),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      client.undoRedoAvailability(identifier, scope, branch, signal),
   };
 }
 

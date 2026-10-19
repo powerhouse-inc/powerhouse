@@ -158,6 +158,26 @@ export function createGraphQLRoutableBackend(
         : job;
     },
     waitForJob: (job, signal) => gql.waitForJob(job, signal),
+    undo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await gql.undo<TDocument>(identifier, scope, branch, signal),
+      ),
+    redo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await gql.redo<TDocument>(identifier, scope, branch, signal),
+      ),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      gql.undoRedoAvailability(identifier, scope, branch, signal),
   };
   return {
     backend,

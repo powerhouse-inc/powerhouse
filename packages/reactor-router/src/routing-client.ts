@@ -21,6 +21,7 @@ import {
   type PagingOptions,
   type PropagationMode,
   type SearchFilter,
+  type UndoRedoAvailability,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -77,7 +78,10 @@ type OptionalMember =
   | "removeRelationship"
   | "moveRelationship"
   | "getDocumentModelModules"
-  | "getDocumentModelModule";
+  | "getDocumentModelModule"
+  | "undo"
+  | "redo"
+  | "undoRedoAvailability";
 
 function declared<K extends OptionalMember>(
   backend: RouterBackend,
@@ -852,6 +856,68 @@ export class RoutingReactorClient implements IReactorClient {
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;
+  }
+
+  /** The owning backend resolves the target and signs the write. */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.dispatcher.onDocument(
+      "undo",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undo")<TDocument>(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.write,
+    );
+  }
+
+  /** See {@link undo}. */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.dispatcher.onDocument(
+      "redo",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "redo")<TDocument>(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.write,
+    );
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.dispatcher.onDocument(
+      "undoRedoAvailability",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undoRedoAvailability")(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.read,
+    );
   }
 
   rename(
