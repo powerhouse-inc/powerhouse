@@ -102,8 +102,7 @@ type PackageLoad<T> =
   | { status: "absent" }
   | { status: "failed" };
 
-// The package subpath every loader asked for, which is what tells a package
-// that ships none of this kind from one whose bundle is broken.
+// The subpath every loader asked for, which tells "ships none" from "broken".
 function subPathOf(kind: PackageKind): string {
   return kind === "document models" ? "document-models" : kind;
 }
@@ -378,10 +377,7 @@ export class PackageManager implements IPackageManager {
       loader.loadSubgraphs(pkg),
     );
 
-    // A loader answering "none" is indistinguishable from a package that
-    // ships none — loadSubgraphs cannot throw for a bad export shape. The
-    // package's own manifest is the one place that says subgraphs were
-    // meant to exist, so a mismatch gets one warning instead of silence.
+    // A bad export shape loads as none; only the manifest says some were meant.
     for (const [pkg, load] of loads) {
       if (load.status === "loaded" && load.value.length > 0) continue;
       const declared = manifestDeclaredSubgraphs(pkg);
