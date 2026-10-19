@@ -1,28 +1,19 @@
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
+import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
+
+export {
+  runRecordMemberSchema,
+  runRecordSchema,
+  type RunRecord,
+  type RunRecordMember,
+} from "./run-record-schema.js";
 
 /**
- * A running host's `.ph/run/<host>.json` record: what is live for this
- * project, keyed by host name so N hosts (vetra, desktop, …) coexist. This is
- * the generic form of ph-cli's vetra-runtime record; the compound writes one
- * per supervised host and (for compatibility) keeps the legacy
- * vetra-runtime.json in step while agent tooling still reads it (D1.c).
+ * Record I/O for `.ph/run/<host>.json`, keyed by host name so N hosts
+ * (vetra, desktop, …) coexist. The record shape is run-record-schema.ts (v2).
  */
-export interface RunRecordMember {
-  port?: number;
-  url?: string;
-}
-
-export interface RunRecord {
-  pid: number;
-  hostName: string;
-  projectName: string;
-  startedAt: string;
-  members: Record<string, RunRecordMember>;
-  /** Host-specific extras (e.g. mcpUrl) a runner wants in the record. */
-  extra?: Record<string, unknown>;
-}
 
 export type RunProbe =
   | { status: "none" }
@@ -40,19 +31,22 @@ export function readRunRecord(
   projectDir: string,
   hostName: string,
 ): RunRecord | undefined {
+  let raw: unknown;
   try {
-    return JSON.parse(
-      fs.readFileSync(recordPath(projectDir, hostName), "utf8"),
-    ) as RunRecord;
+    raw = JSON.parse(fs.readFileSync(recordPath(projectDir, hostName), "utf8"));
   } catch {
     return undefined;
   }
+  // v1 and foreign-shaped records read as "not running" (3.6).
+  const parsed = runRecordSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export function writeRunRecord(projectDir: string, record: RunRecord): void {
-  const target = recordPath(projectDir, record.hostName);
+  const target = recordPath(projectDir, record.host);
+  const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`);
+  fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
 }
 
 export function clearRunRecord(projectDir: string, hostName: string): void {

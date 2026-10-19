@@ -328,16 +328,14 @@ async function serveAgent(
   );
 
   writeRunRecord(ctx.projectRoot, {
-    pid: process.pid,
-    hostName: resolved.name,
+    version: 2,
+    host: resolved.name,
     projectName,
+    kind,
+    verb: ctx.verb,
+    pid: process.pid,
     startedAt: new Date().toISOString(),
-    members: {
-      [resolved.name]: {
-        port: boundPort,
-        url: `http://127.0.0.1:${boundPort}/v1`,
-      },
-    },
+    outputs: { port: boundPort, url: `http://127.0.0.1:${boundPort}/v1` },
     extra: { reactor: attachment.endpoint, model: provider.modelId },
   });
   const cleanup = () => clearRunRecord(ctx.projectRoot, resolved.name);

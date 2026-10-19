@@ -47,7 +47,7 @@ import { appendFileSync } from "node:fs";
 const sink = ${JSON.stringify(sink)};
 const log = (verb, host) => appendFileSync(sink, JSON.stringify({ verb, name: host.name }) + "\\n");
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run(host) { log("run", host); return {}; }
 export async function dev(host) { log("dev", host); return {}; }
 export async function serve(host) { log("serve", host); return {}; }

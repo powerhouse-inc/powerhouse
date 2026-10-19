@@ -8,7 +8,7 @@ import {
   normalizePluginEntries,
   PluginError,
   type HostPlugin,
-  type PluginEntry,
+  type PluginEntryData,
   type ResolvedPlugin,
 } from "./plugins.js";
 
@@ -35,7 +35,7 @@ export async function resolveHostPlugins<THooks = Record<string, unknown>>(
   projectRoot: string,
   hostType: string,
   verb: string,
-  entries: readonly PluginEntry[],
+  entries: readonly PluginEntryData[],
   where: string,
 ): Promise<ResolvedPlugin<THooks>[]> {
   const normalized = normalizePluginEntries(entries, where);
@@ -126,7 +126,7 @@ export interface PluginContributionsPlan {
 export async function resolvePluginContributions(
   projectRoot: string,
   verb: string,
-  entries: readonly PluginEntry[],
+  entries: readonly PluginEntryData[],
   where: string,
 ): Promise<PluginContributionsPlan> {
   const normalized = normalizePluginEntries(entries, where);

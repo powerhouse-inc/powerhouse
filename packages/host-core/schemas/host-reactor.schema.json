@@ -15,7 +15,8 @@
           "minLength": 1
         },
         "defaultVerb": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "port": {
           "type": "integer",
@@ -208,6 +209,7 @@
                 "additionalProperties": false
               }
             },
+            "required": ["kind"],
             "additionalProperties": false
           }
         },
@@ -372,5 +374,5 @@
     }
   },
   "required": ["name", "runner"],
-  "additionalProperties": {}
+  "additionalProperties": false
 }

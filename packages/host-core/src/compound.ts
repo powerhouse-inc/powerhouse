@@ -1,17 +1,26 @@
-import type { HostDefinition } from "./host-loader.js";
-import { loadHost } from "./host-loader.js";
+import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
+import { z } from "zod";
 import { projectDrivesIntoConnect } from "./connect-projection.js";
-import { unresolvedDriveReferences } from "./plugins.js";
+import {
+  genericCompoundHostSchema,
+  type ChildWrapper,
+  type CompoundWiring,
+  type HostDefinition,
+  type RunnerKind,
+} from "./host-schemas.js";
+import { loadHost } from "./host-loader.js";
 import {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
 } from "./placeholders.js";
+import { unresolvedDriveReferences } from "./plugins.js";
 import {
   clearRunRecord,
   probeRun,
   writeRunRecord,
   type RunRecordMember,
 } from "./run-record.js";
+import { toStartedHandle, type StartedHandle } from "./runner-handle.js";
 import {
   getVerb,
   resolveRunnerModule,
@@ -19,80 +28,51 @@ import {
   type RunnerContext,
 } from "./runner-resolver.js";
 
+export type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
+export type { RunnerHandle, StartedHandle } from "./runner-handle.js";
+
 /**
  * The generic compound runner: supervises the members a compound host
- * declares, each started via its OWN declared runner at the compound's member
- * verb. It projects a reactor member's created drives into a connect member's
- * config, writes a .ph/run/<host>.json record, holds a per-project lock, and
- * tears members down in reverse order on shutdown.
+ * declares, each started via its OWN declared runner at its own effective
+ * verb, writes a v2 .ph/run/<host>.json record, holds a per-project lock,
+ * and tears members down in reverse order through their `shutdown()`.
  *
- * Phase-1 model is ATTACHED and in-process: member runner verbs start their
- * servers (which hold the event loop) and return a handle of facts; the
- * compound stays alive as long as they do. Detached supervision is phase 5.
+ * Attached and in-process: member verbs start their servers (which hold the
+ * event loop) and return a handle; the compound lives as long as they do.
  */
-
-/** Facts a member runner verb returns so the compound can project and tear
- * down. All optional: a void-returning verb is treated as "started, no facts,
- * self-sustaining" (the phase-0 bridges). */
-export interface RunnerHandle {
-  /** Port the member bound. */
-  port?: number;
-  /** Drive URLs a reactor member created, in display order — projected into a
-   * connect member's defaultDrives. */
-  driveUrls?: (string | null | undefined)[];
-  /** Named endpoints (graphql, mcp, …) for the run record / diagnostics. */
-  endpoints?: Record<string, string>;
-  /** Resolves when the member is serving; the compound awaits it before the
-   * next member when ordering requires readiness. */
-  ready?: Promise<void>;
-  /** Reverse-order teardown. */
-  shutdown?: () => void | Promise<void>;
-}
-
-export interface CompoundMember {
-  host: string;
-  plugins?: string[];
-  runner?: { port?: number } & Record<string, unknown>;
-  config?: Record<string, unknown>;
-  reactor?: Record<string, unknown>;
-}
-
-export interface CompoundWiring {
-  /** Project the reactor member's created drives into the connect member. */
-  projectDrivesIntoConnect?: boolean;
-  /** --drives-public-base equivalent. */
-  drivesPublicBase?: string | null;
-  /** Member start order; defaults to declaration order. */
-  startOrder?: string[];
-  /** Write .ph/run/<host>.json (default true). */
-  runtimeRecord?: boolean;
-  /** Patch the baked CSP for the runtime registry on a served connect member
-   * (forwarded to the connect runner as a runner option). */
-  cspRegistrySync?: boolean;
-}
 
 interface StartedMember {
   name: string;
-  handle: RunnerHandle;
+  member: ChildWrapper;
+  specifier: string;
+  kind: RunnerKind;
+  verb: string;
+  handle: StartedHandle;
 }
 
-function memberEntries(host: HostDefinition): [string, CompoundMember][] {
-  const children = (host.children ?? {}) as Record<string, CompoundMember>;
-  return Object.entries(children);
+/** A member host before its runner validates it: the member's host.js with
+ * the wrapper applied. */
+type MemberDraft = Record<string, unknown> & {
+  name: string;
+  runner: HostDefinition["runner"];
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function orderedMembers(
-  host: HostDefinition,
+  children: Record<string, ChildWrapper>,
   wiring: CompoundWiring,
-): [string, CompoundMember][] {
-  const entries = memberEntries(host);
+): [string, ChildWrapper][] {
+  const entries = Object.entries(children);
   if (!wiring.startOrder) return entries;
   const byName = new Map(entries);
-  const out: [string, CompoundMember][] = [];
+  const out: [string, ChildWrapper][] = [];
   for (const name of wiring.startOrder) {
-    const m = byName.get(name);
-    if (m) {
-      out.push([name, m]);
+    const member = byName.get(name);
+    if (member) {
+      out.push([name, member]);
       byName.delete(name);
     }
   }
@@ -102,60 +82,56 @@ function orderedMembers(
 }
 
 /** Build the member host object the member runner sees: the member's own
- * host.js with the wrapper applied. R1 semantics (rewire plan): a wrapper
- * SECTION is a FULL STATEMENT — `reactor` and `config`, when present on the
- * wrapper, replace the member's wholesale (host files derive keeps explicitly
- * by spreading the sibling import: `{ ...switchboard.reactor, drives }`).
- * `runner` stays key-merged: wrappers never restate `module`/`defaultVerb`,
- * they override individual keys (port, host, plugins — the plugins LIST
- * itself is a full statement computed in the file). */
+ * host.js with the wrapper applied. A wrapper SECTION is a FULL STATEMENT —
+ * `reactor` and `config`, when present on the wrapper, replace the member's
+ * wholesale; `runner` key-merges (wrappers override port, host, plugins…). */
 async function resolveMemberHost(
   projectRoot: string,
-  member: CompoundMember,
+  member: ChildWrapper,
   userData: string,
   configPatch?: Record<string, unknown>,
-): Promise<HostDefinition> {
-  const loaded = await loadHost(projectRoot, member.host);
-  const base = loaded.host;
-  const merged: HostDefinition = {
+): Promise<MemberDraft> {
+  const base: HostDefinition = (await loadHost(projectRoot, member.host)).host;
+  const reactor = member.reactor ?? base.reactor;
+  const merged: MemberDraft = {
     ...base,
-    runner: { ...base.runner, ...(member.runner ?? {}) },
-    config: {
-      ...(member.config !== undefined ? member.config : (base.config ?? {})),
-      ...(configPatch ?? {}),
-    },
-    reactor: (member.reactor !== undefined ? member.reactor : base.reactor) as
-      | Record<string, unknown>
-      | undefined,
+    runner: { ...base.runner, ...member.runner },
+    config: { ...(member.config ?? base.config ?? {}), ...configPatch },
+    ...(reactor !== undefined ? { reactor } : {}),
   };
   // ${userData} in the merged host (storage dirs etc.) resolves here — at the
   // runner, never derived from the instance name, so renames stay safe.
   return resolveUserDataPlaceholders(merged, userData);
 }
 
+interface DriveUrlSource {
+  name: string;
+  handle: { driveUrls?: (string | null | undefined)[] };
+}
+
 /**
- * Substitute DRIVE REFERENCES (`{ from: "<member>", slug }`, see
- * driveReferenceSchema) in the member's plugin entry configs with the URL the
- * referenced member's runner handle reported in `driveUrls` — the compound
- * is the one place both sides exist, so the link is derived here, not spelt
- * as a URL in the host file. Fails loudly on an unknown member, a member that
- * has not started yet (fix startOrder) or a slug it does not serve.
+ * Substitute DRIVE REFERENCES (`{ from: "<member>", slug }`) in the member's
+ * plugin entry configs with the URL the referenced member's handle reported
+ * in `driveUrls`. Fails loudly on an unknown member, a member that has not
+ * started yet (fix startOrder) or a slug it does not serve. Removed in T3.
  */
-export function resolveDriveReferences(
-  memberHost: HostDefinition,
+export function resolveDriveReferences<
+  H extends { runner: { plugins?: readonly unknown[] } },
+>(
+  memberHost: H,
   memberName: string,
-  started: readonly StartedMember[],
+  started: readonly DriveUrlSource[],
   declaredMembers: readonly string[],
-): HostDefinition {
-  const plugins = (memberHost.runner as { plugins?: unknown }).plugins;
-  if (!Array.isArray(plugins)) return memberHost;
+): H {
+  const plugins = memberHost.runner.plugins;
+  if (!plugins) return memberHost;
   const substituted: string[] = [];
   const resolved = plugins.map((entry: unknown) => {
-    if (typeof entry !== "object" || entry === null) return entry;
-    const config = (entry as { config?: Record<string, unknown> }).config;
+    if (!isRecord(entry)) return entry;
+    const config = isRecord(entry.config) ? entry.config : undefined;
     const refs = unresolvedDriveReferences(config);
     if (refs.length === 0) return entry;
-    const module = (entry as { module?: string }).module ?? "(plugin)";
+    const module = typeof entry.module === "string" ? entry.module : "(plugin)";
     const next = { ...config };
     for (const { key, reference } of refs) {
       const source = started.find((m) => m.name === reference.from);
@@ -179,7 +155,7 @@ export function resolveDriveReferences(
       next[key] = url;
       substituted.push(`${module}.${key}`);
     }
-    return { ...(entry as object), config: next };
+    return { ...entry, config: next };
   });
   if (substituted.length === 0) return memberHost;
   return { ...memberHost, runner: { ...memberHost.runner, plugins: resolved } };
@@ -191,11 +167,26 @@ function driveSlugOfUrl(url: string): string | undefined {
   return match ? decodeURIComponent(match[1]) : undefined;
 }
 
-function isConnectMember(member: CompoundMember): boolean {
+function isConnectMember(member: ChildWrapper): boolean {
   return member.host === "connect";
 }
-function isReactorFactMember(member: CompoundMember): boolean {
+function isReactorFactMember(member: ChildWrapper): boolean {
   return member.host === "switchboard";
+}
+
+/** A connect member's configured `drives.defaultDrives` entries (config is
+ * runner-defined, so the shape is checked here). */
+function configuredDefaultDrives(
+  config: Record<string, unknown> | undefined,
+): PHConnectDefaultDrive[] | undefined {
+  const drives = config?.drives;
+  if (!isRecord(drives) || !Array.isArray(drives.defaultDrives)) {
+    return undefined;
+  }
+  return drives.defaultDrives.filter(
+    (d: unknown): d is PHConnectDefaultDrive =>
+      isRecord(d) && (typeof d.url === "string" || d.local === true),
+  );
 }
 
 export interface RunCompoundOptions {
@@ -212,16 +203,31 @@ export interface RunCompoundResult {
   shutdown: () => Promise<void>;
 }
 
+/** At compound verb "run" each member runs its own (merged) defaultVerb —
+ * what lets a desktop compound pair a switchboard at `run` with a connect at
+ * `serve`. An explicit forwarded verb stays uniform across members. */
+function memberVerbOf(
+  compoundVerb: string,
+  runner: { defaultVerb?: string },
+): string {
+  return compoundVerb === "run" ? (runner.defaultVerb ?? "run") : compoundVerb;
+}
+
 export async function runCompound(
-  host: HostDefinition,
+  hostInput: HostDefinition,
   ctx: RunnerContext,
   options: RunCompoundOptions,
 ): Promise<RunCompoundResult> {
+  const parsed = genericCompoundHostSchema.safeParse(hostInput);
+  if (!parsed.success) {
+    throw new Error(
+      `hosts/${hostInput.name}: invalid compound host:\n${z.prettifyError(parsed.error)}`,
+    );
+  }
+  const host = parsed.data;
   const projectRoot = ctx.projectRoot;
-  const wiring = (host.config ?? {}) as CompoundWiring;
-  // The member verb is ctx.verb, resolved by the CALLING runner module (its
-  // `run` maps to defaultVerb; its dev/build/serve forward themselves) — the
-  // engine never consults defaultVerb, so an explicit verb always wins.
+  const wiring: CompoundWiring = host.config ?? {};
+  // Resolved by the calling runner module: its `run` maps to defaultVerb.
   const verb = ctx.verb;
 
   // Lock: one live instance per project per host (storage-root contention).
@@ -242,9 +248,8 @@ export async function runCompound(
 
   const userData = defaultUserDataDir(projectRoot, ctx.env);
   const started: StartedMember[] = [];
-  const reactorFacts: { driveUrls: (string | null | undefined)[] } = {
-    driveUrls: [],
-  };
+  const createdDriveUrls: (string | null | undefined)[] = [];
+  const declaredMembers = Object.keys(host.children);
 
   const shutdown = async () => {
     for (const m of [...started].reverse()) {
@@ -259,70 +264,88 @@ export async function runCompound(
     }
   };
 
-  for (const [name, member] of orderedMembers(host, wiring)) {
-    // Compute a config patch for the connect member from reactor facts.
-    let configPatch: Record<string, unknown> | undefined;
-    if (
-      isConnectMember(member) &&
-      wiring.projectDrivesIntoConnect &&
-      reactorFacts.driveUrls.length > 0
-    ) {
-      const configuredDefaultDrives = (
-        (member.config as { drives?: { defaultDrives?: unknown } } | undefined)
-          ?.drives as { defaultDrives?: unknown } | undefined
-      )?.defaultDrives as never;
-      configPatch = projectDrivesIntoConnect({
-        createdDriveUrls: reactorFacts.driveUrls,
-        configuredDefaultDrives,
-        publicBase: wiring.drivesPublicBase,
+  try {
+    for (const [name, member] of orderedMembers(host.children, wiring)) {
+      // A connect member gets the reactor member's created drives.
+      let configPatch: Record<string, unknown> | undefined;
+      if (
+        isConnectMember(member) &&
+        wiring.projectDrivesIntoConnect &&
+        createdDriveUrls.length > 0
+      ) {
+        configPatch = projectDrivesIntoConnect({
+          createdDriveUrls,
+          configuredDefaultDrives: configuredDefaultDrives(member.config),
+          publicBase: wiring.drivesPublicBase,
+        });
+      }
+
+      const memberHost = resolveDriveReferences(
+        await resolveMemberHost(projectRoot, member, userData, configPatch),
+        name,
+        started,
+        declaredMembers,
+      );
+      if (isConnectMember(member) && wiring.cspRegistrySync) {
+        memberHost.runner = { ...memberHost.runner, cspRegistrySync: true };
+      }
+      const specifier = memberHost.runner.module;
+      const runner = await resolveRunnerModule(projectRoot, specifier);
+      const file = `hosts/${member.host}/host.js`;
+      const validated = validateHost(runner, specifier, memberHost, file);
+      const memberVerb = memberVerbOf(verb, memberHost.runner);
+      const fn = getVerb(runner, specifier, memberVerb);
+      const handle = toStartedHandle(
+        await fn(validated, {
+          projectRoot,
+          env: ctx.env,
+          verb: memberVerb,
+          parent: { host: host.name, verb },
+        }),
+        `${name} (${specifier} ${memberVerb})`,
+      );
+      // Registered before `ready` settles, so a failed start still tears
+      // this member down.
+      started.push({
+        name,
+        member,
+        specifier,
+        kind: runner.kind,
+        verb: memberVerb,
+        handle,
       });
-    }
+      if (handle.ready) await handle.ready;
 
-    const memberHost = resolveDriveReferences(
-      await resolveMemberHost(projectRoot, member, userData, configPatch),
-      name,
-      started,
-      memberEntries(host).map(([memberName]) => memberName),
-    );
-    if (isConnectMember(member) && wiring.cspRegistrySync) {
-      memberHost.runner = { ...memberHost.runner, cspRegistrySync: true };
+      if (isReactorFactMember(member) && handle.driveUrls) {
+        createdDriveUrls.push(...handle.driveUrls);
+      }
     }
-    const specifier = memberHost.runner.module;
-    const runner = await resolveRunnerModule(projectRoot, specifier);
-    validateHost(runner, specifier, memberHost, `hosts/${member.host}/host.js`);
-    // At compound verb "run", each member runs its own (merged) defaultVerb —
-    // "each member's default mode" — which is what lets a desktop compound
-    // pair a switchboard at `run` with a connect at `serve`. An explicit
-    // forwarded verb (dev/build/serve) stays uniform across members.
-    const memberVerb =
-      verb === "run"
-        ? ((memberHost.runner.defaultVerb as string | undefined) ?? "run")
-        : verb;
-    const fn = getVerb(runner, specifier, memberVerb);
-    const handle = ((await fn(memberHost, ctx)) ?? {}) as RunnerHandle;
-    if (handle.ready) await handle.ready;
-    started.push({ name, handle });
-
-    if (isReactorFactMember(member) && handle.driveUrls) {
-      reactorFacts.driveUrls.push(...handle.driveUrls);
-    }
+  } catch (error) {
+    await shutdown();
+    throw error;
   }
 
   if (wiring.runtimeRecord !== false) {
     const members: Record<string, RunRecordMember> = {};
     for (const m of started) {
       members[m.name] = {
-        port: m.handle.port,
-        url: m.handle.endpoints?.graphql ?? m.handle.endpoints?.connect,
+        host: m.member.host,
+        runnerModule: m.specifier,
+        kind: m.kind,
+        verb: m.verb,
+        outputs: m.handle.outputs,
       };
     }
     writeRunRecord(projectRoot, {
-      pid: process.pid,
-      hostName: host.name,
+      version: 2,
+      host: host.name,
       projectName: options.projectName,
+      kind: "compound",
+      verb,
+      pid: process.pid,
       startedAt: new Date().toISOString(),
       members,
-      extra: options.recordExtra,
+      ...(options.recordExtra ? { extra: options.recordExtra } : {}),
     });
   }
 
