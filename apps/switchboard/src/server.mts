@@ -1357,14 +1357,22 @@ async function initServer(
 
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
-  const shutdown = async () => {
-    if (pluginHost) await pluginHost.observe("onShutdown");
-    await privacy?.stop();
-    await workflowsRetry?.stop();
-    await workflows?.stop();
-    await api.dispose();
-  };
-  apiRef.current = { dispose: shutdown };
+  // Memoized: the reactor's shutdown hook and a caller can both reach it.
+  let apiDrained: Promise<void> | undefined;
+  const drainApi = () =>
+    (apiDrained ??= (async () => {
+      if (pluginHost) await pluginHost.observe("onShutdown");
+      await privacy?.stop();
+      await workflowsRetry?.stop();
+      await workflows?.stop();
+      await api.dispose();
+    })());
+  apiRef.current = { dispose: drainApi };
+  // An owned reactor's shutdown drains the api through the hook above, in the
+  // signal path's order: kill, hooks, database. A caller's reactor is the
+  // caller's to stop, so only the api is drained.
+  const ownedReactor = ownedReactorModule?.reactorModule;
+  const shutdown = ownedReactor ? () => ownedReactor.shutdown() : drainApi;
 
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
@@ -1579,11 +1587,12 @@ async function initServer(
  * dangling until the process exits.
  *
  * When `options.reactor` is omitted, the switchboard builds and owns the
- * reactor. `shutdown()` on the returned handle only drains the api (HTTP
- * server, GraphQL, MCP, attachments); the reactor itself is torn down by
- * its own signal handlers (`withSignalHandlers`), which call `kill()` and
- * trigger the `withShutdownHook` chain that disposes the api. Programmatic
- * full teardown isn't currently exposed — wire it via SIGINT/SIGTERM.
+ * reactor. `shutdown()` on the returned handle then runs the reactor
+ * module's `shutdown()`: `kill()`, the `withShutdownHook` chain that drains
+ * the api (HTTP server, GraphQL, MCP, attachments, read-model db), then the
+ * reactor database. It does not exit the process. It is the same memoized
+ * teardown the SIGINT/SIGTERM handlers (`withSignalHandlers`) run, so calling
+ * it twice, or receiving a signal around it, tears down once.
  */
 export const startSwitchboard = async (
   options: StartServerOptions = {},
