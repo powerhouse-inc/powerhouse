@@ -34,6 +34,7 @@ describe("applyComposition", () => {
         config: {
           allowAddDrive: false,
           sections: { local: { allowAdd: false } },
+          icons: { folder: "data:f", documents: { "acme/order": "data:o" } },
         },
       },
     ];
@@ -41,6 +42,11 @@ describe("applyComposition", () => {
     // Owned toggles take the entry value...
     expect(out.drives?.allowAddDrive).toBe(false);
     expect(out.drives?.sections?.local?.allowAdd).toBe(false);
+    // ...so do the explorer icons (resolved to data URIs by the build).
+    expect(out.drives?.icons).toEqual({
+      folder: "data:f",
+      documents: { "acme/order": "data:o" },
+    });
     // ...unspecified section keys inherit DEFAULT_CONNECT_CONFIG, not served.
     expect(out.drives?.sections?.local?.enabled).toBe(true);
     expect(out.drives?.sections?.remote?.enabled).toBe(true);
@@ -54,6 +60,8 @@ describe("applyComposition", () => {
     const out = await applyComposition(cfg);
     expect(out.drives?.allowAddDrive).toBe(true);
     expect(out.drives?.sections?.remote?.allowAdd).toBe(true);
+    // the served drives.icons is not a fallback: single source, built-in icons
+    expect(out.drives?.icons).toBeNull();
   });
 
   it("generic absent zeroes the drive-chrome toggles off", async () => {
@@ -63,6 +71,7 @@ describe("applyComposition", () => {
     expect(out.drives?.allowAddDrive).toBe(false);
     expect(out.drives?.sections?.remote?.enabled).toBe(false);
     expect(out.drives?.sections?.local?.allowDelete).toBe(false);
+    expect(out.drives?.icons).toBeNull();
     // branding still untouched by the pipeline.
     expect(out.branding?.appName).toBe("Default");
   });

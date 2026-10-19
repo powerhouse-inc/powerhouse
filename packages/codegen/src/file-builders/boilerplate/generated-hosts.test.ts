@@ -58,6 +58,7 @@ describe("writeGeneratedHostsFiles", () => {
     expect(connect).toContain("@powerhousedao/connect/plugins/generic");
     expect(connect).toContain("config.connect?.drives?.allowAddDrive");
     expect(connect).toContain("config.connect?.drives?.sections");
+    expect(connect).toContain("config.connect?.drives?.icons");
     // standalone Connect: its own worker reactor + a local default drive:
     expect(connect).toContain(`backends: {`);
     expect(connect).toContain(`kind: "worker"`);

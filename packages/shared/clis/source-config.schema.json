@@ -297,37 +297,6 @@
                   }
                 }
               ]
-            },
-            "icons": {
-              "type": ["object", "null"],
-              "additionalProperties": false,
-              "description": "Icons in the drive explorer; each null keeps the built-in icon.",
-              "properties": {
-                "localDrive": {
-                  "type": ["string", "null"],
-                  "description": "Local drives without an icon of their own."
-                },
-                "remoteDrive": {
-                  "type": ["string", "null"],
-                  "description": "Remote drives without an icon of their own."
-                },
-                "folder": {
-                  "type": ["string", "null"],
-                  "description": "Folders."
-                },
-                "document": {
-                  "type": ["string", "null"],
-                  "description": "Documents whose type has no icon in `documents`."
-                },
-                "documents": {
-                  "type": ["object", "null"],
-                  "description": "Per document type, e.g. \"acme/invoice\".",
-                  "additionalProperties": {
-                    "type": "string",
-                    "description": "Image reference: a project-relative file path, a URL, or a data URI."
-                  }
-                }
-              }
             }
           }
         },
@@ -504,6 +473,37 @@
                       "description": "When false, drives in this section cannot be deleted from the UI.",
                       "default": true
                     }
+                  }
+                }
+              }
+            },
+            "icons": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "description": "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon.",
+              "properties": {
+                "localDrive": {
+                  "type": ["string", "null"],
+                  "description": "Local drives without an icon of their own."
+                },
+                "remoteDrive": {
+                  "type": ["string", "null"],
+                  "description": "Remote drives without an icon of their own."
+                },
+                "folder": {
+                  "type": ["string", "null"],
+                  "description": "Folders."
+                },
+                "document": {
+                  "type": ["string", "null"],
+                  "description": "Documents whose type has no icon in `documents`."
+                },
+                "documents": {
+                  "type": ["object", "null"],
+                  "description": "Per document type, e.g. \"acme/invoice\".",
+                  "additionalProperties": {
+                    "type": "string",
+                    "description": "Image reference: a project-relative file path, a URL, or a data URI."
                   }
                 }
               }

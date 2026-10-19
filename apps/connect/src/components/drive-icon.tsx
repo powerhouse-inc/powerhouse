@@ -56,8 +56,8 @@ export function DriveIcon({
     );
   }
 
-  // A drive without an icon of its own takes the branding's local/remote
-  // drive icon (connect.branding.icons), else the built-in one.
+  // A drive without an icon of its own takes the explorer's local/remote
+  // drive icon (the generic plugin's `icons`), else the built-in one.
   const fallbackSrc = isRemoteDrive
     ? branding.icons?.remoteDrive
     : branding.icons?.localDrive;

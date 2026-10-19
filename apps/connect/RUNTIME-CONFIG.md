@@ -50,11 +50,11 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
   // Connect-only runtime values:
   "connect": {
     "branding":  { "appName": "...", "homeBackground": "..." | null,
-                   "icon": "..." | null, "loader": "..." | { src, animation, size } | null,
-                   "icons": { localDrive, remoteDrive, folder, document, documents } | null },
+                   "icon": "..." | null, "loader": "..." | { src, animation, size } | null },
     "app":       { "logLevel": "info", "basePath": "/", "offline": true },
     "renown":    { "url": "...", "networkId": "eip155", "chainId": 1, "switchboardUrl": "..." | undefined, "adapters": {...} | undefined },
-    "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...} },
+    "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...},
+                   "icons": { localDrive, remoteDrive, folder, document, documents } | null },
     "packages":  { "externalEnabled": true },
     "sentry":    { "dsn": null, "env": "dev", "tracing": false },
     "openPanel": { "clientId": "", "apiUrl": "..." | undefined, "trackUiEvents": true, "trackOperations": true },

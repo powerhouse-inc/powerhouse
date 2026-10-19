@@ -51,8 +51,6 @@ export type PHConnectBranding = {
    * editor loads. A path gets a gentle pulse; `{ src, animation, size }`
    * says otherwise. Default: Connect's animated logo. */
   loader?: PHImageRef | PHConnectLoader | null;
-  /** Icons in the drive explorer. Default: the built-in icons. */
-  icons?: PHConnectBrandingIcons | null;
 };
 
 /** The loading image and the motion applied to it. */
@@ -64,8 +62,11 @@ export type PHConnectLoader = {
   size?: number | null;
 };
 
-/** The drive explorer's icons; each `null` keeps the built-in one. */
-export type PHConnectBrandingIcons = {
+/** The drive explorer's icons: the generic chrome's, so the generic plugin
+ * owns them (its entry `icons`; `connect.drives.icons` on the classic path).
+ * Each `null` keeps the built-in icon. A package may ship its own document
+ * icons; these override them per type. */
+export type PHConnectExplorerIcons = {
   /** Local drives without an icon of their own. */
   localDrive?: PHImageRef | null;
   /** Remote drives without an icon of their own. */
@@ -114,6 +115,8 @@ export type PHConnectDrives = {
   defaultDrives?: PHConnectDefaultDrive[];
   preserveStrategy?: DrivePreserveStrategy;
   sections?: PHConnectDriveSections;
+  /** The explorer's icons (generic plugin); null = the built-in icons. */
+  icons?: PHConnectExplorerIcons | null;
 };
 
 export type PHConnectApp = {

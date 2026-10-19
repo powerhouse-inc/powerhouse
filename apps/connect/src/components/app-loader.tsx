@@ -38,6 +38,11 @@ export const AppLoader = (props: {
   localPackage?: DocumentModelLib | Promise<DocumentModelLib>;
 }) => {
   const phStore = connectPHStore();
+  // connect.branding (Connect's identity) plus the explorer icons the generic
+  // plugin owns (drives.icons), both resolved by the build: one provider for
+  // the design-system components.
+  const runtime = getRuntimeConfig().connect;
+  const branding = { ...runtime.branding, icons: runtime.drives?.icons };
   const Load = lazy(() =>
     import("./load.js").then((m) =>
       m.loadComponent(props.localPackage, phStore),
@@ -45,9 +50,7 @@ export const AppLoader = (props: {
   );
   return (
     <StrictMode>
-      {/* connect.branding, resolved by the build (images as data URIs): the
-          design-system components read it from here. */}
-      <ConnectBrandingProvider branding={getRuntimeConfig().connect.branding}>
+      <ConnectBrandingProvider branding={branding}>
         <PHStoreProvider store={phStore}>
           <ErrorBoundary
             fallbackRender={(props) => (

@@ -1,7 +1,9 @@
 import type {
   PHConnectBranding,
-  PHConnectBrandingIcons,
+  PHConnectCompositionEntry,
+  PHConnectExplorerIcons,
   PHConnectLoader,
+  PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import {
@@ -27,15 +29,21 @@ import type { Connect, Plugin } from "vite";
 //    and icons, emitted next to index.html the way connectFaviconPlugin emits
 //    icon.ico and declared in <meta> / <link> tags;
 //  - the runtime config's `branding` block, with every image resolved to a
-//    data URI, which Connect reads at boot (in-app logo, home background,
-//    explorer icons).
+//    data URI, which Connect reads at boot (in-app logo, home background).
 //
-// `null` on any field means the default, the same as omitting it.
+// The drive explorer's icons are the generic chrome's, owned by the generic
+// plugin (`drives.icons`); the same resolution is applied to them below.
+// `null` on any field means the default, the same as omitting it. A path is
+// resolved here, at build or dev-server start; config applied later (deploy
+// overrides, packages loaded in the browser) uses URLs or data URIs, which
+// pass through everywhere.
 
 /** `<meta name>` that tells Connect's loaders which image replaces the logo. */
 export const LOADER_META = "ph-loader";
 /** `<meta name>` set when the project's `_app` replaces Connect's layout. */
 export const CUSTOM_SHELL_META = "ph-custom-shell";
+/** The plugin whose entry config carries the explorer icons. */
+export const GENERIC_PLUGIN_MODULE = "@powerhousedao/connect/plugins/generic";
 
 const DEFAULT_LOADER_SIZE = 96;
 const DEFAULT_BRANDING: PHConnectBranding =
@@ -43,14 +51,11 @@ const DEFAULT_BRANDING: PHConnectBranding =
 
 type Warn = (message: string) => void;
 
-type IconsKey = keyof PHConnectBrandingIcons;
-
 /**
  * The branding in effect: defaults < source powerhouse.config.json <
  * CLI / host override, applied in that order. In every layer `undefined`
  * leaves the field alone and `null` resets it to the default, so a null in a
  * later layer beats a value in an earlier one (`--home-background ""`).
- * `icons` merges per key the same way.
  */
 export function effectiveBranding(
   ...layers: Array<PHConnectBranding | null | undefined>
@@ -62,23 +67,7 @@ export function effectiveBranding(
     const entries = Object.entries(layer) as Array<[string, unknown]>;
     for (const [key, value] of entries) {
       if (value === undefined) continue;
-      if (value === null) {
-        out[key] = defaults[key] ?? null;
-        continue;
-      }
-      if (key === "icons" && typeof value === "object") {
-        const merged: Record<string, unknown> = {
-          ...((out.icons as Record<string, unknown> | null | undefined) ?? {}),
-        };
-        for (const [iconKey, iconValue] of Object.entries(value as object)) {
-          if (iconValue === undefined) continue;
-          if (iconValue === null) delete merged[iconKey];
-          else merged[iconKey] = iconValue;
-        }
-        out.icons = Object.keys(merged).length > 0 ? merged : null;
-        continue;
-      }
-      out[key] = value;
+      out[key] = value === null ? (defaults[key] ?? null) : value;
     }
   }
   const appName =
@@ -98,7 +87,6 @@ export function resolveRuntimeBranding(
   branding: PHConnectBranding,
   warn?: Warn,
 ): PHConnectBranding {
-  const ui = { maxBytes: UI_ICON_MAX_BYTES, warn };
   const out: PHConnectBranding = {
     appName: branding.appName ?? DEFAULT_BRANDING.appName,
     homeBackground:
@@ -108,35 +96,108 @@ export function resolveRuntimeBranding(
       }) ?? null,
     icon: null,
     loader: null,
-    icons: null,
   };
   if (branding.icon) {
     const logo = iconVariantPath(projectRoot, branding.icon, 64);
-    out.icon = resolveImageRef(projectRoot, logo ?? branding.icon, ui) ?? null;
-  }
-  const icons = branding.icons;
-  if (icons) {
-    const resolved: PHConnectBrandingIcons = {};
-    for (const key of [
-      "localDrive",
-      "remoteDrive",
-      "folder",
-      "document",
-    ] as const satisfies readonly IconsKey[]) {
-      const src = resolveImageRef(projectRoot, icons[key], ui);
-      if (src) resolved[key] = src;
-    }
-    if (icons.documents) {
-      const documents: Record<string, string> = {};
-      for (const [type, ref] of Object.entries(icons.documents)) {
-        const src = resolveImageRef(projectRoot, ref, ui);
-        if (src) documents[type] = src;
-      }
-      if (Object.keys(documents).length > 0) resolved.documents = documents;
-    }
-    if (Object.keys(resolved).length > 0) out.icons = resolved;
+    out.icon =
+      resolveImageRef(projectRoot, logo ?? branding.icon, {
+        maxBytes: UI_ICON_MAX_BYTES,
+        warn,
+      }) ?? null;
   }
   return out;
+}
+
+const EXPLORER_ICON_KEYS = [
+  "localDrive",
+  "remoteDrive",
+  "folder",
+  "document",
+] as const;
+
+/**
+ * The drive explorer's icons with every path resolved to a data URI; a key
+ * without a usable image is dropped (the built-in icon), an empty or null
+ * set is null.
+ */
+export function resolveExplorerIcons(
+  projectRoot: string,
+  icons: PHConnectExplorerIcons | null | undefined,
+  warn?: Warn,
+): PHConnectExplorerIcons | null {
+  if (!icons) return null;
+  const ui = { maxBytes: UI_ICON_MAX_BYTES, warn };
+  const out: PHConnectExplorerIcons = {};
+  for (const key of EXPLORER_ICON_KEYS) {
+    const src = resolveImageRef(projectRoot, icons[key], ui);
+    if (src) out[key] = src;
+  }
+  if (icons.documents) {
+    const documents: Record<string, string> = {};
+    for (const [type, ref] of Object.entries(icons.documents)) {
+      const src = resolveImageRef(projectRoot, ref, ui);
+      if (src) documents[type] = src;
+    }
+    if (Object.keys(documents).length > 0) out.documents = documents;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+type GenericEntry = PHConnectCompositionEntry & {
+  config: { icons?: PHConnectExplorerIcons | null };
+};
+
+function hasIconsConfig(
+  entry: PHConnectCompositionEntry,
+): entry is GenericEntry {
+  return (
+    entry.module === GENERIC_PLUGIN_MODULE &&
+    entry.config !== undefined &&
+    "icons" in entry.config
+  );
+}
+
+/**
+ * A connect block with its explorer icons resolved, wherever they are
+ * declared: `drives.icons` (the classic source value) and the generic
+ * plugin entry's `icons` in a served composition (the owner under uniform
+ * runners). Unchanged when neither is present.
+ */
+export function withResolvedExplorerIcons<
+  T extends PHConnectRuntimeConfig | undefined,
+>(projectRoot: string, connect: T, warn?: Warn): T {
+  if (!connect) return connect;
+  let out: PHConnectRuntimeConfig = connect;
+  if (connect.drives && "icons" in connect.drives) {
+    out = {
+      ...out,
+      drives: {
+        ...out.drives,
+        icons: resolveExplorerIcons(projectRoot, connect.drives.icons, warn),
+      },
+    };
+  }
+  if (connect.composition?.some(hasIconsConfig)) {
+    out = {
+      ...out,
+      composition: connect.composition.map((entry) =>
+        hasIconsConfig(entry)
+          ? {
+              ...entry,
+              config: {
+                ...entry.config,
+                icons: resolveExplorerIcons(
+                  projectRoot,
+                  entry.config.icons,
+                  warn,
+                ),
+              },
+            }
+          : entry,
+      ),
+    };
+  }
+  return out as T;
 }
 
 const IMAGE_TYPES: Record<string, string> = {

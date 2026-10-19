@@ -101,6 +101,41 @@ const imageRefSchema = {
     "Image reference: a project-relative file path (resolved by the Connect build), a URL, or a data URI. null keeps the default.",
 } as const;
 
+/** The drive explorer's icons: the generic chrome's, owned by the generic
+ * plugin (its entry `icons`; `connect.drives.icons` on the classic path).
+ * Each `null` keeps the built-in icon; paths are resolved by the Connect
+ * build, URLs and data URIs pass through. */
+export const phConnectExplorerIconsSchema = {
+  type: ["object", "null"],
+  additionalProperties: false,
+  description:
+    "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon.",
+  properties: {
+    localDrive: {
+      ...imageRefSchema,
+      description: "Local drives without an icon of their own.",
+    },
+    remoteDrive: {
+      ...imageRefSchema,
+      description: "Remote drives without an icon of their own.",
+    },
+    folder: { ...imageRefSchema, description: "Folders." },
+    document: {
+      ...imageRefSchema,
+      description: "Documents whose type has no icon in `documents`.",
+    },
+    documents: {
+      type: ["object", "null"],
+      description: 'Per document type, e.g. "acme/invoice".',
+      additionalProperties: {
+        type: "string",
+        description:
+          "Image reference: a project-relative file path, a URL, or a data URI.",
+      },
+    },
+  },
+} as const;
+
 /** `connect.branding`: Connect's identity and look. Core settings of the
  * Connect host; `null` on any field means the default. Same shape in
  * powerhouse.config.json (paths) and in the runtime config (resolved). */
@@ -155,36 +190,6 @@ export const phConnectBrandingSchema = {
           },
         },
       ],
-    },
-    icons: {
-      type: ["object", "null"],
-      additionalProperties: false,
-      description:
-        "Icons in the drive explorer; each null keeps the built-in icon.",
-      properties: {
-        localDrive: {
-          ...imageRefSchema,
-          description: "Local drives without an icon of their own.",
-        },
-        remoteDrive: {
-          ...imageRefSchema,
-          description: "Remote drives without an icon of their own.",
-        },
-        folder: { ...imageRefSchema, description: "Folders." },
-        document: {
-          ...imageRefSchema,
-          description: "Documents whose type has no icon in `documents`.",
-        },
-        documents: {
-          type: ["object", "null"],
-          description: 'Per document type, e.g. "acme/invoice".',
-          additionalProperties: {
-            type: "string",
-            description:
-              "Image reference: a project-relative file path, a URL, or a data URI.",
-          },
-        },
-      },
     },
   },
 } as const;
@@ -337,6 +342,7 @@ export const phConnectRuntimeConfigSchema = {
             local: driveSectionSchema,
           },
         },
+        icons: phConnectExplorerIconsSchema,
       },
     },
     renown: {

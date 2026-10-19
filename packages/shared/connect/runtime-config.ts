@@ -21,7 +21,6 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
     homeBackground: null,
     icon: null,
     loader: null,
-    icons: null,
   },
   app: {
     logLevel: "info",
@@ -43,6 +42,8 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
       remote: { enabled: true, allowAdd: true, allowDelete: true },
       local: { enabled: true, allowAdd: true, allowDelete: true },
     },
+    // The explorer's icons: the generic plugin's; null = the built-in icons.
+    icons: null,
   },
   renown: {
     url: "https://www.renown.id",

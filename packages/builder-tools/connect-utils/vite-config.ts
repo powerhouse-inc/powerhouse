@@ -45,6 +45,7 @@ import {
   resolveProjectLoader,
   resolveProjectPwaBrand,
   resolveRuntimeBranding,
+  withResolvedExplorerIcons,
 } from "./vite-plugins/project-brand.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
@@ -404,6 +405,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     branding,
     brandWarn,
   );
+  // The explorer's icons are the generic plugin's: `drives.icons` in the
+  // source block and the generic entry's `icons` in a served composition.
+  // Paths become data URIs here as well; URLs and data URIs pass through.
+  const sourceConnect = withResolvedExplorerIcons(
+    options.dirname,
+    phConfig.connect,
+    brandWarn,
+  );
+  const connectOverride = withResolvedExplorerIcons(
+    options.dirname,
+    options.cliConnectOverride,
+    brandWarn,
+  );
   const pwaPlugins: PluginOption = (async () => {
     if (!offlineEnabled) return connectPwaPlugins({ offlineEnabled });
     const contributions = await collectPackagePwaContributions({
@@ -525,10 +539,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       phConfigPlugin({
         packages: phPackages,
         projectRoot: options.dirname,
-        connect: phConfig.connect,
+        connect: sourceConnect,
         workflows: phConfig.workflows,
         packageRegistryUrl: phPackageRegistryUrl ?? undefined,
-        cliConnectOverride: options.cliConnectOverride,
+        cliConnectOverride: connectOverride,
         branding: runtimeBranding,
       }),
       phBundledPackagesPlugin({

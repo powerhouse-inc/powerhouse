@@ -1,12 +1,14 @@
 import { createContext, useContext, type PropsWithChildren } from "react";
 
 /**
- * Connect's branding as the components see it: the host app resolves
- * `connect.branding` (paths already turned into data URIs) and provides it
- * once at its root; the components read it from here instead of reaching
- * into configuration. Without a provider every built-in icon renders.
+ * Connect's branding as the components see it: the host app provides it once
+ * at its root (images already resolved to data URIs) and the components read
+ * it from here instead of reaching into configuration. `icons` are the drive
+ * explorer's, which the generic plugin owns; `appName`, `icon` and
+ * `homeBackground` are Connect's identity (`connect.branding`). Without a
+ * provider every built-in icon renders.
  */
-export type ConnectBrandingIcons = {
+export type ConnectExplorerIcons = {
   /** Local drives without an icon of their own. */
   localDrive?: string | null;
   /** Remote drives without an icon of their own. */
@@ -23,7 +25,7 @@ export type ConnectBranding = {
   /** The in-app logo (the 64 px app icon). */
   icon?: string | null;
   homeBackground?: string | null;
-  icons?: ConnectBrandingIcons | null;
+  icons?: ConnectExplorerIcons | null;
 };
 
 const ConnectBrandingContext = createContext<ConnectBranding>({});
@@ -43,8 +45,9 @@ export function useConnectBranding(): ConnectBranding {
   return useContext(ConnectBrandingContext);
 }
 
-/** The icon for a document of `documentType`: its type's icon, else the
- * branding's default document icon, else undefined (the built-in icon). */
+/** The icon for a document of `documentType`: the explorer's icon for that
+ * type, else its default document icon, else undefined (the icon the package
+ * ships, or the built-in one). */
 export function brandedDocumentIcon(
   branding: ConnectBranding,
   documentType: string,

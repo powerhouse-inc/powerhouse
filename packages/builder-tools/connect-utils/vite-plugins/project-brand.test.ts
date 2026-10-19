@@ -7,11 +7,13 @@ import {
   effectiveBranding,
   pngSize,
   replaceShellLoader,
+  resolveExplorerIcons,
   resolveProjectFavicons,
   resolveProjectLoader,
   resolveProjectPwaBrand,
   resolveRuntimeBranding,
   withProjectFavicons,
+  withResolvedExplorerIcons,
 } from "./project-brand.js";
 import { brandManifest } from "./pwa.js";
 
@@ -36,6 +38,9 @@ function project(files: Record<string, Buffer | string>): string {
   return dir;
 }
 
+const dataUri = (buffer: Buffer) =>
+  `data:image/png;base64,${buffer.toString("base64")}`;
+
 describe("effectiveBranding", () => {
   it("fills the defaults and lets null in any layer mean the default", () => {
     expect(effectiveBranding()).toEqual({
@@ -43,7 +48,6 @@ describe("effectiveBranding", () => {
       homeBackground: null,
       icon: null,
       loader: null,
-      icons: null,
     });
     // the scaffold's all-null block is the default look
     expect(
@@ -52,7 +56,6 @@ describe("effectiveBranding", () => {
         homeBackground: null,
         icon: null,
         loader: null,
-        icons: null,
       }),
     ).toEqual(effectiveBranding());
     // source sets, the override's null resets (`--home-background ""`)
@@ -67,27 +70,14 @@ describe("effectiveBranding", () => {
       icon: "./a.png",
     });
   });
-
-  it("merges icons per key, a null key dropping back to the built-in icon", () => {
-    const merged = effectiveBranding(
-      { icons: { folder: "./f.png", document: "./d.png" } },
-      { icons: { document: null, localDrive: "./l.png" } },
-    );
-    expect(merged.icons).toEqual({ folder: "./f.png", localDrive: "./l.png" });
-    expect(
-      effectiveBranding({ icons: { folder: "./f.png" } }, { icons: null })
-        .icons,
-    ).toBeNull();
-  });
 });
 
 describe("resolveRuntimeBranding", () => {
-  it("resolves every image to a data URI, the icon to its 64 px variant", () => {
+  it("resolves the background and the icon's 64 px variant to data URIs", () => {
     const dir = project({
       "icons/app.png": png(1024, 1024),
       "icons/app_64x64.png": png(64, 64),
       "icons/bg.webp": "RIFF",
-      "icons/doc.png": png(8, 8),
     });
     const runtime = resolveRuntimeBranding(
       dir,
@@ -96,36 +86,22 @@ describe("resolveRuntimeBranding", () => {
         icon: "./icons/app.png",
         homeBackground: "./icons/bg.webp",
         loader: "./icons/app.png",
-        icons: {
-          document: "./icons/doc.png",
-          documents: { "acme/order": "./icons/doc.png", "x/y": "./nope.png" },
-          folder: "https://cdn/folder.png",
-        },
       }),
     );
     expect(runtime.appName).toBe("Pizza Plaza");
-    expect(runtime.icon).toBe(
-      `data:image/png;base64,${png(64, 64).toString("base64")}`,
-    );
+    expect(runtime.icon).toBe(dataUri(png(64, 64)));
     expect(runtime.homeBackground).toMatch(/^data:image\/webp;base64,/);
     // the loader is served as a file and declared in index.html
     expect(runtime.loader).toBeNull();
-    expect(runtime.icons).toEqual({
-      document: expect.stringMatching(/^data:image\/png/) as string,
-      documents: { "acme/order": expect.stringMatching(/^data:/) as string },
-      folder: "https://cdn/folder.png",
-    });
   });
 
   it("keeps nulls for the defaults and a master without variants as the logo", () => {
     const dir = project({ "icons/app.png": png(16, 16) });
-    const runtime = resolveRuntimeBranding(dir, effectiveBranding());
-    expect(runtime).toEqual({
+    expect(resolveRuntimeBranding(dir, effectiveBranding())).toEqual({
       appName: "Powerhouse Connect",
       homeBackground: null,
       icon: null,
       loader: null,
-      icons: null,
     });
     expect(
       resolveRuntimeBranding(
@@ -133,6 +109,63 @@ describe("resolveRuntimeBranding", () => {
         effectiveBranding({ icon: "./icons/app.png" }),
       ).icon,
     ).toMatch(/^data:image\/png/);
+  });
+});
+
+describe("explorer icons (the generic plugin's)", () => {
+  it("resolves paths, passes URLs through, drops what has no image", () => {
+    const dir = project({ "icons/doc.png": png(8, 8) });
+    const warnings: string[] = [];
+    expect(
+      resolveExplorerIcons(
+        dir,
+        {
+          document: "./icons/doc.png",
+          documents: { "acme/order": "./icons/doc.png", "x/y": "./nope.png" },
+          folder: "https://cdn/folder.png",
+          localDrive: null,
+        },
+        (m) => warnings.push(m),
+      ),
+    ).toEqual({
+      document: dataUri(png(8, 8)),
+      documents: { "acme/order": dataUri(png(8, 8)) },
+      folder: "https://cdn/folder.png",
+    });
+    expect(warnings).toHaveLength(1);
+    expect(resolveExplorerIcons(dir, null)).toBeNull();
+    expect(resolveExplorerIcons(dir, { folder: "./nope.png" })).toBeNull();
+  });
+
+  it("resolves them in the source drives block and in the generic entry's config", () => {
+    const dir = project({ "f.png": png(4, 4) });
+    const connect = {
+      branding: { appName: "x" },
+      drives: { allowAddDrive: true, icons: { folder: "./f.png" } },
+      composition: [
+        { module: "@powerhousedao/connect/plugins/workflows", config: {} },
+        {
+          module: "@powerhousedao/connect/plugins/generic",
+          config: { allowAddDrive: false, icons: { document: "./f.png" } },
+        },
+      ],
+    };
+    const out = withResolvedExplorerIcons(dir, connect);
+    expect(out.drives).toEqual({
+      allowAddDrive: true,
+      icons: { folder: dataUri(png(4, 4)) },
+    });
+    expect(out.composition[1].config).toEqual({
+      allowAddDrive: false,
+      icons: { document: dataUri(png(4, 4)) },
+    });
+    // other entries and the rest of the block are untouched
+    expect(out.composition[0]).toBe(connect.composition[0]);
+    expect(out.branding).toBe(connect.branding);
+    // nothing to resolve: the same object comes back
+    const plain = { drives: { allowAddDrive: true } };
+    expect(withResolvedExplorerIcons(dir, plain)).toBe(plain);
+    expect(withResolvedExplorerIcons(dir, undefined)).toBeUndefined();
   });
 });
 
