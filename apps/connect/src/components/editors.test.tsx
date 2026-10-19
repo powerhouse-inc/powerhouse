@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import type { UseUndoRedoShortcutsProps } from "@powerhousedao/connect/hooks";
+import type { UseUndoRedoShortcutsProps } from "../hooks/useUndoRedoShortcuts.js";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,10 +13,10 @@ const state = vi.hoisted(() => ({
   shortcuts: undefined as UseUndoRedoShortcutsProps | undefined,
 }));
 
-vi.mock("@powerhousedao/connect/components", () => ({
+vi.mock("./editor-loader.js", () => ({
   EditorLoader: () => null,
 }));
-vi.mock("@powerhousedao/connect/hooks", () => ({
+vi.mock("../hooks/useUndoRedoShortcuts.js", () => ({
   useUndoRedoShortcuts: (props: UseUndoRedoShortcutsProps) => {
     state.shortcuts = props;
   },
@@ -41,7 +41,7 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
 vi.mock("@powerhousedao/reactor-browser", () => ({
   getRevisionFromDate: () => 0,
   setRevisionHistoryVisible: () => undefined,
-  showPHModal: () => undefined,
+  openTarget: () => undefined,
   useDocumentById: () => [state.document, state.dispatch],
   useDocumentModelModuleById: () => undefined,
   useDocumentOperations: () => ({
