@@ -192,4 +192,21 @@ describe("mastra-runner attach failures", () => {
     ).rejects.toThrow(/declare a remote backend/);
     rmSync(dir, { recursive: true, force: true });
   });
+
+  it("fails naming the token form when the remote backend has no url", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ph-agent-nourl-"));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+    await expect(
+      runner.run(
+        {
+          name: "assistant",
+          runner: { module: "m" },
+          reactor: { backends: { switchboard: { kind: "remote" } } },
+        },
+        { projectRoot: dir, verb: "run", env: {} },
+      ),
+    ).rejects.toThrow(
+      /needs the switchboard's GraphQL url: remote: \{ url: switchboard\.endpoints\.graphql \}.*\$output/,
+    );
+  });
 });

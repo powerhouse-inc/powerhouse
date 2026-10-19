@@ -14,25 +14,37 @@ const CLINT = "@powerhousedao/clint/clint-runner";
 const mastra = { ...mastraRunner };
 const clint = { ...clintRunner };
 
-/** The scaffold/Sektar assistant host, with a literal model. The
- * `satisfies PHHost` is the type-level half of the contract. */
-const assistantHost = () =>
+/** The scaffold/Sektar assistant host as DECLARED: a literal model and the
+ * key as an `$env` token. The `satisfies PHHost` is the type-level half of
+ * the contract. (`remote.url` takes the switchboard endpoint token once
+ * host-core makes it a ref() field; spelled literally here.) */
+const declaredAssistantHost = () =>
   ({
     name: "assistant",
-    runner: { module: MASTRA, port: 4910, workdir: "${userData}/assistant" },
+    runner: { module: MASTRA, port: 4910 },
     profile: { appId: "inc.powerhouse.assistant.lab", name: "Lab Assistant" },
     reactor: {
       backends: {
-        switchboard: { kind: "remote", remote: { host: "switchboard" } },
+        switchboard: {
+          kind: "remote",
+          remote: { url: "http://127.0.0.1:4001/graphql" },
+        },
       },
       protocol: {},
     },
     config: {
       model: "openrouter/anthropic/claude-sonnet-4.5",
+      apiKey: { $env: "OPENROUTER_API_KEY" },
       instructions: "You are the lab assistant.",
       prompts: { skillsDir: "agents", outDir: "dist/skills" },
     },
   }) satisfies PHHost;
+
+/** The same host RESOLVED: what the verbs receive. */
+const assistantHost = () => {
+  const host = declaredAssistantHost();
+  return { ...host, config: { ...host.config, apiKey: "sk-or-test" } };
+};
 
 /** A clint shell host using every option the runner reads. */
 const cliHost = () =>
@@ -74,16 +86,44 @@ const validate = {
 
 describe("mastra-runner host contract", () => {
   it("accepts the scaffold assistant host", () => {
-    expect(validate.mastra(assistantHost()).config?.model).toBe(
-      "openrouter/anthropic/claude-sonnet-4.5",
+    const parsed = validate.mastra(assistantHost());
+    expect(parsed.config?.model).toBe("openrouter/anthropic/claude-sonnet-4.5");
+    expect(parsed.config?.apiKey).toBe("sk-or-test");
+  });
+
+  it("declared form: apiKey takes an $env or $output token", () => {
+    const host = declaredAssistantHost();
+    expect(mastraRunner.declaredHostSchema.safeParse(host).success).toBe(true);
+    expect(
+      mastraRunner.declaredHostSchema.safeParse({
+        ...host,
+        config: {
+          ...host.config,
+          apiKey: { $output: { host: "vault", path: ["keys", "openrouter"] } },
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("resolved form: apiKey is a string, tokens are rejected", () => {
+    const declared = declaredAssistantHost();
+    expect(mastraRunner.hostSchema.safeParse(declared).success).toBe(false);
+    expect(() => validate.mastra(declared)).toThrow(
+      /config\.apiKey` is an output token \(\$env\)/,
     );
   });
 
-  it("rejects an unknown runner key", () => {
+  it("rejects an unknown runner key, including the retired workdir", () => {
     const host = assistantHost();
     expect(() =>
       validate.mastra({ ...host, runner: { ...host.runner, workDir: "x" } }),
     ).toThrow(/runner: Unrecognized key: "workDir"/);
+    expect(() =>
+      validate.mastra({
+        ...host,
+        runner: { ...host.runner, workdir: "${userData}/assistant" },
+      }),
+    ).toThrow(/runner: Unrecognized key: "workdir"/);
   });
 
   it("rejects a defaultVerb typo", () => {
@@ -110,13 +150,6 @@ describe("mastra-runner host contract", () => {
     expect(() => validate.mastra({ ...host, reactr: {} })).toThrow(
       /Unrecognized key: "reactr"/,
     );
-  });
-
-  it("keeps the base reactor block, remote.host included (removed in T3)", () => {
-    const host = assistantHost();
-    expect(
-      validate.mastra(host).reactor?.backends?.switchboard?.remote?.host,
-    ).toBe("switchboard");
   });
 
   it("outputsSchema is strict and URL-typed", () => {
@@ -231,6 +264,15 @@ describe("PHHostRunners augmentation", () => {
     expectTypeOf<
       PHHostOutputs<typeof MASTRA>
     >().toEqualTypeOf<mastraRunner.MastraOutputs>();
+
+    // Authors may write the key as a token; verbs only ever see a string.
+    type DeclaredKey = NonNullable<
+      NonNullable<mastraRunner.MastraHostInput["config"]>["apiKey"]
+    >;
+    expectTypeOf<{ $env: "OPENROUTER_API_KEY" }>().toExtend<DeclaredKey>();
+    expectTypeOf<
+      NonNullable<mastraRunner.MastraHost["config"]>["apiKey"]
+    >().toEqualTypeOf<string | undefined>();
     expectTypeOf<
       PHHostOutputs<typeof CLINT>
     >().toEqualTypeOf<clintRunner.ClintOutputs>();
@@ -243,13 +285,14 @@ const schemasDir = path.join(
   "schemas",
 );
 
-/** Committed artifacts must match the live schemas. Fix a failure with:
- * pnpm --filter @powerhousedao/clint emit-schemas */
+/** Committed artifacts must match the live schemas. They are the DECLARED
+ * forms (what authors write: token-able fields accept tokens). Fix a
+ * failure with: pnpm --filter @powerhousedao/clint emit-schemas */
 describe("emitted runner host schemas drift", () => {
   const emitted = {
     "host-mastra-runner.schema.json": emitHostJsonSchema(
       "host-mastra-runner",
-      mastraRunner.hostSchema,
+      mastraRunner.declaredHostSchema,
     ),
     "host-clint-runner.schema.json": emitHostJsonSchema(
       "host-clint-runner",
