@@ -87,10 +87,14 @@ describe("conditions over a RETRACT on base-reducer 3", () => {
     return status.consistencyToken;
   }
 
-  /** Executes each action on the open reactor, one second apart. */
-  async function writeOpen(docId: string, actions: Action[]): Promise<void> {
-    for (const [i, action] of actions.entries()) {
+  /** Builds and executes each action on the open reactor, one second apart. */
+  async function writeOpen(
+    docId: string,
+    builders: Array<() => Action | Promise<Action>>,
+  ): Promise<void> {
+    for (const [i, build] of builders.entries()) {
       vi.setSystemTime(new Date(Date.UTC(2026, 0, 1, 0, 0, i + 1)));
+      const action = await build();
       await settle(open, (await open.execute(docId, "main", [action])).id);
     }
   }
@@ -136,12 +140,13 @@ describe("conditions over a RETRACT on base-reducer 3", () => {
     const docId = document.header.id;
     await settle(open, (await open.create(document)).id);
 
-    const name = await signedAs(setModelName({ name: "locked" }), ADMIN, docId);
+    let name: Action | undefined;
     await writeOpen(docId, [
-      initializeAuth({ version: 1, grants: [adminGrant, whileUnnamed] }),
-      name,
-      await signedAs(retract(name.id), retractor, docId),
-      await signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
+      () => initializeAuth({ version: 1, grants: [adminGrant, whileUnnamed] }),
+      async () =>
+        (name = await signedAs(setModelName({ name: "locked" }), ADMIN, docId)),
+      () => signedAs(retract(name!.id), retractor, docId),
+      () => signedAs(addModule({ id: "m1", name: "m1" }), WRITER, docId),
     ]);
     await copyToGated(docId);
     return docId;
