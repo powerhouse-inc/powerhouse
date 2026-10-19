@@ -27,6 +27,7 @@ import {
   versionSummary,
 } from "./pieces.js";
 import { bundleKey, contentTypeOf, filesKey } from "./processor.js";
+import { publishTarget, type PublishGuard } from "./publish-guard.js";
 import type { PackageInfo, RegistryConfig } from "./types.js";
 
 // Paginated /packages and /pieces: default and max page sizes
@@ -49,6 +50,8 @@ export interface RegistryServices {
   webhooks: WebhookStore;
   sse: SSEChannel;
   ownerStore?: AuthStore;
+  /** Rolls back publishes whose tarball upload failed */
+  publishGuard?: PublishGuard;
 }
 
 /** Parse+clamp a `limit` query param to 1..MAX_PAGE_SIZE (default 30). */
@@ -453,7 +456,9 @@ export function createPowerhouseRouter(
         result.row.packageJsonVersion,
         { distTags: row?.distTags, versions: row?.versions },
       );
-      res.json(await withOwners(pkg, name));
+      // The requested npm name is the package's identity; its manifest may
+      // carry another package's name (one copied, or from before a rename)
+      res.json(await withOwners({ ...pkg, name }, name));
     }),
   );
 
@@ -696,21 +701,56 @@ function parseDistTagChange(reqPath: string): { packageName: string } | null {
   return match ? { packageName: decodeURIComponent(match[1]) } : null;
 }
 
-// Runs `record` once verdaccio answers 2xx, holding the response until the
-// record commits so a client never sees success before the job exists
-function afterSuccess(res: Response, record: () => Promise<void>): void {
+// Runs `task` when verdaccio's answer has a status `applies` accepts, holding
+// the response until the task settles
+function beforeReply(
+  res: Response,
+  applies: (status: number) => boolean,
+  task: () => Promise<void>,
+  label: string,
+): void {
   const originalEnd = res.end.bind(res) as (...args: unknown[]) => Response;
   res.end = function (this: Response, ...args: unknown[]) {
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      return originalEnd(...args);
-    }
-    record()
+    if (!applies(res.statusCode)) return originalEnd(...args);
+    task()
       .catch((err: unknown) => {
-        console.error("[registry] recording a change failed:", err);
+        console.error(`[registry] ${label} failed:`, err);
       })
       .finally(() => originalEnd(...args));
     return this;
   } as Response["end"];
+}
+
+const isSuccess = (status: number) => status >= 200 && status < 300;
+
+// Runs `record` once verdaccio answers 2xx, holding the response until the
+// record commits so a client never sees success before the job exists
+function afterSuccess(res: Response, record: () => Promise<void>): void {
+  beforeReply(res, isSuccess, record, "recording a change");
+}
+
+// Undoes what a failed publish stored before the client hears of the failure,
+// so its retry finds the version free
+async function guardPublish(
+  services: RegistryServices,
+  req: Request,
+  res: Response,
+  packageName: string,
+): Promise<void> {
+  const guard = services.publishGuard;
+  const target = guard ? publishTarget(packageName, req.body) : null;
+  if (!guard || !target) return;
+  const before = await guard.prepare(target);
+  beforeReply(
+    res,
+    (status) => !isSuccess(status),
+    async () => {
+      if (await guard.rollback(target, before)) {
+        await queueSync(services.db, packageName, {});
+      }
+    },
+    "rolling back a failed publish",
+  );
 }
 
 async function queueSync(
@@ -925,11 +965,12 @@ export function createPublishHook(
             ? `${packageName}@${retired.join(", ")} was unpublished and cannot be published again. Publish a new version.`
             : pieceClaimConflict(services.catalog, packageName, req.body),
         )
-        .then((conflict) => {
+        .then(async (conflict) => {
           if (conflict) {
             res.status(409).json({ error: conflict });
             return;
           }
+          await guardPublish(services, req, res, packageName);
           recordOnSuccess(req, res, packageName);
           next();
         })

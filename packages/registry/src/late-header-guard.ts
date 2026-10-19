@@ -18,3 +18,19 @@ export function ignoreLateContentLength(
   }
   next();
 }
+
+// Verdaccio stops a tarball read on the request's "abort" event, which an
+// incoming request never emits; a client that leaves mid-download would keep
+// the storage read open until the storage side times out
+export function abortTarballOnClose(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (TARBALL_PATH.test(req.path)) {
+    res.once("close", () => {
+      if (!res.writableFinished) req.emit("abort");
+    });
+  }
+  next();
+}

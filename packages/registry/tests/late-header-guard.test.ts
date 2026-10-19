@@ -1,8 +1,11 @@
 import express from "express";
 import type { AddressInfo } from "node:net";
 import type http from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
-import { ignoreLateContentLength } from "../src/late-header-guard.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  abortTarballOnClose,
+  ignoreLateContentLength,
+} from "../src/late-header-guard.js";
 
 let server: http.Server | undefined;
 
@@ -43,5 +46,47 @@ describe("ignoreLateContentLength", () => {
   it("throws without the guard, as the unguarded route does", async () => {
     const result = await serveLateSize("/pkg/-/pkg-1.0.0.tgz", false);
     expect(result.errors).toMatchObject([{ code: "ERR_HTTP_HEADERS_SENT" }]);
+  });
+});
+
+// Serves `path` like Verdaccio's tarball route: a slow body, stopped on "abort"
+async function serveSlowBody(path: string) {
+  const app = express();
+  app.use(abortTarballOnClose);
+  let aborted = false;
+  let finish: (() => void) | undefined;
+  app.get(/.*/, (req, res) => {
+    req.on("abort", () => {
+      aborted = true;
+    });
+    res.write("part");
+    finish = () => res.end();
+  });
+  server = app.listen(0);
+  await new Promise((resolve) => server!.once("listening", resolve));
+  const { port } = server.address() as AddressInfo;
+  return {
+    url: `http://localhost:${port}${path}`,
+    aborted: () => aborted,
+    finish: () => finish?.(),
+  };
+}
+
+describe("abortTarballOnClose", () => {
+  it("signals abort when the client leaves a tarball download", async () => {
+    const served = await serveSlowBody("/pkg/-/pkg-1.0.0.tgz");
+    const controller = new AbortController();
+    const response = await fetch(served.url, { signal: controller.signal });
+    controller.abort();
+    await response.text().catch(() => undefined);
+    await vi.waitFor(() => expect(served.aborted()).toBe(true));
+  });
+
+  it("leaves a completed download alone", async () => {
+    const served = await serveSlowBody("/pkg/-/pkg-1.0.0.tgz");
+    const response = await fetch(served.url);
+    served.finish();
+    expect(await response.text()).toBe("part");
+    expect(served.aborted()).toBe(false);
   });
 });
