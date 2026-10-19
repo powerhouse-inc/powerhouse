@@ -1,4 +1,3 @@
-import { fitCreateBaseReducer } from "../core/create-base-reducer.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   Action,
@@ -18,6 +17,7 @@ import {
   retract,
   undo,
   DEFAULT_SIGNATURE_POLICY,
+  fitCreateBaseReducer,
   PEER_CAPABILITIES,
   selectProtocolVersions,
   normalizeDocumentModelVersion,

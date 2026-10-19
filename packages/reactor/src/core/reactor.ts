@@ -9,6 +9,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   FLAGLESS_BASE_REDUCER_VERSION,
+  fitCreateBaseReducer,
   normalizeDocumentModelVersion,
   redoTarget,
   undoTarget,
@@ -17,7 +18,6 @@ import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { scopeDerivation } from "../cache/kysely-write-cache.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
-import { fitCreateBaseReducer } from "./create-base-reducer.js";
 import {
   addRelationshipAction,
   createDocumentAction,

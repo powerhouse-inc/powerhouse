@@ -121,6 +121,7 @@ describe("create paths for a model whose reducer createReducer did not build", (
   async function build() {
     const logger = new ConsoleLogger(["test"]);
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const debug = vi.spyOn(logger, "debug").mockImplementation(() => {});
     const built = await new ReactorClientBuilder()
       .withLogger(logger)
       .withReactorBuilder(
@@ -139,6 +140,7 @@ describe("create paths for a model whose reducer createReducer did not build", (
       reactor: built.reactor,
       module: built.reactorModule as InProcessReactorModule,
       warn,
+      debug,
     };
   }
 
@@ -191,18 +193,19 @@ describe("create paths for a model whose reducer createReducer did not build", (
     );
   });
 
-  it("selects base-reducer 2 for a type that is not registered", async () => {
-    const { client, warn } = await build();
+  it("selects base-reducer 2 for a type that is not registered, logging at debug only", async () => {
+    const { client, warn, debug } = await build();
 
     expect(
       await client.getCreateProtocolVersions({
         documentType: "powerhouse/not-registered",
       }),
     ).toEqual({ "base-reducer": 2 });
-    expect(warn).toHaveBeenCalledWith(
+    expect(debug).toHaveBeenCalledWith(
       expect.stringContaining("not registered"),
       "powerhouse/not-registered",
     );
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it("rebuilds its documents cold", async () => {
