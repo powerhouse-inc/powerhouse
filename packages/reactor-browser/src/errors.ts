@@ -4,7 +4,9 @@ export class UnsupportedDocumentTypeError extends Error {
     this.name = "UnsupportedDocumentTypeError";
   }
 
-  static isError(error: unknown): error is UnsupportedDocumentTypeError {
+  static override isError(
+    error: unknown,
+  ): error is UnsupportedDocumentTypeError {
     return (
       Error.isError(error) && error.name === "UnsupportedDocumentTypeError"
     );
@@ -13,14 +15,14 @@ export class UnsupportedDocumentTypeError extends Error {
 
 export class DocumentModelNotFoundError extends Error {
   readonly documentType: string;
-  readonly name = "DocumentModelNotFoundError";
+  override readonly name = "DocumentModelNotFoundError";
 
   constructor(documentType: string) {
     super(`Document model module for type ${documentType} not found`);
     this.documentType = documentType;
   }
 
-  static isError(error: unknown): error is DocumentModelNotFoundError {
+  static override isError(error: unknown): error is DocumentModelNotFoundError {
     return Error.isError(error) && error.name === "DocumentModelNotFoundError";
   }
 }

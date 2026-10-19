@@ -1,11 +1,13 @@
 /**
  * The code-first document-model compiler. The normal author entry points are
  * `ph`, `defineScalar`, `defineDocumentModel`, and
- * `defineDocumentModelFamily`; the remaining exports are compiler internals
- * that tooling, hosts, and tests read.
+ * `defineDocumentModelFamily`, and `subgraphScalars` for subgraphs; the
+ * remaining exports are compiler internals that tooling, hosts, and tests
+ * read.
  */
 
 export { ph, type Ph } from "./field.js";
+export { subgraphScalars } from "./scalars/catalog.js";
 export { defineScalar } from "./scalars/define-scalar.js";
 export type {
   ScalarCoercion,
@@ -178,15 +180,22 @@ export {
   type RuntimeOperationDeclaration,
 } from "./structured.js";
 export type {
+  ArgsObject,
+  ComputedFieldDescriptor,
+  ComputedToken,
+} from "./subgraph/types.js";
+export type {
   AnyDescriptor,
   AnyFieldDescriptor,
   AnyTypeDescriptor,
+  ComputedTokensOf,
   DefaultFlag,
   EnumDescriptor,
   FieldBuilderOptions,
   FieldDescriptor,
   FieldOptions,
   InputDescriptor,
+  InputObjectOf,
   InputOf,
   InterfaceDescriptor,
   JsonLiteral,
@@ -194,14 +203,17 @@ export type {
   Mutable,
   ObjectDescriptor,
   ObjectFields,
+  OutputObjectOf,
   OutputOf,
   ReferenceDescriptor,
   ScalarBuilder,
   ScalarBuilderOptions,
   ScalarDescriptor,
   ScalarFieldOptions,
+  SourceObjectOf,
   SourceOf,
   StateRootDescriptor,
+  StoredFieldsOf,
   TypeDescriptor,
   UnionDescriptor,
 } from "./types.js";

@@ -12,7 +12,11 @@ export function failedToRun(error: unknown): 2 {
 
 export const modelCheck = command({
   name: "check",
-  description: `Compile this package's definition sources and report what is wrong with them.
+  description: `Compile this package's definition sources and subgraphs and report what is wrong with them.
+
+Subgraphs are read from subgraphs/index.ts and subgraphs/<name>/index.ts,
+whatever definitionSources says. Each class is read through its subgraph
+protocol without being constructed.
 
 \`tsc\` cannot run this check, because a code-first declaration compiles when its
 module is evaluated and \`tsc\` never evaluates modules. Run it after every edit.

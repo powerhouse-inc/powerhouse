@@ -14,38 +14,55 @@ If what you need is a webhook for a third-party provider (GitHub, Stripe, Slack)
 
 ## Subgraphs
 
-A subgraph reads it off itself, as `this.http`:
+A subgraph registers routes through `this.http` in its setup override. It still declares a nonempty GraphQL schema:
 
 ```typescript
-import { BaseSubgraph } from "@powerhousedao/reactor-api";
-import type { PHDocument } from "document-model";
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
+import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 
-export class ReportsSubgraph extends BaseSubgraph {
-  name = "reports";
+export class ReportsHttpSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "reports-http";
+  #route: ReturnType<SubgraphArgs["http"]["get"]> | undefined;
 
-  async onSetup(): Promise<void> {
-    this.http.get("reports/:id", async (_request, ctx) => {
-      try {
-        const document = await this.reactorClient.get<PHDocument>(
-          ctx.params.id,
-          undefined,
-          ctx.signal,
-        );
-        return Response.json({
-          id: document.header.id,
-          documentType: document.header.documentType,
-          state: document.state,
-        });
-      } catch (error) {
-        if (error instanceof Error && error.name === "DocumentNotFoundError") {
-          return Response.json({ error: "Document not found" }, { status: 404 });
-        }
-        throw error;
-      }
-    });
+  static override getSchema(schema: SchemaBuilder<ReportsHttpSubgraph>) {
+    return [
+      schema.query("reportsHttpStatus", {
+        returns: ph.String({ required: true }),
+        resolve: ({ subgraph }) => subgraph.status(),
+      }),
+    ];
+  }
+
+  status(): string {
+    return "ready";
+  }
+
+  override async onSetup(): Promise<void> {
+    await super.onSetup();
+    this.#route = this.http.get("reports/status", () =>
+      Response.json({ status: this.status() }),
+    );
+  }
+
+  override async onDisconnect(): Promise<void> {
+    try {
+      this.#route?.dispose();
+      this.#route = undefined;
+    } finally {
+      await super.onDisconnect();
+    }
   }
 }
 ```
+
+The host calls `onDisconnect` after failed setup and when unregistering the subgraph. Dispose only handles this instance acquired and tolerate missing handles. Call both parent hooks. `onDisconnect` is not a process-exit hook. The host also releases package scopes on unload and shutdown.
+
+To upgrade an existing package, follow the [migration guide](../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
 
 ## Processors
 
@@ -124,11 +141,11 @@ http.route({
 
 `auth` defaults to `renown`, so a route you write with no options requires a verified bearer and answers `401` without one.
 
-| `auth` | Behaviour |
-| --- | --- |
-| `"renown"` (default) | A verifiable bearer is required. No bearer is a `401`. |
-| `"renown-optional"` | A bearer is verified if present; its absence leaves `ctx.user` undefined instead of answering `401`. For handlers that make their own per-document decision. |
-| `"public"` | No identity is checked. `ctx.user` is `undefined`. |
+| `auth`                                                 | Behaviour                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"renown"` (default)                                   | A verifiable bearer is required. No bearer is a `401`.                                                                                                                                                                                                                                        |
+| `"renown-optional"`                                    | A bearer is verified if present; its absence leaves `ctx.user` undefined instead of answering `401`. For handlers that make their own per-document decision.                                                                                                                                  |
+| `"public"`                                             | No identity is checked. `ctx.user` is `undefined`.                                                                                                                                                                                                                                            |
 | a [`RouteAuthorizer`](#custom-authentication) function | Your own gate, run before the handler. It receives the [`IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage) and returns `{ authorized: true }`, a `{ status, message }` refusal, or a whole `Response`. It resolves no principal, so `ctx.user` stays `undefined`. |
 
 ```typescript
@@ -166,26 +183,28 @@ const supremeAdmin: RouteAuthorizer = (req: IncomingMessage) => {
   return { authorized: false, status: 403, message: "Admin only" };
 };
 
-http.post("admin/reindex", { auth: supremeAdmin }, () =>
-  new Response(null, { status: 202 }),
+http.post(
+  "admin/reindex",
+  { auth: supremeAdmin },
+  () => new Response(null, { status: 202 }),
 );
 ```
 
 Two sharp edges:
 
-- **A custom authorizer resolves no principal.** `ctx.user` is `undefined` on a route with a function `auth`, exactly as on a `public` one. If you need the caller's identity *and* a custom rule, use `renown` and apply the extra rule inside the handler.
+- **A custom authorizer resolves no principal.** `ctx.user` is `undefined` on a route with a function `auth`, exactly as on a `public` one. If you need the caller's identity _and_ a custom rule, use `renown` and apply the extra rule inside the handler.
 - **`auth: "renown"` does not guarantee an identity.** On a host running with authentication disabled, every caller is anonymous and a `renown` route serves them anyway, so check `ctx.user` before deciding anything. If your handler needs a real identity, `ctx.authEnabled` tells you whether the host checks at all.
 
 ## Request bodies
 
 `body` decides how the payload reaches your handler.
 
-| `body` | Behaviour |
-| --- | --- |
+| `body`               | Behaviour                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `"parsed"` (default) | Buffered, and readable through the Fetch `Request` (`await request.json()`, `await request.text()`). The bytes go in verbatim. |
-| `"raw"` | Buffered, and also handed over as `ctx.rawBody`, byte for byte. |
-| `"stream"` | Not buffered. The Fetch `Request` body is the live request stream. |
-| `"none"` | The body is not read at all. |
+| `"raw"`              | Buffered, and also handed over as `ctx.rawBody`, byte for byte.                                                                |
+| `"stream"`           | Not buffered. The Fetch `Request` body is the live request stream.                                                             |
+| `"none"`             | The body is not read at all.                                                                                                   |
 
 ## The route context
 

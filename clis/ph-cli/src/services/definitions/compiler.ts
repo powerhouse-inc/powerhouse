@@ -265,7 +265,7 @@ export async function prepareCompile(
     const supportsImportRewriting = major > 5 || (major === 5 && minor >= 7);
     if (loadDefinitions && !supportsNoCheck)
       throw new Error(
-        "Code-first definitions require TypeScript 5.6 or newer for the private loader emit.",
+        "Checking code-first definitions and subgraphs requires TypeScript 5.6 or newer for the private loader emit.",
       );
     const projects = await readProjectGraph(
       packageRoot,
@@ -280,7 +280,7 @@ export async function prepareCompile(
       !supportsImportRewriting
     )
       throw new Error(
-        "Code-first definitions with allowImportingTsExtensions require TypeScript 5.7 or newer to rewrite imports.",
+        "Checking code-first definitions and subgraphs with allowImportingTsExtensions requires TypeScript 5.7 or newer to rewrite imports.",
       );
     return {
       ok: true,

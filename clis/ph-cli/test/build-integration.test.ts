@@ -500,7 +500,6 @@ describe("runBuild on a generated piece", () => {
       project,
     );
     await project.save();
-    process.chdir(originalCwd);
   }, 120_000);
 
   afterAll(() => {

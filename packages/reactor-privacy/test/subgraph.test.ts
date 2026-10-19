@@ -10,10 +10,11 @@ import {
 import { graphql, type GraphQLSchema } from "graphql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  createPrivacySubgraph,
+  createPrivacyResolvers,
   DisclosureService,
-  PRIVACY_SUBGRAPH_NAME,
+  privacySubgraphTypeDefs,
   PrivacySubgraphOpenPolicyError,
+  refuseAnonymousAdmins,
   registerSubjectDocumentsReadModel,
   type ErasurePlan,
   type ErasureRequest,
@@ -166,7 +167,7 @@ describe("privacy subgraph [Postgres]", () => {
     const real = new DisclosureService(host.db, SECRET);
     disclosed = [];
     erasure = new FakeErasureService();
-    const subgraph = createPrivacySubgraph({
+    const resolvers = createPrivacyResolvers({
       authorizationService: authorization("ADMIN_ONLY"),
       erasure,
       disclosure: {
@@ -176,9 +177,8 @@ describe("privacy subgraph [Postgres]", () => {
         },
       },
     });
-    expect(subgraph.name).toBe(PRIVACY_SUBGRAPH_NAME);
     schema = buildSubgraphSchema([
-      { typeDefs: subgraph.typeDefs, resolvers: subgraph.resolvers as never },
+      { typeDefs: privacySubgraphTypeDefs, resolvers: resolvers as never },
     ]);
   });
 
@@ -318,50 +318,47 @@ describe("privacy subgraph mounting", () => {
     disclosure: { disclose: () => Promise.reject(new Error("unused")) },
   };
 
-  it("is not created under OPEN", () => {
+  it("is refused under OPEN", () => {
     const open: PrivacyAuthorization = {
       config: { policy: "OPEN" },
       isSupremeAdmin: () => true,
     };
-    expect(() =>
-      createPrivacySubgraph({ ...deps, authorizationService: open }),
-    ).toThrow(PrivacySubgraphOpenPolicyError);
+    expect(() => refuseAnonymousAdmins(open)).toThrow(
+      "The privacy subgraph is not mounted under policy OPEN: it admits anonymous callers as admins",
+    );
   });
 
-  it("is not created under OPEN even with an admin list", () => {
-    expect(() =>
-      createPrivacySubgraph({
-        ...deps,
-        authorizationService: authorization("OPEN"),
-      }),
-    ).toThrow(PrivacySubgraphOpenPolicyError);
+  it("is refused under OPEN even with an admin list", () => {
+    expect(() => refuseAnonymousAdmins(authorization("OPEN"))).toThrow(
+      PrivacySubgraphOpenPolicyError,
+    );
   });
 
-  it("is not created under any policy that makes anonymous an admin", () => {
+  it("is refused under any policy that makes anonymous an admin", () => {
     const lax: PrivacyAuthorization = {
       config: { policy: "DOCUMENT_PERMISSIONS" },
       isSupremeAdmin: () => true,
     };
-    expect(() =>
-      createPrivacySubgraph({ ...deps, authorizationService: lax }),
-    ).toThrow(PrivacySubgraphOpenPolicyError);
+    expect(() => refuseAnonymousAdmins(lax)).toThrow(
+      PrivacySubgraphOpenPolicyError,
+    );
   });
 
   it.each(["ADMIN_ONLY", "DOCUMENT_PERMISSIONS"])(
-    "is created under %s",
+    "is mounted under %s",
     (policy) => {
-      const subgraph = createPrivacySubgraph({
+      const authorizationService = authorization(policy);
+      expect(refuseAnonymousAdmins(authorizationService)).toBeUndefined();
+      const resolvers = createPrivacyResolvers({
         ...deps,
-        authorizationService: authorization(policy),
+        authorizationService,
       });
-      expect(Object.keys(subgraph.resolvers.Query)).toEqual([
+      expect(Object.keys(resolvers.Query)).toEqual([
         "disclose",
         "erasurePlan",
         "erasureRequest",
       ]);
-      expect(Object.keys(subgraph.resolvers.Mutation)).toEqual([
-        "requestErasure",
-      ]);
+      expect(Object.keys(resolvers.Mutation)).toEqual(["requestErasure"]);
     },
   );
 });

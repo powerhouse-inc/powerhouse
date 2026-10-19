@@ -7,6 +7,7 @@ import {
 } from "../src/services/authorization.service.js";
 import type { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import { contextFor, OUTSIDER } from "./utils/read-gate-fixture.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 const ADMIN = "0xadmin";
 
@@ -21,7 +22,7 @@ function analytics(policy: AuthorizationPolicy) {
     ),
   } as unknown as SubgraphArgs);
   const resolve = (
-    subgraph.resolvers.Query as Record<
+    resolversOf(subgraph).Query as Record<
       string,
       (p: unknown, a: unknown, c: Context) => unknown
     >

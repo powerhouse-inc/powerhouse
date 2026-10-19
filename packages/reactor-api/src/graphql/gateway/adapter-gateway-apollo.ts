@@ -73,7 +73,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
     });
   }
 
-  willSendRequest(options: GraphQLDataSourceProcessOptions) {
+  override willSendRequest(options: GraphQLDataSourceProcessOptions) {
     const { authorization } = options.context.headers as {
       authorization: string;
     };

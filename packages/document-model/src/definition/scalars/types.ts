@@ -64,8 +64,8 @@ export type ScalarFactory<
 
 /**
  * A catalog scalar only the reactor host declares. It has no call signature,
- * so no field can use it; the catalog and the reactor host read its
- * properties.
+ * so `ph` cannot offer it; `subgraphScalars` wraps it in a factory for
+ * subgraph fields.
  */
 export type InternalScalar<
   TName extends string = string,
@@ -108,9 +108,13 @@ export interface ScalarCatalogInterface<
   ): ScalarBinding | undefined;
   /** Every scalar in catalog order. The reactor host declares all of them. */
   readonly names: readonly TName[];
-  /** The scalars a document model or subgraph may reference, in catalog order. */
+  /** The scalars a document model may reference, in catalog order. */
   readonly authorNames: readonly Exclude<TName, InternalScalarName>[];
-  /** The scalars only the reactor host declares, in catalog order. `names` is `authorNames` and these, interleaved. */
+  /**
+   * The scalars only the reactor host declares, in catalog order. A subgraph
+   * references them through `subgraphScalars`. `names` is `authorNames` and
+   * these, interleaved.
+   */
   readonly internalNames: readonly Exclude<TName, PowerhouseScalarName>[];
   readonly validationProfiles: readonly ScalarValidationProfile[];
   readonly digest: Sha256Digest;

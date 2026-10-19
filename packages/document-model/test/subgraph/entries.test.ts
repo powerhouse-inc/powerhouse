@@ -14,8 +14,10 @@ import { ph } from "../../src/definition/field.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
 import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
 import {
+  checkSubgraphDeterminism,
   compileSubgraph,
-  type TypedSubgraphConfig,
+  compileSubgraphTypeDefs,
+  type SubgraphSchemaBuilders,
 } from "../../src/definition/subgraph/definer.js";
 import {
   createEntryBuilders,
@@ -56,6 +58,25 @@ const Post = ph.object("Post", {
   },
 });
 
+type Builders = SubgraphSchemaBuilders<
+  unknown,
+  unknown,
+  unknown,
+  unknown,
+  unknown,
+  unknown
+>;
+
+function compileEntries(name: string, entries: (build: Builders) => unknown) {
+  class Declared {
+    static readonly subgraphName = name;
+    static getSchema(schema: Builders) {
+      return entries(schema);
+    }
+  }
+  return compileSubgraph(Declared, { checkDeterminism: false });
+}
+
 /** The first diagnostic a builder throws, or undefined when it accepts. */
 function refusal(declare: () => unknown) {
   try {
@@ -88,11 +109,7 @@ describe("ph.field", () => {
   });
 
   it("exposes a stable token per computed member", () => {
-    const tokens = Post.computedTokens as Record<
-      string,
-      { typeName: string; fieldName: string; kind: string }
-    >;
-    expect(tokens.wordCount).toEqual({
+    expect(Post.computedTokens.wordCount).toEqual({
       kind: "computed-token",
       typeName: "Post",
       fieldName: "wordCount",
@@ -345,7 +362,7 @@ describe("the entry builders", () => {
 
   it("requires resolve on a computed field, resolveType and isTypeOf", () => {
     const { builders: build } = builders();
-    const tokens = Post.computedTokens as Record<string, never>;
+    const tokens = Post.computedTokens;
     expect(refusal(() => build.field(tokens.wordCount, {} as never))).toEqual({
       code: "PH-SG-ENTRY-INVALID",
       path: ["options", "resolve"],
@@ -527,7 +544,7 @@ describe("the entry builders", () => {
 
   it("says whether a resolver is missing or is not a function", () => {
     const { builders: build } = builders();
-    const tokens = Post.computedTokens as Record<string, never>;
+    const tokens = Post.computedTokens;
     expect(
       refused(() => build.query("post", { returns: ph.ref(Post) } as never)),
     ).toMatchObject({ message: 'query "post" declares no resolve.' });
@@ -665,7 +682,7 @@ describe("the entry builders", () => {
 
   it("binds a computed field through its token, not a string", () => {
     const { builders: build } = builders();
-    const tokens = Post.computedTokens as Record<string, never>;
+    const tokens = Post.computedTokens;
     const read = readEntry(
       build.field(tokens.wordCount, { resolve: () => 12 }),
       ["entries", 0],
@@ -724,20 +741,104 @@ describe("the entry builders", () => {
 });
 
 describe("a compiled declaration", () => {
-  it("binds the entries the callback returned, whatever the author does to the array afterwards", () => {
-    const returned: TypedSubgraphEntry[] = [];
-    const compiled = compileSubgraph({
-      name: "authors",
-      schemaKind: "typed",
-      entries: (build) => {
-        returned.push(
-          build.query("author", {
-            returns: ph.ref(Author),
-            resolve: () => ({ id: "declared", name: null }),
+  it("compiles to type definitions without a class", () => {
+    const entries = (build: Builders) => [
+      build.query("author", {
+        returns: ph.ref(Author),
+        resolve: () => null,
+      }),
+    ];
+
+    const typeDefs = compileSubgraphTypeDefs("authors", entries);
+
+    expect(print(typeDefs as DocumentNode)).toBe(
+      [
+        "scalar OID",
+        "",
+        "type Author {\n  id: OID!\n  name: String\n}",
+        "",
+        "type Query {\n  author: Author\n}",
+      ].join("\n"),
+    );
+    expect(typeDefs).toEqual(compileEntries("authors", entries).typeDefs);
+  });
+
+  it("refuses to compile type definitions whose compile reports a diagnostic", () => {
+    const ping = {
+      typeName: "Query",
+      fieldName: "ping",
+      resolverKind: "field",
+    } as const;
+
+    expect(
+      refused(() =>
+        compileSubgraphTypeDefs("pings", (schema: Builders) =>
+          schema.graphql({
+            typeDefs: parse("type Query { ping: String }"),
+            resolverCoordinates: [ping, ping],
+            resolvers: () => ({}),
           }),
-        );
-        return returned;
-      },
+        ),
+      ),
+    ).toEqual({
+      code: "PH-SG-ENTRY-INVALID",
+      path: ["graphql", "resolverCoordinates"],
+      message: "Coordinate Query.ping:field is declared twice.",
+    });
+  });
+
+  it("checks determinism with exactly one more evaluation of getSchema", () => {
+    let calls = 0;
+    class Steady {
+      static readonly subgraphName = "steady";
+      static getSchema(schema: Builders) {
+        calls += 1;
+        return [
+          schema.query("steady", { returns: ph.Int(), resolve: () => 1 }),
+        ];
+      }
+    }
+    const compiled = compileSubgraph(Steady, { checkDeterminism: false });
+
+    checkSubgraphDeterminism(Steady, compiled);
+
+    expect(calls).toBe(2);
+  });
+
+  it("refuses a getSchema whose second evaluation differs from the compiled schema", () => {
+    let calls = 0;
+    class Drift {
+      static readonly subgraphName = "drift";
+      static getSchema(schema: Builders) {
+        calls += 1;
+        return [
+          schema.query(`field${calls}`, {
+            returns: ph.Int(),
+            resolve: () => 1,
+          }),
+        ];
+      }
+    }
+    const compiled = compileSubgraph(Drift, { checkDeterminism: false });
+
+    expect(refused(() => checkSubgraphDeterminism(Drift, compiled))).toEqual({
+      code: "PH-SG-DEFINITION-INVALID",
+      path: ["getSchema"],
+      message:
+        "Drift.getSchema is not deterministic: two calls returned different schemas.",
+    });
+  });
+
+  it("binds the entries getSchema returned, whatever the author does to the array afterwards", () => {
+    const returned: TypedSubgraphEntry[] = [];
+    const compiled = compileEntries("authors", (build) => {
+      returned.push(
+        build.query("author", {
+          returns: ph.ref(Author),
+          resolve: () => ({ id: "declared", name: null }),
+        }),
+      );
+      return returned;
     });
 
     returned.length = 0;
@@ -753,43 +854,17 @@ describe("a compiled declaration", () => {
     });
   });
 
-  it("keeps the declared definition order after the author changes the array", () => {
-    const order = ["Query", "Author", "OID"];
-    const { definition } = compileSubgraph({
-      name: "authors",
-      schemaKind: "typed",
-      definitionOrder: order,
-      entries: (build) => [
-        build.query("author", {
-          returns: ph.ref(Author),
-          resolve: () => null,
-        }),
-      ],
-    });
-
-    order.reverse();
-    order.push("Injected");
-
-    expect(
-      definition.schemaKind === "typed" && definition.definitionOrder,
-    ).toEqual(["Query", "Author", "OID"]);
-  });
-
   it("binds a computed field where it was declared after the author changes the token", () => {
     const token = {
-      ...(Post.computedTokens as Record<string, object>).wordCount,
+      ...Post.computedTokens.wordCount,
     };
-    const compiled = compileSubgraph({
-      name: "posts",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("post", { returns: ph.ref(Post), resolve: () => null }),
-        build.field(token as never, { resolve: () => 12 }),
-        build.field((Post.computedTokens as Record<string, never>).author, {
-          resolve: () => null,
-        }),
-      ],
-    });
+    const compiled = compileEntries("posts", (build) => [
+      build.query("post", { returns: ph.ref(Post), resolve: () => null }),
+      build.field(token as never, { resolve: () => 12 }),
+      build.field(Post.computedTokens.author, {
+        resolve: () => null,
+      }),
+    ]);
 
     Object.assign(token, { fieldName: "title" });
     const resolvers = compiled.resolversFor({}) as Record<
@@ -800,102 +875,21 @@ describe("a compiled declaration", () => {
     expect(Object.keys(resolvers.Post)).toEqual(["wordCount", "author"]);
   });
 
-  it("takes the name and definition order as they were when the entries callback ran", () => {
-    const config: {
-      -readonly [
-        K in keyof TypedSubgraphConfig<unknown, unknown, unknown, unknown>
-      ]: TypedSubgraphConfig<unknown, unknown, unknown, unknown>[K];
-    } = {
-      name: "authors",
-      schemaKind: "typed",
-      definitionOrder: ["Query", "Author", "OID"],
-      entries: (build) => {
-        config.name = "renamed";
-        config.definitionOrder = ["Bogus"];
-        return [
-          build.query("author", {
-            returns: ph.ref(Author),
-            resolve: () => null,
-          }),
-        ];
-      },
-    };
-    const { definition, diagnostics } = compileSubgraph(config);
-
-    expect(definition.name).toBe("authors");
-    expect(
-      definition.schemaKind === "typed" && definition.definitionOrder,
-    ).toEqual(["Query", "Author", "OID"]);
-    expect(diagnostics).toEqual([]);
-  });
-
-  it("keeps a complete definition order when an unrelated diagnostic is reported", () => {
-    const compiled = compileSubgraph({
-      name: "authors",
-      schemaKind: "typed",
-      definitionOrder: ["Query", "Author", "OID"],
-      entries: (build) => [
-        build.query("author", {
-          returns: ph.ref(Author),
-          resolve: () => null,
-        }),
-        build.field((Post.computedTokens as Record<string, never>).wordCount, {
-          resolve: () => 12,
-        }),
-      ],
-    });
-
-    expect(compiled.diagnostics.map(({ message }) => message)).toEqual([
-      "Computed field Post.wordCount is bound, but no reachable type declares it.",
-    ]);
-    expect(
-      compiled.definition.schemaKind === "typed" &&
-        compiled.definition.definitionOrder,
-    ).toEqual(["Query", "Author", "OID"]);
-    expect(
-      (compiled.typeDefs as DocumentNode).definitions.map((definition) =>
-        "name" in definition ? definition.name?.value : undefined,
-      ),
-    ).toEqual(["Query", "Author", "OID"]);
-  });
-
-  it("refuses a definition order that names something other than a string", () => {
-    expect(
-      refusal(() =>
-        compileSubgraph({
-          name: "authors",
-          schemaKind: "typed",
-          definitionOrder: ["Query", 7, "OID"] as never,
-          entries: (build) => [
-            build.query("author", {
-              returns: ph.ref(Author),
-              resolve: () => null,
-            }),
-          ],
-        }),
-      ),
-    ).toEqual({ code: "PH-SG-ENTRY-INVALID", path: ["definitionOrder", 1] });
-  });
-
   it("reports a root field declared twice and serves the first declaration", () => {
     const declare = (key: string, fieldName?: string) =>
-      compileSubgraph({
-        name: "twice",
-        schemaKind: "typed",
-        entries: (build) => [
-          build.query("a", {
-            fieldName: "x",
-            returns: ph.String(),
-            resolve: () => "first",
-          }),
-          build.mutation("x", { returns: ph.Int(), resolve: () => 1 }),
-          build.query(key, {
-            fieldName,
-            returns: ph.Int(),
-            resolve: () => 2,
-          }),
-        ],
-      });
+      compileEntries("twice", (build) => [
+        build.query("a", {
+          fieldName: "x",
+          returns: ph.String(),
+          resolve: () => "first",
+        }),
+        build.mutation("x", { returns: ph.Int(), resolve: () => 1 }),
+        build.query(key, {
+          fieldName,
+          returns: ph.Int(),
+          resolve: () => 2,
+        }),
+      ]);
     const cases = [declare("b", "x"), declare("x")];
     for (const compiled of cases) {
       expect(
@@ -930,19 +924,15 @@ describe("a compiled declaration", () => {
       validator: z.string(),
       zodSource: "z.string()",
     });
-    const compiled = compileSubgraph({
-      name: "retried",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("x", { returns: Shadowing(), resolve: () => "broken" }),
-        build.query("y", {
-          fieldName: "x",
-          returns: ph.String(),
-          resolve: () => "valid",
-        }),
-        build.mutation("lost", { returns: Shadowing(), resolve: () => "lost" }),
-      ],
-    });
+    const compiled = compileEntries("retried", (build) => [
+      build.query("x", { returns: Shadowing(), resolve: () => "broken" }),
+      build.query("y", {
+        fieldName: "x",
+        returns: ph.String(),
+        resolve: () => "valid",
+      }),
+      build.mutation("lost", { returns: Shadowing(), resolve: () => "lost" }),
+    ]);
     expect(
       compiled.diagnostics.map(({ code, path, message }) => ({
         code,
@@ -981,19 +971,15 @@ describe("a compiled declaration", () => {
         size: ph.field({ returns: ph.Int({ required: true }) }),
       },
     });
-    const size = (Counted.computedTokens as Record<string, never>).size;
-    const compiled = compileSubgraph({
-      name: "counted",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("counted", {
-          returns: ph.ref(Counted),
-          resolve: () => ({ id: "c1" }),
-        }),
-        build.field(size, { resolve: () => 1 }),
-        build.field(size, { resolve: () => 2 }),
-      ],
-    });
+    const size = Counted.computedTokens.size;
+    const compiled = compileEntries("counted", (build) => [
+      build.query("counted", {
+        returns: ph.ref(Counted),
+        resolve: () => ({ id: "c1" }),
+      }),
+      build.field(size, { resolve: () => 1 }),
+      build.field(size, { resolve: () => 2 }),
+    ]);
     const resolvers = compiled.resolversFor({}) as Record<
       string,
       Record<string, (...args: unknown[]) => unknown>
@@ -1014,17 +1000,13 @@ describe("a compiled declaration", () => {
       fields: { id: ph.OID({ required: true }) },
     });
     const Pet = ph.union("Pet", { members: [Cat, Dog] });
-    const compiled = compileSubgraph({
-      name: "pets",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("pet", { returns: ph.ref(Pet), resolve: () => null }),
-        build.resolveType(Pet, () => "Cat"),
-        build.resolveType(Pet, () => "Dog"),
-        build.isTypeOf(Cat, () => true),
-        build.isTypeOf(Cat, () => false),
-      ],
-    });
+    const compiled = compileEntries("pets", (build) => [
+      build.query("pet", { returns: ph.ref(Pet), resolve: () => null }),
+      build.resolveType(Pet, () => "Cat"),
+      build.resolveType(Pet, () => "Dog"),
+      build.isTypeOf(Cat, () => true),
+      build.isTypeOf(Cat, () => false),
+    ]);
     expect(
       compiled.diagnostics.map(({ code, path, message }) => ({
         code,
@@ -1056,22 +1038,10 @@ describe("a compiled declaration", () => {
     expect(resolvers.Cat.__isTypeOf({ id: "p1" }, {}, {})).toBe(true);
   });
 
-  it("refuses a declaration that is not an object", () => {
-    expect(refused(() => compileSubgraph(null as never))).toEqual({
-      code: "PH-SG-DEFINITION-INVALID",
-      path: [],
-      message: "A subgraph declaration is an object.",
-    });
-  });
-
   it("refuses an entries callback that returns something other than an array", () => {
-    expect(() =>
-      compileSubgraph({
-        name: "authors",
-        schemaKind: "typed",
-        entries: () => new Set() as never,
-      }),
-    ).toThrow(DocumentModelDefinitionError);
+    expect(() => compileEntries("authors", () => new Set() as never)).toThrow(
+      DocumentModelDefinitionError,
+    );
   });
 });
 
@@ -1153,5 +1123,88 @@ describe("a refused value that cannot be inspected", () => {
     expect(
       result.diagnostics.map(({ code, received }) => [code, received]),
     ).toEqual([["PH-DM-DECLARATION-INVALID", "inspection-failed"]]);
+  });
+});
+
+describe("computed tokens", () => {
+  it("types each token with its parent, arguments and result", () => {
+    const { builders: build } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    build.field(Post.computedTokens.author, {
+      resolve: ({ parent, args }) => {
+        expectTypeOf(parent).toEqualTypeOf<{ id: string; title: string }>();
+        expectTypeOf(args).toEqualTypeOf<{
+          includeDrafts: boolean | null | undefined;
+        }>();
+        return { id: parent.id, name: null };
+      },
+    });
+    build.field(Post.computedTokens.wordCount, {
+      // @ts-expect-error wordCount resolves to an Int, not a string.
+      resolve: () => "twelve",
+    });
+    // @ts-expect-error Post declares no computed field named missing.
+    expect(Post.computedTokens.missing).toBeUndefined();
+  });
+});
+
+describe("an object of computed fields only", () => {
+  const PostQueries = ph.object("PostQueries", {
+    fields: {
+      count: ph.field({ returns: ph.Int({ required: true }) }),
+      byId: ph.field({
+        args: { id: ph.OID({ required: true }) },
+        returns: ph.ref(Post),
+      }),
+    },
+  });
+
+  it("compiles in a subgraph, each computed field a member", () => {
+    const compiled = compileEntries("post-queries", (build) => [
+      build.query("posts", {
+        returns: ph.ref(PostQueries, { required: true }),
+        resolve: () => ({}),
+      }),
+      build.field(PostQueries.computedTokens.count, { resolve: () => 2 }),
+      build.field(PostQueries.computedTokens.byId, {
+        resolve: ({ args }) => ({ id: args.id, title: "One" }),
+      }),
+      build.field(Post.computedTokens.wordCount, { resolve: () => 1 }),
+      build.field(Post.computedTokens.author, {
+        resolve: () => ({ id: "a1" }),
+      }),
+    ]);
+    expect(compiled.diagnostics).toEqual([]);
+    expect(print(compiled.typeDefs as DocumentNode)).toBe(
+      [
+        "scalar OID",
+        "",
+        "type PostQueries {",
+        "  count: Int!",
+        "  byId(id: OID!): Post",
+        "}",
+        "",
+        "type Post {",
+        "  id: OID!",
+        "  title: String!",
+        "  wordCount: Int!",
+        '  """The post\'s author."""',
+        "  author(includeDrafts: Boolean): Author!",
+        "}",
+        "",
+        "type Author {",
+        "  id: OID!",
+        "  name: String",
+        "}",
+        "",
+        "type Query {",
+        "  posts: PostQueries!",
+        "}",
+      ].join("\n"),
+    );
   });
 });

@@ -19,12 +19,18 @@ import {
   getEditorMetadata,
   getOrCreateDirectory,
   getProcessorMetadata,
-  getSubgraphMetadata,
   loadDocumentModelInDir,
+  projectDirOf,
 } from "@powerhousedao/codegen/utils";
 import { documentModelDocumentModelModule } from "document-model";
 import { readdirSync } from "node:fs";
-import type { Project } from "ts-morph";
+import { join, relative } from "node:path";
+import {
+  type ClassDeclaration,
+  Node,
+  type Project,
+  SyntaxKind,
+} from "ts-morph";
 
 const isDefined = <T>(v: T | undefined | null): v is T => v != null;
 
@@ -59,7 +65,10 @@ import {
 export function extractEditorDocuments(
   project: Project,
 ): DocumentEditorDocument[] {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    join(projectDirOf(project), "editors"),
+  );
   return editorsDir
     .getDirectories()
     .map((dir) => getEditorMetadata(project, dir.getBaseName()))
@@ -88,7 +97,10 @@ export function extractEditorDocuments(
  * predicate used by `generateAllApps`.
  */
 export function extractAppDocuments(project: Project): AppModuleDocument[] {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    join(projectDirOf(project), "editors"),
+  );
   return editorsDir
     .getDirectories()
     .map((dir) => getAppMetadata(project, dir.getBaseName()))
@@ -112,7 +124,7 @@ export function extractProcessorDocuments(
 ): ProcessorModuleDocument[] {
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
-    "processors",
+    join(projectDirOf(project), "processors"),
   );
   return processorsDir
     .getDirectories()
@@ -136,17 +148,40 @@ export function extractProcessorDocuments(
     });
 }
 
+/* Builds a `powerhouse/subgraph` document for each class under `subgraphs/`
+ * with its own static `subgraphName`. A class without one, such as a shared
+ * base, is not a subgraph. An old-style class, or a name that is not a string
+ * literal, is refused, so no subgraph is left out silently.
+ */
 export function extractSubgraphDocuments(
   project: Project,
 ): SubgraphModuleDocument[] {
+  const projectDir = projectDirOf(project);
   const { directory: subgraphsDir } = getOrCreateDirectory(
     project,
-    "subgraphs",
+    join(projectDir, "subgraphs"),
   );
-  return subgraphsDir
-    .getDirectories()
-    .map((dir) => getSubgraphMetadata(project, dir.getBaseName()).subgraphName)
-    .filter(isDefined)
+  const included = [
+    join(subgraphsDir.getPath(), "**/*.ts"),
+    `!${join(subgraphsDir.getPath(), "**/*.d.ts")}`,
+    `!${join(subgraphsDir.getPath(), "**/node_modules/**")}`,
+    `!${join(subgraphsDir.getPath(), "**/dist/**")}`,
+  ];
+  return project
+    .addSourceFilesAtPaths(included)
+    .sort((left, right) =>
+      left.getFilePath().localeCompare(right.getFilePath()),
+    )
+    .flatMap((file) =>
+      file
+        .getClasses()
+        .flatMap((declaration) =>
+          subgraphNamesOf(
+            declaration,
+            relative(projectDir, file.getFilePath()),
+          ),
+        ),
+    )
     .map((name) => {
       const global: SubgraphModuleGlobalState = { name, status: "CONFIRMED" };
       const doc = createSubgraphModuleDocument({ global });
@@ -155,12 +190,58 @@ export function extractSubgraphDocuments(
     });
 }
 
+const OLD_STYLE_FIELDS = [
+  "name",
+  "typeDefs",
+  "resolvers",
+  "hasSubscriptions",
+] as const;
+
+function subgraphNamesOf(declaration: ClassDeclaration, file: string) {
+  const name = declaration.getName() ?? "An anonymous class";
+  const subgraphName = declaration.getStaticProperty("subgraphName");
+  if (subgraphName !== undefined) {
+    const literal = subgraphName
+      .asKind(SyntaxKind.PropertyDeclaration)
+      ?.getInitializerIfKind(SyntaxKind.StringLiteral);
+    if (literal === undefined) {
+      throw new Error(
+        `Cannot extract subgraph: ${name} in ${file} declares static subgraphName without a string literal, so extraction cannot read it. Write it as static override readonly subgraphName = "my-subgraph".`,
+      );
+    }
+    return [literal.getLiteralValue()];
+  }
+  const assigned = new Set(
+    declaration
+      .getDescendantsOfKind(SyntaxKind.BinaryExpression)
+      .filter(
+        (assignment) =>
+          assignment.getOperatorToken().getKind() === SyntaxKind.EqualsToken,
+      )
+      .map((assignment) => assignment.getLeft())
+      .filter(Node.isPropertyAccessExpression)
+      .filter((target) => Node.isThisExpression(target.getExpression()))
+      .map((target) => target.getName()),
+  );
+  const fields = OLD_STYLE_FIELDS.filter(
+    (field) =>
+      declaration.getInstanceProperty(field) !== undefined ||
+      assigned.has(field),
+  );
+  if (fields.length > 0) {
+    throw new Error(
+      `Cannot extract subgraph: ${name} in ${file} is an old-style subgraph: it sets ${fields.join(", ")} instead of a static subgraphName. Run \`ph migrate\` to convert it.`,
+    );
+  }
+  return [];
+}
+
 export function extractDocumentModelDocuments(
   project: Project,
 ): DocumentModelDocument[] {
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDirOf(project), "document-models"),
   );
   return readdirSync(documentModelsDir.getPath(), { withFileTypes: true })
     .map(loadDocumentModelInDir)

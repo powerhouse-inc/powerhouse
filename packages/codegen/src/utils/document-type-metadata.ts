@@ -1,7 +1,7 @@
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
 import { readdirSync } from "fs";
 import { getDocumentModelVariableNames } from "name-builders";
-import { posix } from "path";
+import { join, posix } from "path";
 import {
   filter,
   first,
@@ -14,7 +14,11 @@ import {
   when,
 } from "remeda";
 import type { Project } from "ts-morph";
-import { getOrCreateDirectory, loadDocumentModelInDir } from "utils";
+import {
+  getOrCreateDirectory,
+  loadDocumentModelInDir,
+  projectDirOf,
+} from "utils";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
@@ -29,7 +33,7 @@ export function findDocumentTypeMetadata({
 }: GetDocumentTypeMetadataArgs): DocumentModelDocumentTypeMetadata | undefined {
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDirOf(project), "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
 

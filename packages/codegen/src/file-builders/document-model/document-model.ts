@@ -29,6 +29,7 @@ import {
   getOrCreateDirectory,
   getOrCreateSourceFile,
   getVariableDeclarationByTypeName,
+  projectDirOf,
 } from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
@@ -85,12 +86,12 @@ export async function tsMorphGenerateDocumentModel(
   project: Project,
 ) {
   const { name, id, specifications } = documentModelState;
+  const projectDir = projectDirOf(project);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDir, "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   const documentModelDirName = kebabCase(name);
   const documentModelDirPath = join(
     documentModelsDirPath,
@@ -262,12 +263,12 @@ export async function tsMorphGenerateDocumentModel(
 export async function refreshDocumentModelAggregates(
   project: Project,
 ): Promise<void> {
+  const projectDir = projectDirOf(project);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDir, "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   // skipAddingFilesFromTsConfig leaves other models out of the project; add
   // the files the aggregates scan so every model is included, not just the new one.
   project.addSourceFilesAtPaths([

@@ -296,7 +296,7 @@ describe("ph scalar inspect", () => {
         code: "PH-SCALAR-INTERNAL",
         path: ["selection"],
         message:
-          "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+          "JSONObject is internal to the reactor host. A document model cannot use it.",
       },
     ]);
   });

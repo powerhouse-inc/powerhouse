@@ -126,10 +126,8 @@ function modelPackageScalars(
 }
 
 /**
- * Returns the names an authored resolver map binds to a scalar type of the
- * same name, as a code-first subgraph does for its package scalars. The check
- * reads the object's shape because a scalar built by another graphql copy
- * fails `instanceof`.
+ * The check reads the object's shape because a scalar built by another
+ * graphql copy fails `instanceof`.
  */
 function authoredScalarNames(
   resolvers: Readonly<Record<string, unknown>>,

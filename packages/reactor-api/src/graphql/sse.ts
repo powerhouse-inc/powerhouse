@@ -116,7 +116,26 @@ export function withoutFederationDirectives(
   }));
 }
 
-const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
+const DEFAULT_ROOTS = {
+  query: "Query",
+  mutation: "Mutation",
+  subscription: "Subscription",
+} as const;
+
+const STREAM_ROOTS = Object.values(DEFAULT_ROOTS);
+
+export function customOperationRoots(typeDefs: DocumentNode): string[] {
+  return typeDefs.definitions.flatMap((def) =>
+    def.kind === Kind.SCHEMA_DEFINITION || def.kind === Kind.SCHEMA_EXTENSION
+      ? (def.operationTypes ?? [])
+          .filter(
+            ({ operation, type }) =>
+              type.name.value !== DEFAULT_ROOTS[operation],
+          )
+          .map(({ operation, type }) => `${operation}: ${type.name.value}`)
+      : [],
+  );
+}
 
 /**
  * Merges subscription subgraphs into one stream schema, or `undefined` when no

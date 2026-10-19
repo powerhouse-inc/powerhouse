@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 import {
   generateCodeFirstDocumentModel,
-  generateCodeFirstSubgraph,
+  generateSubgraph as generateClassSubgraph,
 } from "../src/codegen/generate.js";
 import { codeFirstAggregateSources } from "../src/file-builders/document-model/code-first-aggregates.js";
 import {
@@ -29,7 +29,6 @@ import { agentsTemplate } from "../src/templates/boilerplate/AGENTS.md.js";
 import { createCodeFirstPackage } from "./code-first-package.js";
 
 let projectDir: string;
-let enteredFrom: string;
 
 const configPath = () => join(projectDir, "powerhouse.config.json");
 
@@ -83,18 +82,16 @@ async function generateModel(args = todo) {
 
 async function generateSubgraph(name: string) {
   const project = buildTsMorphProject(projectDir);
-  const result = await generateCodeFirstSubgraph(name, project);
+  const result = await generateClassSubgraph(name, project);
   await project.save();
   return result;
 }
 
 beforeEach(() => {
-  enteredFrom = process.cwd();
   projectDir = createCodeFirstPackage();
 });
 
 afterEach(() => {
-  process.chdir(enteredFrom);
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -736,67 +733,74 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
   });
 });
 
-describe("generateCodeFirstSubgraph", () => {
-  it("writes the declaration and exports it under its constant's name", async () => {
-    expect(await generateSubgraph("widgets")).toStrictEqual({
-      written: [
-        "subgraphs/widgets.ts",
-        "subgraphs/index.ts",
-        "powerhouse.manifest.json",
-      ],
-      registration: "created",
-    });
-    expect(read("subgraphs/index.ts")).toBe(
-      'export * as WidgetsSubgraph from "./widgets.js";\n',
-    );
-    expect(read("subgraphs/widgets.ts")).toContain(
-      "export const WidgetsSubgraph = defineSubgraph({",
-    );
-    expect(readConfig().definitionSources).toStrictEqual({
-      formatVersion: 1,
-      mode: "code-first",
-      entries: [{ specifier: "./subgraphs/widgets.ts" }],
-    });
-  });
-
-  it("kebab-cases a multi-word name for the file", async () => {
-    expect((await generateSubgraph("SearchIndex")).written).toStrictEqual([
-      "subgraphs/search-index.ts",
-      "subgraphs/index.ts",
-      "powerhouse.manifest.json",
-    ]);
-    expect(read("subgraphs/index.ts")).toBe(
-      'export * as SearchIndexSubgraph from "./search-index.js";\n',
-    );
-  });
-
-  it("keeps the exports already in subgraphs/index.ts and adds none twice", async () => {
-    mkdirSync(join(projectDir, "subgraphs"));
-    writeFileSync(
-      join(projectDir, "subgraphs/index.ts"),
-      "export * as ExistingSubgraph from './existing/index.js';\nexport * as WidgetsSubgraph from './widgets.js';\n",
-    );
-    await generateSubgraph("widgets");
-    expect(read("subgraphs/index.ts")).toBe(
-      'export * as ExistingSubgraph from "./existing/index.js";\nexport * as WidgetsSubgraph from "./widgets.js";\n',
-    );
-  });
-
-  it("refuses to overwrite an edited declaration", async () => {
-    await generateSubgraph("widgets");
-    writeFileSync(join(projectDir, "subgraphs/widgets.ts"), "// mine\n");
+describe("generateSubgraph", () => {
+  it("writes one class scaffold and registers its barrel without changing definitionSources", async () => {
     const config = readFileSync(configPath(), "utf8");
-    await expect(generateSubgraph("widgets")).rejects.toThrow(
-      "Refusing to overwrite subgraphs/widgets.ts",
+    await generateSubgraph("widgets");
+    expect(readdirSync(join(projectDir, "subgraphs/widgets")).sort()).toEqual([
+      "index.ts",
+      "schema.ts",
+    ]);
+    expect(read("subgraphs/index.ts")).toContain(
+      'import { WidgetsSubgraph } from "./widgets/index.js";',
     );
-    expect(read("subgraphs/widgets.ts")).toBe("// mine\n");
+    expect(read("subgraphs/index.ts")).toContain("export { WidgetsSubgraph };");
+    expect(read("subgraphs/index.ts")).toContain(
+      "const checkWidgetsSubgraph: SubgraphCheck<typeof WidgetsSubgraph> = true;",
+    );
+    expect(read("subgraphs/widgets/index.ts")).toContain(
+      "export class WidgetsSubgraph extends BaseSubgraph",
+    );
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
 
-  it("leaves the config untouched when the declaration cannot be written", async () => {
+  it("kebab-cases a multi-word name for the directory and literal name", async () => {
+    await generateSubgraph("SearchIndex");
+    expect(read("subgraphs/search-index/index.ts")).toContain(
+      'static override readonly subgraphName = "search-index";',
+    );
+    expect(read("subgraphs/index.ts")).toContain(
+      'import { SearchIndexSubgraph } from "./search-index/index.js";',
+    );
+  });
+
+  it("keeps existing classes and adds no duplicate checks", async () => {
+    await generateSubgraph("existing");
+    await generateSubgraph("widgets");
+    const barrel = read("subgraphs/index.ts");
+    await generateSubgraph("widgets");
+    expect(read("subgraphs/index.ts")).toBe(barrel);
+    expect(barrel).toContain("export { ExistingSubgraph };");
+  });
+
+  it("preserves edited class and schema files", async () => {
+    await generateSubgraph("widgets");
+    const edited = read("subgraphs/widgets/index.ts") + "// mine\n";
+    const schema = `// my schema\n${read("subgraphs/widgets/schema.ts")}`;
+    writeFileSync(join(projectDir, "subgraphs/widgets/index.ts"), edited);
+    writeFileSync(join(projectDir, "subgraphs/widgets/schema.ts"), schema);
+    await generateSubgraph("widgets");
+    expect(read("subgraphs/widgets/index.ts")).toBe(edited);
+    expect(read("subgraphs/widgets/schema.ts")).toBe(schema);
+  });
+
+  it("rejects a subgraph that no longer compiles and leaves its files alone", async () => {
+    await generateSubgraph("widgets");
+    const index = read("subgraphs/widgets/index.ts");
+    writeFileSync(
+      join(projectDir, "subgraphs/widgets/schema.ts"),
+      "// my schema\n",
+    );
+    await expect(generateSubgraph("widgets")).rejects.toThrow(
+      "PH-DEF-REFERENCE-TARGET-INVALID",
+    );
+    expect(read("subgraphs/widgets/index.ts")).toBe(index);
+    expect(read("subgraphs/widgets/schema.ts")).toBe("// my schema\n");
+  });
+
+  it("leaves the config untouched when the class cannot be written", async () => {
     writeFileSync(join(projectDir, "subgraphs"), "a file\n");
     const config = readFileSync(configPath(), "utf8");
-    // POSIX names the file it could not open, Windows the file in its way.
     await expect(generateSubgraph("widgets")).rejects.toThrow(/[\\/]subgraphs/);
     expect(readFileSync(configPath(), "utf8")).toBe(config);
   });
@@ -896,7 +900,11 @@ describe("code-first manifest registration", () => {
 
   it.each([
     ["model", () => generateModel(), "document-models/todo"],
-    ["subgraph", () => generateSubgraph("widgets"), "subgraphs/widgets.ts"],
+    [
+      "subgraph",
+      () => generateSubgraph("widgets"),
+      "subgraphs/widgets/index.ts",
+    ],
   ])(
     "refuses an invalid manifest before writing the %s",
     async (_, generate, written) => {
@@ -1002,10 +1010,7 @@ describe("code-first manifest registration", () => {
         })),
       ).toStrictEqual([{ name: "Todo", id: "acme-things/todo" }]);
       expect(loaded.subgraphs).toHaveLength(1);
-      expect(loaded.subgraphs[0]?.value).toHaveProperty(
-        ["definition", "name"],
-        "widget-feed",
-      );
+      expect(loaded.subgraphs[0]?.description.subgraphName).toBe("widget-feed");
     } finally {
       await loader.dispose();
     }

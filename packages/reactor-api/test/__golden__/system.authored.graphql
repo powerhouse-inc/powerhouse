@@ -1,0 +1,9 @@
+type SystemInfo {
+  version: String!
+  gitHash: String!
+  gitUrl: String
+}
+
+type Query {
+  system: SystemInfo!
+}

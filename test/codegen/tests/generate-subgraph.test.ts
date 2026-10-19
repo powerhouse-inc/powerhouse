@@ -1,7 +1,7 @@
 import { generateSubgraph } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, it } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   NEW_PROJECT,
@@ -26,43 +26,34 @@ describe("generateSubgraph", () => {
 
     await runTsc(outDir);
 
-    // index.ts — base subgraph class
+    expect((await readdir(join(subgraphsDir, "my-custom"))).sort()).toEqual([
+      "index.ts",
+      "schema.ts",
+    ]);
     const indexContent = await readFile(
       join(subgraphsDir, "my-custom", "index.ts"),
-      "utf-8",
+      "utf8",
     );
     expect(indexContent).toContain(
       "class MyCustomSubgraph extends BaseSubgraph",
     );
-    expect(indexContent).toContain('name = "my-custom"');
-    expect(indexContent).toContain("import { schema } from");
-    expect(indexContent).toContain("import { getResolvers } from");
-
-    // lib.ts — scaffold
-    const libContent = await readFile(
-      join(subgraphsDir, "my-custom", "lib.ts"),
-      "utf-8",
+    expect(indexContent).toContain(
+      'static override readonly subgraphName = "my-custom"',
     );
-    expect(libContent).toContain("scaffold file meant for customization");
-
-    // schema.ts — custom schema
+    expect(indexContent).toContain("SchemaBuilder<MyCustomSubgraph>");
+    expect(indexContent).toContain('schema.query("myCustomItem",');
     const schemaContent = await readFile(
       join(subgraphsDir, "my-custom", "schema.ts"),
-      "utf-8",
+      "utf8",
     );
-    expect(schemaContent).toContain("import { gql } from");
-    expect(schemaContent).toContain("type MyCustomSubgraphQueries");
-    expect(schemaContent).toContain("myCustom: MyCustomSubgraphQueries!");
-
-    // resolvers.ts — custom resolvers
-    const resolversContent = await readFile(
-      join(subgraphsDir, "my-custom", "resolvers.ts"),
-      "utf-8",
+    expect(schemaContent).toContain(
+      'export const MyCustomSubgraphItem = ph.object("MyCustomSubgraphItem",',
     );
-    expect(resolversContent).toContain("BaseSubgraph");
-    expect(resolversContent).toContain("subgraph.reactorClient");
-    expect(resolversContent).toContain("MyCustomSubgraphQueries");
-    expect(resolversContent).not.toContain("document-drive");
+    const barrel = await readFile(join(subgraphsDir, "index.ts"), "utf8");
+    expect(barrel).toContain("export { MyCustomSubgraph };");
+    expect(barrel).toContain(
+      "const checkMyCustomSubgraph: SubgraphCheck<typeof MyCustomSubgraph> = true;",
+    );
   });
 
   it("should not overwrite existing custom subgraph files", async () => {
@@ -71,19 +62,16 @@ describe("generateSubgraph", () => {
     const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
 
-    // Generate once
     await generateSubgraph("idempotent-test", project);
 
     await project.save();
     await runTsc(outDir);
 
-    // Read original content
     const originalIndex = await readFile(
       join(subgraphsDir, "idempotent-test", "index.ts"),
       "utf-8",
     );
 
-    // Generate again — should not overwrite
     await generateSubgraph("idempotent-test", project);
     await project.save();
 

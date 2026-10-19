@@ -1,0 +1,3077 @@
+schema
+  @link(url: "https://specs.apollo.dev/link/v1.0")
+  @link(url: "https://specs.apollo.dev/join/v0.3", for: EXECUTION)
+{
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+directive @join__enumValue(graph: join__Graph!) repeatable on ENUM_VALUE
+
+directive @join__field(graph: join__Graph, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true, isInterfaceObject: Boolean! = false) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+directive @join__unionMember(graph: join__Graph!, member: String!) repeatable on UNION
+
+directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+type Action
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContext
+}
+
+"""
+One operation an authorization preflight predicts a verdict for.
+
+`input` is what a conditional grant reads, so a candidate standing for a
+filled-in form carries that form's input. Omitting it predicts the verdict an
+empty input earns, not the verdict the filled-in form will get.
+"""
+input ActionCandidateInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  scope: String!
+  type: String!
+  input: JSONObject
+}
+
+type ActionContext
+  @join__type(graph: _GRAPHQL_R)
+{
+  signer: ReactorSigner
+}
+
+"""
+An action's context, as a caller submits it.
+
+Declares every field `ActionContext` carries, because an input object rejects a
+field it does not declare: an action stamped with the head it applies to - which
+is what a signing client sends - is refused outright if these are missing, and
+that refusal is a whole-request one, not a per-field one.
+
+`prevOpHash` and `prevOpIndex` are the scope head the action was composed
+against. They are recorded rather than enforced; a signature is verified from
+the params carried in its own tuple, which do not include them.
+"""
+input ActionContextInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  """The index of the last operation in the scope the action applies to."""
+  prevOpIndex: Int
+
+  """The hash of the state the action applies to."""
+  prevOpHash: String
+
+  """Covers replay of an operation that would otherwise be a no-op."""
+  nonce: String
+  signer: ReactorSignerInput
+}
+
+"""
+One candidate's predicted verdict. `reason` carries the refusal a DENY is
+recorded with, and is null on an ALLOW.
+"""
+type ActionEvaluation
+  @join__type(graph: _GRAPHQL_R)
+{
+  decision: AuthDecision!
+  reason: String
+}
+
+"""
+The predicted verdicts for a set of candidates, in the order they were given,
+with the aggregates a caller branches on.
+
+The aggregates are redundant -- a verdict is binary -- and all four are returned
+so a caller reads the one its question is phrased in rather than negating
+another. Over no candidates every aggregate is false: nothing is allowed and
+nothing is denied.
+"""
+type ActionEvaluations
+  @join__type(graph: _GRAPHQL_R)
+{
+  evaluations: [ActionEvaluation!]!
+  allAllowed: Boolean!
+  anyAllowed: Boolean!
+  allDenied: Boolean!
+  anyDenied: Boolean!
+}
+
+input ActionInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContextInput
+}
+
+scalar Address
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Crypto
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Currency
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Fiat
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Money
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Percentage
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Amount_Tokens
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+input AnalyticsFilter
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  start: String
+  end: String
+
+  """Period to group by"""
+  granularity: AnalyticsGranularity
+
+  """List of metrics to filter by, such as 'budget' or 'actuals'"""
+  metrics: [String]
+
+  """List of dimensions to filter by, such as 'budget' or 'project'"""
+  dimensions: [AnalyticsFilterDimension]
+  currency: String
+}
+
+input AnalyticsFilterDimension
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  name: String!
+  select: String!
+  lod: Int!
+}
+
+enum AnalyticsGranularity
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  hourly @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  daily @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  weekly @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  monthly @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  quarterly @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  semiAnnual @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  annual @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+  total @join__enumValue(graph: _GRAPHQL_ANALYTICS)
+}
+
+type AnalyticsPeriod
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  period: String
+  start: DateTime
+  end: DateTime
+  rows: [AnalyticsSeries]
+}
+
+type AnalyticsQuery
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  series(filter: AnalyticsFilter): [AnalyticsPeriod]
+  multiCurrencySeries(filter: MultiCurrencyConversions): [AnalyticsPeriod]
+  metrics: [String]
+  dimensions: [Dimension]
+  currencies: [String]
+}
+
+type AnalyticsSeries
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  dimensions: [AnalyticsSeriesDimension]
+  metric: String
+  unit: String
+  value: Float
+  sum: Float
+}
+
+type AnalyticsSeriesDimension
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  name: String
+  path: String
+  label: String
+  description: String
+  icon: String
+}
+
+scalar AttachmentRef
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+enum AuthDecision
+  @join__type(graph: _GRAPHQL_R)
+{
+  ALLOW @join__enumValue(graph: _GRAPHQL_R)
+  DENY @join__enumValue(graph: _GRAPHQL_R)
+}
+
+"""
+The outcome of a batch mutation, one entry per job the request named. The wire
+shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+key rather than by position so the client can rebuild the record. The batch is
+not atomic: each job commits on its own and a failed job releases its
+dependents, so each entry's status says what happened to that job, and
+re-submitting re-applies the jobs that succeeded.
+"""
+type BatchExecutionResult
+  @join__type(graph: _GRAPHQL_R)
+{
+  jobs: [BatchJobResult!]!
+}
+
+"""
+One job's outcome within a batch, pairing the plan key the caller gave with the
+job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+`IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+"""
+type BatchJobResult
+  @join__type(graph: _GRAPHQL_R)
+{
+  key: String!
+  job: JobInfo!
+}
+
+type ChannelMeta
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+}
+
+input ChannelMetaInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+}
+
+type ConsistencyCoordinate
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+The write positions a job reached, for read-after-write. Only meaningful once
+the job has completed.
+"""
+type ConsistencyToken
+  @join__type(graph: _GRAPHQL_R)
+{
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinate!]!
+}
+
+type CreateDefaults
+  @join__type(graph: _GRAPHQL_R)
+{
+  signaturePolicy: String!
+  protocolVersions: JSONObject!
+}
+
+scalar Currency
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+input CurrencyConversion
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  metric: String!
+  sourceCurrency: String!
+}
+
+scalar Date
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar DateTime
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+type DeadLetterInfo
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: String!
+  error: String!
+
+  """
+  How the origin classified the failure. A peer needs this to mirror the origin's
+  quarantine decision; without it a held auth operation would freeze the document
+  on the peer side while the origin kept syncing.
+  """
+  errorType: String
+  jobId: String!
+  branch: String!
+  scopes: [String!]!
+  operationCount: Int!
+}
+
+type Dimension
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  name: String
+  values: [Value]
+}
+
+type DocumentAccessInfo
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  documentId: String!
+  permissions: [DocumentPermissionEntry!]!
+}
+
+type DocumentChangeContext
+  @join__type(graph: _GRAPHQL_R)
+{
+  parentId: String
+  childId: String
+}
+
+type DocumentChangeEvent
+  @join__type(graph: _GRAPHQL_R)
+{
+  type: DocumentChangeType!
+  documents: [PHDocument!]!
+  context: DocumentChangeContext
+}
+
+enum DocumentChangeType
+  @join__type(graph: _GRAPHQL_R)
+{
+  CREATED @join__enumValue(graph: _GRAPHQL_R)
+  DELETED @join__enumValue(graph: _GRAPHQL_R)
+  UPDATED @join__enumValue(graph: _GRAPHQL_R)
+  PARENT_ADDED @join__enumValue(graph: _GRAPHQL_R)
+  PARENT_REMOVED @join__enumValue(graph: _GRAPHQL_R)
+  CHILD_ADDED @join__enumValue(graph: _GRAPHQL_R)
+  CHILD_REMOVED @join__enumValue(graph: _GRAPHQL_R)
+}
+
+type DocumentDrive implements IDocument
+  @join__implements(graph: _GRAPHQL_ANALYTICS, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_AUTH, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_DRIVE, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_MODEL, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_INSPECTION, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_PACKAGES, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_R, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_SYSTEM, interface: "IDocument")
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+"""Module: Node"""
+input DocumentDrive_AddFileInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+  name: String!
+  documentType: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddFolderInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+  name: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddListenerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  listener: DocumentDrive_ListenerInput!
+}
+
+input DocumentDrive_AddTriggerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  trigger: DocumentDrive_TriggerInput!
+}
+
+input DocumentDrive_CopyNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  srcId: ID!
+  targetId: ID!
+  targetName: String
+  targetParentFolder: ID
+}
+
+input DocumentDrive_DeleteNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+}
+
+type DocumentDrive_DocumentDriveLocalState
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_DocumentDriveLocalStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  sharingType: String
+  listeners: [DocumentDrive_ListenerInput]
+  triggers: [DocumentDrive_TriggerInput]
+  availableOffline: Boolean
+}
+
+type DocumentDrive_DocumentDriveState
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+input DocumentDrive_DocumentDriveStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  name: String
+  nodes: [JSONObject]
+  icon: String
+}
+
+"""Paginated result type for DocumentDrive documents"""
+type DocumentDrive_DocumentResultPage
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  items: [DocumentDriveMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""Document with children for DocumentDrive"""
+type DocumentDrive_DocumentWithChildren
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  document: DocumentDriveMutationResult!
+  childIds: [String!]!
+}
+
+type DocumentDrive_FileNode
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+input DocumentDrive_FileNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: String
+  name: String
+  kind: String
+  documentType: String
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+"""Input Types for Initial State"""
+input DocumentDrive_FolderNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: String
+  name: String
+  kind: String
+  parentFolder: String
+}
+
+"""Full state with all scopes for DocumentDrive"""
+type DocumentDrive_FullState
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  auth: JSONObject!
+  document: DocumentDrive_PHDocumentScopeState!
+  global: DocumentDrive_DocumentDriveState!
+  local: DocumentDrive_DocumentDriveLocalState!
+}
+
+input DocumentDrive_InitialStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  global: DocumentDrive_DocumentDriveStateInput
+  local: DocumentDrive_DocumentDriveLocalStateInput
+}
+
+type DocumentDrive_Listener
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+type DocumentDrive_ListenerCallInfo
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+input DocumentDrive_ListenerCallInfoInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_ListenerFilter
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerFilterInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilterInput!
+  callInfo: DocumentDrive_ListenerCallInfoInput
+}
+
+input DocumentDrive_MoveNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  srcFolder: ID!
+  targetParentFolder: ID
+}
+
+union DocumentDrive_Node
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+  @join__unionMember(graph: _GRAPHQL_ANALYTICS, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_AUTH, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_DRIVE, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_MODEL, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_INSPECTION, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_PACKAGES, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_R, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_SYSTEM, member: "DocumentDrive_FolderNode")
+  @join__unionMember(graph: _GRAPHQL_ANALYTICS, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_AUTH, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_DRIVE, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_MODEL, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_INSPECTION, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_PACKAGES, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_R, member: "DocumentDrive_FileNode")
+  @join__unionMember(graph: _GRAPHQL_SYSTEM, member: "DocumentDrive_FileNode")
+ = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+input DocumentDrive_PagingInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+"""Document scope state (same for all document types)"""
+type DocumentDrive_PHDocumentScopeState
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  version: Int!
+  hash: DocumentDrive_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""Hash configuration for document state"""
+type DocumentDrive_PHHashConfig
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  algorithm: String!
+  encoding: String!
+}
+
+type DocumentDrive_PullResponderTriggerData
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_PullResponderTriggerDataInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_RemoveListenerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  listenerId: String!
+}
+
+input DocumentDrive_RemoveTriggerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  triggerId: String!
+}
+
+input DocumentDrive_SearchFilterInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+input DocumentDrive_SetAvailableOfflineInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_SetDriveIconInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  icon: String
+}
+
+"""Module: Drive"""
+input DocumentDrive_SetDriveNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  name: String!
+}
+
+input DocumentDrive_SetSharingTypeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  type: String!
+}
+
+enum DocumentDrive_TransmitterType
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  Internal @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+  SwitchboardPush @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+  PullResponder @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+  SecureConnect @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+  MatrixConnect @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+  RESTWebhook @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+}
+
+type DocumentDrive_Trigger
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+union DocumentDrive_TriggerData
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+  @join__unionMember(graph: _GRAPHQL_ANALYTICS, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_AUTH, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_DRIVE, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_DOCUMENT_MODEL, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_INSPECTION, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_PACKAGES, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_R, member: "DocumentDrive_PullResponderTriggerData")
+  @join__unionMember(graph: _GRAPHQL_SYSTEM, member: "DocumentDrive_PullResponderTriggerData")
+ = DocumentDrive_PullResponderTriggerData
+
+input DocumentDrive_TriggerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_PullResponderTriggerDataInput
+}
+
+enum DocumentDrive_TriggerType
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  PullResponder @join__enumValue(graph: _GRAPHQL_ANALYTICS) @join__enumValue(graph: _GRAPHQL_AUTH) @join__enumValue(graph: _GRAPHQL_DOCUMENT_DRIVE) @join__enumValue(graph: _GRAPHQL_DOCUMENT_MODEL) @join__enumValue(graph: _GRAPHQL_INSPECTION) @join__enumValue(graph: _GRAPHQL_PACKAGES) @join__enumValue(graph: _GRAPHQL_R) @join__enumValue(graph: _GRAPHQL_SYSTEM)
+}
+
+input DocumentDrive_UpdateFileInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+  parentFolder: ID
+  name: String
+  documentType: String
+}
+
+input DocumentDrive_UpdateNodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: ID!
+  parentFolder: ID
+  name: String
+}
+
+input DocumentDrive_ViewFilterInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  branch: String
+  scopes: [String!]
+}
+
+"""
+Mutation result type for DocumentDrive operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentDriveMutationResult
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentDrive_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""Mutations: DocumentDrive"""
+type DocumentDriveMutations
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: DocumentDrive_InitialStateInput): DocumentDriveMutationResult!
+  createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): DocumentDriveMutationResult!
+  addFile(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFileInput!): DocumentDriveMutationResult!
+  addFileAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFileInput!): String!
+  addFolder(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFolderInput!): DocumentDriveMutationResult!
+  addFolderAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFolderInput!): String!
+  deleteNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_DeleteNodeInput!): DocumentDriveMutationResult!
+  deleteNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_DeleteNodeInput!): String!
+  updateFile(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateFileInput!): DocumentDriveMutationResult!
+  updateFileAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateFileInput!): String!
+  updateNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateNodeInput!): DocumentDriveMutationResult!
+  updateNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateNodeInput!): String!
+  copyNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_CopyNodeInput!): DocumentDriveMutationResult!
+  copyNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_CopyNodeInput!): String!
+  moveNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_MoveNodeInput!): DocumentDriveMutationResult!
+  moveNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_MoveNodeInput!): String!
+  setDriveName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveNameInput!): DocumentDriveMutationResult!
+  setDriveNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveNameInput!): String!
+  setDriveIcon(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveIconInput!): DocumentDriveMutationResult!
+  setDriveIconAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveIconInput!): String!
+  setSharingType(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetSharingTypeInput!): DocumentDriveMutationResult!
+  setSharingTypeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetSharingTypeInput!): String!
+  setAvailableOffline(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetAvailableOfflineInput!): DocumentDriveMutationResult!
+  setAvailableOfflineAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetAvailableOfflineInput!): String!
+  addListener(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddListenerInput!): DocumentDriveMutationResult!
+  addListenerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddListenerInput!): String!
+  removeListener(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveListenerInput!): DocumentDriveMutationResult!
+  removeListenerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveListenerInput!): String!
+  addTrigger(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddTriggerInput!): DocumentDriveMutationResult!
+  addTriggerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddTriggerInput!): String!
+  removeTrigger(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveTriggerInput!): DocumentDriveMutationResult!
+  removeTriggerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveTriggerInput!): String!
+}
+
+"""Queries: DocumentDrive Document"""
+type DocumentDriveQueries
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+{
+  """Get a specific DocumentDrive document by identifier"""
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: DocumentDrive_ViewFilterInput): DocumentDrive_DocumentWithChildren
+
+  """Get all DocumentDrive documents (paged)"""
+  documents(paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+
+  """Find DocumentDrive documents by search criteria"""
+  findDocuments(search: DocumentDrive_SearchFilterInput, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+
+  """Get outgoing relationships of a DocumentDrive document"""
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+
+  """Get incoming relationships to a DocumentDrive document"""
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+}
+
+type DocumentModel implements IDocument
+  @join__implements(graph: _GRAPHQL_ANALYTICS, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_AUTH, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_DRIVE, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_MODEL, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_INSPECTION, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_PACKAGES, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_R, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_SYSTEM, interface: "IDocument")
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+"""Module: Versioning"""
+input DocumentModel_AddChangeLogItemInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  insertBefore: ID
+  content: String!
+}
+
+"""Module: Module"""
+input DocumentModel_AddModuleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  name: String!
+  description: String
+}
+
+"""Module: OperationError"""
+input DocumentModel_AddOperationErrorInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  operationId: ID!
+  id: ID!
+  errorCode: String
+  errorName: String
+  errorDescription: String
+  errorTemplate: String
+}
+
+"""Module: OperationExample"""
+input DocumentModel_AddOperationExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  operationId: ID!
+  id: ID!
+  example: String!
+}
+
+"""Module: Operation"""
+input DocumentModel_AddOperationInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  moduleId: ID!
+  id: ID!
+  name: String!
+  schema: String
+  description: String
+  template: String
+  reducer: String
+  scope: String
+}
+
+input DocumentModel_AddStateExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  id: ID!
+  insertBefore: ID
+  example: String!
+}
+
+type DocumentModel_Author
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  name: String!
+  website: String
+}
+
+input DocumentModel_AuthorInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  name: String
+  website: String
+}
+
+type DocumentModel_CodeExample
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: ID!
+  value: String!
+}
+
+"""Input Types for Initial State"""
+input DocumentModel_CodeExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID
+  value: String
+}
+
+input DocumentModel_DeleteChangeLogItemInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+}
+
+input DocumentModel_DeleteModuleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationErrorInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+}
+
+input DocumentModel_DeleteStateExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  id: ID!
+}
+
+type DocumentModel_DocumentModelGlobalState
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+input DocumentModel_DocumentModelGlobalStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  name: String
+  id: String
+  extension: String
+  description: String
+  author: DocumentModel_AuthorInput
+  specifications: [DocumentModel_DocumentSpecificationInput]
+}
+
+"""Paginated result type for DocumentModel documents"""
+type DocumentModel_DocumentResultPage
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  items: [DocumentModelMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentModel_DocumentSpecification
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+input DocumentModel_DocumentSpecificationInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  version: Int
+  state: DocumentModel_ScopeStateInput
+  modules: [DocumentModel_ModuleInput]
+  changeLog: [String]
+}
+
+"""Document with children for DocumentModel"""
+type DocumentModel_DocumentWithChildren
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  document: DocumentModelMutationResult!
+  childIds: [String!]!
+}
+
+"""Full state with all scopes for DocumentModel"""
+type DocumentModel_FullState
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  auth: JSONObject!
+  document: DocumentModel_PHDocumentScopeState!
+  global: DocumentModel_DocumentModelGlobalState!
+  local: JSONObject!
+}
+
+input DocumentModel_InitialStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  global: DocumentModel_DocumentModelGlobalStateInput
+  local: JSONObject
+}
+
+type DocumentModel_Module
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+input DocumentModel_ModuleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID
+  name: String
+  description: String
+  operations: [DocumentModel_OperationInput]
+}
+
+input DocumentModel_MoveOperationInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  operationId: ID!
+  newModuleId: ID!
+}
+
+type DocumentModel_Operation
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_OperationError
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+input DocumentModel_OperationErrorInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+input DocumentModel_OperationInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationErrorInput]
+  examples: [DocumentModel_CodeExampleInput]
+  reducer: String
+  scope: String
+}
+
+input DocumentModel_PagingInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+"""Document scope state (same for all document types)"""
+type DocumentModel_PHDocumentScopeState
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  version: Int!
+  hash: DocumentModel_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""Hash configuration for document state"""
+type DocumentModel_PHHashConfig
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  algorithm: String!
+  encoding: String!
+}
+
+input DocumentModel_ReorderChangeLogItemsInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModuleOperationsInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  moduleId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModulesInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationErrorsInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationExamplesInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderStateExamplesInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  order: [ID!]!
+}
+
+type DocumentModel_ScopeState
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+input DocumentModel_ScopeStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  global: DocumentModel_StateInput
+  local: DocumentModel_StateInput
+}
+
+input DocumentModel_SearchFilterInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+input DocumentModel_SetAuthorNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  authorName: String!
+}
+
+input DocumentModel_SetAuthorWebsiteInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  authorWebsite: String!
+}
+
+input DocumentModel_SetInitialStateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  initialValue: String!
+}
+
+input DocumentModel_SetModelDescriptionInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  description: String!
+}
+
+input DocumentModel_SetModelExtensionInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  extension: String!
+}
+
+input DocumentModel_SetModelIdInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: String!
+}
+
+"""Module: Header"""
+input DocumentModel_SetModelNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  name: String!
+}
+
+input DocumentModel_SetModuleDescriptionInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  description: String
+}
+
+input DocumentModel_SetModuleNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationDescriptionInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  description: String
+}
+
+input DocumentModel_SetOperationErrorCodeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  errorCode: String
+}
+
+input DocumentModel_SetOperationErrorDescriptionInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  errorDescription: String
+}
+
+input DocumentModel_SetOperationErrorNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  errorName: String
+}
+
+input DocumentModel_SetOperationErrorTemplateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  errorTemplate: String
+}
+
+input DocumentModel_SetOperationNameInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationReducerInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  reducer: String
+}
+
+input DocumentModel_SetOperationSchemaInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  schema: String
+}
+
+input DocumentModel_SetOperationScopeInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  scope: String
+}
+
+input DocumentModel_SetOperationTemplateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  template: String
+}
+
+"""Module: State"""
+input DocumentModel_SetStateSchemaInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  schema: String!
+}
+
+type DocumentModel_State
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+input DocumentModel_StateInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  schema: String
+  initialValue: String
+  examples: [DocumentModel_CodeExampleInput]
+}
+
+input DocumentModel_UpdateChangeLogItemInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  newContent: String!
+}
+
+input DocumentModel_UpdateOperationExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: ID!
+  example: String!
+}
+
+input DocumentModel_UpdateStateExampleInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  scope: String!
+  id: ID!
+  newExample: String!
+}
+
+input DocumentModel_ViewFilterInput
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  branch: String
+  scopes: [String!]
+}
+
+type DocumentModelGlobalState
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+  name: String!
+  namespace: String
+  version: String
+  specification: JSONObject!
+}
+
+"""
+Mutation result type for DocumentModel operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentModelMutationResult
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentModel_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""Mutations: DocumentModel"""
+type DocumentModelMutations
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: DocumentModel_InitialStateInput): DocumentModelMutationResult!
+  createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): DocumentModelMutationResult!
+  setModelName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelNameInput!): DocumentModelMutationResult!
+  setModelNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelNameInput!): String!
+  setModelId(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelIdInput!): DocumentModelMutationResult!
+  setModelIdAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelIdInput!): String!
+  setModelExtension(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelExtensionInput!): DocumentModelMutationResult!
+  setModelExtensionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelExtensionInput!): String!
+  setModelDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelDescriptionInput!): DocumentModelMutationResult!
+  setModelDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelDescriptionInput!): String!
+  setAuthorName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorNameInput!): DocumentModelMutationResult!
+  setAuthorNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorNameInput!): String!
+  setAuthorWebsite(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorWebsiteInput!): DocumentModelMutationResult!
+  setAuthorWebsiteAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorWebsiteInput!): String!
+  addChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddChangeLogItemInput!): DocumentModelMutationResult!
+  addChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddChangeLogItemInput!): String!
+  updateChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateChangeLogItemInput!): DocumentModelMutationResult!
+  updateChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateChangeLogItemInput!): String!
+  deleteChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteChangeLogItemInput!): DocumentModelMutationResult!
+  deleteChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteChangeLogItemInput!): String!
+  reorderChangeLogItems(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderChangeLogItemsInput!): DocumentModelMutationResult!
+  reorderChangeLogItemsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderChangeLogItemsInput!): String!
+  addModule(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddModuleInput!): DocumentModelMutationResult!
+  addModuleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddModuleInput!): String!
+  setModuleName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleNameInput!): DocumentModelMutationResult!
+  setModuleNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleNameInput!): String!
+  setModuleDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleDescriptionInput!): DocumentModelMutationResult!
+  setModuleDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleDescriptionInput!): String!
+  deleteModule(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteModuleInput!): DocumentModelMutationResult!
+  deleteModuleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteModuleInput!): String!
+  reorderModules(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModulesInput!): DocumentModelMutationResult!
+  reorderModulesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModulesInput!): String!
+  addOperationError(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationErrorInput!): DocumentModelMutationResult!
+  addOperationErrorAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationErrorInput!): String!
+  setOperationErrorCode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorCodeInput!): DocumentModelMutationResult!
+  setOperationErrorCodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorCodeInput!): String!
+  setOperationErrorName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorNameInput!): DocumentModelMutationResult!
+  setOperationErrorNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorNameInput!): String!
+  setOperationErrorDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorDescriptionInput!): DocumentModelMutationResult!
+  setOperationErrorDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorDescriptionInput!): String!
+  setOperationErrorTemplate(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorTemplateInput!): DocumentModelMutationResult!
+  setOperationErrorTemplateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorTemplateInput!): String!
+  deleteOperationError(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationErrorInput!): DocumentModelMutationResult!
+  deleteOperationErrorAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationErrorInput!): String!
+  reorderOperationErrors(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationErrorsInput!): DocumentModelMutationResult!
+  reorderOperationErrorsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationErrorsInput!): String!
+  addOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationExampleInput!): DocumentModelMutationResult!
+  addOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationExampleInput!): String!
+  updateOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateOperationExampleInput!): DocumentModelMutationResult!
+  updateOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateOperationExampleInput!): String!
+  deleteOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationExampleInput!): DocumentModelMutationResult!
+  deleteOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationExampleInput!): String!
+  reorderOperationExamples(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationExamplesInput!): DocumentModelMutationResult!
+  reorderOperationExamplesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationExamplesInput!): String!
+  addOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationInput!): DocumentModelMutationResult!
+  addOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationInput!): String!
+  setOperationName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationNameInput!): DocumentModelMutationResult!
+  setOperationNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationNameInput!): String!
+  setOperationSchema(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationSchemaInput!): DocumentModelMutationResult!
+  setOperationSchemaAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationSchemaInput!): String!
+  setOperationDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationDescriptionInput!): DocumentModelMutationResult!
+  setOperationDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationDescriptionInput!): String!
+  setOperationTemplate(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationTemplateInput!): DocumentModelMutationResult!
+  setOperationTemplateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationTemplateInput!): String!
+  setOperationReducer(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationReducerInput!): DocumentModelMutationResult!
+  setOperationReducerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationReducerInput!): String!
+  setOperationScope(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationScopeInput!): DocumentModelMutationResult!
+  setOperationScopeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationScopeInput!): String!
+  moveOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_MoveOperationInput!): DocumentModelMutationResult!
+  moveOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_MoveOperationInput!): String!
+  deleteOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationInput!): DocumentModelMutationResult!
+  deleteOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationInput!): String!
+  reorderModuleOperations(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModuleOperationsInput!): DocumentModelMutationResult!
+  reorderModuleOperationsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModuleOperationsInput!): String!
+  setStateSchema(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetStateSchemaInput!): DocumentModelMutationResult!
+  setStateSchemaAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetStateSchemaInput!): String!
+  setInitialState(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetInitialStateInput!): DocumentModelMutationResult!
+  setInitialStateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetInitialStateInput!): String!
+  addStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddStateExampleInput!): DocumentModelMutationResult!
+  addStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddStateExampleInput!): String!
+  updateStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateStateExampleInput!): DocumentModelMutationResult!
+  updateStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateStateExampleInput!): String!
+  deleteStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteStateExampleInput!): DocumentModelMutationResult!
+  deleteStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteStateExampleInput!): String!
+  reorderStateExamples(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderStateExamplesInput!): DocumentModelMutationResult!
+  reorderStateExamplesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderStateExamplesInput!): String!
+}
+
+"""Queries: DocumentModel Document"""
+type DocumentModelQueries
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+{
+  """Get a specific DocumentModel document by identifier"""
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: DocumentModel_ViewFilterInput): DocumentModel_DocumentWithChildren
+
+  """Get all DocumentModel documents (paged)"""
+  documents(paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+
+  """Find DocumentModel documents by search criteria"""
+  findDocuments(search: DocumentModel_SearchFilterInput, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+
+  """Get outgoing relationships of a DocumentModel document"""
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+
+  """Get incoming relationships to a DocumentModel document"""
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+}
+
+type DocumentModelResultPage
+  @join__type(graph: _GRAPHQL_R)
+{
+  items: [DocumentModelGlobalState!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+input DocumentOperationsFilterInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+type DocumentPermissionEntry
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+enum DocumentPermissionLevel
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  READ @join__enumValue(graph: _GRAPHQL_AUTH)
+  WRITE @join__enumValue(graph: _GRAPHQL_AUTH)
+  ADMIN @join__enumValue(graph: _GRAPHQL_AUTH)
+}
+
+type DocumentProtectionInfo
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  documentId: String!
+  protected: Boolean!
+  ownerAddress: String
+}
+
+type DocumentRelationship
+  @join__type(graph: _GRAPHQL_R)
+{
+  sourceId: String!
+  targetId: String!
+  relationshipType: String!
+  metadata: JSONObject
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DocumentRelationshipResultPage
+  @join__type(graph: _GRAPHQL_R)
+{
+  items: [DocumentRelationship!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentWithChildren
+  @join__type(graph: _GRAPHQL_R)
+{
+  document: PHDocument!
+  childIds: [String!]!
+}
+
+type DriveDocument implements IDocument
+  @join__implements(graph: _GRAPHQL_ANALYTICS, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_AUTH, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_DRIVE, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_MODEL, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_INSPECTION, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_PACKAGES, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_R, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_SYSTEM, interface: "IDocument")
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar EthereumAddress
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+"""
+One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+(packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+order only, not atomically: each job commits on its own with no batch rollback,
+and a failed job still releases its dependents.
+
+`documentIdOrSlug` is the document the job's actions apply to -- an id that does
+not yet exist when the job's actions create it. `actions` are coerced against
+`ActionInput` and passed through exactly as `execute` does, so a client-signed
+action keeps its signature. `scope` is the single scope every action in the job
+shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+defaults to `main`.
+"""
+input ExecutionJobInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  key: String!
+  documentIdOrSlug: String!
+  scope: String!
+  branch: String
+  actions: [ActionInput!]!
+  dependsOn: [String!]!
+}
+
+type GqlDocument implements IDocument
+  @join__implements(graph: _GRAPHQL_ANALYTICS, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_AUTH, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_DRIVE, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_DOCUMENT_MODEL, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_INSPECTION, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_PACKAGES, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_R, interface: "IDocument")
+  @join__implements(graph: _GRAPHQL_SYSTEM, interface: "IDocument")
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+interface IDocument
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type InspectionAttachmentInfo
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  present: Boolean!
+  storeKind: String!
+  hasReplicator: Boolean!
+  replicatorRunning: Boolean!
+  backlogScanned: Boolean!
+  refsSeen: Int!
+  held: Int!
+  bytesHeld: Float!
+  queued: Int!
+  fetching: Int!
+  pendingFetches: Int!
+  waiting: Int!
+  notFound: Int!
+  failed: Int!
+  lastError: String
+}
+
+type InspectionConnectionHealth
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  snapshot: JSONObject!
+  neverSucceeded: Boolean!
+  stalenessMs: Float
+}
+
+type InspectionCursor
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  cursorType: String!
+  cursorOrdinal: Float!
+  lastSyncedAtUtcMs: Float
+  liveAckOrdinal: Float!
+  liveLatestOrdinal: Float!
+}
+
+"""A dead letter without its operations."""
+type InspectionDeadLetter
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  id: String!
+  jobId: String!
+  documentId: String!
+  branch: String!
+  scopes: [String!]!
+  errorType: String!
+  errorMessage: String!
+  operationCount: Int!
+}
+
+type InspectionDeadLetterPage
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  remoteName: String!
+  results: [InspectionDeadLetter!]!
+  nextCursor: String
+}
+
+type InspectionDocumentModel
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  documentType: String!
+  name: String!
+  version: Int!
+  supportedVersions: [Int!]!
+}
+
+type InspectionDrive
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  driveId: String!
+  name: String!
+  branch: String!
+  collectionId: String!
+  documentType: String!
+  nodeCount: Int!
+  fileCount: Int!
+  folderCount: Int!
+  otherNodeCount: Int!
+  unreadableNodeCount: Int!
+  icon: String
+}
+
+type InspectionDriveIntegrity
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  driveId: String!
+  checkedNodeCount: Int!
+  totalFileNodeCount: Int!
+
+  """
+  File nodes whose document is missing or not served to you; the two are
+  reported alike so a withheld document's existence does not leak.
+  """
+  missingDocuments: [InspectionDriveIntegrityRef!]!
+  unsupportedTypes: [InspectionDriveIntegrityRef!]!
+}
+
+type InspectionDriveIntegrityRef
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  id: String!
+  documentType: String!
+}
+
+type InspectionDrivePage
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  results: [InspectionDrive!]!
+  nextCursor: String
+}
+
+type InspectionMailboxDepths
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  inbox: Int!
+  outbox: Int!
+  deadLetter: Int!
+}
+
+type InspectionProcessor
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  processorId: String!
+  factoryId: String!
+  driveId: String!
+  processorIndex: Int!
+  lastOrdinal: Float!
+  status: String!
+  lastError: String
+  lastErrorTimestampUtcMs: Float
+}
+
+"""A queued job without its actions or operations."""
+type InspectionQueueJob
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  id: String!
+  kind: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  status: String!
+  actionCount: Int!
+  operationCount: Int!
+  retryCount: Int!
+}
+
+type InspectionQueueState
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  isPaused: Boolean!
+  totalPending: Int!
+  totalExecuting: Int!
+  pendingJobs: [InspectionQueueJob!]!
+  executingJobs: [InspectionQueueJob!]!
+}
+
+type InspectionRemote
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  remoteName: String!
+  remoteId: String!
+  inboxCursor: InspectionCursor!
+  outboxCursor: InspectionCursor!
+  mailboxDepths: InspectionMailboxDepths!
+  connection: InspectionConnectionHealth!
+  meta: JSONObject!
+}
+
+"""
+healthy means something only when tracked; an untracked store reports false.
+"""
+type InspectionStorageHealth
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  tracked: Boolean!
+  healthy: Boolean!
+  everRecreated: Boolean!
+  recreateCount: Int!
+}
+
+"""Issues in scopes the caller may not read are left out."""
+type InspectionValidation
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  documentId: String!
+  isConsistent: Boolean!
+  keyframeIssues: [JSONObject!]!
+  snapshotIssues: [JSONObject!]!
+  streamOrderIssues: [JSONObject!]!
+}
+
+type InspectorAccess
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  admin: Boolean!
+  sql: Boolean!
+}
+
+type InstalledPackage
+  @join__type(graph: _GRAPHQL_PACKAGES)
+{
+  name: String!
+  version: String
+  registryUrl: String!
+  installedAt: DateTime!
+  documentTypes: [String!]!
+}
+
+type InstallPackageResult
+  @join__type(graph: _GRAPHQL_PACKAGES)
+{
+  package: InstalledPackage!
+  documentModelsLoaded: Int!
+}
+
+"""The batch a job was submitted in."""
+type JobBatchMeta
+  @join__type(graph: _GRAPHQL_R)
+{
+  batchId: String!
+  batchJobIds: [String!]!
+}
+
+type JobChangeEvent
+  @join__type(graph: _GRAPHQL_R)
+{
+  jobId: String!
+  status: String!
+
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+  error: String
+}
+
+type JobInfo
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+
+  """
+  The document the job operates on. Empty for a job this server does not know,
+  which then comes back FAILED with "Job not found".
+  """
+  documentId: String!
+  status: String!
+
+  """
+  What the job produced, once it has produced anything. Null until then, which
+  is the state every job is in when it is handed back from a submission.
+  """
+  result: JSONObject
+  error: String
+
+  """
+  The error's class name, such as `DocumentAlreadyExistsError`, when it failed.
+  """
+  errorName: String
+  createdAt: DateTime!
+  completedAt: DateTime
+  consistencyToken: ConsistencyToken!
+  meta: JobBatchMeta!
+}
+
+scalar join__FieldSet
+
+enum join__Graph {
+  _GRAPHQL_ANALYTICS @join__graph(name: ":graphql/analytics", url: "http://localhost:4001/graphql/analytics")
+  _GRAPHQL_AUTH @join__graph(name: ":graphql/auth", url: "http://localhost:4001/graphql/auth")
+  _GRAPHQL_DOCUMENT_DRIVE @join__graph(name: ":graphql/document-drive", url: "http://localhost:4001/graphql/document-drive")
+  _GRAPHQL_DOCUMENT_MODEL @join__graph(name: ":graphql/document-model", url: "http://localhost:4001/graphql/document-model")
+  _GRAPHQL_INSPECTION @join__graph(name: ":graphql/inspection", url: "http://localhost:4001/graphql/inspection")
+  _GRAPHQL_PACKAGES @join__graph(name: ":graphql/packages", url: "http://localhost:4001/graphql/packages")
+  _GRAPHQL_R @join__graph(name: ":graphql/r", url: "http://localhost:4001/graphql/r")
+  _GRAPHQL_SYSTEM @join__graph(name: ":graphql/system", url: "http://localhost:4001/graphql/system")
+}
+
+scalar JSONObject
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar link__Import
+
+enum link__Purpose {
+  """
+  `SECURITY` features provide metadata necessary to securely resolve fields.
+  """
+  SECURITY
+
+  """
+  `EXECUTION` features provide metadata necessary for operation execution.
+  """
+  EXECUTION
+}
+
+type MoveRelationshipResult
+  @join__type(graph: _GRAPHQL_R)
+{
+  source: PHDocument!
+  target: PHDocument!
+}
+
+input MultiCurrencyConversions
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  start: String
+  end: String
+
+  """Period to group by"""
+  granularity: AnalyticsGranularity
+
+  """List of metrics to filter by, such as 'budget' or 'actuals'"""
+  metrics: [String]
+
+  """List of dimensions to filter by, such as 'budget' or 'project'"""
+  dimensions: [AnalyticsFilterDimension]
+  currency: String
+  conversions: [CurrencyConversion]!
+}
+
+type Mutation
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+{
+  setDocumentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), protected: Boolean!): DocumentProtectionInfo! @join__field(graph: _GRAPHQL_AUTH)
+  transferDocumentOwnership(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), newOwnerAddress: String!): DocumentProtectionInfo! @join__field(graph: _GRAPHQL_AUTH)
+  grantDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!, permission: DocumentPermissionLevel!): DocumentPermissionEntry! @join__field(graph: _GRAPHQL_AUTH)
+  revokeDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!): Boolean! @join__field(graph: _GRAPHQL_AUTH)
+  grantOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): OperationUserPermission! @join__field(graph: _GRAPHQL_AUTH)
+  revokeOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): Boolean! @join__field(graph: _GRAPHQL_AUTH)
+  DocumentDrive: DocumentDriveMutations! @join__field(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  DocumentModel: DocumentModelMutations! @join__field(graph: _GRAPHQL_DOCUMENT_MODEL)
+  Packages: PackagesMutations! @join__field(graph: _GRAPHQL_PACKAGES)
+  createDocument(document: JSONObject!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): PHDocument! @join__field(graph: _GRAPHQL_R)
+  createEmptyDocument(documentType: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): PHDocument! @join__field(graph: _GRAPHQL_R)
+
+  """
+  Applies actions to a document and waits for the result.
+  
+  Each action is coerced against `ActionInput`, so one missing a field the wire
+  declares is refused before any work starts. The id in particular: it is hashed
+  into the operation id and replay dedupes by it, so an action without one is
+  stored under an operation id shared by every id-less operation on the same
+  document, scope and branch.
+  
+  Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+  defaults to `main`.
+  """
+  execute(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), actions: [ActionInput!]!, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+
+  """
+  Submits actions to a document and returns the job that will apply them.
+  
+  Coerced exactly as `execute` is, so a malformed action is refused here rather
+  than surfacing later as a failed job. Returns the job rather than only its id,
+  so a caller has the status and the creation time it would otherwise have to
+  ask for; `result` is null until the job produces one.
+  """
+  executeAsync(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), actions: [ActionInput!]!, branch: String): JobInfo! @join__field(graph: _GRAPHQL_R)
+
+  """
+  Applies multiple mutation jobs in dependency order and waits for all of them,
+  the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+  against `ActionInput` exactly as `execute` is, so client-signed actions pass
+  through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+  are applied and awaited before the result returns, so every returned `JobInfo`
+  is a completed one rather than the pending receipt the in-process reactor hands
+  back. A batch is ordering, not a transaction: each job commits on its own, and
+  a failed job still releases the jobs that depend on it, so any job, before or
+  after a failure, may have committed. A failed job is therefore returned as a
+  FAILED entry with its `error` and `errorName`, beside the final state of every
+  other job, rather than failing the mutation. The mutation itself fails only
+  when no job state can be reported.
+  
+  A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+  as its first action naming the job's document. Its other actions may only be
+  an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+  it. It is authorized like `createDocument`: write on every source of those
+  relationships, or the right to create when there is none.
+  """
+  executeBatch(jobs: [ExecutionJobInput!]!): BatchExecutionResult! @join__field(graph: _GRAPHQL_R)
+  mutateDocument(documentIdentifier: String!, actions: [JSONObject!]!, view: ViewFilterInput): PHDocument! @join__field(graph: _GRAPHQL_R) @deprecated(reason: "Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored.")
+  mutateDocumentAsync(documentIdentifier: String!, actions: [JSONObject!]!, view: ViewFilterInput): String! @join__field(graph: _GRAPHQL_R) @deprecated(reason: "Use executeAsync, which is typed and returns the job rather than only its id.")
+  renameDocument(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), name: String!, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+  setPreferredEditor(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), preferredEditor: String, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+  addRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, metadata: JSONObject, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+  updateRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, metadata: JSONObject, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+  removeRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, branch: String): PHDocument! @join__field(graph: _GRAPHQL_R)
+  moveRelationship(sourceParentIdOrSlug: String, sourceParentIdentifier: String @deprecated(reason: "Use sourceParentIdOrSlug."), targetParentIdOrSlug: String, targetParentIdentifier: String @deprecated(reason: "Use targetParentIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, branch: String): MoveRelationshipResult! @join__field(graph: _GRAPHQL_R)
+  deleteDocument(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), propagate: PropagationMode): Boolean! @join__field(graph: _GRAPHQL_R)
+  deleteDocuments(idsOrSlugs: [String!], identifiers: [String!] @deprecated(reason: "Use idsOrSlugs."), propagate: PropagationMode): Boolean! @join__field(graph: _GRAPHQL_R)
+  touchChannel(input: TouchChannelInput!): TouchChannelResult! @join__field(graph: _GRAPHQL_R)
+  pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!, peerManifestRevision: String): Boolean! @join__field(graph: _GRAPHQL_R)
+}
+
+scalar OID
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar OLabel
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+type Operation
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+type OperationContext
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+input OperationContextInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+input OperationInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: ActionInput!
+}
+
+type OperationPermissionsInfo
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  documentId: String!
+  operationType: String!
+  userPermissions: [OperationUserPermission!]!
+}
+
+input OperationsFilterInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentIdOrSlug: String
+  documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+type OperationUserPermission
+  @join__type(graph: _GRAPHQL_AUTH)
+{
+  documentId: String!
+  operationType: String!
+  userAddress: String!
+  grantedBy: String!
+  createdAt: DateTime!
+}
+
+type OperationWithContext
+  @join__type(graph: _GRAPHQL_R)
+{
+  operation: ReactorOperation!
+  context: OperationContext!
+}
+
+input OperationWithContextInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  operation: OperationInput!
+  context: OperationContextInput!
+}
+
+type PackagesMutations
+  @join__type(graph: _GRAPHQL_PACKAGES)
+{
+  installPackage(name: String!, registryUrl: String): InstallPackageResult!
+  uninstallPackage(name: String!): Boolean!
+}
+
+type PackagesQueries
+  @join__type(graph: _GRAPHQL_PACKAGES)
+{
+  installedPackages: [InstalledPackage!]!
+  installedPackage(name: String!): InstalledPackage
+}
+
+input PagingInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+type PeerAgreement
+  @join__type(graph: _GRAPHQL_R)
+{
+  collectionId: String!
+  local: JSONObject!
+  members: [PeerAgreementMember!]!
+  limitedBy: [PeerAgreementLimit!]!
+}
+
+type PeerAgreementLimit
+  @join__type(graph: _GRAPHQL_R)
+{
+  protocol: String!
+  remoteNames: [String!]!
+}
+
+type PeerAgreementMember
+  @join__type(graph: _GRAPHQL_R)
+{
+  remoteName: String!
+  announced: Boolean!
+  protocols: JSONObject!
+  features: JSONObject!
+}
+
+type PHDocument
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+  slug: String
+  preferredEditor: String
+  meta: JSONObject
+  protocolVersions: JSONObject
+  name: String!
+  documentType: String!
+  state: JSONObject!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(filter: DocumentOperationsFilterInput, paging: PagingInput): ReactorOperationResultPage
+}
+
+type PHDocumentResultPage
+  @join__type(graph: _GRAPHQL_R)
+{
+  items: [PHDocument!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+scalar PHID
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+type PHOperationContext
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  signer: Signer
+}
+
+type PollSyncEnvelopesResult
+  @join__type(graph: _GRAPHQL_R)
+{
+  envelopes: [SyncEnvelope!]!
+  ackOrdinal: Int!
+  deadLetters: [DeadLetterInfo!]!
+  hasMore: Boolean!
+  manifestRevision: String
+  peerManifestRevision: String
+}
+
+enum PropagationMode
+  @join__type(graph: _GRAPHQL_R)
+{
+  CASCADE @join__enumValue(graph: _GRAPHQL_R)
+  ORPHAN @join__enumValue(graph: _GRAPHQL_R)
+}
+
+type Query
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  analytics: AnalyticsQuery @join__field(graph: _GRAPHQL_ANALYTICS)
+  documentAccess(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentAccessInfo! @join__field(graph: _GRAPHQL_AUTH)
+  documentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentProtectionInfo! @join__field(graph: _GRAPHQL_AUTH)
+  userDocumentPermissions: [DocumentPermissionEntry!]! @join__field(graph: _GRAPHQL_AUTH)
+  operationPermissions(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): OperationPermissionsInfo! @join__field(graph: _GRAPHQL_AUTH)
+  canExecuteOperation(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): Boolean! @join__field(graph: _GRAPHQL_AUTH)
+  DocumentDrive: DocumentDriveQueries! @join__field(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  DocumentModel: DocumentModelQueries! @join__field(graph: _GRAPHQL_DOCUMENT_MODEL)
+  inspection: ReactorInspection! @join__field(graph: _GRAPHQL_INSPECTION)
+  Packages: PackagesQueries! @join__field(graph: _GRAPHQL_PACKAGES)
+  documentModels(namespace: String, paging: PagingInput): DocumentModelResultPage! @join__field(graph: _GRAPHQL_R)
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ViewFilterInput): DocumentWithChildren @join__field(graph: _GRAPHQL_R)
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage! @join__field(graph: _GRAPHQL_R)
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage! @join__field(graph: _GRAPHQL_R)
+  documentOutgoingRelationshipEdges(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String, view: ViewFilterInput, paging: PagingInput): DocumentRelationshipResultPage! @join__field(graph: _GRAPHQL_R)
+  documentIncomingRelationshipEdges(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String, view: ViewFilterInput, paging: PagingInput): DocumentRelationshipResultPage! @join__field(graph: _GRAPHQL_R)
+  findDocuments(search: SearchFilterInput, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage! @join__field(graph: _GRAPHQL_R)
+  jobStatus(jobId: String!): JobInfo @join__field(graph: _GRAPHQL_R)
+  documentServed(idOrSlug: String!, view: ViewFilterInput): Boolean! @join__field(graph: _GRAPHQL_R)
+  createDefaults(parentIdOrSlug: String): CreateDefaults! @join__field(graph: _GRAPHQL_R)
+  documentOperations(filter: OperationsFilterInput!, paging: PagingInput): ReactorOperationResultPage! @join__field(graph: _GRAPHQL_R)
+
+  """
+  Predicts whether the calling subject would be admitted to execute each of a
+  set of candidate operations, without submitting any of them. A UI asks this to
+  disable a control rather than offer an action that fails on submit.
+  
+  The answer is a prediction, not a promise:
+  
+  - Real admission compiles an append condition over everything it read and the
+    store enforces it at write time. A preflight reads no future, so a policy
+    change landing between this answer and the submit changes the verdict. The
+    submit path stays the only authority.
+  - The verdict is evaluated at the stream heads, so it is correct for a
+    candidate about to be submitted. A backdated submission is out of contract;
+    the reactor decides that one by position.
+  - A candidate whose verdict depends on its input has to carry that input, since
+    a conditional grant reads it.
+  
+  The subject is the authenticated caller and cannot be named in the request:
+  answering for an arbitrary subject would disclose what a policy grants
+  somebody else. It carries both the caller's address and the did:key of the app
+  instance whose token authenticated the request, so a policy naming either
+  matches the same principal the write path presents.
+  
+  Requires the reactor's authEnforcement feature flag. Without it the reactor
+  holds no decision model, so this fails with extensions.code
+  AUTH_EVALUATION_UNSUPPORTED rather than guessing.
+  """
+  evaluateActions(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), branch: String, candidates: [ActionCandidateInput!]!): ActionEvaluations! @join__field(graph: _GRAPHQL_R)
+
+  """
+  Polls for sync envelopes from a channel.
+  
+  An operation stored before the API required an action id cannot be
+  represented by this schema, and rather than serving a partial response beside
+  a bare non-null violation, this fails with extensions.code
+  MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+  is worth polling through: the document holding the operation needs repairing,
+  but the channel serves every other document, and a peer that stopped polling
+  would stop receiving those too.
+  """
+  pollSyncEnvelopes(channelId: String!, outboxAck: Int!, outboxLatest: Int!, manifestRevision: String, refusals: [SyncRefusalInput!]): PollSyncEnvelopesResult! @join__field(graph: _GRAPHQL_R)
+  syncHolds(remoteName: String, documentId: String): [SyncHold!]! @join__field(graph: _GRAPHQL_R)
+  peerAgreement(collectionId: String!): PeerAgreement! @join__field(graph: _GRAPHQL_R)
+  system: SystemInfo! @join__field(graph: _GRAPHQL_SYSTEM)
+}
+
+"""
+What this reactor reports about itself. access is null unless the caller is
+one of the host's admins.
+"""
+type ReactorInfo
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  storage: ReactorStorageFacts!
+  workflows: Boolean!
+  syncChannels: [String!]!
+  access: InspectorAccess
+}
+
+"""
+Reads only. info and documentModels serve every caller; drive and document
+reads are made as the caller through the reactor read gate; the rest need
+one of the host's admins.
+"""
+type ReactorInspection
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  info: ReactorInfo!
+  documentModels: [InspectionDocumentModel!]!
+  drives(cursor: String, limit: Int): InspectionDrivePage!
+
+  """Reads every file node's document. Throttled per caller."""
+  driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
+  attachmentInfo: InspectionAttachmentInfo!
+  queueState: InspectionQueueState!
+  processors: [InspectionProcessor!]!
+  catchUpStatus: JSONObject!
+  storageHealth: InspectionStorageHealth!
+
+  """Replays the whole document; expensive. Throttled per caller."""
+  validateDocument(documentId: String!, branch: String): InspectionValidation!
+  remotes: [InspectionRemote!]!
+  remote(remoteName: String!): InspectionRemote!
+  deadLetters(remoteName: String!, cursor: String, limit: Int): InspectionDeadLetterPage!
+}
+
+type ReactorOperation
+  @join__type(graph: _GRAPHQL_R)
+{
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: Action!
+}
+
+type ReactorOperationResultPage
+  @join__type(graph: _GRAPHQL_R)
+{
+  items: [ReactorOperation!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type ReactorSigner
+  @join__type(graph: _GRAPHQL_R)
+{
+  user: ReactorSignerUser
+  app: ReactorSignerApp
+  signatures: [String!]!
+}
+
+type ReactorSignerApp
+  @join__type(graph: _GRAPHQL_R)
+{
+  name: String!
+  key: String!
+}
+
+input ReactorSignerAppInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  name: String!
+  key: String!
+}
+
+input ReactorSignerInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  user: ReactorSignerUserInput
+  app: ReactorSignerAppInput
+  signatures: [String!]!
+}
+
+type ReactorSignerUser
+  @join__type(graph: _GRAPHQL_R)
+{
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+input ReactorSignerUserInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type ReactorStorageFacts
+  @join__type(graph: _GRAPHQL_INSPECTION)
+{
+  engine: String!
+  persistence: String!
+  durable: Boolean!
+  selfHeal: Boolean!
+}
+
+type RemoteCursor
+  @join__type(graph: _GRAPHQL_R)
+{
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteCursorInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteFilterInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: [String!]!
+  scope: [String!]!
+  branch: String!
+}
+
+type Revision
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_R)
+{
+  scope: String!
+  revision: Int!
+}
+
+input SearchFilterInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  type: String
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by type or parentId.")
+}
+
+type Signer
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerApp
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  name: String!
+  key: String!
+}
+
+type SignerUser
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type Subscription
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentChanges(search: SearchFilterInput, view: ViewFilterInput): DocumentChangeEvent!
+  jobChanges(jobId: String!): JobChangeEvent!
+}
+
+type SyncEnvelope
+  @join__type(graph: _GRAPHQL_R)
+{
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMeta!
+  operations: [OperationWithContext!]
+  cursor: RemoteCursor
+  key: String
+  dependsOn: [String!]
+}
+
+input SyncEnvelopeInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMetaInput!
+  operations: [OperationWithContextInput!]
+  cursor: RemoteCursorInput
+  key: String
+  dependsOn: [String!]
+}
+
+enum SyncEnvelopeType
+  @join__type(graph: _GRAPHQL_R)
+{
+  OPERATIONS @join__enumValue(graph: _GRAPHQL_R)
+  ACK @join__enumValue(graph: _GRAPHQL_R)
+}
+
+type SyncHold
+  @join__type(graph: _GRAPHQL_R)
+{
+  remoteName: String!
+  documentId: String!
+  branch: String!
+  reason: SyncHoldReason!
+  heldAtUtcMs: String!
+}
+
+type SyncHoldReason
+  @join__type(graph: _GRAPHQL_R)
+{
+  protocol: String!
+  version: Int!
+  peerSupports: [Int!]!
+}
+
+input SyncRefusalInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  documentId: String!
+  branch: String!
+  kind: String
+}
+
+type SystemInfo
+  @join__type(graph: _GRAPHQL_SYSTEM)
+{
+  version: String!
+  gitHash: String!
+  gitUrl: String
+}
+
+input TouchChannelInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  id: String!
+  name: String!
+  collectionId: String!
+  filter: RemoteFilterInput!
+  sinceTimestampUtcMs: String!
+  manifest: JSONObject
+}
+
+type TouchChannelResult
+  @join__type(graph: _GRAPHQL_R)
+{
+  success: Boolean!
+  ackOrdinal: Int!
+  manifest: JSONObject
+}
+
+scalar Unknown
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar Upload
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+scalar URL
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+  @join__type(graph: _GRAPHQL_AUTH)
+  @join__type(graph: _GRAPHQL_DOCUMENT_DRIVE)
+  @join__type(graph: _GRAPHQL_DOCUMENT_MODEL)
+  @join__type(graph: _GRAPHQL_INSPECTION)
+  @join__type(graph: _GRAPHQL_PACKAGES)
+  @join__type(graph: _GRAPHQL_R)
+  @join__type(graph: _GRAPHQL_SYSTEM)
+
+type Value
+  @join__type(graph: _GRAPHQL_ANALYTICS)
+{
+  path: String
+  label: String
+  description: String
+  icon: String
+}
+
+input ViewFilterInput
+  @join__type(graph: _GRAPHQL_R)
+{
+  branch: String
+  scopes: [String!]
+}

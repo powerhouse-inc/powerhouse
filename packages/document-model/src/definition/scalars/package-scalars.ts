@@ -1,4 +1,5 @@
 import type { DocumentScalarReferenceDefinition } from "@powerhousedao/shared/document-model";
+import { getGlobalRegistry } from "../global-registry.js";
 import type { ScalarBinding } from "./types.js";
 
 /**
@@ -10,15 +11,10 @@ import type { ScalarBinding } from "./types.js";
  * because a package compiles its models with its own copy and the host reads
  * them with another.
  */
-const REGISTRY_KEY = Symbol.for("powerhouse.document-model.package-scalars.v1");
-
-const globalRegistry = globalThis as unknown as {
-  [REGISTRY_KEY]?: WeakMap<object, readonly ScalarBinding[]>;
-};
-
-const registry: WeakMap<object, readonly ScalarBinding[]> = (globalRegistry[
-  REGISTRY_KEY
-] ??= new WeakMap<object, readonly ScalarBinding[]>());
+const registry = getGlobalRegistry(
+  "powerhouse.document-model.package-scalars.v1",
+  () => new WeakMap<object, readonly ScalarBinding[]>(),
+);
 
 export function recordPackageScalars(
   module: object,

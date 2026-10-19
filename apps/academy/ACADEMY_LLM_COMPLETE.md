@@ -6372,13 +6372,14 @@ Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allo
 
 ## Build a Drive-app
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer
+> Source: https://academy.vetra.io/academy/Build/BuildingUserExperiences/BuildingADriveExplorer
 
 **Drive-apps** enhance how contributors and organizations interact with document models.
 They create an 'app-like' experience by providing a **custom interface** for exploring and interacting with the contents of a drive.
 **TIP:**
 A Drive-app offers a tailored application designed around its document models.
 Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
+
 
 ### Drive-apps are purpose-built
 
@@ -6446,8 +6447,8 @@ Now, let's implement a specific example for the to-do list we've been working on
 This example demonstrates how to create a todo-list Drive-app application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
-**WARNING:**
-If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema).
+
+If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema).
 
 If not, you can follow the shortened guide below to prepare your project for this tutorial.
 
@@ -6460,10 +6461,14 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Start by running Vetra Studio locally with `ph vetra --watch`
 
-- Follow the [Get Started guide](/academy/GetStarted/DefineToDoListDocumentModel) to create your TodoList document model specification.
+- Follow the [Manual Todo tutorial](/academy/Build/ManualTodoTutorial/DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
+
+**NOTE:**
+These steps use a schema-first model, where the reducers live in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../docs/../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+
 
 - Copy the code from [`todos.ts`](https://github.com/powerhouse-inc/todo-tutorial/blob/step-3-complete-implement-todo-list-document-model-reducer-operation-handlers/document-models/todo-list/src/reducers/todos.ts)
 - Paste it into `document-models/todo-list/src/reducers/todos.ts`
@@ -6488,7 +6493,7 @@ ph generate --editor TodoList --document-types powerhouse/todo-list
 
 ### 4. Add the editor code:
 
-- Follow the [Build TodoList Editor guide](/academy/GetStarted/BuildToDoListEditor) to implement your editor components.
+- Follow the [Build TodoList Editor guide](/academy/Build/ManualTodoTutorial/BuildToDoListEditor) to implement your editor components.
 
 <details>
 <summary>Alternatively: Use Connect instead of Vetra Studio</summary>
@@ -6498,6 +6503,7 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 
 </details>
+
 
 ## Generate the Drive-app
 
@@ -6844,7 +6850,7 @@ return (
    <details>
    <summary>Update `editors/todo-list-drive-explorer/components/EditorContainer.tsx`</summary>
 
-This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
 
 ```typescript
 
@@ -6900,6 +6906,19 @@ const { dispatch, error, document } = useDocumentEditorProps({
    user,
 });
 
+// `scopes` mirrors the document's own header; a document always carries
+// "global", so it's the fallback while `document` is still loading.
+const scopes = document ? Object.keys(document.header.revision) : ["global"];
+const [scope, setScope] = useState(scopes.includes("global") ? "global" : scopes[0]);
+
+// The hook fetches one scope lazily, only while the panel is open; the
+// panel itself asks for further pages as the viewer scrolls.
+const { operations, isLoading, hasNextPage, fetchNextPage } = useDocumentOperations(
+   documentId,
+   scope,
+   { enabled: showRevisionHistory },
+);
+
 const loadingContent = (
    <div className="flex-1 flex justify-center items-center h-full">
       <DefaultEditorLoader />
@@ -6915,10 +6934,15 @@ return showRevisionHistory ? (
    <RevisionHistory
       documentId={documentId}
       documentTitle={title}
-      globalOperations={document.operations.global}
-      key={documentId}
-      localOperations={document.operations.local}
+      operations={operations}
+      isLoading={isLoading}
+      hasNextPage={hasNextPage}
+      onLoadNextPage={fetchNextPage}
+      scopes={scopes}
+      scope={scope}
+      onScopeChange={setScope}
       onClose={() => setShowRevisionHistory(false)}
+      key={documentId}
    />
 ) : (
    <Suspense fallback={loadingContent}>
@@ -6957,18 +6981,9 @@ return showRevisionHistory ? (
 ph connect
 ```
 
-### Now it's your turn!
+## Up Next
 
-Start building your own Drive-apps or experiences.
-Congratulations on completing this tutorial!
-You've successfully built a custom drive explorer, enhancing the way users interact with document models.
-
-Now, take a moment to think about the possibilities!
-
-- What **unique Drive Experiences** could you create for your own projects?
-- How can you tailor interfaces and streamline workflows to unlock the full potential of your document models?
-
-The Powerhouse platform provides the tools. It's time to start building!
+You've built a custom drive explorer. Next, style it with [CSS customization](/academy/Build/BuildingUserExperiences/CSSCustomization).
 
 ---
 
@@ -10900,411 +10915,109 @@ This ability to programmatically read from and write to documents via the GraphQ
 
 ## Using subgraphs
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/UsingSubgraphs
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/UsingSubgraphs
 
-This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
-Let's start with the basics and gradually add more complex features and functionality.
+Create a subgraph that searches to-do document names within a drive. It returns only document ids that the caller may list.
 
-## What is a subgraph?
+Run these steps in the to-do list package from the previous chapters. The example depends on its `powerhouse/todo-list` document type.
 
-A subgraph in Powerhouse is a **GraphQL-based modular data component** that extends the functionality of your document models. While document models handle the core state and operations, subgraphs can:
+## Generate the subgraph
 
-1. Connect to external APIs or databases
-2. Add custom queries and mutations
-3. Automate interactions between different document models
-4. Provide additional backend functionality
+Run this command in your package:
 
-### Subgraphs can retrieve data from
-
-- **The Reactor** – The core Powerhouse data system or network node.
-- **Relational Data Stores** – Structured data storage for operational processes, offering real-time updates, for querying structured data.
-- **Analytics Stores** – Aggregated historical data, useful for insights, reporting and business intelligence.
-
-### Subgraphs consist of
-
-- **A schema** — Which defines the GraphQL Queries and Mutations.
-- **Resolvers** — Which handle data fetching and logic.
-- **Context Fields** — Additional metadata that helps in resolving data efficiently.
-
-#### Additionally, context fields allow resolvers to access extra information, such as:
-
-- **User authentication** (e.g., checking if a user is an admin).
-- **External data sources** (e.g., analytics).
-
-## Example: Implement a search subgraph based on data from the reactor
-
-In this example we implement a subgraph which allows to search through todo-list documents in a specific document drive.
-
-First we will generate the subgraph with the help of the Powerhouse CLI, then we will define the GraphQL schema and implement the resolvers and finally we will start the reactor and execute a query through the GraphQL Gateway.
-
-### 1. Generate the subgraph
-
-Let's start by generating a new subgraph. For our tutorial we will create a new subgraph within our to-do list project you've created in the previous chapters.  
-Open your project and start your terminal.
-The Powerhouse Vetra toolkit provides a command-line utility to create new subgraphs easily.
-
-```bash title="Run the following command to generate a new subgraph"
+```bash
 ph generate subgraph --name search-todos
 ```
 
-```bash title="Expected Output"
-       FORCED: ./subgraphs/search-todos/index.ts
-       FORCED: ./subgraphs/search-todos/resolvers.ts
-       FORCED: ./subgraphs/search-todos/schema.ts
-```
 
-After generating the subgraph, build your project with a build step.
+The command creates `subgraphs/search-todos/index.ts` and `schema.ts`, adds the class to `subgraphs/index.ts` with a `SubgraphCheck` assertion, and adds the subgraph to `powerhouse.manifest.json` once the subgraph check passes. Keep the class exported through these entries. The host and tooling discover subgraphs through these entries.
 
-```bash title="Build your project"
-pnpm build
-```
+## Declare the schema and resolvers
 
-### What happened?
-
-1. A new subgraph was created in `./subgraphs/search-todos/`
-2. The subgraph was automatically registered in your project's registry
-3. Basic boilerplate code was generated with an example query
-
-If we now run `ph reactor` we will see the new subgraph being registered during the startup of the Reactor.
-
-> Registered /graphql/search-todos subgraph.
-
-```
-Initializing Subgraph Manager...
-> Registered /graphql/auth subgraph.
-> Registered /graphql/r subgraph.
-> Registered /graphql/analytics subgraph.
-> Registered /d/:drive subgraph.
-> Updating router
-> Registered /graphql supergraph
-> Registered /graphql/document-drive subgraph.
-> Registered /graphql/to-do-list subgraph.
-> **Registered /graphql/search-todos subgraph.**
-> Updating router
-> Registered /graphql supergraph
-  ➜  Reactor:   http://localhost:4001/d/powerhouse
-```
-
-## 2. Building a search subgraph
-
-Now that we've generated our subgraph its time to define the GraphQL schema and implement the resolvers.
-
-**Step 1: Define the schema in `subgraphs/search-todos/schema.ts` by creating the file:**
+Replace the generated class in `subgraphs/search-todos/index.ts` with this one. This example does not use the generated `schema.ts`, so you can delete it. Keep it if you want a place for shared `ph` types.
 
 ```typescript
-export const schema: DocumentNode = gql`
-  """
-  Subgraph definition
-  """
-  type Query {
-    searchTodos(driveId: String!, searchTerm: String!): [String!]!
+
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+
+
+export class SearchTodosSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "search-todos";
+
+  static override getSchema(schema: SchemaBuilder<SearchTodosSubgraph>) {
+    return [
+      schema.query("searchTodos", {
+        args: {
+          driveId: ph.String({ required: true }),
+          searchTerm: ph.String({ required: true }),
+        },
+        returns: ph.list(ph.String({ required: true }), { required: true }),
+        resolve: ({ args, subgraph, request }) =>
+          subgraph.search(args.driveId, args.searchTerm, request),
+      }),
+    ];
   }
-`;
+
+  async search(
+    driveId: string,
+    searchTerm: string,
+    request: Context,
+  ): Promise<string[]> {
+    if (!(await this.listsDocument(driveId, request))) return [];
+    const children = await this.reactorClient.getOutgoingRelationships(
+      driveId,
+      "child",
+    );
+    const matches: string[] = [];
+    for (const document of children.results) {
+      if (document.header.documentType !== "powerhouse/todo-list") continue;
+      if (!(await this.listsDocument(document.header.id, request))) continue;
+      if (document.header.name.includes(searchTerm))
+        matches.push(document.header.id);
+    }
+    return matches;
+  }
+}
 ```
 
-**Step 2: Create resolvers in `subgraphs/search-todos/resolvers.ts`:**
+`SchemaBuilder<SearchTodosSubgraph>` gives each resolver the concrete instance as `subgraph` and the request context as `request`. The host provides `reactorClient`, `relationalDb`, and the authorization services on that instance. The request context does not carry a reactor client.
 
-```typescript
-// subgraphs/search-todos/resolvers.ts
+The static `subgraphName` is a lowercase kebab-case route segment and the manifest id. Keep it stable to preserve the URL. Resolvers access instance state through `subgraph`. Inside `getSchema`, `this` refers to the class, so state captured through it is shared across instances.
 
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
+`getSchema` returns typed entries or one `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })` result. It must be deterministic and have no side effects. See [Subgraph classes](../docs/../04-Reference/03-GraphQLData/08-SubgraphClasses.md) for SDL, inheritance, and fragments.
 
-  return {
-    Query: {
-      searchTodos: async (
-        parent: unknown,
-        args: { driveId: string; searchTerm: string },
-      ) => {
-        const children = await reactorClient.getOutgoingRelationships(
-          args.driveId,
-          "child",
-        );
-        const todoItems: string[] = [];
-        for (const doc of children.results) {
-          if (doc.header.documentType !== "powerhouse/todo-list") {
-            continue;
-          }
-          const todoDoc = doc as TodoListDocument;
-          const amountEntries = todoDoc.state.global.items.filter((e) =>
-            e.text.includes(args.searchTerm),
-          ).length;
-          if (amountEntries > 0) {
-            todoItems.push(doc.header.id);
-          }
-        }
-        return todoItems;
-      },
-    },
-  };
-};
-```
+## Build and query
 
-## 3. Testing the to-do list subgraph
-
-### 3.1. Start the reactor
-
-To activate the subgraph, run:
+Run the package checks, then start the Reactor:
 
 ```bash
+ph model check
+ph build
 ph reactor
 ```
 
-You should see the subgraph being registered in the console output:
-
-```
-> Registered /graphql/search-todos subgraph.
-```
-
-### 3.2. Create some test data
-
-Before testing queries, let's create some to-do list documents with test data:
-
-1. Start Connect
-
-```bash
-ph connect
-```
-
-1. Open Connect at `http://localhost:3000` in the browser
-2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
-3. Create a new to-do list document
-4. Add some test items:
-   - "Learn about subgraphs" (leave unchecked)
-   - "Build a to-do list subgraph" (mark as checked)
-   - "Test the subgraph" (leave unchecked)
-
-### 3.3. Access GraphQL playground
-
-Open your browser and go to:
-
-```bash
-http://localhost:4001/graphql
-```
-
-### 3.4. Test the queries
-
-**Query 1: Search for Todos**
+In another terminal, run `ph connect` and open `http://localhost:3000`. Use **Add Drive** to add `http://localhost:4001/d/powerhouse`. Create a to-do list document named `Test tasks` in it. At `http://localhost:4001/graphql`, run this query with `powerhouse` as `driveId`:
 
 ```graphql
-query {
-  searchTodos(driveId: "powerhouse", searchTerm: "test")
+query SearchTodos($driveId: String!, $searchTerm: String!) {
+  searchTodos(driveId: $driveId, searchTerm: $searchTerm)
 }
 ```
 
-You should get a list of the document Ids which contain the search term "Test".
+Use `"Test"` for `searchTerm`. The response contains the matching document's id when the caller can list it. The custom subgraph is also available at `/graphql/search-todos`.
 
-If you want to see the full state of your document use this query.
+The supergraph at `/graphql` combines registered subgraphs. A root field belongs to one subgraph, so give reusable [fragments](../docs/../04-Reference/03-GraphQLData/08-SubgraphClasses.md#inheritance-and-fragments) a field-name or namespace parameter.
 
-```graphql
-query GetDocument($identifier: String!) {
-  ToDoList {
-    document(identifier: $identifier) {
-      document {
-        state {
-          global {
-            items {
-              checked
-              id
-              text
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+## Add host resources
 
-### 3.5. Test real-time updates
+Register HTTP routes and webhook families in `override async onSetup()`, after `await super.onSetup()`. Release resources in `override async onDisconnect()` and call `super.onDisconnect()`. Teardown must tolerate partial setup because the host calls it after failed setup. It also runs for package replacement or removal, or when another package takes over the same subgraph name. It is not a process-exit hook.
 
-To verify that your subgraph stays synchronized with document changes:
+See [Hosting HTTP routes](../docs/docs/07-HostingHttpRoutes.md), [Receiving webhooks](../docs/docs/08-ReceivingWebhooks.md), and [Enforcing authorization in subgraphs](../docs/03-BuildingUserExperiences/07-Authorization/05-EnforcingAuthorizationInSubgraphs.md). For attachments, use `subgraph.attachmentsFor(request)`.
 
-1. Keep the GraphQL playground open
-2. In another tab, open your to-do list document in Connect
-3. Add a new item or check/uncheck an existing item
-4. Return to the GraphQL playground and re-run your queries
-5. You should see the updated data immediately
-
-This demonstrates the real-time synchronization between the document model and the subgraph through event processing.
-
-**TIP:**
-Since you've gotten this far we'll explain a bit more in depth how the GraphQL API or Gateway works!
-
-## 4. Working with the GraphQL Gateway
-
-The GraphQL Gateway is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
-
-### 4.1 Key concepts
-
-- **Subgraph:** An independent GraphQL service with its own schema. Each subgraph typically represents a specific domain or microservice within a larger system.
-- **Gateway/Router:** A server that sits in front of the subgraphs. It receives client queries, consults the supergraph schema, and routes parts of the query to the relevant subgraphs. It then stitches the results back together before sending the final response to the client.
-
-### 4.2 Benefits of using a supergraph
-
-- **Federated Architecture:** Enables a microservices-based approach where different teams can own and operate their services independently.
-- **Scalability:** Individual subgraphs can be scaled independently based on their specific needs.
-- **Improved Developer Experience:** Clients interact with a single, consistent GraphQL API, simplifying data fetching and reducing the need to manage multiple endpoints.
-- **Schema Evolution:** Subgraphs can evolve their schemas independently, and the supergraph can be updated without breaking existing clients, as long as breaking changes are managed carefully.
-- **Clear Separation of Concerns:** Each subgraph focuses on a specific domain, leading to more maintainable and understandable codebases.
-
-### 4.3 Use the Powerhouse supergraph
-
-The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To access the endpoint, start the reactor and navigate to the URL with `graphql` appended. The following commands explain how you can test & try the supergraph.
-
-- Start the reactor:
-
-  ```bash
-  ph reactor
-  ```
-
-- Open the GraphQL editor in your browser:
-
-  ```
-  http://localhost:4001/graphql
-  ```
-
-The supergraph allows you to both query & mutate data from the same endpoint.
-
-**Example: Using the supergraph with to-do list documents**
-
-1. Create a todo document in the `powerhouse` drive using the `ToDoList` `createDocument` mutation:
-
-   ```graphql
-   mutation CreateTodoList($name: String!, $parentIdentifier: String) {
-     ToDoList {
-       createDocument(name: $name, parentIdentifier: $parentIdentifier) {
-         id
-         name
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "name": "My Test To-do List",
-     "parentIdentifier": "powerhouse"
-   }
-   ```
-
-   This returns the document with its ID (e.g., `"abc123"`). Save this ID for the next steps.
-
-2. Add some items to your to-do list using the `addTodoItem` mutation:
-
-   ```graphql
-   mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
-     ToDoList {
-       addTodoItem(docId: $docId, input: $input) {
-         id
-         name
-         revisionsList {
-           scope
-           revision
-         }
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "docId": "abc123",
-     "input": {
-       "text": "Learn about supergraphs"
-     }
-   }
-   ```
-
-   This returns the updated document with its new revision.
-
-3. Query the document state using the `document` query:
-
-   ```graphql
-   query GetTodoList($identifier: String!) {
-     ToDoList {
-       document(identifier: $identifier) {
-         document {
-           id
-           name
-           state {
-             global {
-               items {
-                 id
-                 text
-                 checked
-               }
-             }
-           }
-         }
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "identifier": "abc123"
-   }
-   ```
-
-4. Use the `searchTodos` subgraph query to search for items across your to-do lists:
-
-   ```graphql
-   query SearchTodos($driveId: String!, $searchTerm: String!) {
-     searchTodos(driveId: $driveId, searchTerm: $searchTerm)
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "driveId": "powerhouse",
-     "searchTerm": "supergraph"
-   }
-   ```
-
-This demonstrates how the supergraph provides a unified interface to both your document models and your custom subgraphs, allowing you to query and mutate data from the same endpoint.
-
-## 5. Summary
-
-Congratulations! You've successfully built a complete to-do list subgraph that demonstrates the power of extending document models with custom GraphQL functionality. Let's recap what you've accomplished:
-
-### Key concepts learned:
-
-- **Subgraphs extend document models** with additional querying and data processing capabilities
-- **Operational data stores** provide efficient storage for subgraph data
-- **Event processing** enables real-time synchronization between document models and subgraphs
-- **The supergraph** unifies multiple subgraphs into a single GraphQL endpoint
-
-This tutorial has provided you with a solid foundation for building sophisticated data processing and querying capabilities in the Powerhouse ecosystem.
-
-## Subgraphs are particularly useful for
-
-1. **Cross-Document Interactions**: For example, connecting a to-do list with an Invoice document model:
-   - When an invoice-related task is marked complete, update the invoice status
-   - When an invoice is paid, automatically check off related tasks
-
-2. **External Integrations**:
-   - Sync tasks with external project management tools
-   - Connect with notification systems
-   - Integrate with analytics platforms
-
-3. **Custom Business Logic**:
-   - Implement complex task prioritization
-   - Add automated task assignments
-   - Create custom reporting functionality
-
-### Future enhancements
-
-Bridge Processors and Subgraphs — Currently, there's a gap in how processors and subgraphs interact. Powerhouse might improve this in future updates.
+To upgrade an existing package, run `ph migrate` and follow the [migration guide](../docs/../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
 
 ---
 
@@ -11815,9 +11528,9 @@ interface IProcessorHostModule {
 
 ## Relational database processor
 
-> Source: https://powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
+> Source: https://academy.vetra.io/academy/Build/WorkWithData/RelationalDbProcessor
 
-In this chapter, we will implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
+In this chapter you'll implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
 
 **What is a Relational Database Processor?**
 
@@ -11827,10 +11540,12 @@ A relational database processor is a specialized component that listens to docum
 - **Integration**: Connecting with existing business intelligence tools
 
 **TIP:**
-This tutorial builds on the plain processor concepts covered in [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor). If you are new to processors, start there first.
+This tutorial builds on the plain processor concepts covered in [Building a Processor](/academy/Build/WorkWithData/BuildingAProcessor). If you are new to processors, start there first.
+
 
 **INFO:**
 The code examples below import from `@powerhousedao/reactor-browser`, which re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+
 
 ## Generate the Processor
 
@@ -11873,10 +11588,13 @@ The migration file contains `up` and `down` functions that are called when the p
 In the migration.ts file you'll find an example of the todo table default schema:
 
 ```ts
+
+
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
   await db.schema
     .createTable("todo") // Creates a new table named "todo"
+    .addColumn("document_id", "varchar(255)", (col) => col.notNull()) // The document the row came from
     .addColumn("task", "varchar(255)") // Text column for the task description (max 255 characters)
     .addColumn("status", "boolean") // Boolean column for completion status (true/false)
     .addPrimaryKeyConstraint("todo_pkey", ["task"]) // Makes "task" the primary key (unique identifier)
@@ -11893,6 +11611,7 @@ export async function down(db: IRelationalDb<any>): Promise<void> {
 **Design Considerations:**
 
 - We're using `task` as the primary key, which means each task description must be unique
+- `document_id` records which document each row came from, so the processor can delete a document's rows when the document is deleted (see [Erase a deleted document](#erase-a-deleted-document))
 - The `varchar(255)` limit ensures reasonable memory usage
 - The `boolean` status makes it easy to filter completed vs. incomplete tasks
 - Consider adding timestamps (`created_at`, `updated_at`) for audit trails in production applications
@@ -11922,6 +11641,7 @@ Check your `processors/todo-indexer/schema.ts` file after generation - it will c
 // This is what gets auto-generated based on your migration
 export interface Database {
   todo: {
+    document_id: string;
     task: string;
     status: boolean;
   };
@@ -11971,11 +11691,17 @@ export const todoIndexerProcessorFactory =
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
-      scope: ["global"], // Process global changes (not user-specific)
+      scope: ["global", "document"], // Global changes, plus deletions
     };
 
-    // Create the processor instance
-    const processor = new TodoIndexerProcessor(namespace, filter, store);
+    // Create the processor instance. The drive id is what `isNamespaceDrive`
+    // compares a deleted document's id against.
+    const processor = new TodoIndexerProcessor(
+      namespace,
+      filter,
+      store,
+      driveHeader.id,
+    );
     return [
       {
         processor,
@@ -11990,7 +11716,7 @@ export const todoIndexerProcessorFactory =
 - **`branch`**: Which document branches to monitor (usually "main" for production data)
 - **`documentId`**: Specific document IDs to watch ("\*" means all documents)
 - **`documentType`**: Document types to process (ensures type safety)
-- **`scope`**: Whether to process global changes or user-specific ones
+- **`scope`**: Which scopes to process. `"global"` carries shared state changes; `"document"` carries `DELETE_DOCUMENT` and `PURGE_DOCUMENT`, which the processor needs to erase a document's rows
 
 ## Implement the Processor Logic
 
@@ -12008,10 +11734,12 @@ The processor has several key methods:
 
 Processors receive a flat list of `OperationWithContext[]` items. Each item carries both the operation and its context:
 
-- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (JSON string of the document state after the operation)
+- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState`, a JSON string of `{ header, ...state }`. The header and each scope's state sit at the top level, so `JSON.parse(context.resultingState).global` is the global state after the operation
 - **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts
+
+
 export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Generate a unique namespace for this processor based on the drive ID
   // This prevents data conflicts between different drives
@@ -12038,11 +11766,27 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
     // Process each operation
     for (const { operation, context } of operations) {
+      // A deleted or purged document: remove its rows, or the drive's namespace
+      const type = operation.action.type;
+      if (type === "DELETE_DOCUMENT" || type === "PURGE_DOCUMENT") {
+        const input = operation.action.input as { documentId?: string };
+        const documentId = input.documentId ?? context.documentId;
+        if (this.isNamespaceDrive(documentId)) {
+          await this.dropNamespace();
+          return;
+        }
+        await this.deleteDocumentRows(documentId);
+        continue;
+      }
+      // The rest of the document scope carries nothing to index
+      if (context.scope !== "global") continue;
+
       // Insert a record for each operation into the database
       // This is a simple example - you might want more sophisticated logic
       await this.relationalDb
         .insertInto("todo")
         .values({
+          document_id: context.documentId,
           // Create a unique task identifier combining document ID, operation index, and type
           task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
           status: true, // Default to completed status
@@ -12061,6 +11805,26 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   }
 }
 ```
+
+### Erase a deleted document
+
+A processor's rows are its own: when a document is deleted or purged, the reactor removes its own records of the document, but only the processor removes the rows it wrote. A processor that ignores deletions keeps a deleted document's rows, including a purged one's. There is no separate purge callback, and `onDisconnect()` is not a deletion signal: it also runs when the processor's factory is unregistered or reloaded.
+
+Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that parses `context.resultingState`. `PURGE_DOCUMENT` is the marker a purge leaves in the operation log. A reactor that missed the `DELETE_DOCUMENT` receives only the marker, and the marker can arrive with no `resultingState` and more than once, so keep the handler idempotent. After a purge, the reactor delivers the purged document's marker and none of its earlier operations.
+
+`RelationalDbProcessor` has three helpers for this:
+
+| Method                           | What it does                                                                                                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
+| `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                |
+
+A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
+
+`isNamespaceDrive` needs the drive id the factory passes as the constructor's fourth argument; a processor made without it never drops its namespace. A `getNamespace` override that returns the same namespace for every drive shares it across drives, so dropping it on one drive's deletion would erase the others' rows. For such a processor `isNamespaceDrive` is `false`: the drive's deletion deletes the drive document's own rows, and each of its documents' rows go with that document's own deletion.
+
+When a drive is deleted, its processors receive the batch up to and including the drive's `DELETE_DOCUMENT` (or `PURGE_DOCUMENT`), then `onDisconnect()`. The drive's own deletion reaches them whatever their filter, so the processor above drops its namespace even though its `documentType` filter names only `powerhouse/todo-list`. The generated processor includes this handling.
 
 ## Expose Data Through a Subgraph
 
@@ -12081,61 +11845,54 @@ A subgraph is a GraphQL schema that exposes your processed data to clients. It:
 - Supports both queries (reading data) and mutations (modifying data)
 - Can join data across multiple processors and document types
 
-### Configure the Subgraph
+### Configure the subgraph
 
-Open `./subgraphs/todo/schema.ts` and configure the schema:
+Replace `subgraphs/todo/index.ts` with the following code. It declares the read model and query together; the generated `subgraphs/todo/schema.ts` helper is unused by this example. Use the same namespace as `TodoIndexerProcessor.getNamespace(driveId)` in your processor.
 
-```ts
-export const schema: DocumentNode = gql`
-  # Define the structure of a todo item as returned by GraphQL
-  type TodoListEntry {
-    task: String! # The task description (! means required/non-null)
-    status: Boolean! # The completion status (true = done, false = pending)
-  }
+```typescript
 
-  # Define available queries
-  type Query {
-    todos(driveId: ID!): [TodoListEntry] # Get array of todos for a specific drive
-  }
-`;
-```
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
 
-Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
-```ts
-// subgraphs/search-todos/resolvers.ts
+interface TodoReadModel {
+  todo: { task: string; status: boolean };
+}
 
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-  const relationalDb = subgraph.relationalDb;
+const TodoEntry = ph.object("TodoListEntry", {
+  fields: {
+    task: ph.String({ required: true }),
+    status: ph.Boolean({ required: true }),
+  },
+});
 
-  return {
-    Query: {
-      todos: {
-        // Resolver function for the "todos" query
-        // Arguments: parent object, query arguments, context, GraphQL info
-        resolve: async (_: any, args: { driveId: string }) => {
-          // Query the database using the processor's static query method
-          // This gives us access to the namespaced database for the specific drive
-          const todos = await TodoIndexerProcessor.query(
-            args.driveId,
-            relationalDb,
-          )
-            .selectFrom("todo") // Select from the "todo" table
-            .selectAll() // Get all columns
-            .execute(); // Execute the query
+export class TodoSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "todo";
 
-          // Transform database results to match GraphQL schema
-          return todos.map((todo) => ({
-            task: todo.task, // Map database "task" column to GraphQL "task" field
-            status: todo.status, // Map database "status" column to GraphQL "status" field
-          }));
+  static override getSchema(schema: SchemaBuilder<TodoSubgraph>) {
+    return [
+      schema.query("todos", {
+        args: { driveId: ph.ID({ required: true }) },
+        returns: ph.list(ph.ref(TodoEntry)),
+        resolve: async ({ args, subgraph, request }) => {
+          await subgraph.assertCanRead(args.driveId, request);
+          const db = subgraph.relationalDb.queryNamespace<TodoReadModel>(
+            `TodoIndexerProcessor_${args.driveId.replaceAll("-", "_")}`,
+          );
+          return db.selectFrom("todo").selectAll().execute();
         },
-      },
-    },
-  };
-};
+      }),
+    ];
+  }
+}
 ```
+
+This tutorial's table contains operation labels. The drive check is suitable only if your application grants access to all these rows with that drive. For document-specific data, store the source document id on each row and filter with `subgraph.listsDocument(id, request)` before returning it.
+
+
+The host discovers the exported class through the package's `subgraphs` entry. Subgraphs do not belong in `definitionSources`. For an existing package, run `ph migrate` and follow the [migration guide](../docs/../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
 
 ## Now query the data via the supergraph.
 
@@ -12164,7 +11921,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
   ```
 
   The supergraph allows you to both query & mutate data from the same endpoint.
-  Read more about [subgraphs](/academy/MasteryTrack/WorkWithData/UsingSubgraphs)
+  Read more about [subgraphs](/academy/Build/WorkWithData/UsingSubgraphs)
 
 <details>
 <summary>**Example: Complete Data Flow from Document Operations to Relational Database**</summary>
@@ -17548,7 +17305,7 @@ You can get access to the [package library here.](https://vetra.io/packages)
 
 ## Powerhouse CLI
 
-> Source: https://powerhouse.academy/academy/APIReferences/PowerhouseCLI
+> Source: https://academy.vetra.io/academy/Reference/CLITooling/PowerhouseCLI
 
 ### Installing the Powerhouse CLI
 
@@ -17564,18 +17321,18 @@ The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides ess
 pnpm install -g ph-cmd
 ```
 
-{/_ AUTO-GENERATED-CLI-COMMANDS-START _/}
-{/_ This content is automatically generated. Do not edit directly. _/}
 
+{/* AUTO-GENERATED-CLI-COMMANDS-START */}
+{/* This content is automatically generated. Do not edit directly. */}
 ## Quick Reference
 
-| Command            | Description                     | Example                       |
-| ------------------ | ------------------------------- | ----------------------------- |
-| `ph init`          | Initialize a new project        | `ph init my-project --pnpm`   |
-| `ph use`           | Switch to a release version     | `ph use staging`              |
-| `ph update`        | Update dependencies to latest   | `ph update`                   |
-| `ph setup-globals` | Initialize global project       | `ph setup-globals my-globals` |
-| `ph use-local`     | Use local monorepo dependencies | `ph use-local ../powerhouse`  |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `ph init` | Initialize a new project | `ph init my-project --pnpm` |
+| `ph use` | Switch to a release version | `ph use staging` |
+| `ph update` | Update dependencies to latest | `ph update` |
+| `ph setup-globals` | Initialize global project | `ph setup-globals my-globals` |
+| `ph use-local` | Use local monorepo dependencies | `ph use-local ../powerhouse` |
 
 ---
 
@@ -22329,14 +22086,15 @@ ph vetra --watch
 
 ---
 
-## Subgraph Migration Guide (v6 Reactor)
+## Subgraph migration guide
 
-> Source: https://powerhouse.academy/academy/APIReferences/SubgraphMigrationGuide
+> Source: https://academy.vetra.io/academy/Reference/GraphQLData/SubgraphMigrationGuide
 
 **TIP:**
-This guide covers the **breaking changes** to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old `/graphql/document-drive` or `/graphql/system` endpoints, or building custom subgraphs, **this migration is required**.
+The v5-to-v6 Reactor upgrade changed client endpoints and document arguments. Use the client guide below if you still query the v5 `/graphql/document-drive` or `/graphql/system` APIs. The later [class-authoring migration](#migrate-a-subgraph-class) preserves existing v6 endpoints.
 
-## Overview
+
+## v5-to-v6 client migration
 
 The v6 Reactor replaced the legacy hardcoded subgraphs (`document-drive`, `system`) with a new architecture:
 
@@ -22360,14 +22118,14 @@ In v6, every operation can be done through the **reactor subgraph** (`/graphql/r
 
 Document-model subgraphs are auto-generated for each registered document model and provide:
 
-- `document(identifier)` — get a single document
+- `document(idOrSlug)` — get a single document
 - `documents(paging)` — list all documents of this type
 - `findDocuments(search, view, paging)` — search within this type
-- `documentOutgoingRelationships(sourceIdentifier, relationshipType)` — filtered to this type
-- `documentIncomingRelationships(targetIdentifier, relationshipType)`
-- `createDocument(name, parentIdentifier)` mutation
-- Per-operation mutations (e.g. `addTodoItem(docId, input)`)
-- Async variants of each mutation (e.g. `addTodoItemAsync(docId, input)`)
+- `documentOutgoingRelationships(sourceIdOrSlug, relationshipType)` — filtered to this type
+- `documentIncomingRelationships(targetIdOrSlug, relationshipType)`
+- `createDocument(name, parentIdOrSlug)` mutation
+- Per-operation mutations (e.g. `addTodoItem(documentIdOrSlug, input)`)
+- Async variants of each mutation (e.g. `addTodoItemAsync(documentIdOrSlug, input)`)
 
 ### Getting a drive and its contents
 
@@ -22399,7 +22157,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "my-drive-slug") {
+  document(idOrSlug: "my-drive-slug") {
     document {
       id
       name
@@ -22417,7 +22175,7 @@ query {
 # v6 — /graphql/document-drive (or via supergraph)
 query {
   DocumentDrive {
-    document(identifier: "my-drive-slug") {
+    document(idOrSlug: "my-drive-slug") {
       document {
         id
         name
@@ -22442,7 +22200,7 @@ query {
 # v6 — /graphql/r
 query {
   documentOutgoingRelationships(
-    sourceIdentifier: "my-drive-slug"
+    sourceIdOrSlug: "my-drive-slug"
     relationshipType: "child"
   ) {
     items {
@@ -22451,7 +22209,6 @@ query {
       documentType
       state
     }
-    totalCount
     hasNextPage
   }
 }
@@ -22464,7 +22221,7 @@ query {
 query {
   ToDoList {
     documentOutgoingRelationships(
-      sourceIdentifier: "my-drive-slug"
+      sourceIdOrSlug: "my-drive-slug"
       relationshipType: "child"
     ) {
       items {
@@ -22480,7 +22237,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -22501,7 +22259,8 @@ query {
       name
       state
     }
-    totalCount
+    hasNextPage
+    cursor
   }
 }
 ```
@@ -22526,7 +22285,8 @@ query {
           }
         }
       }
-      totalCount
+      hasNextPage
+      cursor
     }
   }
 }
@@ -22552,7 +22312,7 @@ query {
 ```graphql
 # v6 — /graphql/r
 query {
-  document(identifier: "abc123") {
+  document(idOrSlug: "abc123") {
     document {
       id
       name
@@ -22570,7 +22330,7 @@ query {
 # v6 — /graphql/to-do-list (or via supergraph)
 query {
   ToDoList {
-    document(identifier: "abc123") {
+    document(idOrSlug: "abc123") {
       document {
         id
         name
@@ -22642,7 +22402,7 @@ In the legacy system, documents were created indirectly through drive operations
 mutation {
   createDocument(
     document: { documentType: "powerhouse/todo-list", name: "My List" }
-    parentIdentifier: "my-drive-slug"
+    parentIdOrSlug: "my-drive-slug"
   ) {
     id
     name
@@ -22656,7 +22416,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    createDocument(name: "My List", parentIdentifier: "my-drive-slug") {
+    createDocument(name: "My List", parentIdOrSlug: "my-drive-slug") {
       id
       name
     }
@@ -22673,8 +22433,8 @@ In the legacy system, document operations were applied through strand-based push
 ```graphql
 # v6 — /graphql/r
 mutation {
-  mutateDocument(
-    documentIdentifier: "abc123"
+  execute(
+    documentIdOrSlug: "abc123"
     actions: [
       {
         type: "ADD_TODO_ITEM"
@@ -22698,7 +22458,7 @@ mutation {
 # v6 — /graphql/to-do-list (or via supergraph)
 mutation {
   ToDoList {
-    addTodoItem(docId: "abc123", input: { text: "Buy milk" }) {
+    addTodoItem(documentIdOrSlug: "abc123", input: { text: "Buy milk" }) {
       id
       state {
         global {
@@ -22820,9 +22580,9 @@ subscription {
 
 | Legacy query/mutation           | v6 equivalent                                                                  | Subgraph               |
 | ------------------------------- | ------------------------------------------------------------------------------ | ---------------------- |
-| `drive`                         | `document(identifier: driveSlug)`                                              | reactor (`/graphql/r`) |
+| `drive`                         | `document(idOrSlug: driveSlug)`                                                | reactor (`/graphql/r`) |
 | `drives`                        | `findDocuments(search: { type: "powerhouse/document-drive" })`                 | reactor                |
-| `document(id)`                  | `document(identifier)`                                                         | reactor                |
+| `document(id)`                  | `document(idOrSlug)`                                                           | reactor                |
 | `documents`                     | `findDocuments()`                                                              | reactor                |
 | `addDrive(name)`                | `createDocument(document: { documentType: "powerhouse/document-drive", ... })` | reactor                |
 | `system { sync { strands } }`   | `pollSyncEnvelopes(channelId, ...)`                                            | reactor                |
@@ -22830,96 +22590,72 @@ subscription {
 | `pushUpdates`                   | `pushSyncEnvelopes(envelopes: [...])`                                          | reactor                |
 | N/A (new)                       | `<ModelName> { document(...) }`                                                | document-model         |
 | N/A (new)                       | `<ModelName> { createDocument(...) }`                                          | document-model         |
-| N/A (new)                       | `<ModelName> { <operationName>(docId, input) }`                                | document-model         |
+| N/A (new)                       | `<ModelName> { <operationName>(documentIdOrSlug, input) }`                     | document-model         |
 
-## Migrating custom subgraphs
+## Migrate a subgraph class
 
-### Legacy pattern
+Upgrade your subgraph authoring code before its next build. A converted subgraph keeps its route name, so the host serves it at the same HTTP and GraphQL endpoints and WebSocket and SSE mounts. `ph migrate` converts only the class shapes listed in this section and refuses every other class. It also refuses a class that package code can reach through a module namespace used other than to read a named member. Review and test each converted subgraph.
 
-Custom subgraphs exported a `resolvers` object and a `typeDefs` string, using `ctx.driveServer` for data access:
+### Convert the package
 
-```typescript
-// Legacy custom subgraph
+1. Upgrade the CLI and `@powerhousedao/reactor-api` together. Use a host that supports the new subgraph protocol.
+2. Run `ph migrate --subgraphs-only` in the package root to convert subgraphs without upgrading packages or bundling migrations. Plain `ph migrate` also converts subgraphs before its other migrations. The transform converts the released template and the hand edits listed after these steps into `schema.graphql(...)`.
+   For each converted module, migration keeps its barrel namespace export (such as `export * as BillingSubgraph from "./billing/index.js"`), so its other exports remain reachable. It adds a direct class export and `SubgraphCheck` alongside the namespace, using an alias when the namespace already takes the class name. Namespace exports for modules that were not converted stay unchanged.
+3. Review each converted class. Preserve the route name as `static override readonly subgraphName = "existing-name"`. Put SDL, resolver coordinates, and the resolver factory in `getSchema(schema: SchemaBuilder<YourClass>)`.
+4. Move instance access into the factory's `subgraph` parameter. Remove instance schema fields, custom path configuration, and the subscription flag. The host derives subscriptions from the schema's operation roots.
+5. Make lifecycle methods overrides that call `super`. Make teardown safe after partial setup. `onDisconnect` runs when the subgraph is unregistered while the process continues. It is not a process-exit hook.
+6. Export concrete classes through the package's `subgraphs/index.ts` and `subgraphs/*/index.ts` entries. Remove subgraph entries from `definitionSources`, which now covers document models only.
+7. Run `ph model check`, `ph build`, and your resolver tests. Compare your schema and resolver coordinates with the previous package before publishing.
 
-export const typeDefs = `
-  type Query {
-    myCustomQuery(driveId: String!): [String!]!
-  }
-`;
+The codemod generates resolver coordinates and removes the released resolver factory's `Record<string, unknown>` return annotation so TypeScript can infer its map. It keeps the constructor and lifecycle code. It marks `onSetup` and `onDisconnect` as `override`, and inserts `await super.onSetup()` or `await super.onDisconnect()` at the start of a hook that does not call it. It converts a class only when the class has the shape of the released template or of these hand edits:
 
-export const resolvers: GraphQLResolverMap<Context> = {
-  Query: {
-    myCustomQuery: async (_parent, args, ctx: Context) => {
-      const drive = await ctx.driveServer.getDrive(args.driveId);
-      // ... process drive data
-      return results;
-    },
-  },
-};
-```
+- `name` is a lowercase kebab-case string literal. `typeDefs` is a `gql` literal from `graphql-tag`, written inline or held in an imported or module `const`. `hasSubscriptions`, `path`, and `additionalContextFields` hold literals or imported or module `const` values.
+- `resolvers` is an inline resolver map, or a call such as `getResolvers(this)` to a factory declared as a named function or `const`. The factory can come through an import, a re-export alias, a star barrel, or a default export. Classes can share one factory.
+- The factory takes no parameter, or one `subgraph` parameter without a type or typed as `BaseSubgraph`, the subgraph class, `any`, or `unknown`. Its body can declare `const reactor = subgraph.reactorClient` for any service that the `BaseSubgraph` constructor sets. Then it returns a resolver map.
+- A resolver map is an object literal that can contain other object literals. Each value in it is a function, a method, a literal, or an identifier that names an import or a module `const`, written as `example: example` or as the shorthand `{ example }`. An identifier value must be callable, such as an imported `function` declaration or a `const` arrow function. The exception is the value for a scalar type, such as `Date: DateScalar`.
+- Resolver functions can read the request context, `this.member`, `subgraph.member`, and `subgraphName`. An inline resolver map does not use the class's `super`. Elsewhere, instance code uses `this` only as `this.member` or as the factory argument. It never assigns a `BaseSubgraph` service such as `reactorClient`. That rules out `=`, compound assignment, `++` and `--`, `delete`, destructuring targets, and `for...of` and `for...in` heads. Other fields, the constructor, and lifecycle method bodies stay as written apart from the inserted `super` call, so `onSetup` can await `this.reactorClient`.
 
-### v6 pattern
+Migrate refuses every other class before it edits any file, and reports each refusal with its file and line. Migration removes the `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, `path`, and `additionalContextFields` fields, so it also refuses a matching class that package code, including the class body, references outside its declaration, an import or export, or its factory's parameter type. For example, `new`, `instanceof`, a type annotation, or passing the class as a value refuses it. It also refuses a matching class that a namespace exposes through `import * as`, a named import of an `export * as` namespace, `import()`, or `require` when package code uses that namespace other than in an export or to read a named member such as `ns.schema` or `ns["schema"]`, for example in `Object.values(ns)`, a spread, an argument, a loop, or a dynamic key such as `ns[key]`. An `import()` or `require` whose path is neither a string literal nor a template literal without substitutions, anywhere in the package, refuses every matching migration candidate, because migrate can't tell which module it loads. It also refuses a matching class when other package code uses its factory, and when its factory needs an edit in a file that contains a refused class. A file that contains a refused class stays unchanged. Read `subgraphName` where code read `name`.
 
-Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through `subgraph.reactorClient`:
+Fix the reported cause and run the migration again, or migrate the class by hand.
 
-```typescript
-// v6 custom subgraph — subgraphs/my-custom/resolvers.ts
+Use [Subgraph classes](../docs/docs/08-SubgraphClasses.md) for typed entries, the SDL wrapper, and inheritance examples. A former config-function declaration also becomes a `BaseSubgraph<Ctx>` subclass. The subgraph generation command has no style flag. The document-model `--code-first` option stays.
 
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
+### Fix authoring errors
 
-  return {
-    Query: {
-      myCustomQuery: async (_parent: unknown, args: { driveId: string }) => {
-        const children = await reactorClient.getOutgoingRelationships(
-          args.driveId,
-          "child",
-        );
-        // ... process documents
-        return results;
-      },
-    },
-  };
-};
-```
+`ph build` checks TypeScript before definition validation. These errors can appear before the coded migration diagnostic.
 
-```typescript
-// v6 custom subgraph — subgraphs/my-custom/schema.ts
+| Error                                                                                | Fix                                                                       |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| TS2416 on `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, or `path`             | Old-style subgraph. Run `ph migrate`, review the conversion, and rebuild. |
+| TS2540 when assigning `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, or `path` | Old-style subgraph. Run `ph migrate`, review the conversion, and rebuild. |
 
-export const schema: DocumentNode = gql`
-  type Query {
-    myCustomQuery(driveId: String!): [String!]!
-  }
-`;
-```
+### Reuse code
 
-Generate the scaffolding with:
+Move shared state and hooks into one abstract base without a name. Use plain schema fragments with public capability interfaces. Do not use mixin factories. Preserve a typed parent's entries with `...super.getSchema(schema)`. Call `schema.replaceParentSchema()` when replacing the parent schema intentionally. Typed entries and SDL cannot be mixed, including across inheritance.
 
-```bash
-ph generate --subgraph my-custom
-```
+A concrete literal-name parent cannot be renamed by a subclass (TS2417). Use an abstract base, or declare the extensible parent's name with `: string` and accept runtime-only name validation. A `SubgraphCheck` wrong-class assertion means `SchemaBuilder<X>` names the wrong instance type.
 
-### Key differences
+### Host and package compatibility
 
-| Aspect               | Legacy                          | v6                                              |
-| -------------------- | ------------------------------- | ----------------------------------------------- |
-| Data access          | `ctx.driveServer`               | `subgraph.reactorClient`                        |
-| Schema format        | Template literal string         | `gql` tagged template (`DocumentNode`)          |
-| Resolver export      | `export const resolvers`        | `export const getResolvers = (subgraph) => ...` |
-| Relational DB access | Not available                   | `subgraph.relationalDb`                         |
-| File structure       | `resolvers.ts` + `type-defs.ts` | `resolvers.ts` + `schema.ts` + `index.ts`       |
-| Registration         | Manual                          | Automatic via `ph generate`                     |
+| Host     | Package                     | Result                                                                                                                         |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice. |
+| New host | New class-based package     | Served through protocol version 1.                                                                                             |
+| Old host | New class-based package     | Unsupported. Use matching CLI, package, and host API releases.                                                                 |
+
+Compatibility for published packages does not permit old authoring code in developer tooling. Build, check, generate, publish, prepack, and Vetra reject it with migration guidance. Nameless classes are refused unless they are shared ancestors of exported concrete classes in the same entry.
+
+SDL that declares a subscription root now gets WebSocket and SSE support even if the old package omitted its subscription flag. Existing mounts keep their paths.
 
 ## Migration checklist
 
-- [ ] Update all GraphQL client queries that target `/graphql/document-drive` to use `/graphql/r` or the appropriate document-model subgraph
-- [ ] Replace `drive` queries with `document(identifier)` or `findDocuments`
-- [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
-- [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
-- [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
-- [ ] Replace `ctx.driveServer` calls with `subgraph.reactorClient` methods
-- [ ] Update schema files from plain strings to `gql` tagged templates
-- [ ] Regenerate custom subgraph scaffolding with `ph generate --subgraph <name>`
+- [ ] Point v5 clients at `/graphql/r` or the appropriate document-model subgraph.
+- [ ] Use `idOrSlug`, `sourceIdOrSlug`, `targetIdOrSlug`, and `documentIdOrSlug` for v6 document arguments.
+- [ ] Replace strand-based sync with `touchChannel` and `pollSyncEnvelopes`.
+- [ ] Use `documentChanges` for real-time updates.
+- [ ] Convert custom subgraphs to `BaseSubgraph` classes with static `getSchema`.
+- [ ] Run `ph model check`, `ph build`, and resolver tests before publishing.
 
 ---
 
@@ -25938,7 +25674,7 @@ You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Co
 
 ## Step 1: Create Custom Scalars
 
-> Source: https://powerhouse.academy/academy/ComponentLibrary/CreateCustomScalars
+> Source: https://academy.vetra.io/academy/Reference/EditorsUI/CreateCustomScalars
 
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
@@ -26032,7 +25768,10 @@ Add your scalar to the namespace imports section (around line 2):
 ```typescript
 // namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
 
+
 // ... other imports ...
+
+
 ```
 
 ### 2.2 Add Type Export
@@ -26136,6 +25875,8 @@ Every scalar must have comprehensive tests to ensure it works correctly. Create 
 **Example: Creating `PhoneNumber.test.ts`**
 
 ```typescript
+
+
 describe("PhoneNumber Scalar", () => {
   it("should serialize a phone number", () => {
     const phoneNumber = "+1234567890";
@@ -26307,7 +26048,7 @@ export const schema = z.number().positive();
 
 ```typescript
 export const type = "string";
-export const schema = z.string().datetime();
+export const schema = z.iso.datetime();
 ```
 
 **INFO:**
@@ -26326,6 +26067,55 @@ export const schema = z.string().datetime();
 - Keep the `stringSchema` in sync with your `schema` definition
 - Test edge cases in your validation function
 - Update all required sections in `scalars.ts`
+
+## Use a package scalar in a subgraph
+
+The steps above add a scalar to the Powerhouse catalog. To use a scalar only in your own package, declare a package scalar instead. It needs no change to `scalars.ts`.
+
+Declare a package scalar with `defineScalar` from `document-model`. Use its builder in a document model or a subgraph field.
+
+### Declare and use the scalar
+
+```typescript
+
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+
+
+export const PhoneNumber = defineScalar({
+  name: "PhoneNumber",
+  description: "An international phone number.",
+  representation: "string",
+  validator: z.string().regex(/^\+?[1-9]\d{1,14}$/),
+  zodSource: "z.string().regex(/^\\+?[1-9]\\d{1,14}$/)",
+});
+
+export class SupportSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "support";
+  #phone = "+1234567890";
+
+  static override getSchema(schema: SchemaBuilder<SupportSubgraph>) {
+    return [
+      schema.query("supportPhone", {
+        returns: PhoneNumber({ required: true }),
+        resolve: ({ subgraph }) => subgraph.#phone,
+      }),
+    ];
+  }
+}
+```
+
+`validator` checks runtime values. `zodSource` contains the same validation rule for generated source. Keep them in sync. The compiler derives GraphQL coercion from the validator and representation unless you supply explicit coercion.
+
+In a subgraph, `PhoneNumber` keeps its name. In a document model, the host adds the model prefix. Catalog scalars keep their host bindings. A package scalar cannot reuse a catalog scalar name, a GraphQL built-in name, or another named type in the same schema.
+
+### Check the scalar
+
+Run your package type check and `ph model check`. Test a valid value, an invalid string, and a value with the wrong JavaScript type. Execute the subgraph with variables and literals to check input coercion, and query its output to check serialization. See [Test a subgraph without a host](../docs/03-GraphQLData/09-TestingSubgraphs.md).
+
+For existing SDL, put the scalar implementation in the resolver map returned by `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })`. Resolvers access instance state through `subgraph`. See [Subgraph classes](../docs/03-GraphQLData/08-SubgraphClasses.md).
 
 ---
 
@@ -26527,7 +26317,7 @@ With the help of these host applications, Powerhouse is launching 2 platforms th
 
 ## Working with the Reactor
 
-> Source: https://powerhouse.academy/academy/Architecture/WorkingWithTheReactor
+> Source: https://academy.vetra.io/academy/Reference/Reactor/WorkingWithTheReactor
 
 **TIP:**
 Document models are the common design pattern that is used for all documents and files.  
@@ -26537,6 +26327,7 @@ DocSync is a decentralized synchronization protocol that is storage agnostic.
 But who is doing the syncing?
 
 We call these participants **Reactors**.
+
 
 ### Powerhouse Reactors
 
@@ -26556,6 +26347,7 @@ Powerhouse Reactors are the nodes in the network that store documents, resolve c
 **TIP:**
 The DocSync protocol _sends updates from one reactor to another_ - **smashing document operations into one another** - to ensure all data is synced.
 
+
 A **reactor** is responsible for storing data and resolving merge conflicts.  
 Editing data and submitting new operations must be done through Powerhouse's native applications (Connect, Switchboard, Fusion). Each instance of these applications contains a Reactor that is responsible for storing data and syncing data through DocSync. In other words, Powerhouse applications are how Reactors can be accessed, manipulated, steered, visualized and modified. A local Connect desktop application's reactor can therefore sync with the Reactor of a remote drive (e.g. Switchboard instance).
 
@@ -26568,6 +26360,83 @@ By acting as the backbone for document models in the Powerhouse framework, they 
 Reactors provide the foundation for advanced features like real-time collaboration, history tracking, and decentralized audits.
 This modular, flexible infrastructure enables organizations to build efficient and robust decentralized systems, tailored for modern network organizations
 
+## Getting an IReactorClient
+
+There are a few ways to obtain an `IReactorClient`, depending on where your code runs.
+
+**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the `IReactorClient` for the running reactor.
+
+```typescript
+
+
+const client = useReactorClient();
+```
+
+The same module exposes sibling hooks: `useSync` (the `ISyncManager`), `useSyncList` (its remotes), `useModelRegistry` (the document-model registry), `useDatabase` (the Kysely database), and `usePGlite` (the PGlite instance).
+
+**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client plus the wired module).
+
+```typescript
+
+
+const client = await new ReactorClientBuilder()
+  .withReactorBuilder(reactorBuilder)
+  .withSigner(signer)
+  .build();
+```
+
+`buildModule()` throws if neither `withReactorBuilder` nor `withReactor` was set. For the low-level builder detail, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
+
+**In a subgraph.** A class extends `BaseSubgraph<Context>` and supplies `getSchema(schema: SchemaBuilder<YourClass>)`. Resolvers reach the client through `subgraph.reactorClient`. The GraphQL context holds the caller, not the client.
+
+```typescript
+
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+
+
+export class DocumentNamesSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "document-names";
+
+  static override getSchema(schema: SchemaBuilder<DocumentNamesSubgraph>) {
+    return [
+      schema.query("authorizedDocumentName", {
+        args: { identifier: ph.String({ required: true }) },
+        returns: ph.String({ required: true }),
+        resolve: async ({ args, subgraph, request }) => {
+          const handle = await subgraph.assertCanRead(args.identifier, request);
+          const document = await subgraph.reactorClient.get(
+            handle.fetchIdentifier,
+          );
+          return document.header.name;
+        },
+      }),
+    ];
+  }
+}
+```
+
+See [Subgraph classes](../docs/03-GraphQLData/08-SubgraphClasses.md) for schema forms, hooks, and fragments. Existing endpoint paths, schemas, and WebSocket and SSE mounts are unchanged.
+
+For attachments, a resolver calls `subgraph.attachmentsFor(ctx)`, which returns an `IAttachmentClient` bound to the request's caller. See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard).
+
+**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+
+```typescript
+
+
+// factory.ts (generated scaffold)
+export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
+  const { client } = module; // client: IReactorClient
+  return async () => {
+    // use client.get(...), client.drives, client.execute(...)
+    return [];
+  };
+};
+```
+
 ## The ReactorClient API
 
 The `IReactorClient` is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
@@ -26577,27 +26446,30 @@ The `IReactorClient` is the primary interface for interacting with a reactor pro
 ```
 
 **INFO:**
-`@powerhousedao/reactor-browser` re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+`@powerhousedao/reactor-browser` re-exports a curated subset of reactor types for browser environments (editors, drive-apps, subgraphs) — including `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder`. Other types used on these pages (`ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, `OperationFilter`, `IReactor`, `ReactorEventTypes`, `SyncEventTypes`, `QueueEventTypes`) are not re-exported; import them from `@powerhousedao/reactor`. Outside the browser, import everything from `@powerhousedao/reactor`.
+
 
 ### Reading documents
 
-| Method                                                                         | Description                                       |
-| ------------------------------------------------------------------------------ | ------------------------------------------------- |
-| `get(identifier, view?)`                                                       | Retrieve a document by id or slug                 |
-| `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source              |
-| `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target              |
-| `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs |
-| `getOperations(documentIdentifier, view?, filter?, paging?)`                   | Retrieve operations for a document                |
-| `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
-| `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
+| Method                                                                         | Description                                        |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `get(identifier, view?)`                                                       | Retrieve a document by id or slug                  |
+| `resolveIdOrSlug(identifier)`                                                  | Resolve an id or slug to the canonical document id |
+| `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source               |
+| `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target               |
+| `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs  |
+| `getOperations(documentIdentifier, view?, filter?, paging?)`                   | Retrieve operations for a document                 |
+| `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules             |
+| `getDocumentModelModule(documentType)`                                         | Get a specific document model module               |
 
-The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision:
+The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision. On the client it also names the subject the read is gated for:
 
 ```typescript
 type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
+  subject?: AuthSubject; // client read gate only, ignored by IReactor
 };
 ```
 
@@ -26616,19 +26488,25 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 
 ### Writing documents
 
-| Method                                                                                      | Description                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
-| `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
-| `createDocumentInDrive(driveId, document, parentFolder?)`                                   | Create a document inside a drive in a single batched operation     |
-| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
-| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
-| `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
-| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
-| `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
-| `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
-| `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
-| `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
+| Method                                                                                      | Description                                                               |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                         |
+| `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                                  |
+| `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
+| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs      |
+| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                                     |
+| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`                    |
+| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle       |
+| `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents                  |
+| `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                         |
+| `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)                    |
+| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                            |
+| `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                         |
+| `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                            |
+| `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too)        |
+| `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                               |
+
+To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
 
 ### Subscribing to changes
 
@@ -26637,7 +26515,7 @@ const unsubscribe = reactorClient.subscribe(
   { type: "powerhouse/todo-list" }, // SearchFilter
   (event) => {
     // event.type is one of: Created, Deleted, Updated,
-    //   ParentAdded, ParentRemoved, ChildAdded, ChildRemoved
+    //   ChildAdded, ChildRemoved
     console.log(event.type, event.documents);
   },
 );
@@ -26654,7 +26532,7 @@ const completed = await reactorClient.waitForJob(job.id);
 
 You can also poll with `getJobStatus(jobId)`.
 
-For the full API reference, see [IReactorClient API Reference](/academy/APIReferences/ReactorClient).
+For the full API reference, see [IReactorClient API Reference](/academy/Reference/Reactor/ReactorClient).
 
 ## Job lifecycle
 
@@ -26677,17 +26555,20 @@ Only `READ_READY` and `FAILED` are terminal statuses. The `execute()` method on 
 
 ## Reactor event system
 
-The reactor uses an internal event bus to coordinate between subsystems. Events are grouped into three categories:
+The reactor uses an internal event bus to coordinate between subsystems. The event-type enums you subscribe to most often are:
 
 ### Core job events (`ReactorEventTypes`)
 
-| Event             | Numeric ID | When it fires                                 |
-| ----------------- | ---------- | --------------------------------------------- |
-| `JOB_PENDING`     | 10001      | Job is registered and waiting to execute      |
-| `JOB_RUNNING`     | 10002      | Job starts executing                          |
-| `JOB_WRITE_READY` | 10003      | Operations are written to the operation store |
-| `JOB_READ_READY`  | 10004      | All read models have finished processing      |
-| `JOB_FAILED`      | 10005      | Job failed with an unrecoverable error        |
+| Event                       | Numeric ID | When it fires                                                                      |
+| --------------------------- | ---------- | ---------------------------------------------------------------------------------- |
+| `JOB_PENDING`               | 10001      | Job is registered and waiting to execute                                           |
+| `JOB_RUNNING`               | 10002      | Job starts executing                                                               |
+| `JOB_WRITE_READY`           | 10003      | Operations are written to the operation store                                      |
+| `JOB_READ_READY`            | 10004      | All read models have finished processing                                           |
+| `JOB_FAILED`                | 10005      | Job failed with an unrecoverable error                                             |
+| `READMODEL_BATCH_COMPLETED` | 10006      | The read-model coordinator finishes a projection batch (carries per-stage timings) |
+| `READMODEL_INDEXED`         | 10007      | An individual read model finishes indexing a batch in one stage                    |
+| `MODEL_LOADED`              | 10008      | The resolver loads a document model module on demand                               |
 
 ### Sync events (`SyncEventTypes`)
 
@@ -26705,6 +26586,18 @@ The reactor uses an internal event bus to coordinate between subsystems. Events 
 | --------------- | ---------- | --------------------------------------- |
 | `JOB_AVAILABLE` | 10000      | Queue has work available for processing |
 
+### Executor lifecycle events (`JobExecutorEventTypes`)
+
+The executor managers emit a lower-level set of events for individual job execution and executor startup/shutdown. Most application code subscribes to `ReactorEventTypes` instead.
+
+| Event              | Numeric ID | When it fires                    |
+| ------------------ | ---------- | -------------------------------- |
+| `JOB_STARTED`      | 20000      | An executor starts running a job |
+| `JOB_COMPLETED`    | 20001      | An executor finishes a job       |
+| `JOB_FAILED`       | 20002      | An executor's job fails          |
+| `EXECUTOR_STARTED` | 20003      | An executor starts               |
+| `EXECUTOR_STOPPED` | 20004      | An executor stops                |
+
 ## Configuring your reactor
 
 In addition to the choice of storage, Reactors also have other configurations.
@@ -26719,7 +26612,7 @@ The processor pipeline works as follows:
 3. **`JOB_READ_READY` event fires** — signaling that the document is fully readable
 4. **Post-ready read models update** — the `ProcessorManager` routes matching operations to user-defined processors via `onOperations()`
 
-For a step-by-step guide to building processors, see [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor).
+For a step-by-step guide to building processors, see [Building a Processor](/academy/Build/WorkWithData/BuildingAProcessor). For the reactor-side registration API, see [Processors](/academy/Reference/Reactor/Processors).
 
 ### Ordering guarantees
 
@@ -27119,7 +27012,21 @@ Coming soon to **https://academy.vetra.io**
 
 ## Cookbook
 
-> Source: https://powerhouse.academy/academy/Cookbook
+> Source: https://academy.vetra.io/academy/Lookup/Cookbook
+
+## Author and test a subgraph
+
+A package subgraph is a class that extends `BaseSubgraph<Ctx>`. Declare its own `static override readonly subgraphName = "kebab-case"`. Return typed entries or one `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })` result from `static override getSchema(schema: SchemaBuilder<YourClass>)`. Resolvers access state through `subgraph`.
+
+- [Build a search subgraph](../docs/03-Build/04-WorkWithData/03-UsingSubgraphs.md).
+- [Reuse an abstract base and schema fragments](../docs/04-Reference/03-GraphQLData/08-SubgraphClasses.md#inheritance-and-fragments).
+- [Test a class through describe and bind without a host](../docs/04-Reference/03-GraphQLData/09-TestingSubgraphs.md).
+- [Migrate an existing package](../docs/04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
+
+Use overrides that call `super` for setup and teardown. Teardown tolerates partial setup and is not a process-exit hook. Developer tooling rejects old-style classes and points to `ph migrate`. Running hosts keep serving published old-style packages, with a notice only in development. Every existing endpoint, schema, and WebSocket and SSE mount is unchanged.
+
+The recipe snapshots below include standalone servers from the external recipes repository. For package integration, use the class API above. Do not copy a standalone server's SDL and resolver map into instance fields.
+
 
 ## Powerhouse CLI recipes
 

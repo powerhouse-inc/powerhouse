@@ -13,16 +13,19 @@ import {
   type DefinitionSourceLoader,
   type LoadedDefinition,
   type LoadedDefinitionSet,
+  readSubgraphEntries,
   type SubgraphClass,
 } from "document-model/tooling";
 import { gql } from "graphql-tag";
-import { parse } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
-import { defineSubgraph } from "../src/graphql/define-subgraph.js";
 import { forgetReportedScalarBindings } from "../src/graphql/scalar-bindings.js";
+import { SUBGRAPH_PROTOCOL } from "../src/graphql/subgraph-protocol.js";
+import type { SchemaBuilder } from "../src/graphql/subgraph-schema.js";
 import { validateSubgraphsForHost } from "../src/graphql/subgraph-validation.js";
+import { servedSubgraph } from "./utils/served-subgraph.js";
+import { sdlBase } from "./utils/sdl-base.js";
 
 /**
  * Validation builds the augmented schema the host assembles and reports a
@@ -34,22 +37,13 @@ function entry(
   value: SubgraphClass,
   source: DefinitionSource = { specifier: "./subgraphs/x.ts" },
 ): LoadedDefinition<SubgraphClass> {
-  return { value, source, path: ["definition"] };
+  return { value, source, path: [value.name] };
 }
 
 function compat(name: string, sdl: string) {
-  return defineSubgraph({
-    name,
-    schemaKind: "graphql-ast-compat",
-    compatibility: {
-      kind: "graphql-ast-v1",
-      typeDefs: parse(sdl),
-      resolverCoordinates: [],
-      getResolvers: () => ({}),
-      hasSubscriptions: undefined,
-      preserveDefinitionOrder: true,
-    },
-  });
+  return class Compat extends sdlBase(sdl) {
+    static override readonly subgraphName = name;
+  };
 }
 
 function notesModel(): DocumentModelModule {
@@ -78,17 +72,18 @@ const Widget = ph.object("Widget", {
 });
 
 function widgets(name = "widgets") {
-  return defineSubgraph({
-    name,
-    schemaKind: "typed",
-    entries: (build) => [
-      build.query("widget", {
-        args: { id: ph.OID({ required: true }) },
-        returns: ph.ref(Widget, { required: true }),
-        resolve: () => ({ id: "w", label: "One" }),
-      }),
-    ],
-  });
+  return class Widgets extends BaseSubgraph {
+    static override readonly subgraphName = name;
+    static override getSchema(schema: SchemaBuilder<Widgets>) {
+      return [
+        schema.query("widget", {
+          args: { id: ph.OID({ required: true }) },
+          returns: ph.ref(Widget, { required: true }),
+          resolve: () => ({ id: "w", label: "One" }),
+        }),
+      ];
+    }
+  };
 }
 
 describe("validating against the augmented schema", () => {
@@ -101,12 +96,14 @@ describe("validating against the augmented schema", () => {
     expect(result).toEqual({ completed: true, diagnostics: [] });
   });
 
-  it("validates the same typed AST that instances serve", () => {
+  it("validates the typed AST the protocol describes, which instances serve", () => {
     const Subgraph = widgets();
-    const instance = new Subgraph(
-      {} as ConstructorParameters<typeof Subgraph>[0],
+    const served = servedSubgraph(
+      new Subgraph({} as ConstructorParameters<typeof Subgraph>[0]),
     );
-    expect(Subgraph.typeDefs).toBe(instance.typeDefs);
+    expect(served.typeDefs).toBe(
+      Subgraph[SUBGRAPH_PROTOCOL]().describe().typeDefs,
+    );
     expect(
       validateSubgraphsForHost({
         profile: "edit",
@@ -116,64 +113,11 @@ describe("validating against the augmented schema", () => {
     ).toEqual([]);
   });
 
-  it("rejects a typed class whose published AST is invalid or missing", () => {
-    const Invalid = widgets();
-    Object.defineProperty(Invalid, "typeDefs", {
-      value: parse("type Query { widget: Missing }"),
-    });
-    const invalid = validateSubgraphsForHost({
-      profile: "edit",
-      documentModels: [],
-      subgraphs: [entry(Invalid)],
-    });
-    expect(invalid.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
-      "PH-SG-SCHEMA-INVALID",
-    ]);
-
-    const Missing = widgets();
-    Object.defineProperty(Missing, "typeDefs", { value: undefined });
-    const missing = validateSubgraphsForHost({
-      profile: "edit",
-      documentModels: [],
-      subgraphs: [entry(Missing)],
-    });
-    expect(missing.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
-      "PH-SG-DEFINITION-INVALID",
-    ]);
-  });
-
   it("reports a subgraph whose schema cannot build", () => {
-    class Broken extends BaseSubgraph {
-      name = "broken";
-      typeDefs = gql`
-        type Query {
-          thing: Missing
-        }
-      `;
-    }
-    // Given a definition so the host reads it as a code-first class.
-    Object.defineProperty(Broken, "typeDefs", {
-      value: parse(`type Query { thing: Missing }`),
-    });
-    Object.defineProperty(Broken, "definition", {
-      value: {
-        kind: "powerhouse.subgraph",
-        formatVersion: 1,
-        name: "broken",
-        compositionPolicy: "host-current",
-        federationProfile: "host-current",
-        schemaKind: "graphql-ast-compat",
-        hasSubscriptions: null,
-        document: parse(`type Query { thing: Missing }`),
-        resolverCoordinates: [],
-        access: "manual",
-      },
-    });
-
     const result = validateSubgraphsForHost({
       profile: "edit",
       documentModels: [],
-      subgraphs: [entry(Broken)],
+      subgraphs: [entry(compat("broken", "type Query { thing: Missing }"))],
     });
     expect(result.completed).toBe(true);
     expect(result.diagnostics.map((entry) => entry.code)).toEqual([
@@ -182,23 +126,70 @@ describe("validating against the augmented schema", () => {
     expect(result.diagnostics[0].message).toContain("Missing");
   });
 
+  it("leaves a class the protocol cannot describe to the tooling", () => {
+    class Nameless extends sdlBase("type Query { thing: String }") {}
+    expect(
+      validateSubgraphsForHost({
+        profile: "edit",
+        documentModels: [],
+        subgraphs: [entry(Nameless)],
+      }),
+    ).toEqual({ completed: true, diagnostics: [] });
+  });
+
+  it("leaves a class whose description throws to the tooling, and checks the others", () => {
+    class Throws extends BaseSubgraph {
+      static override readonly subgraphName = "throws";
+      static override getSchema(): never {
+        throw new Error("boom");
+      }
+    }
+    class Unprotocoled {
+      static readonly subgraphName = "unprotocoled";
+    }
+    expect(
+      validateSubgraphsForHost({
+        profile: "edit",
+        documentModels: [],
+        subgraphs: [
+          entry(Throws),
+          entry(Unprotocoled as unknown as SubgraphClass),
+          entry(compat("broken", "type Query { thing: Missing }")),
+        ],
+      }).diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toEqual([
+      {
+        code: "PH-SG-SCHEMA-INVALID",
+        path: ["Compat"],
+        message:
+          'Subgraph "broken" does not build, so the server does not serve it: Unknown type "Missing".',
+      },
+    ]);
+  });
+
   it("calls no resolver factory", () => {
     let factoryCalls = 0;
-    const Subgraph = defineSubgraph({
-      name: "compat",
-      schemaKind: "graphql-ast-compat",
-      compatibility: {
-        kind: "graphql-ast-v1",
-        typeDefs: parse("type Query { thing: String }"),
-        resolverCoordinates: [],
-        getResolvers: () => {
-          factoryCalls += 1;
-          return {};
-        },
-        hasSubscriptions: undefined,
-        preserveDefinitionOrder: true,
-      },
-    });
+    class Subgraph extends BaseSubgraph {
+      static override readonly subgraphName = "compat";
+      static override getSchema(schema: SchemaBuilder<Subgraph>) {
+        return schema.graphql({
+          typeDefs: gql`
+            type Query {
+              thing: String
+            }
+          `,
+          resolverCoordinates: [],
+          resolvers: () => {
+            factoryCalls += 1;
+            return {};
+          },
+        });
+      }
+    }
     const result = validateSubgraphsForHost({
       profile: "edit",
       documentModels: [],
@@ -407,16 +398,17 @@ describe("the conflicts the server enforces", () => {
       field: string,
       fields: Parameters<typeof ph.object>[1]["fields"],
     ) =>
-      defineSubgraph({
-        name,
-        schemaKind: "typed",
-        entries: (build) => [
-          build.query(field, {
-            returns: ph.ref(ph.object("Gadget", { fields })),
-            resolve: () => null,
-          }),
-        ],
-      });
+      class Gadgets extends BaseSubgraph {
+        static override readonly subgraphName = name;
+        static override getSchema(schema: SchemaBuilder<Gadgets>) {
+          return [
+            schema.query(field, {
+              returns: ph.ref(ph.object("Gadget", { fields })),
+              resolve: () => null,
+            }),
+          ];
+        }
+      };
     expect(
       findings([
         gadgets("alpha", "a", {
@@ -749,17 +741,18 @@ describe("package scalars", () => {
     const Contact = ph.object("Contact", {
       fields: { phone: PhoneNumber({ required: true }) },
     });
-    return defineSubgraph({
-      name: "contacts",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("contact", {
-          args: { phone: PhoneNumber({ required: true }) },
-          returns: ph.ref(Contact),
-          resolve: ({ args }) => ({ phone: args.phone }),
-        }),
-      ],
-    });
+    return class Contacts extends BaseSubgraph {
+      static override readonly subgraphName = "contacts";
+      static override getSchema(schema: SchemaBuilder<Contacts>) {
+        return [
+          schema.query("contact", {
+            args: { phone: PhoneNumber({ required: true }) },
+            returns: ph.ref(Contact),
+            resolve: ({ args }) => ({ phone: args.phone }),
+          }),
+        ];
+      }
+    };
   }
 
   it("validate with the coercion instances serve, so nothing is reported unregistered", () => {
@@ -782,26 +775,29 @@ describe("package scalars", () => {
       spy.mockRestore();
     }
     expect(logged.filter((line) => line.includes("PH-SCALAR"))).toEqual([]);
-    const instance = new Subgraph(
-      {} as ConstructorParameters<typeof Subgraph>[0],
+    const served = servedSubgraph(
+      new Subgraph({} as ConstructorParameters<typeof Subgraph>[0]),
     );
-    expect(Object.keys(Subgraph.scalarResolvers)).toEqual(["PhoneNumber"]);
-    expect(instance.resolvers.PhoneNumber).toBe(
-      Subgraph.scalarResolvers.PhoneNumber,
-    );
+    expect(
+      Subgraph[SUBGRAPH_PROTOCOL]()
+        .describe()
+        .scalarDefinitions.map(({ name }) => name),
+    ).toEqual(["PhoneNumber"]);
+    expect(
+      (served.resolvers.PhoneNumber as { name?: unknown } | undefined)?.name,
+    ).toBe("PhoneNumber");
   });
 });
 
 describe("a subgraph whose schema fails", () => {
   it("takes no part in composition", () => {
-    const Invalid = widgets("beta");
-    Object.defineProperty(Invalid, "typeDefs", {
-      value: parse("type Query { widget: Missing }"),
-    });
     const result = validateSubgraphsForHost({
       profile: "release",
       documentModels: [],
-      subgraphs: [entry(widgets("alpha")), entry(Invalid)],
+      subgraphs: [
+        entry(widgets("alpha")),
+        entry(compat("beta", "type Query { widget: Missing }")),
+      ],
     });
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       "PH-SG-SCHEMA-INVALID",
@@ -810,9 +806,15 @@ describe("a subgraph whose schema fails", () => {
 });
 
 describe("checkDefinitions with the host validator", () => {
-  function loaderFor(
-    selection: Pick<LoadedDefinitionSet, "documentModels" | "subgraphs">,
-  ): DefinitionSourceLoader {
+  const SUBGRAPHS = "./subgraphs/index.ts" as const;
+
+  function check(
+    documentModels: LoadedDefinitionSet["documentModels"],
+    classes: Readonly<Record<string, unknown>>,
+  ) {
+    const { subgraphs, diagnostics } = readSubgraphEntries([
+      { specifier: SUBGRAPHS, namespace: classes },
+    ]);
     const set: LoadedDefinitionSet = {
       status: "ready",
       packageRoot: "/package",
@@ -822,46 +824,68 @@ describe("checkDefinitions with the host validator", () => {
         digest: `sha256:${"0".repeat(64)}`,
         sources: [],
       },
-      diagnostics: [],
+      diagnostics,
       upgradeManifests: [],
       scalars: [],
-      ...selection,
+      documentModels,
+      subgraphs,
     };
-    return {
-      normalizeDefinitionSources: () => Promise.resolve(set),
-    } as unknown as DefinitionSourceLoader;
-  }
-
-  function check(
-    selection: Pick<LoadedDefinitionSet, "documentModels" | "subgraphs">,
-  ) {
     return checkDefinitions({
       profile: "edit",
-      loader: loaderFor(selection),
+      loader: {
+        normalizeDefinitionSources: () => Promise.resolve(set),
+      } as unknown as DefinitionSourceLoader,
       packageRevision: `sha256:${"0".repeat(64)}`,
       hostValidation: validateSubgraphsForHost,
     });
   }
 
   it("validates a subgraph against the selected and core models", async () => {
-    const report = await check({
-      documentModels: [
+    const report = await check(
+      [
         {
           source: { specifier: "./document-models/notes.ts" },
           path: [],
           value: notesModel(),
         },
       ],
-      subgraphs: [
-        entry(
-          compat(
-            "report",
-            "type Query { firstNote: Notes, firstDrive: DocumentDrive }",
-          ),
+      {
+        Report: compat(
+          "report",
+          "type Query { firstNote: Notes, firstDrive: DocumentDrive }",
         ),
-      ],
-    });
+      },
+    );
     expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([]);
+    expect(report.definitions.map(({ kind, key }) => [kind, key])).toEqual([
+      ["document-model", "test/notes"],
+      ["subgraph", "report"],
+    ]);
+  });
+
+  it("refuses two classes that declare one subgraph name", async () => {
+    class FirstLedger extends sdlBase("type Query { a: String }") {
+      static override readonly subgraphName = "ledger";
+    }
+    class SecondLedger extends sdlBase("type Query { b: String }") {
+      static override readonly subgraphName = "ledger";
+    }
+    const report = await check([], { FirstLedger, SecondLedger });
+    expect(report.status).toBe("invalid");
+    expect(
+      report.diagnostics.map(({ code, message, source }) => ({
+        code,
+        message,
+        source,
+      })),
+    ).toEqual([
+      {
+        code: "PH-PKG-LOGICAL-COLLISION",
+        message:
+          "SecondLedger and FirstLedger both declare subgraph ledger, so a host serving this package would keep only one of them.",
+        source: { specifier: SUBGRAPHS, exportPath: ["SecondLedger"] },
+      },
+    ]);
   });
 
   it("reports what compiling the declaration found, with its source", async () => {
@@ -871,21 +895,18 @@ describe("checkDefinitions with the host validator", () => {
         wordCount: ph.field({ returns: ph.Int({ required: true }) }),
       },
     });
-    const Posts = defineSubgraph({
-      name: "posts",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("post", {
-          returns: ph.ref(Post, { required: true }),
-          resolve: () => ({ id: "p" }),
-        }),
-      ],
-    });
-    const source = { specifier: "./subgraphs/posts.ts" } as const;
-    const report = await check({
-      documentModels: [],
-      subgraphs: [entry(Posts, source)],
-    });
+    class Posts extends BaseSubgraph {
+      static override readonly subgraphName = "posts";
+      static override getSchema(schema: SchemaBuilder<Posts>) {
+        return [
+          schema.query("post", {
+            returns: ph.ref(Post, { required: true }),
+            resolve: () => ({ id: "p" }),
+          }),
+        ];
+      }
+    }
+    const report = await check([], { Posts });
     expect(report.status).toBe("invalid");
     expect(
       report.diagnostics.map(({ code, message, source }) => ({
@@ -897,42 +918,55 @@ describe("checkDefinitions with the host validator", () => {
       {
         code: "PH-SG-COMPUTED-FIELD-INVALID",
         message: "Computed field Post.wordCount has no binding.",
-        source,
+        source: { specifier: SUBGRAPHS, exportPath: ["Posts"] },
       },
     ]);
   });
 
   it("reports compile diagnostics it cannot read instead of passing", async () => {
-    const Posts = defineSubgraph({
-      name: "posts",
-      schemaKind: "typed",
-      entries: (build) => [
-        build.query("post", { returns: ph.String(), resolve: () => "p" }),
-      ],
-    });
-    Object.defineProperty(Posts, "diagnostics", {
-      value: [
-        {
-          code: "PH-SG-NOT-IN-THIS-RELEASE",
-          path: [],
-          message: "A code a newer compiler added.",
-          repair: "Upgrade.",
-        },
-      ],
-    });
-    const report = await check({
-      documentModels: [],
-      subgraphs: [entry(Posts)],
-    });
+    class Posts extends BaseSubgraph {
+      static override readonly subgraphName = "posts";
+      static override getSchema(schema: SchemaBuilder<Posts>) {
+        return [
+          schema.query("post", { returns: ph.String(), resolve: () => "p" }),
+        ];
+      }
+    }
+    const protocol = Posts[SUBGRAPH_PROTOCOL]();
+    class NewerPosts extends Posts {
+      static override readonly subgraphName = "posts";
+      static override [SUBGRAPH_PROTOCOL]() {
+        return {
+          ...protocol,
+          describe: () => ({
+            ...protocol.describe(),
+            diagnostics: [
+              {
+                code: "PH-SG-NOT-IN-THIS-RELEASE",
+                path: [],
+                message: "A code a newer compiler added.",
+                repair: "Upgrade.",
+              },
+            ],
+          }),
+        } as unknown as ReturnType<(typeof Posts)[typeof SUBGRAPH_PROTOCOL]>;
+      }
+    }
+    const report = await check([], { NewerPosts });
     expect(report.status).toBe("invalid");
-    expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
-      "PH-SG-DEFINITION-INVALID",
+    expect(
+      report.diagnostics.map(({ code, message }) => [code, message]),
+    ).toEqual([
+      [
+        "PH-SG-DEFINITION-INVALID",
+        "NewerPosts's compile diagnostics could not be read.",
+      ],
     ]);
   });
 
   it("builds without a model the adapter rejected", async () => {
-    const report = await check({
-      documentModels: [
+    const report = await check(
+      [
         {
           source: { specifier: "./document-models/broken.ts" },
           path: [],
@@ -942,10 +976,8 @@ describe("checkDefinitions with the host validator", () => {
           } as unknown as DocumentModelModule,
         },
       ],
-      subgraphs: [
-        entry(compat("report", "type Query { firstDrive: DocumentDrive }")),
-      ],
-    });
+      { Report: compat("report", "type Query { firstDrive: DocumentDrive }") },
+    );
     expect(report.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       "PH-DM-DECLARATION-INVALID",
       "PH-DM-DECLARATION-INVALID",

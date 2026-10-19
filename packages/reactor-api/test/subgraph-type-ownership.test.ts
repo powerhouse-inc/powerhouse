@@ -1,6 +1,6 @@
 import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
-import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { documentModelSubgraphClass } from "../src/graphql/document-model-subgraph.js";
 import { inspectionTypeDefs } from "../src/graphql/inspection/schema.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import {
@@ -13,6 +13,7 @@ import { getGeneratedDocumentModelTypes } from "../src/utils/create-schema.js";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { DocumentNode } from "graphql";
+import { servedSubgraph } from "./utils/served-subgraph.js";
 
 const generated = getGeneratedDocumentModelTypes([]);
 
@@ -54,14 +55,18 @@ function makeModel(name: string): DocumentModelModule {
 }
 
 function modelTypeDefs(name: string): DocumentNode {
-  return new DocumentModelSubgraph(makeModel(name), {
-    reactorClient: {} as IReactorClient,
-  } as SubgraphArgs).typeDefs;
+  return servedSubgraph(
+    new (documentModelSubgraphClass(makeModel(name)))({
+      reactorClient: {} as IReactorClient,
+    } as SubgraphArgs),
+  ).typeDefs;
 }
 
-const reactorTypeDefs = new ReactorSubgraph({
-  reactorClient: {} as IReactorClient,
-} as SubgraphArgs).typeDefs;
+const reactorTypeDefs = servedSubgraph(
+  new ReactorSubgraph({
+    reactorClient: {} as IReactorClient,
+  } as SubgraphArgs),
+).typeDefs;
 
 describe("collectSubgraphClaims", () => {
   it("claims non-root types, non-root extensions and root fields", () => {

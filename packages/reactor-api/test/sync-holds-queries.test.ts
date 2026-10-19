@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
 import type { IAuthorizationService } from "../src/services/authorization.service.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 const testProtocol = (versions: number[]): PeerCapability => ({
   kind: "protocol",
@@ -103,7 +104,7 @@ describe("the syncHolds and peerAgreement queries", () => {
 
   const query = (name: "syncHolds" | "peerAgreement") =>
     (
-      subgraph.resolvers.Query as Record<
+      resolversOf(subgraph).Query as Record<
         string,
         (...args: unknown[]) => unknown
       >

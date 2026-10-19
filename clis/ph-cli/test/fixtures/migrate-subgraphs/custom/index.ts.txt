@@ -1,0 +1,34 @@
+import { BaseSubgraph, type SubgraphArgs } from "@powerhousedao/reactor-api";
+import { schema } from "./schema.js";
+import { extraExample } from "./extra-resolvers.js";
+
+export class ExampleSubgraph extends BaseSubgraph {
+  name = "example-custom";
+  typeDefs = schema;
+  resolvers = {
+    Query: { example: () => ({}) },
+    ExampleQueries: { example: extraExample },
+  };
+  hasSubscriptions = true;
+  path = "/example-custom";
+  additionalContextFields = {};
+  readonly cache = new Map<string, string>();
+
+  constructor(args: SubgraphArgs) {
+    super(args);
+    this.cache.set("ready", "yes");
+  }
+
+  async onSetup() {
+    await super.onSetup();
+    this.cache.set("setup", "yes");
+  }
+
+  async onDisconnect() {
+    this.cache.clear();
+  }
+
+  example() {
+    return this.cache.get("ready");
+  }
+}

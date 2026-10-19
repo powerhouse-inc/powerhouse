@@ -284,7 +284,7 @@ export type PowerhouseScalarName =
   | "Unknown"
   | "Upload";
 
-/** Catalog scalars only the reactor host declares. No document model or subgraph can reference one. */
+/** Catalog scalars only the reactor host declares. A subgraph can reference one; a document model cannot. */
 export type InternalScalarName = "JSONObject";
 
 /** Every catalog scalar, author-facing and internal. */
@@ -426,15 +426,15 @@ export type NamedGraphQLTypeDefinition =
   | InputTypeDefinition
   | UnionTypeDefinition;
 
-type CatalogScalarImplementationReference = {
-  [Name in PowerhouseScalarName]: {
+type CatalogScalarImplementationReference<TName extends CatalogScalarName> = {
+  [Name in TName]: {
     readonly name: Name;
     readonly implementation: `powerhouse.catalog#${Name}`;
   };
-}[PowerhouseScalarName];
+}[TName];
 
 export type CatalogScalarReferenceDefinition =
-  CatalogScalarImplementationReference & {
+  CatalogScalarImplementationReference<PowerhouseScalarName> & {
     readonly coercionProfile: "document-engineering-1.40";
   };
 
@@ -681,8 +681,9 @@ export type SubgraphEntryDefinition =
       readonly access: SubgraphEntryAccess;
     };
 
+/** A subgraph may also reference the internal scalars the host declares. */
 export type SubgraphScalarReferenceDefinition =
-  | (CatalogScalarImplementationReference & {
+  | (CatalogScalarImplementationReference<CatalogScalarName> & {
       readonly graphQLProfile: "legacy-graphql-default-v1";
     })
   | {

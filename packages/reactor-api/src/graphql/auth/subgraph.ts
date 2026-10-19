@@ -1,11 +1,31 @@
 import { ConsoleLogger } from "document-model";
 import { GraphQLError } from "graphql";
-import { gql } from "graphql-tag";
-import schemaSource from "./schema.graphql";
+import type { DocumentPermissionService } from "../../services/document-permission.service.js";
 import { requireOneOf } from "../argument-aliases.js";
 import { BaseSubgraph } from "../base-subgraph.js";
+import type { SchemaBuilder } from "../subgraph-schema.js";
 import type { SubgraphArgs } from "../types.js";
 import * as resolvers from "./resolvers.js";
+import { authMutations, authQueries, authSchema } from "./schema.js";
+
+function wirePermission<T extends { createdAt: Date; updatedAt: Date }>(
+  entry: T,
+): Omit<T, "createdAt" | "updatedAt"> & {
+  createdAt: string;
+  updatedAt: string;
+} {
+  return {
+    ...entry,
+    createdAt: entry.createdAt.toISOString(),
+    updatedAt: entry.updatedAt.toISOString(),
+  };
+}
+
+function wireOperationPermission<T extends { createdAt: Date }>(
+  entry: T,
+): Omit<T, "createdAt"> & { createdAt: string } {
+  return { ...entry, createdAt: entry.createdAt.toISOString() };
+}
 
 type DocumentArgs = {
   documentIdOrSlug?: string | null;
@@ -29,282 +49,221 @@ export class AuthSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "auth";
-  hasSubscriptions = false;
+  static override readonly subgraphName = authSchema.subgraphName;
 
-  typeDefs = gql(schemaSource);
-
-  resolvers = {
-    Query: {
-      documentAccess: async (
-        _parent: unknown,
-        args: DocumentArgs,
-        ctx: { user?: { address: string } },
-      ) => {
-        this.logger.debug("documentAccess(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.documentAccess(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in documentAccess: @error", error);
-          throw error;
-        }
-      },
-
-      userDocumentPermissions: async (
-        _parent: unknown,
-        _args: unknown,
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("userDocumentPermissions");
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        if (!ctx.user?.address) {
-          return [];
-        }
-        try {
-          return await resolvers.userDocumentPermissions(
-            this.documentPermissionService,
-            ctx.user.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in userDocumentPermissions: @error", error);
-          throw error;
-        }
-      },
-
-      operationPermissions: async (
-        _parent: unknown,
-        args: DocumentArgs & { operationType: string },
-        ctx: { user?: { address: string } },
-      ) => {
-        this.logger.debug("operationPermissions(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.operationPermissions(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in operationPermissions: @error", error);
-          throw error;
-        }
-      },
-
-      canExecuteOperation: async (
-        _parent: unknown,
-        args: DocumentArgs & { operationType: string },
-        ctx: { user?: { address: string } },
-      ) => {
-        this.logger.debug("canExecuteOperation(@args)", args);
-        try {
-          return await resolvers.canExecuteOperation(
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in canExecuteOperation: @error", error);
-          throw error;
-        }
-      },
-
-      documentProtection: async (
-        _parent: unknown,
-        args: DocumentArgs,
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("documentProtection(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.documentProtection(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in documentProtection: @error", error);
-          throw error;
-        }
-      },
-    },
-
-    Mutation: {
-      setDocumentProtection: async (
-        _parent: unknown,
-        args: DocumentArgs & { protected: boolean },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("setDocumentProtection(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.setDocumentProtection(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error("Error in setDocumentProtection: @error", error);
-          throw error;
-        }
-      },
-
-      transferDocumentOwnership: async (
-        _parent: unknown,
-        args: DocumentArgs & { newOwnerAddress: string },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("transferDocumentOwnership(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.transferDocumentOwnership(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in transferDocumentOwnership: @error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      grantDocumentPermission: async (
-        _parent: unknown,
-        args: DocumentArgs & { userAddress: string; permission: string },
-        ctx: {
-          user?: { address: string };
-        },
-      ) => {
-        this.logger.debug("grantDocumentPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          const resolved = await this.#withCanonicalDocumentArgs(args, ctx);
-          return await resolvers.grantDocumentPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            {
-              ...resolved,
-              permission: resolved.permission as "READ" | "WRITE" | "ADMIN",
+  static override getSchema(schema: SchemaBuilder<AuthSubgraph>) {
+    return [
+      schema.query("documentAccess", {
+        ...authQueries.documentAccess,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("documentAccess(@args)", args);
+          return subgraph.#withPermissions(
+            "documentAccess",
+            async (service) => {
+              const access = await resolvers.documentAccess(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              );
+              return {
+                ...access,
+                permissions: access.permissions.map(wirePermission),
+              };
             },
-            ctx.user?.address,
           );
-        } catch (error) {
-          this.logger.error("Error in grantDocumentPermission: @error", error);
-          throw error;
-        }
-      },
-
-      revokeDocumentPermission: async (
-        _parent: unknown,
-        args: DocumentArgs & { userAddress: string },
-        ctx: {
-          user?: { address: string };
         },
-      ) => {
-        this.logger.debug("revokeDocumentPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.revokeDocumentPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
+      }),
+      schema.query("documentProtection", {
+        ...authQueries.documentProtection,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("documentProtection(@args)", args);
+          return subgraph.#withPermissions(
+            "documentProtection",
+            async (service) =>
+              resolvers.documentProtection(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              ),
           );
-        } catch (error) {
-          this.logger.error("Error in revokeDocumentPermission: @error", error);
-          throw error;
-        }
-      },
-
-      // Operation Permission Mutations
-      grantOperationPermission: async (
-        _parent: unknown,
-        args: DocumentArgs & { operationType: string; userAddress: string },
-        ctx: {
-          user?: { address: string };
         },
-      ) => {
-        this.logger.debug("grantOperationPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.grantOperationPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
+      }),
+      schema.query("userDocumentPermissions", {
+        ...authQueries.userDocumentPermissions,
+        resolve: ({ subgraph, request }) => {
+          subgraph.logger.debug("userDocumentPermissions");
+          const address = request.user?.address;
+          return subgraph.#withPermissions(
+            "userDocumentPermissions",
+            async (service) =>
+              address
+                ? (
+                    await resolvers.userDocumentPermissions(service, address)
+                  ).map(wirePermission)
+                : [],
           );
-        } catch (error) {
-          this.logger.error("Error in grantOperationPermission: @error", error);
-          throw error;
-        }
-      },
-
-      revokeOperationPermission: async (
-        _parent: unknown,
-        args: DocumentArgs & { operationType: string; userAddress: string },
-        ctx: {
-          user?: { address: string };
         },
-      ) => {
-        this.logger.debug("revokeOperationPermission(@args)", args);
-        if (!this.documentPermissionService) {
-          throw new GraphQLError("DocumentPermissionService not available");
-        }
-        try {
-          return await resolvers.revokeOperationPermission(
-            this.documentPermissionService,
-            this.authorizationService,
-            await this.#withCanonicalDocumentArgs(args, ctx),
-            ctx.user?.address,
+      }),
+      schema.query("operationPermissions", {
+        ...authQueries.operationPermissions,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("operationPermissions(@args)", args);
+          return subgraph.#withPermissions(
+            "operationPermissions",
+            async (service) => {
+              const permissions = await resolvers.operationPermissions(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              );
+              return {
+                ...permissions,
+                userPermissions: permissions.userPermissions.map(
+                  wireOperationPermission,
+                ),
+              };
+            },
           );
-        } catch (error) {
-          this.logger.error(
-            "Error in revokeOperationPermission: @error",
-            error,
+        },
+      }),
+      schema.query("canExecuteOperation", {
+        ...authQueries.canExecuteOperation,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("canExecuteOperation(@args)", args);
+          return subgraph.#logged("canExecuteOperation", async () =>
+            resolvers.canExecuteOperation(
+              subgraph.authorizationService,
+              await subgraph.#withCanonicalDocumentArgs(args, request),
+              request.user?.address,
+            ),
           );
-          throw error;
-        }
-      },
-    },
-  };
+        },
+      }),
+      schema.mutation("setDocumentProtection", {
+        ...authMutations.setDocumentProtection,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("setDocumentProtection(@args)", args);
+          return subgraph.#withPermissions(
+            "setDocumentProtection",
+            async (service) =>
+              resolvers.setDocumentProtection(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              ),
+          );
+        },
+      }),
+      schema.mutation("transferDocumentOwnership", {
+        ...authMutations.transferDocumentOwnership,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("transferDocumentOwnership(@args)", args);
+          return subgraph.#withPermissions(
+            "transferDocumentOwnership",
+            async (service) =>
+              resolvers.transferDocumentOwnership(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              ),
+          );
+        },
+      }),
+      schema.mutation("grantDocumentPermission", {
+        ...authMutations.grantDocumentPermission,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("grantDocumentPermission(@args)", args);
+          return subgraph.#withPermissions(
+            "grantDocumentPermission",
+            async (service) =>
+              wirePermission(
+                await resolvers.grantDocumentPermission(
+                  service,
+                  subgraph.authorizationService,
+                  await subgraph.#withCanonicalDocumentArgs(args, request),
+                  request.user?.address,
+                ),
+              ),
+          );
+        },
+      }),
+      schema.mutation("revokeDocumentPermission", {
+        ...authMutations.revokeDocumentPermission,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("revokeDocumentPermission(@args)", args);
+          return subgraph.#withPermissions(
+            "revokeDocumentPermission",
+            async (service) =>
+              resolvers.revokeDocumentPermission(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              ),
+          );
+        },
+      }),
+      schema.mutation("grantOperationPermission", {
+        ...authMutations.grantOperationPermission,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("grantOperationPermission(@args)", args);
+          return subgraph.#withPermissions(
+            "grantOperationPermission",
+            async (service) =>
+              wireOperationPermission(
+                await resolvers.grantOperationPermission(
+                  service,
+                  subgraph.authorizationService,
+                  await subgraph.#withCanonicalDocumentArgs(args, request),
+                  request.user?.address,
+                ),
+              ),
+          );
+        },
+      }),
+      schema.mutation("revokeOperationPermission", {
+        ...authMutations.revokeOperationPermission,
+        resolve: ({ args, subgraph, request }) => {
+          subgraph.logger.debug("revokeOperationPermission(@args)", args);
+          return subgraph.#withPermissions(
+            "revokeOperationPermission",
+            async (service) =>
+              resolvers.revokeOperationPermission(
+                service,
+                subgraph.authorizationService,
+                await subgraph.#withCanonicalDocumentArgs(args, request),
+                request.user?.address,
+              ),
+          );
+        },
+      }),
+    ];
+  }
+
+  #withPermissions<T>(
+    field: string,
+    run: (service: DocumentPermissionService) => Promise<T>,
+  ): Promise<T> {
+    const service = this.documentPermissionService;
+    if (!service) {
+      throw new GraphQLError("DocumentPermissionService not available");
+    }
+    return this.#logged(field, () => run(service));
+  }
+
+  async #logged<T>(field: string, run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      this.logger.error(`Error in ${field}: @error`, error);
+      throw error;
+    }
+  }
 
   #withCanonicalDocumentArgs<T extends DocumentArgs>(args: T, ctx: object) {
     const { documentIdOrSlug, documentId, ...rest } = args;
@@ -321,7 +280,7 @@ export class AuthSubgraph extends BaseSubgraph {
     );
   }
 
-  onSetup(): Promise<void> {
+  override onSetup(): Promise<void> {
     this.logger.debug("Setting up AuthSubgraph");
     return Promise.resolve();
   }

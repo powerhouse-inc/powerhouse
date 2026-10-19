@@ -13,6 +13,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectDirOf,
 } from "utils";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
@@ -50,11 +51,11 @@ export async function tsMorphGenerateProcessor(args: {
   const kebabCaseName = kebabCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
+  const projectDir = projectDirOf(project);
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
-    "processors",
+    path.join(projectDir, "processors"),
   );
-  const projectDir = processorsDir.getParentOrThrow().getPath();
   const processorsDirPath = processorsDir.getPath();
   const dirPath = path.join(processorsDirPath, kebabCaseName);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);

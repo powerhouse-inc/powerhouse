@@ -23,9 +23,10 @@ import {
   getOrCreateDirectory,
   getOrCreateSourceFile,
   getPieceMetadata,
-  PIECES_DIR,
   pieceDirNameOf,
   pieceEntryPath,
+  PIECES_DIR,
+  projectDirOf,
   readPiecesList,
 } from "utils";
 import type {
@@ -168,11 +169,15 @@ async function addPartToPiece(v: {
 }
 
 function pieceDirPaths(project: Project, kebabCaseName: string) {
-  const { directory: piecesDir } = getOrCreateDirectory(project, PIECES_DIR);
+  const projectDir = projectDirOf(project);
+  const { directory: piecesDir } = getOrCreateDirectory(
+    project,
+    path.join(projectDir, PIECES_DIR),
+  );
   const piecesDirPath = piecesDir.getPath();
   const pieceDirPath = path.join(piecesDirPath, kebabCaseName);
   return {
-    projectDir: piecesDir.getParentOrThrow().getPath(),
+    projectDir,
     piecesDirPath,
     pieceDirPath,
     libDirPath: path.join(pieceDirPath, "lib"),
@@ -342,9 +347,12 @@ export async function syncPiecesRegistration(args: {
   only?: string;
 }): Promise<{ ids: string[] }> {
   const { project, packageName, only } = args;
-  const { directory: piecesDir } = getOrCreateDirectory(project, PIECES_DIR);
+  const projectDir = projectDirOf(project);
+  const { directory: piecesDir } = getOrCreateDirectory(
+    project,
+    path.join(projectDir, PIECES_DIR),
+  );
   const piecesDirPath = piecesDir.getPath();
-  const projectDir = piecesDir.getParentOrThrow().getPath();
   project.addSourceFilesAtPaths(path.join(piecesDirPath, "*", "index.ts"));
 
   const dirNames = piecesDir

@@ -52,3 +52,7 @@ After this command:
 Model identities, versions, upgrades, and stored documents of `Invoice` do not change.
 
 A package without code-first definitions needs no `definitionSources` field.
+
+## Subgraphs use one class API
+
+This choice applies to document models only. A subgraph extends `BaseSubgraph<Ctx>`, declares `static override readonly subgraphName`, and returns typed entries or one `schema.graphql(...)` result that wraps existing SDL from `static override getSchema`. Generate it with `ph generate subgraph --name <name>`. See [Subgraph classes](../../03-GraphQLData/08-SubgraphClasses.md).

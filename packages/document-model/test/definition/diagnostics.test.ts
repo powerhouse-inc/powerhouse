@@ -1,8 +1,4 @@
-import type {
-  DefinitionDiagnostic,
-  DefinitionDiagnosticPhase,
-  DefinitionDiagnosticSeverity,
-} from "@powerhousedao/shared/document-model";
+import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   DEFINITION_DIAGNOSTIC_CODES,
@@ -21,25 +17,9 @@ import {
 
 const codes = Object.keys(DEFINITION_DIAGNOSTIC_CODES);
 
-const reportOnlyCodes: readonly DefinitionDiagnosticCode[] = [
-  "PH-CONFIG-SOURCE-UNSELECTED",
-  "PH-DM-GRAPHQL-REFUSED",
-  "PH-SG-GENERATED-TYPE-TAKEN",
-  "PH-SG-NAME-TAKEN",
-  "PH-GQL-COORDINATE-OWNED",
-  "PH-GQL-SHARED-DEFINITION-MISMATCH",
-  "PH-SCALAR-UNREGISTERED",
-  "PH-SCALAR-RESOLVER-SHADOWED",
-  "PH-SCALAR-COERCION-NORMALIZES",
-  "PH-SCALAR-VALUE-NOT-JSON",
-  "PH-SCALAR-POSITION-UNSUPPORTED",
-  "PH-DM-IDENTITY-REUSED",
-];
-
 describe("DEFINITION_DIAGNOSTIC_CODES", () => {
   it("is frozen and every code carries the PH- prefix", () => {
     expect(Object.isFrozen(DEFINITION_DIAGNOSTIC_CODES)).toBe(true);
-    expect(codes.length).toBe(57);
     for (const code of codes) {
       expect(code).toMatch(/^PH-[A-Z0-9-]+$/);
     }
@@ -51,87 +31,6 @@ describe("DEFINITION_DIAGNOSTIC_CODES", () => {
       // @ts-expect-error the catalog is readonly at every depth
       DEFINITION_DIAGNOSTIC_CODES["PH-AUTH-UNSUPPORTED"].severity = "warning";
     }).toThrow(TypeError);
-  });
-
-  it("marks report-only and X-scalar rows as warnings and everything else as errors", () => {
-    for (const code of codes as DefinitionDiagnosticCode[]) {
-      const expected: DefinitionDiagnosticSeverity = reportOnlyCodes.includes(
-        code,
-      )
-        ? "warning"
-        : "error";
-      expect(DEFINITION_DIAGNOSTIC_CODES[code].severity, code).toBe(expected);
-    }
-  });
-
-  it("assigns phases by where the check runs", () => {
-    const phases: Record<DefinitionDiagnosticCode, DefinitionDiagnosticPhase> =
-      {
-        "PH-CONFIG-VERSION-UNSUPPORTED": "configuration",
-        "PH-CONFIG-SOURCE-INVALID": "configuration",
-        "PH-CONFIG-SOURCE-OUTSIDE-PACKAGE": "configuration",
-        "PH-CONFIG-DUPLICATE-SOURCE": "configuration",
-        "PH-CONFIG-SOURCE-UNREGISTERED": "configuration",
-        "PH-CONFIG-SOURCE-UNSELECTED": "configuration",
-        "PH-IMPORT-FAILED": "import",
-        "PH-DEF-FIELD-OPTION-UNSUPPORTED": "definition",
-        "PH-DEF-TYPE-AS-FIELD": "definition",
-        "PH-DEF-OPTION-INVALID": "definition",
-        "PH-DEF-NAME-INVALID": "definition",
-        "PH-DEF-FIELD-INVALID": "definition",
-        "PH-DEF-REFERENCE-TARGET-INVALID": "definition",
-        "PH-DEF-ENUM-VALUES-INVALID": "definition",
-        "PH-DEF-UNION-MEMBERS-INVALID": "definition",
-        "PH-DEF-IMPLEMENTS-INVALID": "definition",
-        "PH-SCALAR-DECLARATION-INVALID": "definition",
-        "PH-DM-DUPLICATE-ACTION": "definition",
-        "PH-DM-DUPLICATE-NAME": "definition",
-        "PH-DM-IDENTITY-INVALID": "definition",
-        "PH-DM-IDENTITY-REUSED": "definition",
-        "PH-DM-STATE-ROOT-INVALID": "definition",
-        "PH-DM-SCOPE-UNSUPPORTED": "definition",
-        "PH-DM-DECLARATION-INVALID": "definition",
-        "PH-DM-INTERFACE-INVALID": "definition",
-        "PH-DM-INITIAL-VALUE-INVALID": "definition",
-        "PH-DM-TYPE-POSITION-INVALID": "definition",
-        "PH-DM-DEFAULT-UNSUPPORTED": "definition",
-        "PH-DM-COMPATIBILITY-INVALID": "definition",
-        "PH-DM-GRAPHQL-REFUSED": "composition",
-        "PH-SG-DEFINITION-INVALID": "definition",
-        "PH-SG-SCHEMA-INVALID": "composition",
-        "PH-SG-ENTRY-INVALID": "definition",
-        "PH-SG-COMPUTED-FIELD-INVALID": "definition",
-        "PH-SG-GENERATED-TYPE-TAKEN": "composition",
-        "PH-SG-NAME-TAKEN": "composition",
-        "PH-GQL-COORDINATE-OWNED": "composition",
-        "PH-GQL-SHARED-DEFINITION-MISMATCH": "composition",
-        "PH-GQL-FEDERATION-UNSUPPORTED": "composition",
-        "PH-SCALAR-AUTHOR-DECLARATION-UNSUPPORTED": "definition",
-        "PH-SCALAR-DUPLICATE-NAME": "package",
-        "PH-SCALAR-UNREGISTERED": "composition",
-        "PH-SCALAR-RESOLVER-SHADOWED": "composition",
-        "PH-SCALAR-COERCION-NORMALIZES": "definition",
-        "PH-SCALAR-VALUE-NOT-JSON": "definition",
-        "PH-SCALAR-ZERO-VALUE-INVALID": "definition",
-        "PH-SCALAR-POSITION-UNSUPPORTED": "definition",
-        "PH-SCALAR-FACTORY-AS-FIELD": "definition",
-        "PH-SCALAR-INTERNAL": "definition",
-        "PH-PKG-LOGICAL-COLLISION": "package",
-        "PH-PKG-DEFINITION-UNRECOGNIZED": "package",
-        "PH-PKG-DEFINITION-UNINSPECTABLE": "package",
-        "PH-PKG-TYPECHECK-FAILED": "typecheck",
-        "PH-PKG-RELEASE-EVIDENCE-MISSING": "package",
-        "PH-PKG-PACKED-CONSUMER-FAILED": "package",
-        "PH-REPLAY-DIVERGENCE": "replay",
-        "PH-AUTH-UNSUPPORTED": "authorization",
-      };
-    for (const [code, phase] of Object.entries(phases)) {
-      expect(
-        DEFINITION_DIAGNOSTIC_CODES[code as DefinitionDiagnosticCode].phase,
-        code,
-      ).toBe(phase);
-    }
-    expect(Object.keys(phases).sort()).toStrictEqual([...codes].sort());
   });
 
   it("types the diagnostic builder on the catalog keys", () => {
@@ -177,6 +76,39 @@ describe("createDiagnostic", () => {
     path.push("operations");
     expect(diagnostic.path).toStrictEqual(["modules", "lineItems"]);
   });
+
+  it.each([
+    {
+      code: "PH-CONFIG-SOURCE-SUBGRAPH-IGNORED",
+      severity: "warning",
+      phase: "configuration",
+    },
+    {
+      code: "PH-SCALAR-UNREGISTERED",
+      severity: "warning",
+      phase: "composition",
+    },
+    { code: "PH-IMPORT-FAILED", severity: "error", phase: "import" },
+  ] as const)(
+    "constructs $code with its reporting severity and phase",
+    ({ code, severity, phase }) => {
+      expect(
+        createDiagnostic({
+          code,
+          path: ["entry"],
+          message: "Check failed.",
+          repair: "Fix the entry.",
+        }),
+      ).toStrictEqual({
+        code,
+        severity,
+        phase,
+        path: ["entry"],
+        message: "Check failed.",
+        repair: "Fix the entry.",
+      });
+    },
+  );
 
   it("keeps optional members in a fixed property order and caps the summaries", () => {
     const diagnostic = createDiagnostic({

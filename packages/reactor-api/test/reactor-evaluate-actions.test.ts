@@ -26,6 +26,7 @@ import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import type { IAuthorizationService } from "../src/services/authorization.service.js";
 import { createTestSigner } from "./utils/test-signer.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 const WRITER = "0xWriter";
 const OUTSIDER = "0xOutsider";
@@ -405,7 +406,7 @@ describe("the creator carve-out over GraphQL", () => {
     ctx: Context,
   ): Promise<{ allAllowed: boolean }> {
     const query = (
-      subgraph.resolvers.Query as Record<
+      resolversOf(subgraph).Query as Record<
         string,
         (
           parent: unknown,

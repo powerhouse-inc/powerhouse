@@ -71,28 +71,37 @@ Processors and subgraphs do not build a client. `@powerhousedao/reactor-api` bui
 
 **Processors** get a client on the host module as `module.attachments`. It is trusted and makes no caller check, because a processor acts for no caller.
 
-**Subgraphs** call `attachmentsFor(ctx)` in a resolver: `subgraph.attachmentsFor(ctx)` in the generated `getResolvers(subgraph)`, `this.attachmentsFor(ctx)` in a class-field resolver. It returns an `IAttachmentClient` bound to the request's caller, `ctx.user`. Calls within one request get the same client.
+**Subgraphs** call `subgraph.attachmentsFor(request)` inside a typed resolver or inside a resolver callback returned by the `schema.graphql` resolver factory. The client acts as `request.user`. Calls within one request share a client.
 
 ```typescript
-import type { AttachmentRef } from "@powerhousedao/reactor";
-import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
 
-export const getResolvers = (subgraph: BaseSubgraph) => ({
-  Query: {
-    attachmentText: async (
-      _parent: unknown,
-      args: { documentId: string; ref: AttachmentRef },
-      ctx: Context,
-    ) => {
-      const attachments = subgraph.attachmentsFor(ctx);
-      const { body } = await attachments.download({
-        documentId: args.documentId,
-        ref: args.ref,
-      });
-      return new Response(body).text();
-    },
-  },
-});
+export class AttachmentTextSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "attachment-text";
+
+  static override getSchema(schema: SchemaBuilder<AttachmentTextSubgraph>) {
+    return [
+      schema.query("attachmentText", {
+        args: {
+          documentId: ph.String({ required: true }),
+          ref: ph.AttachmentRef({ required: true }),
+        },
+        returns: ph.String({ required: true }),
+        resolve: async ({ args, subgraph, request }) => {
+          const { body } = await subgraph
+            .attachmentsFor(request)
+            .download({ documentId: args.documentId, ref: args.ref });
+          return new Response(body).text();
+        },
+      }),
+    ];
+  }
+}
 ```
 
 The client is the authorization check, so the resolver needs no `assertCanRead` before it:
@@ -241,9 +250,7 @@ await Promise.all([
   client.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
-  attachments.reserve(results.options, (handle) =>
-    handle.send(results.blob),
-  ),
+  attachments.reserve(results.options, (handle) => handle.send(results.blob)),
 ]);
 ```
 
@@ -322,54 +329,54 @@ setAgentImageOperation(state, action) {
 
 ### `IAttachmentService`
 
-| Method              | Returns                       | Description                                                                                              |
-| ------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `reserve(options)`  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                               |
-| `stat(ref, { documentId }?)` | `Promise<AttachmentHeader>` | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown or, on a remote service, when no `documentId` is given. |
-| `get(ref, { documentId, signal }?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. A remote service requires `documentId`. |
+| Method                              | Returns                       | Description                                                                                                                                     |
+| ----------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reserve(options)`                  | `Promise<IAttachmentUpload>`  | Reserve a new attachment slot and return an upload handle.                                                                                      |
+| `stat(ref, { documentId }?)`        | `Promise<AttachmentHeader>`   | Look up metadata for an existing ref. Throws `AttachmentNotFound` if the ref is unknown or, on a remote service, when no `documentId` is given. |
+| `get(ref, { documentId, signal }?)` | `Promise<AttachmentResponse>` | Retrieve the bytes. Re-fetches transparently if the data was evicted. A remote service requires `documentId`.                                   |
 
 ### `IAttachmentUpload`
 
-| Member          | Type                                                              | Description                                                                                                       |
-| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `reservationId` | `string`                                                          | Unique identifier for this reservation.                                                                           |
-| `ref`           | `AttachmentRef \| null`                                           | The ref this upload will produce. Set immediately in hash-first mode; `null` in upload-first until `send()` resolves. |
-| `expiresAtUtc`  | `string`                                                          | ISO 8601 UTC reservation expiry (readonly). Use it to bound retry windows.                                        |
-| `send(data)`    | `(ReadableStream<Uint8Array> \| Blob) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic. |
+| Member          | Type                                                                      | Description                                                                                                           |
+| --------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `reservationId` | `string`                                                                  | Unique identifier for this reservation.                                                                               |
+| `ref`           | `AttachmentRef \| null`                                                   | The ref this upload will produce. Set immediately in hash-first mode; `null` in upload-first until `send()` resolves. |
+| `expiresAtUtc`  | `string`                                                                  | ISO 8601 UTC reservation expiry (readonly). Use it to bound retry windows.                                            |
+| `send(data)`    | `(ReadableStream<Uint8Array> \| Blob) => Promise<AttachmentUploadResult>` | Stream the bytes through the handle. Returns `{ hash, ref, header }`. Dedup against existing hashes is automatic.     |
 
 ### `IAttachmentClient`
 
-| Method                    | Returns                           | Description                                                                                                                                                                                                                                   |
-| ------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Method                    | Returns                           | Description                                                                                                                                                                     |
+| ------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `preprocess(file, opts?)` | `Promise<PreprocessResult>`       | Read and hash a `Blob` up front. Returns the ref, hash, declared size, hash-first reserve options, and the file itself as `blob`. `opts` may override `{ fileName, mimeType }`. |
-| `reserve(options, send)`  | `Promise<AttachmentUploadResult>` | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).                                                                         |
+| `reserve(options, send)`  | `Promise<AttachmentUploadResult>` | Reserve a hash-first slot and run `send(handle)`. Short-circuits to the existing ref if the hash is already stored (`AttachmentAlreadyExists` is handled internally).           |
 
 ### Key types
 
-| Type                                  | Shape                                                                                                                                                                                     |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentRef`                       | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                                                                                     |
-| `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                               |
-| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                    |
-| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                          |
+| Type                                  | Shape                                                                                                                                                                                                                                                                 |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentRef`                       | `` `attachment://v${number}:${string}` `` — opaque ref string used in document state.                                                                                                                                                                                 |
+| `ReserveAttachmentOptions`            | `UploadFirstReserveAttachmentOptions \| HashFirstReserveAttachmentOptions` — discriminated on `clientHash`.                                                                                                                                                           |
+| `UploadFirstReserveAttachmentOptions` | `{ mimeType: string; fileName: string; extension?: string \| null }` — no `clientHash`; ref known only after `send()`.                                                                                                                                                |
+| `HashFirstReserveAttachmentOptions`   | `{ mimeType: string; fileName: string; extension?: string \| null; clientHash: AttachmentHash; sizeBytes: number }` — ref known at reserve time.                                                                                                                      |
 | `PreprocessResult`                    | `{ ref: AttachmentRef; hash: AttachmentHash; sizeBytes: number; options: HashFirstReserveAttachmentOptions; blob: Blob; data: ReadableStream<Uint8Array>; stream: () => ReadableStream<Uint8Array> }` — `data` and `stream` are deprecated aliases of `blob.stream()` |
-| `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                  |
-| `AttachmentStatus`                    | `"available" \| "evicted" \| "pending"` — `pending` is synthesized at query time from a live hash-first reservation; the bytes are not uploaded yet.                                       |
-| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status: AttachmentStatus; source; createdAtUtc; lastAccessedAtUtc; expiresAtUtc: string \| null }` — `expiresAtUtc` is `null` for committed attachments and carries the reservation expiry while `pending`. |
-| `AttachmentResponse`                  | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                                                                                          |
+| `AttachmentUploadResult`              | `{ hash: AttachmentHash; ref: AttachmentRef; header: AttachmentHeader }`                                                                                                                                                                                              |
+| `AttachmentStatus`                    | `"available" \| "evicted" \| "pending"` — `pending` is synthesized at query time from a live hash-first reservation; the bytes are not uploaded yet.                                                                                                                  |
+| `AttachmentHeader`                    | `{ hash; mimeType; fileName; sizeBytes; extension; status: AttachmentStatus; source; createdAtUtc; lastAccessedAtUtc; expiresAtUtc: string \| null }` — `expiresAtUtc` is `null` for committed attachments and carries the reservation expiry while `pending`.        |
+| `AttachmentResponse`                  | `{ header: AttachmentHeader; body: ReadableStream<Uint8Array> }`                                                                                                                                                                                                      |
 
 ### Errors
 
-| Class                     | When it is thrown                                                                                                                                         |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know, or one the caller may not read through the named document (the server answers both with the same 404). |
-| `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                        |
-| `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                              |
-| `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                             |
-| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading, with a header built from the caller's own reserve options. |
+| Class                     | When it is thrown                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AttachmentNotFound`      | `stat(ref)` or `get(ref)` called with a ref the store does not know, or one the caller may not read through the named document (the server answers both with the same 404).                                                                                                                                                                                          |
+| `InvalidAttachmentRef`    | A string passed where a ref is expected does not match `attachment://v<N>:<hash>`.                                                                                                                                                                                                                                                                                   |
+| `UploadTooLarge`          | `upload.send()` exceeded the server's configured byte cap. Maps to HTTP 413.                                                                                                                                                                                                                                                                                         |
+| `ReservationNotFound`     | `upload.send()` after the reservation expired or was deleted.                                                                                                                                                                                                                                                                                                        |
+| `AttachmentAlreadyExists` | Hash-first `reserve()` for content whose hash is already stored. The client's `reserve()` catches this and returns the existing ref instead of uploading, with a header built from the caller's own reserve options.                                                                                                                                                 |
 | `AttachmentPending`       | `get(ref)` for a hash that is reserved but whose bytes have not finished uploading. Carries `readonly hash`, `readonly expiresAtUtc: string`, and `readonly metadata?: { mimeType; fileName; sizeBytes }` so the caller can show the declared size and retry timing. Intentionally not a subclass of `AttachmentNotFound` — pending is "retry later", not "unknown". |
-| `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                           |
-| `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                        |
+| `HashMismatch`            | Hash-first `send()` whose uploaded bytes do not match the claimed `clientHash`.                                                                                                                                                                                                                                                                                      |
+| `SizeMismatch`            | Hash-first `send()` whose actual byte count differs from the declared `sizeBytes`.                                                                                                                                                                                                                                                                                   |
 
 A subgraph's client can also throw `AttachmentAccessUnavailable`, `AttachmentAccessFailed`, and `AuthenticationRequiredError`, all from `@powerhousedao/reactor-api`. See [Inside the switchboard](#inside-the-switchboard).
 
@@ -385,16 +392,16 @@ Attachment bytes are stored through a pluggable, provider-neutral backend (`IAtt
 
 Filesystem is the default and requires no configuration. S3 is enabled per Switchboard environment exclusively through environment variables:
 
-| Variable | Required | Meaning |
-| --- | --- | --- |
-| `PH_ATTACHMENT_STORAGE` | — | `s3` enables S3; absent or `filesystem` keeps current behavior. |
-| `PH_ATTACHMENT_S3_ENDPOINT` | in S3 mode | HTTPS endpoint of the S3-compatible provider. |
-| `PH_ATTACHMENT_S3_REGION` | in S3 mode | Provider region. |
-| `PH_ATTACHMENT_S3_BUCKET` | in S3 mode | Private bucket name. |
-| `PH_ATTACHMENT_S3_ACCESS_KEY_ID` / `PH_ATTACHMENT_S3_SECRET_ACCESS_KEY` | in S3 mode | Permanent credentials; available only to Switchboard, never to clients. |
-| `S3_ATTACHMENT_PREFIX` | no | Object key prefix, default `attachments`. |
-| `PH_ATTACHMENT_S3_FORCE_PATH_STYLE` | no | `true` for path-style addressing, default `false`. |
-| `PH_ATTACHMENT_S3_UPLOAD_TTL_SECONDS` / `PH_ATTACHMENT_S3_DOWNLOAD_TTL_SECONDS` | no | Presigned URL lifetimes, defaults 900 / 300 seconds. |
+| Variable                                                                        | Required   | Meaning                                                                 |
+| ------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------- |
+| `PH_ATTACHMENT_STORAGE`                                                         | —          | `s3` enables S3; absent or `filesystem` keeps current behavior.         |
+| `PH_ATTACHMENT_S3_ENDPOINT`                                                     | in S3 mode | HTTPS endpoint of the S3-compatible provider.                           |
+| `PH_ATTACHMENT_S3_REGION`                                                       | in S3 mode | Provider region.                                                        |
+| `PH_ATTACHMENT_S3_BUCKET`                                                       | in S3 mode | Private bucket name.                                                    |
+| `PH_ATTACHMENT_S3_ACCESS_KEY_ID` / `PH_ATTACHMENT_S3_SECRET_ACCESS_KEY`         | in S3 mode | Permanent credentials; available only to Switchboard, never to clients. |
+| `S3_ATTACHMENT_PREFIX`                                                          | no         | Object key prefix, default `attachments`.                               |
+| `PH_ATTACHMENT_S3_FORCE_PATH_STYLE`                                             | no         | `true` for path-style addressing, default `false`.                      |
+| `PH_ATTACHMENT_S3_UPLOAD_TTL_SECONDS` / `PH_ATTACHMENT_S3_DOWNLOAD_TTL_SECONDS` | no         | Presigned URL lifetimes, defaults 900 / 300 seconds.                    |
 
 An incomplete or invalid S3 configuration fails startup loudly; S3 mode never falls back to filesystem silently. Object keys are `<prefix>/<first2>/<next2>/<sha256>` — the same content addressing as the filesystem layout.
 

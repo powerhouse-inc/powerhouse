@@ -43,6 +43,6 @@ export const generateDocumentModelCmd = command({
     const { startGenerateDocumentModel } =
       await import("../services/generate-document-model.js");
     await startGenerateDocumentModel(args, process.cwd());
-    process.exit(0);
+    process.exit();
   },
 });

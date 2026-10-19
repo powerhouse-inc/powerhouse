@@ -22,17 +22,24 @@ export function getDefaultProjectOptions(tsConfigFilePath: string) {
   };
 }
 
-/** Instantiates a ts-morph Project using the default typescript config and nearest tsconfig.json file */
+/** Instantiates a ts-morph Project from `<projectDir>/tsconfig.json` with the default typescript config */
 export function buildTsMorphProject(projectDir: string) {
-  /* In general ts-morph struggles when its instance is running in a different directory to the tsconfig.json file it's using */
-  process.chdir(projectDir);
-  const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
-  const project = new Project({
+  return new Project({
     ...DEFAULT_PROJECT_OPTIONS,
-    tsConfigFilePath,
+    tsConfigFilePath: path.resolve(projectDir, "tsconfig.json"),
     /* This avoids adding many files that are referenced by a given tsconfig in a monorepo
      * Probably only relevant for internal testing in this monorepo */
     skipFileDependencyResolution: true,
   });
-  return project;
+}
+
+/** The directory of the tsconfig.json the project was built from; codegen resolves project paths against it. */
+export function projectDirOf(project: Project): string {
+  const { configFilePath } = project.getCompilerOptions();
+  if (typeof configFilePath !== "string") {
+    throw new Error(
+      "Codegen needs a ts-morph Project built from a tsconfig.json, as buildTsMorphProject does.",
+    );
+  }
+  return path.dirname(configFilePath);
 }

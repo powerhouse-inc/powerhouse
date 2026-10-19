@@ -12,22 +12,15 @@
  * (namespace under any alias, default-nested) — and reject everything else.
  * The table below runs against the shared predicate and against each
  * loader's own extraction path.
- *
- * Generator half of the contract: codegen emits
- *   export * as <ClassName> from "./<dir>/index.js";
- * (`makeSubgraphsIndexFile`), pinned by
- * packages/codegen/src/file-builders/subgraphs.test.ts. The "generated
- * aggregate" fixture and the composed vite test below encode exactly that
- * shape; if the emitted shape changes, both files change in the same commit.
  */
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { ph } from "document-model";
+import type { ILogger } from "document-model";
 import type { ViteDevServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
-import { defineSubgraph } from "../src/graphql/define-subgraph.js";
+import { SUBGRAPH_PROTOCOL } from "../src/graphql/subgraph-protocol.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
 import { isSubgraphClass } from "../src/graphql/utils.js";
 import { extractSubgraphsFromModule } from "../src/packages/http-loader.js";
@@ -38,6 +31,8 @@ import {
   VitePackageLoader,
   startViteServer,
 } from "../src/packages/vite-loader.mjs";
+import { makeHarnessLogger } from "./utils/graphql-manager-harness.js";
+import { sdlBase } from "./utils/sdl-base.js";
 
 type SubgraphsExport = Record<string, Record<string, SubgraphClass>>;
 
@@ -55,20 +50,12 @@ vi.mock("../src/packages/util.js", async (importOriginal) => {
   return { ...actual, loadSubgraphs: utilMocks.loadSubgraphs };
 });
 
-// Subgraph classes extending the host's own BaseSubgraph: the identity path.
 class StatementsSubgraph extends BaseSubgraph {}
 class LedgerSubgraph extends BaseSubgraph {}
 
-const TasksSubgraph = defineSubgraph({
-  name: "tasks",
-  schemaKind: "typed",
-  entries: (build) => [
-    build.query("ping", {
-      returns: ph.String({ required: true }),
-      resolve: () => "pong",
-    }),
-  ],
-});
+class TasksSubgraph extends sdlBase("type Query { ping: String! }") {
+  static override readonly subgraphName = "tasks";
+}
 
 // A different copy of the base class with the same name: what a project
 // served by the vite dev server produces when it resolves reactor-api from
@@ -76,6 +63,23 @@ const TasksSubgraph = defineSubgraph({
 class ForeignBase {}
 Object.defineProperty(ForeignBase, "name", { value: "BaseSubgraph" });
 class ForeignCopySubgraph extends ForeignBase {}
+
+class SubgraphRegistry {
+  ForeignCopySubgraph = ForeignCopySubgraph;
+  TasksSubgraph = TasksSubgraph;
+}
+
+const NamedLegacy = (() => {
+  class BaseSubgraph extends ForeignBase {}
+  return BaseSubgraph;
+})();
+const Framework = BaseSubgraph;
+const NamedModern = (() => {
+  class BaseSubgraph extends Framework {
+    static override readonly subgraphName = "named-base";
+  }
+  return BaseSubgraph;
+})();
 
 // Junk the rule must reject: callables and classes that are not subgraphs.
 class Unrelated {}
@@ -92,9 +96,7 @@ type Fixture = {
 
 const fixtures: Fixture[] = [
   {
-    // The shape codegen's makeSubgraphsIndexFile emits — see the header
-    // comment and packages/codegen/src/file-builders/subgraphs.test.ts.
-    name: "generated aggregate: namespace aliased to the class name",
+    name: "published aggregate: namespace aliased to the class name",
     module: {
       StatementsSubgraph: { StatementsSubgraph },
       LedgerSubgraph: { LedgerSubgraph },
@@ -108,23 +110,22 @@ const fixtures: Fixture[] = [
     expected: [StatementsSubgraph],
   },
   {
-    // The ordinary re-export the old vite rule also dropped.
-    name: "direct named re-export of the class",
+    name: "generated barrel: direct named export of the class",
     module: { StatementsSubgraph },
     expected: [StatementsSubgraph],
   },
   {
-    name: "code-first namespace under an arbitrary alias",
+    name: "class subgraph namespace under an arbitrary alias",
     module: { tasks: { TasksSubgraph } },
     expected: [TasksSubgraph],
   },
   {
-    name: "code-first direct named export beside a schema-first one",
+    name: "class subgraph direct named export beside an old-style one",
     module: { TasksSubgraph, StatementsSubgraph },
     expected: [TasksSubgraph, StatementsSubgraph],
   },
   {
-    name: "code-first direct export under a different key",
+    name: "class subgraph direct export under a different key",
     module: { Renamed: TasksSubgraph },
     expected: [TasksSubgraph],
   },
@@ -139,12 +140,12 @@ const fixtures: Fixture[] = [
     expected: [StatementsSubgraph, LedgerSubgraph],
   },
   {
-    name: "code-first default export",
+    name: "class subgraph default export",
     module: { default: TasksSubgraph },
     expected: [TasksSubgraph],
   },
   {
-    name: "default-exported object mixing code-first and schema-first",
+    name: "default-exported object mixing class and old-style subgraphs",
     module: { default: { TasksSubgraph, StatementsSubgraph } },
     expected: [TasksSubgraph, StatementsSubgraph],
   },
@@ -152,6 +153,21 @@ const fixtures: Fixture[] = [
     name: "class extending a package-local copy of BaseSubgraph",
     module: { ForeignCopySubgraph: { ForeignCopySubgraph } },
     expected: [ForeignCopySubgraph],
+  },
+  {
+    name: "class instance holding an old-style and a class subgraph",
+    module: { registry: new SubgraphRegistry() },
+    expected: [ForeignCopySubgraph, TasksSubgraph],
+  },
+  {
+    name: "default-exported class instance holding subgraphs",
+    module: { default: new SubgraphRegistry() },
+    expected: [ForeignCopySubgraph, TasksSubgraph],
+  },
+  {
+    name: "old-style and class subgraphs that are themselves named BaseSubgraph",
+    module: { NamedLegacy, NamedModern },
+    expected: [NamedLegacy, NamedModern],
   },
   {
     name: "same class reachable as named export and inside a namespace: once",
@@ -162,7 +178,7 @@ const fixtures: Fixture[] = [
     expected: [StatementsSubgraph],
   },
   {
-    name: "code-first class as named export, in a namespace and in a default object: once",
+    name: "class subgraph as named export, in a namespace and in a default object: once",
     module: {
       TasksSubgraph,
       tasks: { TasksSubgraph },
@@ -177,10 +193,9 @@ const fixtures: Fixture[] = [
     expected: [],
   },
   {
-    name: "junk exports: constants, helpers, unrelated classes, the base class and the factory",
+    name: "junk exports: constants, helpers, unrelated classes and the base class",
     module: {
       BaseSubgraph,
-      defineSubgraph,
       VERSION: "1.0.0",
       config: { x: 1 },
       helper,
@@ -255,9 +270,153 @@ describe("the unified predicate (extractSubgraphs)", () => {
     ]);
   });
 
-  it("accepts a code-first class by ancestry, not by its class name", () => {
-    expect(TasksSubgraph.name).toBe("CodeFirstSubgraph");
-    expect(isSubgraphClass(TasksSubgraph)).toBe(true);
+  it("accepts a class from another copy of reactor-api by its protocol, not by ancestry", () => {
+    class OtherCopySubgraph {
+      static readonly subgraphName = "other-copy";
+      static [SUBGRAPH_PROTOCOL]() {
+        return { version: 1 };
+      }
+    }
+    expect(isSubgraphClass(OtherCopySubgraph)).toBe(true);
+    expect(extractSubgraphs({ OtherCopySubgraph })).toEqual([
+      OtherCopySubgraph,
+    ]);
+  });
+});
+
+describe("a nameless class among the exports", () => {
+  abstract class SharedBase extends sdlBase("type Query { shared: String }") {}
+  class Invoices extends SharedBase {
+    static override readonly subgraphName = "invoices";
+  }
+
+  function logged(logger: ILogger): unknown[][] {
+    return vi.mocked(logger.info).mock.calls;
+  }
+
+  it("is left out as a shared base when an exported subgraph extends it, and logged once per package", () => {
+    const logger = makeHarnessLogger();
+    const context = { packageName: "@acme/invoices", logger };
+    expect(extractSubgraphs({ SharedBase, Invoices }, context)).toEqual([
+      Invoices,
+    ]);
+    expect(extractSubgraphs({ SharedBase, Invoices }, context)).toEqual([
+      Invoices,
+    ]);
+    expect(logged(logger)).toEqual([
+      [
+        "Treating @base in @package as a shared subgraph base: it has no static subgraphName, and @child extends it",
+        "SharedBase",
+        "@acme/invoices",
+        "Invoices",
+      ],
+    ]);
+  });
+
+  it("does not make a named subgraph that another named subgraph extends a shared base", () => {
+    class InvoicesV1 extends SharedBase {
+      static override readonly subgraphName: string = "invoices";
+    }
+    class InvoicesV2 extends InvoicesV1 {
+      static override readonly subgraphName = "invoices-v2";
+    }
+    const logger = makeHarnessLogger();
+
+    expect(
+      extractSubgraphs(
+        { InvoicesV1, InvoicesV2 },
+        { packageName: "@acme/invoices", logger },
+      ),
+    ).toEqual([InvoicesV1, InvoicesV2]);
+    expect(logged(logger)).toEqual([]);
+  });
+
+  it("is classified after the export set is flattened, whichever export reaches the child", () => {
+    expect(
+      extractSubgraphs({ bases: { SharedBase }, default: { Invoices } }),
+    ).toEqual([Invoices]);
+    expect(extractSubgraphs({ SharedBase })).toEqual([SharedBase]);
+  });
+
+  it("is classified after nested namespaces and containers are flattened, at any depth and through cycles", () => {
+    const cyclic: Record<string, unknown> = { Invoices };
+    cyclic.self = cyclic;
+
+    expect(
+      extractSubgraphs({
+        group: { definitions: { SharedBase }, subgraphs: [{ Invoices }] },
+      }),
+    ).toEqual([Invoices]);
+    expect(
+      extractSubgraphs({
+        group: { deeper: { Invoices, SharedBase } },
+        Invoices,
+        again: [[Invoices]],
+      }),
+    ).toEqual([Invoices]);
+    expect(extractSubgraphs({ cyclic, SharedBase })).toEqual([Invoices]);
+  });
+
+  it("keeps each level's export order when it flattens nested exports", () => {
+    class Second extends sdlBase("type Query { second: String }") {
+      static override readonly subgraphName = "second";
+    }
+    class First extends sdlBase("type Query { first: String }") {
+      static override readonly subgraphName = "first";
+    }
+
+    expect(
+      extractSubgraphs({ outer: { inner: { Second, First }, Invoices } }),
+    ).toEqual([Second, First, Invoices]);
+  });
+
+  it("is a shared base only for a child whose own name is kebab-case", () => {
+    class InvalidChild extends SharedBase {
+      static override readonly subgraphName = "Invalid";
+    }
+
+    expect(extractSubgraphs({ SharedBase, InvalidChild })).toEqual([
+      SharedBase,
+      InvalidChild,
+    ]);
+  });
+
+  it("is logged once per package for each distinct base class, even when two share a name", () => {
+    const sharedBase = () =>
+      class SharedBase extends sdlBase("type Query { shared: String }") {};
+    const One = sharedBase();
+    const Two = sharedBase();
+    class ChildOne extends One {
+      static override readonly subgraphName = "child-one";
+    }
+    class ChildTwo extends Two {
+      static override readonly subgraphName = "child-two";
+    }
+    const logger = makeHarnessLogger();
+    const exports = { One, Two, ChildOne, ChildTwo };
+
+    expect(
+      extractSubgraphs(exports, { packageName: "@acme/twins", logger }),
+    ).toEqual([ChildOne, ChildTwo]);
+    extractSubgraphs(exports, { packageName: "@acme/twins", logger });
+    extractSubgraphs({ One, ChildOne }, { packageName: "@acme/other", logger });
+
+    expect(
+      logged(logger).map(([, base, packageName, child]) => [
+        base,
+        packageName,
+        child,
+      ]),
+    ).toEqual([
+      ["SharedBase", "@acme/twins", "ChildOne"],
+      ["SharedBase", "@acme/twins", "ChildTwo"],
+      ["SharedBase", "@acme/other", "ChildOne"],
+    ]);
+  });
+
+  it("is kept for registration to decide when no exported subgraph extends it", () => {
+    abstract class Unused extends sdlBase("type Query { unused: String }") {}
+    expect(extractSubgraphs({ Unused, Invoices })).toEqual([Unused, Invoices]);
   });
 });
 
@@ -313,11 +472,6 @@ describe("the vite loader (VitePackageLoader.loadSubgraphs)", () => {
   });
 });
 
-// The composed half: a real vite dev server over a real project tree whose
-// subgraphs/index.ts carries the generated shape plus the two hand-written
-// forms, with the project's own copy of the base class — the exact local-dev
-// setup the bug report came from. This is the one place the synthetic
-// namespaces above are checked against what ssrLoadModule actually produces.
 describe("VitePackageLoader against a real project tree", () => {
   let root = "";
   let vite: ViteDevServer;
@@ -364,10 +518,10 @@ describe("VitePackageLoader against a real project tree", () => {
         " * This file is auto-generated and updated by codegen",
         " */",
         // The generated shape (makeSubgraphsIndexFile).
-        'export * as StatementsSubgraph from "./statements/index.js";',
-        // The two hand-written shapes the old rule silently dropped.
+        'import { StatementsSubgraph } from "./statements/index.js";',
+        "export { StatementsSubgraph };",
+        'export * as DirectSubgraph from "./direct/index.js";',
         'export * as ledger from "./ledger/index.js";',
-        'export { DirectSubgraph } from "./direct/index.js";',
         // Junk that must not register.
         "export const notASubgraph = 42;",
         "",

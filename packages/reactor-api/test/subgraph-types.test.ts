@@ -19,6 +19,7 @@ import {
   type PackageSubgraph,
 } from "../src/graphql/subgraph-types.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
+import { servedSubgraph } from "./utils/served-subgraph.js";
 
 function model(
   name: string,
@@ -112,7 +113,7 @@ describe("coreSubgraphTypeDefs", () => {
     const core = coreSubgraphClasses({
       inspection: true,
       documentPermissions: true,
-    }).map((Subgraph) => new Subgraph(args));
+    }).map((Subgraph) => servedSubgraph(new Subgraph(args)));
 
     expect(
       Object.fromEntries(

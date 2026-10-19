@@ -30,8 +30,8 @@ const cases: readonly Case[] = [
       mode: "code-first",
       entries: [
         {
-          specifier: "./src/subgraphs/billing.ts",
-          exportPath: ["billingSubgraph"],
+          specifier: "./src/document-models/index.ts",
+          exportPath: ["invoiceModel"],
         },
       ],
     },

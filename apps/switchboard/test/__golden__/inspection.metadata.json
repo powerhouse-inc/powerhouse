@@ -1,0 +1,78 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Query",
+      "fieldName": "inspection",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "attachmentInfo",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "catchUpStatus",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "deadLetters",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "documentModels",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "driveIntegrity",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "drives",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "info",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "processors",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "queueState",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "remote",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "remotes",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "storageHealth",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "ReactorInspection",
+      "fieldName": "validateDocument",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": false,
+    "normalized": false
+  }
+}

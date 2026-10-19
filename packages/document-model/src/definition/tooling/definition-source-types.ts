@@ -5,7 +5,10 @@ import type {
   DefinitionPath,
   DefinitionSource,
   DocumentModelModule,
+  LocationFreeGraphQLDocumentNode,
+  ScalarDefinition,
   Sha256Digest,
+  SubgraphDefinition,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { ScalarBinding } from "../scalars/types.js";
@@ -50,6 +53,11 @@ export type DefinitionSourceSelectionRequest = {
   readonly configFile?: string;
   /** Raw `--source` values. Any value present replaces the config entries. */
   readonly cliSources?: readonly string[];
+  /**
+   * A missing config file then selects nothing, as a config without
+   * `definitionSources` does, so the package's subgraphs are still checked.
+   */
+  readonly allowMissingConfig?: boolean;
 };
 
 export type DefinitionSourceLoadRequest = DefinitionSourceSelectionRequest & {
@@ -84,19 +92,43 @@ export type LoadedDefinition<TValue> = {
   readonly value: TValue;
 };
 
-/**
- * A code-first subgraph, as the loader sees it: a constructible class carrying
- * a compiled subgraph definition. Spelled structurally rather than imported
- * from `reactor-api`, which would make this package depend on a host.
- */
 export type SubgraphClass = abstract new (...args: never[]) => unknown;
+
+/** What a subgraph class's protocol `describe()` returns: plain data. */
+export type SubgraphProtocolDescription = {
+  readonly subgraphName: string;
+  readonly definition: SubgraphDefinition;
+  readonly typeDefs: LocationFreeGraphQLDocumentNode;
+  readonly hasSubscriptions: boolean;
+  /** Sourced to the export the class was read from. */
+  readonly diagnostics: readonly DefinitionDiagnostic[];
+  readonly scalarDefinitions: readonly ScalarDefinition[];
+};
+
+export type DescribedSubgraph = LoadedDefinition<SubgraphClass> & {
+  readonly description: SubgraphProtocolDescription;
+};
+
+/**
+ * Every class that described, and a diagnostic for each import failure,
+ * old-style or nameless class, or class `describe()` refused.
+ */
+export type LoadedSubgraphSet = {
+  readonly sharedBases: readonly LoadedDefinition<SubgraphClass>[];
+  readonly subgraphs: readonly DescribedSubgraph[];
+  readonly diagnostics: readonly DefinitionDiagnostic[];
+};
 
 export type LoadedDefinitionSet = DefinitionSourceResolution & {
   readonly documentModels: readonly LoadedDefinition<DocumentModelModule>[];
   readonly upgradeManifests: readonly LoadedDefinition<
     UpgradeManifest<readonly number[]>
   >[];
-  readonly subgraphs: readonly LoadedDefinition<SubgraphClass>[];
+  /**
+   * The subgraph classes of the package's `subgraphs/index.ts` and
+   * `subgraphs/<name>/index.ts` entries, found whatever `definitionSources` says.
+   */
+  readonly subgraphs: readonly DescribedSubgraph[];
   /**
    * Scalars a selected source exported. A factory `defineScalar` returned for
    * a name outside the catalog is a package scalar; anything else is a

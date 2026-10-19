@@ -1,0 +1,483 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addChangeLogItem",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addChangeLogItemAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addModule",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addModuleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperation",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperationAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperationError",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperationErrorAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperationExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addOperationExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addStateExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "addStateExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "createDocument",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "createEmptyDocument",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteChangeLogItem",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteChangeLogItemAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteModule",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteModuleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperation",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperationAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperationError",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperationErrorAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperationExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteOperationExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteStateExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "deleteStateExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "moveOperation",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "moveOperationAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "releaseNewVersion",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "releaseNewVersionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderChangeLogItems",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderChangeLogItemsAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderModuleOperations",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderModuleOperationsAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderModules",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderModulesAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderOperationErrors",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderOperationErrorsAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderOperationExamples",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderOperationExamplesAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderStateExamples",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "reorderStateExamplesAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setAuthorName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setAuthorNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setAuthorWebsite",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setAuthorWebsiteAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setInitialState",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setInitialStateAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelDescription",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelDescriptionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelExtension",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelExtensionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelId",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelIdAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModelNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModuleDescription",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModuleDescriptionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModuleName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setModuleNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationDescription",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationDescriptionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorCode",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorCodeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorDescription",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorDescriptionAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorTemplate",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationErrorTemplateAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationReducer",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationReducerAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationSchema",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationSchemaAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationScope",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationScopeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationTemplate",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setOperationTemplateAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setStateSchema",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "setStateSchemaAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateChangeLogItem",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateChangeLogItemAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateOperationExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateOperationExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateStateExample",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelMutations",
+      "fieldName": "updateStateExampleAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelQueries",
+      "fieldName": "document",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelQueries",
+      "fieldName": "documentIncomingRelationships",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelQueries",
+      "fieldName": "documentOutgoingRelationships",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelQueries",
+      "fieldName": "documents",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentModelQueries",
+      "fieldName": "findDocuments",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "DocumentModel",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "DocumentModel",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": "undefined",
+    "normalized": false
+  }
+}

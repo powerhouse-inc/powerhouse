@@ -6,6 +6,12 @@ sidebar_position: 1
 
 The `analytics-engine-graphql` module provides types and resolvers needed for a fully-functional GraphQL Server API. This library has no dependencies on any particular server but has been tested using [Apollo Server 3 and 4](https://www.apollographql.com/docs/apollo-server).
 
+## Use analytics in a Switchboard package
+
+Switchboard supplies its analytics API through a subgraph class. A custom package extends `BaseSubgraph<Context>` (or a subtype of `Context`), declares a static lowercase kebab-case `subgraphName`, and returns typed entries or one `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })` result from `getSchema`. Resolvers access host services through `subgraph`. `BaseSubgraph` does not expose the analytics store. Override the constructor, call `super(args)`, and keep `args.analyticsStore` on the instance, as `AnalyticsSubgraph` does. See [Subgraph classes](../../../../04-Reference/03-GraphQLData/08-SubgraphClasses.md).
+
+The standalone Apollo integration below describes the analytics library, not package subgraph registration. To upgrade an existing package, follow the [migration guide](../../../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
+
 ## Resolvers and types
 
 The graphql package contains typical resolvers and typedefs. The resolvers, however, are dependent on another object: `AnalyticsModel`. This object is responsible for connecting GQL types with an `IAnalyticsStore` implementation.

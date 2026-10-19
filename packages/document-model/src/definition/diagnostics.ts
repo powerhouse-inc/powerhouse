@@ -50,6 +50,12 @@ const catalog = {
     meaning:
       "A module declares a code-first definition that definitionSources does not list",
   },
+  "PH-CONFIG-SOURCE-SUBGRAPH-IGNORED": {
+    severity: "warning",
+    phase: "configuration",
+    meaning:
+      "definitionSources lists a subgraph, which is found through the package's subgraph entries instead",
+  },
   "PH-IMPORT-FAILED": {
     severity: "error",
     phase: "import",
@@ -214,6 +220,12 @@ const catalog = {
     meaning:
       "A computed field is malformed, unbound, bound twice, or bound where it does not exist",
   },
+  "PH-SG-PARENT-FIELDS-DROPPED": {
+    severity: "warning",
+    phase: "definition",
+    meaning:
+      "A subgraph's own getSchema drops root fields its parent's getSchema declares",
+  },
   "PH-SG-GENERATED-TYPE-TAKEN": {
     severity: "warning",
     phase: "composition",
@@ -241,8 +253,7 @@ const catalog = {
   "PH-GQL-FEDERATION-UNSUPPORTED": {
     severity: "error",
     phase: "composition",
-    meaning:
-      "A core-v1 code-first subgraph requests Federation 2 authoring semantics",
+    meaning: "A subgraph schema requests Federation 2 authoring semantics",
   },
   "PH-SCALAR-AUTHOR-DECLARATION-UNSUPPORTED": {
     severity: "error",
@@ -301,7 +312,7 @@ const catalog = {
     severity: "error",
     phase: "definition",
     meaning:
-      "A definition reaches for a catalog scalar that only the reactor host declares",
+      "A document model reaches for a catalog scalar that only the reactor host declares; subgraphs reach it through subgraphScalars",
   },
   "PH-PKG-LOGICAL-COLLISION": {
     severity: "error",

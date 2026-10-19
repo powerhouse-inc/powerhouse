@@ -1,0 +1,16 @@
+import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+
+export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
+  const reactor = subgraph.reactorClient;
+
+  return ({
+    Query: {
+      example: () => ({}), // namespace resolver for nested queries
+    },
+    ExampleQueries: {
+      example: async (parent: unknown, args: { driveId: string }) => {
+        return "example";
+      },
+    },
+  });
+};

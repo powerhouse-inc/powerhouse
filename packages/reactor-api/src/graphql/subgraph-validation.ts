@@ -1,14 +1,14 @@
-import type {
-  DefinitionDiagnostic,
-  SubgraphDefinition,
-} from "@powerhousedao/shared/document-model";
+import type { DefinitionDiagnostic } from "@powerhousedao/shared/document-model";
 import { createDiagnostic } from "document-model";
 import type {
   HostValidationRequest,
   HostValidationResult,
 } from "document-model/tooling";
-import { type DocumentNode, Kind } from "graphql";
-import type { DefinedSubgraph } from "./define-subgraph.js";
+import { type DocumentNode, GraphQLScalarType } from "graphql";
+import {
+  type DescribedSubgraphClass,
+  describeSubgraphClass,
+} from "./hosted-subgraph.js";
 import {
   buildPackageSubgraph,
   describeClaimContest,
@@ -21,13 +21,13 @@ import {
 } from "./subgraph-types.js";
 
 /**
- * Validates each code-first subgraph in a selection against the augmented
- * schema the host serves, then warns about each model and subgraph the server
- * would refuse or leave out of the supergraph. A subgraph that names a
+ * Validates each subgraph class in a selection against the augmented schema
+ * the host serves, then warns about each model and subgraph the server would
+ * refuse or leave out of the supergraph. A subgraph that names a
  * host-declared type such as `OID` or `DocumentDrive` is valid, because the
- * host declares it. Each class is read through its static `definition`,
- * `typeDefs`, and `scalarResolvers`. Nothing is constructed, so no resolver
- * factory or `onSetup` runs.
+ * host declares it. Each class is read through the subgraph protocol's
+ * `describe()`. Nothing is constructed, so no resolver factory or `onSetup`
+ * runs. A class the protocol cannot describe is the tooling's to report.
  */
 export function validateSubgraphsForHost(
   request: HostValidationRequest,
@@ -48,34 +48,27 @@ export function validateSubgraphsForHost(
 
   const candidates: Candidate[] = [];
   for (const entry of request.subgraphs) {
-    const definition = subgraphDefinitionOf(entry.value);
-    if (definition === null) continue;
-    const typeDefs = staticTypeDefsOf(entry.value);
-    if (typeDefs === null) {
-      diagnostics.push(
-        createDiagnostic({
-          code: "PH-SG-DEFINITION-INVALID",
-          source: entry.source,
-          path: entry.path.map(String),
-          message: `Subgraph ${definition.name} publishes no type definitions the host can read.`,
-          repair: "Rebuild the package with a matching compiler.",
-        }),
-      );
-      continue;
-    }
-    candidates.push({ name: definition.name, typeDefs, entry });
+    const described = describedOf(entry.value);
+    if (described === undefined) continue;
+    const { subgraphName, typeDefs } = described.description;
+    candidates.push({
+      name: subgraphName,
+      typeDefs: typeDefs as DocumentNode,
+      described,
+      entry,
+    });
   }
 
   // buildSubgraphSchema validates as it builds and throws, so building is the
-  // check. validateSchema cannot run on the result, because @apollo/subgraph
-  // loads graphql's CommonJS entry, this package loads the ESM entry, and
-  // graphql checks type identity with instanceof.
+  // check. validateSchema cannot run on the result: @apollo/subgraph requires
+  // graphql's CommonJS entry, a bundler such as Vite can give this package
+  // the ESM entry, and graphql checks type identity with instanceof.
   const { conflicts, contests } = findPackageSubgraphConflicts(
     candidates,
     host,
     (candidate) =>
       buildPackageSubgraph(candidate, host, {
-        resolvers: scalarResolversOf(candidate.entry.value),
+        resolvers: packageScalarsOf(candidate.described),
         reportScalars: true,
       }),
   );
@@ -118,6 +111,7 @@ export function validateSubgraphsForHost(
 }
 
 type Candidate = PackageSubgraph & {
+  readonly described: DescribedSubgraphClass;
   readonly entry: HostValidationRequest["subgraphs"][number];
 };
 
@@ -136,30 +130,21 @@ function warningDiagnostic(
   });
 }
 
-function subgraphDefinitionOf(value: unknown): SubgraphDefinition | null {
-  if (typeof value !== "function") return null;
-  const definition = (value as { definition?: unknown }).definition;
-  if (definition === null || typeof definition !== "object") return null;
-  const candidate = definition as Partial<SubgraphDefinition>;
-  return candidate.kind === "powerhouse.subgraph" &&
-    candidate.formatVersion === 1
-    ? (definition as SubgraphDefinition)
-    : null;
+function describedOf(value: unknown): DescribedSubgraphClass | undefined {
+  try {
+    return describeSubgraphClass(value);
+  } catch {
+    return undefined;
+  }
 }
 
-function staticTypeDefsOf(value: unknown): DocumentNode | null {
-  const typeDefs = (value as { typeDefs?: unknown }).typeDefs;
-  return typeDefs !== null &&
-    typeof typeDefs === "object" &&
-    (typeDefs as Partial<DocumentNode>).kind === Kind.DOCUMENT &&
-    Array.isArray((typeDefs as Partial<DocumentNode>).definitions)
-    ? (typeDefs as DocumentNode)
-    : null;
-}
-
-function scalarResolversOf(value: unknown): DefinedSubgraph["scalarResolvers"] {
-  const resolvers = (value as { scalarResolvers?: unknown }).scalarResolvers;
-  return resolvers !== null && typeof resolvers === "object"
-    ? (resolvers as DefinedSubgraph["scalarResolvers"])
-    : {};
+function packageScalarsOf({
+  description,
+}: DescribedSubgraphClass): Record<string, GraphQLScalarType> {
+  return Object.fromEntries(
+    description.scalarDefinitions.map(({ name }) => [
+      name,
+      new GraphQLScalarType({ name }),
+    ]),
+  );
 }

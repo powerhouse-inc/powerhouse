@@ -1,5 +1,62 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — Class-based subgraphs
+
+### ✨ Highlights
+
+Subgraph authors use one class API. A class extends `BaseSubgraph<Ctx>`, declares `static override readonly subgraphName = "kebab-case"`, and returns typed `ph` entries or one `schema.graphql(...)` wrapper from `static override getSchema(schema: SchemaBuilder<YourClass>)`. Resolvers access instance state through `subgraph`.
+
+Every existing HTTP and GraphQL endpoint keeps its path, schema, and behavior. Every existing WebSocket and SSE mount is unchanged.
+
+Typed subgraph entries can use the host's `JSONObject` scalar through `subgraphScalars.JSONObject()` from `document-model`. Document models still cannot use it. `subgraphScalars` is available from this release. A package that uses it needs `document-model` and `@powerhousedao/reactor-api` from this release or later.
+
+### BREAKING CHANGES
+
+The config-function author API and instance schema fields are removed. Developer tooling refuses old-style subgraphs and points to `ph migrate`. The subgraph style flag is removed. The document-model `--code-first` option stays. Subgraphs are discovered through package `subgraphs` entries, independently of `definitionSources`.
+
+Share behavior through one abstract base without a name and schema fragments with public capability interfaces. Preserve a typed parent's entries with `super.getSchema(schema)`. Use `schema.replaceParentSchema()` for intentional replacement. Typed entries and SDL wrappers cannot be mixed. TypeScript mixin factories are unsupported.
+
+Lifecycle methods are overrides that call `super`. The host calls `onDisconnect` after failed setup, so teardown must tolerate partial setup. It also runs when unregistering a subgraph. It is not a process-exit hook.
+
+Subscription support is derived from the schema's operation roots. Third-party SDL that declares a subscription root now gets WebSocket and SSE support even if it omitted the former subscription flag. A subgraph whose schema renames the subscription root, as in `schema { subscription: S }`, is served at its own `/stream` but no longer joins the shared `/graphql/stream`, where it used to replace the other subgraphs' subscriptions.
+
+The host decides how to serve a subgraph before `onSetup` runs. An old-style class that assigns `name`, `typeDefs`, and `resolvers` only in `onSetup` is refused. Run `ph migrate` in its package.
+
+When `NODE_ENV` is unset, `development`, or `test`, the host calls each class's `getSchema` twice and refuses a class whose two results differ. Under any other `NODE_ENV`, such as `production`, the host calls it once. `ph model check`, `ph build` and `ph generate` always run this check, whatever `NODE_ENV` is.
+
+**Host API.** These changes affect code that embeds `@powerhousedao/reactor-api` and calls `GraphQLManager` directly:
+
+- `ISubgraph` is removed from the public types. `registerSubgraphInstance` and `setSupergraph` accept `BaseSubgraph` instances only. Wrap an object literal in a `BaseSubgraph` subclass with `static subgraphName` and `static getSchema` returning `schema.graphql(...)`, or cast it with `as unknown as BaseSubgraph`. The runtime adapter keeps serving legacy literals and published old-style classes until the adapter's removal in a later major.
+- `getSubgraphByName` returns the registered instance, typed `BaseSubgraph | undefined`. A class subgraph instance has no `name`, `typeDefs`, or `resolvers`, and reading them returns `undefined`. Legacy instances registered through a cast can still have `typeDefs`, despite the declared type. Their `subgraphName` can be missing or throw on old-style classes. Narrow with `instanceof BaseSubgraph` before using class APIs, and handle a missing or throwing `subgraphName`. For class subgraphs, read the name from `instance.subgraphName` and the schema from the class's subgraph protocol: `(instance.constructor as SubgraphClass)[SUBGRAPH_PROTOCOL]().describe().typeDefs`.
+- `SubgraphArgs.path` is removed from the public types. Delete it from constructor argument objects and call `graphqlManager.getBasePath()` instead. The host still passes `path` internally to old-style constructors, including those from older `reactor-api` copies. `BaseSubgraph` still copies it to `this.path` for a class with no static `subgraphName` or `getSchema`. Its field initializers and constructor read it as before. A class subgraph instance has no `path`.
+- The subgraph protocol's `describe()` accepts `{ checkDeterminism: true }`, typed `SubgraphDescribeOptions`. It runs the determinism check whatever `NODE_ENV` is. `ph` checks pass it.
+- `@powerhousedao/reactor-privacy` no longer exports `createPrivacySubgraph` or the `PrivacySubgraph` type. Wrap `privacySubgraphTypeDefs`, `privacyResolverCoordinates` and `createPrivacyResolvers` in your own `BaseSubgraph` class, and call `refuseAnonymousAdmins(authorizationService)` before registering it. The package README shows the class.
+- The federation `_service { sdl }` text of `/graphql/packages` and `/graphql/auth` lists the same definitions in a different order. Sort the definitions before comparing SDL text across releases.
+- `createInspectionResolvers` and `InspectionCallerGate`, exported only in dev tags, are removed.
+- `SubgraphClass` is no longer `typeof BaseSubgraph`. It is a constructor that takes `SubgraphArgs`, with the static `subgraphName`, `getSchema`, and `[SUBGRAPH_PROTOCOL]` members. A value typed `SubgraphClass` no longer exposes the other static members of `BaseSubgraph`.
+
+### MIGRATION GUIDE
+
+1. Upgrade the CLI, host, and `@powerhousedao/reactor-api` together.
+2. Run `ph migrate --subgraphs-only` in each package and review its changes. Use plain `ph migrate` to include package upgrades and bundled migrations. Preserve the existing route name and SDL while moving the schema into `getSchema` with resolver coordinates and a factory receiving `subgraph`.
+3. Export concrete classes through `subgraphs/index.ts` and `subgraphs/*/index.ts`. Remove subgraph entries from `definitionSources`.
+4. Make setup and teardown overrides call `super`, and make teardown safe after partial setup.
+5. Run `ph model check`, `ph build`, and resolver tests. Compare schema and resolver coordinates before publishing.
+
+| Host     | Package                     | Compatibility                                                                                                                  |
+| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice. |
+| New host | New class-based package     | Served through the versioned subgraph protocol.                                                                                |
+| Old host | New class-based package     | Unsupported. Use matching CLI, package, and host API releases.                                                                 |
+
+This release must bump the major version. `FEATURE_DEPENDENCIES.subgraph` peer ranges must exclude the old major so an old host cannot accept a new class-based package. `ph migrate` updates an existing `@powerhousedao/reactor-api` peer to the target release pin.
+
+### DOCUMENTATION
+
+[Subgraph classes](https://academy.vetra.io/academy/Reference/GraphQLData/SubgraphClasses) documents schema forms, authorization helpers, inheritance, and fragments. [Test a subgraph without a host](https://academy.vetra.io/academy/Reference/GraphQLData/TestingSubgraphs) shows protocol inspection and binding with CommonJS GraphQL and Apollo's schema-module input.
+
+---
+
 ## 🚀 **Unreleased**
 
 ### ⚠️ BREAKING CHANGES
@@ -22,7 +79,7 @@ These apply to every package, including packages that never adopt code-first doc
 
 **`definitionSources` is optional.** A package without the field, without a `powerhouse.config.json`, or with an empty `code-first` entry list builds like a schema-first package and needs no change.
 
-**Code-first definitions must be registered.** A code-first model or subgraph in the package that no `definitionSources` entry reaches fails `ph build`, `ph publish`, and the `prepack` check with `PH-CONFIG-SOURCE-UNREGISTERED`, and `ph generate` warns about it. The message names the entry to add.
+**Code-first definitions must be registered.** A code-first document model in the package that no `definitionSources` entry reaches fails `ph build`, `ph publish`, and the `prepack` check with `PH-CONFIG-SOURCE-UNREGISTERED`, and `ph generate` warns about it. The message names the entry to add.
 
 ---
 

@@ -10,7 +10,7 @@ import {
   observedModels,
   type MaterializedPackage,
 } from "../../document-model/test/fixtures/loaders/materialize.js";
-import type { DefinedSubgraph } from "../src/graphql/define-subgraph.js";
+import { SUBGRAPH_PROTOCOL } from "../src/graphql/subgraph-protocol.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
 import type { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { asSchemaFirst, reactorClientFor } from "./utils/graphql-host.js";
@@ -174,64 +174,119 @@ describe("Vite / local source", () => {
   });
 });
 
-type Observed = { className: string; definition: string | null };
+type Observed = { className: string; subgraphName: string | null };
+
+function subgraphNameOf(value: SubgraphClass): string | null {
+  return Object.hasOwn(value, "subgraphName")
+    ? value[SUBGRAPH_PROTOCOL]().describe().subgraphName
+    : null;
+}
 
 function observedSubgraphs(classes: readonly SubgraphClass[]): Observed[] {
   return classes
     .map((value) => ({
       className: value.name,
-      definition: (value as Partial<DefinedSubgraph>).definition?.name ?? null,
+      subgraphName: subgraphNameOf(value),
     }))
     .sort(
       (left, right) =>
         left.className.localeCompare(right.className) ||
-        String(left.definition).localeCompare(String(right.definition)),
+        String(left.subgraphName).localeCompare(String(right.subgraphName)),
     );
 }
 
-const example: Observed = {
-  className: "CodeFirstSubgraph",
-  definition: "example",
+const SOURCES = {
+  "base.ts": [
+    'import { BaseSubgraph } from "@powerhousedao/reactor-api";',
+    "export abstract class WidgetBase extends BaseSubgraph {}",
+  ].join("\n"),
+  "example.ts": [
+    'import { ph } from "document-model";',
+    'import { WidgetBase } from "./base.js";',
+    'const Widget = ph.object("Widget", {',
+    "  fields: { id: ph.OID({ required: true }), label: ph.String({ required: true }) },",
+    "});",
+    "export class ExampleSubgraph extends WidgetBase {",
+    '  static subgraphName = "example";',
+    "  static getSchema(schema) {",
+    "    return [",
+    '      schema.query("widget", {',
+    "        args: { id: ph.OID({ required: true }) },",
+    "        returns: ph.ref(Widget),",
+    '        resolve: ({ args }) => ({ id: String(args.id), label: "One" }),',
+    "      }),",
+    "    ];",
+    "  }",
+    "}",
+  ].join("\n"),
+  "notes.ts": [
+    'import { BaseSubgraph } from "@powerhousedao/reactor-api";',
+    "export class NotesSubgraph extends BaseSubgraph {",
+    '  name = "notes";',
+    "}",
+  ].join("\n"),
+  "group.ts": [
+    'export * as bases from "./base.js";',
+    'export * as definitions from "./example.js";',
+  ].join("\n"),
+  "cycle.ts": [
+    'export * as self from "./cycle.js";',
+    'export * as group from "./group.js";',
+    'export * as legacy from "./notes.js";',
+  ].join("\n"),
 };
-const notes: Observed = { className: "NotesSubgraph", definition: null };
+
+const example: Observed = {
+  className: "ExampleSubgraph",
+  subgraphName: "example",
+};
+const notes: Observed = { className: "NotesSubgraph", subgraphName: null };
 
 type ExportForm = {
   form: string;
-  variantIndex?: string;
+  variantIndex: string;
   expected: Observed[];
+  sharedBase?: true;
 };
 
 const forms: ExportForm[] = [
-  { form: "scaffold", expected: [example, notes] },
+  {
+    form: "generated",
+    variantIndex: [
+      'export * as ExampleSubgraph from "../../sources/example.js";',
+      'export * as NotesSubgraph from "../../sources/notes.js";',
+    ].join("\n"),
+    expected: [example, notes],
+  },
   {
     form: "namespace-alias",
     variantIndex: [
-      'export * as tasks from "../../../subgraphs/example.js";',
-      'export * as legacy from "../../../subgraphs/notes.js";',
+      'export * as tasks from "../../sources/example.js";',
+      'export * as legacy from "../../sources/notes.js";',
     ].join("\n"),
     expected: [example, notes],
   },
   {
     form: "direct-renamed",
     variantIndex: [
-      'export { ExampleSubgraph as TasksSubgraph } from "../../../subgraphs/example.js";',
-      'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
+      'export { ExampleSubgraph as TasksSubgraph } from "../../sources/example.js";',
+      'export { NotesSubgraph } from "../../sources/notes.js";',
     ].join("\n"),
     expected: [example, notes],
   },
   {
     form: "default-class",
     variantIndex: [
-      'export { ExampleSubgraph as default } from "../../../subgraphs/example.js";',
-      'export { NotesSubgraph } from "../../../subgraphs/notes.js";',
+      'export { ExampleSubgraph as default } from "../../sources/example.js";',
+      'export { NotesSubgraph } from "../../sources/notes.js";',
     ].join("\n"),
     expected: [example, notes],
   },
   {
     form: "default-object",
     variantIndex: [
-      'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
-      'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
+      'import { ExampleSubgraph } from "../../sources/example.js";',
+      'import { NotesSubgraph } from "../../sources/notes.js";',
       "export default { ExampleSubgraph, NotesSubgraph };",
     ].join("\n"),
     expected: [example, notes],
@@ -239,10 +294,10 @@ const forms: ExportForm[] = [
   {
     form: "several-paths",
     variantIndex: [
-      'import { ExampleSubgraph } from "../../../subgraphs/example.js";',
-      'import { NotesSubgraph } from "../../../subgraphs/notes.js";',
-      'export * as tasks from "../../../subgraphs/example.js";',
-      'export * as legacy from "../../../subgraphs/notes.js";',
+      'import { ExampleSubgraph } from "../../sources/example.js";',
+      'import { NotesSubgraph } from "../../sources/notes.js";',
+      'export * as tasks from "../../sources/example.js";',
+      'export * as legacy from "../../sources/notes.js";',
       "export { ExampleSubgraph, NotesSubgraph };",
       "export default { ExampleSubgraph, NotesSubgraph };",
     ].join("\n"),
@@ -251,20 +306,44 @@ const forms: ExportForm[] = [
   {
     form: "statement-order",
     variantIndex: [
-      'export * as Zebra from "../../../subgraphs/example.js";',
-      'export { NotesSubgraph as AppleSubgraph } from "../../../subgraphs/notes.js";',
+      'export * as Zebra from "../../sources/example.js";',
+      'export { NotesSubgraph as AppleSubgraph } from "../../sources/notes.js";',
     ].join("\n"),
     expected: [example, notes],
   },
   {
+    form: "shared-base-exported",
+    variantIndex: [
+      'export * as bases from "../../sources/base.js";',
+      'export * as ExampleSubgraph from "../../sources/example.js";',
+    ].join("\n"),
+    expected: [example],
+    sharedBase: true,
+  },
+  {
+    form: "nested-namespaces",
+    variantIndex: 'export * as group from "../../sources/group.js";',
+    expected: [example],
+    sharedBase: true,
+  },
+  {
+    form: "cyclic-namespace",
+    variantIndex: [
+      'export * as cycle from "../../sources/cycle.js";',
+      'export { ExampleSubgraph } from "../../sources/example.js";',
+    ].join("\n"),
+    expected: [example, notes],
+    sharedBase: true,
+  },
+  {
     form: "unrelated-exports",
     variantIndex: [
-      'export * as tasks from "../../../subgraphs/example.js";',
+      'export * as tasks from "../../sources/example.js";',
       'export const VERSION = "1.0.0";',
       "export function helper() { return 1; }",
       "export class Unrelated {}",
       "export const config = { helper, Unrelated, retries: 3 };",
-      'export { BaseSubgraph, defineSubgraph } from "@powerhousedao/reactor-api";',
+      'export { BaseSubgraph } from "@powerhousedao/reactor-api";',
     ].join("\n"),
     expected: [example],
   },
@@ -272,25 +351,29 @@ const forms: ExportForm[] = [
 
 type Variant = { root: string; packageName: string };
 
-function variantOf({ form, variantIndex }: ExportForm): Variant {
-  return variantIndex === undefined
-    ? { root: fixture.root, packageName: FIXTURE_PACKAGE_NAME }
-    : {
-        root: join(fixture.root, "variants", form),
-        packageName: `${FIXTURE_PACKAGE_NAME}-${form}`,
-      };
+function variantOf({ form }: ExportForm): Variant {
+  return {
+    root: join(fixture.root, "variants", form),
+    packageName: `${FIXTURE_PACKAGE_NAME}-${form}`,
+  };
 }
 
 const loaders: {
   loader: string;
+  tag: string;
+  identifier(variant: Variant): string;
   load(variant: Variant): Promise<SubgraphClass[]>;
 }[] = [
   {
     loader: "Node / server import",
+    tag: "[reactor-api][import-loader]",
+    identifier: ({ root }) => root,
     load: ({ root }) => new ImportPackageLoader().loadSubgraphs(root),
   },
   {
     loader: "HTTP / CDN",
+    tag: "[reactor-api][http-loader]",
+    identifier: ({ packageName }) => packageName,
     load: ({ packageName }) =>
       new HttpPackageLoader({
         registryUrl: fixture.registryUrl,
@@ -298,14 +381,26 @@ const loaders: {
   },
   {
     loader: "Vite / local source",
+    tag: "[reactor-api][vite-loader]",
+    identifier: ({ root }) => root,
     load: ({ root }) => VitePackageLoader.build(vite).loadSubgraphs(root),
   },
 ];
 
+function sharedBaseNotices(info: { mock: { calls: unknown[][] } }): string[] {
+  return info.mock.calls
+    .map(([line]) => String(line).replace(/^\[[^\]]+\] /, ""))
+    .filter((line) => line.includes("as a shared subgraph base"));
+}
+
 describe("subgraph export forms", () => {
   beforeAll(() => {
+    const sources = join(fixture.root, "variants", "sources");
+    mkdirSync(sources, { recursive: true });
+    for (const [file, source] of Object.entries(SOURCES)) {
+      writeFileSync(join(sources, file), source);
+    }
     for (const form of forms) {
-      if (form.variantIndex === undefined) continue;
       const { root, packageName } = variantOf(form);
       mkdirSync(join(root, "subgraphs"), { recursive: true });
       mkdirSync(join(root, "node", "subgraphs"), { recursive: true });
@@ -337,11 +432,23 @@ describe("subgraph export forms", () => {
     }
   });
 
-  describe.each(loaders)("$loader", ({ load }) => {
+  describe.each(loaders)("$loader", ({ tag, identifier, load }) => {
     it.each(forms)("$form", async (form) => {
-      expect(observedSubgraphs(await load(variantOf(form)))).toEqual(
-        form.expected,
-      );
+      const info = vi.spyOn(console, "info").mockImplementation(() => {});
+      try {
+        expect(observedSubgraphs(await load(variantOf(form)))).toEqual(
+          form.expected,
+        );
+        expect(sharedBaseNotices(info)).toEqual(
+          form.sharedBase
+            ? [
+                `${tag} Treating WidgetBase in ${identifier(variantOf(form))} as a shared subgraph base: it has no static subgraphName, and ExampleSubgraph extends it`,
+              ]
+            : [],
+        );
+      } finally {
+        info.mockRestore();
+      }
     });
 
     // The order decides which subgraph keeps a contested claim, so a dev
@@ -350,10 +457,7 @@ describe("subgraph export forms", () => {
       const form = forms.find(({ form }) => form === "statement-order");
       const loaded = await load(variantOf(form!));
       expect(
-        loaded.map(
-          (value) =>
-            (value as Partial<DefinedSubgraph>).definition?.name ?? value.name,
-        ),
+        loaded.map((value) => subgraphNameOf(value) ?? value.name),
       ).toEqual(["NotesSubgraph", "example"]);
     });
   });

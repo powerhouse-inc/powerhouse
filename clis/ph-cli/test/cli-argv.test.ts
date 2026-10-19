@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -85,9 +86,10 @@ describe("a flag that shares its name with another command's option", () => {
     expect(run.status).toBe(2);
   }, 60_000);
 
-  it("generate subgraph --code-first leaves --name its value", () => {
+  it("generate subgraph refuses --code-first, which only generate document-model takes", () => {
+    const root = project();
     const run = ph(
-      project(),
+      root,
       "generate",
       "subgraph",
       "--code-first",
@@ -95,8 +97,9 @@ describe("a flag that shares its name with another command's option", () => {
       "widgets",
       "--skip-install",
     );
-    expect(run.stdout).toContain("Wrote subgraphs/widgets.ts\n");
-    expect(run.status).toBe(0);
+    expect(run.stderr).toContain("^ Unknown arguments");
+    expect(run.status).toBe(1);
+    expect(existsSync(join(root, "subgraphs"))).toBe(false);
   }, 60_000);
 
   it("connect config --json still takes a value", () => {

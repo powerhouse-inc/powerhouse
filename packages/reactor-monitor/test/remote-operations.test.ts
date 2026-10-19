@@ -14,14 +14,11 @@ import { INSPECTION_OPERATIONS } from "../src/index.js";
 function inspectionSchema(): GraphQLSchema {
   const file = fileURLToPath(
     new URL(
-      "../../reactor-api/src/graphql/inspection/schema.ts",
+      "../../reactor-api/test/__golden__/inspection.authored.graphql",
       import.meta.url,
     ),
   );
-  const sdl = /gql`([\s\S]*?)`/.exec(readFileSync(file, "utf8"))?.[1];
-  if (!sdl) {
-    throw new Error(`no gql template in ${file}`);
-  }
+  const sdl = readFileSync(file, "utf8");
   return buildSchema(`scalar JSONObject\n${sdl}`);
 }
 

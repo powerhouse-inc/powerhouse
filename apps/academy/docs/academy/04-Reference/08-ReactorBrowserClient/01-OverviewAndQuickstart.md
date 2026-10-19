@@ -277,6 +277,10 @@ test walks the entry's import graph and fails if that regresses.
 The monorepo's `test/test-fusion/` app is a worked example: it imports the
 subpath and has no bundler configuration at all.
 
+## Custom subgraphs on the server
+
+The browser client calls the host's GraphQL API, including your package's subgraphs. To write a subgraph, see [Subgraph classes](../03-GraphQLData/08-SubgraphClasses.md). The subgraph migration changes no endpoint the client uses.
+
 ## Next
 
 - [API reference](/academy/Reference/ReactorBrowserClient/ApiReference) - provider

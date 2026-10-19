@@ -7,14 +7,8 @@ import type {
 } from "@powerhousedao/reactor";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
-import type {
-  GraphQLManager,
-  ISubgraph,
-  SubgraphArgs,
-} from "@powerhousedao/reactor-api";
-import type { DocumentNode } from "graphql";
+import type { GraphQLManager, SubgraphArgs } from "@powerhousedao/reactor-api";
 import { ForbiddenError, AuthenticationRequiredError } from "./errors.js";
-import { gql } from "graphql-tag";
 import {
   AuthorizationPolicy,
   AuthorizedDocumentHandle,
@@ -31,6 +25,17 @@ import {
   createCredentialInvalidator,
   type ICredentialInvalidator,
 } from "../services/auth.service.js";
+import { seedLegacyPath, type LegacySubgraphArgs } from "./legacy-subgraph.js";
+import {
+  SUBGRAPH_PROTOCOL,
+  subgraphProtocolOf,
+  type SubgraphProtocol,
+} from "./subgraph-protocol.js";
+import type {
+  requestType,
+  SchemaBuilder,
+  SubgraphSchema,
+} from "./subgraph-schema.js";
 import type { Context } from "./types.js";
 
 /**
@@ -41,21 +46,51 @@ export function callerSubject(user: Context["user"]): AuthSubject {
   return { address: user?.address, key: user?.appKey };
 }
 
-export class BaseSubgraph implements ISubgraph {
-  name = "example";
-  // The host's base path as injected by the GraphQL manager. Routing
-  // ignores it: the manager mounts every subgraph under its own base path.
-  path = "";
-  resolvers: Record<string, any> = {
-    Query: {
-      hello: () => this.name,
-    },
-  };
-  typeDefs: DocumentNode = gql`
-    type Query {
-      hello: String
-    }
-  `;
+/**
+ * A GraphQL subgraph. A concrete class declares its route segment and its
+ * schema as statics:
+ *
+ * ```ts
+ * class InvoicesSubgraph extends BaseSubgraph<ShopContext> {
+ *   static override readonly subgraphName = "invoices";
+ *   static override getSchema(schema: SchemaBuilder<InvoicesSubgraph>) {
+ *     return [schema.query("invoice", { returns, resolve })];
+ *   }
+ * }
+ * ```
+ *
+ * The host compiles each class once, constructs it, awaits `onSetup`, and
+ * then binds the schema to the instance. Resolvers reach the instance as
+ * `subgraph`, never through `this`.
+ */
+export class BaseSubgraph<TRequest extends Context = Context> {
+  /**
+   * The route segment and manifest id: lowercase kebab-case. Declared by
+   * concrete classes only; a shared base leaves it undeclared.
+   */
+  declare static readonly subgraphName: string | undefined;
+
+  /**
+   * The schema: typed entries, or one `schema.graphql(...)` result. Runs once
+   * per class with the class as receiver, and must be deterministic. Extend a
+   * parent's with `[...super.getSchema(schema), ...]`.
+   */
+  static getSchema(_schema: SchemaBuilder<BaseSubgraph>): SubgraphSchema {
+    return [];
+  }
+
+  static [SUBGRAPH_PROTOCOL](): SubgraphProtocol {
+    return subgraphProtocolOf(this);
+  }
+
+  declare readonly [requestType]?: TRequest;
+
+  declare readonly name?: never;
+  declare readonly typeDefs?: never;
+  declare readonly resolvers?: never;
+  declare readonly hasSubscriptions?: never;
+  declare readonly path?: never;
+
   reactorClient: IReactorClient;
   /** This package's namespaced slice of the HTTP surface. */
   readonly http: SubgraphArgs["http"];
@@ -102,10 +137,16 @@ export class BaseSubgraph implements ISubgraph {
     this.documentPermissionService = args.documentPermissionService;
     this.authorizationService = args.authorizationService;
     this.syncServingGate = args.syncServingGate;
-    this.path = args.path ?? "";
     this.#attachments = args.attachments;
     this.credentials =
       args.credentials ?? createCredentialInvalidator(undefined);
+    seedLegacyPath(this, new.target, (args as LegacySubgraphArgs).path);
+  }
+
+  get subgraphName(): string {
+    return (this.constructor as typeof BaseSubgraph)
+      [SUBGRAPH_PROTOCOL]()
+      .describe().subgraphName;
   }
 
   /**
@@ -244,15 +285,12 @@ export class BaseSubgraph implements ISubgraph {
    * be refused an operation the write path accepts, since a signed action
    * carries the same key. Anonymous callers supply neither.
    */
-  protected viewSubject(ctx: Context): AuthSubject {
+  viewSubject(ctx: Context): AuthSubject {
     return callerSubject(ctx.user);
   }
 
   /** Whether a listing would serve the document to the caller; fails closed. */
-  protected async servesDocument(
-    documentId: string,
-    ctx: Context,
-  ): Promise<boolean> {
+  async servesDocument(documentId: string, ctx: Context): Promise<boolean> {
     if (!documentId) {
       return false;
     }
@@ -264,7 +302,7 @@ export class BaseSubgraph implements ISubgraph {
   }
 
   /** {@link servesDocument}, but a reactor that cannot answer throws. */
-  protected servesDocumentOrThrows(
+  servesDocumentOrThrows(
     identifier: string,
     ctx: Context,
     view?: Pick<ViewFilter, "branch" | "scopes">,
@@ -280,7 +318,7 @@ export class BaseSubgraph implements ISubgraph {
    * gate, then the host's legacy layer, as `findDocuments` applies them. Absent
    * or withheld is `false`; a failure to decide throws.
    */
-  protected async listsDocument(
+  async listsDocument(
     identifier: string,
     ctx: Context,
     view?: Pick<ViewFilter, "branch" | "scopes">,

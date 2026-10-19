@@ -8,6 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
+import { ts } from "ts-morph";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -19,6 +21,7 @@ import {
 import { detectFeatures } from "../../codegen/features.js";
 import {
   writeAiConfigFiles,
+  writeGeneratedProjectRootFiles,
   writeModuleFiles,
 } from "./generated-project-files.js";
 
@@ -36,6 +39,64 @@ function makeTempProject(prefix: string): string {
   return dir;
 }
 
+describe("writeGeneratedProjectRootFiles", () => {
+  it("requires override in a project written by ph init", async () => {
+    const dir = makeTempProject("ph-init-override-");
+    await writeGeneratedProjectRootFiles(dir);
+    const config: unknown = ts.parseConfigFileTextToJson(
+      "tsconfig.json",
+      readFileSync(join(dir, "tsconfig.json"), "utf8"),
+    ).config;
+    expect(config).toMatchObject({
+      compilerOptions: { noImplicitOverride: true },
+    });
+    writeFileSync(
+      join(dir, "fixture.ts"),
+      "class Parent { method() {} }\nclass Child extends Parent { method() {} }\n",
+    );
+    writeFileSync(
+      join(dir, "consumer.json"),
+      JSON.stringify({
+        extends: "./tsconfig.json",
+        compilerOptions: {
+          types: [],
+          noEmit: true,
+          emitDeclarationOnly: false,
+          incremental: false,
+        },
+        files: ["fixture.ts"],
+        include: [],
+      }),
+    );
+    const compile = () =>
+      spawnSync(
+        process.execPath,
+        [
+          join(
+            import.meta.dirname,
+            "../../../../../node_modules/typescript/bin/tsc",
+          ),
+          "-p",
+          join(dir, "consumer.json"),
+          "--pretty",
+          "false",
+        ],
+        { encoding: "utf8" },
+      );
+    const result = compile();
+    expect(result.status, result.stdout + result.stderr).toBe(1);
+    expect(result.stdout + result.stderr).toContain(
+      "fixture.ts(2,30): error TS4114:",
+    );
+    writeFileSync(
+      join(dir, "fixture.ts"),
+      "class Parent { method() {} }\nclass Child extends Parent { override method() {} }\n",
+    );
+    const fixed = compile();
+    expect(fixed.status, fixed.stdout + fixed.stderr).toBe(0);
+  });
+});
+
 // The export is part of every package's map; the list arrives with the first
 // generated piece, which is also when the pieces framework is installed.
 describe("a new project's pieces entry", () => {
@@ -52,15 +113,12 @@ describe("a new project's pieces entry", () => {
     expect(exports["./pieces"]).toEqual(packageJsonExports["./pieces"]);
     // Node only, like ./pieces: `ph build` builds no browser subgraphs.
     expect(exports["./subgraphs"]).not.toHaveProperty("browser");
-    // Content, not existence: a fresh project's subgraphs aggregate is the
-    // banner and nothing else — no export, so no subgraph registers until
-    // codegen appends one (makeSubgraphsIndexFile).
     const subgraphsIndex = readFileSync(
       join(dir, "subgraphs", "index.ts"),
       "utf-8",
     );
     expect(subgraphsIndex).toContain("WARNING: DO NOT EDIT");
-    expect(subgraphsIndex).not.toContain("export");
+    expect(subgraphsIndex).toContain("export {};");
     expect(existsSync(join(dir, "pieces"))).toBe(false);
     expect(detectFeatures(dir)).not.toContain("piece");
   });

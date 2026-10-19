@@ -5,7 +5,10 @@ import { DocumentModelDefinitionError } from "../../src/definition/diagnostics.j
 import { ph } from "../../src/definition/field.js";
 import { schemaFirstSpecification } from "../../src/definition/compatibility.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
-import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
+import {
+  compileSubgraph,
+  type SdlSchemaSpec,
+} from "../../src/definition/subgraph/definer.js";
 import { checkRetainedSerialization } from "../../src/definition/tooling/retained-serialization.js";
 import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import type { ObjectFields } from "../../src/definition/types.js";
@@ -32,7 +35,7 @@ describe.each([
       "The declaration lists Status.<type>:scalar, which the resolver map does not bind.",
   },
 ])(
-  "a compatibility subgraph with a $kind extension",
+  "an SDL subgraph with a $kind extension",
   ({
     kind,
     base,
@@ -42,30 +45,31 @@ describe.each([
     missingResolverMessage,
   }) => {
     function compile(declarations: readonly string[]) {
-      return compileSubgraph({
-        name: `${kind}-extension`,
-        schemaKind: "graphql-ast-compat",
-        compatibility: {
-          kind: "graphql-ast-v1",
-          typeDefs: parse(
-            [
-              "directive @tag on SCALAR",
-              ...declarations,
-              "type Query { status: Status! }",
-            ].join("\n"),
-          ),
-          resolverCoordinates: [
-            { typeName: "Query", fieldName: "status", resolverKind: "field" },
-            { typeName: "Status", fieldName: null, resolverKind: kind },
-          ],
-          getResolvers: () => ({
-            Query: { status: () => 3 },
-            Status: resolver,
-          }),
-          hasSubscriptions: undefined,
-          preserveDefinitionOrder: true,
-        },
-      });
+      class Extension {
+        static readonly subgraphName = `${kind}-extension`;
+        static getSchema(schema: {
+          graphql(spec: SdlSchemaSpec<unknown, unknown, unknown>): unknown;
+        }) {
+          return schema.graphql({
+            typeDefs: parse(
+              [
+                "directive @tag on SCALAR",
+                ...declarations,
+                "type Query { status: Status! }",
+              ].join("\n"),
+            ),
+            resolverCoordinates: [
+              { typeName: "Query", fieldName: "status", resolverKind: "field" },
+              { typeName: "Status", fieldName: null, resolverKind: kind },
+            ],
+            resolvers: () => ({
+              Query: { status: () => 3 },
+              Status: resolver,
+            }),
+          });
+        }
+      }
+      return compileSubgraph(Extension, { checkDeterminism: false });
     }
 
     it.each([
@@ -94,7 +98,7 @@ describe.each([
           code: "PH-SG-ENTRY-INVALID",
           severity: "error",
           phase: "definition",
-          path: ["compatibility", "resolverCoordinates"],
+          path: ["graphql", "resolverCoordinates"],
           message: missingResolverMessage,
           repair:
             "List each resolver coordinate once, with a string type name, a string or null field name, and a known resolver kind.",

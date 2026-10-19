@@ -78,14 +78,14 @@ describe("subgraph feature", () => {
     expect(detectFeatures(dir)).not.toContain("subgraph");
   });
 
-  it("is detected from a schema-first subgraphs/<name>/ directory", () => {
+  it("is detected from a subgraphs/<name>/ directory", () => {
     const dir = makeProject();
     writeSubgraphsIndex(dir);
     mkdirSync(join(dir, "subgraphs", "greeter"));
     expect(detectFeatures(dir)).toContain("subgraph");
   });
 
-  it("is detected from a code-first subgraphs/<name>.ts", () => {
+  it("is detected from a subgraphs/<name>.ts file", () => {
     const dir = makeProject();
     writeSubgraphsIndex(dir);
     writeFileSync(join(dir, "subgraphs", "tasks.ts"), "export {};\n");
@@ -223,5 +223,23 @@ describe("migrate and the piece feature", () => {
       workspacePackageNames,
     });
     expect(devDependencies[PIECES_FRAMEWORK_PACKAGE]).toBe("6.0.0");
+  });
+});
+
+describe("migrate and the subgraph feature", () => {
+  it("moves a reactor-api peer pinned to an older major to the release it migrates to", () => {
+    const { peerDependencies, devDependencies } = resolveManagedDependencies({
+      packageJson: {
+        peerDependencies: { [REACTOR_API_PACKAGE]: "6.2.3" },
+        devDependencies: { [REACTOR_API_PACKAGE]: "6.2.3" },
+      },
+      features: ["subgraph"],
+      fullyQualifiedVersion: "7.0.0-dev.1",
+      workspacePackageNames: [],
+    });
+    expect([
+      peerDependencies[REACTOR_API_PACKAGE],
+      devDependencies[REACTOR_API_PACKAGE],
+    ]).toEqual(["7.0.0-dev.1", "7.0.0-dev.1"]);
   });
 });

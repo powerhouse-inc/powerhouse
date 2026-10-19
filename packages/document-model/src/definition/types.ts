@@ -4,6 +4,8 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
 import type { ScalarBinding } from "./scalars/types.js";
+import type { ResolverResult } from "./subgraph/entries.js";
+import type { ArgsObject, ComputedToken } from "./subgraph/types.js";
 
 export type FieldValidationOptions<TRequired extends boolean = boolean> = {
   readonly required?: TRequired;
@@ -409,7 +411,26 @@ export type ObjectDescriptor<
    */
   readonly computed?: Readonly<Record<string, unknown>>;
   /** `Type.computedTokens.<field>`, the handle a subgraph binds through. */
-  readonly computedTokens?: Readonly<Record<string, unknown>>;
+  readonly computedTokens: ComputedTokensOf<TFields>;
+};
+
+/**
+ * One token per computed member, typed with the parent a resolver receives,
+ * the member's arguments and what its resolver returns.
+ */
+export type ComputedTokensOf<TFields extends OutputMembers> = {
+  readonly [
+    K in keyof TFields as TFields[K] extends ComputedMember ? K : never
+  ]: TFields[K] extends {
+    readonly args: infer TArgs extends ObjectFields;
+    readonly returns: infer TReturns;
+  }
+    ? ComputedToken<
+        SourceObjectOf<TFields>,
+        ArgsObject<TArgs>,
+        ResolverResult<TReturns>
+      >
+    : never;
 };
 
 export type InputDescriptor<TFields extends ObjectFields = ObjectFields> =

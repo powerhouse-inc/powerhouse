@@ -23,6 +23,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectDirOf,
 } from "utils";
 import { planDefinitionSourceRegistration } from "../definition-sources.js";
 import { createOrUpdateManifest, readManifest } from "../manifest.js";
@@ -44,11 +45,11 @@ export async function tsMorphGenerateCodeFirstDocumentModel(
     ...getCodeFirstDocumentModelVariableNames(args.name),
     ...args,
   };
+  const projectDir = projectDirOf(project);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDir, "document-models"),
   );
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   const modelDir = `document-models/${v.kebabCaseDocumentType}`;
   const files = [
     [`${modelDir}/v1/definition.ts`, codeFirstDefinitionTemplate(v)],

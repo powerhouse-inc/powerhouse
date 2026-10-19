@@ -9,38 +9,59 @@ A webhook endpoint is how a third-party provider (GitHub, Stripe, Slack, a payme
 A subgraph registers from `onSetup`, off `this.http`:
 
 ```typescript
-import { BaseSubgraph } from "@powerhousedao/reactor-api";
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
 import type {
   IWebhookEndpoints,
   WebhookReply,
   WebhookRequest,
 } from "@powerhousedao/reactor-api";
 
-export class BillingSubgraph extends BaseSubgraph {
-  name = "billing";
-
+export class BillingSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "billing";
   #endpoints: IWebhookEndpoints | undefined;
+  #deliveries = 0;
 
-  async onSetup(): Promise<void> {
+  static override getSchema(schema: SchemaBuilder<BillingSubgraph>) {
+    return [
+      schema.query("billingDeliveryCount", {
+        returns: ph.Int({ required: true }),
+        resolve: ({ subgraph }) => subgraph.#deliveries,
+      }),
+    ];
+  }
+
+  override async onSetup(): Promise<void> {
+    await super.onSetup();
     this.#endpoints = await this.http.webhooks.register({
       name: "invoices",
       onRequest: (request) => this.#deliver(request),
     });
   }
 
-  // Reached once the delivery is deduped and is not a probe.
-  async #deliver(request: WebhookRequest): Promise<WebhookReply> {
-    await this.#recordEvent(request.key, request.body);
+  override async onDisconnect(): Promise<void> {
+    this.#endpoints = undefined;
+    await super.onDisconnect();
+  }
+
+  async #deliver(_request: WebhookRequest): Promise<WebhookReply> {
+    this.#deliveries += 1;
     return { status: 202 };
   }
 
-  /** The URL to hand the provider. */
   async endpointUrl(documentId: string): Promise<string | undefined> {
-    const endpoint = await this.#endpoints?.endpointFor(documentId);
-    return endpoint?.url; // https://switchboard.example/webhooks/2f9c… (32 hex)
+    return (await this.#endpoints?.endpointFor(documentId))?.url;
   }
 }
 ```
+
+This example counts accepted deliveries in memory. Persist billing events in your application before acknowledging them. The host releases webhook handlers with the package scope. Teardown tolerates partial setup and is not a process-exit hook.
+
+To upgrade an existing package, follow the [migration guide](../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
 
 Nothing here verifies a signature, so this endpoint accepts any caller that knows the token. That is the starting point, not the destination — [`policyFor`](#policyfor-versus-the-registration) is where a signing scheme goes, and [Signature schemes](#signature-schemes) covers the choice.
 

@@ -1,10 +1,4 @@
-import type { DocumentNode } from "graphql";
-import {
-  createPrivacyResolvers,
-  type PrivacyAuthorization,
-  type PrivacyResolverDeps,
-} from "./resolvers.js";
-import { typeDefs } from "./schema.js";
+import type { PrivacyAuthorization } from "./resolvers.js";
 
 export const PRIVACY_SUBGRAPH_NAME = "privacy";
 
@@ -18,32 +12,20 @@ export class PrivacySubgraphOpenPolicyError extends Error {
   }
 }
 
-export type PrivacySubgraph = {
-  name: string;
-  typeDefs: DocumentNode;
-  resolvers: ReturnType<typeof createPrivacyResolvers>;
-};
-
-function admitsAnonymous(authorizationService: PrivacyAuthorization): boolean {
-  return (
+/**
+ * Throws PrivacySubgraphOpenPolicyError when anonymous callers are admins,
+ * so a host never mounts the privacy subgraph under such a policy.
+ */
+export function refuseAnonymousAdmins(
+  authorizationService: PrivacyAuthorization,
+): void {
+  if (
     authorizationService.config.policy === "OPEN" ||
     authorizationService.isSupremeAdmin(undefined) ||
     authorizationService.isSupremeAdmin("")
-  );
-}
-
-/** Throws PrivacySubgraphOpenPolicyError when anonymous callers are admins. */
-export function createPrivacySubgraph(
-  deps: PrivacyResolverDeps,
-): PrivacySubgraph {
-  if (admitsAnonymous(deps.authorizationService)) {
+  ) {
     throw new PrivacySubgraphOpenPolicyError(
-      deps.authorizationService.config.policy,
+      authorizationService.config.policy,
     );
   }
-  return {
-    name: PRIVACY_SUBGRAPH_NAME,
-    typeDefs,
-    resolvers: createPrivacyResolvers(deps),
-  };
 }

@@ -1,8 +1,9 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   DefinitionDiagnostic,
   DefinitionPath,
-  DefinitionRef,
   DefinitionSource,
   DocumentModelModule,
   Sha256Digest,
@@ -18,8 +19,6 @@ import {
   compareDefinitionDiagnostics,
   compareDefinitionPaths,
   createDiagnostic,
-  type DefinitionDiagnosticCode,
-  DEFINITION_DIAGNOSTIC_CODES,
 } from "../diagnostics.js";
 import {
   compareCodeUnits,
@@ -38,137 +37,34 @@ import type {
   DefinitionSourceSelectionRequest,
   LoadedDefinition,
   LoadedDefinitionSet,
+  LoadedSubgraphSet,
   LoadedScalar,
-  SubgraphClass,
   TypeScriptSourceImportInterface,
 } from "./definition-source-types.js";
 import type { ScalarBinding } from "../scalars/types.js";
+import {
+  describeThrown,
+  readProperty,
+  structuredDiagnostics,
+} from "./structured-diagnostics.js";
+import {
+  isSubgraphClass,
+  readSubgraphEntries,
+  subgraphEntrySpecifiers,
+  type SubgraphEntryNamespace,
+} from "./subgraph-reader.js";
+
+type ImportRequest = Pick<
+  DefinitionSourceLoadRequest,
+  "packageRevision" | "signal"
+>;
 
 type ImportCacheEntry = {
   readonly revision: Sha256Digest;
   readonly namespace: Promise<Readonly<Record<string, unknown>>>;
 };
 
-function describeThrown(error: unknown): string {
-  if (error === null) return "null";
-  try {
-    if (error instanceof Error) {
-      return `${error.name}: ${error.message}`;
-    }
-  } catch {
-    // A revoked Proxy or a throwing getter makes these reads throw.
-  }
-  return typeof error;
-}
-
-function readProperty(
-  value: object,
-  key: string,
-): { readonly ok: true; readonly value: unknown } | { readonly ok: false } {
-  try {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (descriptor === undefined || !("value" in descriptor)) {
-      return { ok: false };
-    }
-    return { ok: true, value: descriptor.value as unknown };
-  } catch {
-    return { ok: false };
-  }
-}
-
-const DEFINITION_KINDS = [
-  "document-model",
-  "subgraph",
-  "scalar",
-  "package",
-] as const;
-
-function definitionRef(value: unknown): DefinitionRef | undefined {
-  const snapshot = snapshotRecord(value, undefined, []);
-  if (!snapshot.ok) return undefined;
-  const { kind, key, version } = snapshot.value;
-  if (
-    typeof key !== "string" ||
-    key === "" ||
-    !DEFINITION_KINDS.includes(kind as (typeof DEFINITION_KINDS)[number])
-  ) {
-    return undefined;
-  }
-  return {
-    kind: kind as DefinitionRef["kind"],
-    key,
-    ...(typeof version === "number" && { version }),
-  };
-}
-
-/**
- * Rebuilds the diagnostics a structured compilation failure or a compiled
- * subgraph class carries, or returns `undefined` when it holds no valid list.
- * Under a Vite adapter the value can come from a second copy of this package,
- * so `instanceof` cannot recognise it.
- */
-export function structuredDiagnostics(
-  value: unknown,
-  source: DefinitionSource,
-): readonly DefinitionDiagnostic[] | undefined {
-  if (
-    value === null ||
-    (typeof value !== "object" && typeof value !== "function")
-  ) {
-    return undefined;
-  }
-  const list = readProperty(value, "diagnostics");
-  if (!list.ok) return undefined;
-  const snapshot = snapshotArray(list.value, []);
-  if (!snapshot.ok || snapshot.value.length === 0) return undefined;
-
-  const rebuilt: DefinitionDiagnostic[] = [];
-  for (const candidate of snapshot.value) {
-    const entry = snapshotRecord(candidate, undefined, []);
-    if (!entry.ok) return undefined;
-    const { code, message, repair, expected, received } = entry.value;
-    const path = snapshotArray(entry.value.path, []);
-    if (
-      typeof code !== "string" ||
-      !Object.prototype.hasOwnProperty.call(
-        DEFINITION_DIAGNOSTIC_CODES,
-        code,
-      ) ||
-      typeof message !== "string" ||
-      typeof repair !== "string" ||
-      !path.ok ||
-      !path.value.every(
-        (segment) =>
-          typeof segment === "string" ||
-          (typeof segment === "number" && Number.isSafeInteger(segment)),
-      ) ||
-      (expected !== undefined && typeof expected !== "string") ||
-      (received !== undefined && typeof received !== "string")
-    ) {
-      return undefined;
-    }
-    const definition = definitionRef(entry.value.definition);
-    rebuilt.push(
-      createDiagnostic({
-        code: code as DefinitionDiagnosticCode,
-        source,
-        ...(definition !== undefined && { definition }),
-        path: path.value as DefinitionPath,
-        message,
-        ...(expected !== undefined && { expected }),
-        ...(received !== undefined && { received }),
-        repair,
-      }),
-    );
-  }
-  return rebuilt;
-}
-
-type RecognizedKind =
-  | "document-model"
-  | "upgrade-manifest"
-  | "subgraph"
-  | "scalar";
+type RecognizedKind = "document-model" | "upgrade-manifest" | "scalar";
 
 /**
  * Runs before anything sorts or serializes versions. A `supportedVersions` of
@@ -217,9 +113,6 @@ function recognizeCallable(value: unknown): RecognizedKind | undefined {
   const definition = readProperty(value, "definition");
   if (definition.ok) {
     const record = snapshotRecord(definition.value, undefined, []);
-    if (record.ok && record.value.kind === "powerhouse.subgraph") {
-      return "subgraph";
-    }
     // A `defineScalar` factory, or a catalog scalar factory the package
     // re-exports.
     if (record.ok && record.value.kind === "powerhouse.scalar") {
@@ -244,7 +137,6 @@ type Collected = {
   readonly upgradeManifests: LoadedDefinition<
     UpgradeManifest<readonly number[]>
   >[];
-  readonly subgraphs: LoadedDefinition<SubgraphClass>[];
   readonly scalars: LoadedDefinition<LoadedScalar>[];
   readonly diagnostics: DefinitionDiagnostic[];
   /**
@@ -362,27 +254,6 @@ function collect(
       }
       return;
     }
-    case "subgraph": {
-      const compiled = readProperty(value, "definition");
-      const declared = compiled.ok
-        ? snapshotRecord(compiled.value, undefined, [])
-        : undefined;
-      const name =
-        declared?.ok === true && typeof declared.value.name === "string"
-          ? declared.value.name
-          : "";
-      collected.subgraphs.push({ source, path, value: value as SubgraphClass });
-      if (name !== "") {
-        claim(
-          collected,
-          ["subgraph", name].join(KEY_SEPARATOR),
-          `subgraph ${name}`,
-          source,
-          path,
-        );
-      }
-      return;
-    }
   }
 }
 
@@ -453,6 +324,10 @@ function walk(
   source: DefinitionSource,
   path: DefinitionPath,
 ): number {
+  if (isSubgraphClass(value)) {
+    collected.diagnostics.push(ignoredSubgraphDiagnostic(source, path));
+    return 1;
+  }
   const callable = recognizeCallable(value);
   if (callable !== undefined) {
     collect(collected, callable, value, extendSource(source, path), path);
@@ -522,6 +397,23 @@ function walk(
         count + visit(collected, plain.value[key], source, [...path, key]),
       0,
     );
+}
+
+function ignoredSubgraphDiagnostic(
+  source: DefinitionSource,
+  path: DefinitionPath,
+): DefinitionDiagnostic {
+  return createDiagnostic({
+    code: "PH-CONFIG-SOURCE-SUBGRAPH-IGNORED",
+    source: extendSource(source, path),
+    path,
+    message:
+      "definitionSources lists a subgraph. Subgraphs are found through subgraphs/index.ts and subgraphs/*/index.ts, so this entry is ignored.",
+    expected: "a document model, a family, or a scalar",
+    received: "a subgraph class",
+    repair:
+      "Remove the entry from definitionSources.entries in powerhouse.config.json, and export the subgraph from subgraphs/index.ts.",
+  });
 }
 
 /**
@@ -614,8 +506,21 @@ export class DefinitionSourceLoader {
   readonly #imports = new Map<string, ImportCacheEntry>();
   #revision: Sha256Digest | undefined;
 
-  constructor(importer: TypeScriptSourceImportInterface) {
+  readonly #reportedSharedBases = new Set<string>();
+  readonly #onSharedBase:
+    | ((base: LoadedSubgraphSet["sharedBases"][number]) => void)
+    | undefined;
+
+  constructor(
+    importer: TypeScriptSourceImportInterface,
+    options: {
+      readonly onSharedBase?: (
+        base: LoadedSubgraphSet["sharedBases"][number],
+      ) => void;
+    } = {},
+  ) {
     this.#importer = importer;
+    this.#onSharedBase = options.onSharedBase;
   }
 
   /** The selected sources, without importing any of them. */
@@ -637,7 +542,14 @@ export class DefinitionSourceLoader {
       subgraphs: [],
       scalars: [],
     } as const;
-    if (resolution.status !== "ready") {
+    const subgraphEntries =
+      resolution.status === "failed"
+        ? []
+        : subgraphEntrySpecifiers(resolution.packageRootIdentity);
+    if (
+      resolution.status === "failed" ||
+      (resolution.status === "skipped" && subgraphEntries.length === 0)
+    ) {
       return { ...publicResolution(resolution), ...empty };
     }
     if (!isSha256Digest(request.packageRevision)) {
@@ -665,13 +577,32 @@ export class DefinitionSourceLoader {
 
     await this.#retainRevision(request.packageRevision);
 
-    const namespaces = await this.#importModules(resolution, request);
+    const subgraphs = await this.#readSubgraphs(
+      resolution.packageRootIdentity,
+      subgraphEntries,
+      request,
+    );
+    if (resolution.status === "skipped") {
+      return {
+        ...publicResolution(resolution),
+        ...empty,
+        subgraphs: subgraphs.subgraphs,
+        diagnostics: [...subgraphs.diagnostics].sort(
+          compareDefinitionDiagnostics,
+        ),
+      };
+    }
+
+    const namespaces = await this.#importModules(
+      resolution.packageRootIdentity,
+      resolution.resolved,
+      request,
+    );
     throwIfAborted(request.signal, "The definition source load");
 
     const collected: Collected = {
       documentModels: [],
       upgradeManifests: [],
-      subgraphs: [],
       scalars: [],
       diagnostics: [],
       visited: new Map(),
@@ -703,10 +634,10 @@ export class DefinitionSourceLoader {
             message:
               "This source exports no finalized definition, so selecting it checks nothing.",
             expected:
-              "a finalized document model, a family, a subgraph, or a collection holding them",
+              "a finalized document model, a family, or a collection holding them",
             received: "no recognised definition",
             repair:
-              "Point this entry at the export that defineDocumentModel, defineDocumentModelFamily, or defineSubgraph returned.",
+              "Point this entry at the export that defineDocumentModel or defineDocumentModelFamily returned.",
           }),
         );
       }
@@ -714,17 +645,41 @@ export class DefinitionSourceLoader {
 
     checkManifestCoverage(collected);
 
-    const diagnostics = [...collected.diagnostics].sort(
-      compareDefinitionDiagnostics,
-    );
+    const diagnostics = [
+      ...collected.diagnostics,
+      ...subgraphs.diagnostics,
+    ].sort(compareDefinitionDiagnostics);
     return {
       ...selectedSources(resolution),
       status: diagnostics.length === 0 ? "ready" : "failed",
       diagnostics,
       documentModels: sortBySource(collected.documentModels),
       upgradeManifests: sortBySource(collected.upgradeManifests),
-      subgraphs: sortBySource(collected.subgraphs),
+      subgraphs: subgraphs.subgraphs,
       scalars: sortBySource(collected.scalars),
+    };
+  }
+
+  /**
+   * The package's subgraph classes, read through the subgraph protocol from
+   * its subgraph entries, whatever `definitionSources` says. Runs author code
+   * as {@link readSubgraphEntries} describes.
+   */
+  async readSubgraphs(
+    request: ImportRequest & { readonly packageRoot: string },
+  ): Promise<LoadedSubgraphSet> {
+    throwIfAborted(request.signal, "The subgraph load");
+    const packageRoot = realpathSync.native(request.packageRoot);
+    await this.#retainRevision(request.packageRevision);
+    const read = await this.#readSubgraphs(
+      packageRoot,
+      subgraphEntrySpecifiers(packageRoot),
+      request,
+    );
+    return {
+      sharedBases: read.sharedBases,
+      subgraphs: read.subgraphs,
+      diagnostics: [...read.diagnostics].sort(compareDefinitionDiagnostics),
     };
   }
 
@@ -752,12 +707,59 @@ export class DefinitionSourceLoader {
     }
   }
 
+  async #readSubgraphs(
+    packageRootIdentity: string,
+    specifiers: readonly `./${string}`[],
+    request: ImportRequest,
+  ): Promise<LoadedSubgraphSet> {
+    const entries = specifiers.map((specifier) => ({
+      moduleIdentity: realpathSync(resolve(packageRootIdentity, specifier)),
+      source: { specifier },
+    }));
+    const namespaces = await this.#importModules(
+      packageRootIdentity,
+      entries,
+      request,
+    );
+    throwIfAborted(request.signal, "The definition source load");
+    const diagnostics: DefinitionDiagnostic[] = [];
+    const loaded: SubgraphEntryNamespace[] = [];
+    for (const entry of entries) {
+      const namespace = namespaces.get(entry.moduleIdentity);
+      if (namespace === undefined) continue;
+      if (namespace.ok) {
+        loaded.push({
+          specifier: entry.source.specifier,
+          namespace: namespace.value,
+        });
+      } else {
+        diagnostics.push(...namespace.diagnostics(entry.source));
+      }
+    }
+    const read = readSubgraphEntries(loaded);
+    for (const base of read.sharedBases) {
+      const key = JSON.stringify([packageRootIdentity, base.source]);
+      if (this.#reportedSharedBases.has(key)) continue;
+      this.#reportedSharedBases.add(key);
+      this.#onSharedBase?.(base);
+    }
+    return {
+      sharedBases: read.sharedBases,
+      subgraphs: read.subgraphs,
+      diagnostics: [...diagnostics, ...read.diagnostics],
+    };
+  }
+
   async #importModules(
-    resolution: ReturnType<typeof resolveDefinitionSources>,
-    request: DefinitionSourceLoadRequest,
+    packageRootIdentity: string,
+    resolved: readonly {
+      readonly moduleIdentity: string;
+      readonly source: DefinitionSource;
+    }[],
+    request: ImportRequest,
   ): Promise<Map<string, ImportedNamespace>> {
-    const byModule = new Map<string, (typeof resolution.resolved)[number]>();
-    for (const entry of resolution.resolved) {
+    const byModule = new Map<string, (typeof resolved)[number]>();
+    for (const entry of resolved) {
       if (!byModule.has(entry.moduleIdentity)) {
         byModule.set(entry.moduleIdentity, entry);
       }
@@ -769,7 +771,7 @@ export class DefinitionSourceLoader {
     // imports can evaluate the shared module twice and turn an alias into a
     // logical collision.
     for (const [moduleIdentity, entry] of byModule) {
-      const cacheKey = [resolution.packageRootIdentity, moduleIdentity].join(
+      const cacheKey = [packageRootIdentity, moduleIdentity].join(
         KEY_SEPARATOR,
       );
       let cached = this.#imports.get(cacheKey);
@@ -778,7 +780,7 @@ export class DefinitionSourceLoader {
           // Under a symlinked root, such as a macOS temp directory, an adapter
           // could evaluate one module under two paths, and two exports of one
           // definition would look like two definitions.
-          packageRoot: resolution.packageRootIdentity,
+          packageRoot: packageRootIdentity,
           specifier: entry.source.specifier,
           packageRevision: request.packageRevision,
           ...(request.signal !== undefined && { signal: request.signal }),
@@ -860,6 +862,20 @@ function importDiagnostics(
 ): readonly DefinitionDiagnostic[] {
   const structured = structuredDiagnostics(error, source);
   if (structured !== undefined) return structured;
+  const missing = uninstalledPackageOf(error);
+  if (missing !== undefined) {
+    return [
+      createDiagnostic({
+        code: "PH-IMPORT-FAILED",
+        source,
+        path: [],
+        message: `This definition source needs the package ${missing}, which is not installed.`,
+        expected: `${missing} installed in the package`,
+        received: describeThrown(error),
+        repair: `Install ${missing}: list it in package.json and run your package manager's install, then run the definition check again.`,
+      }),
+    ];
+  }
   return [
     createDiagnostic({
       code: "PH-IMPORT-FAILED",
@@ -872,6 +888,35 @@ function importDiagnostics(
         "Fix this module or one of its imports, then run the definition check again.",
     }),
   ];
+}
+
+/**
+ * The package a failed import names when no `node_modules` above the
+ * importing file holds it. Node and Vite both report a bare specifier they
+ * cannot resolve as `Cannot find package|module '<specifier>' imported from
+ * <file>`.
+ */
+function uninstalledPackageOf(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const match =
+    /^Cannot find (?:package|module) '([^']+)' imported from '?(.+?)'?$/m.exec(
+      error.message,
+    );
+  if (match === null) return undefined;
+  const [, specifier, importer] = match;
+  if (/^(?:[./\\]|[a-zA-Z][\w+.-]*:)/.test(specifier)) return undefined;
+  const name = specifier
+    .split("/")
+    .slice(0, specifier.startsWith("@") ? 2 : 1)
+    .join("/");
+  const from = importer.startsWith("file:")
+    ? fileURLToPath(importer)
+    : importer;
+  if (!isAbsolute(from)) return undefined;
+  for (let directory = dirname(from); ; directory = dirname(directory)) {
+    if (existsSync(join(directory, "node_modules", name))) return undefined;
+    if (dirname(directory) === directory) return name;
+  }
 }
 
 type SelectedExport =

@@ -1,0 +1,25 @@
+import { BaseSubgraph as Base } from "@powerhousedao/reactor-api";
+import { gql } from "graphql-tag";
+
+export class InlineSubgraph extends Base {
+  name = "inline";
+  readonly label = "today";
+  typeDefs = gql`
+    scalar Date
+    enum Choice { YES NO }
+    interface Node { id: ID! }
+    type Item implements Node { id: ID! }
+    type Query { item: Node, date: Date }
+    type Updates { item: Item }
+    schema { query: Query, subscription: Updates }
+  `;
+  resolvers = {
+    Date: { serialize: (value: unknown) => value },
+    Choice: { YES: "yes", NO: "no" },
+    Node: { __resolveType: () => "Item" },
+    Item: { __isTypeOf: function(this: { valid: boolean }) { return this.valid; } },
+    Query: { item: () => ({ id: "1" }), date: () => this.label },
+    Updates: { item: { subscribe: async function* () { yield { id: "1" }; }, resolve: (value: unknown) => value } },
+  };
+  hasSubscriptions = true;
+}

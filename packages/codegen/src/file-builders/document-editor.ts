@@ -19,6 +19,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectDirOf,
 } from "utils";
 import {
   emittedImportPath,
@@ -43,14 +44,17 @@ export async function tsMorphGenerateDocumentEditor({
   editorId,
   documentModelId,
 }: GenerateEditorArgs) {
+  const projectDir = projectDirOf(project);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    path.join(projectDir, "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    path.join(projectDir, "editors"),
+  );
   const editorsDirPath = editorsDir.getPath();
-  const projectDir = editorsDir.getParentOrThrow().getPath();
   const editorDirPath = path.join(editorsDirPath, editorDir);
   const componentsDirPath = path.join(editorDirPath, "components");
 

@@ -1,7 +1,13 @@
+import type { Sha256Digest } from "@powerhousedao/shared/document-model";
+import { createHash, randomUUID } from "node:crypto";
 import type { TypeScriptSourceImportInterface } from "document-model/tooling";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+export function uncachedDefinitionSourceRevision(): Sha256Digest {
+  return `sha256:${createHash("sha256").update(randomUUID()).digest("hex")}`;
+}
 
 type ViteServer = {
   ssrLoadModule(url: string): Promise<Record<string, unknown>>;
@@ -55,6 +61,12 @@ async function closeEnvironment(environment: {
   }
 }
 
+const PACKAGES_SHARING_MODULE_REGISTRY = [
+  "document-model",
+  "@powerhousedao/shared",
+  "@powerhousedao/reactor-api",
+];
+
 async function createViteServer(
   packageRoot: string,
   cacheDir: string,
@@ -71,8 +83,8 @@ async function createViteServer(
     // Sources compile against the installed compiler instead of a copy Vite
     // transformed. A second copy has its own module registry, so the check
     // would not see the report a declaration raised while compiling.
-    ssr: { external: ["document-model", "@powerhousedao/shared"] },
-    resolve: { dedupe: ["document-model", "@powerhousedao/shared"] },
+    ssr: { external: PACKAGES_SHARING_MODULE_REGISTRY },
+    resolve: { dedupe: PACKAGES_SHARING_MODULE_REGISTRY },
   });
   return server as unknown as ViteServer;
 }

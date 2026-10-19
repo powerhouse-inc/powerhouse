@@ -52,7 +52,7 @@ export function checkFederationSurface(
         message: `@${directive.name} is Federation 2 authoring, which a typed declaration does not support.`,
         received: `@${directive.name}`,
         repair:
-          'Declare this subgraph with schemaKind: "graphql-ast-compat", which preserves the AST and its composition behaviour exactly.',
+          "Return schema.graphql({ typeDefs, resolverCoordinates, resolvers }) from getSchema, which preserves the AST and its composition behaviour exactly.",
       }),
     ];
   });

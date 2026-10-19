@@ -1,8 +1,7 @@
-import { typedefs as analyticsTypeDefs } from "@powerhousedao/analytics-engine-graphql";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { DefinitionDiagnosticCode } from "document-model";
+import { compileSubgraphTypeDefs } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
-import { gql } from "graphql-tag";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
   admitDocumentModel,
@@ -22,9 +21,10 @@ import {
   SubgraphTypeCollisionError,
   typeDefinitionNames,
 } from "../utils/create-schema.js";
-import authSchema from "./auth/schema.graphql";
-import { inspectionTypeDefs } from "./inspection/schema.js";
-import reactorSchema from "./reactor/schema.graphql";
+import { analyticsSchema } from "./analytics-schema.js";
+import { authSchema } from "./auth/schema.js";
+import { inspectionSchema } from "./inspection/schema.js";
+import { reactorSchema } from "./reactor/schema.js";
 import {
   claimsConflict,
   collectSubgraphClaims,
@@ -33,7 +33,8 @@ import {
   resolveClaimOwnership,
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
-import { systemTypeDefs } from "./system/schema.js";
+import type { ResolverCoordinate, SchemaBuilder } from "./subgraph-schema.js";
+import { systemSchema } from "./system/schema.js";
 
 export {
   reservedTypeNames,
@@ -57,18 +58,39 @@ export function quotedNames(names: readonly string[]): string {
 export const DOCUMENT_MODEL_SCHEMA_OWNER = "document-model schema";
 
 /**
+ * A core subgraph's schema, in a module that loads no resolvers. Its class
+ * passes it to `schema.graphql`.
+ */
+export type CoreSubgraphSchema = {
+  readonly subgraphName: string;
+  readonly typeDefs: DocumentNode;
+  readonly resolverCoordinates: readonly ResolverCoordinate[];
+};
+
+/**
  * The type definitions of every core subgraph, by subgraph name. The server
  * registers `inspection` and `auth` only when inspection and document
  * permissions are on, and the checks assume they are, so a name or claim
  * that avoids them is free on every host.
  */
-export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
-  ["analytics", gql(analyticsTypeDefs)],
-  ["system", systemTypeDefs],
-  ["r", gql(reactorSchema)],
-  ["inspection", inspectionTypeDefs],
-  ["auth", gql(authSchema)],
-]);
+export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map(
+  [
+    analyticsSchema,
+    systemSchema,
+    reactorSchema,
+    inspectionSchema,
+    authSchema,
+  ].map((core) => [
+    core.subgraphName,
+    compileSubgraphTypeDefs(core.subgraphName, (schema: SchemaBuilder<never>) =>
+      schema.graphql({
+        typeDefs: core.typeDefs,
+        resolverCoordinates: core.resolverCoordinates,
+        resolvers: () => ({}),
+      }),
+    ) as DocumentNode,
+  ]),
+);
 
 /** A package's own subgraph, as the server would receive it. */
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
@@ -491,10 +513,6 @@ export function findPackageSubgraphConflicts<S extends PackageSubgraph>(
   return { conflicts, contests, duplicateNames: [...duplicateNames] };
 }
 
-/**
- * A warning, worded once for the code-first check and the schema-first lint,
- * so both styles tell an author the same thing.
- */
 export type SubgraphWarning = {
   readonly code: Extract<
     DefinitionDiagnosticCode,

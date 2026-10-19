@@ -8,7 +8,6 @@ import type {
   DefinitionSource,
   DocumentModelModule,
   Sha256Digest,
-  SubgraphDefinition,
 } from "@powerhousedao/shared/document-model";
 import { unregisteredDefinitionDiagnostics } from "./unregistered-definitions.js";
 import { adaptCodeFirstDocumentModelSource } from "../adapters/code-first-document-model-source-adapter.js";
@@ -30,11 +29,9 @@ import {
   compareCodeUnits,
   throwIfAborted,
 } from "../primitives.js";
-import {
-  type DefinitionSourceLoader,
-  structuredDiagnostics,
-} from "./definition-source-loader.js";
+import type { DefinitionSourceLoader } from "./definition-source-loader.js";
 import type {
+  DescribedSubgraph,
   LoadedDefinition,
   LoadedDefinitionSet,
   LoadedScalar,
@@ -109,6 +106,7 @@ export type DefinitionCheckRequest = {
   readonly packageRevision: Sha256Digest;
   readonly configFile?: string;
   readonly cliSources?: readonly string[];
+  readonly allowMissingConfig?: boolean;
   readonly warningsAsErrors?: boolean;
   readonly signal?: AbortSignal;
   readonly releaseEvidence?: ReleaseEvidenceProvider;
@@ -327,24 +325,20 @@ function normalizeLoadedDefinitions(loaded: LoadedDefinitionSet): Normalized {
     }
   }
 
-  // A subgraph class from a package may have been compiled by another release,
-  // so its published definition is shape-checked before it is reported.
   for (const entry of loaded.subgraphs) {
-    const definition = (entry.value as { definition?: unknown }).definition;
+    const { definition, subgraphName } = entry.description;
     const shape = checkSubgraphDefinitionShape(definition, entry.path);
     diagnostics.push(
       ...shape.map((item: DefinitionDiagnostic) => ({
         ...item,
         source: entry.source,
       })),
-      ...compileDiagnostics(entry),
     );
     if (shape.length > 0) continue;
-    const published = definition as SubgraphDefinition;
     definitions.push({
       kind: "subgraph",
-      key: published.name,
-      digest: canonicalDigest(published),
+      key: subgraphName,
+      digest: canonicalDigest(definition),
       source: entry.source,
     });
   }
@@ -357,31 +351,6 @@ function normalizeLoadedDefinitions(loaded: LoadedDefinitionSet): Normalized {
   diagnostics.push(...checkPackageScalarNames(artifacts, loaded.subgraphs));
 
   return { artifacts, modules, definitions, diagnostics };
-}
-
-/**
- * A diagnostics list this release cannot read, such as one with a code added
- * later, becomes one error so that a newer compiler's error is not dropped.
- */
-function compileDiagnostics(
-  entry: LoadedDefinitionSet["subgraphs"][number],
-): readonly DefinitionDiagnostic[] {
-  const rebuilt = structuredDiagnostics(entry.value, entry.source);
-  if (rebuilt !== undefined) return rebuilt;
-  const reported = (entry.value as { diagnostics?: unknown }).diagnostics;
-  if (!Array.isArray(reported) || reported.length === 0) return [];
-  return [
-    createDiagnostic({
-      code: "PH-SG-DEFINITION-INVALID",
-      source: entry.source,
-      path: [...entry.path, "diagnostics"],
-      message: "This subgraph's compile diagnostics could not be read.",
-      expected: "diagnostics from the V1 catalog",
-      received: `${reported.length} diagnostics`,
-      repair:
-        "Rebuild the package with this release of document-model, then run the check again.",
-    }),
-  ];
 }
 
 /**
@@ -451,7 +420,7 @@ function checkExportedScalar(
  */
 function checkPackageScalarNames(
   artifacts: readonly NormalizedDocumentModelArtifact[],
-  subgraphs: readonly LoadedDefinition<SubgraphClass>[],
+  subgraphs: readonly DescribedSubgraph[],
 ): readonly DefinitionDiagnostic[] {
   type Use = {
     readonly digest: Sha256Digest;
@@ -473,9 +442,8 @@ function checkPackageScalarNames(
     });
   }
   for (const entry of subgraphs) {
-    const definition = (entry.value as { definition?: SubgraphDefinition })
-      .definition;
-    if (definition?.schemaKind !== "typed") continue;
+    const { definition } = entry.description;
+    if (definition.schemaKind !== "typed") continue;
     definition.scalars.forEach((scalar, scalarIndex) => {
       if (!("definition" in scalar)) return;
       uses.push({
@@ -709,6 +677,7 @@ export type DefinitionCheckOutcome = {
    * `ph model inspect` does not load the sources a second time.
    */
   readonly artifacts: readonly NormalizedDocumentModelArtifact[];
+  readonly subgraphs: readonly DescribedSubgraph[];
 };
 
 export async function checkDefinitions(
@@ -727,18 +696,25 @@ export async function checkDefinitionsWithArtifacts(
     ...(request.cliSources !== undefined && {
       cliSources: request.cliSources,
     }),
+    ...(request.allowMissingConfig !== undefined && {
+      allowMissingConfig: request.allowMissingConfig,
+    }),
     packageRevision: request.packageRevision,
     ...(request.signal !== undefined && { signal: request.signal }),
   });
   throwIfAborted(request.signal, "The definition check");
 
   const selectionUnknown = loaded.diagnostics.some(
-    ({ phase }) => phase === "configuration",
+    ({ phase, severity }) => phase === "configuration" && severity === "error",
   );
   const unregistered = selectionUnknown
     ? []
     : unregisteredDefinitionDiagnostics(loaded);
-  if (loaded.status === "skipped") {
+  if (
+    loaded.status === "skipped" &&
+    loaded.subgraphs.length === 0 &&
+    loaded.diagnostics.length === 0
+  ) {
     return {
       report: createDefinitionCheckReport({
         profile: request.profile,
@@ -748,6 +724,7 @@ export async function checkDefinitionsWithArtifacts(
         ...(unregistered.length === 0 && { skipReason: loaded.skipReason }),
       }),
       artifacts: [],
+      subgraphs: [],
     };
   }
 
@@ -821,6 +798,7 @@ export async function checkDefinitionsWithArtifacts(
       }),
     }),
     artifacts: normalized.artifacts,
+    subgraphs: loaded.subgraphs,
   };
 }
 

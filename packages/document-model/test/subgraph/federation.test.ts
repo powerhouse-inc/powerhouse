@@ -20,9 +20,6 @@ describe("Federation 2 in a typed declaration", () => {
       kind: "graphql-ast-v1",
       typeDefs: parse(V2_SOURCE),
       resolverCoordinates: [],
-      getResolvers: () => ({}),
-      hasSubscriptions: undefined,
-      preserveDefinitionOrder: true,
     }).document,
   );
 
@@ -34,7 +31,7 @@ describe("Federation 2 in a typed declaration", () => {
       });
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0].code).toBe("PH-GQL-FEDERATION-UNSUPPORTED");
-      expect(diagnostics[0].repair).toContain("graphql-ast-compat");
+      expect(diagnostics[0].repair).toContain("schema.graphql(");
     },
   );
 
@@ -66,9 +63,6 @@ describe("Federation 2 in a typed declaration", () => {
       kind: "graphql-ast-v1",
       typeDefs: parse(V2_SOURCE),
       resolverCoordinates: [],
-      getResolvers: () => ({}),
-      hasSubscriptions: undefined,
-      preserveDefinitionOrder: true,
     });
     expect(normalized.diagnostics).toEqual([]);
     expect(

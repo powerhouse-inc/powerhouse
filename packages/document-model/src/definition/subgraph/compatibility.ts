@@ -22,22 +22,15 @@ import { compareCodeUnits } from "../primitives.js";
  * compares it with what the factory actually produced.
  */
 
-/** The compatibility declaration, with the host types still parameters. */
-export type GraphQLAstCompatibility<TSubgraph, TDocument, TResolverMap> = {
+export type GraphQLAstCompatibility<TDocument> = {
   readonly kind: "graphql-ast-v1";
   readonly typeDefs: TDocument;
   readonly resolverCoordinates: readonly ResolverCoordinateDefinition[];
-  readonly getResolvers: (call: { subgraph: TSubgraph }) => TResolverMap;
-  /** `undefined` is a real value here; it is not "not set". */
-  readonly hasSubscriptions: boolean | undefined;
-  readonly preserveDefinitionOrder: true;
 };
 
 export type NormalizedCompatibility = {
   readonly document: LocationFreeGraphQLDocumentNode;
   readonly resolverCoordinates: readonly ResolverCoordinateDefinition[];
-  /** The wire value: runtime `undefined` becomes `null`. */
-  readonly hasSubscriptions: boolean | null;
   readonly diagnostics: readonly DefinitionDiagnostic[];
 };
 
@@ -60,7 +53,7 @@ const RESOLVER_KINDS = new Set([
  * extension, an enum map, or a federation construct — the AST passes through.
  */
 export function normalizeCompatibility(
-  compatibility: GraphQLAstCompatibility<unknown, unknown, unknown>,
+  compatibility: GraphQLAstCompatibility<unknown>,
   path: readonly (string | number)[] = ["compatibility"],
 ): NormalizedCompatibility {
   const diagnostics: DefinitionDiagnostic[] = [];
@@ -124,19 +117,8 @@ export function normalizeCompatibility(
   return {
     document,
     resolverCoordinates: coordinates,
-    // `undefined` is a real value: the host's truthy check disables transports
-    // for it and for `false` alike, but a migration that could not tell them
-    // apart would have to guess, and guessing wrong turns a socket on.
-    hasSubscriptions: compatibility.hasSubscriptions ?? null,
     diagnostics,
   };
-}
-
-/** Restores the runtime value the host reads from the wire value. */
-export function runtimeHasSubscriptions(
-  wire: boolean | null,
-): boolean | undefined {
-  return wire === null ? undefined : wire;
 }
 
 function coordinateDiagnostic(
@@ -264,6 +246,48 @@ export function typeKindsOfDocument(
     kinds.set(named.name.value, named.kind.replace(/Extension$/, "Definition"));
   }
   return kinds;
+}
+
+const DEFAULT_ROOTS = [
+  ["query", "Query"],
+  ["mutation", "Mutation"],
+  ["subscription", "Subscription"],
+] as const;
+
+/**
+ * The root type of each operation, resolved as GraphQL resolves it: the
+ * schema definition's and extensions' operation types, or, without a schema
+ * definition, the types named `Query`, `Mutation`, and `Subscription`. A type
+ * named `Subscription` is not a root under a schema definition that does not
+ * name it.
+ */
+export function operationRootsOfDocument(
+  document: LocationFreeGraphQLDocumentNode,
+): ReadonlyMap<"query" | "mutation" | "subscription", string> {
+  const roots = new Map<"query" | "mutation" | "subscription", string>();
+  const objectTypes = new Set<string>();
+  let hasSchemaDefinition = false;
+  for (const definition of document.definitions) {
+    switch (definition.kind) {
+      case "SchemaDefinition":
+      case "SchemaExtension":
+        hasSchemaDefinition ||= definition.kind === "SchemaDefinition";
+        for (const operationType of definition.operationTypes) {
+          roots.set(operationType.operation, operationType.type.name.value);
+        }
+        break;
+      case "ObjectTypeDefinition":
+      case "ObjectTypeExtension":
+        objectTypes.add(definition.name.value);
+        break;
+    }
+  }
+  if (!hasSchemaDefinition) {
+    for (const [operation, typeName] of DEFAULT_ROOTS) {
+      if (objectTypes.has(typeName)) roots.set(operation, typeName);
+    }
+  }
+  return roots;
 }
 
 /**

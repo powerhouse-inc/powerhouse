@@ -551,9 +551,9 @@ describe("schema-first module adapter", () => {
         {
           code: "PH-SCALAR-INTERNAL",
           message:
-            "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+            "JSONObject is internal to the reactor host. A document model cannot use it.",
           repair:
-            "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+            "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one. A subgraph can use subgraphScalars.JSONObject().",
         },
       ]);
     });

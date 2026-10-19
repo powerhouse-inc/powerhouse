@@ -21,7 +21,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@powerhousedao/reactor-browser", () => {
   class DocumentModelNotFoundError extends Error {
     override readonly name = "DocumentModelNotFoundError";
-    static isError(error: unknown): error is DocumentModelNotFoundError {
+    static override isError(
+      error: unknown,
+    ): error is DocumentModelNotFoundError {
       return (
         error instanceof Error && error.name === "DocumentModelNotFoundError"
       );

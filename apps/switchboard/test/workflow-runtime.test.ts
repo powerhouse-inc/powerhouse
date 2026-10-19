@@ -978,7 +978,7 @@ describe("the host's reactor access", () => {
 // type, and the subgraph registers late: poll rather than race it.
 async function pollWorkflowSubgraph(
   switchboard: Awaited<ReturnType<typeof startSwitchboard>>,
-): Promise<{ name: string } | undefined> {
+): Promise<ReturnType<GraphQLManager["getSubgraphByName"]>> {
   const { graphqlManager } = (
     switchboard as unknown as {
       api: { graphqlManager: GraphQLManager };
@@ -1027,7 +1027,7 @@ describe("booting Switchboard with workflows on", () => {
       // The subgraph is registered late, so the schema it joins arrives after
       // the boot resolves; poll rather than race it.
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
-        name: "workflow-runtime",
+        subgraphName: "workflow-runtime",
       });
       // The boot type does not publish `api`; the facts sink lives on it.
       const { api } = switchboard as unknown as {

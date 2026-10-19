@@ -1,58 +1,22 @@
-import {
-  DriveInspection,
-  InvalidDeadLetterCursorError,
-  toWireDeadLetter,
-  type DeadLetterPage,
-  toWireQueueState,
-  type INSPECTOR_OPS,
-  type InspectorDocumentReader,
-  type InspectorAccess,
-  type InspectorDriveInfo,
-  type InspectorProcessorInfo,
-  type InspectorReadOpKey,
-  type ISyncInspector,
-  type Remote,
-  type RemoteCursorInfo,
-  type RemoteSyncInspection,
-  type SYNC_INSPECTION_OPS,
-  type SyncInspectionReadOpKey,
-  type ValidationResult,
-  type WireDeadLetterPage,
-  type WireInspectorAttachmentInfo,
-  type WireInspectorDocumentModel,
-  type WireInspectorDrive,
-  type WireInspectorDriveIntegrity,
-  type WireInspectorDrivePage,
-  type WireInspectorProcessor,
-  type WireQueueState,
-  type WireReactorInfo,
-  type WireRemoteCursor,
-  type WireRemoteSyncInspection,
-  type WireStorageHealth,
-  type WireValidationResult,
+import type {
+  INSPECTOR_OPS,
+  InspectorDriveInfo,
+  InspectorProcessorInfo,
+  InspectorReadOpKey,
+  Remote,
+  RemoteCursorInfo,
+  RemoteSyncInspection,
+  SYNC_INSPECTION_OPS,
+  SyncInspectionReadOpKey,
+  ValidationResult,
+  WireInspectorDrive,
+  WireInspectorProcessor,
+  WireRemoteCursor,
+  WireRemoteSyncInspection,
+  WireValidationResult,
 } from "@powerhousedao/reactor";
 import { GraphQLError } from "graphql";
 import { ForbiddenError } from "../errors.js";
-import type { Context } from "../types.js";
-import type { IReactorInspectionSource } from "./source.js";
-
-/** How the subgraph decides for one request's caller. */
-export interface InspectionCallerGate {
-  /** One of the host's listed admins, whatever the policy. */
-  isOperator(ctx: Context): boolean;
-  /** The reactor client, reading as the caller. */
-  readerFor(ctx: Context): InspectorDocumentReader;
-  /** The host's own read check on one document; throws when refused. */
-  assertCanRead(identifier: string, ctx: Context): Promise<string>;
-  /** The host's own read check over a listing. */
-  readableIds(ids: readonly string[], ctx: Context): Promise<Set<string>>;
-  /** The document's id and the scopes the caller is served, or undefined. */
-  servedDocument(
-    identifier: string,
-    branch: string | undefined,
-    ctx: Context,
-  ): Promise<{ id: string; scopes: ReadonlySet<string> } | undefined>;
-}
 
 type GqlOf<T, K extends keyof T> = T[K] extends {
   readonly gql: infer G extends string;
@@ -65,13 +29,11 @@ export type InspectionReadField =
   | GqlOf<typeof INSPECTOR_OPS, InspectorReadOpKey>
   | GqlOf<typeof SYNC_INSPECTION_OPS, SyncInspectionReadOpKey>;
 
-type FieldResolver = (parent: unknown, args: never, ctx: Context) => unknown;
-
-function operatorRequired(): GraphQLError {
+export function operatorRequired(): GraphQLError {
   return new ForbiddenError("to read the reactor's operational state");
 }
 
-function noSyncInspector(): GraphQLError {
+export function noSyncInspector(): GraphQLError {
   return new GraphQLError("This host does not serve sync inspection");
 }
 
@@ -79,11 +41,13 @@ function toOrdinal(value: number | bigint): number {
   return Number(value);
 }
 
-function toWireDrive(drive: InspectorDriveInfo): WireInspectorDrive {
+export function toWireDrive(drive: InspectorDriveInfo): WireInspectorDrive {
   return { ...drive, icon: drive.icon ?? null };
 }
 
-function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
+export function toWireProcessor(
+  info: InspectorProcessorInfo,
+): WireInspectorProcessor {
   return {
     processorId: info.processorId,
     factoryId: info.factoryId,
@@ -108,7 +72,7 @@ function toWireCursor(cursor: RemoteCursorInfo): WireRemoteCursor {
   };
 }
 
-function toWireRemotes(
+export function toWireRemotes(
   inspections: RemoteSyncInspection[],
   remotes: Remote[],
 ): WireRemoteSyncInspection[] {
@@ -132,7 +96,7 @@ function toWireRemotes(
 }
 
 // Every issue names its scope; one the caller is not served is left out.
-function servedIssues(
+export function servedIssues(
   result: ValidationResult,
   scopes: ReadonlySet<string>,
 ): WireValidationResult {
@@ -154,178 +118,5 @@ function servedIssues(
     keyframeIssues,
     snapshotIssues,
     streamOrderIssues,
-  };
-}
-
-/** The read half of the inspection surface; no lever has a field here. */
-export function createInspectionResolvers(
-  source: IReactorInspectionSource,
-  sync: { list(): Remote[] },
-  gate: InspectionCallerGate,
-): Record<string, unknown> {
-  const inspector = source.inspector;
-
-  const operator =
-    <A, R>(run: (args: A) => R) =>
-    (_parent: unknown, args: A, ctx: Context): R => {
-      if (!gate.isOperator(ctx)) {
-        throw operatorRequired();
-      }
-      return run(args);
-    };
-
-  const syncInspector = (): ISyncInspector => {
-    if (!source.syncInspector) {
-      throw noSyncInspector();
-    }
-    return source.syncInspector;
-  };
-
-  const accessFor = (ctx: Context, access: InspectorAccess) =>
-    gate.isOperator(ctx) ? access : null;
-
-  const throttle = source.throttle;
-
-  // Charged before any read, so it also throttles probing the gate.
-  const admit = (ctx: Context): void => {
-    if (!gate.isOperator(ctx)) {
-      throttle.charge(ctx.user?.address.toLowerCase() ?? "anonymous");
-    }
-  };
-
-  const fields: Record<InspectionReadField, FieldResolver> = {
-    info: async (
-      _parent: unknown,
-      _args: unknown,
-      ctx: Context,
-    ): Promise<WireReactorInfo> => {
-      const info = await inspector.info();
-      return { ...info, access: accessFor(ctx, info.access) };
-    },
-
-    documentModels: (): Promise<WireInspectorDocumentModel[]> =>
-      inspector.listDocumentModels(),
-
-    drives: async (
-      _parent: unknown,
-      args: { cursor?: string | null; limit?: number | null },
-      ctx: Context,
-    ): Promise<WireInspectorDrivePage> => {
-      const page = await new DriveInspection(
-        gate.readerFor(ctx),
-        source.documentModelRegistry,
-      ).listDrives(args.cursor ?? undefined, args.limit ?? undefined);
-      const readable = await gate.readableIds(
-        page.results.map((drive) => drive.driveId),
-        ctx,
-      );
-      return {
-        results: page.results
-          .filter((drive) => readable.has(drive.driveId))
-          .map(toWireDrive),
-        nextCursor: page.nextCursor ?? null,
-      };
-    },
-
-    driveIntegrity: async (
-      _parent: unknown,
-      args: { driveId: string; branch: string },
-      ctx: Context,
-    ): Promise<WireInspectorDriveIntegrity> => {
-      admit(ctx);
-      const identifier = await gate.assertCanRead(args.driveId, ctx);
-      const served = await gate.servedDocument(identifier, args.branch, ctx);
-      if (!served) {
-        throw new ForbiddenError("to read this document");
-      }
-      return new DriveInspection(
-        gate.readerFor(ctx),
-        source.documentModelRegistry,
-      ).checkDriveIntegrity(served.id, args.branch);
-    },
-
-    attachmentInfo: operator(async (): Promise<WireInspectorAttachmentInfo> => {
-      const info = await inspector.getAttachmentInfo();
-      return { ...info, lastError: info.lastError ?? null };
-    }),
-
-    queueState: operator(async (): Promise<WireQueueState> =>
-      toWireQueueState(await inspector.getQueueState()),
-    ),
-
-    processors: operator(async (): Promise<WireInspectorProcessor[]> =>
-      (await inspector.getProcessors()).map(toWireProcessor),
-    ),
-
-    catchUpStatus: operator(() => inspector.getCatchUpStatus()),
-
-    storageHealth: operator((): Promise<WireStorageHealth> =>
-      inspector.getStorageHealth(),
-    ),
-
-    validateDocument: async (
-      _parent: unknown,
-      args: { documentId: string; branch?: string | null },
-      ctx: Context,
-    ): Promise<WireValidationResult> => {
-      admit(ctx);
-      const branch = args.branch ?? undefined;
-      const identifier = await gate.assertCanRead(args.documentId, ctx);
-      const served = await gate.servedDocument(identifier, branch, ctx);
-      if (!served) {
-        throw new ForbiddenError("to read this document");
-      }
-      const result = await inspector.validateDocument(served.id, branch);
-      return servedIssues(result, served.scopes);
-    },
-
-    remotes: operator(async (): Promise<WireRemoteSyncInspection[]> =>
-      toWireRemotes(await syncInspector().inspectRemotes(), sync.list()),
-    ),
-
-    remote: operator(
-      async (args: {
-        remoteName: string;
-      }): Promise<WireRemoteSyncInspection> => {
-        const inspection = await syncInspector().inspectRemote(args.remoteName);
-        return toWireRemotes([inspection], sync.list())[0];
-      },
-    ),
-
-    deadLetters: operator(
-      async (args: {
-        remoteName: string;
-        cursor?: string | null;
-        limit?: number | null;
-      }): Promise<WireDeadLetterPage> => {
-        let page: DeadLetterPage;
-        try {
-          page = await syncInspector().listDeadLetters(
-            args.remoteName,
-            args.cursor ?? undefined,
-            args.limit ?? undefined,
-          );
-        } catch (error) {
-          if (error instanceof InvalidDeadLetterCursorError) {
-            throw new GraphQLError(error.message, {
-              extensions: { code: "BAD_USER_INPUT" },
-            });
-          }
-          throw error;
-        }
-        return {
-          remoteName: page.remoteName,
-          results: page.results.map(toWireDeadLetter),
-          nextCursor: page.nextCursor ?? null,
-        };
-      },
-    ),
-  };
-
-  return {
-    Query: {
-      inspection: () => ({}),
-    },
-    ReactorInspection: fields,
   };
 }

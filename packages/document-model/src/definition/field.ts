@@ -37,6 +37,7 @@ import type {
 import {
   type AnyFieldDescriptor,
   type AnyTypeDescriptor,
+  type ComputedTokensOf,
   type EnumDescriptor,
   type EnumValue,
   type EnumValueInput,
@@ -440,8 +441,8 @@ export const ph = withInternalScalarGuards({
   /**
    * Declares a field a resolver computes.
    *
-   * Schema only: the implementation is bound in a subgraph's entries
-   * callback, where the host instance and the request type are in scope. An
+   * Schema only: the implementation is bound in a subgraph's `getSchema`,
+   * where the subgraph instance and the request type are in scope. An
    * object carrying one exposes `Type.computedTokens.<field>` to bind through.
    */
   field: computedField,
@@ -471,7 +472,10 @@ export const ph = withInternalScalarGuards({
       // same on every object and a typo is a compile error rather than a
       // read of `undefined`.
       computed: members.computed,
-      computedTokens: computedTokens(validName, members.computed),
+      computedTokens: computedTokens(
+        validName,
+        members.computed,
+      ) as ComputedTokensOf<TFields>,
     });
   },
 

@@ -87,11 +87,12 @@ const query = `{ inspection { info { workflows } } }`;
 async function postQuery(
   port: number,
   path: string,
+  source = query,
 ): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query: source }),
   });
   const text = await response.text();
   let body: unknown = text;
@@ -146,5 +147,21 @@ describe("booting Switchboard", () => {
         expect((await postQuery(port, "/graphql/inspection")).status).toBe(404);
       },
     );
+  }, 60_000);
+
+  it("mounts the reactor drive subgraph at /graphql/reactor-drive-nodes", async () => {
+    await withSwitchboard({}, undefined, async ({ port }) => {
+      await vi.waitFor(
+        async () =>
+          expect(
+            await postQuery(
+              port,
+              "/graphql/reactor-drive-nodes",
+              '{ reactorDrive(id: "missing") { id } }',
+            ),
+          ).toEqual({ status: 200, body: { data: { reactorDrive: null } } }),
+        { timeout: 30_000, interval: 250 },
+      );
+    });
   }, 60_000);
 });

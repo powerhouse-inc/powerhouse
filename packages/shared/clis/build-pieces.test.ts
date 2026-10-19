@@ -1,12 +1,18 @@
 // The pure helpers behind the pieces half of `ph build`: what gets written
 // beside a piece, how the manifest is enriched, and what fails a build.
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { runInNewContext } from "node:vm";
 import type { Manifest } from "../document-model/types.js";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assertPieceVersion,
   assertPiecesOutDir,
@@ -19,6 +25,7 @@ import {
   pieceListPath,
   piecePackageJson,
   resolvePieceLocation,
+  syncDistManifest,
   type BuiltPiece,
   planPieces,
 } from "./build-pieces.mts";
@@ -600,5 +607,108 @@ describe("planPieces", () => {
     expect(planPieces(dir, "build")[0].outDir).toBe(
       join("build", "node", "pieces", "hello"),
     );
+  });
+});
+
+describe("syncDistManifest with the subgraphs the build checked", () => {
+  it("enriches pieces, external dependencies and subgraphs together", () => {
+    const projectRoot = writeProject({
+      "powerhouse.manifest.json": '{"name":"@acme/pkg"}',
+      "dist/node/pieces/index.mjs": "export {};",
+    });
+    const copy = syncDistManifest(
+      { projectRoot, outDir: "dist", pieces: [] },
+      {
+        built: [built[0]],
+        externalDependencies: { graphql: "16.11.0" },
+        subgraphNames: ["reports"],
+      },
+    );
+
+    expect(copy).toBe(join(projectRoot, "dist/powerhouse.manifest.json"));
+    expect(JSON.parse(readFileSync(copy!, "utf8"))).toEqual({
+      name: "@acme/pkg",
+      pieces: [
+        {
+          id: "@acme/piece-hello",
+          name: "Hello",
+          version: "1.2.3",
+          description: "Says hello.",
+          bundle: "dist/node/pieces/hello",
+          descriptor: "dist/node/pieces/hello/descriptor.json",
+        },
+      ],
+      externalDependencies: { graphql: "16.11.0" },
+      subgraphs: [{ id: "reports", name: "reports" }],
+    });
+    expect(
+      readFileSync(join(projectRoot, "powerhouse.manifest.json"), "utf8"),
+    ).toBe('{"name":"@acme/pkg"}');
+  });
+
+  const sync = (source: object, subgraphNames: string[]) => {
+    const projectRoot = writeProject({
+      "powerhouse.manifest.json": JSON.stringify(source),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const copy = syncDistManifest(
+        { projectRoot, outDir: "dist", pieces: [] },
+        { built: [], subgraphNames },
+      );
+      return {
+        copy:
+          copy === undefined
+            ? undefined
+            : (JSON.parse(readFileSync(copy, "utf8")) as Manifest),
+        source: readFileSync(
+          join(projectRoot, "powerhouse.manifest.json"),
+          "utf8",
+        ),
+        warnings: warn.mock.calls.map((call) => String(call[0])),
+      };
+    } finally {
+      warn.mockRestore();
+    }
+  };
+
+  it("lists a checked subgraph the source manifest leaves out, and keeps the entries it has", () => {
+    const source = {
+      name: "@acme/subgraphs",
+      subgraphs: [
+        { id: "billing", name: "Billing" },
+        { id: "retired", name: "retired" },
+      ],
+    };
+
+    const { copy, warnings, ...rest } = sync(source, ["billing", "reports"]);
+
+    expect(copy?.subgraphs).toEqual([
+      { id: "billing", name: "Billing" },
+      { id: "retired", name: "retired" },
+      { id: "reports", name: "reports" },
+    ]);
+    expect(rest.source).toBe(JSON.stringify(source));
+    expect(warnings).toEqual([
+      "⚠ powerhouse.manifest.json does not list the subgraph(s) reports; the built manifest lists them. Run ph generate subgraph --all to record them.",
+    ]);
+  });
+
+  it("adds a subgraphs list to a manifest without one", () => {
+    const { copy } = sync({ name: "@acme/subgraphs" }, ["reports"]);
+
+    expect(copy?.subgraphs).toEqual([{ id: "reports", name: "reports" }]);
+  });
+
+  it("copies a manifest that lists every checked subgraph unchanged and says nothing", () => {
+    const source = {
+      name: "@acme/subgraphs",
+      subgraphs: [{ id: "reports", name: "Reports" }],
+    };
+
+    const { copy, warnings } = sync(source, ["reports"]);
+
+    expect(copy).toEqual(source);
+    expect(warnings).toEqual([]);
   });
 });

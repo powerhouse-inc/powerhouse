@@ -24,7 +24,7 @@ import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
-import { logRefusal, runBuild } from "./build.js";
+import { logBuildReport, runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
   const { outDir, debug, dynamicBase, favicon } = args;
@@ -61,8 +61,8 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     noSharedDeps: false,
     ignoreTypeErrors: false,
   });
+  await logBuildReport(result);
   if (result.exitCode !== 0) {
-    await logRefusal(result);
     throw new Error("The package build failed, so Connect was not built.");
   }
 

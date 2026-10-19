@@ -8,6 +8,7 @@ import {
   findUnregisteredDefinitions,
   formatDefinitionDiagnostic,
   type PackedConsumerEvidence,
+  subgraphEntrySpecifiers,
   unregisteredDefinitionDiagnostic,
 } from "document-model/tooling";
 import {
@@ -58,11 +59,17 @@ import {
   scratchDirectory,
   ScratchDirectoryError,
 } from "./paths.js";
+import { legacySubgraphHints } from "./legacy-subgraph-hint.js";
+
+export function reportSharedBase(write: (text: string) => void) {
+  return ({ value }: { readonly value: { readonly name: string } }) =>
+    write(`ℹ ${value.name} is accepted as a shared subgraph base.\n`);
+}
 
 export const GENERATION_DIRECTORY = join(".ph", "build");
 
 const NOTHING_CHECKED =
-  "ℹ This package lists no code-first definitionSources; no definition was checked.\n";
+  "ℹ This package lists no code-first definitionSources and has no subgraphs; no definition was checked.\n";
 
 export type CandidateRequest = {
   readonly packageRoot: string;
@@ -101,6 +108,7 @@ export type GenerationSteps = {
   readonly emitCandidate: (request: {
     readonly packageRoot: string;
     readonly candidateRoot: string;
+    readonly subgraphNames: readonly string[];
   }) => Promise<{ readonly ok: boolean; readonly summary?: string }>;
   readonly verifyPackedConsumers: (
     request: CandidateRequest,
@@ -211,8 +219,9 @@ export async function runGeneration(
       });
       const preflight = await request.steps.preflight(
         packageRoot,
-        selection.status === "ready" &&
-          selection.sourceSet.mode === "code-first",
+        (selection.status === "ready" &&
+          selection.sourceSet.mode === "code-first") ||
+          subgraphEntrySpecifiers(packageRoot).length > 0,
       );
       if (!preflight.ok) {
         request.log(`✘ ${preflight.summary}\n`);
@@ -324,7 +333,15 @@ async function generate(
   }
   if (!typecheck.ok) {
     log("✘ TypeScript failed; no definition was evaluated.\n");
-    if (typecheck.summary !== undefined) log(`${typecheck.summary}\n`);
+    if (typecheck.summary !== undefined) {
+      log(`${typecheck.summary}\n`);
+      for (const hint of legacySubgraphHints(
+        typecheck.summary,
+        request.packageRoot,
+      )) {
+        log(`✘ ${hint}\n`);
+      }
+    }
     return failure("failed");
   }
   plan = typecheck.plan;
@@ -367,10 +384,13 @@ async function generate(
         emittedModules: typecheck.emittedModules,
         loaderDiagnostics: typecheck.loaderDiagnostics,
       }),
+      { onSharedBase: reportSharedBase(log) },
     );
 
     const outputRoot = resolve(request.packageRoot, request.outDir);
-    const assembleCandidate = async (): Promise<void> => {
+    const assembleCandidate = async (
+      subgraphNames: readonly string[],
+    ): Promise<void> => {
       log("▶ Emitting candidate bundles\n");
       phases.push("candidate");
       const bundlesRoot = join(generationRoot, "bundles");
@@ -378,6 +398,7 @@ async function generate(
       const candidate = await request.steps.emitCandidate({
         packageRoot: request.packageRoot,
         candidateRoot: bundlesRoot,
+        subgraphNames,
       });
       if (!candidate.ok) {
         throw new CandidateBundleError(
@@ -435,7 +456,7 @@ async function generate(
 
     const buildWithoutEvidence = async (): Promise<GenerationResult> => {
       try {
-        await assembleCandidate();
+        await assembleCandidate([]);
       } catch (error) {
         return refusal(
           `The candidate bundle failed.\n${error instanceof Error ? error.message : String(error)}`,
@@ -454,11 +475,13 @@ async function generate(
       );
     };
 
-    if (
-      request.allowMissingConfig &&
+    const hasSubgraphs =
+      subgraphEntrySpecifiers(request.packageRoot).length > 0;
+    const allowMissingConfig =
+      request.allowMissingConfig === true &&
       request.cliSources === undefined &&
-      !existsSync(request.configFile)
-    ) {
+      !existsSync(request.configFile);
+    if (allowMissingConfig) {
       const unregistered = findCodeFirstDefinitions(request.packageRoot);
       if (unregistered.length > 0) {
         for (const definition of unregistered) {
@@ -468,8 +491,10 @@ async function generate(
         }
         return failure("failed");
       }
-      log(NOTHING_CHECKED);
-      return await buildWithoutEvidence();
+      if (!hasSubgraphs) {
+        log(NOTHING_CHECKED);
+        return await buildWithoutEvidence();
+      }
     }
 
     const resolution = loader.resolve({
@@ -477,9 +502,11 @@ async function generate(
       ...(request.cliSources !== undefined && {
         cliSources: request.cliSources,
       }),
+      allowMissingConfig,
     });
     if (
       resolution.status === "skipped" &&
+      !hasSubgraphs &&
       findUnregisteredDefinitions(resolution).length === 0
     ) {
       log(NOTHING_CHECKED);
@@ -498,6 +525,7 @@ async function generate(
         ...(request.cliSources !== undefined && {
           cliSources: request.cliSources,
         }),
+        allowMissingConfig,
         warningsAsErrors: request.warningsAsErrors,
         hostValidation: defaultHostValidationFor(request.packageRoot),
         releaseEvidence: {
@@ -507,7 +535,13 @@ async function generate(
             loadedRuntimeFiles = runtime.files;
             stateInput = { ...stateInput, loadedRuntimeFiles };
             state = { ...state, loadedRuntimeFilesDigest: runtime.digest };
-            await assembleCandidate();
+            const { subgraphs } = await loader.readSubgraphs({
+              packageRoot: request.packageRoot,
+              packageRevision: state.packageRevision,
+            });
+            await assembleCandidate(
+              subgraphs.map(({ description }) => description.subgraphName),
+            );
             log("▶ Verifying packed consumers\n");
             phases.push("packed");
             const publications: PublishedFileSet[] = [];
@@ -545,6 +579,10 @@ async function generate(
       await loader.dispose();
     }
 
+    if (report.status === "skipped") {
+      log(NOTHING_CHECKED);
+      return await buildWithoutEvidence();
+    }
     if (report.status !== "ok") {
       log(`✘ ${report.status}\n`);
       return failure(

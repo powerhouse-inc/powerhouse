@@ -19,6 +19,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
+  projectDirOf,
 } from "utils";
 import {
   makeEditorModuleFile,
@@ -39,15 +40,18 @@ export async function tsMorphGenerateApp({
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: GenerateAppArgs) {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const projectDir = projectDirOf(project);
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    path.join(projectDir, "editors"),
+  );
   const editorsDirPath = editorsDir.getPath();
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    path.join(projectDir, "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const editorDirPath = path.join(editorsDirPath, editorDir);
-  const projectDir = editorsDir.getParentOrThrow().getPath();
   const editorComponentsDirPath = path.join(editorDirPath, "components");
 
   await ensureDirectoriesExist(

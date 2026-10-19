@@ -43,8 +43,7 @@ describe("generateAll", () => {
     await runTsc(outDir);
   });
 
-  // A fresh project loads no source files, so discovery must read them from disk.
-  it("should regenerate editors, subgraphs and processors found on disk", async () => {
+  it("should regenerate editors and processors found on disk beside a subgraph", async () => {
     const outDir = join(parentOutDir, "regenerate-modules");
     await cpForce(WITH_EDITORS, outDir);
 
@@ -63,7 +62,6 @@ describe("generateAll", () => {
 
     const regenerated = [
       "editors/existing-document-editor/editor.tsx",
-      "subgraphs/test-subgraph/schema.ts",
       "processors/test-processor/processor.ts",
     ];
     for (const file of regenerated) await rm(join(outDir, file));

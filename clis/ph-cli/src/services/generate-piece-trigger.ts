@@ -1,11 +1,9 @@
 import {
-  detectFeatures,
   generatePieceTrigger,
-  syncFeatureDependencies,
+  installFeatureDependencies,
 } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { GeneratePieceTriggerArgs } from "../types.js";
-import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 
 export async function startGeneratePieceTrigger(
   args: GeneratePieceTriggerArgs,
@@ -33,9 +31,7 @@ export async function startGeneratePieceTrigger(
     project,
   );
   await project.save();
-  const added = await syncFeatureDependencies(
-    detectFeatures(projectDir),
-    projectDir,
-  );
-  await installAddedDependencies(added, projectDir, args.skipInstall);
+  await installFeatureDependencies(projectDir, {
+    skipInstall: args.skipInstall,
+  });
 }

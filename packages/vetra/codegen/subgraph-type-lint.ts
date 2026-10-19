@@ -1,4 +1,8 @@
-import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
+import {
+  loadDocumentModelInDir,
+  uncachedDefinitionSourceRevision,
+  ViteTypeScriptSourceImportAdapter,
+} from "@powerhousedao/codegen/utils";
 import {
   describeClaimContest,
   describeRefusedDocumentModel,
@@ -6,16 +10,23 @@ import {
   findPackageSubgraphConflicts,
   hostDocumentModels,
   type PackageSubgraph,
-  quotedNames,
   type SubgraphWarning,
 } from "@powerhousedao/reactor-api/subgraph-types";
-import { type DocumentNode, parse } from "graphql";
-import { type Dirent, readdirSync, readFileSync } from "node:fs";
+import {
+  DefinitionSourceLoader,
+  formatDefinitionDiagnostic,
+  subgraphEntrySpecifiers,
+} from "document-model/tooling";
+import type { DocumentNode } from "graphql";
+import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-// Templates with substitutions are skipped: their SDL is only known at runtime.
-const GQL_TEMPLATE = /\bgql\s*`([^`]*)`/g;
-const SUBGRAPH_NAME = /\bname\s*=\s*["'`]([^"'`]+)["'`]/;
+export type SubgraphLint = {
+  /** Subgraphs the package cannot ship, such as old-style classes. */
+  readonly errors: string[];
+  /** Models and subgraphs the server would refuse or leave out. */
+  readonly warnings: string[];
+};
 
 function directories(path: string): Dirent[] {
   try {
@@ -27,68 +38,57 @@ function directories(path: string): Dirent[] {
   }
 }
 
-function read(path: string): string | undefined {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return undefined;
-  }
-}
-
-function readSchema(path: string): DocumentNode | undefined {
-  const source = read(path);
-  if (source === undefined) return undefined;
-  const blocks = Array.from(source.matchAll(GQL_TEMPLATE), ([, sdl]) => sdl);
-  if (blocks.length === 0 || blocks.some((sdl) => sdl.includes("${"))) {
-    return undefined;
-  }
-  try {
-    return parse(blocks.join("\n"));
-  } catch {
-    // Invalid SDL fails where the subgraph loads, and is reported there.
-    return undefined;
-  }
-}
-
 const line = ({ message, repair }: SubgraphWarning) => `${message} ${repair}`;
 
-/** A warning per model and subgraph the server would refuse or leave out. */
-export function lintSubgraphTypes(projectDir: string): string[] {
+/**
+ * Reads the package's subgraphs through the subgraph protocol, without
+ * constructing them, and reports what the server would refuse or leave out.
+ */
+export async function lintSubgraphTypes(
+  projectDir: string,
+): Promise<SubgraphLint> {
+  if (subgraphEntrySpecifiers(projectDir).length === 0) {
+    return { errors: [], warnings: [] };
+  }
+  const loader = new DefinitionSourceLoader(
+    new ViteTypeScriptSourceImportAdapter(),
+  );
+  let read: Awaited<ReturnType<DefinitionSourceLoader["readSubgraphs"]>>;
+  try {
+    read = await loader.readSubgraphs({
+      packageRoot: projectDir,
+      packageRevision: uncachedDefinitionSourceRevision(),
+    });
+  } finally {
+    await loader.dispose();
+  }
+
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  for (const diagnostic of read.diagnostics) {
+    (diagnostic.severity === "error" ? errors : warnings).push(
+      formatDefinitionDiagnostic(diagnostic),
+    );
+  }
+  const subgraphs: PackageSubgraph[] = read.subgraphs.map(
+    ({ description }) => ({
+      name: description.subgraphName,
+      typeDefs: description.typeDefs as DocumentNode,
+    }),
+  );
+  if (subgraphs.length === 0) return { errors, warnings };
+
   const models = directories(join(projectDir, "document-models"))
     .map(loadDocumentModelInDir)
     .filter((model) => model !== undefined);
-  const subgraphsDir = join(projectDir, "subgraphs");
-  const subgraphs: PackageSubgraph[] = [];
-  const dirOf = new Map<PackageSubgraph, string>();
-  const dirs = directories(subgraphsDir)
-    .map((entry) => entry.name)
-    .sort();
-  for (const dir of dirs) {
-    const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
-    if (!typeDefs) continue;
-    const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
-    const subgraph = { name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs };
-    subgraphs.push(subgraph);
-    dirOf.set(subgraph, dir);
-  }
-  if (subgraphs.length === 0) return [];
-
   const host = hostDocumentModels(models);
-  const { conflicts, contests, duplicateNames } = findPackageSubgraphConflicts(
-    subgraphs,
-    host,
-  );
-  return [
+  const { conflicts, contests } = findPackageSubgraphConflicts(subgraphs, host);
+  warnings.push(
     ...host.refused.map((model) => line(describeRefusedDocumentModel(model))),
-    ...duplicateNames.map((name) => {
-      const dirs = subgraphs
-        .filter((subgraph) => subgraph.name === name)
-        .map((subgraph) => dirOf.get(subgraph) ?? name);
-      return `Subgraphs in ${quotedNames(dirs)} are ${dirs.length === 2 ? "both" : "all"} named "${name}", so the server serves only one of them. Rename ${dirs.length === 2 ? "one" : "all but one"} of them.`;
-    }),
     ...Array.from(conflicts).flatMap(([{ name }, conflict]) =>
       describeSubgraphConflict(name, conflict).map(line),
     ),
     ...contests.map((contest) => line(describeClaimContest(contest))),
-  ];
+  );
+  return { errors, warnings };
 }

@@ -3,10 +3,12 @@ import { ph } from "document-model";
 import { createRequire } from "node:module";
 import type * as GraphQL from "graphql";
 import { describe, expect, it } from "vitest";
-import { defineSubgraph } from "../src/graphql/define-subgraph.js";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import type { SchemaBuilder } from "../src/graphql/subgraph-schema.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
 import { printCompatibilityDocument } from "../src/graphql/structured-projection.js";
 import { buildSubgraphSchemaModule } from "../src/utils/create-schema.js";
+import { servedSubgraph } from "./utils/served-subgraph.js";
 
 const Widget = ph.object("Widget", {
   fields: { id: ph.String({ required: true }) },
@@ -20,24 +22,21 @@ const { graphql, parse, GraphQLScalarType, Kind } = createRequire(
 function run(
   resolve: () => { name: string } | string | Promise<{ name: string } | string>,
 ) {
-  const Subgraph = defineSubgraph({
-    name: "entries",
-    schemaKind: "typed",
-    entries: (build) => [
-      build.query("entry", {
-        returns: ph.ref(Entry, { required: true }),
-        resolve: () => ({ id: "one" }),
-      }),
-      build.resolveType(Entry, resolve),
-    ],
-  });
-  const instance = new Subgraph({} as SubgraphArgs);
+  class Entries extends BaseSubgraph {
+    static override readonly subgraphName = "entries";
+    static override getSchema(schema: SchemaBuilder<Entries>) {
+      return [
+        schema.query("entry", {
+          returns: ph.ref(Entry, { required: true }),
+          resolve: () => ({ id: "one" }),
+        }),
+        schema.resolveType(Entry, resolve),
+      ];
+    }
+  }
+  const served = servedSubgraph(new Entries({} as SubgraphArgs));
   const schema = buildSubgraphSchema([
-    buildSubgraphSchemaModule(
-      [],
-      instance.resolvers as never,
-      instance.typeDefs,
-    ),
+    buildSubgraphSchemaModule([], served.resolvers, served.typeDefs),
   ]);
   return graphql({
     schema,

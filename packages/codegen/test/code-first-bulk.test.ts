@@ -17,7 +17,6 @@ import {
   generateAllDocumentModels,
   generateAllSubgraphs,
   generateCodeFirstDocumentModel,
-  generateCodeFirstSubgraph,
   generateSubgraph,
 } from "../src/codegen/generate.js";
 import { loadCodeFirstInventory } from "../src/file-builders/index.mts";
@@ -35,7 +34,6 @@ const TEST_DOC_JSON = fileURLToPath(
 );
 
 let projectDir: string;
-let enteredFrom: string;
 
 const path = (...segments: string[]) => join(projectDir, ...segments);
 const read = (...segments: string[]) => readFileSync(path(...segments), "utf8");
@@ -80,7 +78,7 @@ const oldSubgraphEntry = { name: "old-subgraph", id: "old-subgraph" };
 
 async function scaffoldCodeFirst() {
   await inProject((project) => generateCodeFirstDocumentModel(task, project));
-  await inProject((project) => generateCodeFirstSubgraph("tasks-api", project));
+  await inProject((project) => generateSubgraph("tasks-api", project));
 }
 
 async function createMixedPackage() {
@@ -105,6 +103,9 @@ function breakTaskSource() {
 const unsupportedVersionDiagnostic =
   "PH-CONFIG-VERSION-UNSUPPORTED [error/configuration] <config> /definitionSources/formatVersion: The definitionSources format version is not one this release reads. Expected: 1 Received: 2 Repair: Set definitionSources.formatVersion to 1, or upgrade ph.";
 
+const SUBGRAPH_IMPORT_FAILURE =
+  "PH-IMPORT-FAILED [error/import] ./subgraphs/billing/index.ts (root): This definition source needs the package missing-dependency, which is not installed.";
+
 const unloadableWarning = (section: string, reason: string) =>
   `Kept every ${section} entry in powerhouse.manifest.json: definitionSources in powerhouse.config.json could not be read or loaded.\n${reason}`;
 
@@ -122,13 +123,11 @@ function selectDefinitionSources(definitionSources: unknown) {
 }
 
 beforeEach(() => {
-  enteredFrom = process.cwd();
   projectDir = createCodeFirstPackage();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  process.chdir(enteredFrom);
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -202,7 +201,7 @@ describe("bulk generation in a package with both kinds of modules", () => {
     },
   );
 
-  it("keeps every subgraph entry and registers a schema-first one when a code-first source is broken", async () => {
+  it("regenerates subgraphs when a code-first model source is broken", async () => {
     await createMixedPackage();
     breakTaskSource();
     writeManifest({
@@ -212,12 +211,10 @@ describe("bulk generation in a package with both kinds of modules", () => {
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await inProject(generateAllSubgraphs);
-    expect(warn.mock.calls).toStrictEqual([
-      [unloadableWarning("subgraphs", brokenTaskDiagnostic)],
-    ]);
+    expect(warn.mock.calls).toStrictEqual([]);
     expect(readManifestJson()).toMatchObject({
       documentModels: [testDocEntry, taskEntry],
-      subgraphs: [tasksApiEntry, oldSubgraphEntry, billingEntry],
+      subgraphs: [tasksApiEntry, billingEntry],
     });
   });
 
@@ -246,7 +243,7 @@ describe("bulk generation in a package with both kinds of modules", () => {
     });
   });
 
-  it("keeps a subgraph entry, and prints a warning, when its BaseSubgraph cannot be resolved", async () => {
+  it("fails and keeps the manifest when a subgraph cannot be imported", async () => {
     await createMixedPackage();
     replaceIn(
       "subgraphs/billing/index.ts",
@@ -254,44 +251,93 @@ describe("bulk generation in a package with both kinds of modules", () => {
       'from "missing-dependency";',
     );
     const billing = read("subgraphs/billing/index.ts");
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await inProject(generateAllSubgraphs);
-    expect(warn.mock.calls).toStrictEqual([
-      [
-        "Kept every subgraphs entry in powerhouse.manifest.json: 1 subgraph(s) extend a BaseSubgraph that cannot be resolved (billing/index.ts).",
-      ],
-    ]);
-    expect(readManifestJson()).toMatchObject({
-      subgraphs: [tasksApiEntry, billingEntry],
-    });
+    const manifest = read("powerhouse.manifest.json");
+    await expect(inProject(generateAllSubgraphs)).rejects.toThrow(
+      SUBGRAPH_IMPORT_FAILURE,
+    );
+    expect(read("powerhouse.manifest.json")).toBe(manifest);
     expect(read("subgraphs/billing/index.ts")).toBe(billing);
   });
 
-  it("keeps every subgraph entry when a schema-first subgraph's name cannot be read", async () => {
+  it("recovers a computed subgraph name through the protocol", async () => {
     await createMixedPackage();
-    writeManifest({
-      name: "@acme/things",
-      subgraphs: [tasksApiEntry, billingEntry, oldSubgraphEntry],
-    });
     replaceIn(
       "subgraphs/billing/index.ts",
-      'name = "billing";',
-      "name = BILLING_NAME;",
+      'subgraphName = "billing";',
+      "subgraphName = BILLING_NAME;",
     );
     writeFileSync(
       path("subgraphs/billing/index.ts"),
       `const BILLING_NAME = "billing";\n${read("subgraphs/billing/index.ts")}`,
     );
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const authored = read("subgraphs/billing/index.ts");
+    rmSync(path("subgraphs/index.ts"));
+    writeManifest({ name: "@acme/things", subgraphs: [] });
     await inProject(generateAllSubgraphs);
-    expect(warn.mock.calls).toStrictEqual([
-      [
-        "Kept every subgraphs entry in powerhouse.manifest.json: 1 subgraph(s) do not declare their name as a string literal (billing/index.ts).",
-      ],
+    expect(readManifestJson()).toHaveProperty("subgraphs", [
+      billingEntry,
+      tasksApiEntry,
     ]);
+    expect(read("subgraphs/index.ts")).toContain(
+      'import { BillingSubgraph } from "./billing/index.js";',
+    );
+    expect(read("subgraphs/index.ts")).toContain("export { BillingSubgraph };");
+    expect(read("subgraphs/billing/index.ts")).toBe(authored);
+  });
+
+  it("fails on an old-style subgraph with the migration message and keeps the manifest", async () => {
+    await createMixedPackage();
+    mkdirSync(path("subgraphs", "legacy"));
+    writeFileSync(
+      path("subgraphs/legacy/index.ts"),
+      'import { BaseSubgraph } from "@powerhousedao/reactor-api";\n\nexport class LegacySubgraph extends BaseSubgraph {\n  name = "legacy";\n}\n',
+    );
+    const manifest = read("powerhouse.manifest.json");
+    await expect(inProject(generateAllSubgraphs)).rejects.toThrow(
+      "LegacySubgraph has no static subgraphName. Shared bases belong outside subgraphs/ or must be extended by an exported subgraph. Old-style subgraphs (`name`/`typeDefs`/`resolvers`): run `ph migrate`.",
+    );
+    expect(read("powerhouse.manifest.json")).toBe(manifest);
+  });
+
+  it("repairs a deleted barrel and lists every subgraph again", async () => {
+    await createMixedPackage();
+    rmSync(path("subgraphs/index.ts"));
+    writeManifest({ name: "@acme/things", subgraphs: [] });
+    await inProject(generateAllSubgraphs);
+    expect(read("subgraphs/index.ts")).toContain(
+      'import { BillingSubgraph } from "./billing/index.js";',
+    );
+    expect(read("subgraphs/index.ts")).toContain(
+      'import { TasksApiSubgraph } from "./tasks-api/index.js";',
+    );
     expect(readManifestJson()).toMatchObject({
-      subgraphs: [tasksApiEntry, billingEntry, oldSubgraphEntry],
+      subgraphs: [billingEntry, tasksApiEntry],
     });
+  });
+
+  it("restores a barrel that lost an export", async () => {
+    await createMixedPackage();
+    const barrel = read("subgraphs/index.ts");
+    writeFileSync(
+      path("subgraphs/index.ts"),
+      barrel.replace("export { TasksApiSubgraph };\n", ""),
+    );
+    expect(read("subgraphs/index.ts")).not.toBe(barrel);
+    await inProject(generateAllSubgraphs);
+    expect(read("subgraphs/index.ts")).toBe(barrel);
+  });
+
+  it("never writes into an existing subgraph directory", async () => {
+    await createMixedPackage();
+    rmSync(path("subgraphs/billing/schema.ts"));
+    const index = `${read("subgraphs/billing/index.ts")}export const mine = 1;\n`;
+    writeFileSync(path("subgraphs/billing/index.ts"), index);
+    writeManifest({ name: "@acme/things", subgraphs: [] });
+    await expect(
+      inProject((project) => generateSubgraph("billing", project)),
+    ).rejects.toThrow(/PH-IMPORT-FAILED/);
+    expect(readdirSync(path("subgraphs/billing"))).toStrictEqual(["index.ts"]);
+    expect(read("subgraphs/billing/index.ts")).toBe(index);
   });
 });
 
@@ -323,9 +369,7 @@ describe("bulk generation in a code-first package", () => {
   ])(
     "%s leaves the banner-only aggregate of a package with only a subgraph alone",
     async (_, run) => {
-      await inProject((project) =>
-        generateCodeFirstSubgraph("tasks-api", project),
-      );
+      await inProject((project) => generateSubgraph("tasks-api", project));
       writeFileSync(path("document-models/index.ts"), bannerOnlyIndex);
       await inProject(run);
       expect(aggregates()).toStrictEqual([["index.ts", bannerOnlyIndex]]);
@@ -364,7 +408,7 @@ describe("bulk generation in a code-first package", () => {
     expect(readManifestJson()).toMatchObject({ subgraphs: [tasksApiEntry] });
   });
 
-  it("does not rewrite a manifest that lists every code-first subgraph", async () => {
+  it("does not rewrite a manifest that lists every subgraph", async () => {
     await scaffoldCodeFirst();
     writeManifest({
       name: "@acme/things",
@@ -379,10 +423,8 @@ describe("bulk generation in a code-first package", () => {
     expect(read("powerhouse.manifest.json")).toBe(manifest);
   });
 
-  it("re-adds a deleted subgraph entry under its kebab-case name, as it does for a schema-first subgraph", async () => {
-    await inProject((project) =>
-      generateCodeFirstSubgraph("Widget Feed", project),
-    );
+  it("re-adds a deleted subgraph entry under its subgraphName", async () => {
+    await inProject((project) => generateSubgraph("Widget Feed", project));
     expect(readManifestJson()).toMatchObject({
       subgraphs: [{ id: "widget-feed", name: "Widget Feed" }],
     });
@@ -399,8 +441,7 @@ describe("bulk generation in a code-first package", () => {
       generateAllDocumentModels,
       ["documentModels"],
     ],
-    ["generateAllSubgraphs", generateAllSubgraphs, ["subgraphs"]],
-    ["generateAll", generateAll, ["documentModels", "subgraphs"]],
+    ["generateAll", generateAll, ["documentModels"]],
   ])(
     "%s warns and changes nothing when a code-first source is broken",
     async (_, run, sections) => {
@@ -448,8 +489,7 @@ describe("bulk generation in a package whose code-first model has no id", () => 
       generateAllDocumentModels,
       ["documentModels"],
     ],
-    ["generateAllSubgraphs", generateAllSubgraphs, ["subgraphs"]],
-    ["generateAll", generateAll, ["documentModels", "subgraphs"]],
+    ["generateAll", generateAll, ["documentModels"]],
   ])("%s warns and keeps the manifest", async (_, run, sections) => {
     writeFileSync(
       path("model.ts"),
@@ -491,7 +531,7 @@ describe("bulk generation in a package with no modules", () => {
 describe("bulk generation in a package whose definitionSources selects nothing", () => {
   const emptySelection = { formatVersion: 1, mode: "code-first", entries: [] };
 
-  it("prunes subgraphs to the schema-first ones without a warning", async () => {
+  it("prunes subgraphs to the ones subgraphs/ declares without a warning", async () => {
     selectDefinitionSources(emptySelection);
     await inProject((project) => generateSubgraph("billing", project));
     writeManifest({
@@ -520,7 +560,7 @@ describe("bulk generation in a package whose definitionSources selects nothing",
 });
 
 describe("bulk generation in a package whose definitionSources cannot be read", () => {
-  it("keeps every subgraph entry for an unsupported formatVersion", async () => {
+  it("regenerates subgraphs, which definitionSources does not select", async () => {
     selectDefinitionSources({
       formatVersion: 2,
       mode: "code-first",
@@ -533,12 +573,8 @@ describe("bulk generation in a package whose definitionSources cannot be read", 
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await inProject(generateAllSubgraphs);
-    expect(warn.mock.calls).toStrictEqual([
-      [unloadableWarning("subgraphs", unsupportedVersionDiagnostic)],
-    ]);
-    expect(readManifestJson()).toMatchObject({
-      subgraphs: [billingEntry, oldSubgraphEntry],
-    });
+    expect(warn.mock.calls).toStrictEqual([]);
+    expect(readManifestJson()).toMatchObject({ subgraphs: [billingEntry] });
   });
 });
 

@@ -53,7 +53,7 @@ export type CompileSubgraphInput = {
  * serving it, and deduplicates keep-first as it does for a schema-first
  * subgraph.
  *
- * Traversal order is the contract. Entries are walked in the order the callback
+ * Traversal order is the contract. Entries are walked in the order getSchema
  * returned them, then `expose` calls in the order they were made. A named type
  * is emitted when it is first reached, and the walk marks its token before
  * visiting its children so a cycle terminates.
@@ -65,6 +65,8 @@ export function compileSubgraphSchema(
   const walk = new DescriptorWalk(collector, {
     allowOutputDefaults: true,
     allowEquals: false,
+    computedFieldsAreMembers: true,
+    internalScalarsAreReferenceable: true,
   });
   const entries: SubgraphEntryDefinition[] = [];
   const roots = new Map<RootName, FieldNode[]>();
@@ -197,7 +199,7 @@ export function compileSubgraphSchema(
           path: ["entries"],
           message: `Computed field ${typeName}.${fieldName} has no binding.`,
           received: `${typeName}.${fieldName}`,
-          repair: `Add field(${typeName}.computedTokens.${fieldName}, { resolve }) to the entries callback.`,
+          repair: `Add field(${typeName}.computedTokens.${fieldName}, { resolve }) to the entries getSchema returns.`,
         });
       }
     }
@@ -320,7 +322,7 @@ function scalarReferences(
 ): readonly SubgraphScalarReferenceDefinition[] {
   // Catalog order, so the declaration block, which is part of the published
   // schema text, does not move when an author reorders fields.
-  const catalog = scalarCatalog.authorNames
+  const catalog = scalarCatalog.names
     .filter((entry) => used.has(entry))
     .map(
       (name) =>

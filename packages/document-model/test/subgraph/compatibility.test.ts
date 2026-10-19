@@ -4,7 +4,6 @@ import {
   compareResolverCoordinates,
   coordinatesOfResolverMap,
   normalizeCompatibility,
-  runtimeHasSubscriptions,
   typeKindsOfDocument,
 } from "../../src/definition/subgraph/compatibility.js";
 
@@ -67,9 +66,6 @@ function compatibility(overrides: Record<string, unknown> = {}) {
         resolverKind: "resolveType" as const,
       },
     ],
-    getResolvers: () => ({}),
-    hasSubscriptions: undefined,
-    preserveDefinitionOrder: true as const,
     ...overrides,
   };
 }
@@ -105,29 +101,6 @@ describe("normalizing a compatibility declaration", () => {
     expect(printed).toContain("extend type Query");
     expect(printed).toContain("enum Visibility");
     expect(printed).toContain("schema {");
-  });
-});
-
-describe("hasSubscriptions", () => {
-  it("maps undefined to null and restores it", () => {
-    const normalized = normalizeCompatibility(compatibility());
-    expect(normalized.hasSubscriptions).toBeNull();
-    expect(
-      runtimeHasSubscriptions(normalized.hasSubscriptions),
-    ).toBeUndefined();
-  });
-
-  it("round-trips false and true distinctly", () => {
-    // Both `undefined` and `false` disable transports under the host's truthy
-    // check, but a migration that conflated them could not tell whether it was
-    // allowed to leave a socket off.
-    for (const value of [false, true]) {
-      const normalized = normalizeCompatibility(
-        compatibility({ hasSubscriptions: value }),
-      );
-      expect(normalized.hasSubscriptions).toBe(value);
-      expect(runtimeHasSubscriptions(normalized.hasSubscriptions)).toBe(value);
-    }
   });
 });
 
@@ -226,22 +199,5 @@ describe("resolver coordinates", () => {
       "invented is not a resolver kind.",
       "Coordinate Query.folder:field is declared twice.",
     ]);
-  });
-});
-
-describe("the resolver factory", () => {
-  it("is never called by normalization", () => {
-    // Checking and inspecting must not run host code: a factory can allocate,
-    // read a dependency, or count its own calls.
-    let calls = 0;
-    normalizeCompatibility(
-      compatibility({
-        getResolvers: () => {
-          calls += 1;
-          return {};
-        },
-      }),
-    );
-    expect(calls).toBe(0);
   });
 });

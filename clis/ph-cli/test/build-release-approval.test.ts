@@ -528,6 +528,7 @@ describe("publication evidence", () => {
         await steps.emitCandidate({
           packageRoot: root,
           candidateRoot: join(root, "dist"),
+          subgraphNames: [],
         }),
       ).toEqual({ ok: true });
       expect(existsSync(join(root, "out", "node", "index.mjs"))).toBe(true);

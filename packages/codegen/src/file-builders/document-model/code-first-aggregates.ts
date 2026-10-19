@@ -4,25 +4,19 @@ import {
   ConfigFileError,
   getConfigStrict,
 } from "@powerhousedao/shared/clis/config-strict";
-import type {
-  DefinitionSource,
-  Sha256Digest,
-} from "@powerhousedao/shared/document-model";
-import { kebabCase } from "change-case";
+import type { DefinitionSource } from "@powerhousedao/shared/document-model";
 import {
   DefinitionSourceLoader,
   findCodeFirstDefinitions,
   findUnregisteredDefinitions,
   formatDefinitionDiagnostic,
   resolveDefinitionSelection,
+  subgraphEntrySpecifiers,
   unregisteredDefinitionDiagnostic,
   type UnregisteredDefinition,
   type DefinitionSourceResolution,
-  type LoadedDefinition,
   type LoadedDefinitionSet,
-  type SubgraphClass,
 } from "document-model/tooling";
-import { createHash, randomUUID } from "node:crypto";
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { firstBy, isObjectType, isString, prop, uniqueBy } from "remeda";
@@ -31,7 +25,10 @@ import {
   type ArrayLiteralExpression,
   type SourceFile,
 } from "ts-morph";
-import { ViteTypeScriptSourceImportAdapter } from "../../utils/definition-source-importer.js";
+import {
+  uncachedDefinitionSourceRevision,
+  ViteTypeScriptSourceImportAdapter,
+} from "../../utils/definition-source-importer.js";
 
 type CollectionName = "documentModels" | "upgradeManifests";
 export type CodeFirstAggregateSource = {
@@ -45,11 +42,15 @@ export type CodeFirstAggregateSource = {
 export type CodeFirstInventory =
   | { kind: "none" }
   | { kind: "unavailable"; reason: string }
+  | { kind: "loaded"; documentModels: PowerhouseModule[] };
+
+export type SubgraphInventory =
   | {
       kind: "loaded";
-      documentModels: PowerhouseModule[];
       subgraphs: PowerhouseModule[];
-    };
+      warnings: string[];
+    }
+  | { kind: "invalid"; errors: string[] };
 
 function isReadable(configFile: string): boolean {
   try {
@@ -101,12 +102,9 @@ export function unregisteredCodeFirstDefinitions(
   return unregistered(projectDir).definitions;
 }
 
-export function warnUnregisteredCodeFirstDefinitions(
-  projectDir: string,
-  kind: UnregisteredDefinition["kind"],
-) {
+export function warnUnregisteredCodeFirstDefinitions(projectDir: string) {
   const { mode, definitions } = unregistered(projectDir);
-  for (const definition of definitions.filter((d) => d.kind === kind)) {
+  for (const definition of definitions) {
     console.warn(
       `⚠ ${formatDefinitionDiagnostic(unregisteredDefinitionDiagnostic(definition, mode))}`,
     );
@@ -140,8 +138,7 @@ async function readCodeFirstSources<T>(
 ): Promise<T> {
   const importer = new ViteTypeScriptSourceImportAdapter();
   const loader = new DefinitionSourceLoader(importer);
-  // A fresh import environment binds each generation pass; none is reused across passes.
-  const packageRevision: Sha256Digest = `sha256:${createHash("sha256").update(randomUUID()).digest("hex")}`;
+  const packageRevision = uncachedDefinitionSourceRevision();
   try {
     const loaded = await loader.normalizeDefinitionSources({
       configFile,
@@ -240,29 +237,12 @@ function documentModelModule({
   );
 }
 
-function subgraphModule({
-  source,
-  value,
-}: LoadedDefinition<SubgraphClass>): PowerhouseModule {
-  const definition = "definition" in value ? value.definition : undefined;
-  if (
-    isObjectType(definition) &&
-    "name" in definition &&
-    isNonEmptyString(definition.name)
-  ) {
-    return { id: kebabCase(definition.name), name: definition.name };
-  }
-  throw new Error(
-    `${source.specifier} exports a subgraph without a name, so it cannot be listed in powerhouse.manifest.json. Run ph model check for the details.`,
-  );
-}
-
 /**
- * The manifest entries for every model and subgraph the package's code-first
- * sources compile to. Identity comes from the compiled values, not from where
- * the sources live. `unavailable` carries the diagnostics or error of any other
+ * The manifest entries for every model the package's code-first sources
+ * compile to. Identity comes from the compiled values, not from where the
+ * sources live. `unavailable` carries the diagnostics or error of any other
  * selection or source that cannot be loaded, and names the source of a model
- * or subgraph without an id or a name.
+ * without an id or a name.
  */
 export async function loadCodeFirstInventory(
   projectDir: string,
@@ -277,13 +257,45 @@ export async function loadCodeFirstInventory(
         loaded.documentModels.map(documentModelModule),
         prop("id"),
       ),
-      subgraphs: uniqueBy(loaded.subgraphs.map(subgraphModule), prop("id")),
     }));
   } catch (error) {
     return {
       kind: "unavailable",
       reason: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+/** Reads the host's subgraph entries through describe(), without constructing instances. */
+export async function loadSubgraphInventory(
+  projectDir: string,
+): Promise<SubgraphInventory> {
+  if (subgraphEntrySpecifiers(projectDir).length === 0)
+    return { kind: "loaded", subgraphs: [], warnings: [] };
+  const loader = new DefinitionSourceLoader(
+    new ViteTypeScriptSourceImportAdapter(),
+  );
+  try {
+    const { subgraphs, diagnostics } = await loader.readSubgraphs({
+      packageRoot: projectDir,
+      packageRevision: uncachedDefinitionSourceRevision(),
+    });
+    const errors = diagnostics.filter(({ severity }) => severity === "error");
+    if (errors.length > 0)
+      return {
+        kind: "invalid",
+        errors: errors.map(formatDefinitionDiagnostic),
+      };
+    return {
+      kind: "loaded",
+      subgraphs: subgraphs.map(({ description: { subgraphName } }) => ({
+        id: subgraphName,
+        name: subgraphName,
+      })),
+      warnings: diagnostics.map(formatDefinitionDiagnostic),
+    };
+  } finally {
+    await loader.dispose();
   }
 }
 

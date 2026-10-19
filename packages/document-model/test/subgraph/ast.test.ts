@@ -107,10 +107,7 @@ function buildEverything(definitionOrder?: readonly string[]) {
       returns: ph.ref(Folder, { required: true }),
       subscribe: () => (async function* () {})(),
     }),
-    builders.field(
-      (Folder.computedTokens as Record<string, never>).childCount,
-      { resolve: () => 0 },
-    ),
+    builders.field(Folder.computedTokens.childCount, { resolve: () => 0 }),
     builders.resolveType(Entry, () => "Folder"),
     builders.isTypeOf(Folder, () => true),
   ];
@@ -323,7 +320,7 @@ describe("computed-field bindings", () => {
       unknown,
       unknown
     >();
-    const token = (Thing.computedTokens as Record<string, never>).size;
+    const token = Thing.computedTokens.size;
     const entries = [
       builders.query("thing", {
         returns: ph.ref(Thing),
@@ -342,7 +339,7 @@ describe("computed-field bindings", () => {
         },
       });
       entries.push(
-        builders.field((Other.computedTokens as Record<string, never>).hidden, {
+        builders.field(Other.computedTokens.hidden, {
           resolve: () => 1,
         }),
       );
@@ -456,9 +453,9 @@ describe("a package scalar", () => {
     ).toContainEqual(["definition", "scalars", "1", "name"]);
   });
 
-  it("refuses a catalog reference to an internal scalar", () => {
+  it("accepts a catalog reference to an internal scalar, and only to a catalog scalar", () => {
     const compiled = compile();
-    const definition = {
+    const definition = (name: string) => ({
       kind: "powerhouse.subgraph",
       formatVersion: 1,
       name: "swatches",
@@ -470,23 +467,23 @@ describe("a package scalar", () => {
       entries: compiled.entries,
       scalars: [
         {
-          name: "JSONObject",
-          implementation: "powerhouse.catalog#JSONObject",
+          name,
+          implementation: `powerhouse.catalog#${name}`,
           graphQLProfile: "legacy-graphql-default-v1",
         },
       ],
-      definitionOrder: ["JSONObject", "Swatch", "Query"],
-    };
+      definitionOrder: [name, "Swatch", "Query"],
+    });
+    expect(checkSubgraphDefinitionShape(definition("JSONObject"))).toEqual([]);
     expect(
-      checkSubgraphDefinitionShape(definition).map(
+      checkSubgraphDefinitionShape(definition("HostOnly")).map(
         ({ code, path, message }) => ({ code, path, message }),
       ),
     ).toEqual([
       {
-        code: "PH-SCALAR-INTERNAL",
+        code: "PH-SG-DEFINITION-INVALID",
         path: ["definition", "scalars", "0", "name"],
-        message:
-          "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+        message: "HostOnly is not a catalog scalar.",
       },
     ]);
   });

@@ -1,0 +1,193 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Mutation",
+      "fieldName": "workflowRuntime",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "workflowRuntime",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "cancelTriggerTest",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "checkConnection",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "createSecret",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "deleteSecret",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "fire",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "rerun",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "rotateSecret",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "startOAuth",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "testStep",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeMutations",
+      "fieldName": "testTrigger",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "authConditions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "authEnforcement",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "blockDescriptor",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "blockOptions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "blockOutputTree",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "blockResolutions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "connections",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "health",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "oauthAttempt",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "oauthRedirectUri",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "pieceActions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "pieceCatalog",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "pieceDetail",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "pieceTriggers",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "reactorAccessDenial",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "reactorIdentity",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "run",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "runs",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "runsPage",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "searchPieces",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "secret",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "secrets",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "stepOutputTree",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "triggerStates",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "WorkflowRuntimeQueries",
+      "fieldName": "webhookEndpoint",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": "undefined",
+    "normalized": false
+  }
+}
