@@ -6,8 +6,8 @@ import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
 import { coreSubgraphClasses } from "../src/config.js";
 import type { IReactorInspectionSource } from "../src/graphql/inspection/source.js";
+import { coreSubgraphTypeDefs } from "../src/graphql/package-subgraph-check.js";
 import {
-  coreSubgraphTypeDefs,
   DOCUMENT_MODEL_SCHEMA_OWNER,
   findPackageSubgraphConflicts,
   type PackageSubgraph,
@@ -58,12 +58,12 @@ const template = (pascal: string, camel: string) => gql`
   }
 `;
 
-function conflicts(
+async function conflicts(
   subgraphs: PackageSubgraph[],
   models: DocumentModelGlobalState[] = [todoList],
 ) {
   return Object.fromEntries(
-    findPackageSubgraphConflicts(subgraphs, models).conflicts,
+    (await findPackageSubgraphConflicts(subgraphs, models)).conflicts,
   );
 }
 
@@ -95,15 +95,15 @@ describe("coreSubgraphTypeDefs", () => {
 });
 
 describe("findPackageSubgraphConflicts", () => {
-  it("is silent on the template under a name of its own", () => {
+  it("is silent on the template under a name of its own", async () => {
     expect(
-      conflicts([
+      await conflicts([
         { name: "todo-tools", typeDefs: template("TodoTools", "todoTools") },
       ]),
     ).toEqual({});
   });
 
-  it("is silent on an identical copy of a core type", () => {
+  it("is silent on an identical copy of a core type", async () => {
     const typeDefs = gql`
       type Revision {
         scope: String!
@@ -111,12 +111,12 @@ describe("findPackageSubgraphConflicts", () => {
       }
     `;
 
-    expect(conflicts([{ name: "ledger", typeDefs }])).toEqual({});
+    expect(await conflicts([{ name: "ledger", typeDefs }])).toEqual({});
   });
 
-  it("refuses the name of a model's subgraph", () => {
+  it("refuses the name of a model's subgraph", async () => {
     expect(
-      conflicts([
+      await conflicts([
         { name: "todo-list", typeDefs: template("TodoList", "todoList") },
       ]),
     ).toEqual({
@@ -124,22 +124,24 @@ describe("findPackageSubgraphConflicts", () => {
     });
   });
 
-  it("refuses the name of a core subgraph", () => {
+  it("refuses the name of a core subgraph", async () => {
     expect(
-      conflicts([{ name: "system", typeDefs: template("System", "sys") }]),
+      await conflicts([
+        { name: "system", typeDefs: template("System", "sys") },
+      ]),
     ).toEqual({ system: { nameHeldBy: "core", claims: [] } });
   });
 
-  it("leaves a model without operations unmounted, so its name is free", () => {
+  it("leaves a model without operations unmounted, so its name is free", async () => {
     expect(
-      conflicts(
+      await conflicts(
         [{ name: "todo-list", typeDefs: template("TodoList", "todoList") }],
         [model("TodoList", "")],
       ),
     ).toEqual({});
   });
 
-  it("reports a type the model's own subgraph generates", () => {
+  it("reports a type the model's own subgraph generates", async () => {
     const typeDefs = gql`
       type TodoListQueries {
         example(driveId: String!): String
@@ -149,54 +151,54 @@ describe("findPackageSubgraphConflicts", () => {
       }
     `;
 
-    expect(conflicts([{ name: "todo-tools", typeDefs }])).toEqual({
+    expect(await conflicts([{ name: "todo-tools", typeDefs }])).toEqual({
       "todo-tools": {
         claims: [{ claim: "TodoListQueries", owner: "todo-list" }],
       },
     });
   });
 
-  it("reports a type a base model's subgraph generates", () => {
+  it("reports a type a base model's subgraph generates", async () => {
     const typeDefs = gql`
       type DocumentModelQueries {
         example: String
       }
     `;
 
-    expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
+    expect(await conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
         claims: [{ claim: "DocumentModelQueries", owner: "document-model" }],
       },
     });
   });
 
-  it("reports a model's generated document type", () => {
+  it("reports a model's generated document type", async () => {
     const typeDefs = gql`
       type TodoList {
         id: ID
       }
     `;
 
-    expect(conflicts([{ name: "ledger", typeDefs }])).toEqual({
+    expect(await conflicts([{ name: "ledger", typeDefs }])).toEqual({
       ledger: { claims: [{ claim: "TodoList", owner: "todo-list" }] },
     });
   });
 
-  it("reports a type every generated schema reserves", () => {
+  it("reports a type every generated schema reserves", async () => {
     const typeDefs = gql`
       type Operation {
         id: ID
       }
     `;
 
-    expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
+    expect(await conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
         claims: [{ claim: "Operation", owner: DOCUMENT_MODEL_SCHEMA_OWNER }],
       },
     });
   });
 
-  it("reports a core type and root field defined differently", () => {
+  it("reports a core type and root field defined differently", async () => {
     const typeDefs = gql`
       type Revision {
         id: ID
@@ -206,7 +208,7 @@ describe("findPackageSubgraphConflicts", () => {
       }
     `;
 
-    expect(conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
+    expect(await conflicts([{ name: "ledger", typeDefs }], [])).toEqual({
       ledger: {
         claims: [
           { claim: "Query.system", owner: "system" },
@@ -216,7 +218,7 @@ describe("findPackageSubgraphConflicts", () => {
     });
   });
 
-  it("gives a root field two package subgraphs define to the first", () => {
+  it("gives a root field two package subgraphs define to the first", async () => {
     const typeDefs = gql`
       type Query {
         ledger: String
@@ -224,7 +226,7 @@ describe("findPackageSubgraphConflicts", () => {
     `;
 
     expect(
-      conflicts([
+      await conflicts([
         { name: "ledger", typeDefs },
         { name: "ledger-copy", typeDefs },
       ]),
@@ -233,8 +235,8 @@ describe("findPackageSubgraphConflicts", () => {
     });
   });
 
-  it("reports a model whose schema does not parse and checks the rest", () => {
-    const report = findPackageSubgraphConflicts(
+  it("reports a model whose schema does not parse and checks the rest", async () => {
+    const report = await findPackageSubgraphConflicts(
       [{ name: "todo-list", typeDefs: template("TodoList", "todoList") }],
       [todoList, model("Broken", "input BrokenInput {")],
     );
@@ -247,8 +249,8 @@ describe("findPackageSubgraphConflicts", () => {
 });
 
 describe("findPackageSubgraphConflicts runtime parity", () => {
-  it("refuses a model that generates a reserved type name, freeing its subgraph name", () => {
-    const report = findPackageSubgraphConflicts(
+  it("refuses a model that generates a reserved type name, freeing its subgraph name", async () => {
+    const report = await findPackageSubgraphConflicts(
       [{ name: "revision", typeDefs: template("Revision", "revision") }],
       [model("Revision"), model("Operation")],
     );
@@ -268,8 +270,8 @@ describe("findPackageSubgraphConflicts runtime parity", () => {
     ]);
   });
 
-  it("refuses a model whose generated types do not build", () => {
-    const report = findPackageSubgraphConflicts(
+  it("refuses a model whose generated types do not build", async () => {
+    const report = await findPackageSubgraphConflicts(
       [{ name: "dangling", typeDefs: template("Dangling", "dangling") }],
       [model("Dangling", undefined, "type DanglingState { owner: Missing }")],
     );
@@ -284,8 +286,8 @@ describe("findPackageSubgraphConflicts runtime parity", () => {
     ]);
   });
 
-  it("keeps the generated types of a model whose own subgraph does not build", () => {
-    const report = findPackageSubgraphConflicts(
+  it("keeps the generated types of a model whose own subgraph does not build", async () => {
+    const report = await findPackageSubgraphConflicts(
       [
         { name: "widget", typeDefs: template("Widget", "widget") },
         {
@@ -329,8 +331,8 @@ describe("findPackageSubgraphConflicts runtime parity", () => {
     ]);
   });
 
-  it("leaves out a model's subgraph named like a core subgraph", () => {
-    const report = findPackageSubgraphConflicts(
+  it("leaves out a model's subgraph named like a core subgraph", async () => {
+    const report = await findPackageSubgraphConflicts(
       [
         {
           name: "ledger",
@@ -354,7 +356,7 @@ describe("findPackageSubgraphConflicts runtime parity", () => {
     ]);
   });
 
-  it("serves only the last of two package subgraphs with one name", () => {
+  it("serves only the last of two package subgraphs with one name", async () => {
     const typeDefs = gql`
       type Query {
         ledger: String
@@ -362,7 +364,7 @@ describe("findPackageSubgraphConflicts runtime parity", () => {
     `;
 
     expect(
-      conflicts([
+      await conflicts([
         { name: "ledger", typeDefs },
         { name: "ledger", typeDefs },
       ]),

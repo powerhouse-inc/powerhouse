@@ -24,5 +24,5 @@ export async function startGenerateAll(
   }
   await generateAll(project);
   await project.save();
-  warnSubgraphTypeConflicts(projectDir);
+  await warnSubgraphTypeConflicts(projectDir);
 }

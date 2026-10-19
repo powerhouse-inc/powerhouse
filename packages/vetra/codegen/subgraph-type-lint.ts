@@ -87,7 +87,7 @@ function describe(name: string, conflict: PackageSubgraphConflicts): string {
 }
 
 /** A warning per model or subgraph the server would refuse or leave out. */
-export function lintSubgraphTypes(projectDir: string): string[] {
+export async function lintSubgraphTypes(projectDir: string): Promise<string[]> {
   const models = directories(join(projectDir, "document-models"))
     .map(loadDocumentModelInDir)
     .filter((model) => model !== undefined);
@@ -101,7 +101,7 @@ export function lintSubgraphTypes(projectDir: string): string[] {
   }
   if (subgraphs.length === 0 && models.length === 0) return [];
 
-  const { conflicts, refusedModels } = findPackageSubgraphConflicts(
+  const { conflicts, refusedModels } = await findPackageSubgraphConflicts(
     subgraphs,
     models,
   );
