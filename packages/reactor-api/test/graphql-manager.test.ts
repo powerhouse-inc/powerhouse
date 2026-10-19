@@ -52,9 +52,7 @@ import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
-  WsConnection,
   WsDisposer,
-  WsHandlers,
 } from "../src/graphql/gateway/types.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -75,6 +73,19 @@ import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 import type { PackageManager } from "../src/packages/package-manager.js";
 import { setupEventListeners } from "../src/packages/package-listeners.js";
 import type { IProcessorHostModule } from "../src/types.js";
+import { useServer } from "../src/graphql/websocket.js";
+
+vi.mock("../src/graphql/websocket.js", () => ({
+  useServer: vi.fn(() => ({ dispose: vi.fn() })),
+}));
+
+/** The options the manager's one graphql-ws server was started with. */
+function wsServerOptions() {
+  return vi.mocked(useServer).mock.calls[0][0] as unknown as {
+    onConnect: (ctx: object) => Promise<boolean>;
+    context: (ctx: object) => Promise<unknown>;
+  };
+}
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
 
@@ -751,7 +762,7 @@ describe("GraphQLManager", () => {
     });
 
     it("an additional field named user never becomes the caller of an anonymous WebSocket", async () => {
-      const { manager, gatewayAdapter } = makeHarness();
+      const { manager } = makeHarness();
       manager.setAdditionalContextFields({
         user: { address: "0xinjected" },
         customField: "custom-value",
@@ -759,11 +770,10 @@ describe("GraphQLManager", () => {
       await registerSubscriptionSubgraph(manager);
       await initAndFlush(manager);
 
-      const handlers = gatewayAdapter.attachWebSocket.mock
-        .calls[0][2] as WsHandlers<Context>;
-      const connection = {} as WsConnection;
-      await expect(handlers.onConnect({}, connection)).resolves.toBe(true);
-      const ctx = (await handlers.context({}, connection)) as Record<
+      const options = wsServerOptions();
+      const connection = { connectionParams: {}, extra: {} };
+      await expect(options.onConnect(connection)).resolves.toBe(true);
+      const ctx = (await options.context(connection)) as Record<
         string,
         unknown
       >;
@@ -1633,20 +1643,25 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("my-sub")).toBe(newSub);
     });
 
-    it("a throwing WebSocket disposer does not abort the replacement", async () => {
-      const { manager, gatewayAdapter } = makeHarness();
-      const dispose = vi.fn().mockRejectedValue(new Error("ws boom"));
-      gatewayAdapter.attachWebSocket.mockReturnValue({ dispose });
+    it("replacement keeps the one WebSocket server", async () => {
+      const { manager } = makeHarness();
 
       const oldSub = await makeSub("ws-sub", { hasSubscriptions: true });
       await manager.registerSubgraphInstance(oldSub, "graphql");
       await initAndFlush(manager);
-      expect(gatewayAdapter.attachWebSocket).toHaveBeenCalledTimes(1);
+      expect(useServer).toHaveBeenCalledTimes(1);
 
       const newSub = await makeSub("ws-sub", { hasSubscriptions: true });
       const result = await manager.registerSubgraphInstance(newSub, "graphql");
+      const update = manager.updateRouter();
+      await vi.runAllTimersAsync();
+      await update;
 
-      expect(dispose).toHaveBeenCalledTimes(1);
+      expect(useServer).toHaveBeenCalledTimes(1);
+      const { dispose } = vi.mocked(useServer).mock.results[0].value as {
+        dispose: ReturnType<typeof vi.fn>;
+      };
+      expect(dispose).not.toHaveBeenCalled();
       expect(result).toBe(newSub);
       expect(manager.getSubgraphByName("ws-sub")).toBe(newSub);
     });
