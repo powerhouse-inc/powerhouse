@@ -94,11 +94,19 @@ const ALREADY_LOGGED = new Set([
   PACKAGE_MODULE_FAILED,
 ]);
 
+type PackageKind = "document models" | "subgraphs" | "processors" | "pieces";
+
 // A failed load is kept apart from a package that ships none.
-type DocumentModelsLoad =
-  | { status: "loaded"; models: DocumentModelModule[] }
+type PackageLoad<T> =
+  | { status: "loaded"; value: T[] }
   | { status: "absent" }
   | { status: "failed" };
+
+// The package subpath every loader asked for, which is what tells a package
+// that ships none of this kind from one whose bundle is broken.
+function subPathOf(kind: PackageKind): string {
+  return kind === "document models" ? "document-models" : kind;
+}
 
 export function getUniqueDocumentModels(
   ...documentModels: readonly (readonly DocumentModelModule<any>[])[]
@@ -190,18 +198,32 @@ export class PackageManager implements IPackageManager {
     const upgradeManifestsMap = await this.loadUpgradeManifests(
       packages.filter((pkg) => !failed.includes(pkg)),
     );
-    const documentModelsMap = new Map<string, DocumentModelModule[]>(
-      baseDocumentModels.map(([source, model]) => [source, [model]]),
-    );
-    for (const [pkg, load] of documentModelLoads) {
-      if (load.status === "loaded") documentModelsMap.set(pkg, load.models);
-    }
     for (const pkg of failed) {
-      this.keepLastLoaded(pkg, documentModelsMap, upgradeManifestsMap);
+      const manifests = this.upgradeManifestsMap.get(pkg);
+      if (manifests) upgradeManifestsMap.set(pkg, manifests);
     }
-    const subgraphsMap = await this.loadSubgraphs(packages);
-    const processorsMap = await this.loadProcessors(packages);
-    const piecesMap = await this.loadPieces(packages);
+    const documentModelsMap = new Map<string, DocumentModelModule[]>([
+      ...baseDocumentModels.map(
+        ([source, model]) =>
+          [source, [model]] as [string, DocumentModelModule[]],
+      ),
+      ...this.settle("document models", documentModelLoads, this.docModelsMap),
+    ]);
+    const subgraphsMap = this.settle(
+      "subgraphs",
+      await this.loadSubgraphs(packages),
+      this.subgraphsMap,
+    );
+    const processorsMap = this.settle(
+      "processors",
+      await this.loadProcessors(packages),
+      this.processorMap,
+    );
+    const piecesMap = this.settle(
+      "pieces",
+      await this.loadPieces(packages),
+      this.piecesMap,
+    );
 
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
@@ -229,70 +251,87 @@ export class PackageManager implements IPackageManager {
     };
   }
 
-  private async loadDocumentModels(
-    packages: string[],
-  ): Promise<Map<string, DocumentModelsLoad>> {
-    this.logger.debug(
-      `Loading document models from packages: ${packages.join(", ")}`,
-    );
+  // A failed load is no news about a package: what it last provided stands.
+  private settle<T>(
+    kind: PackageKind,
+    loads: Map<string, PackageLoad<T>>,
+    current: Map<string, T[]>,
+  ): Map<string, T[]> {
+    const settled = new Map<string, T[]>();
+    for (const [pkg, load] of loads) {
+      if (load.status === "failed" && current.has(pkg)) {
+        this.logger.info(`Keeping the last loaded ${kind} of @pkg`, pkg);
+      }
+      settled.set(
+        pkg,
+        load.status === "loaded"
+          ? load.value
+          : load.status === "failed"
+            ? (current.get(pkg) ?? [])
+            : [],
+      );
+    }
+    return settled;
+  }
 
-    const loads = new Map<string, DocumentModelsLoad>();
+  // The first loader to answer wins; only misses everywhere means absent.
+  private async loadEach<T>(
+    kind: PackageKind,
+    packages: string[],
+    load: (loader: ISubscribablePackageLoader, pkg: string) => Promise<T[]>,
+  ): Promise<Map<string, PackageLoad<T>>> {
+    this.logger.debug(`Loading ${kind} from packages: ${packages.join(", ")}`);
+    const subPath = subPathOf(kind);
+    const loads = new Map<string, PackageLoad<T>>();
 
     for (const pkg of packages) {
       const failures: { loader: string; error: unknown }[] = [];
-      let load: DocumentModelsLoad | undefined;
+      let loaded: PackageLoad<T> | undefined;
 
       for (const loader of this.loaders) {
         try {
-          const documentModels = await loader.loadDocumentModels(pkg);
-          this.logger.info(
-            `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
-            pkg,
-            documentModels.map((dm) => dm.documentModel.global.id),
-          );
-          load = { status: "loaded", models: documentModels };
+          loaded = { status: "loaded", value: await load(loader, pkg) };
           break;
         } catch (error) {
           failures.push({ loader: loader.name, error });
           this.logger.debug(
-            `[${loader.name}] Failed to load document models from package @pkg: @error`,
+            "[@loader] Failed to load @kind from package @package: @error",
+            loader.name,
+            kind,
             pkg,
             error,
           );
         }
       }
 
-      this.maybeWarnAllLoadersFailed(
-        "document models",
-        pkg,
-        load !== undefined,
-        failures,
-      );
+      this.maybeWarnAllLoadersFailed(kind, pkg, loaded !== undefined, failures);
 
-      // Only misses everywhere means the package is gone.
-      load ??= failures.every(({ error }) =>
-        isExpectedLoaderMiss(error, pkg, "document-models"),
-      )
-        ? { status: "absent" }
-        : { status: "failed" };
-      loads.set(pkg, load);
+      loads.set(
+        pkg,
+        loaded ??
+          (failures.every(({ error }) =>
+            isExpectedLoaderMiss(error, pkg, subPath),
+          )
+            ? { status: "absent" }
+            : { status: "failed" }),
+      );
     }
 
     return loads;
   }
 
-  // A failed load is no news about a package: what it last provided stands.
-  private keepLastLoaded(
-    pkg: string,
-    documentModelsMap: Map<string, DocumentModelModule[]>,
-    upgradeManifestsMap: Map<string, UpgradeManifest<readonly number[]>[]>,
-  ): void {
-    const models = this.docModelsMap.get(pkg);
-    if (!models) return;
-    this.logger.info("Keeping the last loaded document models of @pkg", pkg);
-    documentModelsMap.set(pkg, models);
-    const manifests = this.upgradeManifestsMap.get(pkg);
-    if (manifests) upgradeManifestsMap.set(pkg, manifests);
+  private loadDocumentModels(
+    packages: string[],
+  ): Promise<Map<string, PackageLoad<DocumentModelModule>>> {
+    return this.loadEach("document models", packages, async (loader, pkg) => {
+      const documentModels = await loader.loadDocumentModels(pkg);
+      this.logger.info(
+        `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
+        pkg,
+        documentModels.map((dm) => dm.documentModel.global.id),
+      );
+      return documentModels;
+    });
   }
 
   /** Upgrade manifests currently loaded across all packages, one per type. */
@@ -334,157 +373,67 @@ export class PackageManager implements IPackageManager {
 
   private async loadSubgraphs(
     packages: string[],
-  ): Promise<Map<string, SubgraphClass[]>> {
-    this.logger.debug(
-      `Loading subgraphs from packages: ${packages.join(", ")}`,
+  ): Promise<Map<string, PackageLoad<SubgraphClass>>> {
+    const loads = await this.loadEach("subgraphs", packages, (loader, pkg) =>
+      loader.loadSubgraphs(pkg),
     );
 
-    const subgraphsMap = new Map<string, SubgraphClass[]>();
-
-    for (const pkg of packages) {
-      const allSubgraphs: SubgraphClass[] = [];
-      const failures: { loader: string; error: unknown }[] = [];
-      let succeeded = false;
-
-      for (const loader of this.loaders) {
-        try {
-          const subgraphs = await loader.loadSubgraphs(pkg);
-
-          allSubgraphs.push(...subgraphs);
-          succeeded = true;
-          break;
-        } catch (error) {
-          failures.push({ loader: loader.name, error });
-          this.logger.debug(
-            "[@loader] Failed to load subgraphs from package @package: @error",
-            loader.name,
-            pkg,
-            error,
-          );
-        }
+    // A loader answering "none" is indistinguishable from a package that
+    // ships none — loadSubgraphs cannot throw for a bad export shape. The
+    // package's own manifest is the one place that says subgraphs were
+    // meant to exist, so a mismatch gets one warning instead of silence.
+    for (const [pkg, load] of loads) {
+      if (load.status === "loaded" && load.value.length > 0) continue;
+      const declared = manifestDeclaredSubgraphs(pkg);
+      if (declared.length > 0) {
+        this.logger.warn(
+          "Package @pkg declares subgraphs in powerhouse.manifest.json (@declared) but none was loaded; check the exports of subgraphs/index.ts",
+          pkg,
+          declared.join(", "),
+        );
       }
-
-      this.maybeWarnAllLoadersFailed("subgraphs", pkg, succeeded, failures);
-
-      // A loader answering "none" is indistinguishable from a package that
-      // ships none — loadSubgraphs cannot throw for a bad export shape. The
-      // package's own manifest is the one place that says subgraphs were
-      // meant to exist, so a mismatch gets one warning instead of silence.
-      if (allSubgraphs.length === 0) {
-        const declared = manifestDeclaredSubgraphs(pkg);
-        if (declared.length > 0) {
-          this.logger.warn(
-            "Package @pkg declares subgraphs in powerhouse.manifest.json (@declared) but none was loaded; check the exports of subgraphs/index.ts",
-            pkg,
-            declared.join(", "),
-          );
-        }
-      }
-
-      subgraphsMap.set(pkg, allSubgraphs);
     }
 
-    return subgraphsMap;
+    return loads;
   }
 
-  private async loadProcessors(
+  private loadProcessors(
     packages: string[],
-  ): Promise<Map<string, Processor>> {
-    this.logger.debug(
-      `Loading processors from packages: ${packages.join(", ")}`,
-    );
-
-    const processorsMap = new Map<string, Processor>();
-
-    for (const pkg of packages) {
-      const allProcessors: ProcessorFactoryBuilder[] = [];
-      const failures: { loader: string; error: unknown }[] = [];
-      let succeeded = false;
-
-      for (const loader of this.loaders) {
-        try {
-          const processors = await loader.loadProcessors(pkg);
-
-          if (processors) {
-            allProcessors.push(processors);
-          }
-          succeeded = true;
-          break;
-        } catch (error) {
-          failures.push({ loader: loader.name, error });
-          this.logger.debug(
-            "[@loader] Failed to load processors from package @package: @error",
-            loader.name,
-            pkg,
-            error,
-          );
-        }
-      }
-
-      this.maybeWarnAllLoadersFailed("processors", pkg, succeeded, failures);
-
-      processorsMap.set(pkg, allProcessors);
-    }
-
-    return processorsMap;
+  ): Promise<Map<string, PackageLoad<ProcessorFactoryBuilder>>> {
+    return this.loadEach("processors", packages, async (loader, pkg) => {
+      const processors = await loader.loadProcessors(pkg);
+      return processors ? [processors] : [];
+    });
   }
 
   // Paths, not modules: a piece is code the host must not import, and what a
   // worker needs from here is where on disk the package put it.
   private async loadPieces(
     packages: string[],
-  ): Promise<Map<string, PackagePieceEntry[]>> {
-    this.logger.debug(`Loading pieces from packages: ${packages.join(", ")}`);
-
-    const piecesMap = new Map<string, PackagePieceEntry[]>();
-
-    for (const pkg of packages) {
-      const allPieces: PackagePieceEntry[] = [];
-      const failures: { loader: string; error: unknown }[] = [];
-      let succeeded = false;
-
-      for (const loader of this.loaders) {
-        try {
-          allPieces.push(...(await loader.loadPieces(pkg)));
-          succeeded = true;
-          break;
-        } catch (error) {
-          failures.push({ loader: loader.name, error });
-          this.logger.debug(
-            "[@loader] Failed to load pieces from package @package: @error",
-            loader.name,
-            pkg,
-            error,
-          );
-        }
-      }
-
-      this.maybeWarnAllLoadersFailed("pieces", pkg, succeeded, failures);
-
-      if (allPieces.length > 0) {
-        this.logger.info(
-          "Loaded @count piece(s) from package @pkg: @pieces",
-          allPieces.length,
-          pkg,
-          allPieces.map((piece) => piece.name).join(", "),
-        );
-      }
-      piecesMap.set(pkg, allPieces);
+  ): Promise<Map<string, PackageLoad<PackagePieceEntry>>> {
+    const loads = await this.loadEach("pieces", packages, (loader, pkg) =>
+      loader.loadPieces(pkg),
+    );
+    for (const [pkg, load] of loads) {
+      if (load.status !== "loaded" || load.value.length === 0) continue;
+      this.logger.info(
+        "Loaded @count piece(s) from package @pkg: @pieces",
+        load.value.length,
+        pkg,
+        load.value.map((piece) => piece.name).join(", "),
+      );
     }
-
-    return piecesMap;
+    return loads;
   }
 
   private maybeWarnAllLoadersFailed(
-    kind: "document models" | "subgraphs" | "processors" | "pieces",
+    kind: PackageKind,
     pkg: string,
     succeeded: boolean,
     failures: { loader: string; error: unknown }[],
   ): void {
     if (succeeded || failures.length === 0) return;
-    // The package subpath every loader asked for, which is what tells a
-    // package that ships none of this kind from one whose bundle is broken.
-    const subPath = kind === "document models" ? "document-models" : kind;
+    const subPath = subPathOf(kind);
     // Each loader's "this package isn't mine" failure is expected fallthrough,
     // not a real error. Only surface a warning when at least one loader hit
     // something unexpected (e.g. a bundle evaluation error or registry 5xx),
@@ -513,18 +462,39 @@ export class PackageManager implements IPackageManager {
     );
   }
 
+  // A failed reload changes nothing; an empty one drops the package.
+  private withReload<T>(
+    kind: PackageKind,
+    current: Map<string, T[]>,
+    pkg: string,
+    load: PackageLoad<T> | undefined,
+  ): Map<string, T[]> | undefined {
+    if (load?.status === "failed") {
+      if (current.has(pkg)) {
+        this.logger.info(`Keeping the last loaded ${kind} of @pkg`, pkg);
+      }
+      return undefined;
+    }
+    const next = new Map(current);
+    const value = load?.status === "loaded" ? load.value : [];
+    if (value.length === 0) {
+      next.delete(pkg);
+    } else {
+      next.set(pkg, value);
+    }
+    return next;
+  }
+
   private async updateDocumentModelsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating document models for package: ${pkg}`);
     const load = (await this.loadDocumentModels([pkg])).get(pkg);
-    if (load?.status === "failed") {
-      if (this.docModelsMap.has(pkg)) {
-        this.logger.info(
-          "Keeping the last loaded document models of @pkg",
-          pkg,
-        );
-      }
-      return;
-    }
+    const documentModelsMap = this.withReload(
+      "document models",
+      this.docModelsMap,
+      pkg,
+      load,
+    );
+    if (!documentModelsMap) return;
     const upgradeManifests = await this.loadUpgradeManifests([pkg]);
     const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
     const pkgManifests = upgradeManifests.get(pkg) ?? [];
@@ -534,59 +504,28 @@ export class PackageManager implements IPackageManager {
       upgradeManifestsMap.set(pkg, pkgManifests);
     }
     this.upgradeManifestsMap = upgradeManifestsMap;
-    const documentModelsMap = new Map(this.docModelsMap);
-    const pkgModels = load?.status === "loaded" ? load.models : [];
-    if (pkgModels.length === 0) {
-      // Dropped, not emptied, so the change event signals removal.
-      documentModelsMap.delete(pkg);
-    } else {
-      documentModelsMap.set(pkg, pkgModels);
-    }
     this.updatePackagesMap(documentModelsMap);
   }
 
   private async updateSubgraphsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating subgraphs for package: ${pkg}`);
-    const subgraphs = await this.loadSubgraphs([pkg]);
-    const subgraphsMap = new Map(this.subgraphsMap);
-    const pkgSubgraphs = subgraphs.get(pkg) ?? [];
-    if (pkgSubgraphs.length === 0) {
-      // An empty result means the package no longer contributes subgraphs
-      // (e.g. its subgraphs/ entry was removed): drop the key so the change
-      // event signals removal instead of re-asserting an empty entry.
-      subgraphsMap.delete(pkg);
-    } else {
-      subgraphsMap.set(pkg, pkgSubgraphs);
-    }
-    this.updateSubgraphsMap(subgraphsMap);
+    const load = (await this.loadSubgraphs([pkg])).get(pkg);
+    const next = this.withReload("subgraphs", this.subgraphsMap, pkg, load);
+    if (next) this.updateSubgraphsMap(next);
   }
 
   private async updateProcessorsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating processors for package: ${pkg}`);
-    const processors = await this.loadProcessors([pkg]);
-    const processorsMap = new Map(this.processorMap);
-    const pkgProcessors = processors.get(pkg) ?? [];
-    if (pkgProcessors.length === 0) {
-      processorsMap.delete(pkg);
-    } else {
-      processorsMap.set(pkg, pkgProcessors);
-    }
-    this.updateProcessorsMap(processorsMap);
+    const load = (await this.loadProcessors([pkg])).get(pkg);
+    const next = this.withReload("processors", this.processorMap, pkg, load);
+    if (next) this.updateProcessorsMap(next);
   }
 
   private async updatePiecesForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating pieces for package: ${pkg}`);
-    const pieces = await this.loadPieces([pkg]);
-    const piecesMap = new Map(this.piecesMap);
-    const pkgPieces = pieces.get(pkg) ?? [];
-    if (pkgPieces.length === 0) {
-      // An empty result means the package no longer contributes pieces: drop
-      // the key so the change event signals removal, as its siblings do.
-      piecesMap.delete(pkg);
-    } else {
-      piecesMap.set(pkg, pkgPieces);
-    }
-    this.updatePiecesMap(piecesMap);
+    const load = (await this.loadPieces([pkg])).get(pkg);
+    const next = this.withReload("pieces", this.piecesMap, pkg, load);
+    if (next) this.updatePiecesMap(next);
   }
 
   /** Debounced per key so repeated subscribePackages calls reuse one timer. */
