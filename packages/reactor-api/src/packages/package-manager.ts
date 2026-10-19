@@ -135,6 +135,9 @@ export class PackageManager implements IPackageManager {
   private configWatcher: StatWatcher | undefined;
   private unsubscribePackages: (() => void) | undefined;
   private subscribedPackages = new Set<string>();
+  private removals = 0;
+  private removedAt = new Map<string, number>();
+  private loadQueue: Promise<unknown> = Promise.resolve();
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
@@ -163,16 +166,41 @@ export class PackageManager implements IPackageManager {
     return await this.loadPackages(this.getAllPackageNames());
   }
 
-  private async loadPackages(
-    packages: string[],
-  ): Promise<PackageManagerResult> {
-    this.logger.info("Loading packages: @packages", packages.join(", "));
+  // In call order, so a slower earlier load cannot overwrite a newer one.
+  private loadPackages(packages: string[]): Promise<PackageManagerResult> {
+    const requestedAt = this.removals;
+    const load = this.loadQueue.then(() =>
+      this.loadPackagesNow(packages, requestedAt),
+    );
+    this.loadQueue = load.catch(() => undefined);
+    return load;
+  }
 
-    const documentModelsMap = await this.loadDocumentModels(packages);
-    const upgradeManifestsMap = await this.loadUpgradeManifests(packages);
-    const subgraphsMap = await this.loadSubgraphs(packages);
-    const processorsMap = await this.loadProcessors(packages);
-    const piecesMap = await this.loadPieces(packages);
+  private async loadPackagesNow(
+    requested: string[],
+    requestedAt: number,
+  ): Promise<PackageManagerResult> {
+    this.logger.info("Loading packages: @packages", requested.join(", "));
+
+    const documentModelsMap = await this.loadDocumentModels(requested);
+    const upgradeManifestsMap = await this.loadUpgradeManifests(requested);
+    const subgraphsMap = await this.loadSubgraphs(requested);
+    const processorsMap = await this.loadProcessors(requested);
+    const piecesMap = await this.loadPieces(requested);
+
+    const removed = requested.filter(
+      (pkg) => (this.removedAt.get(pkg) ?? 0) > requestedAt,
+    );
+    for (const map of [
+      documentModelsMap,
+      upgradeManifestsMap,
+      subgraphsMap,
+      processorsMap,
+      piecesMap,
+    ]) {
+      removed.forEach((pkg) => map.delete(pkg));
+    }
+    const packages = requested.filter((pkg) => !removed.includes(pkg));
 
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
@@ -474,6 +502,7 @@ export class PackageManager implements IPackageManager {
     this.logger.debug(`Updating document models for package: ${pkg}`);
     const documentModels = await this.loadDocumentModels([pkg]);
     const upgradeManifests = await this.loadUpgradeManifests([pkg]);
+    if (!this.subscribedPackages.has(pkg)) return;
     const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
     const pkgManifests = upgradeManifests.get(pkg) ?? [];
     if (pkgManifests.length === 0) {
@@ -498,6 +527,7 @@ export class PackageManager implements IPackageManager {
   private async updateSubgraphsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating subgraphs for package: ${pkg}`);
     const subgraphs = await this.loadSubgraphs([pkg]);
+    if (!this.subscribedPackages.has(pkg)) return;
     const subgraphsMap = new Map(this.subgraphsMap);
     const pkgSubgraphs = subgraphs.get(pkg) ?? [];
     if (pkgSubgraphs.length === 0) {
@@ -514,6 +544,7 @@ export class PackageManager implements IPackageManager {
   private async updateProcessorsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating processors for package: ${pkg}`);
     const processors = await this.loadProcessors([pkg]);
+    if (!this.subscribedPackages.has(pkg)) return;
     const processorsMap = new Map(this.processorMap);
     const pkgProcessors = processors.get(pkg) ?? [];
     if (pkgProcessors.length === 0) {
@@ -527,6 +558,7 @@ export class PackageManager implements IPackageManager {
   private async updatePiecesForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating pieces for package: ${pkg}`);
     const pieces = await this.loadPieces([pkg]);
+    if (!this.subscribedPackages.has(pkg)) return;
     const piecesMap = new Map(this.piecesMap);
     const pkgPieces = pieces.get(pkg) ?? [];
     if (pkgPieces.length === 0) {
@@ -547,7 +579,8 @@ export class PackageManager implements IPackageManager {
   ): () => void {
     const key = `${pkg}:${kind}`;
     if (!this.debouncedUpdateCallbacks.has(key)) {
-      // A timer still pending for a package dropped since does nothing.
+      // A timer still pending for a package dropped since does nothing; the
+      // update re-checks after its load for a drop while the load ran.
       const updateIfSubscribed = () =>
         this.subscribedPackages.has(pkg) ? update() : undefined;
       const debouncedFn = debounce(
@@ -715,6 +748,7 @@ export class PackageManager implements IPackageManager {
   removePackage(pkg: string): void {
     this.logger.info(`Removing package: ${pkg}`);
     this.subscribedPackages.delete(pkg);
+    this.removedAt.set(pkg, ++this.removals);
     const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
       if (!map.has(pkg)) return map;
       const next = new Map(map);
