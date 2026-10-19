@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import type { HostDefinition } from "./host-schemas.js";
 
 /**
  * Loads and pre-validates a `hosts/<name>/host.js` definition.
@@ -58,12 +59,51 @@ export function probeHostsFolder(projectRoot: string): HostsFolderStatus {
  * compositions (full-inclusion wrappers compute over them with plain JS). */
 const SIBLING_IMPORT = /^\.\.\/([A-Za-z0-9_-]+)\/host\.js$/;
 
+/** Blank out `//` and block comments, keeping string and template literals
+ * (URLs contain `//`) and every newline, so line-anchored checks still see
+ * the code's own lines. A JSDoc `import("…")` type is a comment, not code. */
+export function stripComments(source: string): string {
+  let out = "";
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (ch === "/" && next === "/") {
+      while (i < source.length && source[i] !== "\n") {
+        out += " ";
+        i++;
+      }
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      const end = source.indexOf("*/", i + 2);
+      const stop = end === -1 ? source.length : end + 2;
+      out += source.slice(i, stop).replace(/[^\n]/g, " ");
+      i = stop;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      let j = i + 1;
+      while (j < source.length && source[j] !== ch) {
+        j += source[j] === "\\" ? 2 : 1;
+      }
+      out += source.slice(i, j + 1);
+      i = j + 1;
+      continue;
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
 /** Rejects every import except the project's powerhouse.config.json and
  * SIBLING host files (R1: derived compositions), plus any dynamic
  * `import(...)` or `require(...)`. Source-level enforcement: the JSON round
  * trip below is the hard gate; this one produces the better error. Returns
  * the sibling host names the file imports, for cycle detection. */
-export function lintHostImports(source: string, file: string): string[] {
+export function lintHostImports(rawSource: string, file: string): string[] {
+  const source = stripComments(rawSource);
   const siblings: string[] = [];
   for (const match of source.matchAll(
     /^\s*import\b[^;'"]*?from\s+["']([^"']+)["']/gm,
@@ -153,14 +193,7 @@ export function findNonStaticValue(
   return undefined;
 }
 
-export interface HostDefinition {
-  name: string;
-  runner: { module: string } & Record<string, unknown>;
-  config?: Record<string, unknown>;
-  profile?: Record<string, unknown>;
-  reactor?: Record<string, unknown>;
-  children?: Record<string, unknown>;
-}
+export type { HostDefinition } from "./host-schemas.js";
 
 export interface LoadedHost {
   name: string;

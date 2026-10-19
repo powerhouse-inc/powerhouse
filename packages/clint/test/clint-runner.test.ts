@@ -65,7 +65,7 @@ setTimeout(() => {}, 30_000);
     `
 import { appendFileSync } from "node:fs";
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run() {}
 export async function build(host) {
   appendFileSync(${JSON.stringify(sink)}, JSON.stringify({ built: host.name }) + "\\n");

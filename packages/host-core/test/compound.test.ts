@@ -60,12 +60,12 @@ import { appendFileSync } from "node:fs";
 const sink = ${JSON.stringify(sink)};
 const log = (entry) => appendFileSync(sink, JSON.stringify(entry) + "\\n");
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function dev(host, ctx) {
   log({ name: host.name, drives: host.config?.drives ?? null, port: host.runner.port, plugins: host.runner.plugins ?? null });
   // the switchboard-role member reports its created drive URLs
   if (host.name.includes("switchboard")) {
-    return { port: host.runner.port, driveUrls: ["http://localhost:7064/d/vetra-x", "http://localhost:7064/d/workflows"] };
+    return { port: host.runner.port, driveUrls: ["http://localhost:7064/d/vetra-x", "http://localhost:7064/d/workflows"], outputs: { origin: "http://localhost:7064" } };
   }
   return { port: host.runner.port };
 }
@@ -160,9 +160,27 @@ describe("runCompound", () => {
     });
 
     const record = readRunRecord(dir, "app");
+    expect(record).toMatchObject({
+      version: 2,
+      host: "app",
+      kind: "compound",
+      verb: "dev",
+    });
     expect(record?.members).toEqual({
-      "app-switchboard": { port: 7064, url: undefined },
-      "app-connect": { port: 2064, url: undefined },
+      "app-switchboard": {
+        host: "switchboard",
+        runnerModule: "fake-runner",
+        kind: "reactor",
+        verb: "dev",
+        outputs: { origin: "http://localhost:7064" },
+      },
+      "app-connect": {
+        host: "connect",
+        runnerModule: "fake-runner",
+        kind: "reactor",
+        verb: "dev",
+        outputs: {},
+      },
     });
 
     await result.shutdown();
@@ -242,9 +260,12 @@ describe("runCompound", () => {
     const { dir } = makeProject();
     const { writeRunRecord } = await import("../src/run-record.js");
     writeRunRecord(dir, {
-      pid: process.pid,
-      hostName: "app",
+      version: 2,
+      host: "app",
       projectName: "lab",
+      kind: "compound",
+      verb: "dev",
+      pid: process.pid,
       startedAt: "x",
       members: {},
     });
@@ -260,9 +281,12 @@ describe("runCompound", () => {
     const { dir } = makeProject();
     const { writeRunRecord } = await import("../src/run-record.js");
     writeRunRecord(dir, {
-      pid: process.pid,
-      hostName: "app",
+      version: 2,
+      host: "app",
       projectName: "someone-else",
+      kind: "compound",
+      verb: "dev",
+      pid: process.pid,
       startedAt: "x",
       members: {},
     });

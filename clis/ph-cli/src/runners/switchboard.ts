@@ -2,7 +2,6 @@ import {
   profileSchema,
   reactorSchema,
   type HostDefinition,
-  type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import {
@@ -12,7 +11,6 @@ import {
   resolveDriveDeclaration,
   resolveHostPlugins,
   seedDrives,
-  type DriveDeclaration,
   type DriveSeederClient,
   type ResolvedDrive,
   type ResolvedPlugin,
@@ -45,7 +43,7 @@ export const hostSchema = z.looseObject({
     plugins: z.array(pluginEntrySchema).optional(),
   }),
   config: z.looseObject({}).optional(),
-  profile: profileSchema,
+  profile: profileSchema.optional(),
   reactor: reactorSchema.optional(),
 });
 
@@ -213,12 +211,12 @@ async function start(
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
   const options = applyReactorEnvProjection(
-    host.reactor as ReactorConfig | undefined,
+    host.reactor,
     `hosts/${host.name}/host.js`,
   );
   const { startSwitchboard } = await import("../services/switchboard.js");
-  const entriesDeclared =
-    (host.runner as { plugins?: unknown }).plugins !== undefined;
+  const entries = host.runner.plugins;
+  const entriesDeclared = entries !== undefined;
   const args = await toSwitchboardArgs(
     host,
     devMode,
@@ -229,9 +227,6 @@ async function start(
   // R2 step 2: a declared composition activates the plugin pipeline — the
   // runner resolves the entries against the PROJECT dependency tree and the
   // flag drives server-side activation. No plugins key = classic path.
-  const entries = (host.runner as { plugins?: unknown }).plugins as
-    | Parameters<typeof resolveHostPlugins>[3]
-    | undefined;
   let pluginComposition;
   if (entries !== undefined) {
     process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
@@ -247,9 +242,7 @@ async function start(
   // Core drive declarations (reactor.drives): locals seed after boot via the
   // host-core seeder; remotes ride the existing remoteDrives option; the
   // implicit default powerhouse drive is replaced by the declared set.
-  const declarations = (
-    host.reactor as { drives?: DriveDeclaration[] } | undefined
-  )?.drives;
+  const declarations = host.reactor?.drives;
   const hostDrives = (declarations ?? []).map((declaration) =>
     resolveDriveDeclaration(ctx.projectRoot, declaration),
   );

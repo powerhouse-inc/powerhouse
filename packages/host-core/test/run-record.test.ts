@@ -1,4 +1,10 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -24,14 +30,25 @@ function makeProject(): string {
   return dir;
 }
 
+const member = (host: string, port: number) => ({
+  host,
+  runnerModule: "fake-runner",
+  kind: "reactor" as const,
+  verb: "dev",
+  outputs: { port },
+});
+
 const record = (over: Partial<RunRecord> = {}): RunRecord => ({
-  pid: process.pid,
-  hostName: "vetra",
+  version: 2,
+  host: "vetra",
   projectName: "lab",
+  kind: "compound",
+  verb: "dev",
+  pid: process.pid,
   startedAt: "2026-10-13T00:00:00.000Z",
   members: {
-    "vetra-studio": { port: 2064 },
-    "vetra-switchboard": { port: 7064 },
+    "vetra-studio": member("connect", 2064),
+    "vetra-switchboard": member("switchboard", 7064),
   },
   ...over,
 });
@@ -42,17 +59,39 @@ describe("run record read/write/clear", () => {
     writeRunRecord(dir, record());
     expect(existsSync(path.join(dir, ".ph/run/vetra.json"))).toBe(true);
     expect(readRunRecord(dir, "vetra")).toMatchObject({
-      hostName: "vetra",
-      members: { "vetra-studio": { port: 2064 } },
+      host: "vetra",
+      members: { "vetra-studio": { outputs: { port: 2064 } } },
     });
   });
 
   it("keeps hosts separate by name", () => {
     const dir = makeProject();
-    writeRunRecord(dir, record({ hostName: "vetra" }));
-    writeRunRecord(dir, record({ hostName: "desktop", members: {} }));
-    expect(readRunRecord(dir, "vetra")?.hostName).toBe("vetra");
-    expect(readRunRecord(dir, "desktop")?.hostName).toBe("desktop");
+    writeRunRecord(dir, record({ host: "vetra" }));
+    writeRunRecord(dir, record({ host: "desktop", members: {} }));
+    expect(readRunRecord(dir, "vetra")?.host).toBe("vetra");
+    expect(readRunRecord(dir, "desktop")?.host).toBe("desktop");
+  });
+
+  it("reads a v1 record as not running (probe: none)", () => {
+    const dir = makeProject();
+    mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
+    writeFileSync(
+      path.join(dir, ".ph", "run", "vetra.json"),
+      JSON.stringify({
+        pid: process.pid,
+        hostName: "vetra",
+        projectName: "lab",
+        startedAt: "x",
+        members: {},
+      }),
+    );
+    expect(readRunRecord(dir, "vetra")).toBeUndefined();
+    expect(probeRun(dir, "vetra", "lab")).toEqual({ status: "none" });
+  });
+
+  it("refuses to write an invalid record", () => {
+    const dir = makeProject();
+    expect(() => writeRunRecord(dir, { ...record(), verb: "" })).toThrow();
   });
 
   it("returns undefined for missing or corrupt records", () => {
