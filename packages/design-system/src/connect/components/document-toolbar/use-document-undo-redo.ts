@@ -29,8 +29,8 @@ const UNDO_SCOPE = "global";
 
 /**
  * Whether undo and redo go through the reactor client: on base-reducer 3, and
- * on a light-client header, which carries no protocol versions and whose
- * client resolves every version.
+ * on a header without protocol versions (a light client of an older
+ * Switchboard), whose client resolves every version.
  */
 function undoesThroughClient(
   client: IReactorBrowserClient | undefined,

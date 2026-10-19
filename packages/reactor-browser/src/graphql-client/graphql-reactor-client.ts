@@ -695,7 +695,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     branch: string = "main",
     signal?: AbortSignal,
   ): Promise<UndoRedoAvailability> {
-    // The read API serves no protocolVersions; CREATE_DOCUMENT carries them.
+    // An older Switchboard serves no header protocolVersions; CREATE_DOCUMENT carries them.
     const spine = await this.allOperations(
       documentIdentifier,
       "document",

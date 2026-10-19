@@ -71,14 +71,14 @@ async function globalHistory(documentId: string): Promise<Operation[]> {
   return all;
 }
 
-// The document's CREATE_DOCUMENT, from the cache or else read: a light-client
-// header carries no protocol versions.
+// The document's CREATE_DOCUMENT, from the cache or else read: a header from
+// an older Switchboard carries no protocol versions.
 async function creation(document: PHDocument): Promise<Operation | undefined> {
   const operations: Record<string, Operation[] | undefined> =
     document.operations;
   const cached = operations.document?.at(0);
   if (cached) return cached;
-  const client = window.ph?.reactorClient;
+  const client = getPHStore()?.reactorClient;
   if (!client) return undefined;
   const page = await client.getOperations(
     document.header.id,
