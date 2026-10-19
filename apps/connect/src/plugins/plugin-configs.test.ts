@@ -56,6 +56,24 @@ describe("Connect plugin configSchemas", () => {
         homeBackground: "./home.png",
       }).success,
     ).toBe(true);
+    // the shape the Connect build leaves after resolving images to data URIs
+    // (mapBackgroundImages keeps each layer, swapping only its src)
+    expect(
+      schema.safeParse({
+        homeBackground: {
+          color: { light: "#fff", dark: "#000" },
+          layers: [
+            {
+              src: { light: "data:image/png;base64,AA==", dark: "data:x" },
+              position: { right: 0, bottom: 0 },
+              width: "40%",
+              opacity: 0.8,
+            },
+          ],
+        },
+        icons: null,
+      }).success,
+    ).toBe(true);
     // nested typos fail too: the slice schemas are strict
     expect(
       schema.safeParse({ sections: { remote: { allowAd: false } } }).success,
