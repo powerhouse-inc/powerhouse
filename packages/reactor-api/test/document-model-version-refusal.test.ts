@@ -100,7 +100,6 @@ function makeHarness(models: DocumentModelModule[]) {
       build();
       return Promise.resolve();
     }),
-    attachWebSocket: vi.fn().mockReturnValue({ dispose: vi.fn() }),
     stop: vi.fn().mockResolvedValue(undefined),
   } as unknown as IGatewayAdapter<Context>;
   const handle = (): AdapterRouteHandle => ({ dispose: vi.fn() });

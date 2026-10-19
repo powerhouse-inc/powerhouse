@@ -97,7 +97,9 @@ async function dbState(dataDir: string): Promise<number> {
 }
 
 // 180 s: the Windows runner scans first-seen files; a fresh initdb there took 68 s.
-describe("convertSnapshotDir", { timeout: 180_000 }, () => {
+const WINDOWS_BOOT_BUDGET = 180_000;
+
+describe("convertSnapshotDir", { timeout: WINDOWS_BOOT_BUDGET }, () => {
   let templateDir: string;
   let root: string;
   let dir: string;
@@ -107,6 +109,7 @@ describe("convertSnapshotDir", { timeout: 180_000 }, () => {
   let deps: ConversionDeps;
   let info: ReturnType<typeof vi.fn>;
 
+  // The describe timeout covers tests only; this hook runs the first initdb.
   beforeAll(async () => {
     templateDir = await fs.mkdtemp(path.join(os.tmpdir(), "convert-template-"));
     const pg = await openNodeFs(templateDir);
@@ -115,7 +118,7 @@ describe("convertSnapshotDir", { timeout: 180_000 }, () => {
       `INSERT INTO "Rows" SELECT g, repeat('x', 100) FROM generate_series(1, ${TEMPLATE_ROWS}) g`,
     );
     await closeNodeFs(pg, templateDir);
-  });
+  }, WINDOWS_BOOT_BUDGET);
 
   afterAll(async () => {
     await fs.rm(templateDir, RM);

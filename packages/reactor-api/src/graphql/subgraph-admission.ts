@@ -231,20 +231,39 @@ export type SupergraphMember<T> = {
   claims: SubgraphClaims;
 };
 
-/** Members that lose a claim: claims go by rank, then first registration. */
+/** Rank, then first registration. */
+export function byClaimPriority<T>(
+  members: Iterable<T>,
+  originOf: (member: T) => SubgraphOrigin,
+  nameOf: (member: T) => string,
+  order: RegistrationOrder,
+): T[] {
+  return Array.from(members, (member) => {
+    const origin = originOf(member);
+    return {
+      member,
+      priority: [-rank(origin), ...order.of(origin, nameOf(member))],
+    };
+  })
+    .sort((a, b) => {
+      const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
+      return i === -1 ? 0 : a.priority[i] - b.priority[i];
+    })
+    .map(({ member }) => member);
+}
+
+/** Members that lose a claim: claims go by byClaimPriority. */
 export function supergraphClaimLosers<T>(
   members: Iterable<SupergraphMember<T>>,
   order: RegistrationOrder,
 ): Map<T, OwnershipConflict[]> {
-  const ranked = Array.from(members, (member) => ({
-    member,
-    priority: [-rank(member.origin), ...order.of(member.origin, member.name)],
-  })).sort((a, b) => {
-    const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
-    return i === -1 ? 0 : a.priority[i] - b.priority[i];
-  });
   return resolveClaimOwnership(
-    ranked.map(({ member }) => ({
+    byClaimPriority(
+      members,
+      (member) => member.origin,
+      (member) => member.name,
+      order,
+    ).map((member) => ({
       candidate: member.member,
       name: member.name,
       claims: member.claims,

@@ -13,16 +13,12 @@ import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { WebSocketServer } from "ws";
 import type { Context } from "../types.js";
-import { useServer } from "../websocket.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
   SubgraphDefinition,
-  WsDisposer,
-  WsHandlers,
 } from "./types.js";
 
 /**
@@ -111,25 +107,6 @@ export class MercuriusGatewayAdapter implements IGatewayAdapter<Context> {
     // Swap atomically — in-flight requests on the old app finish normally.
     this.#supergraphApp = newApp;
     if (oldApp) await oldApp.close();
-  }
-
-  attachWebSocket(
-    wsServer: WebSocketServer,
-    schema: GraphQLSchema,
-    handlers: WsHandlers<Context>,
-  ): WsDisposer {
-    // Use graphql-ws directly; Mercurius's own subscription transport is
-    // Fastify-specific and not applicable here.
-    return useServer(
-      {
-        schema,
-        onConnect: (ctx) =>
-          handlers.onConnect(ctx.connectionParams ?? {}, ctx.extra as object),
-        context: (ctx) =>
-          handlers.context(ctx.connectionParams ?? {}, ctx.extra as object),
-      },
-      wsServer,
-    );
   }
 
   async stop(): Promise<void> {

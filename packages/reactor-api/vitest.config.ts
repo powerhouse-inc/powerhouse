@@ -8,14 +8,6 @@ if (process.env.RUN_HUB_SPOKE_INTEGRATION !== "1") {
 }
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "graphql-ws/lib/use/ws": resolve(
-        __dirname,
-        "../../node_modules/graphql-ws/lib/use/ws.mjs",
-      ),
-    },
-  },
   test: {
     exclude: baseExclude,
     // PGLite WASM cold boot plus initdb's fsync pass can exceed the default
