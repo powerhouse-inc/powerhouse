@@ -76,6 +76,14 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
+  it("publishes validated outputs in its handle and its v2 run record", async () => {
+    const { readRunRecord } = await import("@powerhousedao/host-core");
+    const outputs = runner.outputsSchema.parse(handle.outputs);
+    expect(outputs.endpoints.openai).toBe(`${outputs.origin}/v1`);
+    expect(outputs.endpoints.ready).toBe(`${outputs.origin}/ready`);
+    expect(readRunRecord(projectDir, "assistant")?.outputs).toEqual(outputs);
+  });
+
   it("answers /ready and /v1/models", async () => {
     const base = handle.outputs.endpoints.openai.replace(/\/v1$/, "");
     const ready = await fetch(`${base}/ready`);
