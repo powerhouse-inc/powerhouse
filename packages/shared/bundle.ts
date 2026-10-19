@@ -31,6 +31,9 @@ await build({
     "registry/manifest-slim.ts",
     "registry/urls.ts",
     "registry/updates.ts",
+    // Zod-only Connect config schema: host-core's neutral entries and the
+    // connect runner import it without the connect barrel.
+    "connect/connect-config-schema.ts",
   ],
   outDir: "dist",
   platform: "neutral",
