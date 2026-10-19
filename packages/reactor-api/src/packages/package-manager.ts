@@ -157,6 +157,7 @@ export class PackageManager implements IPackageManager {
   private configWatcher: StatWatcher | undefined;
   private unsubscribePackages: (() => void) | undefined;
   private subscribedPackages = new Set<string>();
+  private removedPackages = new Set<string>();
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
@@ -600,7 +601,13 @@ export class PackageManager implements IPackageManager {
         packageNames.add(name);
       }
     }
-    return Array.from(packageNames);
+    // Removed stays removed until nothing declares it, so declaring it again loads.
+    for (const pkg of this.removedPackages) {
+      if (!packageNames.has(pkg)) this.removedPackages.delete(pkg);
+    }
+    return Array.from(packageNames).filter(
+      (pkg) => !this.removedPackages.has(pkg),
+    );
   }
 
   private getPackageNamesFromConfigFile(configFile: string) {
@@ -691,15 +698,15 @@ export class PackageManager implements IPackageManager {
     return new Map(this.piecesMap);
   }
 
-  /**
-   * Remove `pkg` from all package maps and emit the change events, tearing
-   * down everything the package registered (subgraphs, processors, document
-   * models). For an uninstalled package no loader can serve it again, so
-   * nothing can re-add it.
-   */
+  hasPackage(pkg: string): boolean {
+    return this.subscribedPackages.has(pkg);
+  }
+
+  /** Tear down everything `pkg` registered; config reloads leave it out. */
   removePackage(pkg: string): void {
     this.logger.info(`Removing package: ${pkg}`);
     this.subscribedPackages.delete(pkg);
+    this.removedPackages.add(pkg);
     const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
       if (!map.has(pkg)) return map;
       const next = new Map(map);
