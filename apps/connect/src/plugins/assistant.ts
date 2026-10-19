@@ -1,6 +1,10 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * The Connect AI assistant (`@powerhousedao/connect/plugins/assistant`).
@@ -25,7 +29,11 @@ declare global {
 }
 
 export const createAssistantPlugin: ConnectPluginFactory = (rawConfig) => {
-  assistantConfigSchema.parse(rawConfig);
+  parseEntryConfig(
+    "@powerhousedao/connect/plugins/assistant",
+    assistantConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "connect-assistant",
     appliesTo: "connect",

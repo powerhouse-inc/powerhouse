@@ -1,7 +1,11 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { connectSentrySchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import type { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * Sentry error reporting (`@powerhousedao/connect/plugins/sentry`). Presence
@@ -26,7 +30,11 @@ declare global {
 }
 
 export const createSentryPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config = sentryConfigSchema.parse(rawConfig);
+  const config = parseEntryConfig(
+    "@powerhousedao/connect/plugins/sentry",
+    sentryConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "connect-sentry",
     appliesTo: "connect",

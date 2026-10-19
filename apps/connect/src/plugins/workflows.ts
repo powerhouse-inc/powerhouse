@@ -7,7 +7,11 @@ import type {
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * The workflows plugin, browser side (`@powerhousedao/connect/plugins/
@@ -71,8 +75,11 @@ function withDrive(
 }
 
 export const createWorkflowsPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config: WorkflowsConnectConfig =
-    workflowsConnectConfigSchema.parse(rawConfig);
+  const config: WorkflowsConnectConfig = parseEntryConfig(
+    "@powerhousedao/connect/plugins/workflows",
+    workflowsConnectConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "connect-workflows",
     appliesTo: "connect",

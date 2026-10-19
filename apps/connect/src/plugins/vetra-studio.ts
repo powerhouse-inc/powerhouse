@@ -1,6 +1,10 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * Vetra Studio, browser side (`@powerhousedao/vetra-studio/connect`). Its
@@ -26,7 +30,11 @@ declare global {
 }
 
 export const createVetraStudioPlugin: ConnectPluginFactory = (rawConfig) => {
-  vetraStudioConfigSchema.parse(rawConfig);
+  parseEntryConfig(
+    "@powerhousedao/vetra-studio/connect",
+    vetraStudioConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "vetra-studio-connect",
     appliesTo: "connect",

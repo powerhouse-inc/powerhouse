@@ -46,6 +46,12 @@ describe("Connect plugin configSchemas", () => {
     },
   );
 
+  it("names the plugin and the offending key when an entry config is invalid", () => {
+    expect(() => createGenericPlugin({ allowAddDrives: false })).toThrow(
+      /Connect plugin "@powerhousedao\/connect\/plugins\/generic" is invalid:[\s\S]*allowAddDrives/,
+    );
+  });
+
   it("generic types its slices by the Connect config schema", () => {
     const schema = createGenericPlugin({}).configSchema!;
     expect(

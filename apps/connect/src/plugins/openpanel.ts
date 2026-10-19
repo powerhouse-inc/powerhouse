@@ -1,7 +1,11 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { connectOpenPanelSchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import type { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * OpenPanel analytics (`@powerhousedao/connect/plugins/openpanel`). Presence
@@ -26,7 +30,11 @@ declare global {
 }
 
 export const createOpenPanelPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config = openPanelConfigSchema.parse(rawConfig);
+  const config = parseEntryConfig(
+    "@powerhousedao/connect/plugins/openpanel",
+    openPanelConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "connect-openpanel",
     appliesTo: "connect",

@@ -10,7 +10,11 @@ import type {
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import {
+  parseEntryConfig,
+  type ConnectPlugin,
+  type ConnectPluginFactory,
+} from "./types.js";
 
 /**
  * The generic Connect shell plugin (`@powerhousedao/connect/plugins/generic`).
@@ -73,7 +77,11 @@ const DEFAULT_DRIVES = DEFAULT_CONNECT_CONFIG.drives;
 const DEFAULT_HOME = DEFAULT_CONNECT_CONFIG.home;
 
 export const createGenericPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config: GenericConfig = genericConfigSchema.parse(rawConfig);
+  const config: GenericConfig = parseEntryConfig(
+    "@powerhousedao/connect/plugins/generic",
+    genericConfigSchema,
+    rawConfig,
+  );
   const plugin: ConnectPlugin = {
     name: "connect-generic",
     appliesTo: "connect",
