@@ -239,6 +239,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private realtimeErrorLogged = false;
   /** Whether the last socket died because the Switchboard refused its credentials. */
   private realtimeRefusedCredentials = false;
+  /** False once the Switchboard refuses `createDefaults(documentType:)`. */
+  private createDefaultsTakesType = true;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -868,16 +870,33 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * The protocol versions the Switchboard selects for a new document under
-   * `parentIdentifier`, read from its `createDefaults` query. A parent the
-   * caller may not read is refused by the server, never answered as if none
-   * was named; a Switchboard without the query is refused with
-   * {@link GraphQLOperationNotSupportedError}.
+   * The protocol versions the Switchboard selects for a new document of
+   * `documentType` under `parentIdentifier`, read from its `createDefaults`
+   * query. A parent the caller may not read is refused by the server, never
+   * answered as if none was named; a Switchboard without the query is refused
+   * with {@link GraphQLOperationNotSupportedError}. A Switchboard that
+   * predates the `documentType` argument answers without fitting to the type.
    */
   async getCreateProtocolVersions(
-    { parentIdentifier }: CreateProtocolVersionsOptions,
+    { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
+    if (documentType !== undefined && this.createDefaultsTakesType) {
+      try {
+        const result = await this.sdk.GetCreateProtocolVersions(
+          { parentIdOrSlug: parentIdentifier, documentType },
+          undefined,
+          signal,
+        );
+        return protocolVersionsFrom(result.createDefaults.protocolVersions);
+      } catch (error) {
+        if (rejectsArgument(error, "createDefaults", "documentType")) {
+          this.createDefaultsTakesType = false;
+        } else if (!queriesUnknownField(error, "createDefaults")) {
+          throw error;
+        }
+      }
+    }
     const defaults = await this.createDefaults(
       "getCreateProtocolVersions",
       parentIdentifier,
@@ -1785,6 +1804,29 @@ function queriesUnknownField(error: unknown, field: string): boolean {
       typeof (entry as { message?: unknown } | null)?.message === "string" &&
       (entry as { message: string }).message.startsWith(prefix),
   );
+}
+
+/** Whether the server's schema has no such argument on a root field. */
+function rejectsArgument(
+  error: unknown,
+  field: string,
+  argument: string,
+): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  const prefix = `Unknown argument "${argument}" on field "`;
+  const suffix = `.${field}".`;
+  return errors.some((entry) => {
+    const message = (entry as { message?: unknown } | null)?.message;
+    return (
+      typeof message === "string" &&
+      message.startsWith(prefix) &&
+      message.includes(suffix)
+    );
+  });
 }
 
 /**

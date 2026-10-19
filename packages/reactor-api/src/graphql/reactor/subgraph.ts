@@ -501,6 +501,7 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await resolvers.createDefaults(
             this.reactorClient,
             parentIdOrSlug,
+            args.documentType ?? undefined,
           );
         } catch (error) {
           this.logger.error("Error in createDefaults: @Error", error);

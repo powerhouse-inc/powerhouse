@@ -680,6 +680,7 @@ export type Query = {
 };
 
 export type QueryCreateDefaultsArgs = {
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
@@ -1346,6 +1347,15 @@ export type GetCreateDefaultsQuery = {
     readonly signaturePolicy: string;
     readonly protocolVersions: NonNullable<unknown>;
   };
+};
+
+export type GetCreateProtocolVersionsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentType: Scalars["String"]["input"];
+}>;
+
+export type GetCreateProtocolVersionsQuery = {
+  readonly createDefaults: { readonly protocolVersions: NonNullable<unknown> };
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
@@ -3633,6 +3643,19 @@ export const GetCreateDefaultsDocument = gql`
     }
   }
 `;
+export const GetCreateProtocolVersionsDocument = gql`
+  query GetCreateProtocolVersions(
+    $parentIdOrSlug: String
+    $documentType: String!
+  ) {
+    createDefaults(
+      parentIdOrSlug: $parentIdOrSlug
+      documentType: $documentType
+    ) {
+      protocolVersions
+    }
+  }
+`;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
     $documentIdentifier: String!
@@ -4120,6 +4143,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetCreateDefaultsQuery>;
+    },
+    GetCreateProtocolVersions(
+      variables: GetCreateProtocolVersionsQueryVariables,
+      options?: C,
+    ): Promise<GetCreateProtocolVersionsQuery> {
+      return requester<
+        GetCreateProtocolVersionsQuery,
+        GetCreateProtocolVersionsQueryVariables
+      >(
+        GetCreateProtocolVersionsDocument,
+        variables,
+        options,
+      ) as Promise<GetCreateProtocolVersionsQuery>;
     },
     EvaluateActions(
       variables: EvaluateActionsQueryVariables,

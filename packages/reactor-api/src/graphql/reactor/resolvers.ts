@@ -123,15 +123,20 @@ import type {
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
-/** The defaults `create` gives a new document; the parent must already be gated. */
+/**
+ * The defaults `create` gives a new document; the parent must already be
+ * gated. A request without `documentType` predates it and gets the host's
+ * selection unfitted.
+ */
 export async function createDefaults(
   reactorClient: IReactorClient,
   parentIdOrSlug: string | undefined,
+  documentType: string | undefined,
 ): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
   const [signaturePolicy, protocolVersions] = await Promise.all([
     reactorClient.getCreateSignaturePolicy(),
     reactorClient.getCreateProtocolVersions({
-      documentType: undefined,
+      documentType,
       parentIdentifier: parentIdOrSlug,
     }),
   ]);

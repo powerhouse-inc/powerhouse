@@ -34,6 +34,7 @@ type MockSdk = {
   GetDocument: ReturnType<typeof vi.fn>;
   SetPreferredEditor: ReturnType<typeof vi.fn>;
   GetCreateDefaults: ReturnType<typeof vi.fn>;
+  GetCreateProtocolVersions: ReturnType<typeof vi.fn>;
 };
 
 /** A drive the `get` adapter can rebuild. */
@@ -87,6 +88,7 @@ function createMockSdk(overrides: Partial<MockSdk> = {}): MockSdk {
       .fn()
       .mockResolvedValue({ setPreferredEditor: editorDocument }),
     GetCreateDefaults: vi.fn(),
+    GetCreateProtocolVersions: vi.fn(),
     ...overrides,
   };
 }
@@ -814,6 +816,48 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
         parentIdentifier: "parent-1",
       }),
     ).rejects.toBe(refused);
+  });
+
+  it("asks for protocol versions fitted to a document type", async () => {
+    const sdk = createMockSdk({
+      GetCreateProtocolVersions: vi.fn().mockResolvedValue({
+        createDefaults: { protocolVersions: { "base-reducer": 2 } },
+      }),
+    });
+    const controller = new AbortController();
+
+    const versions = await createClientWith(sdk).getCreateProtocolVersions(
+      { documentType: "powerhouse/test", parentIdentifier: "parent-1" },
+      controller.signal,
+    );
+
+    expect(versions).toEqual({ "base-reducer": 2 });
+    expect(sdk.GetCreateProtocolVersions).toHaveBeenCalledWith(
+      { parentIdOrSlug: "parent-1", documentType: "powerhouse/test" },
+      undefined,
+      controller.signal,
+    );
+    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
+  });
+
+  it("passes on a typed request's other failures untouched", async () => {
+    const refused = Object.assign(new Error("forbidden"), {
+      response: {
+        status: 200,
+        errors: [{ message: "Forbidden", extensions: { code: "FORBIDDEN" } }],
+      },
+    });
+    const sdk = createMockSdk({
+      GetCreateProtocolVersions: vi.fn().mockRejectedValue(refused),
+    });
+
+    await expect(
+      createClientWith(sdk).getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+        parentIdentifier: "parent-1",
+      }),
+    ).rejects.toBe(refused);
+    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
   });
 
   it("sets the preferred editor as a signed action through execute", async () => {

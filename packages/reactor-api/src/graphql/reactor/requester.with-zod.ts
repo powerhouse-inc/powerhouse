@@ -104,6 +104,13 @@ const operationValidators: OperationValidators = {
       CreateDefaultsDTO.parse(data.createDefaults);
     }
   },
+  GetCreateProtocolVersions: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.pick({ protocolVersions: true }).parse(
+        data.createDefaults,
+      );
+    }
+  },
   EvaluateActions: (data) => {
     if (data.evaluateActions) {
       ActionEvaluationsDTO.parse(data.evaluateActions);

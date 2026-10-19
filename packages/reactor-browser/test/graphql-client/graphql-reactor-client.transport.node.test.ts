@@ -1,5 +1,6 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
+import { buildSchema, parse, validate } from "graphql";
 import { logger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -136,6 +137,102 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
         parentIdentifier: "parent-1",
       }),
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
+    await expect(
+      client.getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+        parentIdentifier: "parent-1",
+      }),
+    ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
+  });
+});
+
+const CREATE_DEFAULTS_TYPES = /* GraphQL */ `
+  scalar JSONObject
+  type CreateDefaults {
+    signaturePolicy: String!
+    protocolVersions: JSONObject!
+  }
+`;
+
+/** A Switchboard validating each query against its own createDefaults. */
+function createDefaultsServer(
+  createDefaults: string,
+  protocolVersions: unknown,
+) {
+  const schema = buildSchema(
+    `${CREATE_DEFAULTS_TYPES} type Query { ${createDefaults} }`,
+  );
+  return (received: Received): Reply => {
+    const errors = validate(schema, parse(received.body.query));
+    if (errors.length > 0) {
+      return {
+        status: 400,
+        body: JSON.stringify({
+          errors: errors.map((error) => ({
+            message: error.message,
+            extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+          })),
+        }),
+      };
+    }
+    return {
+      status: 200,
+      body: JSON.stringify({
+        data: {
+          createDefaults: { signaturePolicy: "legacy", protocolVersions },
+        },
+      }),
+    };
+  };
+}
+
+describe("GraphQLReactorClient create protocol versions for a document type", () => {
+  it("sends the type to a Switchboard that takes it", async () => {
+    const { url, received } = await serve(
+      createDefaultsServer(
+        "createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!",
+        { "base-reducer": 2 },
+      ),
+    );
+    const client = clientFor(url);
+
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+        parentIdentifier: "parent-1",
+      }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(received.map((entry) => entry.body.variables)).toEqual([
+      { parentIdOrSlug: "parent-1", documentType: "powerhouse/test" },
+    ]);
+  });
+
+  it("falls back once, then stops sending the type, to a Switchboard that predates it", async () => {
+    const { url, received } = await serve(
+      createDefaultsServer(
+        "createDefaults(parentIdOrSlug: String): CreateDefaults!",
+        {
+          "base-reducer": 3,
+        },
+      ),
+    );
+    const client = clientFor(url);
+    const options = {
+      documentType: "powerhouse/test",
+      parentIdentifier: "parent-1",
+    };
+
+    expect(await client.getCreateProtocolVersions(options)).toEqual({
+      "base-reducer": 3,
+    });
+    expect(await client.getCreateProtocolVersions(options)).toEqual({
+      "base-reducer": 3,
+    });
+    expect(received.map((entry) => entry.body.operationName)).toEqual([
+      "GetCreateProtocolVersions",
+      "GetCreateDefaults",
+      "GetCreateDefaults",
+    ]);
   });
 });
 
