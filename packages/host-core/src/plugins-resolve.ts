@@ -278,24 +278,30 @@ function valueAt(root: unknown, dotted: string): unknown {
   return current;
 }
 
-function sameValue(a: unknown, b: unknown): boolean {
-  if (Object.is(a, b)) return true;
+/** Whether Connect already serves what the author wrote: every authored leaf
+ * equals the served one. An unset leaf asks for nothing, so a partial object
+ * (`sections: { remote: { enabled: false } }`) is satisfied by the zeroed
+ * slice. */
+function alreadyServed(authored: unknown, served: unknown): boolean {
+  if (authored === undefined || Object.is(authored, served)) return true;
   if (
-    a === null ||
-    b === null ||
-    typeof a !== "object" ||
-    typeof b !== "object" ||
-    Array.isArray(a) !== Array.isArray(b)
+    authored === null ||
+    served === null ||
+    typeof authored !== "object" ||
+    typeof served !== "object" ||
+    Array.isArray(authored) !== Array.isArray(served)
   ) {
     return false;
   }
-  const left = a as Record<string, unknown>;
-  const right = b as Record<string, unknown>;
-  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
-  for (const key of keys) {
-    if (!sameValue(left[key], right[key])) return false;
+  if (
+    Array.isArray(authored) &&
+    authored.length !== (served as unknown[]).length
+  ) {
+    return false;
   }
-  return true;
+  const want = authored as Record<string, unknown>;
+  const have = served as Record<string, unknown>;
+  return Object.keys(want).every((key) => alreadyServed(want[key], have[key]));
 }
 
 /**
@@ -307,7 +313,7 @@ function sameValue(a: unknown, b: unknown): boolean {
  *
  * Nothing is reported when the host declares no composition
  * (`runner.plugins` absent: the classic boot serves the config as is), or
- * when the authored value already equals what Connect serves. Warnings, not
+ * when Connect already serves every leaf of the authored value. Warnings, not
  * errors: the host still boots, it just does not do what the value says.
  */
 export function findDeadConnectConfig(
@@ -330,13 +336,13 @@ export function findDeadConnectConfig(
     if (inertUnless !== undefined) {
       const gate = slices.find((slice) => slice.path === inertUnless);
       const gateValue = valueAt(config, inertUnless);
-      if (gateValue === undefined || sameValue(gateValue, gate?.absent)) {
+      if (alreadyServed(gateValue, gate?.absent)) {
         continue;
       }
     }
     for (const { path: slicePath, absent, entryKey } of slices) {
       const value = valueAt(config, slicePath);
-      if (value === undefined || sameValue(value, absent)) continue;
+      if (alreadyServed(value, absent)) continue;
       const move =
         entryKey === undefined
           ? `compose "${owner}" (presence is the switch)`

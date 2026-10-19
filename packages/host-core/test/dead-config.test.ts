@@ -88,6 +88,7 @@ describe("findDeadConnectConfig", () => {
               local: { allowDelete: false, allowAdd: false, enabled: false },
             },
           },
+          home: { background: undefined },
           sentry: { dsn: null, env: "dev" },
           ai: { assistantEnabled: false },
         },
@@ -96,6 +97,26 @@ describe("findDeadConnectConfig", () => {
         WHERE,
       ),
     ).toEqual([]);
+  });
+
+  it("skips a partial value whose every leaf Connect already serves", () => {
+    for (const sections of [
+      {},
+      { remote: { enabled: false, allowAdd: false, allowDelete: false } },
+      { local: { allowAdd: false } },
+    ]) {
+      expect(
+        findDeadConnectConfig({ drives: { sections } }, [], "dev", WHERE),
+      ).toEqual([]);
+    }
+    expect(
+      findDeadConnectConfig(
+        { drives: { sections: { local: { allowAdd: true } } } },
+        [],
+        "dev",
+        WHERE,
+      ).map((w) => w.path),
+    ).toEqual(["drives.sections"]);
   });
 
   it("reports every live slice of an absent plugin; presence-only slices hint at composing it", () => {
