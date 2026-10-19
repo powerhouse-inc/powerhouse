@@ -4,24 +4,24 @@ import {
   type PHConnectDefaultDrive,
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
+import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import {
   entryActiveForVerb,
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
   PluginError,
-  pluginEntrySchema,
   unresolvedDriveReferences,
-  profileSchema,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
-  reactorSchema,
+  reactorHostSchema,
   remoteBackendUrls,
-  type HostDefinition,
+  runnerBaseSchema,
   type ReactorConfig,
   type RunnerContext,
+  type RunnerHandle,
 } from "@powerhousedao/host-core";
 import { z } from "zod";
 import type {
@@ -33,42 +33,87 @@ import type {
 /**
  * BRIDGE runner for Connect hosts (uniform-runners phase 0): maps a
  * hosts/connect/host.js definition onto the SAME service the classic
- * `ph connect studio` command calls — no forked behavior. Real verbs
- * (`build`, `serve`) arrive with later phases; their absence here is
- * deliberate and surfaces through the verb-listing error.
+ * `ph connect studio` (dev/run), `ph connect build` and `ph connect preview`
+ * (serve) commands call — no forked behavior.
  */
 
 export const kind = "reactor";
 
-/** Phase-2 schema (D2.d): `reactor` and `profile` validate strictly via the
- * shared host-core schemas — a typo'd protocol key fails instead of silently
- * not applying. `config` stays loose: it is runner-defined by design. */
-export const hostSchema = z.looseObject({
-  name: z.string().min(1),
-  runner: z.looseObject({
-    module: z.string(),
-    port: z.number().int().positive().optional(),
-    host: z.string().optional(),
-    https: z.boolean().optional(),
-    openBrowser: z.boolean().optional(),
-    // THE COMPOSITION (rewire R3): plugin entries, presence is activation.
-    plugins: z.array(pluginEntrySchema).optional(),
-  }),
-  config: z.looseObject({}).optional(),
-  profile: profileSchema.optional(),
-  reactor: reactorSchema.optional(),
+/** The connect host: the host-core reactor host with every runner option
+ * this module reads declared (strict: an unknown runner key fails), and
+ * `config` typed by Connect's own zod schema (the authored `connect` block). */
+export const hostSchema = reactorHostSchema.extend({
+  runner: runnerBaseSchema
+    .extend({
+      /** Open a browser tab once listening (dev/serve). */
+      openBrowser: z.boolean().optional(),
+      /** Fail instead of moving to the next free port when `port` is taken. */
+      strictPort: z.boolean().optional(),
+      /** The Connect build output dir (`build` writes it, `serve` serves it). */
+      outDir: z.string().min(1).optional(),
+      /** Patch the baked CSP for the runtime registry (`serve`); a compound's
+       * wiring sets it on its connect member. */
+      cspRegistrySync: z.boolean().optional(),
+    })
+    .strict(),
+  config: connectConfigSchema.optional(),
 });
+
+/** What a connect host.js author writes. */
+export type ConnectHost = z.input<typeof hostSchema>;
+/** What a verb receives (defaults applied). */
+export type ConnectHostParsed = z.output<typeof hostSchema>;
+
+/** What a started Connect (`dev`/`run`/`serve`) produces: the origin it
+ * actually listens on and the app URL (origin plus base path). */
+export const outputsSchema = z.strictObject({
+  origin: z.url(),
+  endpoints: z.strictObject({ connect: z.url() }),
+});
+export type ConnectOutputs = z.infer<typeof outputsSchema>;
+
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/ph-cli/runners/connect": {
+      host: ConnectHost;
+      outputs: ConnectOutputs;
+    };
+  }
+}
+
+/** The slice of a vite dev/preview server a handle needs. */
+interface ListeningServer {
+  resolvedUrls: { local: string[] } | null;
+  close(): Promise<void>;
+}
+
+/** A started Connect as a runner handle. vite has already listened when the
+ * service returns, so `ready` is settled; the outputs carry the URL vite
+ * resolved (the port it actually bound), falling back to the requested one. */
+function connectHandle(
+  server: ListeningServer,
+  requested: { host: string; port: number },
+): RunnerHandle<ConnectOutputs> {
+  const fallback = `http://${requested.host}:${requested.port}/`;
+  const app = server.resolvedUrls?.local[0] ?? fallback;
+  let closing: Promise<void> | undefined;
+  return {
+    outputs: outputsSchema.parse({
+      origin: new URL(app).origin,
+      endpoints: { connect: app },
+    }),
+    ready: Promise.resolve(),
+    shutdown: () => (closing ??= server.close()),
+  };
+}
 
 /** The studio arg surface is wide (commonArgs + server args); the service only
  * reads a known subset, and the repo's own tests build these objects the same
  * way (Partial + cast — see connect-build.test.ts `mk()`). */
-function toStudioArgs(host: HostDefinition): ConnectStudioArgs {
+function toStudioArgs(host: ConnectHostParsed): ConnectStudioArgs {
   const runner = host.runner;
   const args: Partial<ConnectStudioArgs> = {
-    port:
-      typeof runner.port === "number"
-        ? runner.port
-        : DEFAULT_CONNECT_STUDIO_PORT,
+    port: runner.port ?? DEFAULT_CONNECT_STUDIO_PORT,
     open: runner.openBrowser === true,
     strictPort: runner.strictPort === true,
     printUrls: true,
@@ -112,11 +157,12 @@ function declaredDrivesToDefaults(
 }
 
 function callerOverride(
-  host: HostDefinition,
+  host: ConnectHostParsed,
   ctx?: RunnerContext,
   verb = "dev",
 ): PHConnectRuntimeConfig | undefined {
-  const base = (host.config ?? {}) as PHConnectRuntimeConfig;
+  // A copy: the projection below adds served-only keys (composition, …).
+  const base: PHConnectRuntimeConfig = { ...host.config };
   const reactor: ReactorConfig | undefined = host.reactor;
 
   // R3: the composition (verb-filtered, projected as DATA — the browser
@@ -153,7 +199,7 @@ function callerOverride(
       const active = entryActiveForVerb(entry, verb);
       const scope =
         entry.verbs === "*" ? "" : ` verbs=[${entry.verbs.join(",")}]`;
-      const cfg = Object.keys(entry.config ?? {});
+      const cfg = Object.keys(entry.config);
       console.log(
         `[connect]   ${active ? "•" : "○"} ${entry.module}${scope}` +
           (cfg.length ? ` config: {${cfg.join(", ")}}` : "") +
@@ -220,15 +266,18 @@ function callerOverride(
 }
 
 export async function dev(
-  host: HostDefinition,
+  host: ConnectHostParsed,
   ctx: RunnerContext,
-): Promise<void> {
+): Promise<RunnerHandle<ConnectOutputs>> {
   const { runConnectStudio } = await import("../services/connect-studio.js");
-  await runConnectStudio(
-    toStudioArgs(host),
+  const args = toStudioArgs(host);
+  const server = await runConnectStudio(
+    args,
     undefined,
-    callerOverride(host, ctx, ctx.verb ?? "dev"),
+    callerOverride(host, ctx, ctx.verb),
   );
+  // vite's dev server binds its default host ("localhost") here.
+  return connectHandle(server, { host: "localhost", port: args.port });
 }
 
 /** `run` is dev-studio until the plugin phases give hosts a production
@@ -237,13 +286,12 @@ export const run = dev;
 
 /** P3.3 — `build`: the SAME service as classic `ph connect build`. */
 export async function build(
-  host: HostDefinition,
+  host: ConnectHostParsed,
   _ctx: RunnerContext,
 ): Promise<void> {
   const { runConnectBuild } = await import("../services/connect-build.js");
-  const runner = host.runner;
   const args: Partial<ConnectBuildArgs> = {
-    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+    outDir: host.runner.outDir ?? "dist",
   };
   await runConnectBuild(args as ConnectBuildArgs);
 }
@@ -257,17 +305,16 @@ export async function build(
  * CSP's script-src for the runtime registry — together these replace the
  * ph-win-desktop sidecar's hand-rolled static server (desktop shape). */
 export async function serve(
-  host: HostDefinition,
+  host: ConnectHostParsed,
   ctx: RunnerContext,
-): Promise<void> {
+): Promise<RunnerHandle<ConnectOutputs>> {
   const { runConnectPreview } = await import("../services/connect-preview.js");
   const runner = host.runner;
+  const port = runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
+  const bind = runner.host ?? "127.0.0.1";
   const args: Partial<ConnectPreviewArgs> = {
-    port:
-      typeof runner.port === "number"
-        ? runner.port
-        : DEFAULT_CONNECT_STUDIO_PORT,
-    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+    port,
+    outDir: runner.outDir ?? "dist",
     open: runner.openBrowser === true,
     strictPort: runner.strictPort === true,
     cors: true,
@@ -276,11 +323,12 @@ export async function serve(
     // Explicit IPv4 loopback (runner.host overrides): vite's default
     // "localhost" can bind ::1 only on Windows, and a supervising shell
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
-    host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
+    host: bind,
   };
-  const override = callerOverride(host, ctx, ctx.verb ?? "serve");
-  await runConnectPreview(args as ConnectPreviewArgs, {
+  const override = callerOverride(host, ctx, ctx.verb);
+  const server = await runConnectPreview(args as ConnectPreviewArgs, {
     connect: override,
     cspRegistrySync: runner.cspRegistrySync === true,
   });
+  return connectHandle(server, { host: bind, port });
 }
