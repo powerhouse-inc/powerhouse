@@ -2,6 +2,7 @@
 // piece catalog, connection documents, and connection health. The `aiTools`
 // export is how the host app discovers this package's tools (the line in the
 // project index is synced by `ph generate`).
+import { getPHStore } from "@powerhousedao/reactor-browser";
 import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import {
@@ -182,8 +183,7 @@ export async function getConnections(): Promise<{
     fetchPieceCatalog(),
     fetchConnections(),
   ]);
-  const client =
-    typeof window !== "undefined" ? window.ph?.reactorClient : undefined;
+  const client = getPHStore()?.reactorClient;
   const connections = await Promise.all(
     summaries.map(async (summary) => {
       const piece = catalog.find(

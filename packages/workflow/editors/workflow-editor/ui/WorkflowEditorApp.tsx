@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Button } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
 import {
@@ -33,6 +33,7 @@ import { blockRefKey } from "./query-keys.js";
 import { missingInPublished } from "./reactor-view.js";
 import { BlockResolutionsProvider, VersionSummary } from "./version-badge.js";
 import { stepBlock, triggerBlock } from "./blocks.js";
+import { useSelectedBlock } from "./use-selected-block.js";
 import { WorkflowCanvas } from "./WorkflowCanvas.js";
 
 export function WorkflowEditorApp(props: {
@@ -43,7 +44,7 @@ export function WorkflowEditorApp(props: {
   trailing?: ReactNode;
 }) {
   const { model, callbacks } = props;
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useSelectedBlock();
   const { publishing, error: publishError, publish } = usePublish(callbacks);
   const { readiness } = useWorkflowCheck(model);
 

@@ -1,19 +1,37 @@
+import type { PHStore } from "./ph-store.js";
+import {
+  getPHStore,
+  isScopedPHStore,
+  usePHStore,
+  warnGlobalSetterInScope,
+} from "./ph-store.js";
+import { useCallback } from "react";
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
 import {
-  createUrlWithPreservedParams,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
-  makeDriveUrlComponent,
-  resolveUrlPathname,
+  findDriveBySlug,
+  makeDriveSlug,
 } from "../utils/url.js";
+import { isInitialSyncInFlight } from "../routing/initial-sync.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";
-import { makePHEventFunctions } from "./make-ph-event-functions.js";
-import { setSelectedNode } from "./set-selected-node.js";
+import {
+  makePHEventFunctions,
+  subscribeToPHValue,
+} from "./make-ph-event-functions.js";
+import {
+  getCurrentPathname,
+  hasHostNavigation,
+  openTarget,
+  openTargetWith,
+  preloadTarget,
+} from "./navigation.js";
+import { selectNode } from "./set-selected-node.js";
 
 const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
 
@@ -23,7 +41,8 @@ export const useSelectedDriveId = selectedDriveIdEventFunctions.useValue;
 /** Sets the selected drive id */
 export const setSelectedDriveId = selectedDriveIdEventFunctions.setValue;
 
-/** Adds an event handler for the selected drive id */
+/** Adds an event handler for the selected drive id
+ * @deprecated `ph:setSelectedDriveId` bypasses the URL; use `setSelectedDrive`. */
 export const addSelectedDriveIdEventHandler =
   selectedDriveIdEventFunctions.addEventHandler;
 
@@ -57,33 +76,79 @@ export function useSelectedDriveSafe() {
   ];
 }
 
-export function setSelectedDrive(
-  driveOrDriveSlug: string | DocumentDriveDocument | undefined,
+type DriveRef = string | DocumentDriveDocument | undefined;
+
+/** Selects a drive in the app's store; inside a scoped store, use
+ * `useSetSelectedDrive`. */
+export function setSelectedDrive(driveOrDriveSlug: DriveRef) {
+  warnGlobalSetterInScope("setSelectedDrive", "useSetSelectedDrive");
+  selectDrive(driveOrDriveSlug);
+}
+
+/** Selects a drive in `store`: a scope's own selection, else the app's. */
+export function selectDriveIn(
+  store: PHStore | undefined,
+  driveOrDriveSlug: DriveRef,
 ) {
+  if (!store || !isScopedPHStore(store)) {
+    selectDrive(driveOrDriveSlug);
+    return;
+  }
   const driveSlug =
     typeof driveOrDriveSlug === "string"
       ? driveOrDriveSlug
-      : driveOrDriveSlug?.header.slug;
+      : driveOrDriveSlug && makeDriveSlug(driveOrDriveSlug);
+  if (store.navigation) {
+    openTargetWith(store.navigation, driveSlug ? { driveSlug } : undefined);
+    return;
+  }
+  const drive =
+    typeof driveOrDriveSlug === "object"
+      ? driveOrDriveSlug
+      : findDriveBySlug(store.drives, driveSlug);
+  store.selectedDriveId = drive?.header.id;
+  store.selectedNodeId = undefined;
+}
+
+/** `setSelectedDrive` for the store in context, e.g. a scoped editor's. */
+export function useSetSelectedDrive() {
+  const store = usePHStore();
+  return useCallback((drive: DriveRef) => selectDriveIn(store, drive), [store]);
+}
+
+/** Selects a drive in the app's store, without the scope warning. */
+export function selectDrive(driveOrDriveSlug: DriveRef) {
+  const driveSlug =
+    typeof driveOrDriveSlug === "string"
+      ? driveOrDriveSlug
+      : driveOrDriveSlug && makeDriveSlug(driveOrDriveSlug);
+
+  // A host router resolves the drive and writes the selection itself.
+  if (hasHostNavigation()) {
+    cancelPendingDriveSelection();
+    openTarget(driveSlug ? { driveSlug } : undefined);
+    return;
+  }
 
   // A full drive document is selected directly — a just-created drive
   // navigates before the collection refresh. Slugs go through the lookup.
-  const drives = window.ph?.drives;
+  const drives = getPHStore()?.drives;
   const drive =
     typeof driveOrDriveSlug === "object" && driveOrDriveSlug !== null
       ? driveOrDriveSlug
-      : drives?.find((d) => d.header.slug === driveSlug);
+      : findDriveBySlug(drives, driveSlug);
   const driveId = drive?.header.id;
 
-  // A URL-pinned slug with no matching drive: the deep link may predate
-  // remote drive registration, so defer instead of rewriting the URL.
+  // Deprecated: hosts without a navigation only; route loaders wait for drives.
+  // A deep link may predate remote drive registration, so defer the lookup.
   if (
     !driveId &&
     driveSlug &&
-    extractDriveSlugFromPath(window.location.pathname) === driveSlug
+    extractDriveSlugFromPath(getCurrentPathname()) === driveSlug
   ) {
     // Clear the previous selection so a stale drive doesn't render against
     // the new URL; the selected node resets with it, the URL is untouched.
-    if (window.ph?.selectedDriveId) {
+    if (getPHStore()?.selectedDriveId) {
       setSelectedDriveId(undefined);
     }
     deferDriveSelection(driveSlug);
@@ -94,20 +159,29 @@ export function setSelectedDrive(
   cancelPendingDriveSelection();
 
   setSelectedDriveId(driveId);
+  openTarget(driveId && driveSlug ? { driveSlug } : undefined);
+}
 
-  if (!driveId) {
-    const pathname = resolveUrlPathname("/");
-    if (pathname === window.location.pathname) {
-      return;
-    }
-    window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
-    return;
-  }
-  const pathname = resolveUrlPathname(`/d/${driveSlug}`);
-  if (pathname === window.location.pathname) {
-    return;
-  }
-  window.history.pushState(null, "", createUrlWithPreservedParams(pathname));
+/** Warms a drive's view before it is opened, e.g. on hover. */
+export function preloadDrive(drive: DocumentDriveDocument | undefined) {
+  warnGlobalSetterInScope("preloadDrive", "usePreloadDrive");
+  if (drive) preloadTarget({ driveSlug: makeDriveSlug(drive) });
+}
+
+/** `preloadDrive` for the store in context. */
+export function usePreloadDrive() {
+  const store = usePHStore();
+  return useCallback(
+    (drive: DocumentDriveDocument | undefined) => {
+      if (!drive) return;
+      if (!isScopedPHStore(store)) {
+        preloadTarget({ driveSlug: makeDriveSlug(drive) });
+        return;
+      }
+      store?.navigation?.preload?.({ driveSlug: makeDriveSlug(drive) });
+    },
+    [store],
+  );
 }
 
 // Tick between unresolved-slug checks; re-armed while a sync is in flight.
@@ -115,34 +189,13 @@ const DEFERRED_DRIVE_TICK_MS = 2_000;
 // Hard cap so a wedged remote can't pin the deep link forever.
 const DEFERRED_DRIVE_MAX_WAIT_MS = 15_000;
 
-// True while any sync remote has not completed its first successful pull —
-// a drive may still be on its way in, so the deferred lookup keeps waiting.
-function isInitialSyncInFlight(): boolean {
-  const remotes =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager?.list();
-  if (!remotes?.length) {
-    return false;
-  }
-  return remotes.some((remote) => {
-    try {
-      const snapshot = remote.channel.getConnectionState();
-      return (
-        snapshot.receivingPages ||
-        (!snapshot.lastSuccessUtcMs && snapshot.state !== "error")
-      );
-    } catch {
-      return false;
-    }
-  });
-}
-
-let pendingHandler: (() => void) | undefined;
+let unsubscribePending: (() => void) | undefined;
 let pendingTimeout: ReturnType<typeof setTimeout> | undefined;
 
 function cancelPendingDriveSelection() {
-  if (pendingHandler) {
-    window.removeEventListener("ph:drivesUpdated", pendingHandler);
-    pendingHandler = undefined;
+  if (unsubscribePending) {
+    unsubscribePending();
+    unsubscribePending = undefined;
   }
   if (pendingTimeout) {
     clearTimeout(pendingTimeout);
@@ -150,66 +203,35 @@ function cancelPendingDriveSelection() {
   }
 }
 
-// Re-runs the slug lookup on each drives update until it resolves, then
-// restores the URL-pinned node. Unresolved slugs redirect once syncs settle.
+// Deprecated with the no-navigation path: re-runs the slug lookup on drives
+// updates, restores the pinned node, and redirects home once syncs settle.
 function deferDriveSelection(driveSlug: string) {
   cancelPendingDriveSelection();
 
   // Capture the node pinned in the deep link before setSelectedDrive
   // rewrites the URL to /d/<driveSlug>, dropping the node segment.
-  const nodeSlug = extractNodeSlugFromPath(window.location.pathname);
+  const nodeSlug = extractNodeSlugFromPath(getCurrentPathname());
   const handler = () => {
-    const drive = window.ph?.drives?.find((d) => d.header.slug === driveSlug);
+    const drive = findDriveBySlug(getPHStore()?.drives, driveSlug);
     if (!drive) {
       return;
     }
     cancelPendingDriveSelection();
-    setSelectedDrive(driveSlug);
-    setSelectedNode(nodeSlug);
+    selectDrive(driveSlug);
+    selectNode(nodeSlug);
   };
-  pendingHandler = handler;
-  window.addEventListener("ph:drivesUpdated", handler);
+  unsubscribePending = subscribeToPHValue("drives", handler);
 
   const deadline = Date.now() + DEFERRED_DRIVE_MAX_WAIT_MS;
   const scheduleTick = () => {
     pendingTimeout = setTimeout(() => {
-      if (Date.now() < deadline && isInitialSyncInFlight()) {
+      if (Date.now() < deadline && isInitialSyncInFlight(getPHStore())) {
         scheduleTick();
         return;
       }
       cancelPendingDriveSelection();
-      const pathname = resolveUrlPathname("/");
-      if (pathname === window.location.pathname) {
-        return;
-      }
-      window.history.pushState(
-        null,
-        "",
-        createUrlWithPreservedParams(pathname),
-      );
+      openTarget(undefined);
     }, DEFERRED_DRIVE_TICK_MS);
   };
   scheduleTick();
-}
-
-export function addSetSelectedDriveOnPopStateEventHandler() {
-  window.addEventListener("popstate", () => {
-    // Compare slugs as the URL spells them: setSelectedDrive takes a slug,
-    // and most slugs don't embed the drive id.
-    const driveSlug = extractDriveSlugFromPath(window.location.pathname);
-    const drives = window.ph?.drives ?? [];
-    const selectedId = window.ph?.selectedDriveId;
-    const selected = drives.find((drive) => drive.header.id === selectedId);
-    // A drive selected before it is listed stays, unless the URL names another.
-    if (selectedId && !selected) {
-      const named = drives.some(
-        (drive) => makeDriveUrlComponent(drive) === `/d/${driveSlug}`,
-      );
-      if (driveSlug && !named) return;
-    }
-    const selectedUrl = makeDriveUrlComponent(selected);
-    if (`/d/${driveSlug}` !== selectedUrl && (driveSlug || selectedId)) {
-      setSelectedDrive(driveSlug || undefined);
-    }
-  });
 }

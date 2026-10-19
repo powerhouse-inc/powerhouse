@@ -249,7 +249,28 @@ function assertShape(declaration: ResolvedScalarDeclaration): void {
   }
 }
 
+/**
+ * Zod 4.6 binds parse and safeParse through prototype accessors. A Zod schema
+ * carries its internals in the data property `_zod`, so it is trusted as
+ * library code; any other validator is checked as author code.
+ */
+function isZodSchema(validator: unknown): boolean {
+  if (validator === null || typeof validator !== "object") return false;
+  try {
+    const internals = Object.getOwnPropertyDescriptor(validator, "_zod");
+    return (
+      internals !== undefined &&
+      "value" in internals &&
+      typeof internals.value === "object" &&
+      internals.value !== null
+    );
+  } catch {
+    return false;
+  }
+}
+
 function assertValidator(name: string, validator: unknown): void {
+  if (isZodSchema(validator)) return;
   methodsOf(validator, "validator", ["parse", "safeParse"], (path, received) =>
     fail(name, {
       code: "PH-SCALAR-DECLARATION-INVALID",

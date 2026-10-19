@@ -87,6 +87,55 @@ function makeProject(files: Record<string, string>): string {
   return root;
 }
 
+function writeModel(
+  root: string,
+  name: string,
+  { operationSchema = "", globalSchema = "" },
+): void {
+  const dir = join(root, "document-models", name.toLowerCase());
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, `${name.toLowerCase()}.json`),
+    JSON.stringify({
+      id: `test/${name.toLowerCase()}`,
+      name,
+      author: { name: "", website: "" },
+      extension: "",
+      description: "",
+      specifications: [
+        {
+          version: 1,
+          changeLog: [],
+          modules: [
+            {
+              id: "m",
+              name: "base",
+              description: "",
+              operations: [
+                {
+                  id: "o",
+                  name: "SET",
+                  description: "",
+                  schema: operationSchema,
+                  template: "",
+                  reducer: "",
+                  errors: [],
+                  examples: [],
+                  scope: "global",
+                },
+              ],
+            },
+          ],
+          state: {
+            global: { schema: globalSchema, initialValue: "", examples: [] },
+            local: { schema: "", initialValue: "", examples: [] },
+          },
+        },
+      ],
+    }),
+  );
+}
+
 const sdlSubgraph = (className: string, name: string, sdl: string) => `
 import { BaseSubgraph, type SchemaBuilder } from "@powerhousedao/reactor-api";
 import { gql } from "graphql-tag";
@@ -253,48 +302,7 @@ describe("lintSubgraphTypes", () => {
 
   it("warns that the server refuses a model whose schema does not build, and checks the rest", async () => {
     const root = makeProject(template("subgraph-module", "SubgraphModule"));
-    const brokenDir = join(root, "document-models", "broken");
-    mkdirSync(brokenDir, { recursive: true });
-    writeFileSync(
-      join(brokenDir, "broken.json"),
-      JSON.stringify({
-        id: "test/broken",
-        name: "Broken",
-        author: { name: "", website: "" },
-        extension: "",
-        description: "",
-        specifications: [
-          {
-            version: 1,
-            changeLog: [],
-            modules: [
-              {
-                id: "m",
-                name: "base",
-                description: "",
-                operations: [
-                  {
-                    id: "o",
-                    name: "SET",
-                    description: "",
-                    schema: "input BrokenInput {",
-                    template: "",
-                    reducer: "",
-                    errors: [],
-                    examples: [],
-                    scope: "global",
-                  },
-                ],
-              },
-            ],
-            state: {
-              global: { schema: "", initialValue: "", examples: [] },
-              local: { schema: "", initialValue: "", examples: [] },
-            },
-          },
-        ],
-      }),
-    );
+    writeModel(root, "Broken", { operationSchema: "input BrokenInput {" });
 
     expect(await lintSubgraphTypes(root)).toEqual({
       errors: [],
@@ -304,6 +312,49 @@ describe("lintSubgraphTypes", () => {
         ),
         'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
       ],
+    });
+  });
+
+  it("warns that the server refuses a model, without any subgraph", async () => {
+    const root = makeProject({});
+    writeModel(root, "Revision", {
+      globalSchema: "type RevisionState { title: String }",
+    });
+
+    expect(await lintSubgraphTypes(root)).toEqual({
+      errors: [],
+      warnings: [
+        'The server refuses document model "Revision": it generates reserved type names: Revision. Rename the document model, or the types it generates that the server reserves.',
+      ],
+    });
+  });
+
+  it("refuses two subgraphs with one name", async () => {
+    const root = makeProject({
+      "ledger/index.ts": sdlSubgraph(
+        "LedgerSubgraph",
+        "ledger",
+        "type Query { ledger: String }",
+      ),
+      "ledger-copy/index.ts": sdlSubgraph(
+        "LedgerCopySubgraph",
+        "ledger",
+        "type Query { ledgerCopy: String }",
+      ),
+      "index.ts": [
+        'export { LedgerSubgraph } from "./ledger/index.js";',
+        'export { LedgerCopySubgraph } from "./ledger-copy/index.js";',
+        "",
+      ].join("\n"),
+    });
+
+    expect(await lintSubgraphTypes(root)).toEqual({
+      errors: [
+        expect.stringMatching(
+          /^PH-PKG-LOGICAL-COLLISION .* LedgerCopySubgraph and LedgerSubgraph both declare subgraph ledger, /,
+        ),
+      ],
+      warnings: [],
     });
   });
 

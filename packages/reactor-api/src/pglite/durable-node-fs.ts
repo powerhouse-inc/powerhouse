@@ -36,6 +36,15 @@ export function resolvePgliteFsync(
 
 interface NodeFsStream {
   nfd?: number;
+  /** Emscripten open flags; NODEFS opens the host fd with the same access mode. */
+  flags?: number;
+}
+
+// Only PGlite's pg_flush_data (fsync on pre_sync_fname's O_RDONLY fd) syncs a
+// read-only fd: the result is discarded and an O_RDWR fsync of the same file
+// follows. Skipped, as Windows refuses FlushFileBuffers without write access.
+function isReadOnly(stream: NodeFsStream): boolean {
+  return stream.flags !== undefined && (stream.flags & 3) === 0;
 }
 
 interface EmscriptenFs {
@@ -191,7 +200,7 @@ export function createDurableNodeFs(
     private fsyncStream(stream: NodeFsStream): number {
       if (!this.hostSyncs) return 0;
       // Directory streams carry no host fd; only regular files do.
-      if (typeof stream.nfd !== "number") return 0;
+      if (typeof stream.nfd !== "number" || isReadOnly(stream)) return 0;
       try {
         hostFs.fsyncSync(stream.nfd);
       } catch (err) {
@@ -210,7 +219,7 @@ export function createDurableNodeFs(
       } catch {
         return -ERRNO_CODES.EBADF;
       }
-      if (typeof stream.nfd !== "number") return 0;
+      if (typeof stream.nfd !== "number" || isReadOnly(stream)) return 0;
       try {
         hostFs.fdatasyncSync(stream.nfd);
       } catch (err) {

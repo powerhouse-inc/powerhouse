@@ -19,10 +19,13 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   getFullReactorClient: () =>
     window.ph?.fullReactorClient ?? window.ph?.reactorClientModule?.client,
   ChannelScheme: class {},
+  // No store: the add does not wait for the drive to be listed.
+  getPHStore: () => undefined,
   isDriveAuthError: vi.fn(() => false),
   ReactorBuilder: class {},
   ReactorClientBuilder: class {},
   setDriveMetadata: vi.fn(),
+  untilDriveListed: vi.fn(),
   waitForDocumentReady: vi.fn(),
 }));
 vi.mock("@renown/sdk", () => ({ createSignatureVerifier: vi.fn() }));

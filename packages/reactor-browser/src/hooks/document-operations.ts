@@ -67,15 +67,17 @@ function useScopeOperations(
       : undefined;
   const activeId = enabled && cache && documentId ? documentId : undefined;
 
+  const getEntry = () =>
+    activeId && cache
+      ? cache.getOperationsState(activeId, scope)
+      : IDLE_OPERATIONS_ENTRY;
   const entry = useSyncExternalStore(
     (onChange) =>
       activeId && cache
         ? cache.subscribeOperations(activeId, onChange)
         : () => {},
-    () =>
-      activeId && cache
-        ? cache.getOperationsState(activeId, scope)
-        : IDLE_OPERATIONS_ENTRY,
+    getEntry,
+    getEntry,
   );
 
   useEffect(() => {

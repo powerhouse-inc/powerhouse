@@ -1,5 +1,6 @@
 import { DYNAMIC_BASE_PLACEHOLDER } from "@powerhousedao/shared/connect";
 import MagicString from "magic-string";
+import path from "node:path";
 import type { Plugin } from "vite";
 
 /**
@@ -53,6 +54,23 @@ const PLACEHOLDER_LITERAL = new RegExp(
   "g",
 );
 
+const PLACEHOLDER_CSS_URL = new RegExp(
+  `url\\(\\s*(["']?)${escapeForRegExp(DYNAMIC_BASE_PLACEHOLDER)}([^"')]*)\\1\\s*\\)`,
+  "g",
+);
+
+/** Rewrites `url(<placeholder>assets/x)` relative to the stylesheet at `fileName`. */
+export function relativeCssUrls(css: string, fileName: string): string {
+  const dir = path.posix.dirname(fileName);
+  return css.replace(
+    PLACEHOLDER_CSS_URL,
+    (_match, quote: string, target: string) => {
+      const relative = path.posix.relative(dir, target);
+      return `url(${quote}${relative.startsWith(".") ? relative : `./${relative}`}${quote})`;
+    },
+  );
+}
+
 /**
  * Rewrites the placeholder base in emitted JS chunks to a runtime expression so
  * one built `dist/connect` serves under any subpath. Rolldown-native: per-match
@@ -77,9 +95,9 @@ const PLACEHOLDER_LITERAL = new RegExp(
  * (the same proxy also sets the runtime global for the JS rewrite). See the
  * plugin's module doc / report for the exact serve-time contract.
  *
- * CSS `url(...)` references resolve relative to the stylesheet's own URL, so
- * they need no rewrite once the stylesheet itself is loaded from the right
- * prefix (which the HTML substitution handles).
+ * CSS `url(...)` references that Vite emits with the placeholder (e.g. bundled
+ * fonts) are rewritten relative to the stylesheet, which the HTML substitution
+ * already loads from the right prefix.
  */
 export function connectDynamicBasePlugin(
   options: { forWorker?: boolean; workerStripPrefix?: string } = {},
@@ -116,6 +134,11 @@ export function connectDynamicBasePlugin(
       return { code: s.toString(), map: s.generateMap({ hires: true }) };
     },
     generateBundle(_options, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type === "asset" && file.fileName.endsWith(".css")) {
+          file.source = relativeCssUrls(String(file.source), file.fileName);
+        }
+      }
       // A residual token in JS (a literal the regex couldn't rewrite, e.g. a
       // template interpolating after the token) or CSS (url() must stay
       // stylesheet-relative; the placeholder would ship verbatim and 404)

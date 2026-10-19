@@ -1,0 +1,5 @@
+/* The prerendered shell's critical CSS: only the utilities its markup uses. */
+@layer theme, base, components, utilities;
+@import "@powerhousedao/design-system/theme.css";
+@import "tailwindcss" source(none) theme(static);
+@source "../../.prerender/shell.html";

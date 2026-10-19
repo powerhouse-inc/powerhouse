@@ -1,6 +1,8 @@
 import {
   DEFAULT_VENDOR_INCLUDE,
   DYNAMIC_BASE_PLACEHOLDER,
+  directoryContentDigest,
+  findPackageRoot,
   getConnectBaseViteConfig,
   missingVendorEntries,
   prebuildConnectVendor,
@@ -24,6 +26,10 @@ import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
+import {
+  isPrecompressEnabled,
+  precompressAssets,
+} from "../utils/precompress.js";
 import { logBuildReport, runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
@@ -100,6 +106,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       base: appBase,
       nodeEnv: "production",
       errorRef,
+      ...connectOwnVendorDeps(dirname),
     });
     if (!vendor) {
       console.error(
@@ -158,7 +165,14 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       ? {
           imports: vendorImportMapEntries(vendor.imports, appBase),
           versions: vendor.versions,
+          sharedDeps: vendorImportMapEntries(
+            { sharedDeps: vendor.sharedDeps },
+            appBase,
+          ).sharedDeps,
         }
+      : undefined,
+    reactorWorkerVersion: reactorWorker
+      ? directoryContentDigest(join(outDirAbs, "__reactor_worker__"))
       : undefined,
   });
 
@@ -196,6 +210,15 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       );
     }
   }
+
+  // Runs after the PWA plugin, so the siblings never enter the precache list.
+  if (isPrecompressEnabled()) {
+    const r = await precompressAssets(outDirAbs);
+    console.log(
+      `ph connect build: precompressed ${r.files} wasm/data files ` +
+        `(${r.written} .gz written, ${(r.outputBytes / 1e6).toFixed(1)} MB) in ${(r.ms / 1000).toFixed(1)}s`,
+    );
+  }
 }
 
 /**
@@ -224,8 +247,28 @@ export function productionVendorInclude(): string[] {
       ...DEFAULT_VENDOR_INCLUDE.filter((s) => s !== "@powerhousedao/connect"),
       ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
       ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+      // Connect imports these roots too; unvendored, the app re-bundles their shared chunks.
+      "@powerhousedao/design-system",
+      "@powerhousedao/reactor",
     ]),
   ];
+}
+
+/** Connect's own deps that vendored packages also bundle; projects don't install them. */
+export const CONNECT_OWN_VENDOR_DEPS = [
+  "kysely",
+  "tailwind-merge",
+  "@renown/sdk",
+  "@renown/sdk/crypto",
+  "@renown/sdk/trust",
+  "@powerhousedao/reactor-attachments/client",
+];
+
+export function connectOwnVendorDeps(dirname: string): {
+  ownDeps?: { specs: string[]; from: string };
+} {
+  const from = findPackageRoot(dirname, "@powerhousedao/connect");
+  return from ? { ownDeps: { specs: CONNECT_OWN_VENDOR_DEPS, from } } : {};
 }
 
 /**

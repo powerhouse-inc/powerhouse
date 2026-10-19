@@ -27,7 +27,7 @@ type Harness = {
   resolveSkeleton: () => void;
 };
 
-function harness(): Harness {
+function harness(options: { shell?: boolean } = {}): Harness {
   const calls: string[] = [];
   const root = fakeRoot();
 
@@ -59,6 +59,11 @@ function harness(): Harness {
     initObserver: () => {
       calls.push("initObserver");
       return () => undefined;
+    },
+    adoptShell: () => !!options.shell,
+    warmModules: () => {
+      calls.push("warmModules");
+      return Promise.resolve();
     },
   };
 
@@ -110,6 +115,18 @@ describe("bootConnect", () => {
     await booting;
   });
 
+  it("keeps a prerendered shell painted instead of the skeleton", async () => {
+    const h = harness({ shell: true });
+
+    const booting = bootConnect(h.deps);
+    h.resolveSkeleton();
+    h.resolveConfig({ connect: {} });
+
+    await expect(booting).resolves.toBe(h.root);
+    expect(h.calls).not.toContain("importSkeleton");
+    expect(h.root.painted).toHaveLength(0);
+  });
+
   it("hands back the root it painted into once the config resolves", async () => {
     const h = harness();
 
@@ -117,6 +134,23 @@ describe("bootConnect", () => {
     h.resolveSkeleton();
     h.resolveConfig({ connect: {} });
 
+    await expect(booting).resolves.toBe(h.root);
+  });
+
+  it("hands back the root only once the warmed modules are evaluated", async () => {
+    const h = harness({ shell: true });
+    let warmed!: () => void;
+    h.deps.warmModules = () => new Promise<void>((res) => (warmed = res));
+    let settled = false;
+    const booting = bootConnect(h.deps).then((root) => {
+      settled = true;
+      return root;
+    });
+    h.resolveConfig({ connect: {} });
+    await new Promise((res) => setTimeout(res, 0));
+    expect(settled).toBe(false);
+
+    warmed();
     await expect(booting).resolves.toBe(h.root);
   });
 
@@ -151,6 +185,18 @@ describe("bootConnect", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "503 from powerhouse.config.json",
     );
+  });
+
+  it("paints the config error without waiting for the warmed modules", async () => {
+    const h = harness({ shell: true });
+    h.deps.warmModules = () => new Promise<void>(() => undefined);
+
+    const booting = bootConnect(h.deps);
+    h.rejectConfig(new Error("offline"));
+
+    await expect(booting).resolves.toBeNull();
+    renderNode(h.root.painted[h.root.painted.length - 1]);
+    expect(screen.getByRole("alert").textContent).toContain("offline");
   });
 
   it("resolves with null when the runtime config cannot be loaded", async () => {

@@ -1,8 +1,6 @@
-import {
-  AppContainer,
-  DriveIcon,
-  IfPlugin,
-} from "@powerhousedao/connect/components";
+import { AppContainer } from "../components/app-container.js";
+import { DriveIcon } from "../components/drive-icon.js";
+import { IfPlugin } from "../components/if-plugin.js";
 import {
   defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
@@ -15,18 +13,25 @@ import {
 } from "@powerhousedao/design-system/connect";
 import {
   logout,
+  makeDriveSlug,
+  preloadDrive,
   setPHAppConfig,
   setPHDocumentEditorConfig,
   setSelectedDrive,
   useAppModuleById,
   useIsAddDriveEnabled,
+  useLinkProps,
   useSelectedDocumentId,
   useSelectedDriveSafe,
   useSelectedFolder,
+  getDriveName,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { getRuntimeConfig } from "../runtime-config.js";
+import { CONTENT_VIEW_ID } from "../router/connect-router.js";
+import { useShowsHomeScreen } from "../components/route-views.js";
 import {
   useDriveAuthGate,
   useVisibleDrives,
@@ -52,10 +57,15 @@ export function Content() {
     }
   }, [selectedDrive]);
 
-  const showHomeScreen =
-    !selectedDocumentId && !selectedDrive && !selectedFolder;
+  const hasSelection = !!(
+    selectedDocumentId ||
+    selectedDrive ||
+    selectedFolder
+  );
+  const showHomeScreen = useShowsHomeScreen(hasSelection);
   return (
     <ContentContainer>
+      <Outlet />
       {gate ? (
         <div className="flex h-full items-center justify-center p-4">
           <DriveAuthGate
@@ -73,16 +83,20 @@ export function Content() {
         <IfPlugin module="@powerhousedao/connect/plugins/generic">
           <HomeScreenContainer />
         </IfPlugin>
-      ) : (
+      ) : hasSelection ? (
         <AppContainer />
-      )}
+      ) : null}
     </ContentContainer>
   );
 }
 
 function ContentContainer({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full flex-col overflow-auto" id="content-view">
+    <div
+      className="flex h-full flex-col overflow-auto"
+      id={CONTENT_VIEW_ID}
+      data-scroll-restoration-id={CONTENT_VIEW_ID}
+    >
       {children}
     </div>
   );
@@ -91,13 +105,19 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
   const editorModule = useAppModuleById(drive.header.meta?.preferredEditor);
   const description = editorModule?.config.name || "Drive Explorer App";
+  const link = useLinkProps({ driveSlug: makeDriveSlug(drive) }, () =>
+    setSelectedDrive(drive),
+  );
   return (
     <HomeScreenItem
       key={drive.header.id}
-      title={drive.state.global.name || drive.header.name}
+      title={getDriveName(drive)}
       description={description}
       icon={<DriveIcon drive={drive} />}
-      onClick={() => setSelectedDrive(drive)}
+      href={link.href}
+      aria-current={link["aria-current"]}
+      onClick={link.onClick}
+      onPreload={() => preloadDrive(drive)}
     />
   );
 }

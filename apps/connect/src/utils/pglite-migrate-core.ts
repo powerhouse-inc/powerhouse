@@ -1,4 +1,3 @@
-import { PGlite } from "@electric-sql/pglite";
 import {
   createFileDataStore,
   IDB_DB_VERSION,
@@ -164,6 +163,8 @@ function logRestoreFailure(idbName: string, sql: string, err: unknown): void {
 
 async function restoreDumpIntoIdb(idbName: string, sql: string): Promise<void> {
   const stripped = idbName.replace(/^\/pglite\//, "");
+  // Dynamic: a static import puts PGlite (~350 KB) in the app-loader chunk.
+  const { PGlite } = await import("@electric-sql/pglite");
   const pg = new PGlite(`idb://${stripped}`, { relaxedDurability: false });
   try {
     await pg.waitReady;

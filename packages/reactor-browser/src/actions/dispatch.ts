@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import { queueActions } from "./queue.js";
@@ -7,7 +8,7 @@ async function getDocument(
   documentId: string,
 ): Promise<PHDocument | undefined> {
   try {
-    return await window.ph?.reactorClient?.get(documentId);
+    return await getPHStore()?.reactorClient?.get(documentId);
   } catch (error) {
     logger.debug(`Failed to get document with id ${documentId}:`, error);
     return undefined;

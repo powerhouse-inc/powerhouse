@@ -3,14 +3,9 @@ import {
   uncachedDefinitionSourceRevision,
   ViteTypeScriptSourceImportAdapter,
 } from "@powerhousedao/codegen/utils";
-import {
-  describeClaimContest,
-  describeRefusedDocumentModel,
-  describeSubgraphConflict,
-  findPackageSubgraphConflicts,
-  hostDocumentModels,
-  type PackageSubgraph,
-  type SubgraphWarning,
+import type {
+  PackageSubgraph,
+  SubgraphWarning,
 } from "@powerhousedao/reactor-api/subgraph-types";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import {
@@ -66,38 +61,49 @@ export function readSchemaFirstModels(
 export async function lintSubgraphTypes(
   projectDir: string,
 ): Promise<SubgraphLint> {
-  if (subgraphEntrySpecifiers(projectDir).length === 0) {
-    return { errors: [], warnings: [] };
-  }
-  const loader = new DefinitionSourceLoader(
-    new ViteTypeScriptSourceImportAdapter(),
-  );
-  let read: Awaited<ReturnType<DefinitionSourceLoader["readSubgraphs"]>>;
-  try {
-    read = await loader.readSubgraphs({
-      packageRoot: projectDir,
-      packageRevision: uncachedDefinitionSourceRevision(),
-    });
-  } finally {
-    await loader.dispose();
-  }
-
   const errors: string[] = [];
   const warnings: string[] = [];
-  for (const diagnostic of read.diagnostics) {
-    (diagnostic.severity === "error" ? errors : warnings).push(
-      formatDefinitionDiagnostic(diagnostic),
+  const subgraphs: PackageSubgraph[] = [];
+  if (subgraphEntrySpecifiers(projectDir).length > 0) {
+    const loader = new DefinitionSourceLoader(
+      new ViteTypeScriptSourceImportAdapter(),
     );
+    let read: Awaited<ReturnType<DefinitionSourceLoader["readSubgraphs"]>>;
+    try {
+      read = await loader.readSubgraphs({
+        packageRoot: projectDir,
+        packageRevision: uncachedDefinitionSourceRevision(),
+      });
+    } finally {
+      await loader.dispose();
+    }
+    for (const diagnostic of read.diagnostics) {
+      (diagnostic.severity === "error" ? errors : warnings).push(
+        formatDefinitionDiagnostic(diagnostic),
+      );
+    }
+    for (const { description } of read.subgraphs) {
+      subgraphs.push({
+        name: description.subgraphName,
+        typeDefs: description.typeDefs as DocumentNode,
+      });
+    }
   }
-  const subgraphs: PackageSubgraph[] = read.subgraphs.map(
-    ({ description }) => ({
-      name: description.subgraphName,
-      typeDefs: description.typeDefs as DocumentNode,
-    }),
-  );
-  if (subgraphs.length === 0) return { errors, warnings };
+  // A refused model warns even when the package has no subgraphs.
+  const models = readSchemaFirstModels(projectDir);
+  if (subgraphs.length === 0 && models.length === 0) {
+    return { errors, warnings };
+  }
 
-  const host = hostDocumentModels(readSchemaFirstModels(projectDir));
+  // Loaded on call: the check pulls in the base models and core schemas.
+  const {
+    describeClaimContest,
+    describeRefusedDocumentModel,
+    describeSubgraphConflict,
+    findPackageSubgraphConflicts,
+    hostDocumentModels,
+  } = await import("@powerhousedao/reactor-api/subgraph-types");
+  const host = hostDocumentModels(models);
   const { conflicts, contests } = findPackageSubgraphConflicts(subgraphs, host);
   warnings.push(
     ...host.refused.map((model) => line(describeRefusedDocumentModel(model))),

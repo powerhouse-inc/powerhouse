@@ -205,3 +205,100 @@ describe("PackageManager teardown (issue #2973)", () => {
     expect(events.at(-1)?.has("pkg-a")).toBe(false);
   });
 });
+
+describe("PackageManager keeps the last loaded set of a failed package", () => {
+  const piece: PackagePieceEntry = {
+    name: "piece-a",
+    version: "1.0.0",
+    entryPath: "/pkg-a/piece.mjs",
+  };
+  const subgraph = makeSubgraphClass("alpha");
+  const processor = makeProcessorBuilder();
+  const broken = new Error("Transform failed with 1 error");
+  const missing = Object.assign(
+    new Error("Cannot find package 'pkg-a' imported from /host"),
+    { code: "ERR_MODULE_NOT_FOUND" },
+  );
+
+  function setup() {
+    let failure: Error | undefined;
+    const answer = <T>(value: T) =>
+      failure ? Promise.reject(failure) : Promise.resolve(value);
+    const fire: (() => void)[] = [];
+    const loader: ISubscribablePackageLoader = {
+      name: "fake-loader",
+      loadDocumentModels: () => answer([]),
+      loadSubgraphs: () => answer([subgraph]),
+      loadProcessors: () => answer(processor),
+      loadPieces: () => answer([piece]),
+      onSubgraphsChange: (_, handler) => {
+        fire.push(() => handler([]));
+        return () => {};
+      },
+      onProcessorsChange: (_, handler) => {
+        fire.push(() => handler(null));
+        return () => {};
+      },
+      onPiecesChange: (_, handler) => {
+        fire.push(() => handler([]));
+        return () => {};
+      },
+    };
+    const manager = new PackageManager([loader], { packages: ["pkg-a"] });
+    const last = {
+      subgraphs: undefined as Map<string, SubgraphClass[]> | undefined,
+      processors: undefined as
+        | Map<string, ProcessorFactoryBuilder[]>
+        | undefined,
+      pieces: undefined as Map<string, PackagePieceEntry[]> | undefined,
+    };
+    manager.onSubgraphsChange((m) => (last.subgraphs = m));
+    manager.onProcessorsChange((m) => (last.processors = m));
+    manager.onPiecesChange((m) => (last.pieces = m));
+    return {
+      manager,
+      last,
+      fail: (error: Error) => {
+        failure = error;
+      },
+      reloadConfig: () =>
+        (
+          manager as unknown as {
+            loadPackages(packages: string[]): Promise<unknown>;
+          }
+        ).loadPackages(["pkg-a"]),
+      changed: async () => {
+        for (const handler of fire) handler();
+        await vi.runAllTimersAsync();
+      },
+    };
+  }
+
+  it.each([
+    ["a config reload", (h: ReturnType<typeof setup>) => h.reloadConfig()],
+    ["a change", (h: ReturnType<typeof setup>) => h.changed()],
+  ])("keeps them when %s fails", async (_, reload) => {
+    vi.useFakeTimers();
+    const harness = setup();
+    await harness.manager.init();
+
+    harness.fail(broken);
+    await reload(harness);
+
+    expect(harness.last.subgraphs?.get("pkg-a")).toEqual([subgraph]);
+    expect(harness.last.processors?.get("pkg-a")).toEqual([processor]);
+    expect(harness.last.pieces?.get("pkg-a")).toEqual([piece]);
+  });
+
+  it("drops them when a config reload finds the package absent", async () => {
+    const harness = setup();
+    await harness.manager.init();
+
+    harness.fail(missing);
+    await harness.reloadConfig();
+
+    expect(harness.last.subgraphs?.get("pkg-a")).toEqual([]);
+    expect(harness.last.processors?.get("pkg-a")).toEqual([]);
+    expect(harness.last.pieces?.get("pkg-a")).toEqual([]);
+  });
+});

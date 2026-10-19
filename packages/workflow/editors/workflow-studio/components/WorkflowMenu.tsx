@@ -1,7 +1,11 @@
 // The "…" menu for one workflow: archive or restore it, and delete it behind
 // a confirmation that asks for its exact name.
 import { Modal } from "@powerhousedao/design-system";
-import { deleteNode, useDispatch } from "@powerhousedao/reactor-browser";
+import {
+  deleteNode,
+  getPHStore,
+  useDispatch,
+} from "@powerhousedao/reactor-browser";
 import {
   actions as workflowActions,
   type WorkflowDocument,
@@ -13,11 +17,12 @@ import { deletionTarget } from "./workflow-order.js";
 
 /** Deletes a workflow with its home folder, reading the drive's nodes now. */
 export async function deleteWorkflow(workflowId: string): Promise<void> {
-  const driveId = window.ph?.selectedDriveId;
+  const store = getPHStore();
+  const driveId = store?.selectedDriveId;
   if (!driveId) throw new Error("No drive is selected");
   const nodes =
-    window.ph?.drives?.find((drive) => drive.header.id === driveId)?.state
-      .global.nodes ?? [];
+    store?.drives?.find((drive) => drive.header.id === driveId)?.state.global
+      .nodes ?? [];
   await deleteNode(
     driveId,
     deletionTarget(workflowId, nodes)?.id ?? workflowId,

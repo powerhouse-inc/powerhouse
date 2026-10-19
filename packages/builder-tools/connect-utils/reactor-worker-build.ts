@@ -417,6 +417,20 @@ function readWorkerCacheHit(
   }
 }
 
+/** Content digest of a directory tree (relative paths + bytes; source maps skipped). */
+export function directoryContentDigest(dir: string): string {
+  const h = createHash("sha256");
+  const files = readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile() && !e.name.endsWith(".map"))
+    .map((e) => join(e.parentPath, e.name))
+    .sort();
+  for (const file of files) {
+    h.update(`${file.slice(dir.length).split("\\").join("/")}\n`);
+    h.update(readFileSync(file));
+  }
+  return h.digest("hex").slice(0, 16);
+}
+
 async function waitForWorkerCacheHit(
   metaPath: string,
   sourceDigest: string,

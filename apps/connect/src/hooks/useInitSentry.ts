@@ -3,13 +3,7 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import type { BrowserOptions } from "@sentry/react";
 
 import { childLogger } from "document-model";
-import React, { useEffect } from "react";
-import {
-  createRoutesFromChildren,
-  matchRoutes,
-  useLocation,
-  useNavigationType,
-} from "react-router-dom";
+import { useEffect } from "react";
 import { setSentryModule } from "../services/sentry.js";
 import { useAcceptedCookies } from "./preferences-store.js";
 
@@ -30,14 +24,10 @@ async function initSentry() {
     Sentry.captureConsoleIntegration({ levels: ["error"] }),
   ];
   if (connectConfig.sentry.tracing) {
+    // Dynamic import: the router module pulls in the app's component tree.
+    const { getConnectRouter } = await import("../components/router.js");
     integrations.push(
-      Sentry.reactRouterV6BrowserTracingIntegration({
-        useEffect: React.useEffect,
-        useLocation,
-        useNavigationType,
-        createRoutesFromChildren,
-        matchRoutes,
-      }),
+      Sentry.tanstackRouterBrowserTracingIntegration(getConnectRouter()),
     );
   }
 

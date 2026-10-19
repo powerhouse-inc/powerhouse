@@ -1,7 +1,7 @@
 import type { Color, IconComponentProps, IconName, Size } from "#design-system";
 import { Suspense } from "react";
 import { getDimensions } from "../../utils/getDimensions.js";
-import { iconComponents } from "../icon-components/index.js";
+import { IconByName } from "./icon-by-name.js";
 type IconProps = IconComponentProps & {
   readonly name: IconName;
   readonly size?: Size;
@@ -15,8 +15,6 @@ export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
     style,
   };
 
-  const IconComponent = iconComponents[name];
-
   return (
     // displays div with the same size while icon
     // loads to avoid UI displacement
@@ -24,7 +22,7 @@ export function Icon({ name, size = 24, color, style, ...props }: IconProps) {
       fallback={<div data-testid="icon-fallback" style={dimensions} />}
       name="icon-component"
     >
-      <IconComponent {...props} style={_style} />
+      <IconByName name={name} {...props} style={_style} />
     </Suspense>
   );
 }

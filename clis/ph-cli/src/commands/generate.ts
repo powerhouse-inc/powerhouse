@@ -1,6 +1,7 @@
 import { subcommands } from "cmd-ts";
 import { generateAllCmd } from "./generate-all.js";
 import { generateAppCmd } from "./generate-app.js";
+import { generateDesktopShellCmd } from "./generate-desktop-shell.js";
 import { generateDocumentModelCmd } from "./generate-document-model.js";
 import { generateEditorCmd } from "./generate-editor.js";
 import { generateMigrationFileCmd } from "./generate-migration-file.js";
@@ -21,6 +22,7 @@ export const generateCommands = {
   "piece-action": generatePieceActionCmd,
   "piece-trigger": generatePieceTriggerCmd,
   "migration-file": generateMigrationFileCmd,
+  "desktop-shell": generateDesktopShellCmd,
 };
 
 export const generate = subcommands({

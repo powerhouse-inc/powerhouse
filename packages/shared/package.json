@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.3-dev.59",
+  "version": "6.2.3-dev.63",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -106,6 +106,10 @@
     "./clis/project-env": {
       "source": "./clis/project-env.ts",
       "import": "./dist/clis/project-env.mjs"
+    },
+    "./clis/ph-dir": {
+      "source": "./clis/ph-dir.ts",
+      "import": "./dist/clis/ph-dir.mjs"
     },
     "./clis/utils": {
       "source": "./clis/utils.ts",

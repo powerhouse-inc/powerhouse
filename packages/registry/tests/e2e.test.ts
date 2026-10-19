@@ -18,7 +18,7 @@ import {
 } from "../src/constants.js";
 import type { PublishEvent } from "../src/notifications/types.js";
 import { runRegistry } from "../src/run.js";
-import type { WebhookConfig } from "../src/types.js";
+import type { PackageInfo, WebhookConfig } from "../src/types.js";
 import { packTarball } from "./pack.js";
 
 // Bound to an ephemeral port in runServer.
@@ -383,6 +383,18 @@ describe("registry e2e", () => {
         const page = await fetchPage(query);
         expect(names(page)).toEqual(["Renamed Display Fixture"]);
       }
+    });
+
+    it("describes a package by its npm name, not its manifest's", async () => {
+      const response = await fetch(`${REGISTRY_URL}/packages/${RENAMED}`);
+      expect(response.status).toBe(200);
+      const pkg = (await response.json()) as PackageInfo;
+      expect(pkg).toMatchObject({
+        name: RENAMED,
+        path: `/-/cdn/${RENAMED}`,
+        version: "1.0.0",
+      });
+      expect(pkg.manifest?.name).toBe("Renamed Display Fixture");
     });
 
     it("returns full PackageInfo items with detail=full", async () => {

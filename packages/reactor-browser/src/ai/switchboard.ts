@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import { DriveCollectionId, type ISyncManager } from "@powerhousedao/reactor";
 import { z } from "zod";
 import { ambientRenownTokenProvider } from "../graphql-client/auth.js";
@@ -23,7 +24,8 @@ export function getBrowserSyncManager(): ISyncManager | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  return window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  return getPHStore()?.reactorClientModule?.reactorModule?.syncModule
+    ?.syncManager;
 }
 
 /** Suffix of the per-drive GraphQL channel endpoint the switchboard serves. */
@@ -276,7 +278,9 @@ export function createSwitchboardSchemaTool(
   const getSelectedDriveId =
     deps?.getSelectedDriveId ??
     ((): string | undefined =>
-      typeof window === "undefined" ? undefined : window.ph?.selectedDriveId);
+      typeof window === "undefined"
+        ? undefined
+        : getPHStore()?.selectedDriveId);
   const tokenProvider = deps?.tokenProvider ?? ambientRenownTokenProvider;
   const fetchImpl = deps?.fetchImpl ?? fetch;
   const timeoutMs = deps?.timeoutMs ?? 10_000;

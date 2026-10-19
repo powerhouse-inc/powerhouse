@@ -383,6 +383,30 @@ describe("runBuild on a package with no pieces", () => {
   }, 120_000);
 });
 
+// `ph build` reads project routes only from hosts/connect/routes/.
+describe("runBuild on a package with a top-level routes folder", () => {
+  const fixture = join(fixtures, "legacy-routes-package");
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("does not mount it as Connect routes", async () => {
+    rmSync(fixture, { recursive: true, force: true });
+    cpSync(join(fixtures, "classic-package"), fixture, { recursive: true });
+    clean(fixture);
+    mkdirSync(join(fixture, "routes"));
+    writeFileSync(join(fixture, "routes", "hello.tsx"), "export {};\n");
+    process.chdir(fixture);
+
+    await runBuild(args);
+
+    expect(existsSync(join(fixture, ".ph", "connect-routes.gen.ts"))).toBe(
+      false,
+    );
+  }, 120_000);
+});
+
 // Nothing under pieces/<dir>, so nothing is bundled; the built list is still
 // there, and what it declares is still the build's to check.
 describe("runBuild on a package that only lists a piece", () => {

@@ -1,7 +1,7 @@
 // The documents a run's data references: the run journal keeps a reference
 // (id, type, branch, revision) in place of a document's state.
 import type { DocumentReference } from "@powerhousedao/pieces-framework/workflow";
-import { setSelectedNode } from "@powerhousedao/reactor-browser";
+import { useSetSelectedNode } from "@powerhousedao/reactor-browser";
 import { Button } from "./controls.js";
 
 // Beyond this many, the rest are counted.
@@ -22,6 +22,7 @@ function revisionText(reference: DocumentReference): string {
 
 function DocumentRefRow(props: { reference: DocumentReference }) {
   const { reference } = props;
+  const setSelectedNode = useSetSelectedNode();
   return (
     <li
       aria-label={`Document ${reference.documentId}`}

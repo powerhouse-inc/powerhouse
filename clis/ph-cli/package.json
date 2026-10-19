@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.2.3-dev.59",
+  "version": "6.2.3-dev.63",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -81,6 +81,7 @@
     "remeda": "catalog:",
     "rolldown": "catalog:",
     "semver": "catalog:",
+    "sirv": "^3.0.2",
     "tsdown": "catalog:",
     "vite": "catalog:"
   },
@@ -95,6 +96,7 @@
     "vite-tsconfig-paths": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:",
+    "@powerhousedao/desktop": "workspace:*",
     "@powerhousedao/host-core": "workspace:*"
   }
 }

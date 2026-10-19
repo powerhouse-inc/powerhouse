@@ -522,11 +522,13 @@ export class GqlRequestChannel implements IChannel {
     this.polling = true;
     this.polledSinceStart = false;
     this.pollTimer.start();
+    if (!this.isPushing && !this.pushBlocked) this.drainOutbox();
   }
 
   private stopPolling(): void {
     this.polling = false;
     this.polledSinceStart = false;
+    this.receivingPages = false;
     this.pollTimer.stop();
   }
 
@@ -546,6 +548,10 @@ export class GqlRequestChannel implements IChannel {
     }
     if (this.connectionState === next) return;
     this.connectionState = next;
+    this.notifyConnectionState();
+  }
+
+  private notifyConnectionState(): void {
     const snapshot = this.getConnectionState();
     for (const callback of this.connectionStateCallbacks) {
       try {
@@ -650,6 +656,7 @@ export class GqlRequestChannel implements IChannel {
       this.handleRemoteDeadLetters(deadLetters);
     }
 
+    const wasReceivingPages = this.receivingPages;
     if (hasMore) {
       this.receivingPages = true;
     } else if (this.receivingPages) {
@@ -657,10 +664,18 @@ export class GqlRequestChannel implements IChannel {
       this.drainOutbox();
     }
 
+    const isFirstSuccess = !this.polledSinceStart;
+    const wasConnected = this.connectionState === "connected";
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
     this.polledSinceStart = true;
     this.transitionConnectionState("connected");
+    if (
+      wasConnected &&
+      (isFirstSuccess || wasReceivingPages !== this.receivingPages)
+    ) {
+      this.notifyConnectionState();
+    }
   }
 
   /**

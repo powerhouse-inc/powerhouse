@@ -4,15 +4,16 @@ import {
   refreshReactorDataClient,
   setDrives,
   setFullReactorClient,
+  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type {
-  DocumentModelModule,
-  ISigner,
-} from "@powerhousedao/shared/document-model";
+import type { ISigner } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import type * as MultiReactor from "./multi-reactor.js";
-import type { LocalReactorModule } from "./multi-reactor.js";
+import type {
+  LoadedDocumentModels,
+  LocalReactorModule,
+} from "./multi-reactor.js";
 import type { ReactorClientMode } from "./reactor-client-mode.js";
 
 type MultiReactorModule = typeof MultiReactor;
@@ -24,7 +25,7 @@ export type AppReactorClientParams = {
   module: LocalReactorModule | undefined;
   remoteDriveUrl: string | undefined;
   signer: ISigner;
-  documentModelModules: readonly DocumentModelModule[];
+  documentModelModules: LoadedDocumentModels;
   loadRouter?: () => Promise<MultiReactorModule>;
 };
 
@@ -48,7 +49,7 @@ export async function selectAppReactorClient(
     return remote;
   }
   if (params.mode !== "router") {
-    if (window.ph?.fullReactorClient) {
+    if (getPHStore()?.fullReactorClient) {
       setFullReactorClient(undefined);
     }
     return requireModule(params).client;

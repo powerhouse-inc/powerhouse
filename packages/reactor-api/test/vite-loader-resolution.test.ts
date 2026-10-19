@@ -22,10 +22,13 @@ import {
   startViteServer,
 } from "../src/packages/vite-loader.mjs";
 import { ConsoleLogger } from "document-model";
+import { isExpectedLoaderMiss } from "../src/packages/package-manager.js";
+import { PACKAGE_MODULE_FAILED } from "../src/packages/util.js";
 
 const PROJECT = "@acme/dev-project";
 const HOSTED = "@acme/hosted";
 const BROKEN = "@acme/broken";
+const STALE = "@acme/stale";
 
 let base = "";
 let root = "";
@@ -106,6 +109,14 @@ describe("VitePackageLoader resolution", () => {
       { "./document-models": { node: "./dist/document-models.mjs" } },
       { "dist/document-models.mjs": 'throw new Error("boom in broken");\n' },
     );
+    // Its index still exports a model whose directory was deleted.
+    await writeHostedPackage(
+      STALE,
+      { "./document-models": { node: "./dist/document-models/index.mjs" } },
+      {
+        "dist/document-models/index.mjs": 'export * from "./gone/index.mjs";\n',
+      },
+    );
 
     vite = await startViteServer(root, createViteLogger(new ConsoleLogger()));
   }, 60_000);
@@ -179,12 +190,27 @@ describe("VitePackageLoader resolution", () => {
     expect(logged(warnSpy)).toBe("");
   });
 
-  it("reports a module that exists and fails to load", async () => {
+  it("reports and throws for a module that exists and fails to load", async () => {
     const loader = VitePackageLoader.build(vite, { resolveFrom: [hostEntry] });
 
-    expect(await loader.loadDocumentModels(BROKEN)).toEqual([]);
+    await expect(loader.loadDocumentModels(BROKEN)).rejects.toMatchObject({
+      code: PACKAGE_MODULE_FAILED,
+    });
     const errors = logged(errorSpy);
     expect(errors).toContain(BROKEN);
     expect(errors).toContain("boom in broken");
+  });
+
+  // A miss inside the package is a broken module, not a package without one.
+  it("throws for a module whose own import is missing", async () => {
+    const loader = VitePackageLoader.build(vite, { resolveFrom: [hostEntry] });
+
+    const error: unknown = await loader.loadDocumentModels(STALE).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+
+    expect(error).toMatchObject({ code: PACKAGE_MODULE_FAILED });
+    expect(isExpectedLoaderMiss(error, STALE, "document-models")).toBe(false);
   });
 });

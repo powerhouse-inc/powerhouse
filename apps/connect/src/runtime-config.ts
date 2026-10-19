@@ -1,8 +1,7 @@
-import {
-  ConfigLoader,
-  JsonConfigAdapter,
-  type RuntimePowerhouseConfig,
-} from "@powerhousedao/shared/connect";
+// Narrow subpaths: the shared/connect barrel puts zod and semver on the boot path.
+import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
+import { ConfigLoader } from "@powerhousedao/shared/connect/config-loader";
+import { JsonConfigAdapter } from "@powerhousedao/shared/connect/json-adapter";
 
 const loader = new ConfigLoader(
   new JsonConfigAdapter({
@@ -40,9 +39,4 @@ export async function loadRuntimeConfig(): Promise<RuntimePowerhouseConfig> {
  */
 export function getRuntimeConfig(): RuntimePowerhouseConfig {
   return loader.getCached() as RuntimePowerhouseConfig;
-}
-
-export function applyConnectBranding(config: RuntimePowerhouseConfig): void {
-  const appName = config.connect.branding?.appName;
-  if (appName) document.title = appName;
 }

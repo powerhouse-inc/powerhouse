@@ -64,6 +64,7 @@ import { closeWithin } from "./utils/close-within.js";
 import { createWorkerLocalPeers } from "./utils/worker-local-peers.js";
 import { createWorkerStores } from "./utils/worker-stores.js";
 import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
+import { createLazyStore } from "./utils/lazy-store.js";
 import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
@@ -73,7 +74,6 @@ import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
   CURRENT_PG_MAJOR,
-  type DetectedMajor,
   loadPGliteModule,
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
@@ -134,13 +134,13 @@ let reactorInstance: IReactor | undefined;
 // which IQueue lacks.
 let reactorQueue: InMemoryQueue | undefined;
 let syncStopped: Promise<void> | undefined;
-type RelationalState = {
-  pg?: PgLiveModuleNs.PGliteWithLive;
-  db?: IRelationalDb;
+type RelationalStore = {
+  pg: PgLiveModuleNs.PGliteWithLive;
+  db: IRelationalDb;
   /** The Kysely `db` wraps; RPC SQL goes through its queue, not at the client. */
-  kysely?: Kysely<unknown>;
+  kysely: Kysely<unknown>;
+  close: () => Promise<void>;
 };
-const relational: RelationalState = {};
 type OwnedStorage = {
   reactorPg?: {
     close: () => Promise<void>;
@@ -213,7 +213,9 @@ const onStorePoisoned = reloadOnPoisonedStore((reason, gen) =>
   host.retireAndReload(reason, gen),
 );
 
-async function openRelational(namespace: string): Promise<DetectedMajor> {
+// Opened on the first relational query: processors don't run in the worker, so
+// most sessions never need it, nor its second PGlite download.
+async function openRelational(namespace: string): Promise<RelationalStore> {
   let pg: { close: () => Promise<void> } | undefined;
   try {
     await storeLocks.acquire(namespace);
@@ -236,28 +238,36 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
     });
     pg = opened;
     await opened.waitReady;
-    relational.pg = opened as unknown as PgLiveModuleNs.PGliteWithLive;
-    const relationalKysely = new Kysely<unknown>({
+    const kysely = new Kysely<unknown>({
       dialect: new HardenedPGliteDialect(opened, {
         onPoisoned: onStorePoisoned,
       }),
     });
-    relational.kysely = relationalKysely;
-    relational.db = createRelationalDb(relationalKysely);
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
-    return detected;
+    return {
+      pg: opened as unknown as PgLiveModuleNs.PGliteWithLive,
+      kysely,
+      db: createRelationalDb(kysely),
+      close: () => opened.close(),
+    };
   } catch (error) {
-    console.error(
-      "[reactor.worker] Failed to open the relational store:",
-      error,
-    );
-    relational.pg = undefined;
-    relational.db = undefined;
-    relational.kysely = undefined;
     await stores.releaseFailedOpen(namespace, pg);
-    return null;
+    throw error;
+  }
+}
+
+const relational = createLazyStore({
+  open: openRelational,
+  discard: (namespace, store) => stores.releaseFailedOpen(namespace, store),
+});
+
+// An admin flow works on the relational files even when it was never opened.
+async function lockRelationalFiles(): Promise<void> {
+  await relational.settled();
+  if (owned.relationalNamespace) {
+    await storeLocks.acquire(owned.relationalNamespace);
   }
 }
 
@@ -338,19 +348,14 @@ const stores = createWorkerStores({
   stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
   stopSync,
   queue: () => reactorQueue,
-  relational: () => ({
-    namespace: owned.relationalNamespace,
-    store: relational.pg,
-  }),
+  relational: () => relational.snapshot(),
   reactor: () => ({
     namespace: owned.reactorNamespace,
     store: owned.reactorPg,
   }),
   forget: () => {
     inspector = undefined;
-    relational.pg = undefined;
-    relational.db = undefined;
-    relational.kysely = undefined;
+    relational.forget();
     owned.reactorPg = undefined;
     owned.reactorDb = undefined;
   },
@@ -370,6 +375,7 @@ const host = new ReactorHost({
     stores.runAdmin({
       close: closeWithin,
       run: async () => {
+        await lockRelationalFiles();
         for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
           if (idbName) {
             await clearFileData(idbName);
@@ -389,6 +395,7 @@ const host = new ReactorHost({
         }),
       run: async () => {
         try {
+          await lockRelationalFiles();
           for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
             if (idbName) {
               await migrateIdb(
@@ -452,16 +459,17 @@ const host = new ReactorHost({
 
       owned.reactorNamespace = construct.namespace;
       owned.relationalNamespace = construct.relationalNamespace;
-      //this has to be serial: concurrent PGlite constructors consume the same
-      // cached one-shot wasm "Response" object
+      // Armed only after this open: concurrent PGlite constructors consume the
+      // same cached one-shot wasm "Response" object.
       const reactor = await openReactorPglite(construct.namespace);
-      const relationalMajor = await openRelational(
-        construct.relationalNamespace,
-      );
       const pg = reactor.pg;
       owned.reactorPg = pg;
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      const relationalMajor = coerceMajor(
+        await readPgVersionFile(owned.relationalIdb),
+      );
+      relational.arm(construct.relationalNamespace);
       // A store is migratable when coerceMajor kept it (a supported legacy
       // major) and it is not the current one; openers already read PG_VERSION.
       const legacyMajor = [reactor.detected, relationalMajor].find(
@@ -649,23 +657,25 @@ const host = new ReactorHost({
     }
   },
   onDbOp: async (method, args) => {
-    if (!relational.kysely) {
+    const store = await relational.get();
+    if (!store) {
       throw new Error("Relational store not available");
     }
     switch (method) {
       case "query": {
         const [sql, params] = args as [string, unknown[]];
-        return queryThroughDialect(relational.kysely, sql, params);
+        return queryThroughDialect(store.kysely, sql, params);
       }
       default:
         throw new Error(`Unknown db op: ${method}`);
     }
   },
   onLiveQuery: async (sql, params, onResults) => {
-    if (!relational.pg) {
+    const store = await relational.get();
+    if (!store) {
       throw new Error("Relational store not available");
     }
-    const live = await relational.pg.live.query(sql, params, (results) =>
+    const live = await store.pg.live.query(sql, params, (results) =>
       onResults(results),
     );
     return () => {

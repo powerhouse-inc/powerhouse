@@ -643,6 +643,7 @@ describe("Powerhouse real integration", () => {
     }
   });
 
+  // Cold reactor + PGlite WASM load: ~3.4s on an idle CI runner, past 5s under load.
   it("buildReactor creates a PGlite-backed reactor", async () => {
     // Pass empty documentModels — buildReactor already includes base models
     // (documentModelDocumentModelModule + driveDocumentModelModule) internally.
@@ -659,7 +660,7 @@ describe("Powerhouse real integration", () => {
     expect(reactorModule).toBeDefined();
     expect(reactorModule.client).toBeDefined();
     expect(reactorModule.reactor).toBeDefined();
-  });
+  }, 30_000);
 
   // Skipped for the same reason as the startSwitchboard tests below:
   // applySwitchboardReactorDefaults pulls in @mercuriusjs/gateway → p-map (ESM)

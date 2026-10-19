@@ -1,3 +1,4 @@
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -16,10 +17,11 @@ export type VetraProbe =
   | { status: "live"; record: VetraRuntimeRecord }
   | { status: "foreign"; record: VetraRuntimeRecord };
 
-const RECORD_REL = path.join(".ph", "vetra-runtime.json");
 const READY_TIMEOUT_MS = 2000;
 
-const recordPath = (projectDir: string) => path.join(projectDir, RECORD_REL);
+// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR.
+const recordPath = (projectDir: string) =>
+  path.join(resolvePhDir(projectDir), "vetra-runtime.json");
 
 export function readVetraRuntime(
   projectDir: string,

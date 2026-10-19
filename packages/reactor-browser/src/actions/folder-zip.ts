@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
   FolderNode,
@@ -150,7 +151,7 @@ export async function downloadFolderZip(
   folderNode?: FolderNode,
   onProgress?: (done: number, total: number) => void,
 ): Promise<FolderZipResult> {
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

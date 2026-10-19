@@ -11,13 +11,6 @@ if (process.env.RUN_HUB_SPOKE_INTEGRATION !== "1") {
 export default defineConfig({
   resolve: {
     alias: [
-      {
-        find: "graphql-ws/lib/use/ws",
-        replacement: resolve(
-          __dirname,
-          "../../node_modules/graphql-ws/lib/use/ws.mjs",
-        ),
-      },
       // Node resolves `graphql` to its CommonJS entry, the copy
       // @apollo/subgraph requires. Vite would pick the ESM entry, a second
       // copy, so tests would see errors production never sends.

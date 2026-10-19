@@ -6,7 +6,6 @@ import {
   getIntrospectionQuery,
   lexicographicSortSchema,
   printSchema,
-  type GraphQLSchema,
   type IntrospectionQuery,
 } from "graphql";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -18,6 +17,7 @@ import { AnalyticsSubgraph } from "../../src/graphql/analytics-subgraph.js";
 import { AuthSubgraph } from "../../src/graphql/auth/subgraph.js";
 import { ReactorSubgraph } from "../../src/graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "../../src/graphql/system/subgraph.js";
+import { SubgraphWsRouter } from "../../src/graphql/subgraph-ws-router.js";
 import { InspectionSubgraph } from "../../src/graphql/inspection/subgraph.js";
 import { PackagesSubgraph } from "../../src/graphql/packages/subgraph.js";
 import type { Context, SubgraphArgs } from "../../src/graphql/types.js";
@@ -58,21 +58,7 @@ export async function createGoldenHost() {
   const adapter = new ApolloGatewayAdapter(logger);
   const gateway: IGatewayAdapter<Context> = harness.gatewayAdapter;
   const server = createServer();
-  const schemaPaths = new Map<GraphQLSchema, string>();
-  let pendingSchema: GraphQLSchema | undefined;
-  const mount = vi.mocked(harness.httpAdapter.mount).getMockImplementation();
-  if (!mount)
-    throw new Error("The manager harness must capture mounted handlers");
-  vi.mocked(harness.httpAdapter.mount).mockImplementation(
-    (path, handler, options) => {
-      if (pendingSchema) {
-        schemaPaths.set(pendingSchema, path);
-        pendingSchema = undefined;
-      }
-      return mount(path, handler, options);
-    },
-  );
-  const wsSchemas = new Set<GraphQLSchema>();
+  const wsPaths = new Set<string>();
   let supergraphSdl = "";
   const initialize = LocalCompose.prototype.initialize;
   const composition = vi
@@ -83,12 +69,8 @@ export async function createGoldenHost() {
         typeof result.supergraphSdl === "string" ? result.supergraphSdl : "";
       return result;
     });
-  vi.spyOn(gateway, "createHandler").mockImplementation(
-    async (schema, context) => {
-      const handler = await adapter.createHandler(schema, context);
-      pendingSchema = schema;
-      return handler;
-    },
+  vi.spyOn(gateway, "createHandler").mockImplementation((schema, context) =>
+    adapter.createHandler(schema, context),
   );
   vi.spyOn(gateway, "createSupergraphHandler").mockImplementation(
     (subgraphs, _server, context) =>
@@ -98,14 +80,27 @@ export async function createGoldenHost() {
     adapter.updateSupergraph(),
   );
   vi.spyOn(gateway, "stop").mockImplementation(() => adapter.stop());
-  vi.spyOn(gateway, "attachWebSocket").mockImplementation((_server, schema) => {
-    wsSchemas.add(schema);
-    return {
-      dispose: () => {
-        wsSchemas.delete(schema);
-      },
-    };
-  });
+  // The manager serves WebSocket subscriptions from one router: record the
+  // paths it routes, without starting a graphql-ws server.
+  const attach = vi
+    .spyOn(SubgraphWsRouter.prototype, "attach")
+    .mockImplementation(() => undefined);
+  const route = vi
+    .spyOn(SubgraphWsRouter.prototype, "set")
+    .mockImplementation((path) => {
+      wsPaths.add(path);
+    });
+  const unroute = vi
+    .spyOn(SubgraphWsRouter.prototype, "delete")
+    .mockImplementation((path) => {
+      wsPaths.delete(path);
+    });
+  const restore = () => {
+    composition.mockRestore();
+    attach.mockRestore();
+    route.mockRestore();
+    unroute.mockRestore();
+  };
   const args: SubgraphArgs = {
     reactorClient: harness.reactorClient,
     graphqlManager: harness.manager,
@@ -141,7 +136,7 @@ export async function createGoldenHost() {
     await harness.manager.updateRouter();
   } catch (error) {
     await harness.manager.shutdown();
-    composition.mockRestore();
+    restore();
     throw error;
   }
   return {
@@ -149,7 +144,7 @@ export async function createGoldenHost() {
     args,
     async close() {
       await harness.manager.shutdown();
-      composition.mockRestore();
+      restore();
     },
     async capture(
       directory: string,
@@ -167,13 +162,7 @@ export async function createGoldenHost() {
       expect(paths).toEqual(
         ["/graphql", ...names.map((name) => `/graphql/${name}`)].sort(),
       );
-      const websocketPaths: string[] = [];
-      for (const schema of wsSchemas) {
-        const path = schemaPaths.get(schema);
-        if (!path)
-          throw new Error("A WebSocket schema has no mounted GraphQL handler");
-        websocketPaths.push(path);
-      }
+      const websocketPaths = [...wsPaths].filter((p) => harness.mounts.has(p));
       await golden(
         directory,
         "mounts.json",

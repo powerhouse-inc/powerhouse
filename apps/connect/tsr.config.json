@@ -1,0 +1,22 @@
+{
+  "target": "react",
+  "routesDirectory": "./src/routes",
+  "generatedRouteTree": "./src/routeTree.gen.ts",
+  "virtualRouteConfig": {
+    "type": "root",
+    "file": "__root.tsx",
+    "children": [
+      {
+        "type": "layout",
+        "id": "_app",
+        "file": "core/_app.tsx",
+        "children": [
+          { "type": "physical", "pathPrefix": "", "directory": "core/_app" }
+        ]
+      }
+    ]
+  },
+  "quoteStyle": "double",
+  "semicolons": true,
+  "addExtensions": "js"
+}

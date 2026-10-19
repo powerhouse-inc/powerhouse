@@ -504,6 +504,28 @@ describe("hostDocumentModels", () => {
     }
   });
 
+  it("refuses every version of a model whose latest version is refused, as the server does", () => {
+    const v1 = version(model("Notes"), 1);
+    const v2 = version(model("Notes", "", "type NotesState {"), 2);
+
+    for (const models of [
+      [v1, v2],
+      [v2, v1],
+    ]) {
+      const host = hostDocumentModels(models);
+      expect(host.admitted).not.toContain(v1);
+      expect(host.subgraphs.map(({ name }) => name)).not.toContain("notes");
+      expect(host.refused).toEqual([
+        {
+          id: "test/Notes",
+          name: "Notes",
+          kind: "unusable schema",
+          reason: expect.stringMatching(/^has an unusable schema: /),
+        },
+      ]);
+    }
+  });
+
   it("refuses a model subgraph whose name a core subgraph holds, as the server does", () => {
     const host = hostDocumentModels([model("R")]);
 

@@ -420,24 +420,30 @@ test("Install Package in Consumer Project", async ({ browser }) => {
       .locator(".skeleton-loader")
       .waitFor({ state: "hidden", timeout: 60_000 });
 
-    // Step 6: Open Settings modal
-    const settingsButton = page.locator('button[aria-label="Settings"]');
-    await expect(settingsButton).toBeVisible({ timeout: 30_000 });
-    await settingsButton.click();
+    // Step 6: Open the settings page
+    const settingsLink = page.getByRole("link", {
+      name: "Settings",
+      exact: true,
+    });
+    await expect(settingsLink).toBeVisible({ timeout: 30_000 });
+    await settingsLink.click();
 
-    // Wait for settings modal to appear
-    const settingsModal = page.getByRole("dialog");
-    await expect(settingsModal).toBeVisible({ timeout: 10_000 });
+    // It opens on its first tab, the package manager.
+    await expect(page).toHaveURL(/\/settings\/package-manager/, {
+      timeout: 10_000,
+    });
+    const settingsPage = page.getByRole("main");
+    await expect(settingsPage).toBeVisible({ timeout: 10_000 });
 
     // Package Manager tab is selected by default — the "Installed" tab of
     // the two-tab layout is showing.
     await expect(
-      settingsModal.getByRole("tab", { name: /^Installed/ }),
+      settingsPage.getByRole("tab", { name: /^Installed/ }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Step 7: Switch to the Available tab — triggers the lazy GET /packages
     // fetch against the registry.
-    await settingsModal.getByRole("tab", { name: /^Available/ }).click();
+    await settingsPage.getByRole("tab", { name: /^Available/ }).click();
 
     // Filter the list down to the published package. Match the placeholder
     // by prefix so the test keeps passing when the hint text is extended.
@@ -450,7 +456,7 @@ test("Install Package in Consumer Project", async ({ browser }) => {
 
     // The row appears once the registry fetch resolves. Install via the row's
     // 3-dot dropdown (more reliable than button-in-card selectors).
-    const availablePackageRow = settingsModal
+    const availablePackageRow = settingsPage
       .locator("li")
       .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
     await expect(availablePackageRow).toBeVisible({ timeout: 30_000 });
@@ -466,13 +472,9 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     // Wait for installation to complete
     await page.waitForTimeout(5000);
 
-    // Step 8: Close the settings modal
-    const closeButton = settingsModal
-      .locator("button")
-      .filter({ has: page.locator("svg") })
-      .first();
-    await closeButton.click();
-    await settingsModal.waitFor({ state: "hidden", timeout: 10_000 });
+    // Step 8: Close the settings page, back to where it was opened
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page).not.toHaveURL(/\/settings/, { timeout: 10_000 });
 
     // Step 9: Create a new local drive
     const createDriveButton = page.getByText("Create New Drive");
@@ -579,21 +581,27 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // -------------------------------------------------------------------
   console.log("Uninstalling test-package-vetra via the Package Manager UI...");
 
-  const settingsButton = page.locator('button[aria-label="Settings"]');
-  await expect(settingsButton).toBeVisible({ timeout: 30_000 });
-  await settingsButton.click();
+  const settingsLink = page.getByRole("link", {
+    name: "Settings",
+    exact: true,
+  });
+  await expect(settingsLink).toBeVisible({ timeout: 30_000 });
+  await settingsLink.click();
 
-  const settingsModal = page.getByRole("dialog");
-  await expect(settingsModal).toBeVisible({ timeout: 10_000 });
+  await expect(page).toHaveURL(/\/settings\/package-manager/, {
+    timeout: 10_000,
+  });
+  const settingsPage = page.getByRole("main");
+  await expect(settingsPage).toBeVisible({ timeout: 10_000 });
 
   // The Package Manager opens on the "Installed" tab by default and its rows
   // are always in the DOM. Click the tab to make the precondition explicit.
-  const installedTab = settingsModal.getByRole("tab", { name: /^Installed/ });
+  const installedTab = settingsPage.getByRole("tab", { name: /^Installed/ });
   await expect(installedTab).toBeVisible({ timeout: 10_000 });
   await installedTab.click();
 
   // Find the installed package row by its <h3>name and open its dropdown.
-  const installedRow = settingsModal
+  const installedRow = settingsPage
     .locator("li")
     .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
   await expect(installedRow).toBeVisible({ timeout: 30_000 });
@@ -618,16 +626,9 @@ test("Change registry URL at runtime and install from new registry", async () =>
     timeout: 10_000,
   });
 
-  // Close the settings modal so it doesn't capture later clicks.
-  const closeSettings = async () => {
-    const closeBtn = settingsModal
-      .locator("button")
-      .filter({ has: page.locator("svg") })
-      .first();
-    await closeBtn.click();
-    await settingsModal.waitFor({ state: "hidden", timeout: 10_000 });
-  };
-  await closeSettings();
+  // Close the settings page, back to where it was opened.
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page).not.toHaveURL(/\/settings/, { timeout: 10_000 });
 
   // -------------------------------------------------------------------
   // Step 2: Stop the registry on :8080 and restart it on :8081 using the
@@ -775,17 +776,17 @@ test("Change registry URL at runtime and install from new registry", async () =>
   console.log(
     "Installing test-package-vetra from new registry via the Available tab dropdown...",
   );
-  await expect(settingsButton).toBeVisible({ timeout: 30_000 });
-  await settingsButton.click();
-  await expect(settingsModal).toBeVisible({ timeout: 10_000 });
+  await expect(settingsLink).toBeVisible({ timeout: 30_000 });
+  await settingsLink.click();
+  await expect(settingsPage).toBeVisible({ timeout: 10_000 });
 
   // Switch to the Available tab — triggers the lazy GET /packages fetch
   // against the NEW registry; the republished package shows up (not installed).
-  const availableTab = settingsModal.getByRole("tab", { name: /^Available/ });
+  const availableTab = settingsPage.getByRole("tab", { name: /^Available/ });
   await expect(availableTab).toBeVisible({ timeout: 30_000 });
   await availableTab.click();
 
-  const availableRow = settingsModal
+  const availableRow = settingsPage
     .locator("li")
     .filter({ has: page.locator('h3:has-text("test-package-vetra")') });
   await expect(availableRow).toBeVisible({ timeout: 30_000 });
@@ -805,7 +806,7 @@ test("Change registry URL at runtime and install from new registry", async () =>
   // Installed count rose: before install it's 2 (Common, Local) — Vetra isn't
   // loaded in a production build (studioMode off) — so after install it's 3.
   await expect(
-    settingsModal.getByRole("tab", { name: /^Installed \(3\)/ }),
+    settingsPage.getByRole("tab", { name: /^Installed \(3\)/ }),
   ).toBeVisible({ timeout: 60_000 });
 });
 

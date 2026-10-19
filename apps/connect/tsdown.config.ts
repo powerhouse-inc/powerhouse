@@ -9,6 +9,9 @@ export default defineConfig({
   entry: {
     "start-connect": "start-connect.tsx",
     main: "main.tsx",
+    router: "src/router/index.ts",
+    layout: "src/layout/index.ts",
+    "route-tree": "src/routeTree.gen.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
     "reactor.worker": "src/reactor.worker.ts",
@@ -25,6 +28,9 @@ export default defineConfig({
       "react-dom",
       "react/jsx-runtime",
       "react-dom/client",
+      "@powerhousedao/connect/fonts.css",
+      // Resolved by the project build, which may swap in a tree with its routes.
+      "@powerhousedao/connect/route-tree",
     ],
   },
   loader: {

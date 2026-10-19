@@ -1,5 +1,6 @@
 // The run journal as a filterable table. Rows expand in place to their step
 // executions, so drilling into a failure never leaves the list.
+import { useSetSearchParams } from "@powerhousedao/reactor-browser";
 import { Fragment, useMemo, useState } from "react";
 import type {
   RunRecord,
@@ -37,11 +38,21 @@ import { useWorkflowDocumentsInSelectedDrive } from "document-models/workflow";
 import { MiniChain, runLinks, triggerOfKind } from "./chain.js";
 import { triggerBlock } from "../../workflow-editor/ui/blocks.js";
 import { Select } from "../../shared/controls.js";
+import { useSearchParam, useSearchParamDraft } from "../../shared/url-param.js";
 import { DataViewer } from "../../shared/data-viewer.js";
 import { Button, Icon, StatusText } from "./ui.js";
 import { StepError } from "../../workflow-editor/ui/StepError.js";
 
 type StatusFilter = "ALL" | (typeof RUN_STATUSES)[number];
+const STATUS_FILTERS: readonly StatusFilter[] = ["ALL", ...RUN_STATUSES];
+
+/** The runs table's query params. */
+export const RUNS_PARAMS = {
+  status: "runs.status",
+  query: "runs.q",
+  workflow: "runs.workflow",
+  trigger: "runs.trigger",
+} as const;
 type SortKey = "startedAt" | "duration";
 
 const DETAIL_POLL_MS = 5000;
@@ -395,10 +406,29 @@ export function RunsTable(props: {
   showWorkflow: boolean;
   onChanged: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("ALL");
-  const [workflow, setWorkflow] = useState("ALL");
-  const [trigger, setTrigger] = useState("ALL");
+  // Filters live in the URL (replaced, not pushed); the search box keeps its
+  // own state so typing never waits on a navigation.
+  const [query, setQuery] = useSearchParamDraft(RUNS_PARAMS.query);
+  const [status, setStatusParam] = useSearchParam<StatusFilter>(
+    RUNS_PARAMS.status,
+    "ALL",
+    STATUS_FILTERS,
+  );
+  const setStatus = (value: StatusFilter) =>
+    setStatusParam(value, { replace: true });
+  const [workflow, setWorkflowParam] = useSearchParam<string>(
+    RUNS_PARAMS.workflow,
+    "ALL",
+  );
+  const setWorkflow = (value: string) =>
+    setWorkflowParam(value, { replace: true });
+  const [trigger, setTriggerParam] = useSearchParam<string>(
+    RUNS_PARAMS.trigger,
+    "ALL",
+  );
+  const setTrigger = (value: string) =>
+    setTriggerParam(value, { replace: true });
+  const setParams = useSetSearchParams();
   const [sort, setSort] = useState<SortKey>("startedAt");
   const [descending, setDescending] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -498,7 +528,7 @@ export function RunsTable(props: {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="flex h-8 items-center gap-0.5 rounded-md bg-muted p-0.5">
-          {(["ALL", ...RUN_STATUSES] as StatusFilter[]).map((option) => (
+          {STATUS_FILTERS.map((option) => (
             <button
               key={option}
               type="button"
@@ -559,9 +589,14 @@ export function RunsTable(props: {
             type="button"
             className="text-[13px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
             onClick={() => {
-              setQuery("");
-              setWorkflow("ALL");
-              setTrigger("ALL");
+              setParams(
+                {
+                  [RUNS_PARAMS.query]: undefined,
+                  [RUNS_PARAMS.workflow]: undefined,
+                  [RUNS_PARAMS.trigger]: undefined,
+                },
+                { replace: true },
+              );
             }}
           >
             Clear filters

@@ -121,7 +121,7 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
   react: { peer: "^19", dev: "19.2.6" },
   "react-dom": { peer: "^19", dev: "19.2.6" },
-  zod: { peer: "^4", dev: "4.3.6" },
+  zod: { peer: "^4", dev: "4.6.5" },
 } as const satisfies Record<string, PeerSpec>;
 
 // Per-feature deps added dynamically by codegen when required. `devVersioned`

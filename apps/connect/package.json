@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.3-dev.59",
+  "version": "6.2.3-dev.63",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -10,7 +10,11 @@
   },
   "files": [
     "dist",
+    "src/routes",
+    "src/router",
+    "src/routeTree.gen.ts",
     "style.css",
+    "fonts.css",
     "nginx.conf",
     "nginx.sh",
     "scripts",
@@ -30,15 +34,34 @@
       "types": "./dist/main.d.ts",
       "import": "./dist/main.js"
     },
+    "./router": {
+      "source": "./src/router/index.ts",
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
+    },
+    "./layout": {
+      "source": "./src/layout/index.ts",
+      "types": "./dist/layout.d.ts",
+      "import": "./dist/layout.js"
+    },
+    "./route-tree": {
+      "source": "./src/routeTree.gen.ts",
+      "types": "./dist/route-tree.d.ts",
+      "import": "./dist/route-tree.js"
+    },
+    "./routes/*": "./src/routes/*.tsx",
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./fonts.css": "./fonts.css",
+    "./package.json": "./package.json"
   },
   "sideEffects": [
     "./dist/main.js",
     "./dist/start-connect.js",
     "./dist/i18n-*.js",
     "./src/i18n/index.ts",
-    "./dist/style.css"
+    "./dist/style.css",
+    "./fonts.css"
   ],
   "license": "AGPL-3.0-only",
   "author": "powerhouse.inc",
@@ -55,9 +78,10 @@
     "lint": "cd ../.. && oxlint apps/connect",
     "test": "vitest --run",
     "dev": "vite dev",
-    "build": "pnpm run build:bundle && pnpm run build:css",
-    "build:bundle": "tsdown",
+    "build": "pnpm run build:bundle && pnpm run build:css && pnpm run build:shell",
+    "build:bundle": "tsr generate && tsdown",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
+    "build:shell": "vite build --config vite.prerender.config.ts --logLevel warn && node scripts/prerender-shell.ts",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "docker:build": "docker build -f ./Dockerfile --tag connect-test-dev --build-arg TAG=dev .",
@@ -66,6 +90,7 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
+    "@fontsource-variable/inter": "5.3.0",
     "@openfeature/core": "1.9.1",
     "@openfeature/web-sdk": "1.6.2",
     "@openpanel/web": "^1.4.1",
@@ -87,6 +112,7 @@
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
     "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-router": "^1.170.41",
     "document-model": "workspace:*",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
@@ -97,16 +123,18 @@
     "react-error-boundary": "^4.0.11",
     "react-hotkeys-hook": "^4.6.2",
     "react-i18next": "^16.0.0",
-    "react-router-dom": "^6.11.2",
     "tailwind-merge": "catalog:",
     "usehooks-ts": "^3.1.1",
     "wagmi": "2.19.5",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "cross-env": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-router-devtools": "1.167.2",
+    "@tanstack/router-cli": "1.167.40",
+    "@tanstack/router-core": "1.171.34",
+    "@tanstack/router-plugin": "1.168.42",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.0.1",
     "@types/bun": "catalog:",
@@ -115,6 +143,7 @@
     "@types/react-dom": "catalog:",
     "@types/wicg-file-system-access": "^2023.10.7",
     "@vitejs/plugin-react": "catalog:",
+    "cross-env": "catalog:",
     "happy-dom": "^20.8.9",
     "react": "catalog:",
     "react-dom": "catalog:",

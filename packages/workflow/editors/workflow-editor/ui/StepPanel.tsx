@@ -18,6 +18,7 @@ import {
   textInputClass,
 } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
+import { useSearchParam } from "../../shared/url-param.js";
 import { acyclicTargets, flowOrder, reachableFrom } from "./ap-layout.js";
 import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
@@ -45,6 +46,7 @@ import {
   type PropertySettingModel,
   type RetryPolicyModel,
   type StepModel,
+  TAB_PARAM,
   type TriggerModel,
   type WorkflowEditorCallbacks,
   type WorkflowModel,
@@ -1027,7 +1029,8 @@ function LastRunSection(props: {
   );
 }
 
-type StepTab = "setup" | "run" | "settings";
+const STEP_TABS = ["setup", "run", "settings"] as const;
+type StepTab = (typeof STEP_TABS)[number];
 
 function settingsCustomised(step: StepModel, model: WorkflowModel): number {
   return [
@@ -1048,7 +1051,12 @@ export function StepPanel(props: {
 }) {
   const { step, callbacks } = props;
   const designTime = useDesignTime();
-  const [tab, setTab] = useState<StepTab>("setup");
+  const [tab, setTabParam] = useSearchParam<StepTab>(
+    TAB_PARAM,
+    "setup",
+    STEP_TABS,
+  );
+  const setTab = (next: StepTab) => setTabParam(next, { replace: true });
   const block = stepBlock(step);
   const meta = useBlockMeta(block);
   const { form, formError, missing, issues } = useBlockCheck({

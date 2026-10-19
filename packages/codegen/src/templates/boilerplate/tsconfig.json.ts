@@ -27,6 +27,11 @@ export const tsconfigPathsTemplate = json`
 ],
 "subgraphs/*": [
   "./subgraphs/*/index.ts"
+],
+// Connect's routes plus hosts/connect/routes/, once a build generates the tree;
+// until then the import falls back to Connect's core tree.
+"@powerhousedao/connect/route-tree": [
+  "./.ph/connect-routes.gen.ts"
 ]`.raw;
 
 export const tsConfigTemplate = json`
@@ -55,7 +60,8 @@ export const tsConfigTemplate = json`
     "noUncheckedSideEffectImports": true,
     "skipLibCheck": true
   },
-  "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts", "main.tsx"]
+  // **/* skips dot folders, so of .ph only the route tree is checked: it types hosts/connect/routes/.
+  "include": ["**/*", "./powerhouse.manifest.json", ".ph/connect-routes.gen.ts"],
+  "exclude": ["dist", "node_modules", "vitest.config.ts", "main.tsx"]
 }
 `.raw;

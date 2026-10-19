@@ -50,6 +50,24 @@ import {
 } from "./utils/graphql-manager-harness.js";
 import { PublishedBaseSubgraph } from "./utils/published-base-subgraph.js";
 import { sdlBase } from "./utils/sdl-base.js";
+import { useServer } from "../src/graphql/websocket.js";
+
+vi.mock("../src/graphql/websocket.js", () => ({
+  useServer: vi.fn(() => ({ dispose: vi.fn() })),
+}));
+
+/** The schema the manager's one graphql-ws server routes `source` to. */
+function wsSchema(source: string): GraphQL.GraphQLSchema {
+  const { schema } = vi.mocked(useServer).mock.calls[0][0] as unknown as {
+    schema: (
+      ctx: object,
+      id: string,
+      payload: unknown,
+      args: { document: GraphQL.DocumentNode },
+    ) => GraphQL.GraphQLSchema;
+  };
+  return schema({}, "1", {}, { document: parse(source) });
+}
 
 // The host builds schemas with @apollo/subgraph, which loads graphql's
 // CommonJS entry; executing one needs that copy.
@@ -149,6 +167,7 @@ let warn: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.mocked(useServer).mockClear();
   warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
@@ -471,13 +490,12 @@ describe("a class subgraph", () => {
     await register(harness.manager, Ticks);
     await register(harness.manager, Clock);
 
-    expect(harness.gatewayAdapter.attachWebSocket).toHaveBeenCalledTimes(1);
-    const [, schema] = harness.gatewayAdapter.attachWebSocket.mock.calls[0] as [
-      unknown,
-      GraphQL.GraphQLSchema,
-    ];
+    expect(useServer).toHaveBeenCalledTimes(1);
     expect(
-      Object.keys(schema.getSubscriptionType()?.getFields() ?? {}),
+      Object.keys(
+        wsSchema("subscription { tick }").getSubscriptionType()?.getFields() ??
+          {},
+      ),
     ).toEqual(["tick"]);
     expect(harness.mounts.has("/ticks/stream")).toBe(true);
     expect(harness.mounts.has("/clock/stream")).toBe(false);
@@ -807,9 +825,11 @@ describe("shutdown", () => {
     const { manager, gatewayAdapter, wsServer } = servingHarness();
     await initAndFlush(manager);
     await register(manager, Ticks);
-    const [disposer] = gatewayAdapter.attachWebSocket.mock.results.map(
-      (result) => result.value as { dispose: ReturnType<typeof vi.fn> },
-    );
+    const [disposer] = vi
+      .mocked(useServer)
+      .mock.results.map(
+        (result) => result.value as { dispose: ReturnType<typeof vi.fn> },
+      );
 
     await manager.shutdown();
 
@@ -1003,7 +1023,7 @@ describe("an old-style subgraph, served through the legacy adapter", () => {
     expect(await query(harness, "/legacy-ticks", "{ now }")).toEqual({
       data: { now: "noon" },
     });
-    expect(harness.gatewayAdapter.attachWebSocket).toHaveBeenCalledTimes(1);
+    expect(useServer).toHaveBeenCalledTimes(1);
     expect(harness.mounts.has("/legacy-ticks/stream")).toBe(true);
   });
 

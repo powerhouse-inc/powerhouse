@@ -11,13 +11,16 @@ import { useDrives } from "./drives.js";
 import { useFolderById } from "./folder-by-id.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";
 import { useSelectedFolder } from "./selected-folder.js";
-import { setSelectedNode, useSelectedNode } from "./selected-node.js";
+import { usePHStore } from "./ph-store.js";
+import { useSelectedNode } from "./selected-node.js";
+import { selectNodeIn } from "./set-selected-node.js";
 
 function resolveNode(driveId: string, node: Node | undefined) {
   return node?.id !== driveId ? node : undefined;
 }
 
 export function useNodeActions() {
+  const store = usePHStore();
   const [selectedDrive] = useSelectedDriveSafe();
   const selectedFolder = useSelectedFolder();
   const selectedNode = useSelectedNode();
@@ -127,7 +130,7 @@ export function useNodeActions() {
     const newFolder = await onAddFolder(name, resolvedTarget);
 
     if (newFolder) {
-      setSelectedNode(newFolder);
+      selectNodeIn(store, newFolder);
     }
   }
 

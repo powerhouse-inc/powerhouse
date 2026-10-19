@@ -4,7 +4,6 @@ import {
   addDocument,
   addFolder,
   deleteNode,
-  setSelectedNode,
   useDocumentSafe,
   useFileNodesInSelectedDrive,
   useNodesInSelectedDrive,
@@ -30,7 +29,7 @@ import {
 import { DocumentErrorBoundary } from "../../shared/DocumentErrorBoundary.js";
 import { RunsView } from "./RunsView.js";
 import { Sidebar } from "./Sidebar.js";
-import { useHashSelection } from "./use-hash-selection.js";
+import { useItemSelection } from "./use-item-selection.js";
 import { useRuns } from "./useRuns.js";
 import { WorkflowBoard } from "./WorkflowBoard.js";
 import { WorkflowHeader } from "./WorkflowHeader.js";
@@ -61,8 +60,8 @@ function Studio(props: { children?: ReactNode }) {
   const selectedNode = useSelectedNode();
   const selectedNodeId = selectedNode?.id;
   const toast = usePHToast();
-  // The sidebar selection, kept in the URL hash; undefined = all runs.
-  const [selectedId, select] = useHashSelection();
+  // The sidebar selection, kept in the URL; undefined = all runs.
+  const [selectedId, select, go] = useItemSelection(selectedNodeId);
   const [creating, setCreating] = useState(false);
 
   const driveId = drive.header.id;
@@ -120,14 +119,6 @@ function Studio(props: { children?: ReactNode }) {
         type: "error",
       }),
     );
-  };
-
-  // One history entry per click: when the open editor changes, Connect pushes
-  // its path and the selection rides on that entry.
-  const go = (id: string | undefined, editor?: string) => {
-    const before = window.location.pathname;
-    if ((editor ?? null) !== (selectedNodeId ?? null)) setSelectedNode(editor);
-    select(id, { replace: window.location.pathname !== before });
   };
 
   const showRuns = (node: FileNode | null) => go(node?.id);
@@ -207,7 +198,7 @@ function Studio(props: { children?: ReactNode }) {
                 key={selectedNodeId}
                 documentId={selectedNodeId}
                 label={selectedNode?.name}
-                onDismiss={() => setSelectedNode(undefined)}
+                onDismiss={() => go(selectedId)}
               >
                 {props.children}
               </DocumentErrorBoundary>

@@ -1,4 +1,23 @@
-import { DYNAMIC_BASE_PLACEHOLDER } from "@powerhousedao/shared/connect";
+import { resolveDynamicBaseUrl } from "@powerhousedao/shared/connect";
+
+// Set by `ph connect build`: the content-hashed shared-deps module URL.
+declare const PH_CONNECT_SHARED_DEPS_URL: string | undefined;
+
+function builtSharedDepsUrl(): string | undefined {
+  return typeof PH_CONNECT_SHARED_DEPS_URL !== "undefined"
+    ? PH_CONNECT_SHARED_DEPS_URL
+    : undefined;
+}
+
+/** The shared-deps module URL: this build's hashed copy, else the stable dev path. */
+export function sharedDepsModuleUrl(
+  runtimeBase: string,
+  built: string | undefined = builtSharedDepsUrl(),
+): string {
+  return built
+    ? resolveDynamicBaseUrl(built, runtimeBase)
+    : `${runtimeBase}__vendor__/shared-deps.js`;
+}
 
 export type SharedDeps = {
   imports: Record<string, string>;
@@ -26,8 +45,7 @@ export function normalizeVendorImports(
   return Object.fromEntries(
     Object.entries(rawImports).map(([spec, value]) => [
       spec,
-      new URL(value.replace(DYNAMIC_BASE_PLACEHOLDER, runtimeBase), origin)
-        .href,
+      new URL(resolveDynamicBaseUrl(value, runtimeBase), origin).href,
     ]),
   );
 }
@@ -45,7 +63,7 @@ export function getSharedDeps(): Promise<SharedDeps | null> {
   cached ??= (async () => {
     try {
       const mod = (await import(
-        /* @vite-ignore */ `${import.meta.env.BASE_URL}__vendor__/shared-deps.js`
+        /* @vite-ignore */ sharedDepsModuleUrl(import.meta.env.BASE_URL)
       )) as {
         imports: Record<string, string>;
         versions: Record<string, string>;

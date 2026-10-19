@@ -31,6 +31,12 @@ import {
   DYNAMIC_BASE_PLACEHOLDER,
   connectDynamicBasePlugin,
 } from "./vite-plugins/dynamic-base.js";
+import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
+import {
+  connectRouterChunkGroups,
+  connectRoutes,
+  resolveConnectRoutesDir,
+} from "./vite-plugins/connect-routes.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
@@ -405,6 +411,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     })
     .filter((p): p is string => p !== null);
 
+  const routesDir = resolveConnectRoutesDir(options.dirname);
+  const routes = connectRoutes(options.dirname, routesDir);
+
   const config: InlineConfig = {
     configFile: false,
     mode,
@@ -430,12 +439,28 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       },
     },
     resolve: {
-      dedupe: ["react", "react-dom"],
+      alias: [routes.alias],
+      dedupe: ["react", "react-dom", ...routes.dedupe],
       tsconfigPaths: true,
     },
     define: {
       PH_CONNECT_SENTRY_RELEASE: JSON.stringify(release || "unknown"),
       PH_CONNECT_BUILD_HASH: JSON.stringify(buildHash),
+      // Per-build URLs, so a stale service worker never serves an older copy.
+      ...(options.vendor?.sharedDeps && mode === "production"
+        ? {
+            PH_CONNECT_SHARED_DEPS_URL: JSON.stringify(
+              options.vendor.sharedDeps,
+            ),
+          }
+        : {}),
+      ...(options.reactorWorkerVersion
+        ? {
+            PH_CONNECT_REACTOR_WORKER_VERSION: JSON.stringify(
+              options.reactorWorkerVersion,
+            ),
+          }
+        : {}),
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
@@ -467,11 +492,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       }),
       // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
-      devReactImportmapPlugin(options.dirname),
+      devReactImportmapPlugin(options.dirname, routesDir),
       // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
       // stable URL the tab probes; production builds emit it via
       // prebuildReactorWorker in `ph connect build`.
       reactorWorkerDevPlugin(options.dirname),
+      // The project's routes beside Connect's; ahead of react().
+      ...routes.plugins,
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().
@@ -509,6 +536,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),
+      // Build-time: Connect's prerendered app shell in #root, critical CSS inline.
+      connectAppShellPlugin(options.dirname),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).
       connectBuildHashPlugin(buildHash),
@@ -534,7 +563,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       sourcemap: true,
       // npm can nest privy's optional Solana peers out of its reach; vite
       // stubs them, so named imports from the stub must not fail the build.
-      rolldownOptions: { shimMissingExports: true },
+      rolldownOptions: {
+        shimMissingExports: true,
+        output: {
+          codeSplitting: { groups: connectRouterChunkGroups(routesDir) },
+        },
+      },
     },
   };
   return config;

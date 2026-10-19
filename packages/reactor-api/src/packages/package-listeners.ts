@@ -48,13 +48,15 @@ export function setupEventListeners(
       );
       const incomingTypes = typesOf(newModules);
 
-      // A failed load arrives as no models or no package: neither removes any.
+      // A failed load keeps its last good set; anything missing is gone.
       const removedTypes = new Set<string>();
-      for (const [pkg, models] of Object.entries(packagedModels)) {
-        if (models.length === 0) continue;
-        for (const type of packagedTypes.get(pkg) ?? []) {
+      for (const types of packagedTypes.values()) {
+        for (const type of types) {
           if (!incomingTypes.has(type)) removedTypes.add(type);
         }
+      }
+      packagedTypes.clear();
+      for (const [pkg, models] of Object.entries(packagedModels)) {
         packagedTypes.set(pkg, typesOf(models));
       }
       if (removedTypes.size > 0) {

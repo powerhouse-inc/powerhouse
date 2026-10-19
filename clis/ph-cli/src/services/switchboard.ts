@@ -5,7 +5,6 @@ import type {
 import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
-import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
 import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
 
@@ -25,9 +24,14 @@ export function allowLocalhostEgress(env: NodeJS.ProcessEnv = process.env) {
     env[EGRESS_ALLOW_ENV] = [...current, ...missing].join(",");
 }
 
+// No `dbPath` default here: the classic commands always carry the parsed
+// `dbPath` key (undefined without --db-path) and so always overrode it — the
+// server's own split defaults (`.ph/reactor-storage` for the reactor,
+// `.ph/read-storage` for the read model) are the legacy layout. A default
+// here resurfaces for any caller that omits the key and then names ONE dir
+// for both PGlite stores (two writers on one PGDATA).
 export const defaultSwitchboardOptions = {
   port: 4001,
-  dbPath: path.join(process.cwd(), ".ph/read-model.db"),
   drive: {
     id: "powerhouse",
     slug: "powerhouse",
@@ -50,7 +54,6 @@ function getDefaultVetraSwitchboardOptions(
 ): Partial<StartServerOptions> {
   return {
     port: 4001,
-    dbPath: path.join(process.cwd(), ".ph/read-model.db"),
     drive: {
       id: vetraDriveId,
       slug: vetraDriveId,
@@ -70,7 +73,11 @@ function getDefaultVetraSwitchboardOptions(
 }
 
 export async function startSwitchboard(
-  options: SwitchboardArgs & {
+  options: Omit<SwitchboardArgs, "mcp"> & {
+    /** A declared composition (R2) leaves this unset: the mcp plugin's presence sets it. */
+    mcp?: boolean;
+    /** `undefined` suppresses the default drive (declared drives replace it). */
+    drive?: StartServerOptions["drive"];
     strictPort?: boolean;
     processorConfig?: Map<string, unknown>;
   },

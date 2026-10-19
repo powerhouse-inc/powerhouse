@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { globalOperations } from "./mocks.js";
-import { RevisionHistory } from "./revision-history.js";
+import { RevisionHistory } from "./revision-history.impl.js";
 
 const baseProps = {
   documentTitle: "Doc",

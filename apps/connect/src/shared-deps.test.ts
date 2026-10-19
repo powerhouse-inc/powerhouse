@@ -3,7 +3,32 @@
 // absolute URLs; concrete-base values pass through (still made absolute).
 
 import { describe, expect, it } from "vitest";
-import { normalizeVendorImports } from "./shared-deps.js";
+import { normalizeVendorImports, sharedDepsModuleUrl } from "./shared-deps.js";
+
+describe("sharedDepsModuleUrl", () => {
+  it("falls back to the stable dev path when the build sets no hashed URL", () => {
+    expect(sharedDepsModuleUrl("/app/")).toBe("/app/__vendor__/shared-deps.js");
+  });
+
+  it("keeps a concrete subpath base's URL as built", () => {
+    const url = "/connect/__vendor__/shared-deps-abc.js";
+    expect(sharedDepsModuleUrl("/connect/", url)).toBe(url);
+  });
+
+  it("keeps a root base's URL as built", () => {
+    const url = "/__vendor__/shared-deps-abc.js";
+    expect(sharedDepsModuleUrl("/", url)).toBe(url);
+  });
+
+  it("resolves a dynamic-base build's placeholder to the runtime base", () => {
+    expect(
+      sharedDepsModuleUrl(
+        "/app/",
+        "/__PH_DYNAMIC_BASE__/__vendor__/shared-deps-abc.js",
+      ),
+    ).toBe("/app/__vendor__/shared-deps-abc.js");
+  });
+});
 
 describe("normalizeVendorImports", () => {
   it("resolves the dynamic-base placeholder and makes values absolute", () => {
@@ -35,6 +60,15 @@ describe("normalizeVendorImports", () => {
       a: "http://localhost/__vendor__/a.js",
       b: "http://localhost/__vendor__/b.js",
     });
+  });
+
+  it("does not prefix a concrete subpath base twice", () => {
+    expect(
+      normalizeVendorImports(
+        { zod: "/connect/__vendor__/zod-x.js" },
+        "/connect/",
+      ),
+    ).toEqual({ zod: "http://localhost/connect/__vendor__/zod-x.js" });
   });
 
   it("handles an empty table", () => {

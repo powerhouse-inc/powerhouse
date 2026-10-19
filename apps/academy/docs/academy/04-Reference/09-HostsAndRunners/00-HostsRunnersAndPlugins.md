@@ -239,20 +239,18 @@ its own registry (`generic`, `sentry`, `openpanel`, `assistant`,
 browser is on the roadmap. Server-side (switchboard, compound) compositions
 resolve real modules from your project's `node_modules` today.
 
-:::caution Connect plugin presence today controls CONFIG, not the UI tree
-A built-in Connect plugin's effect right now is its `transformConnectConfig`
-step — the config slice it owns. The generic plugin owns the drive-chrome
-toggles: `allowAddDrive` and `sections.{remote,local}.{enabled,allowAdd,allowDelete}`
-(configure them through its entry `config`, not top-level `connect.drives`).
-Removing `@powerhousedao/connect/plugins/generic` turns those OFF — no
-add-drive affordance, drive sections disabled — which is live and observable
-today. What it does **not** yet do is unmount the chrome shell (sidebar, home,
-`/d/` routes); that UI still renders, and gating it on the plugin (remove it →
-go headless, or swap your own shell) is a roadmap item. (`branding` is NOT the
-generic plugin's concern — it has reach beyond the chrome, like the document
-title, so it stays a top-level `connect.branding` value that survives the
-plugin's absence. The switchboard side is already fully behavioural: removing
-`mcp` removes `/mcp`.)
+:::caution What removing the Connect generic plugin does today
+The generic plugin owns the drive-chrome toggles: `allowAddDrive` and
+`sections.{remote,local}.{enabled,allowAdd,allowDelete}` (configure them
+through its entry `config`, not top-level `connect.drives`). When a host
+declares a plugin list without `@powerhousedao/connect/plugins/generic`, those
+toggles turn OFF and Connect hides the generic chrome: the sidebar and the
+drive-list home screen. Drive and document views under `/d/` still render.
+With no declared plugin list, every plugin reads as present, so classic Connect
+is unchanged. (`branding` is NOT the generic plugin's concern. It reaches past
+the chrome, for example into the document title, so it stays a top-level
+`connect.branding` value that survives the plugin's absence. The switchboard
+side behaves the same way: removing `mcp` removes `/mcp`.)
 :::
 
 ## Writing your own plugin

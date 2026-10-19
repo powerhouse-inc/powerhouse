@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { DocumentDriveDocument } from "@powerhousedao/shared";
 import { DriveDocumentSchema } from "@powerhousedao/shared/document-drive";
 import { useEffect, useState } from "react";
@@ -18,8 +19,8 @@ import {
 import { setDocumentCache } from "./document-cache.js";
 import { setDrives } from "./drives.js";
 import { setGraphQLReactorClient } from "./graphql-reactor-client.js";
-import { setSelectedDrive } from "./selected-drive.js";
-import { setSelectedNode } from "./selected-node.js";
+import { selectDrive } from "./selected-drive.js";
+import { selectNode } from "./set-selected-node.js";
 
 export function useInitReactorGraphqlClient(
   switchboardUrl = DEFAULT_SWITCHBOARD_URL,
@@ -41,7 +42,7 @@ export function useInitReactorGraphqlClient(
 async function reactorGraphqlFetchDrive(
   identifier: string,
 ): Promise<DocumentDriveDocument> {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -63,7 +64,7 @@ async function reactorGraphqlFetchDrive(
 }
 
 async function reactorGraphqlSyncDrive(driveId: string) {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
 
   if (!client) {
     throw new Error(
@@ -72,23 +73,19 @@ async function reactorGraphqlSyncDrive(driveId: string) {
   }
   const drive = await reactorGraphqlFetchDrive(driveId);
   setDrives([drive]);
-  setSelectedDrive(drive);
+  selectDrive(drive);
 }
 
 async function initGraphQLReactorClientWithDocumentCache(
   switchboardUrl: string,
   driveId: string,
 ) {
-  if (!window.ph) {
-    window.ph = {};
-  }
-
   callEventHandlerRegisterFunctions(commonGlobalEventHandlerFunctions);
 
   const client = createClient(switchboardUrl, documentCacheClientMiddleware);
   setGraphQLReactorClient(client);
   await reactorGraphqlSyncDrive(driveId);
-  setSelectedNode(undefined);
+  selectNode(undefined);
   setDocumentCache(new GraphQLClientDocumentCache());
 
   forEach(graphqlEventsToSyncDrive, (name) => {

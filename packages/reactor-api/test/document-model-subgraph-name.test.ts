@@ -125,9 +125,9 @@ describe("a document model subgraph's name", () => {
     expect(harness.manager.getSubgraphByName("café-menu")).toBeUndefined();
     expect([...harness.mounts.keys()]).not.toContain("/graphql/café-menu");
     expect(harness.logger.error).toHaveBeenCalledWith(
-      "Refusing document model @documentType from the GraphQL schema: @reason",
+      "Refusing every version of document model @documentType from the GraphQL schema: @reason",
       "powerhouse/cafe-menu",
-      "has an unusable schema: Syntax Error: Unexpected character: U+00E9.",
+      "version 1 has an unusable schema: Syntax Error: Unexpected character: U+00E9.",
     );
   });
 

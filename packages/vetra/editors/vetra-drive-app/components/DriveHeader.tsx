@@ -1,3 +1,4 @@
+import { resolveUrlPathname } from "@powerhousedao/reactor-browser";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DriveInfoItem } from "./DriveInfoItem.js";
 import { ShareMenuItem } from "./ShareMenuItem.js";
@@ -5,6 +6,19 @@ import { InfoIcon } from "../icons/InfoIcon.js";
 import { ExternalLinkIcon } from "../icons/ExternalLinkIcon.js";
 import { ShareIcon } from "../icons/ShareIcon.js";
 import { VetraIcon } from "../icons/VetraIcon.js";
+
+/** A link that opens this host, under its base path, with `driveUrl` added. */
+export function makeDriveShareUrl(driveUrl: string) {
+  if (!driveUrl) return "";
+  try {
+    new URL(driveUrl);
+  } catch {
+    return "";
+  }
+  const appUrl = new URL(resolveUrlPathname("/"), window.location.origin);
+  appUrl.searchParams.set("driveUrl", driveUrl);
+  return appUrl.href;
+}
 
 interface DriveHeaderProps {
   driveId: string;
@@ -66,15 +80,7 @@ export const DriveHeader: React.FC<DriveHeaderProps> = ({
     };
   }, [isInfoMenuOpen, isShareMenuOpen]);
 
-  const shareUrl = useMemo(() => {
-    if (!driveUrl) return "";
-    try {
-      new URL(driveUrl);
-      return `${window.location.origin}/?driveUrl=${encodeURIComponent(driveUrl)}`;
-    } catch {
-      return "";
-    }
-  }, [driveUrl]);
+  const shareUrl = useMemo(() => makeDriveShareUrl(driveUrl), [driveUrl]);
 
   return (
     <div className="bg-background px-6 py-4">

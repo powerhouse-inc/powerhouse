@@ -4,7 +4,6 @@ import { compileSubgraphTypeDefs } from "document-model/tooling";
 import { type DocumentNode, Kind } from "graphql";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
-  admitDocumentModel,
   buildDocumentModelSchema,
   createSchema,
   type DocumentModelSchema,
@@ -18,9 +17,11 @@ import {
   isDocumentModelModule,
   latestDocumentModelVersions,
   reservedTypeNames,
+  type ResolvedDocumentModelSchema,
   SubgraphTypeCollisionError,
   typeDefinitionNames,
 } from "../utils/create-schema.js";
+import { admitDocumentModels } from "./subgraph-admission.js";
 import { analyticsSchema } from "./analytics-schema.js";
 import { authSchema } from "./auth/schema.js";
 import { inspectionSchema } from "./inspection/schema.js";
@@ -184,31 +185,31 @@ export function hostDocumentModels<M extends DocumentModelSource>(
     });
   };
 
+  const resolved: ResolvedDocumentModelSchema<M | DocumentModelModule>[] = [];
   for (const model of [
     ...baseDocumentModels.map(([, base]) => base),
     ...documentModels,
   ]) {
-    let built: DocumentModelSchema | Error;
+    const { id } = globalStateOf(model);
     try {
-      built = buildDocumentModelSchema(model);
+      resolved.push({
+        model,
+        key: id,
+        schema: buildDocumentModelSchema(model),
+      });
     } catch (error) {
-      built = error instanceof Error ? error : new Error(String(error));
+      resolved.push({
+        model,
+        key: id,
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
     }
-    const admission = admitDocumentModel(
-      built instanceof Error
-        ? { model, error: built }
-        : { model, schema: built },
-      reserved,
-    );
-    if (!admission.admitted) {
-      refuse(model, admission.refusal, admission.reason);
-      continue;
-    }
-    admitted.push(model);
-    schemas.set(model, admission.schema);
-    if (admission.subgraphRefusal !== undefined) {
-      refuse(model, "unusable subgraph", admission.subgraphRefusal);
-    }
+  }
+  const admissions = admitDocumentModels(resolved, reserved);
+  admitted.push(...admissions.admitted);
+  for (const [model, schema] of admissions.schemas) schemas.set(model, schema);
+  for (const { model, kind, reason } of admissions.refusals) {
+    refuse(model, kind, reason);
   }
 
   // The server registers the latest version's subgraph only, refuses one

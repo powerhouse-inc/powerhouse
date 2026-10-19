@@ -233,6 +233,22 @@
       }
     },
     {
+      "files": [
+        "apps/connect/src/router/**/*.{ts,tsx}",
+        "apps/connect/src/routes/**/*.{ts,tsx}",
+        "apps/connect/src/components/drive-auth-gate.test.tsx"
+      ],
+      "jsPlugins": [
+        {
+          "name": "tanstack-router",
+          "specifier": "@tanstack/eslint-plugin-router"
+        }
+      ],
+      "rules": {
+        "tanstack-router/create-route-property-order": "error"
+      }
+    },
+    {
       "files": ["**/*.tsx"],
       "jsPlugins": [
         {
@@ -776,6 +792,8 @@
     "**/build/",
     "**/.docusaurus/",
     "**/.ph/",
+    "**/routeTree.gen.ts",
+    "**/.prerender/",
     "**/.hotseat/",
     "**/prisma/",
     "**/babel.config.js",

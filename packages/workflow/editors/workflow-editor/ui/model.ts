@@ -129,6 +129,10 @@ export interface WorkflowModel {
 // The side panel's id for the variables editor, beside step and trigger ids.
 export const VARIABLES_VIEW = "__variables";
 
+/** Query params of the editor's view: the open panel and its tab. */
+export const STEP_PARAM = "step";
+export const TAB_PARAM = "tab";
+
 // Unpublished changes: never published, or edited since.
 export function hasDraftChanges(
   model: Pick<WorkflowModel, "version" | "published">,

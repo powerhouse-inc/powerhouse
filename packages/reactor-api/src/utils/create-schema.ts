@@ -414,6 +414,12 @@ export const globalStateOf = (
 ): DocumentModelGlobalState =>
   isDocumentModelModule(source) ? source.documentModel.global : source;
 
+/** The version of a model: its module's, else its latest specification's. */
+export const documentModelVersion = (source: DocumentModelSource): number =>
+  (isDocumentModelModule(source) ? source.version : undefined) ??
+  globalStateOf(source).specifications.at(-1)?.version ??
+  0;
+
 /**
  * The latest version of each model, by name: the only one whose own subgraph
  * the server registers.
@@ -421,15 +427,14 @@ export const globalStateOf = (
 export function latestDocumentModelVersions<M extends DocumentModelSource>(
   documentModels: readonly M[],
 ): M[] {
-  const versionOf = (source: M) =>
-    (isDocumentModelModule(source) ? source.version : undefined) ??
-    globalStateOf(source).specifications.at(-1)?.version ??
-    0;
   const latestByName = new Map<string, M>();
   for (const documentModel of documentModels) {
     const { name } = globalStateOf(documentModel);
     const existing = latestByName.get(name);
-    if (!existing || versionOf(documentModel) > versionOf(existing)) {
+    if (
+      !existing ||
+      documentModelVersion(documentModel) > documentModelVersion(existing)
+    ) {
       latestByName.set(name, documentModel);
     }
   }
@@ -736,8 +741,8 @@ const GENERATED_TAIL = gql`
 
 /** {@link generatedTypesOf} for modules. */
 export function getGeneratedDocumentModelTypes(
-  documentModels: DocumentModelModule[],
-  schemas?: ReadonlyMap<DocumentModelModule, DocumentModelSchema>,
+  documentModels: readonly DocumentModelSource[],
+  schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
   return generatedTypesOf(documentModels, schemas);
 }
@@ -885,8 +890,10 @@ export function buildDocumentModelSchema(
 }
 
 /** A document model's schema, or why it is unusable, under its source key. */
-export type ResolvedDocumentModelSchema = {
-  model: DocumentModelModule;
+export type ResolvedDocumentModelSchema<
+  T extends DocumentModelSource = DocumentModelModule,
+> = {
+  model: T;
   key: string;
 } & (
   | { schema: DocumentModelSchema; error?: undefined }

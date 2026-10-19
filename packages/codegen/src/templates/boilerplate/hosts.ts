@@ -242,11 +242,16 @@ export default {
 
   runner: {
     module: "@powerhousedao/desktop/runner",
-    // NATIVE WINDOW (optional): point \`shell\` at a ph-win-desktop checkout;
-    // \`ph run desktop dev\` then opens the shell around this stack with no
-    // environment wiring, and \`ph run desktop build\` stages the shippable
-    // stack (hosts + config + built Connect + vendored ph-cli) into the
-    // shell for a no-env installed app. Headless verbs need no shell.
+    // NATIVE WINDOW: two ways to get one (headless verbs need neither).
+    //
+    // 1. BUILDER-OWNED IDENTITY (recommended, no Rust): run
+    //    \`ph generate desktop-shell\` to scaffold hosts/desktop/app.json.
+    //    \`ph run desktop dev\` projects it into a generated Tauri shell that
+    //    depends on the published ph-desktop-shell crate and opens the window
+    //    around this stack; \`ph run desktop build\` produces installers for
+    //    this OS (nsis / app+dmg / deb+appimage). Needs Rust + the Tauri CLI.
+    //
+    // 2. PREBUILT/HAND-MAINTAINED shell: point \`shell.project\` at a checkout.
     // shell: {
     //   project: "../ph-win-desktop",
     //   window: { title: "${projectName}", width: 1440, height: 900 },
@@ -274,10 +279,14 @@ export default {
         protocol: switchboard.reactor.protocol,
         backends: {
           main: {
-            // Per-user data dir; \${userData} resolves at the runner (a shell
-            // points it at the OS profile via PH_USER_DATA_DIR).
-            storage: { kind: "path", dataDir: "\${userData}/pglite" },
-            readModel: { url: "\${userData}/pglite" },
+            // The user's .ph tree, same names as the project's: \${userData}
+            // resolves at the runner — the project root in the CLI, the OS
+            // profile dir in a shell (PH_USER_DATA_DIR). The reactor store is
+            // named here for clarity; the read model (.ph/read-storage),
+            // identity and run records follow the same root by default.
+            // NEVER point readModel at this dir: two PGlite instances on one
+            // data dir corrupt it (the runner refuses the declaration).
+            storage: { kind: "path", dataDir: "\${userData}/.ph/reactor-storage" },
             // the reactor can fetch models Connect installs at runtime
             packages: { dynamic: true },
           },

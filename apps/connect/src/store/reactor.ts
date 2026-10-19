@@ -18,9 +18,9 @@ import {
   addRemoteDrive,
   DocumentCache,
   DRIVE_DOCUMENT_TYPES,
-  extractDriveSlugFromPath,
-  extractNodeSlugFromPath,
   login,
+  trackDriveArrival,
+  untilDriveListed,
   refreshReactorDataClient,
   RegistryClient,
   setAttachmentService,
@@ -42,6 +42,8 @@ import {
   type PHToastFn,
   type ReactorFeatureFlags,
   type WorkerReactorClientModule,
+  getPHStore,
+  type PHStore,
 } from "@powerhousedao/reactor-browser";
 import {
   BrowserKeyStorage,
@@ -54,6 +56,7 @@ import {
   type UpgradeManifest,
 } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
+
 import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
@@ -198,7 +201,7 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
 }
 
 export async function clearReactorStorage() {
-  const module = window.ph?.reactorClientModule;
+  const module = getPHStore()?.reactorClientModule;
   if (module?.kind === "worker") {
     // The worker holds the PGlite handles open, so it must close + clear them.
     await module.adminClient.clearStorage();
@@ -231,13 +234,13 @@ export async function clearReactorStorage() {
   );
 }
 
-export async function createReactor(localPackage?: DocumentModelLib) {
-  if (!window.ph) {
-    window.ph = {};
-  }
-  if (window.ph.loading) return;
+export async function createReactor(
+  localPackage: DocumentModelLib | undefined,
+  store: PHStore,
+) {
+  if (store.loading) return;
 
-  window.ph.loading = true;
+  store.loading = true;
 
   addPHEventHandlers();
 
@@ -318,17 +321,19 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     subscribeToPackagesChannel(packageManager);
   }
 
-  const documentModelModules = packageManager.packages
-    .flatMap((pkg) => pkg.documentModels)
-    .filter(
-      (module, index, modules) =>
-        // dedupe by documentType and version
-        modules.findIndex(
-          (m) =>
-            m.documentModel.global.id === module.documentModel.global.id &&
-            m.version === module.version,
-        ) === index,
-    );
+  const loadedDocumentModels = () =>
+    packageManager.packages
+      .flatMap((pkg) => pkg.documentModels)
+      .filter(
+        (module, index, modules) =>
+          // dedupe by documentType and version
+          modules.findIndex(
+            (m) =>
+              m.documentModel.global.id === module.documentModel.global.id &&
+              m.version === module.version,
+          ) === index,
+      );
+  const documentModelModules = loadedDocumentModels();
 
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
@@ -437,7 +442,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       bundle: packagedWorker,
     });
     if (workerSource.kind === "unavailable") {
-      window.ph.loading = false;
+      store.loading = false;
       throw new Error(
         "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
       );
@@ -496,7 +501,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         [REACTOR_INSTANCE_NAMESPACE, RELATIONAL_PGLITE_NAME],
       );
     } catch (error) {
-      window.ph.loading = false;
+      store.loading = false;
       logger.error("Reactor worker failed to start: @error", error);
       throw error;
     }
@@ -520,7 +525,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     module: reactorClientModule,
     remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
     signer: renown.signer,
-    documentModelModules,
+    documentModelModules: loadedDocumentModels,
   });
 
   const drives = await getAppDrives(
@@ -528,8 +533,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     reactorClientModule?.client ?? appReactorClient,
   );
 
-  const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, renown);
+  // Reads `?user=` and strips it once consumed.
+  await login(undefined, renown);
 
   const documentCache = new DocumentCache(appReactorClient);
 
@@ -542,11 +547,6 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   );
   setDefaultPHGlobalConfig(mergedGlobalConfig);
 
-  // Slug extraction needs window.ph.basePath, published by
-  // setDefaultPHGlobalConfig above.
-  const path = window.location.pathname;
-  const driveSlug = extractDriveSlugFromPath(path);
-  const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
   setReactorClient(appReactorClient);
 
@@ -577,27 +577,32 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   setDocumentCache(documentCache);
   setRenown(renown);
-  setDrives(drives);
   setFeatures(features);
 
-  // Add default/remote drives in the background so the app renders immediately;
-  // setSelectedDrive defers selection until the URL-matched drive syncs in.
+  // Add default/remote drives in the background so the app renders immediately.
+  // They are tracked before the drives are set, so a waiting route sees them pending.
+  // The remote client lists the Switchboard's own drives; it has no sync to add drives to.
+  const addsDrives = mode !== "remote";
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
-  if (defaultDrivesConfig.length > 0) {
-    void addDefaultDrivesForNewReactor(defaultDrivesConfig).catch((error) =>
-      console.error("Failed to add default drives:", error),
-    );
+  if (addsDrives && defaultDrivesConfig.length > 0) {
+    void trackDriveArrival(
+      addDefaultDrivesForNewReactor(defaultDrivesConfig),
+    ).catch((error) => console.error("Failed to add default drives:", error));
   }
 
   const remoteUrl = getDriveUrl();
-  if (remoteUrl) {
-    void addRemoteDrive(remoteUrl, undefined).catch((error) =>
+  if (remoteUrl && !addsDrives) {
+    logger.warn("The remote reactor client ignores ?driveUrl=@url", remoteUrl);
+  } else if (remoteUrl) {
+    void trackDriveArrival(
+      addRemoteDrive(remoteUrl, undefined).then((driveId) =>
+        untilDriveListed(store, driveId),
+      ),
+    ).catch((error) =>
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error),
     );
   }
-
-  setSelectedDrive(driveSlug);
-  setSelectedNode(nodeSlug);
+  setDrives(drives);
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
@@ -614,8 +619,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // Redirect when a currently-viewed document or drive is deleted remotely
   reactorClient.subscribe({}, (event) => {
     closeDeletedSelection(event, {
-      selectedDriveId: window.ph?.selectedDriveId,
-      selectedNodeId: window.ph?.selectedNodeId,
+      selectedDriveId: store.selectedDriveId,
+      selectedNodeId: store.selectedNodeId,
       closeDrive: () => setSelectedDrive(undefined),
       closeNode: () => setSelectedNode(undefined),
       notify: (message) => toast(message),
@@ -660,7 +665,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     const processorHostModule = await createProcessorHostModule(
       reactorClientModule.client,
       readModels,
-      window.ph?.attachmentService,
+      store.attachmentService,
     );
     if (processorHostModule !== undefined) {
       await Promise.all(
@@ -684,14 +689,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     }
   }
 
-  window.ph.loading = false;
-}
-
-function getDidFromUrl() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const didComponent = searchParams.get("user");
-  const did = didComponent ? decodeURIComponent(didComponent) : undefined;
-  return did;
+  store.loading = false;
 }
 
 function getDriveUrl() {

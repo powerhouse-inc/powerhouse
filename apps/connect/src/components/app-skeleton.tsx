@@ -77,7 +77,7 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
     <div
       className={`skeleton-loader absolute inset-0 z-10 flex items-center justify-center ${showLoading ? "" : "hidden"}`}
     >
-      <div className="animate-pulse overflow-hidden rounded-full shadow-lg">
+      <div className="animate-pulse overflow-hidden rounded-full shadow-lg motion-reduce:animate-none">
         <LogoAnimation />
       </div>
       {isSSR ? (
@@ -105,7 +105,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
     <div className="flex h-screen overflow-hidden bg-background">
       {!isEmbedded && (
         <ConnectSidebar
-          className="animate-pulse"
+          className="animate-pulse motion-reduce:animate-none"
           onLogin={undefined}
           onDisconnect={undefined}
           onClickSettings={undefined}

@@ -6,9 +6,29 @@ import {
   REACTOR_WORKER_META_PATH,
   resolvePackagedReactorWorker,
   selectReactorWorkerSource,
+  workerFileUrl,
 } from "../../src/utils/reactor-worker-url.js";
 
 const ORIGIN = "https://app.test";
+
+describe("workerFileUrl", () => {
+  it("versions the URL with the build's worker digest", () => {
+    expect(
+      workerFileUrl(
+        "/app/",
+        "__reactor_worker__/reactor.worker.js",
+        ORIGIN,
+        "abc",
+      ).href,
+    ).toBe(`${ORIGIN}/app/__reactor_worker__/reactor.worker.js?v=abc`);
+  });
+
+  it("stays unversioned without a digest (dev)", () => {
+    expect(
+      workerFileUrl("/", "__reactor_worker__/worker-meta.json", ORIGIN).href,
+    ).toBe(`${ORIGIN}/__reactor_worker__/worker-meta.json`);
+  });
+});
 
 describe("joinBase", () => {
   it("joins the root base without doubling slashes", () => {

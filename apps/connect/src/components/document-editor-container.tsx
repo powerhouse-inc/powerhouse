@@ -1,4 +1,4 @@
-import { DocumentEditor } from "@powerhousedao/connect/components";
+import { DocumentEditor } from "./editors.js";
 import {
   setSelectedNode,
   useNodeParentFolderById,

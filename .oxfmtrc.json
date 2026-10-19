@@ -22,6 +22,7 @@
     "test/registry-e2e/fixture/package/build/",
     "test/registry-e2e/results/",
     "**/test/**/goldens/",
-    "**/test/**/__golden__/"
+    "**/test/**/__golden__/",
+    "**/routeTree.gen.ts"
   ]
 }

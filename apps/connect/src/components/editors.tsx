@@ -1,12 +1,12 @@
-import { EditorLoader } from "@powerhousedao/connect/components";
-import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
+import { EditorLoader } from "./editor-loader.js";
+import { useUndoRedoShortcuts } from "../hooks/useUndoRedoShortcuts.js";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
+  openTarget,
   setRevisionHistoryVisible,
-  showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
@@ -64,7 +64,7 @@ function OpenPackageManagerButton() {
     <PowerhouseButton
       className="px-3 py-1.5 text-base font-medium"
       onClick={() => {
-        showPHModal({ type: "settings" });
+        openTarget({ settings: "package-manager" });
       }}
       type="button"
     >

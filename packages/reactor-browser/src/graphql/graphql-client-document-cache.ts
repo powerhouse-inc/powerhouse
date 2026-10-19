@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { PHDocument } from "document-model";
 import { ClientError } from "graphql-request";
 import { forEach } from "remeda";
@@ -24,7 +25,7 @@ function isMissingDocumentMessage(message: string): boolean {
 async function fetchDocumentForRefetch(
   identifier: string,
 ): Promise<PHDocument> {
-  const client = window.ph?.reactorGraphQLClient;
+  const client = getPHStore()?.reactorGraphQLClient;
   if (!client) {
     throw new Error(
       "Please call `useInitReactorGraphqlClient` to use its functions",

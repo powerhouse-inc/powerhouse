@@ -1,7 +1,7 @@
 import { startConnect } from "@powerhousedao/connect";
-import * as localPackage from "./index.js";
 
-const { updateLocalPackage } = startConnect(localPackage);
+// Loaded lazily so the package's models stay off Connect's boot path.
+const { updateLocalPackage } = startConnect(() => import("./index.js"));
 
 if (import.meta.hot) {
   import.meta.hot.accept(["./index.js"], ([newModule]) => {

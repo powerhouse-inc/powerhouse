@@ -1,9 +1,12 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
@@ -12,11 +15,16 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  findPackageRoot,
+  linkedBuildStamp,
   missingVendorEntries,
   prebuildConnectVendor,
+  resolveOwnDeps,
   withVendorBase,
   type PrebuiltVendor,
 } from "./externalize-vendor.js";
+
+const HASHED_ZOD = /^\/__vendor__\/zod-[\w-]+\.js$/;
 
 // The real dev context is the fixture: apps/connect resolves vite + zod,
 // exactly where the dev plugin calls prebuildConnectVendor.
@@ -64,10 +72,16 @@ describe("prebuildConnectVendor production options", () => {
     expect(result, "vendor build should succeed").not.toBeNull();
     const v = result as PrebuiltVendor;
     // Import-map values stay base-relative; the consumer prefixes the base.
-    expect(v.imports["zod"]).toBe("/__vendor__/zod.js");
+    expect(v.imports["zod"]).toMatch(HASHED_ZOD);
     expect(v.versions["zod"]).toBe(ZOD_VERSION);
-    const modPath = join(vendorDir, "shared-deps.js");
-    expect(existsSync(modPath), "shared-deps.js must be emitted").toBe(true);
+    expect(v.sharedDeps).toMatch(
+      /^\/__vendor__\/shared-deps-[0-9a-f]{12}\.js$/,
+    );
+    const modPath = join(vendorDir, v.sharedDeps.slice("/__vendor__/".length));
+    expect(existsSync(modPath), "shared-deps must be emitted").toBe(true);
+    expect(readFileSync(join(vendorDir, "shared-deps.js"), "utf8")).toBe(
+      readFileSync(modPath, "utf8"),
+    );
     const mod = (await import(pathToFileURL(modPath).href)) as {
       imports: Record<string, string>;
       versions: Record<string, string>;
@@ -77,7 +91,7 @@ describe("prebuildConnectVendor production options", () => {
     // against the page origin, so a base-less path would 404 on a subpath
     // deploy.
     expect(mod.imports).toEqual(withVendorBase(v.imports, "/app/"));
-    expect(mod.imports["zod"]).toBe("/app/__vendor__/zod.js");
+    expect(mod.imports["zod"]).toBe(`/app${v.imports["zod"]}`);
     expect(mod.versions).toEqual(v.versions);
 
     // mkdtemp stages the build at 0700 and the rename carries that mode over.
@@ -103,8 +117,37 @@ describe("prebuildConnectVendor production options", () => {
     });
     expect(result, "vendor build should succeed").not.toBeNull();
     const v = result as PrebuiltVendor;
-    expect(v.imports["zod"]).toBe("/__vendor__/zod.js");
+    expect(v.imports["zod"]).toMatch(HASHED_ZOD);
     expect(v.versions["zod"]).toBe(ZOD_VERSION);
+    const file = (url: string) =>
+      join(vendorDir, url.slice("/__vendor__/".length));
+
+    // zod's entries drop the locales namespace (it pins every locale); zod/locales keeps them.
+    type ZodLike = {
+      locales?: unknown;
+      core: { locales?: unknown };
+      string(): {
+        safeParse(v: unknown): { error?: { issues: { message: string }[] } };
+      };
+    };
+    const zod = (await import(pathToFileURL(file(v.imports["zod"])).href)) as {
+      z: ZodLike;
+      default: unknown;
+    };
+    expect("locales" in zod).toBe(false);
+    expect(zod.z.locales).toBeUndefined();
+    expect(zod.z.core.locales).toBeUndefined();
+    expect(zod.default).toBe(zod.z);
+    expect(zod.z.string().safeParse(1).error?.issues[0].message).toBe(
+      "Invalid input: expected string, received number",
+    );
+    expect(v.imports["zod/locales"]).toMatch(
+      /^\/__vendor__\/zod_locales-[\w-]+\.js$/,
+    );
+    const locales = (await import(
+      pathToFileURL(file(v.imports["zod/locales"])).href
+    )) as Record<string, unknown>;
+    expect(typeof locales.fr).toBe("function");
   }, 240_000);
 
   it("serves a cache hit on an identical second call", async () => {
@@ -122,6 +165,112 @@ describe("prebuildConnectVendor production options", () => {
     expect(second).not.toBeNull();
     expect(second).toEqual(first);
   }, 240_000);
+});
+
+const readMeta = (vendorDir: string) =>
+  JSON.parse(readFileSync(join(vendorDir, "import-map.json"), "utf8")) as {
+    versionDigest: string;
+    base: string;
+    nodeEnv: string;
+  };
+
+describe("vendor URLs are content-addressed", () => {
+  it("keeps the URLs when a rebuild produces the same content", async () => {
+    const vendorDir = join(dir, "stable");
+    const opts = {
+      dirname: DIRNAME,
+      include: ["zod"],
+      vendorDir,
+      nodeEnv: "production" as const,
+      base: "/",
+    };
+    const first = (await prebuildConnectVendor(opts)) as PrebuiltVendor;
+    // Not a cache hit: the dir is gone, so the vendor really builds again.
+    rmSync(vendorDir, { recursive: true, force: true });
+    const second = (await prebuildConnectVendor(opts)) as PrebuiltVendor;
+    expect(second.imports).toEqual(first.imports);
+    expect(second.sharedDeps).toBe(first.sharedDeps);
+  }, 240_000);
+
+  it("changes the URLs when the content changes", async () => {
+    const dev = (await prebuildConnectVendor({
+      dirname: DIRNAME,
+      include: ["zod"],
+      vendorDir: join(dir, "env-dev"),
+      nodeEnv: "development",
+      base: "/",
+    })) as PrebuiltVendor;
+    const prod = (await prebuildConnectVendor({
+      dirname: DIRNAME,
+      include: ["zod"],
+      vendorDir: join(dir, "env-prod"),
+      nodeEnv: "production",
+      base: "/",
+    })) as PrebuiltVendor;
+    // Minified vs not: same entry name, different bytes, different URL.
+    expect(prod.imports["zod"]).not.toBe(dev.imports["zod"]);
+  }, 240_000);
+});
+
+describe("vendored dynamic-base helpers", () => {
+  it("leave a concrete base's URLs alone and resolve a dynamic build's placeholder", async () => {
+    const vendorDir = join(dir, "shared-connect");
+    const v = (await prebuildConnectVendor({
+      dirname: DIRNAME,
+      include: ["@powerhousedao/shared/connect"],
+      vendorDir,
+      base: "/connect/",
+      nodeEnv: "production",
+    })) as PrebuiltVendor;
+    expect(v).not.toBeNull();
+    const url = v.imports["@powerhousedao/shared/connect"];
+    const mod = (await import(
+      pathToFileURL(join(vendorDir, url.slice("/__vendor__/".length))).href
+    )) as {
+      DYNAMIC_BASE_PLACEHOLDER: string;
+      resolveDynamicBaseUrl: (url: string, base: string) => string;
+    };
+    // The trap: the vendor build rewrites the string constant to the runtime base.
+    expect(mod.DYNAMIC_BASE_PLACEHOLDER).toBe("/");
+    expect(
+      mod.resolveDynamicBaseUrl("/connect/__vendor__/x.js", "/connect/"),
+    ).toBe("/connect/__vendor__/x.js");
+    expect(mod.resolveDynamicBaseUrl("/__vendor__/x.js", "/")).toBe(
+      "/__vendor__/x.js",
+    );
+    expect(
+      mod.resolveDynamicBaseUrl(
+        "/__PH_DYNAMIC_BASE__/__vendor__/x.js",
+        "/app/",
+      ),
+    ).toBe("/app/__vendor__/x.js");
+  }, 240_000);
+});
+
+describe("vendor cache key", () => {
+  it("rebuilds when the base or NODE_ENV changes", async () => {
+    const vendorDir = join(dir, "key");
+    const build = (base: string, nodeEnv: "development" | "production") =>
+      prebuildConnectVendor({
+        dirname: DIRNAME,
+        include: ["zod"],
+        vendorDir,
+        base,
+        nodeEnv,
+      });
+    await build("/", "production");
+    const rootKey = readMeta(vendorDir).versionDigest;
+
+    await build("/connect/", "production");
+    const based = readMeta(vendorDir);
+    expect(based.base).toBe("/connect/");
+    expect(based.versionDigest).not.toBe(rootKey);
+
+    await build("/connect/", "development");
+    const dev = readMeta(vendorDir);
+    expect(dev.nodeEnv).toBe("development");
+    expect(dev.versionDigest).not.toBe(based.versionDigest);
+  }, 480_000);
 });
 
 describe("withVendorBase", () => {
@@ -186,5 +335,73 @@ describe("missingVendorEntries", () => {
         url: "/__vendor__/_powerhousedao_shared_connect.js",
       },
     ]);
+  });
+});
+
+describe("linkedBuildStamp", () => {
+  it("ignores installed packages and follows a linked package's dist", () => {
+    const installed = join(dir, "node_modules", "pkg");
+    mkdirSync(join(installed, "dist"), { recursive: true });
+    writeFileSync(join(installed, "dist", "index.js"), "export {};");
+    expect(linkedBuildStamp(installed)).toBe("");
+
+    const linked = join(tmpdir(), `ph-linked-${Date.now()}`, "pkg");
+    expect(linkedBuildStamp(linked)).toBe("");
+    const dist = join(linked, "dist");
+    mkdirSync(join(dist, "hooks"), { recursive: true });
+    expect(linkedBuildStamp(linked)).toBe("");
+
+    const chunk = join(dist, "hooks", "chunk.js");
+    writeFileSync(join(dist, "index.js"), "export {};");
+    writeFileSync(chunk, "export {};");
+    const at = (seconds: number) => new Date(seconds * 1000);
+    utimesSync(join(dist, "index.js"), at(1000), at(1000));
+    utimesSync(chunk, at(1000), at(1000));
+    utimesSync(dist, at(1000), at(1000));
+    expect(linkedBuildStamp(linked)).toBe("+dist.1000000");
+
+    // Rebuilt in place: the nested file moves, dist's own mtime does not.
+    utimesSync(chunk, at(2000), at(2000));
+    utimesSync(dist, at(1000), at(1000));
+    expect(statSync(dist).mtimeMs).toBe(1000000);
+    expect(linkedBuildStamp(linked)).toBe("+dist.2000000");
+
+    // Source maps and declarations never reach the vendor bundle.
+    writeFileSync(join(dist, "index.js.map"), "{}");
+    writeFileSync(join(dist, "index.d.ts"), "export {};");
+    expect(linkedBuildStamp(linked)).toBe("+dist.2000000");
+    rmSync(dirname(linked), { recursive: true, force: true });
+  });
+});
+
+describe("resolveOwnDeps", () => {
+  it("resolves an app's deps from the app's install dir, walking up node_modules", () => {
+    const base = mkdtempSync(join(tmpdir(), "own-deps-"));
+    const pkg = join(base, "node_modules", "lib");
+    mkdirSync(join(pkg, "esm"), { recursive: true });
+    writeFileSync(
+      join(pkg, "package.json"),
+      JSON.stringify({
+        name: "lib",
+        exports: { ".": { import: "./esm/index.js" }, "./sub": "./sub.js" },
+      }),
+    );
+    writeFileSync(join(pkg, "esm", "index.js"), "export {};");
+    writeFileSync(join(pkg, "sub.js"), "export {};");
+    const app = join(base, "node_modules", "app");
+    mkdirSync(app, { recursive: true });
+
+    expect(findPackageRoot(app, "lib")).toBe(realpathSync(pkg));
+    const own = resolveOwnDeps(app, [
+      "lib",
+      "lib/sub",
+      "lib/missing",
+      "absent",
+    ]);
+    expect(own).toEqual({
+      lib: realpathSync(join(pkg, "esm", "index.js")),
+      "lib/sub": realpathSync(join(pkg, "sub.js")),
+    });
+    rmSync(base, { recursive: true, force: true });
   });
 });
