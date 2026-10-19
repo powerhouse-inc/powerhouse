@@ -10,7 +10,9 @@ import createOpenPanelPlugin from "./openpanel.js";
 import createSentryPlugin from "./sentry.js";
 import type { ConnectPluginFactory } from "./types.js";
 import createVetraStudioPlugin from "./vetra-studio.js";
-import createWorkflowsPlugin from "./workflows.js";
+import createWorkflowsPlugin, {
+  workflowsConnectConfigSchema,
+} from "./workflows.js";
 
 // typed-host-configs 1.4 / 1.6, T2 lane C: every built-in Connect plugin
 // declares a strict zod configSchema (typo'd keys fail) and augments
@@ -111,16 +113,49 @@ describe("Connect plugin configSchemas", () => {
     });
   });
 
-  it("workflows takes a URL or a { from, slug } reference, not the switchboard's drive declaration", () => {
+  it("workflows takes a URL or an output token, not the switchboard's drive declaration", () => {
     const schema = createWorkflowsPlugin({}).configSchema!;
     expect(
-      schema.safeParse({ drive: { from: "switchboard", slug: "workflows" } })
-        .success,
+      schema.safeParse({ drive: "http://127.0.0.1:4001/d/workflows" }).success,
     ).toBe(true);
+    expect(
+      schema.safeParse({
+        drive: {
+          $output: {
+            host: "switchboard",
+            path: ["drives", "workflows", "url"],
+          },
+        },
+      }).success,
+    ).toBe(true);
+    expect(schema.safeParse({ drive: "workflows" }).success).toBe(false);
     expect(
       schema.safeParse({ drive: { slug: "workflows", name: "Workflows" } })
         .success,
     ).toBe(false);
+  });
+
+  it("workflows rejects the removed { from, slug } reference naming the token form", () => {
+    const result = workflowsConnectConfigSchema.safeParse({
+      drive: { from: "switchboard", slug: "workflows" },
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({
+        path: ["drive"],
+        message: expect.stringMatching(
+          /drive: \{ from, slug \} was removed; use switchboard\.drives\.workflows\.url from \.\.\/switchboard\/outputs\.js, or \{ \$output: \{ host: "switchboard", path: \["drives", "workflows", "url"\] \} \}/,
+        ) as unknown,
+      }),
+    ]);
+    // The browser factory fails the same way, naming the plugin.
+    expect(() =>
+      createWorkflowsPlugin({
+        drive: { from: "switchboard", slug: "workflows" },
+      }),
+    ).toThrow(
+      /@powerhousedao\/connect\/plugins\/workflows[\s\S]*\{ from, slug \} was removed/,
+    );
   });
 });
 
@@ -144,11 +179,11 @@ describe("PHPluginConfigs augmentation (type level)", () => {
       verbs: ["dev"],
     };
 
-    const declaration: EntryFor<"@powerhousedao/connect/plugins/workflows"> = {
-      module: "@powerhousedao/connect/plugins/workflows",
-      // @ts-expect-error -- Connect's workflows drive is a URL, not the switchboard's { slug, name } declaration
-      config: { drive: { slug: "workflows", name: "Workflows" } },
-    };
+    // `drive` is ref(z.url()). Host-core's tokenSchema is typed
+    // `z.ZodType<Token>` (input `unknown`), so a ref() field's input type is
+    // `unknown` and `drive: { slug, name }` cannot be a type error until
+    // host-core types the token input; the runtime rejection is pinned above.
+    // Restore `@ts-expect-error` on that entry once it is.
     const typo: EntryFor<"@powerhousedao/connect/plugins/generic"> = {
       module: "@powerhousedao/connect/plugins/generic",
       // @ts-expect-error -- `allowAddDrives` is not a generic config key
@@ -163,6 +198,6 @@ describe("PHPluginConfigs augmentation (type level)", () => {
     // The typed configs stay assignable to the runtime entry shape that
     // normalizePluginEntries takes (the type-alias rule from T1).
     const runtime: PluginEntryData[] = [generic, workflows, studio];
-    expect([sentry, declaration, typo, assistant, runtime]).toBeDefined();
+    expect([sentry, typo, assistant, runtime]).toBeDefined();
   });
 });

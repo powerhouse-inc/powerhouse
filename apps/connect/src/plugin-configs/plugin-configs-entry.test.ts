@@ -57,7 +57,7 @@ describe("@powerhousedao/connect/plugin-configs", () => {
     const allowed = new Set([
       "zod",
       "@powerhousedao/shared/connect/connect-config-schema",
-      "@powerhousedao/host-core/plugins",
+      "@powerhousedao/host-core/schema",
     ]);
     const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
     for (const file of readdirSync(dir)) {
