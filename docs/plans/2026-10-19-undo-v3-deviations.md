@@ -188,13 +188,18 @@ Decisions:
   argument and still compiled, which created untagged models at 3.
   `copyNode` selects per source document type, and the router's `copyNode`
   forwards `CopyNodeOptions`.
-- A document type that is not registered creates at base-reducer 2, with a
-  warning; the model is not loaded first. Loading on a read query would put
-  a mistyped or probing type on the failed-load list until restart, and the
-  queue loads the model at the create gate anyway.
+- A document type that is not registered fits to base-reducer 2 on the read
+  query (`getCreateProtocolVersions`, GraphQL `createDefaults`), logged at
+  debug and not remembered. The read query never loads a model: a mistyped
+  or probing type would sit on the failed-load list until restart.
+- Headerless creates on the write paths (`submitCreate`, `Reactor.create`,
+  `addFile`, `copyNode`) load the model through the create gate's resolver
+  before fitting, so a lazily loaded tagged model lands at 3.
+- `fitCreateBaseReducer` moved to `@powerhousedao/shared/document-model` so
+  the light client can use it without the reactor.
 - GraphQL `createDefaults` takes a `documentType` argument. The client falls
   back to the untyped query, once per client, when an older Switchboard
-  rejects the argument.
+  rejects the argument, and fits that answer to its own document models.
 - The light client's header now carries `protocolVersions` from a current
   Switchboard. The `CREATE_DOCUMENT` fallbacks stay for older Switchboards.
 - Workflow's `creation()` reads the client through `getPHStore()`.
@@ -216,8 +221,10 @@ Decisions:
 - Lost-operation resend (R1, R2) is not implemented. The base-reducer 3 twin
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
-- An unregistered document type creates at 2. Cost: the first create of a
-  tagged model that is not loaded yet gets 2 rather than 3.
+- Connect's first create of a model the host has not loaded yet gets 2:
+  `addDocument` asks `createDefaults`, which never loads, and writes the
+  answer into the header. Options: a non-poisoning load on the read query,
+  or headerless creates from Connect so the host fits at write time.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
 - Academy `tsc --build` tooling issue, pre-existing.
