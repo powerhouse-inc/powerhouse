@@ -9,6 +9,7 @@ import type * as HostCore from "@powerhousedao/host-core";
 import {
   readRunRecord,
   runCompound,
+  writeRunRecord,
   toStartedHandle,
   validateHost,
   type ResolvedPlugin,
@@ -113,7 +114,7 @@ const runners: [string, RunnerModule, Record<string, unknown>][] = [
   [
     "@powerhousedao/ph-cli/runners/switchboard",
     { ...switchboardRunner } as RunnerModule,
-    { dev: true, driveSlug: "lab", outDir: "dist" },
+    { dev: true, outDir: "dist" },
   ],
 ];
 
@@ -330,5 +331,54 @@ describe("standalone ph run", () => {
       startRun({ host: "switchboard", projectRoot: project }),
     ).rejects.toThrow(/Unrecognized key: "prot"/);
     expect(vi.mocked(startSwitchboard)).not.toHaveBeenCalled();
+  });
+
+  it("refuses to start a second live instance and frees its port", async () => {
+    const port = await ephemeralPort();
+    const project = makeProject({
+      switchboard: `export default { name: "lab-switchboard", runner: { module: ${JSON.stringify(SWITCHBOARD_SRC)}, port: ${port} } };`,
+    });
+    // a live process of this project (the test runner's parent) holds it
+    writeRunRecord(project, {
+      version: 2,
+      host: "lab-switchboard",
+      projectName: "lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.ppid,
+      startedAt: new Date().toISOString(),
+      outputs: {},
+    });
+    const { startRun } = await import("../src/services/run/start-run.js");
+    await expect(
+      startRun({ host: "switchboard", projectRoot: project }),
+    ).rejects.toThrow(/already running for this project/);
+    expect(await isFree(port)).toBe(true);
+    expect(readRunRecord(project, "lab-switchboard")?.pid).toBe(process.ppid);
+  });
+
+  it("a runner without outputsSchema keeps its own record (no overwrite)", async () => {
+    const project = makeProject({
+      agent: `export default { name: "lab-agent", runner: { module: "fake-agent" } };`,
+    });
+    const pkg = path.join(project, "node_modules", "fake-agent");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(
+      path.join(pkg, "package.json"),
+      JSON.stringify({
+        name: "fake-agent",
+        type: "module",
+        exports: "./index.js",
+      }),
+    );
+    writeFileSync(
+      path.join(pkg, "index.js"),
+      `export const kind = "reactor";
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
+export async function run() { return { ready: Promise.resolve(), shutdown() {} }; }`,
+    );
+    const { startRun } = await import("../src/services/run/start-run.js");
+    await startRun({ host: "agent", projectRoot: project });
+    expect(readRunRecord(project, "lab-agent")).toBeUndefined();
   });
 });

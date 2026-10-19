@@ -34,9 +34,6 @@ export const hostSchema = reactorHostSchema.extend({
     .extend({
       /** Dev mode without the `dev` verb (the Vite package loader). */
       dev: z.boolean().optional(),
-      /** The slug of the server's implicit default drive, when the host
-       * declares no drives (default "powerhouse"). */
-      driveSlug: z.string().min(1).optional(),
       /** The project package output dir `build` writes (default "dist"). */
       outDir: z.string().min(1).optional(),
     })
@@ -117,9 +114,30 @@ async function toSwitchboardArgs(
   };
 }
 
-/** The slug of the drive the switchboard creates by default
- * (apps/switchboard config); `runner.driveSlug` overrides. */
+/** The drive the switchboard service creates by default
+ * (services/switchboard.ts `defaultSwitchboardOptions.drive`). */
 const DEFAULT_DRIVE_SLUG = "powerhouse";
+
+/** The `<slug>` of the server-reported `…/d/<slug>` default drive URL. */
+function defaultDriveSlug(url: string | undefined): string {
+  const match = url ? /\/d\/([^/?#]+)\/?$/.exec(url) : null;
+  return match ? decodeURIComponent(match[1]) : DEFAULT_DRIVE_SLUG;
+}
+
+/** Set once SIGINT/SIGTERM arrives. The owned reactor's own signal handler
+ * then kills the reactor and drains this api in order; a supervisor's
+ * shutdown() must not drain it a second time in parallel. */
+let signalled = false;
+let signalWatch = false;
+function watchSignals(): void {
+  if (signalWatch) return;
+  signalWatch = true;
+  const mark = () => {
+    signalled = true;
+  };
+  process.prependListener("SIGINT", mark);
+  process.prependListener("SIGTERM", mark);
+}
 
 /** A drive in the plan with the slug its declaration used (a `projectHash:
  * true` drive is served under its hashed slug; outputs key it by this one). */
@@ -351,12 +369,9 @@ async function start(
   // The server creates its implicit default drive only when nothing replaces
   // it: no host declaration and no remote drive (services/switchboard.ts).
   const localHostDrives = hostDrives.filter((d) => d.drive.kind === "local");
-  const defaultSlug = host.runner.driveSlug ?? DEFAULT_DRIVE_SLUG;
+  const defaultSlug = defaultDriveSlug(switchboard.defaultDriveUrl);
   if (hostDrives.length === 0 && remoteDrives.length === 0) {
-    drives[defaultSlug] = {
-      id: defaultSlug,
-      url: switchboard.defaultDriveUrl ?? driveUrlOf(defaultSlug),
-    };
+    drives[defaultSlug] = { id: defaultSlug, url: driveUrlOf(defaultSlug) };
   }
   for (const { declaredSlug, drive } of localPlanned) {
     drives[declaredSlug] = {
@@ -393,7 +408,8 @@ async function start(
   // Drains the HTTP server, GraphQL, MCP, attachments, the plugins'
   // onShutdown and the read-model db, which frees the port. The reactor the
   // server owns is not stopped here: SwitchboardReactor exposes no kill; its
-  // own SIGINT/SIGTERM handlers stop it.
+  // own SIGINT/SIGTERM handlers stop it (and drain the api themselves).
+  watchSignals();
   let stopping: Promise<void> | undefined;
   return {
     outputs: outputsSchema.parse({
@@ -405,7 +421,8 @@ async function start(
       drives,
     }),
     ready,
-    shutdown: () => (stopping ??= switchboard.shutdown()),
+    shutdown: () =>
+      (stopping ??= signalled ? Promise.resolve() : switchboard.shutdown()),
     port,
     driveUrls,
     endpoints: { graphql },

@@ -4,13 +4,13 @@ import {
   clearRunRecord,
   getVerb,
   loadHost,
+  probeRun,
   readRunRecord,
   resolveRunnerModule,
   toStartedHandle,
   validateHost,
   writeRunRecord,
   type HostSchemaLike,
-  type RunnerModule,
 } from "@powerhousedao/host-core";
 
 export interface StartRunArgs {
@@ -25,9 +25,10 @@ export interface StartRunArgs {
  * declared runner with the PARSED host. There is deliberately no
  * type→runner registry — what a host does is written in its own file.
  *
- * A reactor runner's handle has its outputs published in a v2
- * `.ph/run/<name>.json` record once ready. Compounds write their own record;
- * one-shot verbs (`build`) return nothing and write none.
+ * A reactor runner that exports `outputsSchema` has its handle's outputs
+ * published in a v2 `.ph/run/<name>.json` record once ready. Runners without
+ * one (mastra) and compounds keep writing their own records; one-shot verbs
+ * (`build`) return nothing and write none.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   const projectRoot = args.projectRoot ?? process.cwd();
@@ -43,8 +44,14 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
     console.log({ host: loaded.host.name, runner: specifier, verb });
   }
   const result = await fn(host, { projectRoot, verb, env: process.env });
-  if (runner.kind === "reactor" && result !== undefined && result !== null) {
-    await publishOutputs(runner, result, {
+  const outputsSchema: unknown = runner.outputsSchema;
+  if (
+    runner.kind === "reactor" &&
+    isSchemaLike(outputsSchema) &&
+    result !== undefined &&
+    result !== null
+  ) {
+    await publishOutputs(outputsSchema, result, {
       projectRoot,
       hostName: loaded.host.name,
       specifier,
@@ -74,31 +81,42 @@ function isSchemaLike(value: unknown): value is HostSchemaLike {
  * exit. A handle that never gets ready or reports invalid outputs is shut
  * down before the error propagates. */
 async function publishOutputs(
-  runner: RunnerModule,
+  outputsSchema: HostSchemaLike,
   result: unknown,
   target: PublishTarget,
 ): Promise<void> {
   const where = `${target.specifier} ${target.verb}`;
   const handle = toStartedHandle(result, where);
-  let outputs: unknown = handle.outputs;
+  const name = projectName(target.projectRoot);
+  let outputs: unknown;
   try {
-    if (handle.ready) await handle.ready;
-    const schema: unknown = runner.outputsSchema;
-    if (isSchemaLike(schema)) {
-      const parsed = schema.safeParse(handle.outputs);
-      if (!parsed.success) {
-        const issues = parsed.error.issues
-          .map(
-            (issue) =>
-              `  - ${issue.path.map(String).join(".") || "<root>"}: ${issue.message}`,
-          )
-          .join("\n");
-        throw new Error(
-          `${where} reported outputs that fail its outputsSchema:\n${issues}`,
-        );
-      }
-      outputs = parsed.data;
+    // A second instance of this host would take over the first one's record
+    // (and clear it on exit): refuse, as the compound's lock does.
+    const probe = probeRun(target.projectRoot, target.hostName, name);
+    if (probe.status === "live" && probe.record.pid !== process.pid) {
+      throw new Error(
+        `${target.hostName} is already running for this project (pid ${probe.record.pid}). Stop it before starting another.`,
+      );
     }
+    if (probe.status === "foreign") {
+      throw new Error(
+        `.ph/run/${target.hostName}.json describes a live "${probe.record.projectName}", but this project is "${name}". Refusing to start a second instance.`,
+      );
+    }
+    if (handle.ready) await handle.ready;
+    const parsed = outputsSchema.safeParse(handle.outputs);
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map(
+          (issue) =>
+            `  - ${issue.path.map(String).join(".") || "<root>"}: ${issue.message}`,
+        )
+        .join("\n");
+      throw new Error(
+        `${where} reported outputs that fail its outputsSchema:\n${issues}`,
+      );
+    }
+    outputs = parsed.data;
   } catch (error) {
     await handle.shutdown?.();
     throw error;
@@ -107,7 +125,7 @@ async function publishOutputs(
   writeRunRecord(target.projectRoot, {
     version: 2,
     host: target.hostName,
-    projectName: projectName(target.projectRoot),
+    projectName: name,
     kind: "reactor",
     verb: target.verb,
     pid: process.pid,

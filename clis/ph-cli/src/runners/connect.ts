@@ -33,9 +33,8 @@ import type {
 /**
  * BRIDGE runner for Connect hosts (uniform-runners phase 0): maps a
  * hosts/connect/host.js definition onto the SAME service the classic
- * `ph connect studio` command calls — no forked behavior. Real verbs
- * (`build`, `serve`) arrive with later phases; their absence here is
- * deliberate and surfaces through the verb-listing error.
+ * `ph connect studio` (dev/run), `ph connect build` and `ph connect preview`
+ * (serve) commands call — no forked behavior.
  */
 
 export const kind = "reactor";

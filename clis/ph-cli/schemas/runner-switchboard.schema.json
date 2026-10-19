@@ -78,10 +78,6 @@
         "dev": {
           "type": "boolean"
         },
-        "driveSlug": {
-          "type": "string",
-          "minLength": 1
-        },
         "outDir": {
           "type": "string",
           "minLength": 1
