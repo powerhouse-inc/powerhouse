@@ -1,13 +1,13 @@
-import { defineConfig } from "tsdown";
+import { defineConfig, type UserConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
 
-const shared = {
+const shared: UserConfig = {
   outDir: "dist",
   clean: true,
   dts: { generator: "tsgo" },
   plugins: [dtsExportList()],
   sourcemap: true,
-} as const;
+};
 
 export default defineConfig([
   // The Node CLI context (ph run): loaders and run records use node:fs/url.
