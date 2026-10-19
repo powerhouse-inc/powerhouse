@@ -53,6 +53,7 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope, throwIfAborted } from "../shared/utils.js";
+import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import type {
   DocumentRelationship,
   IDocumentIndexer,
@@ -126,6 +127,8 @@ export class Reactor implements IReactor {
     private readonly createProtocolVersions: ProtocolVersions = {
       "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
     },
+    // The CREATE gate's resolver, so a headerless create fits a loaded model.
+    private readonly modelResolver?: IDocumentModelResolver,
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -591,6 +594,16 @@ export class Reactor implements IReactor {
     const createdAtUtcIso = new Date().toISOString();
 
     throwIfAborted(signal, () => new AbortError());
+
+    if (!document.header.protocolVersions && this.modelResolver) {
+      try {
+        await this.modelResolver.ensureModelLoaded(
+          document.header.documentType,
+        );
+      } catch {
+        // The CREATE gate fails the job.
+      }
+    }
 
     const createInput: CreateDocumentActionInput = {
       model: document.header.documentType,

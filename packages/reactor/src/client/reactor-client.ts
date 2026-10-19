@@ -249,6 +249,7 @@ export class ReactorClient implements IReactorClient {
       (request, signal) => reactor.executeBatch(request, signal),
       signer,
       (id, signal) => this.resolveReference(id, "main", signal),
+      (options, signal) => this.createWriteProtocolVersions(options, signal),
     );
     this.logger.verbose("ReactorClient initialized");
   }
@@ -829,6 +830,22 @@ export class ReactorClient implements IReactorClient {
     );
   }
 
+  // Loads the model first, so a lazily loaded model fits as if registered at boot.
+  private async createWriteProtocolVersions(
+    options: CreateProtocolVersionsOptions,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    const { loadModel } = this.protocolSelection;
+    if (loadModel && options.documentType !== undefined) {
+      try {
+        await loadModel(options.documentType);
+      } catch {
+        // The CREATE gate fails the job.
+      }
+    }
+    return this.getCreateProtocolVersions(options, signal);
+  }
+
   /**
    * Creates a document and waits for completion
    */
@@ -891,7 +908,7 @@ export class ReactorClient implements IReactorClient {
       : undefined;
     const protocolVersions =
       document.header.protocolVersions ??
-      (await this.getCreateProtocolVersions(
+      (await this.createWriteProtocolVersions(
         { documentType: document.header.documentType, parentIdentifier },
         signal,
       ));

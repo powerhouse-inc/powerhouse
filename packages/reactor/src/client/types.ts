@@ -24,6 +24,8 @@ export type ProtocolSelection = {
   /** Absent without sync: no members, so the local preference. */
   agreement?: () => IPeerAgreement;
   collectionsOf: (documentIds: string[]) => Promise<Record<string, string[]>>;
+  /** Loads a model the registry lacks, as the CREATE gate does; create writes only. */
+  loadModel?: (documentType: string) => Promise<void>;
 };
 
 import type {

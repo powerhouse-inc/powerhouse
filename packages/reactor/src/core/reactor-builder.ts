@@ -95,6 +95,7 @@ import type {
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
+  type IDocumentModelResolver,
 } from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type {
@@ -457,6 +458,11 @@ export class ReactorBuilder {
   }
 
   /** The registry plus any capabilities added with withPeerCapabilities. */
+  /** The loader-backed resolver the CREATE gate uses; undefined without a loader. */
+  getModelResolver(): IDocumentModelResolver | undefined {
+    return this.modelResolver;
+  }
+
   getPeerCapabilities(): readonly PeerCapability[] {
     return mergePeerCapabilities(PEER_CAPABILITIES, this.extraPeerCapabilities);
   }
@@ -1379,6 +1385,7 @@ export class ReactorBuilder {
         flags: featureFlags,
         members: [],
       }),
+      this.modelResolver,
     );
 
     const localPeer: LocalPeer = {

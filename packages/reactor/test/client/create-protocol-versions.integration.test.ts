@@ -242,3 +242,108 @@ describe("create paths for a model whose reducer createReducer did not build", (
     ).rejects.toThrow("not built by createReducer");
   });
 });
+
+/** A host that loads models on demand, as Switchboard with dynamicModelLoading does. */
+describe("create paths for a model the loader brings in after boot", () => {
+  const reactors: IReactor[] = [];
+
+  afterEach(() => {
+    for (const reactor of reactors.splice(0)) {
+      reactor.kill();
+    }
+  });
+
+  async function build(behind: DocumentModelModule | undefined) {
+    const load = vi.fn((documentType: string) =>
+      behind && documentType === DOCUMENT_MODEL
+        ? Promise.resolve(behind)
+        : Promise.reject(new Error(`no package for ${documentType}`)),
+    );
+    const logger = new ConsoleLogger(["test"]);
+    vi.spyOn(logger, "warn").mockImplementation(() => {});
+    const built = await new ReactorClientBuilder()
+      .withLogger(logger)
+      .withReactorBuilder(
+        new ReactorBuilder()
+          .withLogger(logger)
+          .withDocumentModelSources([driveDocumentModelModule as never])
+          .withDocumentModelLoader({ load }),
+      )
+      .withSigner((await TestP256Signer.create()).asISigner())
+      .buildModule();
+    reactors.push(built.reactor);
+    const registered = await built.client.getDocumentModelModules();
+    expect(
+      registered.results.map((module) => module.documentModel.global.id),
+    ).not.toContain(DOCUMENT_MODEL);
+    return { client: built.client, reactor: built.reactor, load };
+  }
+
+  function unversioned(documentType = DOCUMENT_MODEL): PHDocument {
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    return {
+      ...document,
+      header: createPresignedHeader(undefined, documentType),
+    } as PHDocument;
+  }
+
+  const tagged =
+    documentModelDocumentModelModule as unknown as DocumentModelModule;
+
+  it("answers the read query with 2 without loading", async () => {
+    const { client, load } = await build(tagged);
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it("creates a createReducer model at 3 on its first create", async () => {
+    const { client, load } = await build(tagged);
+
+    const created = await client.create(unversioned());
+    expect(created.header.protocolVersions?.["base-reducer"]).toBe(3);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a createReducer model to a drive at 3 on its first create", async () => {
+    const { client } = await build(tagged);
+
+    const drive = await client.drives.create({ global: { name: "Drive" } });
+    const file = await client.drives.addFile(drive.header.id, unversioned());
+    expect(file.header.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
+  it("creates a createReducer model at 3 through the reactor on its first create", async () => {
+    const { reactor } = await build(tagged);
+
+    const direct = unversioned();
+    const job = await reactor.create(direct);
+    await vi.waitUntil(async () => {
+      const { status } = await reactor.getJobStatus(job.id);
+      return status === JobStatus.READ_READY || status === JobStatus.FAILED;
+    });
+    expect((await reactor.getJobStatus(job.id)).status).toBe(
+      JobStatus.READ_READY,
+    );
+    const stored = await reactor.get(direct.header.id);
+    expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
+  });
+
+  it("creates a model whose reducer createReducer did not build at 2", async () => {
+    const { client } = await build(untaggedDocumentModel());
+
+    const created = await client.create(unversioned());
+    expect(created.header.protocolVersions?.["base-reducer"]).toBe(2);
+  });
+
+  it("leaves a failed load to the CREATE gate without loading again", async () => {
+    const { client, load } = await build(undefined);
+
+    await expect(client.create(unversioned())).rejects.toThrow(
+      `Failed to load document model for type: ${DOCUMENT_MODEL}`,
+    );
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+});

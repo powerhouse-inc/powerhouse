@@ -49,7 +49,12 @@ import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
-import type { CopyNodeOptions, IDriveClient, IReactorClient } from "./types.js";
+import type {
+  CopyNodeOptions,
+  CreateProtocolVersionsOptions,
+  IDriveClient,
+  IReactorClient,
+} from "./types.js";
 
 /** The client members a {@link DriveClient} reads and writes through. */
 export type DriveClientDeps = Pick<
@@ -96,6 +101,11 @@ export class DriveClient implements IDriveClient {
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string>,
+    private readonly createProtocolVersions: (
+      options: CreateProtocolVersionsOptions,
+      signal?: AbortSignal,
+    ) => Promise<ProtocolVersions> = (options, signal) =>
+      client.getCreateProtocolVersions(options, signal),
   ) {
     this.executeBatch =
       typeof submitter === "function"
@@ -176,7 +186,7 @@ export class DriveClient implements IDriveClient {
       meta: document.header.meta,
       protocolVersions:
         document.header.protocolVersions ??
-        (await this.client.getCreateProtocolVersions(
+        (await this.createProtocolVersions(
           {
             documentType: document.header.documentType,
             parentIdentifier: driveId,
@@ -475,7 +485,7 @@ export class DriveClient implements IDriveClient {
       const documentType = srcDoc.header.documentType;
       let base = selectedByType.get(documentType);
       if (base === undefined) {
-        base = await this.client.getCreateProtocolVersions(
+        base = await this.createProtocolVersions(
           { documentType, parentIdentifier: drive.header.id },
           signal,
         );
