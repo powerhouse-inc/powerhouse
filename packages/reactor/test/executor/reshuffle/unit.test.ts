@@ -231,7 +231,8 @@ describe("Reshuffle Functions", () => {
       ).toEqual(["action-B", "action-A"]);
     });
 
-    it("still puts a tied structure action ahead of other actions", () => {
+    // Only the v2 order ranks structure actions first.
+    it("orders a tied structure action against other actions by action id", () => {
       const other = buildOperation({
         index: 0,
         skip: 0,
@@ -250,6 +251,13 @@ describe("Reshuffle Functions", () => {
           [other],
           [folder("action-Z", 5, 0)],
           { canonical: true },
+        ).map((op) => op.action.id),
+      ).toEqual(["action-0", "action-Z"]);
+      expect(
+        reshuffleByTimestamp(
+          { index: 10, skip: 0 },
+          [other],
+          [folder("action-Z", 5, 0)],
         ).map((op) => op.action.id),
       ).toEqual(["action-Z", "action-0"]);
     });

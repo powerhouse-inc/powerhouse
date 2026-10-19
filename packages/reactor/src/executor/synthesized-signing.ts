@@ -7,7 +7,6 @@ import type {
 import {
   actionSignerIdentity,
   deriveOperationId,
-  hashBrowser,
 } from "@powerhousedao/shared/document-model";
 
 /** Submitted types whose stored action the reducer writes in their place. */
@@ -18,10 +17,11 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
 
 /**
  * The id of the action synthesized from `submittedId`. Derived, so the stored
- * operation answers for the submitted id at the live-id check.
+ * operation answers for the submitted id at the live-id check, and it sorts
+ * against every other id as the submitted id does.
  */
 export function synthesizedActionId(submittedId: string): string {
-  return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(0, 32);
+  return `${submittedId}.s`;
 }
 
 /**

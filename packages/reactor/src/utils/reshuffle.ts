@@ -35,18 +35,14 @@ export function sortOperations<TOpIndex extends OperationIndex>(
     .sort((a, b) => a.index - b.index);
 }
 
-const strictRank = (op: OperationIndex): number =>
-  STRICT_ORDER_ACTION_TYPES.has(op.action?.type ?? "") ? 0 : 1;
-
 /**
- * Base-reducer 3's one order: timestamp, then structure actions first, then
- * action id. Every key is the same on every replica, so a tie sorts the same
- * wherever it is broken.
+ * Base-reducer 3's one order: timestamp, then action id. Action ids from one
+ * process sort in creation order, so a client's same-millisecond actions keep
+ * theirs, and every key is the same on every replica.
  */
 export function compareCanonical(a: OperationIndex, b: OperationIndex): number {
   return (
     Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs) ||
-    strictRank(a) - strictRank(b) ||
     (a.action?.id ?? "").localeCompare(b.action?.id ?? "") ||
     a.id.localeCompare(b.id)
   );
