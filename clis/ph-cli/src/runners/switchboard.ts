@@ -6,6 +6,8 @@ import {
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import {
+  drivesSchema,
+  mergeDrivePlan,
   pluginEntrySchema,
   resolveDriveDeclaration,
   resolveHostPlugins,
@@ -13,6 +15,7 @@ import {
   type DriveDeclaration,
   type DriveSeederClient,
   type ResolvedDrive,
+  type ResolvedPlugin,
 } from "@powerhousedao/host-core";
 import { applyReactorEnvProjection } from "./reactor-env.js";
 import { z } from "zod";
@@ -86,6 +89,40 @@ async function toSwitchboardArgs(
 /** The slug of the drive the switchboard creates by default
  * (apps/switchboard config); `runner.driveSlug` overrides. */
 const DEFAULT_DRIVE_SLUG = "powerhouse";
+
+/**
+ * The drives the composition's plugins contribute, resolved and in plan
+ * order, minus the slugs the host declares itself (mergeDrivePlan: the host
+ * file wins). A contribution that is not a valid drive declaration fails the
+ * boot naming the plugin.
+ */
+function pluginDrives(
+  projectRoot: string,
+  hostDrives: readonly ResolvedDrive[],
+  composition: readonly ResolvedPlugin[] | undefined,
+  where: string,
+): ResolvedDrive[] {
+  if (!composition) return [];
+  const contributed = composition.flatMap((resolved) => {
+    const drives = resolved.plugin.contributions?.drives ?? [];
+    if (drives.length === 0) return [];
+    const parsed = drivesSchema.safeParse(drives);
+    if (!parsed.success) {
+      throw new Error(
+        `${where}: plugin "${resolved.plugin.name}" contributes an invalid drive declaration:\n${z.prettifyError(parsed.error)}`,
+      );
+    }
+    return parsed.data.map((declaration) => ({
+      declaration,
+      source: resolved.plugin.name,
+    }));
+  });
+  if (contributed.length === 0) return [];
+  const hostSlugs = new Set(hostDrives.map((d) => d.slug));
+  return mergeDrivePlan(projectRoot, [], contributed)
+    .map((entry) => entry.drive)
+    .filter((drive) => !hostSlugs.has(drive.slug));
+}
 
 /** Poll the default drive endpoint until the server answers — the compound's
  * readiness gate: Connect auto-connects the drive on first load, so the drive
@@ -192,15 +229,28 @@ async function start(
   const declarations = (
     host.reactor as { drives?: DriveDeclaration[] } | undefined
   )?.drives;
-  const resolvedDrives = (declarations ?? []).map((declaration) =>
+  const hostDrives = (declarations ?? []).map((declaration) =>
     resolveDriveDeclaration(ctx.projectRoot, declaration),
   );
+  // Plugin-contributed drives (e.g. the workflows plugin's Workflows drive)
+  // join the plan after the host's own: a host declaration with the same slug
+  // wins, and the host's drives stay first (the first local one is the
+  // readiness gate and the compound's primary drive).
+  const contributedDrives = pluginDrives(
+    ctx.projectRoot,
+    hostDrives,
+    pluginComposition,
+    `hosts/${host.name}/host.js`,
+  );
+  const resolvedDrives = [...hostDrives, ...contributedDrives];
   const serverArgs = {
     ...args,
     ...(pluginComposition ? { pluginComposition } : {}),
-    ...(resolvedDrives.length > 0
+    // Only the HOST's declarations replace the implicit default drive; a
+    // contribution adds to whatever the host serves.
+    ...(hostDrives.length > 0 ? { drive: undefined } : {}),
+    ...(resolvedDrives.some((d) => d.kind === "remote")
       ? {
-          drive: undefined,
           remoteDrives: resolvedDrives
             .filter((d) => d.kind === "remote")
             .map((d) => d.remoteUrl!),
@@ -216,22 +266,24 @@ async function start(
     await seedDrives(seederClient(switchboard.reactor, port), localDrives);
   }
 
+  const localHostDrives = hostDrives.filter((d) => d.kind === "local");
   const slug =
-    localDrives.length > 0
-      ? localDrives[0].slug
+    localHostDrives.length > 0
+      ? localHostDrives[0].slug
       : typeof host.runner.driveSlug === "string"
         ? host.runner.driveSlug
         : DEFAULT_DRIVE_SLUG;
   const driveUrl = `http://localhost:${port}/d/${slug}`;
-  const driveUrls =
-    localDrives.length > 0
-      ? localDrives.map((d) => `http://localhost:${port}/d/${d.slug}`)
-      : [driveUrl];
+  const driveUrls = [
+    ...(localHostDrives.length > 0 ? [] : [driveUrl]),
+    ...localDrives.map((d) => `http://localhost:${port}/d/${d.slug}`),
+  ];
 
-  // Workflows on → seed the SAME project-hashed workflows drive the vetra
-  // path seeds (opens in Workflow Studio); it rides the handle so a
-  // supervising compound projects it into the connect member's drives.
-  if (switchboard?.workflowsEnabled) {
+  // No composition declared (the deprecated `reactor.workflows` switch): the
+  // workflows flag still seeds the SAME project-hashed drive the classic
+  // vetra path seeds. With a composition the workflows PLUGIN declares that
+  // drive (contributions.drives above), so nothing implicit happens here.
+  if (entries === undefined && switchboard?.workflowsEnabled) {
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
     driveUrls.push(await seedWorkflowsDrive(switchboard.reactor, port));
   }

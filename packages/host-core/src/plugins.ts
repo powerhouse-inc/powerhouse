@@ -45,6 +45,38 @@ export const pluginEntrySchema = z.union([
 
 export type PluginEntry = z.infer<typeof pluginEntrySchema>;
 
+/* --------------------------------------------------------- drive references */
+
+/**
+ * A DRIVE REFERENCE in a plugin entry's config: "the drive `slug` that
+ * compound member `from` serves". The generic compound runner substitutes it
+ * with the URL that member's runner handle reported (`driveUrls`) before the
+ * member host is validated — so a connect member can say
+ * `{ drive: { from: "vetra-switchboard", slug: "workflows" } }` instead of
+ * spelling the sibling's URL. Outside a compound a reference cannot resolve:
+ * runners reject it at boot (there is no sibling to point at).
+ */
+export const driveReferenceSchema = z.strictObject({
+  from: z.string().min(1),
+  slug: z.string().min(1),
+});
+
+export type DriveReference = z.infer<typeof driveReferenceSchema>;
+
+export function isDriveReference(value: unknown): value is DriveReference {
+  return driveReferenceSchema.safeParse(value).success;
+}
+
+/** The config keys of an entry that still hold a drive reference, e.g. after
+ * a standalone run skipped compound substitution. */
+export function unresolvedDriveReferences(
+  config: Record<string, unknown> | undefined,
+): { key: string; reference: DriveReference }[] {
+  return Object.entries(config ?? {}).flatMap(([key, value]) =>
+    isDriveReference(value) ? [{ key, reference: value }] : [],
+  );
+}
+
 export interface NormalizedPluginEntry {
   module: string;
   enabled: boolean;

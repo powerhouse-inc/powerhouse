@@ -100,3 +100,77 @@ export async function resolveHostPlugins<THooks = Record<string, unknown>>(
   }
   return resolved;
 }
+
+/** A drive a plugin contributes: its declaration (drives.ts shape, validated
+ * by the consumer) and the plugin it came from. */
+export interface ContributedDrive {
+  declaration: Record<string, unknown>;
+  source: string;
+}
+
+export interface PluginContributionsPlan {
+  drives: ContributedDrive[];
+  /** Entries whose module the project tree cannot resolve (e.g. Connect's
+   * browser built-ins, which have no Node-resolvable identity module). */
+  unresolved: string[];
+}
+
+/**
+ * LENIENT resolution for diagnostics (`ph run <host> --explain drives`):
+ * collects the drive contributions of the entries active for `verb`. Unlike
+ * resolveHostPlugins it does not know the host type (so appliesTo is not
+ * checked) and does not fail on a specifier the project tree cannot resolve
+ * — the entry is listed under `unresolved` instead. Config is still validated
+ * against the plugin's schema, so a bad entry surfaces here too.
+ */
+export async function resolvePluginContributions(
+  projectRoot: string,
+  verb: string,
+  entries: readonly PluginEntry[],
+  where: string,
+): Promise<PluginContributionsPlan> {
+  const normalized = normalizePluginEntries(entries, where);
+  const projectRequire = createRequire(
+    pathToFileURL(path.join(projectRoot, "package.json")).href,
+  );
+  const plan: PluginContributionsPlan = { drives: [], unresolved: [] };
+  for (const entry of normalized) {
+    if (!entryActiveForVerb(entry, verb)) continue;
+    let file: string;
+    try {
+      file = projectRequire.resolve(entry.module);
+    } catch {
+      plan.unresolved.push(entry.module);
+      continue;
+    }
+    const module = (await import(pathToFileURL(file).href)) as {
+      default?: unknown;
+    };
+    const exported = module.default;
+    let plugin: HostPlugin;
+    if (typeof exported === "function") {
+      plugin = (exported as (config: unknown) => HostPlugin)(entry.config);
+    } else if (isHostPluginShape(exported)) {
+      plugin = exported;
+    } else {
+      plan.unresolved.push(entry.module);
+      continue;
+    }
+    if (plugin.configSchema) {
+      const parsed = plugin.configSchema.safeParse(entry.config);
+      if (!parsed.success) {
+        throw new PluginError(
+          `${where}: config for plugin "${plugin.name}" is invalid:\n` +
+            z.prettifyError(parsed.error),
+        );
+      }
+    }
+    for (const declaration of plugin.contributions?.drives ?? []) {
+      plan.drives.push({
+        declaration: declaration as Record<string, unknown>,
+        source: plugin.name,
+      });
+    }
+  }
+  return plan;
+}

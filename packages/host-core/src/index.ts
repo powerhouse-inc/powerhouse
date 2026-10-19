@@ -46,6 +46,7 @@ export {
 } from "./run-record.js";
 export {
   runCompound,
+  resolveDriveReferences,
   type CompoundMember,
   type CompoundWiring,
   type RunCompoundOptions,
@@ -104,6 +105,10 @@ export {
   runObserveHook,
   runObserveHookSequential,
   mergeContributions,
+  driveReferenceSchema,
+  isDriveReference,
+  unresolvedDriveReferences,
+  type DriveReference,
   type PluginEntry,
   type NormalizedPluginEntry,
   type HostPlugin,
@@ -116,7 +121,12 @@ export {
   type ContributionSource,
   type MergedContribution,
 } from "./plugins.js";
-export { resolveHostPlugins } from "./plugins-resolve.js";
+export {
+  resolveHostPlugins,
+  resolvePluginContributions,
+  type ContributedDrive,
+  type PluginContributionsPlan,
+} from "./plugins-resolve.js";
 export {
   driveDeclarationSchema,
   drivesSchema,

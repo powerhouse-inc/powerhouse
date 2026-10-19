@@ -72,6 +72,12 @@ describe("writeGeneratedHostsFiles", () => {
     expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
     expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
     expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
+    // workflow plugins: the connect member derives the Workflows drive from
+    // the switchboard member (a drive reference, resolved by the compound)
+    expect(vetra).toContain("@powerhousedao/connect/plugins/workflows");
+    expect(vetra).toContain(
+      `drive: { from: "vetra-switchboard", slug: "workflows" }`,
+    );
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.
@@ -94,6 +100,13 @@ describe("writeGeneratedHostsFiles", () => {
     expect(desktop).not.toMatch(/readModel:\s*\{/);
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");
+    expect(desktop).toContain(
+      `drive: { from: "desktop-switchboard", slug: "workflows" }`,
+    );
+    // the switchboard side serves the runtime and its drive:
+    expect(switchboard).toContain(
+      "@powerhousedao/switchboard/plugins/workflows",
+    );
 
     // P5.8: the agent + cli hosts ride the clint runners; ${userData} stays
     // a literal placeholder; the agents manager references the sibling host.
@@ -109,7 +122,11 @@ describe("writeGeneratedHostsFiles", () => {
     const cli = readFileSync(join(dir, "hosts/cli/host.js"), "utf-8");
     expect(cli).toContain("@powerhousedao/host-core/runners/compound");
     expect(cli).toContain('import switchboard from "../switchboard/host.js"');
+    expect(cli).toContain('import connect from "../connect/host.js"');
     expect(cli).toContain('"cli-switchboard": { host: "switchboard" }');
+    expect(cli).toContain(
+      `drive: { from: "cli-switchboard", slug: "workflows" }`,
+    );
     expect(cli).toContain(`kind: "remote"`);
     expect(cli).toContain("/graphql");
     expect(cli).not.toContain("@powerhousedao/clint/clint-runner");

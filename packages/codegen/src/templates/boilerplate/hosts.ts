@@ -211,6 +211,13 @@ export default {
         plugins: [
           ...connect.runner.plugins,
           { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },
+          // The browser half of workflows: loads Workflow Studio and attaches
+          // the Workflows drive the sibling's workflows plugin serves — the
+          // compound derives the URL from that member, so the link is here.
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+          },
         ],
       },
     },
@@ -301,7 +308,14 @@ export default {
       runner: {
         defaultVerb: "serve",
         port: config.studio?.port ?? 3000,
-        plugins: [...connect.runner.plugins],
+        plugins: [
+          ...connect.runner.plugins,
+          // Workflow Studio over the server's Workflows drive (derived).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: { drive: { from: "desktop-switchboard", slug: "workflows" } },
+          },
+        ],
       },
       // Attach the server's drives as remotes (replaces the old implicit
       // projectDrivesIntoConnect flag with legible derivation):
@@ -374,6 +388,7 @@ export default {
 // design. remote client = no local store; synchronized remote drive = local
 // store.) Standalone \`ph run connect\` is untouched — still a local reactor.
 import switchboard from "../switchboard/host.js";
+import connect from "../connect/host.js";
 
 // The drive(s) the switchboard serves, and its port — the single source
 // Connect's remote attachment derives from.
@@ -403,6 +418,16 @@ export default {
     // give the client the Switchboard URL to proxy to.
     "cli-connect": {
       host: "connect",
+      runner: {
+        plugins: [
+          ...connect.runner.plugins,
+          // Workflow Studio over the server's Workflows drive (derived).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: { drive: { from: "cli-switchboard", slug: "workflows" } },
+          },
+        ],
+      },
       reactor: {
         backends: {
           sb: {

@@ -255,6 +255,73 @@ plugin's absence. The switchboard side is already fully behavioural: removing
 `mcp` removes `/mcp`.)
 :::
 
+### Workflows: one link, two plugins
+
+Workflows have a server half and a browser half, and the two are declared so
+the link between them is visible in `hosts/`:
+
+```js
+// hosts/switchboard/host.js — serves the workflow runtime AND the drive
+plugins: [
+  {
+    module: "@powerhousedao/switchboard/plugins/workflows",
+    // the Workflows drive this plugin seeds; `drive: false` = runtime only
+    config: { drive: { slug: "workflows", name: "Workflows" } },
+  },
+],
+
+// hosts/connect/host.js — loads Workflow Studio, attaches that drive
+plugins: [
+  {
+    module: "@powerhousedao/connect/plugins/workflows",
+    config: { drive: "http://localhost:4001/d/workflows" },
+  },
+],
+```
+
+- The **switchboard plugin** contributes its drive to the host's drive plan
+  (`contributions.drives`): `ph run switchboard --explain drives` lists it
+  with the plugin as the source, a host declaration with the same slug wins,
+  and the drive opens in Workflow Studio (`preferredEditor: "workflow-studio"`
+  on the drive document). Defaults: slug `workflows`, name `Workflows`, a
+  project-hashed id (the id classic `ph vetra` gave it).
+- The **Connect plugin** is presence-is-activation like the other built-ins:
+  listed, Connect loads the workflow package (Workflow Studio exists) and
+  attaches `drive` as a remote default drive; absent from a declared
+  composition, `app.workflowsEnabled` is zeroed. The drive must be the
+  switchboard's — Workflow Studio reaches the workflow runtime through the
+  selected drive's switchboard, so a local copy of the drive would point the
+  studio at the wrong endpoint. Connect warns when a drive names a drive app
+  that no installed package provides, and Workflow Studio warns when its
+  drive has no switchboard behind it.
+
+**Inside a compound, derive the link instead of spelling the URL.** A plugin
+config value of the shape `{ from: "<member>", slug: "<drive>" }` is a drive
+reference: the compound runner replaces it with the URL that member reported
+for the drive, before the member host is validated:
+
+```js
+"vetra-studio": {
+  host: "connect",
+  runner: {
+    plugins: [
+      ...connect.runner.plugins,
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+      },
+    ],
+  },
+},
+```
+
+The referenced member must start first (`config.startOrder`) and must serve
+that slug; otherwise the compound fails boot naming the members and drives it
+knows. A reference reaching standalone `ph run connect` is a boot error with
+the same hint — there is no sibling to point at. (The classic switches,
+`workflows.enabled` / `connect.app.workflowsEnabled` / the host's
+`reactor.workflows`, still parse; with the plugins listed they are redundant.)
+
 ## Writing your own plugin
 
 A complete switchboard plugin with config, in one file:

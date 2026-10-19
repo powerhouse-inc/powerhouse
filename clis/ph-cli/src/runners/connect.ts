@@ -9,7 +9,9 @@ import {
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
+  PluginError,
   pluginEntrySchema,
+  unresolvedDriveReferences,
   profileSchema,
   resolveDriveDeclaration,
   type DriveDeclaration,
@@ -128,6 +130,18 @@ function callerOverride(
       : normalizePluginEntries(entries, `hosts/${host.name}/host.js`)
           .filter((entry) => entryActiveForVerb(entry, verb))
           .map((entry) => ({ module: entry.module, config: entry.config }));
+  // A drive reference (`{ from, slug }`) is derived by a supervising compound
+  // from the referenced member's drives. Reaching this runner unresolved
+  // means there is no such member: standalone `ph run connect`, or a
+  // compound member that is not started before this one.
+  for (const entry of composition ?? []) {
+    for (const { key, reference } of unresolvedDriveReferences(entry.config)) {
+      throw new PluginError(
+        `hosts/${host.name}/host.js: plugin "${entry.module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", but this Connect is not running inside a compound that started it.`,
+        `Run the compound that declares "${reference.from}" (and list it before this member in config.startOrder), or spell the drive URL: { ${key}: "http://localhost:<port>/d/${reference.slug}" }.`,
+      );
+    }
+  }
   if (entries !== undefined) {
     // Change 2: show the composition plan on the `ph run connect` terminal.
     // The pipeline itself runs in the browser (hook execution logs to the
@@ -180,7 +194,9 @@ function callerOverride(
   const { connect } = projectReactorToConnect(reactor);
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
-    return host.config as PHConnectRuntimeConfig | undefined;
+    // `base` IS host.config when the host has one; a host without a config
+    // block still carries its composition and drives (set on `base` above).
+    return base;
   }
   const drives = structural
     ? projectDrivesIntoConnect({

@@ -22,9 +22,12 @@ import { z } from "zod";
 export const driveDeclarationSchema = z.strictObject({
   slug: z.string().min(1),
   id: z.string().min(1).optional(),
-  /** Derive id (and the served slug) from the project path, like
-   * generateProjectDriveId — same ids classic `ph vetra` produces. */
-  projectHash: z.boolean().optional(),
+  /** Derive the id from the project path, like generateProjectDriveId — the
+   * same ids classic `ph vetra` produces. `true` serves the drive under the
+   * hashed slug too (the vetra drive's slug IS its hashed id); `"id"` hashes
+   * only the id and keeps the declared slug (the classic Workflows drive:
+   * `/d/workflows`, id `workflows-<hash>`). */
+  projectHash: z.union([z.boolean(), z.literal("id")]).optional(),
   name: z.string().min(1).optional(),
   icon: z.string().optional(),
   preferredEditor: z.string().optional(),
@@ -66,8 +69,8 @@ export function resolveDriveDeclaration(
     ? projectDriveId(projectRoot, decl.slug)
     : (decl.id ?? decl.slug);
   // Hash-derived drives serve under the hashed slug too (classic parity:
-  // the vetra drive's slug IS its hashed id).
-  const slug = decl.projectHash ? id : decl.slug;
+  // the vetra drive's slug IS its hashed id) — unless only the id is hashed.
+  const slug = decl.projectHash === true ? id : decl.slug;
   if (decl.remote) {
     return {
       kind: "remote",

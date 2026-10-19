@@ -324,7 +324,15 @@
                 "minLength": 1
               },
               "projectHash": {
-                "type": "boolean"
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "id"
+                  }
+                ]
               },
               "name": {
                 "type": "string",

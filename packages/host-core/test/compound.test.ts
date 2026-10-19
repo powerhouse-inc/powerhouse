@@ -23,7 +23,12 @@ afterEach(() => {
 
 /** A hosts project with a compound whose two members use FAKE runners that
  * record their calls to a shared JSON sink and return scripted handles. */
-function makeProject(opts?: { startOrder?: string[]; publicBase?: string }): {
+function makeProject(opts?: {
+  startOrder?: string[];
+  publicBase?: string;
+  /** Plugin entries for the connect member's wrapper (drive references). */
+  connectPlugins?: unknown[];
+}): {
   dir: string;
   sink: string;
 } {
@@ -57,10 +62,10 @@ const log = (entry) => appendFileSync(sink, JSON.stringify(entry) + "\\n");
 export const kind = "reactor";
 export const hostSchema = { safeParse: () => ({ success: true }) };
 export async function dev(host, ctx) {
-  log({ name: host.name, drives: host.config?.drives ?? null, port: host.runner.port });
-  // the switchboard-role member reports a created drive URL
+  log({ name: host.name, drives: host.config?.drives ?? null, port: host.runner.port, plugins: host.runner.plugins ?? null });
+  // the switchboard-role member reports its created drive URLs
   if (host.name.includes("switchboard")) {
-    return { port: host.runner.port, driveUrls: ["http://localhost:7064/d/vetra-x"] };
+    return { port: host.runner.port, driveUrls: ["http://localhost:7064/d/vetra-x", "http://localhost:7064/d/workflows"] };
   }
   return { port: host.runner.port };
 }
@@ -87,6 +92,9 @@ export const run = dev;
     ...(opts?.startOrder ? { startOrder: opts.startOrder } : {}),
     ...(opts?.publicBase ? { drivesPublicBase: opts.publicBase } : {}),
   };
+  const connectMember = opts?.connectPlugins
+    ? `{ host: "connect", runner: { plugins: ${JSON.stringify(opts.connectPlugins)} } }`
+    : `{ host: "connect" }`;
   write(
     "app",
     `export default {
@@ -94,7 +102,7 @@ export const run = dev;
       runner: { module: "fake-runner", defaultVerb: "dev" },
       children: {
         "app-switchboard": { host: "switchboard" },
-        "app-connect": { host: "connect" },
+        "app-connect": ${connectMember},
       },
       config: ${JSON.stringify(wiring)},
     };`,
@@ -116,6 +124,7 @@ interface FakeCall {
   name: string;
   drives: unknown;
   port: number;
+  plugins: unknown;
 }
 
 function calls(sink: string): FakeCall[] {
@@ -141,10 +150,11 @@ describe("runCompound", () => {
     const sb = log.find((c) => c.name === "lab-switchboard");
     const connect = log.find((c) => c.name === "lab-connect");
     expect(sb?.port).toBe(7064);
-    // the connect member received the switchboard's created drive, preserve-all
+    // the connect member received the switchboard's created drives, preserve-all
     expect(connect?.drives).toEqual({
       defaultDrives: [
         { url: "http://localhost:7064/d/vetra-x", name: null, icon: null },
+        { url: "http://localhost:7064/d/workflows", name: null, icon: null },
       ],
       preserveStrategy: "preserve-all",
     });
@@ -185,6 +195,47 @@ describe("runCompound", () => {
       | { defaultDrives: { url: string }[] }
       | undefined;
     expect(drives?.defaultDrives[0]?.url).toBe("https://lab.example/d/vetra-x");
+  });
+
+  it("resolves a plugin's drive reference from the sibling's reported drives (workflow plugins)", async () => {
+    const WF = "@powerhousedao/connect/plugins/workflows";
+    const { dir, sink } = makeProject({
+      startOrder: ["app-switchboard", "app-connect"],
+      connectPlugins: [
+        "@powerhousedao/connect/plugins/generic",
+        {
+          module: WF,
+          config: { drive: { from: "app-switchboard", slug: "workflows" } },
+        },
+      ],
+    });
+    await runCompound(await appHost(dir), ctx(dir), {
+      projectName: "lab",
+      installSignalHandlers: false,
+    });
+    const connect = calls(sink).find((c) => c.name === "lab-connect");
+    expect(connect?.plugins).toEqual([
+      "@powerhousedao/connect/plugins/generic",
+      { module: WF, config: { drive: "http://localhost:7064/d/workflows" } },
+    ]);
+  });
+
+  it("fails boot naming the fix when the referenced member starts later", async () => {
+    const { dir } = makeProject({
+      startOrder: ["app-connect", "app-switchboard"],
+      connectPlugins: [
+        {
+          module: "@powerhousedao/connect/plugins/workflows",
+          config: { drive: { from: "app-switchboard", slug: "workflows" } },
+        },
+      ],
+    });
+    await expect(
+      runCompound(await appHost(dir), ctx(dir), {
+        projectName: "lab",
+        installSignalHandlers: false,
+      }),
+    ).rejects.toThrow(/list it first in config.startOrder/);
   });
 
   it("refuses to start when a live record of this project exists (lock)", async () => {

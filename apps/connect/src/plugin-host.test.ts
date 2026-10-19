@@ -106,6 +106,69 @@ describe("applyComposition", () => {
     expect((await applyComposition(off)).app?.studioMode).toBe(false);
   });
 
+  it("workflows: presence loads the package and attaches the drive; absence zeroes the flag", async () => {
+    const on = base();
+    on.drives = {
+      ...on.drives,
+      defaultDrives: [{ url: "http://localhost:7540/d/sektar" }],
+    } as never;
+    on.composition = [
+      { module: "@powerhousedao/connect/plugins/generic" },
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: "http://localhost:7540/d/workflows" },
+      },
+    ];
+    const out = await applyComposition(on);
+    expect(out.app?.workflowsEnabled).toBe(true);
+    expect(out.drives?.defaultDrives).toEqual([
+      { url: "http://localhost:7540/d/sektar" },
+      { url: "http://localhost:7540/d/workflows", name: null, icon: null },
+    ]);
+
+    // the same drive twice (host declaration + plugin) attaches once
+    const dup = base();
+    dup.drives = {
+      ...dup.drives,
+      defaultDrives: [{ url: "http://localhost:7540/d/workflows", name: "W" }],
+    } as never;
+    dup.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: "http://localhost:7540/d/workflows" },
+      },
+    ];
+    expect((await applyComposition(dup)).drives?.defaultDrives).toEqual([
+      { url: "http://localhost:7540/d/workflows", name: "W" },
+    ]);
+
+    // served flag on, plugin not composed in -> off (presence is activation)
+    const off = base();
+    off.app = { workflowsEnabled: true } as never;
+    off.composition = [{ module: "@powerhousedao/connect/plugins/generic" }];
+    expect((await applyComposition(off)).app?.workflowsEnabled).toBe(false);
+
+    // present without a drive: the package loads, nothing is attached
+    const bare = base();
+    bare.composition = [{ module: "@powerhousedao/connect/plugins/workflows" }];
+    const bareOut = await applyComposition(bare);
+    expect(bareOut.app?.workflowsEnabled).toBe(true);
+    expect(bareOut.drives?.defaultDrives).toBeUndefined();
+  });
+
+  it("workflows: an unresolved drive reference attaches nothing (the compound resolves it)", async () => {
+    const cfg = base();
+    cfg.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+      },
+    ];
+    const out = await applyComposition(cfg);
+    expect(out.app?.workflowsEnabled).toBe(true);
+    expect(out.drives?.defaultDrives).toBeUndefined();
+  });
+
   it("unknown specifier warns and skips without throwing", async () => {
     const cfg = base();
     cfg.composition = [{ module: "@acme/not-a-real-plugin" }];

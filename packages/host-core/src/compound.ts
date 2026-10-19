@@ -1,6 +1,7 @@
 import type { HostDefinition } from "./host-loader.js";
 import { loadHost } from "./host-loader.js";
 import { projectDrivesIntoConnect } from "./connect-projection.js";
+import { unresolvedDriveReferences } from "./plugins.js";
 import {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
@@ -132,6 +133,64 @@ async function resolveMemberHost(
   return resolveUserDataPlaceholders(merged, userData);
 }
 
+/**
+ * Substitute DRIVE REFERENCES (`{ from: "<member>", slug }`, see
+ * driveReferenceSchema) in the member's plugin entry configs with the URL the
+ * referenced member's runner handle reported in `driveUrls` — the compound
+ * is the one place both sides exist, so the link is derived here, not spelt
+ * as a URL in the host file. Fails loudly on an unknown member, a member that
+ * has not started yet (fix startOrder) or a slug it does not serve.
+ */
+export function resolveDriveReferences(
+  memberHost: HostDefinition,
+  memberName: string,
+  started: readonly StartedMember[],
+  declaredMembers: readonly string[],
+): HostDefinition {
+  const plugins = (memberHost.runner as { plugins?: unknown }).plugins;
+  if (!Array.isArray(plugins)) return memberHost;
+  const substituted: string[] = [];
+  const resolved = plugins.map((entry: unknown) => {
+    if (typeof entry !== "object" || entry === null) return entry;
+    const config = (entry as { config?: Record<string, unknown> }).config;
+    const refs = unresolvedDriveReferences(config);
+    if (refs.length === 0) return entry;
+    const module = (entry as { module?: string }).module ?? "(plugin)";
+    const next = { ...config };
+    for (const { key, reference } of refs) {
+      const source = started.find((m) => m.name === reference.from);
+      if (!source) {
+        const hint = declaredMembers.includes(reference.from)
+          ? `Member "${reference.from}" starts after "${memberName}"; list it first in config.startOrder.`
+          : `Members declared: ${declaredMembers.join(", ")}.`;
+        throw new Error(
+          `${memberName}: plugin "${module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", which is not started. ${hint}`,
+        );
+      }
+      const urls = (source.handle.driveUrls ?? []).filter(
+        (u): u is string => typeof u === "string",
+      );
+      const url = urls.find((u) => driveSlugOfUrl(u) === reference.slug);
+      if (!url) {
+        throw new Error(
+          `${memberName}: plugin "${module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", which serves ${urls.length ? urls.map((u) => `"${driveSlugOfUrl(u)}"`).join(", ") : "no drives"}.`,
+        );
+      }
+      next[key] = url;
+      substituted.push(`${module}.${key}`);
+    }
+    return { ...(entry as object), config: next };
+  });
+  if (substituted.length === 0) return memberHost;
+  return { ...memberHost, runner: { ...memberHost.runner, plugins: resolved } };
+}
+
+/** The `<slug>` of a `…/d/<slug>` drive URL (undefined for other URLs). */
+function driveSlugOfUrl(url: string): string | undefined {
+  const match = /\/d\/([^/?#]+)\/?$/.exec(url);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 function isConnectMember(member: CompoundMember): boolean {
   return member.host === "connect";
 }
@@ -219,11 +278,11 @@ export async function runCompound(
       });
     }
 
-    const memberHost = await resolveMemberHost(
-      projectRoot,
-      member,
-      userData,
-      configPatch,
+    const memberHost = resolveDriveReferences(
+      await resolveMemberHost(projectRoot, member, userData, configPatch),
+      name,
+      started,
+      memberEntries(host).map(([memberName]) => memberName),
     );
     if (isConnectMember(member) && wiring.cspRegistrySync) {
       memberHost.runner = { ...memberHost.runner, cspRegistrySync: true };

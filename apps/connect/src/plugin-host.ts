@@ -16,6 +16,7 @@ import type {
   ConnectPluginFactory,
 } from "./plugins/types.js";
 import createVetraStudioPlugin from "./plugins/vetra-studio.js";
+import createWorkflowsPlugin from "./plugins/workflows.js";
 
 export type { ConnectPluginContext } from "./plugins/types.js";
 
@@ -45,6 +46,7 @@ const BUILTINS: Record<string, ConnectPluginFactory> = {
   "@powerhousedao/connect/plugins/sentry": createSentryPlugin,
   "@powerhousedao/connect/plugins/openpanel": createOpenPanelPlugin,
   "@powerhousedao/connect/plugins/assistant": createAssistantPlugin,
+  "@powerhousedao/connect/plugins/workflows": createWorkflowsPlugin,
   "@powerhousedao/vetra-studio/connect": createVetraStudioPlugin,
 };
 
@@ -83,6 +85,11 @@ function zeroAbsentSlices(
   }
   if (!present.has("@powerhousedao/vetra-studio/connect")) {
     out.app = { ...out.app, studioMode: false } as never;
+  }
+  if (!present.has("@powerhousedao/connect/plugins/workflows")) {
+    // The workflow package (Workflow Studio) loads only when the plugin is
+    // composed in; the classic workflows.enabled value is not the switch.
+    out.app = { ...out.app, workflowsEnabled: false } as never;
   }
   return out;
 }
