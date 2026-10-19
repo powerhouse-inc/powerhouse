@@ -19,6 +19,7 @@ await build({
     // piece workers and must not load the document-model barrel (zod, crypto).
     "document-model/version.ts",
     "document-model/errors.ts",
+    "document-model/action-id.ts",
     "document-drive/index.ts",
     "processors/index.ts",
     "registry/index.ts",

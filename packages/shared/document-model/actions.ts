@@ -164,7 +164,7 @@ import type {
   UpdateStateExampleAction,
   UpdateStateExampleInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { deriveOperationId, generateActionId } from "./utils.js";
 
 /**
  * Cancels the last `count` operations.
@@ -219,11 +219,11 @@ let lastClockMs = 0;
 let lastStampMs = 0;
 
 /**
- * Strictly increasing per process, so one client's actions never share a
- * millisecond and their order survives a reorder by timestamp. A clock that
- * steps back is followed rather than outrun.
+ * Strictly increasing per process, as the auth scope's admission rule requires
+ * of one client's auth actions. A clock that steps back is followed rather than
+ * outrun.
  */
-export function nextActionTimestamp(): string {
+export function nextAuthTimestamp(): string {
   const now = Date.now();
   lastStampMs = now < lastClockMs || now > lastStampMs ? now : lastStampMs + 1;
   lastClockMs = now;
@@ -264,8 +264,9 @@ export function createAction<TAction extends Action>(
     throw new Error(`Invalid action type: ${JSON.stringify(type)}`);
 
   const action: Action = {
-    id: generateId(),
-    timestampUtcMs: nextActionTimestamp(),
+    id: generateActionId(),
+    timestampUtcMs:
+      scope === "auth" ? nextAuthTimestamp() : new Date().toISOString(),
     type,
     input,
     scope,

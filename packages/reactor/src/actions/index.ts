@@ -9,8 +9,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actions as documentActions,
-  generateId,
-  nextActionTimestamp,
+  generateActionId,
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };
@@ -20,10 +19,10 @@ export { documentActions };
  */
 export function createDocumentAction(input: CreateDocumentActionInput): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "CREATE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }
@@ -35,10 +34,10 @@ export function upgradeDocumentAction(
   input: UpgradeDocumentActionInput,
 ): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPGRADE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }
@@ -52,10 +51,10 @@ export function deleteDocumentAction(documentId: string): Action {
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "DELETE_DOCUMENT",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }
@@ -81,10 +80,10 @@ export function addRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }
@@ -107,10 +106,10 @@ export function updateRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPDATE_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }
@@ -130,10 +129,10 @@ export function removeRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "REMOVE_RELATIONSHIP",
     scope: "document",
-    timestampUtcMs: nextActionTimestamp(),
+    timestampUtcMs: new Date().toISOString(),
     input,
   };
 }

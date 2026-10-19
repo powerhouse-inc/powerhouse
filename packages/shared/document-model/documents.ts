@@ -45,7 +45,7 @@ import type {
   UndoRedoAction,
   UpgradeDocumentActionInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { deriveOperationId, generateActionId, generateId } from "./utils.js";
 
 /** Meta information about the document. */
 export type PHDocumentMeta = {
@@ -220,14 +220,14 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
 
   const actions: Action[] = [
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
       input: createInput,
     },
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
