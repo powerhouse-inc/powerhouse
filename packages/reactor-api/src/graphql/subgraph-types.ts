@@ -5,8 +5,7 @@ import type { OwnershipConflict } from "./subgraph-type-ownership.js";
 export type { ReservedTypeNames } from "../utils/create-schema.js";
 export type { OwnershipConflict } from "./subgraph-type-ownership.js";
 
-/** Owner of the types every generated document-model schema carries. */
-export const DOCUMENT_MODEL_SCHEMA_OWNER = "document-model schema";
+export { DOCUMENT_MODEL_SCHEMA_OWNER } from "./subgraph-schema-owner.js";
 
 /** A package's own subgraph, in the order the package exports it. */
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };

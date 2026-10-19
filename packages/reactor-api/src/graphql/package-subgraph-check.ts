@@ -32,12 +32,12 @@ import {
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
 import { systemTypeDefs } from "./system/schema.js";
-import {
-  DOCUMENT_MODEL_SCHEMA_OWNER,
-  type PackageSubgraph,
-  type PackageSubgraphConflicts,
-  type PackageSubgraphReport,
-  type RefusedDocumentModel,
+import { DOCUMENT_MODEL_SCHEMA_OWNER } from "./subgraph-schema-owner.js";
+import type {
+  PackageSubgraph,
+  PackageSubgraphConflicts,
+  PackageSubgraphReport,
+  RefusedDocumentModel,
 } from "./subgraph-types.js";
 
 /** The type definitions of every core subgraph, by subgraph name. */
