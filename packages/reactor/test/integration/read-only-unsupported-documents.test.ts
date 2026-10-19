@@ -18,6 +18,7 @@ import { DocumentIntegrityService } from "../../src/admin/document-integrity-ser
 import { createDefaultDatabase } from "../../src/core/create-default-database.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
+import { createReactorInspector } from "../../src/inspector/from-module.js";
 import { SnapshotPosition } from "../../src/cache/write-cache-types.js";
 import { UnsupportedProtocolVersionError } from "../../src/shared/errors.js";
 import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
@@ -279,6 +280,13 @@ describe("read-only over documents at an unsupported base-reducer version", () =
     );
     const result = await integrity.validateDocument(UNSUPPORTED);
     expect(result.unsupported).toEqual({ protocol: "base-reducer", version });
+
+    const inspected =
+      await createReactorInspector(narrow).validateDocument(UNSUPPORTED);
+    expect(inspected.unsupported).toEqual({
+      protocol: "base-reducer",
+      version,
+    });
   }
 
   it("serves no state for the document when no snapshot was stored", async () => {
