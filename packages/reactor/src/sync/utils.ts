@@ -569,6 +569,9 @@ export function classifyJobFailure(errorName: string): SyncOperationErrorType {
       return "UNSUPPORTED_PROTOCOL";
     case "DocumentPurgedError":
       return "DOCUMENT_PURGED";
+    // By name: DocumentNotFoundError.isError also matches the purged subclass.
+    case "DocumentNotFoundError":
+      return "MISSING_OPERATIONS";
     case "DocumentNotDeletedError":
     case "GroupInUseError":
     case "PurgeTooLargeError":
@@ -596,12 +599,14 @@ const NON_QUARANTINING_ERROR_TYPES: ReadonlySet<SyncOperationErrorType> =
     "DOCUMENT_PURGED",
     "PURGE_PRECONDITION",
     "MARKER_REFUSED",
+    "MISSING_OPERATIONS",
   ]);
 
 /**
  * A held auth operation must not quarantine: reconciling the two policies needs
  * the traffic a quarantine would stop. A protocol refusal concerns one peer,
- * and quarantine is global to the document.
+ * and quarantine is global to the document. A missing ancestor arrives through
+ * exactly the traffic a quarantine stops.
  */
 export function quarantinesDocument(
   errorType: SyncOperationErrorType,

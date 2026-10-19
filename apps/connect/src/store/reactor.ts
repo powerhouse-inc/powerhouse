@@ -18,10 +18,9 @@ import {
   addRemoteDrive,
   DocumentCache,
   DRIVE_DOCUMENT_TYPES,
-  extractDriveSlugFromPath,
-  extractNodeSlugFromPath,
-  getDrives,
   login,
+  trackDriveArrival,
+  untilDriveListed,
   refreshReactorDataClient,
   RegistryClient,
   setAttachmentService,
@@ -43,6 +42,8 @@ import {
   type PHToastFn,
   type ReactorFeatureFlags,
   type WorkerReactorClientModule,
+  getPHStore,
+  type PHStore,
 } from "@powerhousedao/reactor-browser";
 import {
   BrowserKeyStorage,
@@ -55,19 +56,38 @@ import {
   type UpgradeManifest,
 } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
+
 import { NoRegistryDiscoveryService } from "../no-registry-discovery.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { createWorkerReactorClientModule } from "../reactor-worker-client.js";
 import { closeDeletedSelection } from "../utils/deleted-selection.js";
-import { bumpWorkerGen } from "../reactor-worker-name.js";
+import { closeWithin } from "../utils/close-within.js";
+import { reloadForWorker } from "../utils/poisoned-store-budget.js";
+import { startupOwningStores } from "../utils/worker-startup.js";
 import { getRuntimeConfig } from "../runtime-config.js";
 import { getSharedDeps } from "../shared-deps.js";
 import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
+import { resolveReactorClientMode } from "./reactor-client-mode.js";
+import { isPackagedConnectDist } from "../utils/build-info.js";
+import {
+  resolvePackagedReactorWorker,
+  selectReactorWorkerSource,
+} from "../utils/reactor-worker-url.js";
+import {
+  resolveDevProjectSource,
+  resolveLocalPackageSources,
+  subscribeLocalPackageChanges,
+} from "../utils/worker-package-sources.js";
 import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import {
+  getAppDrives,
+  refreshAppDrives,
+  selectAppReactorClient,
+} from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -181,14 +201,16 @@ function subscribeToPackagesChannel(packageManager: IPackageManager): void {
 }
 
 export async function clearReactorStorage() {
-  const module = window.ph?.reactorClientModule;
+  const module = getPHStore()?.reactorClientModule;
   if (module?.kind === "worker") {
     // The worker holds the PGlite handles open, so it must close + clear them.
     await module.adminClient.clearStorage();
     return;
   }
   if (module?.kind === "browser") {
-    await module.reactorModule?.pg?.close();
+    // Flushes the group commit, then closes.
+    const reactorModule = module.reactorModule;
+    await closeWithin(reactorModule?.groupCommitStorage ?? reactorModule?.pg);
   }
 
   // Dropping tables in PGlite with relaxedDurability can lose pending IDB
@@ -212,13 +234,13 @@ export async function clearReactorStorage() {
   );
 }
 
-export async function createReactor(localPackage?: DocumentModelLib) {
-  if (!window.ph) {
-    window.ph = {};
-  }
-  if (window.ph.loading) return;
+export async function createReactor(
+  localPackage: DocumentModelLib | undefined,
+  store: PHStore,
+) {
+  if (store.loading) return;
 
-  window.ph.loading = true;
+  store.loading = true;
 
   addPHEventHandlers();
 
@@ -299,17 +321,19 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     subscribeToPackagesChannel(packageManager);
   }
 
-  const documentModelModules = packageManager.packages
-    .flatMap((pkg) => pkg.documentModels)
-    .filter(
-      (module, index, modules) =>
-        // dedupe by documentType and version
-        modules.findIndex(
-          (m) =>
-            m.documentModel.global.id === module.documentModel.global.id &&
-            m.version === module.version,
-        ) === index,
-    );
+  const loadedDocumentModels = () =>
+    packageManager.packages
+      .flatMap((pkg) => pkg.documentModels)
+      .filter(
+        (module, index, modules) =>
+          // dedupe by documentType and version
+          modules.findIndex(
+            (m) =>
+              m.documentModel.global.id === module.documentModel.global.id &&
+              m.version === module.version,
+          ) === index,
+      );
+  const documentModelModules = loadedDocumentModels();
 
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
@@ -356,12 +380,24 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
+  // The single 4-way selector. `remote` builds NO local reactor (no PGlite);
+  // `router` keeps the local reactor and adds remote backends; `worker` /
+  // `in-process` are the local reactor alone. (multiReactor is kept as the
+  // flag the local build + worker fingerprint already understand.)
+  const mode = resolveReactorClientMode();
+  const multiReactor = mode === "router";
+  const needsLocalReactor = mode !== "remote";
+  const localAsWorker =
+    needsLocalReactor &&
+    (mode === "worker" || (mode === "router" && isReactorWorkerEnabled()));
 
-  // create reactor v2 with all versions and upgrade manifests
+  // create reactor v2 with all versions and upgrade manifests. Undefined in
+  // `remote` mode: the tab has no local reactor, so PGlite is never imported.
   let reactorClientModule:
     | BrowserReactorClientModule
-    | WorkerReactorClientModule;
-  if (isReactorWorkerEnabled()) {
+    | WorkerReactorClientModule
+    | undefined;
+  if (localAsWorker) {
     const packageSpecs = packageManager
       .getRegistryPackages()
       .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
@@ -394,20 +430,38 @@ export async function createReactor(localPackage?: DocumentModelLib) {
         return module;
       },
     };
-    // The production vendor's shared-deps table (null in dev / vendor-off
-    // builds): the worker rewrites shared imports in package sources to
-    // these absolute URLs and blob-imports the result.
-    const sharedImports = (await getSharedDeps())?.imports;
+    // sharedDeps is null in dev / vendor-off builds; packageSources are local
+    // models the registry cannot serve (prod prebuilds, or the live dev entry).
+    const [sharedDeps, packagedWorker, packageSources] = await Promise.all([
+      getSharedDeps(),
+      resolvePackagedReactorWorker(import.meta.env.BASE_URL),
+      resolveLocalPackageSources(import.meta.env.BASE_URL),
+    ]);
+    const workerSource = selectReactorWorkerSource({
+      packaged: isPackagedConnectDist(),
+      bundle: packagedWorker,
+    });
+    if (workerSource.kind === "unavailable") {
+      store.loading = false;
+      throw new Error(
+        "reactorWorker is enabled but this deployment serves no reactor worker bundle (__reactor_worker__/); rebuild with ph connect build or open with ?reactorWorker=false",
+      );
+    }
     const workerClient = createWorkerReactorClientModule({
+      workerUrl: workerSource.kind === "bundle" ? workerSource.url : undefined,
+      workerDigest:
+        workerSource.kind === "bundle" ? workerSource.digest : undefined,
+      packageSources,
       namespace: REACTOR_INSTANCE_NAMESPACE,
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports,
+      sharedImports: sharedDeps?.imports,
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
       featureFlags: reactorFeatureFlags,
+      multiReactor,
       createSignaturePolicy,
       unsupportedStoredDocuments,
       renownEndpoints,
@@ -415,25 +469,43 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       upgradeManifests,
       documentModelLoader,
       renown,
-      onReload: (reason, workerGen) => {
+      onReload: (reason) => {
         logger.warn("Reactor worker requested reload: @reason", reason);
-        if (workerGen) {
-          bumpWorkerGen(REACTOR_INSTANCE_NAMESPACE, workerGen);
-        }
-        window.location.reload();
+        reloadForWorker(reason, () => window.location.reload());
       },
     });
     reactorClientModule = workerClient.reactorClientModule;
+    // A watch rebuild replaces the local package (updateLocalPackage); in
+    // worker mode the reactor lives in the worker, so forward only that.
+    const { registerPackages } = workerClient.reactorClientModule;
+    subscribeLocalPackageChanges(packageManager, () => {
+      void (async () => {
+        const source = await resolveDevProjectSource(import.meta.env.BASE_URL);
+        if (!source) return;
+        try {
+          await registerPackages([source]);
+        } catch (error) {
+          logger.error(
+            "Failed to re-register project models in the reactor worker: @error",
+            error,
+          );
+        }
+      })();
+    });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
+    // The worker boots only once it owns both stores.
     try {
-      await workerClient.syncManagerProxy.startup();
+      await startupOwningStores(
+        (options) => workerClient.syncManagerProxy.startup(options),
+        [REACTOR_INSTANCE_NAMESPACE, RELATIONAL_PGLITE_NAME],
+      );
     } catch (error) {
-      window.ph.loading = false;
+      store.loading = false;
       logger.error("Reactor worker failed to start: @error", error);
       throw error;
     }
-  } else {
+  } else if (needsLocalReactor) {
     reactorClientModule = await createBrowserReactor(
       documentModelModules,
       upgradeManifests,
@@ -443,15 +515,28 @@ export async function createReactor(localPackage?: DocumentModelLib) {
       createSignaturePolicy,
       renownEndpoints,
       unsupportedStoredDocuments,
+      multiReactor,
     );
   }
+  // mode === "remote": reactorClientModule stays undefined — no local reactor.
 
-  const drives = await getDrives(reactorClientModule.client);
+  const appReactorClient = await selectAppReactorClient({
+    mode,
+    module: reactorClientModule,
+    remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
+    signer: renown.signer,
+    documentModelModules: loadedDocumentModels,
+  });
 
-  const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, renown);
+  const drives = await getAppDrives(
+    appReactorClient,
+    reactorClientModule?.client ?? appReactorClient,
+  );
 
-  const documentCache = new DocumentCache(reactorClientModule.client);
+  // Reads `?user=` and strips it once consumed.
+  await login(undefined, renown);
+
+  const documentCache = new DocumentCache(appReactorClient);
 
   const basePath = phGlobalConfig.basePath ?? "/";
   const routerBasename = phGlobalConfig.routerBasename ?? "/";
@@ -462,13 +547,8 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   );
   setDefaultPHGlobalConfig(mergedGlobalConfig);
 
-  // Slug extraction needs window.ph.basePath, published by
-  // setDefaultPHGlobalConfig above.
-  const path = window.location.pathname;
-  const driveSlug = extractDriveSlugFromPath(path);
-  const nodeSlug = extractNodeSlugFromPath(path);
   setReactorClientModule(reactorClientModule);
-  setReactorClient(reactorClientModule.client);
+  setReactorClient(appReactorClient);
 
   const _defaultDrivesUrl = phGlobalConfig.defaultDrivesUrl;
   if (_defaultDrivesUrl) {
@@ -497,35 +577,40 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   setDocumentCache(documentCache);
   setRenown(renown);
-  setDrives(drives);
   setFeatures(features);
 
-  // Add default/remote drives in the background so the app renders immediately;
-  // setSelectedDrive defers selection until the URL-matched drive syncs in.
+  // Add default/remote drives in the background so the app renders immediately.
+  // They are tracked before the drives are set, so a waiting route sees them pending.
+  // The remote client lists the Switchboard's own drives; it has no sync to add drives to.
+  const addsDrives = mode !== "remote";
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
-  if (defaultDrivesConfig.length > 0) {
-    void addDefaultDrivesForNewReactor(defaultDrivesConfig).catch((error) =>
-      console.error("Failed to add default drives:", error),
-    );
+  if (addsDrives && defaultDrivesConfig.length > 0) {
+    void trackDriveArrival(
+      addDefaultDrivesForNewReactor(defaultDrivesConfig),
+    ).catch((error) => console.error("Failed to add default drives:", error));
   }
 
   const remoteUrl = getDriveUrl();
-  if (remoteUrl) {
-    void addRemoteDrive(remoteUrl, undefined).catch((error) =>
+  if (remoteUrl && !addsDrives) {
+    logger.warn("The remote reactor client ignores ?driveUrl=@url", remoteUrl);
+  } else if (remoteUrl) {
+    void trackDriveArrival(
+      addRemoteDrive(remoteUrl, undefined).then((driveId) =>
+        untilDriveListed(store, driveId),
+      ),
+    ).catch((error) =>
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error),
     );
   }
-
-  setSelectedDrive(driveSlug);
-  setSelectedNode(nodeSlug);
+  setDrives(drives);
 
   // Refresh the drive list on any drive-type change so async-added
   // default/remote drives surface on first load without a manual reload.
-  const reactorClient = reactorClientModule.client;
+  const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
       );
     });
@@ -534,15 +619,18 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // Redirect when a currently-viewed document or drive is deleted remotely
   reactorClient.subscribe({}, (event) => {
     closeDeletedSelection(event, {
-      selectedDriveId: window.ph?.selectedDriveId,
-      selectedNodeId: window.ph?.selectedNodeId,
+      selectedDriveId: store.selectedDriveId,
+      selectedNodeId: store.selectedNodeId,
       closeDrive: () => setSelectedDrive(undefined),
       closeNode: () => setSelectedNode(undefined),
       notify: (message) => toast(message),
     });
   });
 
-  await refreshReactorDataClient(reactorClientModule.client);
+  await refreshAppDrives(
+    appReactorClient,
+    reactorClientModule?.client ?? appReactorClient,
+  );
 
   const packagesWithProcessorFactories = packageManager.packages.filter(
     (pkg) => pkg.processorFactory !== undefined,
@@ -550,23 +638,34 @@ export async function createReactor(localPackage?: DocumentModelLib) {
 
   // processorManager lives in the worker on the cutover path and is not yet
   // bridged, so surface the gap loudly rather than dropping factories silently.
+  // In `remote` mode there is no local reactor at all — processors run on the
+  // remote Switchboard, so there is nothing to register in the tab.
   const reactorModule =
-    reactorClientModule.kind === "browser"
+    reactorClientModule?.kind === "browser"
       ? reactorClientModule.reactorModule
       : undefined;
-  if (packagesWithProcessorFactories.length > 0 && !reactorModule) {
+  if (packagesWithProcessorFactories.length > 0 && !reactorClientModule) {
+    logger.info(
+      "Remote reactor client: @count processor factory/ies run on the Switchboard, not in the tab",
+      packagesWithProcessorFactories.length,
+    );
+  } else if (packagesWithProcessorFactories.length > 0 && !reactorModule) {
     for (const pkg of packagesWithProcessorFactories) {
       logger.warn(
         "Skipping processor factory @name: processors are not supported on the worker reactor path yet",
         pkg.manifest.name,
       );
     }
-  } else if (packagesWithProcessorFactories.length > 0 && reactorModule) {
+  } else if (
+    packagesWithProcessorFactories.length > 0 &&
+    reactorModule &&
+    reactorClientModule
+  ) {
     const readModels = reactorModule.readModelCoordinator.readModels;
     const processorHostModule = await createProcessorHostModule(
       reactorClientModule.client,
       readModels,
-      window.ph?.attachmentService,
+      store.attachmentService,
     );
     if (processorHostModule !== undefined) {
       await Promise.all(
@@ -590,14 +689,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     }
   }
 
-  window.ph.loading = false;
-}
-
-function getDidFromUrl() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const didComponent = searchParams.get("user");
-  const did = didComponent ? decodeURIComponent(didComponent) : undefined;
-  return did;
+  store.loading = false;
 }
 
 function getDriveUrl() {

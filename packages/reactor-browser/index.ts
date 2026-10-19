@@ -12,6 +12,7 @@ export * from "./src/hooks/index.js";
 export * from "./src/pglite/index.js";
 export * from "./src/re-exports.js";
 export * from "./src/reactor.js";
+export * from "./src/routing/index.js";
 export * from "./src/registry/index.js";
 export * from "./src/relational/index.js";
 export * from "./src/remote-controller/index.js";

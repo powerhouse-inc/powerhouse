@@ -1,3 +1,4 @@
+import { cursorProtectedLoadMeta } from "../../../src/shared/types.js";
 import { settledAtHead } from "../../catch-up/helpers.js";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { ConsoleLogger } from "document-model";
@@ -24,6 +25,7 @@ import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
+  RemotePersistence,
   SyncOperationStatus,
   type ChannelConfig,
   type RemoteRecord,
@@ -32,6 +34,22 @@ import {
   quarantinesDocument,
   syncOperationErrorType,
 } from "../../../src/sync/utils.js";
+
+/** A stored remote record with every field the rehydration path reads. */
+function storedRemote(name: string): RemoteRecord {
+  return {
+    id: `ch-${name}`,
+    name,
+    collectionId: DriveCollectionId.forDrive("col1"),
+    channelConfig: { type: "internal", parameters: {} },
+    filter: { documentId: [], scope: [], branch: "main" },
+    options: { sinceTimestampUtcMs: "0" },
+    status: {
+      push: { state: "idle", failureCount: 0 },
+      pull: { state: "idle", failureCount: 0 },
+    },
+  };
+}
 
 describe("SyncManager - Unit Tests", () => {
   // A silent peer lacks document-purge, so gating reads creation versions.
@@ -397,6 +415,62 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.startup()).rejects.toThrow(
         "SyncManager is already shutdown and cannot be started",
       );
+    });
+
+    it("should boot the remaining remotes when one record's factory throws", async () => {
+      const okChannel = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockImplementation(
+        (_id, name): any => {
+          if (name === "remote-broken") {
+            throw new Error("no transport for peer 'gone'");
+          }
+          return okChannel;
+        },
+      );
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-broken"),
+        storedRemote("remote-ok"),
+      ]);
+
+      await expect(syncManager.startup()).resolves.toBeUndefined();
+
+      const remotes = syncManager.list();
+      expect(remotes).toHaveLength(1);
+      expect(remotes[0].meta.name).toBe("remote-ok");
+      expect(() => syncManager.getByName("remote-broken")).toThrow(
+        "Remote with name 'remote-broken' does not exist",
+      );
+    });
+
+    it("should drop the record of a remote whose config the factory rejects", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new Error("no channel factory for 'local' channels");
+      });
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-broken"),
+      ]);
+
+      await syncManager.startup();
+
+      expect(syncManager.list()).toHaveLength(0);
+      expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote-broken");
+    });
+
+    it("should keep the record of a remote whose factory failed on credentials", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new GraphQLRequestError("offline", "network");
+      });
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([
+        storedRemote("remote-offline"),
+      ]);
+
+      await syncManager.startup();
+
+      expect(syncManager.list()).toHaveLength(0);
+      expect(mockRemoteStorage.remove).not.toHaveBeenCalled();
     });
 
     it("should not register remote when channel.init() fails", async () => {
@@ -3119,7 +3193,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox" },
+        cursorProtectedLoadMeta("remote-inbox"),
       );
     });
 
@@ -3250,7 +3324,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-inbox2" },
+        cursorProtectedLoadMeta("remote-inbox2"),
       );
     });
 
@@ -3687,7 +3761,7 @@ describe("SyncManager - Unit Tests", () => {
         "main",
         expect.any(Array),
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        cursorProtectedLoadMeta("remote-mixed"),
       );
 
       expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
@@ -3699,7 +3773,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-mixed" },
+        cursorProtectedLoadMeta("remote-mixed"),
       );
     });
 
@@ -3937,7 +4011,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-empty-dep" },
+        cursorProtectedLoadMeta("remote-empty-dep"),
       );
 
       expect(ch.deadLetter.add).not.toHaveBeenCalled();
@@ -4045,7 +4119,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        cursorProtectedLoadMeta("remote-fifo"),
       );
       expect((mockReactor as any).loadBatch).toHaveBeenNthCalledWith(
         2,
@@ -4058,7 +4132,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-fifo" },
+        cursorProtectedLoadMeta("remote-fifo"),
       );
     });
 
@@ -4168,7 +4242,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-xdoc" },
+        cursorProtectedLoadMeta("remote-xdoc"),
       );
     });
 
@@ -4238,7 +4312,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-stale" },
+        cursorProtectedLoadMeta("remote-stale"),
       );
     });
 
@@ -4361,7 +4435,7 @@ describe("SyncManager - Unit Tests", () => {
           ],
         },
         expect.any(AbortSignal),
-        { sourceRemote: "remote-concurrent" },
+        cursorProtectedLoadMeta("remote-concurrent"),
       );
     });
   });
@@ -5812,6 +5886,217 @@ describe("SyncManager - Unit Tests", () => {
       await vi.waitFor(() => {
         expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
       });
+    });
+  });
+
+  describe("remote persistence", () => {
+    const sessionOptions = {
+      sinceTimestampUtcMs: "0",
+      persistence: RemotePersistence.Session,
+    };
+
+    it("should write a session-scoped remote so its rows have a parent", async () => {
+      await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+
+      expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "local:peer-b:drive-1",
+          options: expect.objectContaining({
+            persistence: RemotePersistence.Session,
+          }),
+        }),
+      );
+    });
+
+    it("should remove a session-scoped remote at the next startup instead of rehydrating it", async () => {
+      const stored = new Map<string, RemoteRecord>();
+      vi.mocked(mockRemoteStorage.upsert).mockImplementation((record) => {
+        stored.set(record.name, record);
+        return Promise.resolve();
+      });
+      vi.mocked(mockRemoteStorage.list).mockImplementation(() =>
+        Promise.resolve([...stored.values()]),
+      );
+      vi.mocked(mockRemoteStorage.remove).mockImplementation((name) => {
+        stored.delete(name);
+        return Promise.resolve();
+      });
+
+      await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      const instance = vi.fn<IChannelFactory["instance"]>(() => mockChannel);
+      const restarted = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        { instance },
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
+      );
+
+      await expect(restarted.startup()).resolves.toBeUndefined();
+      expect(restarted.list().map((r) => r.meta.name)).toEqual([
+        "durable-remote",
+      ]);
+      expect(instance.mock.calls.map((call) => call[1])).toEqual([
+        "durable-remote",
+      ]);
+      expect([...stored.keys()]).toEqual(["durable-remote"]);
+      expect(mockCursorStorage.remove).toHaveBeenCalledWith(
+        "local:peer-b:drive-1",
+      );
+      restarted.shutdown();
+    });
+
+    it("should not quarantine a document whose only dead letter was a purged session remote's", async () => {
+      const stored = new Map<string, RemoteRecord>();
+      const deadLetters = new Map<string, string[]>([
+        ["local:peer-b:drive-1", ["session-quarantined-doc"]],
+      ]);
+      vi.mocked(mockRemoteStorage.upsert).mockImplementation((record) => {
+        stored.set(record.name, record);
+        return Promise.resolve();
+      });
+      vi.mocked(mockRemoteStorage.list).mockImplementation(() =>
+        Promise.resolve([...stored.values()]),
+      );
+      // sync_dead_letters cascades from sync_remotes.
+      vi.mocked(mockRemoteStorage.remove).mockImplementation((name) => {
+        stored.delete(name);
+        deadLetters.delete(name);
+        return Promise.resolve();
+      });
+      vi.mocked(
+        mockDeadLetterStorage.listQuarantinedDocumentIds,
+      ).mockImplementation(() =>
+        Promise.resolve([...new Set([...deadLetters.values()].flat())]),
+      );
+
+      await syncManager.add(
+        "local:peer-b:drive-1",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "local", parameters: { peerId: "peer-b" } },
+        { documentId: [], scope: [], branch: "" },
+        sessionOptions,
+      );
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      const channel = {
+        ...mockChannel,
+        inbox: createMockMailbox(),
+        outbox: createMockMailbox(),
+        deadLetter: createMockMailbox(),
+      } as IChannel;
+      const restarted = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        { instance: () => channel },
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        settledAtHead(),
+      );
+      await restarted.startup();
+      vi.mocked(mockReactor.load).mockClear();
+
+      const inboxCb = vi.mocked(channel.inbox.onAdded).mock.calls[0][0];
+      inboxCb([
+        new SyncOperation(
+          "inbox-after-restart",
+          "",
+          [],
+          "durable-remote",
+          "session-quarantined-doc",
+          ["global"],
+          "main",
+          [
+            {
+              operation: {
+                index: 0,
+                skip: 0,
+                id: "op-after-restart",
+                hash: "h",
+                timestampUtcMs: "1000",
+                action: { type: "CREATE", scope: "global" } as any,
+              },
+              context: {
+                documentId: "session-quarantined-doc",
+                documentType: "test",
+                scope: "global",
+                branch: "main",
+                ordinal: 1,
+              },
+            },
+          ],
+        ),
+      ]);
+
+      await vi.waitFor(() => {
+        expect(mockReactor.load).toHaveBeenCalledWith(
+          "session-quarantined-doc",
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+        );
+      });
+      restarted.shutdown();
+    });
+
+    it("should persist a remote by default", async () => {
+      await syncManager.add(
+        "durable-remote",
+        DriveCollectionId.forDrive("drive-1"),
+        { type: "internal", parameters: {} },
+      );
+
+      expect(mockRemoteStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "durable-remote" }),
+      );
+    });
+
+    it("should leave no record when the factory rejects the config", async () => {
+      vi.mocked(mockChannelFactory.instance).mockImplementation((): any => {
+        throw new Error('This reactor has no "gql" channel factory');
+      });
+
+      await expect(
+        syncManager.add("bad-remote", DriveCollectionId.forDrive("drive-1"), {
+          type: "gql",
+          parameters: { url: "https://example.test/graphql" },
+        }),
+      ).rejects.toThrow('This reactor has no "gql" channel factory');
+
+      expect(mockRemoteStorage.upsert).not.toHaveBeenCalled();
+      expect(syncManager.list()).toHaveLength(0);
     });
   });
 });

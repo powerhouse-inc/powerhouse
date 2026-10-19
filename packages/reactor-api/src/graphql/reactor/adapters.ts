@@ -143,6 +143,8 @@ export function toGqlPhDocument(doc: PHDocument): PhDocument {
     documentType: doc.header.documentType,
     slug: doc.header.slug,
     preferredEditor: doc.header.meta?.preferredEditor ?? null,
+    meta: doc.header.meta ?? null,
+    protocolVersions: doc.header.protocolVersions ?? null,
     createdAtUtcIso: doc.header.createdAtUtcIso,
     lastModifiedAtUtcIso: doc.header.lastModifiedAtUtcIso,
     revisionsList,
@@ -156,11 +158,27 @@ export function toGqlPhDocument(doc: PHDocument): PhDocument {
 export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
   return {
     id: job.id,
+    documentId: job.documentId,
     status: job.status,
     createdAt: job.createdAtUtcIso,
     completedAt: job.completedAtUtcIso ?? null,
     error: job.error?.message ?? null,
+    errorName: job.error?.name ?? null,
     result: job.result ?? null,
+    consistencyToken: {
+      version: job.consistencyToken.version,
+      createdAtUtcIso: job.consistencyToken.createdAtUtcIso,
+      coordinates: job.consistencyToken.coordinates.map((coordinate) => ({
+        documentId: coordinate.documentId,
+        scope: coordinate.scope,
+        branch: coordinate.branch,
+        operationIndex: coordinate.operationIndex,
+      })),
+    },
+    meta: {
+      batchId: job.meta.batchId,
+      batchJobIds: [...job.meta.batchJobIds],
+    },
   };
 }
 

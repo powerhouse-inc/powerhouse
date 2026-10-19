@@ -62,9 +62,16 @@ export interface BlockSearchHit {
   kind: string;
 }
 
-export interface BlockSearchResult {
+export interface PieceSearchMatch {
+  pieceName: string;
+  pieceVersion: string;
+  source: string;
+  blocks: BlockSearchHit[];
+}
+
+export interface PieceSearchResult {
   status: string;
-  hits: BlockSearchHit[];
+  pieces: PieceSearchMatch[];
   indexedPieces: number;
   error: string | null;
 }
@@ -107,45 +114,49 @@ export async function pieceCatalog(
   return data.workflowRuntime.pieceCatalog ?? [];
 }
 
-export async function searchBlocks(
+// Actions only: the fixture piece has no triggers.
+export async function searchPieces(
   client: SwitchboardClient,
   query: string,
-): Promise<BlockSearchResult> {
+): Promise<PieceSearchResult> {
   const data = await client.request<{
-    workflowRuntime: { searchBlocks: BlockSearchResult };
+    workflowRuntime: { searchPieces: PieceSearchResult };
   }>(
     RUNTIME_PATH,
     `query Search($query: String!) {
       workflowRuntime {
-        searchBlocks(query: $query) {
+        searchPieces(query: $query, kind: "action") {
           status
           indexedPieces
           error
-          hits { pieceName pieceVersion name displayName kind }
+          pieces {
+            pieceName pieceVersion source
+            blocks { pieceName pieceVersion name displayName kind }
+          }
         }
       }
     }`,
     { query },
   );
-  return data.workflowRuntime.searchBlocks;
+  return data.workflowRuntime.searchPieces;
 }
 
 // The index builds lazily on first use, so a "indexing" answer is polled out
 // rather than treated as a miss.
-export async function searchBlocksWhenReady(
+export async function searchPiecesWhenReady(
   client: SwitchboardClient,
   query: string,
   timeoutMs = 60_000,
-): Promise<BlockSearchResult> {
+): Promise<PieceSearchResult> {
   const deadline = Date.now() + timeoutMs;
-  let last: BlockSearchResult | undefined;
+  let last: PieceSearchResult | undefined;
   while (Date.now() < deadline) {
-    last = await searchBlocks(client, query);
+    last = await searchPieces(client, query);
     if (last.status !== "indexing") return last;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(
-    `searchBlocks("${query}") was still indexing after ${timeoutMs}ms (last: ${JSON.stringify(last)})`,
+    `searchPieces("${query}") was still indexing after ${timeoutMs}ms (last: ${JSON.stringify(last)})`,
   );
 }
 

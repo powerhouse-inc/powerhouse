@@ -49,6 +49,28 @@ describe("buildActionContext", () => {
     );
   });
 
+  it("serves a supplied resumePayload, and throws by name without one", () => {
+    const payload = { body: { approved: true }, headers: {}, queryParams: {} };
+    const { context: resumed } = buildActionContext({
+      propsValue: {},
+      resumePayload: payload,
+    });
+    expect(resumed.resumePayload).toBe(payload);
+
+    // No resume payload on the request: the member the RESUME contract
+    // promises throws by name instead of reading as undefined.
+    const { context: ctx } = buildActionContext({ propsValue: {} });
+    try {
+      void (ctx.resumePayload as { body?: unknown }).body;
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(UnsupportedContextMemberError);
+      expect((error as UnsupportedContextMemberError).member).toBe(
+        "resumePayload.body",
+      );
+    }
+  });
+
   it("provides identity data without throwing", async () => {
     const { context: ctx } = buildActionContext({
       propsValue: {},

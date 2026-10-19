@@ -95,6 +95,13 @@ describe("document ids", () => {
     expect(reader.documentId(text, "documentId")).toBe(ID);
     expect(reader.output()).toEqual({ extractedFrom: { documentId: text } });
   });
+
+  it("extracts a derived id", () => {
+    const derived = "taZIv6HFu5vxqH3YvrZ6W6N3Dg6qlS87HI628RCVicg";
+    expect(
+      extract().documentId(`Use ${derived}, not the other.`, "documentId"),
+    ).toBe(derived);
+  });
 });
 
 describe("dispatch payloads", () => {

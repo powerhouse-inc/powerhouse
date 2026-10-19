@@ -4,7 +4,8 @@ import { existsSync, realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseNonNegativeInt } from "./env.mjs";
 
 export type WorkerCountInput = number | "auto";
 
@@ -170,6 +171,40 @@ const BASE_MODEL_SPECIFIERS = [
   "@powerhousedao/reactor-group/document-models",
 ];
 
+// As the reactor builder tells a module from the rest of a source's exports.
+function isModelModule(value: unknown): boolean {
+  const candidate = value as {
+    reducer?: unknown;
+    documentModel?: { global?: { id?: unknown } };
+  } | null;
+  return (
+    typeof candidate?.reducer === "function" &&
+    typeof candidate.documentModel?.global?.id === "string"
+  );
+}
+
+// Drops sources that fail to import or export no model. For workflow pieces
+// only: a missing model means "unavailable to pieces", not a failed boot.
+export async function keepImportableSources(
+  sources: FileModelSource[],
+  logger: ILogger,
+): Promise<FileModelSource[]> {
+  const kept: FileModelSource[] = [];
+  for (const source of sources) {
+    try {
+      const exports = (await import(
+        pathToFileURL(source.filePath).href
+      )) as Record<string, unknown>;
+      if (Object.values(exports).some(isModelModule)) kept.push(source);
+    } catch (error) {
+      logger.warn(
+        `Worker model sources: "${source.filePath}" does not import, so workflow pieces will not see its models: ${String(error)}`,
+      );
+    }
+  }
+  return kept;
+}
+
 /**
  * Resolves base models and configured package identifiers to `{ filePath }`
  * sources for the reactor builder. Resolution to absolute paths happens here
@@ -181,10 +216,16 @@ const BASE_MODEL_SPECIFIERS = [
 export async function resolveWorkerModelSources(
   packages: string[],
   logger: ILogger,
+  options: {
+    /** Cached file for a package not installed locally, e.g. from a registry. */
+    resolveRemote?: (identifier: string) => Promise<string | null>;
+  } = {},
 ): Promise<FileModelSource[]> {
   const sources: FileModelSource[] = [];
   for (const identifier of [...BASE_MODEL_SPECIFIERS, ...packages]) {
-    const filePath = await resolveModelModuleFile(identifier);
+    const filePath =
+      (await resolveModelModuleFile(identifier)) ??
+      (await resolveRemoteSafely(identifier, options.resolveRemote, logger));
     if (!filePath) {
       logger.warn(
         `Worker model sources: no importable document-models entry for "${identifier}", skipping`,
@@ -194,6 +235,22 @@ export async function resolveWorkerModelSources(
     sources.push({ filePath });
   }
   return sources;
+}
+
+async function resolveRemoteSafely(
+  identifier: string,
+  resolveRemote: ((identifier: string) => Promise<string | null>) | undefined,
+  logger: ILogger,
+): Promise<string | null> {
+  if (!resolveRemote) return null;
+  try {
+    return await resolveRemote(identifier);
+  } catch (error) {
+    logger.warn(
+      `Worker model sources: could not cache "${identifier}" from the registry: ${String(error)}`,
+    );
+    return null;
+  }
 }
 
 /**
@@ -350,20 +407,6 @@ function parseWorkerCount(
     throw new Error(
       `REACTOR_WORKERS must be "auto" or a non-negative integer, got "${raw}"`,
     );
-  }
-  return value;
-}
-
-export function parseNonNegativeInt(
-  raw: string | undefined,
-  name: string,
-): number | undefined {
-  if (raw === undefined || raw.trim() === "") {
-    return undefined;
-  }
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isInteger(value) || value < 0 || String(value) !== raw.trim()) {
-    throw new Error(`${name} must be a non-negative integer, got "${raw}"`);
   }
   return value;
 }

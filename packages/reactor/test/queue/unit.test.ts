@@ -8,6 +8,7 @@ import { ReactorEventTypes } from "../../src/events/types.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type {
+  IJobExecutionHandle,
   Job,
   JobAvailableEvent,
   JobRoutingMeta,
@@ -19,6 +20,7 @@ import {
 } from "../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelLoader } from "../../src/registry/interfaces.js";
+import { DocumentNotFoundError } from "../../src/shared/errors.js";
 import {
   createJobDependencyChain,
   createJobWithDependencies,
@@ -1256,6 +1258,76 @@ describe("InMemoryQueue", () => {
       expect(failedEvents[0].error.message).toContain("unknown/type");
     });
 
+    it("should not emit JOB_FAILED for a job a deferral already dropped", async () => {
+      // deferJob removes the job from the index, so a later failJob has no
+      // job to put on the event. The deferred-expiry path emits its own
+      // JOB_FAILED carrying the job; a second, job-less event from the queue
+      // delivered every expiry to subscribers twice.
+      const job = createTestJob({ id: "deferred-job" });
+      await queue.enqueue(job);
+
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("deferred-job");
+      handle?.start();
+      handle?.defer();
+
+      await queue.failJob("deferred-job", {
+        name: "DocumentNotFoundError",
+        message: "Document not found",
+        stack: "",
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(0);
+    });
+
+    it("should emit the typed error instance a failer carried on errorInfo.source", async () => {
+      // The result handler flattens its typed error into ErrorInfo for the
+      // record, and rides the instance along as source so subscribers can
+      // still classify by instanceof.
+      const typedError = new DocumentNotFoundError("missing-doc");
+      const job = createTestJob({ id: "typed-source-job" });
+      await queue.enqueue(job);
+
+      await queue.failJob("typed-source-job", {
+        name: typedError.name,
+        message: typedError.message,
+        stack: typedError.stack || "",
+        source: typedError,
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(1);
+      const event = jobFailedEmits[0][1] as JobFailedEvent;
+      expect(event.jobId).toBe("typed-source-job");
+      expect(event.error).toBe(typedError);
+      expect(event.error).toBeInstanceOf(DocumentNotFoundError);
+      expect(event.job?.id).toBe("typed-source-job");
+    });
+
+    it("should reconstruct the error, name preserved, when errorInfo has no source", async () => {
+      const job = createTestJob({ id: "no-source-job" });
+      await queue.enqueue(job);
+
+      await queue.failJob("no-source-job", {
+        name: "InvalidSignatureError",
+        message: "signature did not verify",
+        stack: "",
+      });
+
+      const jobFailedEmits = mockEventBusEmit.mock.calls.filter(
+        ([type]) => type === ReactorEventTypes.JOB_FAILED,
+      );
+      expect(jobFailedEmits).toHaveLength(1);
+      const event = jobFailedEmits[0][1] as JobFailedEvent;
+      expect(event.error.name).toBe("InvalidSignatureError");
+      expect(event.error.message).toBe("signature did not verify");
+    });
+
     it("should unblock dependent jobs when a job fails during enqueue", async () => {
       const realEventBus = new EventBus();
       const registry = new DocumentModelRegistry();
@@ -1484,6 +1556,124 @@ describe("InMemoryQueue", () => {
       const retriedHandle = await queue.dequeueNext();
       expect(retriedHandle).not.toBeNull();
       expect(retriedHandle!.job.retryCount).toBe(1);
+    });
+  });
+
+  describe("re-enqueue at the job's original position", () => {
+    const transient = { name: "Error", message: "transient", stack: "" };
+
+    async function drain(): Promise<string[]> {
+      const order: string[] = [];
+      let next = await queue.dequeueNext();
+      while (next) {
+        order.push(next.job.id);
+        await queue.completeJob(next.job.id);
+        next = await queue.dequeueNext();
+      }
+      return order;
+    }
+
+    async function startJ1ThenQueueJ2(): Promise<IJobExecutionHandle> {
+      await queue.enqueue(createTestJob({ id: "J1", kind: "load" }));
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("J1");
+      handle!.start();
+      await queue.enqueue(
+        createTestJob({ id: "J2", kind: "load", queueHint: ["J1"] }),
+      );
+      return handle!;
+    }
+
+    async function startK1OfChain(): Promise<IJobExecutionHandle> {
+      await queue.enqueue(createTestJob({ id: "K1", documentId: "D" }));
+      await queue.enqueue(
+        createTestJob({ id: "K2", documentId: "E", queueHint: ["K1"] }),
+      );
+      await queue.enqueue(
+        createTestJob({ id: "K3", documentId: "D", queueHint: ["K2"] }),
+      );
+      const handle = await queue.dequeueNext();
+      expect(handle?.job.id).toBe("K1");
+      handle!.start();
+      return handle!;
+    }
+
+    it("runs a retried job before the dependent queued while it ran", async () => {
+      await startJ1ThenQueueJ2();
+
+      await queue.retryJob("J1", transient);
+
+      const retried = await queue.dequeueNext();
+      expect(retried?.job.id).toBe("J1");
+      await queue.completeJob("J1");
+      expect((await queue.dequeueNext())?.job.id).toBe("J2");
+    });
+
+    it("runs a flushed deferred job before the dependent queued while it ran", async () => {
+      const handle = await startJ1ThenQueueJ2();
+
+      handle.defer();
+      await queue.enqueue(handle.job);
+
+      const flushed = await queue.dequeueNext();
+      expect(flushed?.job.id).toBe("J1");
+      await queue.completeJob("J1");
+      expect((await queue.dequeueNext())?.job.id).toBe("J2");
+    });
+
+    it("completes a retried job whose same-document dependent waits through another document", async () => {
+      await startK1OfChain();
+
+      await queue.retryJob("K1", transient);
+
+      expect(await drain()).toEqual(["K1", "K2", "K3"]);
+      expect(await queue.totalSize()).toBe(0);
+    });
+
+    it("completes a flushed job whose same-document dependent waits through another document", async () => {
+      const handle = await startK1OfChain();
+
+      handle.defer();
+      await queue.enqueue(handle.job);
+
+      expect(await drain()).toEqual(["K1", "K2", "K3"]);
+      expect(await queue.totalSize()).toBe(0);
+    });
+
+    it("puts a retried job back ahead of jobs queued after it", async () => {
+      await queue.enqueue(createTestJob({ id: "J1" }));
+      await queue.dequeueNext();
+      await queue.enqueue(createTestJob({ id: "X" }));
+      await queue.enqueue(createTestJob({ id: "J2", queueHint: ["J1"] }));
+
+      await queue.retryJob("J1", transient);
+
+      expect(await drain()).toEqual(["J1", "X", "J2"]);
+    });
+
+    it("keeps the original order of several jobs flushed for one sub-queue", async () => {
+      await queue.enqueue(createTestJob({ id: "A" }));
+      await queue.enqueue(createTestJob({ id: "B" }));
+      const a = await queue.dequeueNext();
+      a!.start();
+      a!.defer();
+      const b = await queue.dequeueNext();
+      b!.start();
+      b!.defer();
+      await queue.enqueue(createTestJob({ id: "X" }));
+
+      await queue.enqueue(a!.job);
+      await queue.enqueue(b!.job);
+
+      expect(await drain()).toEqual(["A", "B", "X"]);
+    });
+
+    it("appends a fresh job at the tail", async () => {
+      await queue.enqueue(createTestJob({ id: "A" }));
+      await queue.enqueue(createTestJob({ id: "B" }));
+      await queue.enqueue(createTestJob({ id: "C" }));
+
+      expect(await drain()).toEqual(["A", "B", "C"]);
     });
   });
 

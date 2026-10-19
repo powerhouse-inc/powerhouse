@@ -1,7 +1,11 @@
 import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
-import type { PieceAuthKind, PieceTriggerStrategy } from "file-builders";
+import type {
+  PieceAuthKind,
+  PieceRequireReactor,
+  PieceTriggerStrategy,
+} from "file-builders";
 import {
   getPieceNames,
   pruneManifestSection,
@@ -388,13 +392,18 @@ export async function generatePiece(
 }
 
 export async function generatePieceAction(
-  args: { pieceDir?: string; actionName: string },
+  args: {
+    pieceDir?: string;
+    actionName: string;
+    requireReactor?: PieceRequireReactor;
+  },
   project: Project,
 ) {
   await tsMorphGeneratePieceAction({
     project,
     pieceDir: resolvePieceDir(project, args.pieceDir),
     actionName: args.actionName,
+    requireReactor: args.requireReactor,
   });
 }
 
@@ -403,6 +412,7 @@ export async function generatePieceTrigger(
     pieceDir?: string;
     triggerName: string;
     strategy?: PieceTriggerStrategy;
+    requireReactor?: PieceRequireReactor;
   },
   project: Project,
 ) {
@@ -411,6 +421,7 @@ export async function generatePieceTrigger(
     pieceDir: resolvePieceDir(project, args.pieceDir),
     triggerName: args.triggerName,
     strategy: args.strategy ?? "polling",
+    requireReactor: args.requireReactor,
   });
 }
 

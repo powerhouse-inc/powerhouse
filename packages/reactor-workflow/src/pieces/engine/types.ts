@@ -16,6 +16,8 @@ export interface WorkflowTriggerDef {
   pieceVersion: string;
   triggerName: string;
   connectionId?: string | null;
+  // A REACTOR connection, for a trigger that declares requireReactor.
+  reactorConnectionId?: string | null;
   config?: unknown;
   propertySettings?: PropertySettingDef[] | null;
 }
@@ -28,11 +30,16 @@ export interface WorkflowStepDef {
   pieceVersion: string;
   actionName: string;
   connectionId?: string | null;
+  // A REACTOR connection, for an action that declares requireReactor.
+  reactorConnectionId?: string | null;
   config: unknown;
   timeoutSeconds?: number | null;
   propertySettings?: PropertySettingDef[] | null;
   // Passed over at run time: not executed, continues on "next" with a null output.
   skip?: boolean | null;
+  // The author's retry block, unresolved; `effectiveRetryPolicy` reads it.
+  // Falls back to the workflow policy's `defaultRetry`.
+  retry?: unknown;
 }
 
 export interface WorkflowEdgeDef {
@@ -61,6 +68,7 @@ export interface BlockExecution {
   // Step config with expressions already resolved against the run scope.
   config: unknown;
   connectionId?: string | null;
+  reactorConnectionId?: string | null;
   step: WorkflowStepDef;
   // Run-wide secret values (SECRET variables) the executor redacts as well.
   redactValues?: string[];
@@ -83,11 +91,16 @@ export interface BlockExecutor {
 
 // REPLAYED: output reused from a prior run's journal instead of executing.
 // SKIPPED: never reached, or flagged `skip` (then it carries port "next").
+// INDETERMINATE: the step neither returned nor failed — a host call it made
+// timed out, so a write it asked for may well have been committed. Reporting
+// that as FAILED would be a claim nobody can stand behind, so it is its own
+// state: it takes no port, ends the run, and never replays on rerun.
 export type StepExecutionStatus =
   | "SUCCEEDED"
   | "FAILED"
   | "SKIPPED"
-  | "REPLAYED";
+  | "REPLAYED"
+  | "INDETERMINATE";
 
 export interface StepExecutionRecord {
   stepId: string;
@@ -99,8 +112,21 @@ export interface StepExecutionRecord {
   // Resolved config the block ran with; absent for skipped steps.
   input?: unknown;
   output?: unknown;
+  /**
+   * Journaled in the output column in place of `output`, when there is no
+   * output to hand a caller but the row still has to say something.
+   *
+   * One use today: a REPLAYED step whose journaled output the payload cap
+   * truncated. The record's `output` stays absent — a caller must not be
+   * handed a marker where real data goes — while the row keeps the marker, so
+   * a SECOND rerun still knows the output is gone and tells a downstream step
+   * by name instead of resolving it to nothing.
+   */
+  journaledOutput?: unknown;
   port?: string;
   error?: string;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  errorName?: string;
   // ISO times the block ran between; absent for skipped and replayed steps.
   startedAt?: string;
   endedAt?: string;
@@ -108,14 +134,21 @@ export interface StepExecutionRecord {
   piece?: StepPieceRecord;
   // Hash of the step definition it ran from; rerun replays only an unchanged one.
   configHash?: string;
+  // How many times the block ran, when its retry policy let it run more than
+  // once. Absent for a single attempt, so an unretried step journals as it did.
+  attempts?: number;
 }
 
-export type WorkflowRunStatus = "SUCCEEDED" | "FAILED";
+// CANCELLED: the run passed its `runTimeoutSeconds`, or a firing was skipped
+// because the workflow's concurrency mode is SINGLETON and a run was active.
+// Neither is a failure of the workflow, which is why it is not FAILED.
+export type WorkflowRunStatus = "SUCCEEDED" | "FAILED" | "CANCELLED";
 
 export interface WorkflowRunResult {
   status: WorkflowRunStatus;
   steps: StepExecutionRecord[];
   error?: string;
+  errorName?: string;
   // What ran but deserves a look, e.g. an edge on a port nothing emits.
   warnings?: string[];
 }

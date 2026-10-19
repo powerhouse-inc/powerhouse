@@ -15,6 +15,8 @@ const POLL_MS = 1_000;
 export const ON_DEMAND_TIMEOUT_MS = 60_000;
 const VERSION_CACHE_MAX = 5_000;
 
+const FAILED_RETRY_AFTER = "15 minutes";
+
 export interface VersionRow {
   package: string;
   version: string;
@@ -23,6 +25,8 @@ export interface VersionRow {
   packageJsonVersion: string | null;
   files: string[];
   error: string | null;
+  /** Failed long enough ago that a request may try it again */
+  retryable?: boolean;
 }
 
 export interface PackageRow {
@@ -321,9 +325,11 @@ export class Catalog {
     }
     const rows = await this.#db.query<VersionRow>(
       `SELECT package, version, status, manifest,
-              package_json_version AS "packageJsonVersion", files, error
+              package_json_version AS "packageJsonVersion", files, error,
+              (status = 'failed' AND NOT permanent
+               AND updated_at < now() - $3::interval) AS retryable
          FROM registry_versions WHERE package = $1 AND version = $2`,
-      [pkg, version],
+      [pkg, version, FAILED_RETRY_AFTER],
     );
     const row = rows.rows[0] ?? null;
     // Only ready rows are served from the cache, so only they are kept
@@ -362,10 +368,32 @@ export class Catalog {
   ): Promise<EnsureResult> {
     let row = await this.version(pkg, version);
     if (row?.status === "ready") return { kind: "ready", row };
-    if (row?.status === "failed") {
+    if (row?.status === "failed" && !row.retryable) {
       return { kind: "failed", error: row.error ?? "" };
     }
-    if (!row) {
+    if (row?.status === "failed") {
+      // A failure left this long may have been transient, such as throttling
+      const local = (await this.packageRow(pkg))?.local === true;
+      await this.#db.transaction(async (tx) => {
+        // Another request may have reset it already; its job is enough
+        const reset = await tx.query(
+          `UPDATE registry_versions SET status = 'pending', error = NULL, updated_at = now()
+            WHERE package = $1 AND version = $2 AND status = 'failed'
+            RETURNING version`,
+          [pkg, version],
+        );
+        if (reset.rows.length === 0) return;
+        await enqueue(
+          tx,
+          "process",
+          pkg,
+          version,
+          {},
+          local ? 0 : ON_DEMAND_PRIORITY,
+        );
+      });
+      await wakeWorkers(this.#db);
+    } else if (!row) {
       const packument = await fetchPackument(this.#registryUrl(), pkg);
       if (!packument?.versions?.[version]) return { kind: "missing" };
       // Mirroring an npm package on request waits behind publishes

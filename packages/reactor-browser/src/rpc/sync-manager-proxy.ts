@@ -2,7 +2,13 @@ import type { PeerManifest } from "@powerhousedao/shared/document-model";
 import {
   createPeerAgreement,
   DriveCollectionId,
+  SYNC_INSPECTION_OPS,
   SyncEventTypes,
+  type DeadLetterPage,
+  type ISyncAdmin,
+  type ISyncInspector,
+  type RemoteSyncInspection,
+  type SyncInspectionOpKey,
   type ChannelConfig,
   type ConnectionStateChangeCallback,
   type ConnectionStateChangedEvent,
@@ -24,12 +30,18 @@ import {
   type SyncStatus,
   type SyncStatusChangeCallback,
 } from "@powerhousedao/reactor";
-import { KeyedListeners, Listeners } from "./listeners.js";
-import type { MessageRouter } from "./message-router.js";
+import {
+  KeyedListeners,
+  Listeners,
+  type MessageRouter,
+} from "@powerhousedao/reactor/rpc";
+import {
+  SYNC_REMOTES_CHANGED_EVENT,
+  SYNC_STATUS_CHANGED_EVENT,
+} from "./bus-event-ids.js";
 import { opChannel, type IOpChannel } from "./op-channel.js";
 
-// Synthetic bus channel id for sync-status deltas (not a reactor IEventBus type).
-export const SYNC_STATUS_CHANGED_EVENT = 90001;
+export { SYNC_REMOTES_CHANGED_EVENT, SYNC_STATUS_CHANGED_EVENT };
 
 export type SyncStatusChangedBusEvent = {
   documentId: string;
@@ -54,6 +66,7 @@ type WireRemote = {
   meta: WireRemoteMeta;
   connectionState: ConnectionStateSnapshot;
 };
+type SyncRemotesChangedBusEvent = { remotes: WireRemote[] };
 
 const DEFAULT_SNAPSHOT: ConnectionStateSnapshot = {
   state: "connecting",
@@ -117,7 +130,9 @@ function channelUrl(meta: RemoteMeta): string | undefined {
 }
 
 // Tab-side ISyncManager: cache-backed reads fed by the bus, ops over sync-op RPC.
-export class SyncManagerProxy implements ISyncManager {
+export class SyncManagerProxy
+  implements ISyncManager, ISyncInspector, ISyncAdmin
+{
   private readonly ops: IOpChannel;
   private readonly connectionStates = new Map<
     string,
@@ -148,25 +163,30 @@ export class SyncManagerProxy implements ISyncManager {
       this.syncStatusListeners.emit(e.documentId, e.status);
     });
 
+    busProxy.subscribe(SYNC_REMOTES_CHANGED_EVENT, (_type, event) => {
+      this.applyRemotes((event as SyncRemotesChangedBusEvent).remotes);
+    });
+
     void this.ensureSeeded();
   }
 
-  async startup(): Promise<void> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt < SEED_MAX_ATTEMPTS; attempt++) {
+  /** Attempts that fail while `isWaiting()` (the worker waits on a store lock) are not counted. */
+  async startup({
+    isWaiting = () => false,
+  }: { isWaiting?: () => boolean } = {}): Promise<void> {
+    let failures = 0;
+    for (;;) {
       try {
         await this.ensureSeeded();
         return;
       } catch (error) {
-        lastError = error;
-        if (attempt < SEED_MAX_ATTEMPTS - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, SEED_RETRY_DELAY_MS),
-          );
-        }
+        if (!isWaiting()) failures++;
+        if (failures >= SEED_MAX_ATTEMPTS) throw error;
+        await new Promise((resolve) =>
+          setTimeout(resolve, SEED_RETRY_DELAY_MS),
+        );
       }
     }
-    throw lastError;
   }
 
   shutdown(): ShutdownStatus {
@@ -277,6 +297,44 @@ export class SyncManagerProxy implements ISyncManager {
     return this.syncStatusListeners.add(callback);
   }
 
+  async inspectRemote(remoteName: string): Promise<RemoteSyncInspection> {
+    return (await this.tableOp("inspectRemote", [
+      remoteName,
+    ])) as RemoteSyncInspection;
+  }
+
+  async inspectRemotes(): Promise<RemoteSyncInspection[]> {
+    return (await this.tableOp("inspectRemotes", [])) as RemoteSyncInspection[];
+  }
+
+  async listDeadLetters(
+    remoteName: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<DeadLetterPage> {
+    return (await this.tableOp("listDeadLetters", [
+      remoteName,
+      cursor,
+      limit,
+    ])) as DeadLetterPage;
+  }
+
+  async resetChannel(remoteName: string): Promise<void> {
+    await this.tableOp("resetChannel", [remoteName]);
+  }
+
+  async requeueDeadLetter(remoteName: string, id: string): Promise<void> {
+    await this.tableOp("requeueDeadLetter", [remoteName, id]);
+  }
+
+  async clearDeadLetter(remoteName: string, id: string): Promise<void> {
+    await this.tableOp("clearDeadLetter", [remoteName, id]);
+  }
+
+  private tableOp(key: SyncInspectionOpKey, args: unknown[]): Promise<unknown> {
+    return this.ops.call(SYNC_INSPECTION_OPS[key].rpc, args);
+  }
+
   private callSyncOp(method: string, args: unknown[]): Promise<unknown> {
     return this.ops.call(method, args);
   }
@@ -322,7 +380,10 @@ export class SyncManagerProxy implements ISyncManager {
   }
 
   private async refreshRemotes(): Promise<void> {
-    const wire = (await this.callSyncOp("list", [])) as WireRemote[];
+    this.applyRemotes((await this.callSyncOp("list", [])) as WireRemote[]);
+  }
+
+  private applyRemotes(wire: WireRemote[]): void {
     const names = new Set<string>();
     this.remotes = wire.map((w) => {
       const meta = rehydrateMeta(w.meta);

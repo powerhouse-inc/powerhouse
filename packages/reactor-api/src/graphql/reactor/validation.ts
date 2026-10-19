@@ -86,6 +86,23 @@ export const MoveRelationshipResultDTO = z
   })
   .strip();
 
+export const ConsistencyTokenDTO = z
+  .object({
+    version: z.number().int(),
+    createdAtUtcIso: z.string(),
+    coordinates: z.array(
+      z
+        .object({
+          documentId: z.string(),
+          scope: z.string(),
+          branch: z.string(),
+          operationIndex: z.number().int(),
+        })
+        .strip(),
+    ),
+  })
+  .strip();
+
 export const JobInfoDTO = z
   .object({
     id: z.string(),
@@ -94,6 +111,21 @@ export const JobInfoDTO = z
     error: z.string().nullable().optional(),
     createdAt: DateTimeDTO,
     completedAt: DateTimeDTO.nullable().optional(),
+  })
+  .strip();
+
+export const JobInfoFieldsDTO = JobInfoDTO.extend({
+  documentId: z.string(),
+  errorName: z.string().nullable().optional(),
+  consistencyToken: ConsistencyTokenDTO,
+  meta: z
+    .object({ batchId: z.string(), batchJobIds: z.array(z.string()) })
+    .strip(),
+}).strip();
+
+export const BatchExecutionResultDTO = z
+  .object({
+    jobs: z.array(z.object({ key: z.string(), job: JobInfoFieldsDTO }).strip()),
   })
   .strip();
 
@@ -180,6 +212,13 @@ export const DocumentChangeEventDTO = z
     type: z.string(),
     documents: z.array(PHDocumentDTO),
     context: DocumentChangeContextDTO.nullable().optional(),
+  })
+  .strip();
+
+export const CreateDefaultsDTO = z
+  .object({
+    signaturePolicy: z.string(),
+    protocolVersions: JSONObjectDTO,
   })
   .strip();
 

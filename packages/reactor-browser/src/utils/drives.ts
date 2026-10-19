@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { SyncStatus } from "@powerhousedao/reactor";
 import type {
@@ -43,14 +44,19 @@ export function getSyncStatusSync(
   documentId: string,
   sharingType: SharingType,
 ): UISyncStatus | undefined {
-  if (sharingType === "LOCAL") return;
+  if (sharingType === "LOCAL" || typeof window === "undefined") return;
 
   const syncManager =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (!syncManager) return;
 
   const status = syncManager.getSyncStatus(documentId);
   if (status === undefined) return;
 
   return syncStatusToUI[status];
+}
+
+/** A drive's display name: the header's (renames set it), else its creation name. */
+export function getDriveName(drive: DocumentDriveDocument): string {
+  return drive.header.name || drive.state.global.name;
 }

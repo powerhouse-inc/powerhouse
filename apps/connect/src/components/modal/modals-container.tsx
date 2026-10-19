@@ -1,4 +1,6 @@
+import type { PHModal } from "@powerhousedao/reactor-browser";
 import { usePHModal } from "@powerhousedao/reactor-browser";
+import type { ComponentType } from "react";
 import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "../error-boundary.js";
 
@@ -62,11 +64,6 @@ const ConfirmDocumentUpgradeModal = lazy(() =>
     default: m.ConfirmDocumentUpgradeModal,
   })),
 );
-const SettingsModal = lazy(() =>
-  import("./modals/SettingsModal.js").then((m) => ({
-    default: m.SettingsModal,
-  })),
-);
 const UpgradeDriveModal = lazy(() =>
   import("./modals/UpgradeDriveModal.js").then((m) => ({
     default: m.UpgradeDriveModal,
@@ -97,7 +94,8 @@ const LoginModal = lazy(() =>
     default: m.LoginModal,
   })),
 );
-const modalComponents = {
+// "settings" is a page; showPHModal navigates to it.
+const modalComponents: Partial<Record<PHModal["type"], ComponentType>> = {
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,
   cookiesPolicy: CookiesPolicyModal,
@@ -111,13 +109,12 @@ const modalComponents = {
   documentVersionUnsupported: DocumentVersionUnsupportedModal,
   confirmDocumentUpgrade: ConfirmDocumentUpgradeModal,
   inspector: InspectorModal,
-  settings: SettingsModal,
   upgradeDrive: UpgradeDriveModal,
   missingPackage: MissingPackageModal,
   driveAuthRequired: DriveAuthRequiredModal,
   openFileDocuments: OpenFileDocumentsModal,
   login: LoginModal,
-} as const;
+};
 
 export const ModalsContainer = lazy(() => {
   return Promise.resolve({

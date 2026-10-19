@@ -48,7 +48,9 @@ export function resolveRegistryConfig(
   let packageNames =
     config.packages
       ?.filter((p) => p.provider === "registry")
-      .map((p) => p.packageName) ?? [];
+      .map((p) =>
+        p.version ? `${p.packageName}@${p.version}` : p.packageName,
+      ) ?? [];
 
   // Env vars override config
   if (env.PH_REGISTRY_URL) {

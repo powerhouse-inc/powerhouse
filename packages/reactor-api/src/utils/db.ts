@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
+import { NodeFS } from "@electric-sql/pglite/nodefs";
+import { childLogger } from "document-model";
 import type { Knex } from "knex";
 import knex from "knex";
 import ClientPgLite from "knex-pglite";
@@ -8,6 +9,12 @@ import { type Generated, Kysely } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
+import {
+  createDurableNodeFs,
+  resolvePgliteFsync,
+} from "../pglite/pglite-node.js";
+
+const logger = childLogger(["reactor-api", "db"]);
 
 /**
  * Permission levels for documents:
@@ -63,14 +70,11 @@ export const PGLITE_UTC_PARSERS = {
   1114: (value: string) => new Date(`${value.replace(" ", "T")}Z`),
 } as const;
 
-function isPG(connectionString: string) {
-  if (
+export function isPostgresConnectionString(connectionString: string) {
+  return (
     connectionString.startsWith("postgresql://") ||
     connectionString.startsWith("postgres://")
-  ) {
-    return true;
-  }
-  return false;
+  );
 }
 
 /**
@@ -89,24 +93,7 @@ export interface DbClient {
   pglite: PGliteType | undefined;
 }
 
-/**
- * Cache of DB clients keyed by connection string. Reactor-api's read-model
- * layer wires analytics, attachments, and document-permissions as separate
- * consumers but they all target the same logical database (one postgres
- * instance, many schemas). Without caching:
- *   - PGlite: two `new PGlite(samePath)` calls mean two embedded postgres
- *     processes contending for the same data dir, racing shutdown syncs
- *     and silently losing writes — a correctness bug.
- *   - Postgres: each consumer opens an independent pool against the same
- *     backend — wasteful but correct.
- * Caching by connection string returns the same knex/PGlite pair to every
- * consumer so writes coexist in one MemoryFS and one atomic snapshot, and
- * postgres callers get connection-pool dedup for free.
- *
- * Entries are evicted from inside the wrapped `knex.destroy()` below, so a
- * teardown + re-init in the same process (tests, hot-reloads) constructs
- * a fresh client instead of returning a closed pool.
- */
+// One client per connection string: two PGlite instances on one PGDATA corrupt it.
 const IN_MEMORY_CACHE_KEY = Symbol("getDbClient:in-memory");
 type CacheKey = string | typeof IN_MEMORY_CACHE_KEY;
 const dbClientCache = new Map<CacheKey, DbClient>();
@@ -119,7 +106,7 @@ export function getDbClient(
   const cached = dbClientCache.get(cacheKey);
   if (cached) return cached;
 
-  const isPg = connectionString && isPG(connectionString);
+  const isPg = connectionString && isPostgresConnectionString(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
   const pgliteInstance: PGliteType | undefined = isPg
     ? undefined
@@ -127,7 +114,10 @@ export function getDbClient(
       ? pgliteFactory(connectionString)
       : connectionString
         ? new PGlite({
-            fs: new AtomicNodeFs(connectionString),
+            fs: createDurableNodeFs(NodeFS, connectionString, {
+              fsync: resolvePgliteFsync(process.env),
+              logger,
+            }),
             parsers: PGLITE_UTC_PARSERS,
           })
         : new PGlite({ parsers: PGLITE_UTC_PARSERS });

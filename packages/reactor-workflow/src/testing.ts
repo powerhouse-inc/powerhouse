@@ -25,11 +25,11 @@ export {
   type IPieceWorker,
 } from "./pieces/activepieces/worker/host.js";
 export { PieceWorkerPool } from "./pieces/activepieces/worker/pool.js";
+export { WorkflowTelemetry } from "./telemetry.js";
 export {
   ActivepiecesBlockExecutor,
   CompositeBlockExecutor,
   type AttachmentPort,
-  type ReactorPort,
 } from "./pieces/engine/blocks.js";
 export { StaticConnectionResolver } from "./pieces/engine/connections.js";
 export { runWorkflow } from "./pieces/engine/coordinator.js";

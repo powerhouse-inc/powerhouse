@@ -8,6 +8,28 @@ export const schema: DocumentNode = gql`
   type WorkflowRuntimeQueries {
     health: String!
     """
+    Whether this reactor enforces document auth (REACTOR_AUTH_ENFORCEMENT).
+    On, a workflow needs a signed publish, and the host grants, to reach
+    documents. Answered to any caller.
+    """
+    authEnforcement: Boolean!
+    """
+    Who this host signs as: grant it on each document a step writes. Null for
+    a caller who is not signed in, or a host with no signer.
+    """
+    reactorIdentity: ReactorIdentity
+    """
+    REACTOR_AUTH_CONDITIONS. True: grant the host by key, with
+    { match: subject.key == key }; false: by address. Null for a caller who
+    is not signed in.
+    """
+    authConditions: Boolean
+    """
+    Why the workflow's last publish or enable got no reactor access, naming
+    the publisher and the connection; null when the check passed.
+    """
+    reactorAccessDenial(workflowId: String!): String
+    """
     Persisted runs, newest first. Scope them to one workflow, or to every
     workflow a drive holds; workflowId wins when both are given.
     """
@@ -48,6 +70,8 @@ export const schema: DocumentNode = gql`
       connectionId: String
       "What the author typed, for a DROPDOWN declared with refreshOnSearch."
       searchValue: String
+      "The step's reactor connection; its filter narrows what the resolver reads."
+      reactorConnectionId: String
     ): Unknown
     """
     Every piece this reactor offers: the core piece, its package pieces, and
@@ -79,10 +103,20 @@ export const schema: DocumentNode = gql`
       version: String
     ): Unknown
     """
-    Action/trigger name search across the catalog. The index builds lazily on
-    first use; poll while status is "indexing".
+    Piece and block search across the catalog, grouped by piece. The index
+    builds lazily on first use; poll while status is "indexing".
     """
-    searchBlocks(query: String!, limit: Int): BlockSearchResult!
+    searchPieces(
+      query: String!
+      "action | trigger"
+      kind: String!
+      "local | registry | activepieces; all when omitted."
+      sources: [String!]
+      "Category ids, any of; all when omitted."
+      categories: [String!]
+      "Pieces returned."
+      limit: Int
+    ): PieceSearchResult!
     """
     Health of every registered piece trigger (poll schedule, errors).
     """
@@ -199,10 +233,28 @@ export const schema: DocumentNode = gql`
     latestVersion: String
   }
 
-  type BlockSearchResult {
+  type PieceSearchMatch {
+    pieceName: String!
+    pieceVersion: String!
+    displayName: String!
+    description: String!
+    logoUrl: String!
+    categories: [String!]!
+    "local | registry | activepieces"
+    source: String!
+    deprecated: Boolean
+    "Why no block of the piece can run on this reactor."
+    unsupported: String
+    "Every query token matched the piece's own name."
+    namedPiece: Boolean!
+    "Matching blocks of the kind asked for, best first."
+    blocks: [BlockSearchHit!]!
+  }
+
+  type PieceSearchResult {
     "ready | indexing | error"
     status: String!
-    hits: [BlockSearchHit!]!
+    pieces: [PieceSearchMatch!]!
     indexedPieces: Int!
     error: String
   }
@@ -223,6 +275,13 @@ export const schema: DocumentNode = gql`
     authType: String!
     status: String!
     accountLabel: String
+  }
+
+  type ReactorIdentity {
+    "The address the host signs as; null without a signed-in identity."
+    address: String
+    "The did:key that signs the host's operations."
+    key: String!
   }
 
   type ConnectionCheckResult {
@@ -286,6 +345,8 @@ export const schema: DocumentNode = gql`
     output: Unknown
     port: String
     error: String
+    "The thrown error's name, e.g. ReactorAccessDeniedError."
+    errorName: String
     startedAt: String
     endedAt: String
     "The piece version that ran; null for an unresolved block."
@@ -307,6 +368,7 @@ export const schema: DocumentNode = gql`
     triggerPayload: Unknown
     status: String!
     error: String
+    errorName: String
     "When the run began executing; a PENDING run's is when it was journaled."
     startedAt: String!
     endedAt: String
@@ -344,22 +406,29 @@ export const schema: DocumentNode = gql`
     output: Unknown
     port: String
     error: String
+    errorName: String
   }
 
   type WorkflowRunPayload {
     runId: String
     status: String!
     error: String
+    errorName: String
     steps: [WorkflowStepRun!]!
   }
 
   type WorkflowStepTestResult {
     "Null when the test never started, e.g. an upstream block is untested."
     runId: String
-    "SUCCEEDED | FAILED"
+    """
+    SUCCEEDED | FAILED | INDETERMINATE. INDETERMINATE is neither: a host call
+    the block made timed out, so a write it asked for may well have landed.
+    Show it distinctly - it is not a confirmed pass.
+    """
     status: String!
     output: Unknown
     error: String
+    errorName: String
     durationMs: Int!
   }
 

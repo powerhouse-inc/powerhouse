@@ -1,5 +1,5 @@
-// A trigger that does not resolve arms nothing, and says why: in the log and
-// on the trigger row, with a retry only when a source could not be asked.
+// A trigger that does not resolve arms nothing, and says why on its trigger
+// row, with a retry only when a source could not be asked. Real supervisor.
 import type { OperationWithContext } from "document-model";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,7 +23,7 @@ import {
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { packagePieces } from "./piece-registry.js";
 import type { WorkflowRuntimeService } from "./service.js";
-import type { PieceTriggerBinding } from "./trigger-supervisor.js";
+import type { TriggerStateRow, WorkflowRunStore } from "./store.js";
 import { CORE_PIECE_NAME, CORE_PIECE_VERSION } from "../pieces/index.js";
 
 const PIECE = "@acme/piece-inbox";
@@ -39,7 +39,8 @@ const pinned = (pieceVersion: string): TriggerFields => ({
   triggerName: "tick",
 });
 const UNPINNED = pinned("latest");
-const WORKFLOW = "wf-inbox";
+// A worker forks and describes the piece before a row lands.
+const SETTLE = { timeout: 15_000 };
 
 // Unique per operation: the service dedupes on the ordinal.
 let ordinal = 0;
@@ -54,7 +55,10 @@ const enabledState = (trigger: TriggerFields) => ({
   variables: [],
 });
 
-function workflowOp(trigger: TriggerFields): OperationWithContext {
+function workflowOp(
+  workflowId: string,
+  trigger: TriggerFields,
+): OperationWithContext {
   ordinal += 1;
   return {
     operation: {
@@ -64,7 +68,7 @@ function workflowOp(trigger: TriggerFields): OperationWithContext {
       resultingState: JSON.stringify(enabledState(trigger)),
     },
     context: {
-      documentId: WORKFLOW,
+      documentId: workflowId,
       documentType: "powerhouse/workflow",
       scope: "global",
       branch: "main",
@@ -73,32 +77,13 @@ function workflowOp(trigger: TriggerFields): OperationWithContext {
   } as unknown as OperationWithContext;
 }
 
-const logger = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-  verbose: vi.fn(),
-  child: vi.fn(),
-};
-
-// What this suite reads is which binding the supervisor is handed, if any.
-const upsert = vi.fn((_binding: PieceTriggerBinding) => Promise.resolve());
-const reject = vi.fn(
-  (
-    _workflowId: string,
-    _block: unknown,
-    _config: unknown,
-    _message: string,
-    _retryAt?: Date,
-  ) => Promise.resolve(),
-);
-const remove = vi.fn((_workflowId: string) => Promise.resolve());
-
 let service: WorkflowRuntimeService;
+let store: WorkflowRunStore;
 let sources: PieceSources | undefined;
 let dir = "";
 let inbox = "";
+let workflowId = "";
+let tests = 0;
 
 // An installed copy the worker can actually describe.
 async function bundleDir(piece: FixturePiece): Promise<string> {
@@ -116,6 +101,18 @@ async function bundleDir(piece: FixturePiece): Promise<string> {
   return target;
 }
 
+// The trigger row once it reads `status`, from the shared journal.
+async function rowWith(
+  status: string,
+  id = workflowId,
+): Promise<TriggerStateRow> {
+  await vi.waitFor(async () => {
+    const row = await store.getTriggerState(id);
+    expect(row?.status, row?.last_error ?? "no row").toBe(status);
+  }, SETTLE);
+  return (await store.getTriggerState(id))!;
+}
+
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "unresolved-trigger-"));
   inbox = await bundleDir(versionedPiece(PIECE, "2.0.0"));
@@ -125,24 +122,13 @@ afterAll(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-const reason = () => String(reject.mock.calls.at(-1)?.[3]);
-// Says why when nothing was armed, rather than failing on an empty call list.
-const armed = (): PieceTriggerBinding => {
-  const call = upsert.mock.calls.at(-1);
-  if (!call) throw new Error(`Nothing was armed; refused with: ${reason()}`);
-  return call[0];
-};
-
-beforeEach(() => {
-  vi.clearAllMocks();
+// A workflow of its own per test: the journal is shared across the file.
+beforeEach(async () => {
+  tests += 1;
+  workflowId = `wf-inbox-${tests}`;
   packagePieces.reset();
-  service = testRuntime({ logger } as never);
-  (service as unknown as { triggerSupervisor: unknown }).triggerSupervisor = {
-    upsert,
-    reject,
-    remove,
-    stop: vi.fn(),
-  };
+  service = testRuntime();
+  store = (await service.store())!;
 });
 
 afterEach(async () => {
@@ -158,15 +144,16 @@ describe("a pinned trigger", () => {
       { name: PIECE, version: "2.0.0", bundleDir: inbox },
     ]);
 
-    await service.onOperations([workflowOp(pinned("2.0.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("2.0.0"))]);
 
-    expect(armed()).toMatchObject({
-      version: "2.0.0",
-      source: "local",
-      match: "exact",
-      triggerName: "tick",
+    expect(await rowWith("ENABLED")).toMatchObject({
+      piece_name: PIECE,
+      trigger_name: "tick",
+      piece_version: "2.0.0",
+      piece_source: "local",
+      version_match: "exact",
+      last_error: null,
     });
-    expect(reject).not.toHaveBeenCalled();
   });
 
   it("arms the closest version a source has, and records how it matched", async () => {
@@ -177,60 +164,65 @@ describe("a pinned trigger", () => {
       ],
     });
 
-    await service.onOperations([workflowOp(pinned("1.2.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("1.2.0"))]);
 
-    expect(armed()).toMatchObject({
-      version: "1.4.0",
-      source: "registry",
-      match: "compatible",
-      note: "Pinned 1.2.0 is not available; runs 1.4.0 from registry",
+    expect(await rowWith("ENABLED")).toMatchObject({
+      piece_version: "1.4.0",
+      piece_source: "registry",
+      version_match: "compatible",
+      version_note: "Pinned 1.2.0 is not available; runs 1.4.0 from registry",
+      last_error: null,
     });
-    expect(reject).not.toHaveBeenCalled();
   });
 
   it("reports a piece no source has, with no retry", async () => {
     sources = await startPieceSources({ npm: [] });
 
-    await service.onOperations([workflowOp(pinned("1.0.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("1.0.0"))]);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(reason()).toContain(`No source has the piece ${PIECE}`);
-    expect(reject.mock.calls[0]![4]).toBeUndefined();
-    const warned = logger.warn.mock.calls.find((call) =>
-      String(call[0]).includes("@reason"),
-    );
-    expect(warned?.[1]).toBe(WORKFLOW);
+    const row = await rowWith("ERROR");
+    expect(row.last_error).toContain(`No source has the piece ${PIECE}`);
+    expect(row.next_poll_at).toBeNull();
+    expect(row.piece_version).toBeNull();
   });
 
   it("says a source was unreachable, and comes back once it answers", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
-      const get = vi.fn(() =>
+      const get = () =>
         Promise.resolve({
-          header: { id: WORKFLOW, documentType: "powerhouse/workflow" },
+          header: { id: workflowId, documentType: "powerhouse/workflow" },
           state: { global: enabledState(pinned("1.0.0")) },
-        }),
-      );
-      (
-        service as unknown as { host: { reactorClient: { get: unknown } } }
-      ).host.reactorClient.get = get;
+        });
+      service.shutdown();
+      service = testRuntime({
+        reactorClient: {
+          get,
+          find: () => Promise.resolve({ results: [] }),
+        },
+      } as never);
+      store = (await service.store())!;
 
       // The default test sources refuse every connection.
-      await service.onOperations([workflowOp(pinned("1.0.0"))]);
-      expect(upsert).not.toHaveBeenCalled();
-      expect(reason()).toContain("connectivity failure, not a missing piece");
-      expect(reject.mock.calls[0]![4]).toBeInstanceOf(Date);
+      await service.onOperations([workflowOp(workflowId, pinned("1.0.0"))]);
+      const refused = await rowWith("ERROR");
+      expect(refused.last_error).toContain(
+        "connectivity failure, not a missing piece",
+      );
+      expect(refused.next_poll_at).not.toBeNull();
 
       sources = await startPieceSources({
         npm: [versionedPiece(PIECE, "1.0.0")],
       });
       await vi.advanceTimersByTimeAsync(30_000);
       // The retry fetches, extracts and describes the piece for real.
-      await vi.waitFor(() => expect(upsert).toHaveBeenCalled(), {
-        timeout: 15_000,
-      });
+      vi.useRealTimers();
 
-      expect(armed()).toMatchObject({ version: "1.0.0", source: "npm" });
+      expect(await rowWith("ENABLED")).toMatchObject({
+        piece_version: "1.0.0",
+        piece_source: "npm",
+        last_error: null,
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -243,27 +235,30 @@ describe("a trigger whose version is not exact", () => {
       npm: [versionedPiece(PIECE, "1.0.0")],
     });
 
-    await service.onOperations([workflowOp(UNPINNED)]);
+    await service.onOperations([workflowOp(workflowId, UNPINNED)]);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(reason()).toContain(
+    const row = await rowWith("ERROR");
+    expect(row.last_error).toContain(
       `pins "latest", which is not an exact semver version`,
     );
+    expect(row.next_poll_at).toBeNull();
     expect(sources.requests).toEqual([]);
   });
 
   it("drops the error it recorded once the workflow arms again", async () => {
-    await service.onOperations([workflowOp(UNPINNED)]);
-    expect(reject).toHaveBeenCalledTimes(1);
+    await service.onOperations([workflowOp(workflowId, UNPINNED)]);
+    expect((await rowWith("ERROR")).last_error).not.toBeNull();
 
     packagePieces.setPieces([
       { name: PIECE, version: "2.0.0", bundleDir: inbox },
     ]);
-    await service.onOperations([workflowOp(pinned("2.0.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("2.0.0"))]);
 
-    // Queued ahead of the enable, so the row the arming writes is the one left.
-    expect(remove).toHaveBeenCalledWith(WORKFLOW);
-    expect(armed().version).toBe("2.0.0");
+    expect(await rowWith("ENABLED")).toMatchObject({
+      piece_version: "2.0.0",
+      last_error: null,
+      consecutive_failures: 0,
+    });
   });
 });
 
@@ -273,12 +268,12 @@ describe("a trigger whose strategy is not known for sure", () => {
       { name: PIECE, version: "2.0.0", bundleDir: join(dir, "missing") },
     ]);
 
-    await service.onOperations([workflowOp(pinned("2.0.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("2.0.0"))]);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(reason()).toContain("Could not describe");
+    const row = await rowWith("ERROR");
+    expect(row.last_error).toContain("Could not describe");
     // A read failure may clear up; a retry is scheduled.
-    expect(reject.mock.calls.at(-1)?.[4]).toBeInstanceOf(Date);
+    expect(row.next_poll_at).not.toBeNull();
   });
 
   it("refuses an APP_WEBHOOK trigger without a retry", async () => {
@@ -291,26 +286,29 @@ describe("a trigger whose strategy is not known for sure", () => {
       { name: PIECE, version: "3.0.0", bundleDir: bundle },
     ]);
 
-    await service.onOperations([workflowOp(pinned("3.0.0"))]);
+    await service.onOperations([workflowOp(workflowId, pinned("3.0.0"))]);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(reason()).toContain("APP_WEBHOOK");
-    expect(reject.mock.calls.at(-1)?.[4]).toBeUndefined();
+    const row = await rowWith("ERROR");
+    expect(row.last_error).toContain("APP_WEBHOOK");
+    expect(row.next_poll_at).toBeNull();
   });
 });
 
 describe("a trigger that was never a piece", () => {
-  it("says nothing", async () => {
+  it("records nothing", async () => {
     await service.onOperations([
-      workflowOp({
+      workflowOp(workflowId, {
         pieceName: CORE_PIECE_NAME,
         pieceVersion: CORE_PIECE_VERSION,
         triggerName: "manual",
       }),
     ]);
+    // The supervisor's lane is serial: once a later refusal lands, so has
+    // anything queued for the manual workflow.
+    const later = `${workflowId}-later`;
+    await service.onOperations([workflowOp(later, UNPINNED)]);
+    await rowWith("ERROR", later);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(reject).not.toHaveBeenCalled();
-    expect(logger.warn).not.toHaveBeenCalled();
+    expect(await store.getTriggerState(workflowId)).toBeUndefined();
   });
 });

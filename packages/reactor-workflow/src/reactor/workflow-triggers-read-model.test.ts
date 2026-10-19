@@ -12,10 +12,10 @@ import type { OperationWithContext } from "document-model";
 import { sql, type Kysely } from "kysely";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestRelationalDb } from "../../test/helpers/pglite.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 import type { WorkflowRuntimeService } from "./service.js";
 import {
   WORKFLOW_TRIGGERS_READ_MODEL,
-  WORKFLOW_TRIGGERS_READ_MODEL_STAGE,
   WorkflowTriggersReadModel,
 } from "./workflow-triggers-read-model.js";
 
@@ -69,7 +69,7 @@ async function cursor(): Promise<number | undefined> {
 // Pages everything above the ordinal asked for, one array per page, the way
 // the reactor's operation index hands a catch-up to a read model.
 function pagedIndex(pages: OperationWithContext[][]) {
-  return vi.fn((ordinal: number) => {
+  return (ordinal: number) => {
     const remaining = pages
       .map((page) => page.filter((item) => item.context.ordinal > ordinal))
       .filter((page) => page.length > 0);
@@ -82,7 +82,7 @@ function pagedIndex(pages: OperationWithContext[][]) {
             : undefined,
       }) as unknown as PagedResults<OperationWithContext>;
     return Promise.resolve(page(0));
-  });
+  };
 }
 
 function settledAt(settledThrough: number): ISettledWatermark {
@@ -94,7 +94,11 @@ function settledAt(settledThrough: number): ISettledWatermark {
   };
 }
 
-function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
+function readModel(
+  pages: OperationWithContext[][] = [],
+  settledThrough = 0,
+  real?: WorkflowRuntimeService,
+) {
   const batches: OperationWithContext[][] = [];
   const onOperations = vi.fn((operations: OperationWithContext[]) => {
     batches.push(operations);
@@ -103,10 +107,12 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
   const onDocumentsPurged = vi.fn((_markers: OperationWithContext[]) =>
     Promise.resolve(null),
   );
-  const runtime = {
-    onOperations,
-    onDocumentsPurged,
-  } as unknown as WorkflowRuntimeService;
+  const runtime =
+    real ??
+    ({
+      onOperations,
+      onDocumentsPurged,
+    } as unknown as WorkflowRuntimeService);
   const getSinceOrdinal = pagedIndex(pages);
   const stored = pages.flat();
   const getByOrdinals = vi.fn((wanted: readonly number[]) =>
@@ -127,7 +133,7 @@ function readModel(pages: OperationWithContext[][] = [], settledThrough = 0) {
     runtime,
   );
   model.attachCatchUp(settledAt(settledThrough), 100_000);
-  return { batches, getSinceOrdinal, model, onDocumentsPurged, onOperations };
+  return { batches, model, onDocumentsPurged, onOperations };
 }
 
 const ordinals = (batches: OperationWithContext[][]) =>
@@ -159,33 +165,26 @@ describe("WorkflowTriggersReadModel", () => {
     await sql`delete from document_purges`.execute(db);
   });
 
-  it("is named for the coordinator, and reads once the document is ready", () => {
-    expect(readModel().model.name).toBe(WORKFLOW_TRIGGERS_READ_MODEL);
-    expect(WORKFLOW_TRIGGERS_READ_MODEL_STAGE).toBe("post_ready");
-  });
-
   it("starts a first registration at the watermark and replays nothing", async () => {
-    const { batches, getSinceOrdinal, model } = readModel([[op(1), op(2)]], 2);
+    const { batches, model } = readModel([[op(1), op(2)]], 2);
 
     await model.init();
 
-    expect(getSinceOrdinal).not.toHaveBeenCalled();
     expect(batches).toHaveLength(0);
     expect(await cursor()).toBe(2);
   });
 
   it("delegates a live batch and leaves the cursor to the sweep", async () => {
-    const { batches, model, onOperations } = readModel([], 10);
+    const { batches, model } = readModel([], 10);
 
     await model.init();
     await model.indexOperations([op(11), op(13), op(12)]);
 
-    expect(onOperations).toHaveBeenCalledTimes(1);
     expect(batches).toEqual([[op(11), op(13), op(12)]]);
     expect(await cursor()).toBe(10);
 
     await model.sweep(13, [11, 12, 13]);
-    expect(onOperations).toHaveBeenCalledTimes(1);
+    expect(batches).toHaveLength(1);
     expect(await cursor()).toBe(13);
   });
 
@@ -207,11 +206,25 @@ describe("WorkflowTriggersReadModel", () => {
     expect(await cursor()).toBe(99);
   });
 
+  // Shut down for losing the singleton: what it is handed is the next owner's
+  // to fire, so it must stay below the cursor rather than be acknowledged.
+  it("leaves the cursor below operations a shut-down runtime is handed", async () => {
+    const runtime = testRuntime();
+    runtime.shutdown();
+    const { model } = readModel([[op(11), op(12)]], 10, runtime);
+    await model.init();
+
+    await expect(model.indexOperations([op(11)])).rejects.toThrow("shut down");
+    await model.sweep(12, [11, 12]);
+
+    expect(await cursor()).toBe(10);
+  });
+
   it("catches up from the stored cursor on a later start", async () => {
     const before = readModel([], 13);
     await before.model.init();
 
-    const { batches, getSinceOrdinal, model } = readModel(
+    const { batches, model } = readModel(
       [
         [op(12), op(13), op(14)],
         [op(15), op(16)],
@@ -220,7 +233,6 @@ describe("WorkflowTriggersReadModel", () => {
     );
     await model.init();
 
-    expect(getSinceOrdinal).toHaveBeenCalledWith(13);
     // Only what the cursor had not seen, page by page.
     expect(ordinals(batches)).toEqual([[14], [15, 16]]);
     expect(await cursor()).toBe(16);

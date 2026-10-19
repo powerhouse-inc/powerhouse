@@ -117,7 +117,14 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
       await trx
         .insertInto("sync_dead_letters")
         .values(insertable)
-        .onConflict((oc) => oc.column("id").doNothing())
+        // A requeued op that fails again records its latest failure.
+        .onConflict((oc) =>
+          oc.column("id").doUpdateSet((eb) => ({
+            error_source: eb.ref("excluded.error_source"),
+            error_message: eb.ref("excluded.error_message"),
+            error_type: eb.ref("excluded.error_type"),
+          })),
+        )
         .execute();
     });
 
@@ -160,16 +167,22 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
     }
   }
 
-  async listQuarantinedDocumentIds(signal?: AbortSignal): Promise<string[]> {
+  async listQuarantinedDocumentIds(
+    signal?: AbortSignal,
+    exceptIds: readonly string[] = [],
+  ): Promise<string[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
+    let query = this.db
       .selectFrom("sync_dead_letters")
       .select(["document_id", "error_type"])
-      .distinct()
-      .execute();
+      .distinct();
+    if (exceptIds.length > 0) {
+      query = query.where("id", "not in", [...exceptIds]);
+    }
+    const rows = await query.execute();
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");

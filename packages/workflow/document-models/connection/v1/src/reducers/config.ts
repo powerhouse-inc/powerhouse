@@ -1,11 +1,27 @@
 import type { ConnectionConfigOperations } from "document-models/connection/v1";
-import { SecretRefNotFoundError } from "../../gen/config/error.js";
+import {
+  InvalidReactorConfigError,
+  InvalidReactorConfigRemovalError,
+  InvalidReactorConfigValueError,
+  ReactorSecretRefError,
+  SecretRefNotFoundError,
+} from "../../gen/config/error.js";
+import { parseReactorConnectionConfig } from "../reactor-connection.js";
 
 export const connectionConfigOperations: ConnectionConfigOperations = {
   setConfigOperation(state, action) {
-    state.config = action.input.config;
+    if (state.authType !== "REACTOR") {
+      state.config = action.input.config;
+      return;
+    }
+    const parsed = parseReactorConnectionConfig(action.input.config);
+    if (!parsed.ok) throw new InvalidReactorConfigError(parsed.error);
+    state.config = parsed.config;
   },
   setSecretRefOperation(state, action) {
+    if (state.authType === "REACTOR") {
+      throw new ReactorSecretRefError("A reactor connection holds no secrets");
+    }
     const existing = state.secretRefs.find(
       (secretRef) => secretRef.name === action.input.name,
     );
@@ -28,4 +44,36 @@ export const connectionConfigOperations: ConnectionConfigOperations = {
     }
     state.secretRefs.splice(index, 1);
   },
+  setConfigValueOperation(state, action) {
+    const { name, value } = action.input;
+    const config = { ...configRecord(state.config) };
+    if (value === undefined) delete config[name];
+    else config[name] = value;
+    if (state.authType !== "REACTOR") {
+      state.config = config;
+      return;
+    }
+    const parsed = parseReactorConnectionConfig(config);
+    if (!parsed.ok) throw new InvalidReactorConfigValueError(parsed.error);
+    state.config = parsed.config;
+  },
+  removeConfigValueOperation(state, action) {
+    const current = configRecord(state.config);
+    if (!(action.input.name in current)) return;
+    const { [action.input.name]: _removed, ...config } = current;
+    if (state.authType !== "REACTOR") {
+      state.config = config;
+      return;
+    }
+    const parsed = parseReactorConnectionConfig(config);
+    if (!parsed.ok) throw new InvalidReactorConfigRemovalError(parsed.error);
+    state.config = parsed.config;
+  },
 };
+
+// A config that is not an object holds no fields to keep.
+function configRecord(config: unknown): Record<string, unknown> {
+  return config !== null && typeof config === "object" && !Array.isArray(config)
+    ? (config as Record<string, unknown>)
+    : {};
+}

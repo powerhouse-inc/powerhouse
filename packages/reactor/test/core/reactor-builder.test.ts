@@ -10,8 +10,18 @@ import type {
   WorkerInFlightSnapshot,
 } from "../../src/executor/interfaces.js";
 import type { Job } from "../../src/queue/types.js";
-import type { DbConfig } from "../../src/executor/worker/protocol.js";
+import type { IReactor } from "../../src/core/types.js";
+import type {
+  DbConfig,
+  ModelManifestEntry,
+} from "../../src/executor/worker/protocol.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
+import { GQL_CHANNEL_TYPE } from "../../src/sync/channels/gql-request-channel-factory.js";
+import { POLLING_CHANNEL_TYPE } from "../../src/sync/channels/gql-response-channel-factory.js";
+import { LOCAL_CHANNEL_TYPE } from "../../src/sync/channels/local-channel-factory.js";
+import type { IChannelFactory } from "../../src/sync/interfaces.js";
+import { SyncBuilder } from "../../src/sync/sync-builder.js";
+import { ChannelScheme } from "../../src/sync/types.js";
 
 /** An ILogger that keeps what it was handed, so the report can be asserted. */
 function recordingLogger(): ILogger & {
@@ -708,6 +718,210 @@ describe("ReactorBuilder", () => {
       module.reactor.kill();
 
       expect(module.degradedComponents).toEqual([]);
+    });
+  });
+
+  describe("getImportableEntries", () => {
+    class LoadingWorker extends FakeWorker {
+      readonly loaded: ModelManifestEntry[] = [];
+      override loadModel(entry?: ModelManifestEntry): Promise<void> {
+        if (entry) this.loaded.push(entry);
+        return Promise.resolve();
+      }
+    }
+
+    const betaLoader = {
+      load: () =>
+        Promise.resolve({ filePath: FIXTURE_PATH, exportName: "betaModel" }),
+    };
+
+    const betaEntry: ModelManifestEntry = {
+      documentType: "test/beta",
+      version: "2",
+      spec: { module: { filePath: FIXTURE_PATH, exportName: "betaModel" } },
+    };
+
+    // A type the boot sources leave out, so creating one runs the loader.
+    async function loadBeta(reactor: IReactor): Promise<void> {
+      const document = documentModelDocumentModelModule.utils.createDocument();
+      document.header.documentType = "test/beta";
+      await reactor.create(document);
+    }
+
+    it("lists boot entries, and run-time loads beside the pool's broadcast", async () => {
+      const workers: LoadingWorker[] = [];
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([
+          { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+        ])
+        .withDocumentModelLoader(betaLoader)
+        .withWorkerPool({
+          numWorkers: 1,
+          factory: (index) => {
+            const worker = new LoadingWorker(index);
+            workers.push(worker);
+            return worker;
+          },
+        });
+
+      const module = await builder.buildModule();
+      try {
+        expect(
+          builder.getImportableEntries("test/alpha").map((e) => e.version),
+        ).toEqual(["1"]);
+        expect(builder.getImportableEntries("test/beta")).toEqual([]);
+
+        await loadBeta(module.reactor);
+
+        expect(builder.getImportableEntries("test/beta")).toEqual([betaEntry]);
+        expect(workers[0]!.loaded).toEqual([betaEntry]);
+        expect(builder.getResolvedModelManifest()).toHaveLength(1);
+      } finally {
+        await module.reactor.kill();
+      }
+    });
+
+    it("lists run-time loads without a pool", async () => {
+      const builder = new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule])
+        .withDocumentModelLoader(betaLoader);
+      const module = await builder.buildModule();
+      try {
+        await loadBeta(module.reactor);
+
+        expect(builder.getImportableEntries("test/beta")).toEqual([betaEntry]);
+      } finally {
+        await module.reactor.kill();
+      }
+    });
+
+    it("lists boot entries without a loader", async () => {
+      const builder = new ReactorBuilder().withDocumentModelSources([
+        { filePath: FIXTURE_PATH, exportName: "alphaModel" },
+      ]);
+      const module = await builder.buildModule();
+      try {
+        expect(
+          builder.getImportableEntries("test/alpha").map((e) => e.documentType),
+        ).toEqual(["test/alpha"]);
+      } finally {
+        await module.reactor.kill();
+      }
+    });
+  });
+
+  // The channel-factory composition seam (multi-reactor W3.0). Every case here
+  // is refused before any storage is opened, so none of them builds a reactor.
+  describe("channel factory composition", () => {
+    const localFactory: IChannelFactory = {
+      instance: () => {
+        throw new Error("not reached");
+      },
+    };
+
+    it("refuses an additional channel factory with no scheme to compose with", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withAdditionalChannelFactory([local]) needs a withChannelScheme",
+      );
+    });
+
+    it("refuses an additional factory that claims the scheme's own channel type", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withAdditionalChannelFactory(GQL_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        'withAdditionalChannelFactory("gql", ...) collides with the "connect" channel scheme',
+      );
+    });
+
+    it("refuses the switchboard scheme's own channel type too", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.SWITCHBOARD)
+        .withAdditionalChannelFactory(POLLING_CHANNEL_TYPE, localFactory);
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        'withAdditionalChannelFactory("polling", ...) collides with the "switchboard" channel scheme',
+      );
+    });
+
+    it("refuses registering two factories for one type", () => {
+      const builder = new ReactorBuilder().withAdditionalChannelFactory(
+        LOCAL_CHANNEL_TYPE,
+        localFactory,
+      );
+
+      expect(() =>
+        builder.withAdditionalChannelFactory(LOCAL_CHANNEL_TYPE, localFactory),
+      ).toThrow('A channel factory for the type "local" is already registered');
+    });
+  });
+
+  describe("sync configuration", () => {
+    const unusedFactory: IChannelFactory = {
+      instance: () => {
+        throw new Error("not reached");
+      },
+    };
+
+    it("refuses withChannelScheme together with withSync", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withSync(new SyncBuilder().withChannelFactory(unusedFactory));
+
+      await expect(builder.buildModule()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("refuses the combination whichever order it was set in", async () => {
+      const builder = new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withSync(new SyncBuilder().withChannelFactory(unusedFactory))
+        .withChannelScheme(ChannelScheme.SWITCHBOARD);
+
+      await expect(builder.build()).rejects.toThrow(
+        "withChannelScheme and withSync are mutually exclusive",
+      );
+    });
+
+    it("builds the scheme's sync module from withChannelScheme alone", async () => {
+      const module = await new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withChannelScheme(ChannelScheme.SWITCHBOARD)
+        .buildModule();
+
+      try {
+        expect(module.syncModule).toBeDefined();
+      } finally {
+        module.syncModule?.syncManager.shutdown();
+        module.reactor.kill();
+      }
+    });
+
+    it("builds the caller's SyncBuilder from withSync alone", async () => {
+      const syncBuilder = new SyncBuilder().withChannelFactory(unusedFactory);
+      const buildSpy = vi.spyOn(syncBuilder, "buildModule");
+
+      const module = await new ReactorBuilder()
+        .withLogger(recordingLogger())
+        .withSync(syncBuilder)
+        .buildModule();
+
+      try {
+        expect(buildSpy).toHaveBeenCalledTimes(1);
+        expect(module.syncModule).toBe(buildSpy.mock.results[0]?.value);
+      } finally {
+        module.syncModule?.syncManager.shutdown();
+        module.reactor.kill();
+      }
     });
   });
 });

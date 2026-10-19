@@ -1,24 +1,15 @@
-import { Sidebar } from "@powerhousedao/connect/components";
-import { useIsEmbedded } from "@powerhousedao/connect/hooks";
+import { Outlet } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { Outlet } from "react-router-dom";
+import { useReleasePrerenderedShell } from "./prerendered-shell.js";
 
+/** What every page shares; the sidebar is the `_app` layout's. */
 export function Root() {
-  const isEmbedded = useIsEmbedded();
+  useReleasePrerenderedShell(true);
   return (
-    <div className="h-screen bg-background">
-      <div
-        className={`flex h-screen items-stretch overflow-auto`}
-        role="presentation"
-        tabIndex={0}
-      >
-        <Suspense name="Root">
-          {!isEmbedded && <Sidebar />}
-          <div className="relative flex-1 overflow-auto">
-            <Outlet />
-          </div>
-        </Suspense>
-      </div>
+    <div className="h-screen overflow-auto bg-background">
+      <Suspense name="Root">
+        <Outlet />
+      </Suspense>
     </div>
   );
 }

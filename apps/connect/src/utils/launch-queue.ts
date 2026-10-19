@@ -1,4 +1,8 @@
-import { showPHModal } from "@powerhousedao/reactor-browser";
+import {
+  getPHStore,
+  showPHModal,
+  subscribeToPHValue,
+} from "@powerhousedao/reactor-browser";
 
 // PWA launch handling: consume the files the OS hands the installed Connect app
 // via window.launchQueue when a document is opened through its file association
@@ -82,7 +86,7 @@ async function handleLaunchParams(params: LaunchParams) {
 // import clears the pending store BEFORE closing, so this can't loop.
 function maybeReopenImportModal() {
   if (getPendingImportFiles().length === 0) return;
-  if (window.ph?.modal !== undefined) return;
+  if (getPHStore()?.modal !== undefined) return;
   showPHModal({ type: "openFileDocuments" });
 }
 
@@ -98,7 +102,7 @@ let initialized = false;
 export function initLaunchQueueFileHandling() {
   if (initialized) return;
   initialized = true;
-  window.addEventListener("ph:modalUpdated", maybeReopenImportModal);
+  subscribeToPHValue("modal", maybeReopenImportModal);
   window.launchQueue?.setConsumer((params) => {
     void handleLaunchParams(params);
   });

@@ -1,7 +1,7 @@
 // @ts-check
 
 // Logger call-shape rules. ConsoleLogger fills `@token` placeholders from
-// positional args, one per unique token; missing args render as "null".
+// positional args, one per unique token; tokens without an arg stay as written.
 import { definePlugin, defineRule } from "@oxlint/plugins";
 
 const LOGGER_METHODS = new Set(["verbose", "debug", "info", "warn", "error"]);
@@ -50,7 +50,7 @@ const missingTokenArgs = defineRule({
     schema: [],
     messages: {
       missing:
-        'logger.{{method}} message has {{tokens}} @token(s) but only {{args}} replacement arg(s) — missing slots render as "null".',
+        "logger.{{method}} message has {{tokens}} @token(s) but only {{args}} replacement arg(s) — unmatched tokens print as written.",
     },
   },
   createOnce(context) {

@@ -13,10 +13,10 @@
       "path": "../../packages/document-model"
     },
     {
-      "path": "../../packages/opentelemetry-instrumentation-reactor"
+      "path": "../../packages/host-core"
     },
     {
-      "path": "../../packages/pglite-fs"
+      "path": "../../packages/opentelemetry-instrumentation-reactor"
     },
     {
       "path": "../../packages/reactor"

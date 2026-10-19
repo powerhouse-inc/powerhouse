@@ -16,6 +16,7 @@ import type { IQueue } from "../../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState } from "../../../src/queue/types.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import {
   DocumentModelResolver,
   NullDocumentModelResolver,
@@ -191,7 +192,64 @@ describe("SimpleJobExecutorManager", () => {
       expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(
         job,
         expect.any(AbortSignal),
+        expect.any(Function),
       );
+    });
+
+    describe("job timeout", () => {
+      function timedManager(
+        executeJob: IJobExecutor["executeJob"],
+      ): SimpleJobExecutorManager {
+        return new SimpleJobExecutorManager(
+          () => ({ executeJob }),
+          eventBus,
+          queue,
+          jobTracker,
+          createMockLogger(),
+          new NullDocumentModelResolver(),
+          50,
+        );
+      }
+
+      async function runOne(
+        timed: SimpleJobExecutorManager,
+        id: string,
+      ): Promise<JobStatus | undefined> {
+        await timed.start(1);
+        const job = createTestJob({ id });
+        await queue.enqueue(job);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await timed.stop(false);
+        return jobTracker.getJobStatus(id)?.status;
+      }
+
+      it("fails a job that runs past the timeout before it commits", async () => {
+        const timed = timedManager(
+          (job) =>
+            new Promise((resolve) =>
+              setTimeout(
+                () => resolve({ job, success: true, duration: 150 }),
+                150,
+              ),
+            ),
+        );
+
+        expect(await runOne(timed, "job-uncommitted")).toBe(JobStatus.FAILED);
+      });
+
+      it("never fails a job past its point of no return", async () => {
+        const timed = timedManager((job, _signal, onCommitting) => {
+          onCommitting?.();
+          return new Promise((resolve) =>
+            setTimeout(
+              () => resolve({ job, success: true, duration: 150 }),
+              150,
+            ),
+          );
+        });
+
+        expect(await runOne(timed, "job-committed")).not.toBe(JobStatus.FAILED);
+      });
     });
 
     it("should call start() on the job execution handle", async () => {
@@ -873,26 +931,23 @@ describe("SimpleJobExecutorManager", () => {
       });
       await classifyQueue.enqueue(job2);
 
-      // Wait for processing: job1 (DocumentNotFoundError) is deferred,
-      // job2 (generic) emits JOB_FAILED from both manager and queue
+      // Wait for processing. Both jobs are mutations, so each fails
+      // terminally through handle.fail, and queue.failJob is the single
+      // JOB_FAILED emitter - the handler no longer emits a duplicate.
       await new Promise((resolve) => setTimeout(resolve, 200));
       const genericEvents = failedEvents.filter(
         (e) => e.jobId === "classify-job-2",
       );
-      expect(genericEvents.length).toBeGreaterThanOrEqual(1);
-      expect(
-        genericEvents.every((e) => !DocumentNotFoundError.isError(e.error)),
-      ).toBe(true);
+      expect(genericEvents).toHaveLength(1);
+      expect(DocumentNotFoundError.isError(genericEvents[0].error)).toBe(false);
 
-      // Stop the manager to flush the deferred DocumentNotFoundError job
       await classifyManager.stop(true);
-      const deferredEvents = failedEvents.filter(
+      const notFoundEvents = failedEvents.filter(
         (e) => e.jobId === "classify-job-1",
       );
-      expect(deferredEvents.length).toBeGreaterThanOrEqual(1);
-      expect(
-        deferredEvents.some((e) => DocumentNotFoundError.isError(e.error)),
-      ).toBe(true);
+      expect(notFoundEvents).toHaveLength(1);
+      expect(DocumentNotFoundError.isError(notFoundEvents[0].error)).toBe(true);
+      expect(notFoundEvents[0].error).toBeInstanceOf(DocumentNotFoundError);
     });
   });
 
@@ -1047,6 +1102,62 @@ describe("SimpleJobExecutorManager", () => {
       expect(failedEvent.jobId).toBe("timeout-job");
     });
 
+    it("should emit JOB_FAILED exactly once when a job times out", async () => {
+      const onceEventBus = new EventBus();
+      const onceQueue = new InMemoryQueue(
+        onceEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const onceJobTracker = new InMemoryJobTracker(onceEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockImplementation(
+          () => new Promise(() => {}), // never resolves
+        ),
+      };
+
+      const onceManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        onceEventBus,
+        onceQueue,
+        onceJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+        50, // 50ms timeout
+      );
+
+      const failedEvents: JobFailedEvent[] = [];
+      onceEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failedEvents.push(data);
+        },
+      );
+
+      await onceManager.start(1);
+
+      const job = createTestJob({
+        id: "timeout-once-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await onceQueue.enqueue(job);
+
+      await vi.waitFor(() => {
+        expect(failedEvents.length).toBeGreaterThanOrEqual(1);
+      });
+      // The timeout path used to emit twice: once through handle.fail via
+      // queue.failJob and once directly from the manager. Let any second
+      // emit land before counting.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].jobId).toBe("timeout-once-job");
+      expect(failedEvents[0].job?.id).toBe("timeout-once-job");
+
+      await onceManager.stop(true);
+    });
+
     it("should complete normally when within timeout", async () => {
       const normalEventBus = new EventBus();
       const normalQueue = new InMemoryQueue(
@@ -1119,6 +1230,7 @@ describe("SimpleJobExecutorManager", () => {
       expect(mockExecutor.executeJob).toHaveBeenCalledWith(
         expect.objectContaining({ id: "signal-job" }),
         expect.any(AbortSignal),
+        expect.any(Function),
       );
     });
   });

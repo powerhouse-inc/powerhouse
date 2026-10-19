@@ -30,6 +30,8 @@ export interface IWebhookStore {
   revoke(namespace: string, endpoint: string, ownerKey: string): Promise<void>;
   /** True when this delivery has been seen before, within the TTL. */
   seen(token: string, key: string, ttlSeconds: number): Promise<boolean>;
+  /** Drops a delivery recorded by seen(), so a retry of it is delivered. */
+  forget(token: string, key: string): Promise<void>;
 }
 
 const TOKEN_BYTES = 16;
@@ -218,6 +220,14 @@ export class RelationalWebhookStore implements IWebhookStore {
       .execute();
   }
 
+  async forget(token: string, key: string): Promise<void> {
+    await this.#handle
+      .deleteFrom("webhook_deliveries")
+      .where("token", "=", token)
+      .where("dedupe_key", "=", key)
+      .execute();
+  }
+
   async seen(token: string, key: string, ttlSeconds: number): Promise<boolean> {
     const now = Date.now();
     const nowIso = new Date(now).toISOString();
@@ -321,6 +331,11 @@ export class MemoryWebhookStore implements IWebhookStore {
 
   find(token: string): Promise<WebhookEndpointRow | undefined> {
     return Promise.resolve(this.#byToken.get(token));
+  }
+
+  forget(token: string, key: string): Promise<void> {
+    this.#deliveries.delete(`${token}|${key}`);
+    return Promise.resolve();
   }
 
   list(namespace: string, endpoint?: string): Promise<WebhookEndpointRow[]> {

@@ -8,6 +8,9 @@
       "path": "apps/connect"
     },
     {
+      "path": "apps/reactor-monitor"
+    },
+    {
       "path": "clis/ph-cli"
     },
     {
@@ -15,6 +18,9 @@
     },
     {
       "path": "packages/builder-tools"
+    },
+    {
+      "path": "packages/clint"
     },
     {
       "path": "packages/document-model"
@@ -27,6 +33,9 @@
     },
     {
       "path": "packages/shared"
+    },
+    {
+      "path": "packages/vetra-studio"
     },
     {
       "path": "packages/analytics-engine/benchmarks"

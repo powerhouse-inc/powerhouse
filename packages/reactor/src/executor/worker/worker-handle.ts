@@ -598,7 +598,8 @@ export class WorkerHandle implements IExecutorWorker {
 
   private handleTransportError(err: Error): void {
     this.logger.error(
-      `worker ${this.workerId} transport error: ${err.message}`,
+      `worker ${this.workerId} transport error: @message`,
+      err.message,
       err,
     );
   }

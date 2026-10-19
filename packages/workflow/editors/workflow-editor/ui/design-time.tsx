@@ -218,6 +218,20 @@ function keyHash(value: unknown): string {
   }
 }
 
+// A just-bound reactor connection the runtime doesn't hold yet reads as forbidden.
+// A just-made document the Switchboard doesn't hold yet; never a sign-in.
+const SYNC_REFUSAL = /forbidden|document\b.*not found|was not found/i;
+const SYNC_RETRIES_MAX = 4;
+
+function retryWhileSyncing(input: ResolverKeyInput) {
+  if (!input.reactorConnectionId) return {};
+  return {
+    retry: (failures: number, error: unknown) =>
+      failures < SYNC_RETRIES_MAX && SYNC_REFUSAL.test(messageOf(error)),
+    retryDelay: 1000,
+  };
+}
+
 // The first value passes straight through; later changes settle after `ms`.
 function useSettled<T>(value: T, ms: number): T {
   const hash = keyHash(value);
@@ -245,7 +259,7 @@ export function useResolvedProp<T>(options: {
   load: (() => Promise<unknown>) | undefined;
   parse: (raw: unknown) => T;
   debounceMs: number;
-}): { state: LoadState<T>; reload: () => void } {
+}): { state: LoadState<T>; reload: () => void; syncing: boolean } {
   const { queryClient, scope } = useDesignTimeScope();
   const input = useSettled(options.input, options.debounceMs);
   const loadRef = useRef(options);
@@ -263,22 +277,26 @@ export function useResolvedProp<T>(options: {
       },
       enabled,
       staleTime: RESOLVER_STALE_MS,
+      ...retryWhileSyncing(input),
     },
     queryClient,
   );
   const reload = () => void query.refetch();
-  if (!enabled) return { state: { kind: "idle" }, reload };
-  if (query.isFetching) return { state: { kind: "loading" }, reload };
+  // Retrying a refusal that reads as a document still syncing.
+  const syncing = query.isFetching && query.failureCount > 0;
+  if (!enabled) return { state: { kind: "idle" }, reload, syncing: false };
+  if (query.isFetching) return { state: { kind: "loading" }, reload, syncing };
   if (query.status === "error") {
     return {
       state: { kind: "error", message: messageOf(query.error) },
       reload,
+      syncing,
     };
   }
   if (query.status === "success") {
-    return { state: { kind: "ready", result: query.data }, reload };
+    return { state: { kind: "ready", result: query.data }, reload, syncing };
   }
-  return { state: { kind: "loading" }, reload };
+  return { state: { kind: "loading" }, reload, syncing };
 }
 
 // refreshOnSearch: the resolver re-runs with what the author types, debounced.
@@ -310,6 +328,7 @@ export function useOptionSearch<T>(options: {
       },
       enabled: Boolean(options.load) && settled !== "" && typed !== "",
       staleTime: RESOLVER_STALE_MS,
+      ...retryWhileSyncing(options.input),
       placeholderData: keepPreviousData,
     },
     queryClient,
@@ -347,9 +366,12 @@ export function useDynamicPrefetch(): (
               input.propName,
               config,
               input.connectionId ?? undefined,
+              undefined,
+              input.reactorConnectionId ?? undefined,
             )
             .then(parsePropList),
         staleTime: RESOLVER_STALE_MS,
+        ...retryWhileSyncing(input),
       });
     },
     [service, queryClient, scope],

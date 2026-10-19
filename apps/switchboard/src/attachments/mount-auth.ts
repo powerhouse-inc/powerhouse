@@ -7,6 +7,12 @@ import {
 
 export type HttpMethod = "DELETE" | "GET" | "HEAD" | "POST" | "PUT";
 
+// rawBody dispatches ahead of every body parser, so the handler streams `req`.
+type MountOptions = Pick<
+  NonNullable<Parameters<API["httpAdapter"]["mountNodeRoute"]>[3]>,
+  "rawBody"
+>;
+
 /**
  * Mount a Node-style attachment route with `requireAuth` applied unconditionally.
  * When `api.authService` is undefined (auth disabled), the handler still runs
@@ -27,14 +33,16 @@ export function mountAuthenticatedNodeRoute(
   method: HttpMethod,
   path: string,
   handler: NodeHandler,
-  options?: RequireAuthOptions,
+  options?: RequireAuthOptions & MountOptions,
 ): void {
+  const { rawBody, ...authOptions } = options ?? {};
   api.httpAdapter.mountNodeRoute(
     method,
     path,
     requireAuth(api.authService, handler, {
-      ...options,
+      ...authOptions,
       requireAuthenticatedCaller: api.requireAuthenticatedCaller,
     }),
+    { rawBody: rawBody ?? false },
   );
 }

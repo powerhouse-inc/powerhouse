@@ -33,6 +33,7 @@ playwright-report/
 test-results/
 __screenshots__/
 .vitest-attachments/
+.vitest/
 __pycache__/
 hotseat.json
 .hotseat

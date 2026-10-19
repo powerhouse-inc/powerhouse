@@ -43,10 +43,8 @@ import {
   type ReadModelIndexedEvent,
   type Unsubscribe,
 } from "../../events/types.js";
-import {
-  defaultLoadFactory,
-  type BuildWorkerExecutorOptions,
-} from "../../executor/worker/build-worker-executor.js";
+import type { BuildWorkerExecutorOptions } from "../../executor/worker/build-worker-executor.js";
+import { defaultLoadFactory } from "../../executor/worker/load-spec.js";
 import type {
   FactorySpec,
   ModelManifestEntry,

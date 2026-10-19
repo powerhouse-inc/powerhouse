@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 import type { PGlite } from "@electric-sql/pglite";
+import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
+import {
+  createDurableNodeFs,
+  resolvePgliteFsync,
+  type DurableNodeFs,
+} from "@powerhousedao/reactor-api/pglite-node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
 import {
   DriveCollectionId,
   EventBus,
+  IN_MEMORY_PGLITE_STORAGE_FACTS,
+  PGLITE_PATH_STORAGE_FACTS,
+  POSTGRES_STORAGE_FACTS,
   REACTOR_SCHEMA,
   ReactorBuilder,
   ReactorClientBuilder,
@@ -16,6 +24,7 @@ import {
   type InProcessReactorClientModule,
   type JwtHandler,
   type PoolInstrumentation,
+  type ReactorStorageFacts,
   UnsupportedStoredProtocolError,
 } from "@powerhousedao/reactor";
 import {
@@ -25,7 +34,9 @@ import {
   PackagesSubgraph,
   PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
+  reportFailure,
   resolveRenownConfig,
+  runDetached,
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
@@ -41,6 +52,7 @@ import {
   NodeProcessor,
   ReactorDriveClient,
   createReactorDriveResolvers,
+  REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
@@ -56,7 +68,6 @@ import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
-import { promises as fs } from "node:fs";
 import { register } from "node:module";
 import net from "node:net";
 import path from "path";
@@ -74,9 +85,15 @@ import {
 import {
   resolvePrivacy,
   startPrivacy,
+  type ResolvedPrivacy,
   type RunningPrivacy,
 } from "./privacy.mjs";
 import { applySwitchboardReactorDefaults } from "./builder-defaults.mjs";
+import {
+  createSwitchboardPluginHost,
+  isPluginHostEnabled,
+  type SwitchboardPluginHost,
+} from "./plugin-host.mjs";
 import {
   assertProjectionWorkerSupported,
   resolveProjectionWorkerOptions,
@@ -84,25 +101,39 @@ import {
 import {
   buildWorkerDbConfig,
   resolveHostPoolSize,
+  keepImportableSources,
   resolveWorkerModelSources,
   resolveWorkerPoolOptions,
 } from "./worker-pool.mjs";
+import { inspectionThrottleFromEnv } from "./inspection-throttle.mjs";
+import { initProfilerFromEnv } from "./profiler.js";
 import { initFeatureFlags } from "./feature-flags.js";
+import { resolveInspectionEnabled } from "./inspection-flag.mjs";
 import { resolveMcpEnabled } from "./mcp-flag.mjs";
 import {
   WORKFLOW_PACKAGE_NAME,
+  WORKFLOW_TELEMETRY_SCOPE,
   composeWorkflowRuntime,
+  modelManifestSource,
   assertWorkflowPackageLoadable,
+  isWorkflowSingletonConflict,
   resolveWorkflowsEnabled,
+  retryWorkflowSingleton,
+  workflowSingletonLossHandler,
+  type WorkflowSingletonRetry,
   type ComposedWorkflowRuntime,
+  type ModelManifestSource,
 } from "./workflow-runtime.mjs";
-import { ClosablePGliteDialect } from "./pglite-dialect.js";
-import { migratePgliteDir } from "./pglite-migration.js";
+import {
+  ClosablePGliteDialect,
+  reactorPgliteDialectOptions,
+} from "./pglite-dialect.js";
+import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   CURRENT_PG_MAJOR,
   isSupportedMajor,
+  loadNodeFsClass,
   loadPGliteModule,
-  readPgVersionFile,
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
@@ -123,6 +154,10 @@ import {
   addDefaultReactorDrive,
   isPostgresUrl,
 } from "./utils.mjs";
+import {
+  defaultStoreDirs,
+  resolvePhDir,
+} from "@powerhousedao/shared/clis/ph-dir";
 
 const defaultLogger = childLogger(["switchboard"]);
 
@@ -140,17 +175,54 @@ const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
 // How many ports forward from the requested one we will try before giving up.
 const PORT_FALLBACK_ATTEMPTS = 20;
 
-// AtomicNodeFs needs a flush interval to coalesce writes into a single disk write (only used locally)
-const PGLITE_FLUSH_INTERVAL_MS = (() => {
-  const raw = process.env.PGLITE_FLUSH_INTERVAL_MS;
-  if (raw === undefined) return 100;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 100;
-})();
+// Retired with the snapshot store; PGlite writes through NodeFS now.
+let flushIntervalWarned = false;
+function warnIgnoredFlushInterval(logger: ILogger): void {
+  if (flushIntervalWarned) return;
+  if (process.env.PGLITE_FLUSH_INTERVAL_MS === undefined) return;
+  flushIntervalWarned = true;
+  logger.warn(
+    "PGLITE_FLUSH_INTERVAL_MS is set but ignored: PGlite stores no longer snapshot on a timer.",
+  );
+}
 
-// A store that cannot persist must not keep accepting writes.
-function onPgliteFlushError(err: unknown): void {
-  triggerFatalShutdown("PGlite snapshot flush failed", err);
+// A Postgres PANIC (ENOSPC on WAL, a failed fdatasync) aborts the wasm
+// runtime; the store is dead and the process must not keep accepting writes.
+function onPgliteAbort(logger: ILogger, what: unknown): void {
+  if (!triggerFatalShutdown("PGlite aborted", what)) {
+    logger.error("PGlite aborted: @error", what);
+  }
+}
+
+// 0.2.17 syncs WAL through open_datasync, which NODEFS cannot honour, so on
+// PG16 only checkpoints reach the host disk; commits are durable against an
+// app crash, not a power loss, until --migrate-pglite upgrades the dir.
+function pgliteFsyncFor(
+  major: SupportedPgMajor,
+  dir: string,
+  logger: ILogger,
+): boolean {
+  const wanted = resolvePgliteFsync(process.env);
+  if (wanted && major === 16) {
+    logger.warn(
+      `PGlite data dir ${dir} is PG16 on pglite-legacy-02, which does not sync commits to disk; only checkpoints are synced until --migrate-pglite upgrades it.`,
+    );
+  }
+  return wanted;
+}
+
+/** Preloads the module's NodeFS so the returned factory can be synchronous. */
+async function loadDurableFsFactory(
+  major: SupportedPgMajor,
+  logger: ILogger,
+): Promise<(dir: string) => DurableNodeFs> {
+  const NodeFS = await loadNodeFsClass(major);
+  return (dir) =>
+    createDurableNodeFs(NodeFS, dir, {
+      fsync: pgliteFsyncFor(major, dir, logger),
+      logger,
+      onAbort: (what) => onPgliteAbort(logger, what),
+    });
 }
 
 // When set, runs both reactor and read-model PGLite instances purely in-memory.
@@ -225,14 +297,14 @@ async function resolveServerPort(
 type ReactorStorage = {
   kysely: Kysely<Database>;
   poolInstrumentation: PoolInstrumentation | undefined;
+  storageFacts: ReactorStorageFacts;
 };
 
-async function createReactorKysely(opts: {
+export async function createReactorKysely(opts: {
   reactorDbUrl: string | undefined;
   reactorPgliteDir: string | null;
   reactorPgliteMajor: SupportedPgMajor | null;
   inMemory: boolean;
-  flushIntervalMs: number;
   /**
    * Resolved lazily: only the Postgres branch has a host pool, and
    * {@link resolveHostPoolSize} throws on a bad REACTOR_DB_POOL_SIZE_HOST.
@@ -247,7 +319,6 @@ async function createReactorKysely(opts: {
     reactorPgliteDir,
     reactorPgliteMajor,
     inMemory,
-    flushIntervalMs,
     hostPoolSize,
     logger,
   } = opts;
@@ -267,6 +338,7 @@ async function createReactorKysely(opts: {
     return {
       kysely: new Kysely<Database>({ dialect: new PostgresDialect({ pool }) }),
       poolInstrumentation,
+      storageFacts: POSTGRES_STORAGE_FACTS,
     };
   }
 
@@ -277,11 +349,9 @@ async function createReactorKysely(opts: {
   const pglite = inMemory
     ? new PGlite()
     : new PGlite({
-        fs: new AtomicNodeFs(reactorPgliteDir, {
-          logger,
-          flushIntervalMs,
-          onFlushError: onPgliteFlushError,
-        }),
+        fs: (await loadDurableFsFactory(reactorPgliteMajor, logger))(
+          reactorPgliteDir,
+        ),
       });
   logger.info(
     inMemory
@@ -290,9 +360,78 @@ async function createReactorKysely(opts: {
   );
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(pglite),
+      dialect: new ClosablePGliteDialect(
+        pglite,
+        reactorPgliteDialectOptions(logger),
+      ),
     }),
     poolInstrumentation: undefined,
+    storageFacts: inMemory
+      ? IN_MEMORY_PGLITE_STORAGE_FACTS
+      : PGLITE_PATH_STORAGE_FACTS,
+  };
+}
+
+export interface PgliteStorageDirs {
+  /** Read-model store: a Postgres URL or a PGlite dir. */
+  readModelPath: string;
+  /** Reactor store: a Postgres URL or a PGlite dir. */
+  reactorPath: string;
+  /** PGlite dir for the reactor, null for Postgres or a caller-owned reactor. */
+  reactorPgliteDir: string | null;
+  /** PGlite dir for the read model, null for Postgres. */
+  readModelPgliteDir: string | null;
+  /** The PGlite dirs for the pre-flight, as before (not deduplicated). */
+  pgliteDirs: string[];
+  /** Set when BOTH stores are PGlite on one dir (see resolvePgliteStorageDirs). */
+  sharedPgliteDir: string | null;
+}
+
+/**
+ * Where the two stores live — the classic resolution, relocated verbatim.
+ * Classic layout: `./.ph/reactor-storage` for the reactor and
+ * `.ph/read-storage` for the read model (the same names inside
+ * `${userData}/.ph` under a shell's PH_USER_DATA_DIR). `dbPath` also names
+ * the reactor store unless PH_REACTOR_DATABASE_URL does: with `dbPath` alone
+ * both stores share one location. That is the long-standing contract of
+ * `--db-path` and fine for one Postgres database, but for PGlite it is two
+ * postmasters on one data dir — reported via `sharedPgliteDir` so the caller
+ * warns. Not refused: changing that contract is a separate decision.
+ */
+export function resolvePgliteStorageDirs(opts: {
+  dbPath: string | undefined;
+  reactorDbUrl: string | undefined;
+  /** The caller passed its own reactor — the reactor-side dir is unused. */
+  callerReactor: boolean;
+  phDir?: string;
+}): PgliteStorageDirs {
+  const { dbPath, reactorDbUrl, callerReactor } = opts;
+  const defaults = defaultStoreDirs(process.env, opts.phDir);
+  const readModelPath = dbPath || defaults.readModel;
+  const reactorPath = reactorDbUrl || defaults.reactor;
+  const reactorPgliteDir = callerReactor
+    ? null
+    : !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
+      ? reactorPath
+      : null;
+  const readModelPgliteDir =
+    !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
+  const sharedPgliteDir =
+    reactorPgliteDir !== null &&
+    readModelPgliteDir !== null &&
+    path.resolve(reactorPgliteDir) === path.resolve(readModelPgliteDir)
+      ? path.resolve(reactorPgliteDir)
+      : null;
+  const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
+    (d): d is string => d !== null,
+  );
+  return {
+    readModelPath,
+    reactorPath,
+    reactorPgliteDir,
+    readModelPgliteDir,
+    pgliteDirs,
+    sharedPgliteDir,
   };
 }
 
@@ -328,87 +467,73 @@ async function initServer(
     remoteDrives = [],
     logger = defaultLogger,
   } = options;
+
+  // R2 plugin pipeline (FEATURE_PLUGIN_HOST_ENABLED): flag off, the inline
+  // path below runs byte-identically; flag on, carved subsystems run as
+  // built-in plugins through the hook moments marked along this function.
+  const pluginHost: SwitchboardPluginHost | null = isPluginHostEnabled()
+    ? createSwitchboardPluginHost(
+        {
+          logger,
+          options: options as unknown as Record<string, unknown>,
+          renown,
+        },
+        options.pluginComposition,
+      )
+    : null;
+  if (pluginHost) {
+    options = await pluginHost.transformOptions(options);
+    // Presence is activation: whatever no plugin (or explicit option) set
+    // stays OFF. The mcp/workflows plugins set these true at
+    // transformServerOptions; their absence must actually deactivate.
+    options.mcp ??= false;
+    options.workflows = { enabled: options.workflows?.enabled === true };
+  }
   logger.level = LogLevel;
   const dbPath =
     options.dbPath ??
     process.env.DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
 
-  // use postgres url for read model storage if available, otherwise use local PGlite path
-  const readModelPath = dbPath || ".ph/read-storage";
-
   const reactorDbUrl =
     options.dbPath ??
     process.env.PH_REACTOR_DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
-  // When the caller passes in a reactor, the reactor-side PGLite dir is
-  // unused — the caller owns its own storage. Only the read-model dir is
-  // still needed by reactor-api itself.
-  const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
-  const reactorPgliteDir = options.reactor
-    ? null
-    : !reactorDbUrl || !isPostgresUrl(reactorDbUrl)
-      ? reactorPath
-      : null;
-  const readModelPgliteDir =
-    !dbPath || !isPostgresUrl(dbPath) ? readModelPath : null;
-
-  // PGLite version pre-flight: when PH_FORCE_PG_VERSION is set, wipe local
-  // data dirs and re-initdb at the chosen version. Otherwise detect on-disk
-  // PG_VERSION and either migrate (when --migrate-pglite is set) or warn and
-  // fall through to the matching legacy PGLite at runtime.
-  const pgliteDirs = [reactorPgliteDir, readModelPgliteDir].filter(
-    (d): d is string => d !== null,
-  );
-  const detectedMajors = new Map<string, number>();
-
-  // delete PGLite's lockfile to recover, in case it didn't have time to close
-  for (const dir of pgliteDirs) {
-    const lockPath = path.join(dir, "postmaster.pid");
-    try {
-      await fs.unlink(lockPath);
-      logger.warn(`Removed stale PGLite lockfile ${lockPath}`);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-  }
-
-  if (options.forcePgVersion !== undefined && pgliteDirs.length > 0) {
-    if (options.migratePglite) {
-      logger.warn(
-        "PH_FORCE_PG_VERSION is set; ignoring --migrate-pglite/PH_MIGRATE_PGLITE because the data dirs will be wiped.",
-      );
-    }
+  // Postgres URLs or local PGlite dirs under the project's .ph tree. When
+  // the caller passes in a reactor, the reactor-side PGLite dir is unused —
+  // the caller owns its own storage. Only the read-model dir is still needed
+  // by reactor-api itself. Refuses one PGlite dir for both stores.
+  const {
+    readModelPath,
+    reactorPgliteDir,
+    readModelPgliteDir,
+    pgliteDirs,
+    sharedPgliteDir,
+  } = resolvePgliteStorageDirs({
+    dbPath,
+    reactorDbUrl,
+    callerReactor: options.reactor !== undefined,
+  });
+  if (sharedPgliteDir !== null) {
     logger.warn(
-      `PH_FORCE_PG_VERSION=${options.forcePgVersion} set; wiping PGLite data dirs and re-initializing at PG${options.forcePgVersion}.`,
+      `The reactor and read-model PGlite stores share one directory (${sharedPgliteDir}): ` +
+        "two PGlite instances on one data dir can abort at the first checkpoint and leave the store unopenable. " +
+        "Set PH_REACTOR_DATABASE_URL to a separate directory, or leave dbPath unset for the classic " +
+        "./.ph/reactor-storage + .ph/read-storage layout.",
     );
-    for (const dir of pgliteDirs) {
-      await fs.rm(dir, { recursive: true, force: true });
-      logger.info(`Wiped PGLite data dir ${dir}`);
-    }
-  } else if (options.forcePgVersion === undefined) {
-    for (const dir of pgliteDirs) {
-      const major = await readPgVersionFile(dir);
-      if (major !== null) detectedMajors.set(dir, major);
-    }
-
-    if (options.migratePglite) {
-      for (const [dir, major] of detectedMajors) {
-        if (major === CURRENT_PG_MAJOR) continue;
-        await migratePgliteDir(dir, logger);
-        // refresh detected major after a successful migration
-        const after = await readPgVersionFile(dir);
-        if (after !== null) detectedMajors.set(dir, after);
-      }
-    } else {
-      for (const [dir, major] of detectedMajors) {
-        if (major === CURRENT_PG_MAJOR) continue;
-        logger.warn(
-          `PGLite data dir at ${dir} was created with PG${major} but Switchboard ships PG${CURRENT_PG_MAJOR}. Running on legacy PGLite. Re-start with --migrate-pglite (or PH_MIGRATE_PGLITE=true) to upgrade.`,
-        );
-      }
-    }
   }
+
+  // PGLite pre-flight: convert legacy single-file snapshot stores, clear
+  // stale lock and WAL temp files, then detect PG_VERSION and migrate or
+  // warn. Under PH_FORCE_PG_VERSION the dirs are wiped instead.
+  warnIgnoredFlushInterval(logger);
+  const detectedMajors = await runPglitePreflight({
+    dirs: pgliteDirs,
+    forcePgVersion: options.forcePgVersion,
+    migratePglite: options.migratePglite,
+    inMemory: PGLITE_IN_MEMORY,
+    logger,
+  });
 
   function resolvePgliteMajorForDir(dir: string): SupportedPgMajor {
     if (options.forcePgVersion !== undefined) return options.forcePgVersion;
@@ -429,6 +554,7 @@ async function initServer(
     ? resolvePgliteMajorForDir(readModelPgliteDir)
     : null;
 
+  const inspectionThrottle = inspectionThrottleFromEnv(process.env);
   let workerPool = resolveWorkerPoolOptions(options.workerPool, process.env);
   if (workerPool && options.reactor) {
     logger.warn(
@@ -509,6 +635,21 @@ async function initServer(
     });
   }
 
+  // Registry packages import from the on-disk cache, which workers can read.
+  const registryPackageNames = new Set(
+    (registryPackages ?? "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean),
+  );
+  const resolveRegistryModels = async (
+    identifier: string,
+  ): Promise<string | null> =>
+    httpLoader && registryPackageNames.has(identifier)
+      ? ((await httpLoader.cachePackage(identifier)).entries.documentModels ??
+        null)
+      : null;
+
   const reactorLogger = logger.child(["reactor"]);
   // Latched: dropWriteReady reports the fatal once per dropped job.
   let projectionWorkerFatalFired = false;
@@ -528,7 +669,11 @@ async function initServer(
   // only reads the answer.
   const workflowsEnabled = options.workflows?.enabled === true;
   // Resolved before the reactor is built: a bad secret fails the boot early.
-  const privacyConfig = resolvePrivacy(options.privacy, process.env);
+  // Flag-on, the privacy plugin owns this resolve (same fail-fast timing, in
+  // transformServerOptions above).
+  const privacyConfig = pluginHost
+    ? ({ enabled: false } as ResolvedPrivacy)
+    : resolvePrivacy(options.privacy, process.env);
 
   // Through the package manager like any other, so one route carries the
   // models, the subgraphs and the piece.
@@ -542,6 +687,8 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // The models workers and workflow pieces import; only on a reactor built here.
+  let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
   let localRenownRequest: SwitchboardRequestFn | undefined;
   const initializeClient = async (
@@ -576,16 +723,18 @@ async function initServer(
       };
     }
 
-    const { kysely: baseKysely, poolInstrumentation } =
-      await createReactorKysely({
-        reactorDbUrl,
-        reactorPgliteDir,
-        reactorPgliteMajor,
-        inMemory: PGLITE_IN_MEMORY,
-        flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-        hostPoolSize: () => resolveHostPoolSize(process.env),
-        logger,
-      });
+    const {
+      kysely: baseKysely,
+      poolInstrumentation,
+      storageFacts,
+    } = await createReactorKysely({
+      reactorDbUrl,
+      reactorPgliteDir,
+      reactorPgliteMajor,
+      inMemory: PGLITE_IN_MEMORY,
+      hostPoolSize: () => resolveHostPoolSize(process.env),
+      logger,
+    });
 
     const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
     const hasSkipThreshold = !isNaN(maxSkipThreshold) && maxSkipThreshold > 0;
@@ -611,6 +760,7 @@ async function initServer(
     const reactorBuilder = new ReactorBuilder()
       .withEventBus(new EventBus())
       .withKysely(baseKysely)
+      .withStorageFacts(storageFacts)
       .withFeatures({
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
@@ -688,20 +838,29 @@ async function initServer(
         : undefined,
     });
 
+    // File sources give workers and workflow pieces importable paths for the
+    // models registered above; the builder dedupes them.
+    if (workerPool || projectionWorker || workflowsEnabled) {
+      const sources = await resolveWorkerModelSources(packages, reactorLogger, {
+        resolveRemote: resolveRegistryModels,
+      });
+      // Workers need every model; workflow pieces can do without a broken one.
+      reactorBuilder.withDocumentModelSources(
+        workerPool || projectionWorker
+          ? sources
+          : await keepImportableSources(sources, reactorLogger),
+      );
+    }
+    workerModels = modelManifestSource(reactorBuilder);
+
     if (workerPool) {
       if (!reactorDbUrl) {
         throw new Error(
           "unreachable: worker pool enabled without a reactor database URL",
         );
       }
-      // File sources give workers importable paths for the same models the
-      // live modules above registered; the builder dedupes and fails the
-      // boot if any model lacks an importable source.
-      const workerSources = await resolveWorkerModelSources(
-        packages,
-        reactorLogger,
-      );
-      reactorBuilder.withDocumentModelSources(workerSources).withWorkerPool({
+      // The builder fails the boot if a model lacks an importable source.
+      reactorBuilder.withWorkerPool({
         numWorkers: workerPool.numWorkers,
         db: buildWorkerDbConfig(reactorDbUrl, workerPool),
       });
@@ -740,14 +899,6 @@ async function initServer(
         throw new Error(
           "unreachable: projection worker enabled without a reactor database URL",
         );
-      }
-      // The projection worker rebuilds its registry from the same manifest.
-      if (!workerPool) {
-        const workerSources = await resolveWorkerModelSources(
-          packages,
-          reactorLogger,
-        );
-        reactorBuilder.withDocumentModelSources(workerSources);
       }
       const db = {
         ...buildWorkerDbConfig(reactorDbUrl, {
@@ -861,6 +1012,11 @@ async function initServer(
   // TODO get path from powerhouse config
   const basePath = process.cwd();
 
+  const reportError = (error: unknown) => {
+    Sentry.captureException(error);
+  };
+  const reporting = { logger, report: reportError };
+
   // import Vite loader only if dev mode is enabled
   let vite: ViteDevServer | undefined;
   let viteLoader: VitePackageLoader | undefined;
@@ -872,6 +1028,7 @@ async function initServer(
     // here when the project does not install them itself.
     viteLoader = VitePackageLoader.build(vite, {
       resolveFrom: [import.meta.url],
+      reportError,
     });
   }
 
@@ -914,18 +1071,12 @@ async function initServer(
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
     const { PGlite: ReadModelPGlite } =
       await loadPGliteModule(readModelPgliteMajor);
+    const durableFs = await loadDurableFsFactory(readModelPgliteMajor, logger);
     pgliteFactory = PGLITE_IN_MEMORY
       ? () => new ReadModelPGlite({ parsers: PGLITE_UTC_PARSERS })
       : (connectionString) =>
           new ReadModelPGlite({
-            fs: new AtomicNodeFs(
-              connectionString ?? (readModelPgliteDir as string),
-              {
-                logger,
-                flushIntervalMs: PGLITE_FLUSH_INTERVAL_MS,
-                onFlushError: onPgliteFlushError,
-              },
-            ),
+            fs: durableFs(connectionString ?? readModelPgliteDir),
             parsers: PGLITE_UTC_PARSERS,
           });
   }
@@ -945,7 +1096,10 @@ async function initServer(
         : {},
       configFile: configPath,
       mcp: options.mcp ?? true,
+      inspection:
+        options.inspection === false ? false : { throttle: inspectionThrottle },
       logger: apiLogger,
+      reportError,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
       // Already resolved for this reactor's own identity; reuse it so an
       // invalid RENOWN_SOURCE is reported once, not once per resolution.
@@ -985,11 +1139,24 @@ async function initServer(
     );
   }
 
-  registerAttachmentRoutes(api);
-
-  const attachmentService = createRemoteAttachmentService(
-    deriveAttachmentServiceConfig(options, serverPort, renown),
-  );
+  // R2.3: flag-on, the attachments plugin owns the route mount + service
+  // creation at onHttpMounting; flag-off runs the inline path.
+  let attachmentService:
+    | ReturnType<typeof createRemoteAttachmentService>
+    | undefined;
+  if (pluginHost) {
+    pluginHost.ctx.api = api;
+    pluginHost.ctx.serverPort = serverPort;
+    await pluginHost.observe("onHttpMounting");
+    attachmentService = pluginHost.ctx.attachmentService as
+      | ReturnType<typeof createRemoteAttachmentService>
+      | undefined;
+  } else {
+    registerAttachmentRoutes(api);
+    attachmentService = createRemoteAttachmentService(
+      deriveAttachmentServiceConfig(options, serverPort, renown),
+    );
+  }
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
@@ -1000,18 +1167,33 @@ async function initServer(
   const { client, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
+  if (pluginHost) {
+    pluginHost.ctx.client = client;
+    pluginHost.ctx.graphqlManager = graphqlManager;
+    pluginHost.ctx.lateSubgraphs = lateSubgraphs;
+    pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
+    await pluginHost.observe("onReactorReady");
+  }
 
   // The workflow runtime is a switchboard component: composed from what the
   // api handed back, registered like any other late subgraph.
   let workflows: ComposedWorkflowRuntime | undefined;
-  if (workflowsEnabled) {
-    workflows = await composeWorkflowRuntime({
+  let workflowsRetry: WorkflowSingletonRetry | undefined;
+  const composeWorkflows = () =>
+    composeWorkflowRuntime({
       reactorClient: client,
       clientModule: options.reactor ?? ownedReactorModule,
       relationalDb: api.relationalDb,
       // A Postgres read model outlives the pod; a key file beside it would not.
       secretsKeyFile: readModelPgliteDir === null ? false : undefined,
+      // The stable half of the default singleton owner name. Absolute, so
+      // two Switchboards in different working directories differ.
+      storageId:
+        readModelPgliteDir === null
+          ? readModelPath
+          : path.resolve(readModelPath),
       attachments: createAttachmentClient(api.attachments.service),
+      attachmentAccess: api.attachmentAccess,
       // The workflow package's own HTTP namespace: its webhook endpoints live
       // under it, not under the reactor's.
       webhooks: api.httpRoutes.scopeFor(WORKFLOW_PACKAGE_NAME).webhooks,
@@ -1021,10 +1203,21 @@ async function initServer(
       // runs in is one of them, so its own pieces arrive with the rest.
       pieces: api.packageManager,
       pieceRegistryUrl: registryUrl,
+      models: workerModels,
+      // The piece pool leaves the reactor's threads their share of the cores.
+      reactorThreads:
+        (workerPool?.numWorkers ?? 0) + (projectionWorker ? 1 : 0),
       logger: logger.child(["workflow-runtime"]),
+      exclusiveJournal: readModelPgliteDir !== null,
+      onSingletonLost: workflowSingletonLossHandler(logger),
+      // The providers observability.mts registered before this module loaded.
+      telemetry: {
+        tracer: trace.getTracer(WORKFLOW_TELEMETRY_SCOPE),
+        meter: metrics.getMeter(WORKFLOW_TELEMETRY_SCOPE),
+      },
     });
-
-    const WorkflowRuntimeSubgraph = workflows.subgraph;
+  const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
+    const WorkflowRuntimeSubgraph = composed.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
       reactorClient: client,
       http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
@@ -1036,24 +1229,109 @@ async function initServer(
       path: graphqlManager.getBasePath(),
       attachments: api.attachmentClientProvider,
     });
-
-    lateSubgraphs.push(
-      graphqlManager
-        .registerSubgraphInstance(workflowSubgraph, "graphql", false)
-        .catch((error: unknown) => {
-          logger.error(
-            "Failed to register workflow-runtime subgraph: @error",
-            error,
-          );
-        }),
-    );
-
+    return graphqlManager
+      .registerSubgraphInstance(workflowSubgraph, "graphql", false)
+      .catch((error: unknown) => {
+        reportFailure(
+          reporting,
+          error,
+          "Failed to register workflow-runtime subgraph: @error",
+        );
+      });
+  };
+  if (!pluginHost && workflowsEnabled) {
+    try {
+      workflows = await composeWorkflows();
+    } catch (error) {
+      // Without the claim this host must not run workflows, but everything
+      // else it serves still works, so it boots without the runtime.
+      if (!isWorkflowSingletonConflict(error)) throw error;
+      logger.warn(
+        `Workflows are enabled but another live process ("${error.owner ?? "unknown"}") ` +
+          `holds the workflow singleton until ${error.expiresAt ?? "unknown"}. ` +
+          "This Switchboard has booted WITHOUT the workflow runtime: no " +
+          "trigger of any kind fires here, and the workflow GraphQL face is " +
+          "absent. Everything else serves normally. Stop the other owner, or " +
+          "set PH_WORKFLOWS_SINGLETON_OWNER to the same stable name on the " +
+          "slot that owns workflows. This Switchboard retries the claim and " +
+          "starts workflows once the lease comes free.",
+      );
+      workflowsRetry = retryWorkflowSingleton({
+        compose: composeWorkflows,
+        onComposed: async (composed) => {
+          try {
+            await composed.start();
+          } catch (error) {
+            // Hands the lease back so a retry or another replica can claim it.
+            try {
+              await composed.stop();
+            } catch (stopError) {
+              logger.error(
+                "Stopping the late workflow runtime failed: @error",
+                stopError,
+              );
+            }
+            throw error;
+          }
+          logger.info("Workflow runtime started");
+          workflows = composed;
+          await registerWorkflowSubgraph(composed);
+          // Past boot nothing else rebuilds the router, so a subgraph
+          // registered now is not served until this runs.
+          try {
+            await graphqlManager.updateRouter(true);
+          } catch (error) {
+            reportFailure(
+              reporting,
+              error,
+              "Mounting the late workflow-runtime subgraph failed: @error",
+            );
+          }
+        },
+        logger,
+      });
+    }
+  }
+  if (workflows) {
+    lateSubgraphs.push(registerWorkflowSubgraph(workflows));
     await workflows.start();
     logger.info("Workflow runtime started");
+    api.inspection?.facts.setWorkflows(true);
+  }
+
+  // Plugins register their subgraphs here (push into lateSubgraphs, or mount
+  // directly like privacy). The call site carries the inline privacy block's
+  // failure semantics: stop workflows, abort the partial boot, rethrow.
+  if (pluginHost) {
+    pluginHost.ctx.workflowsOrchestration = {
+      enabled: options.workflows?.enabled === true,
+      composeWorkflows,
+      registerWorkflowSubgraph,
+      updateRouter: () => graphqlManager.updateRouter(true),
+      reportMountFailure: (error: unknown) =>
+        reportFailure(
+          reporting,
+          error,
+          "Mounting the late workflow-runtime subgraph failed: @error",
+        ),
+      setWorkflowsFact: () => api.inspection?.facts.setWorkflows(true),
+    };
+    try {
+      await pluginHost.observe("onSubgraphsRegistering");
+    } catch (error) {
+      await (
+        pluginHost.ctx.workflowsRetry as WorkflowSingletonRetry | undefined
+      )?.stop();
+      await (
+        pluginHost.ctx.workflows as ComposedWorkflowRuntime | undefined
+      )?.stop();
+      await abortBoot(api);
+      throw error;
+    }
   }
 
   let privacy: RunningPrivacy | undefined;
-  if (privacyConfig.enabled) {
+  if (!pluginHost && privacyConfig.enabled) {
     // The caller's reactor signs with a signer only the caller knows.
     const signer = options.reactor
       ? options.privacy?.signer
@@ -1070,6 +1348,7 @@ async function initServer(
         logger: logger.child(["privacy"]),
       });
     } catch (error) {
+      await workflowsRetry?.stop();
       await workflows?.stop();
       await abortBoot(api);
       throw error;
@@ -1079,7 +1358,9 @@ async function initServer(
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
   const shutdown = async () => {
+    if (pluginHost) await pluginHost.observe("onShutdown");
     await privacy?.stop();
+    await workflowsRetry?.stop();
     await workflows?.stop();
     await api.dispose();
   };
@@ -1098,9 +1379,10 @@ async function initServer(
       graphqlManager
         .regenerateDocumentModelSubgraphs()
         .catch((error: unknown) => {
-          logger.error(
-            "Failed to regenerate document model subgraphs: @error",
+          reportFailure(
+            reporting,
             error,
+            "Failed to regenerate document model subgraphs: @error",
           );
         });
     });
@@ -1122,7 +1404,11 @@ async function initServer(
       graphqlManager
         .registerSubgraphInstance(packagesSubgraph, "graphql", false)
         .catch((error: unknown) => {
-          logger.error("Failed to register packages subgraph: @error", error);
+          reportFailure(
+            reporting,
+            error,
+            "Failed to register packages subgraph: @error",
+          );
         }),
     );
   }
@@ -1134,7 +1420,7 @@ async function initServer(
 
     const authorizationService = graphqlManager.getAuthorizationService();
     const reactorDriveSubgraph = {
-      name: "reactor-drive",
+      name: REACTOR_DRIVE_SUBGRAPH_NAME,
       path: graphqlManager.getBasePath(),
       resolvers: createReactorDriveResolvers({
         reactorClient: client,
@@ -1154,26 +1440,32 @@ async function initServer(
       graphqlManager
         .registerSubgraphInstance(reactorDriveSubgraph, "graphql", false)
         .catch((error: unknown) => {
-          logger.error(
-            "Failed to register reactor-drive subgraph: @error",
+          reportFailure(
+            reporting,
             error,
+            "Failed to register reactor-drive subgraph: @error",
           );
         }),
     );
   }
 
-  void (async () => {
-    await Promise.all(lateSubgraphs);
-    try {
-      await graphqlManager.updateRouter(true);
-    } catch (error) {
-      logger.error(
-        "Final router update before readiness failed: @error",
-        error,
-      );
-    }
-    api.readiness.markReady();
-  })();
+  void runDetached(
+    "Marking the API ready",
+    async () => {
+      await Promise.allSettled(lateSubgraphs);
+      try {
+        await graphqlManager.updateRouter(true);
+      } catch (error) {
+        reportFailure(
+          reporting,
+          error,
+          "Final router update before readiness failed: @error",
+        );
+      }
+      api.readiness.markReady();
+    },
+    reporting,
+  );
 
   // Create default drive if provided
   if (options.drive) {
@@ -1244,16 +1536,32 @@ async function initServer(
     }
   }
 
+  // Drives exist (default created, remotes attached) — the barrier after the
+  // future core drive seeding (R2 step 2 replaces the two blocks above).
+  if (pluginHost) await pluginHost.observe("onDrivesReady");
+
   return {
     defaultDriveUrl,
     api,
     reactor: client,
     attachmentService,
     attachmentReferenceProjection: api.attachmentReferenceProjection,
-    workflowTriggers: workflows?.triggers,
+    // Read live: losing the singleton turns it unavailable.
+    get workflowTriggers() {
+      return (
+        workflows ??
+        (pluginHost?.ctx.workflows as ComposedWorkflowRuntime | undefined)
+      )?.triggers;
+    },
     workflowsEnabled,
-    privacy: privacy ? { erasure: privacy.erasure } : undefined,
+    modelManifest: () => workerModels?.modelManifest() ?? [],
+    privacy: (() => {
+      const running =
+        privacy ?? (pluginHost?.ctx.privacy as RunningPrivacy | undefined);
+      return running ? { erasure: running.erasure } : undefined;
+    })(),
     mcpEnabled: options.mcp !== false,
+    inspectionEnabled: options.inspection !== false,
     renown,
     port: serverPort,
     shutdown,
@@ -1282,6 +1590,12 @@ export const startSwitchboard = async (
 ): Promise<SwitchboardReactor> => {
   const requestedPort = options.port ?? DEFAULT_PORT;
   const logger = options.logger ?? defaultLogger;
+  // Here as well as in index.mts, so a host embedding the server is profiled.
+  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
+    await initProfilerFromEnv(process.env).catch((error: unknown) =>
+      logger.error("Error starting profiler: @error", error),
+    );
+  }
   const serverPort = await resolveServerPort(
     requestedPort,
     options.strictPort ?? false,
@@ -1299,15 +1613,29 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  options.mcp = await resolveMcpEnabled({ featureFlags, option: options.mcp });
-
-  const configPathForFlags = resolveConfigPath(options.configFile);
-  const workflowsEnabled = await resolveWorkflowsEnabled({
+  // CLASSIC resolution of the carved subsystems' switches — flag-on, the
+  // plugins own these (presence is activation): the resolvers are skipped so
+  // an ABSENT plugin can actually deactivate its subsystem (initServer
+  // normalizes unset values to off after transformServerOptions). An explicit
+  // caller option always wins on both paths. The inspection flag is a core
+  // capability (not carved) and resolves classically either way.
+  if (!isPluginHostEnabled()) {
+    options.mcp = await resolveMcpEnabled({
+      featureFlags,
+      option: options.mcp,
+    });
+    const configPathForFlags = resolveConfigPath(options.configFile);
+    const workflowsEnabled = await resolveWorkflowsEnabled({
+      featureFlags,
+      override: options.workflows?.enabled,
+      configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+    });
+    options.workflows = { enabled: workflowsEnabled };
+  }
+  options.inspection = await resolveInspectionEnabled({
     featureFlags,
-    override: options.workflows?.enabled,
-    configEnabled: readConfigWorkflowsEnabled(configPathForFlags),
+    option: options.inspection,
   });
-  options.workflows = { enabled: workflowsEnabled };
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1318,6 +1646,14 @@ export const startSwitchboard = async (
   options.identity = {
     ...options.identity,
     baseUrl: options.identity?.baseUrl ?? renownConfig.url,
+    // Under a shell's PH_USER_DATA_DIR the identity lives in the user's .ph
+    // tree with the stores, never in the install dir. Unset: unchanged —
+    // renown's own `<cwd>/.ph/.keypair.json` default applies.
+    keypairPath:
+      options.identity?.keypairPath ??
+      (process.env.PH_USER_DATA_DIR
+        ? path.join(resolvePhDir(), ".keypair.json")
+        : undefined),
   };
 
   logger.info(
@@ -1326,7 +1662,8 @@ export const startSwitchboard = async (
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
-        PH_WORKFLOWS_ENABLED: workflowsEnabled,
+        INSPECTION_ENABLED: options.inspection,
+        PH_WORKFLOWS_ENABLED: options.workflows?.enabled,
       },
       null,
       2,

@@ -1,7 +1,7 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
+import { render, type RenderResult } from "vitest-browser-react";
 import { DocumentCache } from "../src/document-cache.js";
 import { ensurePHEventHandlers } from "../src/graphql-client/graphql-reactor-provider.js";
 import {
@@ -56,7 +56,7 @@ function Probe({ id }: { id: string }) {
   );
 }
 
-function textOf(screen: ReturnType<typeof render>, testId: string) {
+function textOf(screen: RenderResult, testId: string) {
   return (
     screen.container.querySelector(`[data-testid=${testId}]`)?.textContent ?? ""
   );
@@ -79,7 +79,7 @@ describe("useDocumentSafe", () => {
     const { promise, resolve } = deferred<PHDocument>();
     setDocumentCache(makeCache(() => promise));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe id="doc-1" />
       </StrictMode>,
@@ -107,7 +107,7 @@ describe("useDocumentSafe", () => {
       const { promise, reject } = deferred<PHDocument>();
       setDocumentCache(makeCache(() => promise));
 
-      const screen = render(
+      const screen = await render(
         <StrictMode>
           <Probe id="doc-404" />
         </StrictMode>,
@@ -130,7 +130,7 @@ describe("useDocumentSafe", () => {
     // the bump fires on the next microtask instead of being skipped.
     setDocumentCache(makeCache(() => Promise.resolve(testDocument)));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe id="doc-1" />
       </StrictMode>,

@@ -3,7 +3,7 @@ import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { IRenown } from "@renown/sdk";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "vitest-browser-react";
+import { render, type RenderResult } from "vitest-browser-react";
 import { DocumentCache } from "../src/document-cache.js";
 import { ensurePHEventHandlers } from "../src/graphql-client/graphql-reactor-provider.js";
 import { setDocumentCache } from "../src/hooks/document-cache.js";
@@ -89,7 +89,7 @@ function Probe({ candidates }: { candidates?: string[] }) {
   );
 }
 
-function textOf(screen: ReturnType<typeof render>, testId: string) {
+function textOf(screen: RenderResult, testId: string) {
   return (
     screen.container.querySelector(`[data-testid=${testId}]`)?.textContent ?? ""
   );
@@ -115,7 +115,7 @@ describe("useCanExecute", () => {
    * control in an app that never asked for enforcement.
    */
   it("reports unsupported when no reactor client module is set", async () => {
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -129,7 +129,7 @@ describe("useCanExecute", () => {
   it("reports the verdicts once they arrive", async () => {
     setClient(() => Promise.resolve(evaluations(["allow", "deny"])));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe candidates={["SET_NAME", "DELETE_MODULE"]} />
       </StrictMode>,
@@ -145,7 +145,7 @@ describe("useCanExecute", () => {
   it("reports a wholly denied set as denied and ready", async () => {
     setClient(() => Promise.resolve(evaluations(["deny"])));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -172,7 +172,7 @@ describe("useCanExecute", () => {
     });
     setClient(() => Promise.reject(stripped));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -187,7 +187,7 @@ describe("useCanExecute", () => {
   it("reports any other failure as an error", async () => {
     setClient(() => Promise.reject(new Error("reactor unreachable")));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -203,7 +203,7 @@ describe("useCanExecute", () => {
     setRenown(LOGIN_FAILED);
     setClient(() => Promise.resolve(evaluations(["allow"])));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -224,7 +224,7 @@ describe("useCanExecute", () => {
     setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
     setRenown(authorizedAs("0xUserA"));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -252,7 +252,7 @@ describe("useCanExecute", () => {
     setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
     setRenown(authorizedAs("0xUserA"));
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -284,7 +284,7 @@ describe("useCanExecute", () => {
       ) as unknown as IReactorClient["evaluateActions"];
     setClient(evaluate);
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -312,7 +312,7 @@ describe("useCanExecute", () => {
     const evaluate = vi.fn().mockResolvedValue(evaluations(["allow"]));
     setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -323,7 +323,7 @@ describe("useCanExecute", () => {
     });
     const settledCalls = evaluate.mock.calls.length;
 
-    screen.rerender(
+    await screen.rerender(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -339,7 +339,7 @@ describe("useCanExecute", () => {
     const evaluate = vi.fn().mockResolvedValue(evaluations(["allow"]));
     setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,
@@ -377,7 +377,7 @@ describe("useCanExecute", () => {
     const evaluate = vi.fn().mockResolvedValue(evaluations(["allow"]));
     setClient(evaluate as unknown as IReactorClient["evaluateActions"]);
 
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <Probe />
       </StrictMode>,

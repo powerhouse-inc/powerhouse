@@ -17,7 +17,14 @@ import {
   AttachmentBuilder,
   type AttachmentBuildResult,
 } from "../../src/index.js";
-import { AttachmentNotFound, ReservationNotFound } from "../../src/errors.js";
+import { createAttachmentClient } from "../../src/client.js";
+import {
+  AttachmentAlreadyExists,
+  AttachmentNotFound,
+  ReservationNotFound,
+} from "../../src/errors.js";
+import { sha256Hex } from "../../src/replication/hash.js";
+import { createFetchUploadTransport } from "../../src/switchboard/upload-transport.js";
 import { createRemoteAttachmentService } from "../../src/switchboard/create-remote-attachment-service.js";
 import { RemoteAttachmentStore } from "../../src/switchboard/remote-attachment-store.js";
 import { RemoteReservationStore } from "../../src/switchboard/remote-reservation-store.js";
@@ -56,16 +63,36 @@ async function handle(
       mimeType?: string;
       fileName?: string;
       extension?: string | null;
+      clientHash?: string;
+      sizeBytes?: number;
     };
     if (!body.mimeType || !body.fileName) {
       sendJson(res, 400, { error: "missing fields" });
       return;
     }
-    const upload = await ctx.attachments.service.reserve({
-      mimeType: body.mimeType,
-      fileName: body.fileName,
-      extension: body.extension ?? null,
-    });
+    let upload;
+    try {
+      const base = {
+        mimeType: body.mimeType,
+        fileName: body.fileName,
+        extension: body.extension ?? null,
+      };
+      upload = await ctx.attachments.service.reserve(
+        body.clientHash === undefined
+          ? base
+          : {
+              ...base,
+              clientHash: body.clientHash,
+              sizeBytes: body.sizeBytes ?? 0,
+            },
+      );
+    } catch (err) {
+      if (err instanceof AttachmentAlreadyExists) {
+        sendJson(res, 409, { error: "already_exists", ref: err.ref });
+        return;
+      }
+      throw err;
+    }
     sendJson(res, 201, { reservationId: upload.reservationId });
     return;
   }
@@ -242,6 +269,45 @@ describe("remote attachment service end-to-end", () => {
 
     const bytes = await streamToBytes(got.body);
     expect(new TextDecoder().decode(bytes)).toBe(payload);
+  });
+
+  it("uploads a Blob hash-first, sending the Blob itself", async () => {
+    const bytes = new Uint8Array(256 * 1024 + 17);
+    for (let i = 0; i < bytes.length; i++) bytes[i] = (i * 7 + 3) & 0xff;
+    const file = new File([bytes], "big.bin", {
+      type: "application/octet-stream",
+    });
+    const bodies: Blob[] = [];
+    const fetchTransport = createFetchUploadTransport(
+      globalThis.fetch.bind(globalThis),
+    );
+    const service = createRemoteAttachmentService({
+      remoteUrl: baseUrl,
+      uploadTransport: (request) => {
+        bodies.push(request.body);
+        return fetchTransport(request);
+      },
+    });
+    const client = createAttachmentClient(service);
+
+    const preprocessed = await client.preprocess(file);
+    const oneShot = await sha256Hex(bytes);
+    expect(preprocessed.hash).toBe(oneShot);
+    expect(preprocessed.ref).toBe(`attachment://v1:${oneShot}`);
+
+    const result = await client.upload({ preprocessed });
+    expect(bodies).toEqual([file]);
+    expect(bodies[0]).toBe(file);
+    expect(result.hash).toBe(oneShot);
+    expect(result.header.sizeBytes).toBe(bytes.byteLength);
+
+    const got = await service.get(result.ref, { documentId: DOC_ID });
+    expect(await streamToBytes(got.body)).toEqual(bytes);
+
+    // Same bytes again: dedup on reserve, nothing sent.
+    const again = await client.upload({ file });
+    expect(again.hash).toBe(oneShot);
+    expect(bodies).toHaveLength(1);
   });
 
   it("identical payloads dedupe to the same hash", async () => {

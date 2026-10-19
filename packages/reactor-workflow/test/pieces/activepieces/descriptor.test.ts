@@ -1,5 +1,12 @@
 // Pure descriptor translation over an in-memory piece: no bundles, no I/O.
 import {
+  createAction,
+  createPiece,
+  createTrigger,
+  PieceAuth,
+  TriggerStrategy,
+} from "@powerhousedao/pieces-framework";
+import {
   buildDescriptor,
   describeProperties,
 } from "../../../src/pieces/activepieces/descriptor.js";
@@ -237,6 +244,81 @@ describe("buildDescriptor", () => {
   it("leaves plain ARRAY and OBJECT props without nested properties", () => {
     expect(prop("tags").properties).toBeUndefined();
     expect(prop("meta").properties).toBeUndefined();
+  });
+});
+
+describe("requireReactor", () => {
+  const block = { description: "", auth: PieceAuth.None(), props: {} };
+  const framed = createPiece({
+    displayName: "Docs",
+    auth: PieceAuth.None(),
+    logoUrl: "",
+    authors: [],
+    actions: [
+      createAction({
+        ...block,
+        name: "archive",
+        displayName: "Archive",
+        requireReactor: "write",
+        run: (ctx) => ctx.reactor.find({ type: "acme/invoice" }),
+      }),
+      createAction({
+        ...block,
+        name: "peek",
+        displayName: "Peek",
+        requireReactor: "read",
+        run: (ctx) => ctx.reactor.getDocumentModelModules(),
+      }),
+      createAction({
+        ...block,
+        name: "plain",
+        displayName: "Plain",
+        run: noop,
+      }),
+    ],
+    triggers: [
+      createTrigger({
+        ...block,
+        name: "changed",
+        displayName: "Changed",
+        type: TriggerStrategy.POLLING,
+        requireReactor: "read",
+        sampleData: {},
+        onEnable: () => Promise.resolve(),
+        onDisable: () => Promise.resolve(),
+        run: () => Promise.resolve([]),
+      }),
+    ],
+  }) as unknown as ApPiece;
+
+  it("copies each block's declaration, next to requireAuth", () => {
+    const descriptor = buildDescriptor(framed, {
+      packageName: "@acme/piece-docs",
+      version: "1.0.0",
+    });
+    const actions = Object.fromEntries(
+      descriptor.actions.map((a) => [a.name, a.requireReactor]),
+    );
+    expect(actions).toEqual({
+      archive: "write",
+      peek: "read",
+      plain: undefined,
+    });
+    expect("requireReactor" in descriptor.actions[2]).toBe(false);
+    expect(descriptor.triggers[0].requireReactor).toBe("read");
+  });
+
+  it("drops a declaration a foreign bundle mangled", () => {
+    const descriptor = buildDescriptor(
+      {
+        displayName: "Foreign",
+        actions: { odd: { name: "odd", requireReactor: "admin", run: noop } },
+        triggers: { t: { name: "t", type: "POLLING", requireReactor: 1 } },
+      },
+      { packageName: "@acme/piece-foreign", version: "1.0.0" },
+    );
+    expect("requireReactor" in descriptor.actions[0]).toBe(false);
+    expect("requireReactor" in descriptor.triggers[0]).toBe(false);
   });
 });
 

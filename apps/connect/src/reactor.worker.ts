@@ -1,16 +1,21 @@
 import {
-  ChannelScheme,
-  DocumentIntegrityService,
+  createReactorInspector,
   DriveCollectionId,
+  HardenedPGliteDialect,
+  type GroupCommitPGliteInstance,
   InMemoryQueue,
+  queryThroughDialect,
+  PGLITE_IDB_STORAGE_FACTS,
   ReactorBuilder,
   ReactorClientBuilder,
   type ChannelConfig,
   type Database,
-  type ICatchUp,
+  type InspectorAccess,
+  type IReactor,
   type ISyncManager,
   type JwtHandler,
   type ReactorFeatureFlags,
+  type ReactorInspector,
   type Remote,
   type RemoteFilter,
   type RemoteOptions,
@@ -18,21 +23,24 @@ import {
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
+  dispatchInspectorOp,
+  dispatchSyncInspectionOp,
   FORWARDED_EVENT_TYPES,
+  isSyncInspectionOp,
   ReactorHost,
   SYNC_STATUS_CHANGED_EVENT,
   WorkerPackageLoader,
   type ReactorIdentity,
+  type SyncInspectionOpTargets,
   type WorkerMigrationState,
+  type WorkerPackageSource,
 } from "@powerhousedao/reactor-browser/rpc";
 import type {
-  DocumentModelModule,
   PeerManifest,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   createRelationalDb,
-  type IProcessorManager,
   type IRelationalDb,
 } from "@powerhousedao/shared/processors";
 import * as commonDocumentModels from "@powerhousedao/powerhouse-vetra-packages/document-models";
@@ -41,21 +49,31 @@ import {
   toDocumentModelModules,
 } from "./reactor-worker-models.js";
 import {
+  createWorkerModelRegistrar,
+  type WorkerModelRegistrar,
+} from "./reactor-worker-registry.js";
+import {
   BrowserKeyStorage,
   RenownCryptoBuilder,
   type RenownCryptoSigner,
 } from "@renown/sdk/crypto";
 import { createWorkerSignerConfig } from "./reactor-worker-signer.js";
+import { configureConnectChannelScheme } from "./utils/reactor-channel-scheme.js";
 import type { RenownTrustEndpoints } from "./utils/renown-trust.js";
+import { closeWithin } from "./utils/close-within.js";
+import { createWorkerLocalPeers } from "./utils/worker-local-peers.js";
+import { createWorkerStores } from "./utils/worker-stores.js";
+import { reloadOnPoisonedStore } from "./utils/poisoned-store-reload.js";
+import { createLazyStore } from "./utils/lazy-store.js";
+import { createStoreLocks } from "./utils/store-lock.js";
 import { toStoredDocumentsRefused } from "./utils/stored-documents-refused.js";
 import type * as PgLiveModuleNs from "@electric-sql/pglite/live";
+import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
 import { readPgVersionFile } from "./utils/pglite-idb.js";
 import {
   coerceMajor,
   CURRENT_PG_MAJOR,
-  type DetectedMajor,
   loadPGliteModule,
   resolvePgMajorForRuntime,
   type SupportedPgMajor,
@@ -95,46 +113,55 @@ type WorkerConstruct = {
   // Same reason: enforcement flags arrive from the tab. Absent means all off,
   // which is what a tab on an older build sends.
   featureFlags?: Partial<ReactorFeatureFlags>;
+  // Absent (an older tab) means off.
+  multiReactor?: boolean;
   // What new documents are created as; absent means the reactor's default.
   createSignaturePolicy?: SignaturePolicy;
   // Absent means the reactor's default, refuse.
   unsupportedStoredDocuments?: UnsupportedStoredDocuments;
   // Where the trust policy verifies signers under authEnforcement.
   renownEndpoints?: RenownTrustEndpoints;
-};
-
-type ModelRegistry = {
-  registerModules: (...modules: DocumentModelModule[]) => void;
+  // URL-addressed packages (local project models the registry cannot serve).
+  packageSources?: WorkerPackageSource[];
 };
 
 let loader: WorkerPackageLoader | undefined;
-let registry: ModelRegistry | undefined;
+let registrar: WorkerModelRegistrar | undefined;
 let signer: RenownCryptoSigner | undefined;
 let syncManager: ISyncManager | undefined;
-type RelationalState = {
-  pg?: PgLiveModuleNs.PGliteWithLive;
-  db?: IRelationalDb;
+let reactorInstance: IReactor | undefined;
+// The concrete queue: a deploy's drain reads `paused` and the executing jobs,
+// which IQueue lacks.
+let reactorQueue: InMemoryQueue | undefined;
+let syncStopped: Promise<void> | undefined;
+type RelationalStore = {
+  pg: PgLiveModuleNs.PGliteWithLive;
+  db: IRelationalDb;
+  /** The Kysely `db` wraps; RPC SQL goes through its queue, not at the client. */
+  kysely: Kysely<unknown>;
+  close: () => Promise<void>;
 };
-const relational: RelationalState = {};
 type OwnedStorage = {
   reactorPg?: {
     close: () => Promise<void>;
-    query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
   };
+  /** The one Kysely over the reactor store; inspector SQL goes through its queue. */
+  reactorDb?: Kysely<Database>;
   reactorIdb?: string;
   relationalIdb?: string;
+  reactorNamespace?: string;
+  relationalNamespace?: string;
 };
 const owned: OwnedStorage = {};
-let inspectorQueue: InMemoryQueue | undefined;
-let inspectorProcessors: IProcessorManager | undefined;
-let inspectorIntegrity: DocumentIntegrityService | undefined;
-let inspectorCatchUp: ICatchUp | undefined;
+// Another worker (a retired one, or a second gen) may still have these stores open.
+const storeLocks = createStoreLocks();
+let inspector: ReactorInspector | undefined;
+let syncInspection: SyncInspectionOpTargets | undefined;
+const INSPECTOR_ACCESS: InspectorAccess = { admin: true, sql: true };
 let currentIdentity: ReactorIdentity | null = null;
-const registeredKeys = new Set<string>();
-
-function modelKey(module: DocumentModelModule): string {
-  return `${module.documentModel.global.id}@${module.version ?? 1}`;
-}
+const localPeers = createWorkerLocalPeers(
+  new ConsoleLogger(["reactor.worker", "local-sync"]),
+);
 
 // Cloneable projection of a Remote: meta (carries channelConfig) + connection snapshot.
 function toWireRemote(remote: Remote) {
@@ -142,21 +169,6 @@ function toWireRemote(remote: Remote) {
     meta: remote.meta,
     connectionState: remote.channel.getConnectionState(),
   };
-}
-
-// Register only the delta; the registry rejects duplicate (type, version) pairs.
-function registerNewModules(): void {
-  if (!loader || !registry) {
-    return;
-  }
-  const fresh = loader.models.filter((m) => !registeredKeys.has(modelKey(m)));
-  if (fresh.length === 0) {
-    return;
-  }
-  registry.registerModules(...fresh);
-  for (const m of fresh) {
-    registeredKeys.add(modelKey(m));
-  }
 }
 
 // Rebuild renown crypto from the shared renownKeyDB keypair (origin-scoped IndexedDB).
@@ -171,6 +183,7 @@ async function buildWorkerCrypto(chainId: number | undefined) {
 
 // Open against the major already on disk so a legacy PG16 dir isn't read by PG17.
 async function openReactorPglite(namespace: string) {
+  await storeLocks.acquire(namespace);
   const detected = coerceMajor(await readPgVersionFile(`/pglite/${namespace}`));
   const major = resolvePgMajorForRuntime(detected);
   if (major !== 17) {
@@ -179,7 +192,9 @@ async function openReactorPglite(namespace: string) {
     );
   }
   const { PGlite } = await loadPGliteModule(major);
-  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: true });
+  // Not relaxed: group commit flushes through syncToFs, which a relaxed
+  // instance resolves before the sync has run.
+  const pg = new PGlite(`idb://${namespace}`, { relaxedDurability: false });
   await pg.waitReady;
   return { pg, detected };
 }
@@ -193,8 +208,17 @@ async function loadPgLive(major: SupportedPgMajor): Promise<PgLiveModule> {
   return import("@electric-sql/pglite/live");
 }
 
-async function openRelational(namespace: string): Promise<DetectedMajor> {
+// Called only after boot, by which point `host` exists.
+const onStorePoisoned = reloadOnPoisonedStore((reason, gen) =>
+  host.retireAndReload(reason, gen),
+);
+
+// Opened on the first relational query: processors don't run in the worker, so
+// most sessions never need it, nor its second PGlite download.
+async function openRelational(namespace: string): Promise<RelationalStore> {
+  let pg: { close: () => Promise<void> } | undefined;
   try {
+    await storeLocks.acquire(namespace);
     const detected = coerceMajor(
       await readPgVersionFile(`/pglite/${namespace}`),
     );
@@ -208,25 +232,42 @@ async function openRelational(namespace: string): Promise<DetectedMajor> {
       loadPGliteModule(major),
       loadPgLive(major),
     ]);
-    const pg = new PGlite(`idb://${namespace}`, {
+    const opened = new PGlite(`idb://${namespace}`, {
       relaxedDurability: true,
       extensions: { live },
     });
-    await pg.waitReady;
-    relational.pg = pg as unknown as PgLiveModuleNs.PGliteWithLive;
-    relational.db = createRelationalDb(
-      new Kysely({ dialect: new PGliteDialect(pg) }),
-    );
+    pg = opened;
+    await opened.waitReady;
+    const kysely = new Kysely<unknown>({
+      dialect: new HardenedPGliteDialect(opened, {
+        onPoisoned: onStorePoisoned,
+      }),
+    });
     console.info(
       `[reactor.worker] Relational store opened: idb://${namespace} (Postgres ${major}).`,
     );
-    return detected;
+    return {
+      pg: opened as unknown as PgLiveModuleNs.PGliteWithLive,
+      kysely,
+      db: createRelationalDb(kysely),
+      close: () => opened.close(),
+    };
   } catch (error) {
-    console.error(
-      "[reactor.worker] Failed to open the relational store:",
-      error,
-    );
-    return null;
+    await stores.releaseFailedOpen(namespace, pg);
+    throw error;
+  }
+}
+
+const relational = createLazyStore({
+  open: openRelational,
+  discard: (namespace, store) => stores.releaseFailedOpen(namespace, store),
+});
+
+// An admin flow works on the relational files even when it was never opened.
+async function lockRelationalFiles(): Promise<void> {
+  await relational.settled();
+  if (owned.relationalNamespace) {
+    await storeLocks.acquire(owned.relationalNamespace);
   }
 }
 
@@ -245,72 +286,147 @@ const inMemoryBackup: BackupStrategy = {
   commit: () => Promise.resolve(),
 };
 
-async function releaseStores(): Promise<void> {
-  const stores = [relational.pg, owned.reactorPg];
-  relational.pg = undefined;
-  relational.db = undefined;
-  owned.reactorPg = undefined;
-  for (const store of stores) {
-    try {
-      await store?.close();
-    } catch (error) {
-      console.error("[reactor.worker] closing a store failed:", error);
-    }
+async function closeUnbounded(
+  store: { close: () => Promise<void> } | undefined,
+): Promise<boolean> {
+  try {
+    await store?.close();
+    return true;
+  } catch (error) {
+    console.error("[reactor.worker] closing a store failed:", error);
+    return false;
   }
 }
+
+// Reads the store at call time; a retire clears it.
+async function queryReactorDb(sql: string, params?: unknown[]) {
+  if (!owned.reactorDb) {
+    throw new Error("Reactor store not available");
+  }
+  return queryThroughDialect(owned.reactorDb, sql, params);
+}
+
+const RETIRE_STOP_MS = 5_000;
+
+// Once only; the reactor's stop awaits the channels it closes.
+function stopSync(): void {
+  const manager = syncManager;
+  syncManager = undefined;
+  syncInspection = undefined;
+  try {
+    syncStopped = manager?.shutdown().completed ?? syncStopped;
+  } catch (error) {
+    console.error("[reactor.worker] stopping sync failed:", error);
+  }
+}
+
+// A poisoned statement can hold up the reactor's stop, so it is bounded.
+async function stopReactorWithin(timeoutMs: number): Promise<void> {
+  stopSync();
+  const stopping = Promise.allSettled([
+    syncStopped,
+    reactorInstance?.kill().completed,
+  ]);
+  syncStopped = undefined;
+  reactorInstance = undefined;
+  reactorQueue = undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `[reactor.worker] reactor stop did not finish within ${timeoutMs}ms`,
+      );
+      resolve();
+    }, timeoutMs);
+  });
+  await Promise.race([stopping, expired]);
+  clearTimeout(timer);
+}
+
+const stores = createWorkerStores({
+  locks: storeLocks,
+  stopReactor: () => stopReactorWithin(RETIRE_STOP_MS),
+  stopSync,
+  queue: () => reactorQueue,
+  relational: () => relational.snapshot(),
+  reactor: () => ({
+    namespace: owned.reactorNamespace,
+    store: owned.reactorPg,
+  }),
+  forget: () => {
+    inspector = undefined;
+    relational.forget();
+    owned.reactorPg = undefined;
+    owned.reactorDb = undefined;
+  },
+  isRetired: () => host.retired,
+  retireWorker: (reason) => host.retireAndReload(reason, crypto.randomUUID()),
+});
 
 const workerName = (self as { name?: string }).name ?? "";
 
 const host = new ReactorHost({
   namespace: workerName,
+  onRetire: localPeers.retiring(() => stores.retire()),
+  drainBeforeReload: () => stores.drain(),
   onAdminRestart: () =>
-    host.broadcastReload("admin restart", crypto.randomUUID()),
-  onAdminClearStorage: async () => {
-    await relational.pg?.close();
-    await owned.reactorPg?.close();
-    for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
-      if (idbName) {
-        await clearFileData(idbName);
-      }
-    }
-    host.broadcastReload("storage cleared", crypto.randomUUID());
-  },
-  onAdminMigrate: async () => {
-    setMigration({
-      status: "migrating",
-      legacyMajor: migrationState.legacyMajor,
-    });
-    if (relational.pg) await relational.pg.close().catch(() => undefined);
-    if (owned.reactorPg) await owned.reactorPg.close().catch(() => undefined);
-    try {
-      for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
-        if (idbName) {
-          await migrateIdb(
-            idbName,
-            (phase) =>
-              setMigration({
-                status: "migrating",
-                legacyMajor: migrationState.legacyMajor,
-                phase,
-              }),
-            inMemoryBackup,
-          );
+    host.retireAndReload("admin restart", crypto.randomUUID()),
+  onAdminClearStorage: () =>
+    stores.runAdmin({
+      close: closeWithin,
+      run: async () => {
+        await lockRelationalFiles();
+        for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+          if (idbName) {
+            await clearFileData(idbName);
+          }
         }
-      }
-      host.broadcastReload("migration complete", crypto.randomUUID());
-    } catch (error) {
-      console.error("[reactor.worker] Migration failed:", error);
-      setMigration({
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
-      });
-      host.broadcastReload("migration failed", crypto.randomUUID());
-    }
-  },
+        return "storage cleared";
+      },
+      failed: "clearing storage failed",
+    }),
+  onAdminMigrate: () =>
+    stores.runAdmin({
+      close: closeUnbounded,
+      begin: () =>
+        setMigration({
+          status: "migrating",
+          legacyMajor: migrationState.legacyMajor,
+        }),
+      run: async () => {
+        try {
+          await lockRelationalFiles();
+          for (const idbName of [owned.reactorIdb, owned.relationalIdb]) {
+            if (idbName) {
+              await migrateIdb(
+                idbName,
+                (phase) =>
+                  setMigration({
+                    status: "migrating",
+                    legacyMajor: migrationState.legacyMajor,
+                    phase,
+                  }),
+                inMemoryBackup,
+              );
+            }
+          }
+          return "migration complete";
+        } catch (error) {
+          console.error("[reactor.worker] Migration failed:", error);
+          setMigration({
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return "migration failed";
+        }
+      },
+      failed: "migration failed",
+    }),
   build: async (raw) => {
     let phase = "init";
     try {
       const construct = raw as WorkerConstruct;
+      localPeers.serve(construct.multiReactor ?? false);
       phase = "loading packages";
       console.info(`[reactor.worker] boot: ${phase}`);
       loader = new WorkerPackageLoader({
@@ -325,29 +441,35 @@ const host = new ReactorHost({
             )
           ) as Promise<Record<string, unknown>>,
       });
-      const loaded = await loader.loadPackages(construct.packageSpecs);
+      await loader.loadPackages(construct.packageSpecs);
+      // URL-addressed packages: the project's own models in dev, prebuilt
+      // bundles under __reactor_worker__/packages/ in production.
+      await loader.loadSources(construct.packageSources ?? []);
       const flaggedModels = await loadFlaggedDocumentModels({
         studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
       });
-      const models = baseDocumentModels.concat(
+      const staticModels = baseDocumentModels.concat(
         commonBundledModels,
         flaggedModels,
-        loaded,
       );
+      const models = staticModels.concat(loader.models);
       phase = "opening pglite stores";
       console.info(`[reactor.worker] boot: ${phase}`);
 
-      //this has to be serial: concurrent PGlite constructors consume the same
-      // cached one-shot wasm "Response" object
+      owned.reactorNamespace = construct.namespace;
+      owned.relationalNamespace = construct.relationalNamespace;
+      // Armed only after this open: concurrent PGlite constructors consume the
+      // same cached one-shot wasm "Response" object.
       const reactor = await openReactorPglite(construct.namespace);
-      const relationalMajor = await openRelational(
-        construct.relationalNamespace,
-      );
       const pg = reactor.pg;
       owned.reactorPg = pg;
       owned.reactorIdb = `/pglite/${construct.namespace}`;
       owned.relationalIdb = `/pglite/${construct.relationalNamespace}`;
+      const relationalMajor = coerceMajor(
+        await readPgVersionFile(owned.relationalIdb),
+      );
+      relational.arm(construct.relationalNamespace);
       // A store is migratable when coerceMajor kept it (a supported legacy
       // major) and it is not the current one; openers already read PG_VERSION.
       const legacyMajor = [reactor.detected, relationalMajor].find(
@@ -374,10 +496,19 @@ const host = new ReactorHost({
       console.info(`[reactor.worker] boot: ${phase}`);
       const reactorBuilder = new ReactorBuilder()
         .withDocumentModelSources(models)
-        .withChannelScheme(ChannelScheme.CONNECT)
         .withExecutorConfig({ featureFlags: construct.featureFlags ?? {} })
         .withJwtHandler(jwtHandler)
-        .withKysely(new Kysely<Database>({ dialect: new PGliteDialect(pg) }));
+        .withGroupCommitPGlite({
+          pg: pg as unknown as GroupCommitPGliteInstance,
+          onUnrecoverable: onStorePoisoned,
+          onDiagnostic: (message, error) =>
+            console.error(`[reactor.worker] pglite: ${message}`, error),
+        })
+        .withStorageFacts(PGLITE_IDB_STORAGE_FACTS);
+      configureConnectChannelScheme(reactorBuilder, {
+        multiReactor: construct.multiReactor ?? false,
+        createLocalChannelFactory: () => localPeers.createChannelFactory(),
+      });
       if (construct.unsupportedStoredDocuments) {
         reactorBuilder.withUnsupportedStoredDocuments(
           construct.unsupportedStoredDocuments,
@@ -391,30 +522,36 @@ const host = new ReactorHost({
         builder.withCreateSignaturePolicy(construct.createSignaturePolicy);
       }
       const module = await builder.buildModule();
-      registry = module.reactorModule?.documentModelRegistry;
-      syncManager = module.reactorModule?.syncModule?.syncManager;
+      const registry = module.reactorModule?.documentModelRegistry;
+      registrar = registry
+        ? createWorkerModelRegistrar(registry, staticModels)
+        : undefined;
+      const syncModule = module.reactorModule?.syncModule;
+      syncManager = syncModule?.syncManager;
+      syncInspection = {
+        inspector: syncModule?.syncInspector,
+        admin: syncModule?.syncAdmin,
+      };
+      reactorInstance = module.reactorModule?.reactor;
+      const queue = module.reactorModule?.queue;
+      reactorQueue = queue instanceof InMemoryQueue ? queue : undefined;
       const rm = module.reactorModule;
       if (rm) {
-        inspectorQueue =
-          rm.queue instanceof InMemoryQueue ? rm.queue : undefined;
-        inspectorProcessors = rm.processorManager;
-        inspectorCatchUp = rm.catchUp;
-        inspectorIntegrity = new DocumentIntegrityService(
-          rm.keyframeStore,
-          rm.operationStore,
-          rm.writeCache,
-          rm.documentView,
-          rm.documentModelRegistry,
-          rm.protocolSupport,
-        );
+        owned.reactorPg = rm.groupCommitStorage ?? pg;
+        owned.reactorDb = rm.database;
+        inspector = createReactorInspector(rm, { access: INSPECTOR_ACCESS });
       }
-      for (const m of models) {
-        registeredKeys.add(modelKey(m));
-      }
+      registrar?.markRegistered(models);
+      // Manifests ride along in the models entries the loader imported; the
+      // builder only saw the modules.
+      registrar?.syncManifests(loader.upgradeManifests);
       for (const type of FORWARDED_EVENT_TYPES) {
         module.eventBus.subscribe(type, (forwardedType, event) =>
           host.broadcastBusEvent(forwardedType, event),
         );
+      }
+      if (construct.multiReactor && syncManager) {
+        localPeers.attach(syncManager);
       }
       syncManager?.onSyncStatusChange((documentId, status) =>
         host.broadcastBusEvent(SYNC_STATUS_CHANGED_EVENT, {
@@ -426,17 +563,34 @@ const host = new ReactorHost({
       return module.client;
     } catch (error) {
       console.error(`[reactor.worker] boot failed at phase "${phase}":`, error);
-      // The next hello rebuilds, which reopens both stores.
-      await releaseStores();
+      // The next hello rebuilds, unless a store did not close and the worker retired.
+      await stores.releaseAfterBootFailure();
       throw toStoredDocumentsRefused(error);
     }
   },
-  registerPackages: async (specs) => {
+  registerPackages: async (specs, sources) => {
     if (!loader) {
       return;
     }
     await loader.loadPackages(specs);
-    registerNewModules();
+    const { types, failures } = await loader.reloadSources(sources ?? []);
+    if (registrar) {
+      registrar.replaceFamilies(types, loader.models);
+      registrar.syncManifests(loader.upgradeManifests);
+    }
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map((failure) => failure.error),
+        `Failed to reload package source(s): ${failures.map((failure) => failure.name).join(", ")}`,
+      );
+    }
+  },
+  // Read per message: the flag arrives with the construct, after the host exists.
+  get onAdoptSyncPeer() {
+    return localPeers.adoptHandler();
+  },
+  get onRemoveSyncPeer() {
+    return localPeers.removeHandler();
   },
   onIdentity: (user) => {
     currentIdentity = user;
@@ -447,6 +601,14 @@ const host = new ReactorHost({
   onSyncOp: async (method, args) => {
     if (!syncManager) {
       throw new Error("SyncManager not available");
+    }
+    if (isSyncInspectionOp(method)) {
+      return dispatchSyncInspectionOp(
+        syncInspection ?? {},
+        INSPECTOR_ACCESS,
+        method,
+        args,
+      );
     }
     switch (method) {
       case "list":
@@ -495,24 +657,25 @@ const host = new ReactorHost({
     }
   },
   onDbOp: async (method, args) => {
-    if (!relational.pg) {
+    const store = await relational.get();
+    if (!store) {
       throw new Error("Relational store not available");
     }
     switch (method) {
       case "query": {
         const [sql, params] = args as [string, unknown[]];
-        const result = await relational.pg.query(sql, params);
-        return result.rows;
+        return queryThroughDialect(store.kysely, sql, params);
       }
       default:
         throw new Error(`Unknown db op: ${method}`);
     }
   },
   onLiveQuery: async (sql, params, onResults) => {
-    if (!relational.pg) {
+    const store = await relational.get();
+    if (!store) {
       throw new Error("Relational store not available");
     }
-    const live = await relational.pg.live.query(sql, params, (results) =>
+    const live = await store.pg.live.query(sql, params, (results) =>
       onResults(results),
     );
     return () => {
@@ -520,99 +683,15 @@ const host = new ReactorHost({
     };
   },
   onInspectorOp: async (method, args) => {
-    switch (method) {
-      case "queue.getState": {
-        if (!inspectorQueue) {
-          return {
-            isPaused: false,
-            pendingJobs: [],
-            executingJobs: [],
-            totalPending: 0,
-            totalExecuting: 0,
-          };
-        }
-        const pendingJobs = inspectorQueue.getPendingJobs();
-        const executingJobs = [];
-        for (const jobIds of inspectorQueue.getExecutingJobIds().values()) {
-          for (const jobId of jobIds) {
-            const job = inspectorQueue.getJob(jobId);
-            if (job) {
-              executingJobs.push(job);
-            }
-          }
-        }
-        return {
-          isPaused: inspectorQueue.paused,
-          pendingJobs,
-          executingJobs,
-          totalPending: pendingJobs.length,
-          totalExecuting: executingJobs.length,
-        };
-      }
-      case "queue.pause":
-        inspectorQueue?.pause();
-        return undefined;
-      case "queue.resume":
-        await inspectorQueue?.resume();
-        return undefined;
-      case "processors.getAll":
-        return (inspectorProcessors?.getAll() ?? []).map((tracked) => ({
-          processorId: tracked.processorId,
-          factoryId: tracked.factoryId,
-          driveId: tracked.driveId,
-          processorIndex: tracked.processorIndex,
-          lastOrdinal: tracked.lastOrdinal,
-          status: tracked.status,
-          lastError: tracked.lastError,
-          lastErrorTimestamp: tracked.lastErrorTimestamp,
-        }));
-      case "processors.retry": {
-        const [processorId] = args as [string];
-        await inspectorProcessors?.get(processorId)?.retry();
-        return undefined;
-      }
-      case "catchUp.status":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.status();
-      case "catchUp.sweepNow":
-        if (!inspectorCatchUp) {
-          throw new Error("Catch-up not available");
-        }
-        return inspectorCatchUp.sweepNow();
-      case "integrity.validate": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.validateDocument(documentId, branch);
-      }
-      case "integrity.rebuildKeyframes": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildKeyframes(documentId, branch);
-      }
-      case "integrity.rebuildSnapshots": {
-        if (!inspectorIntegrity) {
-          throw new Error("Integrity service not available");
-        }
-        const [documentId, branch] = args as [string, string?];
-        return inspectorIntegrity.rebuildSnapshots(documentId, branch);
-      }
-      case "db.query": {
-        if (!owned.reactorPg) {
-          throw new Error("Reactor store not available");
-        }
-        const [sql, params] = args as [string, unknown[]];
-        const result = await owned.reactorPg.query(sql, params);
-        return result.rows;
-      }
-      default:
-        throw new Error(`Unknown inspector op: ${method}`);
+    if (!inspector) {
+      throw new Error("Inspector not available");
     }
+    return dispatchInspectorOp(
+      { inspector, dbQuery: { queryDb: queryReactorDb } },
+      INSPECTOR_ACCESS,
+      method,
+      args,
+    );
   },
 });
 

@@ -13,7 +13,18 @@ export {
 } from "./src/actions/index.js";
 
 // Reactor Interface and Implementation
-export { DriveClient } from "./src/client/drive-client.js";
+export {
+  DriveClient,
+  type BatchSubmitter,
+  type DriveClientDeps,
+} from "./src/client/drive-client.js";
+export {
+  buildCreateJobs,
+  createEmptyDocument,
+  selectDocumentModelModule,
+  upgradeDocumentWith,
+  type UpgradeDocumentDeps,
+} from "./src/client/derivations.js";
 export {
   ReactorClient,
   type ActionEvaluationConfig,
@@ -22,12 +33,14 @@ export {
   DocumentChangeType,
   type ActionCandidate,
   type ActionEvaluations,
+  type CreateDocumentOptions,
   type DocumentChangeEvent,
   type CopyNodeOptions,
   type IDriveClient,
   type IReactorClient,
   type ProtocolSelection,
   type UndoRedoAvailability,
+  type UpgradeDocumentOptions,
 } from "./src/client/types.js";
 export {
   ReactorBuilder,
@@ -91,7 +104,9 @@ export {
 } from "./src/shared/drive-url.js";
 export {
   AuthEnforcementDisabledError,
+  BatchJobFailedError,
   InvalidSignatureError,
+  JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
   UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
@@ -202,10 +217,17 @@ export {
   type ReactorFeatureFlags,
 } from "./src/executor/types.js";
 
+// The one placement hash: worker pool, projection shards and the router.
+export {
+  bucketFor,
+  hashDocumentId,
+} from "./src/executor/worker-pool-router.js";
+
 // Executor Worker Utilities
 export {
   createForwardingLogger,
   errorToInfo,
+  loadDocumentModelSpec,
   sanitizeArg,
   workerEntryPath,
 } from "./src/executor/worker/index.js";
@@ -244,6 +266,7 @@ export {
   DuplicateManifestError,
   DuplicateModuleError,
   InvalidModuleError,
+  ModelNotWorkerImportableError,
   ModuleNotFoundError,
   NullDocumentModelResolver,
   type IDocumentModelLoader,
@@ -322,6 +345,37 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export {
+  DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
+  DEFAULT_RECOVERY_TIMEOUT_MS,
+  DEFAULT_STATEMENT_TIMEOUT_MS,
+  HardenedPGliteDialect,
+  isLongRunningStatement,
+  PGliteAbortedTransactionError,
+  PGliteAcquireTimeoutError,
+  PGliteSessionError,
+  PGliteSessionPoisonedError,
+  PGliteStatementTimeoutError,
+  queryThroughDialect,
+  type HardenedPGliteDialectOptions,
+  type PGliteSession,
+} from "./src/storage/kysely/pglite-dialect.js";
+export {
+  PGliteFlushSyncTimeoutError,
+  type GroupCommitPGliteInstance,
+} from "./src/storage/kysely/group-commit-pglite-client.js";
+export type {
+  GroupCommitPGliteOptions,
+  IGroupCommitStorage,
+} from "./src/storage/kysely/group-commit-storage.js";
+export {
+  StoragePoisonedError,
+  type IStorageFlusher,
+} from "./src/storage/storage-flush.js";
+export type {
+  IStorageHealthProvider,
+  StorageHealth,
+} from "./src/storage/storage-health.js";
 export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export {
   instrumentPgPool,
@@ -410,13 +464,50 @@ export {
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,
+  CompositeChannelFactory,
   consolidateSyncOperations,
+  channelFactoryTypes,
   envelopesToSyncOperations,
+  deriveConnectionHealth,
+  GQL_CHANNEL_TYPE,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
   GqlResponseChannelFactory,
   IntervalPollTimer,
+  LocalChannel,
+  LocalChannelFactory,
+  LOCAL_CHANNEL_TYPE,
+  assertCollectionIdParts,
+  collectionIdFromKey,
+  DEFAULT_LOCAL_FILTER,
+  LOCAL_REMOTE_OPTIONS,
+  localChannelConfig,
+  LocalChannelPortRegistry,
+  registerLocalPeer,
+  removeLocalPeer,
+  POLLING_CHANNEL_TYPE,
+  messagePortTransport,
+  isLocalWireMessage,
+  type LocalAckMessage,
+  type LocalChannelPort,
+  type LocalChannelTransportProvider,
+  type LocalHelloMessage,
+  type LocalChannelPortRegistryOptions,
+  type LocalPeerSyncManager,
+  type LocalRemoteSpec,
+  type LocalRemoveSpec,
+  type LocalPushMessage,
+  type LocalResendMessage,
+  type LocalWireKind,
+  type LocalWireMessage,
+  type MessagePortLike,
+  type DeadLetterPage,
+  type ISyncInspector,
+  type MailboxDepths,
+  type RemoteConnectionHealth,
+  type RemoteCursorInfo,
+  type RemoteSyncInspection,
   DRIVE_AUTH_ERROR_MESSAGES,
   DriveRequestError,
   isDriveAuthError,
@@ -425,7 +516,10 @@ export {
   Mailbox,
   PollBehavior,
   PollingChannelError,
+  RemotePersistence,
   SyncBuilder,
+  InvalidDeadLetterCursorError,
+  SyncRepairRefusedError,
   SyncEventTypes,
   SyncOperation,
   SyncOperationAggregateError,
@@ -446,10 +540,12 @@ export {
   type IChannelFactory,
   type IMailbox,
   type IPollTimer,
+  type ISyncAdmin,
   type ISyncManager,
   type ISyncStatusTracker,
   type JwtHandler,
   type OperationBatch,
+  type PollDelegate,
   type Remote,
   type RemoteCursor,
   type RemoteMeta,
@@ -526,6 +622,7 @@ export type {
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
+export * from "./src/inspector/index.js";
 
 // Document erasure
 export {

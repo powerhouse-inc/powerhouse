@@ -21,9 +21,9 @@ describe("useTheme", () => {
     localStorage.removeItem(STORED_THEME_KEY);
   });
 
-  it("re-reads the stored theme on a same-origin storage event", () => {
+  it("re-reads the stored theme on a same-origin storage event", async () => {
     localStorage.removeItem(STORED_THEME_KEY);
-    const { result } = renderHook(() => useTheme());
+    const { result } = await renderHook(() => useTheme());
     expect(result.current.isSystem).toBe(true);
 
     // Simulate another browsing context (e.g. the embedding parent window)
@@ -35,9 +35,9 @@ describe("useTheme", () => {
     expect(result.current.isSystem).toBe(false);
   });
 
-  it("ignores storage events for unrelated keys", () => {
+  it("ignores storage events for unrelated keys", async () => {
     localStorage.setItem(STORED_THEME_KEY, "light");
-    const { result } = renderHook(() => useTheme());
+    const { result } = await renderHook(() => useTheme());
     expect(result.current.theme).toBe("light");
 
     localStorage.setItem(STORED_THEME_KEY, "dark");
@@ -47,9 +47,9 @@ describe("useTheme", () => {
     expect(result.current.theme).toBe("light");
   });
 
-  it("re-reads on storage.clear (null key)", () => {
+  it("re-reads on storage.clear (null key)", async () => {
     localStorage.setItem(STORED_THEME_KEY, "dark");
-    const { result } = renderHook(() => useTheme());
+    const { result } = await renderHook(() => useTheme());
     expect(result.current.theme).toBe("dark");
 
     localStorage.removeItem(STORED_THEME_KEY);

@@ -93,7 +93,7 @@ function main(): void {
     const report = readReport(path);
     process.stderr.write(`Converting ${path}\n`);
 
-    const suites = suitesFromVitest(report, target.renames);
+    const suites = suitesFromVitest(report, PACKAGE_DIRECTORY, target.renames);
     const readings = stampReadings(target, RESULTS_DIRECTORY, suites);
 
     const entry = buildMicroEntry({

@@ -2,15 +2,17 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const showPHModal = vi.hoisted(() => vi.fn());
-
-vi.mock("@powerhousedao/reactor-browser", () => ({
-  showPHModal,
-}));
-
+import type * as reactorBrowserModule from "@powerhousedao/reactor-browser";
 import type * as launchQueueModule from "./launch-queue.js";
 
 type LaunchQueueModule = typeof launchQueueModule;
+
+// Modals opened, read from the real `ph:setModal` events (closing sets none).
+const openedModals: unknown[] = [];
+window.addEventListener("ph:setModal", (event) => {
+  const { modal } = (event as CustomEvent<{ modal: unknown }>).detail;
+  if (modal) openedModals.push(modal);
+});
 
 // A controllable window.launchQueue stub. Chromium buffers launches until a
 // consumer registers; the stub just hands us the consumer to fire manually.
@@ -39,8 +41,16 @@ function fileHandle(name: string, getFile?: () => Promise<File>) {
 // files exist, so the previous test's module must be emptied (afterEach) to
 // keep its stale listener inert on the shared happy-dom window.
 let currentModule: LaunchQueueModule | undefined;
+let reactorBrowser: typeof reactorBrowserModule;
+let modalHandlerAdded = false;
 async function loadModule(): Promise<LaunchQueueModule> {
   vi.resetModules();
+  reactorBrowser = await import("@powerhousedao/reactor-browser");
+  // Once per page, as in the app: a second handler re-clears reopened modals.
+  if (!modalHandlerAdded) {
+    reactorBrowser.addModalEventHandler();
+    modalHandlerAdded = true;
+  }
   currentModule = await import("./launch-queue.js");
   return currentModule;
 }
@@ -50,6 +60,7 @@ describe("launch-queue", () => {
     vi.clearAllMocks();
     delete window.launchQueue;
     window.ph = {};
+    openedModals.length = 0;
   });
 
   afterEach(() => {
@@ -79,7 +90,7 @@ describe("launch-queue", () => {
     await vi.waitFor(() => {
       expect(mod.getPendingImportFiles()).toEqual([]);
     });
-    expect(showPHModal).not.toHaveBeenCalled();
+    expect(openedModals).toEqual([]);
   });
 
   it("ignores non-file handles", async () => {
@@ -91,7 +102,7 @@ describe("launch-queue", () => {
     ]);
     await new Promise((resolve) => setTimeout(resolve));
     expect(mod.getPendingImportFiles()).toEqual([]);
-    expect(showPHModal).not.toHaveBeenCalled();
+    expect(openedModals).toEqual([]);
   });
 
   it("stores launched files and opens the import modal", async () => {
@@ -102,7 +113,7 @@ describe("launch-queue", () => {
     await vi.waitFor(() => {
       expect(mod.getPendingImportFiles().map((f) => f.name)).toEqual(["a.phd"]);
     });
-    expect(showPHModal).toHaveBeenCalledWith({ type: "openFileDocuments" });
+    expect(openedModals).toEqual([{ type: "openFileDocuments" }]);
   });
 
   it("merges files from repeated launches into the pending store", async () => {
@@ -120,7 +131,7 @@ describe("launch-queue", () => {
         "b.phdm",
       ]);
     });
-    expect(showPHModal).toHaveBeenCalledTimes(2);
+    expect(openedModals).toHaveLength(2);
   });
 
   it("does not queue a file that is already pending (same name/size/mtime)", async () => {
@@ -161,32 +172,34 @@ describe("launch-queue", () => {
     const mod = await loadModule();
     mod.initLaunchQueueFileHandling();
     mod.addPendingImportFiles([new File(["x"], "a.phd")]);
-    showPHModal.mockClear();
+    reactorBrowser.showPHModal({ type: "addDrive" });
+    openedModals.length = 0;
 
-    // The create-drive detour just closed: modal cleared, files still queued.
-    window.ph = { modal: undefined };
-    window.dispatchEvent(new CustomEvent("ph:modalUpdated"));
-    expect(showPHModal).toHaveBeenCalledWith({ type: "openFileDocuments" });
+    // The create-drive detour closes with files still queued.
+    reactorBrowser.closePHModal();
+    expect(openedModals).toEqual([{ type: "openFileDocuments" }]);
   });
 
   it("does not reopen while a different modal is open", async () => {
     const mod = await loadModule();
     mod.initLaunchQueueFileHandling();
     mod.addPendingImportFiles([new File(["x"], "a.phd")]);
-    showPHModal.mockClear();
+    reactorBrowser.showPHModal({ type: "addDrive" });
+    openedModals.length = 0;
 
-    window.ph = { modal: { type: "addDrive" } };
+    // Another modal update while the create-drive modal stays open.
     window.dispatchEvent(new CustomEvent("ph:modalUpdated"));
-    expect(showPHModal).not.toHaveBeenCalled();
+    expect(openedModals).toEqual([]);
   });
 
   it("does not reopen when nothing is pending (cancel cleared the store)", async () => {
     const mod = await loadModule();
     mod.initLaunchQueueFileHandling();
+    reactorBrowser.showPHModal({ type: "addDrive" });
+    openedModals.length = 0;
 
-    window.ph = { modal: undefined };
-    window.dispatchEvent(new CustomEvent("ph:modalUpdated"));
-    expect(showPHModal).not.toHaveBeenCalled();
+    reactorBrowser.closePHModal();
+    expect(openedModals).toEqual([]);
   });
 
   it("notifies subscribers and swaps the snapshot reference on change", async () => {

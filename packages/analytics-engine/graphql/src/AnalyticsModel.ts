@@ -40,8 +40,13 @@ export class AnalyticsModel {
     }
 
     const query: AnalyticsQuery = {
-      start: filter.start ? DateTime.fromISO(filter.start) : null,
-      end: filter.end ? DateTime.fromISO(filter.end) : null,
+      // Date-only filter strings must anchor to UTC midnight: period
+      // boundaries are computed in UTC, and parsing in the host zone shifts
+      // "2020-01-01" off the calendar boundary on any non-UTC host.
+      start: filter.start
+        ? DateTime.fromISO(filter.start, { zone: "utc" })
+        : null,
+      end: filter.end ? DateTime.fromISO(filter.end, { zone: "utc" }) : null,
       granularity: getGranularity(filter.granularity),
       metrics: filter.metrics,
       currency: getCurrency(filter.currency),
@@ -91,8 +96,13 @@ export class AnalyticsModel {
     }
 
     const query: AnalyticsQuery = {
-      start: filter.start ? DateTime.fromISO(filter.start) : null,
-      end: filter.end ? DateTime.fromISO(filter.end) : null,
+      // Date-only filter strings must anchor to UTC midnight: period
+      // boundaries are computed in UTC, and parsing in the host zone shifts
+      // "2020-01-01" off the calendar boundary on any non-UTC host.
+      start: filter.start
+        ? DateTime.fromISO(filter.start, { zone: "utc" })
+        : null,
+      end: filter.end ? DateTime.fromISO(filter.end, { zone: "utc" }) : null,
       granularity: getGranularity(filter.granularity),
       metrics: filter.metrics,
       currency: getCurrency(filter.currency),

@@ -8,6 +8,7 @@ import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import { DeferredJobs } from "./deferred-jobs.js";
+import { DEFAULT_JOB_TIMEOUT_MS } from "./types.js";
 import {
   JobResultHandler,
   toErrorInfo,
@@ -47,7 +48,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private jobTracker: IJobTracker,
     private logger: ILogger,
     private resolver: IDocumentModelResolver,
-    jobTimeoutMs: number = 30_000,
+    jobTimeoutMs: number = DEFAULT_JOB_TIMEOUT_MS,
     deferredJobTtlMs: number = DEFAULT_DEFERRED_JOB_TTL_MS,
   ) {
     this.jobTimeoutMs = jobTimeoutMs;
@@ -62,7 +63,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     this.resultHandler = new JobResultHandler(
       queue,
       jobTracker,
-      eventBus,
       resolver,
       logger,
     );
@@ -183,8 +183,20 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       .catch(() => {});
 
     // execute the job with a timeout signal; race ensures the timeout fires
-    // even if the executor hangs on a call that does not check the signal
-    const signal = AbortSignal.timeout(this.jobTimeoutMs);
+    // even if the executor hangs on a call that does not check the signal.
+    // The timer is disarmed just before COMMIT is issued: a committed job is
+    // never timed out, since failing it would invite a resubmit.
+    const timeout = new AbortController();
+    const timer = setTimeout(() => {
+      timeout.abort(
+        new DOMException(
+          "The operation was aborted due to timeout",
+          "TimeoutError",
+        ),
+      );
+    }, this.jobTimeoutMs);
+    (timer as { unref?: () => void }).unref?.();
+    const signal = timeout.signal;
     const toError = (reason: unknown): Error =>
       reason instanceof Error ? reason : new Error(String(reason));
     const abortPromise = new Promise<never>((_, reject) => {
@@ -199,25 +211,21 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     let result: JobResult;
     try {
       result = await Promise.race([
-        executor.executeJob(handle.job, signal),
+        executor.executeJob(handle.job, signal, () => clearTimeout(timer)),
         abortPromise,
       ]);
     } catch (error) {
+      clearTimeout(timer);
       const errorInfo = toErrorInfo(
         error instanceof Error ? error : String(error),
       );
 
+      // handle.fail resolves the job through queue.failJob, which emits the
+      // one ReactorEventTypes.JOB_FAILED for this failure; emitting here too
+      // delivered every timeout to subscribers twice.
       handle.fail(errorInfo);
       this.activeJobs--;
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: new Error(errorInfo.message),
-          job: handle.job,
-        })
-        .catch(() => {});
 
       const failedEvent: JobFailedEvent = {
         job: handle.job,
@@ -233,6 +241,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       await this.checkForMoreJobs();
       return;
     }
+
+    clearTimeout(timer);
 
     // handle the result
     if (result.success) {

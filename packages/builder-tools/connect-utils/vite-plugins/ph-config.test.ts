@@ -5,7 +5,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RUNTIME_CONFIG_SCHEMA_URL } from "../runtime-config-schema.js";
-import { phConfigPlugin } from "./ph-config.js";
+import { phConfigPlugin, withAppTitle } from "./ph-config.js";
 
 function makeProjectRoot(pkg: { name?: string; version?: string }): string {
   const dir = mkdtempSync(join(tmpdir(), "ph-config-test-"));
@@ -376,5 +376,30 @@ describe("phConfigPlugin", () => {
     expect(parsed).not.toHaveProperty("documentModelsDir");
     expect(parsed).not.toHaveProperty("studio");
     expect(parsed).not.toHaveProperty("reactor");
+  });
+});
+
+describe("withAppTitle", () => {
+  const html = "<head><title>Powerhouse Connect</title></head>";
+
+  it("sets the title to the app name, escaped", () => {
+    expect(withAppTitle(html, "Docs & <More>")).toBe(
+      "<head><title>Docs &amp; &lt;More&gt;</title></head>",
+    );
+  });
+
+  it("keeps the title without an app name", () => {
+    expect(withAppTitle(html, undefined)).toBe(html);
+  });
+
+  it("titles the index.html of a build from connect.branding.appName", () => {
+    const plugin = phConfigPlugin({
+      projectRoot: makeProjectRoot({ name: "p", version: "1.0.0" }),
+      connect: { branding: { appName: "Versioned Documents" } },
+    } as never);
+    const transform = plugin.transformIndexHtml as (html: string) => string;
+    expect(transform(html)).toBe(
+      "<head><title>Versioned Documents</title></head>",
+    );
   });
 });

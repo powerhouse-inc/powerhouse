@@ -1,5 +1,8 @@
 import { Icon } from "#design-system";
-import { setSelectedNode, useDropFile } from "@powerhousedao/reactor-browser";
+import {
+  useDropFile,
+  useSetSelectedNode,
+} from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import {
   type ComponentPropsWithoutRef,
@@ -83,6 +86,7 @@ export function DropZone(props: DropZoneProps) {
   };
 
   const { isDropTarget, ...dropProps } = useDropFile(handleAddFile);
+  const setSelectedNode = useSetSelectedNode();
 
   return (
     <div

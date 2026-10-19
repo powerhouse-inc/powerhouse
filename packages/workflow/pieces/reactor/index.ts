@@ -1,9 +1,5 @@
 // The Powerhouse reactor piece: documents and document models as workflow
-// blocks, for the reactor the workflow itself runs in.
-
-// It reaches the reactor through ctx.reactor, which the host serves over the
-// worker's call channel — piece code never holds a reactor client, and a copy
-// of this piece fetched from a registry would find the member throwing.
+// blocks, through the `ctx.reactor` each block declares.
 import { createPiece } from "@powerhousedao/pieces-framework";
 import { POWERHOUSE_LOGO } from "./lib/logo.js";
 import { documentCreateAction } from "./lib/actions/document-create.js";

@@ -49,6 +49,53 @@ const CREDENTIAL_CACHE_MAX_ENTRIES = 1_000;
 interface CredentialCacheEntry {
   exists: Promise<boolean>;
   expiresAt: number;
+  address: string;
+  chainId: number;
+  appId: string;
+}
+
+/** What `invalidateCredential` was called with; `address` is lower-cased. */
+export interface CredentialInvalidation {
+  address: string;
+  chainId?: number;
+  appDid?: string;
+}
+
+export type CredentialInvalidationListener = (
+  invalidation: CredentialInvalidation,
+) => void;
+
+/**
+ * The slice of {@link AuthService} handed to packages (as
+ * `SubgraphArgs.credentials` / `BaseSubgraph.credentials`): a package that
+ * revokes a credential calls this so the host stops honouring it at once
+ * instead of after the credential cache TTL.
+ */
+export interface ICredentialInvalidator {
+  /**
+   * Evict cached credential checks for `address` (case-insensitive), narrowed
+   * by `chainId` and the app DID (`did:key` of the app the credential
+   * delegates to) when given, and re-verify open WebSocket connections of that
+   * identity. Returns the number of cache entries evicted. Synchronous and
+   * local to this process: other replicas still honour their cache until
+   * their TTL lapses.
+   */
+  invalidateCredential(
+    address: string,
+    chainId?: number,
+    appDid?: string,
+  ): number;
+}
+
+/** The invalidator a subgraph receives: forwards to `authService`, or does
+ * nothing when the host runs without one. */
+export function createCredentialInvalidator(
+  authService: AuthService | undefined,
+): ICredentialInvalidator {
+  return {
+    invalidateCredential: (address, chainId, appDid) =>
+      authService?.invalidateCredential(address, chainId, appDid) ?? 0,
+  };
 }
 
 /**
@@ -64,9 +111,11 @@ export interface AuthContext {
   auth_enabled: boolean;
 }
 
-export class AuthService {
+export class AuthService implements ICredentialInvalidator {
   private readonly config: AuthConfig;
   private readonly credentialCache = new Map<string, CredentialCacheEntry>();
+  private readonly invalidationListeners =
+    new Set<CredentialInvalidationListener>();
 
   constructor(config: AuthConfig) {
     this.config = config;
@@ -214,6 +263,59 @@ export class AuthService {
     return user;
   }
 
+  /** {@inheritDoc ICredentialInvalidator.invalidateCredential} */
+  invalidateCredential(
+    address: string,
+    chainId?: number,
+    appDid?: string,
+  ): number {
+    const normalized = address.toLowerCase();
+    let evicted = 0;
+    for (const [key, entry] of this.credentialCache) {
+      if (
+        entry.address === normalized &&
+        (chainId === undefined || entry.chainId === chainId) &&
+        (appDid === undefined || entry.appId === appDid)
+      ) {
+        this.credentialCache.delete(key);
+        evicted++;
+      }
+    }
+    const invalidation: CredentialInvalidation = { address: normalized };
+    if (chainId !== undefined) invalidation.chainId = chainId;
+    if (appDid !== undefined) invalidation.appDid = appDid;
+    for (const listener of this.invalidationListeners) {
+      try {
+        listener(invalidation);
+      } catch {
+        // A listener's failure must not stop the eviction reaching the rest.
+      }
+    }
+    return evicted;
+  }
+
+  /** Called after every `invalidateCredential`; returns an unsubscribe. */
+  onCredentialInvalidated(
+    listener: CredentialInvalidationListener,
+  ): () => void {
+    this.invalidationListeners.add(listener);
+    return () => {
+      this.invalidationListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Whether an already-authenticated principal's credential still holds, for
+   * re-checking long-lived connections. Goes through the same cache as
+   * admission, so it costs at most one verifier call per identity per TTL.
+   */
+  async isCredentialValid(user: User): Promise<boolean> {
+    if (this.config.skipCredentialVerification) {
+      return true;
+    }
+    return this.verifyCredentialExists(user.address, user.chainId, user.appKey);
+  }
+
   /**
    * Verify the auth bearer token
    */
@@ -291,6 +393,9 @@ export class AuthService {
         },
       ),
       expiresAt: now + ttlMs,
+      address: address.toLowerCase(),
+      chainId,
+      appId,
     };
     this.credentialCache.set(key, entry);
     return entry.exists;

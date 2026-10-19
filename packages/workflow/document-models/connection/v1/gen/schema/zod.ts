@@ -5,11 +5,14 @@ import type {
   ConnectionAuthType,
   ConnectionState,
   ConnectionStatus,
+  ReactorConnectionConfig,
   RecordCheckResultInput,
+  RemoveConfigValueInput,
   RemoveSecretRefInput,
   SecretRef,
   SetAccountLabelInput,
   SetConfigInput,
+  SetConfigValueInput,
   SetConnectionNameInput,
   SetConnectorInput,
   SetSecretRefInput,
@@ -34,6 +37,7 @@ export const ConnectionAuthTypeSchema = z.enum([
   "NONE",
   "OAUTH2",
   "OIDC",
+  "REACTOR",
   "SECRET_TEXT",
 ]);
 
@@ -61,6 +65,16 @@ export function ConnectionStateSchema(): z.ZodObject<
   });
 }
 
+export function ReactorConnectionConfigSchema(): z.ZodObject<
+  Properties<ReactorConnectionConfig>
+> {
+  return z.object({
+    __typename: z.literal("ReactorConnectionConfig").optional(),
+    access: z.string().nullish(),
+    endpoint: z.string(),
+  });
+}
+
 export function RecordCheckResultInputSchema(): z.ZodObject<
   Properties<RecordCheckResultInput>
 > {
@@ -68,6 +82,14 @@ export function RecordCheckResultInputSchema(): z.ZodObject<
     checkedAt: z.iso.datetime(),
     error: z.string().nullish(),
     status: ConnectionStatusSchema,
+  });
+}
+
+export function RemoveConfigValueInputSchema(): z.ZodObject<
+  Properties<RemoveConfigValueInput>
+> {
+  return z.object({
+    name: z.string(),
   });
 }
 
@@ -101,6 +123,15 @@ export function SetConfigInputSchema(): z.ZodObject<
 > {
   return z.object({
     config: z.unknown(),
+  });
+}
+
+export function SetConfigValueInputSchema(): z.ZodObject<
+  Properties<SetConfigValueInput>
+> {
+  return z.object({
+    name: z.string(),
+    value: z.unknown(),
   });
 }
 

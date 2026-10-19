@@ -19,10 +19,13 @@ export default defineConfig({
       },
     ],
   },
-  // Node gets these as --conditions; "import" there makes pg's require() load ESM.
+  // Node gets these as --conditions; "import" there makes pg's require() load ESM,
+  // and "module" picks OpenTelemetry's extensionless ESM build.
   ssr: {
     resolve: {
-      conditions: conditions.filter((condition) => condition !== "import"),
+      conditions: conditions.filter(
+        (condition) => condition !== "import" && condition !== "module",
+      ),
     },
   },
   test: {

@@ -53,6 +53,7 @@ export function resolverInputFor(
   prop: BlockFormProp,
   config: Record<string, unknown>,
   connectionId: string | null | undefined,
+  reactorConnectionId?: string | null,
 ): ResolverKeyInput {
   const refreshers = (prop.refreshers ?? []).filter((name) => name !== "auth");
   return {
@@ -60,6 +61,7 @@ export function resolverInputFor(
     propName: prop.name,
     refreshers: refreshers.map((name) => config[name] ?? null),
     connectionId: connectionId ?? null,
+    ...(reactorConnectionId ? { reactorConnectionId } : {}),
   };
 }
 
@@ -131,11 +133,14 @@ export interface ValidityInput {
   block: BlockRef;
   config: unknown;
   connectionId: string | null | undefined;
+  reactorConnectionId?: string | null;
   propertySettings?: readonly PropertySettingModel[] | null;
   skip?: boolean | null;
   // DYNAMIC children already resolved for a key; undefined when not cached.
   resolveDynamic?: (input: ResolverKeyInput) => BlockFormProp[] | undefined;
 }
+
+export const REACTOR_CONNECTION_LABEL = "Reactor connection";
 
 // What a block still needs before it can run. [] is complete; null is
 // unknown: the form isn't there, or a DYNAMIC prop is unresolved.
@@ -149,6 +154,9 @@ export function blockMissing(input: ValidityInput): string[] | null {
   if (form.auth === "required" && !input.connectionId) {
     missing.push("Connection");
   }
+  if (form.requireReactor && !input.reactorConnectionId) {
+    missing.push(REACTOR_CONNECTION_LABEL);
+  }
   for (const prop of form.props) {
     if (prop.type === "MARKDOWN" || !isPropVisible(prop, record)) continue;
     const value = record[prop.name];
@@ -160,7 +168,13 @@ export function blockMissing(input: ValidityInput): string[] | null {
     }
     const children =
       input.resolveDynamic?.(
-        resolverInputFor(input.block, prop, record, input.connectionId),
+        resolverInputFor(
+          input.block,
+          prop,
+          record,
+          input.connectionId,
+          input.reactorConnectionId,
+        ),
       ) ?? storedSchema(input.propertySettings, prop.name);
     if (children === undefined) {
       unknown = true;

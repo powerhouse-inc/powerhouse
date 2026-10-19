@@ -9,6 +9,7 @@ import type {
   AttachmentUploadTarget,
   Reservation,
 } from "../../types.js";
+import { isBlob } from "../../blob.js";
 
 class S3AttachmentUpload implements IAttachmentUpload {
   readonly reservationId: string;
@@ -30,9 +31,9 @@ class S3AttachmentUpload implements IAttachmentUpload {
   // to report and nothing for a signal to abort. Callers must use the
   // presigned target, which honours both.
   async send(
-    data: ReadableStream<Uint8Array>,
+    data: ReadableStream<Uint8Array> | Blob,
   ): Promise<AttachmentUploadResult> {
-    await data.cancel().catch(() => {});
+    if (!isBlob(data)) await data.cancel().catch(() => {});
     throw new Error("S3 attachment upload must use the presigned target");
   }
 }

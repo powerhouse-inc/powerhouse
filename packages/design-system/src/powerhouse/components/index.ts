@@ -1,6 +1,7 @@
 export * from "./button/button.js";
 export * from "./dropdown-menu/dropdown-menu.js";
-export * from "./icon-components/index.js";
+export { iconNames } from "./icon-components/names.js";
+export * from "./icon/icon-components.js";
 export * from "./icon/icon.js";
 export * from "./modal/modal.js";
 export * from "./package-animation/package-animation.js";

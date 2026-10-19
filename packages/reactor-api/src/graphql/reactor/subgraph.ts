@@ -341,21 +341,10 @@ export class ReactorSubgraph extends BaseSubgraph {
             },
             this.viewSubject(ctx),
           );
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return { ...result, items: filteredItems };
-          }
-
-          return result;
+          return {
+            ...result,
+            items: await this.readableByHost(result.items, ctx),
+          };
         } catch (error) {
           this.logger.error(
             "Error in documentIncomingRelationships: @Error",
@@ -441,21 +430,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
 
           // Filter results to only include documents the user can read
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const filteredItems = [];
-            for (const item of result.items) {
-              const canRead = await this.canReadDocument(
-                item.id as CanonicalDocumentId,
-                ctx,
-              );
-              if (canRead) {
-                filteredItems.push(item);
-              }
-            }
-            return { ...result, items: filteredItems };
-          }
-
-          return result;
+          return {
+            ...result,
+            items: await this.readableByHost(result.items, ctx),
+          };
         } catch (error) {
           this.logger.error("Error in findDocuments: @Error", error);
           throw error;
@@ -465,11 +443,67 @@ export class ReactorSubgraph extends BaseSubgraph {
       jobStatus: async (_parent, args, ctx: Context) => {
         this.logger.debug("jobStatus(@args)", args);
         try {
-          return await resolvers.jobStatus(this.reactorClient, args, (id) =>
-            this.servesDocument(id, ctx),
+          // jobChanges' gate, applied to the job and to every coordinate.
+          const admin = this.authorizationService.isSupremeAdmin(
+            ctx.user?.address,
+          );
+          const decisions = new Map<string, Promise<boolean>>();
+          const readable = (id: string): Promise<boolean> => {
+            let decision = decisions.get(id);
+            if (!decision) {
+              decision = (async () =>
+                (await this.servesDocument(id, ctx)) &&
+                (admin ||
+                  (await this.canReadDocument(
+                    id as CanonicalDocumentId,
+                    ctx,
+                  ))))();
+              decisions.set(id, decision);
+            }
+            return decision;
+          };
+          return await resolvers.jobStatus(
+            this.reactorClient,
+            args,
+            readable,
+            readable,
           );
         } catch (error) {
           this.logger.error("Error in jobStatus: @Error", error);
+          throw error;
+        }
+      },
+
+      documentServed: async (_parent, args, ctx: Context) => {
+        this.logger.debug("documentServed(@args)", args);
+        try {
+          return await this.listsDocument(args.idOrSlug, ctx, {
+            branch: args.view?.branch ?? undefined,
+            scopes: args.view?.scopes ? [...args.view.scopes] : undefined,
+          });
+        } catch (error) {
+          this.logger.error("Error in documentServed: @Error", error);
+          throw error;
+        }
+      },
+
+      createDefaults: async (_parent, args, ctx: Context) => {
+        this.logger.debug("createDefaults(@args)", args);
+        try {
+          const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
+          // Without a parent the answer is host-wide, so nothing is gated.
+          if (
+            parentIdOrSlug !== undefined &&
+            !(await this.listsDocument(parentIdOrSlug, ctx))
+          ) {
+            throw new ForbiddenError("to read this document");
+          }
+          return await resolvers.createDefaults(
+            this.reactorClient,
+            parentIdOrSlug,
+          );
+        } catch (error) {
+          this.logger.error("Error in createDefaults: @Error", error);
           throw error;
         }
       },
@@ -870,6 +904,63 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
+      executeBatch: async (_parent, args, ctx: Context) => {
+        this.logger.debug("executeBatch(@args)", args);
+        try {
+          const creation = resolvers.batchCreationOf(args.jobs);
+          if (creation) {
+            // The same rule as createDocument: write on a parent, or create.
+            if (creation.linkedFrom.length > 0) {
+              for (const parent of creation.linkedFrom) {
+                await this.assertCanWrite(parent, ctx);
+              }
+            } else {
+              this.assertCanCreate(ctx);
+            }
+
+            const result = await resolvers.executeBatch(this.reactorClient, {
+              jobs: args.jobs,
+            });
+            if (
+              result.jobs.some((entry) => entry.job.status !== "READ_READY")
+            ) {
+              return result;
+            }
+
+            if (isDriveContainerType(creation.documentType)) {
+              this.graphqlManager.driveOwnershipCache.add(creation.documentId);
+            }
+            if (ctx.user?.address) {
+              await this.documentPermissionService?.initializeDocumentProtection(
+                creation.documentId,
+                ctx.user.address,
+                this.authorizationService.config.defaultProtection,
+              );
+            }
+            return result;
+          }
+
+          const jobs = [];
+          for (const job of args.jobs) {
+            const handle = await this.assertCanExecuteOperations(
+              job.documentIdOrSlug,
+              job.actions,
+              ctx,
+            );
+            jobs.push({ ...job, documentIdOrSlug: handle.fetchIdentifier });
+          }
+
+          return await resolvers.executeBatch(this.reactorClient, { jobs });
+        } catch (error) {
+          this.logger.error(
+            "Error in executeBatch(@args): @Error",
+            args,
+            error,
+          );
+          throw error;
+        }
+      },
+
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
         try {
@@ -1125,9 +1216,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           );
         } catch (error) {
           this.logger.error(
-            "Error in moveRelationship(@args): @Error @args",
-            error,
+            "Error in moveRelationship(@args): @Error",
             args,
+            error,
           );
           throw error;
         }

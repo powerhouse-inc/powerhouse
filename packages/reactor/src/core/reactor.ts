@@ -39,6 +39,7 @@ import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { JOB_NOT_FOUND_ERROR_NAME } from "../shared/errors.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   ConsistencyToken,
@@ -145,14 +146,18 @@ export class Reactor implements IReactor {
     this.setShutdown = setShutdown;
     this.setCompleted = setCompleted;
 
+    // Logs identifiers only. The whole job runs to tens of kilobytes per
+    // failure, which buries the message and can itself kill the process when
+    // stdout's reader is gone (write EPIPE); the payload stays reachable
+    // through the queue record by job id.
     this.eventBus.subscribe(
       ReactorEventTypes.JOB_FAILED,
       (_type, event: JobFailedEvent) => {
         this.logger.error(
-          "Job @JobId failed with @Message: @Job",
+          "Job @JobId for document @DocumentId failed with @Message",
           event.jobId,
+          event.job?.documentId ?? "unknown",
           event.error.message,
-          event.job,
         );
       },
     );
@@ -1162,7 +1167,10 @@ export class Reactor implements IReactor {
         status: JobStatus.FAILED,
         createdAtUtcIso: now,
         completedAtUtcIso: now,
-        error: toErrorInfo("Job not found"),
+        error: {
+          ...toErrorInfo("Job not found"),
+          name: JOB_NOT_FOUND_ERROR_NAME,
+        },
         consistencyToken: {
           version: 1,
           createdAtUtcIso: now,

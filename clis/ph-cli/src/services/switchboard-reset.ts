@@ -1,3 +1,4 @@
+import { defaultStoreDirs } from "@powerhousedao/shared/clis/ph-dir";
 import { yellow, red, green, cyan } from "colorette";
 import { promises as fs } from "node:fs";
 
@@ -33,14 +34,15 @@ export function resolveResetPaths(
   options: ResetSwitchboardOptions,
   env: NodeJS.ProcessEnv = process.env,
 ): ResolvedResetPaths {
+  const defaults = defaultStoreDirs(env);
   const readModelDbPath =
     options.dbPath ?? env.DATABASE_URL ?? env.PH_SWITCHBOARD_DATABASE_URL;
-  const readModelPath = readModelDbPath || ".ph/read-storage";
+  const readModelPath = readModelDbPath || defaults.readModel;
   const reactorDbUrl =
     options.dbPath ??
     env.PH_REACTOR_DATABASE_URL ??
     env.PH_SWITCHBOARD_DATABASE_URL;
-  const reactorPath = reactorDbUrl || "./.ph/reactor-storage";
+  const reactorPath = reactorDbUrl || defaults.reactor;
 
   const reactorIsPostgres = !!reactorDbUrl && isPostgresUrl(reactorDbUrl);
   const readModelIsPostgres =

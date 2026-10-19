@@ -17,6 +17,7 @@ import {
 } from "./connection-create.js";
 import { packageFromConnectorId } from "../../connection-editor/piece-auth.js";
 import type { BlockRef } from "./blocks.js";
+import { ConnectionName, useConnectionName } from "./ConnectionName.js";
 import { CreateConnectionModal } from "./CreateConnectionModal.js";
 import { useBlockForm, useConnectionList } from "./design-time.js";
 import type { ConnectionSummary } from "./forms.js";
@@ -155,6 +156,7 @@ export function ConnectionField(props: {
   const selected = connections.find(
     (connection) => connection.id === props.value,
   );
+  const bound = useConnectionName(selected ? null : props.value);
 
   const authMode = form === "loading" ? "loading" : (form?.auth ?? "optional");
   // Blocks that take no connection only show the field to clear a stale one;
@@ -302,7 +304,11 @@ export function ConnectionField(props: {
             </>
           ) : (
             <span className="flex-1 truncate text-muted-foreground/70">
-              {props.value ? props.value : "Choose a connection"}
+              {props.value ? (
+                <ConnectionName name={bound.name} />
+              ) : (
+                "Choose a connection"
+              )}
             </span>
           )}
           <Icon
@@ -311,7 +317,7 @@ export function ConnectionField(props: {
           />
         </button>
       )}
-      {props.value && !selected ? (
+      {props.value && !selected && bound.invalid ? (
         <Hint>Not a known connection document.</Hint>
       ) : null}
       {selected &&

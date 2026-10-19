@@ -115,29 +115,29 @@ describe("useAttachments", () => {
     delete (window as { ph?: unknown }).ph;
   });
 
-  it("returns undefined until a service is installed", () => {
-    const { result } = renderHook(() => useAttachments());
+  it("returns undefined until a service is installed", async () => {
+    const { result } = await renderHook(() => useAttachments());
     expect(result.current).toBeUndefined();
   });
 
-  it("shares one client per service across separate hook consumers", () => {
+  it("shares one client per service across separate hook consumers", async () => {
     const service = makeService();
     install(service);
 
-    const first = renderHook(() => useAttachments());
-    const second = renderHook(() => useAttachments());
+    const first = await renderHook(() => useAttachments());
+    const second = await renderHook(() => useAttachments());
 
     expect(first.result.current).toBeDefined();
     expect(first.result.current).toBe(second.result.current);
   });
 
-  it("hands out a different client for a different service", () => {
+  it("hands out a different client for a different service", async () => {
     install(makeService());
-    const { result: first } = renderHook(() => useAttachments());
+    const { result: first } = await renderHook(() => useAttachments());
     const firstClient = first.current;
 
     install(makeService());
-    const { result: second } = renderHook(() => useAttachments());
+    const { result: second } = await renderHook(() => useAttachments());
 
     expect(second.current).not.toBe(firstClient);
   });
@@ -148,9 +148,9 @@ describe("useAttachmentUpload", () => {
     delete (window as { ph?: unknown }).ph;
   });
 
-  it("starts idle with zeroed progress", () => {
+  it("starts idle with zeroed progress", async () => {
     install(makeService());
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
 
     expect(result.current.stage).toBe("idle");
     expect(result.current.progress).toEqual({
@@ -164,7 +164,7 @@ describe("useAttachmentUpload", () => {
 
   it("reports hashing during preprocess", async () => {
     install(makeService());
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
 
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
@@ -185,7 +185,7 @@ describe("useAttachmentUpload", () => {
         },
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -221,7 +221,7 @@ describe("useAttachmentUpload", () => {
   it("never renders `done` before the upload promise resolves", async () => {
     const gate = deferred<AttachmentUploadResult>();
     install(makeService({ send: () => gate.promise }));
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -246,7 +246,7 @@ describe("useAttachmentUpload", () => {
         reserve: () => Promise.reject(new AttachmentAlreadyExists(HASH, REF)),
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -269,7 +269,7 @@ describe("useAttachmentUpload", () => {
         },
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -307,7 +307,7 @@ describe("useAttachmentUpload", () => {
         },
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -330,7 +330,7 @@ describe("useAttachmentUpload", () => {
 
   it("returns to idle on reset", async () => {
     install(makeService());
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -358,7 +358,7 @@ describe("useAttachmentUpload", () => {
         },
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -400,7 +400,7 @@ describe("useAttachmentUpload", () => {
         },
       }),
     );
-    const { result } = renderHook(() => useAttachmentUpload());
+    const { result } = await renderHook(() => useAttachmentUpload());
     const preprocessed = await act(() =>
       result.current.preprocess(new Blob([CONTENT])),
     );
@@ -439,9 +439,9 @@ describe("useAttachmentPreview", () => {
     delete (window as { ph?: unknown }).ph;
   });
 
-  it("stays idle without a ref", () => {
+  it("stays idle without a ref", async () => {
     install(makeService());
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAttachmentPreview({ documentId: "doc-1", ref: null }),
     );
 
@@ -452,7 +452,7 @@ describe("useAttachmentPreview", () => {
 
   it("reports download stages and settles complete", async () => {
     install(makeService());
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAttachmentPreview({ documentId: "doc-1", ref: REF }),
     );
 
@@ -480,7 +480,7 @@ describe("useAttachmentPreview", () => {
     );
     // A long delay keeps the hook parked between attempts, which is the state
     // under test: today that window is an unexplained spinner.
-    const { result, unmount } = renderHook(() =>
+    const { result, unmount } = await renderHook(() =>
       useAttachmentPreview({
         documentId: "doc-1",
         ref: REF,
@@ -498,7 +498,7 @@ describe("useAttachmentPreview", () => {
     expect(result.current.attempt).toBe(2);
     expect(result.current.maxAttempts).toBe(2);
 
-    unmount();
+    await unmount();
   });
 
   it("recovers when a retry succeeds", async () => {
@@ -514,7 +514,7 @@ describe("useAttachmentPreview", () => {
         }) as unknown as IAttachmentService["get"],
       }),
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAttachmentPreview({
         documentId: "doc-1",
         ref: REF,
@@ -540,7 +540,7 @@ describe("useAttachmentPreview", () => {
         ) as unknown as IAttachmentService["get"],
       }),
     );
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useAttachmentPreview({
         documentId: "doc-1",
         ref: REF,
@@ -567,14 +567,14 @@ describe("useAttachmentPreview", () => {
         }) as unknown as IAttachmentService["get"],
       }),
     );
-    const view = renderHook(() =>
+    const view = await renderHook(() =>
       useAttachmentPreview({ documentId: "doc-1", ref: REF }),
     );
 
     await vi.waitFor(() => expect(observed).toBeDefined());
     expect(observed?.aborted).toBe(false);
 
-    view.unmount();
+    await view.unmount();
 
     expect(observed?.aborted).toBe(true);
   });

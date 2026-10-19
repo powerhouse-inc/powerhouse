@@ -38,10 +38,17 @@ const document = {
   state: { global: {} },
 } as unknown as PHDocument;
 
-const job: JobInfo = {
+const job = {
   id: "job-1",
+  documentId: "doc-1",
   status: "PENDING",
   createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+  consistencyToken: {
+    version: 1,
+    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+    coordinates: [],
+  },
+  meta: { batchId: "job-1", batchJobIds: ["job-1"] },
 } as unknown as JobInfo;
 
 /** Captures what the client was asked to do. */
@@ -159,6 +166,7 @@ describe("executeAsync", () => {
     });
 
     expect(submitted.id).toBe("job-1");
+    expect(submitted.documentId).toBe("doc-1");
     expect(submitted.status).toBe("PENDING");
     // A job is never more resultless than at the moment it is handed back.
     expect(submitted.result).toBeNull();

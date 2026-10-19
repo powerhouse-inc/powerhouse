@@ -1,11 +1,11 @@
 import {
   addDocument,
-  setSelectedNode,
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
   useSelectedDrive,
   useSetPHAppConfig,
+  useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import type { EditorProps } from "@powerhousedao/shared/document-model";
@@ -16,6 +16,7 @@ import { DriveExplorer } from "./DriveExplorer.js";
 
 export function BaseEditor(props: EditorProps) {
   const { children } = props;
+  const setSelectedNode = useSetSelectedNode();
 
   const [document] = useSelectedDrive();
 
@@ -52,18 +53,15 @@ export function BaseEditor(props: EditorProps) {
     (node) => node.documentType === DOCUMENT_TYPES.documentApp,
   );
 
-  const onCreateDocument = useCallback(
-    (documentType: string) => {
-      const documentModel = documentModels?.find(
-        (model) => model.documentModel.global.id === documentType,
-      );
+  const onCreateDocument = (documentType: string) => {
+    const documentModel = documentModels?.find(
+      (model) => model.documentModel.global.id === documentType,
+    );
 
-      if (documentModel) {
-        showCreateDocumentModal(documentModel.documentModel.global.id);
-      }
-    },
-    [showCreateDocumentModal, documentModels?.length],
-  );
+    if (documentModel) {
+      showCreateDocumentModal(documentModel.documentModel.global.id);
+    }
+  };
 
   const onCreatePackageFile = useCallback(() => {
     addDocument(driveId, "vetra-package", DOCUMENT_TYPES.documentPackage).catch(
@@ -79,7 +77,7 @@ export function BaseEditor(props: EditorProps) {
     if (packageNode) {
       setSelectedNode(packageNode);
     }
-  }, [packageNode]);
+  }, [packageNode, setSelectedNode]);
 
   const showDocumentEditor = !!children;
 

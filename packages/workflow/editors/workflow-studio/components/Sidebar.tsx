@@ -5,12 +5,22 @@ import {
   useDocumentSafe,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { useEffect, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { errorMessage } from "../../shared/DocumentErrorBoundary.js";
 import { CONNECTION_TONE, toneOf, workflowHealth } from "./run-format.js";
 import type { WorkflowDocument } from "document-models/workflow";
 import { Icon, StatusDot } from "./ui.js";
-import { WorkflowMenu } from "./WorkflowMenu.js";
+import {
+  DeleteWorkflowDialog,
+  deleteWorkflow,
+  WorkflowMenu,
+} from "./WorkflowMenu.js";
 
 const WORKFLOW_TYPE = "powerhouse/workflow";
 
@@ -37,6 +47,8 @@ function documentStatus(document: unknown): {
 function Row(props: {
   active: boolean;
   onClick: () => void;
+  onKeyDown?: (event: KeyboardEvent) => void;
+  keyShortcuts?: string;
   children: ReactNode;
   trailing?: ReactNode;
 }) {
@@ -53,6 +65,8 @@ function Row(props: {
           props.active ? "font-medium text-foreground" : "text-foreground/80"
         }`}
         onClick={props.onClick}
+        onKeyDown={props.onKeyDown}
+        aria-keyshortcuts={props.keyShortcuts}
       >
         {props.children}
       </button>
@@ -66,17 +80,34 @@ const ROW_ACTION =
 
 const DELETE_ACTION = `${ROW_ACTION} hover:text-wf-fail`;
 
+// Workflows confirm by their own name; their home folder goes with them.
 function DeleteButton(props: { node: FileNode; label: string }) {
+  const [confirming, setConfirming] = useState(false);
+  const isWorkflow = props.node.documentType === WORKFLOW_TYPE;
   return (
-    <button
-      type="button"
-      title="Delete"
-      aria-label={`Delete ${props.label}`}
-      className={DELETE_ACTION}
-      onClick={() => showDeleteNodeModal(props.node)}
-    >
-      <Icon name="trash" className="h-3.5 w-3.5" />
-    </button>
+    <>
+      <button
+        type="button"
+        title="Delete"
+        aria-label={`Delete ${props.label}`}
+        className={DELETE_ACTION}
+        onClick={() =>
+          isWorkflow ? setConfirming(true) : showDeleteNodeModal(props.node)
+        }
+      >
+        <Icon name="trash" className="h-3.5 w-3.5" />
+      </button>
+      {confirming ? (
+        <DeleteWorkflowDialog
+          name={props.label}
+          onCancel={() => setConfirming(false)}
+          onConfirm={async () => {
+            await deleteWorkflow(props.node.id);
+            setConfirming(false);
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -88,6 +119,8 @@ function NodeRow(props: {
   active: boolean;
   onOpen: () => void;
   onEdit?: () => void;
+  onKeyDown?: (event: KeyboardEvent) => void;
+  keyShortcuts?: string;
 }) {
   const { node } = props;
   const { data: document, error } = useDocumentSafe(node.id);
@@ -102,6 +135,8 @@ function NodeRow(props: {
       <Row
         active={props.active}
         onClick={props.onOpen}
+        onKeyDown={props.onKeyDown}
+        keyShortcuts={props.keyShortcuts}
         trailing={
           <span className="mr-1.5 flex shrink-0 items-center">
             <DeleteButton node={node} label={node.name || node.id} />
@@ -135,6 +170,8 @@ function NodeRow(props: {
     <Row
       active={props.active}
       onClick={props.onOpen}
+      onKeyDown={props.onKeyDown}
+      keyShortcuts={props.keyShortcuts}
       trailing={
         <span className="mr-1.5 flex shrink-0 items-center">
           {props.onEdit ? (
@@ -173,6 +210,17 @@ function NodeRow(props: {
   );
 }
 
+function DropLine(props: { edge: "top" | "bottom" }) {
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute inset-x-3 z-10 h-0.5 rounded-full bg-primary ${
+        props.edge === "top" ? "-top-px" : "-bottom-px"
+      }`}
+    />
+  );
+}
+
 function Section(props: {
   title: string;
   addLabel: string;
@@ -184,11 +232,27 @@ function Section(props: {
   onEdit?: (node: FileNode) => void;
   onCreate: () => void;
   creating: boolean;
+  // Moves the node at `from` to index `to` of the list without it.
+  onReorder?: (from: number, to: number) => void;
 }) {
+  const { onReorder } = props;
+  const headingId = useId();
+  // `at` is the insertion index among all rows, before the dragged one leaves.
+  const [drag, setDrag] = useState<{ from: number; at: number } | null>(null);
+  const count = props.nodes.length;
+  const drop = (from: number, at: number) => {
+    const to = at > from ? at - 1 : at;
+    if (to !== from) onReorder?.(from, to);
+  };
+  const showLine = (at: number) =>
+    drag !== null && drag.at === at && at !== drag.from && at !== drag.from + 1;
   return (
-    <div className="mt-5">
+    <div className="mt-5" role="group" aria-labelledby={headingId}>
       <div className="mb-1 flex items-center justify-between pl-4 pr-3">
-        <h3 className="text-xs font-medium text-muted-foreground">
+        <h3
+          id={headingId}
+          className="text-xs font-medium text-muted-foreground"
+        >
           {props.title}
         </h3>
         <button
@@ -206,15 +270,60 @@ function Section(props: {
         <p className="px-4 py-1 text-xs text-muted-foreground">{props.empty}</p>
       ) : (
         <div className="flex flex-col gap-0.5">
-          {props.nodes.map((node) => (
-            <NodeRow
+          {props.nodes.map((node, i) => (
+            <div
               key={node.id}
-              node={node}
-              lastRunStatus={props.lastRuns?.get(node.id)}
-              active={props.activeId === node.id}
-              onOpen={() => props.onOpen(node)}
-              onEdit={props.onEdit ? () => props.onEdit!(node) : undefined}
-            />
+              className={`relative ${drag?.from === i ? "opacity-50" : ""}`}
+              draggable={Boolean(onReorder)}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", node.id);
+                setDrag({ from: i, at: i });
+              }}
+              onDragOver={(event) => {
+                if (!drag) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                const box = event.currentTarget.getBoundingClientRect();
+                const at = event.clientY < box.top + box.height / 2 ? i : i + 1;
+                if (at !== drag.at) setDrag({ ...drag, at });
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                if (drag) drop(drag.from, drag.at);
+                setDrag(null);
+              }}
+              onDragEnd={() => setDrag(null)}
+            >
+              {showLine(i) ? <DropLine edge="top" /> : null}
+              <NodeRow
+                node={node}
+                lastRunStatus={props.lastRuns?.get(node.id)}
+                active={props.activeId === node.id}
+                onOpen={() => props.onOpen(node)}
+                onEdit={props.onEdit ? () => props.onEdit!(node) : undefined}
+                keyShortcuts={
+                  onReorder ? "Alt+ArrowUp Alt+ArrowDown" : undefined
+                }
+                onKeyDown={
+                  onReorder
+                    ? (event) => {
+                        if (!event.altKey) return;
+                        if (event.key === "ArrowUp" && i > 0) {
+                          event.preventDefault();
+                          onReorder(i, i - 1);
+                        } else if (event.key === "ArrowDown" && i < count - 1) {
+                          event.preventDefault();
+                          onReorder(i, i + 1);
+                        }
+                      }
+                    : undefined
+                }
+              />
+              {i === count - 1 && showLine(count) ? (
+                <DropLine edge="bottom" />
+              ) : null}
+            </div>
           ))}
         </div>
       )}
@@ -231,6 +340,7 @@ export function Sidebar(props: {
   allRunsActive: boolean;
   creating: boolean;
   onShowAllRuns: () => void;
+  onReorderWorkflow: (from: number, to: number) => void;
   onOpenWorkflow: (node: FileNode) => void;
   onEditWorkflow: (node: FileNode) => void;
   onOpenConnection: (node: FileNode) => void;
@@ -253,6 +363,7 @@ export function Sidebar(props: {
         onOpen={props.onOpenWorkflow}
         onEdit={props.onEditWorkflow}
         onCreate={props.onCreateWorkflow}
+        onReorder={props.onReorderWorkflow}
         creating={props.creating}
       />
       <Section

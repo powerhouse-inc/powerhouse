@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { resolveLinkedPackage } from "./import-resolver.js";
@@ -102,6 +103,43 @@ async function loadDependency<T = unknown>(
   }
 }
 
+/**
+ * The subgraphs a package's `powerhouse.manifest.json` declares, when the
+ * manifest is reachable — which it is for a package identified by an
+ * absolute path (how every local project reaches the loaders). Lets the
+ * package manager warn when a manifest promises subgraphs and the loaders
+ * deliver none, instead of failing silently. For a bare package name the
+ * manifest would have to be resolved through the module system; until a
+ * caller needs that, a bare name answers [] rather than guessing.
+ */
+export function manifestDeclaredSubgraphs(identifier: string): string[] {
+  if (!path.isAbsolute(identifier)) return [];
+  try {
+    const raw = readFileSync(
+      path.join(identifier, "powerhouse.manifest.json"),
+      "utf-8",
+    );
+    const manifest = JSON.parse(raw) as { subgraphs?: unknown };
+    if (!Array.isArray(manifest.subgraphs)) return [];
+    return manifest.subgraphs
+      .map((subgraph: unknown) => {
+        if (typeof subgraph !== "object" || subgraph === null) {
+          return undefined;
+        }
+        const { id, name } = subgraph as { id?: unknown; name?: unknown };
+        return id ?? name;
+      })
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.length > 0,
+      );
+  } catch {
+    // No manifest, or an unreadable one: nothing was promised, so nothing
+    // to warn about.
+    return [];
+  }
+}
+
 function isUpgradeManifest(
   value: unknown,
 ): value is UpgradeManifest<readonly number[]> {
@@ -138,26 +176,34 @@ export function extractUpgradeManifests(
   return Array.from(manifests.values());
 }
 
-export function debounce<T extends unknown[], R>(
-  func: (...args: T) => Promise<R>,
-  delay = 250,
-) {
-  let timer: number;
-  return (immediate = false, ...args: T) => {
-    if (timer) {
-      clearTimeout(timer);
+/** Calls superseded before the timer fires settle with the run that follows. */
+export function debounce<R>(func: () => Promise<R>, delay = 250) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let waiting: {
+    resolve: (value: R) => void;
+    reject: (error: unknown) => void;
+  }[] = [];
+
+  const run = async () => {
+    timer = undefined;
+    const callers = waiting;
+    waiting = [];
+    try {
+      const value = await func();
+      callers.forEach((caller) => caller.resolve(value));
+    } catch (error) {
+      callers.forEach((caller) => caller.reject(error));
     }
+  };
+
+  return (immediate = false): Promise<R> => {
+    clearTimeout(timer);
     return new Promise<R>((resolve, reject) => {
+      waiting.push({ resolve, reject });
       if (immediate) {
-        func(...args)
-          .then(resolve)
-          .catch(reject);
+        void run();
       } else {
-        timer = setTimeout(() => {
-          func(...args)
-            .then(resolve)
-            .catch(reject);
-        }, delay) as unknown as number;
+        timer = setTimeout(() => void run(), delay);
       }
     });
   };

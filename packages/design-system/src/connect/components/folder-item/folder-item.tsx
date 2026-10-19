@@ -1,10 +1,14 @@
 import { Icon } from "#design-system";
 import {
-  setSelectedNode,
+  getNodeTargetIn,
   showDeleteNodeModal,
   useDownloadFolder,
   useDragNode,
   useDropNode,
+  useLinkProps,
+  usePHStore,
+  usePreloadNode,
+  useSetSelectedNode,
   useNodeActions,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
@@ -19,8 +23,16 @@ import { NodeInput } from "../node-input/node-input.js";
 export function FolderItem(props: {
   folderNode: FolderNode;
   className?: string;
+  /** The folder's link; the navigation's href for it by default. */
+  href?: string;
 }) {
   const { folderNode, className } = props;
+  const store = usePHStore();
+  const setSelectedNode = useSetSelectedNode();
+  const preloadNode = usePreloadNode();
+  const target = getNodeTargetIn(store, folderNode);
+  const link = useLinkProps(target, () => setSelectedNode(folderNode));
+  const href = props.href ?? (target ? link.href : undefined);
   const { isAllowedToCreateDocuments } = useUserPermissions();
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
@@ -95,10 +107,25 @@ export function FolderItem(props: {
     className,
   );
 
+  // A link only while reading: clicks in the rename input must not follow it.
+  const isLink = isReadMode && !!href;
+  const Element = isLink ? "a" : "div";
+
   return (
-    <div
-      className="relative w-64 hover:hover-effect"
-      onClick={isReadMode ? () => setSelectedNode(folderNode) : undefined}
+    <Element
+      href={isLink ? href : undefined}
+      aria-current={isLink ? link["aria-current"] : undefined}
+      className="relative block w-64 hover:hover-effect"
+      onClick={
+        isLink
+          ? link.onClick
+          : isReadMode
+            ? () => setSelectedNode(folderNode)
+            : undefined
+      }
+      onMouseEnter={() => preloadNode(folderNode)}
+      onTouchStart={() => preloadNode(folderNode)}
+      onFocus={() => preloadNode(folderNode)}
     >
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
@@ -122,6 +149,7 @@ export function FolderItem(props: {
                 isDropdownMenuOpen && "block",
               )}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 setIsDropdownMenuOpen(true);
               }}
@@ -131,6 +159,6 @@ export function FolderItem(props: {
           </ConnectDropdownMenu>
         ) : null}
       </div>
-    </div>
+    </Element>
   );
 }

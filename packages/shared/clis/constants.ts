@@ -68,6 +68,20 @@ export const PROJECT_PORT_BAND_SWITCHBOARD = 7000 as const;
 export const PROJECT_PORT_BAND_STUDIO = 6000 as const;
 export const PROJECT_PORT_BAND_VETRA_CONNECT = 2000 as const;
 
+/**
+ * Icon for the drives switchboard creates by default, inlined as a data URI.
+ *
+ * A remote URL is the wrong shape for this: the value is baked into the drive
+ * document and rendered by every Connect that opens it, so the icon only
+ * appears when that client can reach that host. A desktop or air-gapped install
+ * cannot, and the ipfs.io gateway this previously pointed at now answers 403
+ * regardless.
+ *
+ * The mark is drawn dark-on-light so it stays legible against either theme.
+ */
+export const DEFAULT_DRIVE_ICON =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Crect%20width='16'%20height='16'%20rx='3'%20fill='%23F3F5F7'/%3E%3Cpath%20fill='%23343839'%20fill-rule='evenodd'%20clip-rule='evenodd'%20d='M10.0059%200L3.41636%205.45646C2.44979%206.25682%202.3795%207.71452%203.26456%208.60418L5.54425%2010.8957C6.21311%2011.568%206.35783%2012.6012%205.89944%2013.4314L4.48126%2016H2.13333C0.955126%2016%200%2015.0449%200%2013.8667V2.13333C0%200.955126%200.955126%200%202.13333%200H10.0059ZM11.2436%200L10.0128%202.24221C9.55899%203.06891%209.70183%204.09549%2010.3641%204.7669L12.7825%207.21868C13.6656%208.11402%2013.5866%209.57512%2012.612%2010.37L5.70922%2016H13.8667C15.0449%2016%2016%2015.0449%2016%2013.8667V2.13333C16%200.955126%2015.0449%200%2013.8667%200H11.2436Z'/%3E%3C/svg%3E" as const;
+
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
 
 export const MINIMUM_NODE_VERSION = "24.0.0" as const;
@@ -107,7 +121,7 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   [GRAPHQL_TAG_PACKAGE]: { peer: "^2", dev: "2.12.6" },
   react: { peer: "^19", dev: "19.2.6" },
   "react-dom": { peer: "^19", dev: "19.2.6" },
-  zod: { peer: "^4", dev: "4.3.6" },
+  zod: { peer: "^4", dev: "4.6.5" },
 } as const satisfies Record<string, PeerSpec>;
 
 // Per-feature deps added dynamically by codegen when required. `devVersioned`
@@ -173,6 +187,13 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/shared",
   "@powerhousedao/connect",
   "@powerhousedao/design-system",
+  // uniform-runners: the runner modules the scaffolded hosts/*/host.js
+  // files name (desktop runner, clint-runner/mastra-runner, and the generic
+  // compound they build on); dormant in classic projects until the feature
+  // flag defaults on.
+  "@powerhousedao/host-core",
+  "@powerhousedao/clint",
+  "@powerhousedao/desktop",
 ];
 
 export const packageJsonExports = {
@@ -207,7 +228,6 @@ export const packageJsonExports = {
   },
   "./subgraphs": {
     types: "./dist/types/subgraphs/index.d.ts",
-    browser: "./dist/browser/subgraphs/index.js",
     node: "./dist/node/subgraphs/index.mjs",
   },
   "./processors": {
@@ -302,7 +322,7 @@ export const externalDevDependencies = {
   "@types/react": "^19.2.3",
   "@types/react-dom": "^19.2.3",
   "@vitejs/plugin-react": "^6.0.1",
-  "@vitest/coverage-v8": "4.1.1",
+  "@vitest/coverage-v8": "5.0.3",
   oxfmt: "0.68.0",
   oxlint: "1.70.0",
   "oxlint-tsgolint": "0.23.0",
@@ -310,7 +330,7 @@ export const externalDevDependencies = {
   typescript: "~7.0.2",
   vite: "^8.0.10",
   "vite-tsconfig-paths": "6.1.1",
-  vitest: "4.1.1",
+  vitest: "5.0.3",
 } as const;
 
 export const defaultManifest: Manifest = {

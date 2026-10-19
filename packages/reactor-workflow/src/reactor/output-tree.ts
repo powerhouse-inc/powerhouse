@@ -1,6 +1,11 @@
 // Authored output shapes for the {} expression picker: document-model SDL,
 // piece outputSchema/sampleData, and static shapes for core blocks.
 import {
+  DOCUMENT_REF_KEY,
+  isDocumentRefMarker,
+  type DocumentReference,
+} from "@powerhousedao/pieces-framework/workflow";
+import {
   Kind,
   parse,
   type FieldDefinitionNode,
@@ -167,26 +172,38 @@ export function hasOutputSchemaFields(schema: unknown): boolean {
 }
 
 // Piece-authored sampleData → tree; types inferred from the sample's values.
-export function fromSample(value: unknown, depth = 0): OutputTreeNode[] {
+// A journaled document reference becomes the nodes `documentNodes` gives.
+export function fromSample(
+  value: unknown,
+  depth = 0,
+  documentNodes?: (reference: DocumentReference) => OutputTreeNode[],
+): OutputTreeNode[] {
   if (value === null || typeof value !== "object" || depth > MAX_DEPTH) {
     return [];
   }
+  const marker =
+    documentNodes && isDocumentRefMarker(value)
+      ? value[DOCUMENT_REF_KEY]
+      : undefined;
   const entries = Array.isArray(value)
     ? value.slice(0, 1).map((item) => ["0", item] as const)
-    : Object.entries(value as Record<string, unknown>);
-  return entries.map(([name, child]) => {
+    : Object.entries(value as Record<string, unknown>).filter(
+        ([name]) => !marker || name !== DOCUMENT_REF_KEY,
+      );
+  const nodes = entries.map(([name, child]) => {
     const kind = Array.isArray(child)
       ? "array"
       : child === null
         ? "null"
         : typeof child;
-    const children = fromSample(child, depth + 1);
+    const children = fromSample(child, depth + 1, documentNodes);
     return {
       name,
       type: kind,
       ...(children.length > 0 ? { children } : {}),
     };
   });
+  return marker && documentNodes ? [...documentNodes(marker), ...nodes] : nodes;
 }
 
 const leaf = (name: string, type: string, description?: string) => ({
@@ -201,52 +218,81 @@ export const OPERATION_NODE: OutputTreeNode = {
   children: [leaf("index", "Int!"), leaf("timestampUtcMs", "String!")],
 };
 
-// Envelope both document blocks return; state children come from the model.
-export function documentBlockTree(
-  stateChildren: OutputTreeNode[],
+// A reactor document's header, as document-get and document-find return it.
+export function documentHeaderNode(): OutputTreeNode {
+  return {
+    name: "header",
+    type: "object",
+    children: [
+      leaf("id", "PHID!"),
+      leaf("documentType", "String!"),
+      leaf("name", "String"),
+      leaf("slug", "String"),
+      leaf("branch", "String!"),
+      leaf("revision", "JSONObject!", "Operation count per scope"),
+      leaf("createdAtUtcIso", "DateTime!"),
+      leaf("lastModifiedAtUtcIso", "DateTime!"),
+    ],
+  };
+}
+
+// { header, state }; global state children come from the model's schema.
+export function documentTree(
+  globalChildren: OutputTreeNode[],
 ): OutputTreeNode[] {
   return [
-    leaf("documentId", "PHID!"),
-    leaf("documentType", "String!"),
-    leaf("name", "String"),
+    documentHeaderNode(),
     {
       name: "state",
       type: "object",
-      description: "Document global state after the actions applied",
-      ...(stateChildren.length > 0 ? { children: stateChildren } : {}),
+      children: [
+        {
+          name: "global",
+          type: "object",
+          description: "Document global state as read",
+          ...(globalChildren.length > 0 ? { children: globalChildren } : {}),
+        },
+      ],
     },
   ];
 }
 
-export function documentGetTree(
-  stateChildren: OutputTreeNode[],
-): OutputTreeNode[] {
+// What document-create and document-dispatch output.
+export function documentReferenceTree(): OutputTreeNode[] {
   return [
-    ...documentBlockTree(stateChildren).filter((node) => node.name !== "state"),
-    leaf("slug", "String"),
-    {
-      name: "state",
-      type: "object",
-      description: "Document global state as read",
-      ...(stateChildren.length > 0 ? { children: stateChildren } : {}),
-    },
+    leaf("documentId", "PHID!"),
+    leaf("documentType", "String!"),
+    leaf("branch", "String!"),
+    leaf(
+      "revision",
+      "JSONObject!",
+      "Operation count per scope after the write",
+    ),
   ];
 }
 
 export function documentFindTree(): OutputTreeNode[] {
   return [
-    leaf("count", "Int!"),
     {
-      name: "documents",
+      name: "results",
       type: "array",
       children: [
-        leaf("documentId", "PHID!"),
-        leaf("documentType", "String!"),
-        leaf("name", "String"),
-        leaf("slug", "String"),
+        documentHeaderNode(),
+        leaf("state", "JSONObject", "With Include state only"),
       ],
     },
+    leaf("nextCursor", "String", "Present while more documents match"),
   ];
+}
+
+// An output tree as a value, its leaves the declared type names.
+export function treeValue(nodes: OutputTreeNode[]): Record<string, unknown> {
+  return Object.fromEntries(
+    nodes.map((node) => [
+      node.name,
+      node.children ? treeValue(node.children) : node.type,
+    ]),
+  );
 }
 
 export function documentTypesTree(): OutputTreeNode[] {

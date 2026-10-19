@@ -1,14 +1,18 @@
 import type { ILogger } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { IEventBus } from "../../../src/events/interfaces.js";
+import { EventBus } from "../../../src/events/event-bus.js";
+import type { JobFailedEvent } from "../../../src/events/types.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
 import { JobResultHandler } from "../../../src/executor/job-result-handler.js";
 import type { JobResult } from "../../../src/executor/types.js";
+import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../../../src/job-tracker/interfaces.js";
 import type { IQueue } from "../../../src/queue/interfaces.js";
+import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState, RetryAccounting } from "../../../src/queue/types.js";
 import type { IDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
+import { NullDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
   AuthTimestampNotMonotonicError,
@@ -76,7 +80,6 @@ function createMockLogger(): ILogger {
 describe("JobResultHandler", () => {
   let queue: IQueue;
   let jobTracker: IJobTracker;
-  let eventBus: IEventBus;
   let resolver: IDocumentModelResolver;
   let logger: ILogger;
   let handler: JobResultHandler;
@@ -93,23 +96,14 @@ describe("JobResultHandler", () => {
       markFailed: vi.fn(),
     } as unknown as IJobTracker;
 
-    eventBus = {
-      emit: vi.fn().mockResolvedValue(undefined),
-    } as unknown as IEventBus;
-
     resolver = {
       ensureModelLoaded: vi.fn().mockResolvedValue(undefined),
+      recoverMissingModel: vi.fn().mockResolvedValue(undefined),
     };
 
     logger = createMockLogger();
 
-    handler = new JobResultHandler(
-      queue,
-      jobTracker,
-      eventBus,
-      resolver,
-      logger,
-    );
+    handler = new JobResultHandler(queue, jobTracker, resolver, logger);
 
     deferJobMock = vi.fn();
     flushDeferredForMock = vi.fn().mockResolvedValue(undefined);
@@ -180,7 +174,7 @@ describe("JobResultHandler", () => {
   });
 
   describe("model recovery (ModuleNotFoundError)", () => {
-    it("calls resolver.ensureModelLoaded and queue.retryJob on success", async () => {
+    it("calls resolver.recoverMissingModel and queue.retryJob on success", async () => {
       const error = new ModuleNotFoundError("test/type");
       const job = createTestJob({ maxRetries: 3 });
       const handle = createTestHandle(job);
@@ -188,12 +182,15 @@ describe("JobResultHandler", () => {
 
       await handler.handleResult(handle, result, callbacks());
 
-      expect(resolver.ensureModelLoaded).toHaveBeenCalledWith("test/type");
+      expect(resolver.recoverMissingModel).toHaveBeenCalledWith(
+        "test/type",
+        undefined,
+      );
       expect(queue.retryJob).toHaveBeenCalledWith(job.id, expect.any(Object));
     });
 
-    it("falls through to terminal failure when ensureModelLoaded throws", async () => {
-      vi.mocked(resolver.ensureModelLoaded).mockRejectedValue(
+    it("falls through to terminal failure when recoverMissingModel throws", async () => {
+      vi.mocked(resolver.recoverMissingModel).mockRejectedValue(
         new Error("load failed"),
       );
       const error = new ModuleNotFoundError("bad/type");
@@ -212,16 +209,69 @@ describe("JobResultHandler", () => {
       expect(handle.fail).toHaveBeenCalledTimes(1);
     });
 
+    it("fails the job once retries are spent though the model loads", async () => {
+      const realEventBus = new EventBus();
+      const realQueue = new InMemoryQueue(
+        realEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const realHandler = new JobResultHandler(
+        realQueue,
+        jobTracker,
+        resolver,
+        createMockLogger(),
+      );
+      const failed: JobFailedEvent[] = [];
+      realEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failed.push(data);
+        },
+      );
+
+      await realQueue.enqueue(createTestJob({ id: "P", maxRetries: 3 }));
+      await realQueue.enqueue(createTestJob({ id: "L", maxRetries: 3 }));
+
+      const dispatched: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const handle = await realQueue.dequeueNext();
+        if (!handle) {
+          break;
+        }
+        handle.start();
+        dispatched.push(handle.job.id);
+        if (handle.job.id === "L") {
+          handle.complete();
+          continue;
+        }
+        await realHandler.handleResult(
+          handle,
+          {
+            success: false,
+            job: handle.job,
+            error: new ModuleNotFoundError("test/type", 2),
+          },
+          callbacks(),
+        );
+      }
+
+      expect(dispatched).toEqual(["P", "P", "P", "P", "L"]);
+      await vi.waitFor(() => {
+        expect(failed.map((e) => e.jobId)).toEqual(["P"]);
+      });
+      expect(failed[0].error.name).toBe("ModuleNotFoundError");
+    });
+
     it("falls through to terminal failure when retryJob throws after model load", async () => {
       vi.mocked(queue.retryJob).mockRejectedValue(new Error("retry failed"));
       const error = new ModuleNotFoundError("test/type");
-      const job = createTestJob({ retryCount: 0, maxRetries: 0 });
+      const job = createTestJob({ retryCount: 0, maxRetries: 1 });
       const handle = createTestHandle(job);
       const result: JobResult = { success: false, job, error };
 
       await handler.handleResult(handle, result, callbacks());
 
-      expect(resolver.ensureModelLoaded).toHaveBeenCalled();
+      expect(resolver.recoverMissingModel).toHaveBeenCalled();
       expect(jobTracker.markFailed).toHaveBeenCalledWith(
         job.id,
         expect.any(Object),
@@ -250,7 +300,7 @@ describe("JobResultHandler", () => {
       expect(jobTracker.markFailed).not.toHaveBeenCalled();
     });
 
-    it("does not emit JOB_FAILED on defer", async () => {
+    it("does not fail the job on defer, so nothing emits JOB_FAILED", async () => {
       const error = new DocumentNotFoundError("missing-doc");
       const job = createTestJob({ kind: "load", documentId: "missing-doc" });
       const handle = createTestHandle(job);
@@ -258,7 +308,8 @@ describe("JobResultHandler", () => {
 
       await handler.handleResult(handle, result, callbacks());
 
-      expect(eventBus.emit).not.toHaveBeenCalled();
+      expect(handle.fail).not.toHaveBeenCalled();
+      expect(jobTracker.markFailed).not.toHaveBeenCalled();
     });
 
     it("holds the job against the document the error names", async () => {
@@ -296,16 +347,15 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id, error }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ name: error.name, source: error }),
+      );
     });
   });
 
   describe("DocumentDeletedError", () => {
-    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+    it("marks failed and fails the handle with the typed error as source", async () => {
       const error = new DocumentDeletedError(
         "deleted-doc",
         "2024-01-01T00:00:00Z",
@@ -321,11 +371,10 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id, error }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ name: error.name, source: error }),
+      );
     });
 
     it("does not consume a retry for DocumentDeletedError", async () => {
@@ -357,7 +406,7 @@ describe("JobResultHandler", () => {
       );
     }
 
-    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+    it("marks failed and fails the handle with the typed error as source", async () => {
       const error = violation();
       const job = createTestJob({ documentId: "held-doc", maxRetries: 3 });
       const handle = createTestHandle(job);
@@ -373,11 +422,10 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id, error }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ name: error.name, source: error }),
+      );
     });
 
     it("consumes no retry", async () => {
@@ -408,7 +456,7 @@ describe("JobResultHandler", () => {
       );
     }
 
-    it("marks failed, emits JOB_FAILED, and calls handle.fail()", async () => {
+    it("marks failed and fails the handle with the typed error as source", async () => {
       const error = malformed();
       const job = createTestJob({ maxRetries: 3 });
       const handle = createTestHandle(job);
@@ -424,11 +472,10 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id, error }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ name: error.name, source: error }),
+      );
     });
 
     it("consumes no retry", async () => {
@@ -472,16 +519,17 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      // The record names the retry failure; the job's own error rides along
+      // as source so the queue's JOB_FAILED still carries the typed instance.
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "queue broken", source: error }),
+      );
     });
   });
 
   describe("terminal failure path (retryCount >= maxRetries)", () => {
-    it("marks failed and emits JOB_FAILED when retries exhausted", async () => {
+    it("marks failed and fails the handle with the typed error as source when retries exhausted", async () => {
       const error = new Error("permanent failure");
       const job = createTestJob({ retryCount: 3, maxRetries: 3 });
       const handle = createTestHandle(job);
@@ -494,11 +542,10 @@ describe("JobResultHandler", () => {
         expect.any(Object),
         job,
       );
-      expect(eventBus.emit).toHaveBeenCalledWith(
-        ReactorEventTypes.JOB_FAILED,
-        expect.objectContaining({ jobId: job.id, error }),
-      );
       expect(handle.fail).toHaveBeenCalledTimes(1);
+      expect(handle.fail).toHaveBeenCalledWith(
+        expect.objectContaining({ source: error }),
+      );
     });
 
     it("includes aggregated error history in the failure info", async () => {
@@ -529,6 +576,9 @@ describe("JobResultHandler", () => {
       expect(capturedErrors[0].message).toContain("2 attempts");
       expect(capturedErrors[0].message).toContain("attempt 1 error");
       expect(capturedErrors[0].message).toContain("attempt 2 error");
+      // The attempt that ended the job is the one a consumer classifies by,
+      // so the aggregate record keeps its typed instance.
+      expect(capturedErrors[0].source).toBe(currentError);
     });
 
     it("returns the single error directly when no prior error history", async () => {
@@ -709,6 +759,141 @@ describe("JobResultHandler", () => {
 
       expect(jobTracker.markFailed).toHaveBeenCalled();
       expect(handle.fail).toHaveBeenCalled();
+    });
+  });
+
+  describe("terminal failures emit exactly one JOB_FAILED, carrying the typed error", () => {
+    let realEventBus: EventBus;
+    let realQueue: InMemoryQueue;
+    let realTracker: InMemoryJobTracker;
+    let realHandler: JobResultHandler;
+    let failedEvents: JobFailedEvent[];
+
+    beforeEach(() => {
+      realEventBus = new EventBus();
+      realQueue = new InMemoryQueue(
+        realEventBus,
+        new NullDocumentModelResolver(),
+      );
+      realTracker = new InMemoryJobTracker(realEventBus);
+      realHandler = new JobResultHandler(
+        realQueue,
+        realTracker,
+        {
+          ensureModelLoaded: vi.fn().mockResolvedValue(undefined),
+          recoverMissingModel: vi.fn().mockResolvedValue(undefined),
+        },
+        createMockLogger(),
+      );
+      failedEvents = [];
+      realEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failedEvents.push(data);
+        },
+      );
+    });
+
+    /** Enqueues the job and runs it to a live handle the queue resolves. */
+    async function dequeueStarted(job: Job): Promise<IJobExecutionHandle> {
+      await realQueue.enqueue(job);
+      const handle = await realQueue.dequeueNext();
+      expect(handle?.job.id).toBe(job.id);
+      handle!.start();
+      return handle!;
+    }
+
+    /** Waits for the first event, then long enough for a duplicate to land. */
+    async function settle(): Promise<void> {
+      await vi.waitFor(() => {
+        expect(failedEvents.length).toBeGreaterThanOrEqual(1);
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    it("deterministic error: one event, error is the typed instance", async () => {
+      // The handler used to emit directly and handle.fail re-emitted through
+      // queue.failJob, so every deterministic failure reached subscribers
+      // twice - once typed, once as a reconstructed plain Error.
+      const error = new DocumentNotFoundError("missing-doc");
+      const job = createTestJob({ id: "deterministic-job" });
+      const handle = await dequeueStarted(job);
+
+      await realHandler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+      await settle();
+
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].jobId).toBe("deterministic-job");
+      expect(failedEvents[0].error).toBe(error);
+      expect(failedEvents[0].error).toBeInstanceOf(DocumentNotFoundError);
+      expect(failedEvents[0].error.message).toBe(error.message);
+      expect(failedEvents[0].job?.id).toBe("deterministic-job");
+    });
+
+    it("retry-infrastructure failure: one event, error is the job's typed error", async () => {
+      vi.spyOn(realQueue, "retryJob").mockRejectedValue(
+        new Error("queue broken"),
+      );
+      const transient = new Error("transient failure");
+      const job = createTestJob({
+        id: "retry-broken-job",
+        retryCount: 0,
+        maxRetries: 3,
+      });
+      const handle = await dequeueStarted(job);
+
+      await realHandler.handleResult(
+        handle,
+        { success: false, job, error: transient },
+        callbacks(),
+      );
+      await settle();
+
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].jobId).toBe("retry-broken-job");
+      expect(failedEvents[0].error).toBe(transient);
+      expect(failedEvents[0].error.message).toBe("transient failure");
+      expect(failedEvents[0].job?.id).toBe("retry-broken-job");
+    });
+
+    it("retries exhausted: one event, error is the final attempt's typed instance", async () => {
+      const error = new Error("final attempt failed");
+      error.name = "ReducerExplodedError";
+      const job = createTestJob({
+        id: "exhausted-job",
+        retryCount: 3,
+        maxRetries: 3,
+        errorHistory: [
+          { name: "Error", message: "attempt 1 failed", stack: "" },
+        ],
+      });
+      const handle = await dequeueStarted(job);
+
+      await realHandler.handleResult(
+        handle,
+        { success: false, job, error },
+        callbacks(),
+      );
+      await settle();
+
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].jobId).toBe("exhausted-job");
+      expect(failedEvents[0].error).toBe(error);
+      expect(failedEvents[0].error.name).toBe("ReducerExplodedError");
+      expect(failedEvents[0].error.message).toBe("final attempt failed");
+      expect(failedEvents[0].job?.id).toBe("exhausted-job");
+      // The aggregate attempt history still reaches consumers on the job the
+      // event carries, even though the event's error is the final attempt.
+      expect(failedEvents[0].job?.lastError?.message).toContain(
+        "attempt 1 failed",
+      );
+      expect(failedEvents[0].job?.lastError?.message).toContain(
+        "final attempt failed",
+      );
     });
   });
 });

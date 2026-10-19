@@ -12,6 +12,8 @@ export interface S3Config {
   secretAccessKey?: string;
   s3ForcePathStyle?: boolean;
   keyPrefix?: string;
+  /** Artifact writes per second; the provider throttles a bucket past its limit */
+  maxWritesPerSecond?: number;
 }
 
 export interface WebhookConfig {
@@ -95,6 +97,7 @@ export interface RegistryCommandArgs {
   s3SecretAccessKey?: string;
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
+  s3MaxWritesPerSecond?: number;
   webEnabled: boolean;
   webhooks?: string;
   publicUrl?: string;
@@ -136,6 +139,7 @@ export interface WorkerCommandArgs {
   s3SecretAccessKey?: string;
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
+  s3MaxWritesPerSecond?: number;
   databaseUrl?: string;
   listenDatabaseUrl?: string;
   migrateOnBoot?: boolean;

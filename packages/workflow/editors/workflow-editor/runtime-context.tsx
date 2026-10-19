@@ -49,6 +49,9 @@ export interface RuntimeContextValue {
 
 const RuntimeContext = createContext<RuntimeContextValue | null>(null);
 
+// A repeated query while the picker is open answers at once.
+const SEARCH_STALE_MS = 5 * 60_000;
+
 // The block selector's catalog seam, answered from this editor's cache.
 function runtimePieceSource(
   client: RuntimeClient,
@@ -62,8 +65,18 @@ function runtimePieceSource(
       queryClient.fetchQuery(pieceActionsQuery(client, packageName)),
     loadTriggers: (packageName) =>
       queryClient.fetchQuery(pieceTriggersQuery(client, packageName)),
-    // Uncached: the index answers "indexing" until it is built.
-    searchBlocks: (query, limit) => client.searchBlocks(query, limit),
+    searchPieces: async (query, filter) => {
+      const key = runtimeKeys.searchPieces(client.url, query, filter);
+      const result = await queryClient.fetchQuery({
+        queryKey: key,
+        queryFn: () => client.searchPieces(query, filter),
+        staleTime: SEARCH_STALE_MS,
+      });
+      // Only a finished index is worth keeping; the caller polls the rest.
+      if (result.status !== "ready")
+        queryClient.removeQueries({ queryKey: key });
+      return result;
+    },
   };
 }
 

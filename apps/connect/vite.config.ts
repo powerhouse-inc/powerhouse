@@ -1,4 +1,5 @@
 import tailwind from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -76,7 +77,8 @@ export default defineConfig(({ command }) => ({
       "pglite-tools-legacy-02",
     ],
   },
-  plugins: [tailwind(), react(), phLocalPackageDistRewrite()],
+  // Reads tsr.config.json; regenerates src/routeTree.gen.ts as routes change.
+  plugins: [tanstackRouter(), tailwind(), react(), phLocalPackageDistRewrite()],
   worker: {
     format: "es",
   },

@@ -98,4 +98,39 @@ describe("describeTrigger", () => {
       }),
     ).toBe("New message in Slack");
   });
+
+  it("names a reactor document trigger by what it filters on", () => {
+    const reactor = (triggerName: string, config: unknown) =>
+      describeTrigger({
+        pieceName: "@powerhousedao/piece-reactor",
+        triggerName,
+        config,
+      });
+    expect(
+      reactor("document-event", {
+        documentType: "umh/production-ledger",
+        actionType: "APPROVE_ORDER",
+      }),
+    ).toBe("When Approve order runs on a Production Ledger");
+    expect(reactor("document-event", { documentType: "acme/invoice" })).toBe(
+      "When an Invoice changes",
+    );
+    expect(reactor("document-event", { documentId: "abc" })).toBe(
+      "When its document changes",
+    );
+    expect(
+      reactor("document-created", { documentType: "powerhouse/workflow" }),
+    ).toBe("When a Workflow is created");
+    expect(reactor("document-deleted", {})).toBe("When a document is deleted");
+  });
+
+  it("leaves expressions out of a reactor trigger's text", () => {
+    expect(
+      describeTrigger({
+        pieceName: "@powerhousedao/piece-reactor",
+        triggerName: "document-event",
+        config: { documentType: "{{variables.type}}", actionType: "" },
+      }),
+    ).toBe("When a document changes");
+  });
 });

@@ -1,7 +1,6 @@
 import type { IEventBus, Unsubscribe } from "@powerhousedao/reactor";
 import { FORWARDED_BUS_EVENT_TYPES } from "./forwarded-events.js";
-import { KeyedListeners } from "./listeners.js";
-import type { MessageRouter } from "./message-router.js";
+import { KeyedListeners, type MessageRouter } from "@powerhousedao/reactor/rpc";
 
 type BusSubscriber = (type: number, event: unknown) => void | Promise<void>;
 

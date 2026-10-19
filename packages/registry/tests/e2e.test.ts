@@ -18,7 +18,7 @@ import {
 } from "../src/constants.js";
 import type { PublishEvent } from "../src/notifications/types.js";
 import { runRegistry } from "../src/run.js";
-import type { WebhookConfig } from "../src/types.js";
+import type { PackageInfo, WebhookConfig } from "../src/types.js";
 import { packTarball } from "./pack.js";
 
 // Bound to an ephemeral port in runServer.
@@ -385,6 +385,18 @@ describe("registry e2e", () => {
       }
     });
 
+    it("describes a package by its npm name, not its manifest's", async () => {
+      const response = await fetch(`${REGISTRY_URL}/packages/${RENAMED}`);
+      expect(response.status).toBe(200);
+      const pkg = (await response.json()) as PackageInfo;
+      expect(pkg).toMatchObject({
+        name: RENAMED,
+        path: `/-/cdn/${RENAMED}`,
+        version: "1.0.0",
+      });
+      expect(pkg.manifest?.name).toBe("Renamed Display Fixture");
+    });
+
     it("returns full PackageInfo items with detail=full", async () => {
       const page = await fetchPage(`name=${PREFIX}-01&detail=full`);
       expect(page.items[0].manifest).toMatchObject({ category: "Testing" });
@@ -437,8 +449,13 @@ describe("registry e2e", () => {
       await vi.waitFor(
         async () => {
           const res = await fetch(`${REGISTRY_URL}/packages/${NAME}`);
-          const pkg = (await res.json()) as { versions?: string[] };
+          const pkg = (await res.json()) as {
+            distTags?: Record<string, string>;
+            versions?: string[];
+          };
           expect(pkg.versions).toHaveLength(3);
+          // The dev tag lands in a second write after its version
+          expect(pkg.distTags?.dev).toBe("2.1.0-dev.1");
         },
         { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
       );

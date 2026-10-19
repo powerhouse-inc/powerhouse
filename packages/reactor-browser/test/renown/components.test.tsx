@@ -139,7 +139,7 @@ afterEach(() => {
 describe("RenownLoginButton", () => {
   it("should render login button", async () => {
     const onLogin = vi.fn();
-    const screen = render(<RenownLoginButton onLogin={onLogin} />);
+    const screen = await render(<RenownLoginButton onLogin={onLogin} />);
 
     await expect
       .element(screen.getByRole("button", { name: "Log in with Renown" }))
@@ -148,14 +148,14 @@ describe("RenownLoginButton", () => {
 
   it("should call onLogin when clicked", async () => {
     const onLogin = vi.fn();
-    const screen = render(<RenownLoginButton onLogin={onLogin} />);
+    const screen = await render(<RenownLoginButton onLogin={onLogin} />);
 
     await screen.getByRole("button", { name: "Log in with Renown" }).click();
     expect(onLogin).toHaveBeenCalledOnce();
   });
 
   it("should show login text", async () => {
-    const screen = render(<RenownLoginButton />);
+    const screen = await render(<RenownLoginButton />);
 
     await expect.element(screen.getByText("Log in")).toBeVisible();
   });
@@ -163,7 +163,7 @@ describe("RenownLoginButton", () => {
 
 describe("RenownUserButton", () => {
   it("should render avatar placeholder when no avatarUrl", async () => {
-    const screen = render(
+    const screen = await render(
       <RenownUserButton address={TEST_ADDRESS} onDisconnect={vi.fn()} />,
     );
 
@@ -173,7 +173,7 @@ describe("RenownUserButton", () => {
   });
 
   it("should show popover with address on hover", async () => {
-    const screen = render(
+    const screen = await render(
       <RenownUserButton
         address={TEST_ADDRESS}
         username="testuser"
@@ -192,7 +192,7 @@ describe("RenownUserButton", () => {
   });
 
   it("should show 'View Profile' when userId is provided", async () => {
-    const screen = render(
+    const screen = await render(
       <RenownUserButton
         address={TEST_ADDRESS}
         userId="doc-123"
@@ -207,7 +207,7 @@ describe("RenownUserButton", () => {
 
   it("should call onDisconnect when log out is clicked", async () => {
     const onDisconnect = vi.fn();
-    const screen = render(
+    const screen = await render(
       <RenownUserButton address={TEST_ADDRESS} onDisconnect={onDisconnect} />,
     );
 
@@ -220,7 +220,7 @@ describe("RenownUserButton", () => {
 
 describe("RenownAuthButton", () => {
   it("should show login button when no renown instance is set", async () => {
-    const screen = render(<RenownAuthButton />);
+    const screen = await render(<RenownAuthButton />);
 
     await expect
       .element(screen.getByRole("button", { name: "Log in with Renown" }))
@@ -235,7 +235,7 @@ describe("RenownAuthButton", () => {
     url.searchParams.set("user", encodeURIComponent(TEST_USER_DID));
     window.history.replaceState({}, "", url.toString());
 
-    const screen = render(
+    const screen = await render(
       <>
         <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton />
@@ -255,7 +255,7 @@ describe("RenownAuthButton", () => {
     url.searchParams.set("user", encodeURIComponent(TEST_USER_DID));
     window.history.replaceState({}, "", url.toString());
 
-    const screen = render(
+    const screen = await render(
       <>
         <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton />
@@ -282,7 +282,7 @@ describe("RenownAuthButton", () => {
     url.searchParams.set("user", encodeURIComponent(TEST_USER_DID));
     window.history.replaceState({}, "", url.toString());
 
-    const screen = render(
+    const screen = await render(
       <>
         <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton>
@@ -299,7 +299,7 @@ describe("RenownAuthButton", () => {
   });
 
   it("should use children render function for unauthenticated state", async () => {
-    const screen = render(
+    const screen = await render(
       <RenownAuthButton>
         {(auth) =>
           auth.status !== "authorized" &&

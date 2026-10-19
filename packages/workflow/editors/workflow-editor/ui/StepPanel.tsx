@@ -2,7 +2,6 @@ import {
   isCoreBlock,
   stepBlock,
   triggerBlock,
-  triggerFields,
   type BlockRef,
 } from "./blocks.js";
 import { useId, useRef, useState, type ReactNode } from "react";
@@ -19,10 +18,14 @@ import {
   textInputClass,
 } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
+import { useSearchParam } from "../../shared/url-param.js";
 import { acyclicTargets, flowOrder, reachableFrom } from "./ap-layout.js";
 import { useBlockMeta } from "./block-meta.js";
 import { BlockLogo } from "./BlockSelector.js";
 import { ConnectionField } from "./ConnectionField.js";
+import { StepError } from "./StepError.js";
+import { ReactorConnectionField } from "./ReactorConnectionField.js";
+import { useSignInGate } from "../reactor-hooks.js";
 import {
   ExpressionPickerButton,
   ExpressionTokenLine,
@@ -43,6 +46,7 @@ import {
   type PropertySettingModel,
   type RetryPolicyModel,
   type StepModel,
+  TAB_PARAM,
   type TriggerModel,
   type WorkflowEditorCallbacks,
   type WorkflowModel,
@@ -172,6 +176,7 @@ function ConfigSection(props: {
   // False while read-only: edits carry no field modes or schemas.
   writesSettings?: boolean;
   connectionId?: string;
+  reactorConnectionId?: string;
   // Step whose config this is; scopes the expression picker to its ancestors.
   scopeStepId?: string;
   // Substituted into a piece's setup markdown; triggers only.
@@ -179,7 +184,15 @@ function ConfigSection(props: {
 }) {
   const { form } = props;
   const designTime = useDesignTime();
+  const gate = useSignInGate();
   const configRecord = (props.config ?? {}) as Record<string, unknown>;
+  const declared = form && form !== "loading" ? form.requireReactor : undefined;
+  const optionsBlocked =
+    declared && gate.required ? "Sign in to load options" : undefined;
+  const explainOptionsError =
+    declared && !props.reactorConnectionId
+      ? (message: string) => `Bind a reactor connection first. ${message}`
+      : undefined;
 
   if (form === "loading") return <FormSkeleton />;
   return (
@@ -214,6 +227,9 @@ function ConfigSection(props: {
           writesSettings={props.writesSettings}
           scopeStepId={props.scopeStepId}
           connectionId={props.connectionId}
+          reactorConnectionId={props.reactorConnectionId}
+          optionsBlocked={optionsBlocked}
+          explainOptionsError={explainOptionsError}
           secrets={designTime?.secrets}
           block={props.block}
           webhookUrl={props.webhookUrl}
@@ -226,6 +242,7 @@ function ConfigSection(props: {
                     current,
                     props.connectionId,
                     searchValue,
+                    props.reactorConnectionId,
                   )
               : undefined
           }
@@ -984,11 +1001,7 @@ function LastRunSection(props: {
             </span>{" "}
             {relativeTime(run.startedAt)}
           </p>
-          {step?.error ? (
-            <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-wf-fail/10 p-2.5 text-xs text-wf-fail">
-              {step.error}
-            </pre>
-          ) : null}
+          {step?.error ? <StepError error={step.error} /> : null}
           {step ? (
             <>
               <DataViewer label="Received" value={step.input} />
@@ -1016,7 +1029,8 @@ function LastRunSection(props: {
   );
 }
 
-type StepTab = "setup" | "run" | "settings";
+const STEP_TABS = ["setup", "run", "settings"] as const;
+type StepTab = (typeof STEP_TABS)[number];
 
 function settingsCustomised(step: StepModel, model: WorkflowModel): number {
   return [
@@ -1036,7 +1050,13 @@ export function StepPanel(props: {
   readOnly?: boolean;
 }) {
   const { step, callbacks } = props;
-  const [tab, setTab] = useState<StepTab>("setup");
+  const designTime = useDesignTime();
+  const [tab, setTabParam] = useSearchParam<StepTab>(
+    TAB_PARAM,
+    "setup",
+    STEP_TABS,
+  );
+  const setTab = (next: StepTab) => setTabParam(next, { replace: true });
   const block = stepBlock(step);
   const meta = useBlockMeta(block);
   const { form, formError, missing, issues } = useBlockCheck({
@@ -1142,6 +1162,16 @@ export function StepPanel(props: {
                 callbacks.updateStep({ id: step.id, connectionId })
               }
             />
+            <ReactorConnectionField
+              key={`${step.id}-reactor`}
+              block={block}
+              value={step.reactorConnectionId ?? ""}
+              workflowId={designTime?.workflowId}
+              publishedVersion={props.model.published?.version}
+              onChange={(reactorConnectionId) =>
+                callbacks.updateStep({ id: step.id, reactorConnectionId })
+              }
+            />
             <ConfigSection
               key={`${step.id}-config`}
               block={block}
@@ -1158,6 +1188,7 @@ export function StepPanel(props: {
               }
               writesSettings={writes}
               connectionId={step.connectionId ?? undefined}
+              reactorConnectionId={step.reactorConnectionId ?? undefined}
               scopeStepId={step.id}
             />
             {writes ? (
@@ -1372,6 +1403,7 @@ export function TriggerPanel(props: {
   callbacks: WorkflowEditorCallbacks;
   onClose: () => void;
   readOnly?: boolean;
+  publishedVersion?: number | null;
 }) {
   const { trigger, callbacks } = props;
   const designTime = useDesignTime();
@@ -1388,23 +1420,14 @@ export function TriggerPanel(props: {
   // Only a webhook trigger asks. The query mints on first ask, so opening
   // this panel on a schedule or document trigger must not create an endpoint.
   const endpoint = useWebhookEndpoint(isWebhookTrigger);
-  const setTrigger = (patch: {
-    config?: unknown;
-    connectionId?: string | null;
-    settings?: PropertySettingModel[];
-  }) => {
-    const config = patch.config === undefined ? trigger.config : patch.config;
-    const connectionId =
-      patch.connectionId === undefined
-        ? trigger.connectionId
-        : patch.connectionId;
-    callbacks.setTrigger({
-      ...triggerFields(block),
+  const setTriggerConfig = (
+    config: unknown,
+    settings?: PropertySettingModel[],
+  ) =>
+    callbacks.setTriggerConfig(
       config,
-      connectionId,
-      ...(writes ? { propertySettings: patch.settings } : {}),
-    });
-  };
+      writes ? { propertySettings: settings } : undefined,
+    );
   return (
     <div className="flex min-h-full flex-col">
       <PanelHeader
@@ -1428,14 +1451,28 @@ export function TriggerPanel(props: {
             key={`${trigger.id}-conn`}
             block={block}
             value={trigger.connectionId ?? ""}
-            onChange={(connectionId) => setTrigger({ connectionId })}
+            onChange={(connectionId) =>
+              callbacks.setTriggerConnection({ connectionId })
+            }
+          />
+        ) : null}
+        {isPieceTrigger ? (
+          <ReactorConnectionField
+            key={`${trigger.id}-reactor`}
+            block={block}
+            value={trigger.reactorConnectionId ?? ""}
+            workflowId={designTime?.workflowId}
+            publishedVersion={props.publishedVersion}
+            onChange={(reactorConnectionId) =>
+              callbacks.setTriggerConnection({ reactorConnectionId })
+            }
           />
         ) : null}
         {form !== "loading" && form?.display === "schedule" ? (
           <ScheduleBuilder
             key={trigger.id}
             config={trigger.config}
-            onChange={(config) => setTrigger({ config })}
+            onChange={(config) => setTriggerConfig(config)}
           />
         ) : (
           <ConfigSection
@@ -1445,9 +1482,10 @@ export function TriggerPanel(props: {
             formError={formError}
             config={trigger.config}
             settings={trigger.propertySettings}
-            onChange={(config, settings) => setTrigger({ config, settings })}
+            onChange={(config, settings) => setTriggerConfig(config, settings)}
             writesSettings={writes}
             connectionId={trigger.connectionId ?? undefined}
+            reactorConnectionId={trigger.reactorConnectionId ?? undefined}
             webhookUrl={
               endpoint.kind === "ready" ? endpoint.endpoint.url : undefined
             }
@@ -1460,14 +1498,7 @@ export function TriggerPanel(props: {
           kind="trigger"
           onUpdate={
             writes
-              ? (pieceVersion) =>
-                  callbacks.setTrigger({
-                    ...triggerFields(block),
-                    pieceVersion,
-                    config: trigger.config,
-                    connectionId: trigger.connectionId,
-                    propertySettings: trigger.propertySettings ?? undefined,
-                  })
+              ? (pieceVersion) => callbacks.setTriggerPieceVersion(pieceVersion)
               : undefined
           }
         />

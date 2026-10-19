@@ -1,36 +1,34 @@
 // Adapts the reactor's attachment client to the engine's AttachmentPort: both
 // directions go through the filesystem, so a step's bytes never cross the
 // worker's JSON IPC channel.
+import type { AttachmentRef } from "@powerhousedao/reactor";
 import type { AttachmentPort } from "../pieces/index.js";
 import { FileTooLargeError, maxFileBytes } from "../pieces/index.js";
 import { childLogger } from "document-model";
-import { open, readFile, rm } from "node:fs/promises";
+import { openAsBlob } from "node:fs";
+import { open, rm } from "node:fs/promises";
 
 const logger = childLogger(["workflow", "attachments"]);
 
-// The slice of IAttachmentClient this needs, declared structurally so the
-// subgraph does not depend on the attachments package's types.
+// The slice of the attachment client the engine uses, structural so hosts need
+// not install the attachments package; a type test pins it to IAttachmentClient.
 export interface AttachmentClientLike {
   upload(input: {
     file: Blob;
     fileName?: string;
     mimeType?: string;
-  }): Promise<{ ref?: string } & Record<string, unknown>>;
+    signal?: AbortSignal;
+  }): Promise<{ ref: string }>;
   // Streamed rather than materialized: the size limit has to refuse an
   // oversized attachment before its bytes are in this process's memory.
-  download(input: { documentId: string; ref: string }): Promise<{
-    header: { sizeBytes?: number; mimeType?: string; fileName?: string };
+  download(input: {
+    documentId: string;
+    ref: AttachmentRef;
+    signal?: AbortSignal;
+  }): Promise<{
+    header: { sizeBytes: number; mimeType: string; fileName: string };
     body: ReadableStream<Uint8Array>;
   }>;
-}
-
-function refOf(result: Record<string, unknown>): string {
-  const direct = result.ref;
-  if (typeof direct === "string") return direct;
-  // Some client versions nest the reference under the reservation.
-  const nested = (result.reservation as { ref?: unknown } | undefined)?.ref;
-  if (typeof nested === "string") return nested;
-  throw new Error("The attachment store returned no reference for the upload");
 }
 
 // Writes the body out while counting it, so a stream that outgrows the limit
@@ -62,28 +60,46 @@ async function writeCapped(
   await handle.close();
 }
 
+export interface AttachmentPortAccess {
+  // The workflow document a download is made under.
+  documentIdFor: () => string | undefined;
+  // Whether the running workflow may read the ref.
+  canReadRef: (ref: string) => Promise<boolean>;
+  // Told about every ref a step wrote, so the run may read it back.
+  onWritten?: (ref: string) => void;
+}
+
 export function createAttachmentPort(
   client: AttachmentClientLike,
-  // The workflow document a download is made under.
-  documentIdFor: () => string | undefined,
-  // The host's answer to whether a run of that workflow may read the ref.
-  canReadRef: (documentId: string, ref: string) => Promise<boolean>,
+  access: AttachmentPortAccess,
 ): AttachmentPort {
+  const authorize = async (ref: string): Promise<string> => {
+    const documentId = access.documentIdFor();
+    if (!documentId) {
+      throw new Error(
+        `Cannot resolve ${ref}: no workflow document is in scope to authorize the read`,
+      );
+    }
+    if (!(await access.canReadRef(ref))) {
+      throw new Error(
+        `Cannot resolve ${ref}: workflow "${documentId}" may not read it`,
+      );
+    }
+    return documentId;
+  };
   return {
-    async read(ref, destPath) {
-      const documentId = documentIdFor();
-      if (!documentId) {
-        throw new Error(
-          `Cannot resolve ${ref}: no workflow document is in scope to authorize the read`,
-        );
-      }
-      if (!(await canReadRef(documentId, ref))) {
-        throw new Error(
-          `Cannot resolve ${ref}: workflow "${documentId}" may not read it`,
-        );
-      }
+    async authorize(ref) {
+      await authorize(ref);
+    },
+
+    async read(ref, destPath, signal) {
+      const documentId = await authorize(ref);
       const limit = maxFileBytes();
-      const { header, body } = await client.download({ documentId, ref });
+      const { header, body } = await client.download({
+        documentId,
+        ref: ref as AttachmentRef,
+        ...(signal ? { signal } : {}),
+      });
       // The declared size refuses before a byte is read; writeCapped's own
       // count is what catches a header that understated the body.
       if (
@@ -95,23 +111,19 @@ export function createAttachmentPort(
         throw new FileTooLargeError(header.sizeBytes, limit);
       }
       await writeCapped(body, destPath, limit);
-      const contentType =
-        header.mimeType !== undefined && header.mimeType !== ""
-          ? header.mimeType
-          : undefined;
+      const contentType = header.mimeType !== "" ? header.mimeType : undefined;
       return { fileName: header.fileName, contentType };
     },
 
-    async write(file) {
-      const bytes = await readFile(file.path);
-      const result = await client.upload({
-        file: new Blob([new Uint8Array(bytes)], {
-          type: file.contentType ?? "application/octet-stream",
-        }),
+    async write(file, signal) {
+      // A file-backed Blob: hashed natively and streamed, never held in memory.
+      const { ref } = await client.upload({
+        file: await openAsBlob(file.path),
         fileName: file.fileName,
-        mimeType: file.contentType,
+        mimeType: file.contentType ?? "application/octet-stream",
+        ...(signal ? { signal } : {}),
       });
-      const ref = refOf(result);
+      access.onWritten?.(ref);
       logger.debug(`Ingested ${file.fileName} (${file.size} bytes) as ${ref}`);
       return ref;
     },

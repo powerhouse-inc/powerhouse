@@ -11,10 +11,13 @@ async function pgliteStore(): Promise<AuthStore> {
 describe("PgStore (PGlite)", () => {
   let store: AuthStore;
 
+  // NOTE(to author): the default 10s hook timeout flaked on a loaded Windows
+  // CI shard (run 38434514814) — a fresh PGlite's wasm cold start can exceed
+  // it. Generous timeout, same setup.
   beforeEach(async () => {
     store = await pgliteStore();
     await store.init();
-  });
+  }, 60_000);
 
   it("createUser is atomic: second create of the same name returns false", async () => {
     expect(await store.createUser("alice", "hash1")).toBe(true);

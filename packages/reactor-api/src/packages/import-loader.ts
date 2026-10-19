@@ -13,6 +13,8 @@ import {
   pieceListLocation,
   piecesFromListModule,
 } from "./pieces.js";
+import { extractDocumentModels } from "./document-model-detection.js";
+import { extractSubgraphs } from "./subgraph-extraction.js";
 import type { PackagePieceEntry } from "./types.js";
 import {
   extractUpgradeManifests,
@@ -42,12 +44,9 @@ export class ImportPackageLoader implements IPackageLoader {
     const pkgModule = await loadDocumentModelsUtil(identifier);
 
     if (pkgModule) {
-      // duck type: the namespace also carries non-module exports such as the
-      // upgradeManifests aggregate
-      const models = Object.values(pkgModule).filter(
-        (m: unknown): m is DocumentModelModule =>
-          m !== null && typeof m === "object" && "documentModel" in m,
-      );
+      // The namespace also carries non-module exports such as the
+      // upgradeManifests aggregate; the shared predicate drops those.
+      const models = extractDocumentModels(pkgModule);
       this.logger.verbose(
         `  ➜  Loaded ${models.length} Document Models from: ${identifier}`,
       );
@@ -84,13 +83,13 @@ export class ImportPackageLoader implements IPackageLoader {
       return [];
     }
 
-    const subgraphs = Object.values(pkgModule).map((subgraph) => {
-      return Object.values(subgraph);
-    });
+    const subgraphs = extractSubgraphs(pkgModule);
 
-    this.logger.verbose(`  ➜  Loaded Subgraphs from: ${identifier}`);
+    this.logger.verbose(
+      `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,
+    );
 
-    return subgraphs.flat();
+    return subgraphs;
   }
 
   async loadProcessors(

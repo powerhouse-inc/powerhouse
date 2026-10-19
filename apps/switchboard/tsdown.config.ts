@@ -8,6 +8,12 @@ export default defineConfig({
     "src/utils.mts",
     "src/install-packages.mts",
     "src/migrate.mts",
+    // R2: the built-in plugins, published as subpaths so host.js runner.plugins
+    // specifiers resolve from a project's dependency tree.
+    "src/plugins/mcp.mts",
+    "src/plugins/attachments.mts",
+    "src/plugins/privacy.mts",
+    "src/plugins/workflows.mts",
   ],
   platform: "node",
   outDir: "dist",

@@ -5,6 +5,7 @@ import {
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { DriveCollectionId } from "../../cache/operation-index-types.js";
+import { RemotePersistence } from "../../sync/types.js";
 import type { RemotePeer, RemoteRecord } from "../../sync/types.js";
 import type { ISyncRemoteStorage } from "../interfaces.js";
 import type { Database, InsertableSyncRemote, SyncRemoteRow } from "./types.js";
@@ -46,6 +47,9 @@ function rowToRemoteRecord(row: SyncRemoteRow): RemoteRecord {
     options: {
       sinceTimestampUtcMs: "0",
       boundAddress: row.bound_address ?? undefined,
+      ...(row.persistence === (RemotePersistence.Session as string)
+        ? { persistence: RemotePersistence.Session }
+        : {}),
     },
     status: {
       push: {
@@ -111,6 +115,7 @@ function remoteRecordToRow(remote: RemoteRecord): InsertableSyncRemote {
       : null,
     pull_failure_count: remote.status.pull.failureCount,
     bound_address: remote.options.boundAddress ?? null,
+    persistence: remote.options.persistence ?? RemotePersistence.Durable,
     peer_manifest: remote.peer?.manifest
       ? canonicalJson(remote.peer.manifest, "peer manifest")
       : null,

@@ -13,6 +13,7 @@ import {
 import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
 import { dirname, join } from "node:path";
 import type { GenerateDocumentModelArgs } from "../types.js";
+import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 
 export async function startGenerateDocumentModel(
   args: GenerateDocumentModelArgs,
@@ -54,4 +55,5 @@ export async function startGenerateDocumentModel(
     return;
   }
   await project.save();
+  warnSubgraphTypeConflicts(projectDir);
 }

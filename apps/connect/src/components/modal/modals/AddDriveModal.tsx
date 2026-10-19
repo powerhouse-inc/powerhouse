@@ -10,11 +10,14 @@ import {
   closePHModal,
   extractDriveSlugFromPath,
   fetchDriveInfo,
+  getFullReactorClient,
   getDrives,
+  getPHNavigation,
   setSelectedDrive,
   useAppModules,
   usePHModal,
   waitForDocumentReady,
+  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-options.js";
@@ -73,12 +76,12 @@ export function AddDriveModal() {
       // Navigate into the drive if its initial sync lands in time.
       // Not awaited so the modal closes immediately.
       // waiting for the drive and listing drives both need the full reactor client
-      const reactorClient = window.ph?.reactorClientModule?.client;
+      const reactorClient = getFullReactorClient();
       // Only a still unselected, un-pinned (home) view gets pulled into the
       // new drive — the user may have navigated elsewhere meanwhile.
       const stillOnHome = () =>
-        !window.ph?.selectedDriveId &&
-        !extractDriveSlugFromPath(window.location.pathname);
+        !getPHStore()?.selectedDriveId &&
+        !extractDriveSlugFromPath(getPHNavigation().location().pathname);
       void (async () => {
         try {
           if (!reactorClient) {

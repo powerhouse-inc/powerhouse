@@ -64,33 +64,34 @@
     "test:worker:ui": "rimraf .ph && PH_REACTOR_WORKER=1 playwright test --ui"
   },
   "dependencies": {
-    "document-model": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/versioned-documents": "workspace:*",
-    "zod": "catalog:",
+    "document-model": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@powerhousedao/ph-cli": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
+    "@playwright/test": "^1.60.0",
     "@powerhousedao/e2e-utils": "workspace:*",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "tailwindcss": "catalog:",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/registry": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "@tailwindcss/cli": "catalog:",
+    "@tanstack/react-router": "1.170.41",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
-    "@playwright/test": "^1.60.0",
-    "@powerhousedao/registry": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/switchboard": "workspace:*",
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:"
+    "tailwindcss": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "description": ""
 }

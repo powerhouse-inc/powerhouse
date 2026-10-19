@@ -313,6 +313,63 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
     ).toBeNull();
   });
 
+  it("retries a version that failed a while ago when it's requested", async () => {
+    packages.set("pkg-u", {
+      distTags: { latest: "3.0.0" },
+      versions: { "3.0.0": pieceTarball("pkg-u", "3.0.0", "@u/piece") },
+    });
+    await db.query(
+      `INSERT INTO registry_versions (package, version, status, error, updated_at)
+       VALUES ('pkg-u', '3.0.0', 'failed', 'Please reduce your request rate', now())`,
+    );
+    // A recent failure is reported as it is
+    expect(await catalog.ensureVersion("pkg-u", "3.0.0", 1_000)).toMatchObject({
+      kind: "failed",
+    });
+
+    await db.query(
+      "UPDATE registry_versions SET updated_at = now() - interval '1 hour'",
+    );
+    workers.push(await startWorker(ctx, { concurrency: 1 }));
+    const result = await catalog.ensureVersion("pkg-u", "3.0.0", 10_000);
+    expect(result.kind).toBe("ready");
+  });
+
+  it("never retries a version that failed for good", async () => {
+    await indexManifest("pkg-u", ["3.0.0"], { latest: "3.0.0" }, "1-a");
+    packages.set("pkg-u", {
+      distTags: { latest: "3.0.0" },
+      versions: { "3.0.0": pieceTarball("pkg-u", "3.0.0", "@u/piece") },
+    });
+    await db.query(
+      `INSERT INTO registry_versions (package, version, status, error, permanent, updated_at)
+       VALUES ('pkg-u', '3.0.0', 'failed', 'piece taken', true, now() - interval '2 hours')`,
+    );
+    expect(await catalog.ensureVersion("pkg-u", "3.0.0", 1_000)).toMatchObject({
+      kind: "failed",
+      error: "piece taken",
+    });
+    await reconcile(db, { full: true });
+    expect((await queued()).filter((j) => j.kind === "process")).toEqual([]);
+  });
+
+  it("keeps a published version's rows when its package metadata 404s", async () => {
+    packages.set("pkg-a", {
+      distTags: { latest: "1.0.0" },
+      versions: { "1.0.0": pieceTarball("pkg-a", "1.0.0", "@t/piece") },
+    });
+    await db.query(
+      "CREATE TABLE IF NOT EXISTS verdaccio_packages (name text PRIMARY KEY)",
+    );
+    await db.query("INSERT INTO verdaccio_packages (name) VALUES ('pkg-a')");
+    await processVersion(ctx, job("process", "pkg-a", "1.0.0"), noFinish);
+    packages.delete("pkg-a");
+    await expect(
+      processVersion(ctx, job("process", "pkg-a", "1.0.0"), noFinish),
+    ).rejects.toThrow("returned 404");
+    expect((await versionRow("pkg-a", "1.0.0"))?.status).toBe("ready");
+  });
+
   it("queues only tagged versions when syncing", async () => {
     packages.set("pkg-a", {
       distTags: { latest: "2.0.0", dev: "2.1.0-dev.1" },
@@ -397,6 +454,28 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
       { timeout: 10_000, interval: 100 },
     );
     expect(await versionRow("left-pad", "1.0.0")).toBeUndefined();
+
+    // A row an earlier import marked local is cleared, so nothing requeues it
+    await db.query(
+      `INSERT INTO registry_packages (name, local) VALUES ('left-pad', true)`,
+    );
+    await enqueue(
+      db,
+      "sync",
+      "left-pad",
+      "",
+      { local: true },
+      BACKGROUND_PRIORITY,
+    );
+    await vi.waitFor(
+      async () => {
+        const row = await db.query<{ local: boolean }>(
+          "SELECT local FROM registry_packages WHERE name = 'left-pad'",
+        );
+        expect(row.rows[0]?.local).toBe(false);
+      },
+      { timeout: 10_000, interval: 100 },
+    );
   });
 
   it("serves an unprocessed version on demand", async () => {
@@ -645,6 +724,32 @@ describe.each(backends)("registry worker (%s)", (_, createDb) => {
       kind: "sync",
       package: "pkg-a",
     });
+  });
+
+  it("retries a tagged version that failed an hour ago", async () => {
+    await indexManifest("pkg-a", ["1.0.0"], { latest: "1.0.0" }, "1-a");
+    await db.query(
+      `INSERT INTO registry_versions (package, version, status, error, updated_at)
+       VALUES ('pkg-a', '1.0.0', 'failed', 'throttled', now() - interval '10 minutes')`,
+    );
+    expect(
+      (await reconcile(db, { full: true }), await queued()).filter(
+        (j) => j.kind === "process",
+      ),
+    ).toEqual([]);
+    await db.query("DELETE FROM registry_jobs");
+    await db.query(
+      "UPDATE registry_versions SET updated_at = now() - interval '2 hours'",
+    );
+    await reconcile(db, { full: true });
+    expect((await queued()).filter((j) => j.kind === "process")).toEqual([
+      {
+        kind: "process",
+        package: "pkg-a",
+        version: "1.0.0",
+        priority: BACKGROUND_PRIORITY,
+      },
+    ]);
   });
 
   it("leaves packages cached from the uplink alone", async () => {

@@ -102,10 +102,13 @@ export function parseModelJson(text: string): unknown {
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
 
-// The first uuid in the text, else the text without quotes.
+// A derived id: 43 base64url characters standing alone.
+const DERIVED_ID = /(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/;
+
+// The first uuid or derived id in the text, else the text without quotes.
 function extractDocumentId(text: string): string | undefined {
-  const uuid = UUID.exec(text);
-  if (uuid) return uuid[0];
+  const id = UUID.exec(text) ?? DERIVED_ID.exec(text);
+  if (id) return id[0];
   return (
     text
       .trim()

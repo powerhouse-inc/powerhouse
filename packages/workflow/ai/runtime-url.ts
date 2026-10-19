@@ -1,5 +1,6 @@
 // Points the module-level runtime client at the selected drive's
 // workflow-runtime subgraph before an AI tool talks to it.
+import { getPHStore } from "@powerhousedao/reactor-browser";
 import { resolveDriveSwitchboard } from "@powerhousedao/reactor-browser/ai";
 import {
   DEFAULT_RUNTIME_URL,
@@ -8,7 +9,7 @@ import {
 
 export function syncRuntimeUrl(): void {
   if (typeof window === "undefined") return;
-  const switchboard = resolveDriveSwitchboard(window.ph?.selectedDriveId);
+  const switchboard = resolveDriveSwitchboard(getPHStore()?.selectedDriveId);
   // No resolvable switchboard (no selection, or a local/unsynced drive):
   // reset to the default rather than leaving a prior drive's URL attached.
   setRuntimeUrl(

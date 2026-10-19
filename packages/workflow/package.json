@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/workflow",
-  "version": "6.2.3-dev.37",
+  "version": "6.2.3-dev.63",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": [
@@ -47,6 +47,12 @@
       "browser": "./dist/browser/editors/index.js",
       "node": "./dist/node/editors/index.mjs"
     },
+    "./editors/runtime": {
+      "source": "./editors/runtime/index.ts",
+      "types": "./dist/types/editors/runtime/index.d.ts",
+      "browser": "./dist/browser/editors/runtime/index.js",
+      "node": "./dist/node/editors/runtime/index.mjs"
+    },
     "./pieces": {
       "source": "./pieces/index.ts",
       "types": "./dist/types/pieces/index.d.ts",
@@ -92,10 +98,12 @@
     "@playwright/test": "^1.60.0",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@tailwindcss/cli": "catalog:",
+    "@testing-library/react": "^16.0.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "^20.8.9",
     "rolldown": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",

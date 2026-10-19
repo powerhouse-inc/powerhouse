@@ -23,7 +23,7 @@
  */
 
 import { PGlite } from "@electric-sql/pglite";
-import { AtomicNodeFs } from "@powerhousedao/pglite-fs";
+import { NodeFS } from "@electric-sql/pglite/nodefs";
 import { metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import {
@@ -31,6 +31,10 @@ import {
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
+import {
+  createDurableNodeFs,
+  resolvePgliteFsync,
+} from "@powerhousedao/reactor-api/pglite-node";
 import {
   JobStatus,
   REACTOR_SCHEMA,
@@ -616,7 +620,13 @@ function createDatabase(dbPath: string | undefined): Kysely<any> {
 
   console.log(`  Using PGlite with file storage: ${dbPath}`);
   return new Kysely({
-    dialect: new PGliteDialect(new PGlite({ fs: new AtomicNodeFs(dbPath) })),
+    dialect: new PGliteDialect(
+      new PGlite({
+        fs: createDurableNodeFs(NodeFS, dbPath, {
+          fsync: resolvePgliteFsync(process.env),
+        }),
+      }),
+    ),
   });
 }
 
@@ -828,6 +838,7 @@ async function main() {
       } catch (error) {
         throw new Error(
           `Failed to load document ${docId}: ${error instanceof Error ? error.message : error}`,
+          { cause: error },
         );
       }
     } else {

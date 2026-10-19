@@ -1,6 +1,7 @@
 import type { PHModal } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
+import { hasHostNavigation, openTarget } from "./navigation.js";
 
 const modalEventFunctions = makePHEventFunctions("modal");
 
@@ -13,8 +14,12 @@ export const setPHModal = modalEventFunctions.setValue;
 /** Adds an event handler for the modal */
 export const addModalEventHandler = modalEventFunctions.addEventHandler;
 
-/** Shows a modal */
+/** Shows a modal; with an app-shell navigation, "settings" opens the settings page. */
 export function showPHModal(modal: PHModal) {
+  if (modal.type === "settings" && hasHostNavigation()) {
+    openTarget({ settings: true });
+    return;
+  }
   setPHModal(modal);
 }
 

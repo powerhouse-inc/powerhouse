@@ -1,8 +1,7 @@
-import {
-  ConfigLoader,
-  JsonConfigAdapter,
-  type RuntimePowerhouseConfig,
-} from "@powerhousedao/shared/connect";
+// Narrow subpaths: the shared/connect barrel puts zod and semver on the boot path.
+import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
+import { ConfigLoader } from "@powerhousedao/shared/connect/config-loader";
+import { JsonConfigAdapter } from "@powerhousedao/shared/connect/json-adapter";
 
 const loader = new ConfigLoader(
   new JsonConfigAdapter({
@@ -11,7 +10,27 @@ const loader = new ConfigLoader(
 );
 
 export async function loadRuntimeConfig(): Promise<RuntimePowerhouseConfig> {
-  return (await loader.read()) as RuntimePowerhouseConfig;
+  const config = (await loader.read()) as RuntimePowerhouseConfig;
+  // R3: a served composition (projected from host.js runner.plugins by the
+  // uniform-runners connect runner) runs the plugin pipeline over the config
+  // BEFORE the cache warms — every downstream consumer sees the transformed
+  // config through the classic paths. Runtime-flagged (query/stored override
+  // beats the composition's own presence acting as the config flag); no
+  // composition = classic boot, byte-identical.
+  if (config.connect?.composition) {
+    const { isRuntimeFlagEnabled } = await import("./utils/runtime-flag.js");
+    const enabled = isRuntimeFlagEnabled({
+      queryKey: "pluginRunner",
+      storageKey: "ph:flag:pluginRunner",
+      readConfigFlag: () => true,
+    });
+    if (enabled) {
+      const { applyComposition } = await import("./plugin-host.js");
+      config.connect = await applyComposition(config.connect);
+      loader.prime(config);
+    }
+  }
+  return config;
 }
 
 /**
@@ -20,9 +39,4 @@ export async function loadRuntimeConfig(): Promise<RuntimePowerhouseConfig> {
  */
 export function getRuntimeConfig(): RuntimePowerhouseConfig {
   return loader.getCached() as RuntimePowerhouseConfig;
-}
-
-export function applyConnectBranding(config: RuntimePowerhouseConfig): void {
-  const appName = config.connect.branding?.appName;
-  if (appName) document.title = appName;
 }

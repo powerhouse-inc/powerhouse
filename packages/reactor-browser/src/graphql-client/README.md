@@ -12,6 +12,12 @@ editor-module hooks find nothing - see [Limitations](#limitations). An app below
 this provider renders the components it imports itself and builds its own
 actions.
 
+The client needs a Switchboard that serves document `meta` and
+`protocolVersions`, the full `JobInfo` and `executeBatch`. Every document read
+or write (`get`, `find`, `create`, `execute`, relationships, subscriptions)
+selects the document fields, and `waitForJob` and `executeBatch` select the job
+fields, so against an older Switchboard every call fails on the unknown fields.
+
 ## Mounting it
 
 ```tsx
@@ -168,9 +174,25 @@ the full reactor client implement:
 | `undoRedoAvailability(identifier, scope?, ...)`   | Base-reducer 3 treats a row stored with an error as one that threw.               |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
-the signatures cannot drift. Everything outside those members - `drives`,
-`find`, `resolveIdOrSlug`, relationships, jobs, `rename`, `executeBatch`, the
-document-model module getters - is not on it and not implemented here.
+the signatures cannot drift.
+
+The client also implements these `IReactorClient` members, outside the
+interface:
+
+| Method                                                  | Notes                                                                                                                                                |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `find(search, view?, paging?, signal?)`                 | By `type` and `parentId` at head. `ids`, `slugs` or a point-in-time view throw `GraphQLOperationNotSupportedError`; see `findIsServableOverGraphQL`. |
+| `isServed(identifier, view?, signal?)`                  | Asks `documentServed`, the gate `find` passes. A point-in-time view, or a Switchboard without the query, throws `GraphQLOperationNotSupportedError`.  |
+| `get{Outgoing,Incoming}Relationships`                   | Paged documents.                                                                                                                                     |
+| `get{Outgoing,Incoming}RelationshipEdges`               | Paged edges.                                                                                                                                         |
+| `executeBatch(request, signal?)`                        | Signs each job for its resolved id and emits the changes. A FAILED job throws `BatchJobFailedError` with every job's state.                          |
+| `getJob(jobId, signal?)`                                | One `jobStatus` read, no polling; `undefined` when the server answers none.                                                                          |
+| `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
+| `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
+| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`.                                             |
+
+`drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
+module getters are not implemented here.
 
 Plus what only this client has:
 
@@ -254,6 +276,20 @@ alike. The header is a lowercase `authorization`; on the socket it is the
 Return `undefined` (or an empty string) and the request goes out with no
 authorization header at all. A rejecting provider fails the request rather than
 silently downgrading to anonymous.
+
+### Drive routing
+
+A request that is known to belong to one drive carries that drive's id in a
+`Drive-Id` header, which a Switchboard load balancer pins on: `create` of a
+drive with no parent (its own id) and `execute` on a drive. The client cannot tell from an
+identifier alone whether it names a drive, so for `create` under a parent,
+`executeBatch`, `deleteDocument` and `find({ parentId })` it asks the
+`driveIdFor` option, and sends nothing when that is absent or names no drive.
+Where the client has its own proof and the option disagrees, the proof is sent
+and the disagreement logged.
+
+A Switchboard that does not own the drive answers 421, and the client throws
+`GraphQLWrongBackendError` with the drive id and the server's payload.
 
 ## Typed subgraphs
 
@@ -439,9 +475,10 @@ Known and deliberate. Nothing here is a bug report.
   `addDocument`, `addFileWithProgress` and `copyNode` helpers throw or no-op for
   the same reason. Render editor components the app imports directly, and build
   actions the app declares itself.
-- **No drives, no `find`, no jobs.** They are not on `IReactorBrowserClient`.
-  There is no drive bootstrapping anywhere: `create(document, parentIdentifier?)`
-  is the only parenting there is.
+- **No drives, and `find` and jobs only on the class.** They are not on
+  `IReactorBrowserClient`, so the hooks never call them. There is no drive
+  bootstrapping anywhere: `create(document, parentIdentifier?)` is the only
+  parenting the hooks use.
 - **Realtime degrades to local-only.** A socket that cannot be opened, or is
   refused because the Switchboard requires auth and the subscriber is anonymous,
   is logged once and ignored. The client keeps emitting its own changes. The

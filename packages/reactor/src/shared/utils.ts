@@ -30,6 +30,28 @@ export function throwIfAborted(
   }
 }
 
+export const TIMED_OUT = Symbol("deadline-expired");
+
+/** Races a call that cannot be cancelled; on {@link TIMED_OUT} the call may still settle later. */
+export async function withDeadline<T>(
+  pending: Promise<T>,
+  timeoutMs: number,
+): Promise<T | typeof TIMED_OUT> {
+  let handle: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    handle = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
+  });
+  try {
+    return await Promise.race([pending, expiry]);
+  } finally {
+    clearTimeout(handle);
+  }
+}
+
+export function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export type ParsedPaging = {
   offset: number;
   limit: number;

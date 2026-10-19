@@ -1,5 +1,5 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import { getBuildHashStatus } from "@powerhousedao/connect/hooks";
+import { getBuildHashStatus } from "./utils.js";
 import { logger } from "document-model";
 import { useEffect } from "react";
 

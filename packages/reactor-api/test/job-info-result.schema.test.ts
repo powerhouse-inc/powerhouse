@@ -35,6 +35,12 @@ const pendingJob = {
   documentId: "doc-1",
   status: "PENDING",
   createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+  consistencyToken: {
+    version: 1,
+    createdAtUtcIso: "2026-01-01T00:00:00.000Z",
+    coordinates: [],
+  },
+  meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
 };
 
 function clientReturning(job: unknown): IReactorClient {
@@ -43,14 +49,14 @@ function clientReturning(job: unknown): IReactorClient {
   } as unknown as IReactorClient;
 }
 
-const ask = (job: unknown) =>
+const ask = (job: unknown, source = QUERY, serves = true) =>
   graphql({
     schema: buildSchema(SDL),
-    source: QUERY,
+    source,
     variableValues: { jobId: "job-1" },
     rootValue: {
       jobStatus: (args: { jobId: string }) =>
-        jobStatus(clientReturning(job), args, () => Promise.resolve(true)),
+        jobStatus(clientReturning(job), args, () => Promise.resolve(serves)),
     },
   });
 
@@ -80,5 +86,98 @@ describe("asking for a job that has not finished", () => {
     expect(result.errors).toBeUndefined();
     const data = result.data as { jobStatus: { result: unknown } };
     expect(data.jobStatus.result).toEqual({ revision: 3 });
+  });
+});
+
+const FULL_QUERY = `
+  query Status($jobId: String!) {
+    jobStatus(jobId: $jobId) {
+      id
+      documentId
+      status
+      error
+      errorName
+      consistencyToken {
+        version
+        createdAtUtcIso
+        coordinates {
+          documentId
+          scope
+          branch
+          operationIndex
+        }
+      }
+      meta {
+        batchId
+        batchJobIds
+      }
+    }
+  }
+`;
+
+describe("what a job carries over the wire", () => {
+  it("names its document, error class, consistency token and batch", async () => {
+    const result = await ask(
+      {
+        ...pendingJob,
+        status: "FAILED",
+        completedAtUtcIso: "2026-01-01T00:00:01.000Z",
+        error: {
+          name: "UpgradePreconditionFailedError",
+          message: "revision moved",
+          stack: "at secret (server.ts:1)",
+        },
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+          coordinates: [
+            {
+              documentId: "doc-1",
+              scope: "global",
+              branch: "main",
+              operationIndex: 4,
+            },
+          ],
+        },
+        meta: { batchId: "batch-1", batchJobIds: ["job-1"], caller: "x" },
+      },
+      FULL_QUERY,
+    );
+
+    expect(result.errors).toBeUndefined();
+    expect(result.data).toEqual({
+      jobStatus: {
+        id: "job-1",
+        documentId: "doc-1",
+        status: "FAILED",
+        error: "revision moved",
+        errorName: "UpgradePreconditionFailedError",
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso: "2026-01-01T00:00:01.000Z",
+          coordinates: [
+            {
+              documentId: "doc-1",
+              scope: "global",
+              branch: "main",
+              operationIndex: 4,
+            },
+          ],
+        },
+        meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
+      },
+    });
+  });
+
+  it("answers an unserved job with the reactor's unknown-job shape", async () => {
+    const result = await ask(pendingJob, FULL_QUERY, false);
+
+    expect(result.errors).toBeUndefined();
+    const data = result.data as {
+      jobStatus: { documentId: string; status: string; error: string };
+    };
+    expect(data.jobStatus.documentId).toBe("");
+    expect(data.jobStatus.status).toBe("FAILED");
+    expect(data.jobStatus.error).toBe("Job not found");
   });
 });

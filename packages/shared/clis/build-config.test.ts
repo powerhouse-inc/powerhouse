@@ -235,4 +235,9 @@ describe("buildPieceBuildConfig", () => {
   it("does not emit declarations itself (tsc does)", () => {
     expect(cfg.dts).toBe(false);
   });
+
+  it("minifies the bundle and ships no source map", () => {
+    expect(cfg.minify).toBe(true);
+    expect(cfg.sourcemap).toBe(false);
+  });
 });

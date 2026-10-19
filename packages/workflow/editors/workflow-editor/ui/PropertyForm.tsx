@@ -24,6 +24,10 @@ import {
 } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
 import {
+  keyOf as configKey,
+  usePendingEcho,
+} from "../../shared/pending-echo.js";
+import {
   ExpressionPickerButton,
   ExpressionTokenLine,
   useExpressionField,
@@ -359,34 +363,38 @@ function ArrayRows(props: {
   );
 }
 
+function rowsOf(value: Record<string, unknown>) {
+  return Object.entries(value).map(([key, entry]) => ({
+    key,
+    value: stringifyValue(entry),
+  }));
+}
+
+function recordOf(rows: { key: string; value: string }[]) {
+  const record: Record<string, unknown> = {};
+  for (const row of rows) {
+    if (row.key.trim() !== "") record[row.key.trim()] = row.value;
+  }
+  return record;
+}
+
 // Key/value rows for an OBJECT dictionary; values stay strings.
 function ObjectRows(props: {
   value: Record<string, unknown>;
   onCommit: (value: Record<string, unknown> | undefined) => void;
   invalid: boolean;
 }) {
-  const [rows, setRows] = useState(() =>
-    Object.entries(props.value).map(([key, value]) => ({
-      key,
-      value: stringifyValue(value),
-    })),
-  );
-  const [prevValue, setPrevValue] = useState(props.value);
-  if (props.value !== prevValue) {
-    setPrevValue(props.value);
-    setRows(
-      Object.entries(props.value).map(([key, value]) => ({
-        key,
-        value: stringifyValue(value),
-      })),
-    );
+  const [rows, setRows] = useState(() => rowsOf(props.value));
+  // Rows already spelling the new value keep their drafts and empty entries.
+  const valueKey = configKey(props.value);
+  const [seen, setSeen] = useState(valueKey);
+  if (seen !== valueKey) {
+    setSeen(valueKey);
+    if (configKey(recordOf(rows)) !== valueKey) setRows(rowsOf(props.value));
   }
   const commit = (next: { key: string; value: string }[]) => {
     setRows(next);
-    const record: Record<string, unknown> = {};
-    for (const row of next) {
-      if (row.key.trim() !== "") record[row.key.trim()] = row.value;
-    }
+    const record = recordOf(next);
     props.onCommit(Object.keys(record).length > 0 ? record : undefined);
   };
   return (
@@ -596,6 +604,10 @@ function PropField(props: {
   nested?: boolean;
   // Substituted into MARKDOWN props; absent until the endpoint is minted.
   webhookUrl?: string;
+  // Why options can't load right now; shown instead of loading them.
+  optionsBlocked?: string;
+  // Puts a resolver failure in the step's terms.
+  explainOptionsError?: (message: string) => string;
 }) {
   const { prop, value } = props;
   const fieldId = useId();
@@ -654,7 +666,7 @@ function PropField(props: {
   ) : undefined;
 
   const dynamicLoad =
-    props.loadOptions && prop.hasDynamicResolver
+    props.loadOptions && prop.hasDynamicResolver && !props.optionsBlocked
       ? () => props.loadOptions!(prop.name)
       : undefined;
   const isDropdown =
@@ -712,8 +724,12 @@ function PropField(props: {
       onClick={reload}
     />
   );
+  const blocked = prop.hasDynamicResolver ? props.optionsBlocked : undefined;
   const loadError = (state: LoadState<unknown>) =>
-    state.kind === "error" ? state.message : null;
+    blocked ??
+    (state.kind === "error"
+      ? (props.explainOptionsError?.(state.message) ?? state.message)
+      : null);
 
   const textInput = (extra: {
     type?: string;
@@ -1129,7 +1145,9 @@ function PropField(props: {
             placeholder={
               optionsUnavailable
                 ? "Options for nested fields are available soon"
-                : (result?.placeholder ?? prop.placeholder ?? "Choose…")
+                : dropdown.syncing
+                  ? "Waiting for the Switchboard…"
+                  : (result?.placeholder ?? prop.placeholder ?? "Choose…")
             }
           />
         </FieldShell>
@@ -1506,6 +1524,11 @@ const NO_BLOCK: BlockRef = {
   name: "",
 };
 
+interface FormState {
+  value: Record<string, unknown>;
+  settings: PropertySettingModel[] | null;
+}
+
 export function PropertyForm(props: {
   props: BlockFormProp[];
   // Leads the resolver cache keys; absent for forms with no resolvers.
@@ -1534,26 +1557,26 @@ export function PropertyForm(props: {
   scopeStepId?: string;
   // Auth-dependent resolvers re-run when this changes.
   connectionId?: string;
+  // Reactor-reading resolvers too.
+  reactorConnectionId?: string;
+  optionsBlocked?: string;
+  explainOptionsError?: (message: string) => string;
   // Rendered inside another field; nested resolvers are not loadable yet.
   nested?: boolean;
   // This workflow's endpoint URL, for a piece's setup markdown.
   webhookUrl?: string;
 }) {
-  // Track the latest committed config so sequential field edits accumulate;
-  // derive-during-render resets it when the document value changes.
-  const [current, setCurrent] = useState(props.value);
-  const [prevValue, setPrevValue] = useState(props.value);
-  if (props.value !== prevValue) {
-    setPrevValue(props.value);
-    setCurrent(props.value);
-  }
-
-  const [settings, setSettings] = useState(props.settings ?? null);
-  const [prevSettings, setPrevSettings] = useState(props.settings);
-  if (props.settings !== prevSettings) {
-    setPrevSettings(props.settings);
-    setSettings(props.settings ?? null);
-  }
+  // Each edit builds on the newest config and settings sent; their echo
+  // changes nothing, and anything else the document says replaces them.
+  const echo = usePendingEcho<FormState>(
+    { value: props.value, settings: props.settings ?? null },
+    (next, shown) => {
+      if (next.settings !== shown.settings) {
+        props.onChange(next.value, next.settings ?? []);
+      } else props.onChange(next.value);
+    },
+  );
+  const { value: current, settings } = echo.value;
   const tracksSettings = props.writesSettings === true;
   const readDynamic = useDynamicCache();
 
@@ -1572,6 +1595,7 @@ export function PropertyForm(props: {
           prop,
           config,
           props.connectionId,
+          props.reactorConnectionId,
         ),
       );
       if (!fields) continue;
@@ -1615,22 +1639,19 @@ export function PropertyForm(props: {
       }
     }
     if (tracksSettings) nextSettings = withResolvedSchemas(nextSettings, next);
-    setCurrent(next);
-    if (nextSettings !== settings) {
-      setSettings(nextSettings);
-      props.onChange(next, nextSettings ?? []);
-    } else props.onChange(next);
+    echo.commit({ value: next, settings: nextSettings });
   };
 
   // A mode switch alone is still an edit of the config it belongs to.
   const setMode = (name: string, mode: PropertyModeValue) => {
     if (!tracksSettings || settingFor(settings, name)?.mode === mode) return;
-    const next = withResolvedSchemas(
-      withSetting(settings, name, { mode }),
-      current,
-    );
-    setSettings(next);
-    props.onChange(current, next ?? []);
+    echo.commit({
+      value: current,
+      settings: withResolvedSchemas(
+        withSetting(settings, name, { mode }),
+        current,
+      ),
+    });
   };
 
   // A hidden field's value is not cleared: switching scheme to None and back
@@ -1662,11 +1683,14 @@ export function PropertyForm(props: {
       config={current}
       secrets={props.secrets}
       scopeStepId={props.scopeStepId}
+      optionsBlocked={props.optionsBlocked}
+      explainOptionsError={props.explainOptionsError}
       resolverInput={resolverInputFor(
         props.block ?? NO_BLOCK,
         prop,
         current,
         props.connectionId,
+        props.reactorConnectionId,
       )}
       waitingOn={
         props.props.find(
@@ -1681,7 +1705,10 @@ export function PropertyForm(props: {
   );
 
   return (
-    <div className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}>
+    <div
+      className={`flex flex-col ${props.nested ? "gap-4" : "gap-5"}`}
+      onBlur={echo.onBlur}
+    >
       <PropLayout
         props={essential}
         groups={props.groups}

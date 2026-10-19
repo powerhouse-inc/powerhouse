@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
   Node,
@@ -12,22 +13,82 @@ const DERIVED_ID_LENGTH = 43;
 export function resolveUrlPathname(path: string) {
   return new URL(
     path.replace(/^\/+/, ""),
-    window.location.origin + (window.ph?.basePath ?? "/"),
+    window.location.origin + (getPHStore()?.basePath ?? "/"),
   ).pathname;
 }
 
-/** Returns the current path without the base path */
+/** Returns the path without a leading base path */
 export function getPathWithoutBase(path: string) {
-  const basePath = window.ph?.basePath ?? "/";
-  return path.replace(basePath, basePath.endsWith("/") ? "/" : "");
+  const basePath = getPHStore()?.basePath ?? "/";
+  if (!path.startsWith(basePath)) return path;
+  const rest = path.slice(basePath.length);
+  if (basePath.endsWith("/")) return `/${rest}`;
+  return rest === "" || rest.startsWith("/") ? rest : path;
 }
 
-/** Makes a URL component for a drive. */
+/** Makes a URL component for a drive.
+ * @deprecated Open drives through the store's `navigation`; it builds the path. */
 export function makeDriveUrlComponent(
   drive: DocumentDriveDocument | undefined,
 ) {
   if (!drive) return "";
   return `/d/${slug(drive.header.slug)}`;
+}
+
+/** A drive's URL component: its slug, else its id, prefixed with the slugged
+ * name as `<name>-<id>` when the id is opaque (a UUID or derived id). */
+export function makeDriveSlug(drive: DocumentDriveDocument) {
+  const { id, slug: driveSlug } = drive.header;
+  if (driveSlug && driveSlug !== id) return driveSlug;
+  return isOpaqueId(id) ? namedDriveSlug(drive) : id;
+}
+
+function isOpaqueId(id: string) {
+  return findUuid(id) !== undefined || isDerivedDocumentId(id);
+}
+
+function namedDriveSlug(drive: DocumentDriveDocument) {
+  const name = drive.state.global.name || drive.header.name;
+  return namedSlug(drive, name, drive.header.id);
+}
+
+const namedSlugs = new WeakMap<
+  object,
+  { name: string; id: string; value: string }
+>();
+
+// `<slugged name>-<id>`, cached per drive or node; inputs are rechecked.
+function namedSlug(owner: object, name: string, id: string) {
+  const cached = namedSlugs.get(owner);
+  if (cached?.name === name && cached.id === id) return cached.value;
+  const nameSlug = name ? slug(name) : "";
+  const value = nameSlug ? `${nameSlug}-${id}` : id;
+  namedSlugs.set(owner, { name, id, value });
+  return value;
+}
+
+/** The drive a URL slug names: its own slug, its id, or `<name>-<id>`. */
+export function findDriveBySlug(
+  drives: readonly DocumentDriveDocument[] | undefined,
+  ref: string | undefined,
+) {
+  if (!drives || !ref) return undefined;
+  const exact = drives.find(
+    (d) => d.header.slug === ref || d.header.id === ref,
+  );
+  if (exact) return exact;
+  const id = extractDriveIdFromSlug(ref);
+  if (id !== undefined) {
+    const byId = drives.find((d) => d.header.id === id);
+    if (byId) return byId;
+  }
+  // `<name>-<id>` also for a readable id, as older links wrote it.
+  return drives.find(
+    (d) =>
+      (!d.header.slug || d.header.slug === d.header.id) &&
+      ref.endsWith(d.header.id) &&
+      namedDriveSlug(d) === ref,
+  );
 }
 
 /**
@@ -36,8 +97,7 @@ export function makeDriveUrlComponent(
  */
 export function makeNodeSlug(node: Node | undefined) {
   if (!node) return "";
-  const nameSlug = node.name ? slug(node.name) : "";
-  return nameSlug ? `${nameSlug}-${node.id}` : node.id;
+  return namedSlug(node, node.name, node.id);
 }
 
 /** Extracts the node slug from a path.
@@ -72,6 +132,7 @@ export function extractNodeIdFromSlug(nodeSlug: string | undefined) {
   return findUuid(nodeSlug) ?? findDerivedId(nodeSlug);
 }
 
+/** @deprecated Route loaders resolve the node; use `extractNodeIdFromSlug`. */
 export function extractNodeIdFromPath(path: string) {
   const nodeSlug = extractNodeSlugFromPath(path);
   const nodeId = extractNodeIdFromSlug(nodeSlug);
@@ -92,15 +153,15 @@ export function extractDriveIdFromSlug(driveSlug: string | undefined) {
   return findUuid(driveSlug) ?? findDerivedId(driveSlug);
 }
 
+/** @deprecated Route loaders resolve the drive; use `extractDriveIdFromSlug`. */
 export function extractDriveIdFromPath(path: string) {
   const driveSlug = extractDriveSlugFromPath(path);
   const driveId = extractDriveIdFromSlug(driveSlug);
   return driveId;
 }
 
-/**
- * Creates a URL string with the given pathname while preserving existing query parameters.
- */
+/** Creates a URL string with the given pathname, keeping the query string.
+ * @deprecated The store's `navigation` keeps global params across navigations. */
 export function createUrlWithPreservedParams(pathname: string): string {
   const search = window.location.search;
   return search ? `${pathname}${search}` : pathname;

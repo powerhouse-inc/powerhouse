@@ -1,6 +1,6 @@
 import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import { createLiveQueryProxy } from "./live-query-proxy.js";
-import type { MessageRouter } from "./message-router.js";
+import type { MessageRouter } from "@powerhousedao/reactor/rpc";
 import { opChannel } from "./op-channel.js";
 
 export function createRelationalPgliteProxy(

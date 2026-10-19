@@ -72,6 +72,7 @@ export interface IChannel {
 
   /**
    * Registers a callback that fires when the connection state changes.
+   * It also fires when a pull first succeeds, or when paging starts or ends, even if the state stays "connected".
    * Returns an unsubscribe function.
    */
   onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void;
@@ -135,6 +136,9 @@ export type PeerManifestListener = (
  * their own factories that implement this interface.
  */
 export interface IChannelFactory {
+  /** The `ChannelConfig.type`s this factory builds; absent when it does not say. */
+  readonly channelTypes?: readonly string[];
+
   /**
    * Creates a new channel instance with the given configuration.
    *
@@ -313,6 +317,9 @@ export interface ISyncManager {
    */
   remove(name: string): Promise<void>;
 
+  /** Settles once no reset of the remote is running or queued; never rejects. */
+  resetSettled?(name: string): Promise<void>;
+
   /**
    * Lists all configured remotes.
    *
@@ -346,4 +353,19 @@ export interface ISyncManager {
    * @returns Unsubscribe function
    */
   onSyncStatusChange(callback: SyncStatusChangeCallback): () => void;
+}
+
+/** Repair levers for one remote's sync state; each is safe to repeat. */
+export interface ISyncAdmin {
+  /** Rebuilds the channel from cursor storage; never drops the remote's record. */
+  resetChannel(remoteName: string): Promise<void>;
+
+  /** Retries a dead letter; its document's quarantine lifts once none remain. */
+  requeueDeadLetter(remoteName: string, id: string): Promise<void>;
+
+  /**
+   * Drops a dead-lettered operation from the mailbox and from storage; a no-op
+   * for an id that is not this remote's.
+   */
+  clearDeadLetter(remoteName: string, id: string): Promise<void>;
 }

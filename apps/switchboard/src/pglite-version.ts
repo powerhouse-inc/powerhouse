@@ -1,4 +1,8 @@
 import type * as CurrentPGliteModuleNs from "@electric-sql/pglite";
+import type {
+  NodeFsClass,
+  VerifyHandle,
+} from "@powerhousedao/reactor-api/pglite-node";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -48,6 +52,37 @@ export async function loadPGliteModule(
     return (await import("pglite-legacy-02")) as unknown as CurrentPGliteModule;
   }
   return import("@electric-sql/pglite");
+}
+
+/** The stock NodeFS class of the PGlite module that opens `major` dirs. */
+export async function loadNodeFsClass(
+  major: SupportedPgMajor,
+): Promise<NodeFsClass> {
+  if (major === 16) {
+    const mod = await import("pglite-legacy-02/nodefs");
+    return mod.NodeFS as unknown as NodeFsClass;
+  }
+  const mod = await import("@electric-sql/pglite/nodefs");
+  return mod.NodeFS;
+}
+
+/** Opens a converted dir over stock NodeFS so the conversion can check it. */
+export async function openForVerify(
+  major: number,
+  dataDir: string,
+): Promise<VerifyHandle> {
+  if (!isSupportedMajor(major)) {
+    throw new Error(
+      `Cannot verify PGlite data dir ${dataDir}: PG_VERSION=${major} is not supported (expected one of ${SUPPORTED_PG_MAJORS.join(", ")})`,
+    );
+  }
+  const [{ PGlite }, NodeFS] = await Promise.all([
+    loadPGliteModule(major),
+    loadNodeFsClass(major),
+  ]);
+  const pg = new PGlite({ fs: new NodeFS(dataDir) });
+  await pg.waitReady;
+  return pg;
 }
 
 type PgDumpFn = (options: {

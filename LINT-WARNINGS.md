@@ -109,7 +109,6 @@ ESLint-config changes (all in `eslint.config.js` unless noted):
 | `packages/common`                    |        3 |
 | `clis/ph-cmd`                        |        2 |
 | `packages/builder-tools`             |        2 |
-| `packages/pglite-fs`                 |        1 |
 
 ## Cross-cutting notes (read before fixing)
 
@@ -577,12 +576,11 @@ packages/analytics-engine/benchmarks/src/series.ts:68:1
 
 **Batching.** Batch by file. Within a file the fixes are near-identical: drop the redundant `?.`/`!`/guard, OR widen/correct the upstream type. Triage into (a) genuinely-redundant guards -> delete, and (b) type-too-narrow -> fix the type. Do NOT blanket-delete guards on external/`unknown` data.
 
-Packages: `packages/reactor-api` (51), `packages/vetra` (37), `packages/reactor-browser` (24), `apps/connect` (20), `packages/analytics-engine` (19), `packages/design-system` (14), `packages/codegen` (9), `packages/reactor-mcp` (9), `packages/powerhouse-vetra-packages` (5), `test/e2e-utils` (3), `packages/common` (3), `packages/pglite-fs` (1), `packages/switchboard-gui` (1), `packages/document-model` (1), `packages/renown` (1), `packages/builder-tools` (1), `test/versioned-documents` (1)
+Packages: `packages/reactor-api` (51), `packages/vetra` (37), `packages/reactor-browser` (24), `apps/connect` (20), `packages/analytics-engine` (19), `packages/design-system` (14), `packages/codegen` (9), `packages/reactor-mcp` (9), `packages/powerhouse-vetra-packages` (5), `test/e2e-utils` (3), `packages/common` (3), `packages/switchboard-gui` (1), `packages/document-model` (1), `packages/renown` (1), `packages/builder-tools` (1), `test/versioned-documents` (1)
 
 Examples:
 
 ```
-packages/pglite-fs/src/atomic-node-fs.ts:143:26
 packages/switchboard-gui/src/components/tokens/tokens-table.tsx:57:20
 test/e2e-utils/src/helpers/registry.ts:62:15
 test/e2e-utils/src/helpers/registry.ts:65:15
@@ -622,7 +620,6 @@ test/e2e-utils/src/helpers/registry.ts:65:15
 - `packages/design-system/src/powerhouse/hooks/animation.ts` (4)
 - `packages/design-system/src/ui/components/value-transformer/value-transformer.tsx` (2)
 - `packages/document-model/test/document/crypto.test.ts` (1)
-- `packages/pglite-fs/src/atomic-node-fs.ts` (1)
 - `packages/powerhouse-vetra-packages/editors/document-model-editor/hooks/useFormField.ts` (1)
 - `packages/powerhouse-vetra-packages/editors/document-model-editor/utils/helpers.test.ts` (1)
 - `packages/powerhouse-vetra-packages/editors/document-model-editor/utils/helpers.ts` (3)

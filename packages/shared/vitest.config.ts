@@ -25,15 +25,19 @@ export default defineConfig({
     // their own runners / environment requirements; folding them in is a
     // separate effort.
     include: [
+      "constants.test.ts",
       "clis/build-config.test.ts",
       "clis/build-pieces.test.ts",
+      "clis/services/use-local.test.ts",
       "clis/source-config-schema.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
+      "clis/ph-dir.test.ts",
       "clis/args/vetra-ports.test.ts",
       "connect/config-loader.test.ts",
       "connect/env-config.test.ts",
       "connect/entrypoint-seed.test.ts",
+      "connect/nginx-template.test.ts",
       "connect/pwa-config.test.ts",
       "connect/pwa-manifest.test.ts",
       "connect/shared-deps.test.ts",

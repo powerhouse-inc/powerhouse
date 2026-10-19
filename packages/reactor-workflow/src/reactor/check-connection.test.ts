@@ -1,42 +1,33 @@
-// checkConnection over fixture pieces served by a local npm and CDN, with a
-// real PGlite-backed secret store.
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { WorkflowRuntimeHostDeps } from "./host.js";
+// checkConnection over fixture pieces served by a local npm and CDN, a real
+// PGlite-backed secret store and an in-process reactor holding the connections.
+import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
+import {
+  actions,
+  type ConnectionAuthType,
+  type ConnectionDocument,
+} from "@powerhousedao/workflow/document-models/connection";
+import type { Action } from "document-model";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  connectionReactor,
+  createDocument,
+} from "../../test/helpers/connection-reactor.js";
+import {
+  startPieceSources,
+  type PieceSources,
+} from "../../test/helpers/piece-sources.js";
+import { testRuntime } from "../../test/helpers/runtime.js";
 import {
   DEFAULT_EGRESS_POLICY,
   PieceWorkerTimeoutError,
   type PieceWorker,
 } from "../pieces/index.js";
-import {
-  startPieceSources,
-  type PieceSources,
-} from "../../test/helpers/piece-sources.js";
-import type { Action, PHDocument } from "document-model";
-import {
-  actions,
-  reducer,
-  utils,
-  type ConnectionAuthType,
-  type ConnectionDocument,
-  type RecordCheckResultInput,
-} from "@powerhousedao/workflow/document-models/connection";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mock,
-} from "vitest";
-
 import type { WorkflowRuntimeService } from "./service.js";
-import { testRuntime } from "../../test/helpers/runtime.js";
 
 let service: WorkflowRuntimeService;
+let reactor: InProcessReactorClientModule;
 
-// checkConnection hands credentials to piece code, so it demands a caller the
-// subgraph can authorize; the stub above allows this one.
+// checkConnection hands credentials to piece code, so it demands a caller.
 const TEST_CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 const FIXED_NOW = "2026-09-04T00:00:00.000Z";
@@ -157,14 +148,15 @@ module.exports = { app };
 
 let sources: PieceSources;
 let passwordRef = "";
-let get: Mock;
-let execute: Mock;
+let created = 0;
 
-// A bundle request to the fixture sources.
 const bundleRequests = () =>
   sources.requests.filter((path) => path.endsWith(".tgz"));
 
-function makeDocument(
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+// A connection in the reactor; `extra` lands after the setup actions.
+async function makeConnection(
   options: {
     connectorId?: string;
     authType?: ConnectionAuthType;
@@ -173,57 +165,43 @@ function makeDocument(
     configured?: boolean;
     // Nothing to authenticate with: no config values and no secret handles.
     empty?: boolean;
+    extra?: Action[];
   } = {},
-): ConnectionDocument {
+): Promise<string> {
   const {
     connectorId = `${PIECES.pass.name}#pass`,
     authType = "CUSTOM_AUTH",
     secretRef = passwordRef,
     configured = true,
     empty = false,
+    extra = [],
   } = options;
-  let document = utils.createDocument();
-  document = reducer(document, actions.setConnector({ connectorId, authType }));
+  const list: Action[] = [actions.setConnector({ connectorId, authType })];
   if (!empty) {
-    document = reducer(
-      document,
-      actions.setConfig({ config: { host: "imap.example.com" } }),
-    );
-  }
-  if (secretRef && !empty) {
-    document = reducer(
-      document,
-      actions.setSecretRef({ id: "sr-1", name: "password", ref: secretRef }),
-    );
+    list.push(actions.setConfig({ config: { host: "imap.example.com" } }));
+    if (secretRef) {
+      list.push(
+        actions.setSecretRef({ id: "sr-1", name: "password", ref: secretRef }),
+      );
+    }
   }
   if (configured) {
-    document = reducer(
-      document,
+    list.push(
       actions.recordCheckResult({ status: "OK", checkedAt: FIXED_NOW }),
     );
   }
-  return document;
+  list.push(...extra);
+  const id = `conn-check-${++created}`;
+  await createDocument(reactor, "connection", id, list);
+  return id;
 }
 
-function lastActions(): Action[] {
-  const call = execute.mock.calls.at(-1);
-  expect(call, "execute should have been called").toBeDefined();
-  return call?.[2] as Action[];
-}
-
-function lastRecordInput(): RecordCheckResultInput {
-  const action = lastActions()[0];
-  expect(action.type).toBe("RECORD_CHECK_RESULT");
-  expect(action.scope).toBe("global");
-  return action.input as RecordCheckResultInput;
-}
-
-// The SET_ACCOUNT_LABEL the last check wrote, if any.
-function lastLabelWritten(): string | null | undefined {
-  const action = lastActions().find((a) => a.type === "SET_ACCOUNT_LABEL");
-  return (action?.input as { accountLabel?: string | null } | undefined)
-    ?.accountLabel;
-}
+const stored = (id: string) => reactor.client.get<ConnectionDocument>(id);
+const state = async (id: string) => (await stored(id)).state.global;
+const operationTypes = async (id: string) =>
+  (await reactor.client.getOperations(id, { scopes: ["global"] })).results.map(
+    (op) => op.action.type,
+  );
 
 describe("WorkflowRuntimeService.checkConnection", () => {
   beforeAll(async () => {
@@ -236,38 +214,25 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         code: FIXTURE_BUNDLES[key],
       })),
     });
+    reactor = await connectionReactor();
+    service = testRuntime({ reactorClient: reactor.client });
 
-    get = vi.fn();
-    execute = vi.fn(() => ({}) as PHDocument);
-    service = testRuntime({
-      reactorClient: {
-        get,
-        execute,
-        find: vi.fn(() => ({ results: [] })),
-      },
-      assertCanRead: vi.fn(() => Promise.resolve({})),
-      relationalDb: createTestRelationalDb(),
-    } as unknown as WorkflowRuntimeHostDeps);
-
-    const created = await (
-      await service.secrets()
-    ).create({
-      value: "fixture-secret",
-      label: "password",
-    });
-    passwordRef = created.ref;
+    passwordRef = (
+      await (
+        await service.secrets()
+      ).create({ value: "fixture-secret", label: "password" })
+    ).ref;
   });
 
   afterAll(async () => {
     await sources.stop();
+    reactor.reactor.kill();
   });
 
   it("runs a passing check and records OK with the account label", async () => {
-    const document = makeDocument();
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
@@ -277,108 +242,111 @@ describe("WorkflowRuntimeService.checkConnection", () => {
     expect(sources.requests).toContain(
       `/npm/${PIECES.pass.name.replace("/", "%2f")}`,
     );
-    const input = lastRecordInput();
-    expect(input.status).toBe("OK");
-    expect(input.checkedAt).toMatch(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-    );
-    expect(input.error).toBeUndefined();
-    expect(lastLabelWritten()).toBe("pass-account @ imap.example.com");
+    const after = await state(id);
+    expect(after).toMatchObject({
+      status: "OK",
+      lastError: null,
+      accountLabel: "pass-account @ imap.example.com",
+    });
+    expect(after.lastCheckedAt).toMatch(ISO);
+    expect(after.lastCheckedAt).not.toBe(FIXED_NOW);
   });
 
   it("writes no label that the connection already holds", async () => {
-    const document = reducer(
-      makeDocument(),
-      actions.setAccountLabel({
-        accountLabel: "pass-account @ imap.example.com",
-      }),
-    );
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection({
+      extra: [
+        actions.setAccountLabel({
+          accountLabel: "pass-account @ imap.example.com",
+        }),
+      ],
+    });
+    const before = (await operationTypes(id)).length;
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.accountLabel).toBe("pass-account @ imap.example.com");
-    expect(lastActions()).toHaveLength(1);
+    expect((await operationTypes(id)).slice(before)).toEqual([
+      "RECORD_CHECK_RESULT",
+    ]);
   });
 
   it("passes the check and keeps the previous label when labelling throws", async () => {
-    const document = reducer(
-      makeDocument({ connectorId: `${PIECES.labelThrows.name}#labelThrows` }),
-      actions.setAccountLabel({ accountLabel: "ops@example.com" }),
-    );
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection({
+      connectorId: `${PIECES.labelThrows.name}#labelThrows`,
+      extra: [actions.setAccountLabel({ accountLabel: "ops@example.com" })],
+    });
+    const before = (await operationTypes(id)).length;
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
       detail: null,
       accountLabel: "ops@example.com",
     });
-    expect(lastRecordInput().status).toBe("OK");
-    expect(lastLabelWritten()).toBeUndefined();
+    expect(await state(id)).toMatchObject({
+      status: "OK",
+      accountLabel: "ops@example.com",
+    });
+    expect((await operationTypes(id)).slice(before)).toEqual([
+      "RECORD_CHECK_RESULT",
+    ]);
   });
 
   it("records ERROR with the failure detail when the check throws", async () => {
-    const document = makeDocument({
+    const id = await makeConnection({
       connectorId: `${PIECES.fail.name}#fail`,
     });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toBe("auth failed: bad credentials");
-    const input = lastRecordInput();
-    expect(input.status).toBe("ERROR");
-    expect(typeof input.checkedAt).toBe("string");
-    expect(input.error).toBe("auth failed: bad credentials");
+    const after = await state(id);
+    expect(after).toMatchObject({
+      status: "ERROR",
+      lastError: "auth failed: bad credentials",
+    });
+    expect(after.lastCheckedAt).toMatch(ISO);
   });
 
-  // The check must not see the reactor's own environment; a fixture that reads
-  // the master key would report "leaked" if it ran in this process.
+  // A fixture that reads the master key would report "leaked" in this process.
   it("runs the check outside the reactor process", async () => {
-    const document = makeDocument({
-      connectorId: `${PIECES.env.name}#env`,
-    });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection({ connectorId: `${PIECES.env.name}#env` });
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
       detail: null,
       accountLabel: "isolated",
     });
-    expect(lastRecordInput().status).toBe("OK");
+    expect(await state(id)).toMatchObject({
+      status: "OK",
+      accountLabel: "isolated",
+    });
   });
 
   it("records ERROR when validate refuses without a reason", async () => {
-    const document = makeDocument({
+    const id = await makeConnection({
       connectorId: `${PIECES.denied.name}#denied`,
     });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
       detail: "Connection check failed",
       accountLabel: null,
     });
-    expect(lastRecordInput()).toMatchObject({
+    expect(await state(id)).toMatchObject({
       status: "ERROR",
-      error: "Connection check failed",
+      lastError: "Connection check failed",
     });
   });
 
-  // The worker's own timeout handling is covered in src/pieces; here
-  // only the mapping onto the mutation's wording, without waiting it out.
+  // The worker's own timeout is covered in src/pieces; here only the mapping
+  // onto the recorded wording, without waiting it out.
   it("records ERROR when the worker times the check out", async () => {
     const runtime = service as unknown as {
       designWorker?: Pick<PieceWorker, "checkConnection">;
@@ -388,23 +356,18 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       checkConnection: () =>
         Promise.reject(new PieceWorkerTimeoutError(30_000)),
     };
-    const document = makeDocument();
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection();
     try {
-      const result = await service.checkConnection(
-        document.header.id,
-        TEST_CTX,
-      );
+      const result = await service.checkConnection(id, TEST_CTX);
 
       expect(result).toEqual({
         ok: false,
         detail: "Connection check timed out after 30s",
         accountLabel: null,
       });
-      expect(lastRecordInput()).toMatchObject({
+      expect(await state(id)).toMatchObject({
         status: "ERROR",
-        error: "Connection check timed out after 30s",
+        lastError: "Connection check timed out after 30s",
       });
     } finally {
       runtime.designWorker = previous;
@@ -429,11 +392,9 @@ describe("WorkflowRuntimeService.checkConnection", () => {
         });
       },
     };
-    const document = makeDocument();
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection();
     try {
-      await service.checkConnection(document.header.id, TEST_CTX);
+      await service.checkConnection(id, TEST_CTX);
 
       expect(request?.egress).toEqual(DEFAULT_EGRESS_POLICY);
     } finally {
@@ -442,77 +403,69 @@ describe("WorkflowRuntimeService.checkConnection", () => {
   });
 
   it("reports resolved credentials when the piece declares no validate", async () => {
-    const document = makeDocument({
+    const id = await makeConnection({
       connectorId: `${PIECES.nocheck.name}#nocheck`,
     });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: true,
       detail: "piece declares no auth.validate; credentials resolved",
       accountLabel: null,
     });
-    const input = lastRecordInput();
-    expect(input.status).toBe("OK");
-    expect(input.error).toBeUndefined();
+    expect(await state(id)).toMatchObject({ status: "OK", lastError: null });
   });
 
   it("hands validate the property values flat", async () => {
-    const document = makeDocument({
+    const id = await makeConnection({
       connectorId: `${PIECES.validates.name}#validates`,
     });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.ok).toBe(true);
     // Not the "declares no auth.validate" answer: a check really ran, and it
     // read the property values, which only the unwrapped form carries.
     expect(result.detail).toBeNull();
-    expect(lastRecordInput().status).toBe("OK");
+    expect((await state(id)).status).toBe("OK");
   });
 
   it("reports the reason validate gave for refusing", async () => {
-    const document = makeDocument({
+    const id = await makeConnection({
       connectorId: `${PIECES.refuses.name}#refuses`,
     });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toMatchObject({
       ok: false,
       detail: "that host refused the login",
     });
-    expect(lastRecordInput().status).toBe("ERROR");
+    expect(await state(id)).toMatchObject({
+      status: "ERROR",
+      lastError: "that host refused the login",
+    });
   });
 
   it("surfaces a missing secret by naming its ref", async () => {
-    const document = makeDocument({ secretRef: MISSING_SECRET_REF });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection({ secretRef: MISSING_SECRET_REF });
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.ok).toBe(false);
     expect(result.detail).toContain(MISSING_SECRET_REF);
-    const input = lastRecordInput();
-    expect(input.status).toBe("ERROR");
-    expect(input.error).toBe(`No secret found for ref "${MISSING_SECRET_REF}"`);
+    expect(await state(id)).toMatchObject({
+      status: "ERROR",
+      lastError: `No secret found for ref "${MISSING_SECRET_REF}"`,
+    });
   });
 
   it("refuses OIDC without fetching a bundle", async () => {
-    const document = makeDocument({ authType: "OIDC" });
-    get.mockResolvedValueOnce(document);
+    const id = await makeConnection({ authType: "OIDC" });
     const before = bundleRequests().length;
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -520,19 +473,17 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       accountLabel: null,
     });
     expect(bundleRequests()).toHaveLength(before);
-    expect(lastRecordInput()).toMatchObject({
+    expect(await state(id)).toMatchObject({
       status: "ERROR",
-      error: "OIDC connections are not supported by the runtime yet",
+      lastError: "OIDC connections are not supported by the runtime yet",
     });
   });
 
   it("refuses a connection with nothing to authenticate with, without fetching a bundle", async () => {
-    const document = makeDocument({ configured: false, empty: true });
-    get.mockResolvedValueOnce(document);
+    const id = await makeConnection({ configured: false, empty: true });
     const before = bundleRequests().length;
-    execute.mockClear();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result).toEqual({
       ok: false,
@@ -540,82 +491,63 @@ describe("WorkflowRuntimeService.checkConnection", () => {
       accountLabel: null,
     });
     expect(bundleRequests()).toHaveLength(before);
-    expect(lastRecordInput()).toMatchObject({
+    expect(await state(id)).toMatchObject({
       status: "ERROR",
-      error: "Connection is not configured",
+      lastError: "Connection is not configured",
     });
   });
 
   // SET_CONNECTOR leaves UNCONFIGURED behind and only a recorded check clears
-  // it, so a status-based guard refused the very first check of every
-  // connection — the one an author runs after filling the form in.
+  // it, so the first check of a filled-in connection must still run.
   it("checks a configured connection that has never been checked", async () => {
-    const document = makeDocument({ configured: false });
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
+    const id = await makeConnection({ configured: false });
+    expect((await state(id)).status).toBe("UNCONFIGURED");
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.ok).toBe(true);
-    expect(lastRecordInput()).toMatchObject({ status: "OK" });
+    expect((await state(id)).status).toBe("OK");
   });
 
-  it("refuses a revoked connection instead of resolving its secrets", async () => {
-    let document = makeDocument();
-    document = reducer(
-      document,
-      actions.recordCheckResult({ status: "REVOKED", checkedAt: FIXED_NOW }),
-    );
-    get.mockResolvedValueOnce(document);
-    execute.mockClear();
-
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
-
-    expect(result.ok).toBe(false);
-    expect(result.detail).toContain("revoked");
-    // Recording any result would write ERROR over REVOKED, which is what the
-    // second check below would then walk through.
-    expect(execute).not.toHaveBeenCalled();
-  });
-
-  it("keeps refusing a revoked connection on a second check", async () => {
-    let document = reducer(
-      makeDocument(),
-      actions.recordCheckResult({ status: "REVOKED", checkedAt: FIXED_NOW }),
-    );
-    // Writes land on the document the next read returns, so a recorded ERROR
-    // would clear REVOKED exactly as it does against a real reactor.
-    get.mockImplementation(() => Promise.resolve(document));
-    execute.mockImplementation((_id, _scope, actionList: Action[]) => {
-      document = reducer(document, actionList[0]);
-      return document;
+  it("refuses a revoked connection, every time, without recording anything", async () => {
+    const id = await makeConnection({
+      extra: [
+        actions.recordCheckResult({ status: "REVOKED", checkedAt: FIXED_NOW }),
+      ],
     });
-    const before = bundleRequests().length;
+    const before = (await operationTypes(id)).length;
+    const fetched = bundleRequests().length;
 
-    await service.checkConnection(document.header.id, TEST_CTX);
-    const second = await service.checkConnection(document.header.id, TEST_CTX);
+    const first = await service.checkConnection(id, TEST_CTX);
+    // A recorded ERROR would clear REVOKED and let this one through.
+    const second = await service.checkConnection(id, TEST_CTX);
 
-    expect(second.ok).toBe(false);
-    expect(second.detail).toContain("revoked");
-    expect(document.state.global.status).toBe("REVOKED");
+    for (const result of [first, second]) {
+      expect(result.ok).toBe(false);
+      expect(result.detail).toContain("revoked");
+    }
+    expect(await state(id)).toMatchObject({
+      status: "REVOKED",
+      lastCheckedAt: FIXED_NOW,
+    });
+    expect(await operationTypes(id)).toHaveLength(before);
     // Nothing reached the piece, so nothing shaped the stored secrets.
-    expect(bundleRequests()).toHaveLength(before);
+    expect(bundleRequests()).toHaveLength(fetched);
   });
 
   it("refuses a caller the subgraph cannot identify", async () => {
-    const document = makeDocument();
-    get.mockResolvedValueOnce(document);
+    const id = await makeConnection();
 
-    await expect(service.checkConnection(document.header.id)).rejects.toThrow(
+    await expect(service.checkConnection(id)).rejects.toThrow(
       "authenticated request",
     );
+    expect((await state(id)).lastCheckedAt).toBe(FIXED_NOW);
   });
 
   it("checks against the newest version the piece's packument lists", async () => {
-    const document = makeDocument();
-    get.mockResolvedValueOnce(document);
+    const id = await makeConnection();
 
-    const result = await service.checkConnection(document.header.id, TEST_CTX);
+    const result = await service.checkConnection(id, TEST_CTX);
 
     expect(result.ok).toBe(true);
     expect(bundleRequests()).toContain(

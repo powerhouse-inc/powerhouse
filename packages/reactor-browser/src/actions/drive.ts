@@ -1,3 +1,4 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import {
   DocumentChangeType,
   DriveCollectionId,
@@ -27,6 +28,7 @@ import {
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
+import { getFullReactorClient } from "../hooks/reactor.js";
 
 const DEFAULT_INITIAL_SYNC_TIMEOUT_MS = 30_000;
 
@@ -124,13 +126,13 @@ export async function waitForDocumentReady(
 
 /** The full client's creation default, else the library's. */
 async function createSignaturePolicy(): Promise<SignaturePolicy> {
-  const client = window.ph?.reactorClientModule?.client;
+  const client = getFullReactorClient();
   return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
 }
 
 /** What the full client selects for a drive, which has no parent. */
 async function createProtocolVersions(): Promise<ProtocolVersions> {
-  const client = window.ph?.reactorClientModule?.client;
+  const client = getFullReactorClient();
   return client ? client.getCreateProtocolVersions() : {};
 }
 
@@ -140,7 +142,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     throw new Error("User is not allowed to create drives");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -182,13 +184,13 @@ export async function addRemoteDrive(
   options?: AddRemoteDriveOptions,
 ) {
   // remote drives are a full reactor client feature (sync manager + find)
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
 
   const sync =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (!sync) {
     throw new Error("Sync not initialized");
   }
@@ -273,13 +275,13 @@ export async function deleteDrive(driveId: string) {
     throw new Error("User is not allowed to delete drives");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
 
   const sync =
-    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (sync) {
     const collectionId = DriveCollectionId.forDrive(driveId);
     const remotes = sync
@@ -303,7 +305,7 @@ export async function renameDrive(
   }
 
   // drive renaming is only available on the full reactor client
-  const reactorClient = window.ph?.reactorClientModule?.client;
+  const reactorClient = getFullReactorClient();
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -319,7 +321,7 @@ export async function setDriveAvailableOffline(
     throw new Error("User is not allowed to change drive availability");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -337,7 +339,7 @@ export async function setDriveSharingType(
     throw new Error("User is not allowed to change drive sharing type");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
@@ -355,7 +357,7 @@ export async function setDriveMetadata(
     throw new Error("User is not allowed to update drive metadata");
   }
 
-  const reactorClient = window.ph?.reactorClient;
+  const reactorClient = getPHStore()?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }

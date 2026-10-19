@@ -254,6 +254,28 @@ export function resolveManagedDependencies(input: {
   return { peerDependencies, devDependencies };
 }
 
+// Exports and scripts are replaced with the current ones, so an entry `ph build`
+// no longer emits (such as a browser ./subgraphs) is dropped.
+export function migratedPackageJson(
+  packageJson: PackageJson,
+  managed: Pick<PackageJson, "peerDependencies" | "devDependencies">,
+): PackageJson {
+  const updated = {
+    ...packageJson,
+    type: packageJson.type ?? "module",
+    sideEffects: packageJson.sideEffects ?? false,
+    files: packageJson.files ?? ["/dist"],
+    exports: packageJsonExports,
+    scripts: merge(packageJson.scripts, packageScripts),
+    peerDependencies: managed.peerDependencies,
+    devDependencies: managed.devDependencies,
+  } as PackageJson;
+  // Runtime `dependencies` block is no longer emitted — the bundled dist
+  // self-contains everything except the declared peers.
+  delete (updated as { dependencies?: unknown }).dependencies;
+  return updated;
+}
+
 export async function migrate(version: string, projectDir = process.cwd()) {
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
@@ -262,8 +284,6 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     cwd: projectDir,
     normalize: false,
   });
-  const exports = packageJsonExports;
-  const scripts = merge(packageJson.scripts, packageScripts);
   const workspacePackageNames = filter(
     map(WORKSPACE_PACKAGES, prop("manifest", "name")),
     isTruthy,
@@ -277,20 +297,10 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   });
 
   console.log("Updating package.json...");
-  const updatedPackageJson: PackageJson = {
-    ...packageJson,
-    type: packageJson.type ?? "module",
-    sideEffects: packageJson.sideEffects ?? false,
-    files: packageJson.files ?? ["/dist"],
-    exports,
-    scripts,
-    peerDependencies,
-    devDependencies,
-  } as PackageJson;
-  // Runtime `dependencies` block is no longer emitted — the bundled dist
-  // self-contains everything except the declared peers.
-  delete (updatedPackageJson as { dependencies?: unknown }).dependencies;
-  await writePackage(projectDir, updatedPackageJson);
+  await writePackage(
+    projectDir,
+    migratedPackageJson(packageJson, { peerDependencies, devDependencies }),
+  );
 
   console.log("Removing legacy lint/format config files...");
   removeLegacyLintFormatFiles(projectDir);

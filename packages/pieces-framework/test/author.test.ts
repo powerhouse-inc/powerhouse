@@ -1,22 +1,16 @@
 // A piece written the way an external developer would write one.
-import { describe, expect, it, vi } from "vitest";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { describe, expect, it } from "vitest";
 import {
   createAction,
-  createMockActionContext,
   createPiece,
   createTrigger,
   PieceAuth,
   Property,
   PropertyType,
-  reactorOf,
   TriggerStrategy,
 } from "../src/index.js";
-import type {
-  ReactorDocumentSummary,
-  ReactorService,
-  TestOrRunHookContext,
-  WithReactor,
-} from "../src/index.js";
+import type { ReactorReadClient, TestOrRunHookContext } from "../src/index.js";
 
 const props = {
   documentType: Property.ShortText({
@@ -31,11 +25,11 @@ const listDocuments = createAction({
   displayName: "List documents",
   description: "Lists the documents of one type on this reactor",
   auth: PieceAuth.None(),
+  requireReactor: "read",
   props,
   async run(ctx) {
-    return reactorOf(ctx).find({
-      documentType: ctx.propsValue.documentType,
-    });
+    const page = await ctx.reactor.find({ type: ctx.propsValue.documentType });
+    return page.results.map((document) => document.header.id);
   },
 });
 
@@ -45,6 +39,7 @@ const newDocument = createTrigger({
   description: "Fires once for each document that appeared since the last poll",
   auth: PieceAuth.None(),
   type: TriggerStrategy.POLLING,
+  requireReactor: "read",
   props,
   sampleData: {
     documentId: "doc-1",
@@ -59,14 +54,10 @@ const newDocument = createTrigger({
   },
   async run(ctx) {
     const seen = (await ctx.store.get<string[]>("seen")) ?? [];
-    const documents = await reactorOf(ctx).find({
-      documentType: ctx.propsValue.documentType,
-    });
-    await ctx.store.put(
-      "seen",
-      documents.map((d) => d.documentId),
-    );
-    return documents.filter((d) => !seen.includes(d.documentId));
+    const page = await ctx.reactor.find({ type: ctx.propsValue.documentType });
+    const ids = page.results.map((document) => document.header.id);
+    await ctx.store.put("seen", ids);
+    return ids.filter((id) => !seen.includes(id));
   },
 });
 
@@ -80,24 +71,23 @@ const invoices = createPiece({
   triggers: [newDocument],
 });
 
-const documents: ReactorDocumentSummary[] = [
-  { documentId: "doc-1", documentType: "powerhouse/invoice", name: "One" },
-  { documentId: "doc-2", documentType: "powerhouse/invoice", name: "Two" },
-];
+const documents = [
+  { header: { id: "doc-1", documentType: "powerhouse/invoice" } },
+  { header: { id: "doc-2", documentType: "powerhouse/invoice" } },
+  { header: { id: "rcpt-1", documentType: "powerhouse/receipt" } },
+] as PHDocument[];
 
-// The host's half of ctx.reactor; `find` stays a separate handle to assert on.
-function fakeReactor() {
-  const unused = () => Promise.reject(new Error("not under test"));
-  const find = vi.fn<ReactorService["find"]>(() => Promise.resolve(documents));
-  const reactor: ReactorService = {
-    models: () => Promise.resolve([]),
-    model: unused,
-    get: unused,
-    find,
-    create: unused,
-    execute: unused,
-  };
-  return { reactor, find };
+// A reactor holding `documents`, answering `find` by type.
+function fakeReactor(): ReactorReadClient {
+  return {
+    find: (search: { type?: string }) =>
+      Promise.resolve({
+        results: documents.filter(
+          (document) => document.header.documentType === search.type,
+        ),
+        options: { cursor: "", limit: documents.length },
+      }),
+  } as unknown as ReactorReadClient;
 }
 
 describe("authoring a piece", () => {
@@ -124,22 +114,9 @@ describe("authoring a piece", () => {
     });
   });
 
-  it("runs the action against ctx.reactor", async () => {
-    const { reactor, find } = fakeReactor();
-    const ctx = {
-      ...createMockActionContext<typeof props>({
-        propsValue: { documentType: "powerhouse/invoice" },
-      }),
-      reactor,
-    };
-    await expect(listDocuments.run(ctx)).resolves.toEqual(documents);
-    expect(find).toHaveBeenCalledWith({ documentType: "powerhouse/invoice" });
-  });
-
   it("polls through ctx.store and ctx.reactor", async () => {
     const trigger = invoices.getTrigger("new_document");
     if (!trigger) throw new Error("new_document is not registered");
-    const { reactor } = fakeReactor();
     const memory = new Map<string, unknown>();
     const store = {
       put: <T>(key: string, value: T) => {
@@ -152,18 +129,20 @@ describe("authoring a piece", () => {
         return Promise.resolve();
       },
     };
-    type Ctx = WithReactor<
-      TestOrRunHookContext<undefined, typeof props, TriggerStrategy.POLLING>
-    >;
+    type Ctx = TestOrRunHookContext<
+      undefined,
+      typeof props,
+      TriggerStrategy.POLLING
+    > & { reactor: ReactorReadClient };
     const ctx = {
       auth: undefined,
       propsValue: { documentType: "powerhouse/invoice" },
       store,
-      reactor,
+      reactor: fakeReactor(),
     } as unknown as Ctx;
 
     await trigger.onEnable(ctx);
-    await expect(trigger.run(ctx)).resolves.toEqual(documents);
+    await expect(trigger.run(ctx)).resolves.toEqual(["doc-1", "doc-2"]);
     await expect(trigger.run(ctx)).resolves.toEqual([]);
     await trigger.onDisable(ctx);
     expect(memory.has("seen")).toBe(false);

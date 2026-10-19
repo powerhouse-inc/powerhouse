@@ -207,7 +207,8 @@ export const scheduleDriver: TriggerDriver = {
       ctx.markUnhealthy(binding.workflowId);
       await ctx.store.setTriggerStatus(row.workflow_id, "ERROR", message);
       logger.error(
-        `Schedule fire failed for workflow ${row.workflow_id}: ${message}`,
+        `Schedule fire failed for workflow ${row.workflow_id}: @error`,
+        message,
       );
     }
   },
@@ -254,7 +255,8 @@ export const piecePollDriver: TriggerDriver = {
         failures,
       );
       logger.warn(
-        `Poll failed for workflow ${row.workflow_id} (${failures}x): ${message}`,
+        `Poll failed for workflow ${row.workflow_id} (${failures}x): @error`,
+        message,
       );
     }
   },

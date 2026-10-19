@@ -15,7 +15,8 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { mergeDefaultDrives } from "../utils/merge-default-drives.js";
+import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
+import { mergeDefaultDrives, rebaseDriveUrl } from "@powerhousedao/host-core";
 import { parseDefaultDrivesUrl } from "../utils/parse-default-drives.js";
 import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import {
@@ -35,23 +36,8 @@ const getDefaultVetraUrl = (port: number) =>
 const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
-// Rebase a local drive URL onto --drives-public-base: keeps the /d/<slug>
-// path, swaps the loopback origin for the public base. Browser clients
-// behind a reverse proxy can't reach http://localhost:<port>. Non-loopback
-// URLs (e.g. a remote drive) are already public and pass through unchanged.
-const rebaseDriveUrl = (driveUrl: string, publicBase: string): string => {
-  // Unparseable URLs pass through unchanged, like non-loopback ones.
-  let url: URL;
-  try {
-    url = new URL(driveUrl);
-  } catch {
-    return driveUrl;
-  }
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
-    return driveUrl;
-  }
-  return `${publicBase.replace(/\/+$/, "")}${url.pathname}`;
-};
+// rebaseDriveUrl moved to @powerhousedao/host-core (uniform-runners P1.4) —
+// one implementation shared by this classic path and the generic compound.
 
 function createViteLogger(color: Color) {
   const customLogger = createLogger("info");
@@ -87,7 +73,7 @@ async function startVetraPreviewDrive(
     slug: previewDriveId,
     global: {
       name: "Vetra Preview",
-      icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreifddkbopiyvcirf7vaqar74th424r5phlxkdxniirdyg3qgu2ajha",
+      icon: POWERHOUSE_DRIVE_ICON,
       nodes: [],
     },
     local: {
@@ -107,7 +93,10 @@ async function startVetraPreviewDrive(
 }
 
 // Opens in Workflow Studio; only seeded when the switchboard runs workflows.
-async function startVetraWorkflowsDrive(
+// Exported for the switchboard bridge runner: a hosts project with
+// reactor.workflows enabled seeds the SAME project-hashed drive this vetra
+// path does, until drive provisioning becomes a plugin contribution.
+export async function seedWorkflowsDrive(
   reactor: IReactorClient,
   port: number,
   verbose?: boolean,
@@ -222,7 +211,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     let workflowsDriveUrl: string | null = null;
     if (switchboard.workflowsEnabled) {
       try {
-        workflowsDriveUrl = await startVetraWorkflowsDrive(
+        workflowsDriveUrl = await seedWorkflowsDrive(
           switchboard.reactor,
           actualSwitchboardPort,
           verbose,

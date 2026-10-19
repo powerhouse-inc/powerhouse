@@ -369,6 +369,17 @@ export async function publishedHere(
   return row.rows[0]?.published === true;
 }
 
+// Locks first: a tagged publish's version and dist-tag share one `modified`
+async function lockLatestPackument(
+  tx: Queryable,
+  registryUrl: string,
+  pkg: string,
+  fallback: Packument,
+): Promise<Packument> {
+  await tx.query("SELECT pg_advisory_xact_lock(hashtext($1))", [pkg]);
+  return (await fetchPackument(registryUrl, pkg)) ?? fallback;
+}
+
 async function upsertPackage(
   tx: Queryable,
   pkg: string,
@@ -526,6 +537,10 @@ export async function processVersion(
   const local = published ?? job.payload.local === true;
   const manifestRev = await indexedRevision(ctx.db, pkg);
   const packument = await fetchPackument(ctx.registryUrl, pkg);
+  // Unpublishing a whole package drops it from Verdaccio's list first
+  if (!packument && published) {
+    throw new Error(`metadata for published ${pkg} returned 404`);
+  }
   if (!packument?.versions?.[version]) {
     // Unpublished before it was processed
     await ctx.db.transaction(async (tx) => {
@@ -541,8 +556,14 @@ export async function processVersion(
   const times = packument.time ?? {};
 
   const isLocal = await ctx.db.transaction(async (tx) => {
+    const latest = await lockLatestPackument(
+      tx,
+      ctx.registryUrl,
+      pkg,
+      packument,
+    );
     await claimPieces(tx, pkg, unpacked.pieces);
-    await upsertPackage(tx, pkg, packument, local, manifestRev);
+    await upsertPackage(tx, pkg, latest, local, manifestRev);
     await tx.query(
       "DELETE FROM registry_pieces WHERE package = $1 AND version = $2",
       [pkg, version],
@@ -609,13 +630,15 @@ export async function failVersion(
   ctx: ProcessorContext,
   job: Job,
   error: string,
+  permanent = false,
 ): Promise<void> {
   await ctx.db.query(
-    `INSERT INTO registry_versions (package, version, status, error)
-     VALUES ($1, $2, 'failed', $3)
+    `INSERT INTO registry_versions (package, version, status, error, permanent)
+     VALUES ($1, $2, 'failed', $3, $4)
      ON CONFLICT (package, version) DO UPDATE SET
-       status = 'failed', error = EXCLUDED.error, updated_at = now()`,
-    [job.package, job.version, error],
+       status = 'failed', error = EXCLUDED.error,
+       permanent = EXCLUDED.permanent, updated_at = now()`,
+    [job.package, job.version, error, permanent],
   );
   await ctx.events.publish({
     type: "version-failed",
@@ -651,16 +674,19 @@ export async function syncPackage(
     throw new Error(`metadata for published ${pkg} returned 404`);
   }
   await ctx.db.transaction(async (tx) => {
+    const latest = packument
+      ? await lockLatestPackument(tx, ctx.registryUrl, pkg, packument)
+      : null;
     await removeVersionRows(tx, pkg, removed);
-    if (!packument) {
+    if (!latest) {
       await tx.query("DELETE FROM registry_packages WHERE name = $1", [pkg]);
     } else {
-      await upsertPackage(tx, pkg, packument, local, manifestRev);
+      await upsertPackage(tx, pkg, latest, local, manifestRev);
       await recomputeLatest(tx, pkg);
       if (local) {
         // Tagged versions only; the rest are processed when first requested
         const have = new Set(known.rows.map((r) => r.version));
-        const tagged = new Set(Object.values(packument["dist-tags"] ?? {}));
+        const tagged = new Set(Object.values(latest["dist-tags"] ?? {}));
         for (const version of tagged) {
           if (!listed.has(version)) continue;
           if (!have.has(version)) {

@@ -31,6 +31,7 @@ import {
 import type {
   PieceAuthKind,
   PieceNames,
+  PieceRequireReactor,
   PieceTriggerStrategy,
 } from "./types.js";
 
@@ -267,8 +268,9 @@ export async function tsMorphGeneratePieceAction(args: {
   /** Directory under pieces/. */
   pieceDir: string;
   actionName: string;
+  requireReactor?: PieceRequireReactor;
 }): Promise<void> {
-  const { project, pieceDir, actionName } = args;
+  const { project, pieceDir, actionName, requireReactor } = args;
   const kebabActionName = kebabCase(actionName);
   const paths = pieceDirPaths(project, pieceDir);
   const { names, withAuth } = namesForExistingPiece(project, pieceDir);
@@ -284,6 +286,7 @@ export async function tsMorphGeneratePieceAction(args: {
       actionName: kebabActionName,
       actionDisplayName: capitalCase(actionName),
       withAuth,
+      requireReactor,
     }),
   );
   await addPartToPiece({
@@ -300,8 +303,9 @@ export async function tsMorphGeneratePieceTrigger(args: {
   pieceDir: string;
   triggerName: string;
   strategy: PieceTriggerStrategy;
+  requireReactor?: PieceRequireReactor;
 }): Promise<void> {
-  const { project, pieceDir, triggerName, strategy } = args;
+  const { project, pieceDir, triggerName, strategy, requireReactor } = args;
   const kebabTriggerName = kebabCase(triggerName);
   const paths = pieceDirPaths(project, pieceDir);
   const { names, withAuth } = namesForExistingPiece(project, pieceDir);
@@ -318,6 +322,7 @@ export async function tsMorphGeneratePieceTrigger(args: {
       triggerDisplayName: capitalCase(triggerName),
       strategy,
       withAuth,
+      requireReactor,
     }),
   );
   await addPartToPiece({

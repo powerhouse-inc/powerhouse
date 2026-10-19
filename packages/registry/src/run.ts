@@ -1,5 +1,7 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import S3Database from "@powerhousedao/verdaccio-s3-storage";
 import S3DatabasePostgres from "@powerhousedao/verdaccio-s3-storage/postgres";
+import { LocalDatabase } from "@verdaccio/local-storage";
 import express from "express";
 import { findUp } from "find-up";
 import { mkdir } from "node:fs/promises";
@@ -27,6 +29,7 @@ import { migrate, migrateOnBoot, prepareSchema } from "./db/migrations.js";
 import { EventBus } from "./events.js";
 import {
   CONTENT_TYPE as METRICS_CONTENT_TYPE,
+  catalogMetrics,
   databaseMetrics,
   httpMetrics,
   Metrics,
@@ -42,6 +45,7 @@ import {
 import { SSEChannel } from "./notifications/sse.js";
 import { WebhookStore } from "./notifications/webhook.js";
 import type { ProcessorContext } from "./processor.js";
+import { PublishGuard, type PackageStore } from "./publish-guard.js";
 import type {
   RegistryCommandArgs,
   RegistryConfig,
@@ -49,9 +53,12 @@ import type {
   WebhookConfig,
   WorkerCommandArgs,
 } from "./types.js";
-import { ignoreLateContentLength } from "./late-header-guard.js";
+import {
+  abortTarballOnClose,
+  ignoreLateContentLength,
+} from "./late-header-guard.js";
 import { installUplinkMissCache } from "./uplink-miss-cache.js";
-import { buildVerdaccioConfig } from "./verdaccio-config.js";
+import { buildVerdaccioConfig, S3_STORAGE_PLUGIN } from "./verdaccio-config.js";
 import {
   enqueueSweep,
   pruneCachedPackages,
@@ -92,6 +99,7 @@ interface StorageArgs {
   s3SecretAccessKey?: string;
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
+  s3MaxWritesPerSecond?: number;
 }
 
 function s3From(args: StorageArgs): S3Config | undefined {
@@ -104,6 +112,7 @@ function s3From(args: StorageArgs): S3Config | undefined {
     secretAccessKey: args.s3SecretAccessKey,
     keyPrefix: args.s3KeyPrefix,
     s3ForcePathStyle: args.s3ForcePathStyle,
+    maxWritesPerSecond: args.s3MaxWritesPerSecond,
   };
 }
 
@@ -203,6 +212,23 @@ async function seedVerdaccioSecret(
   } finally {
     await pool.end();
   }
+}
+
+// A second handle on the storage Verdaccio publishes into, for the publish
+// guard. The S3 plugin locks a package across processes through Postgres.
+function packageStoreFor(
+  verdaccioConfig: Record<string, unknown>,
+): PackageStore {
+  const s3 = (verdaccioConfig.store as Record<string, object> | undefined)?.[
+    S3_STORAGE_PLUGIN
+  ];
+  const store = s3
+    ? new S3Database(
+        { ...s3, postgresPoolMax: 1, postgresLockPoolMax: 1 } as never,
+        { logger: pluginLogger } as never,
+      )
+    : new LocalDatabase(verdaccioConfig as never, pluginLogger as never);
+  return store as unknown as PackageStore;
 }
 
 const MIB = 1024 * 1024;
@@ -315,9 +341,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   await installUplinkMissCache();
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
-  const verdaccioServer = (await runServer(
-    buildVerdaccioConfig(config) as never,
-  )) as Server;
+  const verdaccioConfig = buildVerdaccioConfig(config);
+  const verdaccioServer = (await runServer(verdaccioConfig as never)) as Server;
 
   // Fail fast: a configured auth store that the plugin never loaded means
   // verdaccio silently fell back to no auth — refuse to run without ownership.
@@ -380,6 +405,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     artifacts,
     webhooks: runtime.webhooks,
     sse,
+    publishGuard: new PublishGuard(packageStoreFor(verdaccioConfig)),
     ...(sharedAuthStore ? { ownerStore: sharedAuthStore } : {}),
   };
 
@@ -437,6 +463,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use(ignoreLateContentLength);
+  app.use(abortTarballOnClose);
   app.use((req, res) => verdaccioHandler(req, res));
 
   // A PGlite database lives in this process, so its jobs must run here too
@@ -462,6 +489,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
       console.log(`  Renown auth: ${config.renown.publicUrl}`);
     }
     if (workers > 0) {
+      catalogMetrics(metrics, runtime.db);
       worker = startWorker(processorContext(runtime, localUrl), {
         concurrency: workers,
         webhooks: runtime.webhooks,
@@ -525,6 +553,7 @@ export async function runWorker(args: WorkerCommandArgs) {
   if (args.metricsPort !== undefined) {
     processMetrics(metrics);
     databaseMetrics(metrics, runtime.db);
+    catalogMetrics(metrics, runtime.db);
     metricsServer = await serveMetrics(metrics, args.metricsPort);
   }
   const worker = await startWorker(
@@ -599,8 +628,11 @@ async function readStoredManifest(
     return JSON.parse(
       (await res.Body?.transformToString()) ?? "null",
     ) as object;
-  } catch {
-    return null;
+  } catch (err) {
+    // Only a missing manifest is an answer; a throttled read must not look like one
+    const name = (err as { name?: string }).name;
+    if (name === "NoSuchKey" || name === "NotFound") return null;
+    throw err;
   }
 }
 
@@ -647,21 +679,31 @@ export async function runImportVerdaccioState(
 
   const pool = new pg.Pool({ connectionString: args.databaseUrl });
   let pruned: string[] = [];
+  let gone = 0;
   try {
     const store = new S3DatabasePostgres(pool, pluginLogger);
     await store.init();
     // The manifest index lets the worker reconcile without fetching metadata
+    const missing: string[] = [];
     for (const name of names) {
       const manifest = await readStoredManifest(s3, s3Config, name);
       if (manifest) await store.record(name, manifest);
+      else missing.push(name);
     }
+    // Listed with no stored manifest: Verdaccio's package list fails on one
+    for (const name of missing) names.delete(name);
+    await pool.query("DELETE FROM verdaccio_packages WHERE name = ANY($1)", [
+      missing,
+    ]);
+    gone = missing.length;
     for (const name of names) {
       await pool.query(
         "INSERT INTO verdaccio_packages (name) VALUES ($1) ON CONFLICT (name) DO NOTHING",
         [name],
       );
     }
-    pruned = await pruneCachedPackages(pool, [...names]);
+    // Without Verdaccio's state file there's no list to prune against
+    if (legacy.list) pruned = await pruneCachedPackages(pool, [...names]);
     for (const token of legacy.tokens ?? []) {
       await pool.query(
         `INSERT INTO verdaccio_tokens ("user", key, token) VALUES ($1, $2, $3)
@@ -680,6 +722,6 @@ export async function runImportVerdaccioState(
     await pool.end();
   }
   console.log(
-    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s)`,
+    `[registry] imported ${names.size} package name(s), ${legacy.tokens?.length ?? 0} token(s)${legacy.secret ? " and the secret" : ""}; pruned ${pruned.length} cached package(s), dropped ${gone} with no stored manifest`,
   );
 }

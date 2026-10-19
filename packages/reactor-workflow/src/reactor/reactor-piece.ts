@@ -5,12 +5,9 @@
 // block depends on the model an author picked, which static piece metadata
 // cannot express. Everything else about them comes from the piece.
 
-// Named where it is enforced: this is the one piece served ctx.reactor, and
-// the blocks below are the surface that port exists for.
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
-import { REACTOR_PORT_PIECE } from "../pieces/index.js";
 
-export const REACTOR_PIECE = REACTOR_PORT_PIECE;
+export const REACTOR_PIECE = "@powerhousedao/piece-reactor";
 
 // Block keys, never written to a document: compare a block's blockKey().
 

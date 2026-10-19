@@ -4,13 +4,13 @@ import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connec
 import {
   addDocument,
   preloadEditorModule,
-  setSelectedNode,
   useAllowedDocumentModelModules,
   useDisabledEditors,
   useEditorModules,
   useParentFolderForSelectedNode,
   useSelectedDriveSafe,
   useSelectedFolder,
+  useSetSelectedNode,
   useStudioMode,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
@@ -35,6 +35,7 @@ function toDocumentTypeOption(
 
 export function CreateDocument() {
   const [showModal, setShowModal] = useState(false);
+  const setSelectedNode = useSetSelectedNode();
   const { isAllowedToCreateDocuments } = useUserPermissions();
   // Respect Connect config: allowedDocumentTypes (allowlist) via the hook,
   // disabledEditors (denylist) subtracted below.

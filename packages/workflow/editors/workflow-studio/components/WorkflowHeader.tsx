@@ -124,7 +124,7 @@ export function WorkflowHeader(props: {
         </Fact>
         <Fact label="Recent runs">
           {stats.total > 0 ? (
-            <RunStrip runs={props.runs ?? []} />
+            <RunStrip centered runs={props.runs ?? []} />
           ) : (
             <span className="text-muted-foreground">None yet</span>
           )}

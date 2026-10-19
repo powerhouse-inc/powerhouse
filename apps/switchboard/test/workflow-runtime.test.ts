@@ -4,19 +4,28 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ReactorBuilder,
+  ReactorClientBuilder,
+  type AttachmentRef,
   type Database,
-  type ILiveReadModelCoordinator,
   type InProcessReactorClientModule,
   type IReadModelCoordinator,
-  type ReadModelRegistrationStage,
 } from "@powerhousedao/reactor";
 import {
   BaseSubgraph,
+  type CanonicalDocumentId,
   type GraphQLManager,
   type PackagePieceEntry,
 } from "@powerhousedao/reactor-api";
-import { PieceRegistry } from "@powerhousedao/reactor-workflow";
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import {
+  PieceRegistry,
+  type WorkflowRuntimeService,
+} from "@powerhousedao/reactor-workflow";
+import {
+  createRelationalDb,
+  type IRelationalDb,
+  type IWebhookScope,
+  type WebhookSpec,
+} from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -26,11 +35,17 @@ import { startSwitchboard } from "../src/server.mjs";
 import {
   PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
-  canReadAttachmentRef,
+  attachmentReadPolicy,
   composeWorkflowRuntime,
   assertWorkflowPackageLoadable,
+  hostPrincipalOf,
+  isWorkflowSingletonConflict,
+  retryWorkflowSingleton,
+  workflowSingletonLossHandler,
+  reactorAccessOf,
   resolveWorkflowsEnabled,
   type BooleanFlagSource,
+  type ComposedWorkflowRuntime,
 } from "../src/workflow-runtime.mjs";
 
 function stubLogger(): ILogger & {
@@ -50,80 +65,6 @@ function stubLogger(): ILogger & {
     info: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
-}
-
-// The engine, faked at the seam the host loads it through: everything below
-// belongs to @powerhousedao/reactor-workflow's own tests.
-function fakeEngine() {
-  const runtime = {
-    registerWebhookEndpoint: vi.fn(() => Promise.resolve()),
-    startTriggerSupervisor: vi.fn(),
-    shutdown: vi.fn(),
-    onOperations: vi.fn((_operations: OperationWithContext[]) =>
-      Promise.resolve(),
-    ),
-  };
-  const constructed: {
-    db: unknown;
-    runtime: unknown;
-    init: number;
-  }[] = [];
-
-  class FakeWorkflowTriggersReadModel {
-    readonly name = "workflow-triggers";
-    readonly #record: (typeof constructed)[number];
-
-    constructor(
-      db: unknown,
-      _operationIndex: unknown,
-      _writeCache: unknown,
-      _consistencyTracker: unknown,
-      boundRuntime: unknown,
-    ) {
-      this.#record = { db, runtime: boundRuntime, init: 0 };
-      constructed.push(this.#record);
-    }
-
-    init(): Promise<void> {
-      this.#record.init += 1;
-      return Promise.resolve();
-    }
-
-    indexOperations(operations: OperationWithContext[]): Promise<void> {
-      return (this.#record.runtime as typeof runtime).onOperations(operations);
-    }
-  }
-
-  return {
-    runtime,
-    constructed,
-    module: {
-      WORKFLOW_PACKAGE_NAME: "@powerhousedao/workflow",
-      WORKFLOW_TRIGGERS_READ_MODEL: "workflow-triggers",
-      WORKFLOW_TRIGGERS_READ_MODEL_STAGE:
-        "post_ready" as ReadModelRegistrationStage,
-      WorkflowTriggersReadModel: FakeWorkflowTriggersReadModel,
-      setPieceRegistryUrl: vi.fn((_url: string | undefined) => undefined),
-      createWorkflowRuntime: vi.fn((_deps: Record<string, unknown>) => runtime),
-    },
-  };
-}
-
-function compose(
-  engine: ReturnType<typeof fakeEngine>,
-  logger: ILogger,
-  overrides: Record<string, unknown> = {},
-) {
-  return composeWorkflowRuntime({
-    reactorClient: {} as never,
-    relationalDb: { id: "relational-db" } as never,
-    attachments: { id: "attachments" } as never,
-    webhooks: { id: "webhooks" } as never,
-    authorizationService: {} as never,
-    logger,
-    load: () => Promise.resolve(engine.module as never),
-    ...overrides,
-  });
 }
 
 describe("resolveWorkflowsEnabled", () => {
@@ -179,19 +120,6 @@ describe("resolveWorkflowsEnabled", () => {
       resolveWorkflowsEnabled({ featureFlags, configEnabled: false }),
     ).resolves.toBe(false);
   });
-
-  // The engine must not be imported at all when workflows are off, so the
-  // decision is the flag's alone and is taken before compose is ever called.
-  it("is what gates composition", async () => {
-    const composeIfEnabled = async () =>
-      (await resolveWorkflowsEnabled({ featureFlags }))
-        ? "composed"
-        : "skipped";
-
-    expect(await composeIfEnabled()).toBe("skipped");
-    process.env[PH_WORKFLOWS_ENABLED] = "true";
-    expect(await composeIfEnabled()).toBe("composed");
-  });
 });
 
 describe("assertWorkflowPackageLoadable", () => {
@@ -203,101 +131,217 @@ describe("assertWorkflowPackageLoadable", () => {
 
   it("names the package a host would have to install when the load fails", async () => {
     const cause = new Error("Cannot find module");
-    await expect(
-      assertWorkflowPackageLoadable(() => Promise.reject(cause)),
-    ).rejects.toMatchObject({ cause });
+    const failing = assertWorkflowPackageLoadable(() => Promise.reject(cause));
+    await expect(failing).rejects.toThrow("@powerhousedao/workflow");
+    await expect(failing).rejects.toMatchObject({ cause });
   });
 });
 
+// The endpoint family as the host's webhook service holds it, in memory.
+function memoryWebhooks() {
+  const families: WebhookSpec[] = [];
+  const scope: IWebhookScope = {
+    hasPublicOrigin: true,
+    register: (spec) => {
+      families.push(spec);
+      return Promise.resolve({
+        endpointFor: (key) =>
+          Promise.resolve({
+            token: key,
+            url: `https://hooks.test/${key}`,
+            createdAt: new Date().toISOString(),
+          }),
+        revoke: () => Promise.resolve(),
+        list: () => Promise.resolve([]),
+      });
+    },
+  };
+  return { families, scope };
+}
+
 describe("composeWorkflowRuntime", () => {
-  let database: Kysely<unknown> | undefined;
-  let reactor: Awaited<ReturnType<ReactorBuilder["buildModule"]>> | undefined;
+  let databases: Kysely<unknown>[] = [];
+  let stores: PGlite[] = [];
+  let module: InProcessReactorClientModule | undefined;
+  let composed: ComposedWorkflowRuntime | undefined;
+  // initdb is most of a store's cost (seconds on Windows): once, then copies.
+  let template: Blob | undefined;
+
+  beforeAll(async () => {
+    const pg = new PGlite();
+    try {
+      template = await pg.dumpDataDir("none");
+    } finally {
+      await pg.close();
+    }
+  }, 30_000);
 
   afterEach(async () => {
-    const shutdown = reactor?.reactor.kill();
-    await shutdown?.completed;
-    await database?.destroy();
-    reactor = undefined;
-    database = undefined;
+    await composed?.stop();
+    await module?.reactor.kill().completed;
+    for (const database of databases) await database.destroy();
+    // Kysely's destroy leaves the PGlite open.
+    for (const store of stores) if (!store.closed) await store.close();
+    composed = undefined;
+    module = undefined;
+    databases = [];
+    stores = [];
   });
+
+  function pglite(): Kysely<unknown> {
+    const store = new PGlite({ loadDataDir: template });
+    stores.push(store);
+    const database = new Kysely<unknown>({
+      dialect: new PGliteDialect(store),
+    });
+    databases.push(database);
+    return database;
+  }
 
   async function buildReactorModule(
     coordinator?: IReadModelCoordinator,
   ): Promise<InProcessReactorClientModule> {
-    database = new Kysely<unknown>({
-      dialect: new PGliteDialect(new PGlite()),
-    });
     const builder = new ReactorBuilder().withKysely(
-      database as unknown as Kysely<Database>,
+      pglite() as unknown as Kysely<Database>,
     );
     if (coordinator) builder.withReadModelCoordinator(coordinator);
-    reactor = await builder.buildModule();
-    return { reactorModule: reactor } as InProcessReactorClientModule;
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(builder)
+      .buildModule();
+    return module;
   }
 
-  it("hands the engine the host surfaces it declares", async () => {
-    const engine = fakeEngine();
-    await compose(engine, stubLogger());
+  // The real engine, loaded as production loads it.
+  async function compose(
+    clientModule: InProcessReactorClientModule,
+    overrides: Partial<Parameters<typeof composeWorkflowRuntime>[0]> = {},
+  ): Promise<ComposedWorkflowRuntime> {
+    composed = await composeWorkflowRuntime({
+      reactorClient: clientModule.client,
+      clientModule,
+      relationalDb: createRelationalDb(pglite()) as IRelationalDb,
+      attachments: {} as never,
+      authorizationService: {} as never,
+      logger: stubLogger(),
+      ...overrides,
+    });
+    return composed;
+  }
 
-    expect(engine.module.createWorkflowRuntime).toHaveBeenCalledTimes(1);
-    const [deps] = engine.module.createWorkflowRuntime.mock.calls[0]!;
-    expect(deps.relationalDb).toEqual({ id: "relational-db" });
-    expect(deps.attachments).toEqual({ id: "attachments" });
-    expect(deps.webhooks).toEqual({ id: "webhooks" });
-    expect(typeof deps.assertCanRead).toBe("function");
-    expect(typeof deps.assertCanWrite).toBe("function");
-    expect(deps.canReadAttachmentRef).toBe(canReadAttachmentRef);
+  it("lets a step read a ref only through a document its user may read", async () => {
+    const ref = `attachment://v1:${"a".repeat(64)}`;
+    const asked: unknown[] = [];
+    const policy = attachmentReadPolicy(
+      {
+        canReadAttachment: (request) => {
+          asked.push(request);
+          return Promise.resolve(
+            request.documentId === "doc-b" && request.userAddress === "0xabc"
+              ? {
+                  kind: "allowed",
+                  documentId: "doc-b" as CanonicalDocumentId,
+                  ref: request.attachmentRef as AttachmentRef,
+                }
+              : { kind: "denied" },
+          );
+        },
+        admitCaller: () => Promise.resolve({ kind: "admitted" }),
+      },
+      1,
+    );
+    const runUser = {
+      address: "0xabc",
+      subject: { address: "0xabc", key: "did:key:z1" },
+    };
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-a", "doc-b"],
+        runUser,
+      }),
+    ).toBe(true);
+    expect(asked[1]).toEqual({
+      documentId: "doc-b",
+      attachmentRef: ref,
+      userAddress: "0xabc",
+      appKey: "did:key:z1",
+    });
+    // No document to read it through, another user, or not a ref: refused.
+    expect(
+      await policy({ workflowId: "wf-1", ref, documentIds: [], runUser }),
+    ).toBe(false);
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-b"],
+        runUser: null,
+      }),
+    ).toBe(false);
+    expect(
+      await policy({
+        workflowId: "wf-1",
+        ref: "not-a-ref",
+        documentIds: ["doc-b"],
+        runUser,
+      }),
+    ).toBe(false);
+    expect(
+      await attachmentReadPolicy(undefined)({
+        workflowId: "wf-1",
+        ref,
+        documentIds: ["doc-b"],
+        runUser,
+      }),
+    ).toBe(false);
   });
 
-  it("lets a step read any well-formed attachment ref", async () => {
-    const hash = "a".repeat(64);
-    // No document references it: runs read attachments as they read documents.
-    expect(await canReadAttachmentRef("wf-1", `attachment://v1:${hash}`)).toBe(
-      true,
+  it("waits for the reference index to catch up with the triggering operation", async () => {
+    const ref = `attachment://v1:${"b".repeat(64)}`;
+    let calls = 0;
+    const policy = attachmentReadPolicy(
+      {
+        canReadAttachment: (request) =>
+          Promise.resolve(
+            ++calls < 3
+              ? { kind: "denied" }
+              : {
+                  kind: "allowed",
+                  documentId: request.documentId as CanonicalDocumentId,
+                  ref: request.attachmentRef as AttachmentRef,
+                },
+          ),
+        admitCaller: () => Promise.resolve({ kind: "admitted" }),
+      },
+      1,
     );
-    expect(await canReadAttachmentRef("wf-1", `attachment://v2:${hash}`)).toBe(
-      false,
-    );
-    expect(await canReadAttachmentRef("wf-1", "not-a-ref")).toBe(false);
+    expect(
+      await policy({ workflowId: "wf-1", ref, documentIds: ["doc-a"] }),
+    ).toBe(true);
+    expect(calls).toBe(3);
   });
 
   it("serves a subgraph the GraphQL manager can construct", async () => {
-    const engine = fakeEngine();
-    const { subgraph } = await compose(engine, stubLogger());
+    const { subgraph } = await compose(await buildReactorModule());
 
     expect(subgraph.prototype).toBeInstanceOf(BaseSubgraph);
   });
 
-  it("registers the trigger read model post_ready and feeds the runtime", async () => {
-    const engine = fakeEngine();
+  it("registers the trigger read model on the reactor's coordinator", async () => {
     const clientModule = await buildReactorModule();
-    const coordinator = clientModule.reactorModule!
-      .readModelCoordinator as ILiveReadModelCoordinator;
-    const addReadModel = vi.spyOn(coordinator, "addReadModel");
-    const logger = stubLogger();
 
-    const workflows = await compose(engine, logger, { clientModule });
+    const workflows = await compose(clientModule);
 
     expect(workflows.triggers).toEqual({ status: "available" });
-    expect(addReadModel).toHaveBeenCalledTimes(1);
-    expect(addReadModel.mock.calls[0]![1]).toBe("post_ready");
-    // Constructed once, initialised before it was registered, bound to the
-    // runtime this composition built.
-    expect(engine.constructed).toHaveLength(1);
-    expect(engine.constructed[0]!.init).toBe(1);
-    expect(engine.constructed[0]!.runtime).toBe(engine.runtime);
-
-    const registered = addReadModel.mock.calls[0]![0];
-    const operations = [] as OperationWithContext[];
-    await registered.indexOperations(operations);
-    expect(engine.runtime.onOperations).toHaveBeenCalledWith(operations);
     expect(
-      coordinator.readModels.filter(({ name }) => name === "workflow-triggers"),
+      clientModule.reactorModule!.readModelCoordinator.readModels.filter(
+        ({ name }) => name === "workflow-triggers",
+      ),
     ).toHaveLength(1);
   });
 
-  it("reports the intake unavailable and says so loudly", async () => {
-    const engine = fakeEngine();
+  it("reports the intake unavailable on a coordinator without live registration", async () => {
     const customCoordinator: IReadModelCoordinator = {
       readModels: [],
       start: vi.fn(),
@@ -305,26 +349,22 @@ describe("composeWorkflowRuntime", () => {
       drain: vi.fn().mockResolvedValue(undefined),
       getChainDepth: vi.fn().mockReturnValue(0),
     };
-    const clientModule = await buildReactorModule(customCoordinator);
-    const logger = stubLogger();
 
-    const workflows = await compose(engine, logger, { clientModule });
+    const workflows = await compose(
+      await buildReactorModule(customCoordinator),
+    );
 
     expect(workflows.triggers).toEqual({
       status: "unavailable",
       reason: "live-read-model-registration-unsupported",
     });
-    expect(engine.constructed).toHaveLength(0);
     expect(customCoordinator.readModels).toEqual([]);
-    expect(logger.error).toHaveBeenCalledTimes(1);
-    expect(logger.error.mock.calls[0]![0]).toContain("NOT armed");
   });
 
   it("reports the intake unavailable without an in-process reactor", async () => {
-    const engine = fakeEngine();
-    const logger = stubLogger();
+    const clientModule = await buildReactorModule();
 
-    const workflows = await compose(engine, logger, {
+    const workflows = await compose(clientModule, {
       clientModule: {} as InProcessReactorClientModule,
     });
 
@@ -332,38 +372,605 @@ describe("composeWorkflowRuntime", () => {
       status: "unavailable",
       reason: "in-process-reactor-module-unavailable",
     });
-    expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it("arms the webhooks and the supervisor on start", async () => {
-    const engine = fakeEngine();
-    const workflows = await compose(engine, stubLogger());
+  it("arms the webhooks and the supervisor on start, and stops them once", async () => {
+    const webhooks = memoryWebhooks();
+    const clientModule = await buildReactorModule();
+    // Intervals only, from here on: the singleton lease's heartbeat and the
+    // run-retention sweep from compose, then the supervisor's tick and the
+    // PENDING-run sweep.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      const workflows = await compose(clientModule, {
+        webhooks: webhooks.scope,
+      });
+      expect(vi.getTimerCount()).toBe(2);
 
-    await workflows.start();
+      await workflows.start();
 
-    expect(engine.runtime.registerWebhookEndpoint).toHaveBeenCalledTimes(1);
-    expect(engine.runtime.startTriggerSupervisor).toHaveBeenCalledTimes(1);
-  });
+      expect(webhooks.families.map(({ name }) => name)).toEqual(["trigger"]);
+      // The real runtime answers for it: an unknown workflow is not armed.
+      await expect(
+        webhooks.families[0]!.policyFor?.("wf-unknown"),
+      ).resolves.toBeUndefined();
+      expect(vi.getTimerCount()).toBe(4);
 
-  it("shuts the runtime down once on stop", async () => {
-    const engine = fakeEngine();
-    const workflows = await compose(engine, stubLogger());
-    await workflows.start();
+      await workflows.stop();
+      await workflows.stop();
 
-    await workflows.stop();
-    await workflows.stop();
-
-    expect(engine.runtime.shutdown).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("names the package a host would have to install when the load fails", async () => {
     const cause = new Error("Cannot find module");
-    const failing = compose(fakeEngine(), stubLogger(), {
+    const failing = compose(await buildReactorModule(), {
       load: () => Promise.reject(cause),
     });
 
     await expect(failing).rejects.toThrow("@powerhousedao/reactor-workflow");
     await expect(failing).rejects.toMatchObject({ cause });
+  });
+
+  // Placement (plan agreed decision 3): the claim is taken before the runtime
+  // exists and released on the way out. Distinct storage ids give the two
+  // composes distinct owner names, as two hosts would have.
+  function composeSecond(
+    clientModule: InProcessReactorClientModule,
+    relationalDb: IRelationalDb,
+  ): Promise<ComposedWorkflowRuntime> {
+    return composeWorkflowRuntime({
+      reactorClient: clientModule.client,
+      clientModule: {} as InProcessReactorClientModule,
+      relationalDb,
+      attachments: {} as never,
+      authorizationService: {} as never,
+      logger: stubLogger(),
+      storageId: "/srv/slot-b",
+    });
+  }
+
+  it("claims the workflow singleton and refuses a second owner until it is released", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const first = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    expect(first.singletonOwner).toBeDefined();
+
+    const refused = await composeSecond(clientModule, relationalDb).catch(
+      (error: unknown) => error,
+    );
+    expect(isWorkflowSingletonConflict(refused)).toBe(true);
+
+    await first.stop();
+    const second = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(second.singletonOwner).toBeDefined();
+      expect(second.singletonOwner).not.toBe(first.singletonOwner);
+    } finally {
+      await second.stop();
+    }
+  });
+
+  it("hands the claim back when composing fails after it", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: () => {
+              throw new Error("the runtime could not be built");
+            },
+          }),
+      }),
+    ).rejects.toThrow("the runtime could not be built");
+
+    const next = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(next.singletonOwner).toBeDefined();
+    } finally {
+      await next.stop();
+    }
+  });
+
+  // A rolling deploy under one stable owner name: the next pod's claim wins,
+  // and this one must stop running workflows rather than become a second
+  // writer. There is no re-claim; it stays down until restarted.
+  it("shuts the runtime down when a newer claim takes the singleton", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const lost = vi.fn();
+    let newer:
+      | Awaited<ReturnType<typeof engine.acquireWorkflowSingletonLease>>
+      | undefined;
+    // The lease measures its silence on performance.now().
+    vi.useFakeTimers({
+      toFake: ["setInterval", "clearInterval", "performance"],
+    });
+    try {
+      const workflows = await compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        onSingletonLost: lost,
+      });
+      await workflows.start();
+      expect(workflows.triggers).toEqual({ status: "available" });
+
+      // The older holder went quiet, so its own slot may take over.
+      const leaseDb = await relationalDb.createNamespace<{
+        workflow_singleton: { heartbeat_at: Date };
+      }>("workflow_runtime");
+      await leaseDb
+        .updateTable("workflow_singleton")
+        .set({ heartbeat_at: new Date(Date.now() - 3_600_000) })
+        .execute();
+      newer = await engine.acquireWorkflowSingletonLease({
+        relationalDb,
+        storageId: "/srv/slot-a",
+        logger: stubLogger(),
+      });
+      expect(newer.owner).toBe(workflows.singletonOwner);
+
+      await vi.advanceTimersByTimeAsync(engine.SINGLETON_HEARTBEAT_MS);
+      await vi.waitFor(() =>
+        expect(lost).toHaveBeenCalledWith({
+          reason: "taken",
+          heldBy: newer!.owner,
+        }),
+      );
+      expect(lost).toHaveBeenCalledTimes(1);
+      expect(workflows.triggers).toEqual({
+        status: "unavailable",
+        reason: "workflow-singleton-lost",
+      });
+      // Only the newer claim's heartbeat is left running.
+      expect(vi.getTimerCount()).toBe(1);
+
+      await workflows.start();
+      expect(vi.getTimerCount()).toBe(1);
+
+      await workflows.stop();
+      expect(await newer.heartbeat()).toBe(true);
+    } finally {
+      await newer?.release();
+      vi.useRealTimers();
+    }
+  });
+
+  it("shuts the runtime down before handing the claim back when composing fails", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const shutdowns: ReturnType<typeof vi.fn>[] = [];
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        storageId: "/srv/slot-a",
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: (host) => {
+              const runtime = engine.createWorkflowRuntime(host);
+              shutdowns.push(vi.spyOn(runtime, "shutdown"));
+              return runtime;
+            },
+            WorkflowTriggersReadModel: class {
+              constructor() {
+                throw new Error("the read model could not be built");
+              }
+            } as never,
+          }),
+      }),
+    ).rejects.toThrow("the read model could not be built");
+
+    expect(shutdowns).toHaveLength(1);
+    expect(shutdowns[0]).toHaveBeenCalledOnce();
+    const next = await composeSecond(clientModule, relationalDb);
+    await next.stop();
+  });
+
+  const triggerModels = (clientModule: InProcessReactorClientModule) =>
+    clientModule.reactorModule!.readModelCoordinator.readModels.filter(
+      ({ name }) => name === "workflow-triggers",
+    );
+
+  // The retry path composes again in the same process, against the same
+  // coordinator: a registration the failed attempt left behind blocks it.
+  it("composes again after a compose that failed past registering the trigger read model", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        http: {
+          baseUrl: "https://host.test/workflow",
+          get: () => {
+            throw new Error("the callback route could not be mounted");
+          },
+        } as never,
+      }),
+    ).rejects.toThrow("the callback route could not be mounted");
+    expect(triggerModels(clientModule)).toHaveLength(0);
+
+    const again = await compose(clientModule, { relationalDb });
+    expect(again.triggers).toEqual({ status: "available" });
+    expect(triggerModels(clientModule)).toHaveLength(1);
+  });
+
+  it("registers no trigger read model when the lease is lost while it initialises", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    let onLost:
+      | ((loss: { reason: "unrenewable"; silentMs: number }) => void)
+      | undefined;
+    class LosingReadModel extends engine.WorkflowTriggersReadModel {
+      override async init(): Promise<void> {
+        onLost?.({ reason: "unrenewable", silentMs: 30_000 });
+        await super.init();
+      }
+    }
+
+    await expect(
+      compose(clientModule, {
+        relationalDb,
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            WorkflowTriggersReadModel: LosingReadModel,
+            acquireWorkflowSingletonLease: (options) => {
+              onLost = options.onLost as typeof onLost;
+              return engine.acquireWorkflowSingletonLease(options);
+            },
+          }),
+      }),
+    ).rejects.toMatchObject({ name: "WorkflowSingletonConflictError" });
+    expect(triggerModels(clientModule)).toHaveLength(0);
+
+    const again = await compose(clientModule, { relationalDb });
+    expect(triggerModels(clientModule)).toHaveLength(1);
+    await again.stop();
+    expect(triggerModels(clientModule)).toHaveLength(0);
+  });
+
+  // Embedded PGlite: no other process can open the journal, so the lease must
+  // not turn workflows off over a stalled renewal.
+  it("lets the lease fence itself only over a journal others can open", async () => {
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const selfFence: (boolean | undefined)[] = [];
+    const load = () =>
+      Promise.resolve({
+        ...engine,
+        acquireWorkflowSingletonLease: (
+          options: Parameters<typeof engine.acquireWorkflowSingletonLease>[0],
+        ) => {
+          selfFence.push(options.selfFence);
+          return engine.acquireWorkflowSingletonLease(options);
+        },
+      });
+
+    for (const exclusiveJournal of [true, false]) {
+      const composed = await compose(await buildReactorModule(), {
+        relationalDb: createRelationalDb(pglite()) as IRelationalDb,
+        exclusiveJournal,
+        load,
+      });
+      await composed.stop();
+    }
+
+    expect(selfFence).toEqual([false, true]);
+    // Two reactors and two PGlite stores: past 5s on a Windows runner
+  }, 30_000);
+
+  it("opens no journal when the lease is lost before the runtime exists", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const createWorkflowRuntime = vi.fn(engine.createWorkflowRuntime);
+
+    const composing = compose(clientModule, {
+      relationalDb,
+      load: () =>
+        Promise.resolve({
+          ...engine,
+          createWorkflowRuntime,
+          acquireWorkflowSingletonLease: async (options) => {
+            const lease = await engine.acquireWorkflowSingletonLease(options);
+            options.onLost?.({ reason: "taken", heldBy: "thief" });
+            return lease;
+          },
+        }),
+    });
+
+    await expect(composing).rejects.toMatchObject({
+      name: "WorkflowSingletonConflictError",
+      owner: "thief",
+    });
+    expect(createWorkflowRuntime).not.toHaveBeenCalled();
+  });
+
+  // A rolling deploy whose slots have different owner names: the new pod is
+  // refused while the old one holds the lease, and must pick workflows up
+  // once the old pod releases it rather than leave nobody running them.
+  it("composes a refused host once the holder releases the singleton", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const holder = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    const onComposed = vi.fn(() => Promise.resolve());
+    const retry = retryWorkflowSingleton({
+      compose: () => composeSecond(clientModule, relationalDb),
+      onComposed,
+      logger: stubLogger(),
+      intervalMs: 20,
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(onComposed).not.toHaveBeenCalled();
+
+      await holder.stop();
+
+      await vi.waitFor(() => expect(onComposed).toHaveBeenCalledOnce());
+      const [taken] = onComposed.mock.calls[0] as unknown as [
+        ComposedWorkflowRuntime,
+      ];
+      expect(taken.singletonOwner).not.toBe(holder.singletonOwner);
+      await taken.stop();
+    } finally {
+      await retry.stop();
+    }
+  });
+
+  // Each claim builds its own runtime, so park state seeded under an earlier
+  // claim never outlives the gap in which another holder wrote.
+  it("reads the parks another holder wrote when it claims again", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const engine = await import("@powerhousedao/reactor-workflow");
+    const runtimes: WorkflowRuntimeService[] = [];
+    const claim = (storageId: string) =>
+      composeWorkflowRuntime({
+        reactorClient: clientModule.client,
+        clientModule: {} as InProcessReactorClientModule,
+        relationalDb,
+        attachments: {} as never,
+        authorizationService: {} as never,
+        logger: stubLogger(),
+        storageId,
+        load: () =>
+          Promise.resolve({
+            ...engine,
+            createWorkflowRuntime: (host) => {
+              const runtime = engine.createWorkflowRuntime(host);
+              runtimes.push(runtime);
+              return runtime;
+            },
+          }),
+      });
+    const parkOf = (runtime: WorkflowRuntimeService) =>
+      (
+        runtime as unknown as {
+          parks: { get(id: string): Promise<unknown> };
+        }
+      ).parks.get("wf-gap");
+
+    const first = await claim("/srv/slot-a");
+    expect(await parkOf(runtimes[0]!)).toBeUndefined();
+    await first.stop();
+
+    const other = await claim("/srv/slot-b");
+    await (await runtimes[1]!.store())!.parkWorkflow(
+      "wf-gap",
+      1,
+      "parked by the other holder",
+    );
+    await other.stop();
+
+    const again = await claim("/srv/slot-a");
+    try {
+      expect(runtimes[2]).not.toBe(runtimes[0]);
+      expect(await parkOf(runtimes[2]!)).toMatchObject({
+        reason: "parked by the other holder",
+      });
+    } finally {
+      await again.stop();
+    }
+  });
+
+  it("stops retrying the claim when the host stops", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+    const holder = await compose(clientModule, {
+      relationalDb,
+      storageId: "/srv/slot-a",
+    });
+    const onComposed = vi.fn(() => Promise.resolve());
+    const retry = retryWorkflowSingleton({
+      compose: () => composeSecond(clientModule, relationalDb),
+      onComposed,
+      logger: stubLogger(),
+      intervalMs: 20,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    await retry.stop();
+    await holder.stop();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(onComposed).not.toHaveBeenCalled();
+  });
+
+  it("claims again when starting the composed runtime fails", async () => {
+    const unhandled: unknown[] = [];
+    const capture = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", capture);
+    const runtimes = [
+      { stop: vi.fn() } as unknown as ComposedWorkflowRuntime,
+      { stop: vi.fn() } as unknown as ComposedWorkflowRuntime,
+    ];
+    const compose = vi
+      .fn<() => Promise<ComposedWorkflowRuntime>>()
+      .mockResolvedValueOnce(runtimes[0]!)
+      .mockResolvedValueOnce(runtimes[1]!);
+    const onComposed = vi
+      .fn<(workflows: ComposedWorkflowRuntime) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("start failed"))
+      .mockResolvedValueOnce(undefined);
+    const logger = stubLogger();
+    const retry = retryWorkflowSingleton({
+      compose,
+      onComposed,
+      logger,
+      intervalMs: 20,
+    });
+    try {
+      await vi.waitFor(() => expect(onComposed).toHaveBeenCalledTimes(2));
+      expect(onComposed).toHaveBeenLastCalledWith(runtimes[1]);
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(unhandled).toEqual([]);
+      expect(logger.error).toHaveBeenCalled();
+    } finally {
+      await retry.stop();
+      process.off("unhandledRejection", capture);
+    }
+  });
+
+  it("composes without a claim only when the host opts out", async () => {
+    const clientModule = await buildReactorModule();
+    const relationalDb = createRelationalDb(pglite()) as IRelationalDb;
+
+    const unclaimed = await compose(clientModule, {
+      relationalDb,
+      singletonLease: false,
+    });
+    expect(unclaimed.singletonOwner).toBeUndefined();
+
+    // Nothing was claimed, so a host that does claim takes it at once.
+    const claimed = await composeSecond(clientModule, relationalDb);
+    try {
+      expect(claimed.singletonOwner).toBeDefined();
+    } finally {
+      await claimed.stop();
+    }
+  });
+});
+
+describe("the host's answer to losing the workflow singleton", () => {
+  it("stays without workflows, naming the holder, when another claim took it", () => {
+    const logger = stubLogger();
+    const fatal = vi.fn(() => true);
+
+    workflowSingletonLossHandler(
+      logger,
+      fatal,
+    )({
+      reason: "taken",
+      heldBy: "switchboard-1",
+    });
+
+    expect(fatal).not.toHaveBeenCalled();
+    const logged = vi
+      .mocked(logger.error)
+      .mock.calls.map(([line]) => String(line));
+    expect(logged.join("\n")).toContain('Another process ("switchboard-1")');
+  });
+
+  // Nobody else runs workflows after a database blip: going down lets the
+  // supervisor restart the process, which re-claims at boot.
+  it("goes through the fatal shutdown when no takeover was seen", () => {
+    const logger = stubLogger();
+    const fatal = vi.fn(() => true);
+
+    workflowSingletonLossHandler(
+      logger,
+      fatal,
+    )({
+      reason: "unrenewable",
+      silentMs: 30_000,
+    });
+
+    expect(fatal).toHaveBeenCalledOnce();
+    const [, error] = fatal.mock.calls[0] as unknown as [string, Error];
+    expect(error.message).toContain("no other process was seen");
+    expect(error.message).not.toContain("Another process");
+  });
+
+  it("says a restart is needed when no fatal shutdown is installed", () => {
+    const logger = stubLogger();
+
+    workflowSingletonLossHandler(
+      logger,
+      () => false,
+    )({
+      reason: "unrenewable",
+      silentMs: 30_000,
+    });
+
+    const logged = vi
+      .mocked(logger.error)
+      .mock.calls.map(([line]) => String(line));
+    expect(logged.join("\n")).toContain("until it is restarted");
+    expect(logged.join("\n")).not.toContain("Another process");
+  });
+});
+
+describe("the host's reactor access", () => {
+  const signer = { app: { key: "did:key:zHost" }, user: { address: "0xhost" } };
+  const moduleWith = (flags?: Record<string, boolean>) =>
+    ({
+      signer,
+      reactorModule: flags ? { featureFlags: flags } : undefined,
+    }) as unknown as InProcessReactorClientModule;
+
+  it("grants the host by key under auth conditions, else by address", () => {
+    const byKey = reactorAccessOf(
+      moduleWith({ authEnforcement: true, authConditions: true }),
+    );
+    expect(byKey).toEqual({
+      authEnforcement: true,
+      authConditions: true,
+      identity: { address: "0xhost", key: "did:key:zHost" },
+    });
+    expect(hostPrincipalOf(byKey)).toEqual({
+      match: { eq: [{ attr: "subject.key" }, { lit: "did:key:zHost" }] },
+    });
+
+    const byAddress = reactorAccessOf(
+      moduleWith({ authEnforcement: false, authConditions: false }),
+    );
+    expect(byAddress.authEnforcement).toBe(false);
+    expect(hostPrincipalOf(byAddress)).toEqual({ address: "0xhost" });
+  });
+
+  it("reads unknown flags as enforced and a keyless signer as no identity", () => {
+    const access = reactorAccessOf({
+      signer: {},
+      reactorModule: undefined,
+    } as unknown as InProcessReactorClientModule);
+    expect(access).toEqual({
+      authEnforcement: true,
+      authConditions: false,
+      identity: null,
+    });
+    expect(hostPrincipalOf(access)).toBeUndefined();
   });
 });
 
@@ -408,10 +1015,26 @@ describe("booting Switchboard with workflows on", () => {
       expect(
         results.map(({ documentModel }) => documentModel.global.id),
       ).toContain("powerhouse/workflow");
+      // With no worker pool or projection worker, workflows alone resolve them.
+      expect(
+        switchboard.modelManifest().map((entry) => entry.documentType),
+      ).toEqual(
+        expect.arrayContaining([
+          "powerhouse/workflow",
+          "powerhouse/connection",
+        ]),
+      );
       // The subgraph is registered late, so the schema it joins arrives after
       // the boot resolves; poll rather than race it.
       await expect(pollWorkflowSubgraph(switchboard)).resolves.toMatchObject({
         name: "workflow-runtime",
+      });
+      // The boot type does not publish `api`; the facts sink lives on it.
+      const { api } = switchboard as unknown as {
+        api: { inspection?: { inspector: { info(): Promise<unknown> } } };
+      };
+      await expect(api.inspection?.inspector.info()).resolves.toMatchObject({
+        workflows: true,
       });
 
       await switchboard.shutdown();

@@ -63,8 +63,7 @@ interface CatalogModule {
 
 interface SearchModule {
   buildSearchIndex: (raw: unknown[]) => {
-    entries: { hit: BlockSearchHit }[];
-    pieces: number;
+    pieces: { meta: { source: string }; blocks: { hit: BlockSearchHit }[] }[];
   };
 }
 
@@ -562,12 +561,14 @@ describe("registry pieces", () => {
     it("buildSearchIndex finds the blocks in the suggestion variant", async () => {
       const raw = await catalogModule.fetchCatalogWithSuggestions();
       const index = searchModule.buildSearchIndex(raw);
-      const blocks = index.entries.map(({ hit }) => [
-        hit.pieceName,
-        hit.pieceVersion,
-        hit.kind,
-        hit.name,
-      ]);
+      const blocks = index.pieces
+        .flatMap((piece) => piece.blocks)
+        .map(({ hit }) => [
+          hit.pieceName,
+          hit.pieceVersion,
+          hit.kind,
+          hit.name,
+        ]);
       expect(blocks).toContainEqual([PIECE_NAME, VERSION, "action", "greet"]);
       expect(blocks).toContainEqual([
         PIECE_NAME,
@@ -575,8 +576,11 @@ describe("registry pieces", () => {
         "trigger",
         "greeted",
       ]);
-      const trigger = index.entries.find((e) => e.hit.kind === "trigger")?.hit;
+      const trigger = index.pieces
+        .flatMap((piece) => piece.blocks)
+        .find(({ hit }) => hit.kind === "trigger")?.hit;
       expect(trigger?.strategy).toBe("POLLING");
+      expect(index.pieces[0]?.meta.source).toBe("registry");
       expect(trigger?.pieceDisplayName).toBe("Greeter");
     });
   });

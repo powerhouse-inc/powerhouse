@@ -15,7 +15,6 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
-import type { Options as BenchOptions } from "tinybench";
 import { describe } from "vitest";
 import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
 import type { OperationIndexEntry } from "../src/cache/operation-index-types.js";
@@ -50,6 +49,7 @@ import {
   type PolicyShape,
 } from "./fixtures/auth-policies.js";
 import { bench } from "./loud-bench.js";
+import type { BenchOptions } from "./loud-bench.js";
 
 // Meso tier: auth-scope.bench.ts's gates, against PGlite instead of stubs.
 
@@ -93,7 +93,7 @@ function shape(overrides: Partial<PolicyShape>): PolicyShape {
   return { ...MINIMAL_SHAPE, ...overrides };
 }
 
-/** Chained rather than awaited: tinybench does not await a teardown. */
+/** Chained so teardown returns at once; the next fixture awaits it. */
 let pendingTeardown: Promise<void> = Promise.resolve();
 
 async function createFixture(): Promise<StorageFixture> {

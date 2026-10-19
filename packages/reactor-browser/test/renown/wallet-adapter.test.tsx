@@ -34,7 +34,7 @@ afterEach(() => {
 
 describe("useRenownWalletAdapter", () => {
   it("is undefined until the adapter publishes its controller", async () => {
-    const screen = render(<Probe id="privy" />);
+    const screen = await render(<Probe id="privy" />);
     await expect
       .element(screen.getByTestId("adapter"))
       .toHaveTextContent("none");
@@ -46,7 +46,7 @@ describe("useRenownWalletAdapter", () => {
 
   it("returns only the adapter with the requested id", async () => {
     setWalletAdapterController("rainbow", controller("rainbow-ctl"));
-    const screen = render(<Probe id="privy" />);
+    const screen = await render(<Probe id="privy" />);
     await expect
       .element(screen.getByTestId("adapter"))
       .toHaveTextContent("none");
@@ -54,7 +54,7 @@ describe("useRenownWalletAdapter", () => {
 
   it("activates the wallet tree on mount, even when the activator registers later", async () => {
     const activator = vi.fn(() => Promise.resolve(controller("merged")));
-    const screen = render(<Probe id="privy" />);
+    const screen = await render(<Probe id="privy" />);
     await expect
       .element(screen.getByTestId("adapter"))
       .toHaveTextContent("none");
@@ -68,7 +68,7 @@ describe("useRenownWalletAdapter", () => {
     const activator = vi.fn(() => Promise.resolve(controller("merged")));
     setWalletActivator(activator);
     setWalletAdapterController("privy", controller("privy-ctl"));
-    const screen = render(<Probe id="privy" />);
+    const screen = await render(<Probe id="privy" />);
     await expect
       .element(screen.getByTestId("adapter"))
       .toHaveTextContent("privy-ctl");
@@ -77,7 +77,7 @@ describe("useRenownWalletAdapter", () => {
 
   it("clears the controller when the adapter unmounts", async () => {
     setWalletAdapterController("privy", controller("privy-ctl"));
-    const screen = render(<Probe id="privy" />);
+    const screen = await render(<Probe id="privy" />);
     await expect
       .element(screen.getByTestId("adapter"))
       .toHaveTextContent("privy-ctl");

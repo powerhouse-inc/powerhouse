@@ -13,6 +13,7 @@ import https from "node:https";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { buffer } from "node:stream/consumers";
+import { pacer } from "./pace.js";
 import type { S3Config } from "./types.js";
 
 export interface Artifact {
@@ -24,14 +25,26 @@ export interface Artifact {
 
 export interface ArtifactStore {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
-  /** Uploads a file from disk without reading it into memory. */
+  /** Uploads a file from disk; only large ones stream, since a stream can't be retried. */
   putFile(key: string, file: string, contentType: string): Promise<void>;
   get(key: string): Promise<Artifact | null>;
   deletePrefix(prefix: string): Promise<void>;
 }
 
+// The SDK can't replay a stream, so a throttled upload of one would fail at once
+const BUFFERED_UPLOAD_BYTES = 4 * 1024 * 1024;
+// Per process: a bucket's 750 requests per second is shared by every writer and
+// reader on it, here dev and prod
+const DEFAULT_WRITES_PER_SECOND = 150;
+
 export function createS3ArtifactStore(config: S3Config): ArtifactStore {
+  const paceWrite = pacer(
+    config.maxWritesPerSecond ?? DEFAULT_WRITES_PER_SECOND,
+  );
   const s3 = new S3Client({
+    // Backs off when the provider answers SlowDown
+    retryMode: "adaptive",
+    maxAttempts: 5,
     endpoint: config.endpoint,
     region: config.region,
     forcePathStyle: config.s3ForcePathStyle ?? true,
@@ -58,6 +71,7 @@ export function createS3ArtifactStore(config: S3Config): ArtifactStore {
 
   return {
     async put(key, body, contentType) {
+      await paceWrite();
       await s3.send(
         new PutObjectCommand({
           Bucket: config.bucket,
@@ -69,10 +83,25 @@ export function createS3ArtifactStore(config: S3Config): ArtifactStore {
     },
     async putFile(key, file, contentType) {
       const { size } = await fs.promises.stat(file);
+      if (size <= BUFFERED_UPLOAD_BYTES) {
+        const body = await fs.promises.readFile(file);
+        await paceWrite();
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: config.bucket,
+            Key: root + key,
+            Body: body,
+            ContentLength: size,
+            ContentType: contentType,
+          }),
+        );
+        return;
+      }
       const body = fs.createReadStream(file);
       // A send that fails before reading leaves the stream's errors unheard
       body.on("error", () => undefined);
       try {
+        await paceWrite();
         await s3.send(
           new PutObjectCommand({
             Bucket: config.bucket,
@@ -113,6 +142,7 @@ export function createS3ArtifactStore(config: S3Config): ArtifactStore {
           o.Key ? [{ Key: o.Key }] : [],
         );
         if (keys.length > 0) {
+          await paceWrite();
           await s3.send(
             new DeleteObjectsCommand({
               Bucket: config.bucket,

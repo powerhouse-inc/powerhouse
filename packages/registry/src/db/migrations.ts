@@ -252,6 +252,15 @@ const MIGRATIONS: Migration[] = [
       ),
     ],
   },
+  {
+    id: 7,
+    name: "permanent version failures",
+    transaction: false,
+    statements: [
+      // A failure retrying can't fix, such as a size limit or a piece conflict
+      "ALTER TABLE registry_versions ADD COLUMN IF NOT EXISTS permanent boolean NOT NULL DEFAULT false",
+    ],
+  },
 ];
 
 const MIGRATIONS_TABLE = `CREATE TABLE IF NOT EXISTS registry_migrations (

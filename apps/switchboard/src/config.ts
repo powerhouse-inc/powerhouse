@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
+import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
 import { parseForcePgVersion } from "./pglite-version.js";
 import type {
   SwitchboardDriveDocumentType,
@@ -53,7 +54,7 @@ export const config: Config = {
     documentType: parseDriveType(process.env.PH_DEFAULT_DRIVE_TYPE),
     global: {
       name: "Powerhouse",
-      icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
+      icon: DEFAULT_DRIVE_ICON,
     },
     local: {
       availableOffline: true,

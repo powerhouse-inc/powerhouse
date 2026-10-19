@@ -75,6 +75,9 @@ export type ReadModelRegistrationStage = "pre_ready" | "post_ready";
  */
 export interface ILiveReadModelCoordinator extends IReadModelCoordinator {
   addReadModel(readModel: IReadModel, stage: ReadModelRegistrationStage): void;
+  /** Detaches this instance, not its name; false when it is not registered.
+   * A batch it reserved and has not applied is released. */
+  removeReadModel(readModel: IReadModel): boolean;
 }
 
 export function supportsLiveReadModelRegistration(
@@ -82,6 +85,8 @@ export function supportsLiveReadModelRegistration(
 ): coordinator is ILiveReadModelCoordinator {
   return (
     "addReadModel" in coordinator &&
-    typeof coordinator.addReadModel === "function"
+    typeof coordinator.addReadModel === "function" &&
+    "removeReadModel" in coordinator &&
+    typeof coordinator.removeReadModel === "function"
   );
 }

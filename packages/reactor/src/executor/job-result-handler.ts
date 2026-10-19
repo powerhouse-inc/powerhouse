@@ -1,12 +1,13 @@
 import type { ILogger } from "document-model";
-import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { RetryAccounting } from "../queue/types.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { ModuleNotFoundError } from "../registry/errors.js";
+import {
+  ModelNotWorkerImportableError,
+  ModuleNotFoundError,
+} from "../registry/errors.js";
 import {
   AuthorizationDeniedError,
   AuthTimestampNotMonotonicError,
@@ -47,6 +48,11 @@ export interface IJobResultHandler {
   ): Promise<void>;
 }
 
+/**
+ * Flattens an error into the ErrorInfo record the queue and tracker store.
+ * An Error input also rides along as `source`, so queue.failJob can emit a
+ * JOB_FAILED carrying the typed instance instead of a reconstruction.
+ */
 export function toErrorInfo(error: Error | string): ErrorInfo {
   if (error instanceof Error) {
     const documentId = (error as { documentId?: unknown }).documentId;
@@ -54,6 +60,7 @@ export function toErrorInfo(error: Error | string): ErrorInfo {
       name: error.name,
       message: error.message,
       stack: error.stack || new Error().stack || "",
+      source: error,
       ...(typeof documentId === "string" ? { documentId } : {}),
     };
   }
@@ -64,11 +71,15 @@ export function toErrorInfo(error: Error | string): ErrorInfo {
   };
 }
 
+/** Whether a retry charged to the job's limit is still within it. */
+export function hasRetriesLeft(job: Job): boolean {
+  return (job.retryCount || 0) < (job.maxRetries || 0);
+}
+
 export class JobResultHandler implements IJobResultHandler {
   constructor(
     private queue: IQueue,
     private jobTracker: IJobTracker,
-    private eventBus: IEventBus,
     private resolver: IDocumentModelResolver,
     private logger: ILogger,
   ) {}
@@ -88,16 +99,27 @@ export class JobResultHandler implements IJobResultHandler {
     }
 
     // Attempt model recovery before exhausting retries
-    if (result.error && ModuleNotFoundError.isError(result.error)) {
+    if (
+      result.error &&
+      ModuleNotFoundError.isError(result.error) &&
+      typeof result.error.documentType === "string"
+    ) {
       let modelLoaded = false;
       try {
-        await this.resolver.ensureModelLoaded(result.error.documentType);
+        await this.resolver.recoverMissingModel(
+          result.error.documentType,
+          result.error.requestedVersion,
+        );
         modelLoaded = true;
-      } catch {
-        // Model could not be loaded, fall through to normal failure path
+      } catch (error) {
+        // No retry can reach a model the workers cannot import.
+        if (ModelNotWorkerImportableError.isError(error)) {
+          this.failNow(handle, error);
+          return;
+        }
       }
 
-      if (modelLoaded) {
+      if (modelLoaded && hasRetriesLeft(handle.job)) {
         const errorInfo = toErrorInfo(result.error);
         try {
           await this.queue.retryJob(handle.job.id, errorInfo);
@@ -175,23 +197,13 @@ export class JobResultHandler implements IJobResultHandler {
         ReservedActionError.isError(result.error) ||
         RetractionRefusedError.isError(result.error))
     ) {
-      const errorInfo = toErrorInfo(result.error);
-      this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: result.error,
-          job: handle.job,
-        })
-        .catch(() => {});
-      handle.fail(errorInfo);
+      this.failNow(handle, result.error);
       return;
     }
 
     const retryCount = handle.job.retryCount || 0;
-    const maxRetries = handle.job.maxRetries || 0;
 
-    if (retryCount < maxRetries) {
+    if (hasRetriesLeft(handle.job)) {
       const currentErrorInfo = result.error
         ? toErrorInfo(result.error)
         : toErrorInfo("Unknown error");
@@ -199,21 +211,19 @@ export class JobResultHandler implements IJobResultHandler {
       try {
         await this.queue.retryJob(handle.job.id, currentErrorInfo);
       } catch (error) {
+        // The record names the retry-infrastructure failure, but the event
+        // carries the job's own typed error when there is one - the same
+        // split the two events used to deliver.
         const retryErrorInfo = toErrorInfo(
           error instanceof Error ? error : "Failed to retry job",
         );
+        const failureInfo: ErrorInfo = result.error
+          ? { ...retryErrorInfo, source: result.error }
+          : retryErrorInfo;
 
-        this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
+        this.jobTracker.markFailed(handle.job.id, failureInfo, handle.job);
 
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_FAILED, {
-            jobId: handle.job.id,
-            error: result.error ?? new Error(retryErrorInfo.message),
-            job: handle.job,
-          })
-          .catch(() => {});
-
-        handle.fail(retryErrorInfo);
+        handle.fail(failureInfo);
       }
     } else {
       const currentErrorInfo = result.error
@@ -228,16 +238,18 @@ export class JobResultHandler implements IJobResultHandler {
 
       this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);
 
-      this.eventBus
-        .emit(ReactorEventTypes.JOB_FAILED, {
-          jobId: handle.job.id,
-          error: result.error ?? new Error(fullErrorInfo.message),
-          job: handle.job,
-        })
-        .catch(() => {});
-
       handle.fail(fullErrorInfo);
     }
+  }
+
+  // handle.fail resolves the job through queue.failJob, which emits the one
+  // ReactorEventTypes.JOB_FAILED for this failure - carrying the typed error
+  // through errorInfo.source. Emitting here too delivered every terminal
+  // failure to subscribers twice.
+  private failNow(handle: IJobExecutionHandle, error: Error): void {
+    const errorInfo = toErrorInfo(error);
+    this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
+    handle.fail(errorInfo);
   }
 
   /** How many times this job has already lost an append-condition race. */
@@ -285,10 +297,12 @@ export class JobResultHandler implements IJobResultHandler {
     });
 
     return {
-      // The attempt that ended the job is the one a consumer classifies by.
+      // The attempt that ended the job is the one a consumer classifies by,
+      // so its name and typed instance carry over to the aggregate record.
       name: currentError.name,
       message: messageLines.join("\n"),
       stack: stackLines.join("\n\n"),
+      ...(currentError.source ? { source: currentError.source } : {}),
     };
   }
 }

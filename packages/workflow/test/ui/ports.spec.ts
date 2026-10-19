@@ -99,7 +99,7 @@ test.describe("Declared ports", () => {
     );
     // Presets list with no chip picked; disabled until the catalog pins them.
     const branch = picker
-      .getByRole("button")
+      .getByRole("option")
       .filter({ hasText: "Routes true/false" });
     await expect(branch).toBeEnabled();
     await branch.click();

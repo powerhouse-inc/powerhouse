@@ -1,8 +1,11 @@
 // The controls every editor's own header carries in place of Connect's
 // document toolbar: a way back out, and undo/redo.
 import {
-  setSelectedNode,
+  getPHStore,
   useDocumentById,
+  usePHNavigation,
+  useSearchParams,
+  useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import {
   undo,
@@ -26,15 +29,20 @@ import {
   undoProtocolVersion,
   type UndoPolicy,
 } from "./undo-plan.js";
+import { ITEM_PARAM } from "./url-param.js";
 
-export function BackButton(props: { label?: string }) {
+/** Back where the user came from, else to the studio's root. */
+export function BackButton(props: { documentId: string; label?: string }) {
+  const navigation = usePHNavigation();
+  const setSelectedNode = useSetSelectedNode();
+  const item = useSearchParams()[ITEM_PARAM];
+  const close = () => {
+    if (navigation.closeOpened?.()) return;
+    // A deep link has no entry to return to; its parent is the hidden home folder.
+    setSelectedNode(undefined, { search: { [ITEM_PARAM]: item } });
+  };
   return (
-    <Button
-      size="sm"
-      variant="ghost"
-      className="-ml-1"
-      onClick={() => setSelectedNode(undefined)}
-    >
+    <Button size="sm" variant="ghost" className="-ml-1" onClick={close}>
       <Icon name="back" className="h-3.5 w-3.5" />
       {props.label ?? "Back"}
     </Button>
@@ -47,7 +55,7 @@ const PAGE = 500;
 
 // Documents in the cache carry no history, so undo reads it when pressed.
 async function globalHistory(documentId: string): Promise<Operation[]> {
-  const client = window.ph?.reactorClient;
+  const client = getPHStore()?.reactorClient;
   if (!client) return [];
   let page = await client.getOperations(
     documentId,

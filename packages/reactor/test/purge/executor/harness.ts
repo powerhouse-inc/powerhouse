@@ -59,6 +59,18 @@ export type TestDatabase = {
   drop(): Promise<void>;
 };
 
+async function waitForNoBackends(admin: Pool, name: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const { rows } = await admin.query<{ count: number }>(
+      "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = $1",
+      [name],
+    );
+    if (rows[0].count === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
 /** A fresh database per test file: the reactor schema name is fixed. */
 export async function createTestDatabase(name: string): Promise<TestDatabase> {
   const admin = new Pool({ connectionString: PG_TEST_URL });
@@ -79,6 +91,8 @@ export async function createTestDatabase(name: string): Promise<TestDatabase> {
       try {
         await base.destroy();
       } finally {
+        // pool.end() resolves before backends exit; FORCE would 57P01 them.
+        await waitForNoBackends(admin, name);
         await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
         await admin.end();
       }

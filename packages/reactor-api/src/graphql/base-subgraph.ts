@@ -3,6 +3,7 @@ import type {
   IRelationalDb,
   ISyncManager,
   SyncScopeGate,
+  ViewFilter,
 } from "@powerhousedao/reactor";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type { AuthSubject } from "@powerhousedao/shared/document-model";
@@ -26,6 +27,10 @@ import {
 } from "../services/canonical-document-id.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
+import {
+  createCredentialInvalidator,
+  type ICredentialInvalidator,
+} from "../services/auth.service.js";
 import type { Context } from "./types.js";
 
 /**
@@ -60,6 +65,14 @@ export class BaseSubgraph implements ISubgraph {
   documentPermissionService?: DocumentPermissionService;
   authorizationService: IAuthorizationService;
   syncServingGate?: SyncScopeGate;
+  /**
+   * The host's credential cache, for a package that revokes credentials:
+   * call `this.credentials.invalidateCredential(address, chainId?, appDid?)`
+   * right after the revocation is stored, so this host refuses the credential
+   * on the next request and closes WebSocket connections that rely on it.
+   * A no-op on a host without authentication.
+   */
+  readonly credentials: ICredentialInvalidator;
 
   /**
    * Per-request memo of raw identifier to canonical document id, keyed on the
@@ -91,6 +104,8 @@ export class BaseSubgraph implements ISubgraph {
     this.syncServingGate = args.syncServingGate;
     this.path = args.path ?? "";
     this.#attachments = args.attachments;
+    this.credentials =
+      args.credentials ?? createCredentialInvalidator(undefined);
   }
 
   /**
@@ -202,6 +217,23 @@ export class BaseSubgraph implements ISubgraph {
     return this.authorizationService.canRead(documentId, ctx.user?.address);
   }
 
+  /** Drops the items the host's own ACL refuses the caller. */
+  async readableByHost<T extends { id: string }>(
+    items: readonly T[],
+    ctx: Context,
+  ): Promise<T[]> {
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return [...items];
+    }
+    const readable: T[] = [];
+    for (const item of items) {
+      if (await this.canReadDocument(item.id as CanonicalDocumentId, ctx)) {
+        readable.push(item);
+      }
+    }
+    return readable;
+  }
+
   /**
    * The principal a request decides as: the authenticated caller's address, and
    * the did:key of the app instance whose token authenticated it.
@@ -225,12 +257,44 @@ export class BaseSubgraph implements ISubgraph {
       return false;
     }
     try {
-      return await this.reactorClient.isServed(documentId, {
-        subject: this.viewSubject(ctx),
-      });
+      return await this.servesDocumentOrThrows(documentId, ctx);
     } catch {
       return false;
     }
+  }
+
+  /** {@link servesDocument}, but a reactor that cannot answer throws. */
+  protected servesDocumentOrThrows(
+    identifier: string,
+    ctx: Context,
+    view?: Pick<ViewFilter, "branch" | "scopes">,
+  ): Promise<boolean> {
+    return this.reactorClient.isServed(identifier, {
+      ...view,
+      subject: this.viewSubject(ctx),
+    });
+  }
+
+  /**
+   * Whether a listing would serve the document to the caller: the reactor read
+   * gate, then the host's legacy layer, as `findDocuments` applies them. Absent
+   * or withheld is `false`; a failure to decide throws.
+   */
+  protected async listsDocument(
+    identifier: string,
+    ctx: Context,
+    view?: Pick<ViewFilter, "branch" | "scopes">,
+  ): Promise<boolean> {
+    if (!(await this.servesDocumentOrThrows(identifier, ctx, view))) {
+      return false;
+    }
+    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+      return true;
+    }
+    return this.canReadDocument(
+      await this.resolveCanonicalDocumentId(identifier, ctx),
+      ctx,
+    );
   }
 
   /**

@@ -1,39 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { schemaFetch, type RuntimeRoot } from "../test/runtime-schema.js";
 import type * as WorkflowToolsModule from "./workflow-tools.js";
-
-vi.mock("@powerhousedao/reactor-browser/ai", () => ({
-  resolveDriveSwitchboard: vi.fn(() => ({
-    switchboardUrl: "http://localhost:4001",
-    graphqlUrl: "http://localhost:4001/graphql",
-  })),
-}));
-
-type Handler = (variables: Record<string, unknown>) => unknown;
-
-/** Routes GraphQL operations by the operation name in the query text. */
-function graphqlFetch(routes: Record<string, Handler>) {
-  const calls: { operation: string; variables: Record<string, unknown> }[] = [];
-  const fetchMock = vi.fn((_url: string, init?: { body?: string }) => {
-    const body = JSON.parse(String(init?.body)) as {
-      query: string;
-      variables: Record<string, unknown>;
-    };
-    const operation =
-      /^\s*(?:query|mutation)\s+(\w+)/.exec(body.query)?.[1] ?? "";
-    calls.push({ operation, variables: body.variables });
-    const payload =
-      operation in routes
-        ? { data: routes[operation](body.variables) }
-        : { errors: [{ message: `unrouted operation ${operation}` }] };
-    return Promise.resolve(
-      new Response(JSON.stringify(payload), { status: 200 }),
-    );
-  });
-  return { fetchMock, calls };
-}
 
 const CORE = "@powerhousedao/piece-core";
 const CORE_VERSION = "6.2.3-dev.27";
+const HTTP = "@activepieces/piece-http";
 
 // What the reactor serves for the core piece, trimmed to what these tests read.
 const CORE_DESCRIPTORS: Record<string, unknown> = {
@@ -88,6 +59,18 @@ const CORE_DESCRIPTORS: Record<string, unknown> = {
   },
 };
 
+interface BlockArg {
+  pieceName: string;
+  pieceVersion: string;
+  name: string;
+  kind: string;
+}
+
+// The tools' requests, executed against the real workflow-runtime schema.
+function serve(root: RuntimeRoot) {
+  vi.stubGlobal("fetch", schemaFetch(root).fetch);
+}
+
 let tools: typeof WorkflowToolsModule;
 
 beforeEach(async () => {
@@ -121,59 +104,51 @@ describe("workflow authoring tools", () => {
   });
 
   it("getWorkflowPieceBlocks returns the pinned fields of a piece's actions and triggers", async () => {
-    const { fetchMock, calls } = graphqlFetch({
-      Actions: () => ({
-        workflowRuntime: {
-          pieceActions: {
-            name: "@activepieces/piece-http",
-            version: "0.11.19",
-            actions: [
-              {
-                name: "send_request",
-                displayName: "Send HTTP request",
-                description: "d",
-              },
-            ],
-          },
-        },
+    // Only the asked-for package has blocks.
+    serve({
+      pieceActions: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: "0.11.19",
+        actions:
+          packageName === HTTP
+            ? [
+                {
+                  name: "send_request",
+                  displayName: "Send HTTP request",
+                  description: "d",
+                },
+              ]
+            : [],
       }),
-      Triggers: () => ({
-        workflowRuntime: {
-          pieceTriggers: {
-            name: "@activepieces/piece-http",
-            version: "0.11.19",
-            triggers: [],
-          },
-        },
+      pieceTriggers: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: "0.11.19",
+        triggers: [],
       }),
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowPieceBlocks").callback({
-      packageName: "@activepieces/piece-http",
+      packageName: HTTP,
     } as never)) as {
       actions: Record<string, string>[];
       triggers: unknown[];
     };
     expect(result.actions[0]).toMatchObject({
-      pieceName: "@activepieces/piece-http",
+      pieceName: HTTP,
       pieceVersion: "0.11.19",
       actionName: "send_request",
     });
     expect(result.triggers).toEqual([]);
-    expect(
-      calls.every(
-        (c) => c.variables.packageName === "@activepieces/piece-http",
-      ),
-    ).toBe(true);
   });
 
   it("getWorkflowBlockConfig reads core blocks from the runtime like any other", async () => {
-    const { fetchMock, calls } = graphqlFetch({
-      Descriptor: () => ({
-        workflowRuntime: { blockDescriptor: CORE_DESCRIPTORS.branch },
-      }),
+    serve({
+      blockDescriptor: ({ block }: { block: BlockArg }) =>
+        block.pieceName === CORE &&
+        block.pieceVersion === CORE_VERSION &&
+        block.kind === "action"
+          ? CORE_DESCRIPTORS[block.name]
+          : null,
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
       pieceName: CORE,
       pieceVersion: CORE_VERSION,
@@ -193,68 +168,77 @@ describe("workflow authoring tools", () => {
     expect(result.props.map((p) => p.name)).toEqual(["left", "operator"]);
     expect(result.ports).toEqual(["true", "false"]);
     expect(result.requiresConnection).toBe(false);
-    expect(calls.map((call) => call.operation)).toEqual(["Descriptor"]);
-    expect(calls[0].variables.block).toEqual({
-      pieceName: CORE,
-      pieceVersion: CORE_VERSION,
-      name: "branch",
-      kind: "action",
-    });
   });
 
   it("getWorkflowBlockConfig describes a piece block's props, options and connection need", async () => {
-    const { fetchMock } = graphqlFetch({
-      Descriptor: () => ({
-        workflowRuntime: {
-          blockDescriptor: {
-            displayName: "HTTP",
-            auth: null,
-            action: {
-              displayName: "Send HTTP request",
-              requireAuth: false,
-              ports: ["next", "error"],
-              props: [
-                {
-                  name: "method",
-                  displayName: "Method",
-                  type: "STATIC_DROPDOWN",
-                  required: true,
-                  staticOptions: [{ label: "GET", value: "GET" }],
-                },
-                {
-                  name: "url",
-                  displayName: "URL",
-                  type: "SHORT_TEXT",
-                  required: true,
-                },
-              ],
+    serve({
+      blockDescriptor: () => ({
+        displayName: "HTTP",
+        auth: null,
+        action: {
+          displayName: "Send HTTP request",
+          requireAuth: false,
+          ports: ["next", "error"],
+          props: [
+            {
+              name: "method",
+              displayName: "Method",
+              type: "STATIC_DROPDOWN",
+              required: true,
+              staticOptions: [{ label: "GET", value: "GET" }],
             },
-          },
+            {
+              name: "url",
+              displayName: "URL",
+              type: "SHORT_TEXT",
+              required: true,
+            },
+          ],
         },
       }),
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("getWorkflowBlockConfig").callback({
-      pieceName: "@activepieces/piece-http",
+      pieceName: HTTP,
       pieceVersion: "0.11.19",
       name: "send_request",
       kind: "action",
     } as never)) as {
       props: { name: string; required: boolean; options?: unknown[] }[];
       requiresConnection: boolean;
+      requireReactor: string | null;
       ports: string[];
     };
     expect(result.requiresConnection).toBe(false);
+    expect(result.requireReactor).toBeNull();
     expect(result.ports).toEqual(["next"]);
     expect(result.props.map((p) => p.name)).toEqual(["method", "url"]);
     expect(result.props[0].options).toEqual(["GET"]);
   });
 
-  it("getWorkflowBlockConfig reports unknown blocks instead of throwing", async () => {
-    const { fetchMock } = graphqlFetch({
-      Descriptor: () => ({ workflowRuntime: { blockDescriptor: null } }),
+  it("getWorkflowBlockConfig says when a block needs a reactor connection", async () => {
+    serve({
+      blockDescriptor: () => ({
+        displayName: "Docs",
+        auth: null,
+        action: {
+          displayName: "Archive invoice",
+          requireAuth: false,
+          requireReactor: "write",
+          props: [],
+        },
+      }),
     });
-    vi.stubGlobal("fetch", fetchMock);
+    const result = (await tool("getWorkflowBlockConfig").callback({
+      pieceName: "@acme/piece-docs",
+      pieceVersion: "1.0.0",
+      name: "archive_invoice",
+      kind: "action",
+    } as never)) as { requireReactor: string | null };
+    expect(result.requireReactor).toBe("write");
+  });
+
+  it("getWorkflowBlockConfig reports unknown blocks instead of throwing", async () => {
+    serve({ blockDescriptor: () => null });
     const result = (await tool("getWorkflowBlockConfig").callback({
       pieceName: "@acme/nope",
       pieceVersion: "1.0.0",
@@ -271,33 +255,20 @@ describe("workflow authoring tools", () => {
       description: "",
       strategy: "MANUAL",
     });
-    const { fetchMock } = graphqlFetch({
-      Actions: () => ({
-        workflowRuntime: {
-          pieceActions: {
-            name: CORE,
-            version: CORE_VERSION,
-            actions: ["branch", "assert"].map(entry),
-          },
-        },
+    serve({
+      pieceActions: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: CORE_VERSION,
+        actions: packageName === CORE ? ["branch", "assert"].map(entry) : [],
       }),
-      Triggers: () => ({
-        workflowRuntime: {
-          pieceTriggers: {
-            name: CORE,
-            version: CORE_VERSION,
-            triggers: ["manual", "schedule"].map(entry),
-          },
-        },
+      pieceTriggers: ({ packageName }: { packageName: string }) => ({
+        name: packageName,
+        version: CORE_VERSION,
+        triggers: packageName === CORE ? ["manual", "schedule"].map(entry) : [],
       }),
-      Descriptor: (variables) => ({
-        workflowRuntime: {
-          blockDescriptor:
-            CORE_DESCRIPTORS[(variables.block as { name: string }).name],
-        },
-      }),
+      blockDescriptor: ({ block }: { block: BlockArg }) =>
+        CORE_DESCRIPTORS[block.name],
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("listWorkflowCoreBlocks").callback(
       {} as never,
     )) as {
@@ -326,6 +297,9 @@ describe("workflow authoring tools", () => {
     expect(result.blocks.every((b) => b.pieceName === CORE)).toBe(true);
     expect(result.expressions.join("\n")).toContain("{{steps.<key>.output");
     expect(result.rules.join("\n")).toMatch(/ADD_EDGE/);
+    expect(result.rules.join("\n")).toMatch(
+      /reports requireReactor .* must set reactorConnectionId .* authType REACTOR/,
+    );
     // The reducer only snapshots: enabling is its own action.
     expect(result.rules.join("\n")).toContain(
       "dispatch SET_WORKFLOW_STATUS ENABLED after PUBLISH_WORKFLOW",
@@ -336,41 +310,38 @@ describe("workflow authoring tools", () => {
   });
 
   it("listWorkflowRuns returns compact run summaries with per-step outcomes", async () => {
-    const { fetchMock, calls } = graphqlFetch({
-      Runs: () => ({
-        workflowRuntime: {
-          runs: [
-            {
-              id: "r1",
-              workflowId: "w1",
-              workflowName: "Hello",
-              workflowVersion: 3,
-              triggerKind: "manual",
-              triggerPayload: null,
-              status: "FAILED",
-              error: "boom",
-              startedAt: "t0",
-              endedAt: "t1",
-              rerunOf: null,
-              steps: [
-                {
-                  stepId: "s",
-                  stepKey: "call",
-                  pieceName: "@acme/x",
-                  blockName: "x",
-                  status: "FAILED",
-                  input: {},
-                  output: null,
-                  port: null,
-                  error: "HttpError",
-                },
-              ],
-            },
-          ],
+    const run = {
+      id: "r1",
+      workflowId: "w1",
+      workflowName: "Hello",
+      workflowVersion: 3,
+      triggerKind: "manual",
+      triggerPayload: null,
+      status: "FAILED",
+      error: "boom",
+      startedAt: "t0",
+      endedAt: "t1",
+      rerunOf: null,
+      warningNotes: [],
+      steps: [
+        {
+          stepId: "s",
+          stepKey: "call",
+          pieceName: "@acme/x",
+          blockName: "x",
+          status: "FAILED",
+          input: {},
+          output: null,
+          port: null,
+          error: "HttpError",
         },
-      }),
+      ],
+    };
+    // Answers only the scope the tool was asked for.
+    serve({
+      runs: ({ workflowId, limit }: { workflowId?: string; limit?: number }) =>
+        workflowId === "w1" && limit === 5 ? [run] : [],
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = (await tool("listWorkflowRuns").callback({
       workflowId: "w1",
       limit: 5,
@@ -390,26 +361,21 @@ describe("workflow authoring tools", () => {
     expect(result.runs[0].steps).toEqual([
       { key: "call", status: "FAILED", error: "HttpError" },
     ]);
-    expect(calls[0].variables).toMatchObject({ workflowId: "w1", limit: 5 });
   });
 
   it("fireWorkflow sends the payload to the fire mutation and returns the run outcome", async () => {
-    const { fetchMock, calls } = graphqlFetch({
-      Fire: () => ({
-        workflowRuntime: {
-          fire: { runId: "r9", status: "SUCCEEDED", error: null },
-        },
-      }),
+    let fired: unknown;
+    serve({
+      fire: (args: { workflowId: string; payload: unknown }) => {
+        fired = args;
+        return { runId: "r9", status: "SUCCEEDED", error: null, steps: [] };
+      },
     });
-    vi.stubGlobal("fetch", fetchMock);
     const result = await tool("fireWorkflow").callback({
       workflowId: "w1",
       payload: { name: "x" },
     } as never);
     expect(result).toMatchObject({ runId: "r9", status: "SUCCEEDED" });
-    expect(calls[0].variables).toMatchObject({
-      workflowId: "w1",
-      payload: { name: "x" },
-    });
+    expect(fired).toMatchObject({ workflowId: "w1", payload: { name: "x" } });
   });
 });

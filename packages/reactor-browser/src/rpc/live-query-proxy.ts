@@ -1,6 +1,8 @@
-import { fromErrorInfo } from "./error-info.js";
-import type { MessageRouter } from "./message-router.js";
-import { createCorrelatedSubscriptions } from "./subscription.js";
+import {
+  fromErrorInfo,
+  type MessageRouter,
+  createCorrelatedSubscriptions,
+} from "@powerhousedao/reactor/rpc";
 
 export type LiveQueryResultsCallback = (results: unknown) => void;
 export type LiveQueryErrorCallback = (error: unknown) => void;

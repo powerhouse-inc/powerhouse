@@ -33,6 +33,16 @@ export function toErrorInfo(err: unknown, depth = 0): ErrorInfo {
     if (typeof documentId === "string") {
       info.documentId = documentId;
     }
+    const { documentType, requestedVersion } = err as {
+      documentType?: unknown;
+      requestedVersion?: unknown;
+    };
+    if (typeof documentType === "string") {
+      info.documentType = documentType;
+    }
+    if (typeof requestedVersion === "number") {
+      info.requestedVersion = requestedVersion;
+    }
     return info;
   }
   if (typeof err === "string") {
@@ -84,6 +94,15 @@ export function fromErrorInfo(info: ErrorInfo): Error {
       configurable: true,
       writable: true,
     });
+  }
+  for (const key of ["documentType", "requestedVersion"] as const) {
+    if (info[key] !== undefined) {
+      Object.defineProperty(err, key, {
+        value: info[key],
+        configurable: true,
+        writable: true,
+      });
+    }
   }
   if (info.cause !== undefined) {
     Object.defineProperty(err, "cause", {

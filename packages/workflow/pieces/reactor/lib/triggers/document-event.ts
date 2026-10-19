@@ -49,6 +49,7 @@ export const documentEventTrigger = createTrigger({
   description: "Fires when a matching document operation lands.",
   type: TriggerStrategy.POLLING,
   requireAuth: false,
+  requireReactor: "read",
   props: {
     documentType: documentTypeProp(
       "Document type",
@@ -78,6 +79,7 @@ export const documentCreatedTrigger = createTrigger({
   description: "Fires when a document is added to a drive.",
   type: TriggerStrategy.POLLING,
   requireAuth: false,
+  requireReactor: "read",
   props: {
     documentType: documentTypeProp(
       "Document type",
@@ -101,6 +103,7 @@ export const documentDeletedTrigger = createTrigger({
   description: "Fires when a document is removed from a drive.",
   type: TriggerStrategy.POLLING,
   requireAuth: false,
+  requireReactor: "read",
   props: {
     documentType: documentTypeProp(
       "Document type",

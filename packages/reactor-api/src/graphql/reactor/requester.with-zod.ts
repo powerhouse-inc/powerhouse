@@ -11,13 +11,15 @@ import type { FetchLike } from "./requester.js";
 import { createFetchRequester } from "./requester.js";
 import {
   ActionEvaluationsDTO,
+  BatchExecutionResultDTO,
+  CreateDefaultsDTO,
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
   DocumentRelationshipResultPageDTO,
   DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
-  JobInfoDTO,
+  JobInfoFieldsDTO,
   MoveRelationshipResultDTO,
   OperationResultPageDTO,
   PHDocumentDTO,
@@ -91,7 +93,15 @@ const operationValidators: OperationValidators = {
   },
   GetJobStatus: (data) => {
     if (data.jobStatus) {
-      JobInfoDTO.parse(data.jobStatus as JobInfo);
+      JobInfoFieldsDTO.parse(data.jobStatus as JobInfo);
+    }
+  },
+  GetDocumentServed: () => {
+    // Returns a boolean
+  },
+  GetCreateDefaults: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.parse(data.createDefaults);
     }
   },
   EvaluateActions: (data) => {
@@ -113,6 +123,11 @@ const operationValidators: OperationValidators = {
   MutateDocument: (data) => {
     if (data.mutateDocument) {
       PHDocumentDTO.parse(data.mutateDocument);
+    }
+  },
+  ExecuteBatch: (data) => {
+    if (data.executeBatch) {
+      BatchExecutionResultDTO.parse(data.executeBatch);
     }
   },
   MutateDocumentAsync: (data) => {

@@ -97,9 +97,14 @@ async function main() {
     process.exit(0);
   }
 
-  // forward command to the local ph-cli installation if it exists
+  // forward command to the local ph-cli installation if it exists. `run` is
+  // uniform-runners surface: flag off → fall through to the cmd-ts tree
+  // (whose help registry also omits it), as if the command did not exist.
+  const { isUniformRunnersEnabled } =
+    await import("@powerhousedao/shared/clis/feature-flags");
   if (
-    phCliCommandNames.includes(command as (typeof phCliCommandNames)[number])
+    phCliCommandNames.includes(command as (typeof phCliCommandNames)[number]) &&
+    (command !== "run" || isUniformRunnersEnabled())
   ) {
     await runPhCliCommand(command);
     process.exit(0);

@@ -70,7 +70,7 @@ function LoginButton() {
   return <button onClick={() => login(undefined, "email")}>login</button>;
 }
 
-function renderTree(descriptor: WalletAdapterDescriptor, user?: User) {
+async function renderTree(descriptor: WalletAdapterDescriptor, user?: User) {
   return render(
     <RenownInitialUserProvider
       initialAuth={
@@ -107,7 +107,7 @@ describe("RenownWalletProvider activation", () => {
     const renown = fakeRenown(USER);
     install(renown);
     const { descriptor, load } = fakeAdapter();
-    const screen = renderTree(descriptor, USER);
+    const screen = await renderTree(descriptor, USER);
     await expect.element(screen.getByRole("button")).toBeVisible();
     await tick();
     expect(load).not.toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe("RenownWalletProvider activation", () => {
     const renown = fakeRenown(USER);
     install(renown);
     const { descriptor, load, controller } = fakeAdapter();
-    const screen = renderTree(descriptor, USER);
+    const screen = await renderTree(descriptor, USER);
     await expect.element(screen.getByRole("button")).toBeVisible();
     expect(load).not.toHaveBeenCalled();
 
@@ -132,7 +132,7 @@ describe("RenownWalletProvider activation", () => {
     const renown = fakeRenown(undefined);
     install(renown);
     const { descriptor, load, controller } = fakeAdapter();
-    const screen = renderTree(descriptor);
+    const screen = await renderTree(descriptor);
     await expect.element(screen.getByRole("button")).toBeVisible();
     expect(load).not.toHaveBeenCalled();
 
@@ -147,7 +147,7 @@ describe("RenownWalletProvider activation", () => {
     install(fakeRenown(undefined));
     setRedirectReturn(true);
     const { descriptor, load } = fakeAdapter(["fake_oauth_code"]);
-    renderTree(descriptor);
+    await renderTree(descriptor);
     await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
   });
 });

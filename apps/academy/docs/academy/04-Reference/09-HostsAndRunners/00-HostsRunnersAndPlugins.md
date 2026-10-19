@@ -1,0 +1,411 @@
+# Hosts, Runners & Plugins
+
+:::info
+This reference covers the **uniform runners** system, currently behind the
+`FEATURE_UNIFORM_RUNNERS_ENABLED=1` flag. With the flag set, `ph run <host>`
+starts any host your project declares. Classic commands (`ph switchboard`,
+`ph connect`, `ph vetra`) are unaffected.
+:::
+
+A Powerhouse project describes every way it can run in its `hosts/` folder.
+Each subfolder holds one **host file** — plain JavaScript, checked in, no
+build step:
+
+```
+hosts/
+  connect/host.js        ph run connect
+  switchboard/host.js    ph run switchboard
+  vetra/host.js          ph run vetra
+  desktop/host.js        ph run desktop
+```
+
+`ph run <host> [verb]` loads the host file, validates it against the runner's
+schema, and calls the runner's verb (`run` is the default; `dev`, `serve`,
+`build` are common others).
+
+## The host file
+
+A host file default-exports an object with a **restricted top level** — five
+keys, in this order:
+
+```js
+// @ts-check
+import config from "../../powerhouse.config.json" with { type: "json" };
+
+export default {
+  // 1. Identity of the host (required, unique within the project)
+  name: "my-switchboard",
+
+  // 2. Presentation: how the host introduces itself (optional)
+  profile: {
+    appId: "com.acme.switchboard",
+    name: "Acme API",
+    description: "Acme's document API",
+    icon: "./icon.svg",
+  },
+
+  // 3. WHO runs it and HOW — module, port, and the plugin composition
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/switchboard",
+    port: config.reactor?.port ?? 4001,
+    host: "127.0.0.1",
+    plugins: [
+      "@powerhousedao/switchboard/plugins/mcp",
+      "@powerhousedao/switchboard/plugins/attachments",
+      "@powerhousedao/switchboard/plugins/workflows",
+    ],
+  },
+
+  // 4. Runner-defined settings, handed to the runtime whole (loose by design)
+  config: {},
+
+  // 5. EITHER a reactor block (single-reactor host) ...
+  reactor: {
+    protocol: config.connect?.reactor ?? {},
+    drives: [
+      { slug: "orders", name: "Orders", preferredEditor: "orders-app" },
+    ],
+  },
+  // ... OR a children block (compound host) — never both. See "Compound hosts".
+};
+```
+
+Two design rules follow from this shape:
+
+- **Reference, don't duplicate.** Values that several hosts must agree on
+  (ports, the replay protocol) live in `powerhouse.config.json` and are
+  *referenced* from host files, so client and server cannot drift.
+- **Everything is visible.** There are no hidden defaults layered behind the
+  file: the composition you read is the composition that runs.
+
+## Plugin entries: presence is activation
+
+The `runner.plugins` array is the host's **composition**. An entry is either
+a module specifier string or an object:
+
+```ts
+type PluginEntry =
+  | string
+  | {
+      module: string;            // the identity — duplicates fail boot
+      enabled?: boolean;         // default true
+      verbs?: "*" | string[];    // default "*": active for every verb
+      config?: object;           // validated against the plugin's configSchema
+    };
+```
+
+The rules:
+
+- **Presence is activation.** A listed plugin is on; an absent plugin is off.
+  There are no enable/disable flags elsewhere — deleting the line is the off
+  switch. (A curated API host deletes `mcp` and simply has no `/mcp`.)
+- **Verb scoping** makes one host serve two moods. The canonical example is
+  Vetra Studio, which is listed `verbs: ["dev"]` — `ph run vetra dev` is the
+  studio; `ph run vetra` is the same stack headless.
+- **Entry config** is data for *that plugin instance*, validated against the
+  schema the plugin declares. A plugin that declares no schema accepts no
+  config — passing one is a boot error, not a silent ignore.
+
+```js
+plugins: [
+  "@powerhousedao/switchboard/plugins/attachments",
+  { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
+  {
+    module: "@acme/audit-plugin/switchboard",
+    config: { sink: "https://audit.acme.com", batchSize: 50 },
+  },
+],
+```
+
+### Composing across hosts: sibling imports, full inclusion
+
+Host files import each other by folder name and build their lists with plain
+JavaScript — spread, filter, concat. There is no merge DSL and no override
+grammar; a derived host *fully includes* what it wants and adds the rest:
+
+```js
+import switchboard from "../switchboard/host.js";
+
+// vetra's switchboard member = the project's switchboard + the studio plugin
+plugins: [
+  ...switchboard.runner.plugins,
+  { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
+],
+```
+
+Anything expressible over arrays is expressible here —
+`switchboard.runner.plugins.filter(...)`, reordering, insertion — and the
+result is always readable in place. Import cycles between host files fail at
+load with both names.
+
+## Core reactor config (not plugins)
+
+Some things every reactor has; they are **core config**, not plugins:
+
+```js
+reactor: {
+  // Fleet-consensus replay/admission settings — validated STRICTLY
+  // (a typo'd key fails boot, it does not silently not-apply):
+  protocol: config.connect?.reactor ?? {},
+
+  // Declared drives. "Can't have a reactor without drives."
+  drives: [
+    {
+      slug: "orders",             // the seeding key (idempotent across boots)
+      name: "Orders",
+      preferredEditor: "orders-app",  // which app opens documents in it
+      // id: "explicit-id",       // or derive it from the project path:
+      // projectHash: true,       // same ids classic `ph vetra` produces
+      // remote: { url: "http://127.0.0.1:4001/d/orders" },  // attach, don't own
+      // icon, sharingType: "public" | "private" | "shared", availableOffline
+    },
+  ],
+
+  // Storage/read-model backends, renown identity, namespace — see the
+  // generated hosts in a fresh `ph init` project for worked examples.
+},
+```
+
+Drives declared here are **seeded idempotently** by slug on every boot, and
+plugins may *contribute* additional drives. To see the merged result with
+provenance before running anything:
+
+```bash
+ph run switchboard --explain drives
+```
+
+## The plugin shape
+
+A plugin module default-exports either a `HostPlugin` object or — when it
+accepts config — a **factory** `(config) => HostPlugin`:
+
+```ts
+import type { HostPlugin } from "@powerhousedao/host-core";
+
+interface HostPlugin<THooks, TConfig> {
+  name: string;              // stable id: ordering, dependsOn, diagnostics
+  appliesTo?: string;        // host-type requirement; default "reactor"
+  enforce?: "pre" | "post";  // coarse ordering bucket (Vite-style)
+  dependsOn?: string[];      // hard deps on OTHER PLUGINS (never the host)
+  configSchema?: z.ZodType<TConfig>;  // no schema = no config accepted
+  hooks?: Partial<THooks>;   // the behavior
+  contributions?: {          // declarative, mergeable data
+    drives?: DriveDeclaration[];
+    packages?: string[];
+    configDeclarations?: { name: string; type?: string; description?: string }[];
+  };
+}
+```
+
+**`appliesTo` and the host-type hierarchy.** Compatibility walks a parent
+chain: `connect`, `switchboard`, and `mastra` all extend `reactor`, while
+`compound` is its own branch (plugins over a *member set*, like a proxy). A
+plugin with `appliesTo: "reactor"` composes onto any reactor host; one with
+`appliesTo: "switchboard"` is rejected elsewhere — at boot, with both names
+in the error.
+
+**Hook kinds.** Host runtimes define a hook *vocabulary*; plugins implement
+subsets of it. Three kinds exist:
+
+| kind | shape | semantics |
+| --- | --- | --- |
+| provide | `(ctx) => T` | one winner — two providers of the same hook fail boot |
+| transform | `(value, ctx) => T` | chained in plugin order, each sees the last's output |
+| observe | `(ctx) => void` | lifecycle notification; teardown moments run sequentially in order |
+
+**Ordering** is `enforce: "pre"` → normal → `"post"`, then `dependsOn`
+topo-sorted within each bucket. Cycles and missing dependencies fail boot
+naming both sides.
+
+### Hook vocabularies are owned by the host runtime
+
+Each runtime publishes the moments plugins can join. The switchboard's
+vocabulary (the built-in `mcp` / `attachments` / `privacy` / `workflows`
+plugins are ordinary consumers of it):
+
+```
+transformServerOptions    shape the server options before boot
+onReadModelsRegistering   contribute read models
+onHttpMounting            mount routes on the HTTP app
+onSubgraphsRegistering    contribute GraphQL subgraphs
+onReactorReady            the reactor is up
+onDrivesReady             declared drives are seeded
+onShutdown                teardown — sequential, in plugin order
+```
+
+Connect's browser-side pipeline currently resolves **built-in** plugins from
+its own registry (`generic`, `sentry`, `openpanel`, `assistant`,
+`vetra-studio/connect`); loading arbitrary third-party plugin modules in the
+browser is on the roadmap. Server-side (switchboard, compound) compositions
+resolve real modules from your project's `node_modules` today.
+
+:::caution Connect plugin presence today controls CONFIG, not the UI tree
+A built-in Connect plugin's effect right now is its `transformConnectConfig`
+step — the config slice it owns. The generic plugin owns the drive-chrome
+toggles: `allowAddDrive` and `sections.{remote,local}.{enabled,allowAdd,allowDelete}`
+(configure them through its entry `config`, not top-level `connect.drives`).
+Removing `@powerhousedao/connect/plugins/generic` turns those OFF — no
+add-drive affordance, drive sections disabled — which is live and observable
+today. What it does **not** yet do is unmount the chrome shell (sidebar, home,
+`/d/` routes); that UI still renders, and gating it on the plugin (remove it →
+go headless, or swap your own shell) is a roadmap item. (`branding` is NOT the
+generic plugin's concern — it has reach beyond the chrome, like the document
+title, so it stays a top-level `connect.branding` value that survives the
+plugin's absence. The switchboard side is already fully behavioural: removing
+`mcp` removes `/mcp`.)
+:::
+
+## Writing your own plugin
+
+A complete switchboard plugin with config, in one file:
+
+```ts
+// src/plugins/audit.ts  (built to dist/, exported as ./plugins/audit)
+import { z } from "zod";
+import type { HostPlugin } from "@powerhousedao/host-core";
+
+const configSchema = z.strictObject({
+  sink: z.string().url(),
+  batchSize: z.number().int().positive().default(20),
+});
+type AuditConfig = z.infer<typeof configSchema>;
+
+export function createAuditPlugin(config: AuditConfig): HostPlugin<{
+  onReactorReady: (ctx: { client: unknown }) => Promise<void>;
+  onShutdown: () => Promise<void>;
+}> {
+  let flush: (() => Promise<void>) | undefined;
+  return {
+    name: "acme-audit",
+    appliesTo: "switchboard",
+    configSchema,
+    hooks: {
+      onReactorReady: async (ctx) => {
+        flush = startAuditPipeline(ctx.client, config.sink, config.batchSize);
+      },
+      onShutdown: async () => {
+        await flush?.();
+      },
+    },
+    contributions: {
+      // declarative data merges with host-declared drives (visible in
+      // `--explain drives` with this plugin named as the source):
+      drives: [{ slug: "audit-log", name: "Audit Log" }],
+    },
+  };
+}
+
+export default createAuditPlugin; // factory: entry config is passed here
+```
+
+Publish it under a subpath (`"./plugins/audit"` in your package's `exports`),
+then list it:
+
+```js
+plugins: [
+  { module: "@acme/my-package/plugins/audit",
+    config: { sink: "https://audit.acme.com" } },
+],
+```
+
+Checklist:
+
+1. **One default export** — the plugin object, or a factory if it takes
+   config. The `module` specifier is the identity; listing it twice fails.
+2. **Declare `configSchema`** if you accept config. Unknown keys and missing
+   required keys fail at boot with the entry named.
+3. **Pick the narrowest `appliesTo`** that is honest. `"reactor"` composes
+   everywhere; `"switchboard"` only there.
+4. **Prefer `contributions` over hooks** for anything declarative (drives,
+   packages) — contributions merge, carry provenance, and show up in
+   `--explain`.
+5. **Clean up in `onShutdown`.** Teardown runs sequentially in plugin order.
+
+## Writing your own runner
+
+A runner is a module the host file names in `runner.module`. Its contract is
+a handful of exports:
+
+```ts
+import { reactorHostSchema } from "@powerhousedao/host-core";
+import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
+
+export const kind = "reactor";          // or "compound"
+export const hostSchema = reactorHostSchema;  // extend with .extend(...) for
+                                              // runner-specific runner.* keys
+
+export async function run(host: HostDefinition, ctx: RunnerContext) {
+  // boot your runtime from the validated host definition
+}
+export const serve = run;               // additional verbs are just exports
+export async function dev(host: HostDefinition, ctx: RunnerContext) { /* … */ }
+export async function build(host: HostDefinition, ctx: RunnerContext) { /* … */ }
+```
+
+- `ph run <host> <verb>` calls the export named `<verb>`; `run` is the
+  default (a `runner.defaultVerb` in the host file can change it).
+- `hostSchema` validates the host file before your code sees it. Start from
+  `reactorHostSchema` / `compoundHostSchema` and extend.
+- A runner that composes plugins resolves them with `resolveHostPlugins`
+  (from `@powerhousedao/host-core`) and defines its own hook vocabulary — the
+  moments above are the switchboard's, not a global list.
+- Most custom hosts do **not** need a custom runner: the generic compound
+  (`@powerhousedao/host-core/runners/compound`) plus plugins covers the
+  common cases.
+
+## Compound hosts
+
+A compound host supervises *members* instead of owning a reactor. `children`
+replaces `reactor`; each member wraps a sibling host by folder name:
+
+```js
+import switchboard from "../switchboard/host.js";
+import connect from "../connect/host.js";
+
+const serverPort = switchboard.runner.port;
+const serverDrives = [{ slug: "powerhouse", name: "Acme" }];
+
+export default {
+  name: "desktop",
+  runner: { module: "@powerhousedao/desktop/runner" },
+  config: { startOrder: ["server", "app"] },
+  children: {
+    server: {
+      host: "switchboard",                       // the sibling folder
+      runner: { plugins: [...switchboard.runner.plugins] },
+      reactor: { ...switchboard.reactor, drives: serverDrives },
+    },
+    app: {
+      host: "connect",
+      runner: { defaultVerb: "serve", port: 3000,
+                plugins: [...connect.runner.plugins] },
+      // the SAME drive list, attached as remotes — declared once, projected twice
+      reactor: {
+        ...connect.reactor,
+        drives: serverDrives.map((d) => ({
+          slug: d.slug,
+          remote: { url: `http://127.0.0.1:${serverPort}/d/${d.slug}` },
+        })),
+      },
+    },
+  },
+};
+```
+
+Wrapper semantics are **full-statement**: a section present on the wrapper
+replaces the member's section wholesale (spread the member's own section in,
+as above, when you mean "theirs plus mine"). Compound-level plugins
+(`appliesTo: "compound"`) act on the member set — the clint proxy is the
+reference example: one front port, routes declared per member, resolved from
+each child's `runner.{host, port}`.
+
+## Debugging
+
+| symptom | tool |
+| --- | --- |
+| which drives will exist, and why | `ph run <host> --explain drives` |
+| plugin rejected on this host | the error names the plugin, its `appliesTo`, and the host type |
+| two plugins provide one hook | boot error naming both — provide hooks have one winner |
+| entry config rejected | boot error naming the entry and the schema failure |
+| duplicate module in a composition | boot error — the specifier is the identity |
+| sibling import cycle | load error naming the cycle |

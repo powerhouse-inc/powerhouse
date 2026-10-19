@@ -2,6 +2,7 @@
 // piece catalog, connection documents, and connection health. The `aiTools`
 // export is how the host app discovers this package's tools (the line in the
 // project index is synced by `ph generate`).
+import { getPHStore } from "@powerhousedao/reactor-browser";
 import type { PhAiToolDescriptor } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import {
@@ -17,6 +18,7 @@ import {
   fetchPieceActions,
   fetchPieceCatalog,
   fetchPieceTriggers,
+  searchPieces,
   type PieceSummary,
 } from "../editors/workflow-editor/runtime-api.js";
 import { syncRuntimeUrl } from "./runtime-url.js";
@@ -82,11 +84,42 @@ async function connectorDetail(piece: PieceSummary): Promise<ConnectorDetail> {
   };
 }
 
+// Pieces the runtime's search ranks for the query, actions' and triggers'
+// rankings interleaved; null while its index builds, where it has none, or
+// when it ranks nothing (a package name, say).
+async function rankedPieces(
+  catalog: PieceSummary[],
+  query: string,
+): Promise<PieceSummary[] | null> {
+  let results;
+  try {
+    results = await Promise.all(
+      (["action", "trigger"] as const).map((kind) =>
+        searchPieces(query, { kind, limit: 50 }),
+      ),
+    );
+  } catch {
+    return null;
+  }
+  if (results.some((result) => result.status !== "ready")) return null;
+  const byName = new Map(catalog.map((piece) => [piece.name, piece]));
+  const ranked = new Map<string, PieceSummary>();
+  const longest = Math.max(...results.map((result) => result.pieces.length));
+  for (let rank = 0; rank < longest; rank++) {
+    for (const result of results) {
+      const name = result.pieces.at(rank)?.pieceName;
+      const piece = name === undefined ? undefined : byName.get(name);
+      if (piece && !ranked.has(piece.name)) ranked.set(piece.name, piece);
+    }
+  }
+  return ranked.size > 0 ? [...ranked.values()] : null;
+}
+
 /**
- * Stage one of connector discovery: the catalog, optionally narrowed to a
- * case-insensitive substring match on name, display name, or description,
- * capped at {@link MAX_CONNECTORS}. Full auth/action/trigger detail is
- * fetched only for the surviving entries (stage two).
+ * Stage one of connector discovery: the catalog, optionally narrowed by the
+ * runtime's piece search (a substring match while its index builds), capped
+ * at {@link MAX_CONNECTORS}. Full auth/action/trigger detail is fetched only
+ * for the surviving entries (stage two).
  */
 export async function getConnectors(query?: string): Promise<{
   total: number;
@@ -97,13 +130,18 @@ export async function getConnectors(query?: string): Promise<{
   syncRuntimeUrl();
   const catalog = await fetchPieceCatalog();
   const needle = query?.trim().toLowerCase();
-  const matches = needle
-    ? catalog.filter((piece) =>
-        [piece.name, piece.displayName, piece.description].some((field) =>
-          field.toLowerCase().includes(needle),
-        ),
-      )
-    : [...catalog];
+  // A package name is an answer, not a search.
+  const exact = catalog.filter((piece) => piece.name.toLowerCase() === needle);
+  const matches = !needle
+    ? [...catalog]
+    : exact.length > 0
+      ? exact
+      : ((await rankedPieces(catalog, needle)) ??
+        catalog.filter((piece) =>
+          [piece.name, piece.displayName, piece.description].some((field) =>
+            field.toLowerCase().includes(needle),
+          ),
+        ));
   const page = matches.slice(0, MAX_CONNECTORS);
   const connectors = await Promise.all(page.map(connectorDetail));
   return {
@@ -145,8 +183,7 @@ export async function getConnections(): Promise<{
     fetchPieceCatalog(),
     fetchConnections(),
   ]);
-  const client =
-    typeof window !== "undefined" ? window.ph?.reactorClient : undefined;
+  const client = getPHStore()?.reactorClient;
   const connections = await Promise.all(
     summaries.map(async (summary) => {
       const piece = catalog.find(
@@ -198,7 +235,7 @@ const READ_ONLY = {
 export const getConnectorsTool: PhAiToolDescriptor = {
   name: "getConnectors",
   description:
-    "Lists the connectors (Activepieces pieces) available to the workflow runtime with their auth fields, actions, and triggers. Without a query it returns up to 20 connectors; pass `query` to search by name or description. Secret fields are listed by name only, never by value.",
+    'Lists the connectors (pieces) available to the workflow runtime with their auth fields, actions, and triggers. Without a query it returns up to 20 connectors; pass `query` to search, best match first: words can name the piece or what it does (e.g. "slack send message"), in any order, and small typos are tolerated. Secret fields are listed by name only, never by value.',
   inputSchema: { query: z.string().optional() },
   annotations: { title: "Get Connectors", ...READ_ONLY },
   callback: (args: { query?: string }) => getConnectors(args.query),
@@ -207,7 +244,7 @@ export const getConnectorsTool: PhAiToolDescriptor = {
 export const getConnectionsTool: PhAiToolDescriptor = {
   name: "getConnections",
   description:
-    "Lists the project's connection documents with their credential status: which required secrets and config values are still missing, and the last account label. Secret values are never included.",
+    "Lists the project's connection documents with their credential status: which required secrets and config values are still missing, and the last account label. Secret values are never included. A connection with authType REACTOR is bound through a step's or trigger's reactorConnectionId, never connectionId.",
   inputSchema: {},
   annotations: { title: "Get Connections", ...READ_ONLY },
   callback: () => getConnections(),

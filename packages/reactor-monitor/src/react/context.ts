@@ -1,0 +1,150 @@
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import type { ProvisionOptions } from "../provision.js";
+import {
+  ReactorMonitorRegistry,
+  type ManagedReactorEntry,
+} from "../registry.js";
+import type { ManagedReactor, ReactorDescriptor } from "../types.js";
+
+/**
+ * Scoped React access to one monitor's reactors.
+ *
+ * Deliberately a context, not `window.ph`: the monitor holds several reactors
+ * at once, so "the reactor" is not a global. Mounting two providers gives two
+ * independent sets.
+ */
+const ReactorMonitorContext = createContext<ReactorMonitorRegistry | null>(
+  null,
+);
+
+export type ReactorMonitorProviderProps = {
+  children?: ReactNode;
+  /**
+   * Descriptors provisioned on mount, and kept in step as the list changes:
+   * a descriptor that appears is provisioned, one that disappears is killed.
+   * Matching is by `name`, so changing a name replaces that reactor.
+   */
+  descriptors?: ReactorDescriptor[];
+  options?: ProvisionOptions;
+  /** Share one registry across providers, or inject one in a test. */
+  registry?: ReactorMonitorRegistry;
+  /**
+   * Called when a declared descriptor fails to provision. The failure is also
+   * kept on the entry (`status: "failed"`), so UI can render it without this.
+   */
+  onError?: (error: Error, descriptor: ReactorDescriptor) => void;
+};
+
+export function ReactorMonitorProvider(
+  props: ReactorMonitorProviderProps,
+): ReactNode {
+  const { children, descriptors, options, registry, onError } = props;
+  const owned = useMemo(
+    () => registry ?? new ReactorMonitorRegistry(),
+    [registry],
+  );
+
+  // Read through a ref so re-provisioning is driven by the descriptor list
+  // alone; a new inline `options` object or `onError` closure must not tear a
+  // reactor down and build it again.
+  const latest = useRef({ options, onError });
+  latest.current = { options, onError };
+
+  const declared = descriptors ?? [];
+  // The names, in order, as one string: the effect's dependency. Re-running on
+  // the array's identity would re-provision on every render of a parent that
+  // builds the list inline.
+  const key = declared.map((descriptor) => descriptor.name).join("\u0000");
+
+  useEffect(() => {
+    let cancelled = false;
+    const wanted = new Map(declared.map((d) => [d.name, d]));
+
+    for (const entry of owned.list()) {
+      if (!wanted.has(entry.name)) {
+        void owned.kill(entry.name);
+      }
+    }
+    for (const descriptor of wanted.values()) {
+      if (owned.get(descriptor.name)) {
+        continue;
+      }
+      void owned
+        .provision(descriptor, latest.current.options)
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            latest.current.onError?.(
+              error instanceof Error ? error : new Error(String(error)),
+              descriptor,
+            );
+          }
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+    // `declared` is re-derived every render; `key` is what actually changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [owned, key]);
+
+  // A registry this provider created is its own to tear down; one passed in
+  // belongs to the caller.
+  useEffect(() => {
+    if (registry) {
+      return;
+    }
+    return () => {
+      void owned.killAll();
+    };
+  }, [owned, registry]);
+
+  return createElement(ReactorMonitorContext.Provider, {
+    value: owned,
+    children,
+  });
+}
+
+/** The provider's registry; throws outside a provider. */
+export function useReactorMonitorRegistry(): ReactorMonitorRegistry {
+  const registry = useContext(ReactorMonitorContext);
+  if (!registry) {
+    throw new Error(
+      "useReactorMonitorRegistry must be used inside a <ReactorMonitorProvider>",
+    );
+  }
+  return registry;
+}
+
+/** Every reactor this monitor knows about, booting and failed ones included. */
+export function useManagedReactors(): readonly ManagedReactorEntry[] {
+  const registry = useReactorMonitorRegistry();
+  return useSyncExternalStore(
+    registry.subscribe,
+    registry.getSnapshot,
+    registry.getSnapshot,
+  );
+}
+
+/** One reactor's entry by name, or undefined if the monitor has no such name. */
+export function useManagedReactorEntry(
+  name: string,
+): ManagedReactorEntry | undefined {
+  const entries = useManagedReactors();
+  return entries.find((entry) => entry.name === name);
+}
+
+/** The ready reactor under `name`; undefined while it is booting or failed. */
+export function useManagedReactor(name: string): ManagedReactor | undefined {
+  const entry = useManagedReactorEntry(name);
+  return entry?.status === "ready" ? entry.reactor : undefined;
+}

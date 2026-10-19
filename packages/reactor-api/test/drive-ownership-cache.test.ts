@@ -165,3 +165,51 @@ describe("DriveOwnershipCache", () => {
     });
   });
 });
+
+describe("DriveOwnershipCache.holds", () => {
+  function clientHolding(documents: PHDocument[]) {
+    return {
+      find: vi.fn(() =>
+        Promise.resolve({
+          results: documents,
+          options: { cursor: "", limit: 100 },
+        }),
+      ),
+    };
+  }
+
+  it("asks the reactor on a miss and remembers a drive it holds", async () => {
+    const client = clientHolding([driveDoc("late")]);
+    const cache = new DriveOwnershipCache(client as unknown as IReactorClient);
+
+    expect(await cache.holds("late")).toBe(true);
+    expect(await cache.holds("late")).toBe(true);
+    expect(cache.has("late")).toBe(true);
+    expect(client.find).toHaveBeenCalledOnce();
+    expect(client.find).toHaveBeenCalledWith({ ids: ["late"] });
+  });
+
+  it("answers false for a document that is not a drive, or is absent", async () => {
+    const plain = {
+      header: { id: "plain", documentType: "powerhouse/document-model" },
+    } as unknown as PHDocument;
+    const cache = new DriveOwnershipCache(
+      clientHolding([plain]) as unknown as IReactorClient,
+    );
+    const empty = new DriveOwnershipCache(
+      clientHolding([]) as unknown as IReactorClient,
+    );
+
+    expect(await cache.holds("plain")).toBe(false);
+    expect(cache.has("plain")).toBe(false);
+    expect(await empty.holds("absent")).toBe(false);
+  });
+
+  it("throws when the reactor cannot answer", async () => {
+    const cache = new DriveOwnershipCache({
+      find: () => Promise.reject(new Error("storage unavailable")),
+    } as unknown as IReactorClient);
+
+    await expect(cache.holds("x")).rejects.toThrow("storage unavailable");
+  });
+});

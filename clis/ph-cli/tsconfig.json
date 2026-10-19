@@ -23,7 +23,13 @@
       "path": "../../packages/config"
     },
     {
+      "path": "../../packages/desktop"
+    },
+    {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/host-core"
     },
     {
       "path": "../../packages/reactor"

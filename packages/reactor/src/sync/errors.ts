@@ -5,7 +5,8 @@ export type GraphQLRequestErrorCategory =
   | "http"
   | "parse"
   | "graphql"
-  | "missing-data";
+  | "missing-data"
+  | "timeout";
 
 export class GraphQLRequestError extends Error {
   readonly statusCode: number | undefined;
@@ -128,6 +129,22 @@ export function isDriveAuthError(error: unknown): boolean {
     );
   }
   return false;
+}
+
+/** A repair lever declined a request it cannot carry out safely. */
+export class SyncRepairRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SyncRepairRefusedError";
+  }
+}
+
+/** A dead-letter page cursor that is not a row offset. */
+export class InvalidDeadLetterCursorError extends Error {
+  constructor(readonly cursor: string) {
+    super(`Invalid dead-letter cursor: ${JSON.stringify(cursor)}`);
+    this.name = "InvalidDeadLetterCursorError";
+  }
 }
 
 export class PollingChannelError extends Error {

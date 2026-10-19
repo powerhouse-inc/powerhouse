@@ -115,10 +115,10 @@ const unsupportedBatchActions: ReadonlySet<string> = new Set([
  * carries none.
  *
  * `baseReducer` reads `baseReducerVersion(document.header)` for every action and
- * throws when the header has no `protocolVersions` - and a header built by
- * {@link phDocumentFromGetDocument} never has one, because the GraphQL
- * `PHDocument` type does not expose it. The version only selects how UNDO, REDO
- * and RETRACT apply, and every action reaching the prediction loop is an
+ * throws when the header has no `protocolVersions`, which a header built by
+ * {@link phDocumentFromGetDocument} lacks when the server sends none. The
+ * version only selects how UNDO, REDO and RETRACT apply, and every action
+ * reaching the prediction loop is an
  * ordinary append-only one, so it cannot change the predicted state here; it is
  * passed purely so the lookup does not throw.
  */

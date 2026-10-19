@@ -5,6 +5,8 @@ import {
   type ChildProcess,
 } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -59,6 +61,34 @@ function runWithEnv(
     throw new Error(
       `Command failed (${res.status ?? "signal"}): ${cmd} ${args.join(" ")}`,
     );
+  }
+}
+
+// `docker compose build` hands the build to bake and intermittently fails
+// reading its output ("read |0: file already closed", docker/compose#13243),
+// so run the definition compose prints through bake directly.
+function bakeComposeBuild(env: NodeJS.ProcessEnv): void {
+  const printed = spawnSync(
+    "docker",
+    ["compose", ...COMPOSE, "build", "--print"],
+    {
+      cwd: ROOT,
+      env,
+      stdio: ["ignore", "pipe", "inherit"],
+    },
+  );
+  if (printed.status !== 0) {
+    throw new Error(
+      `Command failed (${printed.status ?? "signal"}): docker compose build --print`,
+    );
+  }
+  const dir = mkdtempSync(path.join(os.tmpdir(), "pkg-e2e-bake-"));
+  try {
+    const file = path.join(dir, "bake.json");
+    writeFileSync(file, printed.stdout);
+    runWithEnv("docker", ["buildx", "bake", "-f", file], ROOT, env);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 }
 
@@ -186,7 +216,7 @@ async function main(): Promise<void> {
       CACHEBUST: Date.now().toString(),
       WORKSPACE_CACHEBUST: workspaceCachebust,
     };
-    runWithEnv("docker", ["compose", ...COMPOSE, "build"], ROOT, env);
+    bakeComposeBuild(env);
     // Before `up`, so a dependency-failed start still gets composed down.
     bringDownDocker = true;
     try {

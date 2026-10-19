@@ -1,10 +1,27 @@
 import { MemoryFS, PGlite } from "@electric-sql/pglite";
-import { Kysely, type LogEvent } from "kysely";
+import {
+  CompiledQuery,
+  Kysely,
+  sql,
+  type Insertable,
+  type LogEvent,
+} from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import { DriveNodeView } from "../src/read-model/drive-node-view.js";
 import { runReactorDriveMigrations } from "../src/schema/migrations/migrator.js";
-import type { ReactorDriveDatabase } from "../src/schema/tables.js";
+import type {
+  DriveNodeTable,
+  ReactorDriveDatabase,
+} from "../src/schema/tables.js";
 
 async function applyReactorDriveMigrations(
   db: Kysely<ReactorDriveDatabase>,
@@ -330,6 +347,90 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
     expect(second.results.map((n) => n.id)).toEqual(["c"]);
   });
 
+  it("resumes after a row whose createdAt has sub-millisecond precision", async () => {
+    const driveId = "drive-1";
+    for (const [id, at] of [
+      ["a", "2024-01-01T00:00:00.000100Z"],
+      ["b", "2024-01-01T00:00:00.000200Z"],
+      ["c", "2024-01-01T00:00:00.000200Z"],
+    ]) {
+      await db
+        .insertInto("DriveNode")
+        .values({
+          driveId,
+          id,
+          kind: "folder",
+          name: id,
+          requestedName: id,
+          parentFolder: null,
+          documentType: null,
+          createdAt: sql<Date>`${at}::timestamptz`,
+        })
+        .execute();
+    }
+
+    const ids: string[] = [];
+    let cursor = "";
+    for (let i = 0; i < 5; i++) {
+      const page = await view.listChildren(driveId, null, { cursor, limit: 1 });
+      ids.push(...page.results.map((n) => n.id));
+      if (page.nextCursor === undefined) break;
+      cursor = page.nextCursor;
+    }
+    expect(ids).toEqual(["a", "b", "c"]);
+  });
+
+  it("filters by kind across keyset pages", async () => {
+    const driveId = "drive-1";
+    const base = new Date("2024-01-01T00:00:00.000Z");
+    for (let i = 0; i < 6; i++) {
+      const createdAt = new Date(base.getTime() + i * 1000);
+      if (i % 2 === 0) {
+        await insertFolderAt(driveId, `d${i}`, null, `D${i}`, createdAt);
+      } else {
+        await db
+          .insertInto("DriveNode")
+          .values({
+            driveId,
+            id: `f${i}`,
+            kind: "file",
+            name: `F${i}`,
+            requestedName: `F${i}`,
+            parentFolder: null,
+            documentType: "powerhouse/document-model",
+            createdAt,
+            updatedAt: createdAt,
+          })
+          .execute();
+      }
+    }
+
+    const files: string[] = [];
+    let cursor = "";
+    do {
+      const page = await view.listChildren(
+        driveId,
+        null,
+        { cursor, limit: 1 },
+        undefined,
+        "file",
+      );
+      files.push(...page.results.map((n) => n.id));
+      expect(page.cursors).toHaveLength(page.results.length);
+      cursor = page.nextCursor ?? "";
+    } while (cursor !== "");
+    expect(files).toEqual(["f1", "f3", "f5"]);
+
+    const folders = await view.listChildren(
+      driveId,
+      null,
+      { cursor: "", limit: 10 },
+      undefined,
+      "folder",
+    );
+    expect(folders.results.map((n) => n.id)).toEqual(["d0", "d2", "d4"]);
+  });
+
   it("rejects a malformed cursor", async () => {
     await expect(
       view.listChildren("drive-1", null, {
@@ -345,4 +446,108 @@ describe("DriveNodeView.listChildren keyset cursor (PGlite)", () => {
       view.listChildren("drive-1", null, { cursor: bogus, limit: 10 }),
     ).rejects.toThrow(/cursor/i);
   });
+});
+
+describe("DriveNodeView.listChildren query plans (PGlite)", () => {
+  let pg: PGlite;
+  let db: Kysely<ReactorDriveDatabase>;
+  let view: DriveNodeView;
+  const queryLog: CompiledQuery[] = [];
+
+  beforeAll(async () => {
+    pg = new PGlite({ fs: new MemoryFS() });
+    db = new Kysely<ReactorDriveDatabase>({
+      dialect: new PGliteDialect(pg),
+      log: (event: LogEvent) => {
+        if (event.level === "query") {
+          queryLog.push(event.query);
+        }
+      },
+    });
+    await applyReactorDriveMigrations(db);
+    view = new DriveNodeView(db);
+
+    const base = Date.UTC(2024, 0, 1);
+    const rows: Insertable<DriveNodeTable>[] = [];
+    const node = (
+      driveId: string,
+      id: string,
+      parentFolder: string | null,
+      kind: "file" | "folder",
+    ) => {
+      const createdAt = new Date(base + rows.length * 1000);
+      rows.push({
+        driveId,
+        id,
+        kind,
+        name: id,
+        requestedName: id,
+        parentFolder,
+        documentType: kind === "file" ? "powerhouse/document-model" : null,
+        createdAt,
+        updatedAt: createdAt,
+      });
+    };
+    node("drive-1", "parent", null, "folder");
+    for (let i = 0; i < 300; i++) {
+      node("drive-1", `child-${i}`, "parent", i % 10 ? "file" : "folder");
+      node("drive-1", `root-${i}`, null, i % 10 ? "file" : "folder");
+      node("drive-2", `other-${i}`, i % 2 ? null : "parent", "file");
+    }
+    await db.insertInto("DriveNode").values(rows).execute();
+    await sql`ANALYZE "DriveNode"`.execute(db);
+    // A Sort then appears only when no index yields ("createdAt", id) order.
+    await sql`SET enable_sort = off`.execute(db);
+  });
+
+  afterAll(async () => {
+    await db.destroy();
+    await pg.close();
+  });
+
+  it.each([
+    ["a parent", "parent", undefined, "idx_drive_node_parent_created_id"],
+    [
+      "a parent by kind",
+      "parent",
+      "folder",
+      "idx_drive_node_parent_kind_created_id",
+    ],
+    ["the root", null, undefined, "idx_drive_node_root_created_id"],
+    ["the root by kind", null, "folder", "idx_drive_node_root_kind_created_id"],
+    ["a whole drive", undefined, undefined, "idx_drive_node_created_id"],
+  ] as const)(
+    "reads %s in index order, first and later pages",
+    async (_label, parentFolder, kind, index) => {
+      const first = await view.listChildren(
+        "drive-1",
+        parentFolder,
+        { cursor: "", limit: 10 },
+        undefined,
+        kind,
+      );
+      expect(first.nextCursor).toBeDefined();
+
+      for (const cursor of ["", first.nextCursor!]) {
+        queryLog.length = 0;
+        await view.listChildren(
+          "drive-1",
+          parentFolder,
+          { cursor, limit: 10 },
+          undefined,
+          kind,
+        );
+        expect(queryLog).toHaveLength(1);
+        const plan = await db.executeQuery<{ "QUERY PLAN": string }>(
+          CompiledQuery.raw(`EXPLAIN ${queryLog[0].sql}`, [
+            ...queryLog[0].parameters,
+          ]),
+        );
+        const text = plan.rows.map((row) => row["QUERY PLAN"]).join("\n");
+        expect(text).toContain(`Index Scan using ${index} on`);
+        expect(text).not.toMatch(/\bSort\b/);
+        expect(text).not.toMatch(/\bFilter:/);
+      }
+    },
+  );
 });

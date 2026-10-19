@@ -1,3 +1,4 @@
+import { getPHStore } from "./ph-store.js";
 import type { DocumentModelLib } from "document-model";
 import { useSyncExternalStore } from "react";
 import {
@@ -25,19 +26,42 @@ const noPackageManagerUnsubscribe = () => {};
  */
 export const useVetraPackages = () => {
   const packageManager = useVetraPackageManager();
+  const getPackages = () => packageManager?.packages ?? EMPTY_VETRA_PACKAGES;
 
   return useSyncExternalStore(
     (cb) =>
       packageManager
         ? packageManager.subscribe(cb)
         : noPackageManagerUnsubscribe,
-    () => packageManager?.packages ?? EMPTY_VETRA_PACKAGES,
+    getPackages,
+    getPackages,
   );
 };
 
 /** Adds the Vetra package manager event handler */
 export const addVetraPackageManagerEventHandler =
   vetraPackageManagerFunctions.addEventHandler;
+
+/**
+ * Non-react access to the Vetra package manager: calls `callback` once a
+ * manager is available - immediately when already set, otherwise when
+ * `setVetraPackageManager` publishes one. Returns an unsubscribe. The worker
+ * wiring uses this to forward package updates from plain boot code.
+ */
+export function onVetraPackageManager(
+  callback: (packageManager: IPackageManager) => void,
+): () => void {
+  let delivered: IPackageManager | undefined;
+  const deliver = () => {
+    const packageManager = vetraPackageManagerFunctions.getSnapshot();
+    if (!packageManager || packageManager === delivered) return;
+    delivered = packageManager;
+    callback(packageManager);
+  };
+  const unsubscribe = vetraPackageManagerFunctions.subscribeToValue(deliver);
+  deliver();
+  return unsubscribe;
+}
 
 /** Sets the Vetra package manager and registers its packages */
 export function setVetraPackageManager(packageManager: IPackageManager) {
@@ -64,7 +88,7 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
     );
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   if (!registry || documentModelModules.length === 0) return;
 
   const results = registry.registerModules(...documentModelModules);
@@ -100,7 +124,7 @@ function updateReactorClientUpgradeManifests(packages: DocumentModelLib[]) {
     .filter((u) => u !== undefined);
 
   const registry =
-    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+    getPHStore()?.reactorClientModule?.reactorModule?.documentModelRegistry;
   if (!registry || upgradeManifests.length === 0) return;
 
   const results = registry.registerUpgradeManifests(...upgradeManifests);

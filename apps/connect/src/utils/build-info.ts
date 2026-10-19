@@ -6,6 +6,7 @@ export { shortGitSha };
 declare const CONNECT_VERSION: string | undefined;
 declare const CONNECT_GIT_SHA: string | undefined;
 declare const PH_CONNECT_BUILD_HASH: string | undefined;
+declare const CONNECT_PACKAGED_DIST: boolean | undefined;
 
 export function getVersion(): string {
   if (typeof CONNECT_VERSION !== "undefined") return CONNECT_VERSION;
@@ -14,6 +15,11 @@ export function getVersion(): string {
     process.env.npm_package_version ??
     packageJson.version
   );
+}
+
+/** True in the tsdown dist projects install; false in the monorepo app, where Vite bundles the worker. */
+export function isPackagedConnectDist(): boolean {
+  return typeof CONNECT_PACKAGED_DIST !== "undefined" && CONNECT_PACKAGED_DIST;
 }
 
 export function getGitSha(): string {

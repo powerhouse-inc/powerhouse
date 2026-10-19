@@ -1,29 +1,36 @@
-// Reaching the reactor from piece code, and the props whose choices come
-// from it.
-
-// `ctx.reactor` is served by the host over the worker's call channel and only
-// to a piece an installed reactor package ships. Absent, reactorOf throws by
-// name, so a piece that ends up somewhere else fails legibly.
+// The props whose choices come from the reactor, and the reads they share
+// with the actions. Resolvers get the host's design-time read client.
 import {
   Property,
-  reactorOf,
-  type ReactorService,
+  ReactorAccessDeniedError,
+  type PropertyContext,
+  type ReactorReadClient,
 } from "@powerhousedao/pieces-framework";
-import { PARSE_MODES, staticString, type ParseMode } from "./parse.js";
+import type {
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import {
+  describeModel,
+  displayName as documentName,
+  DRIVE_DOCUMENT_TYPE,
+  SET_NAME_ACTION,
+} from "./documents.js";
 import { inputProps } from "./input-props.js";
 import {
   parseActionInputSchema,
   type ActionInputSchema,
 } from "./input-schema.js";
+import { PARSE_MODES, staticString, type ParseMode } from "./parse.js";
 import { folderOptions, withReferencedEnums } from "./schema-text.js";
 
-const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+// What one document dropdown lists of each type.
+const OPTION_LIMIT = 100;
 
 interface OptionEntry {
   label: string;
   value: string;
-  // actionType only: the input's SDL and the model it belongs to, which the
-  // editor's action list builds a form from and validates against.
+  // actionType only: the input's SDL and its model, for the editor's form.
   inputSchema?: string;
   documentType?: string;
 }
@@ -33,19 +40,63 @@ interface OptionState {
   placeholder?: string;
 }
 
-const SET_NAME: OptionEntry = {
-  label: "SET_NAME (base)",
-  value: "SET_NAME",
-  inputSchema: "input SetNameInput {\n  name: String!\n}",
-};
+// A folder in a drive: the step files into the drive, under the folder.
+export interface FolderTarget {
+  driveId: string;
+  folderId: string;
+}
+
+// The read client the host serves a resolver of a declaring block.
+function designTimeReactor(ctx: PropertyContext): ReactorReadClient {
+  if (ctx.reactor) return ctx.reactor;
+  const error = new Error("ctx.reactor is not served to this resolver");
+  error.name = ReactorAccessDeniedError;
+  throw error;
+}
+
+// Every installed module, across the client's pages.
+export async function documentModelModules(
+  reactor: ReactorReadClient,
+): Promise<DocumentModelModule[]> {
+  let page = await reactor.getDocumentModelModules();
+  const modules = [...page.results];
+  while (page.next && page.results.length > 0) {
+    page = await page.next();
+    modules.push(...page.results);
+  }
+  return modules;
+}
+
+// The installed document types, sorted.
+export async function documentTypes(
+  reactor: ReactorReadClient,
+): Promise<{ documentType: string; name: string }[]> {
+  const seen = new Map<string, string>();
+  for (const module of await documentModelModules(reactor)) {
+    const model = module.documentModel.global;
+    if (model.id && !seen.has(model.id)) seen.set(model.id, model.name);
+  }
+  return [...seen]
+    .map(([documentType, name]) => ({ documentType, name }))
+    .sort((a, b) => a.documentType.localeCompare(b.documentType));
+}
 
 async function documentOptions(
-  reactor: ReactorService,
+  reactor: ReactorReadClient,
   documentType: string | undefined,
 ): Promise<OptionState> {
-  const documents = await reactor.find(documentType ? { documentType } : {});
-  const nameOf = (document: (typeof documents)[number]) =>
-    document.name || document.slug || "(unnamed)";
+  // The index needs a type, so an untyped list asks once per installed type.
+  const types = documentType
+    ? [documentType]
+    : (await documentTypes(reactor)).map((entry) => entry.documentType);
+  const pages = await Promise.all(
+    types.map((type) =>
+      reactor.find({ type }, undefined, { cursor: "", limit: OPTION_LIMIT }),
+    ),
+  );
+  const documents = pages.flatMap((page) => page.results);
+  const nameOf = (document: PHDocument) =>
+    documentName(document) || document.header.slug || "(unnamed)";
   const seen = new Map<string, number>();
   for (const document of documents) {
     seen.set(nameOf(document), (seen.get(nameOf(document)) ?? 0) + 1);
@@ -53,15 +104,18 @@ async function documentOptions(
   return {
     options: documents.map((document) => {
       const name = nameOf(document);
+      const { id, slug } = document.header;
       // Two documents of one name are told apart by slug, else a short id.
       const shown =
         (seen.get(name) ?? 0) > 1
-          ? `${name} (${document.slug && document.slug !== name ? document.slug : document.documentId.slice(0, 8)})`
+          ? `${name} (${slug && slug !== name ? slug : id.slice(0, 8)})`
           : name;
       // The type is noise when every option shares it.
       return {
-        label: documentType ? shown : `${shown} — ${document.documentType}`,
-        value: document.documentId,
+        label: documentType
+          ? shown
+          : `${shown} — ${document.header.documentType}`,
+        value: id,
       };
     }),
     placeholder:
@@ -86,19 +140,14 @@ export const documentTypeProp = (
     description,
     required,
     refreshers: [],
-    options: async (_propsValue, ctx) => {
-      const models = await reactorOf(ctx).models();
-      return {
-        options: models
-          .map((model) => ({
-            label: model.name
-              ? `${model.name} (${model.documentType})`
-              : model.documentType,
-            value: model.documentType,
-          }))
-          .sort((a, b) => a.value.localeCompare(b.value)),
-      };
-    },
+    options: async (_propsValue, ctx) => ({
+      options: (await documentTypes(designTimeReactor(ctx))).map((model) => ({
+        label: model.name
+          ? `${model.name} (${model.documentType})`
+          : model.documentType,
+        value: model.documentType,
+      })),
+    }),
   });
 
 export const documentIdProp = (
@@ -114,7 +163,10 @@ export const documentIdProp = (
     // Narrowed by the sibling type when one is set, which is why it refreshes.
     refreshers: ["documentType"],
     options: (propsValue, ctx) =>
-      documentOptions(reactorOf(ctx), staticString(propsValue.documentType)),
+      documentOptions(
+        designTimeReactor(ctx),
+        staticString(propsValue.documentType),
+      ),
   });
 
 export const driveProp = (displayName: string, description?: string) =>
@@ -125,17 +177,17 @@ export const driveProp = (displayName: string, description?: string) =>
     required: false,
     refreshers: [],
     options: (_propsValue, ctx) =>
-      documentOptions(reactorOf(ctx), DRIVE_DOCUMENT_TYPE),
+      documentOptions(designTimeReactor(ctx), DRIVE_DOCUMENT_TYPE),
   });
 
-// A folder inside the drive the `driveProp` sibling names, labelled by path;
-// the step files the document there instead of at the drive's root.
+// A folder inside the drive the `driveProp` sibling names, labelled by path.
+// Its value carries the drive too, so the step needs no lookup.
 export const folderProp = (
   displayName: string,
   driveProp: string,
   description?: string,
 ) =>
-  Property.Dropdown<string>({
+  Property.Dropdown<FolderTarget>({
     auth: undefined,
     displayName,
     description,
@@ -150,20 +202,24 @@ export const folderProp = (
           placeholder: "Pick a drive first",
         };
       }
-      const drive = await reactorOf(ctx).get({ documentId: driveId });
-      const options = folderOptions(drive.state);
+      const drive = await designTimeReactor(ctx).get(driveId);
+      const state = drive.state as { global?: unknown };
+      const options = folderOptions(state.global).map((option) => ({
+        label: option.label,
+        value: { driveId: drive.header.id, folderId: option.value },
+      }));
+      const name = documentName(drive);
       return {
         options,
         placeholder: options.length
-          ? `Folders in ${drive.name || "this drive"}`
-          : `${drive.name || "This drive"} has no folders`,
+          ? `Folders in ${name || "this drive"}`
+          : `${name || "This drive"} has no folders`,
       };
     },
   });
 
-// JSON text of [{type, input, scope?}]: text, so model output reaches the
-// piece's own parsing. Advanced: the single action is the form.
-// `display: "code"` asks the editor for a monospace field; upstream has no such hint.
+// JSON text of [{type, input, scope?}], so model output reaches the piece's
+// parsing. `display: "code"` asks the editor for a monospace field.
 export const actionsProp = (displayName: string, description?: string) => ({
   ...Property.LongText({
     displayName,
@@ -186,8 +242,20 @@ export const parseProp = () =>
     options: { options: PARSE_MODES },
   });
 
-// The target type's own actions, each carrying its input SDL, plus the base
-// actions every document accepts.
+// The module a step targets: by the named type, or the document's own.
+export async function targetModule(
+  reactor: ReactorReadClient,
+  propsValue: Record<string, unknown>,
+): Promise<DocumentModelModule | undefined> {
+  const named = staticString(propsValue.documentType);
+  if (named) return reactor.getDocumentModelModule(named);
+  const documentId = staticString(propsValue.documentId);
+  if (!documentId) return undefined;
+  const document = await reactor.get(documentId);
+  return reactor.getDocumentModelModuleForDocument(document);
+}
+
+// The target type's own actions, each carrying its input SDL, plus SET_NAME.
 export const actionTypeProp = (
   displayName = "Action type",
   required = false,
@@ -200,69 +268,50 @@ export const actionTypeProp = (
     required,
     refreshers: ["documentType", "documentId"],
     options: async (propsValue, ctx) => {
-      const reactor = reactorOf(ctx);
-      let documentType = staticString(propsValue.documentType);
-      if (!documentType) {
-        // A resolvable id names its own type, which is what a step that only
-        // knows the document has to offer.
-        const documentId = staticString(propsValue.documentId);
-        if (documentId) {
-          documentType = (await reactor.get({ documentId })).documentType;
-        }
-      }
-      if (!documentType) {
+      const module = await targetModule(
+        designTimeReactor(ctx),
+        propsValue as Record<string, unknown>,
+      );
+      if (!module) {
         return {
           disabled: true,
-          options: [SET_NAME],
+          options: [
+            {
+              label: "SET_NAME (base)",
+              value: SET_NAME_ACTION.type,
+              inputSchema: SET_NAME_ACTION.inputSchema ?? undefined,
+            },
+          ],
           placeholder: "Pick a document type first",
         };
       }
-      const model = await reactor.model(documentType);
+      const model = describeModel(module);
       return {
-        options: [
-          ...model.actions.map((action) => ({
-            label: `${action.type} (${action.module})`,
-            value: action.type,
-            documentType,
-            ...(action.inputSchema
-              ? {
-                  inputSchema: withReferencedEnums(
-                    action.inputSchema,
-                    model.stateSchema,
-                  ),
-                }
-              : {}),
-          })),
-        ],
-        placeholder: `Actions of ${documentType}`,
+        options: model.actions.map((action) => ({
+          label: `${action.type} (${action.module})`,
+          value: action.type,
+          documentType: model.documentType,
+          ...(action.inputSchema
+            ? {
+                inputSchema: withReferencedEnums(
+                  action.inputSchema,
+                  model.stateSchema,
+                ),
+              }
+            : {}),
+        })),
+        placeholder: `Actions of ${model.documentType}`,
       };
     },
   });
 
-// The model a step targets: named, or read off the document it names.
-async function targetType(
-  reactor: ReactorService,
-  propsValue: Record<string, unknown>,
-): Promise<string | undefined> {
-  const named = staticString(propsValue.documentType);
-  if (named) return named;
-  const documentId = staticString(propsValue.documentId);
-  return documentId
-    ? (await reactor.get({ documentId })).documentType
-    : undefined;
-}
-
-// The chosen action's input schema, with the enums it uses; undefined when the
-// step doesn't yet say which model and action.
-export async function actionInputSchema(
-  reactor: ReactorService,
-  propsValue: Record<string, unknown>,
-): Promise<ActionInputSchema | undefined> {
-  const actionType = staticString(propsValue.actionType);
-  if (!actionType) return undefined;
-  const documentType = await targetType(reactor, propsValue);
-  if (!documentType) return undefined;
-  const model = await reactor.model(documentType);
+// The action's input schema, with the enums it uses; undefined when the
+// module has no such action or it takes no input.
+export function moduleInputSchema(
+  module: DocumentModelModule,
+  actionType: string,
+): ActionInputSchema | undefined {
+  const model = describeModel(module);
   const action = model.actions.find((entry) => entry.type === actionType);
   if (!action?.inputSchema) return undefined;
   return (
@@ -281,10 +330,13 @@ export const actionInputProp = (displayName = "Input") =>
     required: false,
     refreshers: ["documentType", "documentId", "actionType"],
     props: async (propsValue, ctx) => {
-      const schema = await actionInputSchema(
-        reactorOf(ctx),
+      const actionType = staticString(propsValue.actionType);
+      if (!actionType) return {};
+      const module = await targetModule(
+        designTimeReactor(ctx),
         propsValue as Record<string, unknown>,
       );
+      const schema = module && moduleInputSchema(module, actionType);
       return schema ? inputProps(schema) : {};
     },
   });

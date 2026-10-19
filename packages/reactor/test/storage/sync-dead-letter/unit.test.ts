@@ -191,6 +191,26 @@ describe("KyselySyncDeadLetterStorage", () => {
       expect(page.results).toHaveLength(1);
     });
 
+    it("keeps the latest failure when the same id dead-letters again", async () => {
+      await storage.add(
+        createDeadLetter({ errorType: "HASH_MISMATCH", errorMessage: "first" }),
+      );
+      await storage.add(
+        createDeadLetter({
+          errorType: "AUTH_TIMESTAMP_NOT_MONOTONIC",
+          errorMessage: "second",
+        }),
+      );
+
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(1);
+      expect(page.results[0].errorType).toBe("AUTH_TIMESTAMP_NOT_MONOTONIC");
+      expect(page.results[0].errorMessage).toBe("second");
+      await expect(storage.listQuarantinedDocumentIds()).resolves.not.toContain(
+        "doc-1",
+      );
+    });
+
     it("should preserve operations as JSON", async () => {
       const dl = createDeadLetter({
         operations: [
@@ -363,6 +383,18 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       expect(quarantined).toContain("broken-doc");
       expect(quarantined).not.toContain("held-doc");
+    });
+
+    it("leaves out the excepted rows when judging quarantine", async () => {
+      await storage.add(createDeadLetter({ id: "dl-a", documentId: "doc-q" }));
+      await storage.add(createDeadLetter({ id: "dl-b", documentId: "doc-q" }));
+
+      await expect(
+        storage.listQuarantinedDocumentIds(undefined, ["dl-a"]),
+      ).resolves.toContain("doc-q");
+      await expect(
+        storage.listQuarantinedDocumentIds(undefined, ["dl-a", "dl-b"]),
+      ).resolves.not.toContain("doc-q");
     });
 
     // One bad dead letter is enough to quarantine, even beside an exempt one.

@@ -1,0 +1,44 @@
+{
+  "name": "@powerhousedao/vetra-studio",
+  "version": "6.2.3-dev.63",
+  "description": "Vetra Studio as host plugins: the dev tooling composed onto a project's switchboard and Connect (uniform-runners rewire R4). EXPERIMENTAL - private until first manual publish.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/vetra-studio"
+  },
+  "type": "module",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./switchboard": {
+      "source": "./src/switchboard.ts",
+      "types": "./dist/switchboard.d.mts",
+      "import": "./dist/switchboard.mjs",
+      "default": "./dist/switchboard.mjs"
+    },
+    "./connect": {
+      "source": "./src/connect.ts",
+      "types": "./dist/connect.d.mts",
+      "import": "./dist/connect.mjs",
+      "default": "./dist/connect.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/vetra-studio",
+    "build": "tsdown",
+    "test": "vitest --run --passWithNoTests"
+  },
+  "dependencies": {
+    "@powerhousedao/host-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

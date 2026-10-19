@@ -16,7 +16,6 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "document-model",
   "@renown/sdk",
   "@powerhousedao/design-system",
-  "@powerhousedao/pglite-fs",
   "@powerhousedao/pieces-framework",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-attachments",
@@ -27,6 +26,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/reactor-hypercore",
   "@powerhousedao/reactor-mcp",
   "@powerhousedao/reactor-privacy",
+  "@powerhousedao/reactor-router",
   "@powerhousedao/reactor-workflow",
   "@powerhousedao/opentelemetry-instrumentation-reactor",
   "@powerhousedao/registry",
@@ -43,6 +43,16 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   "@powerhousedao/switchboard",
   "@powerhousedao/ph-cli",
   "ph-cmd",
+  // Scaffold dev deps (shared/clis/constants.ts) + deps of locally published
+  // packages. A workspace package REACHABLE from the install graph but absent
+  // here is proxied from npmjs at the SAME version with yesterday's content —
+  // version-equal content skew (host-core's ./plugins subpath was the first
+  // casualty: local connect imports it, npmjs host-core lacked it).
+  // @powerhousedao/vetra-studio stays out deliberately: private until its
+  // first publish, and reachable only by name (string specifiers), not deps.
+  "@powerhousedao/host-core",
+  "@powerhousedao/clint",
+  "@powerhousedao/desktop",
 ] as const;
 
 export interface PublishWorkspaceOptions {

@@ -15,7 +15,7 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
     Query: {
       ${v.camelCaseName}: () => ({}), // namespace resolver for nested queries
     },
-    ${v.pascalCaseName}Queries: {
+    ${v.pascalCaseName}SubgraphQueries: {
       example: async (parent: unknown, args: { driveId: string }) => {
         return "example";
       },

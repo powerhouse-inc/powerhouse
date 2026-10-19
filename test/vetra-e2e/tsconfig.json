@@ -48,5 +48,6 @@
     }
   ],
   "include": ["**/*", "powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"]
+  // hosts/connect/routes/ type-checks against .ph/connect-routes.gen.ts, which a build writes.
+  "exclude": ["dist", "node_modules", ".ph", "hosts/connect/routes"]
 }

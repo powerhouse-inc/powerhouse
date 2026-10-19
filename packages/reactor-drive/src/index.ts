@@ -53,7 +53,10 @@ export {
 } from "./schema/migrations/migrator.js";
 export { resolveCollision } from "./processors/utils/collisions.js";
 export { NodeProcessor } from "./processors/node-processor.js";
-export type { IDriveReadModel } from "./read-model/interfaces.js";
+export type {
+  DriveNodePage,
+  IDriveReadModel,
+} from "./read-model/interfaces.js";
 export { DriveNodeView } from "./read-model/drive-node-view.js";
 export {
   ReactorDriveClient,
@@ -61,6 +64,7 @@ export {
 } from "./client/reactor-drive-client.js";
 export {
   createReactorDriveResolvers,
+  REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveResolverContext,
 } from "./subgraph/index.js";

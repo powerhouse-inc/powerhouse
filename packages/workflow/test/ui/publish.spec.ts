@@ -2,10 +2,12 @@ import type { Page } from "@playwright/test";
 import {
   canvasNode,
   coreTrigger,
+  createConnectionInBrowser,
   createWorkflowInBrowser,
   expectSteady,
   openWorkflowEditor,
   pieceAction,
+  REACTOR_CONNECTOR_ID,
   type PhWindow,
 } from "../../scripts/ui-stack.js";
 import { expect, test } from "./fixtures.js";
@@ -38,14 +40,21 @@ async function docState(app: Page, id: string): Promise<DocState> {
   }, id);
 }
 
-// A reactor Create document step with its action type chosen, so only the
-// Input fields the model declares are left to fill.
+// A reactor Create document step with its action type chosen and a reactor
+// connection bound, so only the Input fields the model declares are left.
 async function createDocumentWorkflow(
   app: Page,
   drive: string,
   name: string,
   options: { enabled?: boolean } = {},
 ) {
+  const reactorConnectionId = await createConnectionInBrowser(app, drive, {
+    name: `${name} access`,
+    connectorId: REACTOR_CONNECTOR_ID,
+    authType: "REACTOR",
+    config: { endpoint: "local" },
+    secrets: {},
+  });
   return createWorkflowInBrowser(app, drive, {
     name,
     enabled: options.enabled,
@@ -62,6 +71,7 @@ async function createDocumentWorkflow(
           documentType: "powerhouse/connection",
           actionType: "SET_CONNECTOR",
         },
+        reactorConnectionId,
       },
     ],
   });

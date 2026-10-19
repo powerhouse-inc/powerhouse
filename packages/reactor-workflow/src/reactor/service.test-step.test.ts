@@ -55,6 +55,27 @@ export const stepTest = {
         throw new Error("the ledger said no");
       },
     },
+    unconfirmed: {
+      name: "unconfirmed",
+      displayName: "Unconfirmed",
+      props: {},
+      // A writing host call that timed out, as the worker reports one: the
+      // class does not cross the IPC boundary, the enumerable flag does.
+      run: async () => {
+        const error = new Error("reactor.submit did not answer within 10000ms; whether it was committed is unknown");
+        error.name = "HostCallIndeterminateError";
+        error.indeterminate = true;
+        throw error;
+      },
+    },
+    big: {
+      name: "big",
+      displayName: "Big",
+      props: {},
+      // Over the journal's STEP_PAYLOAD_MAX_BYTES (256 KiB), word-broken so
+      // the suite stays independent of redact()'s long-run performance.
+      run: async () => ({ blob: "word ".repeat(60 * 1024) }),
+    },
   },
   triggers: {
     poll: {
@@ -327,6 +348,62 @@ describe("testStep", () => {
     );
   }, 60_000);
 
+  // A binary FAILED-or-SUCCEEDED answer made a write-unconfirmed test read
+  // green, which is the one thing INDETERMINATE exists to prevent.
+  it("reports INDETERMINATE, not SUCCEEDED, when a host call does not answer", async () => {
+    documents.apply(
+      "wf-indeterminate",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s1",
+        key: "charge",
+        name: "Charge",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "unconfirmed",
+        config: {},
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "s1", port: "next" }),
+    );
+
+    const result = await service.testStep("wf-indeterminate", "s1", CTX);
+    expect(result.status).toBe("INDETERMINATE");
+    expect(result.status).not.toBe("SUCCEEDED");
+    expect(result.output).toBeUndefined();
+
+    const store = (await service.store())!;
+    const [row] = await store.getSteps(result.runId!);
+    expect(row).toMatchObject({ step_id: "s1", status: "INDETERMINATE" });
+    // And the run it was journaled as is not green either.
+    expect((await store.getRun(result.runId!))?.status).toBe("FAILED");
+
+    // Nor is it a sample: a draft step reading its output would be standing
+    // on a null nobody confirmed.
+    documents.apply(
+      "wf-indeterminate",
+      actions.addStep({
+        id: "s2",
+        key: "after",
+        name: "After",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "echo",
+        config: { text: "{{steps.charge.output}}" },
+        propertySettings: expressionFields("text"),
+      }),
+      actions.addEdge({ id: "e2", from: "s1", to: "s2", port: "next" }),
+    );
+    expect((await service.testStep("wf-indeterminate", "s2", CTX)).error).toBe(
+      'Test "charge" again: its last test is INDETERMINATE, so it has no confirmed output',
+    );
+  }, 60_000);
+
   it("redacts a secret variable in the test run and refuses to replay it", async () => {
     const plaintext = "sk-live-4c1d7e9a2b";
     const { ref } = await secrets.create({ value: plaintext, label: "api" });
@@ -388,6 +465,58 @@ describe("testStep", () => {
     expect((await service.testStep("wf-secret", "s2", CTX)).error).toBe(
       '"call" reads a value redacted from the last test of "auth"',
     );
+  }, 60_000);
+
+  it("refuses a sample the journal truncated, naming the step", async () => {
+    documents.apply(
+      "wf-big",
+      actions.setTrigger({
+        id: "t1",
+        pieceName: "@powerhousedao/piece-core",
+        pieceVersion: CORE_PIECE_VERSION,
+        triggerName: "manual",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s1",
+        key: "big",
+        name: "Big",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "big",
+        config: {},
+      }),
+      actions.addStep({
+        id: "s2",
+        key: "after",
+        name: "After",
+        pieceName: PIECE,
+        pieceVersion: "1.0.0",
+        actionName: "echo",
+        config: { text: "{{steps.big.output.blob}}" },
+        propertySettings: expressionFields("text"),
+      }),
+      actions.addEdge({ id: "e1", from: "t1", to: "s1", port: "next" }),
+      actions.addEdge({ id: "e2", from: "s1", to: "s2", port: "next" }),
+    );
+
+    // The test itself succeeds and serves its live output whole; only the
+    // journaled copy is the {truncated, bytes, prefix} marker (store.ts,
+    // STEP_PAYLOAD_MAX_BYTES).
+    const big = await service.testStep("wf-big", "s1", CTX);
+    expect(big.status).toBe("SUCCEEDED");
+
+    // A draft step reading that sample is refused by name, the way an
+    // untested upstream block is — never fed the marker as prior data.
+    expect((await service.testStep("wf-big", "s2", CTX)).error).toBe(
+      'Test "big" again: the journal kept only a truncated copy of its last output',
+    );
+    // The expression picker falls back to the authored shape (none declared
+    // by the fixture) rather than presenting the marker as the test output.
+    expect(await service.stepOutputTree("wf-big", "s1", CTX)).toEqual({
+      source: "none",
+      nodes: [],
+    });
   }, 60_000);
 
   it("serves the output tree from a block's latest test", async () => {

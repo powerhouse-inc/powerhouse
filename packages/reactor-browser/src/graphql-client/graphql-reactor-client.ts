@@ -1,6 +1,14 @@
+import { getPHStore } from "../hooks/ph-store.js";
 import type {
+  BatchExecutionRequest,
+  BatchExecutionResult,
   DocumentChangeEvent,
   DocumentChangeType,
+  DocumentRelationship,
+  ExecutionJobPlan,
+  JobInfo,
+  JobResultSummary,
+  JobStatus,
   OperationFilter,
   PagedResults,
   PagingOptions,
@@ -13,8 +21,13 @@ import type {
   CreateDocumentActionInput,
   ISigner,
   PHDocumentState,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  actions,
+  actionSigningTarget,
+  isSignaturePolicy,
   appliedOperations,
   normalizeDocumentModelVersion,
   redo,
@@ -35,15 +48,22 @@ import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
+  type DocumentRelationshipFieldsFragment,
+  type GetCreateDefaultsQuery,
+  type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
+  type PhDocumentFieldsFragment,
+  type SdkFunctionWrapper,
   type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
+import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
 import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
 import {
+  isoStringFromDateTime,
   phDocumentFromGetDocument,
   phDocumentFromMutation,
 } from "./adapter.js";
@@ -53,11 +73,16 @@ import {
   type BearerTokenProvider,
 } from "./auth.js";
 import {
+  BatchJobFailedError,
+  GraphQLOperationNotSupportedError,
+  GraphQLWrongBackendError,
+} from "./errors.js";
+import {
   MutateDocumentWithOperationsDocument,
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
 } from "./operations.js";
-import { prepareSignedActions } from "./signing.js";
+import { prepareSignedActions, signStampedAction } from "./signing.js";
 import { resolveDocumentModelModule } from "./static-package-manager.js";
 import {
   describeGraphQLDocument,
@@ -74,6 +99,19 @@ import {
   type DocumentChangesEventPayload,
 } from "./subscriptions.js";
 
+/** A call the client asks {@link GraphQLReactorClientOptions.driveIdFor} about. */
+export type DriveIdCall = {
+  readonly method:
+    | "create"
+    | "execute"
+    | "executeBatch"
+    | "deleteDocument"
+    | "find";
+  readonly documentId?: string;
+  readonly parentId?: string;
+  readonly jobs?: readonly { readonly documentId: string }[];
+};
+
 export type GraphQLReactorClientOptions = {
   /** The Switchboard GraphQL endpoint, e.g. `http://localhost:4001/graphql`. */
   url: string;
@@ -82,8 +120,9 @@ export type GraphQLReactorClientOptions = {
    * A pre-built SDK to use instead of the transport derived from `url`.
    * Mainly a test seam.
    *
-   * A client built this way carries no auth middleware: the injected SDK owns
-   * its own transport, and therefore its own headers.
+   * A client built this way carries no auth middleware and no 421 mapping:
+   * the injected SDK owns its own transport, and therefore its own headers
+   * and transport errors.
    */
   graphqlClient?: ReactorGraphQLClient;
 
@@ -125,10 +164,14 @@ export type GraphQLReactorClientOptions = {
    * `state.document.version` is here. One action needs no prediction and is
    * signed without any of this.
    *
-   * Read once, when the client is built. Below `GraphQLReactorProvider` this
-   * is its `documentModels` prop; a client constructed directly passes its own.
+   * An array is read once, when the client is built; a function is called at
+   * every batch, for a registry that gains models later. Below
+   * `GraphQLReactorProvider` this is its `documentModels` prop; a client
+   * constructed directly passes its own.
    */
-  documentModels?: readonly DocumentModelModule<any>[];
+  documentModels?:
+    | readonly DocumentModelModule<any>[]
+    | (() => readonly DocumentModelModule<any>[]);
 
   /**
    * Signs the actions this client pushes, instead of the logged-in Renown user.
@@ -139,10 +182,20 @@ export type GraphQLReactorClientOptions = {
    * scripts, and integration suites that must sign deterministically.
    */
   signer?: ISigner;
+
+  /**
+   * Names the drive a call belongs to when the client cannot prove it itself,
+   * for its `Drive-Id` header; `undefined` sends none. Return only a drive id
+   * the caller knows: a Switchboard that does not own it answers 421. Where
+   * the client has proof of its own and the two disagree, the proof is sent.
+   */
+  driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
+
+const JOB_POLL_INTERVAL_MS = 250;
 
 /** A registered `subscribe` call. */
 type ChangeListener = {
@@ -176,8 +229,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly listeners: ChangeListener[] = [];
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
-  private readonly documentModels: readonly DocumentModelModule<any>[];
+  private readonly documentModels: () => readonly DocumentModelModule<any>[];
   private readonly signer: ISigner | undefined;
+  private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
   private realtimeStarted = false;
   private realtimeGeneration = 0;
@@ -187,10 +241,17 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
-    // Copied, not held: the caller's array must not be able to change which
-    // reducer a later batch is signed with.
-    this.documentModels = [...(options.documentModels ?? [])];
+    // An array is copied, not held: the caller's array must not be able to
+    // change which reducer a later batch is signed with.
+    const models = options.documentModels;
+    if (typeof models === "function") {
+      this.documentModels = models;
+    } else {
+      const copied = [...(models ?? [])];
+      this.documentModels = () => copied;
+    }
     this.signer = options.signer;
+    this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
       options.realtime === false
         ? undefined
@@ -199,7 +260,9 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
     // The middleware wraps the generated SDK methods AND `RunDocument`, so the
     // hand-authored mutation is authenticated by the same code path.
-    const middleware = makeAuthMiddleware(this.tokenProvider);
+    const middleware = withWrongBackendErrors(
+      makeAuthMiddleware(this.tokenProvider),
+    );
     this.sdk = options.graphqlClient ?? createClient(options.url, middleware);
     // Subgraph transports are always derived from `url` and always carry auth,
     // including when the reactor SDK above was injected: an injected SDK is a
@@ -228,6 +291,38 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       document.document,
       view?.branch,
     );
+  }
+
+  /**
+   * Whether the Switchboard would serve the document to this client's caller,
+   * from its `documentServed` query: the same read gate `find` passes. Absent
+   * or withheld is `false`; a failure to decide throws.
+   *
+   * A point-in-time view throws {@link GraphQLOperationNotSupportedError}, as
+   * does a Switchboard without the query.
+   */
+  async isServed(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    try {
+      const result = await this.sdk.GetDocumentServed(
+        { idOrSlug: identifier, view: viewInput },
+        undefined,
+        signal,
+      );
+      return result.documentServed;
+    } catch (error) {
+      if (queriesUnknownField(error, "documentServed")) {
+        throw new GraphQLOperationNotSupportedError(
+          "isServed",
+          "the Switchboard predates the documentServed query",
+        );
+      }
+      throw error;
+    }
   }
 
   async getOperations(
@@ -276,14 +371,209 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     };
   }
 
+  /**
+   * Filters documents by criteria over the Switchboard's `findDocuments` query.
+   *
+   * The query filters by `type` and `parentId` only, at head. A search naming
+   * `ids` or `slugs` (present, whatever its length) and a point-in-time view are
+   * each by-contract limitations the query cannot express -- running it anyway
+   * would return every document instead of the named ones, or head instead of
+   * the asked-for revision, a silently wrong answer. {@link findIsServableOverGraphQL}
+   * is the single predicate that decides this, and an unservable `find` throws
+   * {@link GraphQLOperationNotSupportedError}. Drive enumeration itself filters
+   * by `type` at head, which is served.
+   */
+  async find<TDocument extends PHDocument = PHDocument>(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<TDocument>> {
+    if (!findIsServableOverGraphQL(search, view)) {
+      throw new GraphQLOperationNotSupportedError(
+        "find",
+        searchNamesIdentifiers(search)
+          ? "it cannot filter by ids or slugs: the Switchboard findDocuments query filters only by type and parentId"
+          : "point-in-time views are not supported by GraphQLReactorClient",
+      );
+    }
+
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const effectivePaging = paging ?? defaultPaging;
+    const result = await this.sdk.FindDocuments(
+      {
+        search: { type: search.type, parentId: search.parentId },
+        view: viewInput,
+        paging: pagingInputFromPaging(effectivePaging),
+      },
+      search.parentId === undefined
+        ? undefined
+        : this.driveIdHeaders({ method: "find", parentId: search.parentId }),
+      signal,
+    );
+
+    return this.toDocumentResults<TDocument>(
+      result.findDocuments,
+      effectivePaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.find<TDocument>(search, view, { cursor, limit }, signal),
+    );
+  }
+
+  async getOutgoingRelationships(
+    sourceIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationships(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentOutgoingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getOutgoingRelationships(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationships(
+    targetIdentifier: string,
+    relationshipType: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationships(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toDocumentResults(
+      result.documentIncomingRelationships,
+      paging ?? defaultPaging,
+      view?.branch,
+      (cursor, limit) =>
+        this.getIncomingRelationships(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getOutgoingRelationshipEdges(
+    sourceIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentOutgoingRelationshipEdges(
+      {
+        sourceIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentOutgoingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getOutgoingRelationshipEdges(
+          sourceIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
+  async getIncomingRelationshipEdges(
+    targetIdentifier: string,
+    relationshipType?: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DocumentRelationship>> {
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const result = await this.sdk.GetDocumentIncomingRelationshipEdges(
+      {
+        targetIdentifier,
+        relationshipType,
+        view: viewInput,
+        paging: pagingInputFromPaging(paging),
+      },
+      undefined,
+      signal,
+    );
+
+    return this.toRelationshipResults(
+      result.documentIncomingRelationshipEdges,
+      paging ?? defaultPaging,
+      (cursor, limit) =>
+        this.getIncomingRelationshipEdges(
+          targetIdentifier,
+          relationshipType,
+          view,
+          { cursor, limit },
+          signal,
+        ),
+    );
+  }
+
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    // A new top-level drive is pinned to the backend its own id routes to;
+    // under a parent it goes where the parent is, which only the hook knows.
     const result = await this.sdk.CreateDocument(
       { document, parentIdentifier },
-      undefined,
+      this.driveIdHeaders(
+        {
+          method: "create",
+          documentId: document.header.id || undefined,
+          parentId: parentIdentifier,
+        },
+        isDrive(document) && parentIdentifier === undefined
+          ? document.header.id
+          : undefined,
+      ),
       signal,
     );
 
@@ -322,7 +612,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     const preparedActions = await prepareActionsForPush(
       actions,
       document,
-      this.documentModels,
+      this.documentModels(),
       this.signer,
       signal,
     );
@@ -342,6 +632,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         operationType: "mutation",
         document: MutateDocumentWithOperationsDocument,
         variables,
+        requestHeaders: this.driveIdHeaders(
+          { method: "execute", documentId: documentIdentifier },
+          isDrive(document) ? document.header.id : undefined,
+        ),
         signal,
       });
 
@@ -457,6 +751,368 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
+   * Runs multiple mutation jobs in dependency order over the Switchboard's
+   * `executeBatch` mutation and waits for all to settle, returning the result
+   * shaped like `IReactor.executeBatch`'s so the reference `DriveClient`
+   * consumes it unchanged.
+   *
+   * Not atomic: each job commits on its own and a failed job still releases
+   * its dependents. A FAILED job throws {@link BatchJobFailedError}, naming the
+   * first failed plan key and carrying every job's final state.
+   *
+   * Each job's actions are signed independently for the job's own
+   * `(documentId, branch)` target -- the per-action signing the reactor's own
+   * `signActions` does, not the batch state-prediction `execute` uses for a
+   * multi-action push. A drive job such as `addFile`'s is `CREATE_DOCUMENT` +
+   * `UPGRADE_DOCUMENT` + `ADD_RELATIONSHIP`, which the prediction path rejects
+   * outright and which has no fetchable baseline to stamp against. The reactor
+   * records but does not verify the stamped previous-state head, so signing
+   * each action bare is exactly what the in-process `DriveClient` relies on.
+   *
+   * The mutation is synchronous server-side: a job it returns is already
+   * settled, so {@link waitForJob} resolves from it without polling.
+   */
+  async executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchExecutionResult> {
+    const signer = this.signer ?? resolveAmbientSigner();
+    const jobInputs = await Promise.all(
+      request.jobs.map(async (job, index) => {
+        const documentId = await this.batchWriteTarget(
+          job,
+          request.jobs.slice(0, index),
+          signer,
+          signal,
+        );
+        const actions = await this.signBatchJobActions(
+          { ...job, documentId },
+          signer,
+          signal,
+        );
+        return {
+          key: job.key,
+          documentIdOrSlug: documentId,
+          scope: job.scope,
+          branch: job.branch,
+          actions: actions.map(toTransportAction),
+          dependsOn: job.dependsOn,
+        };
+      }),
+    );
+
+    const result = await this.sdk.ExecuteBatch(
+      { jobs: jobInputs },
+      this.driveIdHeaders({
+        method: "executeBatch",
+        jobs: jobInputs.map((job) => ({ documentId: job.documentIdOrSlug })),
+      }),
+      signal,
+    );
+
+    const jobs: Record<string, JobInfo> = {};
+    for (const entry of result.executeBatch.jobs) {
+      jobs[entry.key] = jobInfoFromGql(entry.job);
+    }
+    await this.announceBatch(request, jobs, signal);
+    const failed = request.jobs.find(
+      (job) => (jobs[job.key]?.status as string | undefined) === "FAILED",
+    );
+    if (failed) {
+      throw new BatchJobFailedError(failed.key, jobs);
+    }
+    return { jobs };
+  }
+
+  /** The job as `jobStatus` reports it now; `undefined` when it reports none. */
+  async getJob(
+    jobId: string,
+    signal?: AbortSignal,
+  ): Promise<JobInfo | undefined> {
+    const result = await this.sdk.GetJobStatus({ jobId }, undefined, signal);
+    return result.jobStatus ? jobInfoFromGql(result.jobStatus) : undefined;
+  }
+
+  /** Polls `jobStatus` until the job is READ_READY or FAILED. */
+  async waitForJob(
+    jobOrId: string | JobInfo,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    if (typeof jobOrId !== "string" && isSettled(jobOrId)) {
+      return jobOrId;
+    }
+    const jobId = typeof jobOrId === "string" ? jobOrId : jobOrId.id;
+    for (;;) {
+      const result = await this.sdk.GetJobStatus({ jobId }, undefined, signal);
+      if (!result.jobStatus) {
+        throw new Error(`Job not found: ${jobId}`);
+      }
+      const job = jobInfoFromGql(result.jobStatus);
+      if (isSettled(job)) {
+        return job;
+      }
+      await delay(JOB_POLL_INTERVAL_MS, signal);
+    }
+  }
+
+  /**
+   * The policy the Switchboard gives a new document, read from its
+   * `createDefaults` query. A Switchboard without that query is refused with
+   * {@link GraphQLOperationNotSupportedError}: a guessed default would
+   * under-sign on a stricter host.
+   */
+  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    const defaults = await this.createDefaults("getCreateSignaturePolicy");
+    return defaults.signaturePolicy;
+  }
+
+  /**
+   * The protocol versions the Switchboard selects for a new document under
+   * `parentIdentifier`, read from its `createDefaults` query. A parent the
+   * caller may not read is refused by the server, never answered as if none
+   * was named; a Switchboard without the query is refused with
+   * {@link GraphQLOperationNotSupportedError}.
+   */
+  async getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    const defaults = await this.createDefaults(
+      "getCreateProtocolVersions",
+      parentIdentifier,
+      signal,
+    );
+    return defaults.protocolVersions;
+  }
+
+  private async createDefaults(
+    operation: string,
+    parentIdOrSlug?: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    signaturePolicy: SignaturePolicy;
+    protocolVersions: ProtocolVersions;
+  }> {
+    let result: GetCreateDefaultsQuery;
+    try {
+      result = await this.sdk.GetCreateDefaults(
+        { parentIdOrSlug },
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (queriesUnknownField(error, "createDefaults")) {
+        throw new GraphQLOperationNotSupportedError(
+          operation,
+          "the Switchboard predates the createDefaults query",
+        );
+      }
+      throw error;
+    }
+    const { signaturePolicy, protocolVersions } = result.createDefaults;
+    if (!isSignaturePolicy(signaturePolicy)) {
+      throw new Error(
+        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
+      );
+    }
+    return {
+      signaturePolicy,
+      protocolVersions: protocolVersionsFrom(protocolVersions),
+    };
+  }
+
+  /**
+   * Sets or, with `null`, clears the preferred editor as a client-signed
+   * action, as the in-process client does.
+   */
+  setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    return this.execute(
+      documentIdentifier,
+      branch,
+      [actions.setPreferredEditor(preferredEditor)],
+      signal,
+    );
+  }
+
+  /** The `Drive-Id` header for a call: the client's own proof, else the hook's. */
+  private driveIdHeaders(
+    call: DriveIdCall,
+    proven?: string,
+  ): Record<string, string> | undefined {
+    const hinted = this.driveIdFor?.(call);
+    if (proven) {
+      if (hinted && hinted !== proven) {
+        logger.warn(
+          "GraphQLReactorClient: driveIdFor named @hinted for @method, which belongs to drive @proven; sending the proven drive",
+          hinted,
+          call.method,
+          proven,
+        );
+      }
+      return driveIdHeaders(proven);
+    }
+    return hinted ? driveIdHeaders(hinted) : undefined;
+  }
+
+  /**
+   * Emits the changes the batch's settled jobs made, as `create` and `execute`
+   * do, so a cache is invalidated without a realtime socket. The documents a
+   * job wrote to are its own and those its consistency token names.
+   */
+  private async announceBatch(
+    request: BatchExecutionRequest,
+    jobs: Record<string, JobInfo>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (this.listeners.length === 0) {
+      return;
+    }
+    type Written = { documentId: string; branch: string };
+    const deleted = new Set<string>();
+    const created = new Map<string, Written>();
+    const touched = new Map<string, Written>();
+    const keyOf = (written: Written) =>
+      `${written.branch}\u0000${written.documentId}`;
+    for (const job of request.jobs) {
+      const info = jobs[job.key] as JobInfo | undefined;
+      if (!info || (info.status as string) !== "READ_READY") continue;
+      const types = new Set(job.actions.map((action) => action.type));
+      if (types.has("DELETE_DOCUMENT")) {
+        deleted.add(info.documentId);
+        continue;
+      }
+      const own = { documentId: info.documentId, branch: job.branch };
+      if (types.has("CREATE_DOCUMENT")) {
+        created.set(keyOf(own), own);
+      }
+      touched.set(keyOf(own), own);
+      for (const { documentId, branch } of info.consistencyToken.coordinates) {
+        touched.set(keyOf({ documentId, branch }), { documentId, branch });
+      }
+    }
+
+    for (const documentId of deleted) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Deleted,
+        documents: [],
+        context: { childId: documentId },
+      });
+    }
+
+    const read = async ({ documentId, branch }: Written) => {
+      try {
+        return await this.get(documentId, { branch }, signal);
+      } catch (error) {
+        logger.warn(
+          "GraphQLReactorClient: could not read @documentId on @branch to announce a batch change: @error",
+          documentId,
+          branch,
+          error,
+        );
+        return undefined;
+      }
+    };
+    const readAll = async (written: Written[]) =>
+      (await Promise.all(written.map(read))).filter(
+        (document) => document !== undefined,
+      );
+    // Read concurrently, emit in order: Created before Updated.
+    const [createdDocuments, updatedDocuments] = await Promise.all([
+      readAll([...created.values()].filter((w) => !deleted.has(w.documentId))),
+      readAll(
+        [...touched.entries()]
+          .filter(([key, w]) => !deleted.has(w.documentId) && !created.has(key))
+          .map(([, w]) => w),
+      ),
+    ]);
+    if (createdDocuments.length > 0) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Created,
+        documents: createdDocuments,
+      });
+    }
+    if (updatedDocuments.length > 0) {
+      this.emitChange({
+        type: DOCUMENT_CHANGE_TYPE.Updated,
+        documents: updatedDocuments,
+      });
+    }
+  }
+
+  /**
+   * The id a job's actions are signed for: a signature covers the document id,
+   * and the server resolves a slug before verifying. A document created by this
+   * job or an earlier one is named by its id. When the server has no such
+   * document the identifier is used as given, and the server decides; any
+   * other failure to read it throws, so nothing is signed for a slug.
+   */
+  private async batchWriteTarget(
+    job: ExecutionJobPlan,
+    earlier: readonly ExecutionJobPlan[],
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const creates = (plan: ExecutionJobPlan) =>
+      plan.documentId === job.documentId &&
+      plan.actions.some((action) => action.type === "CREATE_DOCUMENT");
+    if (
+      !signer ||
+      job.actions.every(isActionSigned) ||
+      creates(job) ||
+      earlier.some(creates)
+    ) {
+      return job.documentId;
+    }
+    const result = await this.sdk.GetDocument(
+      {
+        identifier: job.documentId,
+        view: viewFilterInputFromViewFilter({ branch: job.branch }),
+      },
+      undefined,
+      signal,
+    );
+    return result.document?.document.id ?? job.documentId;
+  }
+
+  /**
+   * Signs one batch job's actions for the job's own log.
+   *
+   * Each action is signed on its own for `(documentId, branch)`, the same
+   * per-action signing the reactor's `signActions` does: no state prediction
+   * across the job, so a job carrying a `CREATE_DOCUMENT` the push-prediction
+   * path rejects still signs. An action already signed under a key is left
+   * as it is: the reference `DriveClient` signs its jobs before handing them
+   * here. With no signer the actions pass through unsigned, matching
+   * {@link execute}.
+   */
+  private async signBatchJobActions(
+    job: ExecutionJobPlan,
+    signer: ISigner | undefined,
+    signal?: AbortSignal,
+  ): Promise<Action[]> {
+    if (!signer) {
+      return job.actions;
+    }
+    return Promise.all(
+      job.actions.map((action) =>
+        isActionSigned(action)
+          ? Promise.resolve(action)
+          : signStampedAction(
+              action,
+              signer,
+              actionSigningTarget(action, job.documentId, job.branch),
+              signal,
+            ),
+      ),
+    );
+  }
+
+  /**
    * Deletes a document and announces it as a `Deleted` event.
    *
    * Pass a document id. The server resolves a slug just as happily, but
@@ -472,7 +1128,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   ): Promise<void> {
     await this.sdk.DeleteDocument(
       { identifier, propagate: propagationModeInput(propagate) },
-      undefined,
+      this.driveIdHeaders({ method: "deleteDocument", documentId: identifier }),
       signal,
     );
 
@@ -581,6 +1237,67 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       variables,
       signal: options?.signal,
     });
+  }
+
+  /**
+   * Shapes a document result page into the reactor's {@link PagedResults}.
+   *
+   * The items carry the same `PHDocumentFields` fragment as `get`, so the same
+   * adapter rebuilds each one. `hasNextPage` gates the cursor exactly as
+   * `getOperations` does: no cursor means no `next`.
+   */
+  private toDocumentResults<TDocument extends PHDocument = PHDocument>(
+    page: {
+      items: ReadonlyArray<PhDocumentFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    branch: string | undefined,
+    next: (cursor: string, limit: number) => Promise<PagedResults<TDocument>>,
+  ): PagedResults<TDocument> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((item) =>
+        phDocumentFromGetDocument<TDocument>(item, branch),
+      ),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
+  }
+
+  /**
+   * Shapes a relationship-edge result page into the reactor's
+   * {@link PagedResults}, restoring each edge's `Date` fields.
+   */
+  private toRelationshipResults(
+    page: {
+      items: ReadonlyArray<DocumentRelationshipFieldsFragment>;
+      hasNextPage: boolean;
+      cursor?: string | null;
+    },
+    effectivePaging: PagingOptions,
+    next: (
+      cursor: string,
+      limit: number,
+    ) => Promise<PagedResults<DocumentRelationship>>,
+  ): PagedResults<DocumentRelationship> {
+    const nextCursor = page.hasNextPage
+      ? (page.cursor ?? undefined)
+      : undefined;
+    return {
+      results: page.items.map((edge) => documentRelationshipFromEdge(edge)),
+      options: effectivePaging,
+      nextCursor,
+      next: nextCursor
+        ? () => next(nextCursor, effectivePaging.limit)
+        : undefined,
+    };
   }
 
   /**
@@ -829,8 +1546,9 @@ export function viewFilterInputFromViewFilter(
     return undefined;
   }
 
-  if (view.revision !== undefined) {
-    throw new Error(
+  if (viewIsPointInTime(view)) {
+    throw new GraphQLOperationNotSupportedError(
+      "view",
       "point-in-time views are not supported by GraphQLReactorClient",
     );
   }
@@ -849,6 +1567,92 @@ function pagingInputFromPaging(
     return undefined;
   }
   return { cursor: paging.cursor, limit: paging.limit };
+}
+
+/**
+ * Whether a search names `ids` or `slugs`, which the Switchboard `findDocuments`
+ * query cannot honour (it filters by `type` and `parentId`).
+ *
+ * The test is PRESENCE, not length: the reactor `find` contract
+ * (`packages/reactor/src/core/reactor.ts`) dispatches on `search.ids` /
+ * `search.slugs` being present, so `find({ ids: [] })` is an identifier search
+ * that must yield the empty set -- not a plain type query over every document.
+ * The GraphQL surface cannot express an identifier search at all, so a present
+ * (even empty) `ids`/`slugs` is refused rather than served as the wrong query.
+ */
+function searchNamesIdentifiers(search: SearchFilter): boolean {
+  return search.ids !== undefined || search.slugs !== undefined;
+}
+
+/** Whether a view asks for a point-in-time read the GraphQL surface cannot express. */
+function viewIsPointInTime(view?: ViewFilter): boolean {
+  return view?.revision !== undefined;
+}
+
+/**
+ * The single source of truth for whether the Switchboard `findDocuments` query
+ * can serve a `find`. It is servable iff the search names neither `ids` nor
+ * `slugs` (present, regardless of length) AND the view is not point-in-time:
+ * each is a by-contract limitation of a surface that filters only by
+ * `type`/`parentId` at head. Exported so a caller can route around an
+ * unservable search instead of catching the error `find` throws for it.
+ */
+export function findIsServableOverGraphQL(
+  search: SearchFilter,
+  view?: ViewFilter,
+): boolean {
+  return !searchNamesIdentifiers(search) && !viewIsPointInTime(view);
+}
+
+/** Rebuilds a relationship edge from its GraphQL fields. */
+function documentRelationshipFromEdge(
+  edge: DocumentRelationshipFieldsFragment,
+): DocumentRelationship {
+  const relationship: DocumentRelationship = {
+    sourceId: edge.sourceId,
+    targetId: edge.targetId,
+    relationshipType: edge.relationshipType,
+    createdAt: dateFromDateTime(edge.createdAt),
+    updatedAt: dateFromDateTime(edge.updatedAt),
+  };
+  const metadata = edge.metadata;
+  if (isPlainObject(metadata)) {
+    relationship.metadata = metadata;
+  }
+  return relationship;
+}
+
+/**
+ * Restores a `Date` from the `DateTime` scalar, which deserializes as either an
+ * ISO string or a `Date`, reusing the get-path's {@link isoStringFromDateTime}.
+ *
+ * A null, absent or unparseable value is a malformed timestamp from the server,
+ * not something to coerce to the epoch or an `Invalid Date`: it throws, so the
+ * malformed edge surfaces as a genuine failure rather than a silently-wrong
+ * `DocumentRelationship`.
+ */
+function dateFromDateTime(value: string | Date | null | undefined): Date {
+  if (value === null || value === undefined) {
+    throw new Error(
+      "relationship edge is missing a required DateTime timestamp",
+    );
+  }
+  const date = new Date(isoStringFromDateTime(value));
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(
+      `relationship edge carries an unparseable DateTime timestamp: ${String(value)}`,
+    );
+  }
+  return date;
+}
+
+/**
+ * Whether a JSON value is a plain object, so relationship `metadata` is assigned
+ * only when it is one. A non-object JSON scalar (string, number, array, null)
+ * is dropped exactly as a null is, rather than cast to `Record` and trusted.
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -920,12 +1724,187 @@ function documentModelVersion(document: PHDocument): number {
   return normalizeDocumentModelVersion(documentScope?.version);
 }
 
+/**
+ * Rebuilds a reactor {@link JobInfo} from what the server reported. An unknown
+ * job arrives as the reactor's own: FAILED with an empty `documentId`.
+ */
+function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
+  const token = job.consistencyToken;
+  if (token.version !== 1) {
+    throw new Error(
+      `Job ${job.id} carries consistency token version ${token.version}, which this client cannot read`,
+    );
+  }
+  const info: JobInfo = {
+    id: job.id,
+    documentId: job.documentId,
+    status: job.status as JobStatus,
+    createdAtUtcIso: isoStringFromDateTime(job.createdAt),
+    consistencyToken: {
+      version: 1,
+      createdAtUtcIso: token.createdAtUtcIso,
+      coordinates: token.coordinates.map((coordinate) => ({ ...coordinate })),
+    },
+    meta: {
+      batchId: job.meta.batchId,
+      batchJobIds: [...job.meta.batchJobIds],
+    },
+  };
+  if (job.completedAt != null) {
+    info.completedAtUtcIso = isoStringFromDateTime(job.completedAt);
+  }
+  if (job.result != null) {
+    info.result = job.result as JobResultSummary;
+  }
+  if (job.error != null) {
+    // The server keeps stacks to itself; a message always comes with its name.
+    info.error = {
+      name: job.errorName ?? "Error",
+      message: job.error,
+      stack: "",
+    };
+  }
+  return info;
+}
+
+/**
+ * Whether a request failed because the server's schema has no such root field:
+ * a Switchboard older than the field. graphql-js validation words this the same
+ * under every gateway the Switchboard can run.
+ */
+function queriesUnknownField(error: unknown, field: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  const prefix = `Cannot query field "${field}" on type "`;
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
+/**
+ * The header a Switchboard's drive middleware and load balancer key on. A
+ * request carries it only when it is known to belong to that one drive: the
+ * server answers any drive it does not own with 421.
+ */
+const DRIVE_ID_HEADER = "Drive-Id";
+
+function driveIdHeaders(driveId: string): Record<string, string> | undefined {
+  return driveId === "" ? undefined : { [DRIVE_ID_HEADER]: driveId };
+}
+
+function isDrive(document: PHDocument): boolean {
+  return (DRIVE_DOCUMENT_TYPES as readonly string[]).includes(
+    document.header.documentType,
+  );
+}
+
+/**
+ * Surfaces a 421 from the Switchboard's drive middleware, which graphql-request
+ * reports as a `ClientError`, as {@link GraphQLWrongBackendError}.
+ */
+function withWrongBackendErrors(
+  middleware: SdkFunctionWrapper,
+): SdkFunctionWrapper {
+  return async (action, ...rest) => {
+    try {
+      return await middleware(action, ...rest);
+    } catch (error) {
+      throw wrongBackendErrorOf(error) ?? error;
+    }
+  };
+}
+
+function wrongBackendErrorOf(
+  error: unknown,
+): GraphQLWrongBackendError | undefined {
+  const response = (
+    error as {
+      response?: { status?: unknown; body?: unknown; [key: string]: unknown };
+    } | null
+  )?.response;
+  if (response?.status !== 421) {
+    return undefined;
+  }
+  let payload: unknown = response.body;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      // Not JSON: kept as the text the server sent.
+    }
+  }
+  const driveId = (payload as { driveId?: unknown } | null)?.driveId;
+  return new GraphQLWrongBackendError(
+    typeof driveId === "string" ? driveId : "",
+    payload,
+    { cause: error },
+  );
+}
+
+/** Protocol versions as the server sent them; anything but a version map throws. */
+function protocolVersionsFrom(value: unknown): ProtocolVersions {
+  if (!isPlainObject(value)) {
+    throw new Error(
+      "The Switchboard answered malformed create protocol versions",
+    );
+  }
+  const versions: ProtocolVersions = {};
+  for (const [protocol, version] of Object.entries(value)) {
+    if (typeof version !== "number" || !Number.isInteger(version)) {
+      throw new Error(
+        `The Switchboard answered a malformed version for protocol ${protocol}`,
+      );
+    }
+    versions[protocol] = version;
+  }
+  return versions;
+}
+
+function isSettled(job: JobInfo): boolean {
+  const status: string = job.status;
+  return status === "READ_READY" || status === "FAILED";
+}
+
+function abortReason(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason;
+  return reason instanceof Error ? reason : new Error(String(reason));
+}
+
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      if (signal) reject(abortReason(signal));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/** As the reactor's `signAction` reads it: the last tuple names a key. */
+function isActionSigned(action: Action): boolean {
+  const signer = action.context?.signer;
+  return Boolean(signer?.app?.key && signer.signatures.at(-1)?.[1]);
+}
+
 /** Resolves the signer of the logged-in user, if there is one. */
 function resolveAmbientSigner(): ISigner | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
-  const renown = window.ph?.renown;
+  const renown = getPHStore()?.renown;
   return renown?.user ? renown.signer : undefined;
 }
 

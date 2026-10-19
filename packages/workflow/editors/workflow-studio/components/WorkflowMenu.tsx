@@ -3,8 +3,8 @@
 import { Modal } from "@powerhousedao/design-system";
 import {
   deleteNode,
+  getPHStore,
   useDispatch,
-  useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
 import {
   actions as workflowActions,
@@ -13,6 +13,21 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, textInputClass } from "../../shared/controls.js";
 import { Icon } from "../../shared/icons.js";
+import { deletionTarget } from "./workflow-order.js";
+
+/** Deletes a workflow with its home folder, reading the drive's nodes now. */
+export async function deleteWorkflow(workflowId: string): Promise<void> {
+  const store = getPHStore();
+  const driveId = store?.selectedDriveId;
+  if (!driveId) throw new Error("No drive is selected");
+  const nodes =
+    store?.drives?.find((drive) => drive.header.id === driveId)?.state.global
+      .nodes ?? [];
+  await deleteNode(
+    driveId,
+    deletionTarget(workflowId, nodes)?.id ?? workflowId,
+  );
+}
 
 export function DeleteWorkflowDialog(props: {
   name: string;
@@ -129,7 +144,6 @@ export function WorkflowMenu(props: {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [, dispatch] = useDispatch(props.document);
-  const driveId = useSelectedDriveId();
   const ref = useRef<HTMLDivElement>(null);
   const state = props.document.state.global;
   const name = state.name || props.nodeName || "Untitled workflow";
@@ -205,8 +219,7 @@ export function WorkflowMenu(props: {
           name={name}
           onCancel={() => setConfirming(false)}
           onConfirm={async () => {
-            if (!driveId) throw new Error("No drive is selected");
-            await deleteNode(driveId, props.document.header.id);
+            await deleteWorkflow(props.document.header.id);
             setConfirming(false);
             props.onDeleted?.();
           }}

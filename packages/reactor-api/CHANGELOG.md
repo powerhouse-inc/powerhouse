@@ -1,3 +1,484 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.62 (2026-10-16)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.61 (2026-10-16)
+
+### 🚀 Features
+
+- **desktop:** builder-owned desktop identity via a generated tauri shell ([8b87d55db7](https://github.com/powerhouse-inc/powerhouse/commit/8b87d55db7))
+
+### ❤️ Thank You
+
+- Claude Opus 4.8
+- Wouter Kampmann
+
+## 6.2.3-dev.60 (2026-10-15)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.58 (2026-10-14)
+
+### 🩹 Fixes
+
+- **registry:** declare reactor-workflow — undeclared dep broke test shard 1 ([37660d7b04](https://github.com/powerhouse-inc/powerhouse/commit/37660d7b04))
+- **release:** the desktop build filter belongs in scripts.build — the prior commit amended test:ci ([2cbbff231c](https://github.com/powerhouse-inc/powerhouse/commit/2cbbff231c))
+- **release:** build @powerhousedao/desktop — dev.57 shipped an empty tarball; guard the filter list ([9103896840](https://github.com/powerhouse-inc/powerhouse/commit/9103896840))
+- **clint:** powerhousedao packages are regular deps, not peers — npm ERESOLVE on scaffold install ([6de7d0d7c6](https://github.com/powerhouse-inc/powerhouse/commit/6de7d0d7c6))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.57 (2026-10-14)
+
+### 🚀 Features
+
+- **reactor-api:** fresher credential checks (no cache for in-process Renown, package invalidation, WebSocket re-verification) ([#3239](https://github.com/powerhouse-inc/powerhouse/pull/3239))
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **reactor-api:** export core typeDefs and subgraph type conflicts from ./subgraph-types ([4fc1e0cc94](https://github.com/powerhouse-inc/powerhouse/commit/4fc1e0cc94))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **reactor-api:** collect subgraph type and root-field claims and resolve their owners ([c2f68cb479](https://github.com/powerhouse-inc/powerhouse/commit/c2f68cb479))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **reactor-api:** report background failures through a reportError option ([724796bcc1](https://github.com/powerhouse-inc/powerhouse/commit/724796bcc1))
+- **reactor-api:** throttle validateDocument and driveIntegrity per caller ([479b640bd6](https://github.com/powerhouse-inc/powerhouse/commit/479b640bd6))
+- **reactor-api:** add an inspection throttle (per-caller bucket, slot cap, single-flight) ([c4ec902df2](https://github.com/powerhouse-inc/powerhouse/commit/c4ec902df2))
+- **reactor-api:** let a host leave the inspection subgraph unmounted ([0db42f9f29](https://github.com/powerhouse-inc/powerhouse/commit/0db42f9f29))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **reactor-api:** refill the inspection throttle on a monotonic clock ([a237e0634c](https://github.com/powerhouse-inc/powerhouse/commit/a237e0634c))
+- **reactor-api:** report package subgraph conflicts the way the server decides them ([b0946b9cc4](https://github.com/powerhouse-inc/powerhouse/commit/b0946b9cc4))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **reactor-api:** let only subgraphs whose schema builds claim types and root fields ([518733b24f](https://github.com/powerhouse-inc/powerhouse/commit/518733b24f))
+- **reactor-api:** give each root field to one subgraph and normalize quoted and split definitions ([f1df1f8870](https://github.com/powerhouse-inc/powerhouse/commit/f1df1f8870))
+- **reactor-api:** refuse a document model whose specification cannot be keyed ([c43ab0cbab](https://github.com/powerhouse-inc/powerhouse/commit/c43ab0cbab))
+- **reactor-api:** keep a package's models when its load comes back empty ([9b87c36b22](https://github.com/powerhouse-inc/powerhouse/commit/9b87c36b22))
+- **reactor-api:** count type extensions as uses of model types ([9df7eb5af6](https://github.com/powerhouse-inc/powerhouse/commit/9df7eb5af6))
+- **reactor-api:** refuse only a model's own subgraph when its operation schema fails ([079843c699](https://github.com/powerhouse-inc/powerhouse/commit/079843c699))
+- **reactor-api:** rebuild model-typed subgraphs only when the types change ([25299abbcf](https://github.com/powerhouse-inc/powerhouse/commit/25299abbcf))
+- **reactor-api:** serve the old subgraph handler until its rebuild succeeds ([cb5091d8c5](https://github.com/powerhouse-inc/powerhouse/commit/cb5091d8c5))
+- **reactor-api:** keep the newest subgraph build when router updates overlap ([82b9913473](https://github.com/powerhouse-inc/powerhouse/commit/82b9913473))
+- **reactor-api:** keep a stream that has no Subscription root ([6d17c4d061](https://github.com/powerhouse-inc/powerhouse/commit/6d17c4d061))
+- **switchboard:** report the remaining logged-only background failures ([f20ff3eb16](https://github.com/powerhouse-inc/powerhouse/commit/f20ff3eb16))
+- **reactor-api:** reload once per burst of vite watcher events and report failures ([20d5bfa4df](https://github.com/powerhouse-inc/powerhouse/commit/20d5bfa4df))
+- **reactor-api:** keep a pending update from re-adding a dropped package ([6ff7e0a29b](https://github.com/powerhouse-inc/powerhouse/commit/6ff7e0a29b))
+- **reactor-api:** report router update failures through reportError ([11d1316f54](https://github.com/powerhouse-inc/powerhouse/commit/11d1316f54))
+- **reactor-api:** stream federation-style and root-extending subgraphs ([c495bd9ed4](https://github.com/powerhouse-inc/powerhouse/commit/c495bd9ed4))
+- **reactor-api:** exclude subgraphs that lose a type or root-field claim from the supergraph ([9be8ce4a2c](https://github.com/powerhouse-inc/powerhouse/commit/9be8ce4a2c))
+- **reactor-api:** keep __resolveType and __isTypeOf in stitched resolvers ([116e05d888](https://github.com/powerhouse-inc/powerhouse/commit/116e05d888))
+- **reactor-api:** cap inspection buckets at 10,000 callers in O(1) ([d09a27a435](https://github.com/powerhouse-inc/powerhouse/commit/d09a27a435))
+- **reactor-api:** reject an invalid inspection throttle config ([b5da56c03c](https://github.com/powerhouse-inc/powerhouse/commit/b5da56c03c))
+- **reactor-api:** unregister document models a package stops providing ([b0b5e015da](https://github.com/powerhouse-inc/powerhouse/commit/b0b5e015da))
+- **reactor-api:** rebuild a subgraph that uses model types when models change ([9ee6a99639](https://github.com/powerhouse-inc/powerhouse/commit/9ee6a99639))
+- **reactor-api:** stop config reloads from piling up packages and watchers ([99de0b11aa](https://github.com/powerhouse-inc/powerhouse/commit/99de0b11aa))
+- **reactor-api:** mount the current subgraph after a replacement mid router update ([f4f47cf891](https://github.com/powerhouse-inc/powerhouse/commit/f4f47cf891))
+- **reactor-api:** settle superseded debounced calls with the run that follows ([b4ab71bddc](https://github.com/powerhouse-inc/powerhouse/commit/b4ab71bddc))
+- **reactor-api:** give each package its own document-model reload in the vite loader ([1a8a69f219](https://github.com/powerhouse-inc/powerhouse/commit/1a8a69f219))
+- **reactor-api:** run package change listeners detached so one failure cannot stop the rest ([9dd5a2dc59](https://github.com/powerhouse-inc/powerhouse/commit/9dd5a2dc59))
+- **reactor-api:** refuse a document model whose schema does not parse or build ([88bd294b2b](https://github.com/powerhouse-inc/powerhouse/commit/88bd294b2b))
+- **reactor-api:** merge subscription subgraphs into the supergraph stream ([fa488dd1f6](https://github.com/powerhouse-inc/powerhouse/commit/fa488dd1f6))
+
+### 🔥 Performance
+
+- **reactor-api:** build each document model schema once per schema text ([d64e4f09a4](https://github.com/powerhouse-inc/powerhouse/commit/d64e4f09a4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Frank @froid1911
+- Wouter Kampmann
+
+## 6.2.3-dev.56 (2026-10-14)
+
+### 🚀 Features
+
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **reactor-api:** export core typeDefs and subgraph type conflicts from ./subgraph-types ([4fc1e0cc94](https://github.com/powerhouse-inc/powerhouse/commit/4fc1e0cc94))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **reactor-api:** collect subgraph type and root-field claims and resolve their owners ([c2f68cb479](https://github.com/powerhouse-inc/powerhouse/commit/c2f68cb479))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **reactor-api:** report background failures through a reportError option ([724796bcc1](https://github.com/powerhouse-inc/powerhouse/commit/724796bcc1))
+- **reactor-api:** throttle validateDocument and driveIntegrity per caller ([479b640bd6](https://github.com/powerhouse-inc/powerhouse/commit/479b640bd6))
+- **reactor-api:** add an inspection throttle (per-caller bucket, slot cap, single-flight) ([c4ec902df2](https://github.com/powerhouse-inc/powerhouse/commit/c4ec902df2))
+- **reactor-api:** let a host leave the inspection subgraph unmounted ([0db42f9f29](https://github.com/powerhouse-inc/powerhouse/commit/0db42f9f29))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **reactor-api:** refill the inspection throttle on a monotonic clock ([a237e0634c](https://github.com/powerhouse-inc/powerhouse/commit/a237e0634c))
+- **reactor-api:** report package subgraph conflicts the way the server decides them ([b0946b9cc4](https://github.com/powerhouse-inc/powerhouse/commit/b0946b9cc4))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **reactor-api:** let only subgraphs whose schema builds claim types and root fields ([518733b24f](https://github.com/powerhouse-inc/powerhouse/commit/518733b24f))
+- **reactor-api:** give each root field to one subgraph and normalize quoted and split definitions ([f1df1f8870](https://github.com/powerhouse-inc/powerhouse/commit/f1df1f8870))
+- **reactor-api:** refuse a document model whose specification cannot be keyed ([c43ab0cbab](https://github.com/powerhouse-inc/powerhouse/commit/c43ab0cbab))
+- **reactor-api:** keep a package's models when its load comes back empty ([9b87c36b22](https://github.com/powerhouse-inc/powerhouse/commit/9b87c36b22))
+- **reactor-api:** count type extensions as uses of model types ([9df7eb5af6](https://github.com/powerhouse-inc/powerhouse/commit/9df7eb5af6))
+- **reactor-api:** refuse only a model's own subgraph when its operation schema fails ([079843c699](https://github.com/powerhouse-inc/powerhouse/commit/079843c699))
+- **reactor-api:** rebuild model-typed subgraphs only when the types change ([25299abbcf](https://github.com/powerhouse-inc/powerhouse/commit/25299abbcf))
+- **reactor-api:** serve the old subgraph handler until its rebuild succeeds ([cb5091d8c5](https://github.com/powerhouse-inc/powerhouse/commit/cb5091d8c5))
+- **reactor-api:** keep the newest subgraph build when router updates overlap ([82b9913473](https://github.com/powerhouse-inc/powerhouse/commit/82b9913473))
+- **reactor-api:** keep a stream that has no Subscription root ([6d17c4d061](https://github.com/powerhouse-inc/powerhouse/commit/6d17c4d061))
+- **switchboard:** report the remaining logged-only background failures ([f20ff3eb16](https://github.com/powerhouse-inc/powerhouse/commit/f20ff3eb16))
+- **reactor-api:** reload once per burst of vite watcher events and report failures ([20d5bfa4df](https://github.com/powerhouse-inc/powerhouse/commit/20d5bfa4df))
+- **reactor-api:** keep a pending update from re-adding a dropped package ([6ff7e0a29b](https://github.com/powerhouse-inc/powerhouse/commit/6ff7e0a29b))
+- **reactor-api:** report router update failures through reportError ([11d1316f54](https://github.com/powerhouse-inc/powerhouse/commit/11d1316f54))
+- **reactor-api:** stream federation-style and root-extending subgraphs ([c495bd9ed4](https://github.com/powerhouse-inc/powerhouse/commit/c495bd9ed4))
+- **reactor-api:** exclude subgraphs that lose a type or root-field claim from the supergraph ([9be8ce4a2c](https://github.com/powerhouse-inc/powerhouse/commit/9be8ce4a2c))
+- **reactor-api:** keep __resolveType and __isTypeOf in stitched resolvers ([116e05d888](https://github.com/powerhouse-inc/powerhouse/commit/116e05d888))
+- **reactor-api:** cap inspection buckets at 10,000 callers in O(1) ([d09a27a435](https://github.com/powerhouse-inc/powerhouse/commit/d09a27a435))
+- **reactor-api:** reject an invalid inspection throttle config ([b5da56c03c](https://github.com/powerhouse-inc/powerhouse/commit/b5da56c03c))
+- **reactor-api:** unregister document models a package stops providing ([b0b5e015da](https://github.com/powerhouse-inc/powerhouse/commit/b0b5e015da))
+- **reactor-api:** rebuild a subgraph that uses model types when models change ([9ee6a99639](https://github.com/powerhouse-inc/powerhouse/commit/9ee6a99639))
+- **reactor-api:** stop config reloads from piling up packages and watchers ([99de0b11aa](https://github.com/powerhouse-inc/powerhouse/commit/99de0b11aa))
+- **reactor-api:** mount the current subgraph after a replacement mid router update ([f4f47cf891](https://github.com/powerhouse-inc/powerhouse/commit/f4f47cf891))
+- **reactor-api:** settle superseded debounced calls with the run that follows ([b4ab71bddc](https://github.com/powerhouse-inc/powerhouse/commit/b4ab71bddc))
+- **reactor-api:** give each package its own document-model reload in the vite loader ([1a8a69f219](https://github.com/powerhouse-inc/powerhouse/commit/1a8a69f219))
+- **reactor-api:** run package change listeners detached so one failure cannot stop the rest ([9dd5a2dc59](https://github.com/powerhouse-inc/powerhouse/commit/9dd5a2dc59))
+- **reactor-api:** refuse a document model whose schema does not parse or build ([88bd294b2b](https://github.com/powerhouse-inc/powerhouse/commit/88bd294b2b))
+- **reactor-api:** merge subscription subgraphs into the supergraph stream ([fa488dd1f6](https://github.com/powerhouse-inc/powerhouse/commit/fa488dd1f6))
+
+### 🔥 Performance
+
+- **reactor-api:** build each document model schema once per schema text ([d64e4f09a4](https://github.com/powerhouse-inc/powerhouse/commit/d64e4f09a4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-api:** name the type names a document model may not generate ([37d812ac6a](https://github.com/powerhouse-inc/powerhouse/commit/37d812ac6a))
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **reactor-api:** log a package subgraph's type collision once across restores ([3987ec7c2d](https://github.com/powerhouse-inc/powerhouse/commit/3987ec7c2d))
+- **reactor-api:** evict a lower-ranked holder only once the newcomer is set up ([e405f270ad](https://github.com/powerhouse-inc/powerhouse/commit/e405f270ad))
+- **reactor-api:** scope the inline registry escape to each subgraph hook ([310067fd18](https://github.com/powerhouse-inc/powerhouse/commit/310067fd18))
+- **reactor-api:** end a registry change's inline escape when the change ends ([8a7aa948fe](https://github.com/powerhouse-inc/powerhouse/commit/8a7aa948fe))
+- **reactor-api:** give a subgraph name one holder across core and every bucket ([9853df4aab](https://github.com/powerhouse-inc/powerhouse/commit/9853df4aab))
+- **reactor-api:** rank subgraph name owners core > host > model > package ([0c140a82fc](https://github.com/powerhouse-inc/powerhouse/commit/0c140a82fc))
+- **reactor-api:** let a document model redeclare a reserved scalar ([85c6064384](https://github.com/powerhouse-inc/powerhouse/commit/85c6064384))
+- **reactor-api:** await async processor factory builders on reload ([24c38e9508](https://github.com/powerhouse-inc/powerhouse/commit/24c38e9508))
+- **reactor-api:** keep core subgraphs when a document model takes a core type name ([adb87faee4](https://github.com/powerhouse-inc/powerhouse/commit/adb87faee4))
+- **reactor-api:** catch rejections from package change listeners ([4d14f62ce8](https://github.com/powerhouse-inc/powerhouse/commit/4d14f62ce8))
+- **reactor-api:** run a registry change made from a subgraph hook inline ([7510a51b20](https://github.com/powerhouse-inc/powerhouse/commit/7510a51b20))
+- **reactor-api:** let a model's subgraph repeat every type its generator emits ([e79e11590b](https://github.com/powerhouse-inc/powerhouse/commit/e79e11590b))
+- **reactor-api:** serialize subgraph registry changes and restore freed package names ([89da792c3a](https://github.com/powerhouse-inc/powerhouse/commit/89da792c3a))
+- **reactor-api:** make subgraph ownership per mount path and order-independent ([11cc5b6215](https://github.com/powerhouse-inc/powerhouse/commit/11cc5b6215))
+- **reactor-api:** heal only a model's own prefixed types, and build generated types once ([9a3f464a54](https://github.com/powerhouse-inc/powerhouse/commit/9a3f464a54))
+- **reactor-api:** first registration of a subgraph name wins ([c0fa5e3b4a](https://github.com/powerhouse-inc/powerhouse/commit/c0fa5e3b4a))
+- **reactor-api:** refuse subgraph types that collide with generated document-model types ([#917](https://github.com/powerhouse-inc/powerhouse/issues/917))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.54 (2026-10-12)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.53 (2026-10-11)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-api:** refuse registry subgraphs and processors whose external dependencies are missing ([cd360d002c](https://github.com/powerhouse-inc/powerhouse/commit/cd360d002c))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-api:** serve the read half of reactor inspection over graphql ([8d9b143c57](https://github.com/powerhouse-inc/powerhouse/commit/8d9b143c57))
+- **reactor-api:** answer whether a document is served over graphql ([c9b2c1a6af](https://github.com/powerhouse-inc/powerhouse/commit/c9b2c1a6af))
+- **reactor-api:** serve a new document's create defaults over graphql ([849cec881b](https://github.com/powerhouse-inc/powerhouse/commit/849cec881b))
+
+### 🩹 Fixes
+
+- **reactor:** report a group-commit store's health to the inspector ([0e64a943e9](https://github.com/powerhouse-inc/powerhouse/commit/0e64a943e9))
+- **reactor:** name the inspector's storage-health types apart from slice 4's ([9d8d407539](https://github.com/powerhouse-inc/powerhouse/commit/9d8d407539))
+- **reactor,reactor-router:** name an unknown job so the router stops reporting real jobs as unknown ([34aadb3add](https://github.com/powerhouse-inc/powerhouse/commit/34aadb3add))
+- **reactor,reactor-api:** read an empty dead-letter cursor as page one and refuse unsafe offsets ([1ac02bcceb](https://github.com/powerhouse-inc/powerhouse/commit/1ac02bcceb))
+- **reactor-api:** serve queued jobs and dead letters without document content ([ab981bb044](https://github.com/powerhouse-inc/powerhouse/commit/ab981bb044))
+- **reactor-api:** decide drive ownership from storage, not through the read gate ([033ee0ab37](https://github.com/powerhouse-inc/powerhouse/commit/033ee0ab37))
+- **reactor-api:** gate the createDefaults parent through listsDocument ([c811f49be2](https://github.com/powerhouse-inc/powerhouse/commit/c811f49be2))
+- **reactor-api:** bypass a Drive-Id miss only for creating that very drive ([30235a9cad](https://github.com/powerhouse-inc/powerhouse/commit/30235a9cad))
+- **reactor-api:** ask the reactor before refusing a Drive-Id with 421 ([8b361da5ed](https://github.com/powerhouse-inc/powerhouse/commit/8b361da5ed))
+- **reactor-api:** let a drive be created under its own Drive-Id whatever the operation is named ([3d0863e9b2](https://github.com/powerhouse-inc/powerhouse/commit/3d0863e9b2))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+- **reactor-api:** let a webhook delivery answered 503 be delivered again ([df17e0a11b](https://github.com/powerhouse-inc/powerhouse/commit/df17e0a11b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-api:** refuse registry subgraphs and processors whose external dependencies are missing ([cd360d002c](https://github.com/powerhouse-inc/powerhouse/commit/cd360d002c))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-api:** serve the read half of reactor inspection over graphql ([8d9b143c57](https://github.com/powerhouse-inc/powerhouse/commit/8d9b143c57))
+- **reactor-api:** answer whether a document is served over graphql ([c9b2c1a6af](https://github.com/powerhouse-inc/powerhouse/commit/c9b2c1a6af))
+- **reactor-api:** serve a new document's create defaults over graphql ([849cec881b](https://github.com/powerhouse-inc/powerhouse/commit/849cec881b))
+
+### 🩹 Fixes
+
+- **reactor:** report a group-commit store's health to the inspector ([0e64a943e9](https://github.com/powerhouse-inc/powerhouse/commit/0e64a943e9))
+- **reactor:** name the inspector's storage-health types apart from slice 4's ([9d8d407539](https://github.com/powerhouse-inc/powerhouse/commit/9d8d407539))
+- **reactor,reactor-router:** name an unknown job so the router stops reporting real jobs as unknown ([34aadb3add](https://github.com/powerhouse-inc/powerhouse/commit/34aadb3add))
+- **reactor,reactor-api:** read an empty dead-letter cursor as page one and refuse unsafe offsets ([1ac02bcceb](https://github.com/powerhouse-inc/powerhouse/commit/1ac02bcceb))
+- **reactor-api:** serve queued jobs and dead letters without document content ([ab981bb044](https://github.com/powerhouse-inc/powerhouse/commit/ab981bb044))
+- **reactor-api:** decide drive ownership from storage, not through the read gate ([033ee0ab37](https://github.com/powerhouse-inc/powerhouse/commit/033ee0ab37))
+- **reactor-api:** gate the createDefaults parent through listsDocument ([c811f49be2](https://github.com/powerhouse-inc/powerhouse/commit/c811f49be2))
+- **reactor-api:** bypass a Drive-Id miss only for creating that very drive ([30235a9cad](https://github.com/powerhouse-inc/powerhouse/commit/30235a9cad))
+- **reactor-api:** ask the reactor before refusing a Drive-Id with 421 ([8b361da5ed](https://github.com/powerhouse-inc/powerhouse/commit/8b361da5ed))
+- **reactor-api:** let a drive be created under its own Drive-Id whatever the operation is named ([3d0863e9b2](https://github.com/powerhouse-inc/powerhouse/commit/3d0863e9b2))
+- **reactor-api:** forget a webhook's dedupe key only when the handler says it did not process it ([f8422e50d3](https://github.com/powerhouse-inc/powerhouse/commit/f8422e50d3))
+- **reactor-api:** let a webhook delivery answered 503 be delivered again ([df17e0a11b](https://github.com/powerhouse-inc/powerhouse/commit/df17e0a11b))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor-browser:** map document meta and protocolVersions onto remote headers ([87e6f2ef81](https://github.com/powerhouse-inc/powerhouse/commit/87e6f2ef81))
+- **reactor-api:** carry a job's document, error name, token and batch over graphql ([85840b82c5](https://github.com/powerhouse-inc/powerhouse/commit/85840b82c5))
+- **reactor-api:** expose executeBatch over graphql ([9d605e5aa7](https://github.com/powerhouse-inc/powerhouse/commit/9d605e5aa7))
+- **reactor-api:** expose document meta and protocolVersions over graphql ([e5cc452275](https://github.com/powerhouse-inc/powerhouse/commit/e5cc452275))
+
+### 🩹 Fixes
+
+- **reactor-browser:** return the job the server reported, not placeholders ([e23e82da7e](https://github.com/powerhouse-inc/powerhouse/commit/e23e82da7e))
+- **reactor-api:** filter jobStatus coordinates through the reactor read gate too ([742fb52e8f](https://github.com/powerhouse-inc/powerhouse/commit/742fb52e8f))
+- **reactor-api:** gate jobStatus on reading the job's document and its coordinates ([836e71983b](https://github.com/powerhouse-inc/powerhouse/commit/836e71983b))
+- **reactor-api:** leave existing operation selections as older servers serve them ([0b309183f4](https://github.com/powerhouse-inc/powerhouse/commit/0b309183f4))
+- **reactor-api:** report executeBatch job failures per job, not as one error ([deba997303](https://github.com/powerhouse-inc/powerhouse/commit/deba997303))
+- **reactor-api:** accept only createDocument's shape in an executeBatch create ([6bdbbeb53e](https://github.com/powerhouse-inc/powerhouse/commit/6bdbbeb53e))
+- **reactor-api:** authorize an executeBatch create like createDocument ([829a43b567](https://github.com/powerhouse-inc/powerhouse/commit/829a43b567))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **reactor-api:** one acceptance rule for document-model modules ([367ea4af15](https://github.com/powerhouse-inc/powerhouse/commit/367ea4af15))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **reactor-api:** accept subgraphs by class through one predicate ([b0146ab55a](https://github.com/powerhouse-inc/powerhouse/commit/b0146ab55a))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+- **reactor-api:** open on-disk PGlite over the durable NodeFS with a boot preflight ([1efa68c3ac](https://github.com/powerhouse-inc/powerhouse/commit/1efa68c3ac))
+- **reactor-api:** expose the PGlite node helpers as a subpath export ([1ee3f38b2f](https://github.com/powerhouse-inc/powerhouse/commit/1ee3f38b2f))
+- **reactor-api:** durable NodeFS with host fsync and periodic maintenance ([#3149](https://github.com/powerhouse-inc/powerhouse/issues/3149))
+- **reactor-api:** convert AtomicNodeFs snapshots to loose PGDATA ([449e4fd9ce](https://github.com/powerhouse-inc/powerhouse/commit/449e4fd9ce))
+
+### 🩹 Fixes
+
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+- **reactor-api,codegen:** one acceptance rule for modules and subgraphs ([#3176](https://github.com/powerhouse-inc/powerhouse/pull/3176))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **reactor-api:** log moveRelationship failures with their arguments in order ([9a25fe4dca](https://github.com/powerhouse-inc/powerhouse/commit/9a25fe4dca))
+- pass package names, step keys and error text to the logger as arguments ([fd81243791](https://github.com/powerhouse-inc/powerhouse/commit/fd81243791))
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

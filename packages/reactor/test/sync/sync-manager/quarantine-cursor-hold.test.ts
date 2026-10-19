@@ -1,0 +1,506 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
+import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
+import type { BatchLoadRequest, IReactor } from "../../../src/core/types.js";
+import type { IEventBus } from "../../../src/events/interfaces.js";
+import { validateBatchLoadRequest } from "../../../src/core/utils.js";
+import { JobStatus } from "../../../src/shared/types.js";
+import type {
+  DeadLetterRecord,
+  ISyncCursorStorage,
+  ISyncDeadLetterStorage,
+  ISyncRemoteStorage,
+} from "../../../src/storage/interfaces.js";
+import { GqlResponseChannel } from "../../../src/sync/channels/gql-res-channel.js";
+import type {
+  ConnectionStateChangeCallback,
+  IChannel,
+  IChannelFactory,
+} from "../../../src/sync/interfaces.js";
+import { Mailbox } from "../../../src/sync/mailbox.js";
+import { SyncManager } from "../../../src/sync/sync-manager.js";
+import { SyncOperation } from "../../../src/sync/sync-operation.js";
+import {
+  ChannelErrorSource,
+  type ConnectionStateSnapshot,
+  type RemoteCursor,
+  type RemoteRecord,
+} from "../../../src/sync/types.js";
+import { settledAtHead } from "../../catch-up/helpers.js";
+
+const CONNECTED: ConnectionStateSnapshot = {
+  state: "connected",
+  failureCount: 0,
+  lastSuccessUtcMs: 1,
+  lastFailureUtcMs: 0,
+  pushBlocked: false,
+  pushFailureCount: 0,
+  receivingPages: false,
+  requiresAuth: false,
+};
+
+function served(id: string, documentId: string, ordinal: number, jobId = "") {
+  const syncOp = new SyncOperation(
+    id,
+    jobId,
+    [],
+    "remote",
+    documentId,
+    ["global"],
+    "main",
+    [
+      {
+        operation: {
+          index: 0,
+          skip: 0,
+          id: `op-${documentId}-${ordinal}`,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "h",
+          action: {
+            type: "TEST_OP",
+            id: `a-${documentId}-${ordinal}`,
+            scope: "global",
+            timestampUtcMs: new Date().toISOString(),
+            input: {},
+          },
+        },
+        context: {
+          documentId,
+          documentType: "test/doc",
+          scope: "global",
+          branch: "main",
+          ordinal,
+        },
+      },
+    ] as unknown as OperationWithContext[],
+  );
+  syncOp.transported();
+  return syncOp;
+}
+
+let pulls = 0;
+
+/** Pulls everything above its stored inbox cursor on init, as a poller would. */
+class PullingChannel {
+  readonly inbox = new Mailbox({ holdAckBelowMarkers: true });
+  readonly outbox = new Mailbox();
+  readonly deadLetter = new Mailbox();
+
+  constructor(
+    private readonly name: string,
+    private readonly cursors: Map<string, number>,
+  ) {
+    this.inbox.onRemoved(() => {
+      const ack = this.inbox.ackOrdinal;
+      if (ack > (this.cursors.get(this.name) ?? 0)) {
+        this.cursors.set(this.name, ack);
+      }
+    });
+  }
+
+  init(): Promise<void> {
+    const from = this.cursors.get(this.name) ?? 0;
+    this.inbox.init(from);
+    pulls++;
+    const pulled = [
+      served(`p${pulls}`, "doc-b", 10, "J-b"),
+      served(`q${pulls}`, "doc-c", 20, "J-c"),
+    ].filter((syncOp) => syncOp.operations[0].context.ordinal > from);
+    if (pulled.length > 0) this.inbox.add(...pulled);
+    return Promise.resolve();
+  }
+
+  shutdown(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  getConnectionState(): ConnectionStateSnapshot {
+    return CONNECTED;
+  }
+
+  onConnectionStateChange(_callback: ConnectionStateChangeCallback) {
+    return () => {};
+  }
+
+  triggerPull(): void {}
+
+  notePoll(): void {}
+
+  lastHolderPollUtcMs(): number | undefined {
+    return undefined;
+  }
+}
+
+describe("an inbox item parked by a quarantine", () => {
+  const cursors = new Map<string, number>();
+  const storedCursors = new Map<string, RemoteCursor>();
+  let records: RemoteRecord[];
+  let rows: DeadLetterRecord[];
+  let reactor: IReactor;
+  let managers: SyncManager[];
+
+  function storages() {
+    const remoteStorage: ISyncRemoteStorage = {
+      list: vi.fn(() => Promise.resolve([...records])),
+      get: vi.fn(),
+      upsert: vi.fn((record: RemoteRecord) => {
+        records = [...records.filter((r) => r.name !== record.name), record];
+        return Promise.resolve();
+      }),
+      remove: vi.fn(() => Promise.resolve()),
+    } as unknown as ISyncRemoteStorage;
+    const cursorStorage: ISyncCursorStorage = {
+      list: vi.fn((remoteName: string) =>
+        Promise.resolve(
+          [...storedCursors.values()].filter(
+            (cursor) => cursor.remoteName === remoteName,
+          ),
+        ),
+      ),
+      get: vi.fn(),
+      upsert: vi.fn((cursor: RemoteCursor) => {
+        storedCursors.set(`${cursor.remoteName}:${cursor.cursorType}`, cursor);
+        return Promise.resolve();
+      }),
+      remove: vi.fn(() => Promise.resolve()),
+    } as unknown as ISyncCursorStorage;
+    const deadLetterStorage: ISyncDeadLetterStorage = {
+      list: vi.fn((remoteName: string) =>
+        Promise.resolve({
+          results: rows.filter((row) => row.remoteName === remoteName),
+          options: { cursor: "0", limit: 100 },
+        }),
+      ),
+      add: vi.fn(() => Promise.resolve()),
+      remove: vi.fn((id: string) => {
+        rows = rows.filter((row) => row.id !== id);
+        return Promise.resolve();
+      }),
+      removeByRemote: vi.fn(() => Promise.resolve()),
+      listQuarantinedDocumentIds: vi.fn(
+        (_signal?: AbortSignal, exceptIds: readonly string[] = []) =>
+          Promise.resolve(
+            rows
+              .filter((row) => !exceptIds.includes(row.id))
+              .map((row) => row.documentId),
+          ),
+      ),
+    };
+    return { remoteStorage, cursorStorage, deadLetterStorage };
+  }
+
+  function makeManager(pushed = false): SyncManager {
+    const { remoteStorage, cursorStorage, deadLetterStorage } = storages();
+    const channelFactory: IChannelFactory = {
+      instance: (id, name) =>
+        pushed
+          ? new GqlResponseChannel(
+              new ConsoleLogger(["GqlResponseChannel"]),
+              id,
+              name,
+              cursorStorage,
+            )
+          : (new PullingChannel(name, cursors) as unknown as IChannel),
+    };
+    const operationIndex = {
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 500 },
+      }),
+      getCollectionsInRange: vi.fn().mockResolvedValue([]),
+    } as unknown as IOperationIndex;
+    const eventBus = {
+      subscribe: vi.fn(() => () => undefined),
+      emit: vi.fn(() => Promise.resolve()),
+    } as unknown as IEventBus;
+    const manager = new SyncManager(
+      new ConsoleLogger(["quarantine-cursor-hold"]),
+      remoteStorage,
+      cursorStorage,
+      deadLetterStorage,
+      channelFactory,
+      operationIndex,
+      reactor,
+      eventBus,
+      DEFAULT_DRIVE_CONTAINER_TYPES,
+      settledAtHead(),
+    );
+    managers.push(manager);
+    return manager;
+  }
+
+  function loadedDocuments(): string[] {
+    const single = vi
+      .mocked(reactor.load)
+      .mock.calls.map(([documentId]) => documentId as string);
+    const batched = vi
+      .mocked(reactor.loadBatch)
+      .mock.calls.filter(
+        (_, i) =>
+          vi.mocked(reactor.loadBatch).mock.results[i].type === "return",
+      )
+      .flatMap(([request]) => request.jobs.map((job) => job.documentId));
+    return [...single, ...batched];
+  }
+
+  beforeEach(() => {
+    let batchJobs = 0;
+    cursors.clear();
+    storedCursors.clear();
+    records = [];
+    rows = [
+      {
+        id: "d1",
+        jobId: "",
+        jobDependencies: [],
+        remoteName: "remote",
+        documentId: "doc-b",
+        scopes: ["global"],
+        branch: "main",
+        operations: [],
+        errorSource: ChannelErrorSource.Inbox,
+        errorMessage: "broken",
+        errorType: "UNCLASSIFIED",
+      },
+    ];
+    managers = [];
+    reactor = {
+      load: vi.fn((documentId: string) =>
+        Promise.resolve({ id: `job-${documentId}`, status: JobStatus.PENDING }),
+      ),
+      getJobStatus: vi.fn((id: string) =>
+        Promise.resolve({ id, status: JobStatus.READ_READY }),
+      ),
+      loadBatch: vi.fn((request: BatchLoadRequest) => {
+        validateBatchLoadRequest(request.jobs);
+        return Promise.resolve({
+          jobs: Object.fromEntries(
+            request.jobs.map((job) => [
+              job.key,
+              {
+                id: `job-${job.key}-${++batchJobs}`,
+                status: JobStatus.PENDING,
+              },
+            ]),
+          ),
+        });
+      }),
+    } as unknown as IReactor;
+  });
+
+  afterEach(() => {
+    for (const manager of managers) manager.shutdown();
+  });
+
+  async function pullAndApplyLaterOps(manager: SyncManager): Promise<void> {
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "pull", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    await vi.waitFor(() => expect(loadedDocuments()).toContain("doc-c"));
+    await vi.waitFor(() => expect(cursors.get("remote")).toBeDefined());
+    expect(loadedDocuments()).not.toContain("doc-b");
+  }
+
+  it("is pulled again after a reset and applied once the quarantine lifts", async () => {
+    const manager = makeManager();
+    await pullAndApplyLaterOps(manager);
+
+    await manager.resetChannel("remote");
+    await manager.clearDeadLetter("remote", "d1");
+
+    await vi.waitFor(() => expect(loadedDocuments()).toContain("doc-b"));
+    await vi.waitFor(() => expect(cursors.get("remote")).toBe(20));
+  });
+
+  it("keeps one parked copy when a reset carries an item the remote serves again", async () => {
+    const manager = makeManager();
+    await pullAndApplyLaterOps(manager);
+
+    await manager.resetChannel("remote");
+    const fresh = manager.getByName("remote").channel;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      fresh.inbox.items.filter((item) => item.documentId === "doc-b"),
+    ).toHaveLength(1);
+    expect(fresh.inbox.ackOrdinal).toBe(9);
+    expect(cursors.get("remote")).toBe(9);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(cursors.get("remote")).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+    expect(fresh.deadLetter.items).toHaveLength(0);
+  });
+
+  it("keeps one parked copy when a pusher sends the item again", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p1", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    channel.inbox.add(served("p2", "doc-b", 10, "J-b"));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      channel.inbox.items.filter((item) => item.documentId === "doc-b"),
+    ).toHaveLength(1);
+    expect(channel.inbox.ackOrdinal).toBe(9);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+    expect(channel.deadLetter.items).toHaveLength(0);
+  });
+
+  async function parkRepushedCopyThenRequeue(): Promise<SyncManager> {
+    rows.push({
+      id: "x",
+      jobId: "J-b",
+      jobDependencies: [],
+      remoteName: "remote",
+      documentId: "doc-b",
+      scopes: ["global"],
+      branch: "main",
+      operations: served("x", "doc-b", 10, "J-b").operations,
+      errorSource: ChannelErrorSource.Inbox,
+      errorMessage: "transient",
+      errorType: "UNCLASSIFIED",
+    });
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p2", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    await vi.waitFor(() =>
+      expect(storedCursors.get("remote:inbox")?.cursorOrdinal).toBe(9),
+    );
+
+    await manager.requeueDeadLetter("remote", "x");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(rows.map((row) => row.id)).toEqual(["d1", "x"]);
+    expect(loadedDocuments()).not.toContain("doc-b");
+    return manager;
+  }
+
+  it("keeps a requeue's row when a re-pushed copy of it is already parked", async () => {
+    const manager = await parkRepushedCopyThenRequeue();
+    const channel = manager.getByName("remote").channel;
+    expect(
+      channel.inbox.items
+        .filter((item) => item.documentId === "doc-b")
+        .map((item) => item.id),
+    ).toEqual(["p2", "x"]);
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(rows).toHaveLength(0));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(2);
+    expect(channel.inbox.items).toHaveLength(0);
+    expect(channel.deadLetter.items).toHaveLength(0);
+  });
+
+  it("keeps a requeue's row across a restart when a re-pushed copy was parked", async () => {
+    const first = await parkRepushedCopyThenRequeue();
+    first.shutdown();
+
+    const second = makeManager(true);
+    await second.startup();
+    expect(rows.map((row) => row.id)).toEqual(["d1", "x"]);
+    await second.clearDeadLetter("remote", "d1");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(loadedDocuments()).not.toContain("doc-b");
+
+    await second.requeueDeadLetter("remote", "x");
+    await vi.waitFor(() => expect(rows).toHaveLength(0));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+  });
+
+  it("lifts parked items sharing a plan key in separate batches", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const channel = manager.getByName("remote").channel;
+    channel.inbox.add(served("p1", "doc-b", 10, "J-b"));
+    channel.inbox.add(served("p2", "doc-b", 11, "J-b"));
+    channel.inbox.add(served("q", "doc-c", 20, "J-c"));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(20));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(2);
+    expect(channel.deadLetter.items).toHaveLength(0);
+  });
+
+  it("survives a reset of a push-fed channel and is applied once the quarantine lifts", async () => {
+    const manager = makeManager(true);
+    await manager.startup();
+    await manager.add(
+      "remote",
+      DriveCollectionId.forDrive("drive-1"),
+      { type: "polling", parameters: {} },
+      { documentId: [], scope: [], branch: "main" },
+      { sinceTimestampUtcMs: "0" },
+    );
+    const inboxCursor = () => storedCursors.get("remote:inbox")?.cursorOrdinal;
+    const first = manager.getByName("remote").channel;
+    first.inbox.add(served("p", "doc-b", 10));
+    first.inbox.add(served("q", "doc-c", 20));
+    await vi.waitFor(() => expect(inboxCursor()).toBe(9));
+
+    await manager.resetChannel("remote");
+    const fresh = manager.getByName("remote").channel;
+    expect(fresh).not.toBe(first);
+    fresh.inbox.add(served("e", "doc-c", 30));
+    await vi.waitFor(() =>
+      expect(loadedDocuments().filter((id) => id === "doc-c")).toHaveLength(2),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fresh.inbox.ackOrdinal).toBe(9);
+    expect(inboxCursor()).toBe(9);
+    expect(loadedDocuments()).not.toContain("doc-b");
+
+    await manager.clearDeadLetter("remote", "d1");
+    await vi.waitFor(() => expect(inboxCursor()).toBe(30));
+    expect(loadedDocuments().filter((id) => id === "doc-b")).toHaveLength(1);
+  });
+
+  it("is pulled again after a restart and applied once the quarantine lifts", async () => {
+    const first = makeManager();
+    await pullAndApplyLaterOps(first);
+    first.shutdown();
+
+    const second = makeManager();
+    await second.startup();
+    await second.clearDeadLetter("remote", "d1");
+
+    await vi.waitFor(() => expect(loadedDocuments()).toContain("doc-b"));
+  });
+});

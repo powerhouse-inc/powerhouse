@@ -11,14 +11,17 @@ const dist = path.resolve(
   "../dist",
 );
 
+// Only dist's own declarations: peers are type-only, and resolving them
+// parses hundreds of files.
+const project = new Project({
+  skipAddingFilesFromTsConfig: true,
+  compilerOptions: { types: [], noResolve: true },
+});
+project.addSourceFilesAtPaths(path.join(dist, "*.d.ts"));
+
 // Export names the d.ts presents as values, honouring `export type`.
 function valueExports(dtsFile: string): string[] {
-  const project = new Project({
-    skipAddingFilesFromTsConfig: true,
-    compilerOptions: { types: [] },
-  });
-  const file = project.addSourceFileAtPath(dtsFile);
-  project.resolveSourceFileDependencies();
+  const file = project.getSourceFileOrThrow(dtsFile);
   const names: string[] = [];
   for (const symbol of file.getExportSymbols()) {
     const declaration = symbol.getDeclarations()[0];
@@ -91,6 +94,26 @@ describe("dist", () => {
     expect([...new Set(imported)].sort()).toEqual(
       Object.keys(dependencies).sort(),
     );
+  });
+
+  // Type-only peers: the declarations import them, the runtime never does.
+  it("takes the reactor clients' types from peers, not a bundled copy", () => {
+    const { peerDependencies, dependencies } = JSON.parse(
+      readFileSync(path.join(dist, "../package.json"), "utf8"),
+    ) as {
+      peerDependencies: Record<string, string>;
+      dependencies: Record<string, string>;
+    };
+    expect(Object.keys(peerDependencies)).toContain("@powerhousedao/reactor");
+    expect(Object.keys(dependencies)).not.toContain("@powerhousedao/reactor");
+    const declarations = readdirSync(dist)
+      .filter((file) => file.endsWith(".d.ts"))
+      .map((file) => readFileSync(path.join(dist, file), "utf8"))
+      .join("\n");
+    expect(declarations).toMatch(
+      /import \{[^}]*\bIReactorClient\b[^}]*\} from "@powerhousedao\/reactor"/,
+    );
+    expect(declarations).not.toMatch(/interface IReactorClient\b/);
   });
 
   // The editor bundles it for the browser.

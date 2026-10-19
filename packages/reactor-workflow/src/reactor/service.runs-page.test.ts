@@ -53,6 +53,7 @@ function row(
     trigger_payload: null,
     status: "SUCCEEDED",
     error: null,
+    error_name: null,
     enqueued_at: startedAt,
     started_at: startedAt,
     ended_at: startedAt,

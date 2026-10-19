@@ -360,8 +360,10 @@ for verification — but `url` still applies to this switchboard's own identity
 Either way the credential's EIP-712 proof is re-verified and expiry and
 delegation binding are re-checked, so a locally stored credential is held to the
 same standard as a remote one. Successful checks are cached per identity for
-`CREDENTIAL_VERIFICATION_CACHE_TTL_MS` (60s default) in both modes, so
-revocation still lags by up to that TTL.
+`CREDENTIAL_VERIFICATION_CACHE_TTL_MS`. The default depends on the source: `0`
+(no cache) for `self`, where the check is an in-process read-model query, and
+60s for `remote`, where revocation lags by up to that TTL per replica. Setting
+the env var overrides either default.
 
 `self` requires a loaded package that provides the `renown-read-model` subgraph
 (`@powerhousedao/renown-package`). Startup fails if none does, rather than booting
@@ -374,6 +376,52 @@ the generic `GraphQLManager.executeSubgraphQuery` plus an injectable
 `verifyCredential` — core has no knowledge of the renown package. A host that
 sets `source: "self"` without injecting a verifier is refused at boot rather
 than silently verified against a remote Renown.
+
+#### Revoking a Credential From a Package
+
+A package that revokes credentials (for example a `revokeCredential` mutation)
+should evict the host's cached check as soon as the revocation is stored, so the
+credential is refused on the next request instead of after the cache TTL.
+Every subgraph receives the invalidator as `SubgraphArgs.credentials`, and
+`BaseSubgraph` exposes it as `this.credentials`:
+
+```ts
+class RenownAuthSubgraph extends BaseSubgraph {
+  resolvers = {
+    Mutation: {
+      revokeCredential: async (_: unknown, { id }: { id: string }) => {
+        const vc = await this.store.revoke(id); // persist first
+        // Evicts cached checks for this identity and re-verifies its open
+        // WebSocket connections. chainId and appDid narrow the eviction;
+        // pass only the address to drop every app key of that address.
+        this.credentials.invalidateCredential(
+          vc.address,
+          vc.chainId,
+          vc.appDid, // the did:key the credential delegates to
+        );
+        return true;
+      },
+    },
+  };
+}
+```
+
+The call is synchronous, returns the number of evicted entries and is a no-op on
+a host without authentication. It is local to the process: other replicas keep
+their cache until its TTL lapses, which is why `source: "self"` defaults to no
+cache.
+
+Open WebSocket connections are authenticated once, at connect. Their credentials
+are re-verified every `WS_CREDENTIAL_RECHECK_INTERVAL_MS` (default `60000`; `0`
+turns the periodic sweep off) and immediately for the identity named by an
+`invalidateCredential` call. A connection whose credential no longer verifies is
+closed with code `4403` and reason `credential-revoked`. A re-check that fails
+because the verifier is unreachable keeps the connection open. SSE subscription
+streams are not re-checked.
+
+A package built against an older `reactor-api` sees `this.credentials` as
+`undefined`; call it as `this.credentials?.invalidateCredential(...)` when the
+package must support such hosts.
 
 #### The Switchboard's Own Identity
 

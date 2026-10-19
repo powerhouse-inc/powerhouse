@@ -21,7 +21,7 @@ function Probe() {
   return <span data-testid="state">{state}</span>;
 }
 
-function renderProbe(initialAuth: RenownInitialAuth) {
+async function renderProbe(initialAuth: RenownInitialAuth) {
   return render(
     <RenownInitialUserProvider initialAuth={initialAuth}>
       <Probe />
@@ -49,7 +49,7 @@ afterEach(() => {
 describe("useRenownAuthAsync resolution", () => {
   it("resolves anonymous immediately while the SDK is still building", async () => {
     setRenown(SDK_BUILDING);
-    const screen = renderProbe(RENOWN_INITIAL_ANONYMOUS);
+    const screen = await renderProbe(RENOWN_INITIAL_ANONYMOUS);
 
     await expect
       .element(screen.getByTestId("state"))
@@ -61,7 +61,7 @@ describe("useRenownAuthAsync resolution", () => {
     // credential store does not mean signed out.
     setRedirectDid(TEST_USER_DID);
     setRenown(SDK_BUILDING);
-    const screen = renderProbe(RENOWN_INITIAL_ANONYMOUS);
+    const screen = await renderProbe(RENOWN_INITIAL_ANONYMOUS);
 
     await expect
       .element(screen.getByTestId("state"))
@@ -70,7 +70,7 @@ describe("useRenownAuthAsync resolution", () => {
 
   it("keeps resolving when the first render does not know", async () => {
     setRenown(SDK_BUILDING);
-    const screen = renderProbe(RENOWN_INITIAL_UNKNOWN);
+    const screen = await renderProbe(RENOWN_INITIAL_UNKNOWN);
 
     await expect
       .element(screen.getByTestId("state"))
@@ -79,7 +79,7 @@ describe("useRenownAuthAsync resolution", () => {
 
   it("reports the seeded user as authenticated", async () => {
     setRenown(SDK_BUILDING);
-    const screen = renderProbe({
+    const screen = await renderProbe({
       state: "authenticated",
       user: {
         did: TEST_USER_DID,

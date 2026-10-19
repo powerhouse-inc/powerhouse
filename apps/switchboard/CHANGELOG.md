@@ -1,3 +1,420 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.62 (2026-10-16)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.61 (2026-10-16)
+
+### 🚀 Features
+
+- **desktop:** builder-owned desktop identity via a generated tauri shell ([8b87d55db7](https://github.com/powerhouse-inc/powerhouse/commit/8b87d55db7))
+
+### ❤️ Thank You
+
+- Claude Opus 4.8
+- Wouter Kampmann
+
+## 6.2.3-dev.60 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,switchboard:** built-in plugins become real modules + observable lifecycle ([224ce4b01a](https://github.com/powerhouse-inc/powerhouse/commit/224ce4b01a))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **ph-cli,switchboard:** host.js compositions and core drives reach the switchboard runner (R2.6b) ([e74f6830fe](https://github.com/powerhouse-inc/powerhouse/commit/e74f6830fe))
+- **switchboard:** plugin composition seam for host.js entries and tests (R2.6a) ([8e64a8e6ea](https://github.com/powerhouse-inc/powerhouse/commit/8e64a8e6ea))
+- **switchboard:** workflows subsystem carved into the plugin composition (R2.5) ([e9467d9c38](https://github.com/powerhouse-inc/powerhouse/commit/e9467d9c38))
+- **switchboard:** privacy subsystem carved into the plugin composition (R2.4) ([8bff8cbbff](https://github.com/powerhouse-inc/powerhouse/commit/8bff8cbbff))
+- **switchboard:** attachments subsystem carved into the plugin composition (R2.3) ([d63108172e](https://github.com/powerhouse-inc/powerhouse/commit/d63108172e))
+- **switchboard:** mcp subsystem as the first built-in plugin (R2.2) ([41aebd9a0d](https://github.com/powerhouse-inc/powerhouse/commit/41aebd9a0d))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+
+### 🩹 Fixes
+
+- **switchboard:** absent plugins actually deactivate — presence suite (R2.6c) ([5c5380f872](https://github.com/powerhouse-inc/powerhouse/commit/5c5380f872))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.58 (2026-10-14)
+
+### 🩹 Fixes
+
+- **registry:** declare reactor-workflow — undeclared dep broke test shard 1 ([37660d7b04](https://github.com/powerhouse-inc/powerhouse/commit/37660d7b04))
+- **release:** the desktop build filter belongs in scripts.build — the prior commit amended test:ci ([2cbbff231c](https://github.com/powerhouse-inc/powerhouse/commit/2cbbff231c))
+- **release:** build @powerhousedao/desktop — dev.57 shipped an empty tarball; guard the filter list ([9103896840](https://github.com/powerhouse-inc/powerhouse/commit/9103896840))
+- **clint:** powerhousedao packages are regular deps, not peers — npm ERESOLVE on scaffold install ([6de7d0d7c6](https://github.com/powerhouse-inc/powerhouse/commit/6de7d0d7c6))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.57 (2026-10-14)
+
+### 🚀 Features
+
+- **reactor-api:** fresher credential checks (no cache for in-process Renown, package invalidation, WebSocket re-verification) ([#3239](https://github.com/powerhouse-inc/powerhouse/pull/3239))
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **reactor-api:** report background failures through a reportError option ([724796bcc1](https://github.com/powerhouse-inc/powerhouse/commit/724796bcc1))
+- **switchboard:** configure the inspection throttle from PH_INSPECTION_* env ([4eefc0b8aa](https://github.com/powerhouse-inc/powerhouse/commit/4eefc0b8aa))
+- **switchboard:** let INSPECTION_ENABLED=false keep /graphql/inspection unmounted ([aefe93b1e1](https://github.com/powerhouse-inc/powerhouse/commit/aefe93b1e1))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+- ⚠️  **reactor-workflow:** lease warm piece children per request from one pool sized around the reactor's threads ([9ff3834198](https://github.com/powerhouse-inc/powerhouse/commit/9ff3834198))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **switchboard:** new attachment tests use the granted-download helper ([0206932b66](https://github.com/powerhouse-inc/powerhouse/commit/0206932b66))
+- **switchboard:** answer 404 for an attachment whose blob is missing, instead of crashing ([#3110](https://github.com/powerhouse-inc/powerhouse/pull/3110))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **switchboard:** report the remaining logged-only background failures ([f20ff3eb16](https://github.com/powerhouse-inc/powerhouse/commit/f20ff3eb16))
+- **switchboard:** fail boot on an invalid PH_INSPECTION_CALLS_PER_MINUTE ([4326aa0c1e](https://github.com/powerhouse-inc/powerhouse/commit/4326aa0c1e))
+- **reactor-workflow:** journal a fire as it queues, re-read a workflow changed during a wait, and sweep up orphaned PENDING runs ([37e9c7917b](https://github.com/powerhouse-inc/powerhouse/commit/37e9c7917b))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** lease warm piece children per request from one pool sized around the reactor's threads  ([9ff3834198](https://github.com/powerhouse-inc/powerhouse/commit/9ff3834198))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Frank @froid1911
+- Wouter Kampmann
+
+## 6.2.3-dev.56 (2026-10-14)
+
+### 🚀 Features
+
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **reactor-api:** report background failures through a reportError option ([724796bcc1](https://github.com/powerhouse-inc/powerhouse/commit/724796bcc1))
+- **switchboard:** configure the inspection throttle from PH_INSPECTION_* env ([4eefc0b8aa](https://github.com/powerhouse-inc/powerhouse/commit/4eefc0b8aa))
+- **switchboard:** let INSPECTION_ENABLED=false keep /graphql/inspection unmounted ([aefe93b1e1](https://github.com/powerhouse-inc/powerhouse/commit/aefe93b1e1))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+- ⚠️  **reactor-workflow:** lease warm piece children per request from one pool sized around the reactor's threads ([9ff3834198](https://github.com/powerhouse-inc/powerhouse/commit/9ff3834198))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **switchboard:** new attachment tests use the granted-download helper ([0206932b66](https://github.com/powerhouse-inc/powerhouse/commit/0206932b66))
+- **switchboard:** answer 404 for an attachment whose blob is missing, instead of crashing ([#3110](https://github.com/powerhouse-inc/powerhouse/pull/3110))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **switchboard:** report the remaining logged-only background failures ([f20ff3eb16](https://github.com/powerhouse-inc/powerhouse/commit/f20ff3eb16))
+- **switchboard:** fail boot on an invalid PH_INSPECTION_CALLS_PER_MINUTE ([4326aa0c1e](https://github.com/powerhouse-inc/powerhouse/commit/4326aa0c1e))
+- **reactor-workflow:** journal a fire as it queues, re-read a workflow changed during a wait, and sweep up orphaned PENDING runs ([37e9c7917b](https://github.com/powerhouse-inc/powerhouse/commit/37e9c7917b))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** lease warm piece children per request from one pool sized around the reactor's threads  ([9ff3834198](https://github.com/powerhouse-inc/powerhouse/commit/9ff3834198))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Frank @froid1911
+- Wouter Kampmann
+
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **switchboard:** release the lease and retry when the late runtime fails to start ([ef83820e0f](https://github.com/powerhouse-inc/powerhouse/commit/ef83820e0f))
+- **switchboard:** log a failed start of the late workflow runtime ([82e9b88f48](https://github.com/powerhouse-inc/powerhouse/commit/82e9b88f48))
+- **switchboard:** mount the late workflow subgraph without the debounce ([ed64d75da4](https://github.com/powerhouse-inc/powerhouse/commit/ed64d75da4))
+- **switchboard:** register the reactor-drive listing subgraph as reactor-drive-nodes ([8beff0a01f](https://github.com/powerhouse-inc/powerhouse/commit/8beff0a01f))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.54 (2026-10-12)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.53 (2026-10-11)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **switchboard:** report the composed workflow runtime through the facts sink ([da552e5aee](https://github.com/powerhouse-inc/powerhouse/commit/da552e5aee))
+- **switchboard:** stop the workflow runtime when the singleton is lost ([3936e68b76](https://github.com/powerhouse-inc/powerhouse/commit/3936e68b76))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **switchboard:** inline the default drive icon instead of fetching it ([7ca932d882](https://github.com/powerhouse-inc/powerhouse/commit/7ca932d882))
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **switchboard:** take the trigger read model off the coordinator with its runtime ([363772ed4e](https://github.com/powerhouse-inc/powerhouse/commit/363772ed4e))
+- **switchboard:** mount the workflow GraphQL API a late claim registers ([92e76a7207](https://github.com/powerhouse-inc/powerhouse/commit/92e76a7207))
+- **reactor-workflow:** tell a self-fence from a takeover, and restart on the former ([d237e1ac51](https://github.com/powerhouse-inc/powerhouse/commit/d237e1ac51))
+- **switchboard:** retry the workflow singleton after a refused boot ([62b41a8023](https://github.com/powerhouse-inc/powerhouse/commit/62b41a8023))
+- **switchboard:** stop the runtime a failed compose had already built ([fd4012b3d7](https://github.com/powerhouse-inc/powerhouse/commit/fd4012b3d7))
+- **reactor-workflow:** fence a singleton holder that cannot renew ([bc4b81edca](https://github.com/powerhouse-inc/powerhouse/commit/bc4b81edca))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+- **reactor-workflow:** renew the singleton lease from the claim ([7ef58a3585](https://github.com/powerhouse-inc/powerhouse/commit/7ef58a3585))
+- **switchboard:** boot without workflows when another process holds the singleton ([33f8dd3c53](https://github.com/powerhouse-inc/powerhouse/commit/33f8dd3c53))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **workflow:** polish the block picker after a visual review ([67bf5a96f7](https://github.com/powerhouse-inc/powerhouse/commit/67bf5a96f7))
+- **workflow:** group block picker search by piece and add source tabs ([723d7a0660](https://github.com/powerhouse-inc/powerhouse/commit/723d7a0660))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **switchboard:** report the composed workflow runtime through the facts sink ([da552e5aee](https://github.com/powerhouse-inc/powerhouse/commit/da552e5aee))
+- **switchboard:** stop the workflow runtime when the singleton is lost ([3936e68b76](https://github.com/powerhouse-inc/powerhouse/commit/3936e68b76))
+- **reactor-workflow:** claim the workflow singleton before composing ([98a51ff9ab](https://github.com/powerhouse-inc/powerhouse/commit/98a51ff9ab))
+
+### 🩹 Fixes
+
+- **workflow:** address block picker review findings ([1c69224191](https://github.com/powerhouse-inc/powerhouse/commit/1c69224191))
+- **switchboard,connect:** declare the reactor store's storage facts ([28d9d364a9](https://github.com/powerhouse-inc/powerhouse/commit/28d9d364a9))
+- **switchboard:** take the trigger read model off the coordinator with its runtime ([363772ed4e](https://github.com/powerhouse-inc/powerhouse/commit/363772ed4e))
+- **switchboard:** mount the workflow GraphQL API a late claim registers ([92e76a7207](https://github.com/powerhouse-inc/powerhouse/commit/92e76a7207))
+- **reactor-workflow:** tell a self-fence from a takeover, and restart on the former ([d237e1ac51](https://github.com/powerhouse-inc/powerhouse/commit/d237e1ac51))
+- **switchboard:** retry the workflow singleton after a refused boot ([62b41a8023](https://github.com/powerhouse-inc/powerhouse/commit/62b41a8023))
+- **switchboard:** stop the runtime a failed compose had already built ([fd4012b3d7](https://github.com/powerhouse-inc/powerhouse/commit/fd4012b3d7))
+- **reactor-workflow:** fence a singleton holder that cannot renew ([bc4b81edca](https://github.com/powerhouse-inc/powerhouse/commit/bc4b81edca))
+- **reactor-workflow:** never take the singleton from a live holder of the same name ([9f6750789d](https://github.com/powerhouse-inc/powerhouse/commit/9f6750789d))
+- **reactor-workflow:** renew the singleton lease from the claim ([7ef58a3585](https://github.com/powerhouse-inc/powerhouse/commit/7ef58a3585))
+- **switchboard:** boot without workflows when another process holds the singleton ([33f8dd3c53](https://github.com/powerhouse-inc/powerhouse/commit/33f8dd3c53))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **switchboard:** start the Pyroscope profiler in embedded servers ([3dc361721d](https://github.com/powerhouse-inc/powerhouse/commit/3dc361721d))
+- **reactor-workflow:** stream, cache and authorize step attachments ([2c33603d58](https://github.com/powerhouse-inc/powerhouse/commit/2c33603d58))
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **switchboard:** shut down and restart when the reactor's pglite session is poisoned ([ccbb0ecef1](https://github.com/powerhouse-inc/powerhouse/commit/ccbb0ecef1))
+- **switchboard:** build the pglite store on the hardened dialect ([8c359d9278](https://github.com/powerhouse-inc/powerhouse/commit/8c359d9278))
+- **reactor-workflow:** carry INDETERMINATE through test reporting ([ada7daaa61](https://github.com/powerhouse-inc/powerhouse/commit/ada7daaa61))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.49 (2026-10-08)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+- **switchboard:** never let observability lower a fatal exit code ([0498342d22](https://github.com/powerhouse-inc/powerhouse/commit/0498342d22))
+- **switchboard:** survive a logger that fails during fatal shutdown ([ecc8975282](https://github.com/powerhouse-inc/powerhouse/commit/ecc8975282))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+- **switchboard:** open PGlite stores over the durable NodeFS ([b5126c3056](https://github.com/powerhouse-inc/powerhouse/commit/b5126c3056))
+
+### 🩹 Fixes
+
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+- **switchboard:** dump legacy PG16 stores from an in-memory copy ([8084fa5b1e](https://github.com/powerhouse-inc/powerhouse/commit/8084fa5b1e))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+- **switchboard:** keep fatal shutdown exit codes intact ([#3174](https://github.com/powerhouse-inc/powerhouse/pull/3174))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

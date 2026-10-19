@@ -1,6 +1,12 @@
 import type { PyroscopeConfig } from "@pyroscope/nodejs";
 
+let started = false;
+
+// Once per process: the standalone entry and an embedding host (ph vetra) both
+// ask, and Pyroscope must only be initialised once.
 export async function initProfilerFromEnv(env: typeof process.env) {
+  if (started || !env.PYROSCOPE_SERVER_ADDRESS) return;
+  started = true;
   const {
     PYROSCOPE_SERVER_ADDRESS: serverAddress,
     PYROSCOPE_APPLICATION_NAME: appName,

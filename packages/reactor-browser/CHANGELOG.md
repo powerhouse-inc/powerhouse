@@ -1,3 +1,416 @@
+## 6.2.3-dev.63 (2026-10-18)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+- **connect,reactor-browser:** settings page as routes ([2d32484c40](https://github.com/powerhouse-inc/powerhouse/commit/2d32484c40))
+- **connect:** replace react-router with tanstack file routes ([3784d22e85](https://github.com/powerhouse-inc/powerhouse/commit/3784d22e85))
+- **reactor-browser:** resolve drive routes, waiting for drives to arrive ([d21d2fe064](https://github.com/powerhouse-inc/powerhouse/commit/d21d2fe064))
+- **reactor-browser:** a navigator api the app shell owns ([a3df324e36](https://github.com/powerhouse-inc/powerhouse/commit/a3df324e36))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **connect,reactor-browser:** name drives by header, else by the name given at creation ([6def973bf7](https://github.com/powerhouse-inc/powerhouse/commit/6def973bf7))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.62 (2026-10-16)
+
+### 🚀 Features
+
+- **connect,builder-tools:** prerendered app shell, self-hosted font and module warm-up ([cf9b61ef86](https://github.com/powerhouse-inc/powerhouse/commit/cf9b61ef86))
+- **connect,reactor-browser:** settings page as routes ([2d32484c40](https://github.com/powerhouse-inc/powerhouse/commit/2d32484c40))
+- **connect:** replace react-router with tanstack file routes ([3784d22e85](https://github.com/powerhouse-inc/powerhouse/commit/3784d22e85))
+- **reactor-browser:** resolve drive routes, waiting for drives to arrive ([d21d2fe064](https://github.com/powerhouse-inc/powerhouse/commit/d21d2fe064))
+- **reactor-browser:** a navigator api the app shell owns ([a3df324e36](https://github.com/powerhouse-inc/powerhouse/commit/a3df324e36))
+
+### 🩹 Fixes
+
+- **ph-cli,docker,codegen:** serve connect under a base path ([fe07684e12](https://github.com/powerhouse-inc/powerhouse/commit/fe07684e12))
+- **connect,reactor-browser:** name drives by header, else by the name given at creation ([6def973bf7](https://github.com/powerhouse-inc/powerhouse/commit/6def973bf7))
+
+### 🔥 Performance
+
+- **connect:** trim connect's boot imports and break its barrel cycles ([dde9430d74](https://github.com/powerhouse-inc/powerhouse/commit/dde9430d74))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.61 (2026-10-16)
+
+### 🚀 Features
+
+- **desktop:** builder-owned desktop identity via a generated tauri shell ([8b87d55db7](https://github.com/powerhouse-inc/powerhouse/commit/8b87d55db7))
+
+### ❤️ Thank You
+
+- Claude Opus 4.8
+- Wouter Kampmann
+
+## 6.2.3-dev.60 (2026-10-15)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.59 (2026-10-15)
+
+### 🚀 Features
+
+- **connect,vetra-studio:** browser plugin pipeline over the served composition (R3.2) + the studio plugins (R4 start) ([8fb91868da](https://github.com/powerhouse-inc/powerhouse/commit/8fb91868da))
+- **switchboard:** plugin pipeline scaffold for the subsystem carve (R2.1) ([042cd5a93c](https://github.com/powerhouse-inc/powerhouse/commit/042cd5a93c))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.58 (2026-10-14)
+
+### 🩹 Fixes
+
+- **registry:** declare reactor-workflow — undeclared dep broke test shard 1 ([37660d7b04](https://github.com/powerhouse-inc/powerhouse/commit/37660d7b04))
+- **release:** the desktop build filter belongs in scripts.build — the prior commit amended test:ci ([2cbbff231c](https://github.com/powerhouse-inc/powerhouse/commit/2cbbff231c))
+- **release:** build @powerhousedao/desktop — dev.57 shipped an empty tarball; guard the filter list ([9103896840](https://github.com/powerhouse-inc/powerhouse/commit/9103896840))
+- **clint:** powerhousedao packages are regular deps, not peers — npm ERESOLVE on scaffold install ([6de7d0d7c6](https://github.com/powerhouse-inc/powerhouse/commit/6de7d0d7c6))
+
+### ❤️ Thank You
+
+- Claude Fable 5
+- Wouter Kampmann
+
+## 6.2.3-dev.57 (2026-10-14)
+
+### 🚀 Features
+
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **reactor-browser:** tell every tab the worker's remotes after a local peer change ([a0bdb9bf56](https://github.com/powerhouse-inc/powerhouse/commit/a0bdb9bf56))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.56 (2026-10-14)
+
+### 🚀 Features
+
+- **desktop:** @powerhousedao/desktop — the desktop runner productized (P6.1-P6.5) ([58ce9a0d4a](https://github.com/powerhouse-inc/powerhouse/commit/58ce9a0d4a))
+- **clint,ph-cli:** one static-serve implementation — connect-server deleted (P5.7) ([c35b0341c6](https://github.com/powerhouse-inc/powerhouse/commit/c35b0341c6))
+- **clint:** mastra-runner — remote reactor attach + OpenAI-compatible agent API (P5.5, P5.6) ([532cb2128f](https://github.com/powerhouse-inc/powerhouse/commit/532cb2128f))
+- **clint:** port the ph-clint framework — core, integrations, TUI, testing + full suite (P5.2, P5.3) ([d1ace0688e](https://github.com/powerhouse-inc/powerhouse/commit/d1ace0688e))
+- **clint:** scaffold @powerhousedao/clint — the ph-clint port lands here (P5.1) ([c7a3435588](https://github.com/powerhouse-inc/powerhouse/commit/c7a3435588))
+- **host-core,ph-cli:** structural multi-reactor — backends drive the routing client (P4.1-P4.3) ([e7c71ca7ac](https://github.com/powerhouse-inc/powerhouse/commit/e7c71ca7ac))
+- **host-core:** shared zod host schemas; bridges adopt strict reactor/profile (P2.1, P2.2) ([1bd9db67be](https://github.com/powerhouse-inc/powerhouse/commit/1bd9db67be))
+- **vetra:** lint project subgraphs for types core or the package's models own ([6855c0ed91](https://github.com/powerhouse-inc/powerhouse/commit/6855c0ed91))
+- **host-core:** generic run records and pid-probe (P1.3, P1.5, P1.6 foundation) ([9a6affd46e](https://github.com/powerhouse-inc/powerhouse/commit/9a6affd46e))
+- **host-core:** move drive projection primitives; add projectDrivesIntoConnect (P1.4) ([6cd1d8ee6e](https://github.com/powerhouse-inc/powerhouse/commit/6cd1d8ee6e))
+- **host-core:** scaffold @powerhousedao/host-core (P1.1) ([c7d9b415b5](https://github.com/powerhouse-inc/powerhouse/commit/c7d9b415b5))
+- **ph-cli:** uniform-runners flag helper and host.js loader (P0.1, P0.2, P0.12) ([4c04163009](https://github.com/powerhouse-inc/powerhouse/commit/4c04163009))
+
+### 🩹 Fixes
+
+- **ci:** read duration-watch timings from check runs and warn on API errors ([239683c51d](https://github.com/powerhouse-inc/powerhouse/commit/239683c51d))
+- **tsconfig:** dedup host-core from root references now that ph-cli references it (P1.2) ([988cbc574c](https://github.com/powerhouse-inc/powerhouse/commit/988cbc574c))
+- **reactor-browser:** tell every tab the worker's remotes after a local peer change ([a0bdb9bf56](https://github.com/powerhouse-inc/powerhouse/commit/a0bdb9bf56))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.55 (2026-10-13)
+
+### 🚀 Features
+
+- **reactor-monitor:** build remote inspection queries from the wire fields ([d16699f94e](https://github.com/powerhouse-inc/powerhouse/commit/d16699f94e))
+
+### 🩹 Fixes
+
+- **reactor-monitor:** list a worker reactor's local sync links in its tab ([0737b7b941](https://github.com/powerhouse-inc/powerhouse/commit/0737b7b941))
+- **reactor-workflow:** upload a step's output as a file-backed Blob ([8c943bfbeb](https://github.com/powerhouse-inc/powerhouse/commit/8c943bfbeb))
+- **reactor-attachments:** hash and upload attachments without reading the whole file into memory ([f6532d6449](https://github.com/powerhouse-inc/powerhouse/commit/f6532d6449))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.54 (2026-10-12)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.53 (2026-10-11)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.52 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-browser:** let GraphQLReactorClient read its document models live ([8c2f843f39](https://github.com/powerhouse-inc/powerhouse/commit/8c2f843f39))
+- **reactor-browser:** let full-client actions use a client the app sets ([c8c038f02c](https://github.com/powerhouse-inc/powerhouse/commit/c8c038f02c))
+- **reactor-browser:** read a job's state over GraphQL without waiting ([60552fc779](https://github.com/powerhouse-inc/powerhouse/commit/60552fc779))
+- **reactor-browser:** proxy every inspection op now that the worker serves them ([11a0172db5](https://github.com/powerhouse-inc/powerhouse/commit/11a0172db5))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-browser:** host ops to adopt and remove a local sync peer ([a1a129ef92](https://github.com/powerhouse-inc/powerhouse/commit/a1a129ef92))
+- **reactor-browser:** derive the inspector and sync inspection RPC from the op tables ([d9c6677136](https://github.com/powerhouse-inc/powerhouse/commit/d9c6677136))
+- **reactor-browser:** let the caller name the drive a graphql call belongs to ([a056e2eeb0](https://github.com/powerhouse-inc/powerhouse/commit/a056e2eeb0))
+- **reactor-browser:** send Drive-Id on drive writes and type the 421 refusal ([f1628ef0fe](https://github.com/powerhouse-inc/powerhouse/commit/f1628ef0fe))
+- **reactor-browser:** answer graphql isServed from documentServed ([16f156b955](https://github.com/powerhouse-inc/powerhouse/commit/16f156b955))
+- **reactor-browser:** read graphql create defaults from createDefaults ([faf9c687d0](https://github.com/powerhouse-inc/powerhouse/commit/faf9c687d0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** proxy only the inspection ops a worker host serves ([1c135fbdab](https://github.com/powerhouse-inc/powerhouse/commit/1c135fbdab))
+- **reactor-browser:** do not route a drive created under a parent by its own id ([c99c37ae3a](https://github.com/powerhouse-inc/powerhouse/commit/c99c37ae3a))
+- **reactor-browser:** map the 421 in the transport middleware, not around the SDK ([dc39121d76](https://github.com/powerhouse-inc/powerhouse/commit/dc39121d76))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.51 (2026-10-10)
+
+### 🚀 Features
+
+- **reactor-browser:** let GraphQLReactorClient read its document models live ([8c2f843f39](https://github.com/powerhouse-inc/powerhouse/commit/8c2f843f39))
+- **reactor-browser:** let full-client actions use a client the app sets ([c8c038f02c](https://github.com/powerhouse-inc/powerhouse/commit/c8c038f02c))
+- **reactor-browser:** read a job's state over GraphQL without waiting ([60552fc779](https://github.com/powerhouse-inc/powerhouse/commit/60552fc779))
+- **reactor-browser:** proxy every inspection op now that the worker serves them ([11a0172db5](https://github.com/powerhouse-inc/powerhouse/commit/11a0172db5))
+- **ph-cli:** keep native and WebAssembly dependencies external and list them as externalDependencies ([e3b616e67b](https://github.com/powerhouse-inc/powerhouse/commit/e3b616e67b))
+- **reactor-router:** the routing IReactorClient over IRoutableBackend ([772aefe6ec](https://github.com/powerhouse-inc/powerhouse/commit/772aefe6ec))
+- **reactor-browser:** host ops to adopt and remove a local sync peer ([a1a129ef92](https://github.com/powerhouse-inc/powerhouse/commit/a1a129ef92))
+- **reactor-browser:** derive the inspector and sync inspection RPC from the op tables ([d9c6677136](https://github.com/powerhouse-inc/powerhouse/commit/d9c6677136))
+- **reactor-browser:** let the caller name the drive a graphql call belongs to ([a056e2eeb0](https://github.com/powerhouse-inc/powerhouse/commit/a056e2eeb0))
+- **reactor-browser:** send Drive-Id on drive writes and type the 421 refusal ([f1628ef0fe](https://github.com/powerhouse-inc/powerhouse/commit/f1628ef0fe))
+- **reactor-browser:** answer graphql isServed from documentServed ([16f156b955](https://github.com/powerhouse-inc/powerhouse/commit/16f156b955))
+- **reactor-browser:** read graphql create defaults from createDefaults ([faf9c687d0](https://github.com/powerhouse-inc/powerhouse/commit/faf9c687d0))
+
+### 🩹 Fixes
+
+- **reactor-browser:** proxy only the inspection ops a worker host serves ([1c135fbdab](https://github.com/powerhouse-inc/powerhouse/commit/1c135fbdab))
+- **reactor-browser:** do not route a drive created under a parent by its own id ([c99c37ae3a](https://github.com/powerhouse-inc/powerhouse/commit/c99c37ae3a))
+- **reactor-browser:** map the 421 in the transport middleware, not around the SDK ([dc39121d76](https://github.com/powerhouse-inc/powerhouse/commit/dc39121d76))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.50 (2026-10-09)
+
+### 🚀 Features
+
+- **reactor-workflow:** trace runs, steps, workers and reactor calls with a host-supplied tracer and meter ([d42c5d9053](https://github.com/powerhouse-inc/powerhouse/commit/d42c5d9053))
+
+### 🩹 Fixes
+
+- **registry:** stop Verdaccio dropping a package write when Windows refuses the rename ([79636fd438](https://github.com/powerhouse-inc/powerhouse/commit/79636fd438))
+- **reactor-browser:** send a deploy's reload even when its drain throws ([3852510328](https://github.com/powerhouse-inc/powerhouse/commit/3852510328))
+- **reactor-browser:** send a deploy's reload only after the drain before it ([5259e10348](https://github.com/powerhouse-inc/powerhouse/commit/5259e10348))
+- **connect:** let a deploy's retirement finish accepted jobs first ([e1c881204c](https://github.com/powerhouse-inc/powerhouse/commit/e1c881204c))
+- **connect:** keep a store's lock while a retired worker's build opens it ([508ce445ef](https://github.com/powerhouse-inc/powerhouse/commit/508ce445ef))
+- **reactor-browser:** stop a retired worker again when its build finishes late ([00fb49a5e8](https://github.com/powerhouse-inc/powerhouse/commit/00fb49a5e8))
+- **connect:** stop reloading after repeated build-fingerprint mismatches ([7cd9d2bfb9](https://github.com/powerhouse-inc/powerhouse/commit/7cd9d2bfb9))
+- **reactor-browser:** retire the worker when a build fingerprint differs ([093af7c401](https://github.com/powerhouse-inc/powerhouse/commit/093af7c401))
+- **reactor-browser:** refuse a hello on a retired worker even once it has built ([8b2a65cd76](https://github.com/powerhouse-inc/powerhouse/commit/8b2a65cd76))
+- **reactor-browser:** keep the startup seed going while the worker waits on a store lock ([170db0ca53](https://github.com/powerhouse-inc/powerhouse/commit/170db0ca53))
+- **connect:** stop a retired worker's reactor and stores, and refuse its data calls ([7075d92701](https://github.com/powerhouse-inc/powerhouse/commit/7075d92701))
+- **reactor-browser:** call a hook's onPoisoned once, not on every render after the poison ([c0a69ad746](https://github.com/powerhouse-inc/powerhouse/commit/c0a69ad746))
+- **reactor-browser:** tell every useRelationalDb caller that the shared session is poisoned ([43b4f28b39](https://github.com/powerhouse-inc/powerhouse/commit/43b4f28b39))
+- **connect:** send admin calls on a retired worker to the current one ([6b45b3867a](https://github.com/powerhouse-inc/powerhouse/commit/6b45b3867a))
+- **connect:** reload the page, within budget, when an in-tab store's session is poisoned ([ae5d28ad4d](https://github.com/powerhouse-inc/powerhouse/commit/ae5d28ad4d))
+- **connect:** replay a poisoned-store reload to tabs that connect to the old worker ([4927cc2597](https://github.com/powerhouse-inc/powerhouse/commit/4927cc2597))
+- **reactor-browser:** share one relational kysely per pglite instance ([ec4184f39a](https://github.com/powerhouse-inc/powerhouse/commit/ec4184f39a))
+- **connect:** harden the in-tab relational store and the relational hook's dialect ([22a9d2ba6f](https://github.com/powerhouse-inc/powerhouse/commit/22a9d2ba6f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.49 (2026-10-08)
+
+### 🚀 Features
+
+- **reactor-browser:** add executeBatch and drive extensions to the graphql client ([4e13998e26](https://github.com/powerhouse-inc/powerhouse/commit/4e13998e26))
+- **reactor-browser:** map document meta and protocolVersions onto remote headers ([87e6f2ef81](https://github.com/powerhouse-inc/powerhouse/commit/87e6f2ef81))
+- **reactor-browser:** refuse unservable graphql reads with a typed error ([04f49cb922](https://github.com/powerhouse-inc/powerhouse/commit/04f49cb922))
+- **reactor-browser:** serve find and relationship reads over graphql ([b032c4009a](https://github.com/powerhouse-inc/powerhouse/commit/b032c4009a))
+
+### 🩹 Fixes
+
+- **reactor-browser:** narrow the batch error mirror's isError on its fields ([c2643571b5](https://github.com/powerhouse-inc/powerhouse/commit/c2643571b5))
+- **reactor-browser:** read announced batch documents on the branch written ([ddc85c42d2](https://github.com/powerhouse-inc/powerhouse/commit/ddc85c42d2))
+- **reactor-browser:** skip batch announcements nobody hears, and read them concurrently ([dbc932c98d](https://github.com/powerhouse-inc/powerhouse/commit/dbc932c98d))
+- **reactor-browser:** sign for a batch-created id without looking it up ([de762f0ef8](https://github.com/powerhouse-inc/powerhouse/commit/de762f0ef8))
+- **reactor-browser:** announce the documents a graphql batch changed ([62d6571bf2](https://github.com/powerhouse-inc/powerhouse/commit/62d6571bf2))
+- **reactor-browser:** resolve a batch job's slug before signing for it ([2d57177a90](https://github.com/powerhouse-inc/powerhouse/commit/2d57177a90))
+- **reactor-browser:** throw BatchJobFailedError from a failed graphql batch ([fc61d238e3](https://github.com/powerhouse-inc/powerhouse/commit/fc61d238e3))
+- **reactor-browser:** sign setPreferredEditor as an action through execute ([b95c1c2d1b](https://github.com/powerhouse-inc/powerhouse/commit/b95c1c2d1b))
+- **reactor-browser:** decide find's servability through findIsServableOverGraphQL ([c0e11ef359](https://github.com/powerhouse-inc/powerhouse/commit/c0e11ef359))
+- **reactor-browser:** do not re-sign an already-signed batch action ([c7fa5d2f04](https://github.com/powerhouse-inc/powerhouse/commit/c7fa5d2f04))
+- **reactor-browser:** make graphql waitForJob wait for a settled job ([f4174a74ce](https://github.com/powerhouse-inc/powerhouse/commit/f4174a74ce))
+- **reactor-browser:** refuse graphql create defaults instead of guessing ([33486247df](https://github.com/powerhouse-inc/powerhouse/commit/33486247df))
+- **reactor-browser:** return the job the server reported, not placeholders ([e23e82da7e](https://github.com/powerhouse-inc/powerhouse/commit/e23e82da7e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.48 (2026-10-07)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.47 (2026-10-07)
+
+### 🩹 Fixes
+
+- **reactor-browser:** back and forward no longer deselect the drive in view ([166d79759e](https://github.com/powerhouse-inc/powerhouse/commit/166d79759e))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.46 (2026-10-07)
+
+### 🚀 Features
+
+- **connect:** load local project models in the reactor worker ([6e2929ce60](https://github.com/powerhouse-inc/powerhouse/commit/6e2929ce60))
+
+### 🩹 Fixes
+
+- **reactor-browser:** name scoped package sources correctly in load failures ([c1930e8e89](https://github.com/powerhouse-inc/powerhouse/commit/c1930e8e89))
+- **reactor-browser:** let only the newest reload of a source win ([a9954186e7](https://github.com/powerhouse-inc/powerhouse/commit/a9954186e7))
+- **reactor-browser:** keep a source's models when its reload fails ([f2c21617cc](https://github.com/powerhouse-inc/powerhouse/commit/f2c21617cc))
+- **builder-tools:** make the worker bundle survive consumer projects ([6361a66b6d](https://github.com/powerhouse-inc/powerhouse/commit/6361a66b6d))
+- **builder-tools:** assert the vendor-dir mode only where modes exist ([f47c32a020](https://github.com/powerhouse-inc/powerhouse/commit/f47c32a020))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.45 (2026-10-06)
+
+### 🚀 Features
+
+- ⚠️  **reactor-workflow:** let any workflow piece read and write documents through the reactor ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### 🩹 Fixes
+
+- **pglite:** bound the old-dir removal after conversion ([0aef46f0ca](https://github.com/powerhouse-inc/powerhouse/commit/0aef46f0ca))
+- **pglite:** open files read-write for the tree sync ([ce0fa23af5](https://github.com/powerhouse-inc/powerhouse/commit/ce0fa23af5))
+- **switchboard:** resolve the legacy pg_dump wasm path on Windows ([c35148183a](https://github.com/powerhouse-inc/powerhouse/commit/c35148183a))
+
+### 🔥 Performance
+
+- **pglite:** sync the tree once after initdb, conversion and migration ([9ec8caf970](https://github.com/powerhouse-inc/powerhouse/commit/9ec8caf970))
+
+### ⚠️  Breaking Changes
+
+- **reactor-workflow:** let any workflow piece read and write documents through the reactor  ([fcccf0dfca](https://github.com/powerhouse-inc/powerhouse/commit/fcccf0dfca))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+
+## 6.2.3-dev.44 (2026-10-06)
+
+### 🩹 Fixes
+
+- **analytics:** anchor periods and timestamps to UTC ([#3175](https://github.com/powerhouse-inc/powerhouse/pull/3175))
+- **reactor:** make the reactor suite pass on Windows ([#3171](https://github.com/powerhouse-inc/powerhouse/pull/3171))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5
+- Claude Opus 5 (1M context)
+- Wouter Kampmann
+
+## 6.2.3-dev.43 (2026-10-05)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.42 (2026-10-04)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.41 (2026-10-03)
+
+### 🩹 Fixes
+
+- **registry:** stop a tarball stream's late fstat from crashing the registry ([84f56c54bf](https://github.com/powerhouse-inc/powerhouse/commit/84f56c54bf))
+- **reactor:** let executor workers load document models from the registry ([8ae1911d44](https://github.com/powerhouse-inc/powerhouse/commit/8ae1911d44))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.40 (2026-10-02)
+
+### 🩹 Fixes
+
+- **document-model:** leave unmatched @tokens in log messages as written ([0538ea019c](https://github.com/powerhouse-inc/powerhouse/commit/0538ea019c))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.39 (2026-10-02)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.38 (2026-10-01)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.37 (2026-10-01)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

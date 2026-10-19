@@ -140,10 +140,10 @@ export class DeferredJobs {
       return;
     }
 
-    // Deferring dropped the job from the queue's index, so the JOB_FAILED the
-    // queue just emitted carried no job with it, and the tracker's own handler
-    // overwrote the one recorded above with nothing. Re-asserted so the failed
-    // job keeps the record it is meant to be debuggable from.
+    // Deferring dropped the job from the queue's index, so the queue had no
+    // job to emit with and stayed silent - the JOB_FAILED from #markFailed
+    // above is the single event for this expiry. Re-asserted defensively so
+    // the failed job keeps the record it is meant to be debuggable from.
     this.jobTracker.markFailed(job.id, errorInfo, job);
 
     try {

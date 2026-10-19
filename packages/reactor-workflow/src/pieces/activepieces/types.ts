@@ -44,6 +44,8 @@ export type ApProperty = Partial<
     options?: ApStaticDropdownState | ((...args: unknown[]) => unknown);
     // Resolver function on DYNAMIC properties.
     props?: (...args: unknown[]) => unknown;
+    // FILE: hand the piece a stream instead of the bytes.
+    streaming?: boolean;
     // ARRAY: schema of each item's fields; absent for plain value arrays.
     properties?: Record<string, ApProperty>;
     // Layout and control hints, each read off only the types that declare it.
@@ -96,6 +98,8 @@ export type ApAction = Partial<
   };
   // Output ports, read only off a piece the host runs in process.
   ports?: unknown;
+  // "read" | "write"; anything else reads as undeclared.
+  requireReactor?: unknown;
   run: (ctx: unknown) => Promise<unknown>;
   // Called instead of run by a single-step test.
   test?: (ctx: unknown) => Promise<unknown>;
@@ -122,6 +126,7 @@ export type ApTrigger = Partial<
   testStrategy?: string;
   // A form the editor draws instead of the props, e.g. "schedule".
   display?: unknown;
+  requireReactor?: unknown;
   props?: Record<string, ApProperty>;
   propertyGroups?: ApPropertyGroup[];
   outputSchema?: unknown;

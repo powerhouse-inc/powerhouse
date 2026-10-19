@@ -1,0 +1,144 @@
+diff --git a/build/local-fs.js b/build/local-fs.js
+index 2ae41b3c1e37d4f2b0da5ff081189baac7de0c3f..65832c78923f93169acb322f64c0a24668c1ecff 100644
+--- a/build/local-fs.js
++++ b/build/local-fs.js
+@@ -27,11 +27,22 @@ var tempFile = function(str) {
+ };
+ async function renameTmp(src, dst) {
+ 	debug$1("rename %s to %s", src, dst);
+-	try {
++	// Windows refuses to replace a file another handle has open: retry as graceful-fs does, and never drop the write silently
++	for (let attempt = 0;; attempt++) try {
+ 		await require_fs.renamePromise(src, dst);
++		return;
+ 	} catch (err) {
+ 		debug$1("error rename %s error %s", src, err?.message);
+-		await require_fs.unlinkPromise(src);
++		if (attempt < 20 && [
++			"EPERM",
++			"EACCES",
++			"EBUSY"
++		].includes(err?.code)) {
++			await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
++			continue;
++		}
++		await require_fs.unlinkPromise(src).catch(() => {});
++		throw err;
+ 	}
+ }
+ var LocalFS = class {
+@@ -82,13 +93,14 @@ var LocalFS = class {
+ 				err,
+ 				packageName
+ 			}, "error on update package @{packageName}: @{err.message}");
+-			if (locked) try {
+-				await this._unlockJSON(packageJSONFileName);
++			if (locked) {
++				try {
++					await this._unlockJSON(packageJSONFileName);
++				} catch {
++					throw _verdaccio_core.errorUtils.getInternalError("resource temporarily unavailable");
++				}
+ 				throw err;
+-			} catch {
+-				throw _verdaccio_core.errorUtils.getInternalError("resource temporarily unavailable");
+-			}
+-			else if (err.code === "EAGAIN") throw _verdaccio_core.errorUtils.getInternalError("resource temporarily unavailable");
++			} else if (err.code === "EAGAIN") throw _verdaccio_core.errorUtils.getInternalError("resource temporarily unavailable");
+ 			else if (err.code === "ENOENT") throw _verdaccio_core.errorUtils.getNotFound();
+ 			else throw err;
+ 		}
+@@ -252,12 +264,17 @@ var LocalFS = class {
+ 		const pathName = this._getStorage(tarballName);
+ 		debug$1("read a tarball %o", pathName);
+ 		const readStream = (0, node_stream.addAbortSignal)(signal, node_fs.default.createReadStream(pathName));
+-		readStream.on("open", async function(fileDescriptorId) {
++		readStream.on("open", function(fileDescriptorId) {
+ 			debug$1("file descriptor id %o", fileDescriptorId);
+ 			if (fileDescriptorId) {
+-				const stats = await require_fs.fstatPromise(fileDescriptorId);
+-				debug$1("file size %o", stats.size);
+-				readStream.emit("content-length", stats.size);
++				let size;
++				try {
++					size = node_fs.default.fstatSync(fileDescriptorId).size;
++				} catch {}
++				if (size !== void 0) {
++					debug$1("file size %o", size);
++					readStream.emit("content-length", size);
++				}
+ 			}
+ 		});
+ 		readStream.on("error", (error) => {
+diff --git a/build/local-fs.mjs b/build/local-fs.mjs
+index 573e6fae8d57011eb40ffacb422f37bf8475c996..6783ede973feeac19be5b0013e993f066d8edf47 100644
+--- a/build/local-fs.mjs
++++ b/build/local-fs.mjs
+@@ -22,11 +22,22 @@ var tempFile = function(str) {
+ };
+ async function renameTmp(src, dst) {
+ 	debug("rename %s to %s", src, dst);
+-	try {
++	// Windows refuses to replace a file another handle has open: retry as graceful-fs does, and never drop the write silently
++	for (let attempt = 0;; attempt++) try {
+ 		await renamePromise(src, dst);
++		return;
+ 	} catch (err) {
+ 		debug("error rename %s error %s", src, err?.message);
+-		await unlinkPromise(src);
++		if (attempt < 20 && [
++			"EPERM",
++			"EACCES",
++			"EBUSY"
++		].includes(err?.code)) {
++			await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
++			continue;
++		}
++		await unlinkPromise(src).catch(() => {});
++		throw err;
+ 	}
+ }
+ var LocalFS = class {
+@@ -77,13 +88,14 @@ var LocalFS = class {
+ 				err,
+ 				packageName
+ 			}, "error on update package @{packageName}: @{err.message}");
+-			if (locked) try {
+-				await this._unlockJSON(packageJSONFileName);
++			if (locked) {
++				try {
++					await this._unlockJSON(packageJSONFileName);
++				} catch {
++					throw errorUtils.getInternalError("resource temporarily unavailable");
++				}
+ 				throw err;
+-			} catch {
+-				throw errorUtils.getInternalError("resource temporarily unavailable");
+-			}
+-			else if (err.code === "EAGAIN") throw errorUtils.getInternalError("resource temporarily unavailable");
++			} else if (err.code === "EAGAIN") throw errorUtils.getInternalError("resource temporarily unavailable");
+ 			else if (err.code === "ENOENT") throw errorUtils.getNotFound();
+ 			else throw err;
+ 		}
+@@ -247,12 +259,17 @@ var LocalFS = class {
+ 		const pathName = this._getStorage(tarballName);
+ 		debug("read a tarball %o", pathName);
+ 		const readStream = addAbortSignal(signal, fsCallback.createReadStream(pathName));
+-		readStream.on("open", async function(fileDescriptorId) {
++		readStream.on("open", function(fileDescriptorId) {
+ 			debug("file descriptor id %o", fileDescriptorId);
+ 			if (fileDescriptorId) {
+-				const stats = await fstatPromise(fileDescriptorId);
+-				debug("file size %o", stats.size);
+-				readStream.emit("content-length", stats.size);
++				let size;
++				try {
++					size = fsCallback.fstatSync(fileDescriptorId).size;
++				} catch {}
++				if (size !== void 0) {
++					debug("file size %o", size);
++					readStream.emit("content-length", size);
++				}
+ 			}
+ 		});
+ 		readStream.on("error", (error) => {

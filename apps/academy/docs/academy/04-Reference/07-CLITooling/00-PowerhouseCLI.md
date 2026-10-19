@@ -86,6 +86,8 @@ Initialize a new project
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
 
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -199,6 +201,8 @@ Initialize a new global project
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
 **Rc** - Use the `rc` release tag. - Usage: `--rc`
+
+**Uniform Runners** - Scaffold the hosts/ folder (uniform-runners architecture). Also enabled project-wide by FEATURE_UNIFORM_RUNNERS_ENABLED. - Usage: `--uniform-runners`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
@@ -479,6 +483,8 @@ Generate an action inside an existing piece
 
 **Piece** - The piece directory under pieces/ to add the action to. Optional when the project ships exactly one piece. - Usage: `--piece, -p <str>`
 
+**Require Reactor** - Declare reactor access for the action: read, or write (which includes read). The action then gets context.reactor - Usage: `--require-reactor <value>`
+
 
 
 
@@ -513,6 +519,7 @@ Generate a trigger inside an existing piece
 **Strategy** - How the trigger fires: polled on a schedule, or delivered to a webhook - Usage: `--strategy <value>`
 
 **Default:** `polling`
+**Require Reactor** - Declare reactor access for the trigger: read, or write (which includes read). Its hooks then get context.reactor - Usage: `--require-reactor <value>`
 
 
 

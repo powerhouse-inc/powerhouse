@@ -76,7 +76,7 @@ export class TestChannel implements IChannel {
     this.isShutdown = false;
 
     this.inbox = new Mailbox({ holdAckBelowMarkers: true });
-    this.outbox = new Mailbox();
+    this.outbox = new Mailbox({ holdAckBelowUnapplied: false });
     this.deadLetter = new Mailbox();
 
     this.outbox.onAdded((syncOps) => {

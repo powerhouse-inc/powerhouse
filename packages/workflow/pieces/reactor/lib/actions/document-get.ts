@@ -1,4 +1,5 @@
-import { createAction, reactorOf } from "@powerhousedao/pieces-framework";
+import { createAction } from "@powerhousedao/pieces-framework";
+import { documentOutput } from "../documents.js";
 import { ConfigReader } from "../parse.js";
 import { documentIdProp, documentTypeProp, parseProp } from "../reactor.js";
 
@@ -9,11 +10,12 @@ export const documentGetAction = createAction({
   displayName: "Get document",
   description: "Reads a document's current state.",
   requireAuth: false,
+  requireReactor: "read",
   props: {
     documentId: documentIdProp(
       "Document id",
       true,
-      "e.g. {{steps.find.output.documents.0.documentId}}",
+      "e.g. {{steps.find.output.results.0.header.id}}",
     ),
     documentType: documentTypeProp(
       "Document type",
@@ -32,7 +34,7 @@ export const documentGetAction = createAction({
       throw new Error(`${BLOCK}: "documentId" is required`);
     }
     return {
-      ...(await reactorOf(ctx).get({ documentId })),
+      ...documentOutput(await ctx.reactor.get(documentId)),
       ...reader.output(),
     };
   },

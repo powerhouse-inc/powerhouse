@@ -5,6 +5,7 @@ export * from "./gateway/auth-middleware.js";
 export * from "./gateway/factory.js";
 export * from "./gateway/types.js";
 export * from "./graphql-manager.js";
+export * from "./inspection/index.js";
 export * from "./packages/index.js";
 export * from "./playground.js";
 export * from "./reactor/index.js";

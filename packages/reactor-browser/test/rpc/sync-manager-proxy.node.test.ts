@@ -7,13 +7,19 @@ import {
 } from "@powerhousedao/reactor";
 import { describe, expect, it, vi } from "vitest";
 import { createReactorEventBusProxy } from "../../src/rpc/event-bus-proxy.js";
-import { MessageRouter } from "../../src/rpc/message-router.js";
-import type { OwnerMessage, RpcMessage } from "../../src/rpc/protocol.js";
+import {
+  MessageRouter,
+  type OwnerMessage,
+  type RpcMessage,
+  type IRpcTransport,
+} from "@powerhousedao/reactor/rpc";
+import { RPC_DEFAULT_TIMEOUT_MS } from "../../src/rpc/op-channel.js";
 import {
   createSyncManagerProxy,
+  SYNC_REMOTES_CHANGED_EVENT,
   SYNC_STATUS_CHANGED_EVENT,
+  SyncManagerProxy,
 } from "../../src/rpc/sync-manager-proxy.js";
-import type { IRpcTransport } from "../../src/rpc/transport.js";
 
 function createFakeTransport() {
   const listeners = new Set<(m: RpcMessage) => void>();
@@ -241,6 +247,38 @@ describe("createSyncManagerProxy", () => {
     expect(manager.getSyncStatus("doc-1")).toBe(SyncStatus.Synced);
   });
 
+  it("replaces its remotes from the remotes-changed bus channel", async () => {
+    const { transport, posted, deliver } = createFakeTransport();
+    const router = new MessageRouter();
+    router.attach(transport);
+    const manager = createSyncManagerProxy(
+      router,
+      createReactorEventBusProxy(router),
+    );
+    deliver({
+      k: "res",
+      id: lastSyncOp(posted, "list").id,
+      value: [wireRemote("r1", "remote-a", "drive-1", "connected")],
+    });
+    await vi.waitFor(() => expect(manager.list()).toHaveLength(1));
+    const listener = vi.fn();
+    manager.getByName("remote-a").channel.onConnectionStateChange(listener);
+
+    deliver({
+      k: "bus-event",
+      eventType: SYNC_REMOTES_CHANGED_EVENT,
+      event: {
+        remotes: [wireRemote("r2", "local:b", "drive-1", "connecting")],
+      },
+    });
+
+    expect(manager.list().map((r) => r.meta.name)).toEqual(["local:b"]);
+    expect(
+      manager.getByName("local:b").channel.getConnectionState().state,
+    ).toBe("connecting");
+    expect(listener).toHaveBeenCalled();
+  });
+
   it("add() sends a sync-op with collectionId.key and carries config.url", async () => {
     const { transport, posted, deliver } = createFakeTransport();
     const router = new MessageRouter();
@@ -370,5 +408,53 @@ describe("createSyncManagerProxy", () => {
       event: { documentId: "doc-2", status: SyncStatus.Synced },
     });
     expect(calls).toEqual([["doc-1", SyncStatus.Outgoing]]);
+  });
+
+  describe("startup", () => {
+    const ATTEMPT_MS = RPC_DEFAULT_TIMEOUT_MS + 500;
+
+    function startProxy(isWaiting: () => boolean) {
+      const { transport, posted, deliver } = createFakeTransport();
+      const router = new MessageRouter();
+      router.attach(transport);
+      const manager = new SyncManagerProxy(
+        router,
+        createReactorEventBusProxy(router),
+      );
+      const result: { settled?: "ok" | "failed" } = {};
+      manager.startup({ isWaiting }).then(
+        () => (result.settled = "ok"),
+        () => (result.settled = "failed"),
+      );
+      return { posted, deliver, result };
+    }
+
+    it("keeps seeding while a store lock is waited on, then completes", async () => {
+      vi.useFakeTimers();
+      try {
+        let waiting = true;
+        const { posted, deliver, result } = startProxy(() => waiting);
+        await vi.advanceTimersByTimeAsync(5 * ATTEMPT_MS + 1_000);
+        expect(result.settled).toBeUndefined();
+
+        waiting = false;
+        deliver({ k: "res", id: lastSyncOp(posted, "list").id, value: [] });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(result.settled).toBe("ok");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("gives up after its attempts when no store lock is waited on", async () => {
+      vi.useFakeTimers();
+      try {
+        const { result } = startProxy(() => false);
+        await vi.advanceTimersByTimeAsync(3 * ATTEMPT_MS + 1_000);
+        expect(result.settled).toBe("failed");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

@@ -19,12 +19,24 @@ http {
     gzip_comp_level 6;
     gzip_buffers 16 8k;
     gzip_http_version 1.1;
-    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss image/avif;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml application/xml+rss image/avif application/wasm application/octet-stream;
+    # .gz siblings of wasm/data come from ph connect build; nginx:alpine lacks brotli.
+    gzip_static on;
+
+    # Reactor worker files are content-addressed only when the app asks for them with ?v=.
+    map $arg_v $ph_worker_cache_control {
+        ""      "no-cache";
+        default "public, max-age=31536000, immutable";
+    }
 
     server {
         listen 0.0.0.0:${PORT};
         server_name _;
         root /var/www/html/project;
+        # Relative Location headers, so redirects survive a proxy on another host/port.
+        absolute_redirect off;
+
+        ${PH_CONNECT_BASE_REDIRECT}
 
         location /health {
             access_log off;
@@ -51,6 +63,62 @@ http {
             log_not_found off;
             expires max;
             add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        # Shared-dependency vendor and self-hosted React: content-hashed file
+        # names, so every build's import map points at new URLs.
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/__vendor__/ {
+            alias /var/www/html/project/__vendor__/;
+            access_log off;
+            log_not_found off;
+            etag off;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        # The stable-named copies (dev fallback, build metadata) must revalidate.
+        location = ${PH_CONNECT_BASE_PREFIX}/__vendor__/shared-deps.js {
+            alias /var/www/html/project/__vendor__/shared-deps.js;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location = ${PH_CONNECT_BASE_PREFIX}/__vendor__/import-map.json {
+            alias /var/www/html/project/__vendor__/import-map.json;
+            access_log off;
+            add_header Cache-Control "no-cache" always;
+        }
+
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/__react__/ {
+            alias /var/www/html/project/__react__/;
+            access_log off;
+            log_not_found off;
+            etag off;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        # The worker's emitted assets (PGlite wasm/data) carry hashed names.
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/__reactor_worker__/assets/ {
+            alias /var/www/html/project/__reactor_worker__/assets/;
+            access_log off;
+            log_not_found off;
+            etag off;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+        }
+
+        location ^~ ${PH_CONNECT_BASE_PREFIX}/__reactor_worker__/ {
+            alias /var/www/html/project/__reactor_worker__/;
+            access_log off;
+            log_not_found off;
+            add_header Cache-Control $ph_worker_cache_control;
+        }
+
+        # The dynamic manifest route lives in the service worker; this is the static fallback.
+        location = ${PH_CONNECT_BASE_PREFIX}/manifest.webmanifest {
+            alias /var/www/html/project/manifest.webmanifest;
+            access_log off;
+            types { }
+            default_type application/manifest+json;
+            add_header Cache-Control "no-cache" always;
         }
 
         location = ${PH_CONNECT_BASE_PREFIX}/service-worker.js {

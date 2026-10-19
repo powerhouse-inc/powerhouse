@@ -1,6 +1,7 @@
+import { getPHStore } from "../hooks/ph-store.js";
 export function getUserPermissions() {
-  const user = window.ph?.renown?.user;
-  const allowList = window.ph?.allowList;
+  const user = getPHStore()?.renown?.user;
+  const allowList = getPHStore()?.allowList;
   if (!allowList) {
     return {
       isAllowedToCreateDocuments: true,

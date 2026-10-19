@@ -1,0 +1,46 @@
+{
+  "name": "@powerhousedao/desktop",
+  "version": "6.2.3-dev.63",
+  "description": "The desktop runner for uniform-runners hosts: the generic compound stack wrapped in a native shell — dev opens the window, build stages the shippable stack.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/desktop"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./runner": {
+      "source": "./src/runner.ts",
+      "types": "./dist/runner.d.mts",
+      "import": "./dist/runner.mjs",
+      "default": "./dist/runner.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/desktop",
+    "build": "tsdown",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@powerhousedao/host-core": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "vitest": "catalog:"
+  }
+}

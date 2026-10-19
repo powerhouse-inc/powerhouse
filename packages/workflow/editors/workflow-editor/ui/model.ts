@@ -38,6 +38,8 @@ export interface TriggerModel extends BlockStateModel {
   triggerName: string;
   config: unknown;
   connectionId: string | null;
+  // A REACTOR connection, for a trigger that declares requireReactor.
+  reactorConnectionId?: string | null;
 }
 
 export type BackoffKindValue = "FIXED" | "EXPONENTIAL";
@@ -58,6 +60,8 @@ export interface StepModel extends BlockStateModel {
   pieceVersion: string;
   actionName: string;
   connectionId: string | null;
+  // A REACTOR connection, for an action that declares requireReactor.
+  reactorConnectionId?: string | null;
   config: unknown;
   retry: RetryPolicyModel | null;
   timeoutSeconds: number | null;
@@ -90,13 +94,27 @@ export interface VariableModel {
   type?: VariableTypeValue | null;
 }
 
+export interface PublishedBlockModel {
+  id: string;
+  // The step's name, or "Trigger".
+  label: string;
+  pieceName: string;
+  pieceVersion: string;
+  kind: "action" | "trigger";
+  name: string;
+  reactorConnectionId: string | null;
+}
+
 export interface PublishedModel {
   version: number;
   publishedAt: string;
+  // The snapshot's blocks, trigger first; what actually runs.
+  blocks?: PublishedBlockModel[];
 }
 
 export interface WorkflowModel {
   name: string;
+  description?: string | null;
   status: WorkflowStatusValue;
   version: number;
   trigger: TriggerModel | null;
@@ -110,6 +128,10 @@ export interface WorkflowModel {
 
 // The side panel's id for the variables editor, beside step and trigger ids.
 export const VARIABLES_VIEW = "__variables";
+
+/** Query params of the editor's view: the open panel and its tab. */
+export const STEP_PARAM = "step";
+export const TAB_PARAM = "tab";
 
 // Unpublished changes: never published, or edited since.
 export function hasDraftChanges(
@@ -138,6 +160,7 @@ export interface UpdateStepInputModel {
   actionName?: string;
   // null clears the step's connection.
   connectionId?: string | null;
+  reactorConnectionId?: string | null;
   config?: unknown;
   // null clears each of these; undefined leaves them unchanged.
   retry?: RetryPolicyModel | null;
@@ -155,6 +178,7 @@ export interface ConfigExtras {
 
 export interface WorkflowEditorCallbacks {
   setName: (name: string) => void;
+  setDescription: (description: string) => void;
   setStatus: (status: WorkflowStatusValue) => void;
   setTrigger: (
     input: {
@@ -163,8 +187,17 @@ export interface WorkflowEditorCallbacks {
       triggerName: string;
       config: unknown;
       connectionId?: string | null;
+      reactorConnectionId?: string | null;
     } & ConfigExtras,
   ) => AddedBlock;
+  // Field-level trigger edits: each leaves the trigger's other fields alone.
+  setTriggerConfig: (config: unknown, extras?: ConfigExtras) => void;
+  // null clears a connection; undefined leaves it unchanged.
+  setTriggerConnection: (input: {
+    connectionId?: string | null;
+    reactorConnectionId?: string | null;
+  }) => void;
+  setTriggerPieceVersion: (pieceVersion: string) => void;
   clearTrigger: () => void;
   addStep: (input: AddStepInputModel) => AddedBlock;
   updateStep: (input: UpdateStepInputModel) => void;

@@ -1,7 +1,9 @@
+import { getPHStore } from "./ph-store.js";
 import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
   IDocumentModelRegistry,
+  IReactorClient,
   ISyncManager,
 } from "@powerhousedao/reactor";
 import type {
@@ -19,6 +21,8 @@ const reactorClientModuleEventFunctions = makePHEventFunctions(
   "reactorClientModule",
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
+const fullReactorClientEventFunctions =
+  makePHEventFunctions("fullReactorClient");
 
 /** Returns the reactor client module (in-process or worker-backed) */
 export const useReactorClientModule: UsePHGlobalValue<
@@ -45,6 +49,21 @@ export const setReactorClient: SetPHGlobalValue<IReactorBrowserClient> =
 /** Adds an event handler for the reactor client */
 export const addReactorClientEventHandler: AddPHGlobalEventHandler =
   reactorClientEventFunctions.addEventHandler;
+
+/** Sets the client full-client actions use instead of the module's */
+export const setFullReactorClient: SetPHGlobalValue<IReactorClient> =
+  fullReactorClientEventFunctions.setValue;
+
+/** Adds an event handler for the full reactor client */
+export const addFullReactorClientEventHandler: AddPHGlobalEventHandler =
+  fullReactorClientEventFunctions.addEventHandler;
+
+/** The client full-client actions use: the one set, else the module's. */
+export function getFullReactorClient(): IReactorClient | undefined {
+  return (
+    getPHStore()?.fullReactorClient ?? getPHStore()?.reactorClientModule?.client
+  );
+}
 
 // The following are derived from the reactor client module:
 

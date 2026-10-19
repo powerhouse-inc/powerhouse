@@ -109,7 +109,10 @@ describe("a deferred job that its document never arrives for", () => {
     expect(settledJob.error?.name).toBe("DocumentNotFoundError");
   });
 
-  it("emits JOB_FAILED naming the document it waited for", async () => {
+  it("emits exactly one JOB_FAILED, carrying the job it waited with", async () => {
+    // The queue used to emit a second JOB_FAILED whose job was undefined,
+    // because deferring had already dropped the job from its index. One
+    // expiry is one failure, and the event has to carry the job.
     await startManager(missingDocumentExecutor());
     const failures: JobFailedEvent[] = [];
     eventBus.subscribe(
@@ -130,8 +133,11 @@ describe("a deferred job that its document never arrives for", () => {
 
     await settled();
 
-    expect(failures.length).toBeGreaterThan(0);
+    expect(failures.length).toBe(1);
     expect(failures[0].jobId).toBe("held-job");
+    expect(failures[0].job).toBeDefined();
+    expect(failures[0].job?.id).toBe("held-job");
+    expect(failures[0].job?.documentId).toBe("missing-doc");
     expect(failures[0].error).toBeInstanceOf(DocumentNotFoundError);
     expect((failures[0].error as DocumentNotFoundError).documentId).toBe(
       "missing-doc",

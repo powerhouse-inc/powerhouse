@@ -1,0 +1,139 @@
+import { PowerhouseButton } from "#design-system";
+import type { SharingType } from "@powerhousedao/shared/document-drive";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useDebounceValue } from "usehooks-ts";
+import { Disclosure } from "../disclosure/disclosure.js";
+import { Divider } from "../divider/divider.js";
+import { FormInput } from "../form-input/form-input.js";
+import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
+import { DriveName } from "./inputs/drive-name.js";
+import { LocationInfo } from "./inputs/location-info.js";
+
+type RemoteDriveDetails = {
+  id: string;
+  name: string;
+  sharingType: SharingType;
+  location: "SWITCHBOARD";
+  availableOffline: boolean;
+};
+
+type Inputs = {
+  availableOffline: boolean;
+};
+
+export type AddRemoteDriveInput = RemoteDriveDetails & { url: string };
+
+export type AddPublicDriveFormProps = {
+  readonly sharingType: SharingType;
+  readonly onSubmit: (data: AddRemoteDriveInput) => void;
+  readonly onCancel: () => void;
+  readonly requestPublicDrive: (
+    url: string,
+  ) => Promise<{ id: string; name: string }>;
+};
+
+export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
+  const { sharingType = "PUBLIC", requestPublicDrive } = props;
+  const [remoteDriveDetails, setPublicDriveDetails] =
+    useState<RemoteDriveDetails>();
+  const [showLocationSettings, setShowLocationSettings] = useState(false);
+  const [isUrlValid, setIsUrlValid] = useState(true);
+  const [hasConfirmedUrl, setHasConfirmedUrl] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [url, setUrl] = useState("");
+  const [debouncedUrl, setDebouncedUrl] = useDebounceValue(url, 500);
+
+  const { register, handleSubmit, setValue } = useForm<Inputs>({
+    mode: "onBlur",
+    defaultValues: {
+      availableOffline: remoteDriveDetails?.availableOffline ?? false,
+    },
+  });
+
+  useEffect(() => {
+    setDebouncedUrl(url);
+  }, [url]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks-extra/set-state-in-effect
+    setHasConfirmedUrl(false);
+    if (debouncedUrl === "") return;
+    fetchPublicDrive().catch(console.error);
+
+    async function fetchPublicDrive() {
+      try {
+        const { id, name } = await requestPublicDrive(debouncedUrl);
+        setPublicDriveDetails({
+          id,
+          name,
+          sharingType,
+          location: "SWITCHBOARD",
+          availableOffline: true,
+        });
+        setValue("availableOffline", true);
+        setIsUrlValid(true);
+        setErrorMessage("");
+      } catch (error) {
+        setPublicDriveDetails(undefined);
+        setIsUrlValid(false);
+        setErrorMessage((error as Error).message);
+      }
+    }
+  }, [debouncedUrl, setValue, sharingType]);
+
+  function onSubmit({ availableOffline }: Inputs) {
+    if (!remoteDriveDetails) return;
+    props.onSubmit({
+      ...remoteDriveDetails,
+      availableOffline,
+      url: debouncedUrl,
+    });
+  }
+
+  return (
+    <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      {hasConfirmedUrl ? (
+        <>
+          <DriveName driveName={remoteDriveDetails?.name ?? "New drive"} />
+          <Divider className="my-3" />
+          <Disclosure
+            isOpen={showLocationSettings}
+            onOpenChange={() => setShowLocationSettings(!showLocationSettings)}
+            title="Location"
+          >
+            <LocationInfo location="SWITCHBOARD" />
+            <AvailableOfflineToggle {...register("availableOffline")} />
+          </Disclosure>
+          <PowerhouseButton className="mt-4 w-full" color="dark" type="submit">
+            Add new drive
+          </PowerhouseButton>
+        </>
+      ) : (
+        <>
+          <FormInput
+            errorMessage={errorMessage}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="Drive URL"
+            required
+            type="url"
+            value={url}
+          />
+          <PowerhouseButton
+            className="mt-4 w-full py-2 text-base"
+            color="dark"
+            size="small"
+            disabled={!isUrlValid || url === ""}
+            onClick={(e) => {
+              e.preventDefault();
+              setHasConfirmedUrl(true);
+            }}
+            type="button"
+          >
+            Add drive
+          </PowerhouseButton>
+        </>
+      )}
+    </form>
+  );
+}

@@ -72,6 +72,8 @@ export interface ErrorHandlingDefaults {
 export interface BlockForm {
   title: string;
   requireAuth: boolean;
+  // The block needs a reactor connection granting this much.
+  requireReactor?: "read" | "write";
   // Whether the block takes a connection: none hides the field entirely.
   auth?: "none" | "optional" | "required";
   props: BlockFormProp[];
@@ -136,6 +138,7 @@ export interface DesignTimeService {
     input: Record<string, unknown>,
     connectionId?: string,
     searchValue?: string,
+    reactorConnectionId?: string,
   ) => Promise<unknown>;
   // Runs the current workflow's piece trigger test hook; sample items back.
   testTrigger?: () => Promise<unknown>;
@@ -184,9 +187,12 @@ export interface BlockResolutionView {
 export interface StepTestOutcome {
   // Null when nothing ran, e.g. `Test "fetch" first`.
   runId: string | null;
-  status: "SUCCEEDED" | "FAILED";
+  // INDETERMINATE: a write the step asked for may have landed.
+  status: "SUCCEEDED" | "FAILED" | "INDETERMINATE";
   output?: unknown;
   error: string | null;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  errorName?: string | null;
   durationMs: number;
 }
 
@@ -194,6 +200,7 @@ export interface LatestRun {
   id?: string;
   status: string;
   error?: string | null;
+  errorName?: string | null;
   startedAt: string;
   triggerPayload: unknown;
   steps: {
@@ -202,6 +209,7 @@ export interface LatestRun {
     input: unknown;
     output: unknown;
     error: string | null;
+    errorName?: string | null;
   }[];
 }
 

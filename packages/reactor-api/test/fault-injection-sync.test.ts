@@ -164,7 +164,8 @@ describe("Fault-Injection Sync", () => {
     );
 
     await channel.init();
-    expect(channel.getConnectionState().state).toBe("connected");
+    // No poll has completed yet, so the channel has not earned "connected".
+    expect(channel.getConnectionState().state).toBe("connecting");
   });
 
   afterEach(async () => {
@@ -226,8 +227,14 @@ describe("Fault-Injection Sync", () => {
     expect(channel.getConnectionState().state).toBe("reconnecting");
     expect(manualTimer.isRunning()).toBe(false);
 
-    // Recovery touchChannel -> real resolver recreates the channel
+    // Recovery touchChannel -> real resolver recreates the channel; no poll yet.
     await vi.advanceTimersByTimeAsync(500);
+
+    expect(channel.getConnectionState().state).toBe("connecting");
+    expect(manualTimer.isRunning()).toBe(true);
+
+    // The poll that follows is what earns "connected".
+    await manualTimer.tick();
 
     expect(channel.getConnectionState().state).toBe("connected");
     expect(manualTimer.isRunning()).toBe(true);
@@ -279,10 +286,15 @@ describe("Fault-Injection Sync", () => {
     await vi.waitFor(
       async () => {
         await vi.advanceTimersByTimeAsync(50);
-        expect(channel.getConnectionState().state).toBe("connected");
+        expect(channel.getConnectionState().state).toBe("connecting");
       },
       { timeout: 2000, interval: 0 },
     );
     expect(manualTimer.isRunning()).toBe(true);
+
+    // The poll that follows is what earns "connected".
+    await manualTimer.tick();
+
+    expect(channel.getConnectionState().state).toBe("connected");
   });
 });

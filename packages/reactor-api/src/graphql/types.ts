@@ -13,8 +13,10 @@ import type { IHttpScope } from "../http/index.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { IncomingHttpHeaders } from "http";
 import type { IAuthorizationService } from "../services/authorization.service.js";
+import type { ICredentialInvalidator } from "../services/auth.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
+import type { IReactorInspectionSource } from "./inspection/source.js";
 
 export type SubgraphClass = typeof BaseSubgraph;
 
@@ -77,6 +79,15 @@ export type SubgraphArgs = {
    * `BaseSubgraph.attachmentsFor(ctx)`.
    */
   attachments?: IAttachmentClientProvider;
+  /** Read only by `InspectionSubgraph`, registered only when this is set. */
+  inspection?: IReactorInspectionSource;
+  /**
+   * Evicts the host's cached credential checks, e.g. from a package's
+   * credential-revoke mutation, so a revoked credential is refused on the
+   * next request rather than after the cache TTL. Read it through
+   * `BaseSubgraph.credentials`, which is a no-op when the host passes none.
+   */
+  credentials?: ICredentialInvalidator;
   /**
    * The host's base path, injected by the GraphQL manager when it constructs
    * a subgraph. Subgraph code may read it, but routing ignores it: every

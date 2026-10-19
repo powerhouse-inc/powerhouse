@@ -1,7 +1,14 @@
+// Imported by package name so projects resolve its fonts from Connect's dependencies.
+import "@powerhousedao/connect/fonts.css";
 import type { ComponentType, PropsWithChildren, ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import {
+  adoptPrerenderedShell,
+  hasPrerenderedShell,
+} from "./components/prerendered-shell.js";
 import { loadRuntimeConfig } from "./runtime-config.js";
 import { initPerformanceObserver } from "./utils/performance-observer.js";
+import { warmModules } from "./warm-modules.js";
 
 /**
  * The two-phase startup shared by both entry points.
@@ -25,6 +32,10 @@ export type BootDeps = {
   importSkeleton: () => Promise<{ default: ComponentType<PropsWithChildren> }>;
   createRoot: () => RenderTarget;
   initObserver: () => () => void;
+  /** True when #root holds a prerendered shell, which stays until the app renders. */
+  adoptShell: () => boolean;
+  /** Evaluates the app's large packages while the config loads. */
+  warmModules: () => Promise<unknown>;
 };
 
 const defaultDeps: BootDeps = {
@@ -32,6 +43,11 @@ const defaultDeps: BootDeps = {
   importSkeleton: () => import("./components/app-skeleton.js"),
   createRoot: () => createRoot(document.getElementById("root")!),
   initObserver: initPerformanceObserver,
+  adoptShell: () => {
+    adoptPrerenderedShell(document.getElementById("root"));
+    return hasPrerenderedShell();
+  },
+  warmModules: () => warmModules(),
 };
 
 /**
@@ -87,6 +103,8 @@ export async function bootConnect(
     importSkeleton,
     createRoot: makeRoot,
     initObserver,
+    adoptShell,
+    warmModules: warm,
   } = { ...defaultDeps, ...overrides };
 
   if (!window.ph) {
@@ -108,17 +126,22 @@ export async function bootConnect(
     (error: unknown) => ({ ok: false, error }) as const,
   );
 
+  const hasShell = adoptShell();
   const root = makeRoot();
 
   try {
-    const { default: AppSkeleton } = await importSkeleton();
-    root.render(<AppSkeleton />);
+    // The prerendered shell is already painted; the skeleton would replace it.
+    if (!hasShell) {
+      const { default: AppSkeleton } = await importSkeleton();
+      root.render(<AppSkeleton />);
+    }
   } catch (error) {
     console.error("[connect:boot] the app skeleton failed to load:", error);
     root.render(<BootError error={error} />);
     return null;
   }
 
+  const warmed = warm().catch(() => undefined);
   const result = await config;
   if (!result.ok) {
     console.error(
@@ -128,6 +151,8 @@ export async function bootConnect(
     root.render(<BootError error={result.error} />);
     return null;
   }
+  // The app imports these modules anyway; warmed, they evaluate in tasks of their own.
+  await warmed;
 
   return root;
 }

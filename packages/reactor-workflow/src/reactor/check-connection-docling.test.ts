@@ -1,55 +1,24 @@
-// The docling piece's auth.validate and auth.getConnectionIdentifier through
-// the real check-connection path: real PGlite secret store, real PieceWorker fork,
-// built piece bundle, live mock docling-serve. The harness mirrors
-// check-connection.test.ts (same mocks, same subgraph shape).
-import { createTestRelationalDb } from "../../test/helpers/pglite.js";
-import type { WorkflowRuntimeHostDeps } from "./host.js";
-import { ensurePieceBundle } from "../pieces/index.js";
-import type * as ReactorConnectors from "../pieces/index.js";
-import type { Action, PHDocument } from "document-model";
+// The docling piece's auth hooks through the real check path: the built bundle
+// as a package piece, a forked worker, a mini docling-serve, a real reactor.
+import type { InProcessReactorClientModule } from "@powerhousedao/reactor";
 import {
   actions,
-  reducer,
-  utils,
-  type ConnectionAuthType,
   type ConnectionDocument,
-  type RecordCheckResultInput,
 } from "@powerhousedao/workflow/document-models/connection";
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-  type Mock,
-} from "vitest";
-
-vi.mock("../pieces/index.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof ReactorConnectors>();
-  return { ...actual, ensurePieceBundle: vi.fn() };
-});
-
-vi.mock("./piece-catalog.js", () => ({
-  fetchPieceCatalog: vi.fn(),
-  fetchPieceDetail: vi.fn(),
-  fetchPieceActions: vi.fn(),
-  fetchPieceTriggers: vi.fn(),
-}));
-
-import { fetchPieceCatalog } from "./piece-catalog.js";
-import type { WorkflowRuntimeService } from "./service.js";
+  connectionReactor,
+  createDocument,
+} from "../../test/helpers/connection-reactor.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
-
-let service: WorkflowRuntimeService;
+import { packagePieces } from "./piece-registry.js";
+import type { WorkflowRuntimeService } from "./service.js";
 
 const PIECE = { name: "@powerhousedao/piece-docling", version: "1.0.0" };
 const FIXED_NOW = "2026-09-08T00:00:00.000Z";
@@ -57,9 +26,8 @@ const FIXED_NOW = "2026-09-08T00:00:00.000Z";
 // checkConnection demands a caller the subgraph can authorize.
 const TEST_CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
-// Minimal docling-serve: /health and /version open, /v1/* key-gated — the
-// same route-level split as the real 1.32.0 (the connection check's
-// key probe lands on a /v1/ route).
+// Minimal docling-serve: /health and /version open, /v1/* key-gated, the same
+// split as the real 1.32.0 (the key probe lands on a /v1/ route).
 async function startMiniDocling(opts: { apiKey?: string }): Promise<{
   baseUrl: string;
   close(): Promise<void>;
@@ -76,7 +44,6 @@ async function startMiniDocling(opts: { apiKey?: string }): Promise<{
         JSON.stringify({ "docling-serve": "1.32.0", docling: "2.126.0" }),
       );
     }
-    // Everything else (i.e. /v1/*) is gated.
     if (opts.apiKey && req.headers["x-api-key"] !== opts.apiKey) {
       res.writeHead(401, { "content-type": "application/json" });
       return res.end(JSON.stringify({ detail: "Invalid API Key." }));
@@ -95,78 +62,39 @@ async function startMiniDocling(opts: { apiKey?: string }): Promise<{
   };
 }
 
-// The piece is a separate package, not part of this repo: the suite runs
-// where someone checked it out beside this one, and skips everywhere else.
+// A separate package, not in this repo: the suite runs where it is checked out
+// beside this one, and skips everywhere else.
 const PIECE_PKG = fileURLToPath(
   new URL("../../../piece-docling", import.meta.url),
 );
+const PIECE_ENTRY = join(PIECE_PKG, "dist/node/pieces/docling/index.mjs");
 
-// `ph build` emits a bare module; the cache layout wants a package root.
-function seedBuiltBundle(cacheDir: string): void {
-  const entry = join(PIECE_PKG, "dist/node/pieces/docling/index.mjs");
-  if (!existsSync(entry)) {
-    execFileSync("pnpm", ["run", "build"], { cwd: PIECE_PKG });
-  }
-  const dir = join(
-    cacheDir,
-    `${PIECE.name.replace("/", "-")}-${PIECE.version}`,
-  );
-  mkdirSync(dir, { recursive: true });
-  copyFileSync(entry, join(dir, "index.mjs"));
-  writeFileSync(
-    join(dir, "package.json"),
-    JSON.stringify({ ...PIECE, main: "./index.mjs" }),
-  );
-}
-
-let cacheDir = "";
+let service: WorkflowRuntimeService;
+let reactor: InProcessReactorClientModule;
+let docling: Awaited<ReturnType<typeof startMiniDocling>>;
 let keyRef = "";
 let wrongRef = "";
-let get: Mock;
-let execute: Mock;
-let docling: Awaited<ReturnType<typeof startMiniDocling>>;
+let created = 0;
 
-function makeDoclingDocument(options: {
+async function makeDoclingConnection(options: {
   base_url: string;
-  keyRef?: string;
-}): ConnectionDocument {
-  let document = utils.createDocument();
-  document = reducer(
-    document,
+  keyRef: string;
+}): Promise<string> {
+  const id = `conn-docling-${++created}`;
+  await createDocument(reactor, "connection", id, [
     actions.setConnector({
       connectorId: `${PIECE.name}#docling-serve`,
-      authType: "CUSTOM_AUTH" as ConnectionAuthType,
+      authType: "CUSTOM_AUTH",
     }),
-  );
-  document = reducer(
-    document,
     actions.setConfig({ config: { base_url: options.base_url } }),
-  );
-  if (options.keyRef) {
-    document = reducer(
-      document,
-      actions.setSecretRef({
-        id: "sr-1",
-        name: "api_key",
-        ref: options.keyRef,
-      }),
-    );
-  }
-  document = reducer(
-    document,
+    actions.setSecretRef({ id: "sr-1", name: "api_key", ref: options.keyRef }),
     actions.recordCheckResult({ status: "OK", checkedAt: FIXED_NOW }),
-  );
-  return document;
+  ]);
+  return id;
 }
 
-function lastRecordInput(): RecordCheckResultInput {
-  const call = execute.mock.calls.at(-1);
-  expect(call, "execute should have been called").toBeDefined();
-  const actionList = call?.[2] as Action[];
-  const action = actionList[0];
-  expect(action.type).toBe("RECORD_CHECK_RESULT");
-  return action.input as RecordCheckResultInput;
-}
+const state = async (id: string) =>
+  (await reactor.client.get<ConnectionDocument>(id)).state.global;
 
 describe.skipIf(!existsSync(PIECE_PKG))(
   "WorkflowRuntimeService.checkConnection (docling piece)",
@@ -175,139 +103,83 @@ describe.skipIf(!existsSync(PIECE_PKG))(
       // Keep the key in-process so the encrypted store never writes a key file.
       process.env.PH_WORKFLOWS_SECRETS_MASTER_KEY =
         "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
-      cacheDir = await mkdtemp(join(tmpdir(), "ap-check-docling-"));
-      seedBuiltBundle(cacheDir);
-
-      vi.mocked(ensurePieceBundle).mockImplementation(
-        ({ name, version, cacheDir: requestedCacheDir }) => {
-          void requestedCacheDir;
-          const dir = join(cacheDir, `${name.replace("/", "-")}-${version}`);
-          if (!existsSync(join(dir, "package.json"))) {
-            return Promise.reject(
-              new Error(
-                `Offline check test: no fixture bundle for ${name}@${version}`,
-              ),
-            );
-          }
-          return Promise.resolve({
-            dir,
-            source: "cache" as const,
-            dependencies: {},
-            installed: false,
-          });
-        },
-      );
-      vi.mocked(fetchPieceCatalog).mockResolvedValue([
-        {
-          name: PIECE.name,
-          displayName: "Docling",
-          description: "",
-          logoUrl: "",
-          version: PIECE.version,
-          actionCount: 6,
-          triggerCount: 0,
-          categories: [],
-          auth: null,
-        },
-      ]);
+      if (!existsSync(PIECE_ENTRY)) {
+        execFileSync("pnpm", ["run", "build"], { cwd: PIECE_PKG });
+      }
+      // Installed as a package ships it: no catalog or download involved.
+      packagePieces.setPieces([{ ...PIECE, entryPath: PIECE_ENTRY }]);
 
       docling = await startMiniDocling({ apiKey: "k-docling" });
-      get = vi.fn();
-      execute = vi.fn(() => ({}) as PHDocument);
-      service = testRuntime({
-        reactorClient: {
-          get,
-          execute,
-          find: vi.fn(() => ({ results: [] })),
-        },
-        assertCanRead: vi.fn(() => Promise.resolve({})),
-        relationalDb: createTestRelationalDb(),
-      } as unknown as WorkflowRuntimeHostDeps);
+      reactor = await connectionReactor();
+      service = testRuntime({ reactorClient: reactor.client });
 
-      // The mini server is on loopback, which the default policy denies — the
-      // same allowance every other loopback suite here makes.
+      // The mini server is on loopback, which the default policy denies.
       (service as unknown as { designEgress?: unknown }).designEgress = {
         allowAddresses: ["127.0.0.1/32", "::1/128"],
       };
 
+      const secrets = await service.secrets();
       keyRef = (
-        await (
-          await service.secrets()
-        ).create({
-          value: "k-docling",
-          label: "docling api key",
-        })
+        await secrets.create({ value: "k-docling", label: "docling api key" })
       ).ref;
       wrongRef = (
-        await (
-          await service.secrets()
-        ).create({
-          value: "wrong-key",
-          label: "docling api key (wrong)",
-        })
+        await secrets.create({ value: "wrong-key", label: "docling (wrong)" })
       ).ref;
     });
 
     afterAll(async () => {
-      await rm(cacheDir, { recursive: true, force: true });
+      packagePieces.reset();
       await docling.close();
+      reactor.reactor.kill();
     });
 
     it("records OK with the version-labelled account name for a healthy server", async () => {
-      const document = makeDoclingDocument({
+      const id = await makeDoclingConnection({
         base_url: docling.baseUrl,
         keyRef,
       });
-      get.mockResolvedValueOnce(document);
-      execute.mockClear();
 
-      const result = await service.checkConnection(
-        document.header.id,
-        TEST_CTX,
-      );
+      const result = await service.checkConnection(id, TEST_CTX);
 
       expect(result).toEqual({
         ok: true,
         detail: null,
         accountLabel: "docling-serve 1.32.0",
       });
-      expect(lastRecordInput().status).toBe("OK");
+      expect(await state(id)).toMatchObject({
+        status: "OK",
+        accountLabel: "docling-serve 1.32.0",
+      });
     });
 
     it("records ERROR with the 401 detail for a rejected key", async () => {
-      const document = makeDoclingDocument({
+      const id = await makeDoclingConnection({
         base_url: docling.baseUrl,
         keyRef: wrongRef,
       });
-      get.mockResolvedValueOnce(document);
-      execute.mockClear();
 
-      const result = await service.checkConnection(
-        document.header.id,
-        TEST_CTX,
-      );
+      const result = await service.checkConnection(id, TEST_CTX);
 
       expect(result.ok).toBe(false);
       expect(result.detail).toMatch(/401/);
-      expect(lastRecordInput().status).toBe("ERROR");
+      const after = await state(id);
+      expect(after.status).toBe("ERROR");
+      expect(after.lastError).toMatch(/401/);
     });
 
     it("records ERROR when the server is unreachable", async () => {
-      const document = makeDoclingDocument({
+      const id = await makeDoclingConnection({
         base_url: "http://127.0.0.1:1",
         keyRef,
       });
-      get.mockResolvedValueOnce(document);
-      execute.mockClear();
 
-      const result = await service.checkConnection(
-        document.header.id,
-        TEST_CTX,
-      );
+      const result = await service.checkConnection(id, TEST_CTX);
 
       expect(result.ok).toBe(false);
       expect(result.detail).toMatch(/Could not reach/i);
-      expect(lastRecordInput().status).toBe("ERROR");
+      const after = await state(id);
+      expect(after.status).toBe("ERROR");
+      expect(after.lastError).toMatch(/Could not reach/i);
     });
   },
 );

@@ -1,7 +1,46 @@
-export type ErrorCode = "SecretRefNotFoundError";
+export type ErrorCode =
+  | "InvalidReactorConfigError"
+  | "InvalidReactorConfigValueError"
+  | "InvalidReactorConfigRemovalError"
+  | "ReactorSecretRefError"
+  | "SecretRefNotFoundError";
 
 export interface ReducerError {
   errorCode: ErrorCode;
+}
+
+export class InvalidReactorConfigError extends Error implements ReducerError {
+  errorCode = "InvalidReactorConfigError" as ErrorCode;
+  constructor(message = "InvalidReactorConfigError") {
+    super(message);
+  }
+}
+
+export class InvalidReactorConfigValueError
+  extends Error
+  implements ReducerError
+{
+  errorCode = "InvalidReactorConfigValueError" as ErrorCode;
+  constructor(message = "InvalidReactorConfigValueError") {
+    super(message);
+  }
+}
+
+export class InvalidReactorConfigRemovalError
+  extends Error
+  implements ReducerError
+{
+  errorCode = "InvalidReactorConfigRemovalError" as ErrorCode;
+  constructor(message = "InvalidReactorConfigRemovalError") {
+    super(message);
+  }
+}
+
+export class ReactorSecretRefError extends Error implements ReducerError {
+  errorCode = "ReactorSecretRefError" as ErrorCode;
+  constructor(message = "ReactorSecretRefError") {
+    super(message);
+  }
 }
 
 export class SecretRefNotFoundError extends Error implements ReducerError {
@@ -12,5 +51,13 @@ export class SecretRefNotFoundError extends Error implements ReducerError {
 }
 
 export const errors = {
+  SetConfig: { InvalidReactorConfigError },
+
+  SetConfigValue: { InvalidReactorConfigValueError },
+
+  RemoveConfigValue: { InvalidReactorConfigRemovalError },
+
+  SetSecretRef: { ReactorSecretRefError },
+
   RemoveSecretRef: { SecretRefNotFoundError },
 };

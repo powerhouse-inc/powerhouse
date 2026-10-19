@@ -1,0 +1,368 @@
+{
+  "$id": "https://powerhouse.inc/schemas/host-reactor.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaultVerb": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "verbs": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "*"
+                      },
+                      {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": ["module"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": ["module"],
+      "additionalProperties": {}
+    },
+    "config": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reactor": {
+      "type": "object",
+      "properties": {
+        "backends": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["in-process", "worker", "remote"]
+              },
+              "storage": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["idb", "memory", "path", "postgres"]
+                  },
+                  "dataDir": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "additionalProperties": false
+              },
+              "readModel": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "packages": {
+                "type": "object",
+                "properties": {
+                  "cdnUrl": {
+                    "type": "string"
+                  },
+                  "specs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dynamic": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "remote": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "projection": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "dbPoolSize": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
+              "executors": {
+                "type": "object",
+                "properties": {
+                  "numWorkers": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "string",
+                        "const": "auto"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "placement": {
+          "type": "object",
+          "properties": {
+            "primary": {
+              "type": "string"
+            },
+            "default": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": {}
+            }
+          },
+          "additionalProperties": false
+        },
+        "protocol": {
+          "type": "object",
+          "properties": {
+            "featureFlags": {
+              "type": "object",
+              "properties": {
+                "documentDecisions": {
+                  "type": "boolean"
+                },
+                "authEnforcement": {
+                  "type": "boolean"
+                },
+                "authGroups": {
+                  "type": "boolean"
+                },
+                "authConditions": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "createSignaturePolicy": {
+              "type": "string",
+              "enum": ["legacy", "v2-required"]
+            },
+            "unsupportedStoredDocuments": {
+              "type": "string",
+              "enum": ["refuse", "read-only"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "workflows": {
+          "type": "boolean"
+        },
+        "renown": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "networkId": {
+              "type": "string"
+            },
+            "chainId": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "additionalProperties": false
+        },
+        "packages": {
+          "type": "object",
+          "properties": {
+            "registryUrl": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "admins": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "renown": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": {}
+            }
+          },
+          "additionalProperties": false
+        },
+        "drives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "slug": {
+                "type": "string",
+                "minLength": 1
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "projectHash": {
+                "type": "boolean"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "icon": {
+                "type": "string"
+              },
+              "preferredEditor": {
+                "type": "string"
+              },
+              "sharingType": {
+                "type": "string",
+                "enum": ["public", "private", "shared"]
+              },
+              "availableOffline": {
+                "type": "boolean"
+              },
+              "remote": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["url"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["slug"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "runner"],
+  "additionalProperties": {}
+}

@@ -37,6 +37,7 @@ import { SentryPropagator, SentrySpanProcessor } from "@sentry/opentelemetry";
 import { childLogger } from "document-model";
 import type { IncomingMessage } from "node:http";
 import { createMeterProviderFromEnv } from "./metrics.js";
+import { installObservabilitySignalHandlers } from "./observability-signals.mjs";
 import { redactWebhookPath } from "./redact-webhook-path.js";
 
 const logger = childLogger(["switchboard", "observability"]);
@@ -236,11 +237,10 @@ async function shutdown() {
   ]);
 }
 
-process.on("SIGINT", () => {
-  void shutdown().finally(() => process.exit(0));
-});
-process.on("SIGTERM", () => {
-  void shutdown().finally(() => process.exit(0));
-});
+// Exit-code and drain coordination with fatal-shutdown.mts and the reactor
+// builder lives in observability-signals.mts; the earlier inline handlers
+// exited with a literal 0, which turned a fatal crash (exitCode = 1) into a
+// success in the supervisor's eyes and could cut the snapshot drain short.
+installObservabilitySignalHandlers(shutdown);
 
 export { meterProvider, sdk };

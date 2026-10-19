@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
 import { PropagationMode as GqlPropagationMode } from "../src/graphql/reactor/gen/graphql.js";
 
-const _createTestDocument = (): PHDocument => {
+const createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
 };
 
@@ -594,6 +594,36 @@ describe("Reactor Adapters", () => {
 
     it("should return undefined for undefined", () => {
       expect(adapters.toReactorPropagationMode(undefined)).toBeUndefined();
+    });
+  });
+
+  describe("toGqlPhDocument", () => {
+    it("carries header.meta through wholesale", () => {
+      const doc = createTestDocument();
+      doc.header.meta = { preferredEditor: "workflow-studio" };
+
+      const gql = adapters.toGqlPhDocument(doc);
+
+      expect(gql.meta).toEqual({ preferredEditor: "workflow-studio" });
+      expect(gql.preferredEditor).toBe("workflow-studio");
+    });
+
+    it("carries header.protocolVersions through wholesale", () => {
+      const doc = createTestDocument();
+      doc.header.protocolVersions = { "base-reducer": 2 };
+
+      const gql = adapters.toGqlPhDocument(doc);
+
+      expect(gql.protocolVersions).toEqual({ "base-reducer": 2 });
+    });
+
+    it("returns null meta when the header carries none", () => {
+      const doc = createTestDocument();
+      delete doc.header.meta;
+
+      const gql = adapters.toGqlPhDocument(doc);
+
+      expect(gql.meta).toBeNull();
     });
   });
 });

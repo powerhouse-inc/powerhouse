@@ -31,4 +31,5 @@ export const AUTH_TYPE_LABEL: Record<
   CUSTOM_AUTH: "Keys and tokens",
   OAUTH2: "OAuth 2",
   OIDC: "OpenID Connect",
+  REACTOR: "Reactor access",
 };

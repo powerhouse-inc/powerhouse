@@ -19,8 +19,13 @@ const THEME_BOOT_SCRIPT =
   `var p=new URLSearchParams(location.search).get('theme');` +
   `if(p==='dark'||p==='light')localStorage.setItem('ph:theme',p);` +
   `var s=localStorage.getItem('ph:theme');` +
-  `var d=s==='dark'||((!s||s==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);` +
+  `var m=matchMedia('(prefers-color-scheme: dark)');` +
+  `var d=s==='dark'||((!s||s==='system')&&m.matches);` +
   `document.documentElement.classList.toggle('dark',d);` +
+  // Some browsers settle the OS preference after boot; follow it until the app does.
+  `if(!s||s==='system'){var f=function(){var t=localStorage.getItem('ph:theme');` +
+  `if(!t||t==='system')document.documentElement.classList.toggle('dark',m.matches);};` +
+  `m.addEventListener('change',f);requestAnimationFrame(f);}` +
   `}catch(e){}})();`;
 
 /**

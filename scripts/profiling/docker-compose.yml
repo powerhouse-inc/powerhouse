@@ -26,6 +26,38 @@ services:
     ports:
       - "4040:4040"
 
+  tempo:
+    image: grafana/tempo:2.8.1
+    container_name: tempo
+    restart: unless-stopped
+    mem_limit: 512m
+    # The image's user cannot write the anonymous volume behind /var/tempo.
+    user: "0"
+    command: ["-config.file=/etc/tempo.yaml"]
+
+    ports:
+      - "3200:3200"
+
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    container_name: grafana
+    restart: unless-stopped
+    mem_limit: 512m
+
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+
+    ports:
+      - "3030:3000"
+
+    volumes:
+      - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.147.0
     container_name: otel-collector

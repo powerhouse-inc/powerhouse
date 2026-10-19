@@ -1,7 +1,7 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import type { Dirent } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
+import spawn from "cross-spawn";
 import { RecordsError } from "../records/jsonl-store.js";
 import type { CommandResult } from "../records/records-commands.js";
 import { FIX_EXIT } from "./fix-options.js";
@@ -87,7 +87,10 @@ export function newestFile(
       if (!entry.isFile()) {
         continue;
       }
-      const rel = relative(directory, path);
+      // POSIX-separated: `include` anchors path segments with "/", so a
+      // native separator would let a nested package.json through isSourceFile
+      // and flip the staleness verdict.
+      const rel = relative(directory, path).split(sep).join("/");
       if (!include(rel)) {
         continue;
       }
@@ -119,20 +122,26 @@ export function distVerdict(
 }
 
 export function listWorkspacePackages(root: string): WorkspacePackage[] {
-  let raw: string;
-  try {
-    raw = execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
-      cwd: root,
-      encoding: "utf8",
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  } catch (error) {
+  const result = spawn.sync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  // A failure to spawn leaves status null, so this covers both that and a
+  // non-zero exit. cross-spawn reports success as `error: null`, not undefined.
+  if (result.status !== 0) {
+    const reason =
+      result.error?.message ??
+      (result.stderr.trim() || `pnpm ls exited ${String(result.status)}`);
     throw new RecordsError(
-      `Could not list workspace packages: ${error instanceof Error ? error.message : String(error)}`,
+      `Could not list workspace packages: ${reason}`,
       FIX_EXIT.error,
     );
   }
-  const parsed = JSON.parse(raw) as { name?: string; path?: string }[];
+  const parsed = JSON.parse(result.stdout) as {
+    name?: string;
+    path?: string;
+  }[];
   return parsed
     .filter(
       (entry): entry is WorkspacePackage =>
@@ -191,7 +200,7 @@ export function findMarker(pkg: WorkspacePackage, marker: string): MarkerHit {
         visit(path);
         continue;
       }
-      const rel = relative(pkg.path, path);
+      const rel = relative(pkg.path, path).split(sep).join("/");
       if (!isRuntimeDistFile(rel)) {
         continue;
       }

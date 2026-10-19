@@ -368,9 +368,10 @@ describe("the core piece through the runtime", () => {
   });
 
   it("is searchable, and names the triggers the host feeds", async () => {
-    const { hits } = await runtime.searchBlocks("a", 100);
-    const core = hits
-      .filter((hit) => hit.pieceName === CORE_PIECE_NAME)
+    const { pieces } = await runtime.searchPieces("core", { kind: "trigger" });
+    const core = pieces
+      .filter((piece) => piece.pieceName === CORE_PIECE_NAME)
+      .flatMap((piece) => piece.blocks)
       .map((hit) => blockKey(hit));
     for (const key of [MANUAL_BLOCK, SCHEDULE_BLOCK, WEBHOOK_BLOCK]) {
       expect(core).toContain(key);

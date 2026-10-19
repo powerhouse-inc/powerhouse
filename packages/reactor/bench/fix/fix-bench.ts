@@ -102,7 +102,7 @@ type Guarded = {
 
 export function flattenReport(report: VitestBenchReport): FlatCase[] {
   const flat: FlatCase[] = [];
-  for (const suite of suitesFromVitest(report)) {
+  for (const suite of suitesFromVitest(report, process.cwd())) {
     for (const item of suite.cases) {
       flat.push({
         suite: suiteLabel(suite.fullName),

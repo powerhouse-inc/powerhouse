@@ -525,4 +525,32 @@ describe("WorkflowRuntimeService rerun refusal", () => {
     await service.rerun(cleanId, CTX);
     expect(fire.mock.calls[0][1]).toEqual({ body: { id: 7 } });
   });
+
+  it("refuses a trigger payload the journal truncated", async () => {
+    // Over STEP_PAYLOAD_MAX_BYTES, so startRun journals the marker instead
+    // of the payload; replaying the marker would hand it to the workflow as
+    // trigger data. Word-broken filler, as in store.payload-cap.test.ts.
+    const truncatedId = await store.startRun({
+      workflowId: "wf-rerun-truncated",
+      workflowName: "Rerun me not",
+      workflowVersion: 1,
+      triggerKind: "webhook",
+      triggerPayload: { body: "big ".repeat(80 * 1024) },
+    });
+    await store.finishRun(truncatedId, {
+      status: "FAILED",
+      error: "boom",
+      steps: [],
+    });
+
+    service = serviceOver(store);
+    const fire = vi
+      .spyOn(service, "fire")
+      .mockResolvedValue({ runId: "next", status: "SUCCEEDED", steps: [] });
+
+    await expect(service.rerun(truncatedId, CTX)).rejects.toThrow(
+      /truncated by the journal and cannot be replayed/,
+    );
+    expect(fire).not.toHaveBeenCalled();
+  });
 });

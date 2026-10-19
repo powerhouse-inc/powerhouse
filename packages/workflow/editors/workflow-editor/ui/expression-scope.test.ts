@@ -115,7 +115,7 @@ describe("buildExpressionScope", () => {
             pieceName: "@powerhousedao/piece-reactor",
             blockName: "document-get",
             status: "SUCCEEDED",
-            output: { documentId: "d1" },
+            output: { header: { id: "d1" }, state: {} },
           },
           // Sibling branch: not upstream of b, must not appear.
           {
@@ -123,16 +123,108 @@ describe("buildExpressionScope", () => {
             pieceName: "@powerhousedao/piece-reactor",
             blockName: "document-get",
             status: "SUCCEEDED",
-            output: { documentId: "d2" },
+            output: { header: { id: "d2" }, state: {} },
           },
         ],
       },
       authoredOutput: authored,
     });
     expect(scope.value.trigger).toEqual({ payload: { who: "me" } });
-    expect(scope.value.steps).toEqual({ a: { output: { documentId: "d1" } } });
+    expect(scope.value.steps).toEqual({
+      a: { output: { header: { id: "d1" }, state: {} } },
+    });
     expect(scope.captions["steps.a.output"]).toMatch(/^from run /);
     expect(scope.captions["trigger.payload"]).toMatch(/^from run /);
+  });
+
+  it("offers a journaled document reference as the referenced model's fields", async () => {
+    const reference = {
+      documentId: "d1",
+      documentType: "acme/invoice",
+      branch: "main",
+      revision: { global: 4 },
+    };
+    const scope = await buildExpressionScope({
+      model,
+      stepId: "b",
+      latestRun: {
+        startedAt: "2026-09-04T09:14:00Z",
+        triggerPayload: {
+          results: [{ $documentRef: { ...reference, documentId: "d0" } }],
+        },
+        steps: [
+          {
+            stepKey: "a",
+            pieceName: "@powerhousedao/piece-reactor",
+            blockName: "document-get",
+            status: "SUCCEEDED",
+            output: { $documentRef: reference, extractedFrom: { id: "x" } },
+          },
+        ],
+      },
+      authoredOutput: authored,
+      documentOutput: (ref) =>
+        Promise.resolve({
+          header: { id: ref.documentId, revision: ref.revision },
+          state: { global: { total: "Float!" } },
+        }),
+    });
+    expect(scope.value.steps).toEqual({
+      a: {
+        output: {
+          header: { id: "d1", revision: { global: 4 } },
+          state: { global: { total: "Float!" } },
+          extractedFrom: { id: "x" },
+        },
+      },
+    });
+    expect(scope.value.trigger).toEqual({
+      payload: {
+        results: [
+          {
+            header: { id: "d0", revision: { global: 4 } },
+            state: { global: { total: "Float!" } },
+          },
+        ],
+      },
+    });
+  });
+
+  it("keeps a reference's header fields when its model is unknown", async () => {
+    const scope = await buildExpressionScope({
+      model,
+      stepId: "b",
+      latestRun: {
+        startedAt: "2026-09-04T09:14:00Z",
+        triggerPayload: null,
+        steps: [
+          {
+            stepKey: "a",
+            pieceName: "@powerhousedao/piece-reactor",
+            blockName: "document-get",
+            status: "SUCCEEDED",
+            output: {
+              $documentRef: {
+                documentId: "d1",
+                documentType: "acme/unknown",
+                branch: "main",
+                revision: { global: 1 },
+              },
+            },
+          },
+        ],
+      },
+      authoredOutput: authored,
+      documentOutput: () => Promise.reject(new Error("no model")),
+    });
+    expect(scope.value.steps).toMatchObject({
+      a: {
+        output: {
+          header: { id: "d1", documentType: "acme/unknown", branch: "main" },
+          state: { global: {} },
+        },
+      },
+    });
   });
 
   it.each([
@@ -142,7 +234,7 @@ describe("buildExpressionScope", () => {
         pieceName: "@powerhousedao/piece-reactor",
         blockName: "document-find",
         status: "SUCCEEDED",
-        output: { count: 1 },
+        output: { results: [] },
       },
     ],
     [
@@ -151,7 +243,7 @@ describe("buildExpressionScope", () => {
         pieceName: "@powerhousedao/piece-reactor",
         blockName: "document-get",
         status: "FAILED",
-        output: { documentId: "d1" },
+        output: { header: { id: "d1" }, state: {} },
       },
     ],
     [

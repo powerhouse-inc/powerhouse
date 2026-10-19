@@ -4,6 +4,7 @@ import { dtsExportList } from "../../tsdown.dts.mjs";
 export default defineConfig({
   entry: {
     index: "./index.ts",
+    rpc: "./src/rpc/index.ts",
     entry: "./src/executor/worker/entry.ts",
     "projection-entry":
       "./src/projection/projection-worker/projection-entry.ts",

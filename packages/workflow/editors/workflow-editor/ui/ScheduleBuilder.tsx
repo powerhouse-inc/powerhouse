@@ -10,6 +10,7 @@ import {
   Switch,
   textInputClass,
 } from "../../shared/controls.js";
+import { usePendingEcho } from "../../shared/pending-echo.js";
 import {
   configFromDraft,
   draftFromConfig,
@@ -77,18 +78,22 @@ function TimeField(props: { time: string; onChange: (time: string) => void }) {
   );
 }
 
-// Holds what's typed, so the field can be cleared and retyped; only a whole
-// number of at least 1 is saved, and leaving it empty puts the saved value back.
+function isEvery(text: string): boolean {
+  const every = Number(text);
+  return text !== "" && Number.isInteger(every) && every >= 1;
+}
+
+// Keeps text that is not an interval yet; any other new value replaces it.
 function EveryInput(props: {
   id: string;
   every: number;
   onCommit: (every: number) => void;
 }) {
   const [text, setText] = useState(String(props.every));
-  const [saved, setSaved] = useState(props.every);
-  if (saved !== props.every) {
-    setSaved(props.every);
-    setText(String(props.every));
+  const [seen, setSeen] = useState(props.every);
+  if (seen !== props.every) {
+    setSeen(props.every);
+    if (Number(text) !== props.every) setText(String(props.every));
   }
   return (
     <input
@@ -100,17 +105,13 @@ function EveryInput(props: {
       value={text}
       onChange={(event) => {
         setText(event.target.value);
+        if (!isEvery(event.target.value)) return;
         const every = Number(event.target.value);
-        if (
-          event.target.value !== "" &&
-          Number.isInteger(every) &&
-          every >= 1
-        ) {
-          setSaved(every);
-          props.onCommit(every);
-        }
+        if (every !== props.every) props.onCommit(every);
       }}
-      onBlur={() => setText(String(props.every))}
+      onBlur={() => {
+        if (!isEvery(text)) setText(String(props.every));
+      }}
     />
   );
 }
@@ -121,8 +122,11 @@ export function ScheduleBuilder(props: {
 }) {
   const everyId = useId();
   const cronId = useId();
-  const parsed = draftFromConfig(props.config);
-  const timezone = timezoneOf(props.config);
+  // Each change builds on the newest config sent; its echo changes nothing.
+  const echo = usePendingEcho(props.config, props.onChange);
+  const config = echo.value;
+  const parsed = draftFromConfig(config);
+  const timezone = timezoneOf(config);
   // Custom stays open while its cron is typed, even when it spells a preset.
   const [customPinned, setCustomPinned] = useState(parsed.kind === "custom");
   const draft: ScheduleDraft =
@@ -130,12 +134,12 @@ export function ScheduleBuilder(props: {
       ? switchKind(parsed, "custom")
       : parsed;
   const commit = (next: ScheduleDraft, zone = timezone) =>
-    props.onChange(configFromDraft(next, zone));
+    echo.commit(configFromDraft(next, zone));
   // The runtime's own parser: what it would refuse, said before it is armed.
-  const issue = scheduleConfigIssue(props.config);
+  const issue = scheduleConfigIssue(config);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5" onBlur={echo.onBlur}>
       <div>
         <FieldLabel label="Repeats" />
         <Segmented
@@ -267,9 +271,7 @@ export function ScheduleBuilder(props: {
       <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
         Runs{" "}
         <span className="font-medium text-foreground">
-          {describeSchedule(props.config).replace(/^\w/, (c) =>
-            c.toLowerCase(),
-          )}
+          {describeSchedule(config).replace(/^\w/, (c) => c.toLowerCase())}
         </span>
       </p>
     </div>

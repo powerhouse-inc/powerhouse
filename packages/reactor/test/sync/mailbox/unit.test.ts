@@ -602,4 +602,94 @@ describe("Mailbox", () => {
       expect(removedCallback).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("unapplied floor", () => {
+    const withOrdinal = (id: string, ordinal: number) =>
+      new SyncOperation(
+        id,
+        generateId(),
+        [],
+        "remote1",
+        "doc-1",
+        ["public"],
+        "main",
+        [
+          {
+            operation: {} as never,
+            context: {
+              documentId: "doc-1",
+              documentType: "test",
+              scope: "public",
+              branch: "main",
+              ordinal,
+            },
+          },
+        ],
+      );
+
+    it("keeps the ack below an unapplied item until it is applied", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+
+      later.executed();
+      mailbox.remove(later);
+      expect(mailbox.ackOrdinal).toBe(9);
+
+      parked.executed();
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+
+    it("releases an unapplied item that leaves the mailbox", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+      later.executed();
+
+      mailbox.remove(parked);
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+
+    it("releases an item replaced under its id once the replacement applies", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+
+      const replacement = withOrdinal("parked", 10);
+      mailbox.add(replacement);
+      replacement.executed();
+      later.executed();
+      mailbox.remove(replacement, later);
+      expect(mailbox.ackOrdinal).toBe(20);
+    });
+
+    it("keeps holding a replacement when the replaced item applies", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+
+      const replacement = withOrdinal("parked", 10);
+      mailbox.add(replacement);
+      parked.executed();
+      later.executed();
+      mailbox.remove(later);
+      expect(mailbox.ackOrdinal).toBe(9);
+    });
+
+    it("keeps holding an item added again", () => {
+      const mailbox = new Mailbox();
+      const parked = withOrdinal("parked", 10);
+      const later = withOrdinal("later", 20);
+      mailbox.add(parked, later);
+
+      mailbox.add(parked);
+      later.executed();
+      mailbox.remove(later);
+      expect(mailbox.ackOrdinal).toBe(9);
+    });
+  });
 });

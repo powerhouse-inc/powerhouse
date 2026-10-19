@@ -1,7 +1,13 @@
-import { configuredMaxFileBytes } from "../context/limits.js";
+import {
+  configuredMaxFileBytes,
+  hostCallTimeoutForStep,
+} from "../context/limits.js";
 import type { StagedFile } from "../context/files.js";
 import type { RecordedListener, RecordedSchedule } from "../context/trigger.js";
 import { jsonSafe } from "./json-safe.js";
+import { randomUUID } from "node:crypto";
+import { createIpcTransport, type ReactorTap } from "./reactor-rpc.js";
+import type { WorkflowTelemetry } from "../../../telemetry.js";
 import {
   createForkTransport,
   defaultEntryPath,
@@ -9,20 +15,29 @@ import {
   type PieceWorkerTransportFactory,
   type TransportExit,
 } from "./transport.js";
-import type {
-  CheckConnectionRequest,
-  DescribePieceRequest,
-  HostCallHandlers,
-  HostCallMessage,
-  HostCallResponse,
-  HostNotifyHandlers,
-  HostNotifyMessage,
-  ResolveOptionsRequest,
-  RunActionRequest,
-  SerializedPieceError,
-  TriggerHookRequest,
-  WorkerResponse,
+import {
+  MODEL_ENTRIES,
+  MODEL_MANIFEST,
+  type CheckConnectionRequest,
+  type DescribePieceRequest,
+  type HostCallHandlers,
+  type HostCallMessage,
+  type HostCallResponse,
+  type HostNotifyHandlers,
+  type HostNotifyMessage,
+  type ModelEntriesPayload,
+  type ModelManifestMessage,
+  type ReactorRequestBinding,
+  type ReactorRpcEnvelope,
+  type ResolveOptionsRequest,
+  type RunActionRequest,
+  type SerializedPieceError,
+  type TriggerHookRequest,
+  type WorkerMemory,
+  type WorkerResponse,
+  type WorkerTimings,
 } from "./protocol.js";
+import { epochNow } from "./timings.js";
 
 type WorkerRequestType =
   | "run"
@@ -62,6 +77,13 @@ export class PieceWorkerExitError extends Error {
   }
 }
 
+export class PieceWorkerDisposedError extends Error {
+  constructor() {
+    super("This piece worker is disposed");
+    this.name = "PieceWorkerDisposedError";
+  }
+}
+
 export interface PieceWorkerResult {
   output: unknown;
   touched: string[];
@@ -80,19 +102,48 @@ export interface PieceWorkerResult {
 export interface RequestTaps {
   hostCalls?: HostCallHandlers;
   notifications?: HostNotifyHandlers;
+  // ctx.reactor over the reactor RPC; ignored by check-connection and describe.
+  reactor?: ReactorTap;
 }
 
 // Every request that can serve a piece takes the same shape: a deadline plus
 // the taps the host offers while it runs.
 export interface RequestOptions extends RequestTaps {
   timeoutMs?: number;
+  // Cap on each call the child makes of its host, for THIS request. Per
+  // request rather than per worker because it follows the step's own timeout
+  // (`hostCallTimeoutForStep`), and one worker serves many steps.
+  hostCallTimeoutMs?: number;
 }
 
 /** @deprecated Named for the one request that had it; every request takes it
  * now. Kept because the old name is on main, in this package's public types. */
 export type RunActionOptions = RequestOptions;
 
-type ChildMessage = WorkerResponse | HostCallMessage | HostNotifyMessage;
+// The child's marks, plus when the host sent the request and got the reply.
+export type OnWorkerTimings = (
+  timings: WorkerTimings,
+  ipc: { sent: number; received: number },
+) => void;
+
+type ChildMessage =
+  | WorkerResponse
+  | HostCallMessage
+  | HostNotifyMessage
+  | ReactorRpcEnvelope;
+
+interface OpenReactor {
+  binding: ReactorRequestBinding;
+  stop: () => void;
+}
+
+// Importable document models for the child (the reactor's ModelManifestEntry).
+export interface ModelManifestSource {
+  // Sent on fork.
+  entries(): unknown[];
+  // The child's lookup on a miss; without a type, every entry the host knows.
+  lookup?(documentType?: string): unknown[] | Promise<unknown[]>;
+}
 
 // A tap reports on the step; it never decides its outcome. Node delivers these
 // before the result, so no draining step is needed at teardown.
@@ -114,12 +165,27 @@ function serveNotify(
 export interface PieceWorkerOptions {
   // Absolute path to the compiled worker entry; defaults to dist/worker-entry.js.
   entryPath?: string;
+  telemetry?: WorkflowTelemetry;
   defaultTimeoutMs?: number;
   // How to reach a worker. Defaults to a forked child on this machine; a
   // remote transport replaces it without touching the protocol above.
   transport?: PieceWorkerTransportFactory;
   // Cap on each call the child makes of its host; the child's default if unset.
   hostCallTimeoutMs?: number;
+  // Sent to each child on fork, and looked up by type on a miss.
+  models?: ModelManifestSource;
+  // The child's V8 heap limit (`--max-old-space-size`); Node's default if unset.
+  heapMb?: number;
+}
+
+// What a pool needs to decide whether a child can serve another request.
+export interface PieceWorkerHealth {
+  // A child is running; false before the first request and after it exits.
+  alive: boolean;
+  // From the child's last reply; absent until it has replied once.
+  memory?: WorkerMemory;
+  // A request switched TLS verification off, which the child may have cached.
+  tlsPoisoned: boolean;
 }
 
 // The five requests a worker serves, plus teardown. Callers hold this rather
@@ -149,6 +215,8 @@ export interface IPieceWorker {
   // Ends the worker. A caller that was handed one it does not own must not
   // call this; PieceWorkerPool disposes the workers it hands out.
   dispose(): void;
+  // Absent on a worker a pool can't inspect; the pool then trusts it.
+  health?(): PieceWorkerHealth;
 }
 
 // Executes piece actions in a child process. Side-effects (TLS env poisoning,
@@ -157,17 +225,27 @@ export class PieceWorker implements IPieceWorker {
   private readonly connect: PieceWorkerTransportFactory;
   private readonly defaultTimeoutMs: number;
   private readonly hostCallTimeoutMs: number | undefined;
+  private readonly models: ModelManifestSource | undefined;
+  private readonly telemetry: WorkflowTelemetry | undefined;
   private worker: IPieceWorkerTransport | undefined;
+  // When the current child was forked, in epoch ms.
+  private forkedAt = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private nextId = 1;
+  private disposed = false;
+  private memory: WorkerMemory | undefined;
+  private tlsPoisoned = false;
 
   constructor(options: PieceWorkerOptions = {}) {
     const entryPath = options.entryPath;
+    const { heapMb } = options;
     this.connect =
       options.transport ??
-      (() => createForkTransport(entryPath ?? defaultEntryPath()));
+      (() => createForkTransport(entryPath ?? defaultEntryPath(), { heapMb }));
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? 30_000;
     this.hostCallTimeoutMs = options.hostCallTimeoutMs;
+    this.models = options.models;
+    this.telemetry = options.telemetry;
   }
 
   // Requests are serialized per worker; concurrency comes from holding more
@@ -218,23 +296,78 @@ export class PieceWorker implements IPieceWorker {
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs?: number,
-    taps: RequestTaps = {},
+    taps: RequestOptions = {},
   ): Promise<PieceWorkerResult> {
-    const run = this.queue.then(() =>
-      this.execute(type, request, timeoutMs ?? this.defaultTimeoutMs, taps),
-    );
+    const run = this.queue.then(() => {
+      const execute = (onTimings?: OnWorkerTimings) =>
+        this.execute(
+          type,
+          request,
+          timeoutMs ?? this.defaultTimeoutMs,
+          taps,
+          onTimings,
+        );
+      const telemetry = this.telemetry;
+      if (!telemetry) return execute();
+      // Named apart, not just attributed: the phase metric keys on the name,
+      // and a cold request pays for the fork and the child's module loading.
+      const cold = !this.worker;
+      return telemetry.phase(
+        `worker.${type}${cold ? ".cold" : ""}`,
+        { "worker.cold": cold },
+        (span) =>
+          execute((timings, ipc) =>
+            telemetry.workerTimings(span, timings, this.forkedAt, ipc),
+          ),
+      );
+    });
     this.queue = run.catch(() => undefined);
     return run;
   }
 
+  // For good: a request still queued, or made later, forks nothing.
   dispose(): void {
+    this.disposed = true;
     this.worker?.kill();
     this.worker = undefined;
   }
 
+  health(): PieceWorkerHealth {
+    return {
+      alive: this.worker !== undefined,
+      ...(this.memory ? { memory: this.memory } : {}),
+      tlsPoisoned: this.tlsPoisoned,
+    };
+  }
+
+  // A fresh child starts clean, so what the last one reported no longer holds.
+  private forgetChild(): void {
+    this.memory = undefined;
+    this.tlsPoisoned = false;
+  }
+
+  // Read from piece-controlled output, so only well-formed numbers count.
+  private noteReply(response: ChildMessage): void {
+    if ("tlsPoisoned" in response && response.tlsPoisoned === true) {
+      this.tlsPoisoned = true;
+    }
+    const memory = (response as { timings?: WorkerTimings }).timings?.memory;
+    if (
+      memory &&
+      [memory.rss, memory.heapUsed, memory.heapTotal, memory.external].every(
+        (value) => Number.isFinite(value),
+      )
+    ) {
+      this.memory = memory;
+    }
+  }
+
   private spawn(): IPieceWorkerTransport {
     if (this.worker) return this.worker;
+    this.forgetChild();
+    this.forkedAt = epochNow();
     const worker = this.connect();
+    this.sendModels(worker);
     const forget = () => {
       if (this.worker === worker) this.worker = undefined;
       worker.off("exit", forget);
@@ -244,18 +377,78 @@ export class PieceWorker implements IPieceWorker {
     return worker;
   }
 
+  private sendModels(worker: IPieceWorkerTransport): void {
+    const entries = this.models?.entries() ?? [];
+    if (entries.length === 0 || !worker.connected) return;
+    const message: ModelManifestMessage = { type: MODEL_MANIFEST, entries };
+    worker.send(jsonSafe(message));
+  }
+
+  private async modelEntries(payload: unknown): Promise<unknown[]> {
+    const documentType = (payload as ModelEntriesPayload | undefined)
+      ?.documentType;
+    return (await this.models?.lookup?.(documentType)) ?? [];
+  }
+
+  // Starts serving ctx.reactor for one request; the returned stop closes it.
+  private openReactor(
+    worker: IPieceWorkerTransport,
+    tap: ReactorTap,
+    deadline: number,
+  ): OpenReactor {
+    const requestId = randomUUID();
+    const transport = createIpcTransport(worker, requestId);
+    let stopServing: () => void;
+    try {
+      stopServing = tap.open(transport, { requestId, deadline });
+    } catch (error) {
+      transport.close();
+      throw error;
+    }
+    return {
+      binding: { requestId, requireReactor: tap.requireReactor },
+      stop: () => {
+        transport.close();
+        stopServing();
+      },
+    };
+  }
+
   private execute(
     type: WorkerRequestType,
     request: WorkerRequest,
     timeoutMs: number,
-    taps: RequestTaps,
+    taps: RequestOptions,
+    onTimings?: OnWorkerTimings,
   ): Promise<PieceWorkerResult> {
+    if (this.disposed) return Promise.reject(new PieceWorkerDisposedError());
     const worker = this.spawn();
     const id = this.nextId++;
+    // An explicit per-worker cap is the host's own decision and wins. With
+    // none — which is how the pool builds them — each request carries the cap
+    // derived from its step (`hostCallTimeoutForStep`), because one worker
+    // serves many steps and the cap follows the step's own timeout.
+    // A request with no cap of its own (a trigger hook, a design-time call)
+    // takes the operator's, raised to its own timeout, as a step does.
+    const hostCallTimeoutMs =
+      this.hostCallTimeoutMs ??
+      taps.hostCallTimeoutMs ??
+      hostCallTimeoutForStep(timeoutMs);
 
+    // When the request was handed to IPC, for the ipc.in span.
+    let sentAt = 0;
     return new Promise<PieceWorkerResult>((resolve, reject) => {
       // The kill timer's own reading, so the child can give up in time to say why.
       const deadline = Date.now() + timeoutMs;
+      let reactor: OpenReactor | undefined;
+      if (taps.reactor && type !== "check-connection" && type !== "describe") {
+        try {
+          reactor = this.openReactor(worker, taps.reactor, deadline);
+        } catch (error) {
+          reject(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
+      }
       const timer = setTimeout(() => {
         cleanup();
         worker.kill();
@@ -266,11 +459,17 @@ export class PieceWorker implements IPieceWorker {
       const onMessage = (value: unknown) => {
         const response = value as ChildMessage;
         // Ids come from two counters; dispatch on type before comparing them.
-        if (response.type === "host-call" || response.type === "host-notify") {
+        if (
+          response.type === "host-call" ||
+          response.type === "host-notify" ||
+          response.type === "reactor-rpc"
+        ) {
           return;
         }
         if (response.id !== id) return;
         cleanup();
+        const received = epochNow();
+        this.noteReply(response);
         if (response.type === "result") {
           resolve({
             output: response.output,
@@ -283,6 +482,14 @@ export class PieceWorker implements IPieceWorker {
           });
         } else {
           reject(new PieceWorkerError(response.error));
+        }
+        // After settling: the child is piece code and its timings may be junk.
+        if (response.timings && onTimings) {
+          try {
+            onTimings(response.timings, { sent: sentAt, received });
+          } catch {
+            // Tracing must never fail the request it describes.
+          }
         }
       };
 
@@ -305,6 +512,8 @@ export class PieceWorker implements IPieceWorker {
       };
 
       const cleanup = () => {
+        reactor?.stop();
+        reactor = undefined;
         clearTimeout(timer);
         worker.off("message", onMessage);
         worker.off("message", onHostCall);
@@ -318,6 +527,7 @@ export class PieceWorker implements IPieceWorker {
       // values are piece-authored, and the contract is JSON-shaped both ways.
       // The file ceiling is stamped on the same way the egress policy is passed
       // in: the child reads no environment of its own.
+      sentAt = epochNow();
       worker.send(
         jsonSafe({
           id,
@@ -325,10 +535,9 @@ export class PieceWorker implements IPieceWorker {
           request: {
             maxFileBytes: configuredMaxFileBytes(),
             deadline,
-            ...(this.hostCallTimeoutMs
-              ? { hostCallTimeoutMs: this.hostCallTimeoutMs }
-              : {}),
+            ...(hostCallTimeoutMs ? { hostCallTimeoutMs } : {}),
             ...request,
+            ...(reactor ? { reactor: reactor.binding } : {}),
           },
         }),
       );
@@ -344,7 +553,10 @@ export class PieceWorker implements IPieceWorker {
   ): Promise<void> {
     let response: HostCallResponse;
     try {
-      const handler = handlers?.[message.method];
+      const handler =
+        message.method === MODEL_ENTRIES
+          ? (payload: unknown) => this.modelEntries(payload)
+          : handlers?.[message.method];
       if (!handler) {
         throw new Error(`No host handler for "${message.method}"`);
       }

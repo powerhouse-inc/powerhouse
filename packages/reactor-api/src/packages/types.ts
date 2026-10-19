@@ -7,6 +7,7 @@ import type {
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+import type { ReportError } from "../utils/detached.js";
 
 // One entry of a reactor package's pieces list, declared here rather than
 // imported so reactor-api needs no dependency on a package meant for pieces.
@@ -89,7 +90,7 @@ export interface ISubscribablePackageLoader extends IPackageLoader {
 
 export interface IPackageManager {
   onDocumentModelsChange(
-    handler: (documentModels: Record<string, DocumentModelModule[]>) => void,
+    handler: (documentModels: Record<string, DocumentModelModule[]>) => unknown,
   ): void;
   /**
    * Remove a package from all package maps and emit the change events.
@@ -105,6 +106,7 @@ export type IPackageLoaderOptions = {
 export type IPackageManagerOptions = {
   packages?: string[];
   configFile?: string;
+  reportError?: ReportError;
 };
 
 export interface PackageConfig {

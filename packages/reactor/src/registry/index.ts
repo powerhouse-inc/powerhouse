@@ -11,6 +11,7 @@ export {
   InvalidUpgradeStepError,
   ManifestNotFoundError,
   MissingUpgradeTransitionError,
+  ModelNotWorkerImportableError,
   ModuleNotFoundError,
 } from "./errors.js";
 export { DocumentModelRegistry } from "./implementation.js";

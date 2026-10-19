@@ -1,12 +1,20 @@
 import {
   DEFAULT_VENDOR_INCLUDE,
   DYNAMIC_BASE_PLACEHOLDER,
+  directoryContentDigest,
+  findPackageRoot,
   getConnectBaseViteConfig,
   missingVendorEntries,
   prebuildConnectVendor,
+  ownProjectPackage,
+  prebuildReactorWorker,
+  prebuildWorkerPackages,
+  resolveReactorWorkerSource,
+  type PrebuiltReactorWorker,
   type PrebuiltVendor,
 } from "@powerhousedao/builder-tools";
 import { getConfig } from "@powerhousedao/shared/clis";
+import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
   normalizeBasePath,
   SHARED_DEP_SPECIFIERS,
@@ -18,6 +26,10 @@ import type { InlineConfig } from "vite";
 import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { buildCliConnectOverride } from "../utils/cli-connect-override.js";
+import {
+  isPrecompressEnabled,
+  precompressAssets,
+} from "../utils/precompress.js";
 import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
@@ -65,11 +77,11 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // The deploy base the vendor's import-map addresses are written against.
   // Only meaningful when the vendor is built; "/" is the inert default.
   let appBase = "/";
+  // The prebuild out dirs' parent must exist before the prebuilds: their
+  // build locks are siblings of the out dirs, and the package build
+  // (runBuild) writes to a different out dir, so nothing else creates it yet.
+  mkdirSync(outDirAbs, { recursive: true });
   if (isVendorEnabled()) {
-    // The vendor dir's parent must exist before the prebuild: its build
-    // lock is a sibling of the vendor dir, and the package build (runBuild)
-    // writes to a different out dir, so nothing else creates it yet.
-    mkdirSync(outDirAbs, { recursive: true });
     const errorRef: { message?: string } = {};
     // The same base string the app build uses below: the dynamic-base
     // placeholder, or the normalized deploy base (CLI override wins over the
@@ -89,6 +101,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       base: appBase,
       nodeEnv: "production",
       errorRef,
+      ...connectOwnVendorDeps(dirname),
     });
     if (!vendor) {
       console.error(
@@ -98,9 +111,39 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       );
       throw new Error("shared-dependency vendor prebuild failed");
     }
-    // Stale top-level output goes, the vendor stays: the app build below
-    // runs with emptyOutDir: false and must not wipe it.
-    cleanDistExcept(outDirAbs, ["__vendor__"]);
+  }
+
+  // Reactor SharedWorker bundle: the dist worker is a library artifact whose
+  // bare imports no worker can resolve (import maps do not apply to workers),
+  // so the deployable form is prebuilt here. With a vendor, its shared deps
+  // are externalized onto ../__vendor__/ so page and worker share one cache
+  // entry per dep; without one it is fully self-contained.
+  const reactorWorker = await prebuildReactorWorkerBundle(
+    dirname,
+    outDirAbs,
+    vendor,
+    connectOverride,
+  );
+
+  // Local project models the worker cannot get from the registry, built into
+  // the worker bundle's own directory so they share its vendor.
+  if (reactorWorker) {
+    await prebuildLocalWorkerPackages(
+      dirname,
+      outDirAbs,
+      vendor,
+      reactorWorker.vendorImports,
+    );
+  }
+
+  const keepDirs = [
+    ...(vendor ? ["__vendor__"] : []),
+    ...(reactorWorker ? ["__reactor_worker__"] : []),
+  ];
+  // Stale top-level output goes, the prebuilt dirs stay: the app build below
+  // runs with emptyOutDir: false and must not wipe them.
+  if (keepDirs.length > 0) {
+    cleanDistExcept(outDirAbs, keepDirs);
   }
 
   const baseConfig = getConnectBaseViteConfig({
@@ -117,16 +160,23 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
       ? {
           imports: vendorImportMapEntries(vendor.imports, appBase),
           versions: vendor.versions,
+          sharedDeps: vendorImportMapEntries(
+            { sharedDeps: vendor.sharedDeps },
+            appBase,
+          ).sharedDeps,
         }
+      : undefined,
+    reactorWorkerVersion: reactorWorker
+      ? directoryContentDigest(join(outDirAbs, "__reactor_worker__"))
       : undefined,
   });
 
   const buildConfig: InlineConfig = {
     build: {
       outDir,
-      // The vendor dir was prebuilt into the out dir above; the build must
-      // not empty it.
-      ...(vendor ? { emptyOutDir: false } : {}),
+      // The vendor / worker dirs were prebuilt into the out dir above; the
+      // build must not empty them.
+      ...(keepDirs.length > 0 ? { emptyOutDir: false } : {}),
     },
   };
 
@@ -154,6 +204,15 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
           unbacked.map((e) => `  ${e.spec} -> ${e.url}`).join("\n"),
       );
     }
+  }
+
+  // Runs after the PWA plugin, so the siblings never enter the precache list.
+  if (isPrecompressEnabled()) {
+    const r = await precompressAssets(outDirAbs);
+    console.log(
+      `ph connect build: precompressed ${r.files} wasm/data files ` +
+        `(${r.written} .gz written, ${(r.outputBytes / 1e6).toFixed(1)} MB) in ${(r.ms / 1000).toFixed(1)}s`,
+    );
   }
 }
 
@@ -183,8 +242,28 @@ export function productionVendorInclude(): string[] {
       ...DEFAULT_VENDOR_INCLUDE.filter((s) => s !== "@powerhousedao/connect"),
       ...SHARED_DEP_SPECIFIERS.filter((s) => s !== "@powerhousedao/shared"),
       ...SHARED_SUBPATHS.map((s) => `@powerhousedao/shared/${s}`),
+      // Connect imports these roots too; unvendored, the app re-bundles their shared chunks.
+      "@powerhousedao/design-system",
+      "@powerhousedao/reactor",
     ]),
   ];
+}
+
+/** Connect's own deps that vendored packages also bundle; projects don't install them. */
+export const CONNECT_OWN_VENDOR_DEPS = [
+  "kysely",
+  "tailwind-merge",
+  "@renown/sdk",
+  "@renown/sdk/crypto",
+  "@renown/sdk/trust",
+  "@powerhousedao/reactor-attachments/client",
+];
+
+export function connectOwnVendorDeps(dirname: string): {
+  ownDeps?: { specs: string[]; from: string };
+} {
+  const from = findPackageRoot(dirname, "@powerhousedao/connect");
+  return from ? { ownDeps: { specs: CONNECT_OWN_VENDOR_DEPS, from } } : {};
 }
 
 /**
@@ -219,6 +298,107 @@ export function vendorImportMapEntries(
 export function isVendorEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.PH_CONNECT_VENDOR ?? "1";
   return raw !== "0" && raw !== "false";
+}
+
+/**
+ * The reactor worker bundle prebuild runs on every `ph connect build` unless
+ * disabled with PH_CONNECT_REACTOR_WORKER=0 or false. It is built even when
+ * `connect.instance.reactorWorker` is off, because the `?reactorWorker=true`
+ * runtime override can enable the feature on a flag-off deployment.
+ */
+export function isReactorWorkerBundleEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = env.PH_CONNECT_REACTOR_WORKER ?? "1";
+  return raw !== "0" && raw !== "false";
+}
+
+/**
+ * Prebuild the reactor SharedWorker bundle into `<dist>/__reactor_worker__`.
+ * Returns null when the prebuild is disabled, the installed Connect ships no
+ * worker entry, or the build fails. A failure only fails `ph connect build`
+ * when the project explicitly enables `connect.instance.reactorWorker` —
+ * otherwise the feature degrades to unavailable and the build goes on.
+ */
+async function prebuildReactorWorkerBundle(
+  dirname: string,
+  outDirAbs: string,
+  vendor: PrebuiltVendor | null,
+  connectOverride: PHConnectRuntimeConfig | undefined,
+): Promise<PrebuiltReactorWorker | null> {
+  if (!isReactorWorkerBundleEnabled()) return null;
+  if (!resolveReactorWorkerSource(dirname)) return null;
+
+  const errorRef: { message?: string } = {};
+  const bundle = await prebuildReactorWorker({
+    dirname,
+    outDir: join(outDirAbs, "__reactor_worker__"),
+    vendor: vendor
+      ? { imports: vendor.imports, dir: join(outDirAbs, "__vendor__") }
+      : undefined,
+    nodeEnv: "production",
+    errorRef,
+  });
+  if (bundle) return bundle;
+
+  const message = `ph connect build: the reactor worker bundle failed to build${
+    errorRef.message ? `:\n${errorRef.message}` : ""
+  }`;
+  const phConfig = getConfig(join(dirname, "powerhouse.config.json"));
+  const required =
+    connectOverride?.instance?.reactorWorker ??
+    phConfig.connect?.instance?.reactorWorker ??
+    false;
+  if (required) {
+    throw new Error(message);
+  }
+  console.warn(
+    `${message}\nThe reactorWorker feature will be unavailable in this build.`,
+  );
+  return null;
+}
+
+/**
+ * Build the project's `provider: "local"` packages into worker-loadable model
+ * bundles beside the worker. A failure is a warning, not a build failure: the
+ * worker still runs, and documents of registry types still work - only the
+ * project's own types would be unavailable in worker mode.
+ */
+async function prebuildLocalWorkerPackages(
+  dirname: string,
+  outDirAbs: string,
+  vendor: PrebuiltVendor | null,
+  safeVendorImports: Record<string, string>,
+): Promise<void> {
+  const config = getConfig(join(dirname, "powerhouse.config.json"));
+  const configured = (config.packages ?? [])
+    .filter((p) => p.provider === "local")
+    .map((p) => p.packageName);
+  // The project itself is a local package in all but name: a vetra project
+  // declares no entry for itself, and its models are the ones the worker
+  // cannot otherwise get.
+  const own = ownProjectPackage(dirname);
+  const localPackages = [...new Set([...configured, ...(own ? [own] : [])])];
+
+  const errorRef: { message?: string } = {};
+  const built = await prebuildWorkerPackages({
+    dirname,
+    packages: localPackages,
+    outDir: join(outDirAbs, "__reactor_worker__", "packages"),
+    vendor: vendor
+      ? { imports: vendor.imports, dir: join(outDirAbs, "__vendor__") }
+      : undefined,
+    safeVendorImports,
+    nodeEnv: "production",
+    errorRef,
+  });
+  if (!built) {
+    console.warn(
+      `ph connect build: the reactor worker's local package bundles failed to build${
+        errorRef.message ? `:\n${errorRef.message}` : ""
+      }\nDocuments of this project's own types will not load in worker mode.`,
+    );
+  }
 }
 
 /**

@@ -145,8 +145,8 @@ describe("GraphQLReactorProvider", () => {
     resetPHGlobals();
   });
 
-  it("renders its children", () => {
-    const screen = render(
+  it("renders its children", async () => {
+    const screen = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span data-testid="child">hello</span>
       </GraphQLReactorProvider>,
@@ -157,8 +157,8 @@ describe("GraphQLReactorProvider", () => {
     ).not.toBeNull();
   });
 
-  it("publishes the client into the reactorClient slot on mount", () => {
-    render(
+  it("publishes the client into the reactorClient slot on mount", async () => {
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -170,7 +170,7 @@ describe("GraphQLReactorProvider", () => {
   it("publishes a document cache built over that same client", async () => {
     const queries = stubSwitchboard();
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -196,10 +196,10 @@ describe("GraphQLReactorProvider", () => {
     ).toHaveLength(2);
   });
 
-  it("registers the ph event handlers, which the slots depend on", () => {
+  it("registers the ph event handlers, which the slots depend on", async () => {
     const addEventListener = vi.spyOn(window, "addEventListener");
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -209,17 +209,17 @@ describe("GraphQLReactorProvider", () => {
     expect(phSetListenerCount(addEventListener)).toBeGreaterThan(0);
   });
 
-  it("does not register the handlers a second time", () => {
+  it("does not register the handlers a second time", async () => {
     ensurePHEventHandlers();
     const addEventListener = vi.spyOn(window, "addEventListener");
 
-    const first = render(
+    const first = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
     );
-    first.unmount();
-    render(
+    await first.unmount();
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -228,16 +228,16 @@ describe("GraphQLReactorProvider", () => {
     expect(phSetListenerCount(addEventListener)).toBe(0);
   });
 
-  it("survives a remount and republishes the slots", () => {
-    const first = render(
+  it("survives a remount and republishes the slots", async () => {
+    const first = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
     );
     const firstClient = window.ph?.reactorClient;
-    first.unmount();
+    await first.unmount();
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -248,53 +248,53 @@ describe("GraphQLReactorProvider", () => {
     expect(window.ph?.documentCache).toBeInstanceOf(DocumentCache);
   });
 
-  it("disposes the document cache on unmount", () => {
+  it("disposes the document cache on unmount", async () => {
     const dispose = vi.spyOn(DocumentCache.prototype, "dispose");
 
-    const screen = render(
+    const screen = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
     );
     expect(dispose).not.toHaveBeenCalled();
 
-    screen.unmount();
+    await screen.unmount();
 
     expect(dispose).toHaveBeenCalledTimes(1);
   });
 
-  it("disposes the client on unmount, closing its realtime socket", () => {
+  it("disposes the client on unmount, closing its realtime socket", async () => {
     const dispose = vi.spyOn(GraphQLReactorClient.prototype, "dispose");
 
-    const screen = render(
+    const screen = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
     );
     expect(dispose).not.toHaveBeenCalled();
 
-    screen.unmount();
+    await screen.unmount();
 
     expect(dispose).toHaveBeenCalledTimes(1);
   });
 
-  it("leaves the window slots populated after unmount", () => {
-    const screen = render(
+  it("leaves the window slots populated after unmount", async () => {
+    const screen = await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
     );
-    screen.unmount();
+    await screen.unmount();
 
     expect(window.ph?.reactorClient).toBeInstanceOf(GraphQLReactorClient);
     expect(window.ph?.documentCache).toBeInstanceOf(DocumentCache);
   });
 
-  it("keeps realtime alive through a StrictMode mount", () => {
+  it("keeps realtime alive through a StrictMode mount", async () => {
     // StrictMode runs the effect, its cleanup - which disposes the client - and
     // the effect again, all on the same client. A terminal dispose leaves the
     // page with no socket at all and nothing logged.
-    render(
+    await render(
       <StrictMode>
         <GraphQLReactorProvider url={url}>
           <span />
@@ -315,7 +315,7 @@ describe("GraphQLReactorProvider", () => {
       }),
     );
 
-    render(
+    await render(
       <GraphQLReactorProvider
         url={url}
         tokenProvider={tokenProvider}
@@ -335,7 +335,7 @@ describe("GraphQLReactorProvider", () => {
     expect(headers.get("authorization")).toBe("Bearer provider-token");
   });
 
-  it("publishes an attachment service the hooks below it read", () => {
+  it("publishes an attachment service the hooks below it read", async () => {
     // The slot is a wiring seam: the provider neither builds nor calls the
     // service. What is proven here is that a component below the provider gets
     // back the very service the app passed in, through the hook Connect's
@@ -347,7 +347,7 @@ describe("GraphQLReactorProvider", () => {
       return null;
     }
 
-    render(
+    await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -361,8 +361,8 @@ describe("GraphQLReactorProvider", () => {
     expect(seen.at(-1)).toBe(attachmentService);
   });
 
-  it("leaves the attachment service slot alone when no service is given", () => {
-    render(
+  it("leaves the attachment service slot alone when no service is given", async () => {
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -382,14 +382,14 @@ describe("useSwitchboardClient", () => {
     resetPHGlobals();
   });
 
-  it("returns the client the provider mounted", () => {
+  it("returns the client the provider mounted", async () => {
     const seen: (GraphQLReactorClient | undefined)[] = [];
     function Probe() {
       seen.push(useSwitchboardClient());
       return null;
     }
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <Probe />
       </GraphQLReactorProvider>,
@@ -399,7 +399,7 @@ describe("useSwitchboardClient", () => {
     expect(seen.at(-1)).toBeInstanceOf(GraphQLReactorClient);
   });
 
-  it("returns a client built by a duplicate copy of the module", () => {
+  it("returns a client built by a duplicate copy of the module", async () => {
     // A page can carry two copies of this module - a bundled package with its
     // own copy, or a hot-replaced one. Same shape, different class object, so
     // `instanceof` answers false for a perfectly good client.
@@ -418,12 +418,12 @@ describe("useSwitchboardClient", () => {
       return null;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(seen.at(-1)).toBe(fromOtherCopy);
   });
 
-  it("returns nothing when the slot holds another implementation", () => {
+  it("returns nothing when the slot holds another implementation", async () => {
     ensurePHEventHandlers();
     setReactorClient({} as IReactorBrowserClient);
     const seen: (GraphQLReactorClient | undefined)[] = [];
@@ -432,7 +432,7 @@ describe("useSwitchboardClient", () => {
       return null;
     }
 
-    render(<Probe />);
+    await render(<Probe />);
 
     expect(window.ph?.reactorClient).toBeDefined();
     expect(seen.length).toBeGreaterThan(0);
@@ -509,8 +509,8 @@ describe("GraphQLReactorProvider documentModels", () => {
     delete window.__phEventHandlersRegistered;
   });
 
-  it("publishes a StaticPackageManager carrying the given modules", () => {
-    render(
+  it("publishes a StaticPackageManager carrying the given modules", async () => {
+    await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -526,7 +526,7 @@ describe("GraphQLReactorProvider documentModels", () => {
   });
 
   it("makes useDocumentModelModules work below the provider", async () => {
-    const screen = render(
+    const screen = await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -539,8 +539,8 @@ describe("GraphQLReactorProvider documentModels", () => {
     await expect.poll(() => probedModels(screen)).toBe("test/todo@2");
   });
 
-  it("leaves the slot untouched without the prop", () => {
-    render(
+  it("leaves the slot untouched without the prop", async () => {
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -550,7 +550,7 @@ describe("GraphQLReactorProvider documentModels", () => {
   });
 
   it("survives a StrictMode double mount with one sane final state", async () => {
-    const screen = render(
+    const screen = await render(
       <StrictMode>
         <GraphQLReactorProvider
           url={url}
@@ -595,7 +595,7 @@ describe("GraphQLReactorProvider version resolution", () => {
   });
 
   it("resolves the module hook to the LATEST version", async () => {
-    const screen = render(
+    const screen = await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -610,7 +610,7 @@ describe("GraphQLReactorProvider version resolution", () => {
   });
 
   it("resolves a pinned version exactly, or nothing", async () => {
-    const screen = render(
+    const screen = await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -747,7 +747,7 @@ describe("GraphQLReactorProvider signed batches", () => {
     const signAction = installAmbientSigner();
     const mutations = stubSigningSwitchboard();
 
-    render(
+    await render(
       <GraphQLReactorProvider
         url={url}
         realtime={false}
@@ -780,7 +780,7 @@ describe("GraphQLReactorProvider signed batches", () => {
     const signAction = installAmbientSigner();
     const mutations = stubSigningSwitchboard();
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,
@@ -796,7 +796,7 @@ describe("GraphQLReactorProvider signed batches", () => {
   it("still reads and pushes unsigned without models and without a user", async () => {
     const mutations = stubSigningSwitchboard();
 
-    render(
+    await render(
       <GraphQLReactorProvider url={url} realtime={false}>
         <span />
       </GraphQLReactorProvider>,

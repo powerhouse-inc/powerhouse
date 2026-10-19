@@ -263,6 +263,38 @@ describe("generatePieceAction", () => {
   });
 });
 
+describe("generatePieceAction with requireReactor", () => {
+  it("declares the access, and false without it", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm", auth: "none" }, project);
+    await generatePieceAction(
+      { actionName: "archive-record", requireReactor: "write" },
+      project,
+    );
+    await generatePieceAction(
+      { actionName: "read-record", requireReactor: "read" },
+      project,
+    );
+    await generatePieceAction({ actionName: "get-record" }, project);
+    await project.save();
+
+    const action = (name: string) =>
+      readFileSync(
+        join(dir, "pieces", "acme-crm", "lib", "actions", `${name}.ts`),
+        "utf8",
+      );
+    expect(action("archive-record")).toContain('requireReactor: "write",');
+    expect(action("archive-record")).toContain("context.reactor");
+    expect(action("read-record")).toContain('requireReactor: "read",');
+    expect(action("get-record")).toContain("requireReactor: false,");
+    expect(action("get-record")).toContain(
+      '// "read" or "write" gives this action context.reactor',
+    );
+    expect(action("get-record")).not.toContain("await context.reactor");
+  });
+});
+
 describe("generatePieceTrigger", () => {
   it("polls through pollingHelper rather than a cursor of its own", async () => {
     const dir = makeProject();
@@ -306,6 +338,30 @@ describe("generatePieceTrigger", () => {
     expect(trigger).not.toContain("test() {");
     expect(trigger).toContain("add renewConfiguration and onRenew");
     expect(trigger).not.toContain("pollingHelper");
+  });
+
+  it("declares reactor access when asked, and false without it", async () => {
+    const dir = makeProject();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm" }, project);
+    await generatePieceTrigger({ triggerName: "new-record" }, project);
+    await generatePieceTrigger(
+      {
+        triggerName: "record-updated",
+        strategy: "webhook",
+        requireReactor: "read",
+      },
+      project,
+    );
+    await project.save();
+
+    const trigger = (name: string) =>
+      readFileSync(
+        join(dir, "pieces", "acme-crm", "lib", "triggers", `${name}.ts`),
+        "utf8",
+      );
+    expect(trigger("new-record")).toContain("requireReactor: false,");
+    expect(trigger("record-updated")).toContain('requireReactor: "read",');
   });
 });
 

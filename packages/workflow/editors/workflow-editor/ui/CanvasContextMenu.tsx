@@ -2,6 +2,7 @@
 // edge context menus; the step pickers reuse the add-button BlockSelector.
 import { useEffect, useRef, useState } from "react";
 import { BlockSelector } from "./BlockSelector.js";
+import { PICKER_SIZE } from "./PickerPopover.js";
 import { STEP_PRESETS, TRIGGER_PRESETS, type PickedPreset } from "./blocks.js";
 import {
   contextMenuItems,
@@ -27,8 +28,6 @@ const PICKERS: Partial<Record<ContextMenuActionId, string>> = {
   changeTrigger: "Choose a trigger",
 };
 
-const PICKER_SIZE = { width: 320, height: 400 };
-
 export function CanvasContextMenu(props: {
   state: CanvasMenuState;
   model: WorkflowModel;
@@ -48,11 +47,12 @@ export function CanvasContextMenu(props: {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") props.onClose();
     };
-    window.addEventListener("mousedown", onMouseDown);
+    // Capture: the canvas pan handler stops the event before it bubbles.
+    window.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("scroll", props.onClose, true);
     return () => {
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("scroll", props.onClose, true);
     };
@@ -63,8 +63,12 @@ export function CanvasContextMenu(props: {
     props.model,
     props.portsOf,
   );
+  // The picker shrinks to a small window rather than leave it.
   const size = picker
-    ? PICKER_SIZE
+    ? {
+        width: Math.min(PICKER_SIZE.width, window.innerWidth - 16),
+        height: Math.min(PICKER_SIZE.height, window.innerHeight - 16),
+      }
     : { width: MENU_WIDTH, height: menuHeight(items.length) };
   const position = menuPosition(props.state.point, size, {
     width: window.innerWidth,
@@ -83,6 +87,8 @@ export function CanvasContextMenu(props: {
           title={PICKERS[picker] ?? ""}
           presets={picker === "changeTrigger" ? TRIGGER_PRESETS : STEP_PRESETS}
           showPieces
+          width={size.width}
+          height={size.height}
           pieceMode={picker === "changeTrigger" ? "triggers" : "actions"}
           onPick={(preset) => props.onAction(picker, preset)}
           onClose={props.onClose}

@@ -1,7 +1,7 @@
 // The journal is best-effort: fire() owes its caller the run's own outcome,
 // whatever the store manages to record about it.
 import type { WorkflowRunResult } from "../pieces/index.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { WorkflowRuntimeService } from "./service.js";
 import { testRuntime } from "../../test/helpers/runtime.js";
 import { CORE_PIECE_VERSION } from "../pieces/index.js";
@@ -96,6 +96,8 @@ function recordingStore(finishRun: (call: FinishCall) => Promise<void>) {
   return {
     failed,
     startRun: () => Promise.resolve("run-1"),
+    getWorkflowPark: () => Promise.resolve(undefined),
+    listWorkflowParks: () => Promise.resolve([]),
     recordStep: () => Promise.resolve(),
     finishRun: (
       _runId: string,
@@ -113,6 +115,21 @@ function recordingStore(finishRun: (call: FinishCall) => Promise<void>) {
 const CTX = { headers: {}, db: {}, user: { address: "0xabc" } } as never;
 
 describe("fire() and the run journal", () => {
+  it("writes a manual fire admitted at once in one journal write", async () => {
+    const store = recordingStore(() => Promise.resolve());
+    const enqueueRun = vi.fn(() => Promise.resolve("never"));
+    await serviceWithStore({ ...store, enqueueRun }).fire(
+      WORKFLOW_ID,
+      {},
+      "manual",
+      undefined,
+      CTX,
+    );
+
+    // Nothing waited, so no PENDING row was written first.
+    expect(enqueueRun).not.toHaveBeenCalled();
+  });
+
   it("stamps a run with the workflow's own name", async () => {
     let recorded: string | undefined;
     const store = {
@@ -122,7 +139,13 @@ describe("fire() and the run journal", () => {
         return Promise.resolve("run-1");
       },
     };
-    await serviceWithStore(store).fire(WORKFLOW_ID, {}, CTX);
+    await serviceWithStore(store).fire(
+      WORKFLOW_ID,
+      {},
+      "manual",
+      undefined,
+      CTX,
+    );
     expect(recorded).toBe("Journalled");
   });
 
@@ -139,7 +162,13 @@ describe("fire() and the run journal", () => {
         return Promise.resolve("run-1");
       },
     };
-    await serviceWithUnnamedWorkflow(store).fire(WORKFLOW_ID, {}, CTX);
+    await serviceWithUnnamedWorkflow(store).fire(
+      WORKFLOW_ID,
+      {},
+      "manual",
+      undefined,
+      CTX,
+    );
     expect(recorded).toBe("Named on the document");
   });
 

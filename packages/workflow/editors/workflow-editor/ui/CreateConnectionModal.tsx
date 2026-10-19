@@ -112,6 +112,7 @@ export function CreateConnectionModal(props: {
             state={state}
             callbacks={callbacks}
             connectionId={props.connectionId}
+            offerReactor={false}
           />
         ) : (
           <p className="text-xs text-muted-foreground/80">

@@ -1,6 +1,10 @@
 import { PIECES_FRAMEWORK_PACKAGE } from "@powerhousedao/shared/clis";
 import { ts } from "@tmpl/core";
-import type { PieceNames } from "../../file-builders/types.js";
+import type {
+  PieceNames,
+  PieceRequireReactor,
+} from "../../file-builders/types.js";
+import { reactorDeclaration } from "./action-file.js";
 
 export type PieceTriggerTemplateArgs = PieceNames & {
   /** Exported const, e.g. "acmeCrmNewRecordTrigger". */
@@ -10,6 +14,7 @@ export type PieceTriggerTemplateArgs = PieceNames & {
   triggerDisplayName: string;
   strategy: "polling" | "webhook";
   withAuth: boolean;
+  requireReactor?: PieceRequireReactor;
 };
 
 const pollingTemplate = (v: PieceTriggerTemplateArgs) => {
@@ -44,7 +49,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   displayName: "${v.triggerDisplayName}",
   // Shown under the trigger in the editor: say what event starts a run
   description: "",
-  // Inputs the user fills in on the trigger, read from context.propsValue
+${reactorDeclaration(v.requireReactor, "trigger")}  // Inputs the user fills in on the trigger, read from context.propsValue
   props: {},
   // An example item, so later steps can be wired up before the trigger fires
   sampleData: {},
@@ -93,7 +98,7 @@ ${v.withAuth ? `  auth: ${v.camelCaseName}Auth,` : "  // Types context.auth as u
   displayName: "${v.triggerDisplayName}",
   // Shown under the trigger in the editor: say what event starts a run
   description: "",
-  // Inputs the user fills in on the trigger, read from context.propsValue
+${reactorDeclaration(v.requireReactor, "trigger")}  // Inputs the user fills in on the trigger, read from context.propsValue
   props: {},
   // An example item, so later steps can be wired up before the trigger fires
   sampleData: {},

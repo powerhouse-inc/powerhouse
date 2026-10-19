@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.2.3-dev.37",
+  "version": "6.2.3-dev.63",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,
@@ -81,10 +81,12 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "document-model": "workspace:*",
+    "graphql": "catalog:",
     "react": "catalog:",
     "zod": "catalog:",
     "tailwind-merge": "catalog:"

@@ -210,3 +210,13 @@ export function formatSharedDepWarnings(
       `${m.package}: requires ${m.required}, Connect provides ${m.provided}`,
   );
 }
+
+/**
+ * Stable filename for a local package's worker model bundle under
+ * `__reactor_worker__/packages/`. Shared by the tab (URL computation via the
+ * manifest) and the production prebuild (emitted entry names), so the two can
+ * never drift. Scoped names flatten (`@scope/name` -> `scope__name`).
+ */
+export function workerPackageFileName(packageName: string): string {
+  return `${packageName.replace(/^@/, "").replace(/[^\w.-]+/g, "__")}.js`;
+}

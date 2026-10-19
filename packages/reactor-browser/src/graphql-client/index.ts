@@ -1,5 +1,6 @@
 export * from "./adapter.js";
 export * from "./auth.js";
+export * from "./errors.js";
 export * from "./graphql-reactor-client.js";
 export * from "./graphql-reactor-provider.js";
 export * from "./operations.js";

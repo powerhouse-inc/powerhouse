@@ -259,6 +259,85 @@ describe("catch-up duplicate guards", () => {
     expect(row?.lastOperationIndex).toBe(1);
   });
 
+  // R3 in docs/plans/2026-10-02-testing-policy.md: the fallback for a
+  // resultingState that lacks the operation's own scope must never write {}
+  // over a good row. The malformed shape below is the whole-document echo
+  // that emptied snapshots in the field before ed92072b68.
+  it("leaves the snapshot intact when resultingState lacks the operation's scope", async () => {
+    const view = makeView();
+    await view.init();
+    const documentId = generateId();
+
+    await view.indexOperations([
+      item(
+        documentId,
+        "global",
+        0,
+        1,
+        { type: "SET" },
+        {
+          header: header(documentId),
+          global: { count: 1 },
+        },
+      ),
+    ]);
+    await view.indexOperations([
+      item(
+        documentId,
+        "global",
+        1,
+        2,
+        { type: "SET" },
+        {
+          header: header(documentId),
+          state: { global: { count: 2 } },
+        },
+      ),
+    ]);
+
+    const row = await snapshot(documentId, "global");
+    expect(row?.content).toEqual({ count: 1 });
+    expect(row?.lastOperationIndex).toBe(0);
+    expect(row?.lastOperationOrdinal).toBe(1);
+  });
+
+  it("leaves the snapshot intact when resultingState carries a null scope", async () => {
+    const view = makeView();
+    await view.init();
+    const documentId = generateId();
+
+    await view.indexOperations([
+      item(
+        documentId,
+        "global",
+        0,
+        1,
+        { type: "SET" },
+        {
+          header: header(documentId),
+          global: { count: 1 },
+        },
+      ),
+    ]);
+    await view.indexOperations([
+      item(
+        documentId,
+        "global",
+        1,
+        2,
+        { type: "SET" },
+        {
+          header: header(documentId),
+          global: null,
+        },
+      ),
+    ]);
+
+    const row = await snapshot(documentId, "global");
+    expect(row?.content).toEqual({ count: 1 });
+    expect(row?.lastOperationIndex).toBe(0);
+  });
+
   it("keeps a document deleted when an older operation is replayed", async () => {
     const view = makeView();
     await view.init();

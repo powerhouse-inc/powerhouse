@@ -4,6 +4,7 @@
     "outDir": "./.tsbuild",
     "paths": {
       "@powerhousedao/connect/config": ["./src/connect.config.ts"],
+      "@powerhousedao/connect/route-tree": ["./src/routeTree.gen.ts"],
       "@powerhousedao/connect/assets/*": ["./assets/*"],
       "@powerhousedao/connect/*": ["./src/*/index.ts"]
     },
@@ -28,6 +29,9 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/host-core"
+    },
+    {
       "path": "../../packages/powerhouse-vetra-packages"
     },
     {
@@ -41,6 +45,9 @@
     },
     {
       "path": "../../packages/reactor-mcp"
+    },
+    {
+      "path": "../../packages/reactor-router"
     },
     {
       "path": "../../packages/renown"

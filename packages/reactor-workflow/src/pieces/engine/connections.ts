@@ -257,6 +257,21 @@ export function declaredConnectionIds(
   return declared;
 }
 
+// Every REACTOR connection a definition binds, kept apart from the auth
+// connections so neither resolves as the other.
+export function declaredReactorConnectionIds(
+  definition: WorkflowDefinition,
+): ReadonlySet<string> {
+  const declared = new Set<string>();
+  const declare = (connectionId: string | null | undefined) => {
+    if (connectionId && !connectionId.includes("{{"))
+      declared.add(connectionId);
+  };
+  declare(definition.trigger?.reactorConnectionId);
+  for (const step of definition.steps) declare(step.reactorConnectionId);
+  return declared;
+}
+
 // The binding in force for the caller, or undefined when there is none. Read
 // per call because one executor serves every concurrent run.
 export type ConnectionBindingLookup = () => ReadonlySet<string> | undefined;

@@ -1,13 +1,13 @@
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import { HardenedPGliteDialect } from "../kysely/pglite-dialect.js";
 import { runMigrations, getMigrationStatus } from "./migrator.js";
 
 async function main() {
   const command = process.argv[2];
 
   const db = new Kysely<any>({
-    dialect: new PGliteDialect(new PGlite()),
+    dialect: new HardenedPGliteDialect(new PGlite()),
   });
 
   try {

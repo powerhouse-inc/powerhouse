@@ -120,12 +120,56 @@ export enum AuthDecision {
   Deny = "DENY",
 }
 
+/**
+ * The outcome of a batch mutation, one entry per job the request named. The wire
+ * shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+ * key rather than by position so the client can rebuild the record. The batch is
+ * not atomic: each job commits on its own and a failed job releases its
+ * dependents, so each entry's status says what happened to that job, and
+ * re-submitting re-applies the jobs that succeeded.
+ */
+export type BatchExecutionResult = {
+  readonly jobs: ReadonlyArray<BatchJobResult>;
+};
+
+/**
+ * One job's outcome within a batch, pairing the plan key the caller gave with the
+ * job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+ * `IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+ */
+export type BatchJobResult = {
+  readonly job: JobInfo;
+  readonly key: Scalars["String"]["output"];
+};
+
 export type ChannelMeta = {
   readonly id: Scalars["String"]["output"];
 };
 
 export type ChannelMetaInput = {
   readonly id: Scalars["String"]["input"];
+};
+
+export type ConsistencyCoordinate = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly operationIndex: Scalars["Int"]["output"];
+  readonly scope: Scalars["String"]["output"];
+};
+
+/**
+ * The write positions a job reached, for read-after-write. Only meaningful once
+ * the job has completed.
+ */
+export type ConsistencyToken = {
+  readonly coordinates: ReadonlyArray<ConsistencyCoordinate>;
+  readonly createdAtUtcIso: Scalars["String"]["output"];
+  readonly version: Scalars["Int"]["output"];
+};
+
+export type CreateDefaults = {
+  readonly protocolVersions: Scalars["JSONObject"]["output"];
+  readonly signaturePolicy: Scalars["String"]["output"];
 };
 
 export type DeadLetterInfo = {
@@ -209,6 +253,34 @@ export type DocumentWithChildren = {
   readonly document: PhDocument;
 };
 
+/**
+ * One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+ * (packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+ * order only, not atomically: each job commits on its own with no batch rollback,
+ * and a failed job still releases its dependents.
+ *
+ * `documentIdOrSlug` is the document the job's actions apply to -- an id that does
+ * not yet exist when the job's actions create it. `actions` are coerced against
+ * `ActionInput` and passed through exactly as `execute` does, so a client-signed
+ * action keeps its signature. `scope` is the single scope every action in the job
+ * shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+ * defaults to `main`.
+ */
+export type ExecutionJobInput = {
+  readonly actions: ReadonlyArray<ActionInput>;
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly dependsOn: ReadonlyArray<Scalars["String"]["input"]>;
+  readonly documentIdOrSlug: Scalars["String"]["input"];
+  readonly key: Scalars["String"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
+/** The batch a job was submitted in. */
+export type JobBatchMeta = {
+  readonly batchId: Scalars["String"]["output"];
+  readonly batchJobIds: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
 export type JobChangeEvent = {
   readonly error?: Maybe<Scalars["String"]["output"]>;
   readonly jobId: Scalars["String"]["output"];
@@ -223,9 +295,18 @@ export type JobChangeEvent = {
 
 export type JobInfo = {
   readonly completedAt?: Maybe<Scalars["DateTime"]["output"]>;
+  readonly consistencyToken: ConsistencyToken;
   readonly createdAt: Scalars["DateTime"]["output"];
+  /**
+   * The document the job operates on. Empty for a job this server does not know,
+   * which then comes back FAILED with "Job not found".
+   */
+  readonly documentId: Scalars["String"]["output"];
   readonly error?: Maybe<Scalars["String"]["output"]>;
+  /** The error's class name, such as `DocumentAlreadyExistsError`, when it failed. */
+  readonly errorName?: Maybe<Scalars["String"]["output"]>;
   readonly id: Scalars["String"]["output"];
+  readonly meta: JobBatchMeta;
   /**
    * What the job produced, once it has produced anything. Null until then, which
    * is the state every job is in when it is handed back from a submission.
@@ -267,6 +348,27 @@ export type Mutation = {
    * ask for; `result` is null until the job produces one.
    */
   readonly executeAsync: JobInfo;
+  /**
+   * Applies multiple mutation jobs in dependency order and waits for all of them,
+   * the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+   * against `ActionInput` exactly as `execute` is, so client-signed actions pass
+   * through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+   * are applied and awaited before the result returns, so every returned `JobInfo`
+   * is a completed one rather than the pending receipt the in-process reactor hands
+   * back. A batch is ordering, not a transaction: each job commits on its own, and
+   * a failed job still releases the jobs that depend on it, so any job, before or
+   * after a failure, may have committed. A failed job is therefore returned as a
+   * FAILED entry with its `error` and `errorName`, beside the final state of every
+   * other job, rather than failing the mutation. The mutation itself fails only
+   * when no job state can be reported.
+   *
+   * A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+   * as its first action naming the job's document. Its other actions may only be
+   * an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+   * it. It is authorized like `createDocument`: write on every source of those
+   * relationships, or the right to create when there is none.
+   */
+  readonly executeBatch: BatchExecutionResult;
   readonly moveRelationship: MoveRelationshipResult;
   /** @deprecated Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored. */
   readonly mutateDocument: PhDocument;
@@ -326,6 +428,10 @@ export type MutationExecuteAsyncArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type MutationExecuteBatchArgs = {
+  jobs: ReadonlyArray<ExecutionJobInput>;
 };
 
 export type MutationMoveRelationshipArgs = {
@@ -447,9 +553,11 @@ export type PhDocument = {
   readonly documentType: Scalars["String"]["output"];
   readonly id: Scalars["String"]["output"];
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
+  readonly meta?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
   readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
+  readonly protocolVersions?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -507,6 +615,7 @@ export enum PropagationMode {
 }
 
 export type Query = {
+  readonly createDefaults: CreateDefaults;
   readonly document?: Maybe<DocumentWithChildren>;
   readonly documentIncomingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentIncomingRelationships: PhDocumentResultPage;
@@ -514,6 +623,7 @@ export type Query = {
   readonly documentOperations: ReactorOperationResultPage;
   readonly documentOutgoingRelationshipEdges: DocumentRelationshipResultPage;
   readonly documentOutgoingRelationships: PhDocumentResultPage;
+  readonly documentServed: Scalars["Boolean"]["output"];
   /**
    * Predicts whether the calling subject would be admitted to execute each of a
    * set of candidate operations, without submitting any of them. A UI asks this to
@@ -558,6 +668,10 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+};
+
+export type QueryCreateDefaultsArgs = {
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type QueryDocumentArgs = {
@@ -605,6 +719,11 @@ export type QueryDocumentOutgoingRelationshipsArgs = {
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdentifier?: InputMaybe<Scalars["String"]["input"]>;
+  view?: InputMaybe<ViewFilterInput>;
+};
+
+export type QueryDocumentServedArgs = {
+  idOrSlug: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -806,6 +925,8 @@ export type PhDocumentFieldsFragment = {
   readonly slug?: string | null | undefined;
   readonly name: string;
   readonly documentType: string;
+  readonly meta?: NonNullable<unknown> | null | undefined;
+  readonly protocolVersions?: NonNullable<unknown> | null | undefined;
   readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
@@ -858,6 +979,8 @@ export type GetDocumentQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -887,6 +1010,8 @@ export type GetDocumentWithOperationsQuery = {
           readonly slug?: string | null | undefined;
           readonly name: string;
           readonly documentType: string;
+          readonly meta?: NonNullable<unknown> | null | undefined;
+          readonly protocolVersions?: NonNullable<unknown> | null | undefined;
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
@@ -967,6 +1092,8 @@ export type GetDocumentOutgoingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -995,6 +1122,8 @@ export type GetDocumentIncomingRelationshipsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1068,6 +1197,8 @@ export type FindDocumentsQuery = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1131,6 +1262,31 @@ export type GetDocumentOperationsQuery = {
   };
 };
 
+export type JobInfoFieldsFragment = {
+  readonly id: string;
+  readonly documentId: string;
+  readonly status: string;
+  readonly result?: NonNullable<unknown> | null | undefined;
+  readonly error?: string | null | undefined;
+  readonly errorName?: string | null | undefined;
+  readonly createdAt: string | Date;
+  readonly completedAt?: string | Date | null | undefined;
+  readonly consistencyToken: {
+    readonly version: number;
+    readonly createdAtUtcIso: string;
+    readonly coordinates: ReadonlyArray<{
+      readonly documentId: string;
+      readonly scope: string;
+      readonly branch: string;
+      readonly operationIndex: number;
+    }>;
+  };
+  readonly meta: {
+    readonly batchId: string;
+    readonly batchJobIds: ReadonlyArray<string>;
+  };
+};
+
 export type GetJobStatusQueryVariables = Exact<{
   jobId: Scalars["String"]["input"];
 }>;
@@ -1139,14 +1295,48 @@ export type GetJobStatusQuery = {
   readonly jobStatus?:
     | {
         readonly id: string;
+        readonly documentId: string;
         readonly status: string;
         readonly result?: NonNullable<unknown> | null | undefined;
         readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
         readonly createdAt: string | Date;
         readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
       }
     | null
     | undefined;
+};
+
+export type GetDocumentServedQueryVariables = Exact<{
+  idOrSlug: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+}>;
+
+export type GetDocumentServedQuery = { readonly documentServed: boolean };
+
+export type GetCreateDefaultsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetCreateDefaultsQuery = {
+  readonly createDefaults: {
+    readonly signaturePolicy: string;
+    readonly protocolVersions: NonNullable<unknown>;
+  };
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
@@ -1179,6 +1369,8 @@ export type CreateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1200,6 +1392,8 @@ export type CreateEmptyDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1222,6 +1416,8 @@ export type MutateDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1241,11 +1437,63 @@ export type MutateDocumentAsyncMutationVariables = Exact<{
 export type MutateDocumentAsyncMutation = {
   readonly mutateDocumentAsync: {
     readonly id: string;
+    readonly documentId: string;
     readonly status: string;
     readonly result?: NonNullable<unknown> | null | undefined;
     readonly error?: string | null | undefined;
+    readonly errorName?: string | null | undefined;
     readonly createdAt: string | Date;
     readonly completedAt?: string | Date | null | undefined;
+    readonly consistencyToken: {
+      readonly version: number;
+      readonly createdAtUtcIso: string;
+      readonly coordinates: ReadonlyArray<{
+        readonly documentId: string;
+        readonly scope: string;
+        readonly branch: string;
+        readonly operationIndex: number;
+      }>;
+    };
+    readonly meta: {
+      readonly batchId: string;
+      readonly batchJobIds: ReadonlyArray<string>;
+    };
+  };
+};
+
+export type ExecuteBatchMutationVariables = Exact<{
+  jobs: ReadonlyArray<ExecutionJobInput>;
+}>;
+
+export type ExecuteBatchMutation = {
+  readonly executeBatch: {
+    readonly jobs: ReadonlyArray<{
+      readonly key: string;
+      readonly job: {
+        readonly id: string;
+        readonly documentId: string;
+        readonly status: string;
+        readonly result?: NonNullable<unknown> | null | undefined;
+        readonly error?: string | null | undefined;
+        readonly errorName?: string | null | undefined;
+        readonly createdAt: string | Date;
+        readonly completedAt?: string | Date | null | undefined;
+        readonly consistencyToken: {
+          readonly version: number;
+          readonly createdAtUtcIso: string;
+          readonly coordinates: ReadonlyArray<{
+            readonly documentId: string;
+            readonly scope: string;
+            readonly branch: string;
+            readonly operationIndex: number;
+          }>;
+        };
+        readonly meta: {
+          readonly batchId: string;
+          readonly batchJobIds: ReadonlyArray<string>;
+        };
+      };
+    }>;
   };
 };
 
@@ -1261,6 +1509,8 @@ export type RenameDocumentMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1283,6 +1533,8 @@ export type SetPreferredEditorMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1307,6 +1559,8 @@ export type AddRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1331,6 +1585,8 @@ export type UpdateRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1354,6 +1610,8 @@ export type RemoveRelationshipMutation = {
     readonly slug?: string | null | undefined;
     readonly name: string;
     readonly documentType: string;
+    readonly meta?: NonNullable<unknown> | null | undefined;
+    readonly protocolVersions?: NonNullable<unknown> | null | undefined;
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
@@ -1379,6 +1637,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1392,6 +1652,8 @@ export type MoveRelationshipMutation = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1430,6 +1692,8 @@ export type DocumentChangesSubscription = {
       readonly slug?: string | null | undefined;
       readonly name: string;
       readonly documentType: string;
+      readonly meta?: NonNullable<unknown> | null | undefined;
+      readonly protocolVersions?: NonNullable<unknown> | null | undefined;
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
@@ -1572,6 +1836,8 @@ export const PhDocumentFieldsFragmentDoc = gql`
     slug
     name
     documentType
+    meta
+    protocolVersions
     state
     revisionsList {
       scope
@@ -1589,6 +1855,32 @@ export const DocumentRelationshipFieldsFragmentDoc = gql`
     metadata
     createdAt
     updatedAt
+  }
+`;
+export const JobInfoFieldsFragmentDoc = gql`
+  fragment JobInfoFields on JobInfo {
+    id
+    documentId
+    status
+    result
+    error
+    errorName
+    createdAt
+    completedAt
+    consistencyToken {
+      version
+      createdAtUtcIso
+      coordinates {
+        documentId
+        scope
+        branch
+        operationIndex
+      }
+    }
+    meta {
+      batchId
+      batchJobIds
+    }
   }
 `;
 export const GetDocumentModelsDocument = gql`
@@ -1823,12 +2115,21 @@ export const GetDocumentOperationsDocument = gql`
 export const GetJobStatusDocument = gql`
   query GetJobStatus($jobId: String!) {
     jobStatus(jobId: $jobId) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
+    }
+  }
+  ${JobInfoFieldsFragmentDoc}
+`;
+export const GetDocumentServedDocument = gql`
+  query GetDocumentServed($idOrSlug: String!, $view: ViewFilterInput) {
+    documentServed(idOrSlug: $idOrSlug, view: $view)
+  }
+`;
+export const GetCreateDefaultsDocument = gql`
+  query GetCreateDefaults($parentIdOrSlug: String) {
+    createDefaults(parentIdOrSlug: $parentIdOrSlug) {
+      signaturePolicy
+      protocolVersions
     }
   }
 `;
@@ -1903,14 +2204,23 @@ export const MutateDocumentAsyncDocument = gql`
       actions: $actions
       branch: $branch
     ) {
-      id
-      status
-      result
-      error
-      createdAt
-      completedAt
+      ...JobInfoFields
     }
   }
+  ${JobInfoFieldsFragmentDoc}
+`;
+export const ExecuteBatchDocument = gql`
+  mutation ExecuteBatch($jobs: [ExecutionJobInput!]!) {
+    executeBatch(jobs: $jobs) {
+      jobs {
+        key
+        job {
+          ...JobInfoFields
+        }
+      }
+    }
+  }
+  ${JobInfoFieldsFragmentDoc}
 `;
 export const RenameDocumentDocument = gql`
   mutation RenameDocument(
@@ -2366,6 +2676,42 @@ export function getSdk(
         variables,
       );
     },
+    GetDocumentServed(
+      variables: GetDocumentServedQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentServedQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentServedQuery>({
+            document: GetDocumentServedDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentServed",
+        "query",
+        variables,
+      );
+    },
+    GetCreateDefaults(
+      variables?: GetCreateDefaultsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCreateDefaultsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCreateDefaultsQuery>({
+            document: GetCreateDefaultsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCreateDefaults",
+        "query",
+        variables,
+      );
+    },
     EvaluateActions(
       variables: EvaluateActionsQueryVariables,
       requestHeaders?: GraphQLClientRequestHeaders,
@@ -2452,6 +2798,24 @@ export function getSdk(
             signal,
           }),
         "MutateDocumentAsync",
+        "mutation",
+        variables,
+      );
+    },
+    ExecuteBatch(
+      variables: ExecuteBatchMutationVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<ExecuteBatchMutation> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<ExecuteBatchMutation>({
+            document: ExecuteBatchDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "ExecuteBatch",
         "mutation",
         variables,
       );

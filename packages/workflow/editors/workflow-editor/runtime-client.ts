@@ -97,6 +97,7 @@ interface BlockEntryDescriptor {
   displayName: string;
   description?: string;
   requireAuth: boolean;
+  requireReactor?: string;
   props: BlockFormProp[];
   ports?: string[];
   // Triggers only; read through checkTriggerStrategy.
@@ -163,6 +164,9 @@ export function getBlockForm(
           ? entry.displayName
           : `${descriptor.displayName} · ${entry.displayName}`,
         requireAuth: entry.requireAuth,
+        ...(entry.requireReactor === "read" || entry.requireReactor === "write"
+          ? { requireReactor: entry.requireReactor }
+          : {}),
         auth: !descriptor.auth
           ? ("none" as const)
           : entry.requireAuth
@@ -196,6 +200,8 @@ export interface PieceSummary {
   triggerCount: number;
   // Activepieces category ids, e.g. ARTIFICIAL_INTELLIGENCE, SALES_AND_CRM.
   categories: string[];
+  // Absent from runtimes older than the field; read as "activepieces".
+  source?: PieceSource;
   // PieceAuth descriptor, verbatim from the piece; null when authless.
   auth?: unknown;
   // Why none of the piece's blocks can run on this reactor.
@@ -305,31 +311,64 @@ export interface BlockSearchHit {
   unsupported: string | null;
 }
 
-export interface BlockSearchResult {
+export type PieceSource = "local" | "registry" | "activepieces";
+
+export interface PieceSearchMatch {
+  pieceName: string;
+  pieceVersion: string;
+  displayName: string;
+  description: string;
+  logoUrl: string;
+  categories: string[];
+  source: PieceSource;
+  deprecated: boolean | null;
+  unsupported: string | null;
+  // Every query token matched the piece's own name.
+  namedPiece: boolean;
+  blocks: BlockSearchHit[];
+}
+
+export interface PieceSearchResult {
   status: "ready" | "indexing" | "error";
-  hits: BlockSearchHit[];
+  pieces: PieceSearchMatch[];
   indexedPieces: number;
   error: string | null;
 }
 
-// Catalog-wide action/trigger search; "indexing" on the very first calls.
-export async function searchBlocks(
+export interface PieceSearchFilter {
+  kind: "action" | "trigger";
+  sources?: readonly PieceSource[];
+  categories?: readonly string[];
+  limit?: number;
+}
+
+// Catalog-wide search grouped by piece; "indexing" on the very first calls.
+export async function searchPieces(
   t: Transport,
   query: string,
-  limit = 30,
-): Promise<BlockSearchResult> {
+  filter: PieceSearchFilter,
+): Promise<PieceSearchResult> {
   const data = await t.gql<{
-    workflowRuntime: { searchBlocks: BlockSearchResult };
+    workflowRuntime: { searchPieces: PieceSearchResult };
   }>(
-    `query SearchBlocks($query: String!, $limit: Int) {
-      workflowRuntime { searchBlocks(query: $query, limit: $limit) {
+    `query SearchPieces($query: String!, $kind: String!, $sources: [String!], $categories: [String!], $limit: Int) {
+      workflowRuntime { searchPieces(query: $query, kind: $kind, sources: $sources, categories: $categories, limit: $limit) {
         status indexedPieces error
-        hits { pieceName pieceVersion name pieceDisplayName logoUrl displayName description kind strategy unsupported }
+        pieces {
+          pieceName pieceVersion displayName description logoUrl categories source deprecated unsupported namedPiece
+          blocks { pieceName pieceVersion name pieceDisplayName logoUrl displayName description kind strategy unsupported }
+        }
       } }
     }`,
-    { query, limit },
+    {
+      query,
+      kind: filter.kind,
+      sources: filter.sources ?? null,
+      categories: filter.categories ?? null,
+      limit: filter.limit ?? null,
+    },
   );
-  return data.workflowRuntime.searchBlocks;
+  return data.workflowRuntime.searchPieces;
 }
 
 export interface OutputTreeNode {
@@ -428,6 +467,40 @@ export function checkConnection(
       { connectionId },
     )
     .then((data) => data.workflowRuntime.checkConnection);
+}
+
+// What the editor needs to decide on sign-in.
+export interface ReactorAccessInfo {
+  authEnforcement: boolean;
+  // Null for a caller who is not signed in.
+  reactorIdentity: { address: string | null; key: string } | null;
+  authConditions: boolean | null;
+}
+
+export function fetchReactorAccess(t: Transport): Promise<ReactorAccessInfo> {
+  return t
+    .gql<{ workflowRuntime: ReactorAccessInfo }>(
+      `query ReactorAccess {
+        workflowRuntime { authEnforcement reactorIdentity { address key } authConditions }
+      }`,
+      {},
+    )
+    .then((data) => data.workflowRuntime);
+}
+
+// Why the runtime would not arm the workflow's reactor access; null when it would.
+export function fetchReactorAccessDenial(
+  t: Transport,
+  workflowId: string,
+): Promise<string | null> {
+  return t
+    .gql<{ workflowRuntime: { reactorAccessDenial: string | null } }>(
+      `query ReactorAccessDenial($workflowId: String!) {
+        workflowRuntime { reactorAccessDenial(workflowId: $workflowId) }
+      }`,
+      { workflowId },
+    )
+    .then((data) => data.workflowRuntime.reactorAccessDenial);
 }
 
 export interface OAuthStart {
@@ -641,9 +714,12 @@ export async function cancelTriggerTest(
 export interface StepTestResult {
   // Null when the test never started, e.g. `Test "fetch" first`.
   runId: string | null;
-  status: "SUCCEEDED" | "FAILED";
+  // INDETERMINATE: a write the step asked for may have landed.
+  status: "SUCCEEDED" | "FAILED" | "INDETERMINATE";
   output: unknown;
   error: string | null;
+  // The thrown error's name, e.g. ReactorAccessDeniedError.
+  errorName: string | null;
   durationMs: number;
 }
 
@@ -658,7 +734,7 @@ export async function testStep(
     `mutation TestStep($workflowId: String!, $stepId: String!, $driveId: String) {
       workflowRuntime {
         testStep(workflowId: $workflowId, stepId: $stepId, driveId: $driveId) {
-          runId status output error durationMs
+          runId status output error errorName durationMs
         }
       }
     }`,
@@ -724,6 +800,7 @@ export interface RunStepRecord {
   output: unknown;
   port: string | null;
   error: string | null;
+  errorName: string | null;
   // Null for skipped and replayed steps, and for runs journaled before timings.
   startedAt: string | null;
   endedAt: string | null;
@@ -738,6 +815,7 @@ export interface RunRecord {
   triggerPayload: unknown;
   status: string;
   error: string | null;
+  errorName: string | null;
   startedAt: string;
   endedAt: string | null;
   rerunOf: string | null;
@@ -747,9 +825,9 @@ export interface RunRecord {
 }
 
 const RUN_ROW_FIELDS = `id workflowId workflowName workflowVersion triggerKind
-  triggerPayload status error startedAt endedAt rerunOf warningNotes`;
+  triggerPayload status error errorName startedAt endedAt rerunOf warningNotes`;
 const STEP_ROW_FIELDS =
-  "stepId stepKey pieceName blockName status port error startedAt endedAt";
+  "stepId stepKey pieceName blockName status port error errorName startedAt endedAt";
 const RUN_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} input output }`;
 // A listing row: the steps without their input and output.
 const RUN_LIST_FIELDS = `${RUN_ROW_FIELDS} steps { ${STEP_ROW_FIELDS} }`;
@@ -868,10 +946,12 @@ export async function loadBlockOptions(
   input: Record<string, unknown>,
   connectionId?: string,
   searchValue?: string,
+  // Narrows a reactor-reading resolver to what the step's connection reaches.
+  reactorConnectionId?: string,
 ): Promise<unknown> {
   const data = await t.gql<BlockOptionsResult>(
-    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String) {
-      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue) }
+    `query Options($block: BlockInput!, $propName: String!, $input: Unknown, $connectionId: String, $searchValue: String, $reactorConnectionId: String) {
+      workflowRuntime { blockOptions(block: $block, propName: $propName, input: $input, connectionId: $connectionId, searchValue: $searchValue, reactorConnectionId: $reactorConnectionId) }
     }`,
     {
       block: blockInput(block),
@@ -879,6 +959,7 @@ export async function loadBlockOptions(
       input,
       connectionId: connectionId ?? null,
       searchValue: searchValue ?? null,
+      reactorConnectionId: reactorConnectionId ?? null,
     },
   );
   return data.workflowRuntime.blockOptions;
@@ -889,11 +970,13 @@ const operations = {
   fetchPieceCatalog,
   fetchPieceActions,
   fetchPieceTriggers,
-  searchBlocks,
+  searchPieces,
   fetchBlockOutputTree,
   fetchStepOutputTree,
   fetchConnections,
   checkConnection,
+  fetchReactorAccess,
+  fetchReactorAccessDenial,
   fetchOAuthRedirectUri,
   startOAuth,
   fetchOAuthAttempt,

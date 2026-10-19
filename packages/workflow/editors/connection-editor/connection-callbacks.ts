@@ -4,6 +4,9 @@ import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import { generateId } from "document-model";
 import {
   actions,
+  defaultReactorConnectionConfig,
+  parseReactorConnectionConfig,
+  REACTOR_CONNECTOR_ID,
   type ConnectionAction,
   type ConnectionState,
 } from "document-models/connection";
@@ -40,25 +43,24 @@ export function connectionCallbacks(
       dispatch(
         actions.setConnector({ connectorId: state.connectorId, authType }),
       );
-      const config = Object.fromEntries(
-        Object.entries((state.config ?? {}) as Record<string, unknown>).filter(
-          ([name]) => keep.config.includes(name),
-        ),
-      );
-      dispatch(actions.setConfig({ config }));
+      for (const name of Object.keys(configFields(state.config))) {
+        if (!keep.config.includes(name)) {
+          dispatch(actions.removeConfigValue({ name }));
+        }
+      }
       for (const ref of state.secretRefs) {
         if (!keep.secrets.includes(ref.name)) {
           dispatch(actions.removeSecretRef({ id: ref.id }));
         }
       }
     },
+    // One field per write, so a second edit before the echo keeps the first.
     setConfigValue: (name, value) => {
-      const config = {
-        ...((state.config ?? {}) as Record<string, unknown>),
-      };
-      if (value === undefined) delete config[name];
-      else config[name] = value;
-      dispatch(actions.setConfig({ config }));
+      dispatch(
+        value === undefined
+          ? actions.removeConfigValue({ name })
+          : actions.setConfigValue({ name, value }),
+      );
     },
     setSecretRef: (name, ref) => {
       const existing = state.secretRefs.find((entry) => entry.name === name);
@@ -78,5 +80,54 @@ export function connectionCallbacks(
         }),
       );
     },
+    // Nothing to fill in, so it is ready once picked.
+    pickReactor: () => {
+      dispatch(
+        actions.setConnector({
+          connectorId: REACTOR_CONNECTOR_ID,
+          authType: "REACTOR",
+        }),
+      );
+      dispatch(actions.setConfig({ config: defaultReactorConnectionConfig() }));
+      dispatch(
+        actions.recordCheckResult({
+          status: "OK",
+          checkedAt: new Date().toISOString(),
+        }),
+      );
+    },
+    setReactorAccess: (access) => {
+      if (parseReactorConnectionConfig(state.config).ok) {
+        dispatch(
+          access === "read"
+            ? actions.setConfigValue({ name: "access", value: "read" })
+            : actions.removeConfigValue({ name: "access" }),
+        );
+      } else {
+        // An invalid config can't take one field; replace it whole.
+        dispatch(
+          actions.setConfig({
+            config: {
+              ...defaultReactorConnectionConfig(),
+              ...(access === "read" ? { access } : {}),
+            },
+          }),
+        );
+      }
+      if (state.status === "UNCONFIGURED") {
+        dispatch(
+          actions.recordCheckResult({
+            status: "OK",
+            checkedAt: new Date().toISOString(),
+          }),
+        );
+      }
+    },
   };
+}
+
+function configFields(config: unknown): Record<string, unknown> {
+  return config !== null && typeof config === "object" && !Array.isArray(config)
+    ? (config as Record<string, unknown>)
+    : {};
 }

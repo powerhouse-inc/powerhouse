@@ -195,11 +195,12 @@ describe("switchboard as its own renown auth provider", () => {
     );
     await stopSwitchboard(run);
 
-    // Phase 2 — auth on, cache off so revocation is observed immediately.
+    // Phase 2 — auth on. No CREDENTIAL_VERIFICATION_CACHE_TTL_MS: with
+    // source=self credential checks are not cached by default, so the
+    // revocation is observed immediately.
     run = spawnSwitchboard(FIXTURE_DIR, {
       PH_SWITCHBOARD_PORT: String(PORT),
       AUTH_ENABLED: "true",
-      CREDENTIAL_VERIFICATION_CACHE_TTL_MS: "0",
     });
     await waitFor(
       readModelReady,

@@ -2,7 +2,12 @@
 // 08:00 UTC" rather than "0 8 * * *". Unknown shapes fall back to the raw text.
 import { blockKey } from "@powerhousedao/pieces-framework/block-type";
 import { blockMeta } from "./block-meta.js";
-import { MANUAL_TRIGGER, SCHEDULE_TRIGGER, WEBHOOK_TRIGGER } from "./blocks.js";
+import {
+  MANUAL_TRIGGER,
+  REACTOR_PIECE,
+  SCHEDULE_TRIGGER,
+  WEBHOOK_TRIGGER,
+} from "./blocks.js";
 import { parseScheduleConfig } from "@powerhousedao/pieces-framework/workflow";
 
 const WEEKDAYS = [
@@ -97,6 +102,63 @@ export function describeSchedule(config: unknown): string {
     : `On schedule ${schedule.cron}`;
 }
 
+// A literal config value; an expression or a blank says nothing to show.
+function literal(config: unknown, key: string): string | undefined {
+  if (!config || typeof config !== "object") return undefined;
+  const value = (config as Record<string, unknown>)[key];
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  return text && !text.includes("{{") ? text : undefined;
+}
+
+// "umh/production-ledger" reads as "Production Ledger".
+function documentTypeLabel(documentType: string): string {
+  const name = documentType.split("/").pop() ?? documentType;
+  return name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+// "APPROVE_ORDER" reads as "Approve order".
+function actionTypeLabel(actionType: string): string {
+  const words = actionType
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean);
+  const text = words.join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Describes a reactor document trigger by what it filters on. */
+export function describeDocumentTrigger(
+  triggerName: string,
+  config: unknown,
+): string | undefined {
+  const documentType = literal(config, "documentType");
+  const label = documentType ? documentTypeLabel(documentType) : "";
+  const subject = label
+    ? `${/^[AEIOU]/.test(label) ? "an" : "a"} ${label}`
+    : literal(config, "documentId")
+      ? "its document"
+      : "a document";
+  switch (triggerName) {
+    case "document-event": {
+      const actionType = literal(config, "actionType");
+      return actionType
+        ? `When ${actionTypeLabel(actionType)} runs on ${subject}`
+        : `When ${subject} changes`;
+    }
+    case "document-created":
+      return `When ${subject} is created`;
+    case "document-deleted":
+      return `When ${subject} is deleted`;
+    default:
+      return undefined;
+  }
+}
+
 /** When a workflow starts, from its trigger. */
 export function describeTrigger(
   trigger:
@@ -118,6 +180,13 @@ export function describeTrigger(
     case blockKey(SCHEDULE_TRIGGER):
       return describeSchedule(trigger.config);
     default: {
+      if (trigger.pieceName === REACTOR_PIECE) {
+        const described = describeDocumentTrigger(
+          trigger.triggerName,
+          trigger.config,
+        );
+        if (described) return described;
+      }
       const meta = blockMeta(block);
       const piece = meta.subtitle.replace(/ · Trigger$/, "");
       return `${meta.displayName} in ${piece}`;

@@ -1,4 +1,4 @@
-import { camelCase, kebabCase } from "change-case";
+import { camelCase } from "change-case";
 import {
   setName,
   type DocumentModelModule,
@@ -6,8 +6,9 @@ import {
 import { GraphQLError, Kind, parse } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
-  generateDocumentModelSchema,
+  documentModelSubgraphTypes,
   getDocumentModelSchemaName,
+  getDocumentModelSubgraphName,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -145,15 +146,22 @@ export interface DocumentModelSubgraphResolvers<
 export class DocumentModelSubgraph extends BaseSubgraph {
   declare resolvers: DocumentModelSubgraphResolvers;
   private documentModel: DocumentModelModule;
+  /** Names of the types its schema generator emits for the model. */
+  readonly generatedTypeNames: ReadonlySet<string>;
 
-  constructor(documentModel: DocumentModelModule, args: SubgraphArgs) {
+  /** `types` are the model's subgraph types, when already built. */
+  constructor(
+    documentModel: DocumentModelModule,
+    args: SubgraphArgs,
+    types = documentModelSubgraphTypes(documentModel.documentModel.global),
+  ) {
     super(args);
     this.documentModel = documentModel;
-    this.name = kebabCase(documentModel.documentModel.global.name);
-    this.typeDefs = generateDocumentModelSchema(
-      this.documentModel.documentModel.global,
-      { useNewApi: true },
+    this.name = getDocumentModelSubgraphName(
+      documentModel.documentModel.global,
     );
+    this.typeDefs = types.typeDefs;
+    this.generatedTypeNames = types.typeNames;
     this.resolvers = this.generateResolvers();
   }
 
@@ -182,16 +190,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     page: PhDocumentResultPage,
     ctx: Context,
   ): Promise<PhDocumentResultPage> {
-    if (this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-      return page;
-    }
-    const items: PhDocument[] = [];
-    for (const item of page.items) {
-      if (await this.canReadDocument(item.id as CanonicalDocumentId, ctx)) {
-        items.push(item);
-      }
-    }
-    return { ...page, items };
+    return { ...page, items: await this.readableByHost(page.items, ctx) };
   }
 
   /**

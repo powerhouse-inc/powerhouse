@@ -51,6 +51,7 @@ const app = {
       displayName: "Do Thing",
       description: "Does the thing",
       requireAuth: true,
+      requireReactor: "write",
       props: { title: { displayName: "Title", type: "SHORT_TEXT", required: true } },
       run: async () => undefined,
     },
@@ -76,6 +77,7 @@ const app = {
       description: "Fires on a thing",
       type: "POLLING",
       requireAuth: true,
+      requireReactor: "read",
       props: {},
       sampleData: { id: "evt-1", at: "2026-01-01T00:00:00Z" },
       run: async () => [],
@@ -140,13 +142,18 @@ describe("a package piece in the catalog", () => {
         actionCount: 1,
         triggerCount: 0,
         categories: [],
+        source: "registry",
         auth: null,
       },
     ]);
     const catalog = await runtime.pieceCatalog();
 
     expect(catalog.filter((entry) => entry.name === PIECE)).toEqual([
-      expect.objectContaining({ version: "2.0.0", publishedVersion: "1.4.0" }),
+      expect.objectContaining({
+        version: "2.0.0",
+        publishedVersion: "1.4.0",
+        source: "local",
+      }),
     ]);
   });
 
@@ -187,22 +194,26 @@ describe("a package piece in the catalog", () => {
       name: "do_thing",
     })) as {
       displayName: string;
-      action: { name: string };
+      action: { name: string; requireReactor?: string };
     } | null;
 
     expect(descriptor?.displayName).toBe("Fixture");
     expect(descriptor?.action.name).toBe("do_thing");
+    expect(descriptor?.action.requireReactor).toBe("write");
   });
 
   it("finds the piece's blocks while the published catalog is unreachable", async () => {
     resetBlockSearchIndex();
     // The published index never builds here, and a block this reactor ships
     // must still be findable — it is the only kind an offline host has.
-    const result = await runtime.searchBlocks("thing");
+    const search = async (kind: "action" | "trigger") =>
+      (await runtime.searchPieces("thing", { kind })).pieces.flatMap(
+        (piece) => piece.blocks,
+      );
+    const hits = [...(await search("trigger")), ...(await search("action"))];
 
-    // Ranked as any hit is: a name the query prefixes comes first.
     expect(
-      result.hits
+      hits
         .filter((hit) => hit.pieceName === PIECE)
         .map(({ pieceName, pieceVersion, kind, name }) => ({
           pieceName,
@@ -276,10 +287,14 @@ describe("a package piece in the catalog", () => {
   it("serves detail the published listing has nothing to say about", async () => {
     const detail = (await runtime.pieceDetail(PIECE)) as {
       version: string;
-      actions: Record<string, unknown>;
+      actions: Record<string, { requireReactor?: string }>;
+      triggers: Record<string, { requireReactor?: string }>;
     };
 
     expect(detail.version).toBe("2.0.0");
     expect(Object.keys(detail.actions)).toEqual(["do_thing", "summarise"]);
+    expect(detail.actions.do_thing.requireReactor).toBe("write");
+    expect("requireReactor" in detail.actions.summarise).toBe(false);
+    expect(detail.triggers.thing_happened.requireReactor).toBe("read");
   });
 });
