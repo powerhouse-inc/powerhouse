@@ -758,7 +758,7 @@ Override connect.branding.appName.<br><br>
 **usage:** `--app-name <str>`<br>
 
 #### Home Background <br>
-Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.<br><br>
+Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient.<br><br>
 **usage:** `--home-background <str>`<br>
 
 #### Sentry Dsn <br>
