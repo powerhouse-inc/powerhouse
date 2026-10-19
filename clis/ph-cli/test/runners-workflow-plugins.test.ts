@@ -166,6 +166,28 @@ describe("switchboard runner — plugin-contributed drives", () => {
     ]);
   });
 
+  it("a live drive already serving the slug (under another id) is reused, never re-created", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { addDefaultDrive } =
+      await import("@powerhousedao/switchboard/utils");
+    vi.mocked(addDefaultDrive).mockClear();
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const resolveIdOrSlug = vi.fn().mockResolvedValue("workflows-other-hash");
+    vi.mocked(startSwitchboard).mockResolvedValueOnce({
+      workflowsEnabled: true,
+      reactor: { resolveIdOrSlug },
+    } as never);
+
+    const runner = await import("../src/runners/switchboard.js");
+    const handle = await runner.run(switchboardHost(), ctx);
+    expect(resolveIdOrSlug).toHaveBeenCalledWith("workflows");
+    expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
+    expect(handle.driveUrls).toContain("http://localhost:7599/d/workflows");
+  });
+
   it("drive: false (no contribution) seeds nothing extra", async () => {
     const hostCore = await import("@powerhousedao/host-core");
     vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(

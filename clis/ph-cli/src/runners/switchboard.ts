@@ -155,11 +155,32 @@ export interface SwitchboardHandle {
   ready: Promise<void>;
 }
 
-/** Adapter from the switchboard's reactor client onto the host-core seeder.
- * addDefaultDrive is slug-idempotent itself, so findDriveBySlug delegates. */
+/** The slice of the switchboard's reactor client (IReactorClient) the seeder
+ * reads: id-or-slug resolution against the read model (live documents). */
+interface SlugLookupClient {
+  resolveIdOrSlug(identifier: string): Promise<string | undefined>;
+}
+
+/**
+ * Adapter from the switchboard's reactor client onto the host-core seeder.
+ * Seeding is SLUG-keyed: a live drive that already serves the slug — under
+ * whatever id (a store from a run that hashed the project path differently,
+ * or a hand-made drive) — is the drive, and nothing is created. addDefaultDrive
+ * alone only knows ids: with a different id it would try to create a second
+ * drive for the slug, and against a deleted document with that id the create
+ * fails on every boot.
+ */
 function seederClient(reactor: unknown, port: number): DriveSeederClient {
   return {
-    findDriveBySlug: () => Promise.resolve(undefined),
+    findDriveBySlug: async (slug: string) => {
+      try {
+        const id = await (reactor as SlugLookupClient).resolveIdOrSlug(slug);
+        return id || undefined;
+      } catch {
+        // not found (or ambiguous): seed as declared
+        return undefined;
+      }
+    },
     createDrive: async (drive: ResolvedDrive) => {
       const { addDefaultDrive } =
         await import("@powerhousedao/switchboard/utils");
