@@ -4,7 +4,7 @@ import {
   baseReducerVersion,
   garbageCollect,
   garbageCollectV2,
-  generateId,
+  generateActionId,
   isDenied,
   isDocumentAction,
   positionalOperations,
@@ -39,11 +39,11 @@ export interface UndoPlan {
 const GROUP_PREFIX = "undo-group:";
 
 export function newUndoGroup(): string {
-  return generateId();
+  return generateActionId();
 }
 
 export function groupedAction<A extends Action>(action: A, group: string): A {
-  return { ...action, id: `${GROUP_PREFIX}${group}:${generateId()}` };
+  return { ...action, id: `${GROUP_PREFIX}${group}:${generateActionId()}` };
 }
 
 export function undoGroupOf(action: Action): string | undefined {
@@ -222,7 +222,7 @@ export function editedSince(
 // A fresh action carrying an undone edit, to dispatch as its redo.
 export function redoAction(action: Action): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: action.type,
     scope: action.scope,
     input: action.input,
