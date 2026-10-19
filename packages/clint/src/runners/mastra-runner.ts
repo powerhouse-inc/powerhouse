@@ -8,8 +8,6 @@ import {
   reactorHostSchema,
   resolveUserDataPlaceholders,
   runnerBaseSchema,
-  writeRunRecord,
-  clearRunRecord,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
@@ -198,7 +196,8 @@ async function serveAgent(
       ? resolved.runner.port
       : DEFAULT_AGENT_PORT;
 
-  // Single-instance lock, standalone-run parity with the compound.
+  // Single-instance lock: refuse before attaching or binding when the record
+  // start-run wrote for a running instance of this host is live.
   const projectName = (() => {
     try {
       return (
@@ -373,25 +372,13 @@ async function serveAgent(
     `[${resolved.name}] agent API (OpenAI-compatible): ${outputs.endpoints.openai}  (model: ${provider.modelId})`,
   );
 
-  writeRunRecord(ctx.projectRoot, {
-    version: 2,
-    host: resolved.name,
-    projectName,
-    kind,
-    verb: ctx.verb,
-    pid: process.pid,
-    startedAt: new Date().toISOString(),
-    outputs,
-    extra: { reactor: attachment.endpoint, model: provider.modelId },
-  });
-  const cleanup = () => clearRunRecord(ctx.projectRoot, resolved.name);
-  process.once("exit", cleanup);
-
+  // No run record here: standalone `ph run` (start-run) publishes `outputs`
+  // in the v2 record because this module exports `outputsSchema`, and a
+  // compound records its members itself. One writer per record.
   return {
     outputs,
     ready,
     shutdown: async () => {
-      cleanup();
       await new Promise((resolve) => server.close(resolve));
     },
   };

@@ -26,9 +26,9 @@ export interface StartRunArgs {
  * type→runner registry — what a host does is written in its own file.
  *
  * A reactor runner that exports `outputsSchema` has its handle's outputs
- * published in a v2 `.ph/run/<name>.json` record once ready. Runners without
- * one (mastra) and compounds keep writing their own records; one-shot verbs
- * (`build`) return nothing and write none.
+ * published in a v2 `.ph/run/<name>.json` record once ready; this is the only
+ * standalone writer (mastra included). Compounds write their own record with
+ * the members in it; one-shot verbs (`build`) return nothing and write none.
  */
 export async function startRun(args: StartRunArgs): Promise<unknown> {
   const projectRoot = args.projectRoot ?? process.cwd();

@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
 import * as runner from "../src/runners/mastra-runner.js";
 import { promptFromMessages } from "../src/runners/mastra-runner.js";
 
@@ -76,12 +83,15 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
-  it("publishes validated outputs in its handle and its v2 run record", async () => {
+  it("publishes validated outputs in its handle and leaves the run record to start-run", async () => {
     const { readRunRecord } = await import("@powerhousedao/host-core");
     const outputs = runner.outputsSchema.parse(handle.outputs);
     expect(outputs.endpoints.openai).toBe(`${outputs.origin}/v1`);
     expect(outputs.endpoints.ready).toBe(`${outputs.origin}/ready`);
-    expect(readRunRecord(projectDir, "assistant")?.outputs).toEqual(outputs);
+    // start-run writes the v2 record for runners exporting outputsSchema;
+    // the runner itself must not (one writer per record).
+    expect(runner.kind).toBe("reactor");
+    expect(readRunRecord(projectDir, "assistant")).toBeUndefined();
   });
 
   it("answers /ready and /v1/models", async () => {
@@ -137,6 +147,20 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("refuses a second instance via the run-record lock", async () => {
+    const { clearRunRecord, writeRunRecord } =
+      await import("@powerhousedao/host-core");
+    // The record start-run publishes for the first, live instance.
+    writeRunRecord(projectDir, {
+      version: 2,
+      host: "assistant",
+      projectName: "agent-lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      outputs: handle.outputs,
+    });
+    onTestFinished(() => clearRunRecord(projectDir, "assistant"));
     await expect(
       runner.run(
         {
