@@ -74,12 +74,14 @@ export const phBackgroundLayerSchema = /* @__PURE__ */ emitJsonSchemaFragment(
 
 /** A pane's background: layers over a page colour, or one image. */
 export const phBackgroundSchema = /* @__PURE__ */ emitJsonSchemaFragment(
-  orNull(connectBackgroundSchema),
+  /* @__PURE__ */ orNull(connectBackgroundSchema),
 );
 
 /** The drive explorer's icons (the generic plugin's). */
 export const phConnectExplorerIconsSchema =
-  /* @__PURE__ */ emitJsonSchemaFragment(orNull(connectExplorerIconsSchema));
+  /* @__PURE__ */ emitJsonSchemaFragment(
+    /* @__PURE__ */ orNull(connectExplorerIconsSchema),
+  );
 
 /** `connect.branding`. */
 export const phConnectBrandingSchema = /* @__PURE__ */ emitJsonSchemaFragment(
