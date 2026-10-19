@@ -276,10 +276,27 @@ function callerOverride(
   };
 }
 
+/** Fail at `ph run`, naming the plugin and key, when a composed Connect
+ * plugin's entry config does not match its schema. */
+async function validateComposition(
+  host: ConnectHostParsed,
+  ctx: RunnerContext,
+): Promise<void> {
+  const { validateConnectPluginConfigs } =
+    await import("./connect-plugin-configs.js");
+  await validateConnectPluginConfigs(
+    ctx.projectRoot,
+    host.runner.plugins,
+    ctx.verb,
+    `hosts/${host.name}/host.js`,
+  );
+}
+
 export async function dev(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<RunnerHandle<ConnectOutputs>> {
+  await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = toStudioArgs(host);
   const server = await runConnectStudio(
@@ -319,6 +336,7 @@ export async function serve(
   host: ConnectHostParsed,
   ctx: RunnerContext,
 ): Promise<RunnerHandle<ConnectOutputs>> {
+  await validateComposition(host, ctx);
   const { runConnectPreview } = await import("../services/connect-preview.js");
   const runner = host.runner;
   const port = runner.port ?? DEFAULT_CONNECT_STUDIO_PORT;
