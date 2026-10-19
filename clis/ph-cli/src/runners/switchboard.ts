@@ -124,21 +124,6 @@ function defaultDriveSlug(url: string | undefined): string {
   return match ? decodeURIComponent(match[1]) : DEFAULT_DRIVE_SLUG;
 }
 
-/** Set once SIGINT/SIGTERM arrives. The owned reactor's own signal handler
- * then kills the reactor and drains this api in order; a supervisor's
- * shutdown() must not drain it a second time in parallel. */
-let signalled = false;
-let signalWatch = false;
-function watchSignals(): void {
-  if (signalWatch) return;
-  signalWatch = true;
-  const mark = () => {
-    signalled = true;
-  };
-  process.prependListener("SIGINT", mark);
-  process.prependListener("SIGTERM", mark);
-}
-
 /** A drive in the plan with the slug its declaration used (a `projectHash:
  * true` drive is served under its hashed slug; outputs key it by this one). */
 interface PlannedDrive {
@@ -405,11 +390,11 @@ async function start(
   // (or a test with the service mocked) must not die of an unhandled one.
   ready.catch(() => undefined);
   const graphql = `${origin}/graphql`;
-  // Drains the HTTP server, GraphQL, MCP, attachments, the plugins'
-  // onShutdown and the read-model db, which frees the port. The reactor the
-  // server owns is not stopped here: SwitchboardReactor exposes no kill; its
-  // own SIGINT/SIGTERM handlers stop it (and drain the api themselves).
-  watchSignals();
+  // Stops the reactor the server owns, then drains the HTTP server (freeing
+  // the port), GraphQL, MCP, attachments, the plugins' onShutdown and the
+  // read-model db, then closes the reactor database. SwitchboardReactor
+  // memoizes it and SIGINT/SIGTERM run the same teardown, so a supervisor's
+  // shutdown() during or after a signal joins it instead of draining twice.
   let stopping: Promise<void> | undefined;
   return {
     outputs: outputsSchema.parse({
@@ -421,8 +406,7 @@ async function start(
       drives,
     }),
     ready,
-    shutdown: () =>
-      (stopping ??= signalled ? Promise.resolve() : switchboard.shutdown()),
+    shutdown: () => (stopping ??= switchboard.shutdown()),
     port,
     driveUrls,
     endpoints: { graphql },
