@@ -164,7 +164,10 @@ import type {
   UpdateStateExampleAction,
   UpdateStateExampleInput,
 } from "./types.js";
+import { nextAuthTimestamp } from "./action-id.js";
 import { deriveOperationId, generateActionId } from "./utils.js";
+
+export { nextAuthTimestamp };
 
 /**
  * Cancels the last `count` operations.
@@ -214,21 +217,6 @@ export const retract = (target: string, scope = "global") =>
   );
 
 // TODO improve base actions type
-
-let lastClockMs = 0;
-let lastStampMs = 0;
-
-/**
- * Strictly increasing per process, as the auth scope's admission rule requires
- * of one client's auth actions. A clock that steps back is followed rather than
- * outrun.
- */
-export function nextAuthTimestamp(): string {
-  const now = Date.now();
-  lastStampMs = now < lastClockMs || now > lastStampMs ? now : lastStampMs + 1;
-  lastClockMs = now;
-  return new Date(lastStampMs).toISOString();
-}
 
 /**
  * Helper function to be used by action creators.

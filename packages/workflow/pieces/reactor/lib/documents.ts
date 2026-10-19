@@ -5,7 +5,10 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { generateActionId } from "@powerhousedao/shared/document-model/action-id";
+import {
+  generateActionId,
+  nextAuthTimestamp,
+} from "@powerhousedao/shared/document-model/action-id";
 
 export const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 export const DRIVE_DOCUMENT_TYPES = new Set([
@@ -124,7 +127,8 @@ export function plainAction(
 ): Action {
   return {
     id: generateActionId(),
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs:
+      scope === "auth" ? nextAuthTimestamp() : new Date().toISOString(),
     type,
     input,
     scope,

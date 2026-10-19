@@ -62,3 +62,18 @@ export const generateActionId: () => string = createActionIdGenerator();
 export function compareActionIds(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+let lastClockMs = 0;
+let lastStampMs = 0;
+
+/**
+ * Strictly increasing per process, as the auth scope's admission rule requires
+ * of one client's auth actions. A clock that steps back is followed rather than
+ * outrun.
+ */
+export function nextAuthTimestamp(): string {
+  const now = Date.now();
+  lastStampMs = now < lastClockMs || now > lastStampMs ? now : lastStampMs + 1;
+  lastClockMs = now;
+  return new Date(lastStampMs).toISOString();
+}
