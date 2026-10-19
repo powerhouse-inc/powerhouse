@@ -31,18 +31,30 @@ import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
  * that was never substituted.
  */
 
-export const workflowsConnectConfigSchema = z
-  .object({
-    drive: z.union([z.string().min(1), driveReferenceSchema]).optional(),
-    /** Display name for the attached drive entry (the drive's own name wins
-     * once it syncs). */
-    name: z.string().min(1).optional(),
-  })
-  .partial();
+export const workflowsConnectConfigSchema = z.strictObject({
+  drive: z.union([z.string().min(1), driveReferenceSchema]).optional(),
+  /** Display name for the attached drive entry (the drive's own name wins
+   * once it syncs). */
+  name: z.string().min(1).optional(),
+});
 
 export type WorkflowsConnectConfig = z.infer<
   typeof workflowsConnectConfigSchema
 >;
+
+/** What a host.js entry writes: `drive` is a URL or, inside a compound, a
+ * `{ from, slug }` reference (output tokens replace the latter in T3). A
+ * type alias, not an interface, so it stays assignable to the runtime
+ * `PluginEntryData` config record. */
+export type WorkflowsConnectConfigInput = z.input<
+  typeof workflowsConnectConfigSchema
+>;
+
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/connect/plugins/workflows": WorkflowsConnectConfigInput;
+  }
+}
 
 const LOG = "[connect:plugins:workflows]";
 
@@ -59,9 +71,8 @@ function withDrive(
 }
 
 export const createWorkflowsPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config = workflowsConnectConfigSchema.parse(
-    rawConfig ?? {},
-  ) as WorkflowsConnectConfig;
+  const config: WorkflowsConnectConfig =
+    workflowsConnectConfigSchema.parse(rawConfig);
   const plugin: ConnectPlugin = {
     name: "connect-workflows",
     appliesTo: "connect",

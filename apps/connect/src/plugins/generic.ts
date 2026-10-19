@@ -1,4 +1,9 @@
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import {
+  connectDriveSectionsSchema,
+  connectDrivesSchema,
+  connectHomeSchema,
+} from "@powerhousedao/shared/connect/connect-config-schema";
 import type {
   PHBackground,
   PHConnectExplorerIcons,
@@ -39,56 +44,36 @@ import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
  * applied after the build). `null` keeps the built-in icon / gradient.
  */
 
-const sectionSchema = z
-  .object({
-    enabled: z.boolean().optional(),
-    allowAdd: z.boolean().optional(),
-    allowDelete: z.boolean().optional(),
-  })
-  .optional();
+// The entry config is the owned slices themselves, typed by the single-source
+// Connect config schemas (typed-host-configs 1.6): `allowAddDrive`,
+// `sections` and `icons` are `connect.drives.*`, `homeBackground` is
+// `connect.home.background`. Strict, so a typo'd key fails instead of being
+// ignored. The build's image resolution keeps the shape, so the same schema
+// holds before and after it.
+export const genericConfigSchema = z.strictObject({
+  allowAddDrive: connectDrivesSchema.shape.allowAddDrive,
+  sections: connectDriveSectionsSchema.optional(),
+  icons: connectDrivesSchema.shape.icons,
+  homeBackground: connectHomeSchema.shape.background,
+});
 
-const imageRef = z.string().nullable().optional();
+export type GenericConfig = z.output<typeof genericConfigSchema>;
 
-const explorerIconsSchema = z
-  .object({
-    localDrive: imageRef,
-    remoteDrive: imageRef,
-    folder: imageRef,
-    document: imageRef,
-    documents: z.record(z.string(), z.string()).nullable().optional(),
-  })
-  .nullable()
-  .optional();
+/** What a host.js entry writes. A type alias, not an interface, so it stays
+ * assignable to the runtime `PluginEntryData` config record. */
+export type GenericConfigInput = z.input<typeof genericConfigSchema>;
 
-// The shape is `PHBackground` (shared/clis/types.ts); the Connect build
-// validates it and resolves its images, so here it only has to be a string
-// or a `{ layers }` object.
-const backgroundSchema = z
-  .union([
-    z.string(),
-    z.object({ color: z.unknown().optional(), layers: z.array(z.unknown()) }),
-  ])
-  .nullable()
-  .optional();
-
-const genericConfigSchema = z
-  .object({
-    allowAddDrive: z.boolean().optional(),
-    sections: z
-      .object({ remote: sectionSchema, local: sectionSchema })
-      .optional(),
-    icons: explorerIconsSchema,
-    homeBackground: backgroundSchema,
-  })
-  .partial();
-
-type GenericConfig = z.infer<typeof genericConfigSchema>;
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/connect/plugins/generic": GenericConfigInput;
+  }
+}
 
 const DEFAULT_DRIVES = DEFAULT_CONNECT_CONFIG.drives;
 const DEFAULT_HOME = DEFAULT_CONNECT_CONFIG.home;
 
 export const createGenericPlugin: ConnectPluginFactory = (rawConfig) => {
-  const config = genericConfigSchema.parse(rawConfig ?? {}) as GenericConfig;
+  const config: GenericConfig = genericConfigSchema.parse(rawConfig);
   const plugin: ConnectPlugin = {
     name: "connect-generic",
     appliesTo: "connect",
