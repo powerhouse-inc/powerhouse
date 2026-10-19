@@ -12,7 +12,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { applySwitchboardReactorDefaults } from "../src/builder-defaults.mjs";
 import { startSwitchboard } from "../src/server.mjs";
 
@@ -122,60 +130,120 @@ describe("SwitchboardReactor.shutdown", () => {
     return switchboard;
   }
 
-  it("stops an owned reactor and frees the port once, however often it is called", async () => {
-    // Capture the module the switchboard builds for itself.
+  /**
+   * Spies on the reactor module the switchboard builds for itself, from the
+   * moment it is built (an aborted boot tears it down before returning).
+   */
+  function watchOwnedReactor() {
     const realBuild = Object.getOwnPropertyDescriptor(
       ReactorClientBuilder.prototype,
       "buildModule",
     )?.value as (
       this: ReactorClientBuilder,
     ) => Promise<InProcessReactorClientModule>;
-    let owned: InProcessReactorClientModule | undefined;
+    const watched: {
+      kill?: MockInstance<() => unknown>;
+      destroy?: MockInstance<() => Promise<void>>;
+    } = {};
     vi.spyOn(ReactorClientBuilder.prototype, "buildModule").mockImplementation(
       async function (this: ReactorClientBuilder) {
-        owned = await realBuild.call(this);
-        return owned;
+        const built = await realBuild.call(this);
+        if (!built.reactorModule) throw new Error("no reactor module built");
+        watched.kill = vi.spyOn(built.reactorModule.reactor, "kill");
+        watched.destroy = vi.spyOn(built.reactorModule.database, "destroy");
+        return built;
       },
     );
-    // Stubbed before boot: the signal handler binds process.exit when the
-    // reactor is built.
-    const exitCodes: Array<number | undefined> = [];
+    return watched;
+  }
+
+  /** Stubbed before boot: the signal handler binds process.exit when the
+   * reactor is built. */
+  function stubExit() {
+    const codes: Array<number | undefined> = [];
     let resolveExit: (code: number | undefined) => void = () => undefined;
     const exited = new Promise<number | undefined>((resolve) => {
       resolveExit = resolve;
     });
     vi.spyOn(process, "exit").mockImplementation((code) => {
-      exitCodes.push(code === undefined ? undefined : Number(code));
-      resolveExit(code === undefined ? undefined : Number(code));
+      const value = code === undefined ? undefined : Number(code);
+      codes.push(value);
+      resolveExit(value);
       return undefined as never;
     });
+    return { codes, exited };
+  }
+
+  function raiseSigint(): void {
+    const sigint = addedListeners("SIGINT");
+    expect(sigint).toHaveLength(1);
+    sigint[0]!("SIGINT");
+  }
+
+  it("stops an owned reactor and frees the port once, however often it is called", async () => {
+    const reactor = watchOwnedReactor();
+    const exit = stubExit();
 
     const sb = await start();
-    const reactorModule = owned?.reactorModule;
-    if (!reactorModule) throw new Error("switchboard built no reactor module");
-    const kill = vi.spyOn(reactorModule.reactor, "kill");
-    const destroy = vi.spyOn(reactorModule.database, "destroy");
     const dispose = vi.spyOn(apiOf(sb), "dispose");
     expect(await portIsFree(sb.port)).toBe(false);
 
     await Promise.all([sb.shutdown(), sb.shutdown()]);
     await sb.shutdown();
 
-    expect(kill).toHaveBeenCalledTimes(1);
+    expect(reactor.kill).toHaveBeenCalledTimes(1);
     expect(dispose).toHaveBeenCalledTimes(1);
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(reactor.destroy).toHaveBeenCalledTimes(1);
     expect(await portIsFree(sb.port)).toBe(true);
-    expect(exitCodes).toEqual([]);
+    expect(exit.codes).toEqual([]);
 
     // A later SIGINT joins the finished teardown and only exits.
-    const sigint = addedListeners("SIGINT");
-    expect(sigint).toHaveLength(1);
-    sigint[0]!("SIGINT");
-    expect(await exited).toBe(0);
-    expect(exitCodes).toEqual([0]);
-    expect(kill).toHaveBeenCalledTimes(1);
+    raiseSigint();
+    expect(await exit.exited).toBe(0);
+    expect(exit.codes).toEqual([0]);
+    expect(reactor.kill).toHaveBeenCalledTimes(1);
     expect(dispose).toHaveBeenCalledTimes(1);
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(reactor.destroy).toHaveBeenCalledTimes(1);
+  }, 60_000);
+
+  it("an aborted boot tears the owned reactor down once, through its shutdown", async () => {
+    const reactor = watchOwnedReactor();
+    const exit = stubExit();
+    const previousSource = process.env.RENOWN_SOURCE;
+    // No loaded package serves the renown read model: the boot aborts after
+    // the reactor and the api are up.
+    process.env.RENOWN_SOURCE = "self";
+    const port = await freePort();
+
+    try {
+      await expect(
+        startSwitchboard({
+          workflows: { enabled: false },
+          dbPath: join(tempRoot, "read-model"),
+          port,
+          strictPort: true,
+          mcp: false,
+          disableLocalPackages: true,
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+          logger: stubLogger(),
+        }),
+      ).rejects.toThrow(/no loaded package serves/);
+    } finally {
+      if (previousSource === undefined) {
+        delete process.env.RENOWN_SOURCE;
+      } else {
+        process.env.RENOWN_SOURCE = previousSource;
+      }
+    }
+
+    expect(reactor.kill).toHaveBeenCalledTimes(1);
+    expect(reactor.destroy).toHaveBeenCalledTimes(1);
+    expect(await portIsFree(port)).toBe(true);
+
+    raiseSigint();
+    expect(await exit.exited).toBe(0);
+    expect(reactor.kill).toHaveBeenCalledTimes(1);
+    expect(reactor.destroy).toHaveBeenCalledTimes(1);
   }, 60_000);
 
   it("drains the api once and leaves a caller-provided reactor running", async () => {

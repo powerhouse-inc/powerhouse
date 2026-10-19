@@ -970,27 +970,32 @@ async function initServer(
   };
 
   // Tear down a partially booted stack in the reactor's own order: reactor
-  // first, then the api's HTTP/WS/db handles, then the database pool.
+  // first, then the api's HTTP/WS/db handles, then the database pool. An
+  // owned reactor goes through its module's shutdown, so the other hooks run
+  // too and a later signal joins this teardown instead of repeating it.
   const abortBoot = async (api: { dispose: () => Promise<void> }) => {
+    let disposed: Promise<void> | undefined;
+    const disposeApi = () => (disposed ??= api.dispose());
+    apiRef.current = { dispose: disposeApi };
     const owned = ownedReactorModule;
-    if (owned) {
+    if (owned?.reactorModule) {
+      try {
+        await owned.reactorModule.shutdown();
+      } catch (error) {
+        logger.error("Aborting boot: reactor shutdown failed: @error", error);
+      }
+    } else if (owned) {
       try {
         await owned.reactor.kill().completed;
       } catch (error) {
         logger.error("Aborting boot: reactor shutdown failed: @error", error);
       }
     }
+    // Already done by the shutdown hook unless the reactor failed to stop.
     try {
-      await api.dispose();
+      await disposeApi();
     } catch (error) {
       logger.error("Aborting boot: api dispose failed: @error", error);
-    }
-    if (owned?.reactorModule) {
-      try {
-        await owned.reactorModule.database.destroy();
-      } catch (error) {
-        logger.error("Aborting boot: database destroy failed: @error", error);
-      }
     }
   };
 
