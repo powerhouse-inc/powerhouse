@@ -65,11 +65,6 @@ interface DesktopRunnerOptions {
   phCliSpec?: string;
 }
 
-interface ChildWrapper {
-  host: string;
-  runner?: { port?: number; defaultVerb?: string } & Record<string, unknown>;
-}
-
 async function compoundModule() {
   return import("@powerhousedao/host-core/runners/compound");
 }
@@ -84,10 +79,9 @@ async function connectPort(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<number> {
-  const children = (host.children ?? {}) as Record<string, ChildWrapper>;
-  for (const wrapper of Object.values(children)) {
+  for (const wrapper of Object.values(host.children ?? {})) {
     if (wrapper.host !== "connect") continue;
-    if (typeof wrapper.runner?.port === "number") return wrapper.runner.port;
+    if (wrapper.runner?.port !== undefined) return wrapper.runner.port;
     const member = await loadHost(ctx.projectRoot, wrapper.host);
     if (typeof member.host.runner.port === "number") {
       return member.host.runner.port;
@@ -239,18 +233,17 @@ async function buildMembers(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<void> {
-  const children = (host.children ?? {}) as Record<string, ChildWrapper>;
-  for (const [name, wrapper] of Object.entries(children)) {
+  for (const [name, wrapper] of Object.entries(host.children ?? {})) {
     const member = await loadHost(ctx.projectRoot, wrapper.host);
     const specifier = member.host.runner.module;
     const runner = await resolveRunnerModule(ctx.projectRoot, specifier);
-    validateHost(
+    const validated = validateHost(
       runner,
       specifier,
       member.host,
       `hosts/${wrapper.host}/host.js`,
     );
-    if (typeof (runner as Record<string, unknown>).build !== "function") {
+    if (typeof runner.build !== "function") {
       console.log(
         `[${host.name}] build: ${name} (${wrapper.host}) exports no build — skipped (packaging builds what is buildable)`,
       );
@@ -258,7 +251,11 @@ async function buildMembers(
     }
     const fn = getVerb(runner, specifier, "build");
     console.log(`[${host.name}] build → ${name} (${wrapper.host})`);
-    await fn(member.host, { ...ctx, verb: "build" });
+    await fn(validated, {
+      ...ctx,
+      verb: "build",
+      parent: { host: host.name, verb: ctx.verb },
+    });
   }
 }
 

@@ -31,7 +31,7 @@ export const hostSchema = z.looseObject({
   }),
   children: childrenSchema,
   config: z.looseObject({}).optional(),
-  profile: profileSchema,
+  profile: profileSchema.optional(),
 });
 
 interface MemberRef {
@@ -41,18 +41,11 @@ interface MemberRef {
 }
 
 function members(host: HostDefinition): MemberRef[] {
-  return Object.entries(host.children ?? {}).map(([name, wrapper]) => {
-    const w = wrapper as {
-      host: string;
-      runner?: { port?: unknown };
-    };
-    return {
-      name,
-      host: w.host,
-      runnerPort:
-        typeof w.runner?.port === "number" ? w.runner.port : undefined,
-    };
-  });
+  return Object.entries(host.children ?? {}).map(([name, wrapper]) => ({
+    name,
+    host: wrapper.host,
+    runnerPort: wrapper.runner?.port,
+  }));
 }
 
 async function memberPort(
@@ -70,7 +63,7 @@ export async function run(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<void> {
-  const defaultVerb = (host.runner.defaultVerb as string | undefined) ?? "run";
+  const defaultVerb = host.runner.defaultVerb ?? "run";
   if (defaultVerb !== "dev") {
     throw new Error(
       `The phase-0 compound bridge only supports defaultVerb "dev" (vetra semantics); ` +
@@ -104,13 +97,11 @@ export async function run(
   // runner's verbs, so project the block onto env HERE (P2.4 via the vetra
   // path). Wrapper override wins over the member host file, as everywhere.
   const sbMember = await loadHost(ctx.projectRoot, switchboardRef.host);
-  const sbWrapper = (host.children ?? {})[switchboardRef.name] as
-    | { reactor?: Record<string, unknown> }
-    | undefined;
-  const sbReactor = {
-    ...((sbMember.host.reactor as Record<string, unknown> | undefined) ?? {}),
-    ...(sbWrapper?.reactor ?? {}),
-  } as ReactorConfig;
+  const sbWrapper = host.children?.[switchboardRef.name];
+  const sbReactor: ReactorConfig = {
+    ...sbMember.host.reactor,
+    ...sbWrapper?.reactor,
+  };
   const { applyReactorEnvProjection } = await import("./reactor-env.js");
   applyReactorEnvProjection(sbReactor, `hosts/${switchboardRef.host}/host.js`);
 

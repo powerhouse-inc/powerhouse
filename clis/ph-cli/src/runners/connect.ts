@@ -15,7 +15,6 @@ import {
   profileSchema,
   resolveDriveDeclaration,
   type DriveDeclaration,
-  type PluginEntry,
   projectDrivesIntoConnect,
   projectReactorToConnect,
   reactorSchema,
@@ -56,7 +55,7 @@ export const hostSchema = z.looseObject({
     plugins: z.array(pluginEntrySchema).optional(),
   }),
   config: z.looseObject({}).optional(),
-  profile: profileSchema,
+  profile: profileSchema.optional(),
   reactor: reactorSchema.optional(),
 });
 
@@ -118,12 +117,12 @@ function callerOverride(
   verb = "dev",
 ): PHConnectRuntimeConfig | undefined {
   const base = (host.config ?? {}) as PHConnectRuntimeConfig;
-  const reactor = host.reactor as ReactorConfig | undefined;
+  const reactor: ReactorConfig | undefined = host.reactor;
 
   // R3: the composition (verb-filtered, projected as DATA — the browser
   // pipeline resolves and runs the entries), declared drives, and the
   // reactor-core identity/namespace keys.
-  const entries = (host.runner as { plugins?: PluginEntry[] }).plugins;
+  const entries = host.runner.plugins;
   const composition: PHConnectCompositionEntry[] | undefined =
     entries === undefined
       ? undefined
@@ -153,9 +152,7 @@ function callerOverride(
     for (const entry of all) {
       const active = entryActiveForVerb(entry, verb);
       const scope =
-        entry.verbs === "*"
-          ? ""
-          : ` verbs=[${(entry.verbs as string[]).join(",")}]`;
+        entry.verbs === "*" ? "" : ` verbs=[${entry.verbs.join(",")}]`;
       const cfg = Object.keys(entry.config ?? {});
       console.log(
         `[connect]   ${active ? "•" : "○"} ${entry.module}${scope}` +
@@ -164,15 +161,13 @@ function callerOverride(
       );
     }
   }
-  const declared = (reactor as { drives?: DriveDeclaration[] } | undefined)
-    ?.drives;
+  const declared = reactor?.drives;
   const declaredDefaults =
     declared && ctx
       ? declaredDrivesToDefaults(ctx.projectRoot, declared)
       : undefined;
-  const reactorRenown = (reactor as { renown?: unknown } | undefined)?.renown;
-  const reactorNamespace = (reactor as { namespace?: string } | undefined)
-    ?.namespace;
+  const reactorRenown = reactor?.renown;
+  const reactorNamespace = reactor?.namespace;
   base.drives = declaredDefaults
     ? {
         ...base.drives,
@@ -184,8 +179,7 @@ function callerOverride(
       }
     : base.drives;
   if (composition) base.composition = composition;
-  if (reactorRenown)
-    base.renown = { ...(reactorRenown as object), ...base.renown };
+  if (reactorRenown) base.renown = { ...reactorRenown, ...base.renown };
   if (reactorNamespace !== undefined)
     base.instance = {
       ...base.instance,

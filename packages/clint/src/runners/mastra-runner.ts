@@ -10,7 +10,6 @@ import {
   writeRunRecord,
   clearRunRecord,
   type HostDefinition,
-  type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
 import {
@@ -63,8 +62,7 @@ async function resolveRemoteUrl(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<string> {
-  const reactor = host.reactor as ReactorConfig | undefined;
-  const backends = Object.entries(reactor?.backends ?? {});
+  const backends = Object.entries(host.reactor?.backends ?? {});
   const remote = backends.find(([, b]) => b.kind === "remote")?.[1];
   if (!remote) {
     throw new Error(
@@ -73,7 +71,7 @@ async function resolveRemoteUrl(
         `{ kind: "remote", remote: { host: "switchboard" } }.`,
     );
   }
-  const ref = remote.remote as { url?: string; host?: string } | undefined;
+  const ref = remote.remote;
   if (ref?.url) return ref.url;
   if (ref?.host) {
     const sibling = await loadHost(ctx.projectRoot, ref.host);
@@ -207,11 +205,7 @@ async function serveAgent(
       if (req.method === "GET" && url === "/v1/models") {
         // The agent card: id + model, plus description/image from the host's
         // profile (rewire R5 — identity lives in profile, not config).
-        const profile = (resolved.profile ?? {}) as {
-          description?: string;
-          icon?: string;
-          name?: string;
-        };
+        const profile = resolved.profile ?? {};
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({

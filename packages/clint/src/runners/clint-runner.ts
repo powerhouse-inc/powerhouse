@@ -51,13 +51,22 @@ export const kind = "compound";
 
 export const hostSchema = compoundHostSchema;
 
-interface ChildWrapper {
-  host: string;
-  runner?: { port?: number } & Record<string, unknown>;
-  config?: { readiness?: { pattern?: string; timeout?: number } } & Record<
-    string,
-    unknown
-  >;
+/** A member's `config.readiness` override (member config is
+ * runner-defined, so the shape is checked here). */
+function readinessOf(config: Record<string, unknown> | undefined): {
+  pattern?: string;
+  timeout?: number;
+} {
+  const readiness = config?.readiness;
+  if (typeof readiness !== "object" || readiness === null) return {};
+  return {
+    ...("pattern" in readiness && typeof readiness.pattern === "string"
+      ? { pattern: readiness.pattern }
+      : {}),
+    ...("timeout" in readiness && typeof readiness.timeout === "number"
+      ? { timeout: readiness.timeout }
+      : {}),
+  };
 }
 
 interface AgentRef {
@@ -90,8 +99,7 @@ function childServices(
   ctx: RunnerContext,
   phCliEntry: string,
 ): ServiceDefinition<Record<string, unknown>>[] {
-  const children = (host.children ?? {}) as Record<string, ChildWrapper>;
-  return Object.entries(children).map(([name, wrapper]) =>
+  return Object.entries(host.children ?? {}).map(([name, wrapper]) =>
     defineService({
       id: name,
       name,
@@ -105,12 +113,12 @@ function childServices(
           {
             name: "up",
             pattern: new RegExp(
-              wrapper.config?.readiness?.pattern ?? DEFAULT_READINESS,
+              readinessOf(wrapper.config).pattern ?? DEFAULT_READINESS,
               "i",
             ),
           },
         ],
-        timeout: wrapper.config?.readiness?.timeout ?? 180_000,
+        timeout: readinessOf(wrapper.config).timeout ?? 180_000,
       },
     }),
   );
@@ -157,10 +165,12 @@ async function startShell(
   const resolved = resolveUserDataPlaceholders(host, userData);
   const config = (resolved.config ?? {}) as CliHostConfig;
   const lifecycle =
-    (resolved.runner.lifecycle as string | undefined) ?? "detached";
+    typeof resolved.runner.lifecycle === "string"
+      ? resolved.runner.lifecycle
+      : "detached";
 
   const phCliEntry = resolvePhCliEntry(ctx.projectRoot);
-  const children = (resolved.children ?? {}) as Record<string, ChildWrapper>;
+  const children = resolved.children ?? {};
   const projectName = readProjectName(ctx.projectRoot, resolved.name);
   const definitions = childServices(resolved, ctx, phCliEntry);
   const eventBus = createEventBus();
@@ -234,9 +244,7 @@ async function startShell(
 
   // Compound-plugin pipeline (CompoundCore): resolve entries + the proxy
   // ergonomic alias, then fire onMembersReady now that endpoints are known.
-  const pluginEntries = (resolved.runner as { plugins?: unknown }).plugins as
-    | Parameters<typeof resolveHostPlugins>[3]
-    | undefined;
+  const pluginEntries = resolved.runner.plugins;
   const resolvedPlugins = pluginEntries
     ? (
         await resolveHostPlugins(
@@ -248,7 +256,7 @@ async function startShell(
         )
       ).map((r) => r.plugin)
     : [];
-  const proxyBlock = (resolved.runner as { proxy?: unknown }).proxy;
+  const proxyBlock = resolved.runner.proxy;
   if (proxyBlock && typeof proxyBlock === "object") {
     resolvedPlugins.push(createProxyPlugin(proxyBlock as never) as never);
   }
@@ -353,7 +361,7 @@ export async function run(
   console.log(
     `[${host.name}] services up. ` +
       `(ph run ${host.name} dev for the chat shell; Ctrl+C ${
-        (host.runner.lifecycle as string | undefined) === "attached"
+        host.runner.lifecycle === "attached"
           ? "stops the children"
           : "leaves children running"
       }.)`,
@@ -382,12 +390,11 @@ export async function build(
 ): Promise<void> {
   const { getVerb, resolveRunnerModule, validateHost } =
     await import("@powerhousedao/host-core");
-  const children = (host.children ?? {}) as Record<string, ChildWrapper>;
-  for (const [name, wrapper] of Object.entries(children)) {
+  for (const [name, wrapper] of Object.entries(host.children ?? {})) {
     const member = await loadHost(ctx.projectRoot, wrapper.host);
     const specifier = member.host.runner.module;
     const runner = await resolveRunnerModule(ctx.projectRoot, specifier);
-    validateHost(
+    const validated = validateHost(
       runner,
       specifier,
       member.host,
@@ -395,6 +402,10 @@ export async function build(
     );
     const fn = getVerb(runner, specifier, "build");
     console.log(`[${host.name}] build → ${name} (${wrapper.host})`);
-    await fn(member.host, { ...ctx, verb: "build" });
+    await fn(validated, {
+      ...ctx,
+      verb: "build",
+      parent: { host: host.name, verb: ctx.verb },
+    });
   }
 }
