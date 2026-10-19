@@ -1,3 +1,5 @@
+import { DocumentModelRegistry } from "@powerhousedao/reactor";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type { IPackageManager } from "../src/packages/types.js";
 import { PackageManagementService } from "../src/services/package-management.service.js";
@@ -54,5 +56,30 @@ describe("PackageManagementService uninstall (issue #2973)", () => {
     expect(modelsChanged).toHaveBeenCalledOnce();
     // The uninstalled package's modules are gone from the cache.
     expect(modelsChanged.mock.calls[0]![0]).toEqual([]);
+  });
+
+  it("unregisters the package's document models", async () => {
+    const alpha = {
+      documentModel: {
+        global: { id: "test/alpha", name: "Alpha", specifications: [] },
+      },
+    } as unknown as DocumentModelModule;
+    const registry = new DocumentModelRegistry();
+    registry.registerModules(alpha);
+    const storage = new InMemoryPackageStorage();
+    await storage.set("pkg-a", {
+      ...makeInstalledPackage("pkg-a"),
+      documentTypes: ["test/alpha"],
+    });
+    const service = new PackageManagementService({
+      storage,
+      documentModelRegistry: registry,
+    });
+
+    await service.uninstallPackage("pkg-a");
+
+    expect(
+      registry.getAllModules().map((m) => m.documentModel.global.id),
+    ).not.toContain("test/alpha");
   });
 });

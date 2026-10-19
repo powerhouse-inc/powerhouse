@@ -21,7 +21,11 @@ import type {
   PackagePieceEntry,
 } from "./types.js";
 import { baseDocumentModels } from "./base-document-models.js";
-import { debounce, manifestDeclaredSubgraphs } from "./util.js";
+import {
+  PACKAGE_MODULE_FAILED,
+  debounce,
+  manifestDeclaredSubgraphs,
+} from "./util.js";
 import { runDetached } from "../utils/detached.js";
 import {
   REGISTRY_ENTRY_ABSENT,
@@ -84,6 +88,17 @@ export function isExpectedLoaderMiss(
   }
   return false;
 }
+
+const ALREADY_LOGGED = new Set([
+  REGISTRY_EXTERNAL_DEPS_MISSING,
+  PACKAGE_MODULE_FAILED,
+]);
+
+// A failed load is kept apart from a package that ships none.
+type DocumentModelsLoad =
+  | { status: "loaded"; models: DocumentModelModule[] }
+  | { status: "absent" }
+  | { status: "failed" };
 
 export function getUniqueDocumentModels(
   ...documentModels: readonly (readonly DocumentModelModule<any>[])[]
@@ -168,8 +183,22 @@ export class PackageManager implements IPackageManager {
   ): Promise<PackageManagerResult> {
     this.logger.info("Loading packages: @packages", packages.join(", "));
 
-    const documentModelsMap = await this.loadDocumentModels(packages);
-    const upgradeManifestsMap = await this.loadUpgradeManifests(packages);
+    const documentModelLoads = await this.loadDocumentModels(packages);
+    const failed = packages.filter(
+      (pkg) => documentModelLoads.get(pkg)?.status === "failed",
+    );
+    const upgradeManifestsMap = await this.loadUpgradeManifests(
+      packages.filter((pkg) => !failed.includes(pkg)),
+    );
+    const documentModelsMap = new Map<string, DocumentModelModule[]>(
+      baseDocumentModels.map(([source, model]) => [source, [model]]),
+    );
+    for (const [pkg, load] of documentModelLoads) {
+      if (load.status === "loaded") documentModelsMap.set(pkg, load.models);
+    }
+    for (const pkg of failed) {
+      this.keepLastLoaded(pkg, documentModelsMap, upgradeManifestsMap);
+    }
     const subgraphsMap = await this.loadSubgraphs(packages);
     const processorsMap = await this.loadProcessors(packages);
     const piecesMap = await this.loadPieces(packages);
@@ -202,33 +231,26 @@ export class PackageManager implements IPackageManager {
 
   private async loadDocumentModels(
     packages: string[],
-  ): Promise<Map<string, DocumentModelModule[]>> {
+  ): Promise<Map<string, DocumentModelsLoad>> {
     this.logger.debug(
       `Loading document models from packages: ${packages.join(", ")}`,
     );
 
-    const documentModelModuleMap = new Map<string, DocumentModelModule[]>();
-
-    for (const [source, model] of baseDocumentModels) {
-      documentModelModuleMap.set(source, [model]);
-    }
+    const loads = new Map<string, DocumentModelsLoad>();
 
     for (const pkg of packages) {
-      const allDocumentModels: DocumentModelModule[] = [];
       const failures: { loader: string; error: unknown }[] = [];
-      let succeeded = false;
+      let load: DocumentModelsLoad | undefined;
 
       for (const loader of this.loaders) {
         try {
           const documentModels = await loader.loadDocumentModels(pkg);
-
-          allDocumentModels.push(...documentModels);
           this.logger.info(
             `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
             pkg,
             documentModels.map((dm) => dm.documentModel.global.id),
           );
-          succeeded = true;
+          load = { status: "loaded", models: documentModels };
           break;
         } catch (error) {
           failures.push({ loader: loader.name, error });
@@ -243,14 +265,34 @@ export class PackageManager implements IPackageManager {
       this.maybeWarnAllLoadersFailed(
         "document models",
         pkg,
-        succeeded,
+        load !== undefined,
         failures,
       );
 
-      documentModelModuleMap.set(pkg, allDocumentModels);
+      // Only misses everywhere means the package is gone.
+      load ??= failures.every(({ error }) =>
+        isExpectedLoaderMiss(error, pkg, "document-models"),
+      )
+        ? { status: "absent" }
+        : { status: "failed" };
+      loads.set(pkg, load);
     }
 
-    return documentModelModuleMap;
+    return loads;
+  }
+
+  // A failed load is no news about a package: what it last provided stands.
+  private keepLastLoaded(
+    pkg: string,
+    documentModelsMap: Map<string, DocumentModelModule[]>,
+    upgradeManifestsMap: Map<string, UpgradeManifest<readonly number[]>[]>,
+  ): void {
+    const models = this.docModelsMap.get(pkg);
+    if (!models) return;
+    this.logger.info("Keeping the last loaded document models of @pkg", pkg);
+    documentModelsMap.set(pkg, models);
+    const manifests = this.upgradeManifestsMap.get(pkg);
+    if (manifests) upgradeManifestsMap.set(pkg, manifests);
   }
 
   /** Upgrade manifests currently loaded across all packages, one per type. */
@@ -451,9 +493,10 @@ export class PackageManager implements IPackageManager {
     const realFailures = failures.filter(
       ({ error }) =>
         !isExpectedLoaderMiss(error, pkg, subPath) &&
-        // The loader already logged why it skipped the package.
-        (error as NodeJS.ErrnoException | undefined)?.code !==
-          REGISTRY_EXTERNAL_DEPS_MISSING,
+        // The loader already logged why it skipped or failed the package.
+        !ALREADY_LOGGED.has(
+          (error as NodeJS.ErrnoException | undefined)?.code ?? "",
+        ),
     );
     if (realFailures.length === 0) return;
 
@@ -472,7 +515,16 @@ export class PackageManager implements IPackageManager {
 
   private async updateDocumentModelsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating document models for package: ${pkg}`);
-    const documentModels = await this.loadDocumentModels([pkg]);
+    const load = (await this.loadDocumentModels([pkg])).get(pkg);
+    if (load?.status === "failed") {
+      if (this.docModelsMap.has(pkg)) {
+        this.logger.info(
+          "Keeping the last loaded document models of @pkg",
+          pkg,
+        );
+      }
+      return;
+    }
     const upgradeManifests = await this.loadUpgradeManifests([pkg]);
     const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
     const pkgManifests = upgradeManifests.get(pkg) ?? [];
@@ -483,11 +535,9 @@ export class PackageManager implements IPackageManager {
     }
     this.upgradeManifestsMap = upgradeManifestsMap;
     const documentModelsMap = new Map(this.docModelsMap);
-    const pkgModels = documentModels.get(pkg) ?? [];
+    const pkgModels = load?.status === "loaded" ? load.models : [];
     if (pkgModels.length === 0) {
-      // An empty result means the package no longer contributes document
-      // models: drop the key so the change event signals removal instead of
-      // re-asserting an empty entry.
+      // Dropped, not emptied, so the change event signals removal.
       documentModelsMap.delete(pkg);
     } else {
       documentModelsMap.set(pkg, pkgModels);
