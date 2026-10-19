@@ -8,16 +8,10 @@
 
 // The rule is HTTP's: `ws` owns the upgrade, so the fetch gate never sees it.
 
-// `websocket.ts` blanks `useServer` under Vitest; mocked back to the real one.
-
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { createServer, type Server } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
-
-vi.mock("../../src/graphql/websocket.js", async () => ({
-  useServer: (await import("graphql-ws/use/ws")).useServer,
-}));
 
 const mockVerifyAuthBearerToken = vi.fn();
 vi.mock("@renown/sdk", () => ({
@@ -33,17 +27,9 @@ const {
   WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
   WS_CLOSE_REASON_BEARER_REJECTED,
 } = await import("../../src/graphql/gateway/types.js");
-const { ApolloGatewayAdapter } =
-  await import("../../src/graphql/gateway/adapter-gateway-apollo.js");
-const { MercuriusGatewayAdapter } =
-  await import("../../src/graphql/gateway/adapter-gateway-mercurius.js");
-const { StitchingGatewayAdapter } =
-  await import("../../src/graphql/gateway/adapter-gateway-stitching.js");
+const { SubgraphWsRouter } =
+  await import("../../src/graphql/subgraph-ws-router.js");
 
-import type {
-  IGatewayAdapter,
-  WsDisposer,
-} from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
@@ -73,12 +59,6 @@ function makeLogger() {
   };
   return logger;
 }
-
-const ADAPTERS = {
-  apollo: () => new ApolloGatewayAdapter(makeLogger()),
-  mercurius: () => new MercuriusGatewayAdapter(makeLogger()),
-  stitching: () => new StitchingGatewayAdapter(makeLogger()),
-} as const;
 
 /** Records the context it ran with: how anonymous is told from somebody. */
 function makeSchema(seen: Context[]) {
@@ -127,23 +107,16 @@ type Harness = {
 
 // One WebSocketServer bound to the http server by path, as `server.ts` does.
 
-// `attachCount` graphql-ws servers on it: production attaches one per subgraph.
-async function createHarness(
-  adapterName: keyof typeof ADAPTERS,
-  auth: AuthOptions,
-  attachCount = 1,
-): Promise<Harness> {
+// `routes` subgraphs served by the one graphql-ws server, as the manager does.
+async function createHarness(auth: AuthOptions, routes = 1): Promise<Harness> {
   const logger = makeLogger();
-  const adapter = ADAPTERS[adapterName]() as IGatewayAdapter<Context>;
   const httpServer: Server = createServer();
   await new Promise<void>((resolve) =>
     httpServer.listen(0, "127.0.0.1", resolve),
   );
   const port = (httpServer.address() as { port: number }).port;
-  await adapter.start(httpServer);
 
   const wsServer = new WebSocketServer({ server: httpServer, path: WS_PATH });
-  wsServer.setMaxListeners(0);
 
   const authService = new AuthService({
     enabled: auth.enabled,
@@ -167,11 +140,13 @@ async function createHarness(
     },
   });
 
-  const disposers: WsDisposer[] = [];
-  for (let i = 0; i < attachCount; i++) {
-    disposers.push(
-      adapter.attachWebSocket(wsServer, makeSchema(seen), handlers),
-    );
+  const router = new SubgraphWsRouter<number, Context>({
+    order: (owners) => owners,
+    logger,
+  });
+  router.attach(wsServer, handlers);
+  for (let i = 0; i < routes; i++) {
+    router.set(`/graphql/s${i}`, i, makeSchema(seen));
   }
 
   return {
@@ -179,16 +154,7 @@ async function createHarness(
     seen,
     logger,
     close: async () => {
-      // Each disposer closes the shared wsServer, so siblings then reject.
-      for (const disposer of disposers) {
-        try {
-          await disposer.dispose();
-        } catch {
-          /* already closed by a sibling disposer */
-        }
-      }
-      await adapter.stop();
-      await new Promise<void>((resolve) => wsServer.close(() => resolve()));
+      await router.dispose();
       await new Promise<void>((resolve) => httpServer.close(() => resolve()));
     },
   };
@@ -225,7 +191,6 @@ async function subscribeOnce(
       client.subscribe(
         { query: "subscription { tick }" },
         {
-          // Servers sharing a socket duplicate payloads; counting pins nothing.
           next: () => settle({ kind: "next" }),
           error: (err: unknown) => {
             const close = err as { code?: number; reason?: string } | null;
@@ -255,178 +220,173 @@ async function subscribeOnce(
 
 // ─── cases ───────────────────────────────────────────────────────────────────
 
-describe.each(["apollo", "mercurius", "stitching"] as const)(
-  "WebSocket auth close codes (%s adapter)",
-  (adapterName) => {
-    let harness: Harness | undefined;
-    let consoleError: ReturnType<typeof vi.spyOn>;
+describe("WebSocket auth close codes", () => {
+  let harness: Harness | undefined;
+  let consoleError: ReturnType<typeof vi.spyOn>;
 
-    beforeEach(() => {
-      vi.clearAllMocks();
-      mockVerifyAuthBearerToken.mockResolvedValue(makeVerified());
-      // graphql-ws reports the 4500 path through console.error, not our logger.
-      consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVerifyAuthBearerToken.mockResolvedValue(makeVerified());
+    // graphql-ws reports the 4500 path through console.error, not our logger.
+    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(async () => {
+    consoleError.mockRestore();
+    await harness?.close();
+    harness = undefined;
+  });
+
+  it("refuses a tokenless connection with 4403 when a caller is required", async () => {
+    harness = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: true,
     });
 
-    afterEach(async () => {
-      consoleError.mockRestore();
-      await harness?.close();
-      harness = undefined;
+    const outcome = await subscribeOnce(harness, {});
+
+    expect(outcome).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+    });
+    expect(harness.seen).toHaveLength(0);
+    // A throw would close 4500 and log; a missing token is no server error.
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(harness.logger.error).not.toHaveBeenCalled();
+    expect(harness.logger.warn).toHaveBeenCalled();
+  });
+
+  it("admits a tokenless connection with no user when anonymous is allowed", async () => {
+    harness = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: false,
     });
 
-    it("refuses a tokenless connection with 4403 when a caller is required", async () => {
-      harness = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: true,
-      });
+    const outcome = await subscribeOnce(harness, {});
 
-      const outcome = await subscribeOnce(harness, {});
+    // Parity with HTTP and SSE: it runs, and authorizes per document.
+    expect(outcome).toEqual({ kind: "next" });
+    expect(harness.seen.length).toBeGreaterThan(0);
+    expect(harness.seen[0].user).toBeUndefined();
+  });
 
-      expect(outcome).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
-      });
-      expect(harness.seen).toHaveLength(0);
-      // A throw would close 4500 and log; a missing token is no server error.
-      expect(consoleError).not.toHaveBeenCalled();
-      expect(harness.logger.error).not.toHaveBeenCalled();
-      expect(harness.logger.warn).toHaveBeenCalled();
+  it("refuses a tokenless connection with 4403 under an open policy", async () => {
+    // HTTP and SSE 401 this config; WS admitted it, gating on AUTH_ENABLED.
+    harness = await createHarness({
+      enabled: false,
+      resolveIdentity: true,
+      requireAuthenticatedCaller: true,
     });
 
-    it("admits a tokenless connection with no user when anonymous is allowed", async () => {
-      harness = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: false,
-      });
+    const outcome = await subscribeOnce(harness, {});
 
-      const outcome = await subscribeOnce(harness, {});
+    expect(outcome).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+    });
+    expect(harness.seen).toHaveLength(0);
+  });
 
-      // Parity with HTTP and SSE: it runs, and authorizes per document.
-      expect(outcome).toEqual({ kind: "next" });
-      expect(harness.seen.length).toBeGreaterThan(0);
-      expect(harness.seen[0].user).toBeUndefined();
+  it("puts the verified caller on the context, verifying once per connection", async () => {
+    harness = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: true,
     });
 
-    it("refuses a tokenless connection with 4403 under an open policy", async () => {
-      // HTTP and SSE 401 this config; WS admitted it, gating on AUTH_ENABLED.
-      harness = await createHarness(adapterName, {
-        enabled: false,
-        resolveIdentity: true,
-        requireAuthenticatedCaller: true,
-      });
+    const outcome = await subscribeOnce(
+      harness,
+      { authorization: "Bearer token-abc" },
+      2,
+    );
 
-      const outcome = await subscribeOnce(harness, {});
+    expect(outcome).toEqual({ kind: "next" });
+    expect(harness.seen[0].user?.address).toBe("0xuser");
+    expect(harness.seen.length).toBeGreaterThan(1);
+    // Two operations, one JWT verify: the old factory verified per subscribe.
+    expect(mockVerifyAuthBearerToken).toHaveBeenCalledTimes(1);
+  });
 
-      expect(outcome).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
-      });
-      expect(harness.seen).toHaveLength(0);
+  it("refuses a present-but-unusable bearer with 4403, not 4500", async () => {
+    mockVerifyAuthBearerToken.mockResolvedValue(false);
+    harness = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: false,
     });
 
-    it("puts the verified caller on the context, verifying once per connection", async () => {
-      harness = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: true,
-      });
-
-      const outcome = await subscribeOnce(
-        harness,
-        { authorization: "Bearer token-abc" },
-        2,
-      );
-
-      expect(outcome).toEqual({ kind: "next" });
-      expect(harness.seen[0].user?.address).toBe("0xuser");
-      expect(harness.seen.length).toBeGreaterThan(1);
-      // Two operations, one JWT verify: the old factory verified per subscribe.
-      expect(mockVerifyAuthBearerToken).toHaveBeenCalledTimes(1);
+    const outcome = await subscribeOnce(harness, {
+      authorization: "Bearer bad-token",
     });
 
-    it("refuses a present-but-unusable bearer with 4403, not 4500", async () => {
-      mockVerifyAuthBearerToken.mockResolvedValue(false);
-      harness = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: false,
-      });
+    // Refused whatever REQUIRE_AUTHENTICATED_CALLER says, as HTTP 401s it.
 
-      const outcome = await subscribeOnce(harness, {
-        authorization: "Bearer bad-token",
-      });
+    // Retryable, so a client can reconnect with a fresh token.
+    expect(outcome).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_BEARER_REJECTED,
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(harness.logger.error).not.toHaveBeenCalled();
+    expect(harness.logger.warn).toHaveBeenCalled();
+  });
 
-      // Refused whatever REQUIRE_AUTHENTICATED_CALLER says, as HTTP 401s it.
+  it("keeps refusing with 4403 when several subgraphs share one socket", async () => {
+    harness = await createHarness(
+      { enabled: true, requireAuthenticatedCaller: true },
+      2,
+    );
 
-      // Retryable, so a client can reconnect with a fresh token.
-      expect(outcome).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_BEARER_REJECTED,
-      });
-      expect(consoleError).not.toHaveBeenCalled();
-      expect(harness.logger.error).not.toHaveBeenCalled();
-      expect(harness.logger.warn).toHaveBeenCalled();
+    const outcome = await subscribeOnce(harness, {});
+
+    expect(outcome).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
+    });
+    expect(harness.seen).toHaveLength(0);
+  });
+
+  it("gives the two refusals different reasons on the same 4403", async () => {
+    // Returning `false` closes every refusal `4403 Forbidden`, so a client
+    // with a corrupt token and one that merely needs to sign in saw the same
+    // thing, and only the server log told them apart.
+    const requireAuth = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: true,
+    });
+    let anonymous: Outcome;
+    try {
+      anonymous = await subscribeOnce(requireAuth, {});
+    } finally {
+      await requireAuth.close();
+    }
+
+    mockVerifyAuthBearerToken.mockResolvedValue(false);
+    harness = await createHarness({
+      enabled: true,
+      requireAuthenticatedCaller: false,
+    });
+    const badBearer = await subscribeOnce(harness, {
+      authorization: "Bearer bad-token",
     });
 
-    it("keeps refusing with 4403 when several subgraphs share one socket", async () => {
-      // A single-subgraph harness hides whichever server answered first.
-      harness = await createHarness(
-        adapterName,
-        { enabled: true, requireAuthenticatedCaller: true },
-        2,
-      );
-
-      const outcome = await subscribeOnce(harness, {});
-
-      expect(outcome).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
-      });
-      expect(harness.seen).toHaveLength(0);
+    expect(anonymous).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
     });
-
-    it("gives the two refusals different reasons on the same 4403", async () => {
-      // Returning `false` closes every refusal `4403 Forbidden`, so a client
-      // with a corrupt token and one that merely needs to sign in saw the same
-      // thing, and only the server log told them apart.
-      const requireAuth = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: true,
-      });
-      let anonymous: Outcome;
-      try {
-        anonymous = await subscribeOnce(requireAuth, {});
-      } finally {
-        await requireAuth.close();
-      }
-
-      mockVerifyAuthBearerToken.mockResolvedValue(false);
-      harness = await createHarness(adapterName, {
-        enabled: true,
-        requireAuthenticatedCaller: false,
-      });
-      const badBearer = await subscribeOnce(harness, {
-        authorization: "Bearer bad-token",
-      });
-
-      expect(anonymous).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_AUTHENTICATION_REQUIRED,
-      });
-      expect(badBearer).toEqual({
-        kind: "closed",
-        code: 4403,
-        reason: WS_CLOSE_REASON_BEARER_REJECTED,
-      });
-      expect(WS_CLOSE_REASON_AUTHENTICATION_REQUIRED).not.toBe(
-        WS_CLOSE_REASON_BEARER_REJECTED,
-      );
+    expect(badBearer).toEqual({
+      kind: "closed",
+      code: 4403,
+      reason: WS_CLOSE_REASON_BEARER_REJECTED,
     });
-  },
-);
+    expect(WS_CLOSE_REASON_AUTHENTICATION_REQUIRED).not.toBe(
+      WS_CLOSE_REASON_BEARER_REJECTED,
+    );
+  });
+});
 
 describe("the 4403 close reasons", () => {
   it("fit the 123-byte cap a close reason is allowed", () => {

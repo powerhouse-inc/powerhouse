@@ -1,7 +1,11 @@
 import {
   type DefinitionNode,
+  type DirectiveNode,
   type DocumentNode,
+  type ExecutionArgs,
   type GraphQLSchema,
+  type ObjectValueNode,
+  isTypeDefinitionNode,
   Kind,
   parse,
   visit,
@@ -26,6 +30,72 @@ export interface SSEHandlerOptions {
    * AuthContext from the WeakMap.
    */
   contextFactory: (req: Request) => Promise<Context> | Context;
+  /** Tracks the handler's open streams so they can be completed. */
+  streams?: SSEStreams;
+  /** Tags an operation's stream, so `streams.end(tag)` can complete it. */
+  tagsOf?: (args: ExecutionArgs) => ReadonlySet<string>;
+}
+
+/** Open SSE operations; `end()` completes them, and any that start later. */
+export class SSEStreams {
+  readonly #running = new Map<AsyncGenerator<unknown>, ReadonlySet<string>>();
+  readonly #retired = new Set<string>();
+  #ended = false;
+
+  track<T>(
+    result: AsyncGenerator<T>,
+    tags: ReadonlySet<string> = new Set(),
+  ): AsyncGenerator<T> {
+    const running = this.#running;
+    const done = () => running.delete(tracked);
+    const tracked: AsyncGenerator<T> = {
+      [Symbol.asyncIterator]: () => tracked,
+      next: async (...args) => {
+        const step = await result.next(...args);
+        if (step.done) done();
+        return step;
+      },
+      return: (value) => {
+        done();
+        return result.return(value);
+      },
+      throw: (error) => {
+        done();
+        return result.throw(error);
+      },
+      [Symbol.asyncDispose]: async () => {
+        done();
+        await result.return(undefined);
+      },
+    };
+    running.set(tracked, tags);
+    if (this.#ended || [...tags].some((tag) => this.#retired.has(tag))) {
+      void this.#end([tracked]);
+    }
+    return tracked;
+  }
+
+  /**
+   * Complete every stream, or those tagged `tag`, and any that start later
+   * until `reopen()`. graphql-sse sends `complete` and closes each stream.
+   */
+  async end(tag?: string): Promise<void> {
+    if (tag === undefined) this.#ended = true;
+    else this.#retired.add(tag);
+    const results = [...this.#running]
+      .filter(([, tags]) => tag === undefined || tags.has(tag))
+      .map(([result]) => result);
+    await this.#end(results);
+  }
+
+  /** Stop completing new streams for retired tags: the handler was rebuilt. */
+  reopen(): void {
+    this.#retired.clear();
+  }
+
+  async #end(results: AsyncGenerator<unknown>[]): Promise<void> {
+    await Promise.allSettled(results.map((result) => result.return(undefined)));
+  }
 }
 
 /**
@@ -47,7 +117,7 @@ export interface SSEHandlerOptions {
 export function createGraphQLSSEHandler(
   options: SSEHandlerOptions,
 ): (req: Request) => Promise<Response> {
-  const { schema, contextFactory } = options;
+  const { schema, contextFactory, streams, tagsOf } = options;
 
   return createHandler<Context>({
     schema,
@@ -56,8 +126,14 @@ export function createGraphQLSSEHandler(
     // Auth is handled upstream by authFetchMiddleware.
     authenticate: () => null,
     context: (req: SSERequest<Request>) => contextFactory(req.raw),
+    onOperation: (_ctx, _req, args, result) =>
+      streams && isAsyncGenerator(result)
+        ? streams.track(result, tagsOf?.(args))
+        : undefined,
   });
 }
+
+const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
 
 const FEDERATION_DIRECTIVES = new Set([
   "authenticated",
@@ -81,9 +157,69 @@ const FEDERATION_DIRECTIVES = new Set([
   "tag",
 ]);
 
-function isFederationDirective(name: string, declared: Set<string>): boolean {
+const FEDERATION_SPEC_URL = "https://specs.apollo.dev/federation/";
+
+type FederationNames = { names: Set<string>; prefixes: string[] };
+
+function stringArgument(
+  node: DirectiveNode | ObjectValueNode,
+  name: string,
+): string | undefined {
+  const args = node.kind === Kind.DIRECTIVE ? node.arguments : node.fields;
+  const value = args?.find((arg) => arg.name.value === name)?.value;
+  return value?.kind === Kind.STRING ? value.value : undefined;
+}
+
+function withoutAt(name: string): string | undefined {
+  return name.startsWith("@") ? name.slice(1) : undefined;
+}
+
+/** Includes names a federation `@link` imports under an alias or `as` prefix. */
+function federationNames(typeDefs: DocumentNode): FederationNames {
+  const names = new Set(FEDERATION_DIRECTIVES);
+  const prefixes = ["federation__"];
+  for (const def of typeDefs.definitions) {
+    if (
+      def.kind !== Kind.SCHEMA_DEFINITION &&
+      def.kind !== Kind.SCHEMA_EXTENSION
+    ) {
+      continue;
+    }
+    for (const link of def.directives ?? []) {
+      if (link.name.value !== "link") continue;
+      if (!stringArgument(link, "url")?.startsWith(FEDERATION_SPEC_URL)) {
+        continue;
+      }
+      prefixes.push(`${stringArgument(link, "as") ?? "federation"}__`);
+      const imports = link.arguments?.find(
+        (arg) => arg.name.value === "import",
+      )?.value;
+      if (imports?.kind !== Kind.LIST) continue;
+      for (const item of imports.values) {
+        const name =
+          item.kind === Kind.STRING
+            ? item.value
+            : item.kind === Kind.OBJECT
+              ? (stringArgument(item, "as") ?? stringArgument(item, "name"))
+              : undefined;
+        const directive = name === undefined ? undefined : withoutAt(name);
+        if (directive !== undefined) names.add(directive);
+      }
+    }
+  }
+  return { names, prefixes };
+}
+
+function isFederationDirective(
+  name: string,
+  declared: Set<string>,
+  federation: FederationNames,
+): boolean {
   if (declared.has(name)) return false;
-  return FEDERATION_DIRECTIVES.has(name) || name.startsWith("federation__");
+  return (
+    federation.names.has(name) ||
+    federation.prefixes.some((prefix) => name.startsWith(prefix))
+  );
 }
 
 function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
@@ -91,9 +227,12 @@ function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
   for (const def of typeDefs.definitions) {
     if (def.kind === Kind.DIRECTIVE_DEFINITION) declared.add(def.name.value);
   }
+  const federation = federationNames(typeDefs);
   return visit(typeDefs, {
     Directive: (node) =>
-      isFederationDirective(node.name.value, declared) ? null : undefined,
+      isFederationDirective(node.name.value, declared, federation)
+        ? null
+        : undefined,
     SchemaExtension: {
       leave: (node) =>
         !node.directives?.length && !node.operationTypes?.length
@@ -103,29 +242,47 @@ function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
   });
 }
 
-/**
- * The subgraphs with federation directives removed: the stream schema is
- * merged in-process, where those directives are undeclared.
- */
+/** `extend type X @key(...)` with no X in the set must define X to build. */
+function defineExtendedEntities(
+  typeDefs: DocumentNode,
+  defined: Set<string>,
+): DocumentNode {
+  return {
+    ...typeDefs,
+    definitions: typeDefs.definitions.map((def) =>
+      def.kind === Kind.OBJECT_TYPE_EXTENSION &&
+      !defined.has(def.name.value) &&
+      !STREAM_ROOTS.includes(def.name.value)
+        ? { ...def, kind: Kind.OBJECT_TYPE_DEFINITION }
+        : def,
+    ),
+  };
+}
+
+/** Federation directives are undeclared in the in-process merge. */
 export function withoutFederationDirectives(
   subgraphs: SubgraphDefinition[],
 ): SubgraphDefinition[] {
+  const defined = new Set<string>();
+  for (const subgraph of subgraphs) {
+    for (const def of subgraph.typeDefs.definitions) {
+      if (isTypeDefinitionNode(def)) defined.add(def.name.value);
+    }
+  }
   return subgraphs.map((subgraph) => ({
     ...subgraph,
-    typeDefs: stripFederationDirectives(subgraph.typeDefs),
+    typeDefs: defineExtendedEntities(
+      stripFederationDirectives(subgraph.typeDefs),
+      defined,
+    ),
   }));
 }
 
-const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
-
-/**
- * Merges subscription subgraphs into one stream schema, or `undefined` when no
- * subgraph contributes the Query root a schema requires. A root the subgraphs
- * only extend gets an empty definition to extend.
- */
+/** `undefined` when there is nothing to merge; missing roots get placeholders. */
 export function mergeStreamSubgraphs(
   subgraphs: SubgraphDefinition[],
 ): GraphQLSchema | undefined {
+  if (subgraphs.length === 0) return undefined;
   const defined = new Set<string>();
   const extended = new Set<string>();
   for (const subgraph of subgraphs) {
@@ -137,12 +294,13 @@ export function mergeStreamSubgraphs(
       }
     }
   }
-  if (!defined.has("Query") && !extended.has("Query")) {
-    return undefined;
-  }
   const placeholders: DefinitionNode[] = STREAM_ROOTS.filter(
     (root) => extended.has(root) && !defined.has(root),
   ).flatMap((root) => parse(`type ${root}`).definitions);
+  if (!defined.has("Query") && !extended.has("Query")) {
+    // graphql rejects a fieldless type, and a schema needs a Query root.
+    placeholders.push(...parse(`type Query { _stub: Boolean }`).definitions);
+  }
   const roots: SubgraphDefinition[] =
     placeholders.length > 0
       ? [
@@ -154,4 +312,14 @@ export function mergeStreamSubgraphs(
         ]
       : [];
   return mergeSubgraphSchemas([...roots, ...subgraphs], "last");
+}
+
+function isAsyncGenerator<T>(value: T): value is Extract<T, AsyncGenerator> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Symbol.asyncIterator in value &&
+    typeof (value as { return?: unknown }).return === "function" &&
+    typeof (value as { throw?: unknown }).throw === "function"
+  );
 }

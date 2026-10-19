@@ -57,7 +57,7 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
-  warnSubgraphTypeConflicts(projectDir);
+  await warnSubgraphTypeConflicts(projectDir);
   const added = await syncFeatureDependencies(
     detectFeatures(projectDir),
     projectDir,

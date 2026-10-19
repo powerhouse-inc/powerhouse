@@ -248,11 +248,11 @@ export type ProtocolSupport = { [protocol: string]: readonly number[] };
  * Event types for the job executor
  */
 export const JobExecutorEventTypes = {
-  JOB_STARTED: 20000,
-  JOB_COMPLETED: 20001,
-  JOB_FAILED: 20002,
-  EXECUTOR_STARTED: 20003,
-  EXECUTOR_STOPPED: 20004,
+  JOB_STARTED: 30000,
+  JOB_COMPLETED: 30001,
+  JOB_FAILED: 30002,
+  EXECUTOR_STARTED: 30003,
+  EXECUTOR_STOPPED: 30004,
 } as const;
 
 /**

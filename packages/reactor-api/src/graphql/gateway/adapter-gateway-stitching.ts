@@ -19,18 +19,14 @@ import {
   validateSchema,
 } from "graphql";
 import type http from "node:http";
-import type { WebSocketServer } from "ws";
 import type { ILogger } from "document-model";
 import type { Context } from "../types.js";
-import { useServer } from "../websocket.js";
 import { createApolloFetchHandler } from "./adapter-gateway-apollo.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
   SubgraphDefinition,
-  WsDisposer,
-  WsHandlers,
 } from "./types.js";
 
 /**
@@ -482,23 +478,6 @@ export class StitchingGatewayAdapter implements IGatewayAdapter<Context> {
     if (old) {
       await old.stop();
     }
-  }
-
-  attachWebSocket(
-    wsServer: WebSocketServer,
-    schema: GraphQLSchema,
-    handlers: WsHandlers<Context>,
-  ): WsDisposer {
-    return useServer(
-      {
-        schema,
-        onConnect: (ctx) =>
-          handlers.onConnect(ctx.connectionParams ?? {}, ctx.extra as object),
-        context: (ctx) =>
-          handlers.context(ctx.connectionParams ?? {}, ctx.extra as object),
-      },
-      wsServer,
-    );
   }
 
   async stop(): Promise<void> {

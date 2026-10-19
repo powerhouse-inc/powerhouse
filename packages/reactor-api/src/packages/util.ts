@@ -23,6 +23,9 @@ type ProcessorsExport = {
 
 const _logger = childLogger(["reactor-api", "packages/util"]);
 
+// Error code for a package module that exists and failed to load; already logged.
+export const PACKAGE_MODULE_FAILED = "ERR_PACKAGE_MODULE_FAILED";
+
 export const installPackages = (packages: string[]): Promise<void> => {
   for (const packageName of packages) {
     execSync(`ph install ${packageName}`);
