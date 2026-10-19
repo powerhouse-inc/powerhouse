@@ -29,7 +29,9 @@ describe("generateActionId", () => {
   it("strictly increases on a frozen clock", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-    const ids = Array.from({ length: 100 }, () => generateActionId());
+    // A fresh generator: the process-wide one may have seen a later clock.
+    const next = createActionIdGenerator();
+    const ids = Array.from({ length: 100 }, () => next());
     expectIncreasing(ids);
     expect(msOf(ids[0])).toBe(Date.parse("2026-01-01T00:00:00.000Z"));
   });
