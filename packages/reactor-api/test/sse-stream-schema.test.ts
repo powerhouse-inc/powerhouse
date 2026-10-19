@@ -182,4 +182,71 @@ describe("supergraph stream schema", () => {
       );
     });
   });
+
+  describe("entity extensions", () => {
+    const extension = gql`
+      extend type Thing @key(fields: "id") {
+        id: ID! @external
+        extra: String
+      }
+      type Subscription {
+        thingAdded: Thing
+      }
+    `;
+
+    it("streams an entity extension whose base type no subgraph defines", async () => {
+      const { schema, excluded } = streamSchema([
+        subgraph(
+          "base",
+          gql`
+            type Query {
+              info: String
+            }
+          `,
+        ),
+        subgraph(
+          "extender",
+          extension,
+          ticker("thingAdded", { id: "t-1", extra: "x" }),
+        ),
+      ]);
+
+      expect(excluded).toEqual([]);
+      expect(
+        await streamOver(schema!, "subscription { thingAdded { id extra } }"),
+      ).toContain('{"data":{"thingAdded":{"id":"t-1","extra":"x"}}}');
+    });
+
+    it("merges an entity extension into the base type another subgraph defines", async () => {
+      const { schema, excluded } = streamSchema([
+        subgraph(
+          "base",
+          gql`
+            type Thing @key(fields: "id") {
+              id: ID!
+              name: String
+            }
+            type Query {
+              info: String
+            }
+          `,
+        ),
+        subgraph(
+          "extender",
+          extension,
+          ticker("thingAdded", { id: "t-1", name: "n", extra: "x" }),
+        ),
+      ]);
+
+      expect(excluded).toEqual([]);
+      expect(
+        await streamOver(
+          schema!,
+          "subscription { thingAdded { id name extra } }",
+        ),
+      ).toContain(
+        '{"data":{"thingAdded":{"id":"t-1","name":"n","extra":"x"}}}',
+      );
+    });
+  });
 });

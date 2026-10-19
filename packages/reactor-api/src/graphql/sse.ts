@@ -4,6 +4,7 @@ import {
   type DocumentNode,
   type GraphQLSchema,
   type ObjectValueNode,
+  isTypeDefinitionNode,
   Kind,
   parse,
   visit,
@@ -60,6 +61,8 @@ export function createGraphQLSSEHandler(
     context: (req: SSERequest<Request>) => contextFactory(req.raw),
   });
 }
+
+const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
 
 const FEDERATION_DIRECTIVES = new Set([
   "authenticated",
@@ -168,20 +171,41 @@ function stripFederationDirectives(typeDefs: DocumentNode): DocumentNode {
   });
 }
 
-/**
- * The subgraphs with federation directives removed: the stream schema is
- * merged in-process, where those directives are undeclared.
- */
+/** `extend type X @key(...)` with no X in the set must define X to build. */
+function defineExtendedEntities(
+  typeDefs: DocumentNode,
+  defined: Set<string>,
+): DocumentNode {
+  return {
+    ...typeDefs,
+    definitions: typeDefs.definitions.map((def) =>
+      def.kind === Kind.OBJECT_TYPE_EXTENSION &&
+      !defined.has(def.name.value) &&
+      !STREAM_ROOTS.includes(def.name.value)
+        ? { ...def, kind: Kind.OBJECT_TYPE_DEFINITION }
+        : def,
+    ),
+  };
+}
+
+/** Federation directives are undeclared in the in-process merge. */
 export function withoutFederationDirectives(
   subgraphs: SubgraphDefinition[],
 ): SubgraphDefinition[] {
+  const defined = new Set<string>();
+  for (const subgraph of subgraphs) {
+    for (const def of subgraph.typeDefs.definitions) {
+      if (isTypeDefinitionNode(def)) defined.add(def.name.value);
+    }
+  }
   return subgraphs.map((subgraph) => ({
     ...subgraph,
-    typeDefs: stripFederationDirectives(subgraph.typeDefs),
+    typeDefs: defineExtendedEntities(
+      stripFederationDirectives(subgraph.typeDefs),
+      defined,
+    ),
   }));
 }
-
-const STREAM_ROOTS = ["Query", "Mutation", "Subscription"];
 
 /**
  * Merges subscription subgraphs into one stream schema, or `undefined` when no
