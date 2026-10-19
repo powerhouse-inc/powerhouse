@@ -27,7 +27,10 @@ import {
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
+import {
+  synthesizedActionId,
+  synthesizedActionIds,
+} from "../../src/executor/synthesized-signing.js";
 import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -628,6 +631,15 @@ describe("synthesized operations", () => {
     clientModule.reactor.kill();
 
     expect(withSigner).toHaveBeenCalledWith(signer, workerSigner);
+  });
+});
+
+describe("synthesizedActionIds", () => {
+  it("gives both stored forms for a lookup that does not know the version", () => {
+    expect(synthesizedActionIds("u")).toEqual([
+      "u.s",
+      hashBrowser("synthesized:u", "sha1", "hex").slice(0, 32),
+    ]);
   });
 });
 
