@@ -82,10 +82,6 @@
               "type": ["string", "null"],
               "description": "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'."
             },
-            "homeBackground": {
-              "type": ["string", "null"],
-              "description": "Background image of the home screen (e.g. 2048x1152, opaque; WebP keeps it light). null or omitted: the bundled gradient."
-            },
             "icon": {
               "type": ["string", "null"],
               "description": "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon."
@@ -116,6 +112,162 @@
                       "minimum": 16,
                       "maximum": 512,
                       "description": "Rendered width in CSS pixels (default 96); the height follows the image."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "home": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The home screen (the generic chrome's landing page).",
+          "properties": {
+            "background": {
+              "description": "The home screen's background: { color, layers } with each image positioned and sized, or one image pinned bottom-right. null or omitted: the bundled gradient.",
+              "anyOf": [
+                {
+                  "type": ["string", "null"],
+                  "description": "Image reference: a project-relative file path (resolved by the Connect build), a URL, or a data URI. null keeps the default."
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["layers"],
+                  "properties": {
+                    "color": {
+                      "description": "The page colour, or { light, dark }. Omitted or null: the theme's page background.",
+                      "anyOf": [
+                        {
+                          "type": ["string", "null"]
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["light"],
+                          "properties": {
+                            "light": {
+                              "type": "string"
+                            },
+                            "dark": {
+                              "type": ["string", "null"]
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "layers": {
+                      "type": "array",
+                      "description": "Painted in order; the first is at the back.",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["src"],
+                        "description": "An image laid over the page, absolutely positioned: the edges set in `position` pin it, an axis with neither edge set is centred.",
+                        "properties": {
+                          "src": {
+                            "description": "One image for both colour schemes, or { light, dark } (dark falls back to light).",
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                              },
+                              {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": ["light"],
+                                "properties": {
+                                  "light": {
+                                    "type": "string",
+                                    "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                                  },
+                                  "dark": {
+                                    "type": ["string", "null"],
+                                    "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "position": {
+                            "type": ["object", "null"],
+                            "additionalProperties": false,
+                            "properties": {
+                              "top": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "right": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "bottom": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "left": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              }
+                            },
+                            "description": "Distances to the pane's edges; at most one per axis. Omitted: centred both ways."
+                          },
+                          "width": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "height": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "minWidth": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "minHeight": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "maxWidth": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "maxHeight": {
+                            "type": ["number", "string", "null"],
+                            "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                          },
+                          "opacity": {
+                            "type": ["number", "null"],
+                            "minimum": 0,
+                            "maximum": 1,
+                            "description": "0 to 1 (default 1)."
+                          },
+                          "fade": {
+                            "type": ["object", "null"],
+                            "additionalProperties": false,
+                            "properties": {
+                              "top": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "right": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "bottom": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              },
+                              "left": {
+                                "type": ["number", "string", "null"],
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\")."
+                              }
+                            },
+                            "description": "Feather depth per edge, fading the layer into the page colour."
+                          }
+                        }
+                      }
                     }
                   }
                 }

@@ -18,7 +18,11 @@ import {
   preflightOrThrow,
   tauriBundlesForHost,
 } from "../src/shell-toolchain.js";
-import { scaffoldDesktopShell, solidPng } from "../src/scaffold.js";
+import {
+  rebaseBackground,
+  scaffoldDesktopShell,
+  solidPng,
+} from "../src/scaffold.js";
 import { shellMode } from "../src/runner.js";
 
 const temporary: string[] = [];
@@ -381,7 +385,153 @@ describe("toolchain", () => {
   });
 });
 
+describe("background layers on the loading page", () => {
+  const svg = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>',
+  );
+
+  it("places each layer by the shared style, swaps it by scheme, and drops the splash and corner art", () => {
+    const dir = tempDir("ph-proj-layers-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    mkdirSync(path.join(dir, "brand"), { recursive: true });
+    writeFileSync(path.join(dir, "brand", "lockup.svg"), svg);
+    writeFileSync(path.join(dir, "brand", "lockup-dark.svg"), svg);
+    const growth = solidPng(8, [7, 7, 7, 255]);
+    writeFileSync(path.join(dir, "brand", "growth.png"), growth);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      // the deprecated fields are ignored once a background is set
+      splash: "./brand/growth.png",
+      loading: { background: "#ffffff", art: "./brand/growth.png" },
+      background: {
+        color: { light: "#f7f5f0", dark: "#14161a" },
+        layers: [
+          {
+            src: {
+              light: "./brand/lockup.svg",
+              dark: "./brand/lockup-dark.svg",
+            },
+            position: { top: 32, left: 40 },
+            width: 200,
+          },
+          {
+            src: "./brand/growth.png",
+            position: { bottom: 0, right: 0 },
+            width: "min(55%, 880px)",
+            fade: { top: 160, left: 160 },
+            opacity: 0.9,
+          },
+          { src: "./brand/missing.svg" },
+          { src: "https://cdn.example/x.webp", height: "40vh" },
+        ],
+      },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    // the background's colour wins over loading.background, per scheme
+    expect(html).toContain("--bg: #f7f5f0; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toMatch(
+      /prefers-color-scheme: dark\) \{\s*:root \{\s*--bg: #14161a;/,
+    );
+    expect(html).toContain('<div class="layers" aria-hidden="true">');
+    expect(html).toContain(
+      '<source srcset="./bg-0-dark.svg" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain(
+      '<img src="./bg-0.svg" alt="" style="position: absolute; pointer-events: none; object-fit: contain; top: 32px; left: 40px; width: 200px" />',
+    );
+    expect(html).toContain(
+      '<img src="./bg-1.png" alt="" style="position: absolute; pointer-events: none; object-fit: contain; right: 0px; bottom: 0px; width: min(55%, 880px); opacity: 0.9; mask-image: linear-gradient(to bottom, transparent, #000 160px), linear-gradient(to right, transparent, #000 160px); mask-composite: intersect" />',
+    );
+    // a URL is used as given; a missing file drops its layer
+    expect(html).toContain('<img src="https://cdn.example/x.webp" alt=""');
+    expect(html).not.toContain("missing");
+    expect(html).not.toContain('class="splash"');
+    expect(html).not.toContain('class="corner"');
+    expect(html).not.toContain('class="logo"');
+    // staged beside the page, out of git
+    expect(existsSync(path.join(res.shellDir, "ui/bg-0.svg"))).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/bg-0-dark.svg"))).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/bg-1.png")).equals(growth),
+    ).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
+    ).toContain("/ui/bg-*");
+    // idempotent
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      false,
+    );
+  });
+
+  it("a single image is one layer pinned bottom-right; the schema rejects a layer pinned to both edges", () => {
+    const dir = tempDir("ph-proj-layer-one-");
+    writeFileSync(path.join(dir, "art.svg"), svg);
+    const app = appJsonSchema.parse({ ...validApp, background: "./art.svg" });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain(
+      '<img src="./bg-0.svg" alt="" style="position: absolute; pointer-events: none; object-fit: contain; right: 0px; bottom: 0px" />',
+    );
+    // no colour of its own: the loading colours stay
+    expect(html).toContain("--bg: #0f1115;");
+    const invalid = appJsonSchema.safeParse({
+      ...validApp,
+      background: {
+        layers: [{ src: "./art.svg", position: { top: 0, bottom: 0 } }],
+      },
+    });
+    expect(invalid.success).toBe(false);
+    expect(JSON.stringify(invalid.error?.issues)).toContain(
+      "set top or bottom, not both",
+    );
+    expect(
+      appJsonSchema.safeParse({ ...validApp, background: null }).success,
+    ).toBe(true);
+  });
+});
+
 describe("scaffold", () => {
+  it("writes the background it is given and rebases its paths to the host directory", () => {
+    const root = tempDir("ph-scaffold-bg-");
+    const host = path.join(root, "hosts", "desktop");
+    const background = rebaseBackground(
+      {
+        color: "#fff",
+        layers: [
+          {
+            src: { light: "./icons/l.svg", dark: "./icons/d.svg" },
+            width: 200,
+          },
+          { src: "https://cdn.example/x.webp" },
+        ],
+      },
+      root,
+      host,
+    );
+    expect(background).toEqual({
+      color: "#fff",
+      layers: [
+        {
+          src: { light: "../../icons/l.svg", dark: "../../icons/d.svg" },
+          width: 200,
+        },
+        { src: "https://cdn.example/x.webp" },
+      ],
+    });
+    expect(rebaseBackground("./bg.webp", root, host)).toBe("../../bg.webp");
+    scaffoldDesktopShell(host, {
+      identifier: "com.acme.app",
+      productName: "Acme App",
+      background,
+    });
+    expect(loadAppJson(host).background).toEqual(background);
+    // none given: listed as null, like the other defaults
+    const plain = path.join(tempDir("ph-scaffold-nobg-"), "hosts", "desktop");
+    scaffoldDesktopShell(plain, { identifier: "com.a.b", productName: "A" });
+    expect(loadAppJson(plain).background).toBeNull();
+  });
+
   it("writes a schema-valid app.json, a real PNG icon, and a .gitignore", () => {
     const host = path.join(tempDir("ph-scaffold-"), "hosts", "desktop");
     const res = scaffoldDesktopShell(host, {

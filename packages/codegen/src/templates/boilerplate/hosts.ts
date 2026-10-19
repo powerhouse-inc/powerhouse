@@ -93,10 +93,11 @@ export default {
     // today — no add-drive affordance). NOTE: it does not yet unmount the
     // chrome UI itself; gating the shell on this plugin ("go headless / swap
     // your own shell") is on the roadmap. The explorer's icons (drive
-    // fallbacks, folder, document, per-type documents) are this plugin's too.
+    // fallbacks, folder, document, per-type documents) and the home screen's
+    // background (its layers, from connect.home) are this plugin's too.
     // Branding is NOT a plugin: it is the core connect.branding block (appName,
-    // icon, loader, homeBackground; null = default), handed to the runtime
-    // whole in \`config\`.
+    // icon, loader; null = default), handed to the runtime whole in
+    // \`config\`.
     plugins: [
       {
         module: "@powerhousedao/connect/plugins/generic",
@@ -104,6 +105,7 @@ export default {
           allowAddDrive: config.connect?.drives?.allowAddDrive,
           sections: config.connect?.drives?.sections,
           icons: config.connect?.drives?.icons,
+          homeBackground: config.connect?.home?.background,
         },
       },
     ],

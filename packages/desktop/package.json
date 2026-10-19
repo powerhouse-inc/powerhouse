@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

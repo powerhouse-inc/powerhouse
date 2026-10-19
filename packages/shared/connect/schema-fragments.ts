@@ -101,6 +101,121 @@ const imageRefSchema = {
     "Image reference: a project-relative file path (resolved by the Connect build), a URL, or a data URI. null keeps the default.",
 } as const;
 
+const imageRefRequiredSchema = {
+  type: "string",
+  description:
+    "Image reference: a project-relative file path, a URL, or a data URI.",
+} as const;
+
+/** An image per colour scheme. */
+const schemedImageSchema = {
+  description:
+    "One image for both colour schemes, or { light, dark } (dark falls back to light).",
+  anyOf: [
+    imageRefRequiredSchema,
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["light"],
+      properties: {
+        light: imageRefRequiredSchema,
+        dark: { ...imageRefRequiredSchema, type: ["string", "null"] },
+      },
+    },
+  ],
+} as const;
+
+const lengthSchema = {
+  type: ["number", "string", "null"],
+  description:
+    'A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").',
+} as const;
+
+const edgesSchema = {
+  type: ["object", "null"],
+  additionalProperties: false,
+  properties: {
+    top: lengthSchema,
+    right: lengthSchema,
+    bottom: lengthSchema,
+    left: lengthSchema,
+  },
+} as const;
+
+/** One image of a decorated pane. */
+export const phBackgroundLayerSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["src"],
+  description:
+    "An image laid over the page, absolutely positioned: the edges set in `position` pin it, an axis with neither edge set is centred.",
+  properties: {
+    src: schemedImageSchema,
+    position: {
+      ...edgesSchema,
+      description:
+        "Distances to the pane's edges; at most one per axis. Omitted: centred both ways.",
+    },
+    width: lengthSchema,
+    height: lengthSchema,
+    minWidth: lengthSchema,
+    minHeight: lengthSchema,
+    maxWidth: lengthSchema,
+    maxHeight: lengthSchema,
+    opacity: {
+      type: ["number", "null"],
+      minimum: 0,
+      maximum: 1,
+      description: "0 to 1 (default 1).",
+    },
+    fade: {
+      ...edgesSchema,
+      description:
+        "Feather depth per edge, fading the layer into the page colour.",
+    },
+  },
+} as const;
+
+/** A pane's background: layers over a page colour, or one image as
+ * shorthand for a single layer pinned bottom-right. Same shape in
+ * powerhouse.config.json (paths), the runtime config (resolved) and the
+ * desktop app.json. */
+export const phBackgroundSchema = {
+  description:
+    "Layered images over a page colour, or a single image pinned to the bottom-right corner. null keeps the default.",
+  anyOf: [
+    imageRefSchema,
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["layers"],
+      properties: {
+        color: {
+          description:
+            "The page colour, or { light, dark }. Omitted or null: the theme's page background.",
+          anyOf: [
+            { type: ["string", "null"] },
+            {
+              type: "object",
+              additionalProperties: false,
+              required: ["light"],
+              properties: {
+                light: { type: "string" },
+                dark: { type: ["string", "null"] },
+              },
+            },
+          ],
+        },
+        layers: {
+          type: "array",
+          description: "Painted in order; the first is at the back.",
+          items: phBackgroundLayerSchema,
+        },
+      },
+    },
+  ],
+} as const;
+
 /** The drive explorer's icons: the generic chrome's, owned by the generic
  * plugin (its entry `icons`; `connect.drives.icons` on the classic path).
  * Each `null` keeps the built-in icon; paths are resolved by the Connect
@@ -150,11 +265,6 @@ export const phConnectBrandingSchema = {
       description:
         "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'.",
     },
-    homeBackground: {
-      ...imageRefSchema,
-      description:
-        "Background image of the home screen (e.g. 2048x1152, opaque; WebP keeps it light). null or omitted: the bundled gradient.",
-    },
     icon: {
       ...imageRefSchema,
       description:
@@ -194,6 +304,23 @@ export const phConnectBrandingSchema = {
   },
 } as const;
 
+/** `connect.home`: the home screen, the generic chrome's landing page and
+ * so the generic plugin's (its entry `homeBackground` on the uniform-runner
+ * path). Same shape in powerhouse.config.json (paths) and in the runtime
+ * config (resolved). */
+export const phConnectHomeSchema = {
+  type: "object",
+  additionalProperties: false,
+  description: "The home screen (the generic chrome's landing page).",
+  properties: {
+    background: {
+      ...phBackgroundSchema,
+      description:
+        "The home screen's background: { color, layers } with each image positioned and sized, or one image pinned bottom-right. null or omitted: the bundled gradient.",
+    },
+  },
+} as const;
+
 export const phConnectRuntimeConfigSchema = {
   type: "object",
   additionalProperties: false,
@@ -201,6 +328,7 @@ export const phConnectRuntimeConfigSchema = {
     "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
   properties: {
     branding: phConnectBrandingSchema,
+    home: phConnectHomeSchema,
     app: {
       type: "object",
       additionalProperties: false,

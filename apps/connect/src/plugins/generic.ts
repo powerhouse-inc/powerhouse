@@ -1,5 +1,6 @@
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import type {
+  PHBackground,
   PHConnectExplorerIcons,
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
@@ -10,14 +11,16 @@ import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
  * The generic Connect shell plugin (`@powerhousedao/connect/plugins/generic`).
  *
  * It OWNS the drive-chrome UI toggles — `allowAddDrive` and the per-section
- * `sections.{remote,local}` switches (enabled / allowAdd / allowDelete) — and
+ * `sections.{remote,local}` switches (enabled / allowAdd / allowDelete) —
  * the explorer's `icons` (local/remote drive fallbacks, folder, document and
- * per-type document icons, which override the icons a package ships). These
+ * per-type document icons, which override the icons a package ships) and the
+ * home screen's `homeBackground` (its layers over a page colour). These
  * describe nothing outside the generic chrome (connect.config.ts reads the
  * toggles to decide whether the add-drive affordance and the drive sections
- * render; the explorer components read the icons), so under uniform runners
- * they are configured HERE, through this plugin's entry config, not as
- * free-standing top-level connect.drives values:
+ * render; the explorer components read the icons; the home screen is the
+ * chrome's landing page), so under uniform runners they are configured HERE,
+ * through this plugin's entry config, not as free-standing top-level
+ * connect.drives / connect.home values:
  *
  *   - present + entry provides a value  -> that value
  *   - present + entry omits it          -> inherit DEFAULT_CONNECT_CONFIG
@@ -30,10 +33,10 @@ import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
  * beyond the chrome (e.g. document.title), so it stays a Connect-level config
  * value that survives this plugin's absence.
  *
- * Icons are image refs; a project path in host.js is resolved to a data URI
- * by the Connect build before the composition reaches the browser, a URL or
- * data URI passes through (the only forms for config applied after the
- * build). `null` keeps the built-in icon.
+ * Icons and background images are image refs; a project path in host.js is
+ * resolved to a data URI by the Connect build before the composition reaches
+ * the browser, a URL or data URI passes through (the only forms for config
+ * applied after the build). `null` keeps the built-in icon / gradient.
  */
 
 const sectionSchema = z
@@ -57,6 +60,17 @@ const explorerIconsSchema = z
   .nullable()
   .optional();
 
+// The shape is `PHBackground` (shared/clis/types.ts); the Connect build
+// validates it and resolves its images, so here it only has to be a string
+// or a `{ layers }` object.
+const backgroundSchema = z
+  .union([
+    z.string(),
+    z.object({ color: z.unknown().optional(), layers: z.array(z.unknown()) }),
+  ])
+  .nullable()
+  .optional();
+
 const genericConfigSchema = z
   .object({
     allowAddDrive: z.boolean().optional(),
@@ -64,12 +78,14 @@ const genericConfigSchema = z
       .object({ remote: sectionSchema, local: sectionSchema })
       .optional(),
     icons: explorerIconsSchema,
+    homeBackground: backgroundSchema,
   })
   .partial();
 
 type GenericConfig = z.infer<typeof genericConfigSchema>;
 
 const DEFAULT_DRIVES = DEFAULT_CONNECT_CONFIG.drives;
+const DEFAULT_HOME = DEFAULT_CONNECT_CONFIG.home;
 
 export const createGenericPlugin: ConnectPluginFactory = (rawConfig) => {
   const config = genericConfigSchema.parse(rawConfig ?? {}) as GenericConfig;
@@ -102,6 +118,14 @@ export const createGenericPlugin: ConnectPluginFactory = (rawConfig) => {
             // the default — the built-in icons.
             icons: (config.icons ?? null) as PHConnectExplorerIcons | null,
           } as never,
+          home: {
+            ...served.home,
+            // Owned: the entry's background (images resolved by the build),
+            // else the default — the bundled gradient.
+            background: (config.homeBackground ??
+              DEFAULT_HOME?.background ??
+              null) as PHBackground | null,
+          },
         };
       },
     },

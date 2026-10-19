@@ -126,7 +126,7 @@ function HomeScreenContainer() {
   const drives = useVisibleDrives();
   const isAddDriveEnabled = useIsAddDriveEnabled();
   const runtimeConfig = getRuntimeConfig();
-  const homeBackground = runtimeConfig.connect?.branding?.homeBackground;
+  const homeBackground = runtimeConfig.connect.home?.background;
   return (
     <HomeScreen homeBackground={homeBackground}>
       {drives?.map((drive) => {

@@ -35,6 +35,7 @@ describe("applyComposition", () => {
           allowAddDrive: false,
           sections: { local: { allowAdd: false } },
           icons: { folder: "data:f", documents: { "acme/order": "data:o" } },
+          homeBackground: { color: "#fff", layers: [{ src: "data:bg" }] },
         },
       },
     ];
@@ -46,6 +47,11 @@ describe("applyComposition", () => {
     expect(out.drives?.icons).toEqual({
       folder: "data:f",
       documents: { "acme/order": "data:o" },
+    });
+    // ...and the home screen's background.
+    expect(out.home?.background).toEqual({
+      color: "#fff",
+      layers: [{ src: "data:bg" }],
     });
     // ...unspecified section keys inherit DEFAULT_CONNECT_CONFIG, not served.
     expect(out.drives?.sections?.local?.enabled).toBe(true);
@@ -62,6 +68,7 @@ describe("applyComposition", () => {
     expect(out.drives?.sections?.remote?.allowAdd).toBe(true);
     // the served drives.icons is not a fallback: single source, built-in icons
     expect(out.drives?.icons).toBeNull();
+    expect(out.home?.background).toBeNull();
   });
 
   it("generic absent zeroes the drive-chrome toggles off", async () => {
@@ -72,6 +79,7 @@ describe("applyComposition", () => {
     expect(out.drives?.sections?.remote?.enabled).toBe(false);
     expect(out.drives?.sections?.local?.allowDelete).toBe(false);
     expect(out.drives?.icons).toBeNull();
+    expect(out.home?.background).toBeNull();
     // branding still untouched by the pipeline.
     expect(out.branding?.appName).toBe("Default");
   });

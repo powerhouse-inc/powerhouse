@@ -45,7 +45,7 @@ import {
   resolveProjectLoader,
   resolveProjectPwaBrand,
   resolveRuntimeBranding,
-  withResolvedExplorerIcons,
+  withResolvedGenericImages,
 } from "./vite-plugins/project-brand.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
@@ -408,12 +408,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   // The explorer's icons are the generic plugin's: `drives.icons` in the
   // source block and the generic entry's `icons` in a served composition.
   // Paths become data URIs here as well; URLs and data URIs pass through.
-  const sourceConnect = withResolvedExplorerIcons(
+  const sourceConnect = withResolvedGenericImages(
     options.dirname,
     phConfig.connect,
     brandWarn,
   );
-  const connectOverride = withResolvedExplorerIcons(
+  const connectOverride = withResolvedGenericImages(
     options.dirname,
     options.cliConnectOverride,
     brandWarn,

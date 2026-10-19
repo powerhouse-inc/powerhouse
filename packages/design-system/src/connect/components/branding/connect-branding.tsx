@@ -1,3 +1,4 @@
+import type { PHBackground } from "@powerhousedao/shared/clis";
 import { createContext, useContext, type PropsWithChildren } from "react";
 
 /**
@@ -24,7 +25,8 @@ export type ConnectBranding = {
   appName?: string | null;
   /** The in-app logo (the 64 px app icon). */
   icon?: string | null;
-  homeBackground?: string | null;
+  /** The home screen's background (images resolved). */
+  homeBackground?: PHBackground | null;
   icons?: ConnectExplorerIcons | null;
 };
 

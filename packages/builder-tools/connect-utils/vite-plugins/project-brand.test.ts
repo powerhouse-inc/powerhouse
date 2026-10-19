@@ -1,19 +1,24 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type {
+  PHBackgroundLayers,
+  PHConnectBranding,
+} from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "vitest";
 import {
   brandMetaTags,
   effectiveBranding,
   pngSize,
   replaceShellLoader,
+  resolveBackground,
   resolveExplorerIcons,
   resolveProjectFavicons,
   resolveProjectLoader,
   resolveProjectPwaBrand,
   resolveRuntimeBranding,
   withProjectFavicons,
-  withResolvedExplorerIcons,
+  withResolvedGenericImages,
 } from "./project-brand.js";
 import { brandManifest } from "./pwa.js";
 
@@ -45,52 +50,48 @@ describe("effectiveBranding", () => {
   it("fills the defaults and lets null in any layer mean the default", () => {
     expect(effectiveBranding()).toEqual({
       appName: "Powerhouse Connect",
-      homeBackground: null,
       icon: null,
       loader: null,
     });
     // the scaffold's all-null block is the default look
     expect(
-      effectiveBranding({
-        appName: null,
-        homeBackground: null,
-        icon: null,
-        loader: null,
-      }),
+      effectiveBranding({ appName: null, icon: null, loader: null }),
     ).toEqual(effectiveBranding());
-    // source sets, the override's null resets (`--home-background ""`)
+    // source sets, the override's null resets
     expect(
       effectiveBranding(
-        { appName: "Pizza", homeBackground: "./bg.webp", icon: "./a.png" },
-        { homeBackground: null, appName: "  " },
+        { appName: "Pizza", loader: "./l.png", icon: "./a.png" },
+        { loader: null, appName: "  " },
       ),
     ).toMatchObject({
       appName: "Powerhouse Connect",
-      homeBackground: null,
+      loader: null,
       icon: "./a.png",
     });
+    // a key branding no longer has (the home background moved to
+    // connect.home, the generic plugin's) is dropped, not carried along
+    expect(
+      effectiveBranding({ homeBackground: "./bg.webp" } as PHConnectBranding),
+    ).toEqual(effectiveBranding());
   });
 });
 
 describe("resolveRuntimeBranding", () => {
-  it("resolves the background and the icon's 64 px variant to data URIs", () => {
+  it("resolves the icon's 64 px variant to a data URI", () => {
     const dir = project({
       "icons/app.png": png(1024, 1024),
       "icons/app_64x64.png": png(64, 64),
-      "icons/bg.webp": "RIFF",
     });
     const runtime = resolveRuntimeBranding(
       dir,
       effectiveBranding({
         appName: "Pizza Plaza",
         icon: "./icons/app.png",
-        homeBackground: "./icons/bg.webp",
         loader: "./icons/app.png",
       }),
     );
     expect(runtime.appName).toBe("Pizza Plaza");
     expect(runtime.icon).toBe(dataUri(png(64, 64)));
-    expect(runtime.homeBackground).toMatch(/^data:image\/webp;base64,/);
     // the loader is served as a file and declared in index.html
     expect(runtime.loader).toBeNull();
   });
@@ -99,7 +100,6 @@ describe("resolveRuntimeBranding", () => {
     const dir = project({ "icons/app.png": png(16, 16) });
     expect(resolveRuntimeBranding(dir, effectiveBranding())).toEqual({
       appName: "Powerhouse Connect",
-      homeBackground: null,
       icon: null,
       loader: null,
     });
@@ -109,6 +109,90 @@ describe("resolveRuntimeBranding", () => {
         effectiveBranding({ icon: "./icons/app.png" }),
       ).icon,
     ).toMatch(/^data:image\/png/);
+  });
+});
+
+describe("resolveBackground", () => {
+  const svg = (viewBox: boolean) =>
+    `<svg xmlns="http://www.w3.org/2000/svg"${viewBox ? ' viewBox="0 0 10 10"' : ""}/>`;
+
+  it("resolves every layer's light and dark image and keeps the layout", () => {
+    const dir = project({
+      "brand/lockup.svg": svg(true),
+      "brand/lockup-dark.svg": svg(true),
+      "brand/growth.png": png(10, 10),
+    });
+    const warnings: string[] = [];
+    const resolved = resolveBackground(
+      dir,
+      {
+        color: { light: "#fff", dark: "#000" },
+        layers: [
+          {
+            src: {
+              light: "./brand/lockup.svg",
+              dark: "./brand/lockup-dark.svg",
+            },
+            position: { top: 32, left: 40 },
+            width: 200,
+          },
+          {
+            src: "./brand/growth.png",
+            position: { bottom: 0, right: 0 },
+            width: "min(55%, 880px)",
+            fade: { top: 160, left: 160 },
+          },
+          { src: "./brand/none.png" },
+          { src: "https://cdn.example/x.webp", opacity: 0.5 },
+        ],
+      },
+      (message) => warnings.push(message),
+    );
+    const { color, layers } = resolved as PHBackgroundLayers;
+    expect(color).toEqual({ light: "#fff", dark: "#000" });
+    expect(layers).toHaveLength(3);
+    const lockup = layers[0].src as { light: string; dark: string };
+    expect(lockup.light).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(lockup.dark).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(layers[0]).toMatchObject({
+      position: { top: 32, left: 40 },
+      width: 200,
+    });
+    expect(layers.slice(1)).toEqual([
+      {
+        src: dataUri(png(10, 10)),
+        position: { bottom: 0, right: 0 },
+        width: "min(55%, 880px)",
+        fade: { top: 160, left: 160 },
+      },
+      { src: "https://cdn.example/x.webp", opacity: 0.5 },
+    ]);
+    expect(warnings).toEqual([
+      "[branding] file not found, skipped: ./brand/none.png",
+    ]);
+  });
+
+  it("warns about an SVG without a viewBox and a layer pinned to both edges", () => {
+    const dir = project({ "brand/mark.svg": svg(false) });
+    const warnings: string[] = [];
+    resolveBackground(
+      dir,
+      {
+        layers: [{ src: "./brand/mark.svg", position: { top: 0, bottom: 0 } }],
+      },
+      (message) => warnings.push(message),
+    );
+    expect(warnings).toEqual([
+      "[branding] homeBackground.layers[0].position: set top or bottom, not both",
+      "[branding] ./brand/mark.svg has no viewBox, so its aspect is unknown: give the layer both width and height.",
+    ]);
+  });
+
+  it("keeps a single image a single image, and nothing for nothing", () => {
+    const dir = project({ "bg.webp": "RIFF" });
+    expect(resolveBackground(dir, "./bg.webp")).toMatch(/^data:image\/webp/);
+    expect(resolveBackground(dir, "./none.webp")).toBeNull();
+    expect(resolveBackground(dir, null)).toBeNull();
   });
 });
 
@@ -137,35 +221,42 @@ describe("explorer icons (the generic plugin's)", () => {
     expect(resolveExplorerIcons(dir, { folder: "./nope.png" })).toBeNull();
   });
 
-  it("resolves them in the source drives block and in the generic entry's config", () => {
+  it("resolves them, and the home background, in the source block and in the generic entry's config", () => {
     const dir = project({ "f.png": png(4, 4) });
     const connect = {
       branding: { appName: "x" },
       drives: { allowAddDrive: true, icons: { folder: "./f.png" } },
+      home: { background: "./f.png" },
       composition: [
         { module: "@powerhousedao/connect/plugins/workflows", config: {} },
         {
           module: "@powerhousedao/connect/plugins/generic",
-          config: { allowAddDrive: false, icons: { document: "./f.png" } },
+          config: {
+            allowAddDrive: false,
+            icons: { document: "./f.png" },
+            homeBackground: { layers: [{ src: "./f.png", width: 200 }] },
+          },
         },
       ],
     };
-    const out = withResolvedExplorerIcons(dir, connect);
+    const out = withResolvedGenericImages(dir, connect);
     expect(out.drives).toEqual({
       allowAddDrive: true,
       icons: { folder: dataUri(png(4, 4)) },
     });
+    expect(out.home).toEqual({ background: dataUri(png(4, 4)) });
     expect(out.composition[1].config).toEqual({
       allowAddDrive: false,
       icons: { document: dataUri(png(4, 4)) },
+      homeBackground: { layers: [{ src: dataUri(png(4, 4)), width: 200 }] },
     });
     // other entries and the rest of the block are untouched
     expect(out.composition[0]).toBe(connect.composition[0]);
     expect(out.branding).toBe(connect.branding);
     // nothing to resolve: the same object comes back
     const plain = { drives: { allowAddDrive: true } };
-    expect(withResolvedExplorerIcons(dir, plain)).toBe(plain);
-    expect(withResolvedExplorerIcons(dir, undefined)).toBeUndefined();
+    expect(withResolvedGenericImages(dir, plain)).toBe(plain);
+    expect(withResolvedGenericImages(dir, undefined)).toBeUndefined();
   });
 });
 

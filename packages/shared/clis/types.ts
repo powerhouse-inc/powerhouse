@@ -32,6 +32,60 @@ export type PowerhousePackage = {
  * it into a data URI or an emitted file), a URL, or a data URI. */
 export type PHImageRef = string;
 
+/** An image per colour scheme: one reference for both, or `{ light, dark }`
+ * (`dark` falls back to `light`). */
+export type PHSchemedImage =
+  | PHImageRef
+  | { light: PHImageRef; dark?: PHImageRef | null };
+
+/** A CSS colour per colour scheme (`dark` falls back to `light`). */
+export type PHSchemedColor = string | { light: string; dark?: string | null };
+
+/** A CSS length: a number is px, a string is passed through as written
+ * ("40%", "min(55%, 880px)", "calc(50% - 120px)"). */
+export type PHLength = number | string;
+
+/** Distances to the four edges; each is optional. */
+export type PHEdges = {
+  top?: PHLength | null;
+  right?: PHLength | null;
+  bottom?: PHLength | null;
+  left?: PHLength | null;
+};
+
+/** One image of a decorated pane, absolutely positioned inside it. The
+ * edges set in `position` are the ones it is pinned to; an axis with neither
+ * edge set is centred. Give `width` or `height`; the other follows the
+ * image's aspect (an SVG needs a viewBox for that). */
+export type PHBackgroundLayer = {
+  src: PHSchemedImage;
+  /** At most one edge per axis. Omitted: centred both ways. */
+  position?: PHEdges | null;
+  width?: PHLength | null;
+  height?: PHLength | null;
+  minWidth?: PHLength | null;
+  minHeight?: PHLength | null;
+  maxWidth?: PHLength | null;
+  maxHeight?: PHLength | null;
+  /** 0 to 1 (default 1). */
+  opacity?: number | null;
+  /** Feather depth per edge, fading the layer into the page colour. */
+  fade?: PHEdges | null;
+};
+
+/** A decorated pane: the page colour and the images laid over it, painted
+ * in order (the first at the back). The content of the pane paints above
+ * them all. */
+export type PHBackgroundLayers = {
+  /** The page colour. Omitted or null: the theme's page background. */
+  color?: PHSchemedColor | null;
+  layers: PHBackgroundLayer[];
+};
+
+/** A pane's background: layers, or a single image as shorthand for one
+ * layer pinned to the bottom-right corner. */
+export type PHBackground = PHImageRef | PHBackgroundLayers;
+
 /** Connect's identity and look. Core settings of the Connect host: every
  * field is optional, and `null` means "the default" (the same as omitting
  * it), so a scaffolded config can list them all. Paths are resolved by the
@@ -40,8 +94,6 @@ export type PHConnectBranding = {
   /** Browser tab title, installed-app name and in-app brand text.
    * Default "Powerhouse Connect". */
   appName?: string | null;
-  /** Home-screen background image. Default: the bundled gradient. */
-  homeBackground?: PHImageRef | null;
   /** App icon master (1024x1024 PNG recommended, or an SVG). The favicons
    * and installed-app icons are its `<name>_16x16` / `_32x32` / `_64x64` /
    * `_192x192` / `_512x512` siblings; the 64 px one is the in-app logo.
@@ -60,6 +112,15 @@ export type PHConnectLoader = {
   animation?: "pulse" | "spin" | "none" | null;
   /** Width in CSS pixels (default 96); the height follows the image. */
   size?: number | null;
+};
+
+/** The home screen: the generic chrome's landing page, so the generic
+ * plugin owns it (its entry `homeBackground`; `connect.home.background` on
+ * the classic path). */
+export type PHConnectHome = {
+  /** Layered images over a page colour, or one image pinned bottom-right.
+   * null: the bundled gradient. */
+  background?: PHBackground | null;
 };
 
 /** The drive explorer's icons: the generic chrome's, so the generic plugin
@@ -366,6 +427,7 @@ export type PHConnectRuntimeConfig = {
    * classic defaults. */
   composition?: PHConnectCompositionEntry[];
   branding?: PHConnectBranding;
+  home?: PHConnectHome;
   app?: PHConnectApp;
   ai?: PHConnectAi;
   packages?: PHConnectPackages;

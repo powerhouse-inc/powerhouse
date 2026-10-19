@@ -1,3 +1,10 @@
+import {
+  colorVariants,
+  imageVariants,
+  layerStyleText,
+  normalizeBackground,
+} from "@powerhousedao/shared/connect";
+import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -133,15 +140,28 @@ export const LOADING_SPLASH = "splash.png";
 export const LOADING_SPLASH_DARK = "splash-dark.png";
 /** Corner decoration (app.json `loading.art` / `loading.artDark`). */
 export const LOADING_ART = "art";
+/** The background's layers (app.json `background`): `bg-<n>.<ext>` and
+ * `bg-<n>-dark.<ext>` beside the page. */
+export const LOADING_BG = "bg";
 
 /** CSS size of the logo; the 1024² source keeps it crisp up to 8x DPR. */
 const LOGO_CSS_PX = 128;
 
-/** The art the loading page shows: the wide splash (with an optional dark
- * counterpart), else the square logo; plus an optional corner decoration. */
+/** One layer of the page's background, staged beside the page (or a URL /
+ * data URI as given) with the style that places it. */
+type LoadingLayer = { light: string; dark?: string; style: string };
+
+/** The art the loading page shows: a layered background (app.json
+ * `background`) under the centred status line; or, without one, the wide
+ * splash (with an optional dark counterpart) else the square logo above the
+ * status line, plus an optional corner decoration. */
 type LoadingArt = {
   main: { kind: "logo" | "splash"; file: string; dark?: string } | null;
   corner: { file: string; dark?: string } | null;
+  background: {
+    color: { light: string; dark?: string } | null;
+    layers: LoadingLayer[];
+  } | null;
 };
 
 function loadingHtml(app: AppJson, art: LoadingArt): string {
@@ -152,20 +172,44 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
   const message = loading?.message
     ? escape(loading.message)
     : `Starting ${name}…`;
-  const background = loading?.background ?? "#0f1115";
+  // The background's own colour (scheme-aware) beats the loading colours.
+  const pageColor = art.background?.color ?? null;
+  const background = pageColor?.light ?? loading?.background ?? "#0f1115";
   const color = loading?.color ?? "#e6e8eb";
   const accent = loading?.accent ?? "#4ade80";
   const dark = loading?.dark;
-  const darkVars = dark
-    ? `
+  const darkBackground = pageColor?.dark ?? dark?.background;
+  const darkVars =
+    dark || darkBackground
+      ? `
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: ${dark.background ?? background};
-          --fg: ${dark.color ?? color};
-          --accent: ${dark.accent ?? accent};
+          --bg: ${darkBackground ?? background};
+          --fg: ${dark?.color ?? color};
+          --accent: ${dark?.accent ?? accent};
         }
       }`
-    : "";
+      : "";
+  const attr = (text: string) =>
+    text.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  // The background's layers, each placed by the shared layer style (the
+  // same declarations Connect's home screen applies), swapped by scheme.
+  const layersTag =
+    art.background && art.background.layers.length > 0
+      ? `<div class="layers" aria-hidden="true">
+      ${art.background.layers
+        .map((layer) =>
+          layer.dark
+            ? `<picture>
+        <source srcset="${attr(layer.dark)}" media="(prefers-color-scheme: dark)" />
+        <img src="${attr(layer.light)}" alt="" style="${attr(layer.style)}" />
+      </picture>`
+            : `<img src="${attr(layer.light)}" alt="" style="${attr(layer.style)}" />`,
+        )
+        .join("\n      ")}
+    </div>
+    `
+      : "";
   // <picture> swaps the file by color scheme; a plain <img> otherwise.
   const picture = (
     cls: string,
@@ -230,6 +274,7 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
         position: fixed; right: 0; bottom: 0; z-index: 0;
         width: clamp(220px, 30vw, 520px); line-height: 0; pointer-events: none;
       }
+      .layers { position: fixed; inset: 0; z-index: 0; }
       .art { width: 100%; height: auto; display: block; }
       .dot {
         width: 10px; height: 10px; border-radius: 50%;
@@ -244,7 +289,7 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
     <div class="box">
       ${logoTag}<div><span class="dot"></span>${message}</div>
     </div>
-    ${cornerTag}</body>
+    ${layersTag}${cornerTag}</body>
 </html>
 `;
 }
@@ -367,6 +412,7 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /ui/splash-dark.png
 /ui/art.*
 /ui/art-dark.*
+/ui/bg-*
 /dist-stack
 /binaries
 `;
@@ -411,18 +457,53 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     rel ? path.extname(rel).toLowerCase() || ".png" : ".png";
   const artFile = `${LOADING_ART}${artExt(app.loading?.art)}`;
   const artDarkFile = `${LOADING_ART}-dark${artExt(app.loading?.artDark)}`;
+  // The background's layers: a file beside app.json is staged beside the
+  // page as bg-<n>[-dark].<ext>; a URL or data URI is used as given; a layer
+  // whose light image is missing is dropped (a missing dark one falls back
+  // to the light one).
+  const background = normalizeBackground(app.background);
+  const staged: Array<[string, Buffer]> = [];
+  const stage = (ref: string, stem: string): string | undefined => {
+    if (isPassthroughImageRef(ref)) return ref;
+    const abs = path.resolve(hostDir, ref);
+    if (!fs.existsSync(abs)) return undefined;
+    const file = `${stem}${artExt(ref)}`;
+    staged.push([path.join(shellDir, "ui", file), fs.readFileSync(abs)]);
+    return `./${file}`;
+  };
+  const layers = (background?.layers ?? []).flatMap(
+    (layer, index): LoadingLayer[] => {
+      const variants = imageVariants(layer.src);
+      const light = stage(variants.light, `${LOADING_BG}-${index}`);
+      if (!light) return [];
+      const dark = variants.dark
+        ? stage(variants.dark, `${LOADING_BG}-${index}-dark`)
+        : undefined;
+      return [
+        { light, ...(dark ? { dark } : {}), style: layerStyleText(layer) },
+      ];
+    },
+  );
+  // A background replaces the splash/logo and the corner art: its layers are
+  // the page's decoration, the status line stays centred above them.
   const art: LoadingArt = {
-    main: splashBytes
-      ? {
-          kind: "splash",
-          file: LOADING_SPLASH,
-          ...(splashDarkBytes ? { dark: LOADING_SPLASH_DARK } : {}),
-        }
-      : iconBytes
-        ? { kind: "logo", file: LOADING_LOGO }
+    main: background
+      ? null
+      : splashBytes
+        ? {
+            kind: "splash",
+            file: LOADING_SPLASH,
+            ...(splashDarkBytes ? { dark: LOADING_SPLASH_DARK } : {}),
+          }
+        : iconBytes
+          ? { kind: "logo", file: LOADING_LOGO }
+          : null,
+    corner:
+      !background && artBytes
+        ? { file: artFile, ...(artDarkBytes ? { dark: artDarkFile } : {}) }
         : null,
-    corner: artBytes
-      ? { file: artFile, ...(artDarkBytes ? { dark: artDarkFile } : {}) }
+    background: background
+      ? { color: colorVariants(background.color), layers }
       : null,
   };
   const files: Array<[string, string]> = [
@@ -450,6 +531,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     [path.join(shellDir, "ui", LOADING_SPLASH_DARK), splashDarkBytes],
     [path.join(shellDir, "ui", artFile), artBytes],
     [path.join(shellDir, "ui", artDarkFile), artDarkBytes],
+    ...staged,
   ];
   for (const [dest, bytes] of copies) {
     if (!bytes) continue;

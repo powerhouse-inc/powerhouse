@@ -1847,6 +1847,9 @@ importers:
       '@powerhousedao/host-core':
         specifier: workspace:*
         version: link:../host-core
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../shared
       zod:
         specifier: 'catalog:'
         version: 4.6.5

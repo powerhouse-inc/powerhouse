@@ -49,8 +49,8 @@ Schema lives in `packages/builder-tools/connect-utils/runtime-config-schema.ts`.
 
   // Connect-only runtime values:
   "connect": {
-    "branding":  { "appName": "...", "homeBackground": "..." | null,
-                   "icon": "..." | null, "loader": "..." | { src, animation, size } | null },
+    "branding":  { "appName": "...", "icon": "..." | null, "loader": "..." | { src, animation, size } | null },
+    "home":      { "background": "..." | { color, layers: [{ src, position, width, height, fade, ... }] } | null },
     "app":       { "logLevel": "info", "basePath": "/", "offline": true },
     "renown":    { "url": "...", "networkId": "eip155", "chainId": 1, "switchboardUrl": "..." | undefined, "adapters": {...} | undefined },
     "drives":    { "allowAddDrive": true, "defaultDrives": [...], "preserveStrategy": "...", "sections": {...},

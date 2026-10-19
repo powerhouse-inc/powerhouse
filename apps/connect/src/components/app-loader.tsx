@@ -42,7 +42,11 @@ export const AppLoader = (props: {
   // plugin owns (drives.icons), both resolved by the build: one provider for
   // the design-system components.
   const runtime = getRuntimeConfig().connect;
-  const branding = { ...runtime.branding, icons: runtime.drives?.icons };
+  const branding = {
+    ...runtime.branding,
+    homeBackground: runtime.home?.background,
+    icons: runtime.drives?.icons,
+  };
   const Load = lazy(() =>
     import("./load.js").then((m) =>
       m.loadComponent(props.localPackage, phStore),

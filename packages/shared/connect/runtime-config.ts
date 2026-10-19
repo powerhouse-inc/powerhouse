@@ -18,9 +18,13 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
   // null = the default; the scaffold lists every branding field this way.
   branding: {
     appName: "Powerhouse Connect",
-    homeBackground: null,
     icon: null,
     loader: null,
+  },
+  // The generic plugin's (its entry `homeBackground`); null = the bundled
+  // gradient.
+  home: {
+    background: null,
   },
   app: {
     logLevel: "info",

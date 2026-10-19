@@ -1,3 +1,4 @@
+export * from "./background.js";
 export * from "./config-loader.js";
 export * from "./dynamic-base.js";
 export * from "./env-config.js";

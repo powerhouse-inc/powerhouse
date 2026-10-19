@@ -1,11 +1,16 @@
 import type {
+  PHBackground,
   PHConnectBranding,
   PHConnectCompositionEntry,
   PHConnectExplorerIcons,
   PHConnectLoader,
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
-import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import {
+  DEFAULT_CONNECT_CONFIG,
+  mapBackgroundImages,
+  validateBackground,
+} from "@powerhousedao/shared/connect";
 import {
   APP_ICON_VARIANT_SIZES,
   BACKGROUND_MAX_BYTES,
@@ -29,10 +34,11 @@ import type { Connect, Plugin } from "vite";
 //    and icons, emitted next to index.html the way connectFaviconPlugin emits
 //    icon.ico and declared in <meta> / <link> tags;
 //  - the runtime config's `branding` block, with every image resolved to a
-//    data URI, which Connect reads at boot (in-app logo, home background).
+//    data URI, which Connect reads at boot (the in-app logo).
 //
-// The drive explorer's icons are the generic chrome's, owned by the generic
-// plugin (`drives.icons`); the same resolution is applied to them below.
+// The drive explorer's icons (`drives.icons`) and the home screen's
+// background (`home.background`) are the generic chrome's, owned by the
+// generic plugin; the same resolution is applied to them below.
 // `null` on any field means the default, the same as omitting it. A path is
 // resolved here, at build or dev-server start; config applied later (deploy
 // overrides, packages loaded in the browser) uses URLs or data URIs, which
@@ -55,7 +61,8 @@ type Warn = (message: string) => void;
  * The branding in effect: defaults < source powerhouse.config.json <
  * CLI / host override, applied in that order. In every layer `undefined`
  * leaves the field alone and `null` resets it to the default, so a null in a
- * later layer beats a value in an earlier one (`--home-background ""`).
+ * later layer beats a value in an earlier one. Keys branding does not have
+ * (a `homeBackground` from before it moved to `connect.home`) are dropped.
  */
 export function effectiveBranding(
   ...layers: Array<PHConnectBranding | null | undefined>
@@ -66,7 +73,7 @@ export function effectiveBranding(
     if (!layer) continue;
     const entries = Object.entries(layer) as Array<[string, unknown]>;
     for (const [key, value] of entries) {
-      if (value === undefined) continue;
+      if (value === undefined || !(key in defaults)) continue;
       out[key] = value === null ? (defaults[key] ?? null) : value;
     }
   }
@@ -77,10 +84,10 @@ export function effectiveBranding(
 }
 
 /**
- * The `branding` block Connect reads at boot: paths resolved to data URIs,
- * the app icon reduced to its 64 px variant (the in-app logo; a master would
- * be ~1 MB of base64), the loader left out (it is served as a file and
- * declared in index.html). Fields without a usable image end up null.
+ * The `branding` block Connect reads at boot: the app icon reduced to its
+ * 64 px variant as a data URI (the in-app logo; a master would be ~1 MB of
+ * base64), the loader left out (it is served as a file and declared in
+ * index.html). Fields without a usable image end up null.
  */
 export function resolveRuntimeBranding(
   projectRoot: string,
@@ -89,11 +96,6 @@ export function resolveRuntimeBranding(
 ): PHConnectBranding {
   const out: PHConnectBranding = {
     appName: branding.appName ?? DEFAULT_BRANDING.appName,
-    homeBackground:
-      resolveImageRef(projectRoot, branding.homeBackground, {
-        maxBytes: BACKGROUND_MAX_BYTES,
-        warn,
-      }) ?? null,
     icon: null,
     loader: null,
   };
@@ -106,6 +108,46 @@ export function resolveRuntimeBranding(
       }) ?? null;
   }
   return out;
+}
+
+/**
+ * A pane's background with every image, in both colour schemes, resolved to
+ * a data URI: a single image stays a single image, layers stay layers (a
+ * layer without a usable image is dropped). Problems the renderer cannot
+ * fix are warned about: a layer pinned to both edges of an axis, an SVG
+ * without a viewBox (its aspect is unknown, so it needs both dimensions).
+ */
+export function resolveBackground(
+  projectRoot: string,
+  background: PHBackground | null | undefined,
+  warn?: Warn,
+): PHBackground | null {
+  if (!background) return null;
+  for (const problem of validateBackground(background, "homeBackground")) {
+    warn?.(`[branding] ${problem}`);
+  }
+  const resolveOne = (ref: string) => {
+    if (!isPassthroughImageRef(ref) && extname(ref).toLowerCase() === ".svg") {
+      warnWithoutViewBox(projectRoot, ref, warn);
+    }
+    return resolveImageRef(projectRoot, ref, {
+      maxBytes: BACKGROUND_MAX_BYTES,
+      warn,
+    });
+  };
+  if (typeof background === "string") return resolveOne(background) ?? null;
+  return mapBackgroundImages(background, resolveOne);
+}
+
+function warnWithoutViewBox(projectRoot: string, ref: string, warn?: Warn) {
+  const file = resolve(projectRoot, ref);
+  if (!existsSync(file)) return; // resolveImageRef reports the missing file
+  const head = readFileSync(file, "utf8").slice(0, 4096);
+  if (!/<svg[^>]*\sviewBox\s*=/i.test(head)) {
+    warn?.(
+      `[branding] ${ref} has no viewBox, so its aspect is unknown: give the layer both width and height.`,
+    );
+  }
 }
 
 const EXPLORER_ICON_KEYS = [
@@ -144,26 +186,31 @@ export function resolveExplorerIcons(
 }
 
 type GenericEntry = PHConnectCompositionEntry & {
-  config: { icons?: PHConnectExplorerIcons | null };
+  config: {
+    icons?: PHConnectExplorerIcons | null;
+    homeBackground?: PHBackground | null;
+  };
 };
 
-function hasIconsConfig(
+/** A generic plugin entry whose config carries images to resolve. */
+function hasGenericImages(
   entry: PHConnectCompositionEntry,
 ): entry is GenericEntry {
   return (
     entry.module === GENERIC_PLUGIN_MODULE &&
     entry.config !== undefined &&
-    "icons" in entry.config
+    ("icons" in entry.config || "homeBackground" in entry.config)
   );
 }
 
 /**
- * A connect block with its explorer icons resolved, wherever they are
- * declared: `drives.icons` (the classic source value) and the generic
- * plugin entry's `icons` in a served composition (the owner under uniform
- * runners). Unchanged when neither is present.
+ * A connect block with the generic plugin's images resolved, wherever they
+ * are declared: `drives.icons` and `home.background` (the classic source
+ * values) and the generic plugin entry's `icons` / `homeBackground` in a
+ * served composition (the owner under uniform runners). Unchanged when none
+ * is present.
  */
-export function withResolvedExplorerIcons<
+export function withResolvedGenericImages<
   T extends PHConnectRuntimeConfig | undefined,
 >(projectRoot: string, connect: T, warn?: Warn): T {
   if (!connect) return connect;
@@ -177,24 +224,37 @@ export function withResolvedExplorerIcons<
       },
     };
   }
-  if (connect.composition?.some(hasIconsConfig)) {
+  if (connect.home && "background" in connect.home) {
     out = {
       ...out,
-      composition: connect.composition.map((entry) =>
-        hasIconsConfig(entry)
-          ? {
-              ...entry,
-              config: {
-                ...entry.config,
-                icons: resolveExplorerIcons(
-                  projectRoot,
-                  entry.config.icons,
-                  warn,
-                ),
-              },
-            }
-          : entry,
-      ),
+      home: {
+        ...out.home,
+        background: resolveBackground(
+          projectRoot,
+          connect.home.background,
+          warn,
+        ),
+      },
+    };
+  }
+  if (connect.composition?.some(hasGenericImages)) {
+    out = {
+      ...out,
+      composition: connect.composition.map((entry) => {
+        if (!hasGenericImages(entry)) return entry;
+        const config = { ...entry.config };
+        if ("icons" in config) {
+          config.icons = resolveExplorerIcons(projectRoot, config.icons, warn);
+        }
+        if ("homeBackground" in config) {
+          config.homeBackground = resolveBackground(
+            projectRoot,
+            config.homeBackground,
+            warn,
+          );
+        }
+        return { ...entry, config };
+      }),
     };
   }
   return out as T;
