@@ -1,15 +1,19 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
   compoundHostSchema,
+  compoundWiringSchema,
   getVerb,
   loadHost,
+  refineStartOrder,
   resolveRunnerModule,
+  runnerBaseSchema,
   validateHost,
-  type HostDefinition,
   type RunnerContext,
+  type RunnerHandle,
 } from "@powerhousedao/host-core";
+import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleStack } from "./bundle-stack.js";
 import { ICON_SOURCE, projectShell } from "./shell-project.js";
@@ -22,12 +26,7 @@ import {
   tauriSpawn,
   type TauriCommand,
 } from "./shell-toolchain.js";
-import {
-  launchShell,
-  resolveShell,
-  shellEnv,
-  type ShellOptions,
-} from "./shell.js";
+import { launchShell, resolveShell, shellEnv } from "./shell.js";
 
 /**
  * @powerhousedao/desktop/runner.
@@ -52,34 +51,87 @@ import {
 
 export const kind = "compound";
 
-export const hostSchema = compoundHostSchema;
+/** `runner.shell`: a prebuilt or hand-maintained shell (mode 2). Mirrors
+ * `ShellOptions` (shell.ts); a type test pins the two together. */
+export const shellOptionsSchema = z.strictObject({
+  /** Path to a ph-win-desktop checkout (absolute or project-relative). */
+  project: z.string().min(1).optional(),
+  window: z
+    .strictObject({
+      title: z.string().optional(),
+      width: z.number().int().positive().optional(),
+      height: z.number().int().positive().optional(),
+    })
+    .optional(),
+  tray: z.boolean().optional(),
+  fileAssociations: z.array(z.string().min(1)).optional(),
+});
 
-interface DesktopRunnerOptions {
-  shell?: ShellOptions;
-  /** build: vendor ph-cli into the staged stack (default true). */
-  vendorStack?: boolean;
-  /** build: the ph-cli version/tag to vendor (default "dev"). */
-  phCliVersion?: string;
-  /** build: full install spec override (e.g. a pnpm-pack tarball path) for a
-   * ph-cli not yet on the registry. */
-  phCliSpec?: string;
+/** The desktop runner's own `runner` options, on top of the common base. */
+const desktopRunnerOptionsSchema = runnerBaseSchema
+  .extend({
+    shell: shellOptionsSchema.optional(),
+    /** build: vendor ph-cli into the staged stack (default true). */
+    vendorStack: z.boolean().optional(),
+    /** build: the ph-cli version/tag to vendor (default "dev"). */
+    phCliVersion: z.string().min(1).optional(),
+    /** build: full install spec override (e.g. a pnpm-pack tarball path) for a
+     * ph-cli not yet on the registry. */
+    phCliSpec: z.string().min(1).optional(),
+  })
+  .strict();
+
+/** The desktop host: the generic compound's wiring config plus the shell and
+ * packaging options. Extend the unrefined base, refine last (zod refuses to
+ * extend a refined object). */
+export const hostSchema = compoundHostSchema
+  .extend({
+    runner: desktopRunnerOptionsSchema,
+    config: compoundWiringSchema.optional(),
+  })
+  .superRefine(refineStartOrder);
+
+/** What a desktop host.js author writes. */
+export type DesktopHostInput = z.input<typeof hostSchema>;
+/** What the verbs receive. */
+export type DesktopHost = z.output<typeof hostSchema>;
+
+/** The desktop compound produces nothing of its own: what its members
+ * produce stays with the members (the compound's handles, the run record's
+ * `members`). */
+export const outputsSchema = z.strictObject({});
+
+export type DesktopOutputs = z.infer<typeof outputsSchema>;
+
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/desktop/runner": {
+      host: DesktopHostInput;
+      outputs: DesktopOutputs;
+    };
+  }
 }
+
+export type DesktopHandle = RunnerHandle<DesktopOutputs>;
 
 async function compoundModule() {
   return import("@powerhousedao/host-core/runners/compound");
 }
 
 /** hosts/<host>/ — where app.json lives and the generated shell is written. */
-function hostDirOf(host: HostDefinition, ctx: RunnerContext): string {
+function hostDirOf(
+  host: Pick<DesktopHost, "name">,
+  ctx: RunnerContext,
+): string {
   return path.join(ctx.projectRoot, "hosts", host.name);
 }
 
 /** The connect member's port — the shell's readiness probe and window URL. */
 async function connectPort(
-  host: HostDefinition,
+  host: DesktopHost,
   ctx: RunnerContext,
 ): Promise<number> {
-  for (const wrapper of Object.values(host.children ?? {})) {
+  for (const wrapper of Object.values(host.children)) {
     if (wrapper.host !== "connect") continue;
     if (wrapper.runner?.port !== undefined) return wrapper.runner.port;
     const member = await loadHost(ctx.projectRoot, wrapper.host);
@@ -93,28 +145,55 @@ async function connectPort(
   );
 }
 
-export async function run(host: HostDefinition, ctx: RunnerContext) {
+export async function run(
+  host: DesktopHost,
+  ctx: RunnerContext,
+): Promise<DesktopHandle> {
   const compound = await compoundModule();
-  return compound.run(host, ctx);
+  const started = await compound.run(host, ctx);
+  return {
+    outputs: outputsSchema.parse({}),
+    // runCompound has already awaited every member's readiness.
+    ready: Promise.resolve(),
+    shutdown: started.shutdown,
+  };
 }
 
 export const serve = run;
 
-export interface ShellHandle {
+export interface ShellHandle extends DesktopHandle {
   /** Resolves when the shell window exits — the runner's keep-alive. */
-  ready: Promise<void>;
-  shutdown: () => void;
+  exited: Promise<void>;
+}
+
+/** The handle for a launched shell process: `ready` once it is spawned. */
+function shellHandle(child: ChildProcess): ShellHandle {
+  const exited = new Promise<void>((resolve) =>
+    child.once("exit", () => resolve()),
+  );
+  return {
+    outputs: outputsSchema.parse({}),
+    ready: Promise.resolve(),
+    exited,
+    shutdown: () => {
+      try {
+        child.kill();
+      } catch {
+        // already gone
+      }
+      return Promise.resolve();
+    },
+  };
 }
 
 /** Which shell backs this host's native window (D7.d source order):
  * an explicit `runner.shell.project`, else the app.json-generated shell,
  * else the PH_DESKTOP_SHELL escape hatch. */
 export function shellMode(
-  host: HostDefinition,
+  host: Pick<DesktopHost, "name" | "runner">,
   ctx: RunnerContext,
 ): "external-project" | "generated" | "external-env" | "none" {
-  const options = host.runner as { shell?: ShellOptions };
-  if (options.shell?.project) return "external-project";
+  if (host.runner.shell?.project) return "external-project";
   if (fs.existsSync(path.join(hostDirOf(host, ctx), APP_JSON_FILE))) {
     return "generated";
   }
@@ -157,7 +236,7 @@ function spawnTauri(
 }
 
 export async function dev(
-  host: HostDefinition,
+  host: DesktopHost,
   ctx: RunnerContext,
 ): Promise<ShellHandle> {
   const mode = shellMode(host, ctx);
@@ -187,53 +266,27 @@ export async function dev(
         `(${tauri.via}: cargo tauri dev) — stack via ph run ${host.name}, ` +
         `window at http://127.0.0.1:${port}/`,
     );
-    const child = spawnTauri(tauri, ["dev"], shellDir, envVars);
-    const exited = new Promise<void>((resolve) =>
-      child.once("exit", () => resolve()),
-    );
-    return {
-      ready: exited,
-      shutdown: () => {
-        try {
-          child.kill();
-        } catch {
-          // already gone
-        }
-      },
-    };
+    return shellHandle(spawnTauri(tauri, ["dev"], shellDir, envVars));
   }
 
   // external-project / external-env: a prebuilt or hand-maintained shell.
-  const options = host.runner as { shell?: ShellOptions };
+  const options = host.runner;
   const shell = resolveShell(ctx.projectRoot, options.shell, ctx.env);
   console.log(
     `[${host.name}] launching the desktop shell ` +
       `(${shell.exe ? shell.exe : "pnpm tauri dev"}) — stack via ` +
       `ph run ${host.name}, window at http://127.0.0.1:${port}/`,
   );
-  const child = launchShell(shell, envVars, options.shell);
-  const exited = new Promise<void>((resolve) =>
-    child.once("exit", () => resolve()),
-  );
-  return {
-    ready: exited,
-    shutdown: () => {
-      try {
-        child.kill();
-      } catch {
-        // already gone
-      }
-    },
-  };
+  return shellHandle(launchShell(shell, envVars, options.shell));
 }
 
 /** Forward `build` to members that export it (packaging builds what is
  * buildable — unlike the generic compound's uniform fail-loud forwarding). */
 async function buildMembers(
-  host: HostDefinition,
+  host: DesktopHost,
   ctx: RunnerContext,
 ): Promise<void> {
-  for (const [name, wrapper] of Object.entries(host.children ?? {})) {
+  for (const [name, wrapper] of Object.entries(host.children)) {
     const member = await loadHost(ctx.projectRoot, wrapper.host);
     const specifier = member.host.runner.module;
     const runner = await resolveRunnerModule(ctx.projectRoot, specifier);
@@ -261,13 +314,12 @@ async function buildMembers(
 
 /** build = members' builds + the shippable stack + the native installer. */
 export async function build(
-  host: HostDefinition,
+  host: DesktopHost,
   ctx: RunnerContext,
 ): Promise<void> {
   await buildMembers(host, ctx);
 
-  const runnerOptions = host.runner as DesktopRunnerOptions &
-    HostDefinition["runner"];
+  const runnerOptions = host.runner;
   const mode = shellMode(host, ctx);
   const port = await connectPort(host, ctx);
 
