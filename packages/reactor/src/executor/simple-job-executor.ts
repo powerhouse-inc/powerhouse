@@ -3314,18 +3314,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Creation holds the first two indexes for the life of the document, so it
     // never moves however far back the conflicting range reaches. The auth stream
     // moves nothing at all.
-    // Before the cost check: a re-delivered row pulls everything after it into
-    // the window, and a load that writes nothing must not fail on its size.
-    if (baseReducer3 && incomingOpsToApply.length === 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
-    }
-
     const existingOpsToReshuffle = monotonicAuthStream
       ? []
       : nonSupersededOps.filter((operation) => !isGenesisOperation(operation));
