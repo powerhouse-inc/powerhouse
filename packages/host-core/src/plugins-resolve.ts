@@ -174,3 +174,184 @@ export async function resolvePluginContributions(
   }
   return plan;
 }
+
+/* -------------------------------------------------------------- dead config */
+
+/** One Connect config value a built-in Connect plugin owns. */
+export interface OwnedConfigSlice {
+  /** Dot path inside the connect config block, e.g. "drives.allowAddDrive". */
+  path: string;
+  /** What Connect serves at `path` while the owning plugin is absent from a
+   * declared composition (apps/connect plugin-host.ts zeroAbsentSlices). */
+  absent: unknown;
+  /** The owning plugin's entry config key that sets this value, when the
+   * plugin takes it as config; omitted where presence alone is the switch. */
+  entryKey?: string;
+}
+
+export interface ConnectPluginSlices {
+  slices: OwnedConfigSlice[];
+  /** A slice whose unset or `absent` value leaves every slice of this plugin
+   * inert (OpenPanel tracking does nothing without a clientId), so nothing
+   * of it is reported as dead. */
+  inertUnless?: string;
+}
+
+/**
+ * The connect config slices each built-in Connect plugin owns, by specifier
+ * (typed-host-configs 1.6). Under a declared composition Connect zeroes a
+ * slice whose plugin is absent — presence is activation — so an authored
+ * value there is dead config. Connect's built-ins are browser modules with no
+ * Node-resolvable identity, so their ownership is declared here as data; a
+ * Connect test pins it to plugin-host's zeroing.
+ */
+export const CONNECT_PLUGIN_OWNED_SLICES: Readonly<
+  Record<string, ConnectPluginSlices>
+> = {
+  "@powerhousedao/connect/plugins/generic": {
+    slices: [
+      {
+        path: "drives.allowAddDrive",
+        absent: false,
+        entryKey: "allowAddDrive",
+      },
+      {
+        path: "drives.sections",
+        absent: {
+          remote: { enabled: false, allowAdd: false, allowDelete: false },
+          local: { enabled: false, allowAdd: false, allowDelete: false },
+        },
+        entryKey: "sections",
+      },
+      { path: "drives.icons", absent: null, entryKey: "icons" },
+      { path: "home.background", absent: null, entryKey: "homeBackground" },
+    ],
+  },
+  "@powerhousedao/connect/plugins/sentry": {
+    slices: [{ path: "sentry.dsn", absent: null, entryKey: "dsn" }],
+  },
+  "@powerhousedao/connect/plugins/openpanel": {
+    slices: [
+      { path: "openPanel.clientId", absent: "", entryKey: "clientId" },
+      {
+        path: "openPanel.trackUiEvents",
+        absent: false,
+        entryKey: "trackUiEvents",
+      },
+      {
+        path: "openPanel.trackOperations",
+        absent: false,
+        entryKey: "trackOperations",
+      },
+    ],
+    inertUnless: "openPanel.clientId",
+  },
+  "@powerhousedao/connect/plugins/assistant": {
+    slices: [{ path: "ai.assistantEnabled", absent: false }],
+  },
+  "@powerhousedao/vetra-studio/connect": {
+    slices: [{ path: "app.studioMode", absent: false }],
+  },
+  "@powerhousedao/connect/plugins/workflows": {
+    slices: [{ path: "app.workflowsEnabled", absent: false }],
+  },
+};
+
+export interface DeadConfigWarning {
+  /** Dot path inside the connect config block. */
+  path: string;
+  /** The authored value. */
+  value: unknown;
+  /** What Connect serves instead. */
+  served: unknown;
+  /** The specifier of the plugin that owns the slice. */
+  owner: string;
+  message: string;
+}
+
+function valueAt(root: unknown, dotted: string): unknown {
+  let current = root;
+  for (const key of dotted.split(".")) {
+    if (current === null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (
+    a === null ||
+    b === null ||
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    Array.isArray(a) !== Array.isArray(b)
+  ) {
+    return false;
+  }
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  for (const key of keys) {
+    if (!sameValue(left[key], right[key])) return false;
+  }
+  return true;
+}
+
+/**
+ * Dead-config warnings for a Connect host (typed-host-configs 1.6): an
+ * authored connect config value whose owning plugin is not in the
+ * composition active for `verb`. Connect zeroes such a slice, so the value
+ * has no effect — e.g. Sektar's `connect.drives.allowAddDrive: true` without
+ * the generic plugin.
+ *
+ * Nothing is reported when the host declares no composition
+ * (`runner.plugins` absent: the classic boot serves the config as is), or
+ * when the authored value already equals what Connect serves. Warnings, not
+ * errors: the host still boots, it just does not do what the value says.
+ */
+export function findDeadConnectConfig(
+  config: Record<string, unknown> | undefined,
+  entries: readonly PluginEntryData[] | undefined,
+  verb: string,
+  where: string,
+): DeadConfigWarning[] {
+  if (!config || entries === undefined) return [];
+  const active = new Set(
+    normalizePluginEntries(entries, where)
+      .filter((entry) => entryActiveForVerb(entry, verb))
+      .map((entry) => entry.module),
+  );
+  const warnings: DeadConfigWarning[] = [];
+  for (const [owner, { slices, inertUnless }] of Object.entries(
+    CONNECT_PLUGIN_OWNED_SLICES,
+  )) {
+    if (active.has(owner)) continue;
+    if (inertUnless !== undefined) {
+      const gate = slices.find((slice) => slice.path === inertUnless);
+      const gateValue = valueAt(config, inertUnless);
+      if (gateValue === undefined || sameValue(gateValue, gate?.absent)) {
+        continue;
+      }
+    }
+    for (const { path: slicePath, absent, entryKey } of slices) {
+      const value = valueAt(config, slicePath);
+      if (value === undefined || sameValue(value, absent)) continue;
+      const move =
+        entryKey === undefined
+          ? `compose "${owner}" (presence is the switch)`
+          : `compose "${owner}" and set \`${entryKey}\` in its entry config`;
+      warnings.push({
+        path: slicePath,
+        value,
+        served: absent,
+        owner,
+        message:
+          `${where}: config.${slicePath} is dead config: it is owned by plugin "${owner}", ` +
+          `which this host does not compose for verb "${verb}", so Connect serves ${JSON.stringify(absent)} instead of ${JSON.stringify(value)}.` +
+          `\n  Hint: ${move}, or delete the value.`,
+      });
+    }
+  }
+  return warnings;
+}
