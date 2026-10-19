@@ -76,8 +76,16 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
+  it("publishes validated outputs in its handle and its v2 run record", async () => {
+    const { readRunRecord } = await import("@powerhousedao/host-core");
+    const outputs = runner.outputsSchema.parse(handle.outputs);
+    expect(outputs.endpoints.openai).toBe(`${outputs.origin}/v1`);
+    expect(outputs.endpoints.ready).toBe(`${outputs.origin}/ready`);
+    expect(readRunRecord(projectDir, "assistant")?.outputs).toEqual(outputs);
+  });
+
   it("answers /ready and /v1/models", async () => {
-    const base = handle.endpoints.openai.replace(/\/v1$/, "");
+    const base = handle.outputs.endpoints.openai.replace(/\/v1$/, "");
     const ready = await fetch(`${base}/ready`);
     expect(ready.status).toBe(200);
     const models = (await (await fetch(`${base}/v1/models`)).json()) as {
@@ -87,14 +95,17 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("answers a non-streaming chat completion with the demo agent", async () => {
-    const res = await fetch(`${handle.endpoints.openai}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model: "demo",
-        messages: [{ role: "user", content: "hello agent" }],
-      }),
-    });
+    const res = await fetch(
+      `${handle.outputs.endpoints.openai}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "demo",
+          messages: [{ role: "user", content: "hello agent" }],
+        }),
+      },
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       object: string;
@@ -107,14 +118,17 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("streams SSE chunks ending in [DONE]", async () => {
-    const res = await fetch(`${handle.endpoints.openai}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        stream: true,
-        messages: [{ role: "user", content: "stream me" }],
-      }),
-    });
+    const res = await fetch(
+      `${handle.outputs.endpoints.openai}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          stream: true,
+          messages: [{ role: "user", content: "stream me" }],
+        }),
+      },
+    );
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     const text = await res.text();
     expect(text).toContain('"object":"chat.completion.chunk"');

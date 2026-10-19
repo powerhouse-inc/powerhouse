@@ -189,7 +189,7 @@ describe("build verb", () => {
     const sink = path.join(dir, "build-sink.jsonl");
     process.env.BUILD_SINK = sink;
     const { loadHost } = await import("@powerhousedao/host-core");
-    const host = (await loadHost(dir, "desktop")).host;
+    const host = runner.hostSchema.parse((await loadHost(dir, "desktop")).host);
     try {
       await runner.build(host, ctx(dir, "build"));
     } finally {

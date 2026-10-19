@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
+import type { RunnerContext } from "@powerhousedao/host-core";
 import { appJsonSchema, loadAppJson, appSlug } from "../src/app-json.js";
 import { bundleStack } from "../src/bundle-stack.js";
 import { projectShell } from "../src/shell-project.js";
@@ -23,7 +23,12 @@ import {
   scaffoldDesktopShell,
   solidPng,
 } from "../src/scaffold.js";
-import { shellMode } from "../src/runner.js";
+import {
+  hostSchema,
+  shellMode,
+  type DesktopHost,
+  type DesktopHostInput,
+} from "../src/runner.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -629,19 +634,20 @@ describe("shell source order (shellMode)", () => {
   });
   let projectRoot = "";
 
-  function host(over: Partial<HostDefinition> = {}): HostDefinition {
-    return {
+  function host(over: Partial<DesktopHostInput> = {}): DesktopHost {
+    return hostSchema.parse({
       name: "desktop",
       runner: { module: "@powerhousedao/desktop/runner" },
+      children: {},
       ...over,
-    } as HostDefinition;
+    });
   }
 
   it("prefers runner.shell.project over everything", () => {
     projectRoot = tempDir("ph-mode-proj-");
     const h = host({
       runner: { module: "m", shell: { project: "../s" } },
-    } as Partial<HostDefinition>);
+    });
     expect(shellMode(h, ctx({ PH_DESKTOP_SHELL: "/x" }))).toBe(
       "external-project",
     );

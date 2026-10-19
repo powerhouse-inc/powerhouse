@@ -33,7 +33,8 @@
     "tsc": "tsc",
     "lint": "cd ../.. && oxlint packages/desktop",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "emit-schemas": "tsx scripts/emit-schemas.ts"
   },
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
