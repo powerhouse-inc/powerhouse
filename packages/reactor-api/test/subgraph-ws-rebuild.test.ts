@@ -1,7 +1,5 @@
 // One endpoint serves every subscription subgraph; changing one spares the rest.
 
-// `websocket.ts` blanks `useServer` under Vitest; mocked back to the real one.
-
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   IReactorClient,
@@ -11,25 +9,19 @@ import type {
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { parse } from "graphql";
-import type { Client } from "graphql-ws";
+import { type Client, createClient } from "graphql-ws";
 import type http from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import { ApolloGatewayAdapter } from "../src/graphql/gateway/adapter-gateway-apollo.js";
+import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
+import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
-
-vi.mock("../src/graphql/websocket.js", async () => ({
-  useServer: (await import("graphql-ws/use/ws")).useServer,
-}));
-
-const { createClient } = await import("graphql-ws");
-const { BaseSubgraph } = await import("../src/graphql/base-subgraph.js");
-const { ApolloGatewayAdapter } =
-  await import("../src/graphql/gateway/adapter-gateway-apollo.js");
-const { ExpressHttpAdapter } =
-  await import("../src/graphql/gateway/adapter-http-express.js");
-const { GraphQLManager } = await import("../src/graphql/graphql-manager.js");
-const { AuthorizationPolicy, createAuthorizationService } =
-  await import("../src/services/authorization.service.js");
+import {
+  AuthorizationPolicy,
+  createAuthorizationService,
+} from "../src/services/authorization.service.js";
 
 const WS_PATH = "/graphql/subscriptions";
 

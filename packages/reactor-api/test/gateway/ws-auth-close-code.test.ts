@@ -8,16 +8,10 @@
 
 // The rule is HTTP's: `ws` owns the upgrade, so the fetch gate never sees it.
 
-// `websocket.ts` blanks `useServer` under Vitest; mocked back to the real one.
-
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import { createServer, type Server } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
-
-vi.mock("../../src/graphql/websocket.js", async () => ({
-  useServer: (await import("graphql-ws/use/ws")).useServer,
-}));
 
 const mockVerifyAuthBearerToken = vi.fn();
 vi.mock("@renown/sdk", () => ({
