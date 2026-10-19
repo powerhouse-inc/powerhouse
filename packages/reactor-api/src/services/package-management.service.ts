@@ -111,22 +111,28 @@ export class PackageManagementService {
 
   async uninstallPackage(name: string): Promise<boolean> {
     const existing = await this.storage.get(name);
-    if (!existing) {
+    const managed = this.packageManager?.hasPackage(name) ?? false;
+    if (!existing && !managed) {
       this.logger.warn("Package @name is not installed", name);
       return false;
     }
 
     this.logger.info("Uninstalling package @name", name);
 
-    await this.storage.delete(name);
-    this.loadedModulesCache.delete(name);
-
     if (this.httpLoader) {
       this.httpLoader.documentModelLoader.removeFromCache(name);
     }
 
-    if (this.documentModelRegistry) {
+    // The manager's models leave through its change event.
+    if (existing && this.documentModelRegistry) {
       this.documentModelRegistry.unregisterModules(...existing.documentTypes);
+      this.documentModelRegistry.unregisterUpgradeManifests(
+        ...existing.documentTypes,
+      );
+    }
+    if (existing) {
+      await this.storage.delete(name);
+      this.loadedModulesCache.delete(name);
     }
 
     if (this.packageManager) {

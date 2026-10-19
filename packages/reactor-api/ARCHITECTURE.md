@@ -44,7 +44,6 @@ src/graphql/gateway/types.ts
 | `createHandler(schema, contextFactory)`                             | Returns a `FetchHandler` for a single subgraph schema.                                                                                                                  |
 | `createSupergraphHandler(getSubgraphs, httpServer, contextFactory)` | Composes all subgraphs via federation and returns a single `FetchHandler` for the supergraph. `getSubgraphs` is called eagerly and again on every `updateSupergraph()`. |
 | `updateSupergraph()`                                                | Re-composes the supergraph SDL from the current subgraph list and hot-reloads the running gateway. No-op before `createSupergraphHandler` is called.                    |
-| `attachWebSocket(wsServer, schema, contextFactory)`                 | Attaches WebSocket subscription support. Returns a `WsDisposer` for cleanup.                                                                                            |
 | `stop()`                                                            | Graceful shutdown.                                                                                                                                                      |
 
 ### `FetchHandler`: the boundary

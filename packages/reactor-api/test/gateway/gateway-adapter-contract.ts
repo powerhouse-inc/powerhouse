@@ -460,40 +460,4 @@ export function runGatewayAdapterContractTests(
   });
 
   // ── lifecycle (stop after createSupergraphHandler) ─────────────────────────
-
-  // ── attachWebSocket ────────────────────────────────────────────────────────
-  // Skipped in the Vitest environment because graphql-ws/use/ws is blocked by
-  // websocket.ts when VITEST=true. Adapters that support WebSocket in tests
-  // can override this by running the suite with NODE_ENV != "test".
-
-  const itWs = process.env.VITEST === "true" ? it.skip : it;
-
-  describe(`IGatewayAdapter contract (${adapterName}) – attachWebSocket`, () => {
-    let h: GatewayAdapterHarness;
-    let httpServer: ReturnType<typeof makeHttpServer>;
-
-    beforeEach(async () => {
-      h = await createHarness();
-      httpServer = makeHttpServer();
-      await h.adapter.start(httpServer.server);
-    });
-    afterEach(async () => {
-      await httpServer.close();
-      await h.close();
-    });
-
-    itWs("returns a WsDisposer with a dispose() method", async () => {
-      const { WebSocketServer } = await import("ws");
-      const wss = new WebSocketServer({ noServer: true });
-
-      const disposer = h.adapter.attachWebSocket(wss, makeSchema(), {
-        onConnect: () => Promise.resolve(true),
-        context: () => Promise.resolve({ headers: {}, db: null }),
-      });
-
-      expect(typeof disposer.dispose).toBe("function");
-      await disposer.dispose();
-      wss.close();
-    });
-  });
 }

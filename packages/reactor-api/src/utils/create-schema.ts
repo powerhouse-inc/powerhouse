@@ -379,6 +379,11 @@ function documentModelDefinitions(
   return [...prefixed.definitions, ...documentType.definitions];
 }
 
+/** The part of a document model module its schema is built from. */
+export type DocumentModelSource = {
+  documentModel: { global: DocumentModelGlobalState };
+};
+
 /** Type name → whether every definition of that name is a scalar. */
 export type ReservedTypeNames = ReadonlyMap<string, boolean>;
 
@@ -425,7 +430,7 @@ export function reservedTypeNames(
  * repeat a reserved scalar: the duplicate is dropped on assembly.
  */
 export function reservedTypeNamesTaken(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   reserved: ReservedTypeNames,
   definitions: readonly DefinitionNode[] = documentModelDefinitions(
     documentModel.documentModel.global,
@@ -522,8 +527,8 @@ const GENERATED_TAIL = gql`
  * definitions already built; the others are built here.
  */
 export function getGeneratedDocumentModelTypes(
-  documentModels: DocumentModelModule[],
-  schemas?: ReadonlyMap<DocumentModelModule, DocumentModelSchema>,
+  documentModels: readonly DocumentModelSource[],
+  schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
   return generatedTypesFrom(
     documentModels.map((model) => ({
@@ -608,7 +613,7 @@ const toError = (error: unknown): Error =>
 
 /** Build `subgraph` over the generated types of `documentModel` alone. */
 function checkBuilds(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   generated: readonly DefinitionNode[],
   subgraph?: DocumentModelSchema["subgraph"],
 ): void {
@@ -628,7 +633,7 @@ function checkBuilds(
 
 /** Throws when the generated types every subgraph carries do not build. */
 export function buildDocumentModelSchema(
-  documentModel: DocumentModelModule,
+  documentModel: DocumentModelSource,
   options: { subgraph?: boolean } = {},
 ): DocumentModelSchema {
   const generated = documentModelDefinitions(
@@ -654,8 +659,10 @@ export function buildDocumentModelSchema(
 }
 
 /** A document model's schema, or why it is unusable, under its source key. */
-export type ResolvedDocumentModelSchema = {
-  model: DocumentModelModule;
+export type ResolvedDocumentModelSchema<
+  T extends DocumentModelSource = DocumentModelModule,
+> = {
+  model: T;
   key: string;
 } & (
   | { schema: DocumentModelSchema; error?: undefined }
@@ -663,7 +670,7 @@ export type ResolvedDocumentModelSchema = {
 );
 
 /** Hash of everything {@link buildDocumentModelSchema} reads. */
-function schemaSourceKey(documentModel: DocumentModelModule): string {
+function schemaSourceKey(documentModel: DocumentModelSource): string {
   const { name, specifications } = documentModel.documentModel.global;
   return createHash("sha256")
     .update(JSON.stringify([name, specifications.at(-1)]))
@@ -671,20 +678,22 @@ function schemaSourceKey(documentModel: DocumentModelModule): string {
 }
 
 /** Schemas and failures by source hash, for the last resolve's models only. */
-export class DocumentModelSchemaCache {
+export class DocumentModelSchemaCache<
+  T extends DocumentModelSource = DocumentModelModule,
+> {
   #entries = new Map<string, DocumentModelSchema | Error>();
-  readonly #build: (documentModel: DocumentModelModule) => DocumentModelSchema;
+  readonly #build: (documentModel: T) => DocumentModelSchema;
 
-  constructor(build = buildDocumentModelSchema) {
+  constructor(
+    build: (documentModel: T) => DocumentModelSchema = buildDocumentModelSchema,
+  ) {
     this.#build = build;
   }
 
-  resolve(
-    documentModels: readonly DocumentModelModule[],
-  ): ResolvedDocumentModelSchema[] {
+  resolve(documentModels: readonly T[]): ResolvedDocumentModelSchema<T>[] {
     const entries = new Map<string, DocumentModelSchema | Error>();
     const resolved = documentModels.map(
-      (model): ResolvedDocumentModelSchema => {
+      (model): ResolvedDocumentModelSchema<T> => {
         let key: string;
         let entry: DocumentModelSchema | Error | undefined;
         try {

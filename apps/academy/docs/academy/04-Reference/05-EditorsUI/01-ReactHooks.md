@@ -78,8 +78,9 @@ function dispatch(
 | **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType`                       |
 | **Document by ID**    | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType`                                                                  |
 | **Document Cache**    | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync`                |
-| **Drives**            | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId`                                                |
-| **Nodes & Folders**   | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById`                                                     |
+| **Drives**            | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId`, `useSetSelectedDrive`                         |
+| **Nodes & Folders**   | `useSelectedNode`, `useSetSelectedNode`, `useCloseNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById`               |
+| **URL & Links**       | `useSearchParams`, `useSetSearchParams`, `useLinkProps`                                                                      |
 | **Items in Drive**    | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive`     |
 | **Items in Folder**   | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
 | **Node Actions**      | `useNodeActions`                                                                                                             |
@@ -574,6 +575,20 @@ function setSelectedDrive(
 
 - `driveOrDriveSlug` — The drive object, drive slug string, or `undefined` to deselect
 
+`setSelectedDrive` acts on the app's store. Inside a scoped store (a component under a `PHStoreProvider` whose store came from `createScopedPHStore`), use `useSetSelectedDrive` instead. In development, calling `setSelectedDrive` while a scoped store is mounted logs a warning.
+
+---
+
+### `useSetSelectedDrive`
+
+Returns `setSelectedDrive` bound to the store in context. In a scoped store it changes that scope's selection; otherwise it changes the app's.
+
+```typescript
+function useSetSelectedDrive(): (
+  driveOrDriveSlug: string | DocumentDriveDocument | undefined,
+) => void;
+```
+
 ---
 
 ## Selected Node & Folder
@@ -593,12 +608,47 @@ function useSelectedNode(): Node | undefined;
 Sets the selected node and updates the URL.
 
 ```typescript
-function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void;
+function setSelectedNode(
+  node: Node | string | undefined,
+  options?: PHNavigateOptions,
+): void;
+
+type PHNavigateOptions = {
+  replace?: boolean;
+  search?: Record<string, string | undefined>;
+};
 ```
 
 **Parameters:**
 
-- `nodeOrNodeSlug` — The node object, node slug string, or `undefined` to deselect
+- `node` — The node object, node slug string, or `undefined` to deselect
+- `options.replace` — Replace the current history entry instead of pushing a new one
+- `options.search` — Query params the node opens with; an `undefined` value removes the param
+
+Like `setSelectedDrive`, this acts on the app's store. Inside a scoped store, use `useSetSelectedNode`.
+
+---
+
+### `useSetSelectedNode`
+
+Returns `setSelectedNode` bound to the store in context.
+
+```typescript
+function useSetSelectedNode(): (
+  node: Node | string | undefined,
+  options?: PHNavigateOptions,
+) => void;
+```
+
+---
+
+### `useCloseNode`
+
+Returns a function that leaves a node's view. It goes back to the history entry the node was opened from. If there is none, for example after a deep link, it replaces the current entry with the node's parent folder, or the drive root for a top-level node.
+
+```typescript
+function useCloseNode(nodeId: string | null | undefined): () => void;
+```
 
 ---
 
@@ -649,6 +699,57 @@ Returns the path to the currently selected node.
 ```typescript
 function useSelectedNodePath(): Node[];
 ```
+
+---
+
+## URL & Links
+
+These hooks read and write the URL through the host's navigation. Without a host navigation they use the browser history.
+
+### `useSearchParams`
+
+Returns the current query params.
+
+```typescript
+function useSearchParams(): Record<string, string>;
+```
+
+---
+
+### `useSetSearchParams`
+
+Returns a setter for the query params. An object merges into the current params, and an `undefined` value removes a param. A function receives the current params and returns the full new set.
+
+```typescript
+function useSetSearchParams(): (
+  update:
+    | Record<string, string | undefined>
+    | ((prev: Record<string, string>) => Record<string, string | undefined>),
+  options?: { replace?: boolean },
+) => void;
+```
+
+---
+
+### `useLinkProps`
+
+Returns props for an `<a>` element that opens `target` in the app on a plain primary click. Clicks with a modifier key or another mouse button stay with the browser, so open-in-new-tab works. The props also preload the target on hover and focus, and set `aria-current="page"` when the target is the current location.
+
+```typescript
+function useLinkProps(
+  target: PHNavigationTarget | undefined,
+  open?: () => void,
+): LinkProps;
+
+type PHNavigationTarget =
+  | { driveSlug: string; nodeSlug?: string }
+  | { settings: string | true };
+```
+
+**Parameters:**
+
+- `target` — A drive or node, a settings tab by id (`true` opens the first tab), or `undefined` for home
+- `open` — Optional replacement for the default open action on a plain click
 
 ---
 
