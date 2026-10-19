@@ -1,6 +1,6 @@
 # Subgraph registry lows
 
-Four fixes in the GraphQL subgraph registry of reactor-api. Each section gives the root cause, the fix and the tests.
+Five fixes in the GraphQL subgraph registry of reactor-api. Each section gives the root cause, the fix and the tests.
 
 ## 1. Removing a package mid-load re-adds it
 
@@ -84,3 +84,19 @@ Tests
 - reactor-api `subgraph-types.test.ts` "runtime parity": reserved-name model, unbuildable generated types, subgraph-only failure (unparseable and unbuildable op schema), model subgraph named `system`, duplicate package subgraph name.
 - vetra `subgraph-type-lint.test.ts`: a refused model warns with no subgraphs.
 - Existing GraphQLManager suites guard the extracted runtime rules.
+
+## 5. A refused latest model version serves an older one
+
+Root cause
+- `admitDocumentModels` refuses each module on its own (unusable schema, reserved type name, unusable subgraph schema). The latest version is chosen afterwards, from the admitted modules only. With v2 refused, v1 is the latest survivor, so the `<name>` subgraph and its generated types serve v1 while the log says the model is refused.
+- A v2 refused for its subgraph schema alone was still chosen as latest, so nothing was served. The outcome depended on why v2 was refused.
+
+Decision
+- A refused latest version refuses every version of its model. The reactor resolves documents to the latest version, so an older schema would answer for documents of the newer shape. The endpoint stays down until a usable latest version loads.
+
+Fix
+- `admitDocumentModels` picks the latest version per model (by name and last specification version, as before) before admitting. If the latest is refused, the older versions are dropped without a log of their own. A refused older version under a usable latest is still refused alone.
+- One error log per refusal says which versions are refused and names the version that caused it: "Refusing every version of document model `<id>` from the GraphQL schema: version 2 has an unusable schema: …". It reads "the subgraph of every version" for a subgraph-only refusal, and "an older version" when the latest is served.
+
+Tests
+- `test/document-model-version-refusal.test.ts`: v1 usable and v2 with an unparseable schema, a reserved type name, or an unusable subgraph schema. Each serves no `gadget` subgraph and logs one refusal naming version 2. With v1 refused and v2 usable, v2 is served and the log names version 1 as an older version.
