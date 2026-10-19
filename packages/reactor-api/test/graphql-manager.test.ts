@@ -1211,7 +1211,7 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("mounts no stream when no subgraph contributes a Query root", async () => {
+    it("streams subscription subgraphs that contribute no Query root", async () => {
       const logger = makeHarnessLogger();
       const { manager, mounts } = makeHarness({ logger });
       await manager.registerSubgraphInstance(
@@ -1223,15 +1223,29 @@ describe("GraphQLManager", () => {
               lonely: String
             }
           `,
-          resolvers: {},
+          resolvers: {
+            Subscription: {
+              lonely: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { lonely: "here" };
+                },
+              },
+            },
+          },
           relationalDb: {} as IRelationalDb,
           reactorClient: {} as IReactorClient,
         },
         "graphql",
       );
       await initAndFlush(manager);
+      vi.useRealTimers();
 
-      expect(mounts.has("/graphql/stream")).toBe(false);
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      expect(await streamOver(handler!, "subscription { lonely }")).toContain(
+        '{"data":{"lonely":"here"}}',
+      );
       expect(vi.mocked(logger.error)).not.toHaveBeenCalledWith(
         "Failed to setup supergraph SSE: @error",
         expect.anything(),

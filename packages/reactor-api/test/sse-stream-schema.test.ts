@@ -249,4 +249,42 @@ describe("supergraph stream schema", () => {
       );
     });
   });
+
+  describe("subscription-only subgraphs", () => {
+    it("serves a stream when no subgraph contributes a Query root", async () => {
+      const { schema, excluded } = streamSchema([
+        subgraph(
+          "subscription-only",
+          gql`
+            type Subscription {
+              lonely: String
+            }
+          `,
+          ticker("lonely", "here"),
+        ),
+        subgraph(
+          "extends-only",
+          gql`
+            extend type Subscription {
+              extTick: String
+            }
+          `,
+          ticker("extTick", "tick"),
+        ),
+      ]);
+
+      expect(excluded).toEqual([]);
+      expect(schema).toBeDefined();
+      expect(await streamOver(schema!, "subscription { lonely }")).toContain(
+        '{"data":{"lonely":"here"}}',
+      );
+      expect(await streamOver(schema!, "subscription { extTick }")).toContain(
+        '{"data":{"extTick":"tick"}}',
+      );
+    });
+
+    it("serves no stream when no subgraph is left", () => {
+      expect(mergeStreamSubgraphs([])).toBeUndefined();
+    });
+  });
 });

@@ -207,14 +207,11 @@ export function withoutFederationDirectives(
   }));
 }
 
-/**
- * Merges subscription subgraphs into one stream schema, or `undefined` when no
- * subgraph contributes the Query root a schema requires. A root the subgraphs
- * only extend gets an empty definition to extend.
- */
+/** `undefined` when there is nothing to merge; missing roots get placeholders. */
 export function mergeStreamSubgraphs(
   subgraphs: SubgraphDefinition[],
 ): GraphQLSchema | undefined {
+  if (subgraphs.length === 0) return undefined;
   const defined = new Set<string>();
   const extended = new Set<string>();
   for (const subgraph of subgraphs) {
@@ -226,12 +223,13 @@ export function mergeStreamSubgraphs(
       }
     }
   }
-  if (!defined.has("Query") && !extended.has("Query")) {
-    return undefined;
-  }
   const placeholders: DefinitionNode[] = STREAM_ROOTS.filter(
     (root) => extended.has(root) && !defined.has(root),
   ).flatMap((root) => parse(`type ${root}`).definitions);
+  if (!defined.has("Query") && !extended.has("Query")) {
+    // graphql rejects a fieldless type, and a schema needs a Query root.
+    placeholders.push(...parse(`type Query { _stub: Boolean }`).definitions);
+  }
   const roots: SubgraphDefinition[] =
     placeholders.length > 0
       ? [
