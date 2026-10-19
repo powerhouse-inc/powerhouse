@@ -659,6 +659,8 @@ export class GraphQLManager {
         this.cachedDocumentModels,
       );
     }
+    // An unbuilt subgraph claims nothing, so build before the supergraph.
+    await this.#setupSubgraphs(this.subgraphs);
 
     await this.#createSupergraphGateway();
 
