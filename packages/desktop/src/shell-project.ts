@@ -398,7 +398,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const shellDir = path.join(hostDir, SHELL_DIR);
   const iconSrc = path.resolve(hostDir, app.icon);
   const iconBytes = fs.existsSync(iconSrc) ? fs.readFileSync(iconSrc) : null;
-  const readRel = (rel: string | undefined): Buffer | null => {
+  const readRel = (rel: string | null | undefined): Buffer | null => {
     if (!rel) return null;
     const abs = path.resolve(hostDir, rel);
     return fs.existsSync(abs) ? fs.readFileSync(abs) : null;
@@ -407,7 +407,7 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const splashDarkBytes = readRel(app.splashDark);
   const artBytes = readRel(app.loading?.art);
   const artDarkBytes = readRel(app.loading?.artDark);
-  const artExt = (rel: string | undefined) =>
+  const artExt = (rel: string | null | undefined) =>
     rel ? path.extname(rel).toLowerCase() || ".png" : ".png";
   const artFile = `${LOADING_ART}${artExt(app.loading?.art)}`;
   const artDarkFile = `${LOADING_ART}-dark${artExt(app.loading?.artDark)}`;

@@ -34,7 +34,6 @@ const EXPECTED_PROPERTIES = [
   "vetra",
   "workflows",
   "packageRegistryUrl",
-  "icons",
   "connect",
 ] as const;
 

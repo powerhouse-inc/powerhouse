@@ -28,54 +28,53 @@ export type PowerhousePackage = {
   url?: string;
 };
 
+/** An image reference: a project-relative file path (the Connect build turns
+ * it into a data URI or an emitted file), a URL, or a data URI. */
+export type PHImageRef = string;
+
+/** Connect's identity and look. Core settings of the Connect host: every
+ * field is optional, and `null` means "the default" (the same as omitting
+ * it), so a scaffolded config can list them all. Paths are resolved by the
+ * Connect build and dev server relative to the project root. */
 export type PHConnectBranding = {
-  appName?: string;
-  homeBackground?: string | null;
+  /** Browser tab title, installed-app name and in-app brand text.
+   * Default "Powerhouse Connect". */
+  appName?: string | null;
+  /** Home-screen background image. Default: the bundled gradient. */
+  homeBackground?: PHImageRef | null;
+  /** App icon master (1024x1024 PNG recommended, or an SVG). The favicons
+   * and installed-app icons are its `<name>_16x16` / `_32x32` / `_64x64` /
+   * `_192x192` / `_512x512` siblings; the 64 px one is the in-app logo.
+   * Default: Connect's icon. */
+  icon?: PHImageRef | null;
+  /** The loading image shown at first paint, app start and while a drive or
+   * editor loads. A path gets a gentle pulse; `{ src, animation, size }`
+   * says otherwise. Default: Connect's animated logo. */
+  loader?: PHImageRef | PHConnectLoader | null;
+  /** Icons in the drive explorer. Default: the built-in icons. */
+  icons?: PHConnectBrandingIcons | null;
 };
 
-/** A project's icon set (proof of concept). Every value is an image
- * reference: a project-relative file path in powerhouse.config.json / host.js,
- * which the runners turn into a data URI before Connect sees it; a URL or a
- * data URI passes through unchanged. */
-export type PHConnectIcons = {
-  /** App icon master (1024² recommended). Favicon variants are found next to
-   * it by the `<name>_16x16.png` / `_32x32` / `_64x64` naming convention; the
-   * 64 px variant doubles as the in-app logo. */
-  app?: string;
-  /** Filled in by the runner from `app`: the favicon sizes found on disk. */
-  appVariants?: { size: number; src: string }[];
-  /** Wide splash/logo art (e.g. 2048x1152, transparent) for loading
-   * screens; the desktop app.json `splash` points at the same file. */
-  splash?: string;
-  /** Replaces Connect's animated Powerhouse logo on every loading screen.
-   * A static image pulses by default; `animation: "none"` for an image that
-   * animates itself. */
-  loader?: string | PHConnectLoader;
-  /** Full-bleed background (e.g. 2048x1152, opaque; a WebP keeps it light):
-   * Connect's home-screen background unless connect.branding.homeBackground
-   * names another. */
-  background?: string;
-  /** Fallback icon for local drives without their own icon. */
-  localDrive?: string;
-  /** Fallback icon for remote drives without their own icon. */
-  remoteDrive?: string;
-  /** Folder icon in the drive explorer. */
-  folder?: string;
-  /** Default document icon in the drive explorer. */
-  document?: string;
-  /** Per document type (e.g. "acme/invoice") document icons. */
-  documents?: Record<string, string>;
-  /** Per drive slug: written into the drive's own state when seeded. */
-  drives?: Record<string, string>;
-};
-
-/** The loading animation: an image and the motion applied to it. */
+/** The loading image and the motion applied to it. */
 export type PHConnectLoader = {
-  src: string;
+  src: PHImageRef;
   /** Default "pulse"; "none" for an image that animates itself. */
-  animation?: "pulse" | "spin" | "none";
+  animation?: "pulse" | "spin" | "none" | null;
   /** Width in CSS pixels (default 96); the height follows the image. */
-  size?: number;
+  size?: number | null;
+};
+
+/** The drive explorer's icons; each `null` keeps the built-in one. */
+export type PHConnectBrandingIcons = {
+  /** Local drives without an icon of their own. */
+  localDrive?: PHImageRef | null;
+  /** Remote drives without an icon of their own. */
+  remoteDrive?: PHImageRef | null;
+  folder?: PHImageRef | null;
+  /** Documents whose type has no icon below. */
+  document?: PHImageRef | null;
+  /** Per document type, e.g. "acme/invoice". */
+  documents?: Record<string, PHImageRef> | null;
 };
 
 export type PHConnectDefaultDriveRemote = {
@@ -364,7 +363,6 @@ export type PHConnectRuntimeConfig = {
    * classic defaults. */
   composition?: PHConnectCompositionEntry[];
   branding?: PHConnectBranding;
-  icons?: PHConnectIcons;
   app?: PHConnectApp;
   ai?: PHConnectAi;
   packages?: PHConnectPackages;
@@ -427,9 +425,6 @@ export type PowerhouseConfig = {
     };
     port?: number;
   };
-  /** The project's icon set (proof of concept): host files reference it,
-   * runners resolve the paths. See PHConnectIcons. */
-  icons?: PHConnectIcons;
   studio?: {
     port?: number;
     host?: string;

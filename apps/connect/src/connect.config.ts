@@ -130,9 +130,6 @@ function getBuiltInDefaults(): Omit<
     isDeleteLocalDrivesEnabled: runtime.drives?.sections?.local?.allowDelete,
     isAnalyticsDatabaseWorkerEnabled: false,
     isExternalPackagesEnabled: runtime.packages?.externalEnabled,
-    // Project icons (proof of concept), already resolved to data URIs by the
-    // runner; undefined keeps every built-in icon.
-    connectIcons: runtime.icons,
   };
 }
 

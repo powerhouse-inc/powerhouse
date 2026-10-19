@@ -378,18 +378,6 @@ export const useAllowList = allowListEventFunctions.useValue;
 /** Adds an event handler for when the allow list for Connect changes. */
 export const addAllowListEventHandler = allowListEventFunctions.addEventHandler;
 
-const connectIconsEventFunctions = makePHEventFunctions("connectIcons");
-
-/** Sets the project's icon set (app, drives, folders, documents). */
-export const setConnectIcons = connectIconsEventFunctions.setValue;
-
-/** Gets the project's icon set; undefined renders the built-in icons. */
-export const useConnectIcons = connectIconsEventFunctions.useValue;
-
-/** Adds an event handler for when the project's icon set changes. */
-export const addConnectIconsEventHandler =
-  connectIconsEventFunctions.addEventHandler;
-
 type NonUserConfigKey = Exclude<
   PHGlobalConfigKey,
   PHAppConfigKey | PHDocumentEditorConfigKey
@@ -398,7 +386,6 @@ type NonUserConfigSetters = PHGlobalConfigSettersForKey<NonUserConfigKey>;
 type NonUserConfigHooks = PHGlobalConfigHooksForKey<NonUserConfigKey>;
 
 const nonUserConfigSetters: NonUserConfigSetters = {
-  connectIcons: setConnectIcons,
   routerBasename: setRouterBasename,
   version: setVersion,
   requiresHardRefresh: setRequiresHardRefresh,
@@ -458,7 +445,6 @@ export const phGlobalConfigSetters: PHGlobalConfigSetters = {
 };
 
 const nonUserConfigHooks: NonUserConfigHooks = {
-  connectIcons: useConnectIcons,
   routerBasename: useRouterBasename,
   version: useVersion,
   requiresHardRefresh: useRequiresHardRefresh,

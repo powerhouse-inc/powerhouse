@@ -83,7 +83,7 @@ function getConnectRouterFor(store: PHStore) {
     components: connectRouteComponents,
     basepath: connectConfig.routerBasename,
     InnerWrap: RouterChrome,
-    appName: getRuntimeConfig().connect.branding?.appName,
+    appName: getRuntimeConfig().connect.branding?.appName ?? undefined,
   });
   unbindConnectRouter = bindConnectRouter(connectRouter, store);
   return connectRouter;

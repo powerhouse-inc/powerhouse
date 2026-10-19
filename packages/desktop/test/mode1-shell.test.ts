@@ -218,6 +218,27 @@ describe("shell projection", () => {
     ).toBe(false);
   });
 
+  it("null branding fields (the scaffold's) mean the defaults", () => {
+    const dir = tempDir("ph-proj-null-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: null,
+      splashDark: null,
+      loading: { background: null, message: null, dark: null, art: null },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain("--bg: #0f1115; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toContain('<img class="logo" src="./logo.png"');
+    expect(html).toContain("Starting Taco Tent");
+    expect(html).not.toContain("prefers-color-scheme: dark) {");
+    expect(html).not.toContain('class="corner"');
+    expect(
+      appJsonSchema.safeParse({ ...validApp, loading: null }).success,
+    ).toBe(true);
+  });
+
   it("swaps splash, corner art and colors for the dark color scheme", () => {
     const dir = tempDir("ph-proj-dark-");
     writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));

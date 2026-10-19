@@ -96,43 +96,38 @@ const pwaIconSchema = {
 } as const;
 
 const imageRefSchema = {
-  type: "string",
+  type: ["string", "null"],
   description:
-    "Image reference: a project-relative file path (resolved to a data URI by the runners), a URL, or a data URI.",
+    "Image reference: a project-relative file path (resolved by the Connect build), a URL, or a data URI. null keeps the default.",
 } as const;
 
-/** The project's icon set (proof of concept). Same shape in
+/** `connect.branding`: Connect's identity and look. Core settings of the
+ * Connect host; `null` on any field means the default. Same shape in
  * powerhouse.config.json (paths) and in the runtime config (resolved). */
-export const phConnectIconsSchema = {
+export const phConnectBrandingSchema = {
   type: "object",
   additionalProperties: false,
   description:
-    "Project icons for Connect and Desktop: app, drives, folders and documents.",
+    "App identity and visual branding. Every field is optional; null means the default.",
   properties: {
-    app: {
+    appName: {
+      type: ["string", "null"],
+      description:
+        "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'.",
+    },
+    homeBackground: {
       ...imageRefSchema,
       description:
-        "App icon master (1024x1024 recommended). Favicon variants are found next to it as <name>_16x16.png, _32x32.png, _64x64.png; the 64 px variant is the in-app logo.",
+        "Background image of the home screen (e.g. 2048x1152, opaque; WebP keeps it light). null or omitted: the bundled gradient.",
     },
-    appVariants: {
-      type: "array",
-      description:
-        "Filled in by the runner from `app` (favicon sizes found on disk). Not written by hand.",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["size", "src"],
-        properties: { size: { type: "number" }, src: { type: "string" } },
-      },
-    },
-    splash: {
+    icon: {
       ...imageRefSchema,
       description:
-        "Wide splash/logo art (e.g. 2048x1152, transparent) for loading screens; the desktop app.json `splash` points at the same file.",
+        "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon.",
     },
     loader: {
       description:
-        'Replaces Connect\'s animated Powerhouse logo on every loading screen (first paint, app start, drive and editor loading). An image reference, or { src, animation, size }. A static image gets a gentle pulse unless animation says otherwise; use animation "none" for an image that animates itself (animated SVG, GIF or WebP).',
+        'The loading image (first paint, app start, drive and editor loading). A path gets a gentle pulse; { src, animation, size } says otherwise, with animation "none" for an image that animates itself (animated SVG, GIF or WebP). null or omitted: Connect\'s animated logo.',
       anyOf: [
         imageRefSchema,
         {
@@ -140,14 +135,18 @@ export const phConnectIconsSchema = {
           additionalProperties: false,
           required: ["src"],
           properties: {
-            src: imageRefSchema,
-            animation: {
+            src: {
               type: "string",
-              enum: ["pulse", "spin", "none"],
+              description:
+                "Image reference: a project-relative file path, a URL, or a data URI.",
+            },
+            animation: {
+              type: ["string", "null"],
+              enum: ["pulse", "spin", "none", null],
               description: "Motion applied to the image (default pulse).",
             },
             size: {
-              type: "number",
+              type: ["number", "null"],
               minimum: 16,
               maximum: 512,
               description:
@@ -157,37 +156,35 @@ export const phConnectIconsSchema = {
         },
       ],
     },
-    background: {
-      ...imageRefSchema,
+    icons: {
+      type: ["object", "null"],
+      additionalProperties: false,
       description:
-        "Full-bleed background (e.g. 2048x1152, opaque; WebP keeps it light). Connect's home-screen background unless connect.branding.homeBackground names another.",
-    },
-    localDrive: {
-      ...imageRefSchema,
-      description: "Fallback icon for local drives without their own icon.",
-    },
-    remoteDrive: {
-      ...imageRefSchema,
-      description: "Fallback icon for remote drives without their own icon.",
-    },
-    folder: {
-      ...imageRefSchema,
-      description: "Folder icon in the drive explorer.",
-    },
-    document: {
-      ...imageRefSchema,
-      description: "Default document icon in the drive explorer.",
-    },
-    documents: {
-      type: "object",
-      description: 'Per document type (e.g. "acme/invoice") document icons.',
-      additionalProperties: imageRefSchema,
-    },
-    drives: {
-      type: "object",
-      description:
-        "Per drive slug: an icon written into the drive's own state when the host seeds it (synced — keep it small, 64 px).",
-      additionalProperties: imageRefSchema,
+        "Icons in the drive explorer; each null keeps the built-in icon.",
+      properties: {
+        localDrive: {
+          ...imageRefSchema,
+          description: "Local drives without an icon of their own.",
+        },
+        remoteDrive: {
+          ...imageRefSchema,
+          description: "Remote drives without an icon of their own.",
+        },
+        folder: { ...imageRefSchema, description: "Folders." },
+        document: {
+          ...imageRefSchema,
+          description: "Documents whose type has no icon in `documents`.",
+        },
+        documents: {
+          type: ["object", "null"],
+          description: 'Per document type, e.g. "acme/invoice".',
+          additionalProperties: {
+            type: "string",
+            description:
+              "Image reference: a project-relative file path, a URL, or a data URI.",
+          },
+        },
+      },
     },
   },
 } as const;
@@ -198,24 +195,7 @@ export const phConnectRuntimeConfigSchema = {
   description:
     "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
   properties: {
-    branding: {
-      type: "object",
-      additionalProperties: false,
-      description: "App identity and visual branding.",
-      properties: {
-        appName: {
-          type: "string",
-          description:
-            "Browser tab title and any in-app brand text. Defaults to 'Powerhouse Connect'.",
-        },
-        homeBackground: {
-          type: ["string", "null"],
-          description:
-            "Hero image on the empty home screen. URL or path to override; null or omitted uses the bundled default image.",
-        },
-      },
-    },
-    icons: phConnectIconsSchema,
+    branding: phConnectBrandingSchema,
     app: {
       type: "object",
       additionalProperties: false,

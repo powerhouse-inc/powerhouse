@@ -15,12 +15,14 @@ export type RuntimePowerhouseConfig = {
 /** Defaults for every field Connect reads at runtime, merged into the
  * `connect.*` block at boot; also the dist emitter's and the scaffold's base. */
 export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
+  // null = the default; the scaffold lists every branding field this way.
   branding: {
     appName: "Powerhouse Connect",
     homeBackground: null,
+    icon: null,
+    loader: null,
+    icons: null,
   },
-  // No project icons: every built-in icon renders (proof of concept).
-  icons: {},
   app: {
     logLevel: "info",
     basePath: "/",

@@ -11,8 +11,8 @@ import {
   useSetSelectedNode,
   useNodeActions,
   useUserPermissions,
-  useConnectIcons,
 } from "@powerhousedao/reactor-browser";
+import { useConnectBranding } from "../branding/connect-branding.js";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
 import { addProp, entries, map, pipe } from "remeda";
@@ -28,8 +28,8 @@ export function FolderItem(props: {
   href?: string;
 }) {
   const { folderNode, className } = props;
-  // Project folder icon (proof of concept); built-in icon otherwise.
-  const folderIconSrc = useConnectIcons()?.folder;
+  // The branding's folder icon; the built-in icon otherwise.
+  const folderIconSrc = useConnectBranding().icons?.folder;
   const store = usePHStore();
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();

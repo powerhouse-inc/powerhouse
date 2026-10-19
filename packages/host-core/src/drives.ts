@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
-import { DRIVE_ICON_MAX_BYTES, resolveImageRef } from "./icons.js";
+import {
+  DRIVE_ICON_MAX_BYTES,
+  resolveImageRef,
+} from "@powerhousedao/shared/connect/image-ref";
 import { z } from "zod";
 
 /**

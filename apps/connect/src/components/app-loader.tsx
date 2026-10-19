@@ -1,4 +1,5 @@
 import "@powerhousedao/connect/i18n";
+import { ConnectBrandingProvider } from "@powerhousedao/design-system/connect";
 import {
   bindPHStoreToWindow,
   createPHStore,
@@ -16,6 +17,7 @@ import { ModalsContainer } from "./modal/modals-container.js";
 import { LoadingShell } from "./prerendered-shell.js";
 import { ServiceWorkerUpdatePrompt } from "./service-worker-update-prompt.js";
 import { StoredDocumentsRefusedFallback } from "./stored-documents-refused.js";
+import { getRuntimeConfig } from "../runtime-config.js";
 import { isStoredDocumentsRefused } from "../utils/stored-documents-refused.js";
 
 const CookieBanner = lazy(() =>
@@ -43,51 +45,55 @@ export const AppLoader = (props: {
   );
   return (
     <StrictMode>
-      <PHStoreProvider store={phStore}>
-        <ErrorBoundary
-          fallbackRender={(props) => (
-            <AppSkeleton
-              children={
-                isStoredDocumentsRefused(props.error) ? (
-                  <StoredDocumentsRefusedFallback error={props.error} />
-                ) : (
-                  <DetailedFallback {...props} />
-                )
-              }
-            />
-          )}
-          resetKeys={[props.localPackage]}
-          loggerContext={["Connect"]}
-        >
-          <Suspense
-            fallback={<LoadingShell Fallback={AppSkeleton} />}
-            name="AppLoader"
+      {/* connect.branding, resolved by the build (images as data URIs): the
+          design-system components read it from here. */}
+      <ConnectBrandingProvider branding={getRuntimeConfig().connect.branding}>
+        <PHStoreProvider store={phStore}>
+          <ErrorBoundary
+            fallbackRender={(props) => (
+              <AppSkeleton
+                children={
+                  isStoredDocumentsRefused(props.error) ? (
+                    <StoredDocumentsRefusedFallback error={props.error} />
+                  ) : (
+                    <DetailedFallback {...props} />
+                  )
+                }
+              />
+            )}
+            resetKeys={[props.localPackage]}
+            loggerContext={["Connect"]}
           >
-            {/* eslint-disable-next-line react-hooks-extra/static-components */}
-            <Load {...props}>
-              <App />
-            </Load>
-          </Suspense>
-          {/* The cookie banner is an optional, ad-blocker-vulnerable chunk:
+            <Suspense
+              fallback={<LoadingShell Fallback={AppSkeleton} />}
+              name="AppLoader"
+            >
+              {/* eslint-disable-next-line react-hooks-extra/static-components */}
+              <Load {...props}>
+                <App />
+              </Load>
+            </Suspense>
+            {/* The cookie banner is an optional, ad-blocker-vulnerable chunk:
             if its module (or its dependencies) is blocked, the silent
             boundary renders nothing and the app continues with the
             flags at their rejected defaults (analytics off). */}
-          <ErrorBoundary
-            variant="silent"
-            loggerContext={["Connect", "CookieBanner"]}
-          >
-            <Suspense fallback={null} name="CookieBanner">
-              <CookieBanner />
+            <ErrorBoundary
+              variant="silent"
+              loggerContext={["Connect", "CookieBanner"]}
+            >
+              <Suspense fallback={null} name="CookieBanner">
+                <CookieBanner />
+              </Suspense>
+            </ErrorBoundary>
+            <Suspense name="ModalsContainer">
+              <ModalsContainer />
             </Suspense>
+            <MigrationBanner />
+            <ServiceWorkerUpdatePrompt />
+            <ConnectionBanner />
           </ErrorBoundary>
-          <Suspense name="ModalsContainer">
-            <ModalsContainer />
-          </Suspense>
-          <MigrationBanner />
-          <ServiceWorkerUpdatePrompt />
-          <ConnectionBanner />
-        </ErrorBoundary>
-      </PHStoreProvider>
+        </PHStoreProvider>
+      </ConnectBrandingProvider>
     </StrictMode>
   );
 };

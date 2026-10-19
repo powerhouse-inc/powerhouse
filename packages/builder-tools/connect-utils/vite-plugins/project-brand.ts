@@ -1,17 +1,36 @@
 import type {
-  PHConnectIcons,
+  PHConnectBranding,
+  PHConnectBrandingIcons,
   PHConnectLoader,
 } from "@powerhousedao/shared/clis";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import {
+  APP_ICON_VARIANT_SIZES,
+  BACKGROUND_MAX_BYTES,
+  PWA_ICON_VARIANT_SIZES,
+  UI_ICON_MAX_BYTES,
+  iconVariantPath,
+  imageMimeType,
+  isPassthroughImageRef,
+  resolveImageRef,
+} from "@powerhousedao/shared/connect/image-ref";
 import { existsSync, readFileSync } from "node:fs";
 import { extname, isAbsolute, resolve } from "node:path";
 import type { Connect, Plugin } from "vite";
 
-// Project branding that must be in place before any JavaScript runs, so it
-// cannot wait for the runtime config: the loading animation (index.html and
-// the prerendered shell) and the installed app's name and icons (the web-app
-// manifest). Both come from powerhouse.config.json — `icons.loader`,
-// `icons.app` and `connect.branding.appName` — and the files are emitted
-// next to index.html, the way connectFaviconPlugin emits icon.ico.
+// `connect.branding` is a core setting of the Connect host: this module owns
+// turning it into what the browser needs, for `ph connect` and `ph run connect`
+// alike, since both build their Vite config here. Two kinds of output:
+//
+//  - before any JavaScript runs (index.html, the prerendered shell, the web
+//    manifest): the loader image, the favicons and the installed app's name
+//    and icons, emitted next to index.html the way connectFaviconPlugin emits
+//    icon.ico and declared in <meta> / <link> tags;
+//  - the runtime config's `branding` block, with every image resolved to a
+//    data URI, which Connect reads at boot (in-app logo, home background,
+//    explorer icons).
+//
+// `null` on any field means the default, the same as omitting it.
 
 /** `<meta name>` that tells Connect's loaders which image replaces the logo. */
 export const LOADER_META = "ph-loader";
@@ -19,6 +38,106 @@ export const LOADER_META = "ph-loader";
 export const CUSTOM_SHELL_META = "ph-custom-shell";
 
 const DEFAULT_LOADER_SIZE = 96;
+const DEFAULT_BRANDING: PHConnectBranding =
+  DEFAULT_CONNECT_CONFIG.branding ?? {};
+
+type Warn = (message: string) => void;
+
+type IconsKey = keyof PHConnectBrandingIcons;
+
+/**
+ * The branding in effect: defaults < source powerhouse.config.json <
+ * CLI / host override, applied in that order. In every layer `undefined`
+ * leaves the field alone and `null` resets it to the default, so a null in a
+ * later layer beats a value in an earlier one (`--home-background ""`).
+ * `icons` merges per key the same way.
+ */
+export function effectiveBranding(
+  ...layers: Array<PHConnectBranding | null | undefined>
+): PHConnectBranding {
+  const out: Record<string, unknown> = { ...DEFAULT_BRANDING };
+  const defaults = DEFAULT_BRANDING as Record<string, unknown>;
+  for (const layer of layers) {
+    if (!layer) continue;
+    const entries = Object.entries(layer) as Array<[string, unknown]>;
+    for (const [key, value] of entries) {
+      if (value === undefined) continue;
+      if (value === null) {
+        out[key] = defaults[key] ?? null;
+        continue;
+      }
+      if (key === "icons" && typeof value === "object") {
+        const merged: Record<string, unknown> = {
+          ...((out.icons as Record<string, unknown> | null | undefined) ?? {}),
+        };
+        for (const [iconKey, iconValue] of Object.entries(value as object)) {
+          if (iconValue === undefined) continue;
+          if (iconValue === null) delete merged[iconKey];
+          else merged[iconKey] = iconValue;
+        }
+        out.icons = Object.keys(merged).length > 0 ? merged : null;
+        continue;
+      }
+      out[key] = value;
+    }
+  }
+  const appName =
+    typeof out.appName === "string" ? out.appName.trim() : undefined;
+  out.appName = appName || DEFAULT_BRANDING.appName;
+  return out as PHConnectBranding;
+}
+
+/**
+ * The `branding` block Connect reads at boot: paths resolved to data URIs,
+ * the app icon reduced to its 64 px variant (the in-app logo; a master would
+ * be ~1 MB of base64), the loader left out (it is served as a file and
+ * declared in index.html). Fields without a usable image end up null.
+ */
+export function resolveRuntimeBranding(
+  projectRoot: string,
+  branding: PHConnectBranding,
+  warn?: Warn,
+): PHConnectBranding {
+  const ui = { maxBytes: UI_ICON_MAX_BYTES, warn };
+  const out: PHConnectBranding = {
+    appName: branding.appName ?? DEFAULT_BRANDING.appName,
+    homeBackground:
+      resolveImageRef(projectRoot, branding.homeBackground, {
+        maxBytes: BACKGROUND_MAX_BYTES,
+        warn,
+      }) ?? null,
+    icon: null,
+    loader: null,
+    icons: null,
+  };
+  if (branding.icon) {
+    const logo = iconVariantPath(projectRoot, branding.icon, 64);
+    out.icon = resolveImageRef(projectRoot, logo ?? branding.icon, ui) ?? null;
+  }
+  const icons = branding.icons;
+  if (icons) {
+    const resolved: PHConnectBrandingIcons = {};
+    for (const key of [
+      "localDrive",
+      "remoteDrive",
+      "folder",
+      "document",
+    ] as const satisfies readonly IconsKey[]) {
+      const src = resolveImageRef(projectRoot, icons[key], ui);
+      if (src) resolved[key] = src;
+    }
+    if (icons.documents) {
+      const documents: Record<string, string> = {};
+      for (const [type, ref] of Object.entries(icons.documents)) {
+        const src = resolveImageRef(projectRoot, ref, ui);
+        if (src) documents[type] = src;
+      }
+      if (Object.keys(documents).length > 0) resolved.documents = documents;
+    }
+    if (Object.keys(resolved).length > 0) out.icons = resolved;
+  }
+  return out;
+}
 
 const IMAGE_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -42,8 +161,6 @@ export type ProjectLoader = ProjectAsset & {
   size: number;
 };
 
-type Warn = (message: string) => void;
-
 function projectFile(projectRoot: string, ref: string) {
   return isAbsolute(ref) ? ref : resolve(projectRoot, ref);
 }
@@ -55,31 +172,33 @@ function asset(
   warn?: Warn,
 ): ProjectAsset | undefined {
   // URLs and data URIs are not files to emit; the build-time brand takes paths.
-  if (/^(data:|https?:|blob:|\/\/)/i.test(ref)) {
-    warn?.(`[brand] ${ref}: use a project file path here, not a URL. Skipped.`);
+  if (isPassthroughImageRef(ref)) {
+    warn?.(
+      `[branding] ${ref}: use a project file path here, not a URL. Skipped.`,
+    );
     return undefined;
   }
   const file = projectFile(projectRoot, ref);
   const ext = extname(file).toLowerCase();
   const contentType = IMAGE_TYPES[ext];
   if (!contentType) {
-    warn?.(`[brand] ${ref}: unsupported image type. Skipped.`);
+    warn?.(`[branding] ${ref}: unsupported image type. Skipped.`);
     return undefined;
   }
   if (!existsSync(file)) {
-    warn?.(`[brand] ${ref}: file not found. Skipped.`);
+    warn?.(`[branding] ${ref}: file not found. Skipped.`);
     return undefined;
   }
   return { fileName: fileName(ext), file, contentType };
 }
 
-/** `icons.loader` as the build emits it; undefined keeps Connect's logo. */
+/** `branding.loader` as the build emits it; undefined keeps Connect's logo. */
 export function resolveProjectLoader(
   projectRoot: string,
-  icons: PHConnectIcons | undefined,
+  branding: PHConnectBranding | undefined,
   warn?: Warn,
 ): ProjectLoader | undefined {
-  const loader = icons?.loader;
+  const loader = branding?.loader;
   if (!loader) return undefined;
   const spec = typeof loader === "string" ? { src: loader } : loader;
   const found = asset(projectRoot, spec.src, (ext) => `ph-loader${ext}`, warn);
@@ -109,25 +228,18 @@ export type ProjectPwaBrand = {
   icons?: PwaIcon[];
 };
 
-/** The sizes installers look for, found next to the app master by the same
- * `<name>_<n>x<n>.png` convention as the favicon variants. */
-const PWA_ICON_SIZES = [192, 512] as const;
-
-/** The installed app's name and icons, from `connect.branding.appName` and
- * `icons.app`. Undefined members keep Connect's own. */
+/** The installed app's name and icons, from `branding.appName` and
+ * `branding.icon`. Undefined members keep Connect's own. */
 export function resolveProjectPwaBrand(
   projectRoot: string,
-  config: {
-    icons?: PHConnectIcons;
-    connect?: { branding?: { appName?: string } };
-  },
+  branding: PHConnectBranding | undefined,
   warn?: Warn,
 ): ProjectPwaBrand {
   const brand: ProjectPwaBrand = {};
-  const name = config.connect?.branding?.appName?.trim();
-  if (name) brand.name = name;
+  const name = branding?.appName?.trim();
+  if (name && name !== DEFAULT_BRANDING.appName) brand.name = name;
 
-  const app = config.icons?.app;
+  const app = branding?.icon;
   if (!app) return brand;
   const ext = extname(app).toLowerCase();
   if (ext === ".svg") {
@@ -137,7 +249,7 @@ export function resolveProjectPwaBrand(
   }
   if (ext !== ".png") {
     warn?.(
-      `[brand] icons.app ${app}: the installed-app icon needs a PNG or SVG. Connect's icon stays.`,
+      `[branding] icon ${app}: the installed-app icon needs a PNG or SVG. Connect's icon stays.`,
     );
     return brand;
   }
@@ -159,16 +271,65 @@ export function resolveProjectPwaBrand(
     });
   };
   const stem = app.slice(0, app.length - ext.length);
-  for (const size of PWA_ICON_SIZES) add(`${stem}_${size}x${size}${ext}`);
+  for (const size of PWA_ICON_VARIANT_SIZES)
+    add(`${stem}_${size}x${size}${ext}`);
   add(app);
   if (icons.length === 0) {
-    warn?.(
-      `[brand] icons.app ${app}: not a readable PNG. Connect's icon stays.`,
-    );
+    warn?.(`[branding] icon ${app}: not a readable PNG. Connect's icon stays.`);
     return brand;
   }
   brand.icons = icons;
   return brand;
+}
+
+export type ProjectFavicon = ProjectAsset & {
+  /** `<link sizes>`: "16x16", or "any" for an SVG. */
+  sizes: string;
+};
+
+/**
+ * The favicons: the `_16x16` / `_32x32` / `_64x64` siblings of
+ * `branding.icon` (an SVG master is one scalable favicon). They replace
+ * Connect's static icon.ico link in index.html; none keeps it.
+ */
+export function resolveProjectFavicons(
+  projectRoot: string,
+  branding: PHConnectBranding | undefined,
+  warn?: Warn,
+): ProjectFavicon[] {
+  const app = branding?.icon;
+  if (!app) return [];
+  if (isPassthroughImageRef(app)) {
+    warn?.(
+      `[branding] icon ${app}: use a project file path here, not a URL. Connect's favicon stays.`,
+    );
+    return [];
+  }
+  const ext = extname(app).toLowerCase();
+  if (ext === ".svg") {
+    const svg = asset(projectRoot, app, () => "favicon.svg", warn);
+    return svg ? [{ ...svg, sizes: "any" }] : [];
+  }
+  const out: ProjectFavicon[] = [];
+  for (const size of APP_ICON_VARIANT_SIZES) {
+    const variant = iconVariantPath(projectRoot, app, size);
+    if (!variant) continue;
+    const file = projectFile(projectRoot, variant);
+    const contentType = imageMimeType(file);
+    if (!contentType) continue;
+    out.push({
+      fileName: `favicon-${size}x${size}${ext}`,
+      file,
+      contentType,
+      sizes: `${size}x${size}`,
+    });
+  }
+  if (out.length === 0) {
+    warn?.(
+      `[branding] icon ${app}: no _16x16 / _32x32 / _64x64 siblings found. Connect's favicon stays.`,
+    );
+  }
+  return out;
 }
 
 function escapeAttr(value: string) {
@@ -191,6 +352,26 @@ export function brandMetaTags(options: {
     tags.push(`<meta name="${CUSTOM_SHELL_META}" content="true">`);
   }
   return tags.join("");
+}
+
+const ICON_LINK = /<link\b[^>]*\brel=["']?(?:shortcut )?icon["']?[^>]*>\s*/gi;
+
+/** index.html with Connect's icon links replaced by the project's favicons
+ * (one sized link per variant, under `base`); unchanged without any. */
+export function withProjectFavicons(
+  html: string,
+  favicons: ProjectFavicon[],
+  base = "/",
+): string {
+  if (favicons.length === 0) return html;
+  const prefix = base.endsWith("/") ? base : `${base}/`;
+  const links = favicons
+    .map(
+      (icon) =>
+        `<link rel="icon" type="${icon.contentType}" sizes="${icon.sizes}" href="${escapeAttr(prefix + icon.fileName)}" />`,
+    )
+    .join("");
+  return html.replace(ICON_LINK, "").replace("</head>", `${links}</head>`);
 }
 
 /** Keyframes for the loader motions; shared by the shell and the app. */
@@ -227,22 +408,29 @@ export function replaceShellLoader(
 }
 
 /**
- * Serves (dev) and emits (build) the project's brand files, and adds the
- * meta tags Connect's loaders read. Before any JavaScript: the tags sit in
- * index.html, the files next to it.
+ * Serves (dev) and emits (build) the branding files, and adds the tags
+ * index.html carries before any JavaScript: the loader and custom-shell
+ * meta tags, and the favicon links.
  */
 export function connectProjectBrandPlugin(options: {
   loader?: ProjectLoader;
   pwaIcons?: PwaIcon[];
+  favicons?: ProjectFavicon[];
   customShell?: boolean;
 }): Plugin {
+  const favicons = options.favicons ?? [];
   const files: ProjectAsset[] = [
     ...(options.loader ? [options.loader] : []),
     ...(options.pwaIcons ?? []),
+    ...favicons,
   ];
   const meta = brandMetaTags(options);
+  let base = "/";
   return {
     name: "ph-connect-project-brand",
+    configResolved(config) {
+      base = config.base;
+    },
     configureServer(server) {
       for (const file of files) {
         const handler: Connect.NextHandleFunction = (_req, res, next) => {
@@ -253,16 +441,16 @@ export function connectProjectBrandPlugin(options: {
             next();
           }
         };
-        const base = server.config.base;
         const paths = new Set([
-          `${base}${file.fileName}`.replace(/\/{2,}/g, "/"),
+          `${server.config.base}${file.fileName}`.replace(/\/{2,}/g, "/"),
           `/${file.fileName}`,
         ]);
         for (const path of paths) server.middlewares.use(path, handler);
       }
     },
     transformIndexHtml(html) {
-      return meta ? html.replace("</head>", `${meta}</head>`) : html;
+      const withMeta = meta ? html.replace("</head>", `${meta}</head>`) : html;
+      return withProjectFavicons(withMeta, favicons, base);
     },
     generateBundle(_options, bundle) {
       for (const file of files) {
@@ -274,7 +462,7 @@ export function connectProjectBrandPlugin(options: {
             source: readFileSync(file.file),
           });
         } catch {
-          // A file that vanished mid-build: the loader falls back to Connect's.
+          // A file that vanished mid-build: Connect's own asset stays.
         }
       }
     },

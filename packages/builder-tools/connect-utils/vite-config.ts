@@ -40,8 +40,11 @@ import {
 } from "./vite-plugins/connect-routes.js";
 import {
   connectProjectBrandPlugin,
+  effectiveBranding,
+  resolveProjectFavicons,
   resolveProjectLoader,
   resolveProjectPwaBrand,
+  resolveRuntimeBranding,
 } from "./vite-plugins/project-brand.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
@@ -371,17 +374,34 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     mode === "production"
       ? phPackages
       : phPackages.filter((p) => p.provider === "local");
-  // Project branding needed before any JavaScript runs: the loading image
-  // (index.html, prerendered shell) and the installed app's name and icons.
+  // connect.branding, a core Connect setting (null = default): defaults <
+  // source powerhouse.config.json < CLI / host override, like the rest of the
+  // connect block. Resolved once here, for what the page carries before any
+  // JavaScript runs (loader, favicons, web manifest) and for the runtime
+  // config's branding block (images as data URIs).
   const brandWarn = (msg: string) => (customLogger ?? console).warn(msg);
+  const branding = effectiveBranding(
+    phConfig.connect?.branding,
+    options.cliConnectOverride?.branding,
+  );
   const projectLoader = resolveProjectLoader(
     options.dirname,
-    phConfig.icons,
+    branding,
     brandWarn,
   );
   const projectBrand = resolveProjectPwaBrand(
     options.dirname,
-    phConfig,
+    branding,
+    brandWarn,
+  );
+  const projectFavicons = resolveProjectFavicons(
+    options.dirname,
+    branding,
+    brandWarn,
+  );
+  const runtimeBranding = resolveRuntimeBranding(
+    options.dirname,
+    branding,
     brandWarn,
   );
   const pwaPlugins: PluginOption = (async () => {
@@ -509,6 +529,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         workflows: phConfig.workflows,
         packageRegistryUrl: phPackageRegistryUrl ?? undefined,
         cliConnectOverride: options.cliConnectOverride,
+        branding: runtimeBranding,
       }),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,
@@ -570,6 +591,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       connectProjectBrandPlugin({
         loader: projectLoader,
         pwaIcons: offlineEnabled ? projectBrand.icons : undefined,
+        favicons: projectFavicons,
         customShell,
       }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"

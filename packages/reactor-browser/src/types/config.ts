@@ -1,7 +1,4 @@
-import type {
-  PHConnectIcons,
-  PHConnectRenownAdapters,
-} from "@powerhousedao/shared/clis";
+import type { PHConnectRenownAdapters } from "@powerhousedao/shared/clis";
 
 export type PHGlobalConfig = PHCommonGlobalConfig &
   PHAppConfig &
@@ -74,8 +71,6 @@ export type PHCommonGlobalConfig = {
   isEditorReadModeEnabled?: boolean;
   disabledEditors?: string[];
   enabledEditors?: string[];
-  /** The project's icon set, resolved by the runner (proof of concept). */
-  connectIcons?: PHConnectIcons;
 };
 
 export type PHDrivesGlobalConfig = {

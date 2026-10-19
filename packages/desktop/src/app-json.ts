@@ -40,28 +40,30 @@ const cssColorSchema = z
 /** The loading page's colors. */
 const loadingColorsSchema = z.strictObject({
   /** Page background (default #0f1115). */
-  background: cssColorSchema.optional(),
+  background: cssColorSchema.nullable().optional(),
   /** Status text color (default #e6e8eb). */
-  color: cssColorSchema.optional(),
+  color: cssColorSchema.nullable().optional(),
   /** The pulsing status dot (default #4ade80). */
-  accent: cssColorSchema.optional(),
+  accent: cssColorSchema.nullable().optional(),
 });
 
 /** The loading page's look, so the window opens in the app's own colors
- * instead of the default dark page. Every field is optional. */
+ * instead of the default dark page. Every field is optional, and `null`
+ * means the default (the scaffold lists the fields that way). */
 const loadingSchema = loadingColorsSchema
   .extend({
     /** Status line under the art (default "Starting <productName>…"). */
-    message: z.string().min(1).optional(),
+    message: z.string().min(1).nullable().optional(),
     /** Colors for `prefers-color-scheme: dark`; without it the page keeps
      * the light colors in both schemes. */
-    dark: loadingColorsSchema.optional(),
+    dark: loadingColorsSchema.nullable().optional(),
     /** Optional decoration pinned to the bottom-right corner of the page
      * (e.g. a brand shape, PNG/SVG), relative to app.json; `artDark` is its
      * dark-scheme counterpart. */
-    art: z.string().min(1).optional(),
-    artDark: z.string().min(1).optional(),
+    art: z.string().min(1).nullable().optional(),
+    artDark: z.string().min(1).nullable().optional(),
   })
+  .nullable()
   .optional();
 
 const fileAssociationSchema = z.strictObject({
@@ -98,10 +100,10 @@ export const appJsonSchema = z.strictObject({
   icon: z.string().min(1),
   /** Optional wide splash image (e.g. 2048x1152, transparent PNG) for the
    * loading page, shown instead of the square icon. Relative to this file. */
-  splash: z.string().min(1).optional(),
+  splash: z.string().min(1).nullable().optional(),
   /** The splash for `prefers-color-scheme: dark` (e.g. pale marks on
    * transparent); falls back to `splash`. */
-  splashDark: z.string().min(1).optional(),
+  splashDark: z.string().min(1).nullable().optional(),
   loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),

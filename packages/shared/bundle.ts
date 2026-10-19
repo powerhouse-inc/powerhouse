@@ -12,6 +12,9 @@ await build({
     // browser bundle's static import graph.
     "connect/config-loader.ts",
     "connect/json-adapter.ts",
+    // Image refs (node:fs): the Connect build and host-core drives resolve
+    // project image paths with it; not part of the browser barrel.
+    "connect/image-ref.ts",
     "document-model/index.ts",
     "document-model/utils.ts",
     "document-model/mock.ts",

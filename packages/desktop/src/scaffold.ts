@@ -114,6 +114,10 @@ export function scaffoldDesktopShell(
     identifier: options.identifier,
     productName: options.productName,
     icon: `./${iconFile}`,
+    // The loading page's branding; null = the defaults (see app-json.ts).
+    splash: null,
+    splashDark: null,
+    loading: null,
     window: { title: options.productName, width: 1440, height: 900 },
     fileAssociations: [
       {

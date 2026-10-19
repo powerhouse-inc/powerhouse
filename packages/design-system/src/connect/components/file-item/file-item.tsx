@@ -14,8 +14,11 @@ import {
   useNodeActions,
   useSelectedDriveSafe,
   useUserPermissions,
-  useConnectIcons,
 } from "@powerhousedao/reactor-browser";
+import {
+  brandedDocumentIcon,
+  useConnectBranding,
+} from "../branding/connect-branding.js";
 import type {
   DocumentDriveDocument,
   FileNode,
@@ -125,13 +128,12 @@ export function FileItem(props: Props) {
     setIsDropdownMenuOpen(false);
   }
 
-  // Project icons (proof of concept): a per-type icon, else the project's
-  // default document icon, else the built-in one. An explicit prop wins.
-  const projectIcons = useConnectIcons();
+  // The branding's icon for this document type, else its default document
+  // icon, else the built-in one. An explicit prop wins.
+  const branding = useConnectBranding();
   const documentIconSrc =
     customDocumentIconSrc ??
-    projectIcons?.documents?.[fileNode.documentType] ??
-    projectIcons?.document;
+    brandedDocumentIcon(branding, fileNode.documentType);
 
   const icon = documentIconSrc ? (
     <img
