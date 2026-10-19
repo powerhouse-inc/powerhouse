@@ -28,9 +28,14 @@ import {
   type UpgradeDocumentOptions,
 } from "./types.js";
 
-/** The signed jobs that create `document`, and attach it to `parentId`. */
+/**
+ * The signed jobs that create `document` at `protocolVersions`, and attach it
+ * to `parentId`. Resolve the versions with `getCreateProtocolVersions` when
+ * the header carries none.
+ */
 export async function buildCreateJobs(
   document: PHDocument,
+  protocolVersions: ProtocolVersions,
   parentId: string | undefined,
   signer: ISigner,
   signal?: AbortSignal,
@@ -53,9 +58,7 @@ export async function buildCreateJobs(
     name: document.header.name,
     branch: document.header.branch,
     meta: document.header.meta,
-    protocolVersions: document.header.protocolVersions ?? {
-      "base-reducer": 2,
-    },
+    protocolVersions,
   };
 
   const createActions: Action[] = await signActions(

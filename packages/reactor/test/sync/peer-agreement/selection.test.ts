@@ -22,7 +22,12 @@ describe("selecting protocol versions for new documents", () => {
     const { a } = await setup();
 
     expect(
-      (await a.client.getCreateProtocolVersions("drive"))["test-protocol"],
+      (
+        await a.client.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+          parentIdentifier: "drive",
+        })
+      )["test-protocol"],
     ).toBe(1);
     const narrowDoc = await a.client.createEmpty(DOCUMENT_MODEL, {
       parentIdentifier: "drive",
@@ -35,7 +40,12 @@ describe("selecting protocol versions for new documents", () => {
 
     await vi.waitFor(async () =>
       expect(
-        (await a.client.getCreateProtocolVersions("drive"))["test-protocol"],
+        (
+          await a.client.getCreateProtocolVersions({
+            documentType: DOCUMENT_MODEL,
+            parentIdentifier: "drive",
+          })
+        )["test-protocol"],
       ).toBe(2),
     );
     const wideDoc = await a.client.createEmpty(DOCUMENT_MODEL, {
@@ -47,7 +57,10 @@ describe("selecting protocol versions for new documents", () => {
   it("gives base-reducer the local preference whatever the parent's members support", async () => {
     const { a } = await setup();
 
-    const selected = await a.client.getCreateProtocolVersions("drive");
+    const selected = await a.client.getCreateProtocolVersions({
+      documentType: DOCUMENT_MODEL,
+      parentIdentifier: "drive",
+    });
     expect(selected["base-reducer"]).toBe(3);
     expect(selected["test-protocol"]).toBe(1);
     const document = await a.client.createEmpty(DOCUMENT_MODEL, {
@@ -69,9 +82,13 @@ describe("selecting protocol versions for new documents", () => {
   it("gives a document with no parent the local preference", async () => {
     const { a } = await setup();
 
-    expect((await a.client.getCreateProtocolVersions())["test-protocol"]).toBe(
-      2,
-    );
+    expect(
+      (
+        await a.client.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+        })
+      )["test-protocol"],
+    ).toBe(2);
     const drive = await a.client.drives.create({ global: { name: "new" } });
     expect(drive.header.protocolVersions?.["test-protocol"]).toBe(2);
   });
@@ -82,7 +99,12 @@ describe("selecting protocol versions for new documents", () => {
     await fleet.channels.get("a->b")!.shutdown();
 
     expect(
-      (await a.client.getCreateProtocolVersions("drive"))["test-protocol"],
+      (
+        await a.client.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+          parentIdentifier: "drive",
+        })
+      )["test-protocol"],
     ).toBe(1);
   });
 });

@@ -34,6 +34,7 @@ export {
   type ActionCandidate,
   type ActionEvaluations,
   type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type CopyNodeOptions,
   type IDriveClient,

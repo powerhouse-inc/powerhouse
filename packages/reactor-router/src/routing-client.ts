@@ -12,6 +12,7 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
@@ -372,22 +373,22 @@ export class RoutingReactorClient implements IReactorClient {
 
   /** Asked of the parent's backend: the answer is about its collections. */
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
+    const parentIdentifier = options.parentIdentifier;
     if (parentIdentifier === undefined) {
       return this.dispatcher.onBackend(
         "getCreateProtocolVersions",
         this.dispatcher.primary,
-        (backend) => backend.api.getCreateProtocolVersions(undefined, signal),
+        (backend) => backend.api.getCreateProtocolVersions(options, signal),
         ATTEMPT.read,
       );
     }
     return this.dispatcher.onDocument(
       "getCreateProtocolVersions",
       parentIdentifier,
-      (backend) =>
-        backend.api.getCreateProtocolVersions(parentIdentifier, signal),
+      (backend) => backend.api.getCreateProtocolVersions(options, signal),
       ATTEMPT.read,
     );
   }
@@ -691,8 +692,20 @@ export class RoutingReactorClient implements IReactorClient {
             : await beforeSubmit(() =>
                 resolveOn(target, parentIdentifier, signal),
               );
+        const protocolVersions =
+          document.header.protocolVersions ??
+          (await beforeSubmit(() =>
+            target.api.getCreateProtocolVersions(
+              {
+                documentType: document.header.documentType,
+                parentIdentifier: parentId,
+              },
+              signal,
+            ),
+          ));
         const jobs = await buildCreateJobs(
           document,
+          protocolVersions,
           parentId,
           this.signer,
           signal,
@@ -1230,7 +1243,13 @@ export class RoutingReactorClient implements IReactorClient {
     );
     const [policy, versions] = await Promise.all([
       this.getCreateSignaturePolicy(),
-      this.getCreateProtocolVersions(options?.parentIdentifier, signal),
+      this.getCreateProtocolVersions(
+        {
+          documentType: documentModelType,
+          parentIdentifier: options?.parentIdentifier,
+        },
+        signal,
+      ),
     ]);
     return createEmptyDocument(module, options, policy, versions);
   }

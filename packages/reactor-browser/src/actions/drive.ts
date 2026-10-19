@@ -9,6 +9,7 @@ import {
 } from "@powerhousedao/reactor";
 import {
   driveCreateDocument,
+  driveDocumentType,
   setAvailableOffline,
   setDriveIcon as createSetDriveIconAction,
   setDriveName as createSetDriveNameAction,
@@ -133,7 +134,9 @@ async function createSignaturePolicy(): Promise<SignaturePolicy> {
 /** What the full client selects for a drive, which has no parent. */
 async function createProtocolVersions(): Promise<ProtocolVersions> {
   const client = getFullReactorClient();
-  return client ? client.getCreateProtocolVersions() : {};
+  return client
+    ? client.getCreateProtocolVersions({ documentType: driveDocumentType })
+    : {};
 }
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {

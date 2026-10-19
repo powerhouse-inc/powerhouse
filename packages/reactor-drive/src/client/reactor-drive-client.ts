@@ -93,7 +93,10 @@ export class ReactorDriveClient implements IDriveClient {
       ),
       {
         protocolVersions: {
-          ...(await this.reactor.getCreateProtocolVersions(undefined, signal)),
+          ...(await this.reactor.getCreateProtocolVersions(
+            { documentType: REACTOR_DRIVE_DOCUMENT_TYPE },
+            signal,
+          )),
           ...input.protocolVersions,
         },
       },
@@ -142,9 +145,11 @@ export class ReactorDriveClient implements IDriveClient {
       protocolVersions:
         document.header.protocolVersions ??
         (await this.reactor.getCreateProtocolVersions(
-          driveIdentifier,
+          {
+            documentType: document.header.documentType,
+            parentIdentifier: driveIdentifier,
+          },
           signal,
-          document.header.documentType,
         )),
     };
 

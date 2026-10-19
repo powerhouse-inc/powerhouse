@@ -389,11 +389,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           module.utils.createDocument(),
           await client.getCreateSignaturePolicy(),
           {
-            protocolVersions: await client.getCreateProtocolVersions(
-              params.driveId,
-              undefined,
-              params.documentType,
-            ),
+            protocolVersions: await client.getCreateProtocolVersions({
+              documentType: params.documentType,
+              parentIdentifier: params.driveId,
+            }),
           },
         );
         if (params.name) {

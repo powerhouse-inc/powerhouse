@@ -1,5 +1,6 @@
 import {
   DriveClient,
+  type CopyNodeOptions,
   type IDriveClient,
   type PagedResults,
   type PagingOptions,
@@ -211,6 +212,7 @@ export class RoutingDriveClient implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
     return this.dispatcher.onCollection(
       "drives.copyNode",
@@ -222,6 +224,7 @@ export class RoutingDriveClient implements IDriveClient {
           srcNodeId,
           targetParentFolderId,
           signal,
+          options,
         ),
       ATTEMPT.write,
     );

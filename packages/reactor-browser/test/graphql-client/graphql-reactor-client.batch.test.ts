@@ -727,7 +727,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const controller = new AbortController();
 
     const versions = await createClientWith(sdk).getCreateProtocolVersions(
-      "parent-1",
+      { documentType: undefined, parentIdentifier: "parent-1" },
       controller.signal,
     );
 
@@ -755,7 +755,9 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
       });
 
       await expect(
-        createClientWith(sdk).getCreateProtocolVersions(),
+        createClientWith(sdk).getCreateProtocolVersions({
+          documentType: undefined,
+        }),
       ).rejects.toThrow("malformed");
     }
   });
@@ -779,7 +781,10 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const client = createClientWith(sdk);
 
     const policy = client.getCreateSignaturePolicy();
-    const versions = client.getCreateProtocolVersions("parent-1");
+    const versions = client.getCreateProtocolVersions({
+      documentType: undefined,
+      parentIdentifier: "parent-1",
+    });
 
     await expect(policy).rejects.toBeInstanceOf(
       GraphQLOperationNotSupportedError,
@@ -804,7 +809,10 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     });
 
     await expect(
-      createClientWith(sdk).getCreateProtocolVersions("parent-1"),
+      createClientWith(sdk).getCreateProtocolVersions({
+        documentType: undefined,
+        parentIdentifier: "parent-1",
+      }),
     ).rejects.toBe(refused);
   });
 

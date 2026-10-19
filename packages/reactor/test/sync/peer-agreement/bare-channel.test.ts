@@ -73,7 +73,12 @@ describe("a channel without setLocalManifest and onPeerManifest", () => {
     await create(a, "drive", V1);
 
     expect(
-      (await a.client.getCreateProtocolVersions("drive"))["test-protocol"],
+      (
+        await a.client.getCreateProtocolVersions({
+          documentType: "powerhouse/document-model",
+          parentIdentifier: "drive",
+        })
+      )["test-protocol"],
     ).toBe(1);
   });
 

@@ -108,6 +108,16 @@ export type UndoRedoAvailability = {
   canRedo: boolean;
 };
 
+/** Where and what a new document is created, to select its protocolVersions. */
+export type CreateProtocolVersionsOptions = {
+  /**
+   * The new document's type, which fits base-reducer to its reducer.
+   * `undefined` only where the type is not known, e.g. a legacy request.
+   */
+  documentType: string | undefined;
+  parentIdentifier?: string;
+};
+
 export type CopyNodeOptions = {
   /** Merged over each source's versions, e.g. `{ "base-reducer": 3 }` to copy to v3. */
   protocolVersions?: ProtocolVersions;
@@ -512,17 +522,16 @@ export interface IReactorClient {
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
 
   /**
-   * protocolVersions for a new document under `parentIdentifier`, before the
-   * signature policy. base-reducer is always the local preference, except 2
-   * for a `documentType` with a registered reducer not built by
-   * `createReducer`. Every other negotiated protocol is what this reactor and
-   * the direct peers of the parent's collections agree on, or the local
-   * preference without a parent.
+   * protocolVersions for a new document of `documentType` under
+   * `parentIdentifier`, before the signature policy. base-reducer is the
+   * local preference, except 2 for a `documentType` with a registered reducer
+   * not built by `createReducer`. Every other
+   * negotiated protocol is what this reactor and the direct peers of the
+   * parent's collections agree on, or the local preference without a parent.
    */
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
-    documentType?: string,
   ): Promise<ProtocolVersions>;
 
   /**

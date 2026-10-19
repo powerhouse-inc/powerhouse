@@ -78,7 +78,11 @@ describe("booting Switchboard with REACTOR_UNDO_V3", () => {
         expect(logger.info).toHaveBeenCalledWith(
           expect.stringContaining("undoV3 is off"),
         );
-        expect(await reactor.getCreateProtocolVersions()).toEqual({
+        expect(
+          await reactor.getCreateProtocolVersions({
+            documentType: "powerhouse/document-model",
+          }),
+        ).toEqual({
           "base-reducer": 2,
         });
         const document = await reactor.createEmpty("powerhouse/document-model");
@@ -92,7 +96,11 @@ describe("booting Switchboard with REACTOR_UNDO_V3", () => {
       expect(logger.info).not.toHaveBeenCalledWith(
         expect.stringContaining("undoV3 is off"),
       );
-      expect(await reactor.getCreateProtocolVersions()).toEqual({
+      expect(
+        await reactor.getCreateProtocolVersions({
+          documentType: "powerhouse/document-model",
+        }),
+      ).toEqual({
         "base-reducer": 3,
       });
     });

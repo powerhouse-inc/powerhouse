@@ -336,9 +336,8 @@ export class RunScopedReactorClient implements ReactorClient {
         ? undefined
         : await this.resolveReference(options.parentIdentifier, "main", abort);
     const base = await this.inner.getCreateProtocolVersions(
-      parentId,
+      { documentType: documentModelType, parentIdentifier: parentId },
       abort,
-      documentModelType,
     );
     const document = withSignaturePolicy(
       module.utils.createDocument(),

@@ -22,7 +22,9 @@ async function underCreatePolicy<TDocument extends PHDocument>(
   document: TDocument,
   id: string | undefined,
 ): Promise<TDocument> {
-  const protocolVersions = await client.getCreateProtocolVersions();
+  const protocolVersions = await client.getCreateProtocolVersions({
+    documentType: document.header.documentType,
+  });
   return id
     ? withSignaturePolicy(document, "legacy", { id, protocolVersions })
     : withSignaturePolicy(document, await client.getCreateSignaturePolicy(), {

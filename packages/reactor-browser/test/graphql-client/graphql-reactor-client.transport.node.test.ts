@@ -109,7 +109,12 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
     const client = clientFor(url);
 
     expect(await client.getCreateSignaturePolicy()).toBe("legacy");
-    expect(await client.getCreateProtocolVersions("parent-1")).toEqual({
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: undefined,
+        parentIdentifier: "parent-1",
+      }),
+    ).toEqual({
       "base-reducer": 2,
     });
     expect(received.map((entry) => entry.body.variables)).toEqual([
@@ -126,7 +131,10 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
       GraphQLOperationNotSupportedError,
     );
     await expect(
-      client.getCreateProtocolVersions("parent-1"),
+      client.getCreateProtocolVersions({
+        documentType: undefined,
+        parentIdentifier: "parent-1",
+      }),
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
   });
 });

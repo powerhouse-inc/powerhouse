@@ -7,6 +7,7 @@ import {
   type BatchSubmitter,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
@@ -126,7 +127,7 @@ export interface IRoutableBackend {
   ): () => void;
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions>;
 
@@ -294,8 +295,8 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     subscribe: (search, callback, view) =>
       client.subscribe(search, callback, view),
     getCreateSignaturePolicy: () => client.getCreateSignaturePolicy(),
-    getCreateProtocolVersions: (parent, signal) =>
-      client.getCreateProtocolVersions(parent, signal),
+    getCreateProtocolVersions: (options, signal) =>
+      client.getCreateProtocolVersions(options, signal),
     create: (document, parent, signal) =>
       client.create(document, parent, signal),
     execute: (identifier, branch, actions, signal, subject) =>

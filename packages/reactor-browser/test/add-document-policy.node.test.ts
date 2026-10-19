@@ -36,8 +36,12 @@ function install(
   } as unknown as DocumentModelModule;
   const client = {
     getCreateSignaturePolicy: () => Promise.resolve(policy),
-    getCreateProtocolVersions: (parent?: string) => {
-      selectedFor.push(parent);
+    getCreateProtocolVersions: ({
+      parentIdentifier,
+    }: {
+      parentIdentifier?: string;
+    }) => {
+      selectedFor.push(parentIdentifier);
       return Promise.resolve({ "base-reducer": 3 });
     },
     getDocumentModelModule: () => Promise.resolve(module),

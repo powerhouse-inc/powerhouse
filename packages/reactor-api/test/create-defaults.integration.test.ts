@@ -82,7 +82,9 @@ describe("Query.createDefaults", () => {
     expect(response.errors).toBeUndefined();
     expect(response.data?.createDefaults).toEqual({
       signaturePolicy: await module.client.getCreateSignaturePolicy(),
-      protocolVersions: await module.client.getCreateProtocolVersions(),
+      protocolVersions: await module.client.getCreateProtocolVersions({
+        documentType: undefined,
+      }),
     });
   });
 
@@ -92,9 +94,15 @@ describe("Query.createDefaults", () => {
       const response = await createDefaults(server, secret, READER);
 
       expect(response.errors).toBeUndefined();
-      expect(select).toHaveBeenCalledWith(secret);
+      expect(select).toHaveBeenCalledWith({
+        documentType: undefined,
+        parentIdentifier: secret,
+      });
       expect(response.data?.createDefaults?.protocolVersions).toEqual(
-        await module.client.getCreateProtocolVersions(secret),
+        await module.client.getCreateProtocolVersions({
+          documentType: undefined,
+          parentIdentifier: secret,
+        }),
       );
     } finally {
       select.mockRestore();

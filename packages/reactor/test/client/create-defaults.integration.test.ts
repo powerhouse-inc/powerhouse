@@ -73,7 +73,9 @@ describe.each<{ flags: Partial<ReactorFeatureFlags>; expected: number }>([
   it("takes the local preference for every default create", async () => {
     const { client } = await build();
 
-    expect(await client.getCreateProtocolVersions()).toEqual({
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({
       "base-reducer": expected,
     });
 
@@ -88,7 +90,12 @@ describe.each<{ flags: Partial<ReactorFeatureFlags>; expected: number }>([
     });
     expect(baseReducer(child)).toBe(expected);
     expect(
-      (await client.getCreateProtocolVersions(drive.header.id))["base-reducer"],
+      (
+        await client.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+          parentIdentifier: drive.header.id,
+        })
+      )["base-reducer"],
     ).toBe(expected);
   });
 

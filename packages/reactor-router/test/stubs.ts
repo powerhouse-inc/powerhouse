@@ -235,8 +235,8 @@ export class FakeBackend {
       },
       getCreateSignaturePolicy: () =>
         this.run("getCreateSignaturePolicy", [], () => "legacy" as const),
-      getCreateProtocolVersions: (parent) =>
-        this.run("getCreateProtocolVersions", [parent], () => ({
+      getCreateProtocolVersions: (options) =>
+        this.run("getCreateProtocolVersions", [options], () => ({
           "base-reducer": 2,
         })),
       create: <T extends PHDocument>(document: PHDocument, parent?: string) =>

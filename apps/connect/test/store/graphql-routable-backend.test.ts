@@ -106,7 +106,12 @@ describe("createGraphQLRoutableBackend declares what GraphQL serves", () => {
     );
 
     expect(await backend.getCreateSignaturePolicy()).toBe("legacy");
-    expect(await backend.getCreateProtocolVersions("drive-1")).toEqual({
+    expect(
+      await backend.getCreateProtocolVersions({
+        documentType: undefined,
+        parentIdentifier: "drive-1",
+      }),
+    ).toEqual({
       "base-reducer": 2,
     });
     expect(stub.received.map((r) => r.body.variables)).toEqual([

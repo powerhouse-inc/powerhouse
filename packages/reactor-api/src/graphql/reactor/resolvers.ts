@@ -130,7 +130,10 @@ export async function createDefaults(
 ): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
   const [signaturePolicy, protocolVersions] = await Promise.all([
     reactorClient.getCreateSignaturePolicy(),
-    reactorClient.getCreateProtocolVersions(parentIdOrSlug),
+    reactorClient.getCreateProtocolVersions({
+      documentType: undefined,
+      parentIdentifier: parentIdOrSlug,
+    }),
   ]);
   return { signaturePolicy, protocolVersions };
 }
@@ -835,11 +838,10 @@ export async function createEmptyDocument(
           module.utils.createDocument(),
           await reactorClient.getCreateSignaturePolicy(),
           {
-            protocolVersions: await reactorClient.getCreateProtocolVersions(
-              parent.header.id,
-              undefined,
-              args.documentType,
-            ),
+            protocolVersions: await reactorClient.getCreateProtocolVersions({
+              documentType: args.documentType,
+              parentIdentifier: parent.header.id,
+            }),
           },
         );
         if (name) {
@@ -907,11 +909,10 @@ export async function createDocumentWithInitialState(
     module.utils.createDocument(),
     await reactorClient.getCreateSignaturePolicy(),
     {
-      protocolVersions: await reactorClient.getCreateProtocolVersions(
-        parentIdOrSlug ?? undefined,
-        undefined,
-        args.documentType,
-      ),
+      protocolVersions: await reactorClient.getCreateProtocolVersions({
+        documentType: args.documentType,
+        parentIdentifier: parentIdOrSlug ?? undefined,
+      }),
     },
   );
 

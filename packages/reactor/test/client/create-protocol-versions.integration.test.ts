@@ -53,7 +53,11 @@ describe.each<SignaturePolicy>(["v2-required", "legacy"])(
     it("selects base-reducer 3 everywhere", async () => {
       const reactor = await client();
 
-      expect(await reactor.getCreateProtocolVersions()).toEqual({
+      expect(
+        await reactor.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+        }),
+      ).toEqual({
         "base-reducer": 3,
       });
 
@@ -150,15 +154,11 @@ describe("create paths for a model whose reducer createReducer did not build", (
     const { client, reactor, warn } = await build();
 
     expect(
-      await client.getCreateProtocolVersions(
-        undefined,
-        undefined,
-        DOCUMENT_MODEL,
-      ),
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
     ).toEqual({ "base-reducer": 2 });
-    expect(await client.getCreateProtocolVersions()).toEqual({
-      "base-reducer": 3,
-    });
+    expect(
+      await client.getCreateProtocolVersions({ documentType: undefined }),
+    ).toEqual({ "base-reducer": 3 });
 
     const drive = await client.drives.create({ global: { name: "Drive" } });
     expect(drive.header.protocolVersions?.["base-reducer"]).toBe(3);

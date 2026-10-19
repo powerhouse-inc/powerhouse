@@ -80,6 +80,7 @@ import {
   type ActionCandidate,
   type ActionEvaluations,
   type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
@@ -777,9 +778,8 @@ export class ReactorClient implements IReactorClient {
   }
 
   async getCreateProtocolVersions(
-    parentIdentifier?: string,
+    { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
-    documentType?: string,
   ): Promise<ProtocolVersions> {
     const { capabilities, flags, agreement, collectionsOf } =
       this.protocolSelection;
@@ -892,12 +892,12 @@ export class ReactorClient implements IReactorClient {
     const protocolVersions =
       document.header.protocolVersions ??
       (await this.getCreateProtocolVersions(
-        parentIdentifier,
+        { documentType: document.header.documentType, parentIdentifier },
         signal,
-        document.header.documentType,
       ));
     const jobs = await buildCreateJobs(
-      { ...document, header: { ...document.header, protocolVersions } },
+      document,
+      protocolVersions,
       parentId,
       this.signer,
       signal,
@@ -963,9 +963,11 @@ export class ReactorClient implements IReactorClient {
       options?.documentModelVersion,
     );
     const base = await this.getCreateProtocolVersions(
-      options?.parentIdentifier,
+      {
+        documentType: documentModelType,
+        parentIdentifier: options?.parentIdentifier,
+      },
       signal,
-      documentModelType,
     );
     return createEmptyDocument(
       module,

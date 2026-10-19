@@ -58,11 +58,10 @@ describe("create resolvers head a new document at the client's create versions",
 
     await run(reactorClient);
 
-    expect(getCreateProtocolVersions).toHaveBeenCalledWith(
-      DRIVE_ID,
-      undefined,
-      DOCUMENT_TYPE,
-    );
+    expect(getCreateProtocolVersions).toHaveBeenCalledWith({
+      documentType: DOCUMENT_TYPE,
+      parentIdentifier: DRIVE_ID,
+    });
     expect(added[0].header.protocolVersions).toEqual({
       "base-reducer": 3,
       signature: 2,

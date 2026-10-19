@@ -3,6 +3,7 @@ import {
   copyNode as copyNodeAction,
   deleteNode as deleteNodeAction,
   driveCreateDocument,
+  driveDocumentType,
   generateNodesCopy,
   getDescendants,
   handleTargetNameCollisions,
@@ -121,7 +122,10 @@ export class DriveClient implements IDriveClient {
       ),
       {
         protocolVersions: {
-          ...(await this.client.getCreateProtocolVersions(undefined, signal)),
+          ...(await this.client.getCreateProtocolVersions(
+            { documentType: driveDocumentType },
+            signal,
+          )),
           ...input.protocolVersions,
         },
       },
@@ -173,9 +177,11 @@ export class DriveClient implements IDriveClient {
       protocolVersions:
         document.header.protocolVersions ??
         (await this.client.getCreateProtocolVersions(
-          driveId,
+          {
+            documentType: document.header.documentType,
+            parentIdentifier: driveId,
+          },
           signal,
-          document.header.documentType,
         )),
     };
 
@@ -461,14 +467,20 @@ export class DriveClient implements IDriveClient {
     }
 
     const policy = await this.client.getCreateSignaturePolicy();
-    const base = await this.client.getCreateProtocolVersions(
-      drive.header.id,
-      signal,
-    );
+    const selectedByType = new Map<string, ProtocolVersions>();
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
       const srcDoc = await this.client.get(entry.srcId, undefined, signal);
+      const documentType = srcDoc.header.documentType;
+      let base = selectedByType.get(documentType);
+      if (base === undefined) {
+        base = await this.client.getCreateProtocolVersions(
+          { documentType, parentIdentifier: drive.header.id },
+          signal,
+        );
+        selectedByType.set(documentType, base);
+      }
 
       // Read snapshots carry no operations, so the copy is seeded from the
       // source's current state rather than replayed. Replaying here would also

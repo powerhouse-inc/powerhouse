@@ -2,6 +2,7 @@ import { getPHStore } from "../hooks/ph-store.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
   DocumentChangeType,
   DocumentRelationship,
@@ -874,7 +875,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * {@link GraphQLOperationNotSupportedError}.
    */
   async getCreateProtocolVersions(
-    parentIdentifier?: string,
+    { parentIdentifier }: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
     const defaults = await this.createDefaults(
