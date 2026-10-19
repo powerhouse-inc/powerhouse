@@ -215,3 +215,16 @@ export {
   type DeadConfigWarning,
   type OwnedConfigSlice,
 } from "./plugins-resolve.js";
+
+// typed-host-configs T3 lane C: generated outputs.js (+ `process.` ban).
+export {
+  computeOutputsHash,
+  describeHostOutputs,
+  lintHostImportGraph,
+  lintOutputsFile,
+  OUTPUTS_FILE,
+  readOutputsFileHash,
+  scanHostImports,
+  type HostImports,
+  type HostOutputsDescription,
+} from "./host-loader.js";
