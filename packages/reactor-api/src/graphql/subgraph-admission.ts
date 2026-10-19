@@ -38,6 +38,10 @@ function rank(origin: SubgraphOrigin): number {
 export type DocumentModelRefusal<T> = {
   model: T;
   key: string;
+  /** Specification version of the refused model. */
+  version: number;
+  /** The latest version is refused, so no version of the model is served. */
+  everyVersion: boolean;
   /** Only the model's own subgraph is refused; its generated types stay. */
   subgraphOnly: boolean;
   reason: string;
@@ -49,41 +53,75 @@ export type DocumentModelAdmission<T> = {
   refusals: DocumentModelRefusal<T>[];
 };
 
-/** Models whose schemas build and take no reserved name. */
+/** Usable models; a refused latest version refuses every version of its model. */
 export function admitDocumentModels<T extends DocumentModelSource>(
   resolved: readonly ResolvedDocumentModelSchema<T>[],
   reserved: ReservedTypeNames,
 ): DocumentModelAdmission<T> {
+  const latest = new Set(
+    filterLatestDocumentModelVersions(resolved.map(({ model }) => model)),
+  );
+  const candidates: {
+    model: T;
+    key: string;
+    schema?: DocumentModelSchema;
+    refusal?: { reason: string; subgraphOnly: boolean };
+  }[] = [];
+  for (const { model, key, schema, error } of resolved) {
+    if (!schema) {
+      const reason = `has an unusable schema: ${error.message}`;
+      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
+      continue;
+    }
+    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+    if (taken.length > 0) {
+      const reason = `generates reserved type names: ${taken.join(", ")}`;
+      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
+      continue;
+    }
+    const refusal = schema.subgraphError && {
+      reason: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+      subgraphOnly: true,
+    };
+    candidates.push({ model, key, schema, refusal });
+  }
+
+  const refusedModels = new Set(
+    candidates
+      .filter(({ model, refusal }) => refusal && latest.has(model))
+      .map(({ model }) => model.documentModel.global.name),
+  );
   const admission: DocumentModelAdmission<T> = {
     admitted: [],
     schemas: new Map(),
     refusals: [],
   };
-  for (const { model, key, schema, error } of resolved) {
-    const refuse = (reason: string, subgraphOnly = false) =>
-      admission.refusals.push({ model, key, subgraphOnly, reason });
-    if (!schema) {
-      refuse(`has an unusable schema: ${error.message}`);
+  for (const { model, key, schema, refusal } of candidates) {
+    const everyVersion = latest.has(model);
+    if (!everyVersion && refusedModels.has(model.documentModel.global.name)) {
       continue;
     }
-    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    if (taken.length > 0) {
-      refuse(`generates reserved type names: ${taken.join(", ")}`);
-      continue;
+    if (refusal) {
+      admission.refusals.push({
+        model,
+        key,
+        version: specVersion(model),
+        everyVersion,
+        ...refusal,
+      });
     }
-    if (schema.subgraphError) {
-      refuse(
-        `has an unusable subgraph schema: ${schema.subgraphError.message}`,
-        true,
-      );
+    if (schema) {
+      admission.schemas.set(model, schema);
+      admission.admitted.push(model);
     }
-    admission.schemas.set(model, schema);
-    admission.admitted.push(model);
   }
   return admission;
 }
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
+
+const specVersion = (model: DocumentModelSource) =>
+  model.documentModel.global.specifications.at(-1)?.version ?? 0;
 
 /** The latest version of each document model. */
 function filterLatestDocumentModelVersions<T extends DocumentModelSource>(
@@ -95,17 +133,7 @@ function filterLatestDocumentModelVersions<T extends DocumentModelSource>(
     const name = documentModel.documentModel.global.name;
     const existing = latestByName.get(name);
 
-    if (!existing) {
-      latestByName.set(name, documentModel);
-      continue;
-    }
-
-    const currentVersion =
-      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
-    const existingVersion =
-      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
-
-    if (currentVersion > existingVersion) {
+    if (!existing || specVersion(documentModel) > specVersion(existing)) {
       latestByName.set(name, documentModel);
     }
   }

@@ -4062,7 +4062,7 @@ describe("GraphQLManager", () => {
   describe("core types take precedence over document models", () => {
     const CORE = ["r", "system"];
     const REFUSAL =
-      "Refusing document model @documentType from the GraphQL schema: @reason";
+      "Refusing every version of document model @documentType from the GraphQL schema: @reason";
 
     async function flush<T>(pending: Promise<T>): Promise<T> {
       await vi.runAllTimersAsync();

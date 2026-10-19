@@ -687,17 +687,20 @@ export class GraphQLManager {
       reserved,
     );
     const logged = new Set<string>();
-    for (const { model, key, subgraphOnly, reason } of refusals) {
-      const id = model.documentModel.global.id;
-      const refusal = `${id}\n${key}\n${reason}`;
+    for (const refused of refusals) {
+      const id = refused.model.documentModel.global.id;
+      const refusal = `${id}\n${refused.key}\n${refused.reason}`;
       logged.add(refusal);
       if (this.#refusals.has(refusal)) continue;
+      const versions = refused.everyVersion
+        ? "every version"
+        : "an older version";
       this.logger.error(
-        subgraphOnly
-          ? "Refusing the subgraph of document model @documentType: @reason"
-          : "Refusing document model @documentType from the GraphQL schema: @reason",
+        refused.subgraphOnly
+          ? `Refusing the subgraph of ${versions} of document model @documentType: @reason`
+          : `Refusing ${versions} of document model @documentType from the GraphQL schema: @reason`,
         id,
-        reason,
+        `version ${refused.version} ${refused.reason}`,
       );
     }
     this.#refusals = logged;
