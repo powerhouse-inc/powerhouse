@@ -60,7 +60,7 @@ escape hatch. `listen` supports three TLS modes: `true` (devcert),
 `start(httpServer)`, `createHandler(schema, contextFactory)`,
 `createSupergraphHandler(getSubgraphs, httpServer, contextFactory)`,
 `updateSupergraph()` (re-composes federation SDL and hot-reloads the running
-gateway), `attachWebSocket(wsServer, schema, contextFactory)`, `stop()`.
+gateway), `stop()`.
 
 ### `FetchHandler` — the boundary
 

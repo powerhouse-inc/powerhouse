@@ -1,7 +1,6 @@
 import type { CorsOptions } from "cors";
 import type { DocumentNode, GraphQLSchema } from "graphql";
 import type http from "node:http";
-import type { WebSocketServer } from "ws";
 
 export type TlsOptions =
   | { keyPath: string; certPath: string }
@@ -142,15 +141,6 @@ export interface IGatewayAdapter<TContext = unknown> {
    * been called yet, or after stop().
    */
   updateSupergraph(): Promise<void>;
-
-  // Attach WebSocket subscriptions. Both halves of `handlers` must be passed on.
-
-  /** Without `onConnect`, refusing would mean throwing: an unretryable 4500. */
-  attachWebSocket(
-    wsServer: WebSocketServer,
-    schema: GraphQLSchema,
-    handlers: WsHandlers<TContext>,
-  ): WsDisposer;
 
   stop(): Promise<void>;
 }

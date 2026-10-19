@@ -7,7 +7,7 @@ import type {
 import type { ILogger } from "document-model";
 import type http from "node:http";
 import { vi } from "vitest";
-import type { WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 import { ApolloGatewayAdapter } from "../../src/graphql/gateway/adapter-gateway-apollo.js";
 import { ExpressHttpAdapter } from "../../src/graphql/gateway/adapter-http-express.js";
 import { createAuthFetchMiddleware } from "../../src/graphql/gateway/auth-middleware.js";
@@ -69,12 +69,7 @@ export async function startReactorHttpServer(
   const manager = new GraphQLManager({
     path: "/",
     httpServer: server,
-    wsServer: {
-      close: vi.fn((cb?: () => void) => cb?.()),
-      setMaxListeners: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-    } as unknown as WebSocketServer,
+    wsServer: new WebSocketServer({ noServer: true }),
     reactorClient,
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,

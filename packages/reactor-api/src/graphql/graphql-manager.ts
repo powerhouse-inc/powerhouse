@@ -16,6 +16,8 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
   type DocumentNode,
+  type ExecutionArgs,
+  getOperationAST,
   type GraphQLSchema,
   Kind,
   print,
@@ -90,6 +92,7 @@ import {
   type DriveStore,
 } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
+import { rootFields, SubgraphWsRouter } from "./subgraph-ws-router.js";
 import {
   DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
   WsCredentialMonitor,
@@ -104,11 +107,11 @@ import {
   type AdapterRouteHandle,
   type SubgraphDefinition,
   type WsConnection,
-  type WsDisposer,
   type WsHandlers,
 } from "./gateway/types.js";
 import {
   createGraphQLSSEHandler,
+  SSEStreams,
   mergeStreamSubgraphs,
   withoutFederationDirectives,
 } from "./sse.js";
@@ -331,7 +334,7 @@ export class GraphQLManager {
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
 
-  private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
+  readonly #wsRouter: SubgraphWsRouter<ISubgraph, Context>;
   #authMiddleware: AuthFetchMiddleware | undefined;
   #requireAuthMiddleware: RequireAuthFetchMiddleware | undefined;
   #driveMiddleware: DriveFetchMiddleware | undefined;
@@ -354,6 +357,7 @@ export class GraphQLManager {
 
   /** Mounted SSE routes, keyed by path: the supergraph's and each subgraph's. */
   private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
+  readonly #sseStreams = new Map<string, SSEStreams>();
 
   /**
    * Origin → the subgraph instances registered from it. Core and host
@@ -512,11 +516,10 @@ export class GraphQLManager {
     this.driveOwnershipCache = new DriveOwnershipCache(
       options.driveStore ?? this.reactorClient,
     );
-
-    // Each subscription-enabled subgraph adds listeners to the shared wsServer
-    // via graphql-ws's useServer(). The handler cache bounds the count, so
-    // unlimited is safe here.
-    this.wsServer.setMaxListeners(0);
+    this.#wsRouter = new SubgraphWsRouter({
+      order: (subgraphs) => this.#byClaimPriority(subgraphs),
+      logger: this.logger,
+    });
   }
 
   async init(
@@ -1155,14 +1158,15 @@ export class GraphQLManager {
           bucket,
           subgraphs.filter((it) => it !== instance),
         );
-        await this.#unmountSubgraph(instance, bucket);
+        this.#unmountSubgraph(instance, bucket);
       }
     }
   }
 
   /** Unmount what `instance` serves at its path in `bucket`: route, handler
-   * cache, SSE route, WebSocket handler and in-process handler. */
-  async #unmountSubgraph(instance: ISubgraph, bucket: string) {
+   * cache, SSE route, WebSocket route and in-process handler. A rebuild keeps
+   * open WebSocket and SSE subscriptions; otherwise they complete. */
+  #unmountSubgraph(instance: ISubgraph, bucket: string, rebuild = false): void {
     const subgraphPath = this.#getSubgraphPath(instance, bucket);
     if (this.subgraphHandlerCache.get(subgraphPath)?.subgraph !== instance) {
       return;
@@ -1181,19 +1185,13 @@ export class GraphQLManager {
       this.#internalSubgraphHandlers.delete(instance.name);
     }
 
-    const wsDisposer = this.subgraphWsDisposers.get(subgraphPath);
-    if (wsDisposer) {
-      this.subgraphWsDisposers.delete(subgraphPath);
-      try {
-        await wsDisposer.dispose();
-      } catch (error) {
-        this.logger.error(
-          "Error disposing subgraph websocket @name: @error",
-          instance.name,
-          error,
-        );
-      }
-    }
+    if (rebuild) return;
+    this.#wsRouter.delete(subgraphPath, instance);
+    const streams = this.#sseStreams.get(subgraphPath);
+    this.#sseStreams.delete(subgraphPath);
+    void streams?.end();
+    const supergraphPath = path.posix.join(this.path, "graphql");
+    void this.#sseStreams.get(supergraphPath)?.end(subgraphPath);
   }
 
   /**
@@ -1222,7 +1220,7 @@ export class GraphQLManager {
           bucket,
           subgraphs.filter((it) => it !== instance),
         );
-        await this.#unmountSubgraph(instance, bucket);
+        this.#unmountSubgraph(instance, bucket);
       }
     }
 
@@ -1784,11 +1782,7 @@ export class GraphQLManager {
     this.logger.info("Shutting down GraphQL Manager");
     this.#credentialMonitor?.dispose();
 
-    // Dispose per-subgraph WebSocket handlers before closing the WS server.
-    for (const disposer of this.subgraphWsDisposers.values()) {
-      await disposer.dispose();
-    }
-    this.subgraphWsDisposers.clear();
+    await this.#wsRouter.dispose();
 
     // Stop all Apollo servers (per-subgraph + federation gateway) via the adapter.
     await this.gatewayAdapter.stop();
@@ -1838,7 +1832,7 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         if (this.#isExcludedForTypes(subgraph)) {
-          await this.#unmountSubgraph(subgraph, supergraph);
+          this.#unmountSubgraph(subgraph, supergraph);
           continue;
         }
         try {
@@ -1859,7 +1853,7 @@ export class GraphQLManager {
               );
               continue;
             } else {
-              await this.#unmountSubgraph(cached.subgraph, supergraph);
+              this.#unmountSubgraph(cached.subgraph, supergraph);
             }
           }
 
@@ -1886,7 +1880,11 @@ export class GraphQLManager {
             continue;
           }
           if (previous) {
-            await this.#unmountSubgraph(previous.subgraph, supergraph);
+            this.#unmountSubgraph(
+              previous.subgraph,
+              supergraph,
+              previous.subgraph === subgraph,
+            );
           }
           const fetchHandler = this.#composeFetchMiddleware(rawHandler);
           this.subgraphHandlerCache.set(subgraphPath, {
@@ -1902,20 +1900,11 @@ export class GraphQLManager {
 
           if (subgraph.hasSubscriptions) {
             try {
-              const existingDisposer =
-                this.subgraphWsDisposers.get(subgraphPath);
-              if (existingDisposer) {
-                this.logger.warn(
-                  "Overwriting existing WebSocket disposer for subgraph at path @path",
-                  subgraphPath,
-                );
-              }
-              const wsDisposer = this.gatewayAdapter.attachWebSocket(
+              this.#wsRouter.attach(
                 this.wsServer,
-                schema,
                 this.#makeWsContextFactory(),
               );
-              this.subgraphWsDisposers.set(subgraphPath, wsDisposer);
+              this.#wsRouter.set(subgraphPath, subgraph, schema);
               this.logger.debug(
                 `WebSocket subscriptions enabled for ${subgraph.name}`,
               );
@@ -2002,8 +1991,8 @@ export class GraphQLManager {
     return members;
   }
 
-  /** Claims go by rank, then first registration; each exclusion logs once. */
-  #claimLosers(subgraphs: ReadonlySet<ISubgraph>): Set<ISubgraph> {
+  /** Rank, then first registration. */
+  #byClaimPriority(subgraphs: Iterable<ISubgraph>): ISubgraph[] {
     const priority = (subgraph: ISubgraph): number[] => {
       const origin = this.#originOf(subgraph);
       const order = this.#registrationOrder.get(origin);
@@ -2013,15 +2002,21 @@ export class GraphQLManager {
         order?.names.get(subgraph.name) ?? Infinity,
       ];
     };
-    const ranked = Array.from(subgraphs, (subgraph) => ({
+    return Array.from(subgraphs, (subgraph) => ({
       subgraph,
       priority: priority(subgraph),
-    })).sort((a, b) => {
-      const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
-      return i === -1 ? 0 : a.priority[i] - b.priority[i];
-    });
+    }))
+      .sort((a, b) => {
+        const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
+        return i === -1 ? 0 : a.priority[i] - b.priority[i];
+      })
+      .map(({ subgraph }) => subgraph);
+  }
+
+  /** Claims go by #byClaimPriority; each exclusion logs once. */
+  #claimLosers(subgraphs: ReadonlySet<ISubgraph>): Set<ISubgraph> {
     const excluded = resolveClaimOwnership(
-      ranked.map(({ subgraph }) => ({
+      this.#byClaimPriority(subgraphs).map((subgraph) => ({
         candidate: subgraph,
         name: subgraph.name,
         claims: this.#claimsOf(subgraph),
@@ -2190,7 +2185,11 @@ export class GraphQLManager {
         this.#disposeSSERoute(superGraphPath);
         return;
       }
-      this.#setupSSEHandler(mergedSchema, superGraphPath);
+      this.#setupSSEHandler(
+        mergedSchema,
+        superGraphPath,
+        subscriptionOwners(buildable, mergedSchema),
+      );
       this.logger.debug(
         `SSE subscriptions enabled at supergraph level (merged from ${buildable.length} subgraph(s))`,
       );
@@ -2207,11 +2206,23 @@ export class GraphQLManager {
    * Express middleware (Authorization header), unlike WebSocket which
    * needs its own connectionParams-based auth.
    */
-  #setupSSEHandler(schema: GraphQLSchema, basePath: string) {
+  #setupSSEHandler(
+    schema: GraphQLSchema,
+    basePath: string,
+    tagsOf?: (args: ExecutionArgs) => ReadonlySet<string>,
+  ) {
     const ssePath = basePath + "/stream";
+    let streams = this.#sseStreams.get(basePath);
+    if (!streams) {
+      streams = new SSEStreams();
+      this.#sseStreams.set(basePath, streams);
+    }
+    streams.reopen();
     const rawHandler = createGraphQLSSEHandler({
       schema,
       contextFactory: this.#makeContextFactory(),
+      streams,
+      tagsOf,
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
     // Re-created on every router update: replace this path's previous route
@@ -2252,4 +2263,36 @@ export class GraphQLManager {
     }
     return handler;
   }
+}
+
+/** Tags a merged-schema operation with the paths of the subgraphs it reaches. */
+function subscriptionOwners(
+  subgraphs: SubgraphDefinition[],
+  schema: GraphQLSchema,
+): (args: ExecutionArgs) => ReadonlySet<string> {
+  const root = schema.getSubscriptionType()?.name ?? "Subscription";
+  const owners = new Map<string, string>();
+  for (const subgraph of subgraphs) {
+    for (const definition of subgraph.typeDefs.definitions) {
+      if (
+        (definition.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          definition.kind === Kind.OBJECT_TYPE_EXTENSION) &&
+        definition.name.value === root
+      ) {
+        for (const field of definition.fields ?? []) {
+          owners.set(field.name.value, subgraph.url);
+        }
+      }
+    }
+  }
+  return (args) => {
+    const operation = getOperationAST(args.document, args.operationName);
+    const tags = new Set<string>();
+    if (!operation) return tags;
+    for (const field of rootFields(args.document, operation)) {
+      const owner = owners.get(field);
+      if (owner !== undefined) tags.add(owner);
+    }
+    return tags;
+  };
 }

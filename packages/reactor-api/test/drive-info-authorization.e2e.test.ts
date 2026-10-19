@@ -11,10 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocketServer } from "ws";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
 import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
-import type {
-  IGatewayAdapter,
-  WsDisposer,
-} from "../src/graphql/gateway/types.js";
+import type { IGatewayAdapter } from "../src/graphql/gateway/types.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import type { Context } from "../src/graphql/types.js";
 import type { AuthService } from "../src/services/auth.service.js";
@@ -104,9 +101,6 @@ function makeGatewayAdapter(): IGatewayAdapter<Context> {
       .fn()
       .mockResolvedValue(() => Promise.resolve(new Response("supergraph ok"))),
     updateSupergraph: vi.fn().mockResolvedValue(undefined),
-    attachWebSocket: vi
-      .fn()
-      .mockReturnValue({ dispose: vi.fn() } satisfies WsDisposer),
     stop: vi.fn().mockResolvedValue(undefined),
   } as unknown as IGatewayAdapter<Context>;
 }
