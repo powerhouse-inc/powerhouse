@@ -27,7 +27,12 @@ import type {
   ISubscriptionOptions,
   PackagePieceEntry,
 } from "./types.js";
-import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
+import {
+  PACKAGE_MODULE_FAILED,
+  debounce,
+  extractUpgradeManifests,
+  isSubpath,
+} from "./util.js";
 import { runDetached, type ReportError } from "../utils/detached.js";
 
 export function createViteLogger(logger: ILogger, prefix = "") {
@@ -114,7 +119,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 
   // Resolved before it is loaded, so only a module that exists and fails is
-  // reported; one a package does not have is a debug-level miss.
+  // reported and thrown; one a package does not have is a debug-level miss.
   async #load(
     identifier: string,
     subpath: string,
@@ -131,14 +136,19 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       >;
       return { id, namespace };
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
       this.logger.error(
         "Failed to load @subpath of @pkg from @id: @error",
         subpath,
         identifier,
         id,
-        e instanceof Error ? e.message : e,
+        message,
       );
-      return undefined;
+      // Tagged: vite's own code can read as a package without the module.
+      throw Object.assign(
+        new Error(`Failed to load ${id}: ${message}`, { cause: e }),
+        { code: PACKAGE_MODULE_FAILED },
+      );
     }
   }
 
@@ -281,7 +291,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   // One detached reload per burst of file events. "add" and "unlink" too, or a
   // removed entry never reports empty and its registrations leak. Once
-  // unsubscribed, no pending or running reload reaches `handler`.
+  // unsubscribed, no pending or running reload reaches `handler`, and a
+  // failed load leaves the last good set.
   #watch<T>(
     label: string,
     matches: (changedPath: string) => unknown,
@@ -296,7 +307,15 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
           label,
           async () => {
             if (!subscribed) return;
-            const value = await load();
+            let value: T;
+            try {
+              value = await load();
+            } catch (e) {
+              if ((e as NodeJS.ErrnoException).code === PACKAGE_MODULE_FAILED) {
+                return;
+              }
+              throw e;
+            }
             if (subscribed) handler(value);
           },
           { logger: this.logger, report: this.#reportError },
