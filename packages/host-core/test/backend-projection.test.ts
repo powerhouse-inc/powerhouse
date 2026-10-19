@@ -28,6 +28,13 @@ describe("backendToDescriptor (P4.1)", () => {
     });
   });
 
+  it("rides undoV3:false onto the descriptor", () => {
+    expect(
+      backendToDescriptor("local", {}, { featureFlags: { undoV3: false } })
+        .featureFlags,
+    ).toEqual({ undoV3: false });
+  });
+
   it("defaults kind to in-process", () => {
     expect(backendToDescriptor("x", {}).kind).toBe("in-process");
   });
