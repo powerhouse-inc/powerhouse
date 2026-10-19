@@ -78,6 +78,19 @@ export const workflowsPluginConfigSchema = z.strictObject({
 
 export type WorkflowsPluginConfig = z.infer<typeof workflowsPluginConfigSchema>;
 
+/** What a host.js entry writes (typed-host-configs 1.4). Kept a type alias,
+ * not an interface, so it stays assignable to the runtime `PluginEntryData`
+ * config record. */
+export type WorkflowsPluginConfigInput = z.input<
+  typeof workflowsPluginConfigSchema
+>;
+
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/switchboard/plugins/workflows": WorkflowsPluginConfigInput;
+  }
+}
+
 export type WorkflowsPlugin = HostPlugin<
   {
     transformServerOptions: (
