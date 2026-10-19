@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitHostJsonSchema } from "@powerhousedao/host-core";
-import { hostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
+import { declaredHostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
 import { declaredHostSchema as mastraHostSchema } from "../src/runners/mastra-runner.js";
 
 /**

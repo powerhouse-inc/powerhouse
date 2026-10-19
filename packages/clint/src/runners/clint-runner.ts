@@ -3,8 +3,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  childWrapperSchema,
-  compoundHostSchema,
   defaultUserDataDir,
   loadHost,
   probeRun,
@@ -13,25 +11,26 @@ import {
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
-  runnerBaseSchema,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import {
+  makeHostSchemas,
+  ref,
+  type HostSchemas,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
   createProxyPlugin,
+  declaredProxyPluginConfigSchema,
   proxyPluginConfigSchema,
   type ClintCompoundContext,
-  type MemberEndpoints,
 } from "./proxy-plugin.js";
+import { quotedHost, removedKeyError } from "./removed-forms.js";
 import fs from "node:fs";
 import { createEventBus } from "../core/events.js";
 import { isPortFree } from "../core/preflight.js";
-import {
-  createServiceManager,
-  defineService,
-  resolveServiceName,
-} from "../core/services.js";
+import { createServiceManager, defineService } from "../core/services.js";
 import { formatStatus } from "../core/service-command.js";
 import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
@@ -45,8 +44,8 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
  * the next run, `"attached"` tears them down vetra-style.
  *
  * The agents manager (config.agents) maps names to OpenAI-compatible
- * endpoints — a sibling host reference resolves through that host's
- * runner.port (the mastra-runner serves /v1 there). `dev` adds a line chat
+ * endpoints — each `url` a literal or an output token (an agent host's
+ * `endpoints.openai`), resolved before the runner sees it. `dev` adds a line chat
  * loop against the first agent; the full ink REPL remains the library path
  * (defineCli) for implementation projects, as scaffolded clint CLIs use it
  * natively — noted in the phase-5 WBS.
@@ -54,67 +53,97 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
 export const kind = "compound";
 
-/** clint-runner's own `runner` options, on top of the common base. */
-const clintRunnerOptionsSchema = runnerBaseSchema
-  .extend({
-    /** "detached" (default): children outlive the shell and are re-attached
-     * on the next run. "attached": the shell tears them down on exit. */
-    lifecycle: z.enum(["attached", "detached"]).optional(),
-    /** One front port routing to the members (the clint proxy plugin). */
-    proxy: proxyPluginConfigSchema.optional(),
-  })
-  .strict();
+/** The token form that replaced an agent's sibling `host` reference. */
+function agentHostHint(input: Record<string, unknown>): string {
+  const host = quotedHost(input.host, '"<agent host>"');
+  return `use url: <host>.endpoints.openai from ../<host>/outputs.js, or { url: { $output: { host: ${host}, path: ["endpoints", "openai"] } } }.`;
+}
 
-/** A member's scheduling knobs. Members run as their own `ph-cli run
- * <host>` process, so the wrapper's `config` is read by clint (not passed to
- * the member) and holds only these. */
-const clintMemberConfigSchema = z.strictObject({
-  /** When the member counts as up: a stdout pattern (regex source, case
-   * insensitive) and a timeout in ms. */
-  readiness: z
-    .strictObject({
-      pattern: z.string().min(1).optional(),
-      timeout: z.number().int().positive().optional(),
+/**
+ * The clint compound host, built once per form: DECLARED (agent urls and
+ * proxy upstreams may be output tokens; what host.js authors write) and
+ * RESOLVED (what the verbs receive). Host-core's base blocks come from
+ * `makeHostSchemas` in the same form.
+ */
+function buildHostSchema<U extends z.ZodType, P extends z.ZodType>(
+  base: HostSchemas,
+  url: U,
+  proxy: P,
+) {
+  /** clint-runner's own `runner` options, on top of the common base. */
+  const clintRunnerOptionsSchema = base.runnerBaseSchema
+    .extend({
+      /** "detached" (default): children outlive the shell and are
+       * re-attached on the next run. "attached": the shell tears them down
+       * on exit. */
+      lifecycle: z.enum(["attached", "detached"]).optional(),
+      /** One front port routing to upstreams (the clint proxy plugin). */
+      proxy: proxy.optional(),
     })
-    .optional(),
-});
+    .strict();
 
-/** An agent the shell can chat with: a sibling host serving the mastra
- * agent API (resolved through its runner.port) or an explicit URL. */
-const agentRefSchema = z
-  .strictObject({
-    host: z.string().min(1).optional(),
-    url: z.url().optional(),
-  })
-  .refine((agent) => agent.host !== undefined || agent.url !== undefined, {
-    message: "an agents entry needs { host } or { url }",
+  /** A member's scheduling knobs. Members run as their own `ph-cli run
+   * <host>` process, so the wrapper's `config` is read by clint (not passed
+   * to the member) and holds only these. */
+  const clintMemberConfigSchema = z.strictObject({
+    /** When the member counts as up: a stdout pattern (regex source, case
+     * insensitive) and a timeout in ms. */
+    readiness: z
+      .strictObject({
+        pattern: z.string().min(1).optional(),
+        timeout: z.number().int().positive().optional(),
+      })
+      .optional(),
   });
 
-const cliHostConfigSchema = z.strictObject({
-  agents: z.record(z.string(), agentRefSchema).optional(),
-  /** Member start order; must name declared children. Unnamed members start
-   * after the named ones, in declaration order. */
-  startOrder: z.array(z.string().min(1)).optional(),
-});
+  /** An agent the shell can chat with: the OpenAI-compatible base URL of an
+   * agent API (an agent host's `endpoints.openai` output, or external). */
+  const agentRefSchema = z.strictObject(
+    { url },
+    { error: removedKeyError("host", agentHostHint) },
+  );
 
-/** The clint compound host. Extend the unrefined base, refine last (zod
- * refuses to extend a refined object). */
-export const hostSchema = compoundHostSchema
-  .extend({
-    runner: clintRunnerOptionsSchema,
-    children: z.record(
-      z.string(),
-      childWrapperSchema.extend({ config: clintMemberConfigSchema.optional() }),
-    ),
-    config: cliHostConfigSchema.optional(),
-  })
-  .superRefine(refineStartOrder);
+  const cliHostConfigSchema = z.strictObject({
+    agents: z.record(z.string(), agentRefSchema).optional(),
+    /** Member start order; must name declared children. Unnamed members
+     * start after the named ones, in declaration order. */
+    startOrder: z.array(z.string().min(1)).optional(),
+  });
+
+  // Extend the unrefined base, refine last (zod refuses to extend a refined
+  // object).
+  return base.compoundHostSchema
+    .extend({
+      runner: clintRunnerOptionsSchema,
+      children: z.record(
+        z.string(),
+        base.childWrapperSchema.extend({
+          config: clintMemberConfigSchema.optional(),
+        }),
+      ),
+      config: cliHostConfigSchema.optional(),
+    })
+    .superRefine(refineStartOrder);
+}
+
+/** Resolved form: what the verbs receive (and `validateHost` checks). */
+export const hostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "forbid" }),
+  z.url(),
+  proxyPluginConfigSchema,
+);
+
+/** Declared form: what a host file may contain before resolution. */
+export const declaredHostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "allow" }),
+  ref(z.url()),
+  declaredProxyPluginConfigSchema,
+);
 
 /** What a clint host.js author writes. */
-export type ClintHostInput = z.input<typeof hostSchema>;
+export type ClintHostInput = z.input<typeof declaredHostSchema>;
 /** What the verbs receive. */
 export type ClintHost = z.output<typeof hostSchema>;
-type AgentRef = z.output<typeof agentRefSchema>;
 
 /** What starting the shell produces: the resolved agent endpoints and, when
  * `runner.proxy` is set, the proxy's URL. Member outputs belong to the
@@ -180,21 +209,6 @@ function childServices(
   );
 }
 
-async function resolveAgentEndpoint(
-  ref: AgentRef,
-  ctx: RunnerContext,
-): Promise<string> {
-  if (ref.url) return ref.url.replace(/\/$/, "");
-  if (ref.host) {
-    const sibling = await loadHost(ctx.projectRoot, ref.host);
-    const port = sibling.host.runner.port ?? 4910;
-    return `http://127.0.0.1:${String(port)}/v1`;
-  }
-  // The schema requires one of them; a verb called with an unparsed host
-  // still fails loudly.
-  throw new Error("agents entries need { host } or { url }");
-}
-
 function readProjectName(projectRoot: string, fallback: string): string {
   try {
     return (
@@ -231,7 +245,6 @@ async function startShell(
   // R5: compound plugins (appliesTo "compound" — e.g. the proxy) run over the
   // member set. Built-ins resolve from a declared `runner.plugins`; the proxy
   // is registered when a `runner.proxy` block is present (ergonomic alias).
-  const memberEndpoints: MemberEndpoints = {};
   const servicesDir = path.join(ctx.projectRoot, ".ph", "services");
   const services = createServiceManager(definitions, {
     config: {},
@@ -266,14 +279,6 @@ async function startShell(
         : typeof member.host.runner.port === "number"
           ? member.host.runner.port
           : undefined;
-    if (memberPort !== undefined) {
-      const memberHost =
-        (typeof wrapper.runner?.host === "string" && wrapper.runner.host) ||
-        (typeof member.host.runner.host === "string" &&
-          member.host.runner.host) ||
-        "127.0.0.1";
-      memberEndpoints[id] = { host: memberHost, port: memberPort };
-    }
     if (memberPort !== undefined && !(await isPortFree(memberPort))) {
       console.log(
         `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
@@ -315,7 +320,6 @@ async function startShell(
     resolvedPlugins.push(createProxyPlugin(proxyBlock));
   }
   const compoundCtx: ClintCompoundContext = {
-    memberEndpoints,
     logger: { info: (m: string) => console.log(m) },
   };
   if (resolvedPlugins.length > 0) {
@@ -323,8 +327,8 @@ async function startShell(
   }
 
   const agents: Record<string, string> = {};
-  for (const [name, ref] of Object.entries(config.agents ?? {})) {
-    agents[name] = await resolveAgentEndpoint(ref, ctx);
+  for (const [name, agent] of Object.entries(config.agents ?? {})) {
+    agents[name] = agent.url.replace(/\/$/, "");
   }
   if (Object.keys(agents).length > 0) {
     console.log(

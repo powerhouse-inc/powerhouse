@@ -88,7 +88,9 @@ export async function build(host) {
       name: "cli",
       runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
       children: { assistant: { host: "assistant" } },
-      config: { agents: { main: { host: "assistant" } } },
+      // Resolved form: the declared host writes the assistant's
+      // endpoints.openai output token; ph run substitutes the URL.
+      config: { agents: { main: { url: "http://127.0.0.1:4919/v1/" } } },
     };`,
   );
   return { dir, sink };
@@ -97,7 +99,7 @@ export async function build(host) {
 const ctx = (dir: string) => ({ projectRoot: dir, verb: "run", env: {} });
 
 describe("clint-runner (P5.4)", () => {
-  it("schedules children as clint services and resolves agent endpoints", async () => {
+  it("schedules children as clint services and publishes the resolved agent urls", async () => {
     const { dir } = makeProject();
     const { loadHost } = await import("@powerhousedao/host-core");
     const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);

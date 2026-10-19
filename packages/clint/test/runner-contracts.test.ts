@@ -46,8 +46,10 @@ const assistantHost = () => {
   return { ...host, config: { ...host.config, apiKey: "sk-or-test" } };
 };
 
-/** A clint shell host using every option the runner reads. */
-const cliHost = () =>
+/** A clint shell host using every option the runner reads, as DECLARED:
+ * the assistant agent and the proxy route name the assistant host's outputs
+ * by token. */
+const declaredCliHost = () =>
   ({
     name: "cli",
     runner: {
@@ -56,7 +58,11 @@ const cliHost = () =>
       proxy: {
         port: 8490,
         routes: {
-          "/agent": { member: "assistant", path: "/v1", ws: false },
+          "/agent": {
+            upstream: { $output: { host: "assistant", path: ["origin"] } },
+            path: "/v1",
+            ws: false,
+          },
           "/docs": { upstream: "https://docs.example.com" },
         },
       },
@@ -70,12 +76,41 @@ const cliHost = () =>
     },
     config: {
       agents: {
-        main: { host: "assistant" },
+        main: {
+          url: {
+            $output: { host: "assistant", path: ["endpoints", "openai"] },
+          },
+        },
         remote: { url: "https://agents.example.com/v1" },
       },
       startOrder: ["switchboard", "assistant"],
     },
   }) satisfies PHHost;
+
+/** The same host RESOLVED: what the verbs receive. */
+const cliHost = () => {
+  const host = declaredCliHost();
+  return {
+    ...host,
+    runner: {
+      ...host.runner,
+      proxy: {
+        ...host.runner.proxy,
+        routes: {
+          ...host.runner.proxy.routes,
+          "/agent": { upstream: "http://127.0.0.1:4910", path: "/v1" },
+        },
+      },
+    },
+    config: {
+      ...host.config,
+      agents: {
+        ...host.config.agents,
+        main: { url: "http://127.0.0.1:4910/v1" },
+      },
+    },
+  };
+};
 
 const validate = {
   mastra: (host: unknown) =>
@@ -176,6 +211,62 @@ describe("clint-runner host contract", () => {
     const parsed = validate.clint(cliHost());
     expect(parsed.runner.lifecycle).toBe("attached");
     expect(parsed.children.assistant?.config?.readiness?.timeout).toBe(60_000);
+    expect(parsed.config?.agents?.main?.url).toBe("http://127.0.0.1:4910/v1");
+  });
+
+  it("declared form: agent urls and proxy upstreams take output tokens", () => {
+    expect(clintRunner.declaredHostSchema.safeParse(declaredCliHost())).toEqual(
+      expect.objectContaining({ success: true }),
+    );
+  });
+
+  it("resolved form: tokens are rejected", () => {
+    const declared = declaredCliHost();
+    expect(clintRunner.hostSchema.safeParse(declared).success).toBe(false);
+    expect(() => validate.clint(declared)).toThrow(/is an output token/);
+  });
+
+  it("rejects the removed agents.<x>.host and proxy member forms naming the token form", () => {
+    const host = cliHost();
+    for (const schema of [
+      clintRunner.hostSchema,
+      clintRunner.declaredHostSchema,
+    ]) {
+      const agent = schema.safeParse({
+        ...host,
+        config: { agents: { main: { host: "assistant" } } },
+      });
+      expect(agent.error?.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["config", "agents", "main"],
+          message: expect.stringMatching(
+            /`host` was removed; use url: <host>\.endpoints\.openai from \.\.\/<host>\/outputs\.js, or \{ url: \{ \$output: \{ host: "assistant", path: \["endpoints", "openai"\] \} \} \}/,
+          ) as unknown,
+        }),
+      );
+      const route = schema.safeParse({
+        ...host,
+        runner: {
+          ...host.runner,
+          proxy: { port: 8490, routes: { "/x": { member: "assistant" } } },
+        },
+      });
+      expect(route.error?.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["runner", "proxy", "routes", "/x"],
+          message: expect.stringMatching(
+            /`member` was removed; point `upstream` at the member host's output/,
+          ) as unknown,
+        }),
+      );
+    }
+    // Through validateHost the message carries the field path.
+    expect(() =>
+      validate.clint({
+        ...host,
+        config: { agents: { main: { host: "assistant" } } },
+      }),
+    ).toThrow(/config\.agents\.main: `host` was removed; use url:/);
   });
 
   it("rejects an unknown runner key", () => {
@@ -221,13 +312,13 @@ describe("clint-runner host contract", () => {
           proxy: { port: 8490, routes: { "/x": { ws: true } } },
         },
       }),
-    ).toThrow(/runner\.proxy\.routes\.\/x: a proxy route names a `member`/);
+    ).toThrow(/runner\.proxy\.routes\.\/x\.upstream: Invalid input/);
     expect(() =>
       validate.clint({
         ...host,
         config: { agents: { main: {} } },
       }),
-    ).toThrow(/config\.agents\.main: an agents entry needs/);
+    ).toThrow(/config\.agents\.main\.url: Invalid input/);
     expect(() =>
       validate.clint({
         ...host,
@@ -296,7 +387,7 @@ describe("emitted runner host schemas drift", () => {
     ),
     "host-clint-runner.schema.json": emitHostJsonSchema(
       "host-clint-runner",
-      clintRunner.hostSchema,
+      clintRunner.declaredHostSchema,
     ),
   };
   for (const [file, schema] of Object.entries(emitted)) {
