@@ -53,10 +53,9 @@ a schema with it under their mount path:
   subscriptions on other subgraphs continue.
 - **Shutdown** disposes the server as before.
 
-The manager calls `useServer` itself. `IGatewayAdapter.attachWebSocket` is no
-longer called. Its three implementations are identical `useServer` wrappers,
-so routing through it would mean changing an exported signature. Removing it
-is a follow-up.
+The manager calls `useServer` itself, and `IGatewayAdapter.attachWebSocket` is
+removed. Its three implementations were identical `useServer` wrappers, and
+routing through it would have meant changing its signature anyway.
 
 ### Rejected
 

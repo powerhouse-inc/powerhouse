@@ -57,7 +57,6 @@ const gatewayAdapter = {
   createHandler: vi.fn().mockResolvedValue(() => new Response("ok")),
   createSupergraphHandler: vi.fn().mockResolvedValue(() => new Response("ok")),
   updateSupergraph: vi.fn().mockResolvedValue(undefined),
-  attachWebSocket: vi.fn().mockReturnValue({ dispose: vi.fn() }),
   stop: vi.fn().mockResolvedValue(undefined),
 } as unknown as IGatewayAdapter<Context>;
 

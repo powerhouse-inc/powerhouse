@@ -52,7 +52,6 @@ import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
-  WsDisposer,
 } from "../src/graphql/gateway/types.js";
 import {
   createRequireAuthFetchMiddleware,
@@ -200,7 +199,6 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
   createSupergraphHandler: ReturnType<typeof vi.fn>;
   updateSupergraph: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
-  attachWebSocket: ReturnType<typeof vi.fn>;
 } {
   return {
     start: vi.fn().mockResolvedValue(undefined),
@@ -211,9 +209,6 @@ function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
       .fn()
       .mockResolvedValue(() => Promise.resolve(new Response("supergraph ok"))),
     updateSupergraph: vi.fn().mockResolvedValue(undefined),
-    attachWebSocket: vi
-      .fn()
-      .mockReturnValue({ dispose: vi.fn() } satisfies WsDisposer),
     stop: vi.fn().mockResolvedValue(undefined),
   };
 }
