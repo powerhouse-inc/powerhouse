@@ -17,7 +17,6 @@ const removedDriveReferenceSchema = z.looseObject({
  * in its error instead of zod's generic union message. */
 const driveSchema = z.union(ref(z.url()).options, {
   error: (issue) =>
-    issue.code === "invalid_union" &&
     removedDriveReferenceSchema.safeParse(issue.input).success
       ? `drive: { from, slug } was removed; ${DRIVE_TOKEN_HINT}`
       : undefined,
