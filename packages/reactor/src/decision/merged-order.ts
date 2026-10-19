@@ -20,6 +20,12 @@ export type StreamOperations = {
   operations: Operation[];
 };
 
+/** Compares two ids: action ids, then operation ids. */
+export type IdOrder = (a: string, b: string) => number;
+
+/** The base-reducer 1 and 2 id order, which depends on the default locale. */
+export const localeIdOrder: IdOrder = (a, b) => a.localeCompare(b);
+
 /**
  * Orders two operations from different streams by position. Timestamp decides;
  * an equal timestamp puts an auth operation first, and otherwise falls to the
@@ -29,6 +35,7 @@ export type StreamOperations = {
 export function comparePositions(
   a: PositionedOperation,
   b: PositionedOperation,
+  compareIds: IdOrder = localeIdOrder,
 ): number {
   const aTime = Date.parse(a.operation.timestampUtcMs);
   const bTime = Date.parse(b.operation.timestampUtcMs);
@@ -51,14 +58,15 @@ export function comparePositions(
     return aAuth ? -1 : 1;
   }
 
-  const actionIds = (a.operation.action.id ?? "").localeCompare(
+  const actionIds = compareIds(
+    a.operation.action.id ?? "",
     b.operation.action.id ?? "",
   );
   if (actionIds !== 0) {
     return actionIds;
   }
 
-  return (a.operation.id ?? "").localeCompare(b.operation.id ?? "");
+  return compareIds(a.operation.id ?? "", b.operation.id ?? "");
 }
 
 /**
@@ -68,6 +76,7 @@ export function comparePositions(
  */
 export function mergeByPosition(
   streams: StreamOperations[],
+  compareIds: IdOrder = localeIdOrder,
 ): PositionedOperation[] {
   const merged: PositionedOperation[] = [];
 
@@ -81,7 +90,7 @@ export function mergeByPosition(
     }
   }
 
-  return merged.sort(comparePositions);
+  return merged.sort((a, b) => comparePositions(a, b, compareIds));
 }
 
 /**

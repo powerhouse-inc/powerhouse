@@ -2,6 +2,7 @@ import { hashBrowser } from "./crypto.js";
 import type { z } from "zod";
 
 export {
+  compareActionIds,
   createActionIdGenerator,
   generateActionId,
   type ActionIdGeneratorOptions,

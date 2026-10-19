@@ -1,7 +1,9 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import { createActionIdGenerator } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
+  compareCanonical,
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
   sortOperations,
@@ -260,6 +262,58 @@ describe("Reshuffle Functions", () => {
           [folder("action-Z", 5, 0)],
         ).map((op) => op.action.id),
       ).toEqual(["action-Z", "action-0"]);
+    });
+  });
+
+  describe("compareCanonical", () => {
+    const at = "2021-01-01T00:00:00.000Z";
+    const row = (actionId: string, id = `op-${actionId}`) => ({
+      ...buildOperation({
+        index: 0,
+        skip: 0,
+        timestampUtcMs: at,
+        action: {
+          id: actionId,
+          type: "TEST",
+          input: {},
+          scope: "global",
+          timestampUtcMs: at,
+        },
+      }),
+      id,
+    });
+
+    // Danish collation reads "aa" as å, after z; the order must not follow it.
+    it("compares action ids and operation ids by code unit", () => {
+      expect("aa".localeCompare("ab", "da")).toBe(1);
+      expect(compareCanonical(row("aa"), row("ab"))).toBeLessThan(0);
+      expect(compareCanonical(row("ab"), row("aa"))).toBeGreaterThan(0);
+      expect(compareCanonical(row("x", "aa"), row("x", "ab"))).toBeLessThan(0);
+      expect(compareCanonical(row("B"), row("a"))).toBeLessThan(0);
+    });
+
+    it("keeps same-millisecond v7 ids in creation order", () => {
+      let seed = 1;
+      const next = createActionIdGenerator({
+        now: () => Date.parse(at),
+        random: (bytes) => {
+          for (let i = 0; i < bytes.length; i++) {
+            seed = (seed * 1103515245 + 12345) % 2 ** 31;
+            bytes[i] = seed & 0xff;
+          }
+        },
+      });
+      const rows = Array.from({ length: 2_000 }, () => row(next()));
+      const ids = rows.map((r) => r.action.id);
+      const danish = new Intl.Collator("da");
+
+      expect(
+        [...rows]
+          .reverse()
+          .sort(compareCanonical)
+          .map((r) => r.action.id),
+      ).toEqual(ids);
+      expect([...ids].sort(danish.compare)).not.toEqual(ids);
     });
   });
 

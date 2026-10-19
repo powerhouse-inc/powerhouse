@@ -328,6 +328,32 @@ describe("walkByPosition", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("breaks a tie by code unit once a stream is base-reducer 3, by locale otherwise", () => {
+    const v3 = doc();
+    v3.header = { ...v3.header, protocolVersions: { "base-reducer": 3 } };
+    const walkWith = (document: PHDocument) =>
+      walkAll([
+        {
+          streamKey: "x",
+          scope: "x",
+          document,
+          operations: indexed([op("a", 5)]),
+          apply: append,
+        },
+        {
+          streamKey: "y",
+          scope: "y",
+          document: doc(),
+          operations: indexed([op("B", 5)]),
+          apply: append,
+        },
+      ]).map((s) => s.operation.action.id);
+
+    expect("a".localeCompare("B")).toBeLessThan(0);
+    expect(walkWith(doc())).toEqual(["a", "B"]);
+    expect(walkWith(v3)).toEqual(["B", "a"]);
+  });
+
   it("orders identically however the streams are handed in", () => {
     const a = indexed([op("a1", 1), op("a2", 4)]);
     const b = indexed([op("b1", 2), op("b2", 3)]);

@@ -1,3 +1,5 @@
+import { compareActionIds } from "@powerhousedao/shared/document-model";
+
 type OperationIndex = {
   index: number;
   skip: number;
@@ -38,13 +40,14 @@ export function sortOperations<TOpIndex extends OperationIndex>(
 /**
  * Base-reducer 3's one order: timestamp, then action id. Action ids from one
  * process sort in creation order, so a client's same-millisecond actions keep
- * theirs, and every key is the same on every replica.
+ * theirs, and every key is the same on every replica. Ids compare by code
+ * unit, which no locale changes.
  */
 export function compareCanonical(a: OperationIndex, b: OperationIndex): number {
   return (
     Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs) ||
-    (a.action?.id ?? "").localeCompare(b.action?.id ?? "") ||
-    a.id.localeCompare(b.id)
+    compareActionIds(a.action?.id ?? "", b.action?.id ?? "") ||
+    compareActionIds(a.id, b.id)
   );
 }
 

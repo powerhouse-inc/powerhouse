@@ -4,6 +4,7 @@ import type {
   ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import {
+  compareActionIds,
   deriveScope,
   garbageCollect,
   isBaseReducer3,
@@ -111,6 +112,13 @@ export function* walkByPosition(
   streams: WalkStream[],
 ): Generator<WalkPosition, void, boolean> {
   const rules = new Map<string, RuleState>();
+  // A walk reaching a base-reducer 3 stream breaks ties by code unit; a walk
+  // over older streams only keeps the locale order it always had.
+  const compareIds = streams.some((stream) =>
+    isBaseReducer3(stream.document.header),
+  )
+    ? compareActionIds
+    : undefined;
   const merged = mergeByPosition(
     streams.map((stream) => {
       let operations: Operation[];
@@ -131,6 +139,7 @@ export function* walkByPosition(
         operations,
       };
     }),
+    compareIds,
   );
 
   const byKey = new Map(streams.map((stream) => [stream.streamKey, stream]));
