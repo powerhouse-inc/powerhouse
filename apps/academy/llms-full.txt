@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-19T18:02:44.680Z
+> Generated: 2026-10-19T18:41:06.545Z
 > Total Documents: 121
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7993,7 +7993,7 @@ Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor 
 | Switchboard | `REACTOR_UNDO_V3=false`                                                   |
 | Connect     | `connect.reactor.featureFlags.undoV3: false` in `powerhouse.config.json`  |
 | Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: false } })` |
-| ph-cli host  | `protocol.featureFlags.undoV3: false` in the host file (projected to `REACTOR_UNDO_V3`) |
+| ph-cli host  | `reactor.protocol.featureFlags.undoV3: false` in the host file (projected to `REACTOR_UNDO_V3`) |
 
 `undoV3` has no prerequisites. A peer that runs without it is held from version 3 documents until it upgrades.
 
