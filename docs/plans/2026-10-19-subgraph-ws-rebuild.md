@@ -37,9 +37,10 @@ One graphql-ws server for `/graphql/subscriptions`, owned by the manager and
 attached once, when the first subscription subgraph mounts. Subgraphs register
 a schema with it under their mount path:
 
-- **Routing.** `onSubscribe` parses the operation, collects its root fields
-  (following root-level fragments, ignoring `__*`), and picks the first
-  registered schema whose root type has all of them. Candidates are ordered
+- **Routing.** graphql-ws's `schema` option takes a function. It receives the
+  parsed operation, collects its root fields (following root-level fragments,
+  ignoring `__*`), and picks the first registered schema whose root type has
+  all of them. graphql-ws still parses and validates. Candidates are ordered
   like supergraph claims: rank of origin, then registration order. If none
   matches, the first schema validates it, which returns the usual
   `Cannot query field` error.
