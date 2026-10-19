@@ -129,45 +129,92 @@ export const LOADING_LOGO = "logo.png";
 /** The loading page's splash (app.json `splash`), copied beside it; shown
  * instead of the square logo when set. Generated, like the rest of ui/. */
 export const LOADING_SPLASH = "splash.png";
+/** Dark-scheme splash (app.json `splashDark`), beside the light one. */
+export const LOADING_SPLASH_DARK = "splash-dark.png";
+/** Corner decoration (app.json `loading.art` / `loading.artDark`). */
+export const LOADING_ART = "art";
 
 /** CSS size of the logo; the 1024² source keeps it crisp up to 8x DPR. */
 const LOGO_CSS_PX = 128;
 
-/** The art the loading page shows: the wide splash, else the square logo. */
-type LoadingArt = { kind: "logo" | "splash"; file: string } | null;
+/** The art the loading page shows: the wide splash (with an optional dark
+ * counterpart), else the square logo; plus an optional corner decoration. */
+type LoadingArt = {
+  main: { kind: "logo" | "splash"; file: string; dark?: string } | null;
+  corner: { file: string; dark?: string } | null;
+};
 
 function loadingHtml(app: AppJson, art: LoadingArt): string {
   const escape = (text: string) =>
     text.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
   const name = escape(app.productName);
-  const message = app.loading?.message
-    ? escape(app.loading.message)
+  const loading = app.loading;
+  const message = loading?.message
+    ? escape(loading.message)
     : `Starting ${name}…`;
-  const background = app.loading?.background ?? "#0f1115";
-  const color = app.loading?.color ?? "#e6e8eb";
-  const accent = app.loading?.accent ?? "#4ade80";
+  const background = loading?.background ?? "#0f1115";
+  const color = loading?.color ?? "#e6e8eb";
+  const accent = loading?.accent ?? "#4ade80";
+  const dark = loading?.dark;
+  const darkVars = dark
+    ? `
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: ${dark.background ?? background};
+          --fg: ${dark.color ?? color};
+          --accent: ${dark.accent ?? accent};
+        }
+      }`
+    : "";
+  // <picture> swaps the file by color scheme; a plain <img> otherwise.
+  const picture = (
+    cls: string,
+    file: string,
+    darkFile: string | undefined,
+    attrs = "",
+  ) =>
+    darkFile
+      ? `<picture>
+        <source srcset="./${darkFile}" media="(prefers-color-scheme: dark)" />
+        <img class="${cls}" src="./${file}" alt=""${attrs} />
+      </picture>
+      `
+      : `<img class="${cls}" src="./${file}" alt=""${attrs} />
+      `;
+  const main = art.main;
   const logoTag =
-    art?.kind === "splash"
-      ? `<img class="splash" src="./${art.file}" alt="" />
-      `
-      : art
-        ? `<img class="logo" src="./${art.file}" width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}" alt="" />
-      `
+    main?.kind === "splash"
+      ? picture("splash", main.file, main.dark)
+      : main
+        ? picture(
+            "logo",
+            main.file,
+            main.dark,
+            ` width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}"`,
+          )
         : "";
+  const cornerTag = art.corner
+    ? `<div class="corner" aria-hidden="true">${picture("art", art.corner.file, art.corner.dark)}</div>
+    `
+    : "";
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>${name}</title>
     <style>
-      :root { color-scheme: light dark; }
+      :root {
+        color-scheme: light dark;
+        --bg: ${background}; --fg: ${color}; --accent: ${accent};
+      }${darkVars}
       body {
-        margin: 0; height: 100vh;
+        margin: 0; height: 100vh; overflow: hidden;
         display: flex; align-items: center; justify-content: center;
         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: ${background}; color: ${color};
+        background: var(--bg); color: var(--fg);
       }
       .box {
+        position: relative; z-index: 1;
         text-align: center;
         display: flex; flex-direction: column; align-items: center; gap: 20px;
       }
@@ -179,9 +226,14 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
         width: min(720px, 80vw); max-height: 65vh;
         object-fit: contain; display: block;
       }
+      .corner {
+        position: fixed; right: 0; bottom: 0; z-index: 0;
+        width: clamp(220px, 30vw, 520px); line-height: 0; pointer-events: none;
+      }
+      .art { width: 100%; height: auto; display: block; }
       .dot {
         width: 10px; height: 10px; border-radius: 50%;
-        background: ${accent}; display: inline-block; margin-right: 8px;
+        background: var(--accent); display: inline-block; margin-right: 8px;
         animation: pulse 1.2s ease-in-out infinite;
       }
       @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
@@ -192,7 +244,7 @@ function loadingHtml(app: AppJson, art: LoadingArt): string {
     <div class="box">
       ${logoTag}<div><span class="dot"></span>${message}</div>
     </div>
-  </body>
+    ${cornerTag}</body>
 </html>
 `;
 }
@@ -312,6 +364,9 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /icons
 /ui/logo.png
 /ui/splash.png
+/ui/splash-dark.png
+/ui/art.*
+/ui/art-dark.*
 /dist-stack
 /binaries
 `;
@@ -343,14 +398,33 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const shellDir = path.join(hostDir, SHELL_DIR);
   const iconSrc = path.resolve(hostDir, app.icon);
   const iconBytes = fs.existsSync(iconSrc) ? fs.readFileSync(iconSrc) : null;
-  const splashSrc = app.splash ? path.resolve(hostDir, app.splash) : null;
-  const splashBytes =
-    splashSrc && fs.existsSync(splashSrc) ? fs.readFileSync(splashSrc) : null;
-  const art: LoadingArt = splashBytes
-    ? { kind: "splash", file: LOADING_SPLASH }
-    : iconBytes
-      ? { kind: "logo", file: LOADING_LOGO }
-      : null;
+  const readRel = (rel: string | undefined): Buffer | null => {
+    if (!rel) return null;
+    const abs = path.resolve(hostDir, rel);
+    return fs.existsSync(abs) ? fs.readFileSync(abs) : null;
+  };
+  const splashBytes = readRel(app.splash);
+  const splashDarkBytes = readRel(app.splashDark);
+  const artBytes = readRel(app.loading?.art);
+  const artDarkBytes = readRel(app.loading?.artDark);
+  const artExt = (rel: string | undefined) =>
+    rel ? path.extname(rel).toLowerCase() || ".png" : ".png";
+  const artFile = `${LOADING_ART}${artExt(app.loading?.art)}`;
+  const artDarkFile = `${LOADING_ART}-dark${artExt(app.loading?.artDark)}`;
+  const art: LoadingArt = {
+    main: splashBytes
+      ? {
+          kind: "splash",
+          file: LOADING_SPLASH,
+          ...(splashDarkBytes ? { dark: LOADING_SPLASH_DARK } : {}),
+        }
+      : iconBytes
+        ? { kind: "logo", file: LOADING_LOGO }
+        : null,
+    corner: artBytes
+      ? { file: artFile, ...(artDarkBytes ? { dark: artDarkFile } : {}) }
+      : null,
+  };
   const files: Array<[string, string]> = [
     ["Cargo.toml", cargoToml(app, binName)],
     ["src/main.rs", MAIN_RS],
@@ -373,6 +447,9 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     [path.join(shellDir, ICON_SOURCE), iconBytes],
     [path.join(shellDir, "ui", LOADING_LOGO), iconBytes],
     [path.join(shellDir, "ui", LOADING_SPLASH), splashBytes],
+    [path.join(shellDir, "ui", LOADING_SPLASH_DARK), splashDarkBytes],
+    [path.join(shellDir, "ui", artFile), artBytes],
+    [path.join(shellDir, "ui", artDarkFile), artDarkBytes],
   ];
   for (const [dest, bytes] of copies) {
     if (!bytes) continue;

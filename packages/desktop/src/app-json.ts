@@ -37,18 +37,30 @@ const cssColorSchema = z
     "use a hex color (#rgb, #rgba, #rrggbb or #rrggbbaa)",
   );
 
+/** The loading page's colors. */
+const loadingColorsSchema = z.strictObject({
+  /** Page background (default #0f1115). */
+  background: cssColorSchema.optional(),
+  /** Status text color (default #e6e8eb). */
+  color: cssColorSchema.optional(),
+  /** The pulsing status dot (default #4ade80). */
+  accent: cssColorSchema.optional(),
+});
+
 /** The loading page's look, so the window opens in the app's own colors
  * instead of the default dark page. Every field is optional. */
-const loadingSchema = z
-  .strictObject({
-    /** Page background (default #0f1115). */
-    background: cssColorSchema.optional(),
-    /** Status text color (default #e6e8eb). */
-    color: cssColorSchema.optional(),
-    /** The pulsing status dot (default #4ade80). */
-    accent: cssColorSchema.optional(),
+const loadingSchema = loadingColorsSchema
+  .extend({
     /** Status line under the art (default "Starting <productName>…"). */
     message: z.string().min(1).optional(),
+    /** Colors for `prefers-color-scheme: dark`; without it the page keeps
+     * the light colors in both schemes. */
+    dark: loadingColorsSchema.optional(),
+    /** Optional decoration pinned to the bottom-right corner of the page
+     * (e.g. a brand shape, PNG/SVG), relative to app.json; `artDark` is its
+     * dark-scheme counterpart. */
+    art: z.string().min(1).optional(),
+    artDark: z.string().min(1).optional(),
   })
   .optional();
 
@@ -87,6 +99,9 @@ export const appJsonSchema = z.strictObject({
   /** Optional wide splash image (e.g. 2048x1152, transparent PNG) for the
    * loading page, shown instead of the square icon. Relative to this file. */
   splash: z.string().min(1).optional(),
+  /** The splash for `prefers-color-scheme: dark` (e.g. pale marks on
+   * transparent); falls back to `splash`. */
+  splashDark: z.string().min(1).optional(),
   loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),

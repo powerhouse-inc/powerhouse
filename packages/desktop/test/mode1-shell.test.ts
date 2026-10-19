@@ -193,8 +193,7 @@ describe("shell projection", () => {
     });
     const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
     const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
-    expect(html).toContain("background: #f7f1e8; color: #2b2522;");
-    expect(html).toContain("background: #c8392b;");
+    expect(html).toContain("--bg: #f7f1e8; --fg: #2b2522; --accent: #c8392b;");
     expect(html).toContain("Opening the &lt;kitchen>…");
     expect(html).not.toContain("#0f1115");
     const conf = JSON.parse(
@@ -212,11 +211,61 @@ describe("shell projection", () => {
     });
     expect(
       readFileSync(path.join(plain.shellDir, "ui/index.html"), "utf8"),
-    ).toContain("background: #0f1115; color: #e6e8eb;");
+    ).toContain("--bg: #0f1115; --fg: #e6e8eb; --accent: #4ade80;");
     expect(
       appJsonSchema.safeParse({ ...validApp, loading: { background: "red" } })
         .success,
     ).toBe(false);
+  });
+
+  it("swaps splash, corner art and colors for the dark color scheme", () => {
+    const dir = tempDir("ph-proj-dark-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    mkdirSync(path.join(dir, "art"), { recursive: true });
+    const light = solidPng(64, [9, 9, 9, 255]);
+    const dark = solidPng(64, [200, 200, 200, 255]);
+    const svg = Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>");
+    writeFileSync(path.join(dir, "art", "splash.png"), light);
+    writeFileSync(path.join(dir, "art", "splash-dark.png"), dark);
+    writeFileSync(path.join(dir, "art", "mark.svg"), svg);
+    writeFileSync(path.join(dir, "art", "mark-dark.svg"), svg);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: "./art/splash.png",
+      splashDark: "./art/splash-dark.png",
+      loading: {
+        background: "#f7f1e8",
+        dark: { background: "#121212", accent: "#ffcc00" },
+        art: "./art/mark.svg",
+        artDark: "./art/mark-dark.svg",
+      },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    // dark overrides per field; an unset dark field keeps the light value
+    expect(html).toContain("--bg: #f7f1e8; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toMatch(
+      /prefers-color-scheme: dark\) \{\s*:root \{\s*--bg: #121212;\s*--fg: #e6e8eb;\s*--accent: #ffcc00;/,
+    );
+    // <picture> swaps the splash and the corner art by scheme
+    expect(html).toContain(
+      '<source srcset="./splash-dark.png" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain('<img class="splash" src="./splash.png"');
+    expect(html).toContain('<div class="corner" aria-hidden="true">');
+    expect(html).toContain(
+      '<source srcset="./art-dark.svg" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain('<img class="art" src="./art.svg"');
+    // the files travel beside the page under their extension, out of git
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/splash-dark.png")).equals(dark),
+    ).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/art.svg"))).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/art-dark.svg"))).toBe(true);
+    const ignore = readFileSync(path.join(res.shellDir, ".gitignore"), "utf8");
+    expect(ignore).toContain("/ui/splash-dark.png");
+    expect(ignore).toContain("/ui/art.*");
   });
 
   it("renders the loading page without a logo when the icon file is missing", () => {
