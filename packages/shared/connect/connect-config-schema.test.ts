@@ -216,6 +216,16 @@ describe("connectConfigSchema", () => {
     },
   );
 
+  it("keeps the served schema strict", () => {
+    expect(connectRuntimeConfigSchema.safeParse({ bogus: 1 }).success).toBe(
+      false,
+    );
+    const instanceExtra = { instance: { ...instance, bogus: 1 } };
+    expect(connectRuntimeConfigSchema.safeParse(instanceExtra).success).toBe(
+      false,
+    );
+  });
+
   it("fills no defaults on parse", () => {
     const input = { app: {}, instance };
     expect(connectConfigSchema.parse(input)).toEqual(input);
@@ -245,8 +255,9 @@ describe("emitted JSON Schema fragment", () => {
     );
   });
 
-  // Drift pin: a change to the zod schema changes the snapshot. Review the
-  // diff, update with `vitest -u`, then rerun scripts/emit-schemas.ts.
+  // Drift pin: a change to the zod schema changes the snapshot. The snapshot
+  // sorts keys, so it pins the fragment's content, not its key order. Review
+  // the diff, update with `vitest -u`, then rerun scripts/emit-schemas.ts.
   it("matches the pinned fragment", () => {
     expect(phConnectRuntimeConfigSchema).toMatchSnapshot();
   });
