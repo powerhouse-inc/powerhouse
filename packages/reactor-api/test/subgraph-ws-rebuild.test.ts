@@ -196,6 +196,43 @@ async function startServer(core: SubgraphClass[] = [CoreFeed]) {
     return { values, outcome };
   };
 
+  const streams: AbortController[] = [];
+  const stream = (path: string, query: string): Subscription => {
+    const values: number[] = [];
+    const controller = new AbortController();
+    streams.push(controller);
+    const ended = (async () => {
+      const response = await fetch(`http://127.0.0.1:${port}${path}/stream`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "text/event-stream",
+        },
+        body: JSON.stringify({ query }),
+        signal: controller.signal,
+      });
+      let text = "";
+      const decoder = new TextDecoder();
+      for await (const chunk of response.body!) {
+        text += decoder.decode(chunk, { stream: true });
+        const events = text.split("\n\n");
+        text = events.pop() ?? "";
+        for (const event of events) {
+          if (event.startsWith("event: complete")) return "complete";
+          const value = /"\w+":(\d+)/.exec(event)?.[1];
+          if (value !== undefined) values.push(Number(value));
+        }
+      }
+      return "ended";
+    })().catch((error: unknown) => `error ${String(error)}`);
+    const outcome = () =>
+      Promise.race([
+        ended,
+        new Promise<string>((resolve) => setTimeout(resolve, 300, "live")),
+      ]);
+    return { values, outcome };
+  };
+
   const query = async (client: Client, source: string) => {
     const result = await client.iterate({ query: source }).next();
     return result.value as { data?: unknown };
@@ -204,6 +241,7 @@ async function startServer(core: SubgraphClass[] = [CoreFeed]) {
   return {
     connect,
     subscribe,
+    stream,
     query,
     applyPackage: async (subgraphs: SubgraphClass[]) => {
       await manager.applyPackageSubgraphs(
@@ -218,6 +256,7 @@ async function startServer(core: SubgraphClass[] = [CoreFeed]) {
     },
     close: async () => {
       for (const client of clients) await client.dispose();
+      for (const controller of streams) controller.abort();
       await manager.updateRouter(true);
       await manager.shutdown();
       server.closeAllConnections();
@@ -329,5 +368,46 @@ describe("subscription subgraphs on one WebSocket endpoint", () => {
     expect(
       await subscribe(client, "subscription { alphaTick }").outcome(),
     ).toMatch(/^error Cannot query field "alphaTick"/);
+  });
+
+  it("completes a replaced subgraph's SSE streams and serves its replacement", async () => {
+    const { stream, applyPackage } = await setup();
+    const core = stream("/graphql/core-feed", "subscription { coreTick }");
+    const alpha = stream("/graphql/alpha-tools", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await applyPackage([AlphaToolsV2]);
+
+    expect(await alpha.outcome()).toBe("complete");
+    await keepsReceiving(core);
+    const replacement = stream(
+      "/graphql/alpha-tools",
+      "subscription { alphaTick }",
+    );
+    await keepsReceiving(replacement);
+    expect(replacement.values[0]).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("completes a removed subgraph's SSE streams", async () => {
+    const { stream, applyPackage } = await setup();
+    const core = stream("/graphql/core-feed", "subscription { coreTick }");
+    const alpha = stream("/graphql/alpha-tools", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await applyPackage([]);
+
+    expect(await alpha.outcome()).toBe("complete");
+    await keepsReceiving(core);
+  });
+
+  it("keeps SSE streams when a model edit rebuilds their subgraph", async () => {
+    const { stream, editModel } = await setup();
+    const alpha = stream("/graphql/alpha-tools", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await editModel("rev2");
+
+    expect(await alpha.outcome()).toBe("live");
+    await keepsReceiving(alpha);
   });
 });

@@ -109,6 +109,7 @@ import {
 } from "./gateway/types.js";
 import {
   createGraphQLSSEHandler,
+  SSEStreams,
   mergeStreamSubgraphs,
   withoutFederationDirectives,
 } from "./sse.js";
@@ -354,6 +355,7 @@ export class GraphQLManager {
 
   /** Mounted SSE routes, keyed by path: the supergraph's and each subgraph's. */
   private readonly sseRouteHandles = new Map<string, AdapterRouteHandle>();
+  readonly #sseStreams = new Map<string, SSEStreams>();
 
   /**
    * Origin → the subgraph instances registered from it. Core and host
@@ -1161,7 +1163,7 @@ export class GraphQLManager {
 
   /** Unmount what `instance` serves at its path in `bucket`: route, handler
    * cache, SSE route, WebSocket route and in-process handler. A rebuild keeps
-   * the WebSocket route, whose schema the remount swaps. */
+   * open WebSocket and SSE subscriptions; otherwise they complete. */
   #unmountSubgraph(instance: ISubgraph, bucket: string, rebuild = false): void {
     const subgraphPath = this.#getSubgraphPath(instance, bucket);
     if (this.subgraphHandlerCache.get(subgraphPath)?.subgraph !== instance) {
@@ -1181,7 +1183,11 @@ export class GraphQLManager {
       this.#internalSubgraphHandlers.delete(instance.name);
     }
 
-    if (!rebuild) this.#wsRouter.delete(subgraphPath, instance);
+    if (rebuild) return;
+    this.#wsRouter.delete(subgraphPath, instance);
+    const streams = this.#sseStreams.get(subgraphPath);
+    this.#sseStreams.delete(subgraphPath);
+    void streams?.end();
   }
 
   /**
@@ -2194,9 +2200,15 @@ export class GraphQLManager {
    */
   #setupSSEHandler(schema: GraphQLSchema, basePath: string) {
     const ssePath = basePath + "/stream";
+    let streams = this.#sseStreams.get(basePath);
+    if (!streams) {
+      streams = new SSEStreams();
+      this.#sseStreams.set(basePath, streams);
+    }
     const rawHandler = createGraphQLSSEHandler({
       schema,
       contextFactory: this.#makeContextFactory(),
+      streams,
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
     // Re-created on every router update: replace this path's previous route

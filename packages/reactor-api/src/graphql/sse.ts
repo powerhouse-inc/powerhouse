@@ -26,6 +26,52 @@ export interface SSEHandlerOptions {
    * AuthContext from the WeakMap.
    */
   contextFactory: (req: Request) => Promise<Context> | Context;
+  /** Tracks the handler's open streams so they can be completed. */
+  streams?: SSEStreams;
+}
+
+/** Open SSE operations; `end()` completes them, and any that start later. */
+export class SSEStreams {
+  readonly #running = new Set<AsyncGenerator<unknown>>();
+  #ended = false;
+
+  track<T>(result: AsyncGenerator<T>): AsyncGenerator<T> {
+    const running = this.#running;
+    const done = () => running.delete(tracked);
+    const tracked: AsyncGenerator<T> = {
+      [Symbol.asyncIterator]: () => tracked,
+      next: async (...args) => {
+        const step = await result.next(...args);
+        if (step.done) done();
+        return step;
+      },
+      return: (value) => {
+        done();
+        return result.return(value);
+      },
+      throw: (error) => {
+        done();
+        return result.throw(error);
+      },
+      [Symbol.asyncDispose]: async () => {
+        done();
+        await result.return(undefined);
+      },
+    };
+    running.add(tracked);
+    if (this.#ended) void this.#end([tracked]);
+    return tracked;
+  }
+
+  /** graphql-sse sends `complete` and closes each stream as its result ends. */
+  async end(): Promise<void> {
+    this.#ended = true;
+    await this.#end([...this.#running]);
+  }
+
+  async #end(results: AsyncGenerator<unknown>[]): Promise<void> {
+    await Promise.allSettled(results.map((result) => result.return(undefined)));
+  }
 }
 
 /**
@@ -47,7 +93,7 @@ export interface SSEHandlerOptions {
 export function createGraphQLSSEHandler(
   options: SSEHandlerOptions,
 ): (req: Request) => Promise<Response> {
-  const { schema, contextFactory } = options;
+  const { schema, contextFactory, streams } = options;
 
   return createHandler<Context>({
     schema,
@@ -56,6 +102,8 @@ export function createGraphQLSSEHandler(
     // Auth is handled upstream by authFetchMiddleware.
     authenticate: () => null,
     context: (req: SSERequest<Request>) => contextFactory(req.raw),
+    onOperation: (_ctx, _req, _args, result) =>
+      streams && isAsyncGenerator(result) ? streams.track(result) : undefined,
   });
 }
 
@@ -154,4 +202,14 @@ export function mergeStreamSubgraphs(
         ]
       : [];
   return mergeSubgraphSchemas([...roots, ...subgraphs], "last");
+}
+
+function isAsyncGenerator<T>(value: T): value is Extract<T, AsyncGenerator> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Symbol.asyncIterator in value &&
+    typeof (value as { return?: unknown }).return === "function" &&
+    typeof (value as { throw?: unknown }).throw === "function"
+  );
 }
