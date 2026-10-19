@@ -121,7 +121,10 @@ describe("source-config schema", () => {
         }
       }
       if (obj.items) walk(obj.items);
-      if (Array.isArray(obj.oneOf)) for (const v of obj.oneOf) walk(v);
+      for (const key of ["oneOf", "anyOf"] as const) {
+        const variants = obj[key];
+        if (Array.isArray(variants)) for (const v of variants) walk(v);
+      }
     }
     const props = sourceConfigSchema.properties as unknown as Record<
       string,
