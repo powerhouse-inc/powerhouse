@@ -4,19 +4,32 @@ import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import { baseDocumentModels } from "../packages/base-document-models.js";
 import {
+  DocumentModelSchemaCache,
+  type DocumentModelSource,
   findSubgraphTypeCollisions,
-  documentModelSubgraphTypes,
   generatedTypesOf,
   getDocumentModelSubgraphName,
-  hasOperationSchemas,
+  getGeneratedDocumentModelTypes,
+  reservedTypeNames,
 } from "../utils/create-schema.js";
 import authSchema from "./auth/schema.graphql";
 import { inspectionTypeDefs } from "./inspection/schema.js";
 import reactorSchema from "./reactor/schema.graphql";
 import {
+  type Admission,
+  admitDocumentModels,
+  CORE_ORIGIN,
+  decideAdmission,
+  describeOrigin,
+  DOCUMENT_MODEL_ORIGIN,
+  documentModelSubgraphSources,
+  RegistrationOrder,
+  type SubgraphOrigin,
+  supergraphClaimLosers,
+} from "./subgraph-admission.js";
+import {
   collectSubgraphClaims,
   type OwnershipConflict,
-  resolveClaimOwnership,
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
 import { systemTypeDefs } from "./system/schema.js";
@@ -43,20 +56,36 @@ export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
 export type PackageSubgraph = { name: string; typeDefs: DocumentNode };
 
 export type PackageSubgraphConflicts = {
-  /** Set when the server refuses the subgraph's name. */
-  nameHeldBy?: "core" | "document model";
+  /** Who takes the name; "package" is a later same-name subgraph. */
+  nameHeldBy?: "core" | "document model" | "package";
   /** Types and root fields the subgraph loses. */
   claims: OwnershipConflict[];
+};
+
+export type RefusedDocumentModel = {
+  name: string;
+  reason: string;
+  /** Only the model's own subgraph is refused; its types are served. */
+  subgraphOnly: boolean;
 };
 
 export type PackageSubgraphReport = {
   /** By subgraph name; subgraphs without a conflict are left out. */
   conflicts: Map<string, PackageSubgraphConflicts>;
-  /** Models whose schema does not generate, left out of the check. */
-  skippedModels: string[];
+  /** The package's models, or their subgraphs, the server refuses. */
+  refusedModels: RefusedDocumentModel[];
 };
 
-type ModelSubgraph = { name: string; typeDefs: DocumentNode };
+const PACKAGE_ORIGIN: SubgraphOrigin = "package";
+
+type Registered = {
+  name: string;
+  origin: SubgraphOrigin;
+  typeDefs: DocumentNode;
+  ownTypeNames?: ReadonlySet<string>;
+};
+
+type Rejection = Extract<Admission<Registered>, { action: "reject" }>;
 
 function claimsOf(typeDefs: DocumentNode, generated: ReadonlySet<string>) {
   try {
@@ -67,96 +96,141 @@ function claimsOf(typeDefs: DocumentNode, generated: ReadonlySet<string>) {
   }
 }
 
-/** Package subgraphs the server refuses or excludes; host subgraphs unchecked. */
+function describeModelSubgraphRejection(rejection: Rejection): string {
+  switch (rejection.reason) {
+    case "core name":
+      return `its subgraph name is taken by a subgraph from ${describeOrigin(CORE_ORIGIN)}`;
+    case "rank":
+      return `its subgraph name is taken by a subgraph from ${describeOrigin(rejection.holderOrigin)}`;
+    case "collision":
+      return `its subgraph defines generated types: ${rejection.collisions.join(", ")}`;
+  }
+}
+
+function packageConflict(
+  rejection: Rejection,
+  owners: ReadonlyMap<string, string>,
+): PackageSubgraphConflicts {
+  switch (rejection.reason) {
+    case "core name":
+      return { nameHeldBy: "core", claims: [] };
+    case "rank":
+      return { nameHeldBy: "document model", claims: [] };
+    case "collision":
+      return {
+        claims: rejection.collisions.map((claim) => ({
+          claim,
+          owner: owners.get(claim) ?? DOCUMENT_MODEL_SCHEMA_OWNER,
+        })),
+      };
+  }
+}
+
+/** Server admission replayed for one package; hosts and other packages unknown. */
 export function findPackageSubgraphConflicts(
   subgraphs: readonly PackageSubgraph[],
   documentModels: readonly DocumentModelGlobalState[],
 ): PackageSubgraphReport {
-  const models: DocumentModelGlobalState[] = [];
-  const modelSubgraphs: ModelSubgraph[] = [];
-  const skippedModels: string[] = [];
-  const allModels = [
-    ...baseDocumentModels.map(([, model]) => model.documentModel.global),
-    ...documentModels,
-  ];
-  for (const model of allModels) {
-    let typeDefs: DocumentNode | undefined;
-    try {
-      generatedTypesOf([model]);
-      if (hasOperationSchemas(model)) {
-        typeDefs = documentModelSubgraphTypes(model).typeDefs;
-      }
-    } catch {
-      skippedModels.push(model.name);
-      continue;
-    }
-    models.push(model);
-    const name = getDocumentModelSubgraphName(model);
-    if (typeDefs && !modelSubgraphs.some((owner) => owner.name === name)) {
-      modelSubgraphs.push({ name, typeDefs });
+  const packageModels: DocumentModelSource[] = documentModels.map((global) => ({
+    documentModel: { global },
+  }));
+  const { admitted, schemas, refusals } = admitDocumentModels(
+    new DocumentModelSchemaCache<DocumentModelSource>().resolve([
+      ...baseDocumentModels.map(([, model]) => model),
+      ...packageModels,
+    ]),
+    reservedTypeNames(coreSubgraphTypeDefs.values()),
+  );
+  const generated = getGeneratedDocumentModelTypes(admitted, schemas);
+  const fixed = generatedTypesOf([]).names;
+  const generatedOwners = new Map<string, string>();
+  for (const model of admitted) {
+    const owner = getDocumentModelSubgraphName(model.documentModel.global);
+    const { names } = getGeneratedDocumentModelTypes([model], schemas);
+    for (const name of names) {
+      if (!fixed.has(name)) generatedOwners.set(name, owner);
     }
   }
 
-  const generated = generatedTypesOf(models);
-  const fixed = generatedTypesOf([]).names;
-  const generatedOwners = new Map<string, string>();
-  for (const model of models) {
-    for (const name of generatedTypesOf([model]).names) {
-      if (!fixed.has(name)) {
-        generatedOwners.set(name, getDocumentModelSubgraphName(model));
-      }
+  const holders = new Map<string, Registered>();
+  const order = new RegistrationOrder();
+  const register = (entry: Registered): Admission<Registered> => {
+    const holder = holders.get(entry.name);
+    const admission = decideAdmission(
+      entry,
+      entry.origin,
+      holder ? [{ holder, origin: holder.origin }] : [],
+      () => {
+        try {
+          return findSubgraphTypeCollisions(
+            generated,
+            entry.typeDefs,
+            entry.ownTypeNames,
+          );
+        } catch {
+          return [];
+        }
+      },
+    );
+    if (admission.action === "add") {
+      holders.set(entry.name, entry);
+      order.record(entry.origin, entry.name);
+    }
+    return admission;
+  };
+
+  for (const [name, typeDefs] of coreSubgraphTypeDefs) {
+    register({ name, origin: CORE_ORIGIN, typeDefs });
+  }
+
+  const refusedModels: RefusedDocumentModel[] = refusals
+    .filter(({ model }) => packageModels.includes(model))
+    .map(({ model, reason, subgraphOnly }) => ({
+      name: model.documentModel.global.name,
+      reason,
+      subgraphOnly,
+    }));
+  for (const { model, types } of documentModelSubgraphSources(
+    admitted,
+    schemas,
+  )) {
+    const admission = register({
+      name: getDocumentModelSubgraphName(model.documentModel.global),
+      origin: DOCUMENT_MODEL_ORIGIN,
+      typeDefs: types.typeDefs,
+      ownTypeNames: types.typeNames,
+    });
+    if (admission.action === "reject" && packageModels.includes(model)) {
+      refusedModels.push({
+        name: model.documentModel.global.name,
+        reason: describeModelSubgraphRejection(admission),
+        subgraphOnly: true,
+      });
     }
   }
 
   const conflicts = new Map<string, PackageSubgraphConflicts>();
-  const admitted: PackageSubgraph[] = [];
-  for (const subgraph of subgraphs) {
-    if (coreSubgraphTypeDefs.has(subgraph.name)) {
-      conflicts.set(subgraph.name, { nameHeldBy: "core", claims: [] });
-      continue;
+  for (const { name, typeDefs } of subgraphs) {
+    const admission = register({ name, origin: PACKAGE_ORIGIN, typeDefs });
+    if (admission.action === "reject") {
+      conflicts.set(name, packageConflict(admission, generatedOwners));
+    } else if (admission.action === "add" && admission.replaces.length > 0) {
+      conflicts.set(name, { nameHeldBy: "package", claims: [] });
     }
-    if (modelSubgraphs.some((owner) => owner.name === subgraph.name)) {
-      conflicts.set(subgraph.name, {
-        nameHeldBy: "document model",
-        claims: [],
-      });
-      continue;
-    }
-    let collisions: string[];
-    try {
-      collisions = findSubgraphTypeCollisions(generated, subgraph.typeDefs);
-    } catch {
-      collisions = [];
-    }
-    if (collisions.length > 0) {
-      conflicts.set(subgraph.name, {
-        claims: collisions.map((claim) => ({
-          claim,
-          owner: generatedOwners.get(claim) ?? DOCUMENT_MODEL_SCHEMA_OWNER,
-        })),
-      });
-      continue;
-    }
-    admitted.push(subgraph);
   }
 
-  const packageNames = new Set(admitted.map(({ name }) => name));
-  const excluded = resolveClaimOwnership(
-    [
-      ...Array.from(coreSubgraphTypeDefs, ([name, typeDefs]) => ({
-        name,
-        typeDefs,
-      })),
-      ...modelSubgraphs,
-      ...admitted,
-    ].map(({ name, typeDefs }) => ({
-      candidate: name,
-      name,
-      claims: claimsOf(typeDefs, generated.names),
+  const excluded = supergraphClaimLosers(
+    Array.from(holders.values(), (entry) => ({
+      member: entry,
+      name: entry.name,
+      origin: entry.origin,
+      claims: claimsOf(entry.typeDefs, generated.names),
     })),
+    order,
   );
-  for (const [name, claims] of excluded) {
-    if (packageNames.has(name)) conflicts.set(name, { claims });
+  for (const [entry, claims] of excluded) {
+    if (entry.origin !== PACKAGE_ORIGIN) continue;
+    conflicts.set(entry.name, { ...conflicts.get(entry.name), claims });
   }
-  return { conflicts, skippedModels };
+  return { conflicts, refusedModels };
 }

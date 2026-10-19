@@ -59,9 +59,7 @@ import {
   findSubgraphTypeCollisions,
   type GeneratedDocumentModelTypes,
   getGeneratedDocumentModelTypes,
-  type ReservedTypeNames,
   reservedTypeNames,
-  reservedTypeNamesTaken,
   type SubgraphSchemaOptions,
   SubgraphTypeCollisionError,
   typeDefinitionNames,
@@ -70,9 +68,20 @@ import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import {
+  admitDocumentModels,
+  CORE_ORIGIN,
+  decideAdmission,
+  describeOrigin,
+  DOCUMENT_MODEL_ORIGIN,
+  documentModelSubgraphSources,
+  HOST_ORIGIN,
+  RegistrationOrder,
+  type SubgraphOrigin,
+  supergraphClaimLosers,
+} from "./subgraph-admission.js";
+import {
   collectSubgraphClaims,
   describeOwnershipConflicts,
-  resolveClaimOwnership,
   type SubgraphClaims,
 } from "./subgraph-type-ownership.js";
 import { filterBuildableSubgraphs } from "./gateway/adapter-gateway-stitching.js";
@@ -113,8 +122,6 @@ import {
   withoutFederationDirectives,
 } from "./sse.js";
 
-const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
-
 const NON_MODEL_TYPE_NAMES = new Set([
   "String",
   "Int",
@@ -125,36 +132,6 @@ const NON_MODEL_TYPE_NAMES = new Set([
   "Mutation",
   "Subscription",
 ]);
-
-/**
- * Filter document models to keep only the latest version of each unique document model.
- */
-function filterLatestDocumentModelVersions(
-  documentModels: DocumentModelModule[],
-): DocumentModelModule[] {
-  const latestByName = new Map<string, DocumentModelModule>();
-
-  for (const documentModel of documentModels) {
-    const name = documentModel.documentModel.global.name;
-    const existing = latestByName.get(name);
-
-    if (!existing) {
-      latestByName.set(name, documentModel);
-      continue;
-    }
-
-    const currentVersion =
-      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
-    const existingVersion =
-      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
-
-    if (currentVersion > existingVersion) {
-      latestByName.set(name, documentModel);
-    }
-  }
-
-  return Array.from(latestByName.values());
-}
 
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
@@ -204,38 +181,10 @@ export type GraphQLManagerOptions = {
   wsCredentialRecheckIntervalMs?: number;
 };
 
-/**
- * Where a subgraph came from: a core subgraph, the host, the generated
- * document-model subgraphs, or a package name. A name belongs to one origin:
- * the same origin replaces it, a higher-ranked one evicts it, and any other is
- * refused.
- */
-const CORE_ORIGIN = Symbol("core");
-const DOCUMENT_MODEL_ORIGIN = Symbol("document-models");
-const HOST_ORIGIN = Symbol("host");
-type SubgraphOrigin =
-  | string
-  | typeof CORE_ORIGIN
-  | typeof DOCUMENT_MODEL_ORIGIN
-  | typeof HOST_ORIGIN;
 type TrackedOrigin = Exclude<
   SubgraphOrigin,
   typeof CORE_ORIGIN | typeof HOST_ORIGIN
 >;
-
-function describeOrigin(origin: SubgraphOrigin): string {
-  if (origin === CORE_ORIGIN) return "core";
-  if (origin === DOCUMENT_MODEL_ORIGIN) return "document models";
-  if (origin === HOST_ORIGIN) return "the host";
-  return `package ${origin}`;
-}
-
-function rank(origin: SubgraphOrigin): number {
-  if (origin === CORE_ORIGIN) return 3;
-  if (origin === HOST_ORIGIN) return 2;
-  if (origin === DOCUMENT_MODEL_ORIGIN) return 1;
-  return 0;
-}
 
 // Returning `false` closes 4403 with the reason `Forbidden`, so every refusal
 // looks alike and a client cannot tell "sign in" from "that token is no good".
@@ -429,10 +378,7 @@ export class GraphQLManager {
   >();
 
   /** Claim tie-break: kept across re-registration, so HMR keeps the owner. */
-  readonly #registrationOrder = new Map<
-    SubgraphOrigin,
-    { order: number; names: Map<string, number> }
-  >();
+  readonly #registrationOrder = new RegistrationOrder();
 
   /** Per-subgraph handlers by name, before auth/drive middleware is applied,
    * for in-process queries by trusted internals. */
@@ -736,77 +682,39 @@ export class GraphQLManager {
         subgraphs.map((subgraph) => subgraph.typeDefs),
       ).flat(),
     );
-    const refusals = new Set<string>();
-    const schemas = new Map<DocumentModelModule, DocumentModelSchema>();
-    const admitted: DocumentModelModule[] = [];
-    for (const { model, key, schema, error } of this.#schemaCache.resolve(
-      models,
-    )) {
+    const { admitted, schemas, refusals } = admitDocumentModels(
+      this.#schemaCache.resolve(models),
+      reserved,
+    );
+    const logged = new Set<string>();
+    for (const { model, key, subgraphOnly, reason } of refusals) {
       const id = model.documentModel.global.id;
-      const refuse = (message: string, reason: string) => {
-        const refusal = `${id}\n${key}\n${reason}`;
-        refusals.add(refusal);
-        if (!this.#refusals.has(refusal)) {
-          this.logger.error(message, id, reason);
-        }
-      };
-      const refuseModel = (reason: string) =>
-        refuse(
-          "Refusing document model @documentType from the GraphQL schema: @reason",
-          reason,
-        );
-      if (!schema) {
-        refuseModel(`has an unusable schema: ${error.message}`);
-        continue;
-      }
-      const taken = this.#reservedNamesReason(model, schema, reserved);
-      if (taken !== undefined) {
-        refuseModel(taken);
-        continue;
-      }
-      if (schema.subgraphError) {
-        refuse(
-          "Refusing the subgraph of document model @documentType: @reason",
-          `has an unusable subgraph schema: ${schema.subgraphError.message}`,
-        );
-      }
-      schemas.set(model, schema);
-      admitted.push(model);
+      const refusal = `${id}\n${key}\n${reason}`;
+      logged.add(refusal);
+      if (this.#refusals.has(refusal)) continue;
+      this.logger.error(
+        subgraphOnly
+          ? "Refusing the subgraph of document model @documentType: @reason"
+          : "Refusing document model @documentType from the GraphQL schema: @reason",
+        id,
+        reason,
+      );
     }
-    this.#refusals = refusals;
+    this.#refusals = logged;
     this.#modelSchemas = schemas;
     return admitted;
-  }
-
-  #reservedNamesReason(
-    model: DocumentModelModule,
-    schema: DocumentModelSchema,
-    reserved: ReservedTypeNames,
-  ): string | undefined {
-    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    return taken.length > 0
-      ? `generates reserved type names: ${taken.join(", ")}`
-      : undefined;
   }
 
   async #setupDocumentModelSubgraphs(
     supergraph: string,
     documentModels: DocumentModelModule[],
   ): Promise<Set<string>> {
-    const latestDocumentModels =
-      filterLatestDocumentModelVersions(documentModels);
     const registeredNames = new Set<string>();
 
-    for (const documentModel of latestDocumentModels) {
-      if (
-        DOCUMENT_MODELS_TO_EXCLUDE.includes(
-          documentModel.documentModel.global.id,
-        )
-      ) {
-        continue;
-      }
-      const types = this.#modelSchemas.get(documentModel)?.subgraph;
-      if (!types) continue;
+    for (const { model: documentModel, types } of documentModelSubgraphSources(
+      documentModels,
+      this.#modelSchemas,
+    )) {
       try {
         const subgraphInstance = new DocumentModelSubgraph(
           documentModel,
@@ -872,11 +780,6 @@ export class GraphQLManager {
       }
     }
     return holders;
-  }
-
-  /** Core subgraph names are reserved: no other subgraph may take one. */
-  #isCoreNameReserved(name: string): boolean {
-    return this.#findByName(this.coreSubgraphsMap, name) !== undefined;
   }
 
   /** Buckets whose mount paths a registration into `supergraph` occupies: a
@@ -988,69 +891,59 @@ export class GraphQLManager {
     return true;
   }
 
-  /**
-   * Whether `instance` may register, and what it replaces. A name has one
-   * holder across every bucket: the same origin replaces it, a higher rank
-   * (core > host > document models > package) evicts it, and anything else is
-   * refused.
-   */
+  /** Whether `instance` may register, and what it replaces or evicts. */
   #admit(
     instance: ISubgraph,
-    core: boolean,
     origin: SubgraphOrigin,
   ):
     | { action: "skip"; existing: ISubgraph }
     | { action: "reject" }
     | { action: "add"; replaces: ISubgraph[]; evicts: ISubgraph[] } {
-    // A package subgraph may not take a name a core subgraph has registered:
-    // the in-process handler map is keyed by bare name, so a same-name
-    // subgraph would shadow the core one (issue #2972).
-    if (!core && this.#isCoreNameReserved(instance.name)) {
-      this.logger.error(
-        "Rejecting subgraph @name: name is reserved by a registered core subgraph",
-        instance.name,
-      );
-      return { action: "reject" };
-    }
-
-    const holders = this.#holdersOf(instance.name);
-    if (holders.has(instance)) return { action: "skip", existing: instance };
-
-    const rivals = Array.from(holders).filter(
-      (holder) => this.#originOf(holder) !== origin,
+    const admission = decideAdmission(
+      instance,
+      origin,
+      Array.from(this.#holdersOf(instance.name), (holder) => ({
+        holder,
+        origin: this.#originOf(holder),
+      })),
+      () => this.#typeCollisions(instance),
     );
-    for (const holder of rivals) {
-      const holderOrigin = this.#originOf(holder);
-      if (rank(origin) <= rank(holderOrigin)) {
+    switch (admission.action) {
+      case "skip":
+        return { action: "skip", existing: instance };
+      case "add":
+        return admission;
+    }
+    switch (admission.reason) {
+      case "core name":
+        this.logger.error(
+          "Rejecting subgraph @name: name is reserved by a registered core subgraph",
+          instance.name,
+        );
+        break;
+      case "rank":
         this.logger.error(
           "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
           instance.name,
           describeOrigin(origin),
-          describeOrigin(holderOrigin),
+          describeOrigin(admission.holderOrigin),
         );
-        return { action: "reject" };
+        break;
+      case "collision": {
+        const reason = new SubgraphTypeCollisionError(admission.collisions)
+          .message;
+        if (this.#loggedCollisions.get(instance) !== reason) {
+          this.#loggedCollisions.set(instance, reason);
+          this.logger.error(
+            "Rejecting subgraph @name: @error",
+            instance.name,
+            reason,
+          );
+        }
+        break;
       }
     }
-
-    const collisions = core ? [] : this.#typeCollisions(instance);
-    if (collisions.length > 0) {
-      const reason = new SubgraphTypeCollisionError(collisions).message;
-      if (this.#loggedCollisions.get(instance) !== reason) {
-        this.#loggedCollisions.set(instance, reason);
-        this.logger.error(
-          "Rejecting subgraph @name: @error",
-          instance.name,
-          reason,
-        );
-      }
-      return { action: "reject" };
-    }
-
-    return {
-      action: "add",
-      replaces: Array.from(holders).filter((it) => !rivals.includes(it)),
-      evicts: rivals,
-    };
+    return { action: "reject" };
   }
 
   #originOf(instance: ISubgraph): SubgraphOrigin {
@@ -1067,7 +960,7 @@ export class GraphQLManager {
     // Rejections log rather than throw - package registration runs from a
     // detached async closure in server.ts, where a throw is an unhandled
     // rejection that takes the host down.
-    const admission = this.#admit(subgraphInstance, core, origin);
+    const admission = this.#admit(subgraphInstance, origin);
     if (admission.action === "reject") return undefined;
     if (admission.action === "skip") {
       this.logger.debug(
@@ -1111,7 +1004,7 @@ export class GraphQLManager {
     }
 
     this.#origins.set(subgraphInstance, origin);
-    this.#recordRegistrationOrder(origin, subgraphInstance.name);
+    this.#registrationOrder.record(origin, subgraphInstance.name);
     if (origin !== HOST_ORIGIN && origin !== CORE_ORIGIN) {
       let instances = this.packageSubgraphs.get(origin);
       if (!instances) {
@@ -1124,15 +1017,6 @@ export class GraphQLManager {
       `${replaces.length + evicts.length > 0 ? "Replaced" : "Registered"} ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
     );
     return subgraphInstance;
-  }
-
-  #recordRegistrationOrder(origin: SubgraphOrigin, name: string) {
-    let entry = this.#registrationOrder.get(origin);
-    if (!entry) {
-      entry = { order: this.#registrationOrder.size, names: new Map() };
-      this.#registrationOrder.set(origin, entry);
-    }
-    if (!entry.names.has(name)) entry.names.set(name, entry.names.size);
   }
 
   /**
@@ -2006,28 +1890,14 @@ export class GraphQLManager {
 
   /** Claims go by rank, then first registration; each exclusion logs once. */
   #claimLosers(subgraphs: ReadonlySet<ISubgraph>): Set<ISubgraph> {
-    const priority = (subgraph: ISubgraph): number[] => {
-      const origin = this.#originOf(subgraph);
-      const order = this.#registrationOrder.get(origin);
-      return [
-        -rank(origin),
-        order?.order ?? Infinity,
-        order?.names.get(subgraph.name) ?? Infinity,
-      ];
-    };
-    const ranked = Array.from(subgraphs, (subgraph) => ({
-      subgraph,
-      priority: priority(subgraph),
-    })).sort((a, b) => {
-      const i = a.priority.findIndex((value, j) => value !== b.priority[j]);
-      return i === -1 ? 0 : a.priority[i] - b.priority[i];
-    });
-    const excluded = resolveClaimOwnership(
-      ranked.map(({ subgraph }) => ({
-        candidate: subgraph,
+    const excluded = supergraphClaimLosers(
+      Array.from(subgraphs, (subgraph) => ({
+        member: subgraph,
         name: subgraph.name,
+        origin: this.#originOf(subgraph),
         claims: this.#claimsOf(subgraph),
       })),
+      this.#registrationOrder,
     );
 
     for (const subgraph of subgraphs) {

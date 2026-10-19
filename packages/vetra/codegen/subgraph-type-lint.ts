@@ -3,6 +3,7 @@ import {
   findPackageSubgraphConflicts,
   type PackageSubgraph,
   type PackageSubgraphConflicts,
+  type RefusedDocumentModel,
 } from "@powerhousedao/reactor-api/subgraph-types";
 import { type DocumentNode, parse } from "graphql";
 import { type Dirent, readdirSync, readFileSync } from "node:fs";
@@ -61,7 +62,21 @@ function subgraphDirs(subgraphsDir: string): string[] {
     .sort((a, b) => position(a) - position(b));
 }
 
+function describeRefusal({
+  name,
+  reason,
+  subgraphOnly,
+}: RefusedDocumentModel): string {
+  const detail = reason.split("\n")[0].replace(/\.$/, "");
+  return subgraphOnly
+    ? `The subgraph of document model "${name}" is refused by the server: ${detail}.`
+    : `Document model "${name}" is refused by the server: ${detail}.`;
+}
+
 function describe(name: string, conflict: PackageSubgraphConflicts): string {
+  if (conflict.nameHeldBy === "package") {
+    return `Subgraph "${name}" is defined more than once, so the server serves only the last. Rename the others.`;
+  }
   if (conflict.nameHeldBy) {
     return `Subgraph "${name}" has the name of a ${conflict.nameHeldBy} subgraph, so the server refuses it. Rename the subgraph.`;
   }
@@ -71,7 +86,7 @@ function describe(name: string, conflict: PackageSubgraphConflicts): string {
   return `Subgraph "${name}" defines ${claims}, so the supergraph leaves it out. Rename them in its schema.ts.`;
 }
 
-/** A warning per subgraph the server would refuse or leave out. */
+/** A warning per model or subgraph the server would refuse or leave out. */
 export function lintSubgraphTypes(projectDir: string): string[] {
   const models = directories(join(projectDir, "document-models"))
     .map(loadDocumentModelInDir)
@@ -84,17 +99,14 @@ export function lintSubgraphTypes(projectDir: string): string[] {
     const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
     subgraphs.push({ name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs });
   }
-  if (subgraphs.length === 0) return [];
+  if (subgraphs.length === 0 && models.length === 0) return [];
 
-  const { conflicts, skippedModels } = findPackageSubgraphConflicts(
+  const { conflicts, refusedModels } = findPackageSubgraphConflicts(
     subgraphs,
     models,
   );
   return [
-    ...skippedModels.map(
-      (name) =>
-        `Document model "${name}" was left out of the subgraph check: its schema does not generate.`,
-    ),
+    ...refusedModels.map(describeRefusal),
     ...Array.from(conflicts, ([name, conflict]) => describe(name, conflict)),
   ];
 }

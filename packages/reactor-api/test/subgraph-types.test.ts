@@ -1,5 +1,6 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { constantCase } from "change-case";
 import { print } from "graphql";
 import { gql } from "graphql-tag";
 import { describe, expect, it } from "vitest";
@@ -16,6 +17,7 @@ import type { SubgraphArgs } from "../src/graphql/types.js";
 function model(
   name: string,
   operationSchema = `input Set${name}TitleInput { title: String }`,
+  stateSchema = `type ${name}State { title: String }`,
 ): DocumentModelGlobalState {
   return {
     name,
@@ -29,7 +31,7 @@ function model(
                 name: "base",
                 operations: [
                   {
-                    name: `SET_${name.toUpperCase()}_TITLE`,
+                    name: `SET_${constantCase(name)}_TITLE`,
                     schema: operationSchema,
                   },
                 ],
@@ -37,7 +39,7 @@ function model(
             ]
           : [],
         state: {
-          global: { schema: `type ${name}State { title: String }` },
+          global: { schema: stateSchema },
           local: { schema: "" },
         },
       },
@@ -231,15 +233,139 @@ describe("findPackageSubgraphConflicts", () => {
     });
   });
 
-  it("skips a model whose schema does not parse and checks the rest", () => {
+  it("reports a model whose schema does not parse and checks the rest", () => {
     const report = findPackageSubgraphConflicts(
       [{ name: "todo-list", typeDefs: template("TodoList", "todoList") }],
       [todoList, model("Broken", "input BrokenInput {")],
     );
 
-    expect(report.skippedModels).toEqual(["Broken"]);
+    expect(report.refusedModels.map(({ name }) => name)).toEqual(["Broken"]);
     expect(Object.fromEntries(report.conflicts)).toEqual({
       "todo-list": { nameHeldBy: "document model", claims: [] },
     });
+  });
+});
+
+describe("findPackageSubgraphConflicts runtime parity", () => {
+  it("refuses a model that generates a reserved type name, freeing its subgraph name", () => {
+    const report = findPackageSubgraphConflicts(
+      [{ name: "revision", typeDefs: template("Revision", "revision") }],
+      [model("Revision"), model("Operation")],
+    );
+
+    expect(Object.fromEntries(report.conflicts)).toEqual({});
+    expect(report.refusedModels).toEqual([
+      {
+        name: "Revision",
+        subgraphOnly: false,
+        reason: "generates reserved type names: Revision",
+      },
+      {
+        name: "Operation",
+        subgraphOnly: false,
+        reason: "generates reserved type names: Operation",
+      },
+    ]);
+  });
+
+  it("refuses a model whose generated types do not build", () => {
+    const report = findPackageSubgraphConflicts(
+      [{ name: "dangling", typeDefs: template("Dangling", "dangling") }],
+      [model("Dangling", undefined, "type DanglingState { owner: Missing }")],
+    );
+
+    expect(Object.fromEntries(report.conflicts)).toEqual({});
+    expect(report.refusedModels).toEqual([
+      {
+        name: "Dangling",
+        subgraphOnly: false,
+        reason: expect.stringContaining("has an unusable schema"),
+      },
+    ]);
+  });
+
+  it("keeps the generated types of a model whose own subgraph does not build", () => {
+    const report = findPackageSubgraphConflicts(
+      [
+        { name: "widget", typeDefs: template("Widget", "widget") },
+        {
+          name: "ledger",
+          typeDefs: gql`
+            type Widget {
+              id: ID
+            }
+          `,
+        },
+        {
+          name: "notes",
+          typeDefs: gql`
+            type Broken {
+              id: ID
+            }
+          `,
+        },
+      ],
+      [
+        model("Widget", "input SetWidgetTitleInput { owner: Missing }"),
+        model("Broken", "input BrokenInput {"),
+      ],
+    );
+
+    expect(Object.fromEntries(report.conflicts)).toEqual({
+      ledger: { claims: [{ claim: "Widget", owner: "widget" }] },
+      notes: { claims: [{ claim: "Broken", owner: "broken" }] },
+    });
+    expect(report.refusedModels).toEqual([
+      {
+        name: "Widget",
+        subgraphOnly: true,
+        reason: expect.stringContaining("has an unusable subgraph schema"),
+      },
+      {
+        name: "Broken",
+        subgraphOnly: true,
+        reason: expect.stringContaining("has an unusable subgraph schema"),
+      },
+    ]);
+  });
+
+  it("leaves out a model's subgraph named like a core subgraph", () => {
+    const report = findPackageSubgraphConflicts(
+      [
+        {
+          name: "ledger",
+          typeDefs: gql`
+            type SystemQueries {
+              ledger: String
+            }
+          `,
+        },
+      ],
+      [model("System")],
+    );
+
+    expect(Object.fromEntries(report.conflicts)).toEqual({});
+    expect(report.refusedModels).toEqual([
+      {
+        name: "System",
+        subgraphOnly: true,
+        reason: "its subgraph name is taken by a subgraph from core",
+      },
+    ]);
+  });
+
+  it("serves only the last of two package subgraphs with one name", () => {
+    const typeDefs = gql`
+      type Query {
+        ledger: String
+      }
+    `;
+
+    expect(
+      conflicts([
+        { name: "ledger", typeDefs },
+        { name: "ledger", typeDefs },
+      ]),
+    ).toEqual({ ledger: { nameHeldBy: "package", claims: [] } });
   });
 });

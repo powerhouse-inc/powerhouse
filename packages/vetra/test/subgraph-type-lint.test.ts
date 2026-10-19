@@ -40,6 +40,55 @@ function makeProject(subgraphs: Record<string, string>): string {
   return root;
 }
 
+function writeModel(
+  root: string,
+  name: string,
+  { operationSchema = "", globalSchema = "" },
+): void {
+  const dir = join(root, "document-models", name.toLowerCase());
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, `${name.toLowerCase()}.json`),
+    JSON.stringify({
+      id: `test/${name.toLowerCase()}`,
+      name,
+      author: { name: "", website: "" },
+      extension: "",
+      description: "",
+      specifications: [
+        {
+          version: 1,
+          changeLog: [],
+          modules: [
+            {
+              id: "m",
+              name: "base",
+              description: "",
+              operations: [
+                {
+                  id: "o",
+                  name: "SET",
+                  description: "",
+                  schema: operationSchema,
+                  template: "",
+                  reducer: "",
+                  errors: [],
+                  examples: [],
+                  scope: "global",
+                },
+              ],
+            },
+          ],
+          state: {
+            global: { schema: globalSchema, initialValue: "", examples: [] },
+            local: { schema: "", initialValue: "", examples: [] },
+          },
+        },
+      ],
+    }),
+  );
+}
+
 const schemaFile = (sdl: string) =>
   `import { gql } from "graphql-tag";\n\nexport const schema = gql\`\n${sdl}\n\`;\n`;
 
@@ -132,56 +181,41 @@ describe("lintSubgraphTypes", () => {
     ]);
   });
 
-  it("skips a model whose schema does not generate and checks the rest", () => {
+  it("warns on a model the server refuses and checks the rest", () => {
     const root = makeProject({
       "subgraph-module": template("SubgraphModule", "subgraphModule"),
     });
-    const brokenDir = join(root, "document-models", "broken");
-    mkdirSync(brokenDir, { recursive: true });
+    writeModel(root, "Broken", { operationSchema: "input BrokenInput {" });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Document model "Broken" is refused by the server: has an unusable schema: Unknown type "Broken_BrokenState".',
+      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+    ]);
+  });
+
+  it("warns on two subgraphs with one name", () => {
+    const root = makeProject({
+      ledger: template("Ledger", "ledger"),
+      "ledger-copy": template("Ledger", "ledger"),
+    });
     writeFileSync(
-      join(brokenDir, "broken.json"),
-      JSON.stringify({
-        id: "test/broken",
-        name: "Broken",
-        author: { name: "", website: "" },
-        extension: "",
-        description: "",
-        specifications: [
-          {
-            version: 1,
-            changeLog: [],
-            modules: [
-              {
-                id: "m",
-                name: "base",
-                description: "",
-                operations: [
-                  {
-                    id: "o",
-                    name: "SET",
-                    description: "",
-                    schema: "input BrokenInput {",
-                    template: "",
-                    reducer: "",
-                    errors: [],
-                    examples: [],
-                    scope: "global",
-                  },
-                ],
-              },
-            ],
-            state: {
-              global: { schema: "", initialValue: "", examples: [] },
-              local: { schema: "", initialValue: "", examples: [] },
-            },
-          },
-        ],
-      }),
+      join(root, "subgraphs", "ledger-copy", "index.ts"),
+      'export class LedgerSubgraph extends BaseSubgraph {\n  name = "ledger";\n}\n',
     );
 
     expect(lintSubgraphTypes(root)).toEqual([
-      'Document model "Broken" was left out of the subgraph check: its schema does not generate.',
-      'Subgraph "subgraph-module" has the name of a document model subgraph, so the server refuses it. Rename the subgraph.',
+      'Subgraph "ledger" is defined more than once, so the server serves only the last. Rename the others.',
+    ]);
+  });
+
+  it("warns on a model the server refuses, without any subgraph", () => {
+    const root = makeProject({});
+    writeModel(root, "Revision", {
+      globalSchema: "type RevisionState { title: String }",
+    });
+
+    expect(lintSubgraphTypes(root)).toEqual([
+      'Document model "Revision" is refused by the server: generates reserved type names: Revision.',
     ]);
   });
 
