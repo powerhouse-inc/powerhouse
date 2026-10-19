@@ -149,6 +149,7 @@ describe("switchboard bridge runner", () => {
           reactor: {
             backends: {
               main: {
+                kind: "in-process",
                 storage: { kind: "path", dataDir },
                 readModel: { url: "dev.db" },
               },
