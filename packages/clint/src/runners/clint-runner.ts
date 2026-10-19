@@ -358,6 +358,21 @@ async function startShell(
     }
   };
 
+  // Validated before the stack is handed out: an invalid output (e.g. a proxy
+  // bound to a bare IPv6 host, which does not form a URL) tears down what
+  // was started instead of leaving it half-up.
+  const parsedOutputs = outputsSchema.safeParse({
+    agents,
+    ...(compoundCtx.proxyUrl ? { proxy: { url: compoundCtx.proxyUrl } } : {}),
+  });
+  if (!parsedOutputs.success) {
+    await shutdown();
+    throw new Error(
+      `hosts/${host.name}: the shell produced invalid outputs:\n${z.prettifyError(parsedOutputs.error)}`,
+    );
+  }
+  const outputs = parsedOutputs.data;
+
   if (lifecycle === "attached") {
     const onSignal = () => {
       void shutdown().finally(() => process.exit(130));
@@ -366,10 +381,6 @@ async function startShell(
     process.once("SIGTERM", onSignal);
   }
 
-  const outputs = outputsSchema.parse({
-    agents,
-    ...(compoundCtx.proxyUrl ? { proxy: { url: compoundCtx.proxyUrl } } : {}),
-  });
   // Members were started (and awaited to readiness) above.
   return { outputs, ready: Promise.resolve(), services, shutdown };
 }
