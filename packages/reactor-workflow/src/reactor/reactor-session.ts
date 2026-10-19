@@ -73,6 +73,9 @@ const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
   isServed: true,
   getCreateSignaturePolicy: true,
   getCreateProtocolVersions: true,
+  undo: true,
+  redo: true,
+  undoRedoAvailability: true,
 };
 
 type AnyMethod = (...args: unknown[]) => unknown;
