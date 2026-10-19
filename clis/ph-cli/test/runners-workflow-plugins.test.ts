@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type * as HostCore from "@powerhousedao/host-core";
-import type {
-  HostDefinition,
-  ResolvedPlugin,
-  RunnerContext,
-} from "@powerhousedao/host-core";
+import type { ResolvedPlugin, RunnerContext } from "@powerhousedao/host-core";
+import {
+  hostSchema as connectHostSchema,
+  type ConnectHost,
+} from "../src/runners/connect.js";
+import {
+  hostSchema as switchboardHostSchema,
+  outputsSchema as switchboardOutputsSchema,
+  type SwitchboardHost,
+} from "../src/runners/switchboard.js";
 
 /**
  * Workflow-plugins plan — the runners' side of "the drive is a plugin
@@ -18,12 +23,19 @@ import type {
  */
 
 vi.mock("../src/services/connect-studio.js", () => ({
-  runConnectStudio: vi.fn().mockResolvedValue(undefined),
+  runConnectStudio: vi.fn().mockResolvedValue({
+    resolvedUrls: { local: ["http://localhost:3000/"], network: [] },
+    close: vi.fn(),
+  }),
 }));
 vi.mock("../src/services/switchboard.js", () => ({
-  startSwitchboard: vi
-    .fn()
-    .mockResolvedValue({ workflowsEnabled: true, reactor: { fake: true } }),
+  startSwitchboard: vi.fn().mockResolvedValue({
+    workflowsEnabled: true,
+    mcpEnabled: false,
+    port: 7599,
+    reactor: { fake: true },
+    shutdown: vi.fn(),
+  }),
 }));
 vi.mock("../src/services/vetra.js", () => ({
   seedWorkflowsDrive: vi
@@ -73,17 +85,21 @@ function workflowsComposition(
   ];
 }
 
-const switchboardHost = (
-  reactor?: Record<string, unknown>,
-): HostDefinition => ({
-  name: "lab-switchboard",
-  runner: {
-    module: "@powerhousedao/ph-cli/runners/switchboard",
-    port: 7599,
-    plugins: ["@powerhousedao/switchboard/plugins/workflows"],
-  },
-  ...(reactor ? { reactor } : {}),
-});
+/** Verbs receive the PARSED host, as validateHost hands it to them. */
+const connect = (host: ConnectHost) => connectHostSchema.parse(host);
+const switchboard = (host: SwitchboardHost) =>
+  switchboardHostSchema.parse(host);
+
+const switchboardHost = (reactor?: SwitchboardHost["reactor"]) =>
+  switchboard({
+    name: "lab-switchboard",
+    runner: {
+      module: "@powerhousedao/ph-cli/runners/switchboard",
+      port: 7599,
+      plugins: ["@powerhousedao/switchboard/plugins/workflows"],
+    },
+    ...(reactor ? { reactor } : {}),
+  });
 
 describe("switchboard runner — plugin-contributed drives", () => {
   it("seeds the contributed Workflows drive, keeps the implicit default drive, reports both", async () => {
@@ -128,6 +144,21 @@ describe("switchboard runner — plugin-contributed drives", () => {
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/workflows",
     ]);
+    // the typed outputs: keyed by declared slug, plugin drive included
+    expect(switchboardOutputsSchema.parse(handle.outputs)).toEqual({
+      origin: "http://localhost:7599",
+      endpoints: { graphql: "http://localhost:7599/graphql" },
+      drives: {
+        powerhouse: {
+          id: "powerhouse",
+          url: "http://localhost:7599/d/powerhouse",
+        },
+        workflows: {
+          id: hostCore.projectDriveId("/lab", "workflows"),
+          url: "http://localhost:7599/d/workflows",
+        },
+      },
+    });
   });
 
   it("a host declaration with the same slug wins over the contribution", async () => {
@@ -164,6 +195,14 @@ describe("switchboard runner — plugin-contributed drives", () => {
       "http://localhost:7599/d/sektar",
       "http://localhost:7599/d/workflows",
     ]);
+    // a host declaration replaces the default drive in the outputs too
+    expect(handle.outputs.drives).toEqual({
+      sektar: { id: "sektar", url: "http://localhost:7599/d/sektar" },
+      workflows: {
+        id: "flows-fixed",
+        url: "http://localhost:7599/d/workflows",
+      },
+    });
   });
 
   it("a live drive already serving the slug (under another id) is reused, never re-created", async () => {
@@ -178,6 +217,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const resolveIdOrSlug = vi.fn().mockResolvedValue("workflows-other-hash");
     vi.mocked(startSwitchboard).mockResolvedValueOnce({
       workflowsEnabled: true,
+      port: 7599,
       reactor: { resolveIdOrSlug },
     } as never);
 
@@ -186,6 +226,11 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(resolveIdOrSlug).toHaveBeenCalledWith("workflows");
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
     expect(handle.driveUrls).toContain("http://localhost:7599/d/workflows");
+    // the outputs report the id the live drive actually has
+    expect(handle.outputs.drives.workflows).toEqual({
+      id: "workflows-other-hash",
+      url: "http://localhost:7599/d/workflows",
+    });
   });
 
   it("drive: false (no contribution) seeds nothing extra", async () => {
@@ -208,14 +253,14 @@ describe("switchboard runner — plugin-contributed drives", () => {
     vi.mocked(seedWorkflowsDrive).mockClear();
     const runner = await import("../src/runners/switchboard.js");
     const handle = await runner.run(
-      {
+      switchboard({
         name: "lab-switchboard",
         runner: {
           module: "@powerhousedao/ph-cli/runners/switchboard",
           port: 7599,
         },
         reactor: { workflows: true },
-      },
+      }),
       ctx,
     );
     expect(vi.mocked(seedWorkflowsDrive)).toHaveBeenCalledTimes(1);
@@ -223,13 +268,16 @@ describe("switchboard runner — plugin-contributed drives", () => {
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/implicit",
     ]);
+    expect(handle.outputs.drives.workflows.url).toBe(
+      "http://localhost:7599/d/implicit",
+    );
   });
 });
 
 describe("connect runner — drive references", () => {
   it("refuses an unresolved { from, slug } with the compound hint", async () => {
     const runner = await import("../src/runners/connect.js");
-    const host: HostDefinition = {
+    const host = connect({
       name: "lab-connect",
       runner: {
         module: "@powerhousedao/ph-cli/runners/connect",
@@ -240,7 +288,7 @@ describe("connect runner — drive references", () => {
           },
         ],
       },
-    };
+    });
     await expect(runner.dev(host, ctx)).rejects.toThrow(
       /refers to drive "workflows" of member "vetra-switchboard".*not running inside a compound/s,
     );
@@ -252,7 +300,7 @@ describe("connect runner — drive references", () => {
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
-      {
+      connect({
         name: "lab-connect",
         runner: {
           module: "@powerhousedao/ph-cli/runners/connect",
@@ -263,7 +311,7 @@ describe("connect runner — drive references", () => {
             },
           ],
         },
-      },
+      }),
       ctx,
     );
     const override = vi.mocked(runConnectStudio).mock.calls[0][2];
