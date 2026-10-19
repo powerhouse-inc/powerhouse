@@ -1,5 +1,8 @@
 import { DocumentModelRegistry } from "@powerhousedao/reactor";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type { IPackageManager } from "../src/packages/types.js";
 import { PackageManagementService } from "../src/services/package-management.service.js";
@@ -58,7 +61,7 @@ describe("PackageManagementService uninstall (issue #2973)", () => {
     expect(modelsChanged.mock.calls[0]![0]).toEqual([]);
   });
 
-  it("unregisters the package's document models", async () => {
+  it("unregisters the package's document models and upgrade manifests", async () => {
     const alpha = {
       documentModel: {
         global: { id: "test/alpha", name: "Alpha", specifications: [] },
@@ -66,6 +69,9 @@ describe("PackageManagementService uninstall (issue #2973)", () => {
     } as unknown as DocumentModelModule;
     const registry = new DocumentModelRegistry();
     registry.registerModules(alpha);
+    registry.registerUpgradeManifests({
+      documentType: "test/alpha",
+    } as unknown as UpgradeManifest<readonly number[]>);
     const storage = new InMemoryPackageStorage();
     await storage.set("pkg-a", {
       ...makeInstalledPackage("pkg-a"),
@@ -81,5 +87,6 @@ describe("PackageManagementService uninstall (issue #2973)", () => {
     expect(
       registry.getAllModules().map((m) => m.documentModel.global.id),
     ).not.toContain("test/alpha");
+    expect(() => registry.getUpgradeManifest("test/alpha")).toThrow();
   });
 });

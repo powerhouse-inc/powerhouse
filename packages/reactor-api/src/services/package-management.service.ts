@@ -127,6 +127,9 @@ export class PackageManagementService {
 
     if (this.documentModelRegistry) {
       this.documentModelRegistry.unregisterModules(...existing.documentTypes);
+      this.documentModelRegistry.unregisterUpgradeManifests(
+        ...existing.documentTypes,
+      );
     }
 
     if (this.packageManager) {
