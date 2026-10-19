@@ -35,6 +35,11 @@ export interface MastraProviderOptions {
   /** The provider's API key (resolved host config). Absent: Mastra's model
    * router looks the provider's key up in the environment itself. */
   apiKey?: string;
+  /** Tools the agent may call (Mastra `createTool` results), e.g. the
+   * reactor read tools over the attached switchboard. */
+  tools?: Record<string, unknown>;
+  /** Tool-call rounds per turn; a framework knob (stays in code). */
+  maxSteps?: number;
 }
 
 /** A model-router id names its provider: `<provider>/<model…>`. */
@@ -70,6 +75,7 @@ export async function createMastraProvider(
     // With an apiKey the router uses it; without, it resolves the
     // provider's key from the environment.
     model: mastraModelConfig(options.model, options.apiKey),
+    ...(options.tools ? { tools: options.tools as never } : {}),
   });
   return {
     modelId: options.model,
@@ -77,6 +83,7 @@ export async function createMastraProvider(
       const result = await agent.stream(prompt, {
         memory: undefined,
         threadId: streamOptions.threadId,
+        maxSteps: options.maxSteps ?? 8,
       } as never);
       yield* mapMastraStream(
         (result as { fullStream: AsyncIterable<unknown> }).fullStream as never,
