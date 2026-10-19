@@ -363,7 +363,7 @@ describe.each([1, 2] as const)(
       expect(submitted.map((action) => action.type)).toEqual(["UNDO", "REDO"]);
       const undone = (await stream(id)).find(
         (operation) =>
-          operation.action.id === synthesizedActionId(submitted[0].id),
+          operation.action.id === synthesizedActionId(submitted[0].id, false),
       );
       expect(undone?.action.type).toBe("NOOP");
     });

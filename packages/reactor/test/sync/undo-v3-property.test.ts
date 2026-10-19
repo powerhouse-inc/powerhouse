@@ -380,7 +380,7 @@ async function runCase(
         node: node.name,
         id:
           action.type === "UNDO" || action.type === "REDO"
-            ? synthesizedActionId(action.id)
+            ? synthesizedActionId(action.id, true)
             : action.id,
         at: action.timestampUtcMs,
       });

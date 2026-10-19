@@ -221,7 +221,7 @@ describe("base-reducer 3 timestamp ties", () => {
     it(`positions a tied UNDO by the id it is stored under, which sorts ${side}`, async () => {
       const b = "20000000-0000-4000-8000-000000000000";
       const c = "30000000-0000-4000-8000-000000000000";
-      const synthesized = synthesizedActionId(undoId);
+      const synthesized = synthesizedActionId(undoId, true);
       expect(synthesized > c).toBe(side === "after");
       expect(synthesized < b).toBe(side === "before");
 

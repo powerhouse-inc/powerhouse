@@ -7,6 +7,7 @@ import type {
 import {
   actionSignerIdentity,
   deriveOperationId,
+  hashBrowser,
 } from "@powerhousedao/shared/document-model";
 
 /** Submitted types whose stored action the reducer writes in their place. */
@@ -17,11 +18,25 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
 
 /**
  * The id of the action synthesized from `submittedId`. Derived, so the stored
- * operation answers for the submitted id at the live-id check, and it sorts
- * against every other id as the submitted id does.
+ * operation answers for the submitted id at the live-id check. On base-reducer
+ * 3 it sorts against every other id as the submitted id does; below it keeps
+ * the hashed form released stores hold.
  */
-export function synthesizedActionId(submittedId: string): string {
-  return `${submittedId}.s`;
+export function synthesizedActionId(
+  submittedId: string,
+  baseReducer3: boolean,
+): string {
+  return baseReducer3
+    ? `${submittedId}.s`
+    : hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(0, 32);
+}
+
+/** Both forms, for a lookup that does not know the document's version. */
+export function synthesizedActionIds(submittedId: string): string[] {
+  return [
+    synthesizedActionId(submittedId, true),
+    synthesizedActionId(submittedId, false),
+  ];
 }
 
 /**
@@ -58,10 +73,11 @@ export async function signSynthesized(
   submitted: Action,
   target: ActionSigningTarget & { scope: string },
   signer: ISigner,
+  baseReducer3: boolean,
   signal?: AbortSignal,
 ): Promise<void> {
   const synthesized = operation.action;
-  const id = synthesizedActionId(submitted.id);
+  const id = synthesizedActionId(submitted.id, baseReducer3);
   const timestampUtcMs =
     (operation.timestampUtcMs as string | undefined) ||
     (synthesized.timestampUtcMs as string | undefined) ||

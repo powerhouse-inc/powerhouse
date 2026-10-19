@@ -19,6 +19,7 @@ import {
   purgeMarkerOperation,
   type PurgeMarkerOperation,
   hashDocumentStateForScope,
+  isBaseReducer3,
   isUndoRedo,
   mentionedGroupIds,
   localSupports,
@@ -2143,6 +2144,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
+          isBaseReducer3(document.header),
           signal,
         );
       } catch (error) {
@@ -2635,7 +2637,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       let stand = positioned.get(action);
       if (stand === undefined) {
-        stand = { ...action, id: synthesizedActionId(action.id) };
+        stand = { ...action, id: synthesizedActionId(action.id, true) };
         positioned.set(action, stand);
       }
       return stand;

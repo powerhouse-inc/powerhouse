@@ -8,6 +8,7 @@ import type {
 import {
   createPresignedHeader,
   deriveOperationId,
+  hashBrowser,
   noop,
   redo,
   setModelName,
@@ -337,8 +338,10 @@ describe("synthesized operations", () => {
         const { documentId, undone } = await undoneOnce(module, 2);
 
         const operation = await storedNoop(module.reactor, documentId);
-        expect(operation.action.id).toBe(synthesizedActionId(undone.id));
-        expect(operation.action.id).not.toBe(undone.id);
+        expect(operation.action.id).toBe(
+          hashBrowser(`synthesized:${undone.id}`, "sha1", "hex").slice(0, 32),
+        );
+        expect(operation.action.id).toBe(synthesizedActionId(undone.id, false));
       });
 
       it("is refused as DUPLICATE_ACTION when resubmitted", async () => {
@@ -443,7 +446,8 @@ describe("synthesized operations", () => {
         const { documentId, undone } = await undoneOnce(module, 3);
 
         const operation = await storedRetract(module.reactor, documentId);
-        expect(operation.action.id).toBe(synthesizedActionId(undone.id));
+        expect(operation.action.id).toBe(`${undone.id}.s`);
+        expect(operation.action.id).toBe(synthesizedActionId(undone.id, true));
         expect(operation.action.id).not.toBe(undone.id);
       });
 

@@ -39,7 +39,7 @@ import type {
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import {
   SYNTHESIZING_TYPES,
-  synthesizedActionId,
+  synthesizedActionIds,
 } from "./synthesized-signing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
@@ -49,8 +49,11 @@ type Candidate = {
   action: Action;
   stream: Stream;
   opId: string;
-  /** The operation the reducer stores in place of a submitted UNDO or REDO. */
-  synthesizedOpId?: string;
+  /**
+   * The ids the reducer's operation in place of a submitted UNDO or REDO may
+   * be stored under: base-reducer 3's and the older hashed form.
+   */
+  synthesizedOpIds: string[];
   operation?: Operation;
   policy?: SignaturePolicy;
 };
@@ -374,9 +377,10 @@ export class SignatureAdmission {
     const committed = new Map<Candidate, CommittedWrite>();
     const toCompare: Candidate[] = [];
     for (const entry of candidates) {
-      if (entry.synthesizedOpId && live.has(entry.synthesizedOpId)) {
+      const synthesizedOpId = liveSynthesizedOpId(entry, live);
+      if (synthesizedOpId) {
         if (retry) {
-          committed.set(entry, committedWrite(entry, entry.synthesizedOpId));
+          committed.set(entry, committedWrite(entry, synthesizedOpId));
         }
       } else if (live.has(entry.opId)) {
         toCompare.push(entry);
@@ -483,9 +487,7 @@ export class SignatureAdmission {
   ): Promise<Set<Candidate>> {
     const found = new Set<Candidate>();
     const toCompare = candidates.filter(
-      (entry) =>
-        live.has(entry.opId) &&
-        !(entry.synthesizedOpId && live.has(entry.synthesizedOpId)),
+      (entry) => live.has(entry.opId) && !liveSynthesizedOpId(entry, live),
     );
     for (const [stream, entries] of byStream(toCompare)) {
       const stored = await operationStore.getOperationsByIds(
@@ -523,11 +525,7 @@ export class SignatureAdmission {
         stream.documentId,
         stream.scope,
         stream.branch,
-        entries.flatMap((entry) =>
-          entry.synthesizedOpId
-            ? [entry.opId, entry.synthesizedOpId]
-            : [entry.opId],
-        ),
+        entries.flatMap((entry) => [entry.opId, ...entry.synthesizedOpIds]),
         signal,
       );
       for (const opId of found) {
@@ -687,17 +685,21 @@ function candidate(action: Action, stream: Stream): Candidate {
     action,
     stream,
     opId: opId(action.id),
-    synthesizedOpId: SYNTHESIZING_TYPES.has(action.type)
-      ? opId(synthesizedActionId(action.id))
-      : undefined,
+    synthesizedOpIds: SYNTHESIZING_TYPES.has(action.type)
+      ? synthesizedActionIds(action.id).map(opId)
+      : [],
   };
 }
 
+function liveSynthesizedOpId(
+  entry: Candidate,
+  live: Set<string>,
+): string | undefined {
+  return entry.synthesizedOpIds.find((id) => live.has(id));
+}
+
 function isLive(entry: Candidate, live: Set<string>): boolean {
-  return (
-    live.has(entry.opId) ||
-    (entry.synthesizedOpId !== undefined && live.has(entry.synthesizedOpId))
-  );
+  return live.has(entry.opId) || liveSynthesizedOpId(entry, live) !== undefined;
 }
 
 function mutationStream(action: Action, job: Job): Stream {
