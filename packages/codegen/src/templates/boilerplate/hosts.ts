@@ -294,6 +294,8 @@ export default {
         protocol: switchboard.reactor.protocol,
         backends: {
           main: {
+            // the switchboard's own reactor; backend kind is required
+            kind: "in-process",
             // The user's .ph tree, same names as the project's: \${userData}
             // resolves at the runner — the project root in the CLI, the OS
             // profile dir in a shell (PH_USER_DATA_DIR). The reactor store is

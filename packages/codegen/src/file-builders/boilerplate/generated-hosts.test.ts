@@ -99,6 +99,8 @@ describe("writeGeneratedHostsFiles", () => {
     // the legacy .ph names under the user's root; the read model follows the
     // same root by default — never declared on the reactor's dir
     expect(desktop).toContain('dataDir: "${userData}/.ph/reactor-storage"');
+    // backend kind is required: the switchboard member's reactor is in-process
+    expect(desktop).toContain(`kind: "in-process"`);
     expect(desktop).not.toMatch(/readModel:\s*\{/);
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");
