@@ -273,9 +273,11 @@ describe("KyselyWriteCache D7 - cold rebuild with validated upgrades", () => {
 
     const v1Reducer = createReducer((_state, action) => {
       v1ReducerCalls.push((action.input as { index?: number })?.index ?? -1);
+      return undefined;
     });
     const v2Reducer = createReducer((_state, action) => {
       v2ReducerCalls.push((action.input as { index?: number })?.index ?? -1);
+      return undefined;
     });
 
     const getModuleFn = vi
@@ -475,6 +477,7 @@ describe("KyselyWriteCache D8 - warm rebuild version pinning", () => {
       .mockImplementation((_dt: string, _version?: number) => ({
         reducer: createReducer(() => {
           coldRebuildSpy();
+          return undefined;
         }),
       }));
 
@@ -655,6 +658,7 @@ describe("KyselyWriteCache D9 - upgrade reducers run at the boundary", () => {
       (state as unknown as { global: { items: string[] } }).global.items.push(
         "x",
       );
+      return undefined;
     });
     const v2Reducer = keepsState;
 

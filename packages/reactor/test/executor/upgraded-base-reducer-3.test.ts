@@ -48,6 +48,7 @@ function logReducer(version: number): StateReducer<LogState> {
       if (version > 1) throw new Error("OLD was removed in version 2");
       state.global.log.push(`v${version}:old`);
     }
+    return undefined;
   };
 }
 

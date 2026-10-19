@@ -405,6 +405,7 @@ describe("deriveScope", () => {
     const midway: StateReducer<ListState> = (state, act) => {
       state.global.count += 1;
       if (act.type === "FAIL") throw new Error("fails");
+      return undefined;
     };
     const { document } = deriveScope(
       createDoc(),

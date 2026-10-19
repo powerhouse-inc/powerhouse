@@ -23,15 +23,15 @@ const listReducer: StateReducer<ListState> = (state, action) => {
   switch (action.type) {
     case "PUSH":
       state.global.items.push((action.input as { v: string }).v);
-      return;
+      return undefined;
     case "POP":
       if (state.global.items.length === 0) {
         throw new Error("POP on an empty list");
       }
       state.global.items.pop();
-      return;
+      return undefined;
     default:
-      return;
+      return undefined;
   }
 };
 
