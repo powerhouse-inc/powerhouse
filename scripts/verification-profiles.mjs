@@ -76,7 +76,14 @@ export function verificationProfile(name, env = process.env) {
         preflight: tools,
         builds: [build("@powerhousedao/reactor-api")],
         outputs: ["packages/document-model/dist/index.js"],
-        checks: [test("packages/reactor-api", "test/define-subgraph.test.ts")],
+        checks: [
+          test(
+            "packages/reactor-api",
+            "test/subgraph-class.test.ts",
+            "test/subgraph-host.test.ts",
+            "test/core-subgraph-golden.test.ts",
+          ),
+        ],
       };
     case "reactor-pg": {
       const databaseEnv = {

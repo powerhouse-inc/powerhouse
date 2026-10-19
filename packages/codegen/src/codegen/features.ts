@@ -1,6 +1,8 @@
 import {
   ANALYTICS_ENGINE_CORE_PACKAGE,
   FEATURE_DEPENDENCIES,
+  installAddedDependencies,
+  type InstallOptions,
 } from "@powerhousedao/shared/clis";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
@@ -145,4 +147,15 @@ export async function syncFeatureDependencies(
   await writePackage(projectDir, updated);
   console.log(`Added peer/dev dependencies: ${added.join(", ")}`);
   return added;
+}
+
+export async function installFeatureDependencies(
+  projectDir: string,
+  options: InstallOptions = {},
+): Promise<void> {
+  const added = await syncFeatureDependencies(
+    detectFeatures(projectDir),
+    projectDir,
+  );
+  await installAddedDependencies(added, projectDir, options);
 }

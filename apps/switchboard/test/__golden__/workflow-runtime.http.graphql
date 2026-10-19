@@ -1,0 +1,850 @@
+directive @extends on INTERFACE | OBJECT
+
+directive @external on FIELD_DEFINITION
+
+directive @key(fields: _FieldSet!) on INTERFACE | OBJECT
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+scalar AttachmentRef
+
+"""
+One action or trigger of a piece, as a workflow pins it. The engine's own
+blocks are the piece @powerhousedao/piece-core.
+"""
+input BlockInput {
+  """action | trigger"""
+  kind: String!
+
+  """The action or trigger name."""
+  name: String!
+  pieceName: String!
+
+  """Exact semver."""
+  pieceVersion: String!
+}
+
+type BlockResolutionRecord {
+  """action | trigger"""
+  kind: String!
+
+  """The newest version any source offers."""
+  latestVersion: String
+
+  """exact | compatible | fallback | installed | missing"""
+  match: String!
+
+  """The action or trigger name."""
+  name: String!
+
+  """
+  Why the version that runs differs from the pin, or why nothing resolves.
+  """
+  note: String
+  pieceName: String!
+
+  """The version the block pins."""
+  pieceVersion: String!
+
+  """The version that runs; null when nothing resolves."""
+  resolvedVersion: String
+
+  """local | registry | activepieces | npm; null when nothing resolves."""
+  source: String
+
+  """The trigger's or step's id."""
+  stepId: String!
+}
+
+type BlockSearchHit {
+  description: String!
+  displayName: String!
+
+  """action | trigger"""
+  kind: String!
+  logoUrl: String!
+
+  """The action or trigger name."""
+  name: String!
+  pieceDisplayName: String!
+  pieceName: String!
+
+  """The version the hit is listed at; pin to it when picking the block."""
+  pieceVersion: String!
+
+  """Triggers only: POLLING | WEBHOOK | APP_WEBHOOK | MANUAL"""
+  strategy: String
+
+  """Why this block cannot run on this reactor; null when it can."""
+  unsupported: String
+}
+
+type ConnectionCheckResult {
+  """
+  From auth.getConnectionIdentifier when the check passes; otherwise the
+  label the connection already holds.
+  """
+  accountLabel: String
+  detail: String
+  ok: Boolean!
+}
+
+type ConnectionRecord {
+  accountLabel: String
+  authType: String!
+  connectorId: String!
+  id: String!
+  name: String!
+  status: String!
+}
+
+scalar Currency
+
+scalar Date
+
+scalar DateTime
+
+type DocumentDrive implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  initialState: DocumentDrive_DocumentDriveState!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  availableOffline: Boolean!
+  listeners: [DocumentDrive_Listener!]!
+  sharingType: String
+  triggers: [DocumentDrive_Trigger!]!
+}
+
+type DocumentDrive_DocumentDriveState {
+  icon: String
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+}
+
+type DocumentDrive_FileNode {
+  documentType: String!
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_Listener {
+  block: Boolean!
+  callInfo: DocumentDrive_ListenerCallInfo
+  filter: DocumentDrive_ListenerFilter!
+  label: String
+  listenerId: ID!
+  system: Boolean!
+}
+
+type DocumentDrive_ListenerCallInfo {
+  data: String
+  name: String
+  transmitterType: DocumentDrive_TransmitterType
+}
+
+type DocumentDrive_ListenerFilter {
+  branch: [String!]
+  documentId: [ID!]
+  documentType: [String!]!
+  scope: [String!]
+}
+
+union DocumentDrive_Node = DocumentDrive_FileNode | DocumentDrive_FolderNode
+
+type DocumentDrive_PullResponderTriggerData {
+  interval: String!
+  listenerId: ID!
+  url: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  MatrixConnect
+  PullResponder
+  RESTWebhook
+  SecureConnect
+  SwitchboardPush
+}
+
+type DocumentDrive_Trigger {
+  data: DocumentDrive_TriggerData
+  id: ID!
+  type: DocumentDrive_TriggerType!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentModel implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  author: DocumentModel_Author!
+  description: String!
+  extension: String!
+  id: String!
+  name: String!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel_DocumentSpecification {
+  changeLog: [String!]!
+  modules: [DocumentModel_Module!]!
+  state: DocumentModel_ScopeState!
+  version: Int!
+}
+
+type DocumentModel_Module {
+  description: String
+  id: ID!
+  name: String!
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_Operation {
+  description: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  id: ID!
+  name: String
+  reducer: String
+  schema: String
+  scope: String
+  template: String
+}
+
+type DocumentModel_OperationError {
+  code: String
+  description: String
+  id: ID!
+  name: String
+  template: String
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_State {
+  examples: [DocumentModel_CodeExample!]!
+  initialValue: String!
+  schema: String!
+}
+
+type DriveDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+type GqlDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type Mutation {
+  workflowRuntime: WorkflowRuntimeMutations!
+}
+
+type OAuthAttempt {
+  connectionId: String!
+  error: String
+
+  """PENDING | EXCHANGING | OK | ERROR"""
+  status: String!
+}
+
+type OAuthStart {
+  """Where to send the user to sign in."""
+  authorizationUrl: String!
+  expiresAt: String!
+  redirectUri: String!
+  state: String!
+}
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  context: PHOperationContext
+  error: String
+  hash: String!
+  id: String!
+  index: Int!
+  inputText: String
+  skip: Int
+  timestampUtcMs: DateTime!
+  type: String!
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type PieceSearchMatch {
+  """Matching blocks of the kind asked for, best first."""
+  blocks: [BlockSearchHit!]!
+  categories: [String!]!
+  deprecated: Boolean
+  description: String!
+  displayName: String!
+  logoUrl: String!
+
+  """Every query token matched the piece's own name."""
+  namedPiece: Boolean!
+  pieceName: String!
+  pieceVersion: String!
+
+  """local | registry | activepieces"""
+  source: String!
+
+  """Why no block of the piece can run on this reactor."""
+  unsupported: String
+}
+
+type PieceSearchResult {
+  error: String
+  indexedPieces: Int!
+  pieces: [PieceSearchMatch!]!
+
+  """ready | indexing | error"""
+  status: String!
+}
+
+type Query {
+  _service: _Service!
+  workflowRuntime: WorkflowRuntimeQueries!
+}
+
+type ReactorIdentity {
+  """The address the host signs as; null without a signed-in identity."""
+  address: String
+
+  """The did:key that signs the host's operations."""
+  key: String!
+}
+
+type SecretRecord {
+  createdAt: String!
+  label: String
+  ref: String!
+  status: String!
+  updatedAt: String!
+  version: Int!
+}
+
+type Signer {
+  app: SignerApp
+  signatures: [String!]!
+  user: SignerUser
+}
+
+type SignerApp {
+  key: String!
+  name: String!
+}
+
+type SignerUser {
+  address: String!
+  chainId: Int!
+  networkId: String!
+}
+
+type TriggerStateRecord {
+  consecutiveFailures: Int!
+  intervalMs: Int!
+  lastError: String
+  lastPollAt: String
+  nextPollAt: String
+
+  """
+  When a webhook trigger next renews its subscription; null if it never does.
+  """
+  nextRenewAt: String
+  pieceName: String!
+  pieceSource: String
+
+  """The piece version the trigger armed with; null for a host-fed trigger."""
+  pieceVersion: String
+
+  """The last failed renewal, kept apart from lastError, the poll's."""
+  renewError: String
+  renewFailures: Int!
+  status: String!
+  triggerName: String!
+  versionMatch: String
+  versionNote: String
+  workflowId: String!
+}
+
+scalar URL
+
+scalar Upload
+
+type WebhookEndpointRecord {
+  """
+  False when the host gave the webhook service no public origin, so the url
+  above is a bare path. Switchboard always gives one, falling back to
+  http://localhost:<port> when PUBLIC_URL is unset.
+  """
+  absoluteUrl: Boolean!
+
+  """True while the workflow is ENABLED with a valid webhook trigger"""
+  armed: Boolean!
+  createdAt: String!
+  url: String!
+  workflowId: String!
+}
+
+type WorkflowRunPayload {
+  error: String
+  errorName: String
+  runId: String
+  status: String!
+  steps: [WorkflowStepRun!]!
+}
+
+type WorkflowRunRecord {
+  endedAt: String
+  error: String
+  errorName: String
+  id: String!
+  rerunOf: String
+
+  """
+  When the run began executing; a PENDING run's is when it was journaled.
+  """
+  startedAt: String!
+  status: String!
+  steps: [WorkflowStepRunRecord!]!
+  triggerKind: String!
+  triggerPayload: JSON
+
+  """Steps that ran a fallback piece version, edges on ports nothing emits."""
+  warningNotes: [String!]!
+
+  """
+  How many warningNotes the run has; a run with any is not a plain success.
+  """
+  warnings: Int!
+  workflowId: String!
+  workflowName: String!
+  workflowVersion: Int!
+}
+
+type WorkflowRunResultPage {
+  """Resumes after this page's last run; null for an empty page."""
+  cursor: String
+  hasNextPage: Boolean!
+
+  """True when the page was read after a cursor."""
+  hasPreviousPage: Boolean!
+  items: [WorkflowRunRecord!]!
+}
+
+input WorkflowRunsPagingInput {
+  """The cursor of the previous page."""
+  cursor: String
+
+  """Page size; default 25, at most 100."""
+  limit: Int
+}
+
+"""WorkflowRuntime Mutations"""
+type WorkflowRuntimeMutations {
+  """Stops a webhook trigger test that is waiting; false when none was."""
+  cancelTriggerTest(workflowId: String!): Boolean!
+
+  """
+  Runs the piece's auth.validate against the connection's credentials,
+  then auth.getConnectionIdentifier for the account label, and records the
+  outcome on the connection document.
+  """
+  checkConnection(connectionId: String!): ConnectionCheckResult!
+
+  """
+  Mints a managed secret and returns its ref; the value is stored
+  encrypted and is never readable back over any API.
+  """
+  createSecret(label: String, value: String!): SecretRecord!
+
+  """Tombstones a secret; its value becomes unrecoverable."""
+  deleteSecret(ref: String!): Boolean!
+
+  """
+  Fires a workflow's manual trigger (the core piece's) and runs it to completion.
+  """
+  fire(payload: JSON, workflowId: String!): WorkflowRunPayload!
+
+  """
+  Resumes a FAILED run: succeeded steps replay from the journal,
+  execution restarts at the failure. Produces a new run.
+  """
+  rerun(runId: String!): WorkflowRunPayload!
+
+  """Replaces the value behind an existing ref; documents stay untouched."""
+  rotateSecret(ref: String!, value: String!): SecretRecord!
+
+  """
+  Opens an OAuth2 sign-in with the connection's own app (client_id in its
+  config, client_secret in its secretRefs). redirectUri is needed only when
+  oauthRedirectUri is a bare path. With returnUrl, which must be on the
+  caller's origin, the callback sends the browser back there with
+  ?ph_oauth=<state> instead of closing the window.
+  """
+  startOAuth(connectionId: String!, redirectUri: String, returnUrl: String): OAuthStart!
+
+  """
+  Runs one draft step against the latest test outputs of the blocks it
+  reads, journaled as a "test" run and noted as the step's lastTest.
+  driveId waits for an unsynced workflow, as for webhookEndpoint.
+  """
+  testStep(driveId: String, stepId: String!, workflowId: String!): WorkflowStepTestResult!
+
+  """
+  Samples the draft trigger and saves it as the trigger's last test. A piece
+  trigger runs its test hook (no cursor changes). Of the core piece's
+  triggers, manual takes payload, schedule samples a fire now, and webhook
+  waits for the next delivery to the workflow's endpoint, up to
+  timeoutSeconds (default and cap 300), and that delivery runs nothing.
+  """
+  testTrigger(driveId: String, payload: JSON, timeoutSeconds: Int, workflowId: String!): JSON
+}
+
+"""WorkflowRuntime Queries"""
+type WorkflowRuntimeQueries {
+  """
+  REACTOR_AUTH_CONDITIONS. True: grant the host by key, with
+  { match: subject.key == key }; false: by address. Null for a caller who
+  is not signed in.
+  """
+  authConditions: Boolean
+
+  """
+  Whether this reactor enforces document auth (REACTOR_AUTH_ENFORCEMENT).
+  On, a workflow needs a signed publish, and the host grants, to reach
+  documents. Answered to any caller.
+  """
+  authEnforcement: Boolean!
+
+  """
+  The descriptor (props, auth, ports) of one action or trigger, as the
+  version that runs it describes it; triggers come back under "trigger".
+  """
+  blockDescriptor(block: BlockInput!): JSON
+
+  """
+  Resolves a dynamic prop against the current config values: a DROPDOWN
+  yields { options, placeholder, disabled }, a DYNAMIC prop yields the
+  resolved sub-property descriptor list.
+  """
+  blockOptions(
+    block: BlockInput!
+    connectionId: String
+    input: JSON
+    propName: String!
+
+    """
+    The step's reactor connection; its filter narrows what the resolver reads.
+    """
+    reactorConnectionId: String
+
+    """What the author typed, for a DROPDOWN declared with refreshOnSearch."""
+    searchValue: String
+  ): JSON
+
+  """Authored output shape of a block (SDL / outputSchema / sampleData)."""
+  blockOutputTree(block: BlockInput!, config: JSON): JSON
+
+  """
+  Every block of the draft (trigger first) as this reactor resolves it:
+  which piece version runs, from where, and how it matches the pin.
+  """
+  blockResolutions(workflowId: String!): [BlockResolutionRecord!]!
+
+  """Every powerhouse/connection document, for connection pickers."""
+  connections: [ConnectionRecord!]!
+  health: String!
+
+  """How an OAuth2 sign-in opened by startOAuth stands; null when unknown."""
+  oauthAttempt(state: String!): OAuthAttempt
+
+  """
+  The URL an OAuth2 app must register as its redirect. A bare path when
+  this host does not know its public origin; resolve it against the URL
+  this API is reached at. Null when the host serves no HTTP routes.
+  """
+  oauthRedirectUri: String
+
+  """A piece's actions at one version; pin a step to that version."""
+  pieceActions(
+    packageName: String!
+
+    """That version; the installed or latest one when omitted."""
+    version: String
+  ): JSON
+
+  """
+  Every piece this reactor offers: the core piece, its package pieces, and
+  the pieces the registry and Activepieces publish.
+  """
+  pieceCatalog: JSON
+
+  """
+  Full piece detail (PieceMetadataModel-shaped), verbatim from the cloud API.
+  """
+  pieceDetail(
+    packageName: String!
+
+    """That version; the installed or latest one when omitted."""
+    version: String
+  ): JSON
+
+  """A piece's triggers at one version; pin a trigger to that version."""
+  pieceTriggers(
+    packageName: String!
+
+    """That version; the installed or latest one when omitted."""
+    version: String
+  ): JSON
+
+  """
+  Why the workflow's last publish or enable got no reactor access, naming
+  the publisher and the connection; null when the check passed.
+  """
+  reactorAccessDenial(workflowId: String!): String
+
+  """
+  Who this host signs as: grant it on each document a step writes. Null for
+  a caller who is not signed in, or a host with no signer.
+  """
+  reactorIdentity: ReactorIdentity
+  run(id: String!): WorkflowRunRecord
+
+  """
+  Persisted runs, newest first. Scope them to one workflow, or to every
+  workflow a drive holds; workflowId wins when both are given.
+  """
+  runs(
+    driveId: String
+
+    """Trigger kinds to leave out, e.g. test."""
+    excludeTriggerKinds: [String!]
+    limit: Int
+    workflowId: String
+  ): [WorkflowRunRecord!]!
+
+  """
+  The same listing a page at a time, newest journaled first. Pass a page's
+  cursor back in paging to read the next; a page is short only when
+  hasNextPage is false, or when the caller could read none of a long
+  stretch of runs. A run that starts between pages keeps its place.
+  """
+  runsPage(driveId: String, excludeTriggerKinds: [String!], paging: WorkflowRunsPagingInput, workflowId: String): WorkflowRunResultPage!
+
+  """
+  Piece and block search across the catalog, grouped by piece. The index
+  builds lazily on first use; poll while status is "indexing".
+  """
+  searchPieces(
+    """Category ids, any of; all when omitted."""
+    categories: [String!]
+
+    """action | trigger"""
+    kind: String!
+
+    """Pieces returned."""
+    limit: Int
+    query: String!
+
+    """local | registry | activepieces; all when omitted."""
+    sources: [String!]
+  ): PieceSearchResult!
+
+  """Secret metadata (label, version, status). Never the value."""
+  secret(ref: String!): SecretRecord
+  secrets: [SecretRecord!]!
+
+  """
+  Output shape of a draft step or trigger: its latest test output
+  (source "test", with sample and testedAt) when tested, else as blockOutputTree.
+  """
+  stepOutputTree(stepId: String!, workflowId: String!): JSON
+
+  """Health of every registered piece trigger (poll schedule, errors)."""
+  triggerStates: [TriggerStateRecord!]!
+
+  """
+  The webhook endpoint for a workflow: the URL to hand the provider. Minted
+  on first ask, whether or not the workflow is armed — an author needs the
+  URL before enabling, and the armed field carries that difference. Null
+  only when the host has no webhook service. With driveId, a workflow not
+  synced here yet is waited for briefly, then fails as WORKFLOW_SYNCING.
+  """
+  webhookEndpoint(driveId: String, workflowId: String!): WebhookEndpointRecord
+}
+
+type WorkflowStepRun {
+  blockName: String!
+  error: String
+  errorName: String
+  input: JSON
+  key: String!
+  output: JSON
+  pieceName: String!
+  port: String
+  status: String!
+  stepId: String!
+}
+
+type WorkflowStepRunRecord {
+  """The action the step ran, or the trigger a trigger test sampled."""
+  blockName: String!
+  endedAt: String
+  error: String
+
+  """The thrown error's name, e.g. ReactorAccessDeniedError."""
+  errorName: String
+  input: JSON
+  output: JSON
+  pieceName: String!
+
+  """local | registry | activepieces | npm"""
+  pieceSource: String
+
+  """The piece version that ran; null for an unresolved block."""
+  pieceVersion: String
+  port: String
+  startedAt: String
+  status: String!
+  stepId: String!
+  stepKey: String!
+
+  """exact | compatible | fallback | installed | missing"""
+  versionMatch: String
+
+  """Why the version that ran differs from the pin."""
+  versionNote: String
+}
+
+type WorkflowStepTestResult {
+  durationMs: Int!
+  error: String
+  errorName: String
+  output: JSON
+
+  """Null when the test never started, e.g. an upstream block is untested."""
+  runId: String
+
+  """
+  SUCCEEDED | FAILED | INDETERMINATE. INDETERMINATE is neither: a host call
+  the block made timed out, so a write it asked for may well have landed.
+  Show it distinctly - it is not a confirmed pass.
+  """
+  status: String!
+}
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}

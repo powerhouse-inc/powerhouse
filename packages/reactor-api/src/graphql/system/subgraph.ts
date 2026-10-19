@@ -1,20 +1,11 @@
 import { BaseSubgraph } from "../base-subgraph.js";
-import { systemTypeDefs } from "./schema.js";
-import { getGitHash, getGitUrl, getVersion } from "./version.js";
+import type { SchemaBuilder } from "../subgraph-schema.js";
+import { systemEntries, systemSchema } from "./schema.js";
 
 export class SystemSubgraph extends BaseSubgraph {
-  name = "system";
-  hasSubscriptions = false;
+  static override readonly subgraphName = systemSchema.subgraphName;
 
-  typeDefs = systemTypeDefs;
-
-  resolvers = {
-    Query: {
-      system: () => ({
-        version: getVersion(),
-        gitHash: getGitHash(),
-        gitUrl: getGitUrl(),
-      }),
-    },
-  };
+  static override getSchema(schema: SchemaBuilder<SystemSubgraph>) {
+    return systemEntries(schema);
+  }
 }

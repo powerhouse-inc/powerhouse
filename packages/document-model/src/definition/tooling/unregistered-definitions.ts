@@ -12,14 +12,14 @@ import { compareCodeUnits } from "../primitives.js";
 import type { DefinitionSourceResolution } from "./definition-source-types.js";
 
 /**
- * A code-first model directory or subgraph module that `definitionSources`
- * does not reach.
+ * A code-first model directory that `definitionSources` does not reach.
+ * Subgraphs are found through the package's subgraph entries instead.
  *
  * The scan looks only where the scaffolds put definitions and reads source
  * text without running it.
  */
 export type UnregisteredDefinition = {
-  readonly kind: "document-model" | "subgraph";
+  readonly kind: "document-model";
   /** `./document-models/<name>/`, or the declaring module itself. */
   readonly unit: `./${string}`;
   /** The entry that registers it. */
@@ -36,14 +36,8 @@ type Unit = UnregisteredDefinition & {
 };
 
 const DECLARATION = {
-  "document-model": {
-    module: /^document-model(?:\/|$)/,
-    factory: "defineDocumentModel(?:Family)?",
-  },
-  subgraph: {
-    module: /^@powerhousedao\/reactor-api(?:\/|$)/,
-    factory: "defineSubgraph",
-  },
+  module: /^document-model(?:\/|$)/,
+  factory: "defineDocumentModel(?:Family)?",
 } as const;
 
 const NAMED_IMPORT = /\bimport\s*\{([^}]*)\}\s*from\s*"#(\d+)"/g;
@@ -188,8 +182,8 @@ function isTestFile(name: string): boolean {
   return /\.(?:test|spec)\.m?tsx?$/.test(name);
 }
 
-function declares(kind: Unit["kind"], file: string): boolean {
-  const { module, factory } = DECLARATION[kind];
+function declares(file: string): boolean {
+  const { module, factory } = DECLARATION;
   const { code, strings } = readCodeAndStrings(file);
   const isFactory = new RegExp(`^${factory}$`);
   const callees = [
@@ -221,7 +215,7 @@ function packagePath(root: string, path: string): `./${string}` {
 
 function modelUnit(root: string, dir: string): Unit | undefined {
   const files = sourceFilesUnder(dir);
-  const declaring = files.filter((file) => declares("document-model", file));
+  const declaring = files.filter((file) => declares(file));
   if (declaring.length === 0) return undefined;
   const index = join(dir, "index.ts");
   const indexReaches =
@@ -237,19 +231,13 @@ function modelUnit(root: string, dir: string): Unit | undefined {
   };
 }
 
-function subgraphUnit(root: string, path: string): Unit | undefined {
-  if (!declares("subgraph", path)) return undefined;
-  const specifier = packagePath(root, path);
-  return { kind: "subgraph", unit: specifier, specifier, declaring: [path] };
-}
-
 function isSchemaFirstModelDir(models: string, name: string): boolean {
   return existsSync(join(models, name, `${name}.json`));
 }
 
 function handWrittenModelUnits(root: string, dir: string): Unit[] {
   return sourceFilesUnder(dir)
-    .filter((file) => declares("document-model", file))
+    .filter((file) => declares(file))
     .map((file) => {
       const specifier = packagePath(root, file);
       return {
@@ -272,10 +260,6 @@ function codeFirstUnits(root: string): Unit[] {
       continue;
     }
     const unit = modelUnit(root, dir);
-    if (unit) units.push(unit);
-  }
-  for (const path of sourceFilesUnder(join(root, "subgraphs"))) {
-    const unit = subgraphUnit(root, path);
     if (unit) units.push(unit);
   }
   return units;
@@ -357,10 +341,7 @@ export function unregisteredDefinitionDiagnostic(
   return createDiagnostic({
     code: "PH-CONFIG-SOURCE-UNREGISTERED",
     path: ["definitionSources", "entries"],
-    message:
-      definition.kind === "document-model"
-        ? `${definition.unit} declares a code-first document model that definitionSources does not list, so the package leaves it out.`
-        : `${definition.unit} declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.`,
+    message: `${definition.unit} declares a code-first document model that definitionSources does not list, so the package leaves it out.`,
     expected: `an entry for ${definition.specifier}`,
     received: "no entry",
     repair:
@@ -376,7 +357,7 @@ function unselectedDefinitionWarning(
   return createDiagnostic({
     code: "PH-CONFIG-SOURCE-UNSELECTED",
     path: ["sources"],
-    message: `${definition.unit} declares a code-first ${definition.kind === "document-model" ? "document model" : "subgraph"} that the selected sources leave out, so this run does not check it.`,
+    message: `${definition.unit} declares a code-first document model that the selected sources leave out, so this run does not check it.`,
     expected: `a --source for ${definition.specifier}`,
     received: "no source",
     repair:

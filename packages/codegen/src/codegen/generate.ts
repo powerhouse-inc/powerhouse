@@ -12,13 +12,15 @@ import {
   createOrUpdateManifest,
   getPieceNames,
   loadCodeFirstInventory,
+  loadSubgraphInventory,
+  makeSubgraphsIndexFile,
+  planSubgraphsIndexFile,
   pruneManifestSection,
   readManifest,
   syncPiecesRegistration,
   syncProjectAiToolsExport,
   tsMorphGenerateApp,
   tsMorphGenerateCodeFirstDocumentModel,
-  tsMorphGenerateCodeFirstSubgraph,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGeneratePiece,
@@ -29,30 +31,18 @@ import {
   warnUnregisteredCodeFirstDefinitions,
 } from "file-builders";
 import { derivePieceId } from "name-builders";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { readPackage } from "read-pkg";
-import {
-  entries,
-  filter,
-  flatMap,
-  groupBy,
-  isIncludedIn,
-  isTruthy,
-  map,
-  pipe,
-  prop,
-  unique,
-} from "remeda";
+import { filter, isIncludedIn, isTruthy, map, pipe, prop } from "remeda";
 import type { Project } from "ts-morph";
-import type { SubgraphDiscovery } from "utils";
 import {
   discoverDocumentModelInDir,
-  discoverSubgraphInDir,
   getAppMetadata,
   getEditorMetadata,
   getOrCreateDirectory,
   getProcessorMetadata,
+  projectDirOf,
   readPiecesList,
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
@@ -62,13 +52,7 @@ export async function generateDocumentModel(
   project: Project,
 ) {
   await tsMorphGenerateDocumentModel(documentModelState, project);
-  warnUnregisteredCodeFirstDefinitions(projectDirOf(project), "document-model");
-}
-
-function projectDirOf(project: Project) {
-  return getOrCreateDirectory(project, "document-models")
-    .directory.getParentOrThrow()
-    .getPath();
+  warnUnregisteredCodeFirstDefinitions(projectDirOf(project));
 }
 
 export async function generateCodeFirstDocumentModel(
@@ -83,13 +67,13 @@ export async function generateAllDocumentModels(
   project: Project,
   codeFirstInventory?: CodeFirstInventory,
 ) {
+  const projectDir = projectDirOf(project);
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
-    "document-models",
+    join(projectDir, "document-models"),
   );
   const documentModelsDirPath = documentModelsDir.getPath();
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
-  warnUnregisteredCodeFirstDefinitions(projectDir, "document-model");
+  warnUnregisteredCodeFirstDefinitions(projectDir);
   const codeFirst =
     codeFirstInventory ?? (await loadCodeFirstInventory(projectDir));
   const discoveries = pipe(
@@ -131,7 +115,7 @@ type SchemaFirstInventory =
 
 async function syncManifestSection(
   projectDir: string,
-  section: "documentModels" | "subgraphs",
+  section: "documentModels",
   schemaFirst: SchemaFirstInventory,
   codeFirst: CodeFirstInventory,
 ) {
@@ -207,8 +191,11 @@ export async function generateEditor(
  * These are handled separately by the `generateAllApps` function.
  */
 export async function generateAllEditors(project: Project) {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  const projectDir = editorsDir.getParentOrThrow().getPath();
+  const projectDir = projectDirOf(project);
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    join(projectDir, "editors"),
+  );
   // The project starts without files, so load the ones discovery reads.
   project.addSourceFilesAtPaths(join(editorsDir.getPath(), "*", "module.ts"));
 
@@ -281,8 +268,11 @@ export async function generateApp(args: GenerateAppArgs, project: Project) {
  * These are handled separately by the `generateAllEditors` function.
  */
 export async function generateAllApps(project: Project) {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  const projectDir = editorsDir.getParentOrThrow().getPath();
+  const projectDir = projectDirOf(project);
+  const { directory: editorsDir } = getOrCreateDirectory(
+    project,
+    join(projectDir, "editors"),
+  );
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const appsToAdd = pipe(
@@ -318,81 +308,103 @@ export async function generateAllApps(project: Project) {
     appsToAdd.map((a) => a.id),
   );
 }
-export async function generateSubgraph(subgraphName: string, project: Project) {
-  await tsMorphGenerateSubgraph({ subgraphName, project });
-  warnUnregisteredCodeFirstDefinitions(projectDirOf(project), "subgraph");
-}
-
-export async function generateCodeFirstSubgraph(
-  subgraphName: string,
-  project: Project,
-) {
-  return await tsMorphGenerateCodeFirstSubgraph({ subgraphName, project });
-}
-
-const unreadableSubgraphProblems: Record<
-  Extract<SubgraphDiscovery, { kind: "unreadable" }>["reason"],
-  string
-> = {
-  "computed-name": "do not declare their name as a string literal",
-  "unresolved-base-class": "extend a BaseSubgraph that cannot be resolved",
+export type SubgraphGenerationOptions = {
+  /** Runs after files are saved, before imports, to allow dependency installation. */
+  readonly beforeCheck?: () => Promise<void>;
 };
 
-/* Runs generate for each directory found in the project's `subgraphs` directory  */
-export async function generateAllSubgraphs(
+/** Existing subgraph directories are preserved. Manifest updates require a passing check. */
+export async function generateSubgraph(
+  subgraphName: string,
   project: Project,
-  codeFirstInventory?: CodeFirstInventory,
+  options: SubgraphGenerationOptions = {},
 ) {
-  const { directory: subgraphsDir } = getOrCreateDirectory(
+  const { directory } = getOrCreateDirectory(
     project,
-    "subgraphs",
+    join(projectDirOf(project), "subgraphs"),
   );
-  const projectDir = subgraphsDir.getParentOrThrow().getPath();
-  warnUnregisteredCodeFirstDefinitions(projectDir, "subgraph");
-  const codeFirst =
-    codeFirstInventory ?? (await loadCodeFirstInventory(projectDir));
-  project.addSourceFilesAtPaths(join(subgraphsDir.getPath(), "*", "index.ts"));
-  /* The subgraph's name is found in the `index.ts` file */
-  const discoveries = pipe(
-    subgraphsDir.getDirectories(),
-    map((dir) => dir.getBaseName()),
-    map((dirName) => ({
-      dirName,
-      discovery: discoverSubgraphInDir(project, dirName),
-    })),
-  );
-  const problems = pipe(
-    discoveries,
-    flatMap(({ dirName, discovery }) =>
-      discovery.kind === "unreadable"
-        ? [{ file: `${dirName}/index.ts`, reason: discovery.reason }]
-        : [],
-    ),
-    groupBy(prop("reason")),
-    entries(),
-    map(
-      ([reason, unreadable]) =>
-        `${unreadable.length} subgraph(s) ${unreadableSubgraphProblems[reason]} (${unreadable.map(prop("file")).join(", ")}).`,
-    ),
-  );
-  const subgraphNames = pipe(
-    discoveries.flatMap(({ discovery }) =>
-      discovery.kind === "subgraph" ? [discovery.name] : [],
-    ),
-    unique(),
-  );
-  for (const subgraphName of subgraphNames) {
+  const subgraphsDir = directory.getPath();
+  const id = kebabCase(subgraphName);
+  const scaffold = !existsSync(join(subgraphsDir, id));
+  if (scaffold) {
+    if (existsSync(join(subgraphsDir, "index.ts")))
+      await assertSubgraphsIndexRegenerable(project, subgraphsDir);
     await tsMorphGenerateSubgraph({ subgraphName, project });
   }
+  await refreshSubgraphs(project, {
+    ...options,
+    prune: false,
+    scaffolded: scaffold ? { name: subgraphName, id } : undefined,
+  });
+}
 
-  await syncManifestSection(
-    projectDir,
-    "subgraphs",
-    problems.length > 0
-      ? { kind: "incomplete", warning: problems.join(" ") }
-      : { kind: "complete", ids: subgraphNames.map((name) => kebabCase(name)) },
-    codeFirst,
+async function assertSubgraphsIndexRegenerable(
+  project: Project,
+  subgraphsDir: string,
+): Promise<void> {
+  await planSubgraphsIndexFile({ project, subgraphsDir });
+}
+
+/** Thrown when a subgraph in the package is old-style, nameless, or broken. */
+export class SubgraphCheckError extends Error {
+  constructor(errors: readonly string[]) {
+    super(
+      `Kept every subgraphs entry in powerhouse.manifest.json: ${errors.length} subgraph error(s).\n${errors.join("\n")}`,
+    );
+    this.name = "SubgraphCheckError";
+  }
+}
+
+/** Repairs the barrel and checks subgraphs before updating the manifest; preserves authored files. */
+export async function generateAllSubgraphs(
+  project: Project,
+  options: SubgraphGenerationOptions = {},
+) {
+  await refreshSubgraphs(project, { ...options, prune: true });
+}
+
+async function refreshSubgraphs(
+  project: Project,
+  {
+    prune,
+    scaffolded,
+    beforeCheck,
+  }: SubgraphGenerationOptions & {
+    readonly prune: boolean;
+    readonly scaffolded?: { readonly name: string; readonly id: string };
+  },
+) {
+  const projectDir = projectDirOf(project);
+  const { directory } = getOrCreateDirectory(
+    project,
+    join(projectDir, "subgraphs"),
   );
+  const subgraphsDir = directory.getPath();
+  if (!existsSync(subgraphsDir)) return;
+  await makeSubgraphsIndexFile({ project, subgraphsDir });
+  await beforeCheck?.();
+
+  const inventory = await loadSubgraphInventory(projectDir);
+  if (inventory.kind === "invalid")
+    throw new SubgraphCheckError(inventory.errors);
+  for (const warning of inventory.warnings) console.warn(`⚠ ${warning}`);
+  if (scaffolded) {
+    await createOrUpdateManifest({ subgraphs: [scaffolded] }, projectDir);
+  }
+  if (prune) {
+    await pruneManifestSection(
+      projectDir,
+      "subgraphs",
+      inventory.subgraphs.map(prop("id")),
+    );
+  }
+  const listed = new Set(
+    (await readManifest(projectDir))?.manifest.subgraphs?.map(prop("id")),
+  );
+  const missing = inventory.subgraphs.filter(({ id }) => !listed.has(id));
+  if (missing.length > 0) {
+    await createOrUpdateManifest({ subgraphs: missing }, projectDir);
+  }
 }
 
 export async function generateProcessor(
@@ -412,11 +424,11 @@ export async function generateProcessor(
 
 /* Runs generate for each directory found in the project's `processors` directory  */
 export async function generateAllProcessors(project: Project) {
+  const projectDir = projectDirOf(project);
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
-    "processors",
+    join(projectDir, "processors"),
   );
-  const projectDir = processorsDir.getParentOrThrow().getPath();
   // connect.ts and switchboard.ts decide each processor's apps.
   project.addSourceFilesAtPaths([
     join(processorsDir.getPath(), "*.ts"),
@@ -439,15 +451,10 @@ export async function generateAllProcessors(project: Project) {
   );
 }
 
-function piecesProjectDir(project: Project) {
-  const { directory } = getOrCreateDirectory(project, "pieces");
-  return directory.getParentOrThrow().getPath();
-}
-
 // Tolerant of a project with no package.json: `generateAll` runs over whatever
 // is on disk, and only a piece id derived from the package name needs it.
 async function readProjectPackage(project: Project) {
-  const projectDir = piecesProjectDir(project);
+  const projectDir = projectDirOf(project);
   try {
     const pkg = await readPackage({ cwd: projectDir, normalize: false });
     return { projectDir, packageName: pkg.name ?? "" };
@@ -459,7 +466,10 @@ async function readProjectPackage(project: Project) {
 // The directory under pieces/ a part is being added to; a project with one
 // piece needs no flag, and with more than one the choice is the user's.
 function resolvePieceDir(project: Project, pieceDir?: string): string {
-  const { directory: piecesDir } = getOrCreateDirectory(project, "pieces");
+  const { directory: piecesDir } = getOrCreateDirectory(
+    project,
+    join(projectDirOf(project), "pieces"),
+  );
   project.addSourceFilesAtPaths(join(piecesDir.getPath(), "*", "index.ts"));
   const dirNames = piecesDir
     .getDirectories()
@@ -559,18 +569,16 @@ export async function generateAllPieces(project: Project, only?: string) {
 
 /* Runs each module type's generateAll{moduleType} function for the current project */
 export async function generateAll(project: Project) {
-  const { directory: documentModelsDir } = getOrCreateDirectory(
-    project,
-    "document-models",
-  );
-  const codeFirst = await loadCodeFirstInventory(
-    documentModelsDir.getParentOrThrow().getPath(),
-  );
+  const codeFirst = await loadCodeFirstInventory(projectDirOf(project));
   await generateAllDocumentModels(project, codeFirst);
   await generateAllEditors(project);
   await generateAllApps(project);
-  await generateAllSubgraphs(project, codeFirst);
+  const deferredSubgraphFailure = await generateAllSubgraphs(project).then(
+    () => undefined,
+    (error: Error) => error,
+  );
   await generateAllProcessors(project);
   await generateAllPieces(project);
   syncProjectAiToolsExport(project);
+  if (deferredSubgraphFailure !== undefined) throw deferredSubgraphFailure;
 }

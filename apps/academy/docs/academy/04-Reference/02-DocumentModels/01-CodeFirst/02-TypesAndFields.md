@@ -15,8 +15,8 @@ const Priority = ph.enum("Priority", { values: ["LOW", "HIGH"] });
 
 const Item = ph.object("Item", {
   fields: {
-    id: ph.OID({ required: true }),        // a field use
-    priority: ph.ref(Priority),            // a reference to a named type
+    id: ph.OID({ required: true }), // a field use
+    priority: ph.ref(Priority), // a reference to a named type
     tags: ph.list(ph.String({ required: true })),
   },
 });
@@ -42,10 +42,10 @@ ph.list(ph.String(), { required: true })     // [String]!
 A string field accepts `equals`. The field then accepts only a value that matches the regular expression `^<equals>$`, the same as `@equals(value:)` in a schema-first model. The value is not escaped. To match a character such as `.` or `$` literally, escape it yourself.
 
 ```ts
-ph.String({ equals: "[A-Z]{3}" })            // String @equals(value: "[A-Z]{3}")
+ph.String({ equals: "[A-Z]{3}" }); // String @equals(value: "[A-Z]{3}")
 ```
 
-`equals` works on a scalar whose validator is a Zod string schema: `ph.String`, `ph.ID`, and catalog scalars such as `ph.PHID`, `ph.EmailAddress`, and `ph.DateTime`. `ph.Address` and `ph.AttachmentRef` are strings, but they validate with a custom check, so they do not accept `equals`. On those, on a number, object, or opaque scalar, on a list, a reference, or a list item, and on a field of a subgraph, the declaration fails. A pattern that is not a valid regular expression also fails. So does a pattern with a `/` outside a character class or with a line terminator, because a schema-first model writes the pattern into a regular expression literal. Write a slash as `\/` and a line break as `\n`. As in a schema-first model, the replacement tokens `$&`, `` $` ``, `$'`, and `$$` in the pattern are expanded before it is used; write `$$` for a literal `$` next to one of those characters.
+`equals` works on a scalar whose validator is a Zod string schema: `ph.String`, `ph.ID`, and catalog scalars such as `ph.PHID`, `ph.EmailAddress`, and `ph.DateTime`. `ph.Address` and `ph.AttachmentRef` are strings, but they validate with a custom check, so they do not accept `equals`. On those, on a number, object, or opaque scalar, on a list, a reference, or a list item, and on a typed field of a subgraph, the declaration fails. A pattern that is not a valid regular expression also fails. So does a pattern with a `/` outside a character class or with a line terminator, because a schema-first model writes the pattern into a regular expression literal. Write a slash as `\/` and a line break as `\n`. As in a schema-first model, the replacement tokens `$&`, `` $` ``, `$'`, and `$$` in the pattern are expanded before it is used; write `$$` for a literal `$` next to one of those characters.
 
 ## Default an operation input field with `defaultValue`
 
@@ -86,7 +86,7 @@ The declarations below fail as soon as the module runs. Each failure reports a d
 
 ## Declare a scalar for your package
 
-`ph` includes the catalog scalars, such as `ph.PHID`. It leaves out `JSONObject`, which only the reactor host declares, so `ph.JSONObject` fails with `PH-SCALAR-INTERNAL`. To add a scalar of your own, call `defineScalar`. The catalog scalars in `ph` use the same function. `defineScalar` returns a builder that you call in a field the same way you call `ph.PHID`.
+`ph` includes the catalog scalars, such as `ph.PHID`. It leaves out `JSONObject`, which only the reactor host declares, so `ph.JSONObject` fails with `PH-SCALAR-INTERNAL`. A subgraph can use it through `subgraphScalars.JSONObject()`, but a document model cannot. See [JSON objects in subgraphs](../../03-GraphQLData/08-SubgraphClasses.md#json-objects). To add a scalar of your own, call `defineScalar`. The catalog scalars in `ph` use the same function. `defineScalar` returns a builder that you call in a field the same way you call `ph.PHID`.
 
 ```ts
 import { defineScalar, ph } from "document-model";
@@ -120,7 +120,7 @@ A package scalar then works like a catalog scalar:
 The GraphQL name of the scalar depends on where you use it:
 
 - In a document model, the host adds the model prefix, the same as for the model's types. In a `Todo` model, `HexColor` becomes `Todo_HexColor`.
-- In a code-first subgraph, the scalar keeps its own name, `HexColor`, the same as the subgraph's types.
+- In a subgraph, the scalar keeps its own name, `HexColor`, the same as the subgraph's types.
 - A catalog scalar keeps its name and its existing host binding.
 
 ### Naming rules

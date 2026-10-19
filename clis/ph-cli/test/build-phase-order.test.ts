@@ -357,13 +357,15 @@ describe("unregistered code-first definitions", () => {
       });
       expect([result.exitCode, built.promotions]).toEqual([0, 1]);
       expect(builtLog).toContain(
-        "ℹ This package lists no code-first definitionSources; no definition was checked.\n",
+        "ℹ This package lists no code-first definitionSources and has no subgraphs; no definition was checked.\n",
       );
 
-      mkdirSync(join(fixture.root, "subgraphs"));
+      mkdirSync(join(fixture.root, "document-models", "orders"), {
+        recursive: true,
+      });
       writeFileSync(
-        join(fixture.root, "subgraphs", "orders.ts"),
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+        join(fixture.root, "document-models", "orders", "index.ts"),
+        'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});\n',
       );
       const refused = recorder();
       const refusedLog: string[] = [];
@@ -373,7 +375,7 @@ describe("unregistered code-first definitions", () => {
       });
       expect([refusal.exitCode, refused.promotions]).toEqual([2, 0]);
       expect(refusedLog.join("")).toContain(
-        "PH-CONFIG-SOURCE-UNREGISTERED [error/configuration] <config> /definitionSources/entries: ./subgraphs/orders.ts declares a code-first subgraph",
+        "PH-CONFIG-SOURCE-UNREGISTERED [error/configuration] <config> /definitionSources/entries: ./document-models/orders/ declares a code-first document model",
       );
     } finally {
       process.chdir(enteredFrom);
@@ -421,7 +423,7 @@ describe("the compatibility window", () => {
       expect(result.exitCode).toBe(0);
       expect(recording.promotions).toBe(1);
       expect(logged.join("")).toContain(
-        "ℹ This package lists no code-first definitionSources; no definition was checked.\n",
+        "ℹ This package lists no code-first definitionSources and has no subgraphs; no definition was checked.\n",
       );
       expect(await retained(fixture.root)).toEqual({
         ok: false,

@@ -390,6 +390,66 @@ function str(v: unknown): string {
 
 For an editor that accepts dropped files, or that uses shadcn or Vercel AI Elements, read [Editor recipes](docs/agent-guides/editor-recipes.md).
 
+## Subgraphs
+
+Run \`ph generate subgraph --name <name>\`. The command creates \`subgraphs/<name>/index.ts\` and \`schema.ts\`, writes a checked barrel export, and refreshes the manifest. Regeneration preserves files inside existing subgraph directories. Export concrete classes through \`subgraphs/index.ts\` and \`subgraphs/*/index.ts\`. Subgraphs do not use \`definitionSources\`. The document-model \`--code-first\` option stays.
+
+A subgraph is a class with a static name and schema:
+
+~~~typescript
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
+
+export class StatusSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "status";
+
+  static override getSchema(schema: SchemaBuilder<StatusSubgraph>) {
+    return [
+      schema.query("packageStatus", {
+        returns: ph.String({ required: true }),
+        resolve: ({ subgraph }) => subgraph.status(),
+      }),
+    ];
+  }
+
+  status(): string {
+    return "ready";
+  }
+}
+~~~
+
+Use \`SchemaBuilder<YourClass>\` so typed resolvers receive the concrete instance as \`subgraph\`. Extend \`BaseSubgraph<Ctx>\` when the host provides a specialized request context. Resolvers access state through \`subgraph\`, not static \`this\`.
+
+\`getSchema\` returns typed entries or one \`schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })\` result. Keep it deterministic and free of side effects. Do not declare instance schema fields or a subscription flag. The host derives subscriptions from the schema.
+
+Share state and lifecycle through one abstract base without a name. Share schema through plain fragments constrained by public capability interfaces. Do not use mixin factories. Preserve a typed parent's entries with \`...super.getSchema(schema)\`. Call \`schema.replaceParentSchema()\` when replacing them intentionally. Typed fragments cannot extend an SDL parent.
+
+Override \`onSetup\` and \`onDisconnect\`, and call \`super\` in both. Teardown tolerates partial setup and releases only resources the instance acquired. The host calls it after failed setup and when unregistering. It is not a process-exit hook.
+
+Authorize each resolver with the public helpers. \`assertCanRead\` and \`assertCanWrite\` return a handle. Fetch with its \`fetchIdentifier\`. Use \`listsDocument\` to filter collections, \`viewSubject\` for the caller's address and app key, and \`servesDocument\` or \`servesDocumentOrThrows\` for the Reactor's serving decision. Schema fragments can call these public methods.
+
+### Fix subgraph errors
+
+| Error                                                                                | Fix                                                                                                                                                       |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TS2416 on \`name\`, \`typeDefs\`, \`resolvers\`, \`hasSubscriptions\`, or \`path\`             | Old-style subgraph. Run \`ph migrate\`, review the conversion, and rebuild.                                                                                 |
+| TS2540 when assigning \`name\`, \`typeDefs\`, \`resolvers\`, \`hasSubscriptions\`, or \`path\` | Old-style subgraph. Run \`ph migrate\`, review the conversion, and rebuild.                                                                                 |
+| TS2417 when a subclass changes a literal name                                        | Share through an abstract base, or declare the extensible parent's name with \`: string\`. Widening loses literal name validation.                          |
+| TS2302 in static \`getSchema\`                                                         | Static methods cannot reference the class type parameter. Use a shared request constraint, such as \`SchemaBuilder<SharedBase<SharedContext>>\`.            |
+| TS2445 or TS2420 in a fragment                                                       | Use public helpers and a public capability interface. A fragment cannot reach protected members.                                                          |
+| \`SubgraphCheck\` says the schema names the wrong class                                | Fix the \`SchemaBuilder<X>\` type argument to name the class whose instances the resolvers use.                                                             |
+| Mixed typed entries and \`schema.graphql\`                                             | Return typed entries XOR one SDL wrapper. Do not append a typed fragment to an SDL parent.                                                                |
+| Nameless-class refusal                                                               | Declare an own static lowercase kebab-case name, or move the shared base outside the entry. A nameless ancestor of an exported concrete class may remain. |
+| Old-style authoring refusal                                                          | Run \`ph migrate\`, review the conversion, and rebuild. Do not add the removed instance fields back.                                                        |
+
+Running hosts still serve published old-style packages through a legacy adapter. The migration notice appears only in development. Every existing endpoint, schema, and WebSocket and SSE mount stays unchanged. New class-based packages require a matching host API release.
+
+See [Subgraph classes](https://academy.vetra.io/academy/Reference/GraphQLData/SubgraphClasses) and [Test a subgraph without a host](https://academy.vetra.io/academy/Reference/GraphQLData/TestingSubgraphs).
+
 ## Generated files
 
 Do not edit a file whose header says \`DO NOT EDIT\`, or anything in a \`gen/\` directory. Codegen rewrites them. A code-first model's own files are not generated.
@@ -400,6 +460,6 @@ Run these after you change code, and after you create a model or an editor:
 
 - \`npm run tsc\` checks the types.
 - \`npm run lint:fix\` runs oxlint with type-aware rules and fixes what it can.
-- \`ph model check\` checks the code-first models, if the package has any.
+- \`ph model check\` checks registered document models and exported subgraph classes.
 - \`npm run test:coverage\` runs the tests and measures the coverage of \`document-models/**/src/reducers/**\` and \`document-models/**/v*/modules/**\`. Lines, branches, functions and statements must each stay at 95% or more. If coverage drops, add tests in \`v<n>/tests/\`. Do not lower the threshold or exclude files. [Test coverage](#test-coverage) shows how to reach 100%.
 `.raw;

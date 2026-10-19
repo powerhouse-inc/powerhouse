@@ -542,6 +542,23 @@ export function enrichManifestPieces(
   return { manifest: { ...manifest, pieces }, unbuilt };
 }
 
+function listManifestSubgraphs(
+  manifest: Manifest,
+  subgraphNames: readonly string[],
+): { manifest: Manifest; added: string[] } {
+  const subgraphs = manifest.subgraphs ?? [];
+  const listed = new Set(subgraphs.map(({ id }) => id));
+  const added = subgraphNames.filter((id) => !listed.has(id));
+  if (added.length === 0) return { manifest, added };
+  return {
+    manifest: {
+      ...manifest,
+      subgraphs: [...subgraphs, ...added.map((id) => ({ id, name: id }))],
+    },
+    added,
+  };
+}
+
 const count = (record: unknown) =>
   typeof record === "object" && record !== null
     ? Object.keys(record).length
@@ -674,17 +691,21 @@ function warnUnlistedPieces(
   }
 }
 
-// Make sure the manifest ships under outDir (tsdown copies it only in the
-// browser build) and, when pieces were built, list them in that copy.
-
 // Always copied afresh: only <outDir>/node is cleaned by the builds, so a copy
 // left by the last build would otherwise outlive an edit to the source.
 
 // The source file is never written. Returns the path of the copy, if any.
 export function syncDistManifest(
   target: PieceBuildTarget,
-  built: BuiltPiece[],
-  externalDependencies: Record<string, string> = {},
+  {
+    built,
+    externalDependencies = {},
+    subgraphNames = [],
+  }: {
+    built: BuiltPiece[];
+    externalDependencies?: Record<string, string>;
+    subgraphNames?: readonly string[];
+  },
 ): string | undefined {
   const { projectRoot, outDir } = target;
   const source = join(projectRoot, "powerhouse.manifest.json");
@@ -694,6 +715,7 @@ export function syncDistManifest(
   // `bundle:` entries has no pieces/<dir> and still ships pieces.
   const shipsPieces = existsSync(pieceListPath(target));
   const shipsExternal = Object.keys(externalDependencies).length > 0;
+  const shipsSubgraphs = subgraphNames.length > 0;
   if (!existsSync(source)) {
     if (shipsPieces) {
       console.warn("⚠ no powerhouse.manifest.json; pieces will not be listed");
@@ -703,11 +725,16 @@ export function syncDistManifest(
         "⚠ no powerhouse.manifest.json; external dependencies will not be listed",
       );
     }
+    if (shipsSubgraphs) {
+      console.warn(
+        "⚠ no powerhouse.manifest.json; subgraphs will not be listed",
+      );
+    }
     return undefined;
   }
   mkdirSync(dirname(copy), { recursive: true });
   copyFileSync(source, copy);
-  if (!shipsPieces && !shipsExternal) return copy;
+  if (!shipsPieces && !shipsExternal && !shipsSubgraphs) return copy;
 
   let manifest = JSON.parse(readFileSync(copy, "utf8")) as Manifest;
   if (shipsPieces) {
@@ -718,6 +745,15 @@ export function syncDistManifest(
     manifest = enriched.manifest;
   }
   if (shipsExternal) manifest = { ...manifest, externalDependencies };
+  if (shipsSubgraphs) {
+    const listed = listManifestSubgraphs(manifest, subgraphNames);
+    if (listed.added.length > 0) {
+      console.warn(
+        `⚠ powerhouse.manifest.json does not list the subgraph(s) ${listed.added.join(", ")}; the built manifest lists them. Run ph generate subgraph --all to record them.`,
+      );
+    }
+    manifest = listed.manifest;
+  }
   writeFileSync(copy, JSON.stringify(manifest, null, 2) + "\n");
   return copy;
 }

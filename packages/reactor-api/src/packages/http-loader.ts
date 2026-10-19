@@ -64,8 +64,9 @@ type SubgraphsExport = Record<string, SubgraphClass>;
  */
 export function extractSubgraphsFromModule(
   module: Record<string, SubgraphsExport>,
+  context?: Parameters<typeof extractSubgraphs>[1],
 ): SubgraphClass[] {
-  return extractSubgraphs(module);
+  return extractSubgraphs(module, context);
 }
 
 // Expected shape of the processors bundle export
@@ -296,6 +297,7 @@ export class HttpPackageLoader implements IPackageLoader {
     const { module } = await this.importEntry(packageSpec, "subgraphs");
     const subgraphs = extractSubgraphsFromModule(
       module as Record<string, SubgraphsExport>,
+      { packageName, logger: this.logger },
     );
 
     this.logger.verbose(

@@ -1,32 +1,42 @@
-import { BaseSubgraph, type SubgraphClass } from "@powerhousedao/reactor-api";
+import {
+  BaseSubgraph,
+  type SchemaBuilder,
+  type SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import type { WorkflowRuntimeService } from "@powerhousedao/reactor-workflow";
-import type { DocumentNode } from "graphql";
+import { workflowRuntimeResolverCoordinates } from "./resolver-coordinates.js";
 import {
   getResolvers,
   type OAuthRouting,
   type ReactorAccessInfo,
 } from "./resolvers.js";
-import { schema } from "./schema.js";
+import { schema as typeDefs } from "./schema.js";
 
-/** The runtime's read/write surface. The runtime itself is composed by the
- * host, so the subgraph only serves what it is handed. */
+export type WorkflowRuntimeSubgraphClass = SubgraphClass & {
+  readonly subgraphName: "workflow-runtime";
+};
+
 export function createWorkflowRuntimeSubgraph(
   runtime: WorkflowRuntimeService,
   oauth?: OAuthRouting,
   access?: ReactorAccessInfo,
-): SubgraphClass {
+): WorkflowRuntimeSubgraphClass {
   return class WorkflowRuntimeSubgraph extends BaseSubgraph {
-    name = "workflow-runtime";
-    typeDefs: DocumentNode = schema;
-    // A field initializer runs after super(), so the authorization service
-    // the secret mutations gate on is already in place.
-    resolvers = getResolvers(
-      runtime,
-      this.authorizationService,
-      oauth,
-      access,
-      (documentId, ctx) => this.assertCanRead(documentId, ctx),
-    );
-    additionalContextFields = {};
+    static override readonly subgraphName = "workflow-runtime";
+
+    static override getSchema(schema: SchemaBuilder<WorkflowRuntimeSubgraph>) {
+      return schema.graphql({
+        typeDefs,
+        resolverCoordinates: workflowRuntimeResolverCoordinates,
+        resolvers: (subgraph) =>
+          getResolvers(
+            runtime,
+            subgraph.authorizationService,
+            oauth,
+            access,
+            (documentId, ctx) => subgraph.assertCanRead(documentId, ctx),
+          ),
+      });
+    }
   };
 }

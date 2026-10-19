@@ -1,0 +1,282 @@
+scalar DateTime
+
+scalar JSONObject
+
+scalar AttachmentRef
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+"""Hash configuration for document state"""
+type DocumentDrive_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+"""Document scope state (same for all document types)"""
+type DocumentDrive_PHDocumentScopeState {
+  version: Int!
+  hash: DocumentDrive_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""Full state with all scopes for DocumentDrive"""
+type DocumentDrive_FullState {
+  auth: JSONObject!
+  document: DocumentDrive_PHDocumentScopeState!
+  global: DocumentDrive_DocumentDriveState!
+  local: DocumentDrive_DocumentDriveLocalState!
+}
+
+input DocumentDrive_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input DocumentDrive_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input DocumentDrive_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+"""
+Mutation result type for DocumentDrive operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentDriveMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentDrive_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""Document with children for DocumentDrive"""
+type DocumentDrive_DocumentWithChildren {
+  document: DocumentDriveMutationResult!
+  childIds: [String!]!
+}
+
+"""Paginated result type for DocumentDrive documents"""
+type DocumentDrive_DocumentResultPage {
+  items: [DocumentDriveMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""Queries: DocumentDrive Document"""
+type DocumentDriveQueries {
+  """Get a specific DocumentDrive document by identifier"""
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: DocumentDrive_ViewFilterInput): DocumentDrive_DocumentWithChildren
+  """Get all DocumentDrive documents (paged)"""
+  documents(paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+  """Find DocumentDrive documents by search criteria"""
+  findDocuments(search: DocumentDrive_SearchFilterInput, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+  """Get outgoing relationships of a DocumentDrive document"""
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+  """Get incoming relationships to a DocumentDrive document"""
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: DocumentDrive_ViewFilterInput, paging: DocumentDrive_PagingInput): DocumentDrive_DocumentResultPage!
+}
+
+"""Mutations: DocumentDrive"""
+type DocumentDriveMutations {
+  createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: DocumentDrive_InitialStateInput): DocumentDriveMutationResult!
+  createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): DocumentDriveMutationResult!
+  addFile(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFileInput!): DocumentDriveMutationResult!
+  addFileAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFileInput!): String!
+  addFolder(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFolderInput!): DocumentDriveMutationResult!
+  addFolderAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddFolderInput!): String!
+  deleteNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_DeleteNodeInput!): DocumentDriveMutationResult!
+  deleteNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_DeleteNodeInput!): String!
+  updateFile(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateFileInput!): DocumentDriveMutationResult!
+  updateFileAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateFileInput!): String!
+  updateNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateNodeInput!): DocumentDriveMutationResult!
+  updateNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_UpdateNodeInput!): String!
+  copyNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_CopyNodeInput!): DocumentDriveMutationResult!
+  copyNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_CopyNodeInput!): String!
+  moveNode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_MoveNodeInput!): DocumentDriveMutationResult!
+  moveNodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_MoveNodeInput!): String!
+  setDriveName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveNameInput!): DocumentDriveMutationResult!
+  setDriveNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveNameInput!): String!
+  setDriveIcon(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveIconInput!): DocumentDriveMutationResult!
+  setDriveIconAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetDriveIconInput!): String!
+  setSharingType(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetSharingTypeInput!): DocumentDriveMutationResult!
+  setSharingTypeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetSharingTypeInput!): String!
+  setAvailableOffline(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetAvailableOfflineInput!): DocumentDriveMutationResult!
+  setAvailableOfflineAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_SetAvailableOfflineInput!): String!
+  addListener(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddListenerInput!): DocumentDriveMutationResult!
+  addListenerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddListenerInput!): String!
+  removeListener(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveListenerInput!): DocumentDriveMutationResult!
+  removeListenerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveListenerInput!): String!
+  addTrigger(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddTriggerInput!): DocumentDriveMutationResult!
+  addTriggerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_AddTriggerInput!): String!
+  removeTrigger(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveTriggerInput!): DocumentDriveMutationResult!
+  removeTriggerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentDrive_RemoveTriggerInput!): String!
+}
+
+type Query {
+  DocumentDrive: DocumentDriveQueries!
+}
+
+type Mutation {
+  DocumentDrive: DocumentDriveMutations!
+}
+
+"""Input Types for Initial State"""
+input DocumentDrive_FolderNodeInput {
+  id: String
+  name: String
+  kind: String
+  parentFolder: String
+}
+
+input DocumentDrive_FileNodeInput {
+  id: String
+  name: String
+  kind: String
+  documentType: String
+  parentFolder: String
+}
+
+input DocumentDrive_DocumentDriveStateInput {
+  name: String
+  nodes: [JSONObject]
+  icon: String
+}
+
+input DocumentDrive_DocumentDriveLocalStateInput {
+  sharingType: String
+  listeners: [DocumentDrive_ListenerInput]
+  triggers: [DocumentDrive_TriggerInput]
+  availableOffline: Boolean
+}
+
+input DocumentDrive_InitialStateInput {
+  global: DocumentDrive_DocumentDriveStateInput
+  local: DocumentDrive_DocumentDriveLocalStateInput
+}
+
+"""Module: Node"""
+input DocumentDrive_AddFileInput {
+  id: ID!
+  name: String!
+  documentType: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_AddFolderInput {
+  id: ID!
+  name: String!
+  parentFolder: ID
+}
+
+input DocumentDrive_DeleteNodeInput {
+  id: ID!
+}
+
+input DocumentDrive_UpdateFileInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+  documentType: String
+}
+
+input DocumentDrive_UpdateNodeInput {
+  id: ID!
+  parentFolder: ID
+  name: String
+}
+
+input DocumentDrive_CopyNodeInput {
+  srcId: ID!
+  targetId: ID!
+  targetName: String
+  targetParentFolder: ID
+}
+
+input DocumentDrive_MoveNodeInput {
+  srcFolder: ID!
+  targetParentFolder: ID
+}
+
+"""Module: Drive"""
+input DocumentDrive_SetDriveNameInput {
+  name: String!
+}
+
+input DocumentDrive_SetDriveIconInput {
+  icon: String
+}
+
+input DocumentDrive_SetSharingTypeInput {
+  type: String!
+}
+
+input DocumentDrive_SetAvailableOfflineInput {
+  availableOffline: Boolean!
+}
+
+input DocumentDrive_ListenerFilterInput {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+input DocumentDrive_ListenerCallInfoInput {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+input DocumentDrive_ListenerInput {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilterInput!
+  callInfo: DocumentDrive_ListenerCallInfoInput
+}
+
+input DocumentDrive_AddListenerInput {
+  listener: DocumentDrive_ListenerInput!
+}
+
+input DocumentDrive_RemoveListenerInput {
+  listenerId: String!
+}
+
+input DocumentDrive_PullResponderTriggerDataInput {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+input DocumentDrive_TriggerInput {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_PullResponderTriggerDataInput
+}
+
+input DocumentDrive_AddTriggerInput {
+  trigger: DocumentDrive_TriggerInput!
+}
+
+input DocumentDrive_RemoveTriggerInput {
+  triggerId: String!
+}

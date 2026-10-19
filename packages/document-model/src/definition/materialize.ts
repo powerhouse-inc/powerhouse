@@ -35,6 +35,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { CompatibilitySelection } from "./compatibility-apply.js";
+import { getGlobalRegistry } from "./global-registry.js";
 import { recordPackageScalars } from "./scalars/package-scalars.js";
 import type {
   CompiledDocumentModelVersion,
@@ -422,20 +423,10 @@ export type ModuleCompilationReport = {
  * would vanish exactly when a check went looking for it. The report is plain
  * data, so reading one another copy wrote is safe.
  */
-const REGISTRY_KEY = Symbol.for(
+const compilationReports = getGlobalRegistry(
   "powerhouse.document-model.compilation-reports",
+  () => new WeakMap<object, ModuleCompilationReport>(),
 );
-
-const globalRegistry = globalThis as unknown as {
-  [REGISTRY_KEY]?: WeakMap<object, ModuleCompilationReport>;
-};
-
-const compilationReports: WeakMap<object, ModuleCompilationReport> =
-  globalRegistry[REGISTRY_KEY] ??
-  (globalRegistry[REGISTRY_KEY] = new WeakMap<
-    object,
-    ModuleCompilationReport
-  >());
 
 function recordCompilation(
   module: object,

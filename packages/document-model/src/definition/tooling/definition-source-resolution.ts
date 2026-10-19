@@ -477,6 +477,19 @@ export function resolveDefinitionSources(
     // The strict read below produces the one deterministic diagnostic.
   }
 
+  if (
+    request.allowMissingConfig === true &&
+    (request.cliSources ?? []).length === 0 &&
+    !existsSync(configFile)
+  ) {
+    return skipped(
+      packageRoot,
+      packageRootIdentity,
+      "definition-sources-absent",
+      "schema-first",
+    );
+  }
+
   let definitionSources: unknown;
   try {
     definitionSources = getConfigStrict(configFile).definitionSources;

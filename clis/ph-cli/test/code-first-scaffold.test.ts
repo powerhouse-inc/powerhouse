@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { vitestConfigTemplate } from "@powerhousedao/codegen/templates";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { startGenerateDocumentModel } from "../src/services/generate-document-model.js";
 import { startGenerateSubgraph } from "../src/services/generate-subgraph.js";
 import { runModelCheck } from "../src/services/model-check.js";
@@ -454,7 +455,7 @@ describe("adding version 2 to a scaffolded code-first model", () => {
   }, 120_000);
 });
 
-describe("a scaffolded code-first subgraph", () => {
+describe("a scaffolded subgraph beside a code-first model", () => {
   let subgraphOutput: string[];
   beforeAll(async () => {
     subgraphOutput = await printed(() =>
@@ -465,7 +466,6 @@ describe("a scaffolded code-first subgraph", () => {
           dir: undefined,
           all: false,
           extract: false,
-          codeFirst: true,
           skipInstall: true,
           debug: undefined,
         },
@@ -474,13 +474,13 @@ describe("a scaffolded code-first subgraph", () => {
     );
   });
 
-  it("prints what it wrote and what to run next", () => {
-    expect(subgraphOutput).toContain("Wrote subgraphs/widgets.ts");
-    expect(subgraphOutput.slice(-3)).toEqual([
-      "Wrote powerhouse.manifest.json",
-      "Registered the subgraph in powerhouse.config.json definitionSources (added)",
-      "Next: ph model check",
-    ]);
+  it("writes one class and lists it in the barrel", () => {
+    expect(
+      readFileSync(join(projectDir, "subgraphs/widgets/index.ts"), "utf8"),
+    ).toContain('static override readonly subgraphName = "widgets";');
+    expect(
+      readFileSync(join(projectDir, "subgraphs/index.ts"), "utf8"),
+    ).toContain('import { WidgetsSubgraph } from "./widgets/index.js";');
   });
 
   it("declares reactor-api, which the subgraph imports", () => {
@@ -501,13 +501,12 @@ describe("a scaffolded code-first subgraph", () => {
     );
   });
 
-  it("registers beside the model, not instead of it", () => {
+  it("leaves definitionSources to the model", () => {
     const config = JSON.parse(
       readFileSync(join(projectDir, "powerhouse.config.json"), "utf8"),
     ) as { definitionSources: { entries: { specifier: string }[] } };
     expect(config.definitionSources.entries.map((e) => e.specifier)).toEqual([
       "./document-models/todo/index.ts",
-      "./subgraphs/widgets.ts",
     ]);
   });
 
@@ -521,6 +520,64 @@ describe("a scaffolded code-first subgraph", () => {
       subgraphs: [{ id: "widgets", name: "widgets" }],
     });
   });
+
+  it("regenerates from --dir, read as the subgraph's own directory", async () => {
+    const barrel = join(projectDir, "subgraphs/index.ts");
+    const manifestPath = join(projectDir, "powerhouse.manifest.json");
+    const authored = readFileSync(
+      join(projectDir, "subgraphs/widgets/index.ts"),
+      "utf8",
+    );
+    const schema = readFileSync(
+      join(projectDir, "subgraphs/widgets/schema.ts"),
+      "utf8",
+    );
+    const manifest = z
+      .record(z.string(), z.unknown())
+      .parse(JSON.parse(readFileSync(manifestPath, "utf8")));
+    writeFileSync(barrel, "export {};\n");
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, subgraphs: [] }));
+    const args = {
+      name: undefined,
+      document: undefined,
+      all: false,
+      extract: false,
+      skipInstall: true,
+      debug: undefined,
+    };
+    await expect(
+      startGenerateSubgraph(
+        { ...args, dir: join(projectDir, "subgraphs", "widgets") },
+        projectDir,
+      ),
+    ).resolves.toBeUndefined();
+    expect(readFileSync(barrel, "utf8"))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { WidgetsSubgraph } from "./widgets/index.js";
+
+export { WidgetsSubgraph };
+const checkWidgetsSubgraph: SubgraphCheck<typeof WidgetsSubgraph> = true;
+void checkWidgetsSubgraph;
+`);
+    expect(JSON.parse(readFileSync(manifestPath, "utf8"))).toHaveProperty(
+      "subgraphs",
+      [{ id: "widgets", name: "widgets" }],
+    );
+    expect(
+      readFileSync(join(projectDir, "subgraphs/widgets/index.ts"), "utf8"),
+    ).toBe(authored);
+    expect(
+      readFileSync(join(projectDir, "subgraphs/widgets/schema.ts"), "utf8"),
+    ).toBe(schema);
+    await expect(
+      startGenerateSubgraph(
+        { ...args, dir: join(projectDir, "subgraphs", "missing") },
+        projectDir,
+      ),
+    ).rejects.toThrow(
+      "subgraphs/missing has no class with a static subgraphName.",
+    );
+  }, 180_000);
 
   it("typechecks under the project's own tsconfig", () => {
     const result = spawnSync(
@@ -692,16 +749,5 @@ describe("code-first generation refuses", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
-
-  it("a subgraph without --name", async () => {
-    await expect(
-      printed(() =>
-        startGenerateSubgraph(
-          { ...noMode, name: undefined, codeFirst: true, skipInstall: true },
-          projectDir,
-        ),
-      ),
-    ).rejects.toThrow("--code-first needs --name.");
   });
 });

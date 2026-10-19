@@ -267,18 +267,24 @@ export async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** True if the extracted package declares a `./document-models` export. */
-export async function hasDocumentModelsExport(
+export async function hasPackageExport(
   extractedPath: string,
+  exportName: string,
 ): Promise<boolean> {
   try {
     const pkg = JSON.parse(
       await readFile(join(extractedPath, "package.json"), "utf8"),
     ) as { exports?: Record<string, unknown> };
-    return Boolean(pkg.exports?.["./document-models"]);
+    return Boolean(pkg.exports?.[exportName]);
   } catch {
     return false;
   }
+}
+
+export function hasDocumentModelsExport(
+  extractedPath: string,
+): Promise<boolean> {
+  return hasPackageExport(extractedPath, "./document-models");
 }
 
 /** Exits with a build hint if the local Switchboard server build is missing. */

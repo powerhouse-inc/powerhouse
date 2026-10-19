@@ -26,7 +26,6 @@ export {
   type HostValidationResult,
   type PackedConsumerEvidence,
   type ReleaseEvidenceProvider,
-  type SchemaFirstSubgraph,
   type TypecheckEvidence,
 } from "./src/definition/tooling/check-definitions.js";
 export { DefinitionSourceLoader } from "./src/definition/tooling/definition-source-loader.js";
@@ -43,11 +42,21 @@ export type {
   DefinitionSourceResolution,
   DefinitionSourceSelectionRequest,
   DefinitionSourceSet,
+  DescribedSubgraph,
   LoadedDefinition,
   LoadedDefinitionSet,
+  LoadedSubgraphSet,
   SubgraphClass,
+  SubgraphProtocolDescription,
   TypeScriptSourceImportInterface,
 } from "./src/definition/tooling/definition-source-types.js";
+export {
+  isSubgraphClass,
+  readSubgraphEntries,
+  subgraphClassesIn,
+  subgraphEntrySpecifiers,
+  type SubgraphEntryNamespace,
+} from "./src/definition/tooling/subgraph-reader.js";
 export {
   adaptSchemaFirstDocumentModelModule,
   SCHEMA_FIRST_EXAMPLE_KEY_PREFIX,
@@ -66,9 +75,6 @@ export {
 } from "./src/definition/tooling/graphql-document.js";
 export { checkRetainedSerialization } from "./src/definition/tooling/retained-serialization.js";
 
-// Code-first subgraphs. The host-agnostic half: `defineSubgraph` itself ships
-// from `@powerhousedao/reactor-api`, which binds these to its own instance,
-// request, and GraphQL types.
 export {
   inspectSubgraph,
   type SubgraphInspectionEnvelope,
@@ -76,12 +82,19 @@ export {
 } from "./src/definition/tooling/inspect-definitions.js";
 export { checkSubgraphDefinitionShape } from "./src/definition/subgraph/wire-shape.js";
 export {
+  checkSubgraphDeterminism,
+  checkSubgraphName,
   compileSubgraph,
-  type CompatSubgraphConfig,
+  compileSubgraphTypeDefs,
+  isSubgraphName,
+  namelessSubgraphMessage,
   type CompiledSubgraph,
-  type SubgraphConfig,
-  type SubgraphConfigBase,
-  type TypedSubgraphConfig,
+  type CompileSubgraphOptions,
+  type SdlSchema,
+  type SdlSchemaSpec,
+  type SubgraphClassShape,
+  type SubgraphSchema,
+  type SubgraphSchemaBuilders,
 } from "./src/definition/subgraph/definer.js";
 export {
   compileSubgraphSchema,
@@ -91,7 +104,6 @@ export {
   compareResolverCoordinates,
   coordinatesOfResolverMap,
   normalizeCompatibility,
-  runtimeHasSubscriptions,
   typeKindsOfDocument,
   type GraphQLAstCompatibility,
   type NormalizedCompatibility,

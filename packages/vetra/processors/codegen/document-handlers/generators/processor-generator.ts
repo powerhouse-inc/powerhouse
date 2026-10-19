@@ -35,7 +35,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
   /**
    * Validate if this processor strand should be processed
    */
-  shouldProcess(input: CodegenInput): boolean {
+  override shouldProcess(input: CodegenInput): boolean {
     // First run base validation
     if (!super.shouldProcess(input)) {
       return false;

@@ -1,7 +1,7 @@
 /**
  * Phase 5: actually boot a Switchboard and import each published model.
  *
- * For every extracted package that exports `./document-models`, this:
+ * For every extracted package that exports `./document-models` or `./subgraphs`, this:
  *   1. installs the published tarball into a clean scaffold under
  *      .cache/registry-audit/load/<pkg>/ (pnpm, --ignore-scripts), so the
  *      package's full dependency graph resolves the way it would in a real
@@ -32,14 +32,16 @@
  *   --limit <n>        Process at most n packages.
  *   --timeout <ms>     Per-package boot timeout (default 120000).
  *   --skip-install     Reuse a prior install in each scaffold.
+ *   --subgraphs-only   Audit ./subgraphs without booting Switchboard.
  *
  * Writes .cache/registry-audit/load-report.json and a console summary.
- * Requires the local Switchboard to be built (apps/switchboard/dist/server.mjs).
+ * Requires a local Switchboard build unless --subgraphs-only is selected.
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   hasDocumentModelsExport,
+  hasPackageExport,
   installScaffold,
   LOAD_DIR,
   LOAD_REPORT_PATH,
@@ -51,22 +53,39 @@ import {
   requireSwitchboardBuild,
   spawnWorker,
 } from "./lib.js";
+import type { SubgraphFinding } from "./subgraph-rule.js";
 
 const RUNNER = join(REPO_ROOT, "tools", "registry-audit", "load-worker.ts");
 
-type RunnerResult = { ok: boolean; ids: string[]; error?: string; ms?: number };
+type RunnerResult = {
+  ok: boolean;
+  ids: string[];
+  error?: string;
+  ms?: number;
+  subgraphs?: SubgraphFinding[];
+};
 
 /**
  * Spawns the runner subprocess. `pkgName` undefined = baseline (no package);
  * `cwd` defaults to the repo root (used for the baseline).
  */
-function runOnce(pkgName: string | undefined, cwd: string, timeoutMs: number) {
+function runOnce(
+  pkgName: string | undefined,
+  cwd: string,
+  timeoutMs: number,
+  subgraphsOnly = false,
+  hasSubgraphs = false,
+) {
   return spawnWorker<RunnerResult>({
     runner: RUNNER,
     arg: pkgName ?? "none",
     cwd,
     timeoutMs,
     sentinel: "__SBLOAD__",
+    env: {
+      AUDIT_SUBGRAPHS_ONLY: subgraphsOnly ? "1" : "0",
+      AUDIT_HAS_SUBGRAPHS: hasSubgraphs ? "1" : "0",
+    },
   });
 }
 
@@ -74,13 +93,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2), [
     "from-report",
     "skip-install",
+    "subgraphs-only",
   ]);
   const filters = args.options.filter ?? [];
   const wantPackages = new Set(args.options.package ?? []);
   const timeoutMs = Number(opt(args, "timeout", "120000"));
   const skipInstall = args.flags["skip-install"] ?? false;
 
-  await requireSwitchboardBuild();
+  const subgraphsOnly = args.flags["subgraphs-only"] ?? false;
+  if (!subgraphsOnly) await requireSwitchboardBuild();
 
   const manifest = await requireManifest("tsx tools/registry-audit/extract.ts");
   let entries = Object.values(manifest.packages).filter(
@@ -107,35 +128,44 @@ async function main() {
     entries = entries.filter((e) => filters.some((f) => e.name.includes(f)));
   }
 
-  // Only packages that actually expose document models are loadable.
   const targets: typeof entries = [];
   for (const e of entries) {
-    if (await hasDocumentModelsExport(e.extractedPath!)) targets.push(e);
+    if (
+      (await hasPackageExport(e.extractedPath!, "./subgraphs")) ||
+      (!subgraphsOnly && (await hasDocumentModelsExport(e.extractedPath!)))
+    )
+      targets.push(e);
   }
   const limit = args.options.limit ? Number(opt(args, "limit")) : undefined;
   const finalTargets = limit !== undefined ? targets.slice(0, limit) : targets;
 
   console.log(
-    `Booting Switchboard for ${finalTargets.length} model package(s) ` +
-      `(install + in-memory boot, schema build on)...\n`,
+    subgraphsOnly
+      ? `Auditing class subgraphs for ${finalTargets.length} package(s)...\n`
+      : `Booting Switchboard for ${finalTargets.length} package(s) (schema build on)...\n`,
   );
 
   // Baseline: which document-model ids exist with no external package loaded.
-  console.log("  baseline (no package) ...");
-  const baseline = await runOnce(undefined, REPO_ROOT, timeoutMs);
-  const baselineIds = new Set(baseline.result?.ids ?? []);
-  console.log(`  baseline: ${baselineIds.size} core model(s)\n`);
+  if (!subgraphsOnly) console.log("  baseline (no package) ...");
+  const baseline = subgraphsOnly
+    ? undefined
+    : await runOnce(undefined, REPO_ROOT, timeoutMs);
+  const baselineIds = new Set(baseline?.result?.ids ?? []);
+  if (!subgraphsOnly)
+    console.log(`  baseline: ${baselineIds.size} core model(s)\n`);
 
   type Outcome = {
     package: string;
     version: string;
     status:
+      | "audited-subgraphs"
       | "loaded"
       | "no-models"
       | "boot-failed"
       | "install-failed"
       | "timeout";
     loadedModels: string[];
+    subgraphs?: SubgraphFinding[];
     ms?: number;
     error?: string;
   };
@@ -163,7 +193,13 @@ async function main() {
       continue;
     }
 
-    const run = await runOnce(entry.name, scaffold.dir, timeoutMs);
+    const run = await runOnce(
+      entry.name,
+      scaffold.dir,
+      timeoutMs,
+      subgraphsOnly,
+      await hasPackageExport(entry.extractedPath!, "./subgraphs"),
+    );
     let status: Outcome["status"];
     let loadedModels: string[] = [];
     let error: string | undefined;
@@ -173,7 +209,11 @@ async function main() {
       error = `killed after ${timeoutMs}ms`;
     } else if (run.result?.ok) {
       loadedModels = run.result.ids.filter((id) => !baselineIds.has(id));
-      status = loadedModels.length ? "loaded" : "no-models";
+      status = subgraphsOnly
+        ? "audited-subgraphs"
+        : loadedModels.length
+          ? "loaded"
+          : "no-models";
     } else {
       status = "boot-failed";
       error = run.result?.error ?? `exit ${run.exitCode}\n${run.rawTail}`;
@@ -184,23 +224,35 @@ async function main() {
       version: entry.version,
       status,
       loadedModels,
+      subgraphs: run.result?.subgraphs,
       ms: run.result?.ms,
       error,
     });
 
     const label =
-      status === "loaded"
-        ? `ok      ${entry.name}  → ${loadedModels.join(", ")}`
-        : status === "no-models"
-          ? `WARN    ${entry.name}  (booted, registered no models)`
-          : status === "timeout"
-            ? `TIMEOUT ${entry.name}`
-            : `FAILED  ${entry.name}`;
+      status === "audited-subgraphs"
+        ? `AUDITED ${entry.name}`
+        : status === "loaded"
+          ? `ok      ${entry.name}  → ${loadedModels.join(", ")}`
+          : status === "no-models"
+            ? `WARN    ${entry.name}  (booted, registered no models)`
+            : status === "timeout"
+              ? `TIMEOUT ${entry.name}`
+              : `FAILED  ${entry.name}`;
     console.log(`  ${label}`);
+    for (const finding of run.result?.subgraphs ?? []) {
+      console.log(
+        `            [${finding.classification}] ${finding.exports.join(", ")}: ${finding.evidence}`,
+      );
+    }
     if (status === "boot-failed" && error) {
       console.log(`            ${error.split("\n")[0].slice(0, 200)}`);
     }
   }
+
+  const findings = results.flatMap((r) => r.subgraphs ?? []);
+  const classified = (classification: SubgraphFinding["classification"]) =>
+    findings.filter((f) => f.classification === classification).length;
 
   await writeFile(
     LOAD_REPORT_PATH,
@@ -208,6 +260,28 @@ async function main() {
       {
         generatedAt: new Date().toISOString(),
         registry: manifest.registry,
+        subgraphsOnly,
+        selection: {
+          packages: [...wantPackages],
+          filters,
+          fromReport: args.flags["from-report"] ?? false,
+          limit,
+          manifestPackages: Object.keys(manifest.packages).length,
+          selectedPackages: entries.length,
+          eligiblePackages: targets.length,
+          processedPackages: results.length,
+        },
+        skippedPackages: entries
+          .filter((entry) => !targets.includes(entry))
+          .map((entry) => entry.name),
+        subgraphSummary: {
+          newStyle: classified("new-style"),
+          oldStyle: classified("old-style"),
+          namelessOther: classified("nameless/other"),
+          unresolved: findings.filter(
+            (f) => f.constructionRequired && !f.constructed,
+          ).length,
+        },
         baselineModels: [...baselineIds].sort(),
         results: results.sort((a, b) => a.package.localeCompare(b.package)),
       },
@@ -216,6 +290,7 @@ async function main() {
     ),
   );
 
+  const audited = results.filter((r) => r.status === "audited-subgraphs");
   const loaded = results.filter((r) => r.status === "loaded");
   const noModels = results.filter((r) => r.status === "no-models");
   const failed = results.filter(
@@ -224,7 +299,7 @@ async function main() {
   const installFailed = results.filter((r) => r.status === "install-failed");
 
   console.log(
-    `\nDone. loaded=${loaded.length} noModels=${noModels.length} ` +
+    `\nDone. auditedSubgraphs=${audited.length} loaded=${loaded.length} noModels=${noModels.length} ` +
       `bootFailed=${failed.length} installFailed=${installFailed.length}`,
   );
   if (failed.length) {

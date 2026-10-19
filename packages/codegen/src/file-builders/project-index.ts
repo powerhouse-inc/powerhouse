@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Project } from "ts-morph";
-import { getOrCreateDirectory, getOrCreateSourceFile } from "utils";
+import { getOrCreateSourceFile, projectDirOf } from "utils";
 const AI_TOOLS_MODULE_SPECIFIER = "./ai/tools.js";
 
 /**
@@ -11,11 +11,7 @@ const AI_TOOLS_MODULE_SPECIFIER = "./ai/tools.js";
  * this package offers to the in-browser AI assistant.
  */
 export function syncProjectAiToolsExport(project: Project): void {
-  const { directory: documentModelsDir } = getOrCreateDirectory(
-    project,
-    "document-models",
-  );
-  const projectDir = documentModelsDir.getParentOrThrow().getPath();
+  const projectDir = projectDirOf(project);
   const indexPath = join(projectDir, "index.ts");
   if (!existsSync(indexPath)) return;
   const { sourceFile } = getOrCreateSourceFile(project, indexPath);

@@ -21,6 +21,7 @@ import {
   getDbClient,
   type DocumentPermissionDatabase,
 } from "../src/utils/db.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 describe("ReactorSubgraph Permission Checks", () => {
   let mockAuthorizationService: Partial<IAuthorizationService>;
@@ -207,7 +208,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: document", () => {
     const callDocument = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
 
@@ -267,7 +268,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     };
 
     const callJobStatus = (ctx: any) =>
-      (reactorSubgraph.resolvers.Query as any)?.jobStatus(
+      (resolversOf(reactorSubgraph).Query as any)?.jobStatus(
         null,
         { jobId: "job-1" },
         ctx,
@@ -347,7 +348,8 @@ describe("ReactorSubgraph Permission Checks", () => {
 
   describe("Query: evaluateActions", () => {
     const callEvaluateActions = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.evaluateActions;
+      const query = (resolversOf(reactorSubgraph).Query as any)
+        ?.evaluateActions;
       return query(
         null,
         {
@@ -396,7 +398,8 @@ describe("ReactorSubgraph Permission Checks", () => {
     it("should decide for the authenticated caller, not a requested subject", async () => {
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
-      const query = (reactorSubgraph.resolvers.Query as any)?.evaluateActions;
+      const query = (resolversOf(reactorSubgraph).Query as any)
+        ?.evaluateActions;
 
       await query(
         null,
@@ -445,7 +448,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: documentOutgoingRelationships", () => {
     const callDocumentOutgoingRelationships = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)
+      const query = (resolversOf(reactorSubgraph).Query as any)
         ?.documentOutgoingRelationships;
       return query(
         null,
@@ -479,7 +482,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: relationship edges", () => {
     const callOutgoingEdges = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)
+      const query = (resolversOf(reactorSubgraph).Query as any)
         ?.documentOutgoingRelationshipEdges;
       return query(
         null,
@@ -489,7 +492,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     };
 
     const callIncomingEdges = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)
+      const query = (resolversOf(reactorSubgraph).Query as any)
         ?.documentIncomingRelationshipEdges;
       return query(
         null,
@@ -600,7 +603,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: documentIncomingRelationships", () => {
     const callIncomingRelationships = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)
+      const query = (resolversOf(reactorSubgraph).Query as any)
         ?.documentIncomingRelationships;
       return query(
         null,
@@ -661,7 +664,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Query: findDocuments", () => {
     const callFindDocuments = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.findDocuments;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.findDocuments;
       return query(null, { search: { type: "test/document" } }, ctx);
     };
 
@@ -728,7 +731,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Mutation: createDocument", () => {
     const callCreateDocument = (ctx: any, parentIdentifier?: string) => {
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.createDocument;
       return mutation(
         null,
@@ -773,7 +776,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           },
           canCreate: vi.fn().mockReturnValue(true),
         });
-        const mutation = (openSubgraph.resolvers.Mutation as any)
+        const mutation = (resolversOf(openSubgraph).Mutation as any)
           ?.createDocument;
         const ctx = createContext({});
 
@@ -804,7 +807,7 @@ describe("ReactorSubgraph Permission Checks", () => {
           isSupremeAdmin: vi.fn().mockReturnValue(false),
           canCreate: vi.fn().mockReturnValue(false),
         });
-        const mutation = (adminOnlySubgraph.resolvers.Mutation as any)
+        const mutation = (resolversOf(adminOnlySubgraph).Mutation as any)
           ?.createDocument;
         const ctx = createContext({ userAddress: "0xunpermitted" });
 
@@ -843,7 +846,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Mutation: mutateDocument", () => {
     const callMutateDocument = (ctx: any, actions: any[] = []) => {
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.mutateDocument;
       return mutation(null, { documentIdentifier: "doc-123", actions }, ctx);
     };
@@ -884,12 +887,98 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
   });
 
+  describe("Mutation: mutateDocumentAsync", () => {
+    const action = {
+      id: "act-1",
+      type: "SET_NAME",
+      timestampUtcMs: "2026-01-01T00:00:00.000Z",
+      scope: "global",
+      input: { name: "Renamed" },
+    };
+    const callMutateDocumentAsync = (ctx: any) =>
+      (resolversOf(reactorSubgraph).Mutation as any).mutateDocumentAsync(
+        null,
+        { documentIdentifier: "doc-123", actions: [action] },
+        ctx,
+      );
+
+    it("refuses a caller who can read the document but not execute the operation", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
+
+      await expect(
+        callMutateDocumentAsync(createContext({ userAddress: "0xreader" })),
+      ).rejects.toThrow(
+        /^Forbidden: insufficient permissions to execute operation "SET_NAME" on this document$/,
+      );
+      expect(
+        mockAuthorizationService.canMutate,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "SET_NAME", "0xreader");
+      expect(mockReactorClient.executeAsync).not.toHaveBeenCalled();
+    });
+
+    it("queues the operation for a caller who can execute it", async () => {
+      vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
+      vi.mocked(mockReactorClient.executeAsync!).mockResolvedValue({
+        id: "job-123",
+      } as never);
+
+      expect(
+        await callMutateDocumentAsync(
+          createContext({ userAddress: "0xpermitted" }),
+        ),
+      ).toBe("job-123");
+    });
+  });
+
+  describe("PHDocument.operations", () => {
+    const callOperations = (ctx: any) =>
+      (resolversOf(reactorSubgraph).PHDocument as any).operations(
+        { id: "doc-123" },
+        {},
+        ctx,
+      );
+
+    it("refuses a caller who cannot read the document, before fetching its operations", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
+      mockReactorClient.getOperations = vi.fn();
+
+      await expect(
+        callOperations(createContext({ userAddress: "0xoutsider" })),
+      ).rejects.toThrow(
+        /^Forbidden: insufficient permissions to read this document$/,
+      );
+      expect(mockAuthorizationService.canRead).toHaveBeenCalledExactlyOnceWith(
+        "doc-123",
+        "0xoutsider",
+      );
+      expect(mockReactorClient.getOperations).not.toHaveBeenCalled();
+    });
+
+    it("serves the operations to a caller who can read the document", async () => {
+      vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
+      mockReactorClient.getOperations = vi.fn().mockResolvedValue({
+        results: [],
+        options: { limit: 10, cursor: "" },
+      });
+
+      expect(
+        await callOperations(createContext({ userAddress: "0xreader" })),
+      ).toEqual({
+        cursor: null,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        items: [],
+      });
+    });
+  });
+
   // ============================================================
   // Mutation: deleteDocument — drives via canWrite
   // ============================================================
   describe("Mutation: deleteDocument", () => {
     const callDeleteDocument = (ctx: any) => {
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.deleteDocument;
       return mutation(null, { identifier: "doc-123" }, ctx);
     };
@@ -985,7 +1074,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     };
 
     const callExecuteBatch = (jobs: unknown[], ctx: any) => {
-      const mutation = (buildBatchSubgraph().resolvers.Mutation as any)
+      const mutation = (resolversOf(buildBatchSubgraph()).Mutation as any)
         ?.executeBatch;
       return mutation(null, { jobs }, ctx);
     };
@@ -1317,7 +1406,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Mutation: moveRelationship", () => {
     const callMoveRelationship = (ctx: any) => {
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.moveRelationship;
       return mutation(
         null,
@@ -1366,7 +1455,7 @@ describe("ReactorSubgraph Permission Checks", () => {
   // ============================================================
   describe("Mutation: updateRelationship", () => {
     const callUpdateRelationship = (ctx: any) => {
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.updateRelationship;
       return mutation(
         null,
@@ -1434,7 +1523,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       ctx: any,
       documentIds: string[] = [],
     ) => {
-      const mutation = (subgraph.resolvers.Mutation as any)?.touchChannel;
+      const mutation = (resolversOf(subgraph).Mutation as any)?.touchChannel;
       return mutation(null, touchArgs(documentIds), ctx);
     };
 
@@ -1707,7 +1796,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     const callPoll = (subgraph: ReactorSubgraph, ctx: any) => {
-      const query = (subgraph.resolvers.Query as any)?.pollSyncEnvelopes;
+      const query = (resolversOf(subgraph).Query as any)?.pollSyncEnvelopes;
       return query(
         null,
         { channelId: "channel-1", outboxAck: 0, outboxLatest: 0 },
@@ -2214,7 +2303,8 @@ describe("ReactorSubgraph Permission Checks", () => {
       ctx: any,
       operations: ReturnType<typeof operationFor>[] | null,
     ) => {
-      const mutation = (subgraph.resolvers.Mutation as any)?.pushSyncEnvelopes;
+      const mutation = (resolversOf(subgraph).Mutation as any)
+        ?.pushSyncEnvelopes;
       return mutation(null, pushArgs(operations), ctx);
     };
 
@@ -2542,7 +2632,7 @@ describe("ReactorSubgraph Permission Checks", () => {
 
     it("should allow document reads for any user (including anonymous)", async () => {
       const ctx = createContext({});
-      const query = (openSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(openSubgraph).Query as any)?.document;
 
       const result = await query(null, { identifier: "doc-123" }, ctx);
 
@@ -2551,7 +2641,8 @@ describe("ReactorSubgraph Permission Checks", () => {
 
     it("should allow mutations for any user (including anonymous)", async () => {
       const ctx = createContext({});
-      const mutation = (openSubgraph.resolvers.Mutation as any)?.deleteDocument;
+      const mutation = (resolversOf(openSubgraph).Mutation as any)
+        ?.deleteDocument;
 
       const result = await mutation(null, { identifier: "doc-123" }, ctx);
 
@@ -2560,7 +2651,7 @@ describe("ReactorSubgraph Permission Checks", () => {
 
     it("should return all findDocuments items without per-item filtering", async () => {
       const ctx = createContext({});
-      const query = (openSubgraph.resolvers.Query as any)?.findDocuments;
+      const query = (resolversOf(openSubgraph).Query as any)?.findDocuments;
 
       const result = await query(null, { search: {} }, ctx);
 
@@ -2576,7 +2667,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xpermitted" });
 
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       const result = await query(null, { identifier: "child-doc" }, ctx);
 
       expect(result).toBeDefined();
@@ -2593,7 +2684,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xadmin" });
 
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       // Should throw an error (not Forbidden, but a processing error)
       await expect(
@@ -2608,7 +2699,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xadmin" });
 
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       // The resolver throws when trying to convert null document to GraphQL
       await expect(
@@ -2619,7 +2710,7 @@ describe("ReactorSubgraph Permission Checks", () => {
     it("should handle unauthenticated user (no user address) — canRead false → Forbidden", async () => {
       const ctx = createContext({});
 
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       await expect(query(null, { identifier: "doc-123" }, ctx)).rejects.toThrow(
         "Forbidden",
@@ -2639,7 +2730,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xnonowner" });
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       await expect(query(null, { identifier: "my-slug" }, ctx)).rejects.toThrow(
         "Forbidden",
@@ -2662,7 +2753,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canRead!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xowner" });
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       const result = await query(null, { identifier: "my-slug" }, ctx);
 
@@ -2679,7 +2770,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(false);
       const ctx = createContext({ userAddress: "0xattacker" });
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.mutateDocument;
 
       await expect(
@@ -2702,7 +2793,7 @@ describe("ReactorSubgraph Permission Checks", () => {
         new Error("Document not found: ghost"),
       );
       const ctx = createContext({ userAddress: "0xuser" });
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
 
       const error = await query(null, { identifier: "ghost" }, ctx).catch(
         (e: Error) => e,
@@ -2719,7 +2810,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xwriter" });
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.deleteDocument;
 
       await mutation(null, { identifier: "my-slug" }, ctx);
@@ -2740,7 +2831,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xwriter" });
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.deleteDocuments;
 
       await mutation(
@@ -2765,7 +2856,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       );
       vi.mocked(mockAuthorizationService.canWrite!).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xwriter" });
-      const mutation = (reactorSubgraph.resolvers.Mutation as any)
+      const mutation = (resolversOf(reactorSubgraph).Mutation as any)
         ?.moveRelationship;
 
       await mutation(
@@ -2801,7 +2892,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       };
       const openSubgraph = buildSubgraph(openAuthSvc);
       const ctx = createContext({ userAddress: "0xanyone" });
-      const query = (openSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(openSubgraph).Query as any)?.document;
 
       await query(null, { identifier: "any-slug" }, ctx);
 

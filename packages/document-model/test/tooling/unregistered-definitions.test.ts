@@ -63,8 +63,18 @@ const CODE_FIRST_CUSTOMER = {
 };
 
 const CODE_FIRST_ORDERS = {
-  "subgraphs/orders.ts":
-    'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});',
+  "document-models/orders/index.ts":
+    'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});',
+};
+
+const RETURNS_MODEL = {
+  "document-models/returns/index.ts":
+    'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});',
+};
+
+const CLASS_SUBGRAPH = {
+  "subgraphs/orders/index.ts":
+    'import { BaseSubgraph } from "@powerhousedao/reactor-api";\nexport class OrdersSubgraph extends BaseSubgraph {\n  static override readonly subgraphName = "orders";\n}',
 };
 
 describe("unregistered code-first definitions", () => {
@@ -83,7 +93,7 @@ describe("unregistered code-first definitions", () => {
         mode: "code-first",
         entries: [
           { specifier: "./document-models/customer/index.ts" },
-          { specifier: "./subgraphs/orders.ts" },
+          { specifier: "./document-models/orders/index.ts" },
         ],
       },
       { ...SCHEMA_FIRST_INVOICE, ...CODE_FIRST_CUSTOMER, ...CODE_FIRST_ORDERS },
@@ -91,11 +101,11 @@ describe("unregistered code-first definitions", () => {
     expect(unregistered(root)).toEqual([]);
   });
 
-  it("names a model and a subgraph a package without definitionSources leaves out", () => {
+  it("names a model a package without definitionSources leaves out, and never a subgraph", () => {
     const root = packageWith(undefined, {
       ...SCHEMA_FIRST_INVOICE,
       ...CODE_FIRST_CUSTOMER,
-      ...CODE_FIRST_ORDERS,
+      ...CLASS_SUBGRAPH,
     });
     expect(unregistered(root)).toEqual([
       {
@@ -104,11 +114,12 @@ describe("unregistered code-first definitions", () => {
         repair:
           'Set definitionSources in powerhouse.config.json to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./document-models/customer/index.ts" }] }. Schema-first models keep generating from their model documents.',
       },
+    ]);
+    expect(findCodeFirstDefinitions(root)).toEqual([
       {
-        message:
-          "./subgraphs/orders.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
-        repair:
-          'Set definitionSources in powerhouse.config.json to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./subgraphs/orders.ts" }] }. Schema-first models keep generating from their model documents.',
+        kind: "document-model",
+        unit: "./document-models/customer/",
+        specifier: "./document-models/customer/index.ts",
       },
     ]);
   });
@@ -123,31 +134,30 @@ describe("unregistered code-first definitions", () => {
       {
         ...CODE_FIRST_CUSTOMER,
         ...CODE_FIRST_ORDERS,
-        "subgraphs/returns.ts":
-          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});',
+        ...RETURNS_MODEL,
         "src/definitions.ts":
-          'export * from "../document-models/customer/index.js";\nexport { default as orders } from "../subgraphs/orders";',
+          'export * from "../document-models/customer/index.js";\nexport { default as orders } from "../document-models/orders";',
       },
     );
     expect(unregistered(root).map(({ message }) => message)).toEqual([
-      "./subgraphs/returns.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
+      "./document-models/returns/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
     ]);
   });
 
   it("reads declarations from imports, not from comments, and skips dependencies", () => {
     const root = packageWith(undefined, {
       ...SCHEMA_FIRST_INVOICE,
-      "subgraphs/invoice/notes.ts":
-        "// Example: defineSubgraph({ name: 'x' })\nexport const notes = 'defineDocumentModel(';",
-      "subgraphs/node_modules/dep/index.ts":
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";',
-      "subgraphs/commented.ts":
-        '// import { defineSubgraph } from "@powerhousedao/reactor-api";\nimport { type defineSubgraph } from "@powerhousedao/reactor-api";\nexport const usage = \'import { defineSubgraph } from "@powerhousedao/reactor-api"\';',
-      "subgraphs/aliased.ts":
-        'import { defineSubgraph as make } from "@powerhousedao/reactor-api";\nexport default make({});',
+      "document-models/notes/index.ts":
+        "// Example: defineDocumentModel({ name: 'x' })\nexport const notes = 'defineDocumentModel(';",
+      "document-models/node_modules/dep/index.ts":
+        'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});',
+      "document-models/commented/index.ts":
+        '// import { defineDocumentModel } from "document-model";\nimport { type defineDocumentModel } from "document-model";\nexport const usage = \'import { defineDocumentModel } from "document-model"\';',
+      "document-models/aliased/index.ts":
+        'import { defineDocumentModel as make } from "document-model";\nexport default make({});',
     });
     expect(unregistered(root).map(({ message }) => message)).toEqual([
-      "./subgraphs/aliased.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
+      "./document-models/aliased/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
     ]);
   });
 
@@ -161,8 +171,7 @@ describe("unregistered code-first definitions", () => {
       {
         ...CODE_FIRST_CUSTOMER,
         ...CODE_FIRST_ORDERS,
-        "subgraphs/returns.ts":
-          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});',
+        ...RETURNS_MODEL,
         "document-models/customer/helper.ts": "export const helper = 1;",
         "src/definitions.ts": [
           'import { helper } from "../document-models/customer/helper.js";',
@@ -170,9 +179,9 @@ describe("unregistered code-first definitions", () => {
           '// export * from "../document-models/customer/index.js";',
           'export { type family } from "../document-models/customer/index.js";',
           "export const hint = 'export * from \"../document-models/customer/index.js\"';",
-          "export const orders = (await import(`../subgraphs/orders.js`)).default",
+          "export const orders = (await import(`../document-models/orders/index.js`)).default",
           "export type Returns = string",
-          'export * from "../subgraphs/returns.js"',
+          'export * from "../document-models/returns/index.js"',
         ].join("\n"),
       },
     );
@@ -193,7 +202,7 @@ describe("unregistered code-first definitions", () => {
         "src/index.ts": [
           'export const accept = "image/*";',
           "export const path = `${accept}//`;",
-          'export * from "../subgraphs/orders.js";',
+          'export * from "../document-models/orders/index.js";',
           "/** Docs. */",
         ].join("\n"),
       },
@@ -206,17 +215,20 @@ describe("unregistered code-first definitions", () => {
       {
         formatVersion: 1,
         mode: "code-first",
-        entries: [{ specifier: "./subgraphs" }],
+        entries: [{ specifier: "./document-models" }],
       },
       CODE_FIRST_ORDERS,
     );
-    symlinkSync(join(root, "missing.ts"), join(root, "subgraphs", "old.ts"));
+    symlinkSync(
+      join(root, "missing.ts"),
+      join(root, "document-models", "orders", "old.ts"),
+    );
     mkdirSync(join(root, "document-models", "locked"), { recursive: true });
     const locked = join(root, "document-models", "locked");
     chmodSync(locked, 0o000);
     try {
       expect(unregistered(root).map(({ message }) => message)).toEqual([
-        "./subgraphs/orders.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
+        "./document-models/orders/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
       ]);
     } finally {
       chmodSync(locked, 0o755);
@@ -234,7 +246,7 @@ describe("unregistered code-first definitions", () => {
     );
     mkdirSync(join(root, "src"));
     symlinkSync(
-      join(root, "subgraphs", "orders.ts"),
+      join(root, "document-models", "orders", "index.ts"),
       join(root, "src", "orders.ts"),
     );
     expect(unregistered(root)).toEqual([]);
@@ -265,16 +277,16 @@ describe("unregistered code-first definitions", () => {
 
   it("counts a factory call, not an import of the factory", () => {
     const root = packageWith(undefined, {
-      "subgraphs/helpers.ts":
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport { defineSubgraph };\nexport type Builder = typeof defineSubgraph<[]>;',
-      "subgraphs/typed.ts":
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport const typed = defineSubgraph<{ name: string }>({ name: "typed" });',
-      "subgraphs/namespaced.ts":
-        'import * as reactor from "@powerhousedao/reactor-api";\nexport default reactor.defineSubgraph({});',
+      "document-models/helpers/index.ts":
+        'import { defineDocumentModel } from "document-model";\nexport { defineDocumentModel };\nexport type Builder = typeof defineDocumentModel<[]>;',
+      "document-models/typed/index.ts":
+        'import { defineDocumentModel } from "document-model";\nexport const typed = defineDocumentModel<{ name: string }>({ name: "typed" });',
+      "document-models/namespaced/index.ts":
+        'import * as dm from "document-model";\nexport default dm.defineDocumentModel({});',
     });
     expect(unregistered(root).map(({ message }) => message)).toEqual([
-      "./subgraphs/namespaced.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
-      "./subgraphs/typed.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
+      "./document-models/namespaced/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
+      "./document-models/typed/ declares a code-first document model that definitionSources does not list, so the package leaves it out.",
     ]);
   });
 
@@ -287,12 +299,12 @@ describe("unregistered code-first definitions", () => {
       },
       {
         ...CODE_FIRST_ORDERS,
-        "subgraphs/returns.ts":
-          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport const type = defineSubgraph({});',
+        "document-models/returns/index.ts":
+          'import { defineDocumentModel } from "document-model";\nexport const type = defineDocumentModel({});',
         "src/index.ts": [
           "export const special = /[/*]/;",
-          'export * from "../subgraphs/orders.js";',
-          'export { type as Returns } from "../subgraphs/returns.js";',
+          'export * from "../document-models/orders/index.js";',
+          'export { type as Returns } from "../document-models/returns/index.js";',
         ].join("\n"),
       },
     );
@@ -301,8 +313,8 @@ describe("unregistered code-first definitions", () => {
   });
 
   it("skips test files and follows index.mts and .jsx specifiers through escaped regular expressions", () => {
-    const subgraph =
-      'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});';
+    const model =
+      'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});';
     const root = packageWith(
       {
         formatVersion: 1,
@@ -310,15 +322,15 @@ describe("unregistered code-first definitions", () => {
         entries: [{ specifier: "./src/index.ts" }],
       },
       {
-        "subgraphs/orders/orders.test.ts": subgraph,
-        "subgraphs/orders/__tests__/fixture.ts": subgraph,
-        "subgraphs/views/index.mts": subgraph,
-        "subgraphs/view.tsx": subgraph,
+        "document-models/orders/orders.test.ts": model,
+        "document-models/orders/__tests__/fixture.ts": model,
+        "document-models/views/index.mts": model,
+        "document-models/view/view.tsx": model,
         "src/index.ts": [
           "const tick = /\\`/;",
           "const star = /a\\/*/;",
-          'export * from "../subgraphs/views";',
-          'export * from "../subgraphs/view.jsx";',
+          'export * from "../document-models/views";',
+          'export * from "../document-models/view/view.jsx";',
         ].join("\n"),
       },
     );
@@ -326,28 +338,12 @@ describe("unregistered code-first definitions", () => {
     expect(findCodeFirstDefinitions(root)).toHaveLength(2);
   });
 
-  it("treats each subgraph module in a folder as its own definition", () => {
-    const subgraph =
-      'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});';
-    const root = packageWith(
-      {
-        formatVersion: 1,
-        mode: "code-first",
-        entries: [{ specifier: "./subgraphs/orders/a.ts" }],
-      },
-      { "subgraphs/orders/a.ts": subgraph, "subgraphs/orders/b.ts": subgraph },
-    );
-    expect(unregistered(root).map(({ message }) => message)).toEqual([
-      "./subgraphs/orders/b.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out.",
-    ]);
-  });
-
   it("asks a code-first package to add the entry it is missing", () => {
     const root = packageWith(
       {
         formatVersion: 1,
         mode: "code-first",
-        entries: [{ specifier: "./subgraphs/orders.ts" }],
+        entries: [{ specifier: "./document-models/orders/index.ts" }],
       },
       { ...CODE_FIRST_CUSTOMER, ...CODE_FIRST_ORDERS },
     );
@@ -369,7 +365,7 @@ describe("unregistered code-first definitions", () => {
     const diagnostics = unregisteredDefinitionDiagnostics(
       resolveDefinitionSelection({
         configFile: join(root, "powerhouse.config.json"),
-        cliSources: ["./subgraphs/orders.ts"],
+        cliSources: ["./document-models/orders/index.ts"],
       }),
     );
     expect(

@@ -290,11 +290,11 @@ Handle `DELETE_DOCUMENT` and `PURGE_DOCUMENT` the same way, before anything that
 
 `RelationalDbProcessor` has three helpers for this:
 
-| Method                           | What it does                                                                                                           |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Method                           | What it does                                                                                                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `deleteDocumentRows(documentId)` | Deletes the document's rows from every table in the processor's namespace with a `document_id` or `documentId` column |
 | `isNamespaceDrive(documentId)`   | `true` when `documentId` is the processor's drive and no other drive shares its namespace                             |
-| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                 |
+| `dropNamespace()`                | Drops the processor's namespace with every table in it                                                                |
 
 A table without a `document_id` or `documentId` column is not touched by `deleteDocumentRows`. Delete its rows yourself in the same branch.
 
@@ -321,67 +321,54 @@ A subgraph is a GraphQL schema that exposes your processed data to clients. It:
 - Supports both queries (reading data) and mutations (modifying data)
 - Can join data across multiple processors and document types
 
-### Configure the Subgraph
+### Configure the subgraph
 
-Open `./subgraphs/todo/schema.ts` and configure the schema:
+Replace `subgraphs/todo/index.ts` with the following code. It declares the read model and query together; the generated `subgraphs/todo/schema.ts` helper is unused by this example. Use the same namespace as `TodoIndexerProcessor.getNamespace(driveId)` in your processor.
 
-```ts
-import { gql } from "graphql-tag";
-import type { DocumentNode } from "graphql";
+```typescript
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
 
-export const schema: DocumentNode = gql`
-  # Define the structure of a todo item as returned by GraphQL
-  type TodoListEntry {
-    task: String! # The task description (! means required/non-null)
-    status: Boolean! # The completion status (true = done, false = pending)
-  }
+interface TodoReadModel {
+  todo: { task: string; status: boolean };
+}
 
-  # Define available queries
-  type Query {
-    todos(driveId: ID!): [TodoListEntry] # Get array of todos for a specific drive
-  }
-`;
-```
+const TodoEntry = ph.object("TodoListEntry", {
+  fields: {
+    task: ph.String({ required: true }),
+    status: ph.Boolean({ required: true }),
+  },
+});
 
-Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
+export class TodoSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "todo";
 
-```ts
-// subgraphs/search-todos/resolvers.ts
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
-import { type TodoListDocument } from "../../document-models/todo-list/index.js";
-import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
-
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-  const relationalDb = subgraph.relationalDb;
-
-  return {
-    Query: {
-      todos: {
-        // Resolver function for the "todos" query
-        // Arguments: parent object, query arguments, context, GraphQL info
-        resolve: async (_: any, args: { driveId: string }) => {
-          // Query the database using the processor's static query method
-          // This gives us access to the namespaced database for the specific drive
-          const todos = await TodoIndexerProcessor.query(
-            args.driveId,
-            relationalDb,
-          )
-            .selectFrom("todo") // Select from the "todo" table
-            .selectAll() // Get all columns
-            .execute(); // Execute the query
-
-          // Transform database results to match GraphQL schema
-          return todos.map((todo) => ({
-            task: todo.task, // Map database "task" column to GraphQL "task" field
-            status: todo.status, // Map database "status" column to GraphQL "status" field
-          }));
+  static override getSchema(schema: SchemaBuilder<TodoSubgraph>) {
+    return [
+      schema.query("todos", {
+        args: { driveId: ph.ID({ required: true }) },
+        returns: ph.list(ph.ref(TodoEntry)),
+        resolve: async ({ args, subgraph, request }) => {
+          await subgraph.assertCanRead(args.driveId, request);
+          const db = subgraph.relationalDb.queryNamespace<TodoReadModel>(
+            `TodoIndexerProcessor_${args.driveId.replaceAll("-", "_")}`,
+          );
+          return db.selectFrom("todo").selectAll().execute();
         },
-      },
-    },
-  };
-};
+      }),
+    ];
+  }
+}
 ```
+
+This tutorial's table contains operation labels. The drive check is suitable only if your application grants access to all these rows with that drive. For document-specific data, store the source document id on each row and filter with `subgraph.listsDocument(id, request)` before returning it.
+
+
+The host discovers the exported class through the package's `subgraphs` entry. Subgraphs do not belong in `definitionSources`. For an existing package, run `ph migrate` and follow the [migration guide](../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).
 
 ## Now query the data via the supergraph.
 
@@ -538,17 +525,16 @@ Result:
 **Dual data access**: You can now query both the original document state and the processed relational data in a single GraphQL request.
 
 ```graphql
-query GetTodoList($docId: PHID!, $driveId: PHID) {
+query GetTodoList($docId: PHID!, $driveId: PHID, $todosDriveId: ID!) {
+  todos(driveId: $todosDriveId) {
+    task
+    status
+  }
   TodoList {
     getDocument(docId: $docId, driveId: $driveId) {
-      id
-      name
-      revision
       state {
         items {
-          id
           text
-          checked
         }
       }
     }
@@ -561,6 +547,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
+  "todosDriveId": "fc29ec1b-9934-410b-8682-4731b810d441",
   "docId": "pb37thUvB2kq7oJ_XS7XmyIOzApQ4g-2Bj9YsyfB0dI"
 }
 ```
@@ -585,23 +572,21 @@ Response:
       }
     ],
     "TodoList": {
-      "getDocument": [
-        {
-          "state": {
-            "items": [
-              {
-                "text": "complete mutation"
-              },
-              {
-                "text": "add another todo"
-              },
-              {
-                "text": "Now check the data"
-              }
-            ]
-          }
+      "getDocument": {
+        "state": {
+          "items": [
+            {
+              "text": "complete mutation"
+            },
+            {
+              "text": "add another todo"
+            },
+            {
+              "text": "Now check the data"
+            }
+          ]
         }
-      ]
+      }
     }
   }
 }

@@ -73,7 +73,7 @@ Now, let's implement a specific example for the to-do list we've been working on
 This example demonstrates how to create a todo-list Drive-app application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
-:::warning[Heads-up!]
+::::warning[Heads-up!]
 If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema).
 
 If not, you can follow the shortened guide below to prepare your project for this tutorial.
@@ -129,7 +129,7 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 
 </details>
-:::
+::::
 
 ## Generate the Drive-app
 

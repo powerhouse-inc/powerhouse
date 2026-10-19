@@ -7,8 +7,8 @@ export {
   type PrivacySubgraphContext,
 } from "./resolvers.js";
 export {
-  createPrivacySubgraph,
   PRIVACY_SUBGRAPH_NAME,
   PrivacySubgraphOpenPolicyError,
-  type PrivacySubgraph,
+  refuseAnonymousAdmins,
 } from "./subgraph.js";
+export { privacyResolverCoordinates } from "./resolver-coordinates.js";

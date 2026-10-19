@@ -5,6 +5,7 @@ import {
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { formatDefinitionDiagnostic } from "document-model/tooling";
 import { readPackage } from "read-pkg";
 import type { BuildArgs, PublishArgs } from "../types.js";
 import { createGenerationSteps } from "./definitions/build-steps.js";
@@ -149,7 +150,7 @@ export async function runPrepack(
   }
   log(`▶ Running a release check: ${retained.reason}.\n`);
   const result = await runBuild(args, { ...options, log });
-  await logRefusal(result, log);
+  await logBuildReport(result, log);
   return result;
 }
 
@@ -191,11 +192,19 @@ export async function runPublishCheck(
   };
 }
 
-export async function logRefusal(
+export async function logBuildReport(
   result: GenerationResult,
   log: (text: string) => void = writeStderr,
 ): Promise<void> {
-  if (result.status === "ok" || result.report === undefined) return;
+  if (result.report === undefined) return;
+  if (result.status === "ok") {
+    for (const diagnostic of result.report.diagnostics) {
+      if (diagnostic.severity === "warning") {
+        log(`⚠ ${formatDefinitionDiagnostic(diagnostic)}\n`);
+      }
+    }
+    return;
+  }
   const { renderHuman } = await import("./model-check.js");
   log(`${renderHuman(result.report)}\n`);
 }

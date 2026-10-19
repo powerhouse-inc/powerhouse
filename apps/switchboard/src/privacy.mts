@@ -1,17 +1,11 @@
-import type {
-  InProcessReactorModule,
-  IReactorClient,
-} from "@powerhousedao/reactor";
+import type { InProcessReactorModule } from "@powerhousedao/reactor";
 import {
   AuthorizationPolicy,
   PrivacyPermissionAdapter,
-  type DocumentPermissionService,
-  type GraphQLManager,
-  type IAuthorizationService,
+  type SubgraphArgs,
 } from "@powerhousedao/reactor-api";
 import {
   createModuleErasure,
-  createPrivacySubgraph,
   DisclosureService,
   MIN_DEPLOYMENT_SECRET_BYTES,
   registerSubjectDocumentsReadModel,
@@ -20,6 +14,8 @@ import {
 } from "@powerhousedao/reactor-privacy";
 import type { ISigner } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
+
+import { PrivacySubgraph } from "./privacy-subgraph.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -104,13 +100,12 @@ export async function startPrivacy(deps: {
   config: Extract<ResolvedPrivacy, { enabled: true }>;
   reactorModule: InProcessReactorModule | undefined;
   signer: ISigner | undefined;
-  authorizationService: IAuthorizationService;
-  documentPermissionService: DocumentPermissionService | undefined;
-  graphqlManager: GraphQLManager;
-  reactorClient: IReactorClient;
+  subgraphArgs: SubgraphArgs;
   logger: ILogger;
 }): Promise<RunningPrivacy> {
-  const { config, reactorModule, authorizationService } = deps;
+  const { config, reactorModule, subgraphArgs } = deps;
+  const { authorizationService, documentPermissionService, graphqlManager } =
+    subgraphArgs;
   if (authorizationService.config.policy === AuthorizationPolicy.OPEN) {
     throw new PrivacyBootError(
       "PH_PRIVACY_ENABLED is refused under the OPEN authorization policy: every caller, anonymous included, would administer erasure. Enable authentication (AUTH_ENABLED=true with ADMINS) first.",
@@ -127,8 +122,8 @@ export async function startPrivacy(deps: {
     );
   }
 
-  const permissions = deps.documentPermissionService
-    ? new PrivacyPermissionAdapter(deps.documentPermissionService)
+  const permissions = documentPermissionService
+    ? new PrivacyPermissionAdapter(documentPermissionService)
     : undefined;
   const { service, scheduler } = createModuleErasure(reactorModule, {
     deploymentSecret: config.deploymentSecret,
@@ -148,8 +143,7 @@ export async function startPrivacy(deps: {
   );
   let subgraph;
   try {
-    subgraph = createPrivacySubgraph({
-      authorizationService,
+    subgraph = new PrivacySubgraph(subgraphArgs, {
       erasure: service,
       disclosure,
     });
@@ -162,16 +156,7 @@ export async function startPrivacy(deps: {
   await registerSubjectDocumentsReadModel(reactorModule, {
     deploymentSecret: config.deploymentSecret,
   });
-  await deps.graphqlManager.registerSubgraphInstance(
-    {
-      ...subgraph,
-      path: deps.graphqlManager.getBasePath(),
-      reactorClient: deps.reactorClient,
-      relationalDb: undefined as never,
-    },
-    "graphql",
-    false,
-  );
+  await graphqlManager.registerSubgraphInstance(subgraph, "graphql", false);
 
   scheduler.start();
   deps.logger.info("Privacy add-on started: subject index, erasure scheduler");

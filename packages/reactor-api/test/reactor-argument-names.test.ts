@@ -25,6 +25,7 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../src/utils/create-schema.js";
+import { resolversOf, typeDefsOf } from "./utils/served-subgraph.js";
 
 // The CommonJS build @apollo/subgraph uses; vite would hand this file the ESM one.
 const {
@@ -209,7 +210,7 @@ function buildSubgraph(calls: Call[]): ReactorSubgraph {
 }
 
 function buildSchema(subgraph: ReactorSubgraph): GraphQLSchema {
-  return createSchema([], subgraph.resolvers, subgraph.typeDefs);
+  return createSchema([], resolversOf(subgraph), typeDefsOf(subgraph));
 }
 
 const ctx = { headers: {}, db: null } as unknown as Context;
@@ -296,8 +297,8 @@ describe("reactor subgraph argument names", () => {
             name: "r",
             typeDefs: buildSubgraphSchemaModule(
               [],
-              subgraph.resolvers,
-              subgraph.typeDefs,
+              resolversOf(subgraph),
+              typeDefsOf(subgraph),
             ).typeDefs,
             url: "http://localhost/r",
           },

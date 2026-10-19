@@ -427,8 +427,6 @@ Generate a subgraph
 
 **Extract** - Write a powerhouse/subgraph spec for each existing subgraph into specs/subgraphs/ - Usage: `--extract, -x`
 
-**Code First** - Declare the new subgraph in TypeScript and register it in definitionSources and powerhouse.manifest.json. Use with --name. - Usage: `--code-first`
-
 **Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -673,9 +671,11 @@ it never replaces the Vetra drive.
 Compile, check, bundle, and verify this package, then replace its output.
 
 A failed build leaves the published tree unchanged. TypeScript runs first; type errors require confirmation or --ignore-type-errors. For a
-code-first package, the definition check runs against that compilation, and a
-project that installs the packed tarball imports the bundles before the build
-promotes anything. Pieces are bundled as self-contained modules under dist/node/pieces,
+code-first package or a package with subgraphs, the definition check runs
+against that compilation, and a project that installs the packed tarball
+imports the bundles before the build promotes anything. Subgraphs are read from
+subgraphs/index.ts and subgraphs/&lt;name&gt;/index.ts, and an old-style or nameless
+subgraph fails the build with a ph migrate hint. Pieces are bundled as self-contained modules under dist/node/pieces,
 and shared browser dependencies are externalized unless --no-shared-deps is set.
 
 Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
@@ -956,9 +956,11 @@ NOTE: You must run `ph connect build` first
 Compile, check, bundle, and verify this package, then replace its output.
 
 A failed build leaves the published tree unchanged. TypeScript runs first; type errors require confirmation or --ignore-type-errors. For a
-code-first package, the definition check runs against that compilation, and a
-project that installs the packed tarball imports the bundles before the build
-promotes anything. Pieces are bundled as self-contained modules under dist/node/pieces,
+code-first package or a package with subgraphs, the definition check runs
+against that compilation, and a project that installs the packed tarball
+imports the bundles before the build promotes anything. Subgraphs are read from
+subgraphs/index.ts and subgraphs/&lt;name&gt;/index.ts, and an old-style or nameless
+subgraph fails the build with a ph migrate hint. Pieces are bundled as self-contained modules under dist/node/pieces,
 and shared browser dependencies are externalized unless --no-shared-deps is set.
 
 Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.
@@ -1181,6 +1183,8 @@ Run migrations
 ### Flags
 **Force** - Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version. - Usage: `--force, -f`
 
+**Subgraphs Only** - Convert old-style subgraphs without upgrading dependencies or regenerating project files. - Usage: `--subgraphs-only`
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
@@ -1190,7 +1194,11 @@ Run migrations
 Check, inspect, and gate this package's document-model definitions. Use with `check`, `inspect`, or `prepack`.
 
 ## Model Check
-Compile this package's definition sources and report what is wrong with them.
+Compile this package's definition sources and subgraphs and report what is wrong with them.
+
+Subgraphs are read from subgraphs/index.ts and subgraphs/&lt;name&gt;/index.ts,
+whatever definitionSources says. Each class is read through its subgraph
+protocol without being constructed.
 
 `tsc` cannot run this check, because a code-first declaration compiles when its
 module is evaluated and `tsc` never evaluates modules. Run it after every edit.
@@ -1324,7 +1332,7 @@ Definition source to select, written as './module.ts' or './module.ts#/exportNam
 
 
 ## Subgraph Inspect
-Print the exact structured definition of one compiled subgraph.
+Print the exact structured definition of one compiled subgraph, by its subgraphName.
 
   ph subgraph inspect &lt;name&gt; --json
 

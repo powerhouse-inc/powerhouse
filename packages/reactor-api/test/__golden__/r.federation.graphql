@@ -1,0 +1,936 @@
+scalar JSONObject
+
+scalar AttachmentRef
+
+scalar Unknown
+
+scalar Address
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar Amount_Percentage
+
+scalar EmailAddress
+
+scalar Date
+
+scalar DateTime
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+input PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input SearchFilterInput {
+  type: String
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by type or parentId.")
+}
+
+input OperationsFilterInput {
+  documentIdOrSlug: String
+  documentId: String @deprecated(reason: "Use documentIdOrSlug.")
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+input DocumentOperationsFilterInput {
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
+enum PropagationMode {
+  CASCADE
+  ORPHAN
+}
+
+enum DocumentChangeType {
+  CREATED
+  DELETED
+  UPDATED
+  PARENT_ADDED
+  PARENT_REMOVED
+  CHILD_ADDED
+  CHILD_REMOVED
+}
+
+type DocumentModelGlobalState {
+  id: String!
+  name: String!
+  namespace: String
+  version: String
+  specification: JSONObject!
+}
+
+type DocumentModelResultPage {
+  items: [DocumentModelGlobalState!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+type PHDocument {
+  id: String!
+  slug: String
+  preferredEditor: String
+  meta: JSONObject
+  protocolVersions: JSONObject
+  name: String!
+  documentType: String!
+  state: JSONObject!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(filter: DocumentOperationsFilterInput, paging: PagingInput): ReactorOperationResultPage
+}
+
+type PHDocumentResultPage {
+  items: [PHDocument!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DocumentRelationship {
+  sourceId: String!
+  targetId: String!
+  relationshipType: String!
+  metadata: JSONObject
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type DocumentRelationshipResultPage {
+  items: [DocumentRelationship!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type ReactorOperationResultPage {
+  items: [ReactorOperation!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+type DeadLetterInfo {
+  documentId: String!
+  error: String!
+  """
+  How the origin classified the failure. A peer needs this to mirror the origin's
+  quarantine decision; without it a held auth operation would freeze the document
+  on the peer side while the origin kept syncing.
+  """
+  errorType: String
+  jobId: String!
+  branch: String!
+  scopes: [String!]!
+  operationCount: Int!
+}
+
+type PollSyncEnvelopesResult {
+  envelopes: [SyncEnvelope!]!
+  ackOrdinal: Int!
+  deadLetters: [DeadLetterInfo!]!
+  hasMore: Boolean!
+  manifestRevision: String
+  peerManifestRevision: String
+}
+
+type SyncHoldReason {
+  protocol: String!
+  version: Int!
+  peerSupports: [Int!]!
+}
+
+type SyncHold {
+  remoteName: String!
+  documentId: String!
+  branch: String!
+  reason: SyncHoldReason!
+  heldAtUtcMs: String!
+}
+
+type PeerAgreementMember {
+  remoteName: String!
+  announced: Boolean!
+  protocols: JSONObject!
+  features: JSONObject!
+}
+
+type PeerAgreementLimit {
+  protocol: String!
+  remoteNames: [String!]!
+}
+
+type PeerAgreement {
+  collectionId: String!
+  local: JSONObject!
+  members: [PeerAgreementMember!]!
+  limitedBy: [PeerAgreementLimit!]!
+}
+
+type DocumentWithChildren {
+  document: PHDocument!
+  childIds: [String!]!
+}
+
+type CreateDefaults {
+  signaturePolicy: String!
+  protocolVersions: JSONObject!
+}
+
+type MoveRelationshipResult {
+  source: PHDocument!
+  target: PHDocument!
+}
+
+type ConsistencyCoordinate {
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+The write positions a job reached, for read-after-write. Only meaningful once
+the job has completed.
+"""
+type ConsistencyToken {
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinate!]!
+}
+
+"The batch a job was submitted in."
+type JobBatchMeta {
+  batchId: String!
+  batchJobIds: [String!]!
+}
+
+type JobInfo {
+  id: String!
+  """
+  The document the job operates on. Empty for a job this server does not know,
+  which then comes back FAILED with "Job not found".
+  """
+  documentId: String!
+  status: String!
+  """
+  What the job produced, once it has produced anything. Null until then, which
+  is the state every job is in when it is handed back from a submission.
+  """
+  result: JSONObject
+  error: String
+  "The error's class name, such as `DocumentAlreadyExistsError`, when it failed."
+  errorName: String
+  createdAt: DateTime!
+  completedAt: DateTime
+  consistencyToken: ConsistencyToken!
+  meta: JobBatchMeta!
+}
+
+"""
+One job's outcome within a batch, pairing the plan key the caller gave with the
+job that applied it. Mirrors one entry of the `Record<string, JobInfo>` that
+`IReactor.executeBatch` returns (packages/reactor/src/core/types.ts).
+"""
+type BatchJobResult {
+  key: String!
+  job: JobInfo!
+}
+
+"""
+The outcome of a batch mutation, one entry per job the request named. The wire
+shape of `BatchExecutionResult` (`{ jobs }`), keyed on each entry by the plan
+key rather than by position so the client can rebuild the record. The batch is
+not atomic: each job commits on its own and a failed job releases its
+dependents, so each entry's status says what happened to that job, and
+re-submitting re-applies the jobs that succeeded.
+"""
+type BatchExecutionResult {
+  jobs: [BatchJobResult!]!
+}
+
+type DocumentChangeEvent {
+  type: DocumentChangeType!
+  documents: [PHDocument!]!
+  context: DocumentChangeContext
+}
+
+type DocumentChangeContext {
+  parentId: String
+  childId: String
+}
+
+type JobChangeEvent {
+  jobId: String!
+  status: String!
+  """
+  What the job produced, once it has produced anything. Nullable for the same
+  reason as `JobInfo.result`: a job that has not written yet has produced
+  nothing, and an empty object would claim otherwise.
+  """
+  result: JSONObject
+  error: String
+}
+
+type ReactorSignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type ReactorSignerApp {
+  name: String!
+  key: String!
+}
+
+type ReactorSigner {
+  user: ReactorSignerUser
+  app: ReactorSignerApp
+  signatures: [String!]!
+}
+
+type ActionContext {
+  signer: ReactorSigner
+}
+
+type Action {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContext
+}
+
+"""
+One operation an authorization preflight predicts a verdict for.
+
+`input` is what a conditional grant reads, so a candidate standing for a
+filled-in form carries that form's input. Omitting it predicts the verdict an
+empty input earns, not the verdict the filled-in form will get.
+"""
+input ActionCandidateInput {
+  scope: String!
+  type: String!
+  input: JSONObject
+}
+
+enum AuthDecision {
+  ALLOW
+  DENY
+}
+
+"""
+One candidate's predicted verdict. `reason` carries the refusal a DENY is
+recorded with, and is null on an ALLOW.
+"""
+type ActionEvaluation {
+  decision: AuthDecision!
+  reason: String
+}
+
+"""
+The predicted verdicts for a set of candidates, in the order they were given,
+with the aggregates a caller branches on.
+
+The aggregates are redundant -- a verdict is binary -- and all four are returned
+so a caller reads the one its question is phrased in rather than negating
+another. Over no candidates every aggregate is false: nothing is allowed and
+nothing is denied.
+"""
+type ActionEvaluations {
+  evaluations: [ActionEvaluation!]!
+  allAllowed: Boolean!
+  anyAllowed: Boolean!
+  allDenied: Boolean!
+  anyDenied: Boolean!
+}
+
+"""
+An action's context, as a caller submits it.
+
+Declares every field `ActionContext` carries, because an input object rejects a
+field it does not declare: an action stamped with the head it applies to - which
+is what a signing client sends - is refused outright if these are missing, and
+that refusal is a whole-request one, not a per-field one.
+
+`prevOpHash` and `prevOpIndex` are the scope head the action was composed
+against. They are recorded rather than enforced; a signature is verified from
+the params carried in its own tuple, which do not include them.
+"""
+input ActionContextInput {
+  """The index of the last operation in the scope the action applies to."""
+  prevOpIndex: Int
+  """The hash of the state the action applies to."""
+  prevOpHash: String
+  """Covers replay of an operation that would otherwise be a no-op."""
+  nonce: String
+  signer: ReactorSignerInput
+}
+
+input ReactorSignerInput {
+  user: ReactorSignerUserInput
+  app: ReactorSignerAppInput
+  signatures: [String!]!
+}
+
+input ReactorSignerUserInput {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+input ReactorSignerAppInput {
+  name: String!
+  key: String!
+}
+
+input ActionInput {
+  id: String!
+  type: String!
+  timestampUtcMs: String!
+  input: JSONObject!
+  scope: String!
+  context: ActionContextInput
+}
+
+"""
+One mutation job of a batch, mirroring the reactor's `ExecutionJobPlan`
+(packages/reactor/src/core/types.ts). The batch runs its jobs in dependency
+order only, not atomically: each job commits on its own with no batch rollback,
+and a failed job still releases its dependents.
+
+`documentIdOrSlug` is the document the job's actions apply to -- an id that does
+not yet exist when the job's actions create it. `actions` are coerced against
+`ActionInput` and passed through exactly as `execute` does, so a client-signed
+action keeps its signature. `scope` is the single scope every action in the job
+shares, and `dependsOn` names the plan keys this job is ordered after. `branch`
+defaults to `main`.
+"""
+input ExecutionJobInput {
+  key: String!
+  documentIdOrSlug: String!
+  scope: String!
+  branch: String
+  actions: [ActionInput!]!
+  dependsOn: [String!]!
+}
+
+type ReactorOperation {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: Action!
+}
+
+input OperationInput {
+  index: Int!
+  timestampUtcMs: String!
+  hash: String!
+  skip: Int!
+  error: String
+  deniedReason: String
+  id: String
+  action: ActionInput!
+}
+
+type OperationContext {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+input OperationContextInput {
+  documentId: String!
+  documentType: String!
+  scope: String!
+  branch: String!
+  ordinal: Int!
+}
+
+type OperationWithContext {
+  operation: ReactorOperation!
+  context: OperationContext!
+}
+
+input OperationWithContextInput {
+  operation: OperationInput!
+  context: OperationContextInput!
+}
+
+type ChannelMeta {
+  id: String!
+}
+
+input ChannelMetaInput {
+  id: String!
+}
+
+type RemoteCursor {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+input RemoteCursorInput {
+  remoteName: String!
+  cursorOrdinal: Int!
+  lastSyncedAtUtcMs: String
+}
+
+enum SyncEnvelopeType {
+  OPERATIONS
+  ACK
+}
+
+type SyncEnvelope {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMeta!
+  operations: [OperationWithContext!]
+  cursor: RemoteCursor
+  key: String
+  dependsOn: [String!]
+}
+
+input SyncEnvelopeInput {
+  type: SyncEnvelopeType!
+  channelMeta: ChannelMetaInput!
+  operations: [OperationWithContextInput!]
+  cursor: RemoteCursorInput
+  key: String
+  dependsOn: [String!]
+}
+
+input RemoteFilterInput {
+  documentId: [String!]!
+  scope: [String!]!
+  branch: String!
+}
+
+input SyncRefusalInput {
+  documentId: String!
+  branch: String!
+  kind: String
+}
+
+input TouchChannelInput {
+  id: String!
+  name: String!
+  collectionId: String!
+  filter: RemoteFilterInput!
+  sinceTimestampUtcMs: String!
+  manifest: JSONObject
+}
+
+type TouchChannelResult {
+  success: Boolean!
+  ackOrdinal: Int!
+  manifest: JSONObject
+}
+
+type Query {
+  documentModels(namespace: String, paging: PagingInput): DocumentModelResultPage!
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ViewFilterInput): DocumentWithChildren
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage!
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage!
+  documentOutgoingRelationshipEdges(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String, view: ViewFilterInput, paging: PagingInput): DocumentRelationshipResultPage!
+  documentIncomingRelationshipEdges(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String, view: ViewFilterInput, paging: PagingInput): DocumentRelationshipResultPage!
+  findDocuments(search: SearchFilterInput, view: ViewFilterInput, paging: PagingInput): PHDocumentResultPage!
+  jobStatus(jobId: String!): JobInfo
+  documentServed(idOrSlug: String!, view: ViewFilterInput): Boolean!
+  createDefaults(parentIdOrSlug: String): CreateDefaults!
+  documentOperations(filter: OperationsFilterInput!, paging: PagingInput): ReactorOperationResultPage!
+  """
+  Predicts whether the calling subject would be admitted to execute each of a
+  set of candidate operations, without submitting any of them. A UI asks this to
+  disable a control rather than offer an action that fails on submit.
+  
+  The answer is a prediction, not a promise:
+  
+  - Real admission compiles an append condition over everything it read and the
+    store enforces it at write time. A preflight reads no future, so a policy
+    change landing between this answer and the submit changes the verdict. The
+    submit path stays the only authority.
+  - The verdict is evaluated at the stream heads, so it is correct for a
+    candidate about to be submitted. A backdated submission is out of contract;
+    the reactor decides that one by position.
+  - A candidate whose verdict depends on its input has to carry that input, since
+    a conditional grant reads it.
+  
+  The subject is the authenticated caller and cannot be named in the request:
+  answering for an arbitrary subject would disclose what a policy grants
+  somebody else. It carries both the caller's address and the did:key of the app
+  instance whose token authenticated the request, so a policy naming either
+  matches the same principal the write path presents.
+  
+  Requires the reactor's authEnforcement feature flag. Without it the reactor
+  holds no decision model, so this fails with extensions.code
+  AUTH_EVALUATION_UNSUPPORTED rather than guessing.
+  """
+  evaluateActions(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), branch: String, candidates: [ActionCandidateInput!]!): ActionEvaluations!
+  """
+  Polls for sync envelopes from a channel.
+  
+  An operation stored before the API required an action id cannot be
+  represented by this schema, and rather than serving a partial response beside
+  a bare non-null violation, this fails with extensions.code
+  MALFORMED_STORED_OPERATION naming the operation. That code means the failure
+  is worth polling through: the document holding the operation needs repairing,
+  but the channel serves every other document, and a peer that stopped polling
+  would stop receiving those too.
+  """
+  pollSyncEnvelopes(channelId: String!, outboxAck: Int!, outboxLatest: Int!, manifestRevision: String, refusals: [SyncRefusalInput!]): PollSyncEnvelopesResult!
+  syncHolds(remoteName: String, documentId: String): [SyncHold!]!
+  peerAgreement(collectionId: String!): PeerAgreement!
+}
+
+type Mutation {
+  createDocument(document: JSONObject!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): PHDocument!
+  createEmptyDocument(documentType: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): PHDocument!
+  """
+  Applies actions to a document and waits for the result.
+  
+  Each action is coerced against `ActionInput`, so one missing a field the wire
+  declares is refused before any work starts. The id in particular: it is hashed
+  into the operation id and replay dedupes by it, so an action without one is
+  stored under an operation id shared by every id-less operation on the same
+  document, scope and branch.
+  
+  Named for `IReactorClient.execute`, which this is the wire form of. `branch`
+  defaults to `main`.
+  """
+  execute(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), actions: [ActionInput!]!, branch: String): PHDocument!
+  """
+  Submits actions to a document and returns the job that will apply them.
+  
+  Coerced exactly as `execute` is, so a malformed action is refused here rather
+  than surfacing later as a failed job. Returns the job rather than only its id,
+  so a caller has the status and the creation time it would otherwise have to
+  ask for; `result` is null until the job produces one.
+  """
+  executeAsync(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), actions: [ActionInput!]!, branch: String): JobInfo!
+  """
+  Applies multiple mutation jobs in dependency order and waits for all of them,
+  the wire form of `IReactorClient.executeBatch`. Each job's actions are coerced
+  against `ActionInput` exactly as `execute` is, so client-signed actions pass
+  through unchanged, and `dependsOn` orders the jobs. It is synchronous: the jobs
+  are applied and awaited before the result returns, so every returned `JobInfo`
+  is a completed one rather than the pending receipt the in-process reactor hands
+  back. A batch is ordering, not a transaction: each job commits on its own, and
+  a failed job still releases the jobs that depend on it, so any job, before or
+  after a failure, may have committed. A failed job is therefore returned as a
+  FAILED entry with its `error` and `errorName`, beside the final state of every
+  other job, rather than failing the mutation. The mutation itself fails only
+  when no job state can be reported.
+  
+  A job carrying `CREATE_DOCUMENT` must be the batch's only job, with the create
+  as its first action naming the job's document. Its other actions may only be
+  an `UPGRADE_DOCUMENT` of the new document and `ADD_RELATIONSHIP`s targeting
+  it. It is authorized like `createDocument`: write on every source of those
+  relationships, or the right to create when there is none.
+  """
+  executeBatch(jobs: [ExecutionJobInput!]!): BatchExecutionResult!
+  mutateDocument(documentIdentifier: String!, actions: [JSONObject!]!, view: ViewFilterInput): PHDocument! @deprecated(reason: "Use execute. Actions here are untyped, so a malformed one is refused by a hand-written check rather than by the schema, and `view.scopes` is accepted but ignored.")
+  mutateDocumentAsync(documentIdentifier: String!, actions: [JSONObject!]!, view: ViewFilterInput): String! @deprecated(reason: "Use executeAsync, which is typed and returns the job rather than only its id.")
+  renameDocument(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), name: String!, branch: String): PHDocument!
+  setPreferredEditor(documentIdOrSlug: String, documentIdentifier: String @deprecated(reason: "Use documentIdOrSlug."), preferredEditor: String, branch: String): PHDocument!
+  addRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, metadata: JSONObject, branch: String): PHDocument!
+  updateRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, metadata: JSONObject, branch: String): PHDocument!
+  removeRelationship(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, branch: String): PHDocument!
+  moveRelationship(sourceParentIdOrSlug: String, sourceParentIdentifier: String @deprecated(reason: "Use sourceParentIdOrSlug."), targetParentIdOrSlug: String, targetParentIdentifier: String @deprecated(reason: "Use targetParentIdOrSlug."), targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, branch: String): MoveRelationshipResult!
+  deleteDocument(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), propagate: PropagationMode): Boolean!
+  deleteDocuments(idsOrSlugs: [String!], identifiers: [String!] @deprecated(reason: "Use idsOrSlugs."), propagate: PropagationMode): Boolean!
+  touchChannel(input: TouchChannelInput!): TouchChannelResult!
+  pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!, peerManifestRevision: String): Boolean!
+}
+
+type Subscription {
+  documentChanges(search: SearchFilterInput, view: ViewFilterInput): DocumentChangeEvent!
+  jobChanges(jobId: String!): JobChangeEvent!
+}

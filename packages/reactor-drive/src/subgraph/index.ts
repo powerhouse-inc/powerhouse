@@ -5,3 +5,4 @@ export {
   createReactorDriveResolvers,
   type ReactorDriveResolverContext,
 } from "./resolvers.js";
+export { reactorDriveResolverCoordinates } from "./resolver-coordinates.js";

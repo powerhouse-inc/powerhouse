@@ -5,7 +5,7 @@ import type {
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { documentModelSubgraphClass } from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   buildReadGateReactor,
@@ -40,15 +40,14 @@ describe("generated document-model subgraph reads as the caller", () => {
     await client.addRelationship(hub, secret, "related");
     await client.addRelationship(hub, open, "related");
     await client.addRelationship(secret, open, "related");
-    const subgraph = new DocumentModelSubgraph(
+    const subgraph = new (documentModelSubgraphClass(
       documentModelDocumentModelModule as unknown as DocumentModelModule,
-      {
-        reactorClient: client,
-        syncManager: {} as ISyncManager,
-        authorizationService: openAuthorization,
-        graphqlManager: {},
-      } as unknown as SubgraphArgs,
-    );
+    ))({
+      reactorClient: client,
+      syncManager: {} as ISyncManager,
+      authorizationService: openAuthorization,
+      graphqlManager: {},
+    } as unknown as SubgraphArgs);
     const query = (name: string) =>
       (subgraph.queryResolvers as unknown as Record<string, Resolver>)[name];
     const mutation = (name: string) =>

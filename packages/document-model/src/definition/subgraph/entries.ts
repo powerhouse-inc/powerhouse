@@ -24,15 +24,6 @@ import {
   type TypedSubgraphEntry,
 } from "./types.js";
 
-/**
- * The builders an author declares a typed subgraph with.
- *
- * Every builder returns a registered entry, and the entries callback returns
- * the array of them. Nothing is discovered: a resolver that is never returned
- * is never bound, and the compiler says so rather than silently serving a
- * field that nobody implemented.
- */
-
 /** The call the host makes to a field resolver at request time. */
 export type FieldInvocation = {
   readonly parent: unknown;
@@ -115,7 +106,7 @@ export function readEntry(
     failDefinition({
       code: "PH-SG-ENTRY-INVALID",
       path,
-      message: "The entries callback returned something the builders did not.",
+      message: "getSchema returned something the builders did not.",
       received: describeReceived(value),
       repair:
         "Return only values produced by query, mutation, subscription, field, resolveType, or isTypeOf.",

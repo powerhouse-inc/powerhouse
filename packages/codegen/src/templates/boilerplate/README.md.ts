@@ -53,6 +53,16 @@ Connect shows the definition of a code-first model as read-only. Documents of th
 
 Run \`ph generate editor --name <name> --document-type <type>\`, or create an editor document for your document type in Vetra Studio. Codegen writes \`editors/<name>/\` and registers the editor in \`editors/editors.ts\`. Implement the UI in \`editors/<name>/editor.tsx\`, and test it in Vetra Studio.
 
+## Subgraphs
+
+Run \`ph generate subgraph --name <name>\`. The command creates \`subgraphs/<name>/index.ts\` and \`schema.ts\`, writes a checked barrel export, and refreshes the manifest. Regeneration preserves files inside existing subgraph directories. Export a \`BaseSubgraph<Ctx>\` class through the package's \`subgraphs\` entry. Declare \`static override readonly subgraphName = "kebab-case"\` and \`static override getSchema(schema: SchemaBuilder<YourClass>)\`. Return typed \`ph\` entries or one \`schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })\` wrapper. Resolvers read instance state through \`subgraph\`.
+
+Shared behavior belongs in one abstract base and schema fragments with public capabilities. Extend a typed parent's schema with \`super.getSchema(schema)\`, or call \`schema.replaceParentSchema()\` for an intentional replacement. Do not use mixin factories. Lifecycle overrides call \`super\`, and teardown tolerates partial setup. \`onDisconnect\` is not a process-exit hook.
+
+Run \`ph migrate\` before rebuilding old-style subgraphs. Running hosts keep serving published old-style packages through the legacy adapter with a development-only notice. Every existing endpoint, schema, and WebSocket and SSE mount stays unchanged. New class-based packages require a matching host API release.
+
+See [Subgraph classes](https://academy.vetra.io/academy/Reference/GraphQLData/SubgraphClasses) and the [testing recipe](https://academy.vetra.io/academy/Reference/GraphQLData/TestingSubgraphs). \`AGENTS.md\` includes fixes for common authoring errors.
+
 ## Coding agents
 
 \`AGENTS.md\` holds the instructions for coding agents, and \`CLAUDE.md\` imports it. Optional editor recipes that it links are in \`docs/agent-guides/\`. \`.mcp.json\` connects agents to \`reactor-mcp\` on Vetra Switchboard.

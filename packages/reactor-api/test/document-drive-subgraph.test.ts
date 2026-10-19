@@ -5,13 +5,15 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { Kind, parse, print } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  DocumentModelSubgraph,
+  type DocumentModelSubgraph,
   type DocumentModelResolverMap,
+  documentModelSubgraphClass,
 } from "../src/graphql/document-model-subgraph.js";
 import {
   generateDocumentModelSchema,
   getDocumentModelSchemaName,
 } from "../src/utils/create-schema.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 /**
  * Parse a generated DocumentNode into a map of type definitions.
@@ -197,7 +199,7 @@ describe("Document-Drive Subgraph", () => {
       );
       const reactorClient = await builder.build();
 
-      subgraph = new DocumentModelSubgraph(driveModule, {
+      subgraph = new (documentModelSubgraphClass(driveModule))({
         reactorClient,
         documentPermissionService: undefined,
         relationalDb: {} as SubgraphArgs["relationalDb"],
@@ -208,13 +210,13 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should have a namespace resolver on Query that returns an empty object", () => {
-      const queryResolvers = subgraph.resolvers.Query;
+      const queryResolvers = resolversOf(subgraph).Query;
       expect(queryResolvers[documentName]).toBeTypeOf("function");
       expect(queryResolvers[documentName]()).toEqual({});
     });
 
     it("should have a namespace resolver on Mutation that returns an empty object", () => {
-      const mutationResolvers = subgraph.resolvers.Mutation;
+      const mutationResolvers = resolversOf(subgraph).Mutation;
       expect(mutationResolvers[documentName]).toBeTypeOf("function");
       expect(mutationResolvers[documentName]()).toEqual({});
     });
@@ -272,8 +274,10 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should not have flat prefixed resolvers on Query or Mutation", () => {
-      expect(Object.keys(subgraph.resolvers.Query)).toEqual([documentName]);
-      expect(Object.keys(subgraph.resolvers.Mutation)).toEqual([documentName]);
+      expect(Object.keys(resolversOf(subgraph).Query)).toEqual([documentName]);
+      expect(Object.keys(resolversOf(subgraph).Mutation)).toEqual([
+        documentName,
+      ]);
     });
   });
 
@@ -286,7 +290,7 @@ describe("Document-Drive Subgraph", () => {
       );
       const reactorClient = await builder.build();
 
-      subgraph = new DocumentModelSubgraph(driveModule, {
+      subgraph = new (documentModelSubgraphClass(driveModule))({
         reactorClient,
         documentPermissionService: undefined,
         relationalDb: {} as SubgraphArgs["relationalDb"],
@@ -297,7 +301,7 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should generate a __resolveType resolver for DocumentDrive_Node", () => {
-      const nodeResolver = subgraph.resolvers[
+      const nodeResolver = resolversOf(subgraph)[
         `${documentName}_Node`
       ] as DocumentModelResolverMap;
 
@@ -306,7 +310,7 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should resolve FileNode when object has documentType field", () => {
-      const nodeResolver = subgraph.resolvers[
+      const nodeResolver = resolversOf(subgraph)[
         `${documentName}_Node`
       ] as DocumentModelResolverMap;
 
@@ -324,7 +328,7 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should resolve FolderNode when object lacks documentType field", () => {
-      const nodeResolver = subgraph.resolvers[
+      const nodeResolver = resolversOf(subgraph)[
         `${documentName}_Node`
       ] as DocumentModelResolverMap;
 
@@ -341,7 +345,7 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should generate a __resolveType resolver for DocumentDrive_TriggerData", () => {
-      const triggerDataResolver = subgraph.resolvers[
+      const triggerDataResolver = resolversOf(subgraph)[
         `${documentName}_TriggerData`
       ] as DocumentModelResolverMap;
 
@@ -350,7 +354,7 @@ describe("Document-Drive Subgraph", () => {
     });
 
     it("should resolve PullResponderTriggerData for TriggerData union", () => {
-      const triggerDataResolver = subgraph.resolvers[
+      const triggerDataResolver = resolversOf(subgraph)[
         `${documentName}_TriggerData`
       ] as DocumentModelResolverMap;
 

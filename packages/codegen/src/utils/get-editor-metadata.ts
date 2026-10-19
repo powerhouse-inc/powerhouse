@@ -6,6 +6,7 @@ import {
   getOrCreateDirectory,
   getStringArrayPropertyElements,
   getStringPropertyValue,
+  projectDirOf,
 } from "utils";
 import { z } from "zod";
 
@@ -19,7 +20,7 @@ const EditorMetadataSchema = z.object({
 export function getEditorMetadata(project: Project, dirName: string) {
   const { directory: editorDir } = getOrCreateDirectory(
     project,
-    join("editors", dirName),
+    join(projectDirOf(project), "editors", dirName),
   );
   const parsedMetadata = pipe(
     editorDir,
@@ -49,7 +50,9 @@ export function getAppMetadata(project: Project, dirName: string) {
     return undefined;
 
   const appMetadata = pipe(
-    project.getSourceFile(join("editors", dirName, "config.ts")),
+    project.getSourceFile(
+      join(projectDirOf(project), "editors", dirName, "config.ts"),
+    ),
     (sourceFile) => ({
       isDragAndDropEnabled: getBooleanPropertyValue(
         sourceFile,

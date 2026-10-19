@@ -1,5 +1,5 @@
 import { ph } from "document-model";
-import { defineSubgraph } from "@powerhousedao/reactor-api";
+import { BaseSubgraph, type SchemaBuilder } from "@powerhousedao/reactor-api";
 
 const Widget = ph.object("Widget", {
   fields: {
@@ -8,14 +8,16 @@ const Widget = ph.object("Widget", {
   },
 });
 
-export const ExampleSubgraph = defineSubgraph({
-  name: "example",
-  schemaKind: "typed",
-  entries: (build) => [
-    build.query("widget", {
-      args: { id: ph.OID({ required: true }) },
-      returns: ph.ref(Widget),
-      resolve: ({ args }) => ({ id: String(args.id), label: "One" }),
-    }),
-  ],
-});
+export class ExampleSubgraph extends BaseSubgraph {
+  static override readonly subgraphName = "example";
+
+  static override getSchema(schema: SchemaBuilder<ExampleSubgraph>) {
+    return [
+      schema.query("widget", {
+        args: { id: ph.OID({ required: true }) },
+        returns: ph.ref(Widget),
+        resolve: ({ args }) => ({ id: String(args.id), label: "One" }),
+      }),
+    ];
+  }
+}

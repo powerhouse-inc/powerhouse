@@ -15,6 +15,7 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../src/utils/create-schema.js";
+import { resolversOf, typeDefsOf } from "./utils/served-subgraph.js";
 
 // The CommonJS build @apollo/subgraph uses; vite would hand this file the ESM one.
 const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
@@ -128,7 +129,7 @@ describe("auth subgraph argument names", () => {
   beforeEach(() => {
     calls = [];
     const subgraph = buildSubgraph(calls);
-    schema = createSchema([], subgraph.resolvers, subgraph.typeDefs);
+    schema = createSchema([], resolversOf(subgraph), typeDefsOf(subgraph));
   });
 
   function run(pair: Pair, args: string) {
@@ -186,8 +187,8 @@ describe("auth subgraph argument names", () => {
             name: "auth",
             typeDefs: buildSubgraphSchemaModule(
               [],
-              subgraph.resolvers,
-              subgraph.typeDefs,
+              resolversOf(subgraph),
+              typeDefsOf(subgraph),
             ).typeDefs,
             url: "http://localhost/auth",
           },

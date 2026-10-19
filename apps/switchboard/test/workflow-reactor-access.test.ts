@@ -12,6 +12,7 @@ import {
 import {
   AuthorizationPolicy,
   getDbClient,
+  SUBGRAPH_PROTOCOL,
   type Context,
   type IAuthorizationService,
 } from "@powerhousedao/reactor-api";
@@ -286,10 +287,8 @@ describe.each([
       authorizationService,
       relationalDb,
     } as never);
-    const resolvers = subgraph.resolvers as Record<
-      string,
-      Record<string, Resolver>
-    >;
+    const resolvers = composed.subgraph[SUBGRAPH_PROTOCOL]().bind(subgraph)
+      .resolvers as Record<string, Record<string, Resolver>>;
     queries = resolvers.WorkflowRuntimeQueries;
     mutations = resolvers.WorkflowRuntimeMutations;
   });

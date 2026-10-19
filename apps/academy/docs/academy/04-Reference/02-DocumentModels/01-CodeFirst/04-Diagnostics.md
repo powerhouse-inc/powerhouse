@@ -54,8 +54,9 @@ Reads `powerhouse.config.json` and its `definitionSources` field.
 | `PH-CONFIG-DUPLICATE-SOURCE` | error | Two entries point to the same module and export path. |
 | `PH-CONFIG-SOURCE-INVALID` | error | A specifier or an export pointer is malformed. |
 | `PH-CONFIG-SOURCE-OUTSIDE-PACKAGE` | error | A source path or a symlink target points outside the package root. |
-| `PH-CONFIG-SOURCE-UNREGISTERED` | error | A code-first model or subgraph is in the package, but no entry in `definitionSources` covers it. |
-| `PH-CONFIG-SOURCE-UNSELECTED` | warning | A code-first model or subgraph is in the package, but the `--source` list does not reach it, so the run does not check it. |
+| `PH-CONFIG-SOURCE-SUBGRAPH-IGNORED` | warning | An entry in `definitionSources` points to a subgraph class. Subgraphs are found through `subgraphs/index.ts` and `subgraphs/<name>/index.ts`, so the entry is ignored. Remove it from `definitionSources`. |
+| `PH-CONFIG-SOURCE-UNREGISTERED` | error | A code-first document model is in the package, but no entry in `definitionSources` covers it. |
+| `PH-CONFIG-SOURCE-UNSELECTED` | warning | A code-first document model is in the package, but the `--source` list does not reach it, so the run does not check it. |
 | `PH-CONFIG-VERSION-UNSUPPORTED` | error | `definitionSources.formatVersion` is not a version this release supports. |
 
 ## `typecheck` phase
@@ -104,28 +105,28 @@ Compiles each declaration into a structured definition.
 | `PH-SCALAR-AUTHOR-DECLARATION-UNSUPPORTED` | error | A definition source exports a scalar that `defineScalar` did not create, or exports a catalog scalar as its own. |
 | `PH-SCALAR-DECLARATION-INVALID` | error | A scalar declaration has an invalid name, description, validator, or coercion. |
 | `PH-SCALAR-FACTORY-AS-FIELD` | error | A scalar builder is used as a field without being called. |
-| `PH-SCALAR-INTERNAL` | error | A definition, a stored schema, or `ph scalar inspect` names a catalog scalar that only the reactor host declares, such as `JSONObject`. Use `ph.Unknown()` or `ph.object(...)` instead. |
+| `PH-SCALAR-INTERNAL` | error | A document model, a stored schema, or `ph scalar inspect` names a catalog scalar that only the reactor host declares, such as `JSONObject`. Use `ph.Unknown()` or `ph.object(...)` instead. A subgraph can use `subgraphScalars.JSONObject()`. In a subgraph, `ph.JSONObject` fails with this code too. |
 | `PH-SCALAR-ZERO-VALUE-INVALID` | error | A scalar has no zero value, or its own coercion rejects its zero value. |
 | `PH-SG-COMPUTED-FIELD-INVALID` | error | A computed field is malformed, has no subgraph entry, has two entries, or has an entry but no type declares the field. |
-| `PH-SG-DEFINITION-INVALID` | error | A published subgraph definition does not have the expected shape. |
+| `PH-SG-DEFINITION-INVALID` | error | A subgraph class has no static `subgraphName`, a name that is not lowercase kebab-case, no static `getSchema`, or a `getSchema` that returns different schemas on two calls. Or a published subgraph definition does not have the expected shape. |
 | `PH-SG-ENTRY-INVALID` | error | A subgraph entry is malformed, was not created by the builder functions, or has no resolver where the builder requires one. |
+| `PH-SG-PARENT-FIELDS-DROPPED` | warning | A subclass's own `getSchema` drops root fields that its parent's `getSchema` declares, usually because it does not spread `super.getSchema(schema)`. Call `schema.replaceParentSchema()` if the subclass replaces them on purpose. |
 
 ## `composition` phase
 
 Builds the host GraphQL schema from all registered models and subgraphs.
 
-The check includes the package's schema-first models and subgraphs, because the server serves them beside the code-first ones. `ph model check`, `ph build`, and `ph generate` report a conflict between the two styles with the same message. A schema-first subgraph whose schema does not build is reported only by `ph generate`, as a warning.
+The check includes the package's schema-first models, because the server serves them beside the code-first ones. A subgraph can use the types they generate.
 
 | Code | Severity | Meaning |
 | ---- | -------- | ------- |
-| `PH-DM-GRAPHQL-REFUSED` | warning | The server refuses a document model's GraphQL schema, because the schema does not build or generates a type name that the server reserves. Or the server refuses only the model's own subgraph, because that subgraph's schema does not build. The check reports this only when the package has a schema-first or code-first subgraph. |
+| `PH-DM-GRAPHQL-REFUSED` | warning | The server refuses a document model's GraphQL schema, because the schema does not build or generates a type name that the server reserves. Or the server refuses only the model's own subgraph, because that subgraph's schema does not build. The check reports this only when the selection has subgraphs. |
 | `PH-GQL-COORDINATE-OWNED` | warning | A core or document-model subgraph owns a root field that this subgraph declares, so the server leaves this subgraph out of the supergraph. Or other package subgraphs declare it too, and the supergraph can include only one of them. Which one depends on the order the subgraphs register, so the warning names no winner. |
-| `PH-GQL-FEDERATION-UNSUPPORTED` | error | A code-first subgraph uses Apollo Federation 2 features. This version does not support them. |
 | `PH-GQL-SHARED-DEFINITION-MISMATCH` | warning | A core or document-model subgraph defines a type differently from this subgraph, so the server leaves this subgraph out of the supergraph. Or other package subgraphs define it differently, and the supergraph can include the subgraphs of only one definition. Field order and descriptions do not count as differences. |
 | `PH-SCALAR-RESOLVER-SHADOWED` | warning | A resolver that you wrote uses the name of a catalog scalar. |
 | `PH-SCALAR-UNREGISTERED` | warning | The SDL uses a scalar that the catalog has no entry for. |
 | `PH-SG-GENERATED-TYPE-TAKEN` | warning | The subgraph defines a type that the document-model schema generates, such as `Operation` or a model's document type, so the server refuses this subgraph. |
-| `PH-SG-NAME-TAKEN` | warning | A core or document-model subgraph already uses this subgraph's name, so the server refuses this subgraph. Or another subgraph of the package, schema-first or code-first, has the same name, and the server serves only one of them. |
+| `PH-SG-NAME-TAKEN` | warning | A core or document-model subgraph already uses this subgraph's name, so the server refuses this subgraph. |
 | `PH-SG-SCHEMA-INVALID` | error | The subgraph schema, with the types that the host adds, does not build or is not valid. |
 
 ## `package` phase
@@ -149,12 +150,19 @@ Checks authorization rules in a declaration.
 | ---- | -------- | ------- |
 | `PH-AUTH-UNSUPPORTED` | error | A document model declares authorization rules. This version does not support them. |
 
+## Class-based subgraphs
+
+Subgraph discovery is independent of `definitionSources`. Old-style or nameless classes produce `PH-SG-DEFINITION-INVALID` with the class name and a `ph migrate` hint. Nameless ancestors of exported concrete classes are accepted as shared bases. The compiler rejects a missing or invalid static name, an empty schema, and a schema that mixes typed entries with `schema.graphql`.
+
+For TypeScript errors on a subgraph class, see [Fix authoring errors](../../03-GraphQLData/08-SubgraphClasses.md#fix-authoring-errors).
+
 ## Reserved codes
 
 The catalog defines these codes, but no check reports them in this release.
 
 | Code | Phase | Severity | Meaning |
 | ---- | ----- | -------- | ------- |
+| `PH-GQL-FEDERATION-UNSUPPORTED` | `composition` | error | A typed subgraph declaration uses a Federation 2 directive or `@key(resolvable:)`. Typed declarations support Federation 1 only. Return `schema.graphql({ typeDefs, resolverCoordinates, resolvers })` to keep Federation 2 SDL as written. |
 | `PH-REPLAY-DIVERGENCE` | `replay` | error | A recorded history replays to different results in the schema-first and code-first versions of a model. |
 | `PH-SCALAR-COERCION-NORMALIZES` | `definition` | warning | A strict coercion returns a value that differs from the input it accepted. |
 | `PH-SCALAR-POSITION-UNSUPPORTED` | `definition` | warning | A later validation profile rejects the scalar in a stored position. |

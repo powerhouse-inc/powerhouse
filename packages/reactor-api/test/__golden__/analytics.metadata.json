@@ -1,0 +1,38 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "AnalyticsQuery",
+      "fieldName": "currencies",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "AnalyticsQuery",
+      "fieldName": "dimensions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "AnalyticsQuery",
+      "fieldName": "metrics",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "AnalyticsQuery",
+      "fieldName": "multiCurrencySeries",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "AnalyticsQuery",
+      "fieldName": "series",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "analytics",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": "undefined",
+    "normalized": false
+  }
+}

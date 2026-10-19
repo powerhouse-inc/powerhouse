@@ -55,7 +55,7 @@ node /absolute/tools-checkout/scripts/verify-task.mjs run \
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tooling`     | Helper subprocess tests. Capture the four inputs in `scripts/verification-profiles.mjs` or a broader scope.                                    |
 | `cli-runtime` | Installed workspace tools, pnpm and Bun; builds the CLI dependency closure, then actual-Node and built-CLI tests.                              |
-| `subgraph`    | Builds the reactor-api dependency closure before its `define-subgraph` suite.                                                                  |
+| `subgraph`    | Builds the reactor-api dependency closure before its class-subgraph, host and golden suites.                                                   |
 | `reactor-pg`  | Explicit `REACTOR_TEST_PG_URL` and a CREATEDB-capable role. Probes connectivity/privileges before builds and the reactor-workflow purge suite. |
 
 Other than `tooling`, profiles require whole-checkout inputs and installed workspace

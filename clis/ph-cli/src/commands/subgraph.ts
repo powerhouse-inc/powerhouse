@@ -4,7 +4,7 @@ import { failedToRun } from "./model.js";
 
 export const subgraphInspect = command({
   name: "inspect",
-  description: `Print the exact structured definition of one compiled subgraph.
+  description: `Print the exact structured definition of one compiled subgraph, by its subgraphName.
 
   ph subgraph inspect <name> --json
 

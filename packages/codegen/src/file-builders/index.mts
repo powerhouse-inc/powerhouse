@@ -7,9 +7,11 @@ export * from "./document-editor.js";
 export {
   findCodeFirstDocumentModelExport,
   loadCodeFirstInventory,
+  loadSubgraphInventory,
   warnUnregisteredCodeFirstDefinitions,
   type CodeFirstDocumentModelExport,
   type CodeFirstInventory,
+  type SubgraphInventory,
 } from "./document-model/code-first-aggregates.js";
 export * from "./document-model/code-first-model.js";
 export * from "./document-model/document-model.js";

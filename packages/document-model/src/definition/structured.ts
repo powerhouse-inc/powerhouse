@@ -246,6 +246,13 @@ type DescriptorWalkPolicy = {
   readonly allowOutputDefaults: boolean;
   readonly allowEquals: boolean;
   readonly validateInputDefaults: boolean;
+  readonly computedFieldsAreMembers: boolean;
+  /**
+   * Whether a field may use an internal catalog scalar through its catalog
+   * binding. The host declares and serves internal scalars for every
+   * subgraph; document-model tooling has no implementation for them.
+   */
+  readonly internalScalarsAreReferenceable: boolean;
 };
 
 export class DescriptorWalk {
@@ -344,21 +351,7 @@ export class DescriptorWalk {
           name,
           description: descriptor.description,
           ...(implemented.length > 0 && { implements: implemented }),
-          fields: [
-            // Narrowed at the call site: the walk splits stored fields from
-            // computed members, and `fields` never holds one of the latter.
-            ...this.#requireFields(
-              object.fields as ObjectFields,
-              "object",
-              name,
-              path,
-            ),
-            // A computed member is a field of the GraphQL type even though no
-            // source carries it. A document model never has one: `ph.field`
-            // exists for subgraphs, and a state root that declared one is
-            // refused before it reaches here.
-            ...this.#computedFields(object, path),
-          ],
+          fields: this.#objectFields(object, name, path),
         };
       }
       case "interface": {
@@ -505,6 +498,25 @@ export class DescriptorWalk {
       throw new WalkAbort();
     }
     return this.#fields(fields, path);
+  }
+
+  #objectFields(
+    object: ObjectDescriptor,
+    name: string,
+    path: DefinitionPath,
+  ): FieldDefinition[] {
+    const stored = object.fields as ObjectFields;
+    if (
+      this.#policy.computedFieldsAreMembers &&
+      Object.keys(stored).length === 0
+    ) {
+      const computed = this.#computedFields(object, path);
+      if (computed.length > 0) return computed;
+    }
+    return [
+      ...this.#requireFields(stored, "object", name, path),
+      ...this.#computedFields(object, path),
+    ];
   }
 
   #computedFields(
@@ -862,6 +874,12 @@ export class DescriptorWalk {
       isInternalScalarName(name) &&
       (binding === undefined || isCatalogBinding(binding))
     ) {
+      if (
+        binding !== undefined &&
+        this.#policy.internalScalarsAreReferenceable
+      ) {
+        return name;
+      }
       this.#collector.add(internalScalarDiagnostic(name, path));
       throw new WalkAbort();
     }
@@ -1174,6 +1192,8 @@ export function compileDocumentModelVersion(
     allowOutputDefaults: false,
     allowEquals: true,
     validateInputDefaults: true,
+    computedFieldsAreMembers: false,
+    internalScalarsAreReferenceable: false,
   });
   const compatibility = new AppliedCompatibility(
     collector,

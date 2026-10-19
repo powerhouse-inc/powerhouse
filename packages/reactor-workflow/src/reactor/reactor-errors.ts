@@ -16,7 +16,7 @@ export {
 
 export class ReactorError extends Error {
   constructor(
-    readonly name: ReactorErrorName,
+    override readonly name: ReactorErrorName,
     message: string,
   ) {
     super(message);

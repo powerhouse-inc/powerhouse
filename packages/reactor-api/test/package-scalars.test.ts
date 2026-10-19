@@ -12,13 +12,16 @@ import { type DocumentNode, Kind, print } from "graphql";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { defineSubgraph } from "../src/graphql/define-subgraph.js";
+import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import { SUBGRAPH_PROTOCOL } from "../src/graphql/subgraph-protocol.js";
+import type { SchemaBuilder } from "../src/graphql/subgraph-schema.js";
 import { forgetReportedScalarBindings } from "../src/graphql/scalar-bindings.js";
 import {
   buildSubgraphSchemaModule,
   getDocumentModelTypeDefs,
 } from "../src/utils/create-schema.js";
 import { hostFor, messages } from "./utils/graphql-host.js";
+import { servedSubgraph } from "./utils/served-subgraph.js";
 import { composedWith } from "./utils/scalar-matrix.js";
 
 /**
@@ -88,24 +91,25 @@ function lookupSubgraph() {
   const Contact = ph.object("Contact", {
     fields: { phone: PhoneNumber({ required: true }) },
   });
-  return defineSubgraph({
-    name: "contacts-lookup",
-    schemaKind: "typed",
-    entries: ({ query }) => [
-      query("contact", {
-        args: { phone: PhoneNumber({ required: true }) },
-        returns: ph.ref(Contact),
-        resolve: ({ args }) => ({ phone: args.phone }),
-      }),
-    ],
-  });
+  return class ContactsLookup extends BaseSubgraph {
+    static override readonly subgraphName = "contacts-lookup";
+    static override getSchema(schema: SchemaBuilder<ContactsLookup>) {
+      return [
+        schema.query("contact", {
+          args: { phone: PhoneNumber({ required: true }) },
+          returns: ph.ref(Contact),
+          resolve: ({ args }) => ({ phone: args.phone }),
+        }),
+      ];
+    }
+  };
 }
 
 function subgraphHost(
-  subgraphClass: ReturnType<typeof defineSubgraph>,
+  subgraphClass: new (args: SubgraphArgs) => BaseSubgraph,
   models: readonly DocumentModelModule[] = [],
 ) {
-  const subgraph = new subgraphClass({} as SubgraphArgs);
+  const subgraph = servedSubgraph(new subgraphClass({} as SubgraphArgs));
   const schema = buildSubgraphSchema([
     buildSubgraphSchemaModule(
       [...models],
@@ -208,13 +212,12 @@ describe("a model's package scalar on the host", () => {
 
 describe("a subgraph's package scalar on the host", () => {
   it("keeps the declaration the subgraph compiled", () => {
-    const subgraphClass = lookupSubgraph();
-    const subgraph = new subgraphClass({} as SubgraphArgs);
-    const sdl = print(
-      getDocumentModelTypeDefs([], subgraph.typeDefs as DocumentNode),
-    );
+    const { typeDefs, definition } = lookupSubgraph()
+      [SUBGRAPH_PROTOCOL]()
+      .describe();
+    const sdl = print(getDocumentModelTypeDefs([], typeDefs as DocumentNode));
     expect(sdl).toContain('"""An E.164 phone number."""\nscalar PhoneNumber');
-    expect(subgraphClass.definition).toMatchObject({
+    expect(definition).toMatchObject({
       scalars: [
         {
           name: "PhoneNumber",
@@ -241,7 +244,7 @@ describe("a subgraph's package scalar on the host", () => {
 
     const literal = await run(`{ contact(phone: 14155550123) { phone } }`);
     expect(messages(literal)).toEqual([
-      'Expected value of type "PhoneNumber!", found 14155550123; PhoneNumber cannot coerce a int literal.',
+      "PhoneNumber cannot coerce a int literal.",
     ]);
   });
 
@@ -270,17 +273,18 @@ describe("a subgraph's package scalar on the host", () => {
       validator: z.object({ phone: z.string().min(1) }),
       zodSource: "z.object({ phone: z.string().min(1) })",
     });
-    const Search = defineSubgraph({
-      name: "contacts-search",
-      schemaKind: "typed",
-      entries: ({ query }) => [
-        query("find", {
-          args: { filter: Filter({ required: true }) },
-          returns: ph.String(),
-          resolve: ({ args }) => (args.filter as { phone: string }).phone,
-        }),
-      ],
-    });
+    class Search extends BaseSubgraph {
+      static override readonly subgraphName = "contacts-search";
+      static override getSchema(schema: SchemaBuilder<Search>) {
+        return [
+          schema.query("find", {
+            args: { filter: Filter({ required: true }) },
+            returns: ph.String(),
+            resolve: ({ args }) => (args.filter as { phone: string }).phone,
+          }),
+        ];
+      }
+    }
     const run = subgraphHost(Search);
     const query = `query ($p: String!) { find(filter: { phone: $p }) }`;
 

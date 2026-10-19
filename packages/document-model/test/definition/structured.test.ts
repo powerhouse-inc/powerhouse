@@ -1071,6 +1071,51 @@ describe("the stored SDL segments", () => {
     );
     expect(iface[0]?.message).toContain("EmptyInterface");
   });
+
+  it("rejects an object whose only members are computed fields", () => {
+    const diagnostics = diagnosticsOf(() =>
+      defineDocumentModel({
+        id: "test/computed-only",
+        name: "ComputedOnly",
+        description: "",
+        extension: "co",
+        version: 1,
+        author: { name: "Powerhouse" },
+        specifications: {
+          global: {
+            schema: ph.object("ComputedOnlyState", {
+              fields: {
+                thing: ph.ref(
+                  ph.object("OnlyComputed", {
+                    fields: { size: ph.field({ returns: ph.Int() }) },
+                  }),
+                ),
+              },
+            }),
+            initialValue: { thing: null },
+          },
+          local: { schema: null, initialValue: {} },
+        },
+      }).finalize({ modules: [] }),
+    );
+    expect(
+      diagnostics.map(({ code, path, message }) => ({ code, path, message })),
+    ).toEqual([
+      {
+        code: "PH-DM-DECLARATION-INVALID",
+        path: [
+          "specifications",
+          "global",
+          "schema",
+          "fields",
+          "thing",
+          "fields",
+        ],
+        message:
+          'The object type "OnlyComputed" declares no fields, and GraphQL cannot build a schema that contains it.',
+      },
+    ]);
+  });
 });
 
 describe("operation input defaults", () => {

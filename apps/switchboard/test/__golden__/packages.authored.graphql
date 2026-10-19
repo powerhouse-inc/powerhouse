@@ -1,0 +1,32 @@
+scalar DateTime
+
+type InstalledPackage {
+  name: String!
+  version: String
+  registryUrl: String!
+  installedAt: DateTime!
+  documentTypes: [String!]!
+}
+
+type InstallPackageResult {
+  package: InstalledPackage!
+  documentModelsLoaded: Int!
+}
+
+type PackagesQueries {
+  installedPackages: [InstalledPackage!]!
+  installedPackage(name: String!): InstalledPackage
+}
+
+type PackagesMutations {
+  installPackage(name: String!, registryUrl: String): InstallPackageResult!
+  uninstallPackage(name: String!): Boolean!
+}
+
+type Query {
+  Packages: PackagesQueries!
+}
+
+type Mutation {
+  Packages: PackagesMutations!
+}

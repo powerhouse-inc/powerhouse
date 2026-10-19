@@ -21,6 +21,7 @@
     "tools/doc-harness/prompts/schemas/",
     "test/registry-e2e/fixture/package/build/",
     "test/registry-e2e/results/",
-    "**/test/**/goldens/"
+    "**/test/**/goldens/",
+    "**/test/**/__golden__/"
   ]
 }

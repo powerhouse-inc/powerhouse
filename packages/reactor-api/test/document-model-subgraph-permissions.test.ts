@@ -5,7 +5,10 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import {
+  type DocumentModelSubgraph,
+  documentModelSubgraphClass,
+} from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -146,8 +149,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       }),
     };
 
-    subgraph = new DocumentModelSubgraph(
-      mockDocumentModel,
+    subgraph = new (documentModelSubgraphClass(mockDocumentModel))(
       buildSubgraphArgs(mockAuthorizationService),
     );
   });
@@ -525,8 +527,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           isSupremeAdmin: vi.fn().mockReturnValue(false),
           canCreate: vi.fn().mockReturnValue(false),
         };
-        const sg = new DocumentModelSubgraph(
-          mockDocumentModel,
+        const sg = new (documentModelSubgraphClass(mockDocumentModel))(
           buildSubgraphArgs(adminOnlyAuth),
         );
 
@@ -549,8 +550,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           isSupremeAdmin: vi.fn().mockReturnValue(true),
           canCreate: vi.fn().mockReturnValue(true),
         };
-        const sg = new DocumentModelSubgraph(
-          mockDocumentModel,
+        const sg = new (documentModelSubgraphClass(mockDocumentModel))(
           buildSubgraphArgs(openAuth),
         );
 
@@ -647,6 +647,54 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         expect(mockReactorClient.createEmpty).toHaveBeenCalled();
         expect(mockReactorClient.execute).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe("creator ownership", () => {
+    const ownedSubgraph = () => {
+      const documentPermissionService = {
+        initializeDocumentProtection: vi.fn().mockResolvedValue(undefined),
+      };
+      const owned = new (documentModelSubgraphClass(mockDocumentModel))({
+        ...buildSubgraphArgs({
+          ...mockAuthorizationService,
+          config: {
+            admins: [],
+            defaultProtection: true,
+            policy: AuthorizationPolicy.DOCUMENT_PERMISSIONS,
+          },
+        }),
+        documentPermissionService,
+      } as unknown as SubgraphArgs);
+      return { owned, documentPermissionService };
+    };
+
+    it("protects a document created with createDocument for its creator", async () => {
+      const { owned, documentPermissionService } = ownedSubgraph();
+
+      await owned.mutationResolvers.createDocument(
+        null,
+        { name: "Test Document" },
+        createContext({ userAddress: "0xcreator" }),
+      );
+
+      expect(
+        documentPermissionService.initializeDocumentProtection,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "0xcreator", true);
+    });
+
+    it("protects a document created with createEmptyDocument for its creator", async () => {
+      const { owned, documentPermissionService } = ownedSubgraph();
+
+      await owned.mutationResolvers.createEmptyDocument(
+        null,
+        {},
+        createContext({ userAddress: "0xcreator" }),
+      );
+
+      expect(
+        documentPermissionService.initializeDocumentProtection,
+      ).toHaveBeenCalledExactlyOnceWith("doc-123", "0xcreator", true);
     });
   });
 
@@ -849,8 +897,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         canManage: vi.fn().mockResolvedValue(true),
         canMutate: vi.fn().mockResolvedValue(true),
       };
-      openSubgraph = new DocumentModelSubgraph(
-        mockDocumentModel,
+      openSubgraph = new (documentModelSubgraphClass(mockDocumentModel))(
         buildSubgraphArgs(openAuth),
       );
     });

@@ -29,6 +29,7 @@ import {
   AuthorizationPolicy,
   type IAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { resolversOf, typeDefsOf } from "./utils/served-subgraph.js";
 
 const READER = "0xreader";
 const OUTSIDER = "0xoutsider";
@@ -59,9 +60,9 @@ function contextFor(address?: string): Context {
 
 // graphql's own schema, so subscribe() runs in this module's graphql realm.
 function subscriptionSchema(subgraph: ReactorSubgraph) {
-  const schema = buildSchema(print(subgraph.typeDefs));
+  const schema = buildSchema(print(typeDefsOf(subgraph)));
   const fields = schema.getSubscriptionType()!.getFields();
-  const resolvers = subgraph.resolvers.Subscription as Record<
+  const resolvers = resolversOf(subgraph).Subscription as Record<
     string,
     { subscribe: () => unknown; resolve: (payload: unknown) => unknown }
   >;
@@ -228,7 +229,7 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     await createDocument(client, "list-open", "public.pdf");
 
     const findDocuments = (
-      subgraph.resolvers.Query as Record<
+      resolversOf(subgraph).Query as Record<
         string,
         (
           p: unknown,
@@ -341,7 +342,7 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     it("jobStatus answers an unauthorised caller as for an unknown job", async () => {
       const { subgraph, jobId } = await policedJob();
       const jobStatus = (
-        subgraph.resolvers.Query as Record<
+        resolversOf(subgraph).Query as Record<
           string,
           (p: unknown, a: unknown, c: Context) => Promise<JobAnswer>
         >
@@ -372,7 +373,7 @@ describe("documentChanges and findDocuments under OPEN with auth-scope policies"
     it("jobStatus judges a document holding no domain scope on its declared scopes", async () => {
       const { subgraph, jobId, held } = await unindexedJob();
       const jobStatus = (
-        subgraph.resolvers.Query as Record<
+        resolversOf(subgraph).Query as Record<
           string,
           (p: unknown, a: unknown, c: Context) => Promise<JobAnswer>
         >

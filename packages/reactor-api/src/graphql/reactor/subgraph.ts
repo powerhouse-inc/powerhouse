@@ -4,13 +4,13 @@ import { GraphQLError } from "graphql";
 import { optionalOneOf, requireOneOf } from "../argument-aliases.js";
 import { ForbiddenError } from "../errors.js";
 import { withFilter } from "graphql-subscriptions";
-import { gql } from "graphql-tag";
-import schemaSource from "./schema.graphql";
+import { reactorSchema } from "./schema.js";
 import {
   AuthorizedDocumentHandle,
   type CanonicalDocumentId,
 } from "../../services/authorization.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
+import type { SchemaBuilder } from "../subgraph-schema.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
   collectChangedDocumentIds,
@@ -39,8 +39,15 @@ export class ReactorSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "r";
-  hasSubscriptions = true;
+  static override readonly subgraphName = reactorSchema.subgraphName;
+
+  static override getSchema(schema: SchemaBuilder<ReactorSubgraph>) {
+    return schema.graphql({
+      typeDefs: reactorSchema.typeDefs,
+      resolverCoordinates: reactorSchema.resolverCoordinates,
+      resolvers: (subgraph) => subgraph.#resolvers(),
+    });
+  }
 
   #documentChanges: DocumentChangeFeed | undefined;
 
@@ -226,1330 +233,1344 @@ export class ReactorSubgraph extends BaseSubgraph {
     return this.syncServingGate ? ctx.user?.address : undefined;
   }
 
-  typeDefs = gql(schemaSource);
-
-  resolvers: Resolvers = {
-    // Field resolver for PHDocument.operations - fetches operations on demand
-    PHDocument: {
-      operations: async (parent, args, ctx: Context) => {
-        this.logger.debug(
-          "PHDocument.operations(@parent.id, @args)",
-          parent.id,
-          args,
-        );
-
-        await this.assertCanReadCanonical(
-          parent.id as CanonicalDocumentId,
-          ctx,
-        );
-
-        try {
-          // Build the filter using the document's id
-          const filter = {
-            documentIdOrSlug: parent.id,
-            branch: args.filter?.branch,
-            scopes: args.filter?.scopes,
-            actionTypes: args.filter?.actionTypes,
-            sinceRevision: args.filter?.sinceRevision,
-            timestampFrom: args.filter?.timestampFrom,
-            timestampTo: args.filter?.timestampTo,
-          };
-
-          return await resolvers.documentOperations(
-            this.reactorClient,
-            { filter, paging: args.paging },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error("Error in PHDocument.operations: @Error", error);
-          throw error;
-        }
-      },
-    },
-
-    Query: {
-      documentModels: async (_parent, args) => {
-        this.logger.debug("documentModels(@args)", args);
-        try {
-          return await resolvers.documentModels(this.reactorClient, args);
-        } catch (error) {
-          this.logger.error("Error in documentModels: @Error", error);
-          throw error;
-        }
-      },
-
-      document: async (_parent, args, ctx: Context) => {
-        this.logger.debug("document(@args)", args);
-        try {
-          const idOrSlug = requireOneOf<string>(args, "idOrSlug", "identifier");
-          const handle = await this.assertCanRead(idOrSlug, ctx);
-          return await resolvers.document(
-            this.reactorClient,
-            { idOrSlug: handle.fetchIdentifier, view: args.view },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error("Error in document: @Error", error);
-          throw error;
-        }
-      },
-
-      documentOutgoingRelationships: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentOutgoingRelationships(@args)", args);
-        try {
-          const sourceIdOrSlug = requireOneOf<string>(
+  #resolvers(): Resolvers {
+    return {
+      // Field resolver for PHDocument.operations - fetches operations on demand
+      PHDocument: {
+        operations: async (parent, args, ctx: Context) => {
+          this.logger.debug(
+            "PHDocument.operations(@parent.id, @args)",
+            parent.id,
             args,
-            "sourceIdOrSlug",
-            "sourceIdentifier",
-          );
-          const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
-          return await resolvers.documentOutgoingRelationships(
-            this.reactorClient,
-            {
-              sourceIdOrSlug: handle.fetchIdentifier,
-              relationshipType: args.relationshipType,
-              view: args.view,
-              paging: args.paging,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in documentOutgoingRelationships: @Error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      documentIncomingRelationships: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentIncomingRelationships(@args)", args);
-        try {
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const handle = await this.assertCanRead(targetIdOrSlug, ctx);
-          const result = await resolvers.documentIncomingRelationships(
-            this.reactorClient,
-            {
-              targetIdOrSlug: handle.fetchIdentifier,
-              relationshipType: args.relationshipType,
-              view: args.view,
-              paging: args.paging,
-            },
-            this.viewSubject(ctx),
-          );
-          return {
-            ...result,
-            items: await this.readableByHost(result.items, ctx),
-          };
-        } catch (error) {
-          this.logger.error(
-            "Error in documentIncomingRelationships: @Error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      documentOutgoingRelationshipEdges: async (
-        _parent,
-        args,
-        ctx: Context,
-      ) => {
-        this.logger.debug("documentOutgoingRelationshipEdges(@args)", args);
-        try {
-          const sourceIdOrSlug = requireOneOf<string>(
-            args,
-            "sourceIdOrSlug",
-            "sourceIdentifier",
-          );
-          const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
-          const result = await resolvers.documentOutgoingRelationshipEdges(
-            this.reactorClient,
-            {
-              sourceIdOrSlug: handle.fetchIdentifier,
-              relationshipType: args.relationshipType,
-              view: args.view,
-              paging: args.paging,
-            },
-            this.viewSubject(ctx),
-          );
-          return await this.filterRelationshipEdges(result, "targetId", ctx);
-        } catch (error) {
-          this.logger.error(
-            "Error in documentOutgoingRelationshipEdges: @Error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      documentIncomingRelationshipEdges: async (
-        _parent,
-        args,
-        ctx: Context,
-      ) => {
-        this.logger.debug("documentIncomingRelationshipEdges(@args)", args);
-        try {
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const handle = await this.assertCanRead(targetIdOrSlug, ctx);
-          const result = await resolvers.documentIncomingRelationshipEdges(
-            this.reactorClient,
-            {
-              targetIdOrSlug: handle.fetchIdentifier,
-              relationshipType: args.relationshipType,
-              view: args.view,
-              paging: args.paging,
-            },
-            this.viewSubject(ctx),
-          );
-          return await this.filterRelationshipEdges(result, "sourceId", ctx);
-        } catch (error) {
-          this.logger.error(
-            "Error in documentIncomingRelationshipEdges: @Error",
-            error,
-          );
-          throw error;
-        }
-      },
-
-      findDocuments: async (_parent, args, ctx: Context) => {
-        this.logger.debug("findDocuments(@args)", args);
-        try {
-          const result = await resolvers.findDocuments(
-            this.reactorClient,
-            { ...args, search: args.search ?? {} },
-            this.viewSubject(ctx),
           );
 
-          // Filter results to only include documents the user can read
-          return {
-            ...result,
-            items: await this.readableByHost(result.items, ctx),
-          };
-        } catch (error) {
-          this.logger.error("Error in findDocuments: @Error", error);
-          throw error;
-        }
-      },
-
-      jobStatus: async (_parent, args, ctx: Context) => {
-        this.logger.debug("jobStatus(@args)", args);
-        try {
-          // jobChanges' gate, applied to the job and to every coordinate.
-          const admin = this.authorizationService.isSupremeAdmin(
-            ctx.user?.address,
-          );
-          const decisions = new Map<string, Promise<boolean>>();
-          const readable = (id: string): Promise<boolean> => {
-            let decision = decisions.get(id);
-            if (!decision) {
-              decision = (async () =>
-                (await this.servesDocument(id, ctx)) &&
-                (admin ||
-                  (await this.canReadDocument(
-                    id as CanonicalDocumentId,
-                    ctx,
-                  ))))();
-              decisions.set(id, decision);
-            }
-            return decision;
-          };
-          return await resolvers.jobStatus(
-            this.reactorClient,
-            args,
-            readable,
-            readable,
-          );
-        } catch (error) {
-          this.logger.error("Error in jobStatus: @Error", error);
-          throw error;
-        }
-      },
-
-      documentServed: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentServed(@args)", args);
-        try {
-          return await this.listsDocument(args.idOrSlug, ctx, {
-            branch: args.view?.branch ?? undefined,
-            scopes: args.view?.scopes ? [...args.view.scopes] : undefined,
-          });
-        } catch (error) {
-          this.logger.error("Error in documentServed: @Error", error);
-          throw error;
-        }
-      },
-
-      createDefaults: async (_parent, args, ctx: Context) => {
-        this.logger.debug("createDefaults(@args)", args);
-        try {
-          const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
-          // Without a parent the answer is host-wide, so nothing is gated.
-          if (
-            parentIdOrSlug !== undefined &&
-            !(await this.listsDocument(parentIdOrSlug, ctx))
-          ) {
-            throw new ForbiddenError("to read this document");
-          }
-          return await resolvers.createDefaults(
-            this.reactorClient,
-            parentIdOrSlug,
-          );
-        } catch (error) {
-          this.logger.error("Error in createDefaults: @Error", error);
-          throw error;
-        }
-      },
-
-      documentOperations: async (_parent, args, ctx: Context) => {
-        this.logger.debug("documentOperations(@args)", args);
-        try {
-          const { documentIdOrSlug, documentId, ...filter } = args.filter;
-          const handle = await this.assertCanRead(
-            requireOneOf<string>(
-              { documentIdOrSlug, documentId },
-              "documentIdOrSlug",
-              "documentId",
-            ),
+          await this.assertCanReadCanonical(
+            parent.id as CanonicalDocumentId,
             ctx,
           );
-          return await resolvers.documentOperations(
-            this.reactorClient,
-            {
-              filter: { ...filter, documentIdOrSlug: handle.fetchIdentifier },
-              paging: args.paging,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error("Error in documentOperations: @Error", error);
-          throw error;
-        }
-      },
 
-      /**
-       * Gated on reading the document, the same gate every other read here
-       * carries: a verdict is derived from the document's policy, so a caller
-       * who may not read the document may not preflight against it either.
-       * That gate decides whether the query runs; the answer comes entirely
-       * from the reactor's decision model.
-       */
-      evaluateActions: async (_parent, args, ctx: Context) => {
-        this.logger.debug("evaluateActions(@args)", args);
-        try {
-          const documentIdOrSlug = requireOneOf<string>(
-            args,
-            "documentIdOrSlug",
-            "documentIdentifier",
-          );
-          const handle = await this.assertCanRead(documentIdOrSlug, ctx);
-          return await resolvers.evaluateActions(
-            this.reactorClient,
-            {
-              documentIdOrSlug: handle.fetchIdentifier,
-              branch: args.branch,
-              candidates: args.candidates,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error("Error in evaluateActions: @Error", error);
-          throw error;
-        }
-      },
-
-      syncHolds: async (
-        _parent: unknown,
-        args: { remoteName?: string | null; documentId?: string | null },
-        ctx: Context,
-      ) => {
-        const address = ctx.user?.address;
-        if (!this.authorizationService.isSupremeAdmin(address)) {
-          let bound: string | undefined;
           try {
-            bound = args.remoteName
-              ? this.syncManager.getByName(args.remoteName).meta.options
-                  .boundAddress
-              : undefined;
-          } catch {
-            bound = undefined;
-          }
-          if (address === undefined || bound !== address) {
-            throw new ForbiddenError("to list sync holds");
-          }
-        }
-        return resolvers.syncHolds(this.syncManager, args);
-      },
+            // Build the filter using the document's id
+            const filter = {
+              documentIdOrSlug: parent.id,
+              branch: args.filter?.branch,
+              scopes: args.filter?.scopes,
+              actionTypes: args.filter?.actionTypes,
+              sinceRevision: args.filter?.sinceRevision,
+              timestampFrom: args.filter?.timestampFrom,
+              timestampTo: args.filter?.timestampTo,
+            };
 
-      peerAgreement: (
-        _parent: unknown,
-        args: { collectionId: string },
-        ctx: Context,
-      ) => {
-        const address = ctx.user?.address;
-        if (
-          !this.authorizationService.isSupremeAdmin(address) &&
-          (address === undefined ||
-            !this.syncManager
-              .list()
-              .some(
-                (remote) =>
-                  remote.meta.collectionId.key === args.collectionId &&
-                  remote.meta.options.boundAddress === address,
-              ))
-        ) {
-          throw new ForbiddenError("to read peer agreement");
-        }
-        return resolvers.peerAgreement(this.syncManager, args);
-      },
-
-      pollSyncEnvelopes: async (
-        _parent: unknown,
-        args: {
-          channelId: string;
-          outboxAck: number;
-          outboxLatest: number;
-          manifestRevision?: string | null;
-          refusals?: ReadonlyArray<resolvers.PollRefusal> | null;
-        },
-        ctx: Context,
-      ) => {
-        this.logger.debug("pollSyncEnvelopes(@args)", args);
-
-        try {
-          let remote;
-          try {
-            remote = this.syncManager.getById(args.channelId);
+            return await resolvers.documentOperations(
+              this.reactorClient,
+              { filter, paging: args.paging },
+              this.viewSubject(ctx),
+            );
           } catch (error) {
-            throw new GraphQLError(
-              `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
-            );
+            this.logger.error("Error in PHDocument.operations: @Error", error);
+            throw error;
           }
+        },
+      },
 
-          // A collection is a drive-level abstraction; its canonical drive id is
-          // carried by the collection id (never a slug).
-          const driveId = remote.meta.collectionId
-            .driveId as CanonicalDocumentId;
-          const isAdmin = this.authorizationService.isSupremeAdmin(
-            ctx.user?.address,
-          );
-
-          // Tier 1: reading any operation in a collection requires read access to
-          // the drive it belongs to. No drive read, no document read.
-          if (!isAdmin) {
-            await this.assertCanReadCanonical(driveId, ctx);
+      Query: {
+        documentModels: async (_parent, args) => {
+          this.logger.debug("documentModels(@args)", args);
+          try {
+            return await resolvers.documentModels(this.reactorClient, args);
+          } catch (error) {
+            this.logger.error("Error in documentModels: @Error", error);
+            throw error;
           }
+        },
 
-          // Adoption is a write, so it comes after the drive check: a caller
-          // this collection refuses must not claim the channel on its way out.
-          // `bindRemote` will not rebind, so a stray claim would lock the
-          // rightful owner out for good. touchChannel orders these the same way.
-          await this.#bindOrRefuseChannel(args.channelId, ctx);
-
-          resolvers.holdPollRefusals(
-            this.syncManager,
-            args.channelId,
-            args.refusals,
-          );
-          await resolvers.recordPollMarkerRefusals(
-            this.syncManager,
-            args.channelId,
-            args.refusals,
-          );
-          await resolvers.silenceUnversionedPoll(
-            this.syncManager,
-            args.channelId,
-            args.manifestRevision,
-          );
-
-          // Tier 2/3: drop operations and dead letters for documents the caller
-          // cannot read individually.
-          const forbiddenIds = new Set<string>();
-          if (!isAdmin) {
-            // A caller who can read a *protected* drive holds a grant that
-            // inherits to every in-collection member, so the outbox needs no
-            // per-document check. Only a world-readable drive can contain an
-            // individually-protected member this caller cannot read.
-            const driveWorldReadable = await this.authorizationService.canRead(
-              driveId,
-              undefined,
+        document: async (_parent, args, ctx: Context) => {
+          this.logger.debug("document(@args)", args);
+          try {
+            const idOrSlug = requireOneOf<string>(
+              args,
+              "idOrSlug",
+              "identifier",
             );
-            if (driveWorldReadable) {
+            const handle = await this.assertCanRead(idOrSlug, ctx);
+            return await resolvers.document(
+              this.reactorClient,
+              { idOrSlug: handle.fetchIdentifier, view: args.view },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error("Error in document: @Error", error);
+            throw error;
+          }
+        },
+
+        documentOutgoingRelationships: async (_parent, args, ctx: Context) => {
+          this.logger.debug("documentOutgoingRelationships(@args)", args);
+          try {
+            const sourceIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceIdOrSlug",
+              "sourceIdentifier",
+            );
+            const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
+            return await resolvers.documentOutgoingRelationships(
+              this.reactorClient,
+              {
+                sourceIdOrSlug: handle.fetchIdentifier,
+                relationshipType: args.relationshipType,
+                view: args.view,
+                paging: args.paging,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in documentOutgoingRelationships: @Error",
+              error,
+            );
+            throw error;
+          }
+        },
+
+        documentIncomingRelationships: async (_parent, args, ctx: Context) => {
+          this.logger.debug("documentIncomingRelationships(@args)", args);
+          try {
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const handle = await this.assertCanRead(targetIdOrSlug, ctx);
+            const result = await resolvers.documentIncomingRelationships(
+              this.reactorClient,
+              {
+                targetIdOrSlug: handle.fetchIdentifier,
+                relationshipType: args.relationshipType,
+                view: args.view,
+                paging: args.paging,
+              },
+              this.viewSubject(ctx),
+            );
+            return {
+              ...result,
+              items: await this.readableByHost(result.items, ctx),
+            };
+          } catch (error) {
+            this.logger.error(
+              "Error in documentIncomingRelationships: @Error",
+              error,
+            );
+            throw error;
+          }
+        },
+
+        documentOutgoingRelationshipEdges: async (
+          _parent,
+          args,
+          ctx: Context,
+        ) => {
+          this.logger.debug("documentOutgoingRelationshipEdges(@args)", args);
+          try {
+            const sourceIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceIdOrSlug",
+              "sourceIdentifier",
+            );
+            const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
+            const result = await resolvers.documentOutgoingRelationshipEdges(
+              this.reactorClient,
+              {
+                sourceIdOrSlug: handle.fetchIdentifier,
+                relationshipType: args.relationshipType,
+                view: args.view,
+                paging: args.paging,
+              },
+              this.viewSubject(ctx),
+            );
+            return await this.filterRelationshipEdges(result, "targetId", ctx);
+          } catch (error) {
+            this.logger.error(
+              "Error in documentOutgoingRelationshipEdges: @Error",
+              error,
+            );
+            throw error;
+          }
+        },
+
+        documentIncomingRelationshipEdges: async (
+          _parent,
+          args,
+          ctx: Context,
+        ) => {
+          this.logger.debug("documentIncomingRelationshipEdges(@args)", args);
+          try {
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const handle = await this.assertCanRead(targetIdOrSlug, ctx);
+            const result = await resolvers.documentIncomingRelationshipEdges(
+              this.reactorClient,
+              {
+                targetIdOrSlug: handle.fetchIdentifier,
+                relationshipType: args.relationshipType,
+                view: args.view,
+                paging: args.paging,
+              },
+              this.viewSubject(ctx),
+            );
+            return await this.filterRelationshipEdges(result, "sourceId", ctx);
+          } catch (error) {
+            this.logger.error(
+              "Error in documentIncomingRelationshipEdges: @Error",
+              error,
+            );
+            throw error;
+          }
+        },
+
+        findDocuments: async (_parent, args, ctx: Context) => {
+          this.logger.debug("findDocuments(@args)", args);
+          try {
+            const result = await resolvers.findDocuments(
+              this.reactorClient,
+              { ...args, search: args.search ?? {} },
+              this.viewSubject(ctx),
+            );
+
+            // Filter results to only include documents the user can read
+            return {
+              ...result,
+              items: await this.readableByHost(result.items, ctx),
+            };
+          } catch (error) {
+            this.logger.error("Error in findDocuments: @Error", error);
+            throw error;
+          }
+        },
+
+        jobStatus: async (_parent, args, ctx: Context) => {
+          this.logger.debug("jobStatus(@args)", args);
+          try {
+            // jobChanges' gate, applied to the job and to every coordinate.
+            const admin = this.authorizationService.isSupremeAdmin(
+              ctx.user?.address,
+            );
+            const decisions = new Map<string, Promise<boolean>>();
+            const readable = (id: string): Promise<boolean> => {
+              let decision = decisions.get(id);
+              if (!decision) {
+                decision = (async () =>
+                  (await this.servesDocument(id, ctx)) &&
+                  (admin ||
+                    (await this.canReadDocument(
+                      id as CanonicalDocumentId,
+                      ctx,
+                    ))))();
+                decisions.set(id, decision);
+              }
+              return decision;
+            };
+            return await resolvers.jobStatus(
+              this.reactorClient,
+              args,
+              readable,
+              readable,
+            );
+          } catch (error) {
+            this.logger.error("Error in jobStatus: @Error", error);
+            throw error;
+          }
+        },
+
+        documentServed: async (_parent, args, ctx: Context) => {
+          this.logger.debug("documentServed(@args)", args);
+          try {
+            return await this.listsDocument(args.idOrSlug, ctx, {
+              branch: args.view?.branch ?? undefined,
+              scopes: args.view?.scopes ? [...args.view.scopes] : undefined,
+            });
+          } catch (error) {
+            this.logger.error("Error in documentServed: @Error", error);
+            throw error;
+          }
+        },
+
+        createDefaults: async (_parent, args, ctx: Context) => {
+          this.logger.debug("createDefaults(@args)", args);
+          try {
+            const parentIdOrSlug = args.parentIdOrSlug ?? undefined;
+            // Without a parent the answer is host-wide, so nothing is gated.
+            if (
+              parentIdOrSlug !== undefined &&
+              !(await this.listsDocument(parentIdOrSlug, ctx))
+            ) {
+              throw new ForbiddenError("to read this document");
+            }
+            return await resolvers.createDefaults(
+              this.reactorClient,
+              parentIdOrSlug,
+            );
+          } catch (error) {
+            this.logger.error("Error in createDefaults: @Error", error);
+            throw error;
+          }
+        },
+
+        documentOperations: async (_parent, args, ctx: Context) => {
+          this.logger.debug("documentOperations(@args)", args);
+          try {
+            const { documentIdOrSlug, documentId, ...filter } = args.filter;
+            const handle = await this.assertCanRead(
+              requireOneOf<string>(
+                { documentIdOrSlug, documentId },
+                "documentIdOrSlug",
+                "documentId",
+              ),
+              ctx,
+            );
+            return await resolvers.documentOperations(
+              this.reactorClient,
+              {
+                filter: { ...filter, documentIdOrSlug: handle.fetchIdentifier },
+                paging: args.paging,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error("Error in documentOperations: @Error", error);
+            throw error;
+          }
+        },
+
+        /**
+         * Gated on reading the document, the same gate every other read here
+         * carries: a verdict is derived from the document's policy, so a caller
+         * who may not read the document may not preflight against it either.
+         * That gate decides whether the query runs; the answer comes entirely
+         * from the reactor's decision model.
+         */
+        evaluateActions: async (_parent, args, ctx: Context) => {
+          this.logger.debug("evaluateActions(@args)", args);
+          try {
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "documentIdentifier",
+            );
+            const handle = await this.assertCanRead(documentIdOrSlug, ctx);
+            return await resolvers.evaluateActions(
+              this.reactorClient,
+              {
+                documentIdOrSlug: handle.fetchIdentifier,
+                branch: args.branch,
+                candidates: args.candidates,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error("Error in evaluateActions: @Error", error);
+            throw error;
+          }
+        },
+
+        syncHolds: async (
+          _parent: unknown,
+          args: { remoteName?: string | null; documentId?: string | null },
+          ctx: Context,
+        ) => {
+          const address = ctx.user?.address;
+          if (!this.authorizationService.isSupremeAdmin(address)) {
+            let bound: string | undefined;
+            try {
+              bound = args.remoteName
+                ? this.syncManager.getByName(args.remoteName).meta.options
+                    .boundAddress
+                : undefined;
+            } catch {
+              bound = undefined;
+            }
+            if (address === undefined || bound !== address) {
+              throw new ForbiddenError("to list sync holds");
+            }
+          }
+          return resolvers.syncHolds(this.syncManager, args);
+        },
+
+        peerAgreement: (
+          _parent: unknown,
+          args: { collectionId: string },
+          ctx: Context,
+        ) => {
+          const address = ctx.user?.address;
+          if (
+            !this.authorizationService.isSupremeAdmin(address) &&
+            (address === undefined ||
+              !this.syncManager
+                .list()
+                .some(
+                  (remote) =>
+                    remote.meta.collectionId.key === args.collectionId &&
+                    remote.meta.options.boundAddress === address,
+                ))
+          ) {
+            throw new ForbiddenError("to read peer agreement");
+          }
+          return resolvers.peerAgreement(this.syncManager, args);
+        },
+
+        pollSyncEnvelopes: async (
+          _parent: unknown,
+          args: {
+            channelId: string;
+            outboxAck: number;
+            outboxLatest: number;
+            manifestRevision?: string | null;
+            refusals?: ReadonlyArray<resolvers.PollRefusal> | null;
+          },
+          ctx: Context,
+        ) => {
+          this.logger.debug("pollSyncEnvelopes(@args)", args);
+
+          try {
+            let remote;
+            try {
+              remote = this.syncManager.getById(args.channelId);
+            } catch (error) {
+              throw new GraphQLError(
+                `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+              );
+            }
+
+            // A collection is a drive-level abstraction; its canonical drive id is
+            // carried by the collection id (never a slug).
+            const driveId = remote.meta.collectionId
+              .driveId as CanonicalDocumentId;
+            const isAdmin = this.authorizationService.isSupremeAdmin(
+              ctx.user?.address,
+            );
+
+            // Tier 1: reading any operation in a collection requires read access to
+            // the drive it belongs to. No drive read, no document read.
+            if (!isAdmin) {
+              await this.assertCanReadCanonical(driveId, ctx);
+            }
+
+            // Adoption is a write, so it comes after the drive check: a caller
+            // this collection refuses must not claim the channel on its way out.
+            // `bindRemote` will not rebind, so a stray claim would lock the
+            // rightful owner out for good. touchChannel orders these the same way.
+            await this.#bindOrRefuseChannel(args.channelId, ctx);
+
+            resolvers.holdPollRefusals(
+              this.syncManager,
+              args.channelId,
+              args.refusals,
+            );
+            await resolvers.recordPollMarkerRefusals(
+              this.syncManager,
+              args.channelId,
+              args.refusals,
+            );
+            await resolvers.silenceUnversionedPoll(
+              this.syncManager,
+              args.channelId,
+              args.manifestRevision,
+            );
+
+            // Tier 2/3: drop operations and dead letters for documents the caller
+            // cannot read individually.
+            const forbiddenIds = new Set<string>();
+            if (!isAdmin) {
+              // A caller who can read a *protected* drive holds a grant that
+              // inherits to every in-collection member, so the outbox needs no
+              // per-document check. Only a world-readable drive can contain an
+              // individually-protected member this caller cannot read.
+              const driveWorldReadable =
+                await this.authorizationService.canRead(driveId, undefined);
+              if (driveWorldReadable) {
+                await this.#collectForbiddenDocuments(
+                  remote.channel.outbox.items,
+                  forbiddenIds,
+                  ctx,
+                );
+              }
+              // Dead letters can carry documents outside this collection (failed
+              // inbox jobs) that the drive gate does not cover, so always filter.
               await this.#collectForbiddenDocuments(
-                remote.channel.outbox.items,
+                remote.channel.deadLetter.items,
                 forbiddenIds,
                 ctx,
               );
             }
-            // Dead letters can carry documents outside this collection (failed
-            // inbox jobs) that the drive gate does not cover, so always filter.
-            await this.#collectForbiddenDocuments(
-              remote.channel.deadLetter.items,
+
+            // Tier 2/3 again, from the document's own policy this time. The two
+            // verdicts are intersected rather than swapped: every document
+            // predating the policy migration reads as uninitialized, so trusting
+            // the policy alone would open whatever the host's tables still
+            // protect. Held entries are withheld, not consumed, so a grant that
+            // widens later serves them whole on the next poll.
+            // One snapshot feeds both the gate and the poll. Re-reading the
+            // outbox after the gate's awaits would let an entry queued in the
+            // meantime through with no verdict attached to it.
+            const gate = this.syncServingGate;
+            const gated = gate
+              ? [
+                  ...remote.channel.outbox.items,
+                  ...remote.channel.deadLetter.items,
+                ]
+              : undefined;
+            const heldOpIds =
+              gate && gated
+                ? await resolvers.collectHeldSyncOperations(
+                    gated,
+                    gate,
+                    this.viewSubject(ctx),
+                  )
+                : new Set<string>();
+
+            return resolvers.pollSyncEnvelopes(
+              this.syncManager,
+              args,
               forbiddenIds,
-              ctx,
+              heldOpIds,
+              gated && new Set(gated.map((syncOp) => syncOp.id)),
             );
-          }
-
-          // Tier 2/3 again, from the document's own policy this time. The two
-          // verdicts are intersected rather than swapped: every document
-          // predating the policy migration reads as uninitialized, so trusting
-          // the policy alone would open whatever the host's tables still
-          // protect. Held entries are withheld, not consumed, so a grant that
-          // widens later serves them whole on the next poll.
-          // One snapshot feeds both the gate and the poll. Re-reading the
-          // outbox after the gate's awaits would let an entry queued in the
-          // meantime through with no verdict attached to it.
-          const gate = this.syncServingGate;
-          const gated = gate
-            ? [
-                ...remote.channel.outbox.items,
-                ...remote.channel.deadLetter.items,
-              ]
-            : undefined;
-          const heldOpIds =
-            gate && gated
-              ? await resolvers.collectHeldSyncOperations(
-                  gated,
-                  gate,
-                  this.viewSubject(ctx),
-                )
-              : new Set<string>();
-
-          return resolvers.pollSyncEnvelopes(
-            this.syncManager,
-            args,
-            forbiddenIds,
-            heldOpIds,
-            gated && new Set(gated.map((syncOp) => syncOp.id)),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in pollSyncEnvelopes(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-    },
-
-    Mutation: {
-      createDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("createDocument(@args)", args);
-        try {
-          const parentIdOrSlug = optionalOneOf<string>(
-            args,
-            "parentIdOrSlug",
-            "parentIdentifier",
-          );
-          // If creating under a parent, check write permission on parent
-          if (parentIdOrSlug) {
-            const parent = await resolvers.document(this.reactorClient, {
-              idOrSlug: parentIdOrSlug,
-            });
-
-            await this.assertCanWriteCanonical(
-              parent.document.id as CanonicalDocumentId,
-              ctx,
+          } catch (error) {
+            this.logger.error(
+              "Error in pollSyncEnvelopes(@args): @Error",
+              args,
+              error,
             );
-          } else {
-            this.assertCanCreate(ctx);
+            throw error;
           }
-          const result = await resolvers.createDocument(
-            this.reactorClient,
-            { document: args.document, parentIdOrSlug },
-            this.graphqlManager.reactorDriveClient,
-            this.viewSubject(ctx),
-          );
-
-          if (result?.id && isDriveContainerType(result.documentType)) {
-            this.graphqlManager.driveOwnershipCache.add(result.id);
-          }
-
-          // Auto-ownership: set creator as document owner
-          if (ctx.user?.address && result?.id) {
-            await this.documentPermissionService?.initializeDocumentProtection(
-              result.id,
-              ctx.user.address,
-              this.authorizationService.config.defaultProtection,
-            );
-          }
-
-          return result;
-        } catch (error) {
-          this.logger.error(
-            "Error in createDocument(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
+        },
       },
 
-      createEmptyDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("createEmptyDocument(@args)", args);
-        try {
-          const parentIdOrSlug = optionalOneOf<string>(
-            args,
-            "parentIdOrSlug",
-            "parentIdentifier",
-          );
-          // If creating under a parent, check write permission on parent
-          if (parentIdOrSlug) {
-            const parent = await resolvers.document(this.reactorClient, {
-              idOrSlug: parentIdOrSlug,
-            });
-
-            await this.assertCanWriteCanonical(
-              parent.document.id as CanonicalDocumentId,
-              ctx,
+      Mutation: {
+        createDocument: async (_parent, args, ctx: Context) => {
+          this.logger.debug("createDocument(@args)", args);
+          try {
+            const parentIdOrSlug = optionalOneOf<string>(
+              args,
+              "parentIdOrSlug",
+              "parentIdentifier",
             );
-          } else {
-            this.assertCanCreate(ctx);
-          }
-          const result = await resolvers.createEmptyDocument(
-            this.reactorClient,
-            { documentType: args.documentType, parentIdOrSlug },
-            this.graphqlManager.reactorDriveClient,
-            this.viewSubject(ctx),
-          );
+            // If creating under a parent, check write permission on parent
+            if (parentIdOrSlug) {
+              const parent = await resolvers.document(this.reactorClient, {
+                idOrSlug: parentIdOrSlug,
+              });
 
-          if (result?.id && isDriveContainerType(result.documentType)) {
-            this.graphqlManager.driveOwnershipCache.add(result.id);
-          }
-
-          // Auto-ownership: set creator as document owner
-          if (ctx.user?.address && result?.id) {
-            await this.documentPermissionService?.initializeDocumentProtection(
-              result.id,
-              ctx.user.address,
-              this.authorizationService.config.defaultProtection,
-            );
-          }
-
-          return result;
-        } catch (error) {
-          this.logger.error(
-            "Error in createEmptyDocument(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      execute: async (_parent, args, ctx: Context) => {
-        this.logger.debug("execute(@args)", args);
-        try {
-          const documentIdOrSlug = requireOneOf<string>(
-            args,
-            "documentIdOrSlug",
-            "documentIdentifier",
-          );
-          // canMutate combines the write + operation checks per action.
-          const handle = await this.assertCanExecuteOperations(
-            documentIdOrSlug,
-            args.actions,
-            ctx,
-          );
-
-          return await resolvers.execute(
-            this.reactorClient,
-            {
-              documentIdOrSlug: handle.fetchIdentifier,
-              actions: args.actions,
-              branch: args.branch,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error("Error in execute(@args): @Error", args, error);
-          throw error;
-        }
-      },
-
-      executeAsync: async (_parent, args, ctx: Context) => {
-        this.logger.debug("executeAsync(@args)", args);
-        try {
-          const documentIdOrSlug = requireOneOf<string>(
-            args,
-            "documentIdOrSlug",
-            "documentIdentifier",
-          );
-          const handle = await this.assertCanExecuteOperations(
-            documentIdOrSlug,
-            args.actions,
-            ctx,
-          );
-
-          return await resolvers.executeAsync(this.reactorClient, {
-            documentIdOrSlug: handle.fetchIdentifier,
-            actions: args.actions,
-            branch: args.branch,
-          });
-        } catch (error) {
-          this.logger.error(
-            "Error in executeAsync(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      executeBatch: async (_parent, args, ctx: Context) => {
-        this.logger.debug("executeBatch(@args)", args);
-        try {
-          const creation = resolvers.batchCreationOf(args.jobs);
-          if (creation) {
-            // The same rule as createDocument: write on a parent, or create.
-            if (creation.linkedFrom.length > 0) {
-              for (const parent of creation.linkedFrom) {
-                await this.assertCanWrite(parent, ctx);
-              }
+              await this.assertCanWriteCanonical(
+                parent.document.id as CanonicalDocumentId,
+                ctx,
+              );
             } else {
               this.assertCanCreate(ctx);
             }
+            const result = await resolvers.createDocument(
+              this.reactorClient,
+              { document: args.document, parentIdOrSlug },
+              this.graphqlManager.reactorDriveClient,
+              this.viewSubject(ctx),
+            );
 
-            const result = await resolvers.executeBatch(this.reactorClient, {
-              jobs: args.jobs,
-            });
-            if (
-              result.jobs.some((entry) => entry.job.status !== "READ_READY")
-            ) {
-              return result;
+            if (result?.id && isDriveContainerType(result.documentType)) {
+              this.graphqlManager.driveOwnershipCache.add(result.id);
             }
 
-            if (isDriveContainerType(creation.documentType)) {
-              this.graphqlManager.driveOwnershipCache.add(creation.documentId);
-            }
-            if (ctx.user?.address) {
+            // Auto-ownership: set creator as document owner
+            if (ctx.user?.address && result?.id) {
               await this.documentPermissionService?.initializeDocumentProtection(
-                creation.documentId,
+                result.id,
                 ctx.user.address,
                 this.authorizationService.config.defaultProtection,
               );
             }
+
             return result;
-          }
-
-          const jobs = [];
-          for (const job of args.jobs) {
-            const handle = await this.assertCanExecuteOperations(
-              job.documentIdOrSlug,
-              job.actions,
-              ctx,
+          } catch (error) {
+            this.logger.error(
+              "Error in createDocument(@args): @Error",
+              args,
+              error,
             );
-            jobs.push({ ...job, documentIdOrSlug: handle.fetchIdentifier });
+            throw error;
           }
-
-          return await resolvers.executeBatch(this.reactorClient, { jobs });
-        } catch (error) {
-          this.logger.error(
-            "Error in executeBatch(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      mutateDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("mutateDocument(@args)", args);
-        try {
-          // canMutate combines the write + operation checks per action.
-          const handle = await this.assertCanExecuteOperations(
-            args.documentIdentifier,
-            args.actions,
-            ctx,
-          );
-
-          return await resolvers.mutateDocument(
-            this.reactorClient,
-            { ...args, documentIdentifier: handle.fetchIdentifier },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in mutateDocument(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      mutateDocumentAsync: async (_parent, args, ctx: Context) => {
-        this.logger.debug("mutateDocumentAsync(@args)", args);
-        try {
-          const handle = await this.assertCanExecuteOperations(
-            args.documentIdentifier,
-            args.actions,
-            ctx,
-          );
-
-          return await resolvers.mutateDocumentAsync(this.reactorClient, {
-            ...args,
-            documentIdentifier: handle.fetchIdentifier,
-          });
-        } catch (error) {
-          this.logger.error(
-            "Error in mutateDocumentAsync(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      renameDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("renameDocument(@args)", args);
-        try {
-          const documentIdOrSlug = requireOneOf<string>(
-            args,
-            "documentIdOrSlug",
-            "documentIdentifier",
-          );
-          const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
-
-          return await resolvers.renameDocument(
-            this.reactorClient,
-            {
-              documentIdOrSlug: handle.fetchIdentifier,
-              name: args.name,
-              branch: args.branch,
-            },
-            undefined,
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in renameDocument(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      setPreferredEditor: async (_parent, args, ctx: Context) => {
-        this.logger.debug("setPreferredEditor(@args)", args);
-        try {
-          const documentIdOrSlug = requireOneOf<string>(
-            args,
-            "documentIdOrSlug",
-            "documentIdentifier",
-          );
-          const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
-
-          return await resolvers.setPreferredEditor(
-            this.reactorClient,
-            {
-              documentIdOrSlug: handle.fetchIdentifier,
-              preferredEditor: args.preferredEditor,
-              branch: args.branch,
-            },
-            undefined,
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in setPreferredEditor(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      addRelationship: async (_parent, args, ctx: Context) => {
-        this.logger.debug("addRelationship(@args)", args);
-        try {
-          const sourceIdOrSlug = requireOneOf<string>(
-            args,
-            "sourceIdOrSlug",
-            "sourceIdentifier",
-          );
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
-
-          return await resolvers.addRelationship(
-            this.reactorClient,
-            {
-              sourceIdOrSlug: handle.fetchIdentifier,
-              targetIdOrSlug,
-              relationshipType: args.relationshipType,
-              metadata: args.metadata,
-              branch: args.branch,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in addRelationship(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      updateRelationship: async (_parent, args, ctx: Context) => {
-        this.logger.debug("updateRelationship(@args)", args);
-        try {
-          const sourceIdOrSlug = requireOneOf<string>(
-            args,
-            "sourceIdOrSlug",
-            "sourceIdentifier",
-          );
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
-
-          return await resolvers.updateRelationship(
-            this.reactorClient,
-            {
-              sourceIdOrSlug: handle.fetchIdentifier,
-              targetIdOrSlug,
-              relationshipType: args.relationshipType,
-              metadata: args.metadata,
-              branch: args.branch,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in updateRelationship(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      removeRelationship: async (_parent, args, ctx: Context) => {
-        this.logger.debug("removeRelationship(@args)", args);
-        try {
-          const sourceIdOrSlug = requireOneOf<string>(
-            args,
-            "sourceIdOrSlug",
-            "sourceIdentifier",
-          );
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
-
-          return await resolvers.removeRelationship(
-            this.reactorClient,
-            {
-              sourceIdOrSlug: handle.fetchIdentifier,
-              targetIdOrSlug,
-              relationshipType: args.relationshipType,
-              branch: args.branch,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in removeRelationship(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      moveRelationship: async (_parent, args, ctx: Context) => {
-        this.logger.debug("moveRelationship(@args)", args);
-        try {
-          const sourceParentIdOrSlug = requireOneOf<string>(
-            args,
-            "sourceParentIdOrSlug",
-            "sourceParentIdentifier",
-          );
-          const targetParentIdOrSlug = requireOneOf<string>(
-            args,
-            "targetParentIdOrSlug",
-            "targetParentIdentifier",
-          );
-          const targetIdOrSlug = requireOneOf<string>(
-            args,
-            "targetIdOrSlug",
-            "targetIdentifier",
-          );
-          const sourceHandle = await this.assertCanWrite(
-            sourceParentIdOrSlug,
-            ctx,
-          );
-          const targetHandle = await this.assertCanWrite(
-            targetParentIdOrSlug,
-            ctx,
-          );
-
-          return await resolvers.moveRelationship(
-            this.reactorClient,
-            {
-              sourceParentIdOrSlug: sourceHandle.fetchIdentifier,
-              targetParentIdOrSlug: targetHandle.fetchIdentifier,
-              targetIdOrSlug,
-              relationshipType: args.relationshipType,
-              branch: args.branch,
-            },
-            this.viewSubject(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in moveRelationship(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      deleteDocument: async (_parent, args, ctx: Context) => {
-        this.logger.debug("deleteDocument(@args)", args);
-        try {
-          const handle = await this.assertCanWrite(
-            requireOneOf<string>(args, "idOrSlug", "identifier"),
-            ctx,
-          );
-          const idOrSlug = handle.fetchIdentifier;
-
-          // Resolve identifier (id or slug) to detect drive deletes for cache
-          // invalidation. Only one read; no-op for non-drive callers via the
-          // catch.
-          const driveIdToInvalidate = await this.#resolveDriveId(idOrSlug);
-
-          const result = await resolvers.deleteDocument(
-            this.reactorClient,
-            { idOrSlug, propagate: args.propagate },
-            this.graphqlManager.reactorDriveClient,
-          );
-
-          if (result && driveIdToInvalidate) {
-            this.graphqlManager.driveOwnershipCache.remove(driveIdToInvalidate);
-          }
-
-          return result;
-        } catch (error) {
-          this.logger.error(
-            "Error in deleteDocument(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      deleteDocuments: async (_parent, args, ctx: Context) => {
-        this.logger.debug("deleteDocuments(@args)", args);
-        try {
-          // Check write permission on each document, resolving slugs so the
-          // delete targets the same canonical ids the checks authorized.
-          const idsOrSlugs: string[] = [];
-          for (const idOrSlug of requireOneOf<readonly string[]>(
-            args,
-            "idsOrSlugs",
-            "identifiers",
-          )) {
-            const handle = await this.assertCanWrite(idOrSlug, ctx);
-            idsOrSlugs.push(handle.fetchIdentifier);
-          }
-          return await resolvers.deleteDocuments(this.reactorClient, {
-            idsOrSlugs,
-            propagate: args.propagate,
-          });
-        } catch (error) {
-          this.logger.error(
-            "Error in deleteDocuments(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      touchChannel: async (
-        _parent: unknown,
-        args: {
-          input: {
-            id: string;
-            name: string;
-            collectionId: string;
-            filter: {
-              documentId: readonly string[];
-              scope: readonly string[];
-              branch: string;
-            };
-            sinceTimestampUtcMs: string;
-            manifest?: unknown;
-          };
         },
-        ctx: Context,
-      ) => {
-        this.logger.debug("touchChannel(@args)", args);
 
-        try {
-          // A channel synchronizes a collection, i.e. a drive. Registering one
-          // requires read access to that drive; pushed operations are still
-          // authorized per-operation in pushSyncEnvelopes. The collection id
-          // carries the canonical drive id (never a slug).
-          if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
-            const driveId = DriveCollectionId.fromKey(args.input.collectionId)
-              .driveId as CanonicalDocumentId;
-            await this.assertCanReadCanonical(driveId, ctx);
-          }
+        createEmptyDocument: async (_parent, args, ctx: Context) => {
+          this.logger.debug("createEmptyDocument(@args)", args);
+          try {
+            const parentIdOrSlug = optionalOneOf<string>(
+              args,
+              "parentIdOrSlug",
+              "parentIdentifier",
+            );
+            // If creating under a parent, check write permission on parent
+            if (parentIdOrSlug) {
+              const parent = await resolvers.document(this.reactorClient, {
+                idOrSlug: parentIdOrSlug,
+              });
 
-          await this.#bindOrRefuseChannel(args.input.id, ctx);
-
-          return await resolvers.touchChannel(
-            this.syncManager,
-            args,
-            this.#creatorBinding(ctx),
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in touchChannel(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-
-      pushSyncEnvelopes: async (_parent, args, ctx: Context) => {
-        this.logger.debug("pushSyncEnvelopes(@args)", args);
-
-        try {
-          // A push claims or proves ownership exactly as a poll does. It has to
-          // be checked here rather than left to the per-operation canMutate
-          // loop below, because an envelope carrying no operations skips that
-          // loop entirely -- and a push stamps channel liveness, so without
-          // this anyone who learns a channel id could keep that channel, and
-          // the operations it is holding, alive for good.
-          const boundChannelIds = new Set<string>();
-          for (const envelope of args.envelopes) {
-            const channelId = envelope.channelMeta.id;
-            if (boundChannelIds.has(channelId)) continue;
-            boundChannelIds.add(channelId);
-            await this.#bindOrRefuseChannel(channelId, ctx, {
-              adopt: false,
-              action: "push to",
-            });
-          }
-
-          // Check canMutate per distinct (documentId, action type). Nested map
-          // rather than a joined key: a separator could be forged to collide
-          // two distinct pairs and skip a check.
-          const checkedOperations = new Map<string, Set<string>>();
-          for (const envelope of args.envelopes) {
-            for (const op of envelope.operations ?? []) {
-              const documentId = op.context.documentId;
-              const operationType = op.operation.action.type;
-              let checkedTypes = checkedOperations.get(documentId);
-              if (!checkedTypes) {
-                checkedTypes = new Set<string>();
-                checkedOperations.set(documentId, checkedTypes);
-              }
-              if (checkedTypes.has(operationType)) continue;
-              checkedTypes.add(operationType);
-              // Operation context ids are canonical document ids supplied by the
-              // sync protocol (never slugs) and may reference documents not yet
-              // materialized locally, so check them without slug resolution.
-              await this.assertCanExecuteOperationCanonical(
-                documentId as CanonicalDocumentId,
-                operationType,
+              await this.assertCanWriteCanonical(
+                parent.document.id as CanonicalDocumentId,
                 ctx,
               );
+            } else {
+              this.assertCanCreate(ctx);
             }
+            const result = await resolvers.createEmptyDocument(
+              this.reactorClient,
+              { documentType: args.documentType, parentIdOrSlug },
+              this.graphqlManager.reactorDriveClient,
+              this.viewSubject(ctx),
+            );
+
+            if (result?.id && isDriveContainerType(result.documentType)) {
+              this.graphqlManager.driveOwnershipCache.add(result.id);
+            }
+
+            // Auto-ownership: set creator as document owner
+            if (ctx.user?.address && result?.id) {
+              await this.documentPermissionService?.initializeDocumentProtection(
+                result.id,
+                ctx.user.address,
+                this.authorizationService.config.defaultProtection,
+              );
+            }
+
+            return result;
+          } catch (error) {
+            this.logger.error(
+              "Error in createEmptyDocument(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
           }
+        },
 
-          // Convert readonly arrays to mutable arrays for the resolver
-          const mutableArgs = {
-            envelopes: args.envelopes.map((envelope) => ({
-              type: envelope.type,
-              channelMeta: { id: envelope.channelMeta.id },
-              operations: envelope.operations
-                ? envelope.operations.map((op) => ({
-                    operation: op.operation,
-                    context: {
-                      documentId: op.context.documentId,
-                      documentType: op.context.documentType,
-                      scope: op.context.scope,
-                      branch: op.context.branch,
-                      ordinal: op.context.ordinal,
-                    },
-                  }))
-                : null,
-              cursor: envelope.cursor
-                ? {
-                    remoteName: envelope.cursor.remoteName,
-                    cursorOrdinal: envelope.cursor.cursorOrdinal,
-                    lastSyncedAtUtcMs: envelope.cursor.lastSyncedAtUtcMs,
-                  }
-                : null,
-              key: envelope.key ?? undefined,
-              dependsOn: envelope.dependsOn
-                ? [...envelope.dependsOn]
-                : undefined,
-            })),
-          };
+        execute: async (_parent, args, ctx: Context) => {
+          this.logger.debug("execute(@args)", args);
+          try {
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "documentIdentifier",
+            );
+            // canMutate combines the write + operation checks per action.
+            const handle = await this.assertCanExecuteOperations(
+              documentIdOrSlug,
+              args.actions,
+              ctx,
+            );
 
-          return await resolvers.pushSyncEnvelopes(
-            this.syncManager,
-            mutableArgs,
-          );
-        } catch (error) {
-          this.logger.error(
-            "Error in pushSyncEnvelopes(@args): @Error",
-            args,
-            error,
-          );
-          throw error;
-        }
-      },
-    },
+            return await resolvers.execute(
+              this.reactorClient,
+              {
+                documentIdOrSlug: handle.fetchIdentifier,
+                actions: args.actions,
+                branch: args.branch,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error("Error in execute(@args): @Error", args, error);
+            throw error;
+          }
+        },
 
-    Subscription: {
-      documentChanges: {
-        // Each subscriber reads the reactor's feed as its own subject, so the
-        // client withholds what the policy refuses it. The predicate adds the
-        // host's legacy check; both transports share this resolver.
-        subscribe: (
-          rootValue: unknown,
+        executeAsync: async (_parent, args, ctx: Context) => {
+          this.logger.debug("executeAsync(@args)", args);
+          try {
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "documentIdentifier",
+            );
+            const handle = await this.assertCanExecuteOperations(
+              documentIdOrSlug,
+              args.actions,
+              ctx,
+            );
+
+            return await resolvers.executeAsync(this.reactorClient, {
+              documentIdOrSlug: handle.fetchIdentifier,
+              actions: args.actions,
+              branch: args.branch,
+            });
+          } catch (error) {
+            this.logger.error(
+              "Error in executeAsync(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        executeBatch: async (_parent, args, ctx: Context) => {
+          this.logger.debug("executeBatch(@args)", args);
+          try {
+            const creation = resolvers.batchCreationOf(args.jobs);
+            if (creation) {
+              // The same rule as createDocument: write on a parent, or create.
+              if (creation.linkedFrom.length > 0) {
+                for (const parent of creation.linkedFrom) {
+                  await this.assertCanWrite(parent, ctx);
+                }
+              } else {
+                this.assertCanCreate(ctx);
+              }
+
+              const result = await resolvers.executeBatch(this.reactorClient, {
+                jobs: args.jobs,
+              });
+              if (
+                result.jobs.some((entry) => entry.job.status !== "READ_READY")
+              ) {
+                return result;
+              }
+
+              if (isDriveContainerType(creation.documentType)) {
+                this.graphqlManager.driveOwnershipCache.add(
+                  creation.documentId,
+                );
+              }
+              if (ctx.user?.address) {
+                await this.documentPermissionService?.initializeDocumentProtection(
+                  creation.documentId,
+                  ctx.user.address,
+                  this.authorizationService.config.defaultProtection,
+                );
+              }
+              return result;
+            }
+
+            const jobs = [];
+            for (const job of args.jobs) {
+              const handle = await this.assertCanExecuteOperations(
+                job.documentIdOrSlug,
+                job.actions,
+                ctx,
+              );
+              jobs.push({ ...job, documentIdOrSlug: handle.fetchIdentifier });
+            }
+
+            return await resolvers.executeBatch(this.reactorClient, { jobs });
+          } catch (error) {
+            this.logger.error(
+              "Error in executeBatch(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        mutateDocument: async (_parent, args, ctx: Context) => {
+          this.logger.debug("mutateDocument(@args)", args);
+          try {
+            // canMutate combines the write + operation checks per action.
+            const handle = await this.assertCanExecuteOperations(
+              args.documentIdentifier,
+              args.actions,
+              ctx,
+            );
+
+            return await resolvers.mutateDocument(
+              this.reactorClient,
+              { ...args, documentIdentifier: handle.fetchIdentifier },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in mutateDocument(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        mutateDocumentAsync: async (_parent, args, ctx: Context) => {
+          this.logger.debug("mutateDocumentAsync(@args)", args);
+          try {
+            const handle = await this.assertCanExecuteOperations(
+              args.documentIdentifier,
+              args.actions,
+              ctx,
+            );
+
+            return await resolvers.mutateDocumentAsync(this.reactorClient, {
+              ...args,
+              documentIdentifier: handle.fetchIdentifier,
+            });
+          } catch (error) {
+            this.logger.error(
+              "Error in mutateDocumentAsync(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        renameDocument: async (_parent, args, ctx: Context) => {
+          this.logger.debug("renameDocument(@args)", args);
+          try {
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "documentIdentifier",
+            );
+            const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
+
+            return await resolvers.renameDocument(
+              this.reactorClient,
+              {
+                documentIdOrSlug: handle.fetchIdentifier,
+                name: args.name,
+                branch: args.branch,
+              },
+              undefined,
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in renameDocument(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        setPreferredEditor: async (_parent, args, ctx: Context) => {
+          this.logger.debug("setPreferredEditor(@args)", args);
+          try {
+            const documentIdOrSlug = requireOneOf<string>(
+              args,
+              "documentIdOrSlug",
+              "documentIdentifier",
+            );
+            const handle = await this.assertCanWrite(documentIdOrSlug, ctx);
+
+            return await resolvers.setPreferredEditor(
+              this.reactorClient,
+              {
+                documentIdOrSlug: handle.fetchIdentifier,
+                preferredEditor: args.preferredEditor,
+                branch: args.branch,
+              },
+              undefined,
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in setPreferredEditor(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        addRelationship: async (_parent, args, ctx: Context) => {
+          this.logger.debug("addRelationship(@args)", args);
+          try {
+            const sourceIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceIdOrSlug",
+              "sourceIdentifier",
+            );
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
+
+            return await resolvers.addRelationship(
+              this.reactorClient,
+              {
+                sourceIdOrSlug: handle.fetchIdentifier,
+                targetIdOrSlug,
+                relationshipType: args.relationshipType,
+                metadata: args.metadata,
+                branch: args.branch,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in addRelationship(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        updateRelationship: async (_parent, args, ctx: Context) => {
+          this.logger.debug("updateRelationship(@args)", args);
+          try {
+            const sourceIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceIdOrSlug",
+              "sourceIdentifier",
+            );
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
+
+            return await resolvers.updateRelationship(
+              this.reactorClient,
+              {
+                sourceIdOrSlug: handle.fetchIdentifier,
+                targetIdOrSlug,
+                relationshipType: args.relationshipType,
+                metadata: args.metadata,
+                branch: args.branch,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in updateRelationship(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        removeRelationship: async (_parent, args, ctx: Context) => {
+          this.logger.debug("removeRelationship(@args)", args);
+          try {
+            const sourceIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceIdOrSlug",
+              "sourceIdentifier",
+            );
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const handle = await this.assertCanWrite(sourceIdOrSlug, ctx);
+
+            return await resolvers.removeRelationship(
+              this.reactorClient,
+              {
+                sourceIdOrSlug: handle.fetchIdentifier,
+                targetIdOrSlug,
+                relationshipType: args.relationshipType,
+                branch: args.branch,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in removeRelationship(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        moveRelationship: async (_parent, args, ctx: Context) => {
+          this.logger.debug("moveRelationship(@args)", args);
+          try {
+            const sourceParentIdOrSlug = requireOneOf<string>(
+              args,
+              "sourceParentIdOrSlug",
+              "sourceParentIdentifier",
+            );
+            const targetParentIdOrSlug = requireOneOf<string>(
+              args,
+              "targetParentIdOrSlug",
+              "targetParentIdentifier",
+            );
+            const targetIdOrSlug = requireOneOf<string>(
+              args,
+              "targetIdOrSlug",
+              "targetIdentifier",
+            );
+            const sourceHandle = await this.assertCanWrite(
+              sourceParentIdOrSlug,
+              ctx,
+            );
+            const targetHandle = await this.assertCanWrite(
+              targetParentIdOrSlug,
+              ctx,
+            );
+
+            return await resolvers.moveRelationship(
+              this.reactorClient,
+              {
+                sourceParentIdOrSlug: sourceHandle.fetchIdentifier,
+                targetParentIdOrSlug: targetHandle.fetchIdentifier,
+                targetIdOrSlug,
+                relationshipType: args.relationshipType,
+                branch: args.branch,
+              },
+              this.viewSubject(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in moveRelationship(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        deleteDocument: async (_parent, args, ctx: Context) => {
+          this.logger.debug("deleteDocument(@args)", args);
+          try {
+            const handle = await this.assertCanWrite(
+              requireOneOf<string>(args, "idOrSlug", "identifier"),
+              ctx,
+            );
+            const idOrSlug = handle.fetchIdentifier;
+
+            // Resolve identifier (id or slug) to detect drive deletes for cache
+            // invalidation. Only one read; no-op for non-drive callers via the
+            // catch.
+            const driveIdToInvalidate = await this.#resolveDriveId(idOrSlug);
+
+            const result = await resolvers.deleteDocument(
+              this.reactorClient,
+              { idOrSlug, propagate: args.propagate },
+              this.graphqlManager.reactorDriveClient,
+            );
+
+            if (result && driveIdToInvalidate) {
+              this.graphqlManager.driveOwnershipCache.remove(
+                driveIdToInvalidate,
+              );
+            }
+
+            return result;
+          } catch (error) {
+            this.logger.error(
+              "Error in deleteDocument(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        deleteDocuments: async (_parent, args, ctx: Context) => {
+          this.logger.debug("deleteDocuments(@args)", args);
+          try {
+            // Check write permission on each document, resolving slugs so the
+            // delete targets the same canonical ids the checks authorized.
+            const idsOrSlugs: string[] = [];
+            for (const idOrSlug of requireOneOf<readonly string[]>(
+              args,
+              "idsOrSlugs",
+              "identifiers",
+            )) {
+              const handle = await this.assertCanWrite(idOrSlug, ctx);
+              idsOrSlugs.push(handle.fetchIdentifier);
+            }
+            return await resolvers.deleteDocuments(this.reactorClient, {
+              idsOrSlugs,
+              propagate: args.propagate,
+            });
+          } catch (error) {
+            this.logger.error(
+              "Error in deleteDocuments(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        touchChannel: async (
+          _parent: unknown,
           args: {
-            search?: { type?: string | null; parentId?: string | null } | null;
+            input: {
+              id: string;
+              name: string;
+              collectionId: string;
+              filter: {
+                documentId: readonly string[];
+                scope: readonly string[];
+                branch: string;
+              };
+              sinceTimestampUtcMs: string;
+              manifest?: unknown;
+            };
           },
           ctx: Context,
-          info: unknown,
         ) => {
-          this.logger.debug("documentChanges subscription started");
-          const filtered = withFilter<
-            DocumentChangesPayload,
-            {
+          this.logger.debug("touchChannel(@args)", args);
+
+          try {
+            // A channel synchronizes a collection, i.e. a drive. Registering one
+            // requires read access to that drive; pushed operations are still
+            // authorized per-operation in pushSyncEnvelopes. The collection id
+            // carries the canonical drive id (never a slug).
+            if (!this.authorizationService.isSupremeAdmin(ctx.user?.address)) {
+              const driveId = DriveCollectionId.fromKey(args.input.collectionId)
+                .driveId as CanonicalDocumentId;
+              await this.assertCanReadCanonical(driveId, ctx);
+            }
+
+            await this.#bindOrRefuseChannel(args.input.id, ctx);
+
+            return await resolvers.touchChannel(
+              this.syncManager,
+              args,
+              this.#creatorBinding(ctx),
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in touchChannel(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+
+        pushSyncEnvelopes: async (_parent, args, ctx: Context) => {
+          this.logger.debug("pushSyncEnvelopes(@args)", args);
+
+          try {
+            // A push claims or proves ownership exactly as a poll does. It has to
+            // be checked here rather than left to the per-operation canMutate
+            // loop below, because an envelope carrying no operations skips that
+            // loop entirely -- and a push stamps channel liveness, so without
+            // this anyone who learns a channel id could keep that channel, and
+            // the operations it is holding, alive for good.
+            const boundChannelIds = new Set<string>();
+            for (const envelope of args.envelopes) {
+              const channelId = envelope.channelMeta.id;
+              if (boundChannelIds.has(channelId)) continue;
+              boundChannelIds.add(channelId);
+              await this.#bindOrRefuseChannel(channelId, ctx, {
+                adopt: false,
+                action: "push to",
+              });
+            }
+
+            // Check canMutate per distinct (documentId, action type). Nested map
+            // rather than a joined key: a separator could be forged to collide
+            // two distinct pairs and skip a check.
+            const checkedOperations = new Map<string, Set<string>>();
+            for (const envelope of args.envelopes) {
+              for (const op of envelope.operations ?? []) {
+                const documentId = op.context.documentId;
+                const operationType = op.operation.action.type;
+                let checkedTypes = checkedOperations.get(documentId);
+                if (!checkedTypes) {
+                  checkedTypes = new Set<string>();
+                  checkedOperations.set(documentId, checkedTypes);
+                }
+                if (checkedTypes.has(operationType)) continue;
+                checkedTypes.add(operationType);
+                // Operation context ids are canonical document ids supplied by the
+                // sync protocol (never slugs) and may reference documents not yet
+                // materialized locally, so check them without slug resolution.
+                await this.assertCanExecuteOperationCanonical(
+                  documentId as CanonicalDocumentId,
+                  operationType,
+                  ctx,
+                );
+              }
+            }
+
+            // Convert readonly arrays to mutable arrays for the resolver
+            const mutableArgs = {
+              envelopes: args.envelopes.map((envelope) => ({
+                type: envelope.type,
+                channelMeta: { id: envelope.channelMeta.id },
+                operations: envelope.operations
+                  ? envelope.operations.map((op) => ({
+                      operation: op.operation,
+                      context: {
+                        documentId: op.context.documentId,
+                        documentType: op.context.documentType,
+                        scope: op.context.scope,
+                        branch: op.context.branch,
+                        ordinal: op.context.ordinal,
+                      },
+                    }))
+                  : null,
+                cursor: envelope.cursor
+                  ? {
+                      remoteName: envelope.cursor.remoteName,
+                      cursorOrdinal: envelope.cursor.cursorOrdinal,
+                      lastSyncedAtUtcMs: envelope.cursor.lastSyncedAtUtcMs,
+                    }
+                  : null,
+                key: envelope.key ?? undefined,
+                dependsOn: envelope.dependsOn
+                  ? [...envelope.dependsOn]
+                  : undefined,
+              })),
+            };
+
+            return await resolvers.pushSyncEnvelopes(
+              this.syncManager,
+              mutableArgs,
+            );
+          } catch (error) {
+            this.logger.error(
+              "Error in pushSyncEnvelopes(@args): @Error",
+              args,
+              error,
+            );
+            throw error;
+          }
+        },
+      },
+
+      Subscription: {
+        documentChanges: {
+          // Each subscriber reads the reactor's feed as its own subject, so the
+          // client withholds what the policy refuses it. The predicate adds the
+          // host's legacy check; both transports share this resolver.
+          subscribe: (
+            rootValue: unknown,
+            args: {
               search?: {
                 type?: string | null;
                 parentId?: string | null;
               } | null;
             },
-            Context
-          >(
-            () => this.documentChanges.subscribe(this.viewSubject(ctx)),
-            async (payload, filterArgs, filterCtx) => {
-              if (!payload) return false;
+            ctx: Context,
+            info: unknown,
+          ) => {
+            this.logger.debug("documentChanges subscription started");
+            const filtered = withFilter<
+              DocumentChangesPayload,
+              {
+                search?: {
+                  type?: string | null;
+                  parentId?: string | null;
+                } | null;
+              },
+              Context
+            >(
+              () => this.documentChanges.subscribe(this.viewSubject(ctx)),
+              async (payload, filterArgs, filterCtx) => {
+                if (!payload) return false;
 
-              const search = {
-                type: filterArgs?.search?.type ?? undefined,
-                parentId: filterArgs?.search?.parentId ?? undefined,
-              };
-              if (!matchesSearchFilter(payload.documentChanges, search)) {
-                return false;
-              }
+                const search = {
+                  type: filterArgs?.search?.type ?? undefined,
+                  parentId: filterArgs?.search?.parentId ?? undefined,
+                };
+                if (!matchesSearchFilter(payload.documentChanges, search)) {
+                  return false;
+                }
 
-              if (
-                this.authorizationService.isSupremeAdmin(
-                  filterCtx?.user?.address,
-                )
-              ) {
+                if (
+                  this.authorizationService.isSupremeAdmin(
+                    filterCtx?.user?.address,
+                  )
+                ) {
+                  return true;
+                }
+
+                const documentIds = collectChangedDocumentIds(
+                  payload.documentChanges,
+                );
+                if (documentIds.length === 0) return false;
+                for (const documentId of documentIds) {
+                  const canRead = await this.canReadDocument(
+                    documentId as CanonicalDocumentId,
+                    filterCtx as Context,
+                  );
+                  if (!canRead) return false;
+                }
                 return true;
-              }
+              },
+            );
+            return filtered(
+              rootValue as DocumentChangesPayload,
+              args,
+              ctx,
+              info,
+            );
+          },
+          resolve: (payload: DocumentChangesPayload) => {
+            return toGqlDocumentChangeEvent(payload.documentChanges);
+          },
+        },
 
-              const documentIds = collectChangedDocumentIds(
-                payload.documentChanges,
-              );
-              if (documentIds.length === 0) return false;
-              for (const documentId of documentIds) {
-                const canRead = await this.canReadDocument(
-                  documentId as CanonicalDocumentId,
+        jobChanges: {
+          // Drop events unless the subscriber can read the job's document.
+          subscribe: (
+            rootValue: unknown,
+            args: { jobId: string },
+            ctx: Context,
+            info: unknown,
+          ) => {
+            this.logger.debug("jobChanges(@args) subscription started", args);
+            const filtered = withFilter<
+              JobChangesPayload,
+              { jobId: string },
+              Context
+            >(
+              () => {
+                ensureJobSubscription(this.reactorClient, args.jobId);
+                return getPubSub().asyncIterableIterator<JobChangesPayload>(
+                  SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
+                );
+              },
+              async (payload, filterArgs, filterCtx) => {
+                if (!payload || !filterArgs) return false;
+                if (!matchesJobFilter(payload, filterArgs)) return false;
+                if (
+                  !(await this.servesDocument(
+                    payload.documentId,
+                    filterCtx as Context,
+                  ))
+                ) {
+                  return false;
+                }
+
+                if (
+                  this.authorizationService.isSupremeAdmin(
+                    filterCtx?.user?.address,
+                  )
+                ) {
+                  return true;
+                }
+
+                if (!payload.documentId) return false;
+                return this.canReadDocument(
+                  payload.documentId as CanonicalDocumentId,
                   filterCtx as Context,
                 );
-                if (!canRead) return false;
-              }
-              return true;
-            },
-          );
-          return filtered(rootValue as DocumentChangesPayload, args, ctx, info);
-        },
-        resolve: (payload: DocumentChangesPayload) => {
-          return toGqlDocumentChangeEvent(payload.documentChanges);
+              },
+            );
+            return filtered(rootValue as JobChangesPayload, args, ctx, info);
+          },
+          resolve: (payload: JobChangesPayload) => {
+            return payload.jobChanges;
+          },
         },
       },
+    };
+  }
 
-      jobChanges: {
-        // Drop events unless the subscriber can read the job's document.
-        subscribe: (
-          rootValue: unknown,
-          args: { jobId: string },
-          ctx: Context,
-          info: unknown,
-        ) => {
-          this.logger.debug("jobChanges(@args) subscription started", args);
-          const filtered = withFilter<
-            JobChangesPayload,
-            { jobId: string },
-            Context
-          >(
-            () => {
-              ensureJobSubscription(this.reactorClient, args.jobId);
-              return getPubSub().asyncIterableIterator<JobChangesPayload>(
-                SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
-              );
-            },
-            async (payload, filterArgs, filterCtx) => {
-              if (!payload || !filterArgs) return false;
-              if (!matchesJobFilter(payload, filterArgs)) return false;
-              if (
-                !(await this.servesDocument(
-                  payload.documentId,
-                  filterCtx as Context,
-                ))
-              ) {
-                return false;
-              }
-
-              if (
-                this.authorizationService.isSupremeAdmin(
-                  filterCtx?.user?.address,
-                )
-              ) {
-                return true;
-              }
-
-              if (!payload.documentId) return false;
-              return this.canReadDocument(
-                payload.documentId as CanonicalDocumentId,
-                filterCtx as Context,
-              );
-            },
-          );
-          return filtered(rootValue as JobChangesPayload, args, ctx, info);
-        },
-        resolve: (payload: JobChangesPayload) => {
-          return payload.jobChanges;
-        },
-      },
-    },
-  };
-
-  onSetup(): Promise<void> {
+  override onSetup(): Promise<void> {
     this.logger.debug("Setting up ReactorSubgraph");
 
     return Promise.resolve();

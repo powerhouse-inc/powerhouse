@@ -2,22 +2,6 @@ import { describe, expect, it } from "vitest";
 import type * as DescriptorRegistry from "../../src/definition/descriptor-registry.js";
 import { ph } from "../../src/definition/field.js";
 
-/**
- * One process, two copies of this compiler.
- *
- * That is the ordinary case for a code-first subgraph, not an exotic one: the
- * package bundles its own copy of `ph`, and `defineSubgraph` arrives from the
- * host, which is deliberately never bundled so that the class identity its
- * loader checks stays single. Whether a value is a descriptor, and what a
- * `ph.ref` points at, are answered by object identity — so the copy doing the
- * compiling has to be able to read what the copy doing the authoring recorded.
- * When it cannot, a subgraph publishes an empty schema and the failure reaches
- * a running host rather than the check.
- *
- * The second copy here is a genuinely separate module instance of the
- * registry, reached through a distinct specifier; the first test says so, and
- * the rest mean nothing without it.
- */
 type Registry = typeof DescriptorRegistry;
 
 // Built at run time: a query suffix is what makes the module resolver hand

@@ -64,6 +64,7 @@
     "@types/node": "catalog:",
     "graphql": "catalog:",
     "mutative": "^1.0.5",
+    "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
     "vitest": "catalog:"
@@ -75,10 +76,14 @@
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "graphql": "^16"
+    "graphql": "^16",
+    "ts-morph": "^27"
   },
   "peerDependenciesMeta": {
     "graphql": {
+      "optional": true
+    },
+    "ts-morph": {
       "optional": true
     }
   },

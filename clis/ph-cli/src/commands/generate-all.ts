@@ -14,6 +14,6 @@ export const generateAllCmd = command({
   handler: async (args) => {
     const { startGenerateAll } = await import("../services/generate-all.js");
     await startGenerateAll(args, process.cwd());
-    process.exit(0);
+    process.exit();
   },
 });

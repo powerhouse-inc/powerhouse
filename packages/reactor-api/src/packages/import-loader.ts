@@ -83,7 +83,10 @@ export class ImportPackageLoader implements IPackageLoader {
       return [];
     }
 
-    const subgraphs = extractSubgraphs(pkgModule);
+    const subgraphs = extractSubgraphs(pkgModule, {
+      packageName: identifier,
+      logger: this.logger,
+    });
 
     this.logger.verbose(
       `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,

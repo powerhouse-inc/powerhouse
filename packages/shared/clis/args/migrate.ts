@@ -24,5 +24,11 @@ export const migrateArgs = {
     description:
       "Run migrate from the bundled codegen even if the target version cannot be resolved from the npm registry or differs from the installed ph-cli version.",
   }),
+  subgraphsOnly: flag({
+    type: optional(boolean),
+    long: "subgraphs-only",
+    description:
+      "Convert old-style subgraphs without upgrading dependencies or regenerating project files.",
+  }),
   ...debugArgs,
 };

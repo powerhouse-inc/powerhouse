@@ -15,7 +15,10 @@ import {
   defineDocumentModelFamily,
 } from "../../src/definition/model.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
-import { compileSubgraph } from "../../src/definition/subgraph/definer.js";
+import {
+  compileSubgraph,
+  type SdlSchemaSpec,
+} from "../../src/definition/subgraph/definer.js";
 import { adaptSchemaFirstDocumentModelModule } from "../../src/definition/tooling/adapters/schema-first-document-model-module-adapter.js";
 import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import { checkDocumentModelDefinitionShape } from "../../src/definition/wire-shape.js";
@@ -465,11 +468,15 @@ describe("a refusal built from a snapshot rejection", () => {
             implements: new Sub() as never,
           }),
         () =>
-          compileSubgraph({
-            name: "s",
-            schemaKind: "typed",
-            entries: () => new Sub() as never,
-          }),
+          compileSubgraph(
+            class Declared {
+              static readonly subgraphName = "s";
+              static getSchema() {
+                return new Sub();
+              }
+            },
+            { checkDeterminism: false },
+          ),
         () =>
           defineDocumentModel(
             config({
@@ -522,7 +529,7 @@ describe("a refusal built from a snapshot rejection", () => {
         "entries",
         "Expected a plain array, not an Array subclass or an array from another realm.",
         "array of another prototype or realm",
-        "Return an array of the entries the builders produced. Copy an Array subclass or an array from another realm with Array.from(...).",
+        "Return an array of the entries the builders produced, or one schema.graphql(...) result. Copy an Array subclass or an array from another realm with Array.from(...).",
       ],
       [
         "PH-DM-DECLARATION-INVALID",
@@ -746,21 +753,22 @@ describe("a refused member that is null, an array, or has no string form", () =>
           specifications: specifications({}, { graphQLCompatibility: value }),
         }),
       ).finalize({ modules: [] });
-    const subgraph = (preserveDefinitionOrder: unknown) => () =>
-      compileSubgraph({
-        name: "compat",
-        schemaKind: "graphql-ast-compat",
-        compatibility: {
-          kind: "graphql-ast-v1",
-          typeDefs: parse("type Query { ping: String }"),
-          resolverCoordinates: [
-            { typeName: "Query", fieldName: "ping", resolverKind: "field" },
-          ],
-          getResolvers: () => ({ Query: { ping: () => "pong" } }),
-          hasSubscriptions: undefined,
-          preserveDefinitionOrder,
+    const subgraph = (resolverCoordinates: unknown) => () =>
+      compileSubgraph(
+        class Declared {
+          static readonly subgraphName = "sdl";
+          static getSchema(schema: {
+            graphql(spec: SdlSchemaSpec<unknown, unknown, unknown>): unknown;
+          }) {
+            return schema.graphql({
+              typeDefs: parse("type Query { ping: String }"),
+              resolverCoordinates: resolverCoordinates as never,
+              resolvers: () => ({ Query: { ping: () => "pong" } }),
+            });
+          }
         },
-      } as never);
+        { checkDeterminism: false },
+      );
     const refusal = (run: () => unknown) => {
       try {
         const [first] = diagnosticsOf(run);
@@ -809,7 +817,7 @@ describe("a refused member that is null, an array, or has no string form", () =>
       refusal(graphQLCompatibility([])),
       refusal(graphQLCompatibility({ kind: Object.create(null) as unknown })),
       refusal(graphQLCompatibility(revokedProxy())),
-      refusal(subgraph([])),
+      refusal(subgraph([null])),
       refusal(subgraph(Object.create(null))),
     ]).toEqual([
       ["ids.module/a", "null"],
@@ -825,8 +833,8 @@ describe("a refused member that is null, an array, or has no string form", () =>
       ["specifications.graphQLCompatibility", "array"],
       ["specifications.graphQLCompatibility.kind", "object"],
       ["specifications.graphQLCompatibility", "inspection-failed"],
-      ["compatibility.preserveDefinitionOrder", "array"],
-      ["compatibility.preserveDefinitionOrder", "object"],
+      ["graphql.resolverCoordinates.0", "null"],
+      ["graphql.resolverCoordinates", "object"],
     ]);
   });
 });

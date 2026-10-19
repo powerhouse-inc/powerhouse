@@ -8,7 +8,11 @@ import {
 } from "document-model";
 import type { ExecutionResult } from "graphql";
 import { describe, expect, it } from "vitest";
-import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import {
+  type DocumentModelSubgraph,
+  documentModelSubgraphClass,
+} from "../src/graphql/document-model-subgraph.js";
+import { SUBGRAPH_PROTOCOL } from "../src/graphql/subgraph-protocol.js";
 import {
   AuthorizationPolicy,
   type IAuthorizationService,
@@ -21,6 +25,7 @@ import {
   reactorClientFor,
   subgraphArgs,
 } from "./utils/graphql-host.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 /**
  * Executes real GraphQL requests against a code-first model and compares each
@@ -383,17 +388,15 @@ describe("operation name overrides", () => {
 
 describe("union resolution", () => {
   it("discriminates a union member by a field its siblings lack", () => {
-    const structured = new DocumentModelSubgraph(
-      TRACKER,
+    const structured = new (documentModelSubgraphClass(TRACKER))(
       subgraphArgs(reactorClientFor(TRACKER).client),
     );
-    const stored = new DocumentModelSubgraph(
-      TRACKER_AS_STORED,
+    const stored = new (documentModelSubgraphClass(TRACKER_AS_STORED))(
       subgraphArgs(reactorClientFor(TRACKER_AS_STORED).client),
     );
     const resolveOn = (subgraph: DocumentModelSubgraph, value: unknown) =>
       (
-        subgraph.resolvers as unknown as Record<
+        resolversOf(subgraph) as Record<
           string,
           { __resolveType: (value: unknown) => string }
         >
@@ -419,4 +422,46 @@ describe("the served schema", () => {
       "union Tracker_Annotation = Tracker_Link | Tracker_Note",
     );
   });
+
+  it.each([
+    ["code-first", TRACKER],
+    ["stored", TRACKER_AS_STORED],
+  ])(
+    "declares the %s model's resolver coordinates in resolver-map order",
+    (_projection, model) => {
+      const { definition } = documentModelSubgraphClass(model)
+        [SUBGRAPH_PROTOCOL]()
+        .describe();
+      const field = (typeName: string, fieldName: string) => ({
+        typeName,
+        fieldName,
+        resolverKind: "field",
+      });
+      expect(
+        definition.schemaKind === "graphql-ast-compat" &&
+          definition.resolverCoordinates,
+      ).toEqual([
+        {
+          typeName: "Tracker_Annotation",
+          fieldName: null,
+          resolverKind: "resolveType",
+        },
+        field("Query", "Tracker"),
+        field("TrackerQueries", "document"),
+        field("TrackerQueries", "documents"),
+        field("TrackerQueries", "findDocuments"),
+        field("TrackerQueries", "documentOutgoingRelationships"),
+        field("TrackerQueries", "documentIncomingRelationships"),
+        field("Mutation", "Tracker"),
+        field("TrackerMutations", "createDocument"),
+        field("TrackerMutations", "createEmptyDocument"),
+        field("TrackerMutations", "setTitle"),
+        field("TrackerMutations", "setTitleAsync"),
+        field("TrackerMutations", "reset"),
+        field("TrackerMutations", "resetAsync"),
+        field("TrackerMutations", "addCount"),
+        field("TrackerMutations", "addCountAsync"),
+      ]);
+    },
+  );
 });

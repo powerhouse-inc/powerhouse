@@ -19,6 +19,7 @@ import { ViteTypeScriptSourceImportAdapter } from "./definitions/import-adapters
 import {
   type GenerationResult,
   type GenerationSteps,
+  reportSharedBase,
 } from "./definitions/generation.js";
 import { createGenerationSteps } from "./definitions/build-steps.js";
 import { defaultHostValidationFor } from "./definitions/host-validation.js";
@@ -310,6 +311,7 @@ async function runEditCheck(
 ): Promise<DefinitionCheckReport> {
   const loader = new DefinitionSourceLoader(
     new ViteTypeScriptSourceImportAdapter(),
+    { onSharedBase: reportSharedBase(streams.err) },
   );
   try {
     return await withCapturedStdout(streams.err, () =>
@@ -468,6 +470,7 @@ export function createModelCheckWatch(
   const streams = options.streams ?? processStreams;
   const loader = new DefinitionSourceLoader(
     new ViteTypeScriptSourceImportAdapter(),
+    { onSharedBase: reportSharedBase(streams.err) },
   );
   let releaseWork = Promise.resolve();
   let lastGeneration: GenerationResult | undefined;

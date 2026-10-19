@@ -74,13 +74,13 @@ export {
 } from "./disclosure/disclosure-service.js";
 export {
   createPrivacyResolvers,
-  createPrivacySubgraph,
   PRIVACY_SUBGRAPH_NAME,
+  privacyResolverCoordinates,
   privacySubgraphTypeDefs,
   PrivacySubgraphOpenPolicyError,
+  refuseAnonymousAdmins,
   type IDisclosureService,
   type PrivacyAuthorization,
   type PrivacyResolverDeps,
-  type PrivacySubgraph,
   type PrivacySubgraphContext,
 } from "./subgraph/index.js";

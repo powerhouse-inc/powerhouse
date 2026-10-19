@@ -19,6 +19,7 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { REPO_ROOT } from "./lib.js";
+import { loadSubgraphExports, type SubgraphFinding } from "./subgraph-rule.js";
 
 type DocModule = { documentModel?: { global?: { id?: string } } };
 type SwitchboardHandle = {
@@ -38,10 +39,19 @@ function emit(obj: unknown): void {
   console.log(`__SBLOAD__ ${JSON.stringify(obj)}`);
 }
 
+let subgraphs: SubgraphFinding[] = [];
+
 async function main(): Promise<void> {
   const arg = process.argv[2];
   const ext = arg && arg !== "none" ? arg : undefined;
   const t0 = Date.now();
+  if (ext && process.env.AUDIT_HAS_SUBGRAPHS === "1") {
+    subgraphs = await loadSubgraphExports(ext, process.cwd());
+  }
+  if (process.env.AUDIT_SUBGRAPHS_ONLY === "1") {
+    emit({ ok: true, ids: [], subgraphs, ms: Date.now() - t0 });
+    process.exit(0);
+  }
 
   const serverUrl = pathToFileURL(
     join(REPO_ROOT, "apps", "switchboard", "dist", "server.mjs"),
@@ -66,13 +76,13 @@ async function main(): Promise<void> {
     .filter((id): id is string => id.length > 0);
 
   await sb.shutdown();
-  emit({ ok: true, ids, ms: Date.now() - t0 });
+  emit({ ok: true, ids, subgraphs, ms: Date.now() - t0 });
   // Force exit: the reactor/GraphQL stack can leave timers/handles open.
   process.exit(0);
 }
 
 main().catch((e: unknown) => {
   const error = e instanceof Error ? (e.stack ?? e.message) : String(e);
-  emit({ ok: false, ids: [], error: error.slice(0, 2000) });
+  emit({ ok: false, ids: [], subgraphs, error: error.slice(0, 2000) });
   process.exit(1);
 });

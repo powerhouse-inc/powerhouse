@@ -7,7 +7,6 @@ import {
   generateAll,
   generateAllDocumentModels,
   generateCodeFirstDocumentModel,
-  generateCodeFirstSubgraph,
   generateDocumentModel,
   generateEditor,
   generateSubgraph,
@@ -24,7 +23,6 @@ const TEST_DOC_JSON = fileURLToPath(
 );
 
 let projectDir: string;
-let enteredFrom: string;
 
 const read = (file: string) => readFileSync(join(projectDir, file), "utf8");
 
@@ -75,13 +73,11 @@ const UNREGISTERED_CUSTOMER =
   '⚠ PH-CONFIG-SOURCE-UNREGISTERED [error/configuration] <config> /definitionSources/entries: ./document-models/customer/ declares a code-first document model that definitionSources does not list, so the package leaves it out. Expected: an entry for ./document-models/customer/index.ts Received: no entry Repair: Set definitionSources in powerhouse.config.json to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./document-models/customer/index.ts" }] }. Schema-first models keep generating from their model documents.';
 
 beforeEach(() => {
-  enteredFrom = process.cwd();
   projectDir = createCodeFirstPackage();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  process.chdir(enteredFrom);
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -246,16 +242,34 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
     expect(unregisteredWarnings()).toStrictEqual([[UNREGISTERED_CUSTOMER]]);
   });
 
-  it("warns about an unregistered subgraph when one subgraph is generated", async () => {
-    await inProject((project) => generateCodeFirstSubgraph("orders", project));
+  it("never asks definitionSources to list a subgraph", async () => {
+    await inProject((project) => generateSubgraph("orders", project));
     selectDefinitionSources({ formatVersion: 1, mode: "schema-first" });
+    const config = read("powerhouse.config.json");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await inProject((project) => generateSubgraph("billing", project));
-    expect(warn.mock.calls).toStrictEqual([
+    expect(warn.mock.calls).toStrictEqual([]);
+    expect(read("powerhouse.config.json")).toBe(config);
+    expect(read("subgraphs/index.ts"))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { BillingSubgraph } from "./billing/index.js";
+import { OrdersSubgraph } from "./orders/index.js";
+
+export { BillingSubgraph };
+const checkBillingSubgraph: SubgraphCheck<typeof BillingSubgraph> = true;
+void checkBillingSubgraph;
+
+export { OrdersSubgraph };
+const checkOrdersSubgraph: SubgraphCheck<typeof OrdersSubgraph> = true;
+void checkOrdersSubgraph;
+`);
+    expect(JSON.parse(read("powerhouse.manifest.json"))).toHaveProperty(
+      "subgraphs",
       [
-        '⚠ PH-CONFIG-SOURCE-UNREGISTERED [error/configuration] <config> /definitionSources/entries: ./subgraphs/orders.ts declares a code-first subgraph that definitionSources does not list, so no definition check covers it and powerhouse.manifest.json leaves it out. Expected: an entry for ./subgraphs/orders.ts Received: no entry Repair: Set definitionSources in powerhouse.config.json to { "formatVersion": 1, "mode": "code-first", "entries": [{ "specifier": "./subgraphs/orders.ts" }] }. Schema-first models keep generating from their model documents.',
+        { name: "orders", id: "orders" },
+        { name: "billing", id: "billing" },
       ],
-    ]);
+    );
   });
 
   it("names an entry whose file is missing", async () => {

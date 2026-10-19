@@ -19,6 +19,8 @@ function compileAndBuild(root: AnyTypeDescriptor) {
     allowOutputDefaults: false,
     allowEquals: true,
     validateInputDefaults: true,
+    computedFieldsAreMembers: false,
+    internalScalarsAreReferenceable: false,
   });
   const definition = walk.visitType(root, "input", ["root"]);
   const scalars = [...walk.scalars]

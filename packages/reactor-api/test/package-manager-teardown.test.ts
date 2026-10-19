@@ -13,7 +13,7 @@ import type {
 
 function makeSubgraphClass(name: string): SubgraphClass {
   return class extends BaseSubgraph {
-    name = name;
+    static override readonly subgraphName: string = name;
   };
 }
 

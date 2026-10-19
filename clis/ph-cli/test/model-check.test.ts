@@ -131,7 +131,7 @@ describe("ph model check exit codes", () => {
     );
   }, 60_000);
 
-  it("skips an empty code-first list and still names an unregistered subgraph", async () => {
+  it("skips an empty code-first list and still names an unregistered model", async () => {
     const skipped = await check("configs", {
       configFile: "empty.config.json",
       json: true,
@@ -147,8 +147,8 @@ describe("ph model check exit codes", () => {
       "configs",
       { configFile: "empty.config.json", json: true },
       {
-        "subgraphs/orders.ts":
-          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+        "document-models/orders/index.ts":
+          'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});\n',
       },
     );
     expect(result.code).toBe(2);
@@ -195,8 +195,8 @@ describe("ph model check exit codes", () => {
       "configs",
       { configFile: "malformed.config.json.txt", json: true },
       {
-        "subgraphs/orders.ts":
-          'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+        "document-models/orders/index.ts":
+          'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});\n',
       },
     );
     expect(result.code).toBe(2);
@@ -216,8 +216,8 @@ describe("ph model check exit codes", () => {
 
   it("passes a --source subset with a warning for what it leaves out", async () => {
     const extra = {
-      "subgraphs/orders.ts":
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nexport default defineSubgraph({});\n',
+      "document-models/orders/index.ts":
+        'import { defineDocumentModel } from "document-model";\nexport default defineDocumentModel({});\n',
     };
     const plain = await check(
       "control",

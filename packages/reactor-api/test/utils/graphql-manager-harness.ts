@@ -39,7 +39,6 @@ import {
 } from "../../src/services/authorization.service.js";
 import type {
   Context,
-  ISubgraph,
   SubgraphArgs,
   SubgraphClass,
 } from "../../src/graphql/types.js";

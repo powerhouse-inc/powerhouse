@@ -24,6 +24,7 @@ import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { createGraphQLSSEHandler } from "../src/graphql/sse.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import { createSchema } from "../src/utils/create-schema.js";
+import { resolversOf, typeDefsOf } from "./utils/served-subgraph.js";
 
 // The reactor feeds each subject reads, keyed by the view's subject address.
 const liveFeeds = new Set<{
@@ -106,10 +107,10 @@ const readerContext = {
  * schemas with "Cannot use GraphQLSchema from another module or realm".
  */
 function buildSubscriptionSchema(subgraph: ReactorSubgraph = reactorSubgraph) {
-  const schema = buildSchema(print(subgraph.typeDefs));
+  const schema = buildSchema(print(typeDefsOf(subgraph)));
   const subscriptionType = schema.getSubscriptionType()!;
   const fields = subscriptionType.getFields();
-  const resolvers = subgraph.resolvers.Subscription as Record<
+  const resolvers = resolversOf(subgraph).Subscription as Record<
     string,
     { subscribe: () => unknown; resolve: (payload: unknown) => unknown }
   >;
@@ -125,7 +126,11 @@ function buildSubscriptionSchema(subgraph: ReactorSubgraph = reactorSubgraph) {
 
 /** Build a Federation schema for SSE handler tests (doesn't use subscribe()). */
 function buildFederationSchema() {
-  return createSchema([], reactorSubgraph.resolvers, reactorSubgraph.typeDefs);
+  return createSchema(
+    [],
+    resolversOf(reactorSubgraph),
+    typeDefsOf(reactorSubgraph),
+  );
 }
 
 function createTestDocument() {

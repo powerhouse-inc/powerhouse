@@ -6,10 +6,11 @@ import type {
 import { createRequire } from "node:module";
 import type * as GraphQL from "graphql";
 import type { ExecutionResult, GraphQLSchema } from "graphql";
-import { DocumentModelSubgraph } from "../../src/graphql/document-model-subgraph.js";
+import { documentModelSubgraphClass } from "../../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../../src/graphql/types.js";
 import type { IAuthorizationService } from "../../src/services/authorization.service.js";
 import { createSchema } from "../../src/utils/create-schema.js";
+import { servedSubgraph } from "./served-subgraph.js";
 
 /**
  * `@apollo/subgraph` loads graphql's CommonJS entry, and an `import` in a test
@@ -158,15 +159,12 @@ export function hostFor(
   authorization: Partial<IAuthorizationService> = {},
 ): Host {
   const { client, current } = reactorClientFor(module);
-  const subgraph = new DocumentModelSubgraph(
-    module,
-    subgraphArgs(client, authorization),
+  const subgraph = servedSubgraph(
+    new (documentModelSubgraphClass(module))(
+      subgraphArgs(client, authorization),
+    ),
   );
-  const schema = createSchema(
-    [module],
-    subgraph.resolvers as never,
-    subgraph.typeDefs,
-  );
+  const schema = createSchema([module], subgraph.resolvers, subgraph.typeDefs);
   return {
     schema,
     run: (source, variableValues) =>

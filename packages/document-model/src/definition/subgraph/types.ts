@@ -42,7 +42,7 @@ export const COMPUTED_FIELD_ROLE =
  * A field whose value a resolver computes.
  *
  * It carries schema only — arguments, return type, description, deprecation.
- * The implementation is bound separately, inside the entries callback, where
+ * The implementation is bound separately, inside `getSchema`, where
  * the host instance and the request type are in scope.
  */
 export type ComputedFieldDescriptor<

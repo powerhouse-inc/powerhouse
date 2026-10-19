@@ -243,7 +243,7 @@ function createCandidateStep(
   agent: Agent,
   options: BuildStepOptions,
 ): GenerationSteps["emitCandidate"] {
-  return async ({ packageRoot, candidateRoot }) => {
+  return async ({ packageRoot, candidateRoot, subgraphNames }) => {
     const { build } = await import("tsdown");
     const copy = existsSync(join(packageRoot, "powerhouse.manifest.json"))
       ? [{ from: "powerhouse.manifest.json", to: candidateRoot }]
@@ -352,11 +352,11 @@ function createCandidateStep(
           },
         );
       }
-      syncDistManifest(
-        target,
+      syncDistManifest(target, {
         built,
-        externalDependencyVersions(external.values()),
-      );
+        externalDependencies: externalDependencyVersions(external.values()),
+        subgraphNames,
+      });
     } catch (error) {
       return {
         ok: false,

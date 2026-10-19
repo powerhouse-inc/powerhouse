@@ -383,26 +383,44 @@ A package that revokes credentials (for example a `revokeCredential` mutation)
 should evict the host's cached check as soon as the revocation is stored, so the
 credential is refused on the next request instead of after the cache TTL.
 Every subgraph receives the invalidator as `SubgraphArgs.credentials`, and
-`BaseSubgraph` exposes it as `this.credentials`:
+`BaseSubgraph` exposes it to resolvers as `subgraph.credentials`:
 
 ```ts
+interface CredentialStore {
+  revoke(id: string): Promise<{ address: string; chainId: number; appDid: string }>;
+}
+
 class RenownAuthSubgraph extends BaseSubgraph {
-  resolvers = {
-    Mutation: {
-      revokeCredential: async (_: unknown, { id }: { id: string }) => {
-        const vc = await this.store.revoke(id); // persist first
-        // Evicts cached checks for this identity and re-verifies its open
-        // WebSocket connections. chainId and appDid narrow the eviction;
-        // pass only the address to drop every app key of that address.
-        this.credentials.invalidateCredential(
-          vc.address,
-          vc.chainId,
-          vc.appDid, // the did:key the credential delegates to
-        );
-        return true;
-      },
-    },
-  };
+  constructor(args: SubgraphArgs, readonly store: CredentialStore) {
+    super(args);
+  }
+
+  static override readonly subgraphName = "renown-auth";
+
+  static override getSchema(schema: SchemaBuilder<RenownAuthSubgraph>) {
+    return schema.graphql({
+      typeDefs,
+      resolverCoordinates: [
+        { typeName: "Mutation", fieldName: "revokeCredential", resolverKind: "field" },
+      ],
+      resolvers: (subgraph) => ({
+        Mutation: {
+          revokeCredential: async (_: unknown, { id }: { id: string }) => {
+            const vc = await subgraph.store.revoke(id); // persist first
+            // Evicts cached checks for this identity and re-verifies its open
+            // WebSocket connections. chainId and appDid narrow the eviction;
+            // pass only the address to drop every app key of that address.
+            subgraph.credentials.invalidateCredential(
+              vc.address,
+              vc.chainId,
+              vc.appDid, // the did:key the credential delegates to
+            );
+            return true;
+          },
+        },
+      }),
+    });
+  }
 }
 ```
 
@@ -419,8 +437,8 @@ closed with code `4403` and reason `credential-revoked`. A re-check that fails
 because the verifier is unreachable keeps the connection open. SSE subscription
 streams are not re-checked.
 
-A package built against an older `reactor-api` sees `this.credentials` as
-`undefined`; call it as `this.credentials?.invalidateCredential(...)` when the
+A package built against an older `reactor-api` sees `subgraph.credentials` as
+`undefined`; call it as `subgraph.credentials?.invalidateCredential(...)` when the
 package must support such hosts.
 
 #### The Switchboard's Own Identity

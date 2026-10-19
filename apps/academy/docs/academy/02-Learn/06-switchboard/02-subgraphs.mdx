@@ -69,18 +69,38 @@ Because each package owns its subgraph, the package is the unit of delivery. Shi
   ]}
 />
 
-## Where mutations go
+## Authoring a subgraph
 
-A mutation in a subgraph isn't stored as a database write. It dispatches an **action** to the underlying document via the Reactor.
+A package exports a class that extends `BaseSubgraph<Context>`. Its static name selects the route and its static `getSchema` declares the fields:
 
-```ts
-Mutation: {
-  async addTodo(_parent, { input }, ctx) {
-    return ctx.reactor.dispatch("<doc-id>", [
-      { type: "ADD_TODO", input }
-    ]);
+```typescript
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
+
+export class TodoStatusSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "todo-status";
+
+  static override getSchema(schema: SchemaBuilder<TodoStatusSubgraph>) {
+    return [
+      schema.query("todoStatus", {
+        returns: ph.String({ required: true }),
+        resolve: ({ subgraph }) => subgraph.status(),
+      }),
+    ];
+  }
+
+  status(): string {
+    return "ready";
   }
 }
 ```
 
-The Reactor runs the action through the reducer, stamps it as an operation, appends it to the document history, and syncs it to connected peers. The subgraph layer is thin — it translates network calls into document actions and hands off.
+Resolvers read instance state through `subgraph`. The request context carries the caller, not a reactor client. Mutations authorize the caller, then use `subgraph.reactorClient` to dispatch document actions. The Reactor runs each action through its reducer, records the operation, and syncs it to peers.
+
+A class returns typed entries or one `schema.graphql(...)` wrapper for SDL. To share behavior, extend an abstract base class or call a shared schema-building function. See [Inheritance and fragments](../../04-Reference/03-GraphQLData/08-SubgraphClasses.md#inheritance-and-fragments).
+
+If your package was written before class-based subgraphs, run `ph migrate` before you build it. See the [migration guide](../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).

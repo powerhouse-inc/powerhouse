@@ -18,11 +18,8 @@ import {
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { createOrUpdateManifest } from "./manifest.js";
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
-// A project of the shape `ph init` leaves behind, minus everything a piece
-// does not touch; buildTsMorphProject needs the tsconfig and chdirs into it.
 function makeProject(packageName = "@acme/ledger", version = "2.0.0") {
   const dir = mkdtempSync(join(tmpdir(), "ph-pieces-"));
   temporary.push(dir);
@@ -46,10 +43,27 @@ const readList = (dir: string) =>
   readFileSync(join(dir, "pieces", "index.ts"), "utf8");
 
 afterEach(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+describe("buildTsMorphProject", () => {
+  it("generates into the project directory and leaves the working directory alone", async () => {
+    const dir = makeProject();
+    const cwd = process.cwd();
+    const project = buildTsMorphProject(dir);
+    await generatePiece({ pieceName: "acme-crm" }, project);
+    await project.save();
+
+    expect(process.cwd()).toBe(cwd);
+    expect(readManifest(dir).pieces).toEqual([
+      { id: "@acme/piece-acme-crm", name: "Acme Crm" },
+    ]);
+    expect(existsSync(join(dir, "pieces", "acme-crm", "index.ts"))).toBe(true);
+    expect(existsSync(join(cwd, "pieces"))).toBe(false);
+    expect(existsSync(join(cwd, "powerhouse.manifest.json"))).toBe(false);
+  });
 });
 
 describe("generatePiece", () => {

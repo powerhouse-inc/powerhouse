@@ -13,6 +13,7 @@ import { DocumentPermissionService } from "../src/services/document-permission.s
 import { createGetParentIdsFn } from "../src/services/get-parent-ids.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
 import { getDbClient } from "../src/utils/db.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 /**
  * Integration tests for document permissions with the ReactorSubgraph.
@@ -164,7 +165,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("Document Query with Real Permission Service", () => {
     const callDocument = (ctx: any, identifier: string) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       return query(null, { identifier }, ctx);
     };
 
@@ -234,7 +235,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("Permission Inheritance via Parent Hierarchy", () => {
     const callDocument = (ctx: any, identifier: string) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       return query(null, { identifier }, ctx);
     };
 
@@ -291,7 +292,7 @@ describe("Permissions Integration Tests", () => {
   describe("Mutation Permissions with Real Permission Service", () => {
     describe("deleteDocument", () => {
       const callDeleteDocument = (ctx: any, identifier: string) => {
-        const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        const mutation = (resolversOf(reactorSubgraph).Mutation as any)
           ?.deleteDocument;
         return mutation(null, { identifier }, ctx);
       };
@@ -345,7 +346,7 @@ describe("Permissions Integration Tests", () => {
         sourceId: string,
         targetId: string,
       ) => {
-        const mutation = (reactorSubgraph.resolvers.Mutation as any)
+        const mutation = (resolversOf(reactorSubgraph).Mutation as any)
           ?.moveRelationship;
         return mutation(
           null,
@@ -425,7 +426,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("findDocuments Filtering with Real Permission Service", () => {
     const callFindDocuments = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.findDocuments;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.findDocuments;
       return query(
         null,
         { search: { type: "powerhouse/document-drive" } },
@@ -484,7 +485,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("Global Role Override", () => {
     const callDocument = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
 
@@ -517,7 +518,7 @@ describe("Permissions Integration Tests", () => {
 
   describe("Permission Revocation Flow", () => {
     const callDocument = (ctx: any) => {
-      const query = (reactorSubgraph.resolvers.Query as any)?.document;
+      const query = (resolversOf(reactorSubgraph).Query as any)?.document;
       return query(null, { identifier: "doc-123" }, ctx);
     };
 

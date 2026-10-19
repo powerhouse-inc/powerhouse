@@ -15,17 +15,22 @@ import {
   formatDefinitionDiagnostic,
   sortDefinitionDiagnostics,
 } from "../diagnostics.js";
+import { createScalarField } from "../field-options.js";
+import { getGlobalRegistry } from "../global-registry.js";
 import { canonicalDigest } from "../primitives.js";
+import type { ScalarBuilderOptions } from "../types.js";
 import { type AnyScalarDeclaration, PROFILE } from "./declaration.js";
 import { builtInScalars } from "./declarations/index.js";
 import { defineScalar, scalarDiagnostics, withRole } from "./define-scalar.js";
 import type {
   CatalogScalar,
+  InternalScalar,
   PhScalarFactory,
   ScalarBinding,
   ScalarCatalogBuildResult,
   ScalarCatalogInterface,
   ScalarFactory,
+  ScalarFieldFactory,
 } from "./types.js";
 
 export { scalarDeclarations } from "./declarations/index.js";
@@ -231,9 +236,8 @@ export function internalScalarDiagnostic(
     code: "PH-SCALAR-INTERNAL",
     definition: { kind: "scalar", key: name },
     path,
-    message: `${name} is internal to the reactor host. A document model or subgraph cannot use it.`,
-    repair:
-      "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+    message: `${name} is internal to the reactor host. A document model cannot use it.`,
+    repair: `Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one. A subgraph can use subgraphScalars.${name}().`,
   };
 }
 
@@ -255,12 +259,10 @@ export function isHostScalarName(
  * description. A binding's origin, not its digest, is what makes it a catalog
  * scalar, so the set is shared the way the descriptor registry is.
  */
-const CATALOG_BINDINGS_KEY = Symbol.for(
+const catalogBindings = getGlobalRegistry(
   "powerhouse.document-model.catalog-bindings.v1",
+  () => new WeakSet<object>(),
 );
-const catalogBindings: WeakSet<object> = ((
-  globalThis as { [CATALOG_BINDINGS_KEY]?: WeakSet<object> }
-)[CATALOG_BINDINGS_KEY] ??= new WeakSet<object>());
 for (const scalar of builtInScalars) catalogBindings.add(scalar.binding);
 
 /** Whether a copy of the compiler-owned catalog declared this binding. */
@@ -289,6 +291,57 @@ export const scalarFactories: FactoryByBuilder = Object.freeze(
       ]),
   ),
 ) as FactoryByBuilder;
+
+type SubgraphFactoryByBuilder = {
+  readonly [
+    S in Extract<
+      (typeof builtInScalars)[number],
+      { readonly kind: "internal-scalar" }
+    > as S["declaration"]["builderName"]
+  ]: S extends InternalScalar<
+    infer TName,
+    infer TBuilderName,
+    infer TBase,
+    infer TInput
+  >
+    ? ScalarFactory<
+        TName,
+        TBuilderName,
+        TBase,
+        `subgraphScalars.${TBuilderName}`,
+        TInput
+      >
+    : never;
+};
+
+/**
+ * The internal scalars as field factories, for subgraphs only. They stay off
+ * `ph`, so a document model's autocomplete never offers them, and the
+ * document-model compiler refuses a field built with one.
+ */
+export const subgraphScalars: SubgraphFactoryByBuilder = Object.freeze(
+  Object.fromEntries(
+    scalarEntries
+      .filter((entry) => entry.kind === "internal-scalar")
+      .map((entry) => {
+        const { name, builderName, validator } = entry.declaration;
+        return [
+          builderName,
+          withRole(
+            ((options?: ScalarBuilderOptions) =>
+              createScalarField(
+                name,
+                validator,
+                options,
+                entry.binding,
+              )) as ScalarFieldFactory<unknown>,
+            entry,
+            `subgraphScalars.${builderName}`,
+          ),
+        ];
+      }),
+  ),
+) as SubgraphFactoryByBuilder;
 
 export function withInternalScalarGuards<T extends object>(
   builders: T,

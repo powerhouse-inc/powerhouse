@@ -20,6 +20,7 @@ import {
   type ValueNode,
 } from "graphql";
 import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
+import type { SubgraphScalarCoercion } from "./subgraph-protocol.js";
 
 /**
  * Document validation resolves scalars through the catalog under
@@ -33,16 +34,10 @@ import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
 const DOCUMENT_VALIDATION_PROFILE: ScalarValidationProfile =
   "document-engineering-1.40";
 
-/**
- * Builds the GraphQL scalar for a package scalar, served under `name` with the
- * package's own coercion. That coercion is the only validation a subgraph
- * argument gets. A package scalar has no existing clients to stay compatible
- * with, so it never uses GraphQL's default pass-through.
- */
-function packageScalarType(
+export function packageScalarCoercion(
   binding: ScalarBinding,
   name: string,
-): GraphQLScalarType {
+): SubgraphScalarCoercion {
   const { definition, coercion } = binding;
   const coerce = (run: () => unknown): unknown => {
     try {
@@ -57,7 +52,7 @@ function packageScalarType(
       );
     }
   };
-  return new GraphQLScalarType({
+  return {
     name,
     description: definition.description,
     serialize: (value) => coerce(() => coercion.serialize(value)),
@@ -70,6 +65,104 @@ function packageScalarType(
       if (literal === UNRESOLVED) return null;
       return coerce(() => coercion.parseLiteral(literal));
     },
+  };
+}
+
+/**
+ * Read by shape rather than `instanceof`, so a scalar built with another copy
+ * of graphql is found too.
+ */
+export function resolverMapScalarCoercions(
+  resolvers: Readonly<Record<string, unknown>>,
+): readonly SubgraphScalarCoercion[] {
+  return Object.entries(resolvers).flatMap(([name, value]) => {
+    if (!isScalarTypeLike(value)) return [];
+    return [
+      {
+        name,
+        description: value.description,
+        specifiedByURL: value.specifiedByURL,
+        extensions: value.extensions,
+        serialize: (output: unknown) => value.serialize(output),
+        parseValue: (input: unknown) => value.parseValue(input),
+        parseLiteral: (node: ValueNode, variables?: LiteralVariables) =>
+          value.parseLiteral(node, variables),
+      },
+    ];
+  });
+}
+
+type ScalarTypeLike = {
+  readonly name: string;
+  readonly description?: string | null;
+  readonly specifiedByURL?: string | null;
+  readonly extensions?: Readonly<Record<string, unknown>>;
+  serialize(value: unknown): unknown;
+  parseValue(value: unknown): unknown;
+  parseLiteral(node: ValueNode, variables?: LiteralVariables): unknown;
+};
+
+function isScalarTypeLike(value: unknown): value is ScalarTypeLike {
+  if (value === null || typeof value !== "object") return false;
+  const scalar = value as Partial<Record<keyof ScalarTypeLike, unknown>>;
+  return (
+    typeof scalar.name === "string" &&
+    typeof scalar.serialize === "function" &&
+    typeof scalar.parseValue === "function" &&
+    typeof scalar.parseLiteral === "function"
+  );
+}
+
+/**
+ * Builds a scalar from a coercion with this host's copy of graphql. A
+ * coercion built against another copy throws that copy's `GraphQLError`.
+ * graphql-js would not recognize it while coercing input and would prefix and
+ * relocate it, so input coercion rethrows it as this copy's. An output error
+ * reaches the client the same either way.
+ */
+export function scalarTypeFromCoercion(
+  coercion: SubgraphScalarCoercion,
+): GraphQLScalarType {
+  return new GraphQLScalarType({
+    name: coercion.name,
+    description: coercion.description,
+    specifiedByURL: coercion.specifiedByURL,
+    extensions: coercion.extensions,
+    serialize: coercion.serialize,
+    parseValue: withHostErrors(coercion.parseValue),
+    parseLiteral: withHostErrors(coercion.parseLiteral),
+  });
+}
+
+function withHostErrors<TArgs extends unknown[]>(
+  coerce: (...args: TArgs) => unknown,
+): (...args: TArgs) => unknown {
+  return (...args) => {
+    try {
+      return coerce(...args);
+    } catch (error) {
+      throw hostGraphQLError(error);
+    }
+  };
+}
+
+function hostGraphQLError(error: unknown): unknown {
+  if (
+    error instanceof GraphQLError ||
+    !(error instanceof Error) ||
+    error.name !== "GraphQLError"
+  ) {
+    return error;
+  }
+  const { nodes, source, positions, path, originalError, extensions } =
+    error as GraphQLError;
+  return new GraphQLError(error.message, {
+    nodes,
+    source,
+    positions,
+    path,
+    originalError,
+    extensions,
   });
 }
 
@@ -83,7 +176,7 @@ export function packageScalarResolvers(
   return Object.fromEntries(
     scalars.map(({ name, binding }) => [
       name,
-      packageScalarType(binding, name),
+      scalarTypeFromCoercion(packageScalarCoercion(binding, name)),
     ]),
   );
 }

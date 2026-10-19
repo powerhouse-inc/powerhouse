@@ -4,7 +4,8 @@ import type {
   DocumentModelDefinition,
   PackageScalarReferenceDefinition,
 } from "@powerhousedao/shared/document-model";
-import { describe, expect, it } from "vitest";
+import { print } from "graphql";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   DefinitionDiagnosticCollector,
@@ -21,6 +22,7 @@ import {
   isHostScalarName,
   isReferenceableScalarName,
   scalarCatalog,
+  subgraphScalars,
 } from "../../src/definition/scalars/catalog.js";
 import { phidScalar } from "../../src/definition/scalars/declarations/phid.js";
 import { jsonObjectScalar } from "../../src/definition/scalars/declarations/json-object.js";
@@ -36,6 +38,7 @@ import {
 import { packageScalarsOf } from "../../src/definition/scalars/package-scalars.js";
 import { compileSubgraphSchema } from "../../src/definition/subgraph/ast.js";
 import { createEntryBuilders } from "../../src/definition/subgraph/entries.js";
+import { checkSubgraphDefinitionShape } from "../../src/definition/subgraph/wire-shape.js";
 import { checkDocumentModelDefinitionShape } from "../../src/definition/wire-shape.js";
 
 /**
@@ -495,12 +498,12 @@ describe("an internal scalar", () => {
   const internalScalar = {
     code: "PH-SCALAR-INTERNAL",
     message:
-      "JSONObject is internal to the reactor host. A document model or subgraph cannot use it.",
+      "JSONObject is internal to the reactor host. A document model cannot use it.",
     repair:
-      "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one.",
+      "Use ph.Unknown() for an unconstrained value, or ph.object(...) for a structured one. A subgraph can use subgraphScalars.JSONObject().",
   };
 
-  const foreignCopyJsonObjectField = () =>
+  const catalogJsonObjectField = () =>
     createScalarField(
       "JSONObject",
       jsonObjectScalar.binding.validator,
@@ -577,7 +580,7 @@ describe("an internal scalar", () => {
 
   it("is refused in a model field that carries its catalog binding", () => {
     const diagnostics = diagnosticsOf(() =>
-      contacts({ meta: foreignCopyJsonObjectField() }).finalize({
+      contacts({ meta: catalogJsonObjectField() }).finalize({
         modules: [],
       }),
     );
@@ -596,18 +599,93 @@ describe("an internal scalar", () => {
     ]);
   });
 
-  it("is refused in a subgraph entry that carries its catalog binding", () => {
+  it("is refused in a model field built with the subgraph factory", () => {
+    const diagnostics = diagnosticsOf(() =>
+      contacts({ meta: subgraphScalars.JSONObject() }).finalize({
+        modules: [],
+      }),
+    );
+    expect(
+      diagnostics.map(({ code, path, message, repair }) => ({
+        code,
+        path,
+        message,
+        repair,
+      })),
+    ).toEqual([
+      {
+        ...internalScalar,
+        path: ["specifications", "global", "schema", "fields", "meta"],
+      },
+    ]);
+  });
+
+  function compileMeta(field: () => ReturnType<typeof catalogJsonObjectField>) {
     const { builders, exposed } = createEntryBuilders();
-    const compiled = compileSubgraphSchema({
+    return compileSubgraphSchema({
       name: "meta",
       entries: [
         builders.query("meta", {
-          returns: foreignCopyJsonObjectField(),
+          args: { filter: field() },
+          returns: field(),
           resolve: () => ({}),
         }),
       ],
       exposed,
     });
+  }
+
+  it("is declared by a subgraph that uses the subgraph factory", () => {
+    const compiled = compileMeta(() => subgraphScalars.JSONObject());
+    expect(compiled.diagnostics).toEqual([]);
+    expect(compiled.scalars).toEqual([
+      {
+        name: "JSONObject",
+        implementation: "powerhouse.catalog#JSONObject",
+        graphQLProfile: "legacy-graphql-default-v1",
+      },
+    ]);
+    expect(print(compiled.document as never)).toBe(
+      "scalar JSONObject\n\ntype Query {\n  meta(filter: JSONObject): JSONObject\n}",
+    );
+    expect(
+      checkSubgraphDefinitionShape({
+        kind: "powerhouse.subgraph",
+        formatVersion: 1,
+        name: "meta",
+        compositionPolicy: "host-current",
+        federationProfile: "host-current",
+        schemaKind: "typed",
+        hasSubscriptions: false,
+        types: compiled.types,
+        entries: compiled.entries,
+        scalars: compiled.scalars,
+        definitionOrder: compiled.definitionOrder,
+      }),
+    ).toEqual([]);
+  });
+
+  it("is accepted in a subgraph field that carries another copy's catalog binding", async () => {
+    vi.resetModules();
+    const other = await import("../../src/definition/scalars/catalog.js");
+    expect(other.subgraphScalars.JSONObject.binding).not.toBe(
+      subgraphScalars.JSONObject.binding,
+    );
+    const compiled = compileMeta(() => other.subgraphScalars.JSONObject());
+    expect(compiled.diagnostics).toEqual([]);
+    expect(print(compiled.document as never)).toBe(
+      "scalar JSONObject\n\ntype Query {\n  meta(filter: JSONObject): JSONObject\n}",
+    );
+  });
+
+  it("is refused in a subgraph field that names it with no binding", () => {
+    const compiled = compileMeta(() =>
+      createScalarField(
+        "JSONObject",
+        jsonObjectScalar.binding.validator,
+        undefined,
+      ),
+    );
     expect(
       compiled.diagnostics.map(({ code, path, message, repair }) => ({
         code,
@@ -615,7 +693,23 @@ describe("an internal scalar", () => {
         message,
         repair,
       })),
-    ).toEqual([{ ...internalScalar, path: ["entries", 0, "returns"] }]);
+    ).toEqual([
+      { ...internalScalar, path: ["entries", 0, "args", "filter"] },
+      { ...internalScalar, path: ["entries", 0, "returns"] },
+    ]);
+  });
+
+  it("is offered as a factory by subgraphScalars only", () => {
+    const read = (): unknown =>
+      // @ts-expect-error JSONObject is internal to the reactor host
+      ph.JSONObject;
+    expect(diagnosticsOf(read)).toMatchObject([
+      { ...internalScalar, path: ["JSONObject"] },
+    ]);
+    expect(Object.keys(subgraphScalars)).toEqual(["JSONObject"]);
+    expect(subgraphScalars.JSONObject.role).toBe(
+      "field-use factory; call it, as subgraphScalars.JSONObject({ required: true })",
+    );
   });
 
   it("is a host scalar a definition cannot reference", () => {

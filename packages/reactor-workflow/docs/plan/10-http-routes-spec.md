@@ -464,6 +464,8 @@ reads the manifest: `PackageManager` loads only document models, upgrade
 manifests, subgraphs and processors. Adding manifest loading to `IPackageLoader`
 for this would be new plumbing for no gain.
 
+> Historical snapshot. The subgraph fields and path behavior described below are superseded by [ADR 0006](../../../../docs/adr/0006-class-based-subgraphs.md). Current classes use static `subgraphName` and `getSchema`; authors cannot set an instance `path`.
+
 **Related hole worth closing in the same change.** `ISubgraph.path` is an
 optional, package-writable field (`graphql/types.ts:36`). The manager injects
 `path: this.path` (`graphql-manager.ts:505`) and `BaseSubgraph` assigns

@@ -41,7 +41,6 @@ export function materializeLoaderPackage(): MaterializedPackage {
   cpSync(FIXTURE, root, { recursive: true });
   mkdirSync(join(root, "node_modules", "@powerhousedao"), { recursive: true });
   symlinkSync(COMPILER_PACKAGE, join(root, "node_modules", "document-model"));
-  // `defineSubgraph` comes from reactor-api, as in a real subgraph package.
   symlinkSync(
     resolve(COMPILER_PACKAGE, "..", "reactor-api"),
     join(root, "node_modules", "@powerhousedao", "reactor-api"),

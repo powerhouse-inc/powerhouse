@@ -14,7 +14,6 @@ import {
 } from "./code-first-package.js";
 
 let projectDir: string;
-let enteredFrom: string;
 
 const path = (...segments: string[]) => join(projectDir, ...segments);
 const read = (...segments: string[]) => readFileSync(path(...segments), "utf8");
@@ -70,7 +69,6 @@ function taskSources() {
 }
 
 beforeEach(async () => {
-  enteredFrom = process.cwd();
   projectDir = createCodeFirstPackage();
   await inProject((project) =>
     generateCodeFirstDocumentModel(
@@ -85,8 +83,6 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  // buildTsMorphProject enters the project, and Windows cannot remove the cwd.
-  process.chdir(enteredFrom);
   rmSync(projectDir, { recursive: true, force: true });
 });
 

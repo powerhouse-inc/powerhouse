@@ -68,22 +68,38 @@ const client = await new ReactorClientBuilder()
 
 `buildModule()` throws if neither `withReactorBuilder` nor `withReactor` was set. For the low-level builder detail, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
 
-**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`, which holds the client as the `reactorClient` property. The generated `getResolvers(subgraph)` reads it off the instance; inside a method on the subgraph class, use `this.reactorClient`. The GraphQL resolver `context` does not carry the reactor.
+**In a subgraph.** A class extends `BaseSubgraph<Context>` and supplies `getSchema(schema: SchemaBuilder<YourClass>)`. Resolvers reach the client through `subgraph.reactorClient`. The GraphQL context holds the caller, not the client.
 
 ```typescript
-import { type BaseSubgraph } from "@powerhousedao/reactor-api";
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
 
-// resolvers.ts (generated scaffold)
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactor = subgraph.reactorClient; // IReactorClient
+export class DocumentNamesSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "document-names";
 
-  return {
-    Query: {
-      todoList: (_parent: unknown, args: { id: string }) => reactor.get(args.id),
-    },
-  };
-};
+  static override getSchema(schema: SchemaBuilder<DocumentNamesSubgraph>) {
+    return [
+      schema.query("authorizedDocumentName", {
+        args: { identifier: ph.String({ required: true }) },
+        returns: ph.String({ required: true }),
+        resolve: async ({ args, subgraph, request }) => {
+          const handle = await subgraph.assertCanRead(args.identifier, request);
+          const document = await subgraph.reactorClient.get(
+            handle.fetchIdentifier,
+          );
+          return document.header.name;
+        },
+      }),
+    ];
+  }
+}
 ```
+
+See [Subgraph classes](../03-GraphQLData/08-SubgraphClasses.md) for schema forms, hooks, and fragments. Existing endpoint paths, schemas, and WebSocket and SSE mounts are unchanged.
 
 For attachments, a resolver calls `subgraph.attachmentsFor(ctx)`, which returns an `IAttachmentClient` bound to the request's caller. See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard).
 
@@ -116,16 +132,16 @@ import type { IReactorClient } from "@powerhousedao/reactor-browser";
 
 ### Reading documents
 
-| Method                                                                         | Description                                       |
-| ------------------------------------------------------------------------------ | ------------------------------------------------- |
-| `get(identifier, view?)`                                                       | Retrieve a document by id or slug                 |
+| Method                                                                         | Description                                        |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `get(identifier, view?)`                                                       | Retrieve a document by id or slug                  |
 | `resolveIdOrSlug(identifier)`                                                  | Resolve an id or slug to the canonical document id |
-| `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source              |
-| `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target              |
-| `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs |
-| `getOperations(documentIdentifier, view?, filter?, paging?)`                   | Retrieve operations for a document                |
-| `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules            |
-| `getDocumentModelModule(documentType)`                                         | Get a specific document model module              |
+| `getOutgoingRelationships(sourceIdentifier, relationshipType, view?, paging?)` | List documents related from a source               |
+| `getIncomingRelationships(targetIdentifier, relationshipType, view?, paging?)` | List documents related into a target               |
+| `find(search, view?, paging?)`                                                 | Search documents by type, parentId, ids, or slugs  |
+| `getOperations(documentIdentifier, view?, filter?, paging?)`                   | Retrieve operations for a document                 |
+| `getDocumentModelModules(namespace?, paging?)`                                 | List registered document model modules             |
+| `getDocumentModelModule(documentType)`                                         | Get a specific document model module               |
 
 The optional `ViewFilter` lets you target a specific branch, set of scopes, or revision. On the client it also names the subject the read is gated for:
 
@@ -153,23 +169,23 @@ All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) an
 
 ### Writing documents
 
-| Method                                                                                      | Description                                                        |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
-| `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
+| Method                                                                                      | Description                                                               |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                         |
+| `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                                  |
 | `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
-| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs |
-| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
-| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
-| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |
-| `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents          |
-| `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
-| `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)            |
-| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
-| `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
-| `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
-| `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
-| `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
+| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs      |
+| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                                     |
+| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`                    |
+| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle       |
+| `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents                  |
+| `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                         |
+| `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)                    |
+| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                            |
+| `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                         |
+| `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                            |
+| `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too)        |
+| `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                               |
 
 To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
 
@@ -224,16 +240,16 @@ The reactor uses an internal event bus to coordinate between subsystems. The eve
 
 ### Core job events (`ReactorEventTypes`)
 
-| Event             | Numeric ID | When it fires                                 |
-| ----------------- | ---------- | --------------------------------------------- |
-| `JOB_PENDING`     | 10001      | Job is registered and waiting to execute      |
-| `JOB_RUNNING`     | 10002      | Job starts executing                          |
-| `JOB_WRITE_READY` | 10003      | Operations are written to the operation store |
-| `JOB_READ_READY`  | 10004      | All read models have finished processing      |
-| `JOB_FAILED`      | 10005      | Job failed with an unrecoverable error        |
-| `READMODEL_BATCH_COMPLETED` | 10006 | The read-model coordinator finishes a projection batch (carries per-stage timings) |
-| `READMODEL_INDEXED` | 10007    | An individual read model finishes indexing a batch in one stage |
-| `MODEL_LOADED`    | 10008      | The resolver loads a document model module on demand |
+| Event                       | Numeric ID | When it fires                                                                      |
+| --------------------------- | ---------- | ---------------------------------------------------------------------------------- |
+| `JOB_PENDING`               | 10001      | Job is registered and waiting to execute                                           |
+| `JOB_RUNNING`               | 10002      | Job starts executing                                                               |
+| `JOB_WRITE_READY`           | 10003      | Operations are written to the operation store                                      |
+| `JOB_READ_READY`            | 10004      | All read models have finished processing                                           |
+| `JOB_FAILED`                | 10005      | Job failed with an unrecoverable error                                             |
+| `READMODEL_BATCH_COMPLETED` | 10006      | The read-model coordinator finishes a projection batch (carries per-stage timings) |
+| `READMODEL_INDEXED`         | 10007      | An individual read model finishes indexing a batch in one stage                    |
+| `MODEL_LOADED`              | 10008      | The resolver loads a document model module on demand                               |
 
 ### Sync events (`SyncEventTypes`)
 
@@ -255,13 +271,13 @@ The reactor uses an internal event bus to coordinate between subsystems. The eve
 
 The executor managers emit a lower-level set of events for individual job execution and executor startup/shutdown. Most application code subscribes to `ReactorEventTypes` instead.
 
-| Event              | Numeric ID | When it fires                          |
-| ------------------ | ---------- | -------------------------------------- |
-| `JOB_STARTED`      | 20000      | An executor starts running a job       |
-| `JOB_COMPLETED`    | 20001      | An executor finishes a job             |
-| `JOB_FAILED`       | 20002      | An executor's job fails                |
-| `EXECUTOR_STARTED` | 20003      | An executor starts                     |
-| `EXECUTOR_STOPPED` | 20004      | An executor stops                      |
+| Event              | Numeric ID | When it fires                    |
+| ------------------ | ---------- | -------------------------------- |
+| `JOB_STARTED`      | 20000      | An executor starts running a job |
+| `JOB_COMPLETED`    | 20001      | An executor finishes a job       |
+| `JOB_FAILED`       | 20002      | An executor's job fails          |
+| `EXECUTOR_STARTED` | 20003      | An executor starts               |
+| `EXECUTOR_STOPPED` | 20004      | An executor stops                |
 
 ## Configuring your reactor
 

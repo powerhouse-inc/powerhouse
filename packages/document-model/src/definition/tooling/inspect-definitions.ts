@@ -289,7 +289,7 @@ export async function inspectSubgraph(
     readonly selection: SubgraphInspectionSelection;
   },
 ): Promise<SubgraphInspectionEnvelope> {
-  const { report } = await checkDefinitionsWithArtifacts({
+  const { report, subgraphs } = await checkDefinitionsWithArtifacts({
     ...request,
     selection: undefined,
     profile: "edit",
@@ -321,44 +321,24 @@ export async function inspectSubgraph(
         createDiagnostic({
           code: "PH-SG-DEFINITION-INVALID",
           path: ["selection"],
-          message: `No subgraph named ${request.selection.key} is in the selected sources.`,
+          message: `No subgraph named ${request.selection.key} is in subgraphs/index.ts or subgraphs/<name>/index.ts.`,
           expected:
             available.length === 0
-              ? "a selection containing a subgraph"
+              ? "a package with a subgraph"
               : available.slice(0, MAX_LISTED_KEYS).join(", "),
           received: request.selection.key,
           repair:
             available.length === 0
-              ? "Select a source that declares a subgraph."
-              : "Inspect one of the subgraphs the selection contains.",
+              ? "Export a subgraph class from subgraphs/index.ts."
+              : "Inspect one of the subgraphs the package exports.",
         }),
       ],
     };
   }
 
-  // The report carries the identity and the digest; the definition itself is
-  // read back off the loaded class, so the report's wire shape does not have
-  // to grow a field only inspection reads.
-  const loaded = await request.loader.normalizeDefinitionSources({
-    ...(request.configFile !== undefined && { configFile: request.configFile }),
-    ...(request.cliSources !== undefined && { cliSources: request.cliSources }),
-    packageRevision: request.packageRevision,
-    ...(request.signal !== undefined && { signal: request.signal }),
-  });
-  const published = loaded.subgraphs
-    .map(
-      (candidate) =>
-        (candidate.value as { definition?: unknown }).definition as
-          | SubgraphDefinition
-          | undefined,
-    )
-    .find(
-      (candidate): candidate is SubgraphDefinition =>
-        candidate !== undefined &&
-        candidate !== null &&
-        typeof candidate === "object" &&
-        candidate.name === request.selection.key,
-    );
+  const published = subgraphs.find(
+    (candidate) => candidate.description.subgraphName === request.selection.key,
+  )?.description.definition;
   if (published === undefined) {
     return {
       ...base,

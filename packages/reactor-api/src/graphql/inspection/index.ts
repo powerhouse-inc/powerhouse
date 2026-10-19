@@ -1,8 +1,4 @@
-export {
-  createInspectionResolvers,
-  type InspectionCallerGate,
-  type InspectionReadField,
-} from "./resolvers.js";
+export type { InspectionReadField } from "./resolvers.js";
 export { inspectionTypeDefs } from "./schema.js";
 export {
   createReactorInspectionSource,

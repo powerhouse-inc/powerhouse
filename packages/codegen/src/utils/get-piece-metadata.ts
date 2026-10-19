@@ -4,7 +4,7 @@ import {
   type ObjectLiteralExpression,
   type Project,
 } from "ts-morph";
-import { getOrCreateDirectory } from "utils";
+import { getOrCreateDirectory, projectDirOf } from "utils";
 
 export type PieceListEntry = {
   name: string;
@@ -50,7 +50,10 @@ function stringProperty(
 }
 
 export function getPiecesListSourceFile(project: Project) {
-  const { directory } = getOrCreateDirectory(project, PIECES_DIR);
+  const { directory } = getOrCreateDirectory(
+    project,
+    path.join(projectDirOf(project), PIECES_DIR),
+  );
   const filePath = path.join(directory.getPath(), "index.ts");
   return (
     project.getSourceFile(filePath) ??
@@ -84,7 +87,7 @@ export function readPiecesList(project: Project): PieceListEntry[] {
 function getCreatePieceArgument(project: Project, dirName: string) {
   const { directory } = getOrCreateDirectory(
     project,
-    path.join(PIECES_DIR, dirName),
+    path.join(projectDirOf(project), PIECES_DIR, dirName),
   );
   const filePath = path.join(directory.getPath(), "index.ts");
   const sourceFile =

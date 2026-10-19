@@ -1,8 +1,7 @@
 import {
-  detectFeatures,
   generateAllProcessors,
   generateProcessor,
-  syncFeatureDependencies,
+  installFeatureDependencies,
 } from "@powerhousedao/codegen";
 import {
   buildTsMorphProject,
@@ -17,7 +16,6 @@ import {
 import type { ProcessorModuleDocument } from "@powerhousedao/vetra/document-models/processor-module";
 import { dirname } from "node:path";
 import type { GenerateProcessorArgs } from "../types.js";
-import { installAddedDependencies } from "../utils/install-added-dependencies.js";
 
 export async function startGenerateProcessor(
   args: GenerateProcessorArgs,
@@ -72,9 +70,7 @@ export async function startGenerateProcessor(
     return;
   }
   await project.save();
-  const added = await syncFeatureDependencies(
-    detectFeatures(projectDir),
-    projectDir,
-  );
-  await installAddedDependencies(added, projectDir, args.skipInstall);
+  await installFeatureDependencies(projectDir, {
+    skipInstall: args.skipInstall,
+  });
 }

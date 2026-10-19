@@ -49,26 +49,21 @@ function hostEntryPoint(projectDir: string): string | undefined {
 }
 
 /**
- * Validates the selection beside the package's schema-first models and
- * subgraphs, which the server serves with it. A package with no subgraph of
- * either style needs no host, so it passes without one installed.
+ * Validates the selection beside the package's schema-first models, which the
+ * server serves with it.
  */
 export function defaultHostValidationFor(
   projectDir: string,
 ): HostValidationCallback {
   return async (request) => {
-    const { readSchemaFirstModels, readSchemaFirstSubgraphs } =
-      await import("@powerhousedao/vetra/codegen");
-    const subgraphs = readSchemaFirstSubgraphs(projectDir, request.subgraphs);
-    if (request.subgraphs.length === 0 && subgraphs.length === 0) {
-      return { completed: true, diagnostics: [] };
-    }
     const validate = await hostValidationFor(projectDir);
     if (validate === undefined) return { completed: false, diagnostics: [] };
+    const { readSchemaFirstModels } =
+      await import("@powerhousedao/vetra/codegen");
     // `ph generate` reports a model file it cannot read.
-    const documentModels = readSchemaFirstModels(projectDir, {
+    const schemaFirstDocumentModels = readSchemaFirstModels(projectDir, {
       skipUnreadable: true,
     });
-    return validate({ ...request, schemaFirst: { documentModels, subgraphs } });
+    return validate({ ...request, schemaFirstDocumentModels });
   };
 }

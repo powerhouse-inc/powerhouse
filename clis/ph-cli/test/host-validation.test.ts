@@ -29,10 +29,7 @@ afterEach(() => {
  * A project whose installed reactor-api records each request it validates,
  * under the URL of its entry, from the moment it is imported.
  */
-function makeProject(subgraphs: Record<string, string>): {
-  root: string;
-  hostUrl: string;
-} {
+function makeProject(): { root: string; hostUrl: string } {
   const root = mkdtempSync(join(realpathSync(tmpdir()), "ph-host-validation-"));
   temporary.push(root);
   const host = join(root, "node_modules", "@powerhousedao", "reactor-api");
@@ -61,124 +58,18 @@ function makeProject(subgraphs: Record<string, string>): {
     ),
     join(modelDir, "subgraph-module.json"),
   );
-  for (const [dir, sdl] of Object.entries(subgraphs)) {
-    mkdirSync(join(root, "subgraphs", dir), { recursive: true });
-    writeFileSync(
-      join(root, "subgraphs", dir, "schema.ts"),
-      `import { gql } from "graphql-tag";\n\nexport const schema = gql\`\n${sdl}\n\`;\n`,
-    );
-  }
   return { root, hostUrl: pathToFileURL(join(host, "host.mjs")).href };
 }
 
+const ledger = {
+  value: class Ledger {},
+  source: { specifier: "./subgraphs/ledger/index.ts" as const },
+  path: [],
+};
+
 describe("the default host validation", { timeout: 60_000 }, () => {
-  it("hands the host the project's schema-first subgraphs and models", async () => {
-    const { root, hostUrl } = makeProject({
-      ledger: "type Query { ledger: String }",
-    });
-
-    const result = await defaultHostValidationFor(root)({
-      profile: "edit",
-      documentModels: [],
-      subgraphs: [],
-    });
-
-    expect(result).toEqual({ completed: true, diagnostics: [] });
-    const [request] = fakeHosts().get(hostUrl) ?? [];
-    expect(
-      request.schemaFirst?.documentModels.map(({ id, name }) => [id, name]),
-    ).toEqual([["powerhouse/subgraph", "Subgraph Module"]]);
-    expect(
-      request.schemaFirst?.subgraphs.map(
-        ({ name, label, source, typeDefs }) => [
-          name,
-          label,
-          source,
-          typeDefs.definitions.flatMap((definition) =>
-            "fields" in definition
-              ? (definition.fields ?? []).map(
-                  (field) => `${definition.name.value}.${field.name.value}`,
-                )
-              : [],
-          ),
-        ],
-      ),
-    ).toEqual([
-      [
-        "ledger",
-        "ledger",
-        { specifier: "./subgraphs/ledger/schema.ts" },
-        ["Query.ledger"],
-      ],
-    ]);
-  });
-
-  describe("with a code-first subgraph kept in a subgraph directory", () => {
-    function makeFooProject() {
-      const project = makeProject({
-        foo: "type Query { foo: String }",
-        ledger: "type Query { ledger: String }",
-      });
-      writeFileSync(
-        join(project.root, "subgraphs", "foo", "index.ts"),
-        'import { defineSubgraph } from "@powerhousedao/reactor-api";\nimport { schema } from "./schema.js";\n\nexport const FooSubgraph = defineSubgraph({ name: "foo", schemaKind: "graphql-ast-compat", compatibility: { typeDefs: schema } });\n',
-      );
-      return project;
-    }
-    const schemaFirstOf = (hostUrl: string) =>
-      fakeHosts()
-        .get(hostUrl)
-        ?.map(({ schemaFirst }) =>
-          schemaFirst?.subgraphs.map(({ name, source }) => [name, source]),
-        );
-
-    it("leaves the directory out when the selection loaded it", async () => {
-      const { root, hostUrl } = makeFooProject();
-
-      await defaultHostValidationFor(root)({
-        profile: "edit",
-        documentModels: [],
-        subgraphs: [
-          {
-            value: class Foo {},
-            source: { specifier: "./subgraphs/foo/index.ts" },
-            path: [],
-          },
-        ],
-      });
-
-      expect(schemaFirstOf(hostUrl)).toEqual([
-        [["ledger", { specifier: "./subgraphs/ledger/schema.ts" }]],
-      ]);
-    });
-
-    it("reads the directory when the selection did not load it", async () => {
-      const { root, hostUrl } = makeFooProject();
-
-      await defaultHostValidationFor(root)({
-        profile: "edit",
-        documentModels: [],
-        subgraphs: [],
-      });
-
-      expect(schemaFirstOf(hostUrl)).toEqual([
-        [
-          ["foo", { specifier: "./subgraphs/foo/schema.ts" }],
-          ["ledger", { specifier: "./subgraphs/ledger/schema.ts" }],
-        ],
-      ]);
-    });
-  });
-
-  it("hands the host the readable models when another model file is malformed", async () => {
-    const { root, hostUrl } = makeProject({});
-    mkdirSync(join(root, "document-models", "broken"));
-    writeFileSync(join(root, "document-models", "broken", "broken.json"), "{");
-    const ledger = {
-      value: class Ledger {},
-      source: { specifier: "./subgraphs/ledger.ts" as const },
-      path: [],
-    };
+  it("hands the host the project's schema-first models beside the selection", async () => {
+    const { root, hostUrl } = makeProject();
 
     const result = await defaultHostValidationFor(root)({
       profile: "edit",
@@ -187,32 +78,37 @@ describe("the default host validation", { timeout: 60_000 }, () => {
     });
 
     expect(result).toEqual({ completed: true, diagnostics: [] });
-    const requests = fakeHosts().get(hostUrl) ?? [];
     expect(
-      requests.map(({ subgraphs, schemaFirst }) => ({
-        subgraphs,
-        models: schemaFirst?.documentModels.map(({ id }) => id),
-        schemaFirstSubgraphs: schemaFirst?.subgraphs,
-      })),
+      (fakeHosts().get(hostUrl) ?? []).map(
+        ({ subgraphs, schemaFirstDocumentModels }) => ({
+          subgraphs,
+          models: schemaFirstDocumentModels?.map(({ id, name }) => [id, name]),
+        }),
+      ),
     ).toEqual([
       {
         subgraphs: [ledger],
-        models: ["powerhouse/subgraph"],
-        schemaFirstSubgraphs: [],
+        models: [["powerhouse/subgraph", "Subgraph Module"]],
       },
     ]);
   });
 
-  it("passes without importing the host when neither style has a subgraph", async () => {
-    const { root, hostUrl } = makeProject({});
+  it("hands the host the readable models when another model file is malformed", async () => {
+    const { root, hostUrl } = makeProject();
+    mkdirSync(join(root, "document-models", "broken"));
+    writeFileSync(join(root, "document-models", "broken", "broken.json"), "{");
 
     const result = await defaultHostValidationFor(root)({
       profile: "edit",
       documentModels: [],
-      subgraphs: [],
+      subgraphs: [ledger],
     });
 
     expect(result).toEqual({ completed: true, diagnostics: [] });
-    expect(fakeHosts().has(hostUrl)).toBe(false);
+    expect(
+      (fakeHosts().get(hostUrl) ?? []).map(({ schemaFirstDocumentModels }) =>
+        schemaFirstDocumentModels?.map(({ id }) => id),
+      ),
+    ).toEqual([["powerhouse/subgraph"]]);
   });
 });
