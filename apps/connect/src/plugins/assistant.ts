@@ -1,10 +1,13 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { z } from "zod";
 import {
   parseEntryConfig,
   type ConnectPlugin,
   type ConnectPluginFactory,
 } from "./types.js";
+import {
+  assistantConfigSchema,
+  type AssistantConfigInput,
+} from "../plugin-configs/assistant.js";
 
 /**
  * The Connect AI assistant (`@powerhousedao/connect/plugins/assistant`).
@@ -16,17 +19,9 @@ import {
  * `connect.ai` slice, and presence is that switch. The endpoint and agent are
  * user settings in the browser, not host config.
  */
-export const assistantConfigSchema = z.strictObject({});
 
-/** What a host.js entry writes (a type alias, so it stays assignable to the
- * runtime `PluginEntryData` config record). */
-export type AssistantConfigInput = z.input<typeof assistantConfigSchema>;
-
-declare global {
-  interface PHPluginConfigs {
-    "@powerhousedao/connect/plugins/assistant": AssistantConfigInput;
-  }
-}
+// Schema and PHPluginConfigs augmentation: ../plugin-configs (zod-only).
+export { assistantConfigSchema, type AssistantConfigInput };
 
 export const createAssistantPlugin: ConnectPluginFactory = (rawConfig) => {
   parseEntryConfig(

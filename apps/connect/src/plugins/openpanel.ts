@@ -1,11 +1,13 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { connectOpenPanelSchema } from "@powerhousedao/shared/connect/connect-config-schema";
-import type { z } from "zod";
 import {
   parseEntryConfig,
   type ConnectPlugin,
   type ConnectPluginFactory,
 } from "./types.js";
+import {
+  openPanelConfigSchema,
+  type OpenPanelConfigInput,
+} from "../plugin-configs/openpanel.js";
 
 /**
  * OpenPanel analytics (`@powerhousedao/connect/plugins/openpanel`). Presence
@@ -17,17 +19,9 @@ import {
  * The entry config IS the `connect.openPanel` slice, so it is typed and
  * validated by that slice's single-source schema (a typo'd key fails).
  */
-export const openPanelConfigSchema = connectOpenPanelSchema;
 
-/** What a host.js entry writes (a type alias, so it stays assignable to the
- * runtime `PluginEntryData` config record). */
-export type OpenPanelConfigInput = z.input<typeof openPanelConfigSchema>;
-
-declare global {
-  interface PHPluginConfigs {
-    "@powerhousedao/connect/plugins/openpanel": OpenPanelConfigInput;
-  }
-}
+// Schema and PHPluginConfigs augmentation: ../plugin-configs (zod-only).
+export { openPanelConfigSchema, type OpenPanelConfigInput };
 
 export const createOpenPanelPlugin: ConnectPluginFactory = (rawConfig) => {
   const config = parseEntryConfig(

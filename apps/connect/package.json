@@ -49,6 +49,12 @@
       "types": "./dist/route-tree.d.ts",
       "import": "./dist/route-tree.js"
     },
+    "./plugin-configs": {
+      "source": "./src/plugin-configs/index.ts",
+      "types": "./dist/plugin-configs.d.ts",
+      "import": "./dist/plugin-configs.js",
+      "default": "./dist/plugin-configs.js"
+    },
     "./routes/*": "./src/routes/*.tsx",
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css",
@@ -79,7 +85,7 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css && pnpm run build:shell",
-    "build:bundle": "tsr generate && tsdown",
+    "build:bundle": "tsr generate && tsdown && node scripts/assert-plugin-configs.mjs",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:shell": "vite build --config vite.prerender.config.ts --logLevel warn && node scripts/prerender-shell.ts",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",

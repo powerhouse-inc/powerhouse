@@ -1,10 +1,13 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import { z } from "zod";
 import {
   parseEntryConfig,
   type ConnectPlugin,
   type ConnectPluginFactory,
 } from "./types.js";
+import {
+  vetraStudioConfigSchema,
+  type VetraStudioConfigInput,
+} from "../plugin-configs/vetra-studio.js";
 
 /**
  * Vetra Studio, browser side (`@powerhousedao/vetra-studio/connect`). Its
@@ -17,17 +20,9 @@ import {
  * It takes no entry config: presence is the switch, and the rest of the
  * `connect.app` slice is Connect-level config, not this plugin's.
  */
-export const vetraStudioConfigSchema = z.strictObject({});
 
-/** What a host.js entry writes (a type alias, so it stays assignable to the
- * runtime `PluginEntryData` config record). */
-export type VetraStudioConfigInput = z.input<typeof vetraStudioConfigSchema>;
-
-declare global {
-  interface PHPluginConfigs {
-    "@powerhousedao/vetra-studio/connect": VetraStudioConfigInput;
-  }
-}
+// Schema and PHPluginConfigs augmentation: ../plugin-configs (zod-only).
+export { vetraStudioConfigSchema, type VetraStudioConfigInput };
 
 export const createVetraStudioPlugin: ConnectPluginFactory = (rawConfig) => {
   parseEntryConfig(

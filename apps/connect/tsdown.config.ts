@@ -12,6 +12,7 @@ export default defineConfig({
     router: "src/router/index.ts",
     layout: "src/layout/index.ts",
     "route-tree": "src/routeTree.gen.ts",
+    "plugin-configs": "src/plugin-configs/index.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
     "reactor.worker": "src/reactor.worker.ts",
