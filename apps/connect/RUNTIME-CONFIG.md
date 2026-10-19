@@ -387,37 +387,42 @@ Partial sets are rejected at boot — `authConditions` requires `authGroups`, wh
 
 ## Adding or changing a config field (developers)
 
-A `connect.*` field has five artefacts that must stay in lockstep. The TS
-constants are the source of truth; the two committed `*.schema.json` files are
-generated from them. Miss a step and the schemas silently drift from the types.
+A `connect.*` field is declared once, in zod; everything else is derived from
+it. The `PHConnect*` TS types are `z.infer` of the schemas, the JSON Schema
+fragment Ajv uses (`phConnectRuntimeConfigSchema`) is emitted from them, and
+the two committed `*.schema.json` files are generated from that fragment.
 
-1. **Type** — `packages/shared/clis/types.ts`. Add the field to the relevant
-   `PHConnect*` type (e.g. `PHConnectPackages`).
+1. **Schema** — `packages/shared/connect/connect-config-schema.ts`. Declare the
+   field in the relevant `connect*Schema` section (e.g. `connectPackagesSchema`),
+   with its description and `default` in `.meta({ description, default })`.
+   Never use `.default(x)` (it fills values on parse) or `.meta({ id })` (it
+   emits `$defs`). The matching `PHConnect*` type in
+   `packages/shared/clis/types.ts` picks the field up through `z.infer`, and the
+   emitted fragment in `packages/shared/connect/schema-fragments.ts` through
+   `z.toJSONSchema`; neither is edited by hand. The drift test
+   `connect-config-schema.test.ts` pins the emitted fragment: update its
+   snapshot (`vitest -u`) after reviewing the diff.
 2. **Default** — `packages/shared/connect/runtime-config.ts`. Add the field's
    default to `DEFAULT_CONNECT_CONFIG` so the SPA never sees it undefined.
-3. **Schema fragment** — `packages/shared/connect/schema-fragments.ts`. Declare
-   the field (type, description, `default`) in `phConnectRuntimeConfigSchema`.
-   Both committed schemas import this fragment, so declaring it once keeps the
-   source-config and runtime-config schemas in sync by construction.
-4. **Rebuild** the source-of-truth packages so the emit script sees the change:
+3. **Rebuild** the source-of-truth packages so the emit script sees the change:
    ```bash
    pnpm --filter=@powerhousedao/shared --filter=@powerhousedao/builder-tools build
    ```
-5. **Regenerate** the committed JSON schemas:
+4. **Regenerate** the committed JSON schemas:
    ```bash
    pnpm tsx scripts/emit-schemas.ts
    ```
    This rewrites `packages/builder-tools/connect-utils/runtime-config.schema.json`
    and `packages/shared/clis/source-config.schema.json`. Commit both.
 
-**`connect.pwa.*` fields have a sixth artefact.** The zod `PwaConfigSchema` /
+**`connect.pwa.*` fields have a second, hand-kept zod schema.** `PwaConfigSchema` /
 `PwaManifestOverrideSchema` in `packages/shared/document-model/schemas.ts` is
 the validator `ph connect build` actually runs against `connect.pwa` (via
 `validateProjectPwaConfig`), and it is hand-maintained: `emit-schemas.ts` does
 not regenerate it, and the coverage test below does not cover it (there is no
-`pwa` default). The `z.ZodType<PHConnectPwa>` annotation only pins it to the TS
-type, not to the schema fragment, and does not force it to gain a newly-added
-optional field. So when you add a `connect.pwa.*` field, declare it there too —
+`pwa` default). It mirrors `connectPwaSchema`; its `z.ZodType<PHConnectPwa>`
+annotation pins it to the inferred type, but does not force it to gain a
+newly-added optional field. So when you add a `connect.pwa.*` field, declare it there too —
 the objects are strict (`z.strictObject`), so a field the schema doesn't know
 fails the build as an unrecognized key rather than being silently dropped.
 
@@ -434,18 +439,20 @@ Optional, depending on the field:
 
 The `runtime-config-schema.test.ts` coverage test asserts every key emitted from
 `DEFAULT_CONNECT_CONFIG` has a matching schema declaration — it fails loudly if
-you add a default (step 2) but skip the schema fragment (step 3).
+you add a default (step 2) but skip the schema (step 1).
 
 ## Reference: key files
 
 ```
 packages/shared/connect/
+  ├ connect-config-schema.ts      zod schemas: the single source of connect.* fields
+  ├ schema-fragments.ts           JSON Schema fragments emitted from the zod schemas
   ├ runtime-config.ts             DEFAULT_CONNECT_CONFIG, types, buildRuntimeConfig
   ├ config-loader.ts              ConfigLoader, ConfigAdapter, deepMerge
   └ json-adapter.ts               JsonConfigAdapter (browser fetch | Node fs)
 
 packages/builder-tools/connect-utils/
-  ├ runtime-config-schema.ts      JSON Schema (Ajv)
+  ├ runtime-config-schema.ts      JSON Schema (Ajv), composed from the emitted fragment
   └ vite-plugins/ph-config.ts     Emits dist file & serves /powerhouse.config.json in dev
 
 clis/ph-cli/src/
