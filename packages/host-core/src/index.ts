@@ -208,3 +208,10 @@ export {
   type RunRecord,
   type RunRecordMember,
 } from "./run-record-schema.js";
+export {
+  CONNECT_PLUGIN_OWNED_SLICES,
+  findDeadConnectConfig,
+  type ConnectPluginSlices,
+  type DeadConfigWarning,
+  type OwnedConfigSlice,
+} from "./plugins-resolve.js";
