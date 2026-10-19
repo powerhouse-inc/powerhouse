@@ -93,6 +93,39 @@ describe("VitePackageLoader change listeners", () => {
     );
   });
 
+  // The load already said why; the last good set stays until a load succeeds.
+  it("skips the handler and reports nothing when a module fails to load", async () => {
+    const { vite, watcher } = fakeVite();
+    vite.ssrLoadModule = () => Promise.reject(new Error("Transform failed"));
+    const reportError = vi.fn();
+    const loader = VitePackageLoader.build(vite, { reportError });
+    const handler = vi.fn();
+    for (const subscribe of [
+      loader.onDocumentModelsChange,
+      loader.onSubgraphsChange,
+      loader.onProcessorsChange,
+      loader.onPiecesChange,
+    ]) {
+      subscribe.call(loader, PKG_A, handler, { debounce: 0 });
+    }
+    const ssrLoadModule = vi.spyOn(vite, "ssrLoadModule");
+
+    for (const dir of [
+      "document-models",
+      "subgraphs",
+      "processors",
+      "pieces",
+    ]) {
+      watcher.emit("change", resolve(PKG_A, dir, "index.ts"));
+    }
+    await vi.waitFor(() => expect(ssrLoadModule).toHaveBeenCalledTimes(4));
+    await new Promise<void>((done) => setTimeout(done, 10));
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(reportError).not.toHaveBeenCalled();
+    expect(unhandled).toEqual([]);
+  });
+
   it("contains a handler that throws", async () => {
     const { vite, watcher } = fakeVite();
     const loader = VitePackageLoader.build(vite);

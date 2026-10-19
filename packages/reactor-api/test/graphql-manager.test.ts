@@ -69,7 +69,8 @@ import type {
   SubgraphClass,
 } from "../src/graphql/types.js";
 import type { AuthContext, AuthService } from "../src/services/auth.service.js";
-import type { PackageManager } from "../src/packages/package-manager.js";
+import { PackageManager } from "../src/packages/package-manager.js";
+import type { ISubscribablePackageLoader } from "../src/packages/types.js";
 import { setupEventListeners } from "../src/packages/package-listeners.js";
 import type { IProcessorHostModule } from "../src/types.js";
 import { useServer } from "../src/graphql/websocket.js";
@@ -2293,18 +2294,199 @@ describe("GraphQLManager", () => {
       ["missing from the event", {}],
       ["with no models", { pkg: [] }],
     ])(
-      "keeps the models of a package %s, as a failed load sends",
+      "unregisters the models of a package %s",
       async (_, event: Record<string, DocumentModelModule[]>) => {
         const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
         await initAndFlush(manager);
 
         await modelsChange(event);
 
-        expect(registeredTypes()).toEqual(
-          expect.arrayContaining(["test/alpha", "test/beta"]),
-        );
+        expect(registeredTypes()).not.toContain("test/alpha");
+        expect(registeredTypes()).not.toContain("test/beta");
       },
     );
+
+    it("keeps a model another package still provides", async () => {
+      const { manager, modelsChange, registeredTypes } = setup([alpha, beta]);
+      await initAndFlush(manager);
+
+      await modelsChange({ other: [beta] });
+
+      expect(registeredTypes()).not.toContain("test/alpha");
+      expect(registeredTypes()).toContain("test/beta");
+    });
+
+    describe("through the package manager", () => {
+      class BetaStandIn extends BaseSubgraph {
+        name = "beta";
+        typeDefs = parse("type Query { betaStandIn: String }");
+        resolvers = {};
+      }
+
+      const missing = Object.assign(
+        new Error("Cannot find package 'pkg' imported from /host"),
+        { code: "ERR_MODULE_NOT_FOUND" },
+      );
+
+      async function setup() {
+        let outcome: DocumentModelModule[] | Error = [alpha, beta];
+        const fire: (() => void)[] = [];
+        const loader: ISubscribablePackageLoader = {
+          name: "fake-loader",
+          loadDocumentModels: (pkg) =>
+            pkg !== "pkg"
+              ? Promise.resolve([])
+              : outcome instanceof Error
+                ? Promise.reject(outcome)
+                : Promise.resolve(outcome),
+          loadSubgraphs: (pkg) =>
+            Promise.resolve(pkg === "other" ? [BetaStandIn] : []),
+          loadProcessors: () => Promise.resolve(null),
+          loadPieces: () => Promise.resolve([]),
+          onDocumentModelsChange: (pkg, handler) => {
+            if (pkg === "pkg") fire.push(() => handler([]));
+            return () => {};
+          },
+        };
+        const pkgManager = new PackageManager([loader], {
+          packages: ["pkg", "other"],
+        });
+        const { documentModels, subgraphs } = await pkgManager.init();
+        const registry = new DocumentModelRegistry();
+        registry.registerModules(...documentModels);
+        const harness = makeHarness({
+          reactorClient: makeMockReactorClient({
+            getDocumentModelModules: vi.fn(() =>
+              Promise.resolve({
+                results: registry.getAllModules(),
+                options: { cursor: "", limit: 100 },
+              }),
+            ),
+          }),
+          enableDocumentModelSubgraphs: true,
+        });
+        setupEventListeners(
+          pkgManager,
+          harness.manager,
+          {
+            registerFactory: vi.fn(),
+            unregisterFactory: vi.fn(),
+          } as unknown as Parameters<typeof setupEventListeners>[2],
+          () => ({}) as IProcessorHostModule,
+          registry,
+          { logger: silentLogger },
+        );
+        await initAndFlush(harness.manager);
+        await harness.manager.applyPackageSubgraphs(subgraphs);
+        await vi.runAllTimersAsync();
+        expect(harness.manager.getSubgraphByName("beta")).toBeInstanceOf(
+          DocumentModelSubgraph,
+        );
+
+        const registeredTypes = () =>
+          registry.getAllModules().map((m) => m.documentModel.global.id);
+        return {
+          ...harness,
+          pkgManager,
+          registeredTypes,
+          setOutcome: (next: DocumentModelModule[] | Error) => {
+            outcome = next;
+          },
+          // A file under the package's document-models/ changed.
+          documentModelsChanged: async () => {
+            for (const handler of fire) handler();
+            await vi.runAllTimersAsync();
+          },
+          reloadConfig: async (packages: string[]) => {
+            await (
+              pkgManager as unknown as {
+                loadPackages(packages: string[]): Promise<unknown>;
+              }
+            ).loadPackages(packages);
+            await vi.runAllTimersAsync();
+          },
+        };
+      }
+
+      type Harness = Awaited<ReturnType<typeof setup>>;
+
+      function expectPackageGone(harness: Harness, modelRoute: unknown) {
+        const { manager, disposed, gatewayAdapter, registeredTypes } = harness;
+        expect(registeredTypes()).not.toContain("test/alpha");
+        expect(registeredTypes()).not.toContain("test/beta");
+        expect(disposed).toContain(modelRoute);
+        expect(manager.getSubgraphByName("beta")).toBeInstanceOf(BetaStandIn);
+        expect(manager.hasSubgraphHandler("beta")).toBe(true);
+        const typeNames = supergraphTypeNames(gatewayAdapter);
+        expect(typeNames).not.toContain("Alpha");
+        expect(typeNames).not.toContain("Beta");
+      }
+
+      it("unregisters the models of a removed package", async () => {
+        const harness = await setup();
+        const modelRoute = harness.handles.get("/graphql/beta");
+
+        harness.pkgManager.removePackage("pkg");
+        await vi.runAllTimersAsync();
+
+        expectPackageGone(harness, modelRoute);
+      });
+
+      it.each([
+        ["has no models left", []],
+        ["is no longer found", missing],
+      ])(
+        "unregisters the models of a package that %s",
+        async (_, outcome: DocumentModelModule[] | Error) => {
+          const harness = await setup();
+          const modelRoute = harness.handles.get("/graphql/beta");
+
+          harness.setOutcome(outcome);
+          await harness.documentModelsChanged();
+
+          expect(harness.pkgManager.getDocumentModels().has("pkg")).toBe(false);
+          expectPackageGone(harness, modelRoute);
+        },
+      );
+
+      it("unregisters the models of a package dropped from the config", async () => {
+        const harness = await setup();
+        const modelRoute = harness.handles.get("/graphql/beta");
+
+        await harness.reloadConfig(["other"]);
+
+        expectPackageGone(harness, modelRoute);
+      });
+
+      it.each([
+        ["on a change", (h: Harness) => h.documentModelsChanged()],
+        [
+          "on a config reload",
+          (h: Harness) => h.reloadConfig(["pkg", "other"]),
+        ],
+      ])(
+        "keeps the last good models of a package that fails to load %s",
+        async (_, reload: (h: Harness) => Promise<void>) => {
+          const harness = await setup();
+
+          harness.setOutcome(new Error("Transform failed with 1 error"));
+          await reload(harness);
+
+          expect(
+            harness.pkgManager
+              .getDocumentModels()
+              .get("pkg")
+              ?.map((m) => m.documentModel.global.id),
+          ).toEqual(["test/alpha", "test/beta"]);
+          expect(harness.registeredTypes()).toEqual(
+            expect.arrayContaining(["test/alpha", "test/beta"]),
+          );
+          expect(harness.manager.getSubgraphByName("beta")).toBeInstanceOf(
+            DocumentModelSubgraph,
+          );
+        },
+      );
+    });
   });
 
   // ── shutdown() ─────────────────────────────────────────────────────────────
