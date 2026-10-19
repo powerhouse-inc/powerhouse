@@ -191,6 +191,20 @@ describe("create paths for a model whose reducer createReducer did not build", (
     );
   });
 
+  it("selects base-reducer 2 for a type that is not registered", async () => {
+    const { client, warn } = await build();
+
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: "powerhouse/not-registered",
+      }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("not registered"),
+      "powerhouse/not-registered",
+    );
+  });
+
   it("rebuilds its documents cold", async () => {
     const { client, module } = await build();
     const document = await client.createEmpty(DOCUMENT_MODEL);

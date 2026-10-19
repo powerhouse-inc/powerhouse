@@ -524,8 +524,8 @@ export interface IReactorClient {
   /**
    * protocolVersions for a new document of `documentType` under
    * `parentIdentifier`, before the signature policy. base-reducer is the
-   * local preference, except 2 for a `documentType` with a registered reducer
-   * not built by `createReducer`. Every other
+   * local preference, except 2 for a `documentType` that is not registered or
+   * has a registered reducer not built by `createReducer`. Every other
    * negotiated protocol is what this reactor and the direct peers of the
    * parent's collections agree on, or the local preference without a parent.
    */
