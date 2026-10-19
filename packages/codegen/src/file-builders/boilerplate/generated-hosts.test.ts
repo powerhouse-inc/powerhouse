@@ -88,7 +88,10 @@ describe("writeGeneratedHostsFiles", () => {
     // must survive as a literal placeholder (resolved by the runner, not here)
     const desktop = readFileSync(join(dir, "hosts/desktop/host.js"), "utf-8");
     expect(desktop).toContain("@powerhousedao/desktop/runner");
-    expect(desktop).toContain('dataDir: "${userData}/pglite"');
+    // the legacy .ph names under the user's root; the read model follows the
+    // same root by default — never declared on the reactor's dir
+    expect(desktop).toContain('dataDir: "${userData}/.ph/reactor-storage"');
+    expect(desktop).not.toMatch(/readModel:\s*\{/);
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");
 

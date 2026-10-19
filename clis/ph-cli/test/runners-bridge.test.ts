@@ -81,17 +81,36 @@ describe("switchboard bridge runner", () => {
       },
     };
 
-    await runner.run(host, ctx);
-    expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toMatchObject({
-      port: 7599,
-      dev: false,
+    const { classicSwitchboardArgs } =
+      await import("../src/services/classic-args.js");
+    const classic = await classicSwitchboardArgs();
+    // sanity on the classic shape this gate compares against
+    expect(classic).toMatchObject({
       mcp: true,
       useVetraDrive: false,
       remoteDrives: [],
     });
 
+    await runner.run(host, ctx);
+    // THE PARITY GATE: the FULL call, key for key (strict — a key present as
+    // undefined is not the same as a missing key), equals the classic
+    // `ph switchboard` args with only the host-owned keys overlaid. A
+    // subset match (toMatchObject) once let the hand-built object drop
+    // `dbPath`, which put both PGlite stores on one dir.
+    expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toStrictEqual({
+      ...classic,
+      port: 7599,
+      // run = production, exactly as `ph switchboard` without --dev
+      dev: undefined,
+    });
+    expect(vi.mocked(startSwitchboard).mock.calls[0][0]).toHaveProperty(
+      "dbPath",
+      undefined,
+    );
+
     await runner.dev(host, ctx);
-    expect(vi.mocked(startSwitchboard).mock.calls[1][0]).toMatchObject({
+    expect(vi.mocked(startSwitchboard).mock.calls[1][0]).toStrictEqual({
+      ...classic,
       port: 7599,
       dev: true,
     });

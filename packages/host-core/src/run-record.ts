@@ -1,3 +1,4 @@
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -29,7 +30,9 @@ export type RunProbe =
   | { status: "live"; record: RunRecord }
   | { status: "foreign"; record: RunRecord };
 
-const runDir = (projectDir: string) => path.join(projectDir, ".ph", "run");
+// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR.
+const runDir = (projectDir: string) =>
+  path.join(resolvePhDir(projectDir), "run");
 const recordPath = (projectDir: string, hostName: string) =>
   path.join(runDir(projectDir), `${hostName}.json`);
 
