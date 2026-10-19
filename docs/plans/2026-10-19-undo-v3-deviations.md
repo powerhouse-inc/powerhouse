@@ -88,10 +88,10 @@ change, the entry gives the final behaviour.
 - A load whose document meta read fails now fails, except on
   `DocumentNotFoundError`. It used to continue as base-reducer 2 and write v2
   rows into a 3 document.
-- Same-millisecond ties: `createAction` and the reactor's action builders
-  stamp through `nextActionTimestamp` (strictly increasing per process), and
-  `compareCanonical` orders by timestamp, strict rank, action id, operation
-  id. This is under review; see Known gaps.
+- Same-millisecond ties: stage 4 stamped every action through a strictly
+  increasing per-process timestamp. The landing replaced that (see Landing,
+  same-millisecond order): timestamps are wall clock except in the auth
+  scope, and a submitter's same-millisecond order comes from its action ids.
 - A base-reducer 3 copy of the nothing-to-apply load return was added before
   the reshuffle cost check. The landing replaced it with main's return, which
   covers every version.
@@ -211,28 +211,51 @@ Decisions:
   quarantine.
 - `undoV3` defaults on and ships in the next release.
 
+Same-millisecond order (replaces stage 4's global strictly increasing
+timestamps, which the user rejected):
+
+- `generateActionId` (UUIDv7, strictly increasing per process) gives every
+  action id, for every document version; v1/v2 documents get v7-shaped ids,
+  which their code treats as opaque. Document, node and folder ids stay v4.
+- Timestamps are wall clock for every non-auth action. Auth-scope actions
+  keep strictly increasing stamps (`nextAuthTimestamp`): auth admission
+  refuses a stamp at or below the stream's last, and nothing reorders the
+  auth stream. Non-auth stamps are never floored at the last auth stamp.
+- v3 `compareCanonical` orders by timestamp, action id, operation id;
+  structure-first rank is gone from it. The v2 reshuffle keeps its own rank.
+- Synthesized ids are `${submittedId}.s`, so a synthesized RETRACT sorts
+  where its UNDO did.
+- All builders switched: `createAction`, reactor and reactor-drive builders,
+  workflow undo plans and piece actions, document genesis. The generator is
+  its own deep entry (`document-model/action-id`) so the piece bundle stays
+  small.
+
 ## Known gaps
 
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
 - The decision walk uses a single reducer on upgraded models.
-- A cross-stream same-millisecond tie in the decision walk compares a
-  submitted id with a synthesized id.
 - Lost-operation resend (R1, R2) is not implemented. The base-reducer 3 twin
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
-- Connect's first create of a model the host has not loaded yet gets 2:
-  `addDocument` asks `createDefaults`, which never loads, and writes the
-  answer into the header. Options: a non-poisoning load on the read query,
-  or headerless creates from Connect so the host fits at write time.
+- Connect's first create of a model a remote host has not loaded yet gets 2:
+  `addDocument` asks `createDefaults`, which never loads. Headerless creates
+  cannot fix this: under `v2-required` the document id is derived from the
+  whole `protocolVersions` map, so the host cannot fill in or change
+  base-reducer without an `ID_MISMATCH`. Remaining options: fit on the
+  client against its own models, a non-poisoning load on the read query, or
+  accept 2.
+- Pieces and workflow refuse `undo`, `redo` and `undoRedoAvailability`.
+- Workflow undo groups: `undo-group:` ids sort after every plain action id in
+  the same millisecond.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
 - Academy `tsc --build` tooling issue, pre-existing.
-- Open, awaiting a decision: the branch still stamps every action through
-  `nextActionTimestamp` (aa89997e75, fca9a8b3d1), which changes v1/v2 stamps
-  and moves bulk stamps ahead of the clock; global monotonic stamps were
-  rejected. The proposed replacement: action ids that sort in creation
-  order, strict stamps for auth-scope actions only, `strictRank` dropped from
-  `compareCanonical`, and order-preserving synthesized ids. It changes v1/v2
-  action-id shape and same-millisecond tie outcomes, and needs a call on
-  whether non-auth stamps are floored during an auth burst.
+- Auth burst window: auth actions take strictly increasing stamps (t, t+1,
+  t+2 within one millisecond); content created in that millisecond keeps
+  the wall-clock t, sorts before the later grants and can be denied. Accepted
+  and pinned by a test.
+- Action ids from clients that predate `generateActionId` are random, so
+  their same-millisecond order is not preserved. Two processes acting for one
+  submitter (a Connect tab and its SharedWorker) are not ordered within a
+  millisecond.
