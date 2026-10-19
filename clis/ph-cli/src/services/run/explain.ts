@@ -1,5 +1,6 @@
 import {
   explainDrivePlan,
+  findDeadConnectConfig,
   loadHost,
   mergeDrivePlan,
   resolvePluginContributions,
@@ -28,12 +29,14 @@ interface ReactorSection {
 }
 
 interface RunnerSection {
+  module?: string;
   plugins?: PluginEntry[];
   defaultVerb?: string;
 }
 
 interface ChildWrapper {
   host: string;
+  config?: Record<string, unknown>;
   reactor?: ReactorSection;
   runner?: RunnerSection;
 }
@@ -45,6 +48,7 @@ async function explainOne(
   runner: RunnerSection | undefined,
   verb: string,
   where: string,
+  config?: Record<string, unknown>,
 ): Promise<void> {
   const entries = runner?.plugins ?? [];
   const contributions =
@@ -82,7 +86,20 @@ async function explainOne(
       `  (browser plugin ${module}: not resolvable from the project tree)${attached}`,
     );
   }
+  // The same dead-config warnings the connect runner prints at boot.
+  if (runner?.module === CONNECT_RUNNER) {
+    for (const warning of findDeadConnectConfig(
+      config,
+      runner.plugins,
+      verb,
+      where,
+    )) {
+      console.warn(warning.message);
+    }
+  }
 }
+
+const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
 export async function explainHost(options: ExplainOptions): Promise<void> {
   if (options.topic !== "drives") {
@@ -117,6 +134,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
         runner,
         verb,
         `hosts/${wrapper.host}/host.js`,
+        wrapper.config ?? member.host.config,
       );
     }
     return;
@@ -130,5 +148,6 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     hostRunner,
     "run",
     `hosts/${options.host}/host.js`,
+    host.config,
   );
 }

@@ -94,6 +94,60 @@ describe("connect bridge runner", () => {
     });
   });
 
+  it("warns at boot on config owned by a plugin the composition lacks", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const host = connect(
+        connectHost({
+          runner: {
+            module: "@powerhousedao/ph-cli/runners/connect",
+            port: 6599,
+            plugins: ["@powerhousedao/connect/plugins/workflows"],
+          },
+          config: { drives: { allowAddDrive: true } },
+        }),
+      );
+      await runner.dev(host, { ...ctx, verb: "dev" });
+      const messages = warn.mock.calls.map((call) => String(call[0]));
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain(
+        "hosts/lab-connect/host.js: config.drives.allowAddDrive is dead config",
+      );
+      expect(messages[0]).toContain('"@powerhousedao/connect/plugins/generic"');
+      expect(messages[0]).toContain('verb "dev"');
+
+      // Composing the owner silences it; a classic host (no plugins) too.
+      warn.mockClear();
+      await runner.dev(
+        connect(
+          connectHost({
+            runner: {
+              module: "@powerhousedao/ph-cli/runners/connect",
+              plugins: [
+                {
+                  module: "@powerhousedao/connect/plugins/generic",
+                  config: { allowAddDrive: true },
+                },
+              ],
+            },
+            config: { drives: { allowAddDrive: true } },
+          }),
+        ),
+        { ...ctx, verb: "dev" },
+      );
+      await runner.dev(
+        connect(connectHost({ config: { drives: { allowAddDrive: true } } })),
+        { ...ctx, verb: "dev" },
+      );
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      log.mockRestore();
+    }
+  });
+
   it("rejects a host without a name", async () => {
     const runner = await import("../src/runners/connect.js");
     expect(

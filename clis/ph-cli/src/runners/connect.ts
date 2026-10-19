@@ -7,6 +7,7 @@ import {
 import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import {
   entryActiveForVerb,
+  findDeadConnectConfig,
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
@@ -206,6 +207,16 @@ function callerOverride(
           (active ? "" : " (inactive for this verb)"),
       );
     }
+  }
+  // Config a Connect plugin owns, set on the host while that plugin is not
+  // composed for this verb: Connect serves the plugin-absent value instead.
+  for (const warning of findDeadConnectConfig(
+    host.config,
+    entries,
+    verb,
+    `hosts/${host.name}/host.js`,
+  )) {
+    console.warn(warning.message);
   }
   const declared = reactor?.drives;
   const declaredDefaults =
