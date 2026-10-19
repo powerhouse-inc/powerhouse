@@ -4,9 +4,10 @@
 // Mirrors the `PowerhouseConfig` TypeScript type in ./types.ts. Drift between
 // the TS type and this schema is guarded by ./source-config-schema.test.ts.
 //
-// Shared field shapes (PowerhousePackage, PHConnectRuntimeConfig) are imported
-// from `@powerhousedao/shared/connect` so the source schema and the runtime
-// schema (in builder-tools/connect-utils) stay in sync by construction.
+// Shared field shapes (PowerhousePackage, and the `connect` block emitted from
+// the zod connectConfigSchema) are imported from `../connect/` so the source
+// schema and the runtime schema (in builder-tools/connect-utils) stay in sync
+// by construction.
 
 import {
   phConnectRuntimeConfigSchema,
