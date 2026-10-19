@@ -200,7 +200,7 @@ function callerOverride(
       const active = entryActiveForVerb(entry, verb);
       const scope =
         entry.verbs === "*" ? "" : ` verbs=[${entry.verbs.join(",")}]`;
-      const cfg = Object.keys(entry.config ?? {});
+      const cfg = Object.keys(entry.config);
       console.log(
         `[connect]   ${active ? "•" : "○"} ${entry.module}${scope}` +
           (cfg.length ? ` config: {${cfg.join(", ")}}` : "") +
