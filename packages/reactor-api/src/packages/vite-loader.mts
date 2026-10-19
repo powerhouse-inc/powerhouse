@@ -27,7 +27,12 @@ import type {
   ISubscriptionOptions,
   PackagePieceEntry,
 } from "./types.js";
-import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
+import {
+  PACKAGE_MODULE_FAILED,
+  debounce,
+  extractUpgradeManifests,
+  isSubpath,
+} from "./util.js";
 import { runDetached, type ReportError } from "../utils/detached.js";
 
 export function createViteLogger(logger: ILogger, prefix = "") {
@@ -114,7 +119,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 
   // Resolved before it is loaded, so only a module that exists and fails is
-  // reported; one a package does not have is a debug-level miss.
+  // reported and thrown; one a package does not have is a debug-level miss.
   async #load(
     identifier: string,
     subpath: string,
@@ -131,14 +136,19 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       >;
       return { id, namespace };
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
       this.logger.error(
         "Failed to load @subpath of @pkg from @id: @error",
         subpath,
         identifier,
         id,
-        e instanceof Error ? e.message : e,
+        message,
       );
-      return undefined;
+      // Tagged: vite's own code can read as a package without the module.
+      throw Object.assign(
+        new Error(`Failed to load ${id}: ${message}`, { cause: e }),
+        { code: PACKAGE_MODULE_FAILED },
+      );
     }
   }
 
@@ -279,13 +289,26 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return pieces;
   }
 
-  // One reload per burst of file events, run detached.
-  #watcherListener(
+  // One reload per burst of file events; a failed load leaves the last good set.
+  #watcherListener<T>(
     label: string,
     matches: (changedPath: string) => unknown,
-    reload: () => Promise<void>,
+    load: () => Promise<T>,
+    handler: (loaded: T) => void,
     options?: ISubscriptionOptions,
   ): (changedPath: string) => void {
+    const reload = async () => {
+      let loaded: T;
+      try {
+        loaded = await load();
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === PACKAGE_MODULE_FAILED) {
+          return;
+        }
+        throw e;
+      }
+      handler(loaded);
+    };
     const reloadOnce = debounce(
       () =>
         runDetached(label, reload, {
@@ -308,7 +331,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const listener = this.#watcherListener(
       `Reloading the document models of ${identifier}`,
       (changedPath) => isSubpath(documentModelsPath, changedPath),
-      async () => handler(await this.loadDocumentModels(identifier)),
+      () => this.loadDocumentModels(identifier),
+      handler,
       options,
     );
 
@@ -335,7 +359,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const listener = this.#watcherListener(
       `Reloading the subgraphs of ${identifier}`,
       (changedPath) => isSubpath(subgraphsPath, changedPath),
-      async () => handler(await this.loadSubgraphs(identifier)),
+      () => this.loadSubgraphs(identifier),
+      handler,
       options,
     );
     // "change" alone misses files that are created or deleted: a removed
@@ -361,7 +386,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const listener = this.#watcherListener(
       `Reloading the processors of ${identifier}`,
       (changedPath) => isSubpath(processorsPath, changedPath),
-      async () => handler(await this.loadProcessors(identifier)),
+      () => this.loadProcessors(identifier),
+      handler,
       options,
     );
     // "change" alone misses files that are created or deleted: a removed
@@ -393,7 +419,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const listener = this.#watcherListener(
       `Reloading the pieces of ${identifier}`,
       (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
-      async () => handler(await this.loadPieces(identifier)),
+      () => this.loadPieces(identifier),
+      handler,
       options,
     );
     // "change" alone misses files that are created or deleted, and a piece
