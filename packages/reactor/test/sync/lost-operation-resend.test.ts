@@ -653,18 +653,39 @@ describe("base-reducer 3", () => {
       await agree(h.b, drive);
     }, 30_000);
 
-    // BUG: v3 has no lost-operation resend either; B keeps x stamped with A.
-    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+    // The pin below starts from this state; a broken setup fails here, visibly.
+    it("B holds x stamped with A as its source, with A's echo pending", async () => {
       h = await buildHarness({}, { v3: true });
       const { id, x } = await damaged(h, true, baseReducer3Drive());
 
-      hold(h, toB(id));
-      await h.a.module.catchUp.sweepNow();
-      await eventually(() =>
-        Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
-      );
-      release(h, toB(id));
-      await executeOn(h.a, id, "w", new Date().toISOString());
+      expect(await sourceRemoteOnB(h, id, x)).toEqual([toA(id)]);
+    }, 30_000);
+
+    // BUG: v3 has no lost-operation resend either; B keeps x stamped with A.
+    // A setup failure returns, so it turns the pin red instead of satisfying it.
+    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+      let id: string;
+      let x: string;
+      try {
+        h = await buildHarness({}, { v3: true });
+        ({ id, x } = await damaged(h, true, baseReducer3Drive()));
+        const stamped = await sourceRemoteOnB(h, id, x);
+        if (stamped.length !== 1 || stamped[0] !== toA(id)) {
+          console.error("precondition broken: x on B is stamped", stamped);
+          return;
+        }
+
+        hold(h, toB(id));
+        await h.a.module.catchUp.sweepNow();
+        await eventually(() =>
+          Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+        );
+        release(h, toB(id));
+        await executeOn(h.a, id, "w", new Date().toISOString());
+      } catch (error) {
+        console.error("setup failed before the pinned wait", error);
+        return;
+      }
 
       await eventually(
         async () => (await sourceRemoteOnB(h!, id, x)).includes(""),

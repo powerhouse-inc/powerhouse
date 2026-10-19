@@ -14,6 +14,7 @@ import {
   createRoutingClient,
   fromReactorClient,
   UnsupportedByBackendError,
+  type IRoutableBackend,
   type RoutableBackendConfig,
   type RoutingReactorClient,
 } from "../src/index.js";
@@ -123,5 +124,131 @@ describe("router undo and redo", () => {
     await expect(
       router.undoRedoAvailability(created.header.id),
     ).rejects.toBeInstanceOf(UnsupportedByBackendError);
+  });
+});
+
+const UNDO_MEMBERS = ["undo", "redo", "undoRedoAvailability"];
+const WRITE_MEMBERS = [
+  ...UNDO_MEMBERS,
+  "create",
+  "execute",
+  "executeBatch",
+  "loadBatch",
+  "deleteDocument",
+  "submit.execute",
+  "submit.create",
+];
+
+/** Records every member the router calls, by name. */
+function recorded(backend: IRoutableBackend): {
+  backend: IRoutableBackend;
+  calls: string[];
+} {
+  const calls: string[] = [];
+  const wrap = (prefix: string, target: object): Record<string, unknown> =>
+    Object.fromEntries(
+      Object.entries(target).map(([key, value]) => [
+        key,
+        typeof value === "function"
+          ? (...args: unknown[]) => {
+              calls.push(`${prefix}${key}`);
+              return (value as (...a: unknown[]) => unknown)(...args);
+            }
+          : value,
+      ]),
+    );
+  const wrapped = wrap("", backend);
+  if (backend.submit) {
+    wrapped.submit = wrap("submit.", backend.submit);
+  }
+  return { backend: wrapped as unknown as IRoutableBackend, calls };
+}
+
+function writes(calls: readonly string[]): string[] {
+  return calls.filter((call) => WRITE_MEMBERS.includes(call));
+}
+
+describe("router undo and redo across two backends", () => {
+  let primary: InProcessReactorClientModule;
+  let owner: InProcessReactorClientModule;
+  let drive = "";
+
+  beforeAll(async () => {
+    const model =
+      documentModelDocumentModelModule as unknown as DocumentModelModule;
+    primary = await inProcessReactor(model);
+    owner = await inProcessReactor(model);
+    drive = (await owner.client.drives.create({ global: { name: "Owned" } }))
+      .header.id;
+  });
+
+  afterAll(async () => {
+    await primary.reactor.kill().completed;
+    await owner.reactor.kill().completed;
+  });
+
+  async function ownedDocument(): Promise<string> {
+    const created = await owner.client.createEmpty(DOCUMENT_MODEL, {
+      parentIdentifier: drive,
+    });
+    expect(baseReducer(created)).toBe(3);
+    await owner.client.execute(created.header.id, "main", [
+      documentModelDocumentModelModule.actions.setModelName({ name: "first" }),
+    ]);
+    return created.header.id;
+  }
+
+  it("sends undo, redo and availability to the backend that owns the document, and nothing to the other", async () => {
+    const id = await ownedDocument();
+    const one = recorded(fromReactorClient(primary.client));
+    const two = recorded(fromReactorClient(owner.client));
+    const client = await createRoutingClient(
+      [config("one", primary, one.backend), config("two", owner, two.backend)],
+      { onDiagnostic: () => {} },
+    );
+
+    expect(await client.undoRedoAvailability(id)).toEqual({
+      canUndo: true,
+      canRedo: false,
+    });
+    expect(modelName(await client.undo(id))).toBe("");
+    expect(modelName(await client.redo(id))).toBe("first");
+
+    expect(writes(two.calls)).toEqual(["undoRedoAvailability", "undo", "redo"]);
+    expect(writes(one.calls)).toEqual([]);
+    expect(modelName(await owner.client.get(id))).toBe("first");
+    await expect(primary.client.get(id)).rejects.toThrow();
+  });
+
+  it("refuses an owner that does not declare them, submitting and executing nothing", async () => {
+    const id = await ownedDocument();
+    const before = await owner.client.getOperations(id);
+    const one = recorded(fromReactorClient(primary.client));
+    const two = recorded({
+      ...fromReactorClient(owner.client),
+      undo: undefined,
+      redo: undefined,
+      undoRedoAvailability: undefined,
+    });
+    const client = await createRoutingClient(
+      [config("one", primary, one.backend), config("two", owner, two.backend)],
+      { onDiagnostic: () => {} },
+    );
+
+    await expect(client.undo(id)).rejects.toBeInstanceOf(
+      UnsupportedByBackendError,
+    );
+    await expect(client.redo(id)).rejects.toBeInstanceOf(
+      UnsupportedByBackendError,
+    );
+    await expect(client.undoRedoAvailability(id)).rejects.toBeInstanceOf(
+      UnsupportedByBackendError,
+    );
+
+    expect(writes(one.calls)).toEqual([]);
+    expect(writes(two.calls)).toEqual([]);
+    const after = await owner.client.getOperations(id);
+    expect(after).toEqual(before);
+    expect(modelName(await owner.client.get(id))).toBe("first");
   });
 });
