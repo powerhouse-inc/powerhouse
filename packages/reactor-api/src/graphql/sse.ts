@@ -1,6 +1,7 @@
 import {
   type DefinitionNode,
   type DocumentNode,
+  type ExecutionArgs,
   type GraphQLSchema,
   Kind,
   parse,
@@ -28,14 +29,20 @@ export interface SSEHandlerOptions {
   contextFactory: (req: Request) => Promise<Context> | Context;
   /** Tracks the handler's open streams so they can be completed. */
   streams?: SSEStreams;
+  /** Tags an operation's stream, so `streams.end(tag)` can complete it. */
+  tagsOf?: (args: ExecutionArgs) => ReadonlySet<string>;
 }
 
 /** Open SSE operations; `end()` completes them, and any that start later. */
 export class SSEStreams {
-  readonly #running = new Set<AsyncGenerator<unknown>>();
+  readonly #running = new Map<AsyncGenerator<unknown>, ReadonlySet<string>>();
+  readonly #retired = new Set<string>();
   #ended = false;
 
-  track<T>(result: AsyncGenerator<T>): AsyncGenerator<T> {
+  track<T>(
+    result: AsyncGenerator<T>,
+    tags: ReadonlySet<string> = new Set(),
+  ): AsyncGenerator<T> {
     const running = this.#running;
     const done = () => running.delete(tracked);
     const tracked: AsyncGenerator<T> = {
@@ -58,15 +65,29 @@ export class SSEStreams {
         await result.return(undefined);
       },
     };
-    running.add(tracked);
-    if (this.#ended) void this.#end([tracked]);
+    running.set(tracked, tags);
+    if (this.#ended || [...tags].some((tag) => this.#retired.has(tag))) {
+      void this.#end([tracked]);
+    }
     return tracked;
   }
 
-  /** graphql-sse sends `complete` and closes each stream as its result ends. */
-  async end(): Promise<void> {
-    this.#ended = true;
-    await this.#end([...this.#running]);
+  /**
+   * Complete every stream, or those tagged `tag`, and any that start later
+   * until `reopen()`. graphql-sse sends `complete` and closes each stream.
+   */
+  async end(tag?: string): Promise<void> {
+    if (tag === undefined) this.#ended = true;
+    else this.#retired.add(tag);
+    const results = [...this.#running]
+      .filter(([, tags]) => tag === undefined || tags.has(tag))
+      .map(([result]) => result);
+    await this.#end(results);
+  }
+
+  /** Stop completing new streams for retired tags: the handler was rebuilt. */
+  reopen(): void {
+    this.#retired.clear();
   }
 
   async #end(results: AsyncGenerator<unknown>[]): Promise<void> {
@@ -93,7 +114,7 @@ export class SSEStreams {
 export function createGraphQLSSEHandler(
   options: SSEHandlerOptions,
 ): (req: Request) => Promise<Response> {
-  const { schema, contextFactory, streams } = options;
+  const { schema, contextFactory, streams, tagsOf } = options;
 
   return createHandler<Context>({
     schema,
@@ -102,8 +123,10 @@ export function createGraphQLSSEHandler(
     // Auth is handled upstream by authFetchMiddleware.
     authenticate: () => null,
     context: (req: SSERequest<Request>) => contextFactory(req.raw),
-    onOperation: (_ctx, _req, _args, result) =>
-      streams && isAsyncGenerator(result) ? streams.track(result) : undefined,
+    onOperation: (_ctx, _req, args, result) =>
+      streams && isAsyncGenerator(result)
+        ? streams.track(result, tagsOf?.(args))
+        : undefined,
   });
 }
 

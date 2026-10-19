@@ -410,4 +410,42 @@ describe("subscription subgraphs on one WebSocket endpoint", () => {
     expect(await alpha.outcome()).toBe("live");
     await keepsReceiving(alpha);
   });
+
+  it("completes a replaced subgraph's supergraph SSE streams", async () => {
+    const { stream, applyPackage } = await setup();
+    const core = stream("/graphql", "subscription { coreTick }");
+    const alpha = stream("/graphql", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await applyPackage([AlphaToolsV2]);
+
+    expect(await alpha.outcome()).toBe("complete");
+    await keepsReceiving(core);
+    const replacement = stream("/graphql", "subscription { alphaTick }");
+    await keepsReceiving(replacement);
+    expect(replacement.values[0]).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("completes a removed subgraph's supergraph SSE streams", async () => {
+    const { stream, applyPackage } = await setup();
+    const core = stream("/graphql", "subscription { coreTick }");
+    const alpha = stream("/graphql", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await applyPackage([]);
+
+    expect(await alpha.outcome()).toBe("complete");
+    await keepsReceiving(core);
+  });
+
+  it("keeps supergraph SSE streams when a model edit rebuilds a subgraph", async () => {
+    const { stream, editModel } = await setup();
+    const alpha = stream("/graphql", "subscription { alphaTick }");
+    await keepsReceiving(alpha);
+
+    await editModel("rev2");
+
+    expect(await alpha.outcome()).toBe("live");
+    await keepsReceiving(alpha);
+  });
 });

@@ -162,7 +162,8 @@ function isAsyncGenerator(value: unknown): value is AsyncGenerator {
   );
 }
 
-function rootFields(
+/** An operation's root field names, through fragments, without `__` fields. */
+export function rootFields(
   document: DocumentNode,
   operation: OperationDefinitionNode,
 ): string[] {

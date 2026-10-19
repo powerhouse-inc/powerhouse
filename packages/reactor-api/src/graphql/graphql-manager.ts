@@ -16,6 +16,8 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import {
   type DocumentNode,
+  type ExecutionArgs,
+  getOperationAST,
   type GraphQLSchema,
   Kind,
   print,
@@ -90,7 +92,7 @@ import {
   type DriveStore,
 } from "./gateway/drive-ownership-cache.js";
 import type { RequireAuthFetchMiddleware } from "./gateway/require-auth-middleware.js";
-import { SubgraphWsRouter } from "./subgraph-ws-router.js";
+import { rootFields, SubgraphWsRouter } from "./subgraph-ws-router.js";
 import {
   DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS,
   WsCredentialMonitor,
@@ -1188,6 +1190,8 @@ export class GraphQLManager {
     const streams = this.#sseStreams.get(subgraphPath);
     this.#sseStreams.delete(subgraphPath);
     void streams?.end();
+    const supergraphPath = path.posix.join(this.path, "graphql");
+    void this.#sseStreams.get(supergraphPath)?.end(subgraphPath);
   }
 
   /**
@@ -2181,7 +2185,11 @@ export class GraphQLManager {
         this.#disposeSSERoute(superGraphPath);
         return;
       }
-      this.#setupSSEHandler(mergedSchema, superGraphPath);
+      this.#setupSSEHandler(
+        mergedSchema,
+        superGraphPath,
+        subscriptionOwners(buildable, mergedSchema),
+      );
       this.logger.debug(
         `SSE subscriptions enabled at supergraph level (merged from ${buildable.length} subgraph(s))`,
       );
@@ -2198,17 +2206,23 @@ export class GraphQLManager {
    * Express middleware (Authorization header), unlike WebSocket which
    * needs its own connectionParams-based auth.
    */
-  #setupSSEHandler(schema: GraphQLSchema, basePath: string) {
+  #setupSSEHandler(
+    schema: GraphQLSchema,
+    basePath: string,
+    tagsOf?: (args: ExecutionArgs) => ReadonlySet<string>,
+  ) {
     const ssePath = basePath + "/stream";
     let streams = this.#sseStreams.get(basePath);
     if (!streams) {
       streams = new SSEStreams();
       this.#sseStreams.set(basePath, streams);
     }
+    streams.reopen();
     const rawHandler = createGraphQLSSEHandler({
       schema,
       contextFactory: this.#makeContextFactory(),
       streams,
+      tagsOf,
     });
     const handler = this.#composeFetchMiddleware(rawHandler);
     // Re-created on every router update: replace this path's previous route
@@ -2249,4 +2263,36 @@ export class GraphQLManager {
     }
     return handler;
   }
+}
+
+/** Tags a merged-schema operation with the paths of the subgraphs it reaches. */
+function subscriptionOwners(
+  subgraphs: SubgraphDefinition[],
+  schema: GraphQLSchema,
+): (args: ExecutionArgs) => ReadonlySet<string> {
+  const root = schema.getSubscriptionType()?.name ?? "Subscription";
+  const owners = new Map<string, string>();
+  for (const subgraph of subgraphs) {
+    for (const definition of subgraph.typeDefs.definitions) {
+      if (
+        (definition.kind === Kind.OBJECT_TYPE_DEFINITION ||
+          definition.kind === Kind.OBJECT_TYPE_EXTENSION) &&
+        definition.name.value === root
+      ) {
+        for (const field of definition.fields ?? []) {
+          owners.set(field.name.value, subgraph.url);
+        }
+      }
+    }
+  }
+  return (args) => {
+    const operation = getOperationAST(args.document, args.operationName);
+    const tags = new Set<string>();
+    if (!operation) return tags;
+    for (const field of rootFields(args.document, operation)) {
+      const owner = owners.get(field);
+      if (owner !== undefined) tags.add(owner);
+    }
+    return tags;
+  };
 }

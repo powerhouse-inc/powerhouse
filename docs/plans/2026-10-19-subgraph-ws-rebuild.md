@@ -56,6 +56,9 @@ a schema with it under their mount path:
   handler tracks its open operations; a rebuild leaves them running, and a
   replacement or removal ends them, so graphql-sse sends `complete` and closes
   the stream.
+- **Supergraph SSE** (`/graphql/stream`) tags each operation with the paths of
+  the subgraphs that own its root fields. A replacement or removal completes
+  the operations tagged with that path; the rest keep running.
 
 The manager calls `useServer` itself, and `IGatewayAdapter.attachWebSocket` is
 removed. Its three implementations were identical `useServer` wrappers, and
@@ -86,8 +89,8 @@ and a graphql-ws client. Each case fails on the current code:
 - a second subgraph's subscription on the same socket survives all of the
   above;
 - two subscription subgraphs each serve their own fields on one socket;
-- a replaced or removed subgraph's SSE streams complete, and a model edit
-  leaves them running.
+- a replaced or removed subgraph's SSE streams complete, on its own path and
+  on the supergraph, and a model edit leaves them running.
 
 The unit tests in `graphql-manager.test.ts` that read handlers from the
 adapter's `attachWebSocket` mock read them from a mocked `useServer`.
