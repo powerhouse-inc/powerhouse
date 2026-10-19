@@ -2057,8 +2057,7 @@ export class GraphQLManager {
     try {
       const mergedSchema = mergeStreamSubgraphs(buildable);
       if (mergedSchema === undefined) {
-        // Nothing left contributes a Query root: drop the SSE route rather
-        // than serve an empty or invalid schema.
+        // No buildable subscription subgraph is left: drop the SSE route.
         this.#disposeSSERoute(superGraphPath);
         return;
       }
