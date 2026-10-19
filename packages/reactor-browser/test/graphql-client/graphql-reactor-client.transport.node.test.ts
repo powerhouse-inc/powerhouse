@@ -7,6 +7,8 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   actions,
   withSignaturePolicy,
+  type DocumentModelModule,
+  type Reducer,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import {
@@ -17,6 +19,8 @@ import {
   GraphQLReactorClient,
   type DriveIdCall,
 } from "../../src/graphql-client/graphql-reactor-client.js";
+
+const DOCUMENT_MODEL = "powerhouse/document-model";
 
 // Reply bodies are what reactor-api's Apollo gateway and drive middleware send.
 
@@ -207,8 +211,8 @@ describe("GraphQLReactorClient create protocol versions for a document type", ()
     ]);
   });
 
-  it("falls back once, then stops sending the type, to a Switchboard that predates it", async () => {
-    const { url, received } = await serve(
+  async function legacyServer() {
+    return serve(
       createDefaultsServer(
         "createDefaults(parentIdOrSlug: String): CreateDefaults!",
         {
@@ -216,9 +220,22 @@ describe("GraphQLReactorClient create protocol versions for a document type", ()
         },
       ),
     );
-    const client = clientFor(url);
+  }
+
+  function clientKnowing(
+    url: string,
+    documentModels: DocumentModelModule[],
+  ): GraphQLReactorClient {
+    return new GraphQLReactorClient({ url, realtime: false, documentModels });
+  }
+
+  it("falls back once, then stops sending the type, to a Switchboard that predates it", async () => {
+    const { url, received } = await legacyServer();
+    const client = clientKnowing(url, [
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ]);
     const options = {
-      documentType: "powerhouse/test",
+      documentType: DOCUMENT_MODEL,
       parentIdentifier: "parent-1",
     };
 
@@ -233,6 +250,42 @@ describe("GraphQLReactorClient create protocol versions for a document type", ()
       "GetCreateDefaults",
       "GetCreateDefaults",
     ]);
+  });
+
+  it("fits the old Switchboard's answer to a model whose reducer createReducer did not build", async () => {
+    const { url } = await legacyServer();
+    const tagged =
+      documentModelDocumentModelModule.reducer as unknown as Reducer;
+    const untagged = {
+      ...(documentModelDocumentModelModule as unknown as DocumentModelModule),
+      reducer: ((...args) => tagged(...args)) as Reducer,
+    };
+    const client = clientKnowing(url, [untagged]);
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+
+    try {
+      expect(
+        await client.getCreateProtocolVersions({
+          documentType: DOCUMENT_MODEL,
+        }),
+      ).toEqual({ "base-reducer": 2 });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("fits the old Switchboard's answer to 2 for a type the client does not know", async () => {
+    const { url } = await legacyServer();
+    const client = clientFor(url);
+
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+      }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(
+      await client.getCreateProtocolVersions({ documentType: undefined }),
+    ).toEqual({ "base-reducer": 3 });
   });
 });
 

@@ -30,6 +30,7 @@ import {
   actionSigningTarget,
   isSignaturePolicy,
   appliedOperations,
+  fitCreateBaseReducer,
   normalizeDocumentModelVersion,
   redo,
   redoTarget,
@@ -875,7 +876,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * query. A parent the caller may not read is refused by the server, never
    * answered as if none was named; a Switchboard without the query is refused
    * with {@link GraphQLOperationNotSupportedError}. A Switchboard that
-   * predates the `documentType` argument answers without fitting to the type.
+   * predates the `documentType` argument answers without fitting to the type,
+   * so the answer is fitted here against `documentModels`.
    */
   async getCreateProtocolVersions(
     { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
@@ -902,7 +904,12 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       parentIdentifier,
       signal,
     );
-    return defaults.protocolVersions;
+    return fitCreateBaseReducer(
+      defaults.protocolVersions,
+      documentType,
+      this.documentModels(),
+      logger,
+    );
   }
 
   private async createDefaults(
