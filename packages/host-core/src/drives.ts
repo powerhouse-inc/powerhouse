@@ -3,7 +3,7 @@ import {
   DRIVE_ICON_MAX_BYTES,
   resolveImageRef,
 } from "@powerhousedao/shared/connect/image-ref";
-import { z } from "zod";
+import { projectDriveIdWith, type DriveDeclaration } from "./drive-schema.js";
 
 /**
  * R1 — core drive declarations. A reactor without drives is not a running
@@ -12,45 +12,22 @@ import { z } from "zod";
  * CONTRIBUTE declarations into the same merged list (Contributions.drives);
  * `--explain drives` prints the merged set with provenance.
  *
- * Field semantics (union of the three existing creation sites — vetra,
- * preview, workflows — plus Connect's PHConnectDefaultDrive):
- * - slug: the SEEDING KEY (idempotence); id optional (stable identity),
- *   projectHash derives both from the project path (generateProjectDriveId
- *   semantics: `${slug}-${sha256(projectPath).slice(0, 8)}`).
- * - preferredEditor: binds the drive to its drive app — stored at
- *   header.meta.preferredEditor; Connect config's `app` is the legacy alias.
- * - remote.url: an attachment to a drive served elsewhere (Connect default
- *   drives, switchboard remoteDrives); local fields are ignored for remotes.
+ * The declaration schema lives in drive-schema.ts (platform-neutral); this
+ * module is the node half: resolution (image refs read files), seeding and
+ * the node:crypto-bound project drive id.
  */
 
-export const driveDeclarationSchema = z.strictObject({
-  slug: z.string().min(1),
-  id: z.string().min(1).optional(),
-  /** Derive the id from the project path, like generateProjectDriveId — the
-   * same ids classic `ph vetra` produces. `true` serves the drive under the
-   * hashed slug too (the vetra drive's slug IS its hashed id); `"id"` hashes
-   * only the id and keeps the declared slug (the classic Workflows drive:
-   * `/d/workflows`, id `workflows-<hash>`). */
-  projectHash: z.union([z.boolean(), z.literal("id")]).optional(),
-  name: z.string().min(1).optional(),
-  icon: z.string().optional(),
-  preferredEditor: z.string().optional(),
-  sharingType: z.enum(["public", "private", "shared"]).optional(),
-  availableOffline: z.boolean().optional(),
-  remote: z.strictObject({ url: z.string().min(1) }).optional(),
-});
+export {
+  driveDeclarationSchema,
+  drivesSchema,
+  type DriveDeclaration,
+} from "./drive-schema.js";
 
-export type DriveDeclaration = z.infer<typeof driveDeclarationSchema>;
-
-export const drivesSchema = z.array(driveDeclarationSchema);
+const sha256Hex = (input: string): string =>
+  crypto.createHash("sha256").update(input).digest("hex");
 
 export function projectDriveId(projectRoot: string, slug: string): string {
-  const hash = crypto
-    .createHash("sha256")
-    .update(projectRoot)
-    .digest("hex")
-    .substring(0, 8);
-  return `${slug}-${hash}`;
+  return projectDriveIdWith(sha256Hex, projectRoot, slug);
 }
 
 export interface ResolvedDrive {
