@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { compoundHostSchema } from "../host-schemas.js";
-import type { HostDefinition } from "../host-loader.js";
+import {
+  genericCompoundHostSchema,
+  type HostDefinition,
+} from "../host-schemas.js";
 import { runCompound, type RunCompoundResult } from "../compound.js";
 import type { RunnerContext } from "../runner-resolver.js";
 
@@ -20,7 +22,7 @@ import type { RunnerContext } from "../runner-resolver.js";
 
 export const kind = "compound";
 
-export const hostSchema = compoundHostSchema;
+export const hostSchema = genericCompoundHostSchema;
 
 function projectName(projectRoot: string): string {
   try {
@@ -50,7 +52,7 @@ export async function run(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<RunCompoundResult> {
-  const defaultVerb = (host.runner.defaultVerb as string | undefined) ?? "run";
+  const defaultVerb = host.runner.defaultVerb ?? "run";
   return startAt(host, ctx, defaultVerb);
 }
 
