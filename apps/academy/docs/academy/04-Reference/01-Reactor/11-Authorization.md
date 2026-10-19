@@ -112,6 +112,10 @@ Three rules are easy to miss:
 - **A grant that cannot apply is skipped, not honoured.** Below `authGroups` a `{ group }` principal never matches; below `authConditions` a `where` clause never holds. Both fail closed, so a policy relying on a conditional *deny* is weaker than it reads on a reactor that cannot evaluate it.
 - **The creator keeps the auth scope.** The key that signed the document's header may always execute in `scope: "auth"`, so a policy cannot lock its own owner out. On an unsigned document there is no creator, and validation instead refuses any policy that would leave nobody able to administer it.
 
+### Timestamps in the auth scope
+
+A reactor refuses an auth operation whose timestamp does not exceed the newest one in the scope. Auth actions made in one process are stamped 1 ms apart when the clock has not moved, so a burst such as `initializeAuth` followed by two `setGrant` calls in one millisecond is admitted. Other actions keep the wall-clock time. A content action made in the same millisecond as such a burst therefore sorts before the burst's later grants, and is denied if it needs them.
+
 ## Scopes every holder reads
 
 The `auth` and `document` scopes are readable by anyone holding the document, whatever the grants say. A replica that could not read the policy would sync a document, see an uninitialized policy, and allow everything on it. Grants gate the domain scopes.

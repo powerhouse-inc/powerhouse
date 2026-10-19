@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-19T18:41:06.545Z
+> Generated: 2026-10-19T21:00:48.052Z
 > Total Documents: 121
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -7777,6 +7777,10 @@ Three rules are easy to miss:
 - **A grant that cannot apply is skipped, not honoured.** Below `authGroups` a `{ group }` principal never matches; below `authConditions` a `where` clause never holds. Both fail closed, so a policy relying on a conditional *deny* is weaker than it reads on a reactor that cannot evaluate it.
 - **The creator keeps the auth scope.** The key that signed the document's header may always execute in `scope: "auth"`, so a policy cannot lock its own owner out. On an unsigned document there is no creator, and validation instead refuses any policy that would leave nobody able to administer it.
 
+### Timestamps in the auth scope
+
+A reactor refuses an auth operation whose timestamp does not exceed the newest one in the scope. Auth actions made in one process are stamped 1 ms apart when the clock has not moved, so a burst such as `initializeAuth` followed by two `setGrant` calls in one millisecond is admitted. Other actions keep the wall-clock time. A content action made in the same millisecond as such a burst therefore sorts before the burst's later grants, and is denied if it needs them.
+
 ## Scopes every holder reads
 
 The `auth` and `document` scopes are readable by anyone holding the document, whatever the grants say. A replica that could not read the policy would sync a document, see an uninitialized policy, and allow everything on it. Grants gate the domain scopes.
@@ -8046,6 +8050,7 @@ A submitted `UNDO` or `REDO` still works on version 3. The reactor resolves it t
 - A denied `RETRACT` retracts nothing.
 - An operation that throws applies nothing. `UNDO` passes over it.
 - `skip` is only the rewind a reshuffle writes. It never undoes anything.
+- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order. A `RETRACT` the reactor makes from an `UNDO` or `REDO` sorts where the submitted action would.
 
 On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
 

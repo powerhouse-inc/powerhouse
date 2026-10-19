@@ -77,6 +77,7 @@ A submitted `UNDO` or `REDO` still works on version 3. The reactor resolves it t
 - A denied `RETRACT` retracts nothing.
 - An operation that throws applies nothing. `UNDO` passes over it.
 - `skip` is only the rewind a reshuffle writes. It never undoes anything.
+- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order. A `RETRACT` the reactor makes from an `UNDO` or `REDO` sorts where the submitted action would.
 
 On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
 
