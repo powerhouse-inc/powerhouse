@@ -221,14 +221,23 @@ timestamps, which the user rejected):
   keep strictly increasing stamps (`nextAuthTimestamp`): auth admission
   refuses a stamp at or below the stream's last, and nothing reorders the
   auth stream. Non-auth stamps are never floored at the last auth stamp.
+  `createAction` and the workflow piece's `plainAction` share the one
+  per-process auth clock.
 - v3 `compareCanonical` orders by timestamp, action id, operation id;
   structure-first rank is gone from it. The v2 reshuffle keeps its own rank.
-- Synthesized ids are `${submittedId}.s`, so a synthesized RETRACT sorts
-  where its UNDO did.
+- Ids compare by code unit (`compareActionIds`), never `localeCompare`, in
+  `compareCanonical` and in any decision walk that reaches a base-reducer 3
+  stream. Walks over v1/v2 streams only, the v2 reshuffle and v2 replay keep
+  `localeCompare`.
+- Synthesized ids are `${submittedId}.s` on base-reducer 3 only, so a
+  synthesized RETRACT sorts where its UNDO did. Below 3 the released sha1
+  form stays. Admission looks up both forms.
 - All builders switched: `createAction`, reactor and reactor-drive builders,
-  workflow undo plans and piece actions, document genesis. The generator is
-  its own deep entry (`document-model/action-id`) so the piece bundle stays
-  small.
+  workflow undo plans and piece actions, document genesis. The generator and
+  the auth clock are their own deep entry (`document-model/action-id`) so the
+  piece bundle stays small.
+- Workflow undo-group ids are `<v7 id>~ug:<group>`, so they sort by creation
+  against plain ids. Stored `undo-group:<group>:<id>` ids still parse.
 
 ## Known gaps
 
@@ -246,8 +255,6 @@ timestamps, which the user rejected):
   client against its own models, a non-poisoning load on the read query, or
   accept 2.
 - Pieces and workflow refuse `undo`, `redo` and `undoRedoAvailability`.
-- Workflow undo groups: `undo-group:` ids sort after every plain action id in
-  the same millisecond.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
 - Academy `tsc --build` tooling issue, pre-existing.
