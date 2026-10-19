@@ -74,7 +74,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
         logger.info(
           `✅ Subgraph generation completed successfully for: ${state.name}`,
         );
-        warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
+        await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
         // Backup the document
         const fullState = input.state as SubgraphModulePHState;

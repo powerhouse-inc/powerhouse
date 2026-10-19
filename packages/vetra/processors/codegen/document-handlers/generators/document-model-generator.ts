@@ -84,7 +84,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       logger.info(
         `✅ Code generation completed successfully for: ${globalState.name}`,
       );
-      warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
+      await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
       // Backup the document
       const fullState = input.state as DocumentModelPHState;

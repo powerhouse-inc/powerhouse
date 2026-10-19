@@ -157,6 +157,9 @@ export class PackageManager implements IPackageManager {
   private configWatcher: StatWatcher | undefined;
   private unsubscribePackages: (() => void) | undefined;
   private subscribedPackages = new Set<string>();
+  private removals = 0;
+  private removedAt = new Map<string, number>();
+  private loadQueue: Promise<unknown> = Promise.resolve();
   private removedPackages = new Set<string>();
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
@@ -186,17 +189,28 @@ export class PackageManager implements IPackageManager {
     return await this.loadPackages(this.getAllPackageNames());
   }
 
-  private async loadPackages(
-    packages: string[],
-  ): Promise<PackageManagerResult> {
-    this.logger.info("Loading packages: @packages", packages.join(", "));
+  // In call order, so a slower earlier load cannot overwrite a newer one.
+  private loadPackages(packages: string[]): Promise<PackageManagerResult> {
+    const requestedAt = this.removals;
+    const load = this.loadQueue.then(() =>
+      this.loadPackagesNow(packages, requestedAt),
+    );
+    this.loadQueue = load.catch(() => undefined);
+    return load;
+  }
 
-    const documentModelLoads = await this.loadDocumentModels(packages);
-    const failed = packages.filter(
+  private async loadPackagesNow(
+    requested: string[],
+    requestedAt: number,
+  ): Promise<PackageManagerResult> {
+    this.logger.info("Loading packages: @packages", requested.join(", "));
+
+    const documentModelLoads = await this.loadDocumentModels(requested);
+    const failed = requested.filter(
       (pkg) => documentModelLoads.get(pkg)?.status === "failed",
     );
     const upgradeManifestsMap = await this.loadUpgradeManifests(
-      packages.filter((pkg) => !failed.includes(pkg)),
+      requested.filter((pkg) => !failed.includes(pkg)),
     );
     for (const pkg of failed) {
       const manifests = this.upgradeManifestsMap.get(pkg);
@@ -211,19 +225,33 @@ export class PackageManager implements IPackageManager {
     ]);
     const subgraphsMap = this.settle(
       "subgraphs",
-      await this.loadSubgraphs(packages),
+      await this.loadSubgraphs(requested),
       this.subgraphsMap,
     );
     const processorsMap = this.settle(
       "processors",
-      await this.loadProcessors(packages),
+      await this.loadProcessors(requested),
       this.processorMap,
     );
     const piecesMap = this.settle(
       "pieces",
-      await this.loadPieces(packages),
+      await this.loadPieces(requested),
       this.piecesMap,
     );
+
+    const removed = requested.filter(
+      (pkg) => (this.removedAt.get(pkg) ?? 0) > requestedAt,
+    );
+    for (const map of [
+      documentModelsMap,
+      upgradeManifestsMap,
+      subgraphsMap,
+      processorsMap,
+      piecesMap,
+    ]) {
+      removed.forEach((pkg) => map.delete(pkg));
+    }
+    const packages = requested.filter((pkg) => !removed.includes(pkg));
 
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
@@ -493,6 +521,7 @@ export class PackageManager implements IPackageManager {
     );
     if (!documentModelsMap) return;
     const upgradeManifests = await this.loadUpgradeManifests([pkg]);
+    if (!this.subscribedPackages.has(pkg)) return;
     const upgradeManifestsMap = new Map(this.upgradeManifestsMap);
     const pkgManifests = upgradeManifests.get(pkg) ?? [];
     if (pkgManifests.length === 0) {
@@ -507,6 +536,7 @@ export class PackageManager implements IPackageManager {
   private async updateSubgraphsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating subgraphs for package: ${pkg}`);
     const load = (await this.loadSubgraphs([pkg])).get(pkg);
+    if (!this.subscribedPackages.has(pkg)) return;
     const next = this.withReload("subgraphs", this.subgraphsMap, pkg, load);
     if (next) this.updateSubgraphsMap(next);
   }
@@ -514,6 +544,7 @@ export class PackageManager implements IPackageManager {
   private async updateProcessorsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating processors for package: ${pkg}`);
     const load = (await this.loadProcessors([pkg])).get(pkg);
+    if (!this.subscribedPackages.has(pkg)) return;
     const next = this.withReload("processors", this.processorMap, pkg, load);
     if (next) this.updateProcessorsMap(next);
   }
@@ -521,6 +552,7 @@ export class PackageManager implements IPackageManager {
   private async updatePiecesForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating pieces for package: ${pkg}`);
     const load = (await this.loadPieces([pkg])).get(pkg);
+    if (!this.subscribedPackages.has(pkg)) return;
     const next = this.withReload("pieces", this.piecesMap, pkg, load);
     if (next) this.updatePiecesMap(next);
   }
@@ -533,7 +565,8 @@ export class PackageManager implements IPackageManager {
   ): () => void {
     const key = `${pkg}:${kind}`;
     if (!this.debouncedUpdateCallbacks.has(key)) {
-      // A timer still pending for a package dropped since does nothing.
+      // A timer still pending for a package dropped since does nothing; the
+      // update re-checks after its load for a drop while the load ran.
       const updateIfSubscribed = () =>
         this.subscribedPackages.has(pkg) ? update() : undefined;
       const debouncedFn = debounce(
@@ -706,6 +739,7 @@ export class PackageManager implements IPackageManager {
   removePackage(pkg: string): void {
     this.logger.info(`Removing package: ${pkg}`);
     this.subscribedPackages.delete(pkg);
+    this.removedAt.set(pkg, ++this.removals);
     this.removedPackages.add(pkg);
     const dropKey = <T>(map: Map<string, T>): Map<string, T> => {
       if (!map.has(pkg)) return map;

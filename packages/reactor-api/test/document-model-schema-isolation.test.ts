@@ -74,8 +74,9 @@ function refusals(logger: ILogger, id: string): unknown[][] {
     .mocked(logger.error)
     .mock.calls.filter(
       ([message, documentType]) =>
-        String(message).startsWith("Refusing document model") &&
-        documentType === id,
+        String(message).startsWith(
+          "Refusing every version of document model",
+        ) && documentType === id,
     );
 }
 
