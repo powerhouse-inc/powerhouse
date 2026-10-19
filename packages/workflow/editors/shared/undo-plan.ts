@@ -35,22 +35,31 @@ export interface UndoPlan {
   undone: Action[];
 }
 
-// Actions of one edit share an id prefix, so undo takes them back together.
-const GROUP_PREFIX = "undo-group:";
+// Actions of one edit share an id suffix, so undo takes them back together.
+// The id leads, so a grouped action sorts by creation against plain ones.
+const GROUP_SUFFIX = "~ug:";
+// Ids stored before the suffix: `undo-group:<group>:<id>`.
+const LEGACY_GROUP_PREFIX = "undo-group:";
 
 export function newUndoGroup(): string {
   return generateActionId();
 }
 
 export function groupedAction<A extends Action>(action: A, group: string): A {
-  return { ...action, id: `${GROUP_PREFIX}${group}:${generateActionId()}` };
+  return { ...action, id: `${generateActionId()}${GROUP_SUFFIX}${group}` };
 }
 
 export function undoGroupOf(action: Action): string | undefined {
-  if (!action.id.startsWith(GROUP_PREFIX)) return undefined;
-  const end = action.id.indexOf(":", GROUP_PREFIX.length);
-  return end > GROUP_PREFIX.length
-    ? action.id.slice(GROUP_PREFIX.length, end)
+  const id = action.id;
+  if (id.startsWith(LEGACY_GROUP_PREFIX)) {
+    const end = id.indexOf(":", LEGACY_GROUP_PREFIX.length);
+    return end > LEGACY_GROUP_PREFIX.length
+      ? id.slice(LEGACY_GROUP_PREFIX.length, end)
+      : undefined;
+  }
+  const at = id.indexOf(GROUP_SUFFIX);
+  return at > 0 && at + GROUP_SUFFIX.length < id.length
+    ? id.slice(at + GROUP_SUFFIX.length)
     : undefined;
 }
 

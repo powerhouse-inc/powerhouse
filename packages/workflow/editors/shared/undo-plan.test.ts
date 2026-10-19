@@ -1,4 +1,6 @@
 import {
+  compareActionIds,
+  generateActionId,
   undoTarget,
   type Action,
   type Operation,
@@ -157,6 +159,18 @@ describe("grouped edits", () => {
     const action = groupedAction(op(0, "ADD_STEP").action, "g1");
     expect(undoGroupOf(action)).toBe("g1");
     expect(undoGroupOf(op(0, "ADD_STEP").action)).toBeUndefined();
+  });
+
+  it("reads the group of an id stored with the old prefix", () => {
+    const action = { ...op(0, "ADD_STEP").action, id: "undo-group:g1:x" };
+    expect(undoGroupOf(action)).toBe("g1");
+  });
+
+  it("leads a grouped id with a fresh action id, so it sorts by creation", () => {
+    const grouped = groupedAction(op(0, "ADD_STEP").action, newUndoGroup());
+    const plain = generateActionId();
+    expect(compareActionIds(grouped.id, plain)).toBe(-1);
+    expect(grouped.id.split("~ug:")[0]).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("redoes a group as a new group of fresh actions", () => {
