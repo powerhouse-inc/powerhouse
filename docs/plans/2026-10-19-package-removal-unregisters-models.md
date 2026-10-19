@@ -29,6 +29,13 @@ So three removal paths leave the models registered:
 installed directly in the registry, so it already works for the packages it
 installs. The other three paths go through the listener.
 
+The uninstall service has two more gaps:
+
+- It knows only the packages it installed. A package loaded at boot from the
+  config or the package list answers "not installed".
+- It unregisters the modules of a package but leaves their upgrade manifests
+  registered.
+
 ## Options
 
 1. **Make the loader result say what happened.** Change
@@ -44,7 +51,9 @@ installs. The other three paths go through the listener.
    snapshot is authoritative and the listener can remove anything missing.
 
 Chosen: option 3. Public types do not change, and Connect's
-`IPackageManager` (reactor-browser) is not involved.
+`IPackageManager` (reactor-browser) is not involved. The internal
+`IPackageManager` in reactor-api gains `hasPackage`; it is not exported, and
+`PackageManager` is its only implementation.
 
 ## Fix
 
@@ -56,26 +65,33 @@ Chosen: option 3. Public types do not change, and Connect's
   would read as "absent". Watcher reloads that hit a tagged failure call no
   handler and report nothing, so a transient `ph vetra` build error does not
   reach Sentry and the last good set stays.
-- `package-manager.ts`: each document-model load ends in one of these results:
+- `package-manager.ts`: every load of a package's document models,
+  subgraphs, processors or pieces ends in one of these results:
   - `loaded`: a loader answered, even with `[]`.
   - `absent`: every loader threw an expected miss.
   - `failed`: some loader threw anything else.
 
-  A `failed` package keeps its previous models and upgrade manifests, on both
-  a per-package reload (no event) and a config reload. `loaded` with `[]` and
+  A `failed` package keeps its previous set of that kind, on both a
+  per-package reload (no event) and a config reload. A failed document-model
+  load also keeps the package's upgrade manifests. `loaded` with `[]` and
   `absent` drop the package. Tagged failures are excluded from the
   all-loaders-failed warning, because the loader has already logged them.
 - `package-listeners.ts`: the removed types are every type tracked before the
   event that no package in the event provides. Tracking is then rebuilt from
   the event.
 
-Behaviour changes:
+- `package-management.service.ts`: uninstall works for a package in its own
+  storage or one the package manager loaded (`hasPackage`). It answers "not
+  installed" only when neither has the package. It unregisters the upgrade
+  manifests of the types it installed together with their modules. A package
+  the manager loaded leaves through `removePackage` and the listener.
+- `removePackage` keeps the package out of config reloads while the options or
+  the config still declare it. Once a reload finds it undeclared, it is
+  forgotten, so declaring it again loads it. Uninstall does not edit
+  `powerhouse.config.json`, so a restart loads a still-declared package again.
 
-- A vite failure now falls through to the next loader, which
-  `ImportPackageLoader` failures already do.
-- Subgraphs, processors and pieces keep their last good set only through the
-  vite watcher skip. A config reload still drops them on a failure. Giving
-  them the same classification is a follow-up.
+Behaviour change: a vite failure now falls through to the next loader, which
+`ImportPackageLoader` failures already do.
 
 ## Tests
 
@@ -102,5 +118,15 @@ whose own import is missing, throws tagged and is not classified as a miss.
 `vite-loader-listeners.test.ts` checks that a failed reload calls no handler
 and reports nothing.
 
-`package-management-service.test.ts` checks that an uninstall through the
-service unregisters the installed types.
+`package-manager-teardown.test.ts` checks that a failed config reload and a
+failed change keep a package's subgraphs, processors and pieces, and that a
+config reload that finds the package absent drops them.
+
+`package-management-service.test.ts` checks:
+
+- an uninstall through the service unregisters the installed types and their
+  upgrade manifests;
+- a package loaded at boot can be uninstalled;
+- a name no source has answers "not installed";
+- a config-declared package stays out of reloads until the config drops it,
+  and loads again once it is declared again.
