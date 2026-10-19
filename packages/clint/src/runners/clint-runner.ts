@@ -3,19 +3,24 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  childWrapperSchema,
   compoundHostSchema,
   defaultUserDataDir,
   loadHost,
   probeRun,
+  refineStartOrder,
   resolveUserDataPlaceholders,
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
-  type HostDefinition,
+  runnerBaseSchema,
   type RunnerContext,
+  type RunnerHandle,
 } from "@powerhousedao/host-core";
+import { z } from "zod";
 import {
   createProxyPlugin,
+  proxyPluginConfigSchema,
   type ClintCompoundContext,
   type MemberEndpoints,
 } from "./proxy-plugin.js";
@@ -49,34 +54,85 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
 export const kind = "compound";
 
-export const hostSchema = compoundHostSchema;
+/** clint-runner's own `runner` options, on top of the common base. */
+const clintRunnerOptionsSchema = runnerBaseSchema
+  .extend({
+    /** "detached" (default): children outlive the shell and are re-attached
+     * on the next run. "attached": the shell tears them down on exit. */
+    lifecycle: z.enum(["attached", "detached"]).optional(),
+    /** One front port routing to the members (the clint proxy plugin). */
+    proxy: proxyPluginConfigSchema.optional(),
+  })
+  .strict();
 
-/** A member's `config.readiness` override (member config is
- * runner-defined, so the shape is checked here). */
-function readinessOf(config: Record<string, unknown> | undefined): {
-  pattern?: string;
-  timeout?: number;
-} {
-  const readiness = config?.readiness;
-  if (typeof readiness !== "object" || readiness === null) return {};
-  return {
-    ...("pattern" in readiness && typeof readiness.pattern === "string"
-      ? { pattern: readiness.pattern }
-      : {}),
-    ...("timeout" in readiness && typeof readiness.timeout === "number"
-      ? { timeout: readiness.timeout }
-      : {}),
-  };
-}
+/** A member's scheduling knobs. Members run as their own `ph-cli run
+ * <host>` process, so the wrapper's `config` is read by clint (not passed to
+ * the member) and holds only these. */
+const clintMemberConfigSchema = z.strictObject({
+  /** When the member counts as up: a stdout pattern (regex source, case
+   * insensitive) and a timeout in ms. */
+  readiness: z
+    .strictObject({
+      pattern: z.string().min(1).optional(),
+      timeout: z.number().int().positive().optional(),
+    })
+    .optional(),
+});
 
-interface AgentRef {
-  host?: string;
-  url?: string;
-}
+/** An agent the shell can chat with: a sibling host serving the mastra
+ * agent API (resolved through its runner.port) or an explicit URL. */
+const agentRefSchema = z
+  .strictObject({
+    host: z.string().min(1).optional(),
+    url: z.url().optional(),
+  })
+  .refine((agent) => agent.host !== undefined || agent.url !== undefined, {
+    message: "an agents entry needs { host } or { url }",
+  });
 
-interface CliHostConfig {
-  agents?: Record<string, AgentRef>;
-  startOrder?: string[];
+const cliHostConfigSchema = z.strictObject({
+  agents: z.record(z.string(), agentRefSchema).optional(),
+  /** Member start order; must name declared children. Unnamed members start
+   * after the named ones, in declaration order. */
+  startOrder: z.array(z.string().min(1)).optional(),
+});
+
+/** The clint compound host. Extend the unrefined base, refine last (zod
+ * refuses to extend a refined object). */
+export const hostSchema = compoundHostSchema
+  .extend({
+    runner: clintRunnerOptionsSchema,
+    children: z.record(
+      z.string(),
+      childWrapperSchema.extend({ config: clintMemberConfigSchema.optional() }),
+    ),
+    config: cliHostConfigSchema.optional(),
+  })
+  .superRefine(refineStartOrder);
+
+/** What a clint host.js author writes. */
+export type ClintHostInput = z.input<typeof hostSchema>;
+/** What the verbs receive. */
+export type ClintHost = z.output<typeof hostSchema>;
+type AgentRef = z.output<typeof agentRefSchema>;
+
+/** What starting the shell produces: the resolved agent endpoints and, when
+ * `runner.proxy` is set, the proxy's URL. Member outputs belong to the
+ * members. */
+export const outputsSchema = z.strictObject({
+  agents: z.record(z.string(), z.url()),
+  proxy: z.strictObject({ url: z.url() }).optional(),
+});
+
+export type ClintOutputs = z.infer<typeof outputsSchema>;
+
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/clint/clint-runner": {
+      host: ClintHostInput;
+      outputs: ClintOutputs;
+    };
+  }
 }
 
 // A URL in stdout is the universal "I am serving" signal across member kinds
@@ -95,11 +151,11 @@ function resolvePhCliEntry(projectRoot: string): string {
 }
 
 function childServices(
-  host: HostDefinition,
+  host: ClintHost,
   ctx: RunnerContext,
   phCliEntry: string,
 ): ServiceDefinition<Record<string, unknown>>[] {
-  return Object.entries(host.children ?? {}).map(([name, wrapper]) =>
+  return Object.entries(host.children).map(([name, wrapper]) =>
     defineService({
       id: name,
       name,
@@ -113,12 +169,12 @@ function childServices(
           {
             name: "up",
             pattern: new RegExp(
-              readinessOf(wrapper.config).pattern ?? DEFAULT_READINESS,
+              wrapper.config?.readiness?.pattern ?? DEFAULT_READINESS,
               "i",
             ),
           },
         ],
-        timeout: readinessOf(wrapper.config).timeout ?? 180_000,
+        timeout: wrapper.config?.readiness?.timeout ?? 180_000,
       },
     }),
   );
@@ -134,6 +190,8 @@ async function resolveAgentEndpoint(
     const port = sibling.host.runner.port ?? 4910;
     return `http://127.0.0.1:${String(port)}/v1`;
   }
+  // The schema requires one of them; a verb called with an unparsed host
+  // still fails loudly.
   throw new Error("agents entries need { host } or { url }");
 }
 
@@ -151,26 +209,22 @@ function readProjectName(projectRoot: string, fallback: string): string {
   }
 }
 
-export interface CliRunHandle {
+/** The shell's handle: the runner contract plus the services manager. */
+export interface CliRunHandle extends RunnerHandle<ClintOutputs> {
   services: ServiceManager;
-  agents: Record<string, string>;
-  shutdown: () => Promise<void>;
 }
 
 async function startShell(
-  host: HostDefinition,
+  host: ClintHost,
   ctx: RunnerContext,
 ): Promise<CliRunHandle> {
   const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
   const resolved = resolveUserDataPlaceholders(host, userData);
-  const config = (resolved.config ?? {}) as CliHostConfig;
-  const lifecycle =
-    typeof resolved.runner.lifecycle === "string"
-      ? resolved.runner.lifecycle
-      : "detached";
+  const config = resolved.config ?? {};
+  const lifecycle = resolved.runner.lifecycle ?? "detached";
 
   const phCliEntry = resolvePhCliEntry(ctx.projectRoot);
-  const children = resolved.children ?? {};
+  const children = resolved.children;
   const projectName = readProjectName(ctx.projectRoot, resolved.name);
   const definitions = childServices(resolved, ctx, phCliEntry);
   const eventBus = createEventBus();
@@ -250,15 +304,15 @@ async function startShell(
         await resolveHostPlugins(
           ctx.projectRoot,
           "compound",
-          ctx.verb ?? "run",
+          ctx.verb,
           pluginEntries,
           `hosts/${host.name}/host.js`,
         )
       ).map((r) => r.plugin)
     : [];
   const proxyBlock = resolved.runner.proxy;
-  if (proxyBlock && typeof proxyBlock === "object") {
-    resolvedPlugins.push(createProxyPlugin(proxyBlock as never) as never);
+  if (proxyBlock) {
+    resolvedPlugins.push(createProxyPlugin(proxyBlock));
   }
   const compoundCtx: ClintCompoundContext = {
     memberEndpoints,
@@ -312,7 +366,12 @@ async function startShell(
     process.once("SIGTERM", onSignal);
   }
 
-  return { services, agents, shutdown };
+  const outputs = outputsSchema.parse({
+    agents,
+    ...(compoundCtx.proxyUrl ? { proxy: { url: compoundCtx.proxyUrl } } : {}),
+  });
+  // Members were started (and awaited to readiness) above.
+  return { outputs, ready: Promise.resolve(), services, shutdown };
 }
 
 /** Minimal line chat against an agent's OpenAI-compatible endpoint. */
@@ -354,7 +413,7 @@ async function chatLoop(agents: Record<string, string>): Promise<void> {
 }
 
 export async function run(
-  host: HostDefinition,
+  host: ClintHost,
   ctx: RunnerContext,
 ): Promise<CliRunHandle> {
   const handle = await startShell(host, ctx);
@@ -372,12 +431,9 @@ export async function run(
 export const serve = run;
 
 /** dev = services up + the line chat shell (blocks until /exit). */
-export async function dev(
-  host: HostDefinition,
-  ctx: RunnerContext,
-): Promise<void> {
+export async function dev(host: ClintHost, ctx: RunnerContext): Promise<void> {
   const handle = await startShell(host, ctx);
-  await chatLoop(handle.agents);
+  await chatLoop(handle.outputs.agents);
   await handle.shutdown();
 }
 
@@ -385,12 +441,12 @@ export async function dev(
  * members that do not — a silent skip would report success on an unbuilt
  * set), same posture as the generic compound. */
 export async function build(
-  host: HostDefinition,
+  host: ClintHost,
   ctx: RunnerContext,
 ): Promise<void> {
   const { getVerb, resolveRunnerModule, validateHost } =
     await import("@powerhousedao/host-core");
-  for (const [name, wrapper] of Object.entries(host.children ?? {})) {
+  for (const [name, wrapper] of Object.entries(host.children)) {
     const member = await loadHost(ctx.projectRoot, wrapper.host);
     const specifier = member.host.runner.module;
     const runner = await resolveRunnerModule(ctx.projectRoot, specifier);

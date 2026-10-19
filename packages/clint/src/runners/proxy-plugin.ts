@@ -1,4 +1,5 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
+import { z } from "zod";
 
 /**
  * R5 — the clint proxy as a COMPOUND plugin (rewire plan: appliesTo
@@ -10,22 +11,35 @@ import type { HostPlugin } from "@powerhousedao/host-core";
  * sockets.
  */
 
-export interface ProxyPluginConfig {
-  port: number;
-  host?: string;
-  publicUrl?: string;
-  /** Route prefix -> target: a member reference (resolved to the child's
-   * host:port) or an explicit upstream URL; optional path + ws. */
-  routes: Record<
-    string,
+/** One route: a member reference (resolved to the child's host:port) or an
+ * explicit upstream URL; optional path + ws. */
+export const proxyRouteSchema = z
+  .strictObject({
+    /** A member name of the clint compound (`children.<name>`). */
+    member: z.string().min(1).optional(),
+    upstream: z.url().optional(),
+    path: z.string().optional(),
+    ws: z.boolean().optional(),
+  })
+  .refine(
+    (route) => route.member !== undefined || route.upstream !== undefined,
     {
-      member?: string;
-      upstream?: string;
-      path?: string;
-      ws?: boolean;
-    }
-  >;
-}
+      message: "a proxy route names a `member` or an `upstream`",
+    },
+  );
+
+/** `runner.proxy` on a clint-runner host. */
+export const proxyPluginConfigSchema = z.strictObject({
+  /** Front port (0 = any free port). */
+  port: z.number().int().min(0),
+  /** Bind address (default "0.0.0.0"). */
+  host: z.string().min(1).optional(),
+  publicUrl: z.url().optional(),
+  /** Route prefix -> target. */
+  routes: z.record(z.string(), proxyRouteSchema),
+});
+
+export type ProxyPluginConfig = z.input<typeof proxyPluginConfigSchema>;
 
 export interface ResolvedProxyRoute {
   prefix: string;
@@ -84,6 +98,8 @@ export function buildProxyRouteTable(
 export interface ClintCompoundContext {
   memberEndpoints: MemberEndpoints;
   proxyRoutes?: ResolvedProxyRoute[];
+  /** The proxy's listening URL, set at onMembersReady. */
+  proxyUrl?: string;
   proxyStop?: () => Promise<void>;
   logger?: { info: (m: string) => void };
 }
@@ -112,8 +128,9 @@ export function createProxyPlugin(config: ProxyPluginConfig): HostPlugin<{
             upstream: new URL(route.upstream),
             ws: route.ws,
             source: route.source,
-          } as never);
+          });
         }
+        ctx.proxyUrl = instance.url;
         ctx.proxyStop = () => instance.stop();
         ctx.logger?.info(
           `[clint-proxy] listening on ${instance.url} — ${table.length} route(s)`,

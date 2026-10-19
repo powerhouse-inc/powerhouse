@@ -7,11 +7,13 @@ import {
   probeRun,
   reactorHostSchema,
   resolveUserDataPlaceholders,
+  runnerBaseSchema,
   writeRunRecord,
   clearRunRecord,
-  type HostDefinition,
   type RunnerContext,
+  type RunnerHandle,
 } from "@powerhousedao/host-core";
+import { z } from "zod";
 import {
   attachRemoteReactor,
   type RemoteReactorAttachment,
@@ -35,8 +37,6 @@ import {
 
 export const kind = "reactor";
 
-export const hostSchema = reactorHostSchema;
-
 /**
  * host.js config for the agent host — OPERATOR SETTINGS only (rewire R5):
  * `model` selects the LLM; `instructions`/`prompts` shape the agent. Framework
@@ -44,14 +44,66 @@ export const hostSchema = reactorHostSchema;
  * stay in code, and the agent CARD (description/image) comes from the host's
  * `profile`, not here. An LLM API key is a SECRET — env only, never config.
  */
-interface AgentHostConfig {
-  model?: string;
-  instructions?: string;
-  prompts?: {
-    skillsDir?: string;
-    agentsDir?: string;
-    outDir?: string;
-  };
+const agentHostConfigSchema = z.strictObject({
+  /** Mastra model router id (e.g. "openrouter/<vendor>/<model>"). Absent:
+   * the runner answers as the demo agent. */
+  model: z.string().min(1).optional(),
+  instructions: z.string().optional(),
+  /** `build`: skill + agent-profile compilation inputs and output. */
+  prompts: z
+    .strictObject({
+      skillsDir: z.string().min(1).optional(),
+      agentsDir: z.string().min(1).optional(),
+      outDir: z.string().min(1).optional(),
+    })
+    .optional(),
+});
+
+export type AgentHostConfig = z.input<typeof agentHostConfigSchema>;
+
+/** mastra-runner's own `runner` options, on top of the common base. */
+const mastraRunnerOptionsSchema = runnerBaseSchema
+  .extend({
+    /** The agent's working directory (`${userData}` resolves). Accepted for
+     * the scaffold's assistant host; the runner does not consume it yet. */
+    workdir: z.string().min(1).optional(),
+  })
+  .strict();
+
+/** The agent host. `reactor` is the base block: a lone `remote` backend
+ * naming the switchboard to attach to. */
+export const hostSchema = reactorHostSchema.extend({
+  runner: mastraRunnerOptionsSchema,
+  config: agentHostConfigSchema.optional(),
+});
+
+/** What an agent host.js author writes. */
+export type MastraHostInput = z.input<typeof hostSchema>;
+/** What the verbs receive. */
+export type MastraHost = z.output<typeof hostSchema>;
+
+/** What serving the agent produces: where its OpenAI-compatible API is
+ * actually bound. */
+export const outputsSchema = z.strictObject({
+  /** `http://<bound host>:<bound port>`. */
+  origin: z.url(),
+  endpoints: z.strictObject({
+    /** OpenAI-compatible base URL (`<origin>/v1`). */
+    openai: z.url(),
+    /** Readiness probe (`<origin>/ready`). */
+    ready: z.url(),
+  }),
+});
+
+export type MastraOutputs = z.infer<typeof outputsSchema>;
+
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/clint/mastra-runner": {
+      host: MastraHostInput;
+      outputs: MastraOutputs;
+    };
+  }
 }
 
 const DEFAULT_AGENT_PORT = 4910;
@@ -59,7 +111,7 @@ const DEFAULT_AGENT_PORT = 4910;
 /** Resolve the remote backend's switchboard url: `remote.url` as given, or a
  * sibling host reference (`remote.host`) whose runner.port names the port. */
 async function resolveRemoteUrl(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<string> {
   const backends = Object.entries(host.reactor?.backends ?? {});
@@ -132,20 +184,15 @@ function completionChunk(
   })}\n\n`;
 }
 
-export interface AgentServeHandle {
-  port: number;
-  endpoints: Record<string, string>;
-  ready: Promise<void>;
-  shutdown: () => Promise<void>;
-}
+export type AgentServeHandle = RunnerHandle<MastraOutputs>;
 
 async function serveAgent(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<AgentServeHandle> {
   const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
   const resolved = resolveUserDataPlaceholders(host, userData);
-  const config = (resolved.config ?? {}) as AgentHostConfig;
+  const config = resolved.config ?? {};
   const port =
     typeof resolved.runner.port === "number"
       ? resolved.runner.port
@@ -317,8 +364,13 @@ async function serveAgent(
   await ready;
   // The actual bound port (a requested 0 means "any free port").
   const boundPort = (server.address() as { port: number }).port;
+  const origin = `http://127.0.0.1:${boundPort}`;
+  const outputs = outputsSchema.parse({
+    origin,
+    endpoints: { openai: `${origin}/v1`, ready: `${origin}/ready` },
+  });
   console.log(
-    `[${resolved.name}] agent API (OpenAI-compatible): http://127.0.0.1:${boundPort}/v1  (model: ${provider.modelId})`,
+    `[${resolved.name}] agent API (OpenAI-compatible): ${outputs.endpoints.openai}  (model: ${provider.modelId})`,
   );
 
   writeRunRecord(ctx.projectRoot, {
@@ -329,18 +381,14 @@ async function serveAgent(
     verb: ctx.verb,
     pid: process.pid,
     startedAt: new Date().toISOString(),
-    outputs: { port: boundPort, url: `http://127.0.0.1:${boundPort}/v1` },
+    outputs,
     extra: { reactor: attachment.endpoint, model: provider.modelId },
   });
   const cleanup = () => clearRunRecord(ctx.projectRoot, resolved.name);
   process.once("exit", cleanup);
 
   return {
-    port: boundPort,
-    endpoints: {
-      openai: `http://127.0.0.1:${boundPort}/v1`,
-      ready: `http://127.0.0.1:${boundPort}/ready`,
-    },
+    outputs,
     ready,
     shutdown: async () => {
       cleanup();
@@ -350,7 +398,7 @@ async function serveAgent(
 }
 
 export async function run(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<AgentServeHandle> {
   return serveAgent(host, ctx);
@@ -360,10 +408,10 @@ export const serve = run;
 
 /** `build` — skill + agent-profile compilation (ph-clint-dev's pipeline). */
 export async function build(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<void> {
-  const config = (host.config ?? {}) as AgentHostConfig;
+  const config = host.config ?? {};
   const { buildSkills } = await import("../dev/build-skills.js");
   const result = await buildSkills({
     rootDir: ctx.projectRoot,

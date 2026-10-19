@@ -100,7 +100,7 @@ describe("clint-runner (P5.4)", () => {
   it("schedules children as clint services and resolves agent endpoints", async () => {
     const { dir } = makeProject();
     const { loadHost } = await import("@powerhousedao/host-core");
-    const host = (await loadHost(dir, "cli")).host;
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
     const handle = await runner.run(host, ctx(dir));
     try {
       const status = handle.services.list("assistant")[0];
@@ -111,7 +111,9 @@ describe("clint-runner (P5.4)", () => {
       expect(existsSync(path.join(dir, ".ph", "services", "assistant"))).toBe(
         true,
       );
-      expect(handle.agents).toEqual({ main: "http://127.0.0.1:4919/v1" });
+      expect(handle.outputs).toEqual({
+        agents: { main: "http://127.0.0.1:4919/v1" },
+      });
     } finally {
       await handle.shutdown();
     }
@@ -120,7 +122,7 @@ describe("clint-runner (P5.4)", () => {
   it("forwards build to members via their own runners", async () => {
     const { dir, sink } = makeProject();
     const { loadHost } = await import("@powerhousedao/host-core");
-    const host = (await loadHost(dir, "cli")).host;
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
     await runner.build(host, ctx(dir));
     const built = readFileSync(sink, "utf8").trim();
     expect(JSON.parse(built)).toEqual({ built: "cli-assistant" });
