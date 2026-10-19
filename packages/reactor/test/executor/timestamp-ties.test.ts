@@ -1,3 +1,7 @@
+import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelDocument,
@@ -8,8 +12,9 @@ import {
   deriveOperationId,
   positionalOperations,
   undo,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
@@ -28,11 +33,14 @@ describe("base-reducer 3 timestamp ties", () => {
   const live: InProcessReactorModule[] = [];
 
   afterEach(() => {
+    vi.useRealTimers();
     for (const module of live.splice(0)) module.reactor.kill();
   });
 
   async function build(maxSkipThreshold?: number) {
-    const module = await createUndoV3ReactorBuilder()
+    const module = await createUndoV3ReactorBuilder({
+      modules: [driveDocumentModelModule],
+    })
       .withExecutorConfig({
         featureFlags: undoV3Flags({ documentDecisions: true }),
         ...(maxSkipThreshold === undefined ? {} : { maxSkipThreshold }),
@@ -271,6 +279,109 @@ describe("base-reducer 3 timestamp ties", () => {
       });
     });
   }
+
+  async function replicate(
+    origin: InProcessReactorModule,
+    replica: InProcessReactorModule,
+    docId: string,
+  ) {
+    await ok(
+      replica,
+      await replica.reactor.load(
+        docId,
+        "main",
+        await storedRows(origin, docId),
+      ),
+    );
+  }
+
+  const types = async (module: InProcessReactorModule, docId: string) =>
+    positionalOperations(await storedRows(module, docId)).map(
+      (operation) => operation.action.type,
+    );
+
+  for (const jobs of ["one job", "two jobs"] as const) {
+    it(`keeps one client's same-millisecond edit before its UNDO, in ${jobs}`, async () => {
+      const origin = await build();
+      const replica = await build();
+      const docId = await shared(origin, replica);
+
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const edit = addModule({ id: "e", name: "e" });
+      const tiedUndo = undo();
+      expect(tiedUndo.timestampUtcMs).toBe(edit.timestampUtcMs);
+      if (jobs === "one job") {
+        await ok(
+          origin,
+          await origin.reactor.execute(docId, "main", [edit, tiedUndo]),
+        );
+      } else {
+        await ok(origin, await origin.reactor.execute(docId, "main", [edit]));
+        await ok(
+          origin,
+          await origin.reactor.execute(docId, "main", [tiedUndo]),
+        );
+      }
+      await replicate(origin, replica, docId);
+
+      const expected = {
+        types: ["ADD_MODULE", "RETRACT"],
+        modules: [] as string[],
+      };
+      for (const module of [origin, replica]) {
+        expect({
+          types: await types(module, docId),
+          modules: (await view(module, docId)).modules,
+        }).toEqual(expected);
+      }
+    });
+  }
+
+  it("keeps one client's same-millisecond DELETE_NODE before its ADD_FOLDER", async () => {
+    const origin = await build();
+    const replica = await build();
+    const drive = withSignaturePolicy(
+      driveDocumentModelModule.utils.createDocument(),
+      "legacy",
+      { protocolVersions: { "base-reducer": 3 } },
+    );
+    const docId = drive.header.id;
+    for (const module of [origin, replica]) {
+      await ok(module, await module.reactor.create(drive));
+    }
+    const { addFolder, deleteNode } = driveDocumentModelModule.actions;
+    await ok(
+      origin,
+      await origin.reactor.execute(docId, "main", [
+        addFolder({ id: "f", name: "first", parentFolder: null }),
+      ]),
+    );
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 1_000);
+    await ok(
+      origin,
+      await origin.reactor.execute(docId, "main", [
+        deleteNode({ id: "f" }),
+        addFolder({ id: "f", name: "second", parentFolder: null }),
+      ]),
+    );
+    await replicate(origin, replica, docId);
+
+    const expected = {
+      types: ["ADD_FOLDER", "DELETE_NODE", "ADD_FOLDER"],
+      nodes: ["f:second"],
+    };
+    for (const module of [origin, replica]) {
+      const document = await module.reactor.get<DocumentDriveDocument>(docId);
+      expect({
+        types: await types(module, docId),
+        nodes: document.state.global.nodes.map(
+          (node) => `${node.id}:${node.name}`,
+        ),
+      }).toEqual(expected);
+    }
+  });
 
   for (const senderIndex of [10, 0]) {
     it(`writes nothing for a re-delivered row with a long tail after it, sender index ${senderIndex}`, async () => {

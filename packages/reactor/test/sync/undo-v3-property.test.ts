@@ -6,6 +6,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   appliedOperations,
+  createActionIdGenerator,
   positionalOperations,
   redo,
   retract,
@@ -18,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
+import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -265,6 +267,8 @@ type Variant = {
   adversarial: boolean;
   /** Writes often reuse the previous stamp, on the same node or another. */
   ties?: boolean;
+  /** Each node draws action ids from its own generator on a frozen clock. */
+  generatedIds?: boolean;
 };
 
 const reducer = driveDocumentModelModule.reducer;
@@ -323,12 +327,23 @@ async function runCase(
   // Seeded, so a tie breaks the same way when a seed is replayed.
   const hex = (n: number) =>
     Array.from({ length: n }, () => int(16).toString(16)).join("");
-  const seeded = <T extends Action>(action: T): T => ({
+  const replicas = nodes.slice(0, 2 + int(2));
+  const generators = new Map(
+    replicas.map((node) => [
+      node.name,
+      createActionIdGenerator({
+        now: () => 0,
+        random: (bytes) => bytes.forEach((_, i) => (bytes[i] = int(256))),
+      }),
+    ]),
+  );
+  const seeded = <T extends Action>(node: Node, action: T): T => ({
     ...action,
-    id: `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`,
+    id: variant.generatedIds
+      ? generators.get(node.name)!()
+      : `${hex(8)}-${hex(4)}-4${hex(3)}-8${hex(3)}-${hex(12)}`,
   });
 
-  const replicas = nodes.slice(0, 2 + int(2));
   const skew = new Map(
     replicas.map((node) => [node.name, variant.adversarial ? int(9) - 4 : 0]),
   );
@@ -339,6 +354,7 @@ async function runCase(
   try {
     let writes = 0;
     const known: string[] = [];
+    const accepted: Array<{ node: string; id: string; at: string }> = [];
     // A synthesized RETRACT is stamped when executed, so stamps follow the clock.
     let previous: string | undefined;
     const stamp = async (node: Node) => {
@@ -358,7 +374,16 @@ async function runCase(
       trace.push(
         `${node.name} ${label} ${action.id.slice(0, 8)}@${action.timestampUtcMs.slice(14, 23)}${refused ? ` refused: ${reason(refused)}` : ""}`,
       );
-      if (!refused) known.push(action.id);
+      if (refused) return;
+      known.push(action.id);
+      accepted.push({
+        node: node.name,
+        id:
+          action.type === "UNDO" || action.type === "REDO"
+            ? synthesizedActionId(action.id)
+            : action.id,
+        at: action.timestampUtcMs,
+      });
     };
 
     for (let step = 0; step < steps; step++) {
@@ -376,10 +401,14 @@ async function runCase(
             : driveDocumentModelModule.actions.setDriveName({
                 name: `n${writes}`,
               });
-        await write(node, seeded({ ...action, timestampUtcMs }), action.type);
+        await write(
+          node,
+          seeded(node, { ...action, timestampUtcMs }),
+          action.type,
+        );
       } else if (roll < 0.55) {
         const isUndo = random() < 0.55;
-        const action = seeded(isUndo ? undo() : redo());
+        const action = seeded(node, isUndo ? undo() : redo());
         await write(node, action, action.type);
       } else if (roll < 0.65) {
         const rows = await storedRows(node.module, id);
@@ -397,7 +426,10 @@ async function runCase(
         if (target === undefined) continue;
         await write(
           node,
-          seeded({ ...retract(target), timestampUtcMs: await stamp(node) }),
+          seeded(node, {
+            ...retract(target),
+            timestampUtcMs: await stamp(node),
+          }),
           `RETRACT(${target.slice(0, 8)})`,
         );
       } else if (variant.adversarial) {
@@ -458,6 +490,18 @@ async function runCase(
         { ...other, node: first.node },
         `${other.node} vs ${first.node}`,
       ).toEqual(first);
+    }
+    if (variant.generatedIds) {
+      const position = new Map(first.positional.map((id, i) => [id, i]));
+      for (const [i, earlier] of accepted.entries()) {
+        for (const later of accepted.slice(i + 1)) {
+          if (later.node !== earlier.node || later.at !== earlier.at) continue;
+          expect(
+            position.get(earlier.id)! < position.get(later.id)!,
+            `${earlier.node}'s ${earlier.id.slice(0, 13)} before ${later.id.slice(0, 13)} at ${later.at}`,
+          ).toBe(true);
+        }
+      }
     }
     for (const node of replicas) {
       try {
@@ -535,6 +579,15 @@ describe("base-reducer 3, reactor-level differential property", () => {
   // Same-node and cross-node ties, under the adversarial schedule.
   it("replicas agree when writes share timestamps", async () => {
     await runSeeds(0x4c2, { adversarial: true, ties: true });
+  }, 300_000);
+
+  // Each node's same-millisecond writes keep their creation order.
+  it("replicas agree and keep each node's order when its ids sort in creation order", async () => {
+    await runSeeds(0x4c3, {
+      adversarial: true,
+      ties: true,
+      generatedIds: true,
+    });
   }, 300_000);
 
   // selectLoadWrites leaves out receiver rows below the sender's lowest index.

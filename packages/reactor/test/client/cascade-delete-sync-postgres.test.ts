@@ -31,6 +31,10 @@ import { SyncBuilder } from "../../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../../src/sync/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { createDocModelDocument } from "../factories.js";
+import {
+  CASCADE_TIE_FLAGS,
+  sameMillisecondCascade,
+} from "./cascade-tie-scenario.js";
 import { TestChannel } from "../sync/channels/test-channel.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 import { TRUST_ANY_SIGNER } from "../utils/signed-as.js";
@@ -478,6 +482,18 @@ describe("cascade delete of a drive served to its remote [Postgres]", () => {
 
   it("deletes a depth-2 tree of plain documents under document decisions", async () => {
     await plainTree(ENFORCING);
+  }, 60_000);
+
+  it("converges a depth-2 cascade made in one millisecond with a second reactor", async () => {
+    const { module: clientModule, reactorModule } = await build(
+      "in-process",
+      CASCADE_TIE_FLAGS,
+    );
+    await sameMillisecondCascade(
+      clientModule.client,
+      reactorModule.reactor,
+      "pg-tie",
+    );
   }, 60_000);
 
   async function removedFile(
