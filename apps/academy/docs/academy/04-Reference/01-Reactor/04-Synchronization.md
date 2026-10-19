@@ -8,6 +8,8 @@ Sync makes one reactor mirror operations with a remote drive. The local reactor 
 
 The sync subsystem lives in `@powerhousedao/reactor`. The orchestrator is `ISyncManager`; each remote drive is a `Remote` backed by an `IChannel`. Today the only shipped transport is GraphQL over HTTP: `GqlRequestChannel` (the client/poller side, used by Connect) and `GqlResponseChannel` (the server/push side, used by Switchboard). The channel config `type` string is `"gql"`.
 
+![Reactor sync: outbox derived from the operation index, inbox applied through IReactor, mailboxes per remote channel](./images/reactor-sync-light.png)
+
 For the reactor itself and the builder, see [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor) and [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage). For sync error categories and auth failures, see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 ## Enabling sync on a reactor
