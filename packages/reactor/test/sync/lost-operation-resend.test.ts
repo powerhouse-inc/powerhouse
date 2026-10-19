@@ -652,6 +652,25 @@ describe("base-reducer 3", () => {
       await agree(h.a, drive);
       await agree(h.b, drive);
     }, 30_000);
+
+    // BUG: v3 has no lost-operation resend either; B keeps x stamped with A.
+    it.fails("is repaired when A's reshuffle echo reaches B alone", async () => {
+      h = await buildHarness({}, { v3: true });
+      const { id, x } = await damaged(h, true, baseReducer3Drive());
+
+      hold(h, toB(id));
+      await h.a.module.catchUp.sweepNow();
+      await eventually(() =>
+        Promise.resolve((h!.held.get(toB(id))?.length ?? 0) > 0),
+      );
+      release(h, toB(id));
+      await executeOn(h.a, id, "w", new Date().toISOString());
+
+      await eventually(
+        async () => (await sourceRemoteOnB(h!, id, x)).includes(""),
+        5_000,
+      );
+    }, 30_000);
   });
 
   describe("losing a live row on current main (#6b)", () => {
