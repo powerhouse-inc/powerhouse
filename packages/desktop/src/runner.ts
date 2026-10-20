@@ -310,6 +310,9 @@ async function buildMembers(
       specifier,
       member.host,
       `hosts/${wrapper.host}/host.js`,
+      // build is one-shot: it needs no other member's outputs, so a declared
+      // $output stays a token (as in the generic compound).
+      { tokens: "allow" },
     );
     if (typeof runner.build !== "function") {
       console.log(
