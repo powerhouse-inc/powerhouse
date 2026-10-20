@@ -197,9 +197,18 @@ Decisions:
   before fitting, so a lazily loaded tagged model lands at 3.
 - `fitCreateBaseReducer` moved to `@powerhousedao/shared/document-model` so
   the light client can use it without the reactor.
-- GraphQL `createDefaults` takes a `documentType` argument. The client falls
-  back to the untyped query, once per client, when an older Switchboard
-  rejects the argument, and fits that answer to its own document models.
+- The creator chooses a new document's protocol versions. The GraphQL
+  client fits base-reducer against its own flags and document models
+  (tagged reducer with `undoV3` on: 3; otherwise 2) and asks the host only
+  for the signature policy. GraphQL `createDefaults` keeps its `documentType`
+  argument for other callers and older clients.
+- A receiver refuses what it cannot run. Peer agreement already covered a
+  reactor without base-reducer 3 (refused on submit and load, refused on
+  receipt in sync, held by senders). New: a reactor that announces 3 refuses
+  a version 3 CREATE, and writes to a stored version 3 document, when the
+  model's registered reducer is untagged or the model cannot be loaded. It
+  uses the existing `UnsupportedProtocolVersionError`, which is terminal and
+  does not quarantine in sync.
 - The light client's header now carries `protocolVersions` from a current
   Switchboard. The `CREATE_DOCUMENT` fallbacks stay for older Switchboards.
 - Workflow's `creation()` reads the client through `getPHStore()`.
@@ -247,13 +256,16 @@ timestamps, which the user rejected):
 - Lost-operation resend (R1, R2) is not implemented. The base-reducer 3 twin
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
-- Connect's first create of a model a remote host has not loaded yet gets 2:
-  `addDocument` asks `createDefaults`, which never loads. Headerless creates
-  cannot fix this: under `v2-required` the document id is derived from the
-  whole `protocolVersions` map, so the host cannot fill in or change
-  base-reducer without an `ID_MISMATCH`. Remaining options: fit on the
-  client against its own models, a non-poisoning load on the read query, or
-  accept 2.
+- A current Connect creates tagged models at 3. A Switchboard from a release
+  without undo v3 refuses those creates (`UnsupportedProtocolVersionError`);
+  such a Connect needs `undoV3: false` to create there.
+- A reactor that stored version 3 documents while a model was tagged and
+  then boots an untagged build of it refuses every write and load for those
+  documents. The startup stored-protocol check compares versions only and
+  does not catch it.
+- A version 3 CREATE in a worker that cannot import a host-only model now
+  fails at the CREATE (`ModelNotWorkerImportableError`), which quarantines
+  the document in sync, as later writes already did.
 - Pieces and workflow refuse `undo`, `redo` and `undoRedoAvailability`.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
