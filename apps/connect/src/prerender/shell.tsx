@@ -9,11 +9,9 @@ import {
   registerConnectPlugins,
   resetConnectPluginUi,
 } from "@powerhousedao/connect-core/plugins";
-import {
-  getRuntimeConfig,
-  loadRuntimeConfig,
-  primeRuntimeConfig,
-} from "@powerhousedao/connect-core/runtime-config";
+import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import type { RuntimePowerhouseConfig } from "@powerhousedao/shared/connect";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import type { AppShellKind } from "./app-shell.js";
 import { APP_NAME_TOKEN, appShell, shellMarkup } from "./app-shell.js";
 import { shellCss } from "./shell-css.js";
@@ -22,37 +20,17 @@ import { CoreShellLoader, ShellLoader } from "./shell-loader.js";
 export { appShell, shellCss, shellMarkup };
 export type { AppShellKind };
 
-// The config file is read at runtime; the shell renders Connect's defaults.
-// The loader fetches only in a browser, so one is stood in for the read.
-async function readDefaultConfig() {
-  const global = globalThis as { window?: unknown };
-  const fetch = globalThis.fetch;
-  global.window = globalThis;
-  globalThis.fetch = (() =>
-    Promise.resolve(Response.json({}))) as unknown as typeof fetch;
-  try {
-    await loadRuntimeConfig();
-  } finally {
-    globalThis.fetch = fetch;
-    delete global.window;
-  }
-  return getRuntimeConfig();
-}
-
-let defaultConfig: ReturnType<typeof getRuntimeConfig> | undefined;
-
 async function loadDefaultConfig(variant: ShellVariant) {
-  // Read once: a later read would return the previous variant's primed config.
-  defaultConfig ??= await readDefaultConfig();
-  // Core's shell is the one for a composition without a plugin that has a shell.
+  // The config file is read at runtime; the shell renders Connect's defaults.
+  // Not through the config loader: its cache is the realm's, so a dev server's
+  // next render would read the variant primed last.
   primeRuntimeConfig({
-    ...defaultConfig,
     connect: {
-      ...defaultConfig.connect,
+      ...DEFAULT_CONNECT_CONFIG,
+      // Core's shell is the one for a composition without a plugin that has a shell.
       composition: variant === "core" ? [] : undefined,
     },
-  });
-  // After the stand-in window: the plugins' UI modules read the real one.
+  } as RuntimePowerhouseConfig);
   registerConnectPlugins(connectPlugins);
   const plugin = (await shellPlugins())[variant];
   await loadConnectPluginUi(plugin ? [{ module: plugin }] : []);

@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -71,4 +71,24 @@ describe("the prerendered shells", () => {
     expect(head).not.toContain("text-core-danger");
     expect(head.length).toBeLessThan(dist("shell-head.html").length);
   });
+
+  // A dev server renders a project's shells again on each route edit, with a
+  // fresh copy of the renderer in the same process.
+  it("renders the same shell from a second copy of the renderer", () => {
+    const shell = pathToFileURL(join(root, ".prerender", "shell.js")).href;
+    const script = [
+      `const first = await import(${JSON.stringify(`${shell}?first`)});`,
+      `const before = await first.renderShell("generic");`,
+      `await first.renderShell("core");`,
+      `const second = await import(${JSON.stringify(`${shell}?second`)});`,
+      `const after = await second.renderShell("generic");`,
+      `console.log(JSON.stringify(after === before));`,
+    ].join("\n");
+    const out = execFileSync(
+      process.execPath,
+      ["--input-type=module", "-e", script],
+      { cwd: root, env: { ...process.env, NODE_ENV: "production" } },
+    );
+    expect(out.toString().trim().split("\n").at(-1)).toBe("true");
+  }, 60_000);
 });

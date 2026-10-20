@@ -394,7 +394,7 @@ describe("core's document view", () => {
 });
 
 describe("core's revision history", () => {
-  it("lists a page of operations newest first, pages through ?history&page, and closes", async () => {
+  it("lists a page of operations newest first, pages through ?history&historyPage, and closes", async () => {
     const { drive, node } = await createFile(
       await createDrive("Hist"),
       "Model",
@@ -429,7 +429,7 @@ describe("core's revision history", () => {
 
     click(screen.getByRole("button", { name: "Older" }));
     await vi.waitFor(() =>
-      expect(history.location.search).toBe("?history&page=2"),
+      expect(history.location.search).toBe("?history&historyPage=2"),
     );
     await vi.waitFor(() =>
       expect(indexes()).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]),
@@ -798,6 +798,21 @@ describe("core's modals", () => {
     expect(history.location.search).toBe("");
     act(() => closePHModal());
     await vi.waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("closes a confirmation opened over a routed modal with it", async () => {
+    const { router, history } = mount("/?modal=login");
+    await vi.waitFor(() => expect(store.modal?.type).toBe("login"));
+    act(() => showPHModal({ type: "deleteDrive", driveId: "d1" }));
+    expect(store.modal?.type).toBe("deleteDrive");
+
+    // A navigation that resolves meanwhile leaves the confirmation open.
+    await act(() => router.invalidate());
+    expect(store.modal?.type).toBe("deleteDrive");
+
+    await act(() => Promise.resolve(closePHModal()));
+    await vi.waitFor(() => expect(history.location.search).toBe(""));
+    expect(store.modal).toBeUndefined();
   });
 
   it("shows a route's own view of a modal while the route matches", async () => {

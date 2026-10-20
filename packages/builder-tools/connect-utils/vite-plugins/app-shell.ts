@@ -327,10 +327,15 @@ export function connectAppShellPlugin(
   };
   const devShell = async () => {
     if (!devShells) return undefined;
-    const wait = new Promise<undefined>((resolve) =>
-      setTimeout(resolve, DEV_SHELL_WAIT_MS),
-    );
-    return (await Promise.race([devShells, wait]))?.[variant];
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const wait = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), DEV_SHELL_WAIT_MS);
+    });
+    try {
+      return (await Promise.race([devShells, wait]))?.[variant];
+    } finally {
+      clearTimeout(timer);
+    }
   };
   return {
     name: "ph-connect-app-shell",

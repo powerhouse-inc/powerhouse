@@ -22,13 +22,22 @@ export type LoadRuntimeConfigOptions = {
 export async function loadRuntimeConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<RuntimePowerhouseConfig> {
-  const config = (await loader().read()) as RuntimePowerhouseConfig;
+  // Beside the config's fetch: the plugin modules and the UI loader don't
+  // depend on it; only which plugins' UI loads does.
   const pluginHost = options.plugins
-    ? import("../plugins/plugin-host.js").then((host) => {
+    ? import("../plugins/plugin-host.js").then(async (host) => {
         host.registerConnectPlugins(options.plugins!);
+        await host.knownPlugins();
         return host;
       })
     : undefined;
+  const pluginUi = options.plugins
+    ? import("../plugins/plugin-ui.js")
+    : undefined;
+  // Handled here so a failed config read doesn't leave them unhandled.
+  void pluginHost?.catch(() => undefined);
+  void pluginUi?.catch(() => undefined);
+  const config = (await loader().read()) as RuntimePowerhouseConfig;
   // R3: a served composition (projected from host.js runner.plugins by the
   // uniform-runners connect runner) runs the plugin pipeline over the config
   // BEFORE the cache warms — every downstream consumer sees the transformed
@@ -49,9 +58,9 @@ export async function loadRuntimeConfig(
       loader().prime(config);
     }
   }
-  if (pluginHost) {
+  if (pluginHost && pluginUi) {
     await pluginHost;
-    const { loadConnectPluginUi } = await import("../plugins/plugin-ui.js");
+    const { loadConnectPluginUi } = await pluginUi;
     await loadConnectPluginUi(config.connect.composition);
   }
   return config;

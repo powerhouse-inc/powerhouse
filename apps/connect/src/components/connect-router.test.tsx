@@ -602,7 +602,7 @@ describe("Connect router", () => {
 
     act(() => setRevisionHistoryPage(2));
     await vi.waitFor(() =>
-      expect(router.history.location.search).toBe("?history&page=2"),
+      expect(router.history.location.search).toBe("?history&historyPage=2"),
     );
     await vi.waitFor(() =>
       expect(screen.getByTestId("history").textContent).toBe("open 2"),
@@ -632,7 +632,7 @@ describe("Connect router", () => {
     const { drive, node } = await createFile(created, "Linked");
     const path = `/d/${drive.header.slug}/linked-${node.id}`;
     store.drives = [drive];
-    mount(`${path}?history&page=3`, undefined, <HistoryProbe />);
+    mount(`${path}?history&historyPage=3`, undefined, <HistoryProbe />);
     await vi.waitFor(() => screen.getByText("document:Linked"));
     expect(screen.getByTestId("history").textContent).toBe("open 3");
     cleanup();
@@ -640,7 +640,7 @@ describe("Connect router", () => {
 
     // An invalid page is the first one.
     const { router } = mount(
-      `${path}?history&page=x`,
+      `${path}?history&historyPage=x`,
       undefined,
       <HistoryProbe />,
     );
@@ -653,6 +653,28 @@ describe("Connect router", () => {
     await vi.waitFor(() =>
       expect(screen.getByTestId("history").textContent).toBe("closed"),
     );
+  });
+
+  it("leaves a drive app's own page param to it", async () => {
+    const created = await createDrive("Paged-App");
+    const { drive, node } = await createFile(created, "Report");
+    store.drives = [drive];
+    const { router } = mount(
+      `/d/${drive.header.slug}/report-${node.id}?page=3`,
+      undefined,
+      <HistoryProbe />,
+    );
+    await vi.waitFor(() => screen.getByText("document:Report"));
+
+    act(() => showRevisionHistory());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("open 1"),
+    );
+    act(() => hideRevisionHistory());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("closed"),
+    );
+    expect(router.history.location.search).toBe("?page=3");
   });
 
   it("restores drive and document on back and forward", async () => {

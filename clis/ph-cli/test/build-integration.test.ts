@@ -458,6 +458,36 @@ describe("runBuild on a package that offers routes", () => {
     ).toBe(true);
   }, 120_000);
 
+  it("builds a module the routes and the package both import once", async () => {
+    setUp();
+    const marker = "ph-shared-state-marker";
+    writeFileSync(
+      join(fixture, "shared-state.ts"),
+      `export const state = new Map<string, unknown>([["${marker}", 0]]);\n`,
+    );
+    writeFileSync(
+      join(fixture, "index.ts"),
+      `${readFileSync(join(fixture, "index.ts"), "utf8")}export { state } from "./shared-state.js";\n`,
+    );
+    route(
+      "_app/shared.tsx",
+      "/_app/shared",
+      'import { state } from "../../../../shared-state.js";\nstate.set("route", 1);\n',
+    );
+
+    await runBuild({ ...args, ignoreTypeErrors: true });
+
+    const browser = join(fixture, "dist", "browser");
+    const withMarker = readdirSync(browser, { recursive: true })
+      .map(String)
+      .filter((file) => file.endsWith(".js"))
+      .filter((file) =>
+        readFileSync(join(browser, file), "utf8").includes(marker),
+      );
+    expect(withMarker).toHaveLength(1);
+    expect(withMarker[0]).not.toMatch(/^(index|connect-routes)\.js$/);
+  }, 120_000);
+
   it("fails on an offered route that imports Connect", async () => {
     setUp();
     route(

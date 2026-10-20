@@ -4,8 +4,9 @@ export type SharedDep = { specifier: string; package: string };
 
 /**
  * The dependency set Connect and loaded packages share via the import map.
- * `@powerhousedao/connect` is deliberately absent: it is the Connect app
- * itself (no importable exports), so there is nothing to share.
+ * `@powerhousedao/connect` is deliberately absent: it is the Connect app, not
+ * vendored (a host with routes compiles its files), so its exports are for a
+ * host's own routes and layout. Packages share `@powerhousedao/connect-core`.
  */
 export const SHARED_DEPS: readonly SharedDep[] = [
   { specifier: "document-model", package: "document-model" },

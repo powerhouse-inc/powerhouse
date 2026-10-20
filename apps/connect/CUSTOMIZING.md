@@ -811,12 +811,12 @@ export default {
 A package's `hosts/connect/routes/` also adds routes to every Connect that loads the package, e.g. a Reports page or a settings tab, without code:
 
 - Offered: every route file but `_app.tsx` and the files that override Connect's `_app/` routes. Those two only apply to the package's own host. A child of an override joins the loading Connect's route with that id.
-- `ph build` builds them as `./connect-routes` (`dist/browser/connect-routes.js`) and sets `connectRoutes: true` in the package's manifest. Connect loads the module when it loads a package with the flag, and takes the routes out when the package is removed, replaced or reinstalled.
+- `ph build` builds them as `./connect-routes` (`dist/browser/connect-routes.js`), in the same build as the package, and sets `connectRoutes: true` in the package's manifest. A module both import, e.g. a store or a React context an editor and a route share, is one chunk, so they share its state. Connect loads the module when it loads a package with the flag, and takes the routes out when the package is removed, replaced or reinstalled.
 - They join the loading Connect's routes by id (`/_app`, `/_app/settings`, `/_app/d/$driveSlug`, ...). A route at an id that Connect already serves is skipped with a warning; `staticData.nav` and `staticData.settings` list them as for a project's routes.
 - A deep link or reload on a package's page waits for the package: Connect holds unknown paths while packages and their routes load (see [Not found](#not-found)).
 - Removing a package while one of its pages is open takes the app home first.
 - Bundled packages (`ph install --local`, `provider: "local"`) register in a production build through the page's import map, as on the dev server.
-- An offered route imports `@powerhousedao/connect-core` (`ContentOutlet`, `useDriveRouteData`, `RouteSelection`, `ModalDialog`), `@tanstack/react-router` and `@powerhousedao/reactor-browser`, which Connect shares with packages. `@powerhousedao/connect` is not shared, so `ph build` fails, naming the file, if an offered route imports it.
+- An offered route imports `@powerhousedao/connect-core` (`ContentOutlet`, `useDriveRouteData`, `RouteSelection`, `ModalDialog`), `@tanstack/react-router` and `@powerhousedao/reactor-browser`, which Connect shares with packages. `@powerhousedao/connect` is not shared, so `ph build` fails, naming the file, if an offered route imports it, or reaches a module that does. The rest of the package gets a warning: its build would bundle a copy of the Connect modules it uses, apart from the app's state.
 - The project's own package is the exception: its host build already has its routes.
 
 ### Register routes from code

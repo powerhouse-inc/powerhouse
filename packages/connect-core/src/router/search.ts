@@ -58,12 +58,11 @@ export function stringifyConnectSearch(search: Record<string, unknown>) {
 }
 
 /** The drive route's params: `?history` opens the document's revision history,
- * and `page` (a positive integer; 1 is dropped) pages it. */
+ * and `historyPage` (a positive integer; 1 is dropped) pages it. */
 export function validateDriveSearch(
   search: Record<string, unknown>,
 ): ConnectSearch {
   const result = { ...search } as ConnectSearch;
-  // Without `history`, a `page` is the document's own, e.g. a drive app's.
   if (result[REVISION_HISTORY_PARAM] === undefined) return result;
   result[REVISION_HISTORY_PARAM] = "";
   const page = parseRevisionHistoryPage(result[REVISION_HISTORY_PAGE_PARAM]);
