@@ -38,7 +38,7 @@ export function legacyFieldsOf(instance: object): readonly string[] {
   return LEGACY_FIELDS.filter((field) => field in instance);
 }
 
-export function declaresLegacySchema(instance: object): boolean {
+function declaresLegacySchema(instance: object): boolean {
   return legacyFieldsOf(instance).some((field) => field !== "path");
 }
 
@@ -74,9 +74,14 @@ export function isOldStyleClass(subgraphClass: unknown): boolean {
   return true;
 }
 
-export function legacySubgraph(instance: object): HostedSubgraph {
+/** The record of an old-style instance that declares a schema and a name. */
+export function legacySubgraph(instance: object): HostedSubgraph | undefined {
+  const { name } = instance as LegacyFields;
+  if (!declaresLegacySchema(instance) || typeof name !== "string") {
+    return undefined;
+  }
   warnDeprecated(instance);
-  return legacyRecord(instance, (instance as LegacyFields).name as string);
+  return legacyRecord(instance, name);
 }
 
 /** The record of an old-style instance after onSetup, which may rename it. */

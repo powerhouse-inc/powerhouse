@@ -4,7 +4,6 @@ import type { DocumentNode } from "graphql";
 import type { BaseSubgraph } from "./base-subgraph.js";
 import type { Context } from "./types.js";
 import {
-  declaresLegacySchema,
   isOldStyleClass,
   legacyFieldsOf,
   legacySubgraph,
@@ -65,7 +64,8 @@ export function describeSubgraphClass(
 
 /**
  * The record the host admits an instance by, read after `new`. Undefined for
- * an old-style instance with no fields yet, which may set them in onSetup:
+ * an old-style instance with no schema field or no name yet, which may set
+ * them in onSetup:
  * {@link hostSetUpSubgraph} decides for it after onSetup.
  */
 export function hostSubgraph(
@@ -75,7 +75,8 @@ export function hostSubgraph(
   ),
 ): HostedSubgraph | undefined {
   if (described !== undefined) return protocolSubgraph(instance, described);
-  if (declaresLegacySchema(instance)) return legacySubgraph(instance);
+  const legacy = legacySubgraph(instance);
+  if (legacy !== undefined) return legacy;
   if (isOldStyleClass(instance.constructor)) return undefined;
   throw new Error(namelessSubgraphMessage(classNameOf(instance.constructor)));
 }
@@ -91,7 +92,8 @@ export function hostSetUpSubgraph(
 ): HostedSubgraph {
   if (hosted?.kind === "protocol") return hosted;
   if (hosted !== undefined) return renamedAfterSetup(hosted);
-  if (declaresLegacySchema(instance)) return legacySubgraph(instance);
+  const legacy = legacySubgraph(instance);
+  if (legacy !== undefined) return legacy;
   throw new Error(namelessSubgraphMessage(classNameOf(instance.constructor)));
 }
 
