@@ -116,6 +116,9 @@ export function showPHModal(modal: PHModal) {
   }
   const search = modalSearch(modal);
   if (search && hasHostNavigation()) {
+    // A confirmation the store holds would hide it.
+    if (!isRoutedModal(modalEventFunctions.getSnapshot()))
+      setPHModal(undefined);
     getPHNavigation().setSearch(
       (prev) => ({ ...withoutModalSearch(prev), ...search }),
       { replace: true },
@@ -125,7 +128,8 @@ export function showPHModal(modal: PHModal) {
   setPHModal(modal);
 }
 
-/** Closes the current modal; a routed one leaves the URL in place of the entry. */
+/** Closes the current modal; a routed one leaves the URL in place of the entry,
+ * and a confirmation opened over it closes with it. */
 export function closePHModal() {
   if (hasHostNavigation()) {
     const navigation = getPHNavigation();
@@ -133,6 +137,10 @@ export function closePHModal() {
       navigation.setSearch((prev) => withoutModalSearch(prev), {
         replace: true,
       });
+      // The router clears a routed one once the URL changes.
+      if (!isRoutedModal(modalEventFunctions.getSnapshot())) {
+        setPHModal(undefined);
+      }
       return;
     }
   }

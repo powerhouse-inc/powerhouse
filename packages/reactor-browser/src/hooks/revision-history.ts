@@ -4,8 +4,9 @@ import { useSearchParams } from "./url-state.js";
 /** The query param that opens the document's revision history: `?history`. */
 export const REVISION_HISTORY_PARAM = "history";
 
-/** The history page shown, from 1 (the newest operations): `?history&page=2`. */
-export const REVISION_HISTORY_PAGE_PARAM = "page";
+/** The history page shown, from 1 (the newest operations): `?history&historyPage=2`.
+ * Its own name: a drive app or editor may page by `page`. */
+export const REVISION_HISTORY_PAGE_PARAM = "historyPage";
 
 /** The page a `page` param names: a positive integer, else the first. */
 export function parseRevisionHistoryPage(value: string | undefined): number {

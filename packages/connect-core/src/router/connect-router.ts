@@ -152,9 +152,11 @@ export function bindConnectRouter(
     }
   };
 
-  // A routed modal is the URL's: the store holds what the location names.
+  // A routed modal is the URL's: the store holds what the location names,
+  // unless a confirmation is open over it.
   const syncModal = () => {
     const routed = modalFromSearch(router.state.location.search);
+    if (store.modal && !isRoutedModal(store.modal)) return;
     if (routed) {
       if (JSON.stringify(store.modal) !== JSON.stringify(routed)) {
         store.modal = routed;
