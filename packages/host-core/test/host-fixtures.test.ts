@@ -1071,6 +1071,32 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
   );
 });
 
+describe("expectHost drive plan", () => {
+  it("merges by SERVED slug: a projectHash: true drive never replaces a plain one", () => {
+    const contributed = [
+      {
+        declaration: { slug: "workflows", projectHash: "id" },
+        source: "switchboard-workflows",
+      },
+    ];
+    const plan = (drives: Record<string, unknown>[]) =>
+      expectHost({
+        kind: "reactor",
+        declared: { name: "x", runner: { module: "m" }, reactor: { drives } },
+        contributed,
+      }).drives;
+    // Same served slug: the host replaces the contribution in place.
+    expect(plan([{ slug: "workflows", name: "Mine" }])).toEqual([
+      local("workflows"),
+    ]);
+    // Served as workflows-<hash>: both drives exist (mergeDrivePlan).
+    expect(plan([{ slug: "workflows", projectHash: true }])).toEqual([
+      workflowsDrive,
+      local("workflows", { projectHash: true }),
+    ]);
+  });
+});
+
 /* --------------------------------------------------------------- negatives */
 
 interface Negative {

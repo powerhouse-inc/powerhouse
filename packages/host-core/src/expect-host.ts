@@ -192,8 +192,14 @@ function expectDrive(
   return drive;
 }
 
-/** Contributions first, then host declarations; slug-keyed, the host wins
- * (and keeps the contribution's position), like `mergeDrivePlan`. */
+/** The key `mergeDrivePlan` merges on: the SERVED slug, which for
+ * `projectHash: true` is the hashed id (never equal to a plain slug). */
+function servedSlugKey(drive: ExpectedDrive): string {
+  return drive.projectHash === true ? `${drive.slug}\0hashed` : drive.slug;
+}
+
+/** Contributions first, then host declarations; keyed by served slug, the
+ * host wins (and keeps the contribution's position), like `mergeDrivePlan`. */
 function drivePlan(
   reactor: ReactorConfig | undefined,
   contributed: readonly ContributedDriveInput[],
@@ -201,11 +207,11 @@ function drivePlan(
   const plan = new Map<string, ExpectedDrive>();
   for (const { declaration, source } of contributed) {
     const drive = expectDrive(declaration, source);
-    if (drive) plan.set(drive.slug, drive);
+    if (drive) plan.set(servedSlugKey(drive), drive);
   }
   for (const declaration of reactor?.drives ?? []) {
     const drive = expectDrive(declaration, "host");
-    if (drive) plan.set(drive.slug, drive);
+    if (drive) plan.set(servedSlugKey(drive), drive);
   }
   return [...plan.values()];
 }
