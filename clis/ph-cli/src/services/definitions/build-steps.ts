@@ -143,7 +143,7 @@ export function createTypecheckStep(
   agent: Agent,
   options: BuildStepOptions = {},
 ): GenerationSteps["typecheck"] {
-  return async ({ packageRoot, emittedRoot, plan }) => {
+  return async ({ packageRoot, emittedRoot, plan, retainOutputs }) => {
     const projects = new Map(
       plan.projects.map((project) => [project.configFile, project]),
     );
@@ -158,6 +158,7 @@ export function createTypecheckStep(
         references.push(configFile);
     };
     visit(plan.projects[0].configFile);
+    let typeErrorsAccepted = false;
     const acceptTypeErrors = async (
       result: Awaited<ReturnType<typeof runLocal>>,
     ): Promise<boolean> => {
@@ -168,6 +169,7 @@ export function createTypecheckStep(
       console.warn(
         "⚠ Building despite type errors. The package can load and still fail at runtime. Fix them before you publish or deploy it.",
       );
+      typeErrorsAccepted = true;
       return true;
     };
     if (plan.preflightTypeError !== undefined) {
@@ -179,6 +181,7 @@ export function createTypecheckStep(
           plan,
           plan.projects[0].configFile,
         );
+      retainOutputs(plan);
       const result = await runLocal(packageRoot, agent, [
         "tsc",
         "--build",
@@ -188,6 +191,7 @@ export function createTypecheckStep(
         return { ok: false, summary: result.output };
       return {
         ok: true,
+        typeErrorsAccepted,
         emittedModules: new Map(),
         loadedRuntimeFiles: () => ({
           files: [],
@@ -200,6 +204,7 @@ export function createTypecheckStep(
     }
     for (const reference of references) {
       plan = await refreshCompileGraph(packageRoot, agent, plan, reference);
+      retainOutputs(plan);
       const built = await runLocal(packageRoot, agent, [
         "tsc",
         "--build",
@@ -215,6 +220,7 @@ export function createTypecheckStep(
       plan,
       plan.projects[0].configFile,
     );
+    retainOutputs(plan);
     const result = await runLocal(packageRoot, agent, [
       "tsc",
       "--build",
@@ -230,6 +236,7 @@ export function createTypecheckStep(
     );
     return {
       ok: true,
+      typeErrorsAccepted,
       emittedModules: loader.modules,
       loaderDiagnostics: loader.diagnostics,
       loadedRuntimeFiles: loader.loadedRuntimeFiles,

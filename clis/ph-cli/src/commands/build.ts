@@ -22,7 +22,7 @@ Exit codes: 0 built, 1 the declarations are wrong, 2 the build could not run.`,
     try {
       const { logBuildReport, runBuild } = await import("../services/build.js");
       const result = await runBuild(args);
-      await logBuildReport(result);
+      logBuildReport(result);
       process.exit(result.exitCode);
     } catch (error) {
       console.error(error);

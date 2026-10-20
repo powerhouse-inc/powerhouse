@@ -67,7 +67,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     noSharedDeps: false,
     ignoreTypeErrors: false,
   });
-  await logBuildReport(result);
+  logBuildReport(result);
   if (result.exitCode !== 0) {
     throw new Error("The package build failed, so Connect was not built.");
   }

@@ -17,10 +17,15 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
+  rmdirSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { getVersion } from "../../get-version.js";
 import {
   listPublishedFiles,
@@ -87,6 +92,8 @@ export type GenerationSteps = {
     readonly packageRoot: string;
     readonly emittedRoot: string;
     readonly plan: CompilePlan;
+    // Called before each tsc run; a build that promotes nothing restores these outputs.
+    readonly retainOutputs: (plan: CompilePlan) => void;
   }) => Promise<
     | {
         readonly ok: false;
@@ -95,6 +102,7 @@ export type GenerationSteps = {
     | {
         readonly ok: true;
         readonly emittedModules: ReadonlyMap<string, string>;
+        readonly typeErrorsAccepted: boolean;
         readonly disposeLoader?: () => void;
         readonly diagnostics?: string;
         readonly loaderDiagnostics: string;
@@ -143,6 +151,7 @@ export type GenerationResult = {
   // Why the build refused, when no report or compiler output says it.
   readonly summary?: string;
   readonly compilerOutputs?: OutputInventory;
+  readonly typeErrorsAccepted?: boolean;
 };
 
 class CandidateBundleError extends Error {
@@ -237,10 +246,30 @@ export async function runGeneration(
       rmSync(entry, { recursive: true, force: true });
       mkdirSync(entry, { recursive: true });
       scratchRoot = canonicalPath(entry);
-      return await generate(
-        { ...request, ...paths, configFile, scratchRoot, outputTarget },
-        preflight.plan,
-      );
+      const retained: RetainedOutputs = {
+        files: new Map(),
+        directories: new Set(),
+      };
+      let result: GenerationResult;
+      try {
+        result = await generate(
+          {
+            ...request,
+            ...paths,
+            configFile,
+            scratchRoot,
+            outputTarget,
+            retainOutputs: (plan) => retainOutputs(retained, packageRoot, plan),
+          },
+          preflight.plan,
+        );
+      } catch (error) {
+        restoreOutputs(retained, request.log);
+        throw error;
+      }
+      if (!result.phases.includes("promote"))
+        restoreOutputs(retained, request.log);
+      return result;
     } catch (error) {
       if (
         !(
@@ -275,6 +304,70 @@ export async function runGeneration(
   }
 }
 
+// tsc writes its outputs before any check runs. The pre-build files, with
+// their timestamps, are a state tsc rebuilds from: build info older than the
+// sources makes the next run emit again.
+type RetainedOutputs = {
+  readonly files: Map<
+    string,
+    { readonly content: Buffer; readonly stats: Stats } | "absent"
+  >;
+  readonly directories: Set<string>;
+};
+
+function retainOutputs(
+  retained: RetainedOutputs,
+  packageRoot: string,
+  plan: CompilePlan,
+): void {
+  for (const file of plan.outputs.files) {
+    // Canonical: a link repointed during the build must not redirect the restore.
+    const path = canonicalPath(resolve(packageRoot, file), {
+      resolveMissingLinks: true,
+    });
+    if (retained.files.has(path)) continue;
+    const stats = statSync(path, { throwIfNoEntry: false });
+    if (stats?.isFile())
+      retained.files.set(path, { content: readFileSync(path), stats });
+    if (stats !== undefined) continue;
+    retained.files.set(path, "absent");
+    let parent = dirname(path);
+    while (!existsSync(parent)) {
+      retained.directories.add(parent);
+      parent = dirname(parent);
+    }
+  }
+}
+
+function restoreOutputs(
+  { files, directories }: RetainedOutputs,
+  log: (text: string) => void,
+): void {
+  // Build info first: if a later write fails, tsc still emits again.
+  const entries = [...files].sort(
+    ([a], [b]) =>
+      Number(/\.tsbuildinfo$/i.test(b)) - Number(/\.tsbuildinfo$/i.test(a)),
+  );
+  try {
+    for (const [path, file] of entries) {
+      if (file === "absent") {
+        rmSync(path, { force: true });
+        continue;
+      }
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, file.content);
+      utimesSync(path, file.stats.atime, file.stats.mtime);
+    }
+    for (const directory of [...directories].sort().reverse())
+      if (existsSync(directory) && readdirSync(directory).length === 0)
+        rmdirSync(directory);
+  } catch (error) {
+    log(
+      `✘ The previous compiler output could not be restored: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+  }
+}
+
 function discardScratch(root: string): void {
   if (!existsSync(root)) return;
   for (const entry of readdirSync(root)) {
@@ -287,6 +380,7 @@ async function generate(
   request: GenerationRequest & {
     readonly scratchRoot: string;
     readonly outputTarget: string;
+    readonly retainOutputs: (plan: CompilePlan) => void;
   },
   plan: CompilePlan,
 ): Promise<GenerationResult> {
@@ -326,6 +420,7 @@ async function generate(
       packageRoot: request.packageRoot,
       emittedRoot,
       plan,
+      retainOutputs: request.retainOutputs,
     });
   } catch (error) {
     if (!(error instanceof CompilePreflightError)) throw error;
@@ -471,6 +566,7 @@ async function generate(
           phases,
           report: undefined,
           compilerOutputs: plan.outputs,
+          typeErrorsAccepted: typecheck.typeErrorsAccepted,
         }
       );
     };
@@ -621,10 +717,11 @@ async function generate(
           report,
         );
       }
-      writeFileSync(
-        approvalPath(request.packageRoot),
-        JSON.stringify(approval),
-      );
+      if (!typecheck.typeErrorsAccepted)
+        writeFileSync(
+          approvalPath(request.packageRoot),
+          JSON.stringify(approval),
+        );
     }
 
     return {
@@ -633,6 +730,7 @@ async function generate(
       phases,
       report,
       compilerOutputs: plan.outputs,
+      typeErrorsAccepted: typecheck.typeErrorsAccepted,
     };
   } finally {
     typecheck.disposeLoader?.();

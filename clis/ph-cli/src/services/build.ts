@@ -15,6 +15,7 @@ import {
   runGeneration,
 } from "./definitions/generation.js";
 import { readRetainedApproval } from "./definitions/release-approval.js";
+import { renderHuman } from "./render-report.js";
 import {
   canonicalConfigFile,
   resolvePackagePaths,
@@ -75,7 +76,7 @@ const PUBLISH_SELECTION_ENV = "PH_PUBLISH_SELECTION";
 type PublishSelection = Pick<
   BuildArgs,
   "outDir" | "configFile" | "source" | "warningsAsErrors"
->;
+> & { readonly ignoreTypeErrors?: true };
 
 function publishSelection(): PublishSelection | undefined {
   const raw = process.env[PUBLISH_SELECTION_ENV];
@@ -94,6 +95,7 @@ function publishSelection(): PublishSelection | undefined {
     configFile: parsed.configFile,
     source: parsed.source.map(String),
     warningsAsErrors: parsed.warningsAsErrors,
+    ...(parsed.ignoreTypeErrors === true && { ignoreTypeErrors: true }),
   };
 }
 
@@ -159,7 +161,7 @@ export async function runPrepack(
   }
   log(`▶ Running a release check: ${retained.reason}.\n`);
   const result = await runBuild(args, { ...options, log });
-  await logBuildReport(result, log);
+  logBuildReport(result, log);
   return result;
 }
 
@@ -185,7 +187,7 @@ export async function runPublishCheck(
     source: args.source,
     warningsAsErrors: args.warningsAsErrors,
   };
-  const { exitCode } = await runPrepack(
+  const { exitCode, typeErrorsAccepted } = await runPrepack(
     {
       ...selection,
       debug: args.debug,
@@ -194,17 +196,24 @@ export async function runPublishCheck(
     },
     options,
   );
+  // An accepted run retains no approval, so the prepack hook builds again;
+  // it must not ask a second time.
   return {
     exitCode,
     packageRoot,
-    prepackEnvironment: { [PUBLISH_SELECTION_ENV]: JSON.stringify(selection) },
+    prepackEnvironment: {
+      [PUBLISH_SELECTION_ENV]: JSON.stringify({
+        ...selection,
+        ...(typeErrorsAccepted === true && { ignoreTypeErrors: true }),
+      }),
+    },
   };
 }
 
-export async function logBuildReport(
+export function logBuildReport(
   result: GenerationResult,
   log: (text: string) => void = writeStderr,
-): Promise<void> {
+): void {
   if (result.report === undefined) return;
   if (result.status === "ok") {
     for (const diagnostic of result.report.diagnostics) {
@@ -214,6 +223,5 @@ export async function logBuildReport(
     }
     return;
   }
-  const { renderHuman } = await import("./model-check.js");
   log(`${renderHuman(result.report)}\n`);
 }
