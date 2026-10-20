@@ -59,7 +59,10 @@ function makeProject(connect: Record<string, unknown>): {
     JSON.stringify({
       name: "fake-runners",
       type: "module",
-      exports: { "./switchboard": "./switchboard.js", "./connect": "./connect.js" },
+      exports: {
+        "./switchboard": "./switchboard.js",
+        "./connect": "./connect.js",
+      },
     }),
   );
   const common = `
@@ -213,14 +216,19 @@ describe("standalone ph run resolves output tokens", () => {
       withDrive({ $output: { host: "switchboard", path: ["drivez"] } }),
     );
     liveSwitchboard(dir);
-    await expect(startRun({ host: "connect", projectRoot: dir })).rejects.toThrow(
+    await expect(
+      startRun({ host: "connect", projectRoot: dir }),
+    ).rejects.toThrow(
       /invalid output token:\n {2}- runner\.plugins\[0\]\.config\.drive: \$output switchboard › drivez: the outputs has no key "drivez"/,
     );
     expect(calls(sink)).toEqual([]);
   });
 
   it("$env: unset fails naming the variable; optional omits; builtins and sugar resolve", async () => {
-    const reactor = (dataDir: unknown, extra: Record<string, unknown> = {}) => ({
+    const reactor = (
+      dataDir: unknown,
+      extra: Record<string, unknown> = {},
+    ) => ({
       reactor: {
         backends: {
           main: {
@@ -235,7 +243,9 @@ describe("standalone ph run resolves output tokens", () => {
     const unset = makeProject(reactor({ $env: "PH_T3A_UNSET" }));
     await expect(
       startRun({ host: "connect", projectRoot: unset.dir }),
-    ).rejects.toThrow(/`reactor\.backends\.main\.storage\.dataDir` reads \$env PH_T3A_UNSET, which is not set/);
+    ).rejects.toThrow(
+      /`reactor\.backends\.main\.storage\.dataDir` reads \$env PH_T3A_UNSET, which is not set/,
+    );
 
     const optional = makeProject(
       reactor("${userData}/.ph/store", {
@@ -260,7 +270,9 @@ describe("standalone ph run resolves output tokens", () => {
         $concat: [{ $env: { name: "PH_T3A_UNSET", optional: true } }, "/d"],
       }),
     );
-    await expect(startRun({ host: "connect", projectRoot: dir })).rejects.toThrow(
+    await expect(
+      startRun({ host: "connect", projectRoot: dir }),
+    ).rejects.toThrow(
       /legal only as the direct value of an object property.*not as a \$concat part/s,
     );
   });

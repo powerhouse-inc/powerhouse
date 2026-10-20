@@ -2,10 +2,7 @@ import path from "node:path";
 import { loadHost } from "../host-loader.js";
 import { defaultUserDataDir } from "../placeholders.js";
 import { isPidAlive, listRunRecords, probeRun } from "../run-record.js";
-import {
-  resolveRunnerModule,
-  type RunnerModule,
-} from "../runner-resolver.js";
+import { resolveRunnerModule, type RunnerModule } from "../runner-resolver.js";
 import type { OutputRef, OutputsSchemaLookup } from "./declared.js";
 import type { OutputSource, ResolveSources } from "./resolve.js";
 
@@ -75,7 +72,8 @@ export function producerOutputsSchemas(
 ): (ref: OutputRef) => OutputsSchemaLookup {
   return (ref) => {
     const info = producers.get(ref.host);
-    if (!info) return { error: `names host "${ref.host}", which was not loaded.` };
+    if (!info)
+      return { error: `names host "${ref.host}", which was not loaded.` };
     if ("error" in info) return { error: info.error };
     return runnerOutputsSchema(
       info.runner,

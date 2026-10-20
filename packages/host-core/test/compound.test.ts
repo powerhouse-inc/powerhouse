@@ -192,7 +192,19 @@ describe("runCompound", () => {
     const { dir, sink } = makeProject({
       connectPlugins: [{ module: WF, config: { drive: workflowsUrl } }],
       connectReactor: {
-        drives: [{ slug: "vetra", remote: { url: { $output: { host: "switchboard", path: ["drives", "vetra", "url"] } } } }],
+        drives: [
+          {
+            slug: "vetra",
+            remote: {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "vetra", "url"],
+                },
+              },
+            },
+          },
+        ],
       },
     });
     const result = await run(dir);
@@ -261,7 +273,9 @@ describe("runCompound", () => {
       connectPlugins: [
         {
           module: WF,
-          config: { drive: { $output: { host: "switchboard", path: ["drivez"] } } },
+          config: {
+            drive: { $output: { host: "switchboard", path: ["drivez"] } },
+          },
         },
       ],
     });
@@ -274,10 +288,15 @@ describe("runCompound", () => {
   it("fails naming the host when a token names no member", async () => {
     const { dir } = makeProject({
       connectPlugins: [
-        { module: WF, config: { drive: { $output: { host: "nope", path: [] } } } },
+        {
+          module: WF,
+          config: { drive: { $output: { host: "nope", path: [] } } },
+        },
       ],
     });
-    await expect(run(dir)).rejects.toThrow(/names host "nope", which no member/);
+    await expect(run(dir)).rejects.toThrow(
+      /names host "nope", which no member/,
+    );
   });
 
   it("resolves $env in members: unset fails naming it, optional omits", async () => {
@@ -301,7 +320,10 @@ describe("runCompound", () => {
     });
     const optional = makeProject({
       connectPlugins: [
-        { module: WF, config: { token: { $env: { name: "LAB_TOKEN", optional: true } } } },
+        {
+          module: WF,
+          config: { token: { $env: { name: "LAB_TOKEN", optional: true } } },
+        },
       ],
     });
     await run(optional.dir);
@@ -312,7 +334,10 @@ describe("runCompound", () => {
   it("rejects the removed { from, slug } form, naming the token form", async () => {
     const { dir, sink } = makeProject({
       connectPlugins: [
-        { module: WF, config: { drive: { from: "app-switchboard", slug: "workflows" } } },
+        {
+          module: WF,
+          config: { drive: { from: "app-switchboard", slug: "workflows" } },
+        },
       ],
     });
     await expect(run(dir)).rejects.toThrow(

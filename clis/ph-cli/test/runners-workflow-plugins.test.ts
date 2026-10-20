@@ -245,7 +245,10 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const handle = await runner.run(switchboardHost(), ctx);
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
     expect(handle.outputs.drives).toEqual({
-      powerhouse: { id: "powerhouse", url: "http://localhost:7599/d/powerhouse" },
+      powerhouse: {
+        id: "powerhouse",
+        url: "http://localhost:7599/d/powerhouse",
+      },
     });
   });
 
@@ -316,7 +319,10 @@ describe("connect runner — signal ownership", () => {
       return started(...args);
     };
     vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);
-    await runner.dev(host, { ...ctx, parent: { host: "desktop", verb: "run" } });
+    await runner.dev(host, {
+      ...ctx,
+      parent: { host: "desktop", verb: "run" },
+    });
     expect(process.listeners("SIGTERM")).not.toContain(viteExit);
 
     vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);

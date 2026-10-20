@@ -69,10 +69,7 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   }
 
   const projectName = readProjectName(projectRoot);
-  const producers = await loadProducers(
-    projectRoot,
-    outputRefsOf(loaded.host),
-  );
+  const producers = await loadProducers(projectRoot, outputRefsOf(loaded.host));
   validateDeclaredHost(runner, specifier, loaded.host, file, {
     outputsSchemaOf: producerOutputsSchemas(producers),
   });
