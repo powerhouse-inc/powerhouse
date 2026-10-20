@@ -5,6 +5,9 @@
  * with JSDoc `@satisfies {PHHost}` is then checked against its runner's input.
  */
 
+import type { z } from "zod";
+import type { genericCompoundHostSchema } from "./host-schemas.js";
+
 declare global {
   /** `"<runner specifier>": { host: <z.input of its hostSchema>; outputs:
    * <z.infer of its outputsSchema> }`, one entry per runner module. */
@@ -70,3 +73,15 @@ type KnownPluginEntry = {
 export type PluginEntry =
   // oxlint-disable-next-line typescript/no-redundant-type-constituents
   KnownPluginEntry | string | PluginEntryObject<string, undefined>;
+
+/* The generic compound runner ships in host-core, so host-core augments the
+ * map for it (`@powerhousedao/host-core/runners/compound`). It produces no
+ * outputs of its own: consumers address its members' hosts. */
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/host-core/runners/compound": {
+      host: z.input<typeof genericCompoundHostSchema>;
+      outputs: Record<string, never>;
+    };
+  }
+}

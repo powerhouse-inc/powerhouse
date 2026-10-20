@@ -89,4 +89,20 @@ describe("PHHost / PluginEntry type map", () => {
     } satisfies PHHost;
     expect([derived, wrong]).toHaveLength(2);
   });
+
+  it("types generic compound hosts (host-core augments its own runner)", () => {
+    const compound = {
+      name: "cli",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      config: { startOrder: ["cli-switchboard"] },
+      children: { "cli-switchboard": { host: "switchboard" } },
+    } satisfies PHHost;
+    const typo = {
+      name: "cli",
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      // @ts-expect-error -- `child` is not a compound host key
+      child: {},
+    } satisfies PHHost;
+    expect([compound, typo]).toHaveLength(2);
+  });
 });
