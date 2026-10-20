@@ -146,7 +146,11 @@ describe("building through a symlinked package root", () => {
             readdirSync(dist, { recursive: true, encoding: "utf8" })
               .filter((file) => statSync(join(dist, file)).isFile())
               .sort()
-              .map((file) => [file, readFileSync(join(dist, file))]),
+              // Windows lists with backslashes; the keys spell paths with "/".
+              .map((file) => [
+                file.replaceAll("\\", "/"),
+                readFileSync(join(dist, file)),
+              ]),
           );
           expect(declarationSnapshot(fixture.root)).toEqual(declarations);
           expect(artifacts).toHaveProperty(`types/${sources}/invoice.d.ts`);

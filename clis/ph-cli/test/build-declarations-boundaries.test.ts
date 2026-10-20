@@ -765,7 +765,10 @@ describe("where a declaration may be written", () => {
     writeTsconfig(root, { declaration: true, declarationDir: "./types" });
     const result = await build(root, "schema-first");
     expect(result.exitCode).toBe(2);
-    expect(result.log).toContain("ENOTDIR");
+    // Where lstat through a file reports ENOENT, as on Windows, tsc refuses it.
+    expect(result.log).toContain(
+      process.platform === "win32" ? "TS5033" : "ENOTDIR",
+    );
     expect(existsSync(join(root, "dist"))).toBe(false);
   }, 120_000);
 

@@ -13,6 +13,7 @@ import {
   rmSync,
   statSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -85,6 +86,12 @@ export function materializeFixturePackage(name: string): {
   symlinkSync(
     join(repositoryModules, ".bin", "tsc"),
     join(root, "node_modules", ".bin", "tsc"),
+  );
+  // Windows runs .bin/tsc.cmd and cannot run the shell script .bin/tsc is;
+  // without it, the tsc found on PATH would compile instead.
+  writeFileSync(
+    join(root, "node_modules", ".bin", "tsc.cmd"),
+    '@node "%~dp0..\\typescript\\bin\\tsc" %*\r\n',
   );
   return {
     root,

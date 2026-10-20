@@ -20,7 +20,7 @@ import {
   readlinkSync,
   symlinkSync,
 } from "node:fs";
-import { join, dirname } from "node:path";
+import { delimiter, join, dirname } from "node:path";
 import { afterEach, expect, it, vi, describe } from "vitest";
 import { z } from "zod";
 import { recorder } from "./helpers/recorder.js";
@@ -35,6 +35,7 @@ import {
   addReference,
   plainCompile,
   duplicatePackages,
+  writeCmdShim,
 } from "./helpers/workspace.js";
 import { tmpdir } from "node:os";
 
@@ -393,21 +394,36 @@ describe("publication evidence", () => {
     const log = join(probe, "commands.jsonl");
     writeFileSync(log, "");
     const executable = join(probe, "npm");
-    const target = spawnSync("which", ["npm"], {
-      encoding: "utf8",
-    }).stdout.trim();
+    // Windows has no `which`, and its npm is a .cmd only a shell runs: call
+    // npm's own CLI beside this Node there instead.
+    const [command, prefix] =
+      process.platform === "win32"
+        ? [
+            process.execPath,
+            [
+              join(
+                dirname(process.execPath),
+                "node_modules",
+                "npm",
+                "bin",
+                "npm-cli.js",
+              ),
+            ],
+          ]
+        : [spawnSync("which", ["npm"], { encoding: "utf8" }).stdout.trim(), []];
     writeFileSync(
       executable,
       [
         "#!/usr/bin/env node",
         `require("node:fs").appendFileSync(${JSON.stringify(log)}, JSON.stringify(process.argv.slice(2)) + "\\n");`,
-        `const result = require("node:child_process").spawnSync(${JSON.stringify(target)}, [...process.argv.slice(2)], { stdio: "inherit" });`,
+        `const result = require("node:child_process").spawnSync(${JSON.stringify(command)}, [...${JSON.stringify(prefix)}, ...process.argv.slice(2)], { stdio: "inherit" });`,
         "process.exit(result.status ?? 1);",
         "",
       ].join("\n"),
     );
     chmodSync(executable, 0o755);
-    vi.stubEnv("PATH", `${probe}:${process.env.PATH}`);
+    writeCmdShim(executable);
+    vi.stubEnv("PATH", `${probe}${delimiter}${process.env.PATH}`);
     disposals.push(() => vi.unstubAllEnvs());
     return () =>
       readFileSync(log, "utf8")
