@@ -44,9 +44,16 @@ export async function fetchDriveInfo(url: string): Promise<DriveInfo> {
   });
 
   if (!response.ok) {
+    // A protected switchboard challenges the 404 it gives a drive the caller
+    // may not read (and every other 404, so it reveals nothing): logging in
+    // could change the answer, so the caller can prompt for it.
+    const authChallenge = Boolean(
+      response.headers.get("WWW-Authenticate")?.startsWith("Bearer"),
+    );
     throw new DriveRequestError(
       `Failed to resolve drive info from ${url}: HTTP ${response.status}`,
       response.status,
+      { authChallenge },
     );
   }
 

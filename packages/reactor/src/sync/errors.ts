@@ -95,27 +95,39 @@ export const DRIVE_AUTH_ERROR_MESSAGES = {
  */
 export class DriveRequestError extends Error {
   readonly statusCode: number | undefined;
+  /** The response carried a `WWW-Authenticate` challenge: credentials could
+   * change the answer, whatever the status says. */
+  readonly authChallenge: boolean;
 
-  constructor(message: string, statusCode?: number) {
+  constructor(
+    message: string,
+    statusCode?: number,
+    options: { authChallenge?: boolean } = {},
+  ) {
     super(message);
     this.name = "DriveRequestError";
     this.statusCode = statusCode;
+    this.authChallenge = options.authChallenge ?? false;
   }
 }
 
 /** True when the remote rejected the caller as unauthenticated/unauthorized:
  * an HTTP 401/403, or a Forbidden/Unauthorized GraphQL error.
  *
- * 403 and 401 only — NOT 404. The drive info endpoint answers a drive the
- * caller may not read with the same 404 it gives a drive that does not exist,
- * so that an unauthorized caller cannot enumerate drives by probing slugs.
- * That is deliberate, and it costs exactly this: a protected drive is
- * indistinguishable from a typo, and prompting for a login on every 404 would
- * fire on every mistyped URL. See the `WWW-Authenticate` note on the endpoint
- * for the signal that would let a client tell the two apart. */
+ * A bare 404 is NOT one. The drive info endpoint answers a drive the caller
+ * may not read with the same 404 it gives a drive that does not exist, so that
+ * an unauthorized caller cannot enumerate drives by probing slugs, and
+ * prompting for a login on every 404 would fire on every mistyped URL. A
+ * switchboard where credentials matter sends that 404 with a
+ * `WWW-Authenticate` challenge (on every 404, missing drives included, so it
+ * reveals nothing); a challenged 404 is an auth error. */
 export function isDriveAuthError(error: unknown): boolean {
   if (error instanceof DriveRequestError) {
-    return error.statusCode === 401 || error.statusCode === 403;
+    return (
+      error.statusCode === 401 ||
+      error.statusCode === 403 ||
+      (error.statusCode === 404 && error.authChallenge)
+    );
   }
   if (!(error instanceof GraphQLRequestError)) {
     return false;

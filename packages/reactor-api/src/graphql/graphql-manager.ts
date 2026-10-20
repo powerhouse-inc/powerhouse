@@ -47,9 +47,10 @@ import {
   type User,
 } from "../services/auth.service.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
-import type {
-  CanonicalDocumentId,
-  IAuthorizationService,
+import {
+  AuthorizationPolicy,
+  type CanonicalDocumentId,
+  type IAuthorizationService,
 } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -521,6 +522,28 @@ export class GraphQLManager {
       }
 
       const user = getAuthContext(request)?.user;
+      // Every 404 below answers "refused" and "missing" alike, so a slug probe
+      // learns nothing. Where credentials can change the answer it carries a
+      // challenge saying so -- on every 404, missing drives included -- so a
+      // client can offer a login instead of reporting "drive not found".
+      const notFound = (): Response => {
+        const headers = new Headers();
+        if (
+          this.authorizationService.config.policy !== AuthorizationPolicy.OPEN
+        ) {
+          headers.set(
+            "WWW-Authenticate",
+            user
+              ? 'Bearer realm="switchboard", error="insufficient_scope"'
+              : 'Bearer realm="switchboard"',
+          );
+          headers.set("Access-Control-Expose-Headers", "WWW-Authenticate");
+        }
+        return Response.json(
+          { error: "Drive not found" },
+          { status: 404, headers },
+        );
+      };
       try {
         // Read as the caller, so a drive whose domain it may not read serves
         // its header alone; discovery must still reach graphqlEndpoint.
@@ -539,7 +562,7 @@ export class GraphQLManager {
         );
         if (!canRead) {
           this.logger.debug(`Drive read refused: ${driveIdOrSlug}`);
-          return Response.json({ error: "Drive not found" }, { status: 404 });
+          return notFound();
         }
 
         const forwardedProto = request.headers
@@ -580,7 +603,7 @@ export class GraphQLManager {
           driveIdOrSlug,
           error,
         );
-        return Response.json({ error: "Drive not found" }, { status: 404 });
+        return notFound();
       }
     };
 
