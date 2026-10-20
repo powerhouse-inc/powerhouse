@@ -14,7 +14,6 @@ import {
   processResolveEnv,
   refineStartOrder,
   resolveHostOutputs,
-  resolveUserDataPlaceholders,
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
@@ -337,9 +336,10 @@ async function startShell(
   ctx: RunnerContext,
 ): Promise<CliRunHandle> {
   const projectName = readProjectName(ctx.projectRoot, host.name);
+  // resolveOwnTokens also substitutes the "${userData}"/"${projectRoot}"
+  // sugar (processResolveEnv's built-ins); member wrappers stay as declared.
   const pending = await resolveOwnTokens(host, ctx, projectName);
-  const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
-  const resolved = resolveUserDataPlaceholders(pending.host, userData);
+  const resolved = pending.host;
   const config = resolved.config ?? {};
   const lifecycle = resolved.runner.lifecycle ?? "detached";
 
