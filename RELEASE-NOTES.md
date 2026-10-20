@@ -20,7 +20,7 @@ Lifecycle methods are overrides that call `super`. The host calls `onDisconnect`
 
 Subscription support is derived from the schema's operation roots. Third-party SDL that declares a subscription root now gets WebSocket and SSE support even if it omitted the former subscription flag. A subgraph whose schema renames the subscription root, as in `schema { subscription: S }`, is served at its own `/stream` but no longer joins the shared `/graphql/stream`, where it used to replace the other subgraphs' subscriptions.
 
-The host decides how to serve a subgraph before `onSetup` runs. An old-style class that assigns `name`, `typeDefs`, and `resolvers` only in `onSetup` is refused. Run `ph migrate` in its package.
+An old-style class that assigns `name`, `typeDefs`, or `resolvers` only in `onSetup` is still served under that name. An old-style class that never assigns `name` is refused with a message that points to `ph migrate`. Before this release it was served as `example`.
 
 When `NODE_ENV` is unset, `development`, or `test`, the host calls each class's `getSchema` twice and refuses a class whose two results differ. Under any other `NODE_ENV`, such as `production`, the host calls it once. `ph model check`, `ph build` and `ph generate` always run this check, whatever `NODE_ENV` is.
 
@@ -63,7 +63,7 @@ This release must bump the major version. `FEATURE_DEPENDENCIES.subgraph` peer r
 
 These apply to every package, including packages that never adopt code-first document models.
 
-**`ph build` checks TypeScript before building.** If TypeScript reports errors, an interactive build asks whether to continue. Without an interactive terminal it exits with code `2` and leaves `dist` unchanged unless `--ignore-type-errors` is set. This opt-in applies to code-first packages too; definition checks and packed-consumer validation still run before output is replaced. A build that bypasses type errors may fail at runtime. `ph connect build` uses the same interactive prompt.
+**`ph build` checks TypeScript before building.** If TypeScript reports errors, an interactive build asks whether to continue. Without an interactive terminal it exits with code `2` and leaves `dist` unchanged unless `--ignore-type-errors` is set. This opt-in applies to code-first packages too; definition checks and packed-consumer validation still run before output is replaced. A build that bypasses type errors may fail at runtime and records no release approval, so the next `prepack` runs the release check again. `ph publish` asks about type errors once and passes the answer to its `prepack` hook. A failed `ph build` or `ph model check --release` restores every file TypeScript wrote, inside or outside `dist`. `ph connect build` uses the same interactive prompt.
 
 **`ph build` exit codes changed.** `0` means the output was replaced. `1` means a definition check found errors in the declarations. `2` means the build could not run, including TypeScript and bundler failures. Scripts that test for exit code `1` should test for any nonzero code.
 
@@ -80,6 +80,8 @@ These apply to every package, including packages that never adopt code-first doc
 **`definitionSources` is optional.** A package without the field, without a `powerhouse.config.json`, or with an empty `code-first` entry list builds like a schema-first package and needs no change.
 
 **Code-first definitions must be registered.** A code-first document model in the package that no `definitionSources` entry reaches fails `ph build`, `ph publish`, and the `prepack` check with `PH-CONFIG-SOURCE-UNREGISTERED`, and `ph generate` warns about it. The message names the entry to add.
+
+**`finalize()` refuses three schemas that GraphQL rejects.** A computed `ph.field` in document state, `deprecated` on a required input field without a default, and an object that does not implement every field of its interfaces now fail with `PH-SG-COMPUTED-FIELD-INVALID`, `PH-DEF-FIELD-OPTION-UNSUPPORTED` and `PH-DM-INTERFACE-INVALID`. Before, such a model finalized and the host served it without its subgraph. A model that keeps a schema-first document through `graphQLCompatibility` can still declare a computed state field.
 
 ---
 

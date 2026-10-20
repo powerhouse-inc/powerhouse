@@ -83,7 +83,7 @@ Compiles each declaration into a structured definition.
 | ---- | -------- | ------- |
 | `PH-DEF-ENUM-VALUES-INVALID` | error | An enum has no values, a repeated value, or a reserved value. |
 | `PH-DEF-FIELD-INVALID` | error | A field holds something that is neither a field use nor a named type. |
-| `PH-DEF-FIELD-OPTION-UNSUPPORTED` | error | A field use has an option that its builder or its position does not support. For example, `equals` on a list, a reference, a scalar whose validator is not a Zod string schema, or a subgraph field. |
+| `PH-DEF-FIELD-OPTION-UNSUPPORTED` | error | A field use has an option that its builder or its position does not support. For example, `equals` on a list, a reference, a scalar whose validator is not a Zod string schema, or a subgraph field. Or `deprecated` on a required input field or argument that has no `defaultValue`, because a caller still has to supply it. |
 | `PH-DEF-IMPLEMENTS-INVALID` | error | An object or an interface implements something that is not a `ph.interface`, or lists the same interface twice. |
 | `PH-DEF-NAME-INVALID` | error | A type, field, or enum value name is not a valid GraphQL name, or is a reserved name. |
 | `PH-DEF-OPTION-INVALID` | error | A builder option is malformed. For example, it has the wrong type, it is a getter, it uses a symbol key, it is not a plain object, it sets a default to `undefined`, its `equals` pattern is not a valid regular expression, or the `defaultValue` of an input field or argument is not a value of the field's GraphQL type or makes a schema that a GraphQL host cannot build. |
@@ -98,7 +98,7 @@ Compiles each declaration into a structured definition.
 | `PH-DM-IDENTITY-INVALID` | error | An ID in the declaration is malformed, or two declarations produce the same ID. |
 | `PH-DM-IDENTITY-REUSED` | warning | The installed stored specification already uses one ID for two declarations. You cannot fix this in your package, because a change would alter stored data. |
 | `PH-DM-INITIAL-VALUE-INVALID` | error | The initial value of a scope cannot be stored as a JSON string, or the state validator of that scope rejects it. |
-| `PH-DM-INTERFACE-INVALID` | error | An object or interface violates an implemented interface's field, argument, or ancestor requirements. The diagnostic identifies the implementing type. |
+| `PH-DM-INTERFACE-INVALID` | error | An object or interface does not satisfy an interface it implements. It omits a field, a field's type is not compatible, or it does not list an interface that the implemented interface implements. `finalize()` refuses such a declaration. `ph model check` also checks a retained schema-first document, including the field arguments, type extensions, and root types that only that document declares. The diagnostic identifies the implementing type. |
 | `PH-DM-SCOPE-UNSUPPORTED` | error | A definition uses a scope other than `global` or `local`. |
 | `PH-DM-STATE-ROOT-INVALID` | error | A required state root type is missing, is not an object, or has the wrong name. |
 | `PH-DM-TYPE-POSITION-INVALID` | error | An input type is used where an output type is expected, or an output type where an input type is expected. |
@@ -107,7 +107,7 @@ Compiles each declaration into a structured definition.
 | `PH-SCALAR-FACTORY-AS-FIELD` | error | A scalar builder is used as a field without being called. |
 | `PH-SCALAR-INTERNAL` | error | A document model, a stored schema, or `ph scalar inspect` names a catalog scalar that only the reactor host declares, such as `JSONObject`. Use `ph.Unknown()` or `ph.object(...)` instead. A subgraph can use `subgraphScalars.JSONObject()`. In a subgraph, `ph.JSONObject` fails with this code too. |
 | `PH-SCALAR-ZERO-VALUE-INVALID` | error | A scalar has no zero value, or its own coercion rejects its zero value. |
-| `PH-SG-COMPUTED-FIELD-INVALID` | error | A computed field is malformed, has no subgraph entry, has two entries, or has an entry but no type declares the field. |
+| `PH-SG-COMPUTED-FIELD-INVALID` | error | A computed field is malformed, has no subgraph entry, has two entries, or has an entry but no type declares the field. Or a document model's state declares a computed field (`ph.field`). The model stores every state field, so no resolver could supply it. A model that retains a schema-first document is the exception, because that document stores the field. |
 | `PH-SG-DEFINITION-INVALID` | error | A subgraph class has no static `subgraphName`, a name that is not lowercase kebab-case, no static `getSchema`, or a `getSchema` that returns different schemas on two calls. Or a published subgraph definition does not have the expected shape. |
 | `PH-SG-ENTRY-INVALID` | error | A subgraph entry is malformed, was not created by the builder functions, or has no resolver where the builder requires one. |
 | `PH-SG-PARENT-FIELDS-DROPPED` | warning | A subclass's own `getSchema` drops root fields that its parent's `getSchema` declares, usually because it does not spread `super.getSchema(schema)`. Call `schema.replaceParentSchema()` if the subclass replaces them on purpose. |
