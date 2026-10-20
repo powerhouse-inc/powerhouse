@@ -15,6 +15,8 @@ On version 3 a retraction names its target, so where it lands in the stream does
 
 :::info[Feature flag]
 Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor with it off refuses to create a version 3 document and never receives one from a peer.
+
+A reactor with it on still refuses a version 3 document whose model it cannot run as version 3: the model's reducer is not built by `createReducer`, or the model cannot be loaded. The refusal is an `UnsupportedProtocolVersionError`.
 :::
 
 ## Turning it off
