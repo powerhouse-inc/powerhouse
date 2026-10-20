@@ -381,6 +381,31 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(connect?.branding).toEqual({ appName: "Lab" });
   });
 
+  it("serve keeps the build's images over the host's project paths", async () => {
+    const { withoutBuiltImages } = await import("../src/runners/connect.js");
+    const url = "https://cdn.example/logo.png";
+    expect(
+      withoutBuiltImages({
+        branding: {
+          appName: "Lab",
+          icon: "./icons/app.png",
+          loader: { src: "./icons/loader.png", animation: "pulse", size: 88 },
+          favicon: "icon.ico",
+        },
+      })?.branding,
+    ).toEqual({ appName: "Lab" });
+    // URLs, data URIs and resets are served as given
+    expect(
+      withoutBuiltImages({
+        branding: { icon: url, loader: { src: url, animation: "none" } },
+      })?.branding,
+    ).toEqual({ icon: url, loader: { src: url, animation: "none" } });
+    expect(
+      withoutBuiltImages({ branding: { icon: null, loader: "./l.png" } })
+        ?.branding,
+    ).toEqual({ icon: null });
+  });
+
   it("dev mounts the host's routes", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =

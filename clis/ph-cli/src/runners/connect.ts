@@ -5,6 +5,7 @@ import {
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
 import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
+import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import {
   defineHostSchemas,
   entryActiveForVerb,
@@ -322,11 +323,24 @@ async function validateComposition(
   );
 }
 
-// The favicon was built into the dist; served, its path would mean nothing.
-function withoutFavicon(config: PHConnectRuntimeConfig | undefined) {
-  if (config?.branding?.favicon === undefined) return config;
-  const { favicon: _, ...branding } = config.branding;
-  return { ...config, branding };
+/** A project file the build resolved: the built dist has it (as icon.ico or
+ * a data URI); served, its path would mean nothing. */
+function isBuiltImage(ref: unknown): boolean {
+  const src =
+    typeof ref === "object" && ref !== null && "src" in ref ? ref.src : ref;
+  return typeof src === "string" && !isPassthroughImageRef(src);
+}
+
+// The served config keeps the build's images: the favicon and any branding
+// image given as a project path were resolved into the dist, and merged over
+// it a path would replace the built data URI with a URL that 404s.
+export function withoutBuiltImages(config: PHConnectRuntimeConfig | undefined) {
+  const branding = config?.branding;
+  if (!branding) return config;
+  const { favicon: _, ...served } = branding;
+  if (isBuiltImage(served.icon)) delete served.icon;
+  if (isBuiltImage(served.loader)) delete served.loader;
+  return { ...config, branding: served };
 }
 
 export async function dev(
@@ -397,7 +411,7 @@ export async function serve(
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
     host: bind,
   };
-  const override = withoutFavicon(callerOverride(host, ctx, ctx.verb));
+  const override = withoutBuiltImages(callerOverride(host, ctx, ctx.verb));
   const server = await startUnderSupervisor(ctx, () =>
     runConnectPreview(args as ConnectPreviewArgs, {
       connect: override,
