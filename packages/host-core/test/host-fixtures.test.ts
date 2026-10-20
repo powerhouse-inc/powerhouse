@@ -687,6 +687,7 @@ const ROWS: Row[] = [
             verb: "dev",
             drives: [
               workflowsDrive,
+              local("powerhouse"),
               local("vetra", { projectHash: true }),
               local("vetra-preview", { projectHash: true }),
             ],

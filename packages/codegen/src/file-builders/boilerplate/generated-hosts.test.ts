@@ -89,6 +89,9 @@ describe("writeGeneratedHostsFiles", () => {
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
     expect(vetra).not.toContain("from:");
+    // the vetra switchboard serves the switchboard host's drives too, next to
+    // the studio drives
+    expect(vetra).toContain("...(switchboard.reactor.drives ?? [])");
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.

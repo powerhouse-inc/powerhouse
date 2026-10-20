@@ -30,10 +30,12 @@ export default {
           { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
         ],
       },
-      // The studio drives, declared (projectHash keeps today's ids):
+      // The switchboard host's own drives plus the studio drives, declared
+      // (projectHash keeps today's ids):
       reactor: {
         ...switchboard.reactor,
         drives: [
+          ...(switchboard.reactor.drives ?? []),
           {
             slug: "vetra",
             name: "Vetra",
