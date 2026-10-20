@@ -2295,6 +2295,26 @@ export class SyncManager
       return;
     }
 
+    // A refusal answers an earlier revision of this reactor, and the sender
+    // releases its hold on the new one; reporting it again would re-hold.
+    const stale = records.filter(
+      (record) =>
+        record.errorSource === ChannelErrorSource.Inbox &&
+        record.errorType === "UNSUPPORTED_PROTOCOL",
+    );
+    if (stale.length > 0) {
+      records = records.filter((record) => !stale.includes(record));
+      for (const record of stale) {
+        void this.deadLetterStorage.remove(record.id).catch((error) => {
+          this.logger.error(
+            "Failed to drop a stale refusal (@id, @error)",
+            record.id,
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+      }
+    }
+
     if (records.length === 0) {
       return;
     }
