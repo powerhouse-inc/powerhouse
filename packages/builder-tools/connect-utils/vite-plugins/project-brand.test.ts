@@ -423,6 +423,15 @@ describe("the loader in index.html and the shell", () => {
     expect(out.startsWith('<div class="ph-shell-loader">')).toBe(true);
     expect(out.endsWith("</div>")).toBe(true);
   });
+
+  it("swaps core's spinner slot (no logo inside) for the loader too", () => {
+    const body =
+      '<div class="ph-shell-loader"><div data-ph-loader-slot="" class="size-5 animate-spin"></div></div>';
+    const out = replaceShellLoader(body, loader);
+    expect(out).not.toContain("size-5");
+    expect(out).toContain('src="/ph-loader.png"');
+    expect(out.match(/<\/div>/g)).toHaveLength(1);
+  });
 });
 
 describe("pngSize", () => {

@@ -12,7 +12,7 @@ export function ShellLoader() {
       className={`${SHELL_LOADER_CLASS} pointer-events-none fixed inset-0 z-10 flex items-center justify-center`}
     >
       {/* data-ph-loader-slot: a project build swaps this logo for its own
-          loader (powerhouse.config.json icons.loader). */}
+          loader (connect.branding.loader). */}
       <div
         data-ph-loader-slot=""
         className="animate-pulse rounded-full bg-background p-4 text-foreground shadow-lg motion-reduce:animate-none"
@@ -23,7 +23,9 @@ export function ShellLoader() {
   );
 }
 
-// Core's "starting" state: a small neutral spinner, no logo.
+// Core's "starting" state: a small neutral spinner, no logo. The project's
+// loader (connect.branding.loader) is Connect-level branding, so a project
+// build swaps the spinner for it here too.
 export function CoreShellLoader() {
   return (
     <div
@@ -31,7 +33,10 @@ export function CoreShellLoader() {
       aria-label="Starting"
       className={`${SHELL_LOADER_CLASS} pointer-events-none fixed inset-0 z-10 flex items-center justify-center`}
     >
-      <div className="size-5 animate-spin rounded-full border-2 border-core-border border-t-core-muted motion-reduce:animate-none" />
+      <div
+        data-ph-loader-slot=""
+        className="size-5 animate-spin rounded-full border-2 border-core-border border-t-core-muted motion-reduce:animate-none"
+      />
     </div>
   );
 }
