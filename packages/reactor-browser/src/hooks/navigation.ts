@@ -68,9 +68,14 @@ export function applySearchUpdate(
   return next;
 }
 
+/** `params` as a query string, with an empty value as a bare key: `history`, not `history=`. */
+export function searchParamsToString(params: URLSearchParams) {
+  return params.toString().replace(/=(?=&|$)/g, "");
+}
+
 /** `?a=1&b=2`, or an empty string for no params. */
 export function recordToSearch(record: Record<string, string>) {
-  const search = new URLSearchParams(record).toString();
+  const search = searchParamsToString(new URLSearchParams(record));
   return search ? `?${search}` : "";
 }
 
