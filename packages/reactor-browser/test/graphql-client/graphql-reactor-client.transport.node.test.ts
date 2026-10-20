@@ -175,7 +175,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
   });
 
   it("gives a type the client does not know base-reducer 2", async () => {
-    const { client } = await clientKnowing([tagged]);
+    const { client, received } = await clientKnowing([tagged]);
 
     expect(
       await client.getCreateProtocolVersions({
@@ -185,14 +185,18 @@ describe("GraphQLReactorClient create protocol versions", () => {
     expect(
       await client.getCreateProtocolVersions({ documentType: undefined }),
     ).toEqual({ "base-reducer": 3 });
+    expect(received).toEqual([]);
   });
 
   it("gives base-reducer 2 with undoV3 off", async () => {
-    const { client } = await clientKnowing([tagged], { undoV3: false });
+    const { client, received } = await clientKnowing([tagged], {
+      undoV3: false,
+    });
 
     expect(
       await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
     ).toEqual({ "base-reducer": 2 });
+    expect(received).toEqual([]);
   });
 });
 
