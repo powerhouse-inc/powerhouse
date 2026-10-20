@@ -104,6 +104,31 @@ describe("phConfigPlugin", () => {
     });
   });
 
+  it("reads branding.favicon, a host's over the project's, and leaves it out of the dist emit", () => {
+    const plugin = phConfigPlugin({
+      packages: [],
+      projectRoot,
+      connect: { branding: { appName: "App", favicon: "icon.ico" } },
+      cliConnectOverride: { branding: { favicon: "hosts/lab/icon.svg" } },
+    });
+    expect(plugin.api.favicon).toBe("hosts/lab/icon.svg");
+
+    const emitted: { source: string }[] = [];
+    const generateBundle = plugin.generateBundle as (
+      this: unknown,
+      ...args: unknown[]
+    ) => void;
+    generateBundle.call({
+      emitFile: (file: { source: string }) => emitted.push(file),
+    });
+    const parsed = JSON.parse(emitted[0].source) as {
+      connect: { branding: Record<string, unknown> };
+    };
+    expect(parsed.connect.branding.appName).toBe("App");
+    expect(parsed.connect.branding).not.toHaveProperty("favicon");
+    expect(plugin.api.connect.branding).not.toHaveProperty("favicon");
+  });
+
   it("cliConnectOverride beats source.connect in the dist emit", () => {
     const plugin = phConfigPlugin({
       packages: [],

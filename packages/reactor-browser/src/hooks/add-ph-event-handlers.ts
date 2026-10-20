@@ -71,7 +71,6 @@ import {
   addReactorClientModuleEventHandler,
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
-import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
 import {
   addResetSelectedNodeEventHandler,
@@ -111,7 +110,6 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   vetraPackageManager: addVetraPackageManagerEventHandler,
   packageDiscoveryService: addPackageDiscoveryServiceEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
-  revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
   selectedTimelineItem: addSelectedTimelineItemEventHandler,
   routerBasename: addRouterBasenameEventHandler,
   version: addVersionEventHandler,

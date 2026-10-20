@@ -19,3 +19,16 @@ export function setUser(
 ): void {
   sentry?.setUser(...args);
 }
+
+/** Reports a route's loader or render error, as the router's `onCatch`. */
+export function reportRouteError(
+  error: unknown,
+  info?: { componentStack?: string | null },
+) {
+  captureException(
+    error,
+    info?.componentStack
+      ? { data: { componentStack: info.componentStack } }
+      : undefined,
+  );
+}

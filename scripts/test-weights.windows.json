@@ -1,6 +1,7 @@
 {
   "@powerhousedao/codegen": 10,
   "@powerhousedao/connect": 29,
+  "@powerhousedao/connect-core": 1,
   "@powerhousedao/load-test-connect": 1,
   "@powerhousedao/ph-cli": 6,
   "@powerhousedao/reactor-api": 130,

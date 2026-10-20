@@ -5,6 +5,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/codegen",
   "@powerhousedao/common",
   "@powerhousedao/config",
+  "@powerhousedao/connect-core",
   "@powerhousedao/design-system",
   "@powerhousedao/desktop",
   "@powerhousedao/host-core",

@@ -65,6 +65,8 @@
     },
     "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css",
+    "./workflow.css": "./dist/workflow.css",
+    "./vendor.css": "./dist/browser/style.css",
     "./package.json": "./package.json"
   },
   "scripts": {

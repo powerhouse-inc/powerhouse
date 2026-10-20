@@ -51,6 +51,7 @@ export const WORKSPACE_PUBLISH_PACKAGES = [
   // @powerhousedao/vetra-studio stays out deliberately: private until its
   // first publish, and reachable only by name (string specifiers), not deps.
   "@powerhousedao/host-core",
+  "@powerhousedao/connect-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
 ] as const;

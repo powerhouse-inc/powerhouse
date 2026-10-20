@@ -243,6 +243,17 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     options.cliConnectOverride?.app?.basePath ??
     phConfig.connect?.app?.basePath;
 
+  const configPlugin = phConfigPlugin({
+    packages: phPackages,
+    projectRoot: options.dirname,
+    connect: phConfig.connect,
+    workflows: phConfig.workflows,
+    packageRegistryUrl: phPackageRegistryUrl ?? undefined,
+    cliConnectOverride: options.cliConnectOverride,
+  });
+  // The loading shell renders ahead of the app: the served composition and name pick it.
+  const servedConnect = configPlugin.api.connect;
+
   const offlineEnabled =
     options.cliConnectOverride?.app?.offline ??
     phConfig.connect?.app?.offline ??
@@ -411,7 +422,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     })
     .filter((p): p is string => p !== null);
 
-  const routesDir = resolveConnectRoutesDir(options.dirname);
+  const routesDir =
+    resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
   const routes = connectRoutes(options.dirname, routesDir);
 
   const config: InlineConfig = {
@@ -439,7 +451,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       },
     },
     resolve: {
-      alias: [routes.alias],
+      alias: routes.aliases,
       dedupe: ["react", "react-dom", ...routes.dedupe],
       tsconfigPaths: true,
     },
@@ -478,14 +490,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
       // files, preventing tailwind from triggering full page reloads.
-      phConfigPlugin({
-        packages: phPackages,
-        projectRoot: options.dirname,
-        connect: phConfig.connect,
-        workflows: phConfig.workflows,
-        packageRegistryUrl: phPackageRegistryUrl ?? undefined,
-        cliConnectOverride: options.cliConnectOverride,
-      }),
+      configPlugin,
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,
         projectRoot: options.dirname,
@@ -532,12 +537,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       ...(options.vendor && mode === "production"
         ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
         : []),
-      connectFaviconPlugin({ faviconPath: options.favicon }),
+      connectFaviconPlugin({
+        faviconPath: options.favicon ?? configPlugin.api.favicon,
+      }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),
-      // Build-time: Connect's prerendered app shell in #root, critical CSS inline.
-      connectAppShellPlugin(options.dirname),
+      // Connect's prerendered app shell for the composition in #root, critical CSS inline.
+      connectAppShellPlugin(options.dirname, {
+        composition: servedConnect.composition,
+        appName: servedConnect.branding?.appName,
+        // With routes, the shell is the project's layout, rendered from its tree.
+        routeAliases: routesDir ? routes.aliases : undefined,
+        routesDir: routesDir || undefined,
+      }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).
       connectBuildHashPlugin(buildHash),

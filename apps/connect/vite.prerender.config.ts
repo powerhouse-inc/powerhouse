@@ -18,6 +18,10 @@ export default defineConfig({
     outDir: ".prerender",
     emptyOutDir: true,
     target: "node24",
-    rolldownOptions: { output: { entryFileNames: "shell.js" } },
+    rolldownOptions: {
+      // Imported only as the reactor boots, which the shell never does.
+      external: ["ph-bundled-packages-virtual"],
+      output: { entryFileNames: "shell.js" },
+    },
   },
 });

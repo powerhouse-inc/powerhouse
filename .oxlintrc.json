@@ -234,9 +234,10 @@
     },
     {
       "files": [
-        "apps/connect/src/router/**/*.{ts,tsx}",
-        "apps/connect/src/routes/**/*.{ts,tsx}",
-        "apps/connect/src/components/drive-auth-gate.test.tsx"
+        "packages/connect-core/src/router/**/*.{ts,tsx}",
+        "packages/connect-core/src/routes/**/*.{ts,tsx}",
+        "apps/connect/src/components/settings-tabs.tsx",
+        "apps/connect/src/generic/pages/drive-auth-gate.test.tsx"
       ],
       "jsPlugins": [
         {
@@ -310,7 +311,7 @@
         "packages/codegen/src/codegen/.hygen/templates/**/*",
         "packages/document-model/src/document/utils/file.ts",
         "apps/connect/scripts/render-skeleton.ts",
-        "apps/connect/src/components/modal/modals/DebugSettingsModal.tsx",
+        "apps/connect/src/generic/modals/DebugSettingsModal.tsx",
         "apps/connect/src/context/read-mode.tsx",
         "packages/builder-tools/connect-studio/server.ts",
         "packages/codegen/src/codegen/hygen.ts",
@@ -770,6 +771,106 @@
         "react-hooks-extra/immutability": "off",
         "react-hooks-extra/set-state-in-effect": "off",
         "react-hooks-extra/refs": "off"
+      }
+    },
+    {
+      "files": ["apps/connect/src/**/*.{ts,tsx}"],
+      "excludeFiles": [
+        "apps/connect/src/generic/**",
+        "apps/connect/src/plugins/index.ts",
+        "apps/connect/src/**/*.test.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(\\.{1,2}/)+generic(/|$)|^@powerhousedao/connect/generic$",
+                "message": "Only the plugin loader (src/plugins/index.ts) imports src/generic; the app loads it through the plugin's ui()."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/connect/src/generic/*.{ts,tsx}"],
+      "excludeFiles": ["apps/connect/src/**/*.test.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(\\.\\./){1}",
+                "message": "Generic files import app modules through the @powerhousedao/connect/<dir> alias, not a relative path out of src/generic."
+              },
+              {
+                "regex": "^@powerhousedao/connect/components$",
+                "message": "The components barrel must not re-export generic files; use @powerhousedao/connect/components/shared or another @powerhousedao/connect/<dir> alias."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/connect/src/generic/*/*.{ts,tsx}"],
+      "excludeFiles": ["apps/connect/src/**/*.test.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(\\.\\./){2}",
+                "message": "Generic files import app modules through the @powerhousedao/connect/<dir> alias, not a relative path out of src/generic."
+              },
+              {
+                "regex": "^@powerhousedao/connect/components$",
+                "message": "The components barrel must not re-export generic files; use @powerhousedao/connect/components/shared or another @powerhousedao/connect/<dir> alias."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/connect/src/generic/*/*/*.{ts,tsx}"],
+      "excludeFiles": ["apps/connect/src/**/*.test.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(\\.\\./){3}",
+                "message": "Generic files import app modules through the @powerhousedao/connect/<dir> alias, not a relative path out of src/generic."
+              },
+              {
+                "regex": "^@powerhousedao/connect/components$",
+                "message": "The components barrel must not re-export generic files; use @powerhousedao/connect/components/shared or another @powerhousedao/connect/<dir> alias."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["apps/connect/src/generic/**/*.test.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^@powerhousedao/connect/components$",
+                "message": "The components barrel must not re-export generic files; use @powerhousedao/connect/components/shared or another @powerhousedao/connect/<dir> alias."
+              }
+            ]
+          }
+        ]
       }
     }
   ],

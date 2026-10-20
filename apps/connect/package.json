@@ -10,10 +10,16 @@
   },
   "files": [
     "dist",
+    "skills",
+    "docs",
+    "CUSTOMIZING.md",
+    "RUNTIME-CONFIG.md",
     "src/routes",
     "src/router",
+    "src/route-tree.ts",
     "src/routeTree.gen.ts",
     "style.css",
+    "tailwind.css",
     "fonts.css",
     "nginx.conf",
     "nginx.sh",
@@ -44,14 +50,30 @@
       "types": "./dist/layout.d.ts",
       "import": "./dist/layout.js"
     },
+    "./generic": {
+      "source": "./src/generic/index.ts",
+      "types": "./dist/generic.d.ts",
+      "import": "./dist/generic.js"
+    },
     "./route-tree": {
-      "source": "./src/routeTree.gen.ts",
+      "source": "./src/route-tree.ts",
       "types": "./dist/route-tree.d.ts",
       "import": "./dist/route-tree.js"
+    },
+    "./prerender": {
+      "source": "./src/prerender/shell.tsx",
+      "types": "./dist/prerender.d.ts",
+      "import": "./dist/prerender.js"
+    },
+    "./route-views": {
+      "source": "./src/route-views/index.ts",
+      "types": "./dist/route-views.d.ts",
+      "import": "./dist/route-views.js"
     },
     "./routes/*": "./src/routes/*.tsx",
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css",
+    "./tailwind.css": "./tailwind.css",
     "./fonts.css": "./fonts.css",
     "./package.json": "./package.json"
   },
@@ -79,7 +101,7 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css && pnpm run build:shell",
-    "build:bundle": "tsr generate && tsdown",
+    "build:bundle": "tsdown",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:shell": "vite build --config vite.prerender.config.ts --logLevel warn && node scripts/prerender-shell.ts",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
@@ -95,6 +117,7 @@
     "@openfeature/web-sdk": "1.6.2",
     "@openpanel/web": "^1.4.1",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/connect-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/host-core": "workspace:*",
@@ -111,6 +134,7 @@
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
+    "@tailwindcss/node": "catalog:",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-router": "^1.170.41",
     "document-model": "workspace:*",
@@ -132,7 +156,6 @@
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-router-devtools": "1.167.2",
-    "@tanstack/router-cli": "1.167.40",
     "@tanstack/router-core": "1.171.34",
     "@tanstack/router-plugin": "1.168.42",
     "@testing-library/dom": "^10.4.0",

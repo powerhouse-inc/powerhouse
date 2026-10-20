@@ -50,6 +50,8 @@ export const hostSchema = z.looseObject({
     host: z.string().optional(),
     https: z.boolean().optional(),
     openBrowser: z.boolean().optional(),
+    // The host's routes folder, project-relative; false for none. Default: hosts/connect/routes.
+    routes: z.union([z.string(), z.literal(false)]).optional(),
     // THE COMPOSITION (rewire R3): plugin entries, presence is activation.
     plugins: z.array(pluginEntrySchema).optional(),
   }),
@@ -180,7 +182,8 @@ function callerOverride(
   const { connect } = projectReactorToConnect(reactor);
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
-    return host.config as PHConnectRuntimeConfig | undefined;
+    // `base` is host.config when there is one; without, it may still carry the composition.
+    return host.config !== undefined || composition ? base : undefined;
   }
   const drives = structural
     ? projectDrivesIntoConnect({
@@ -209,6 +212,18 @@ function callerOverride(
   };
 }
 
+// The favicon was built into the dist; served, its path would mean nothing.
+function withoutFavicon(config: PHConnectRuntimeConfig | undefined) {
+  if (config?.branding?.favicon === undefined) return config;
+  const { favicon: _, ...branding } = config.branding;
+  return { ...config, branding };
+}
+
+const routesOf = (host: HostDefinition) => {
+  const routes = host.runner.routes;
+  return typeof routes === "string" || routes === false ? routes : undefined;
+};
+
 export async function dev(
   host: HostDefinition,
   ctx: RunnerContext,
@@ -218,6 +233,7 @@ export async function dev(
     toStudioArgs(host),
     undefined,
     callerOverride(host, ctx, ctx.verb ?? "dev"),
+    { routes: routesOf(host) },
   );
 }
 
@@ -228,14 +244,19 @@ export const run = dev;
 /** P3.3 — `build`: the SAME service as classic `ph connect build`. */
 export async function build(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<void> {
   const { runConnectBuild } = await import("../services/connect-build.js");
   const runner = host.runner;
   const args: Partial<ConnectBuildArgs> = {
     outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
   };
-  await runConnectBuild(args as ConnectBuildArgs);
+  // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
+  await runConnectBuild(
+    args as ConnectBuildArgs,
+    callerOverride(host, ctx, ctx.verb ?? "build"),
+    { routes: routesOf(host) },
+  );
 }
 
 /** P3.3 — `serve`: the SAME vite preview server as classic
@@ -268,7 +289,9 @@ export async function serve(
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
     host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
   };
-  const override = callerOverride(host, ctx, ctx.verb ?? "serve");
+  const override = withoutFavicon(
+    callerOverride(host, ctx, ctx.verb ?? "serve"),
+  );
   await runConnectPreview(args as ConnectPreviewArgs, {
     connect: override,
     cspRegistrySync: runner.cspRegistrySync === true,

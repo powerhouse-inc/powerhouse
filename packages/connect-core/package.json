@@ -1,0 +1,114 @@
+{
+  "name": "@powerhousedao/connect-core",
+  "version": "6.2.3-dev.66",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "The minimum a Connect app needs: runtime, router, routes, plain views, theme and settings",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/connect-core"
+  },
+  "files": [
+    "dist",
+    "src",
+    "theme.css"
+  ],
+  "sideEffects": [
+    "./theme.css"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./router": {
+      "source": "./src/router/index.ts",
+      "types": "./dist/router.d.ts",
+      "import": "./dist/router.js"
+    },
+    "./runtime-config": {
+      "source": "./src/runtime/runtime-config.ts",
+      "types": "./dist/runtime-config.d.ts",
+      "import": "./dist/runtime-config.js"
+    },
+    "./embedded": {
+      "source": "./src/runtime/embedded.ts",
+      "types": "./dist/embedded.d.ts",
+      "import": "./dist/embedded.js"
+    },
+    "./plugins": {
+      "source": "./src/plugins/index.ts",
+      "types": "./dist/plugins.d.ts",
+      "import": "./dist/plugins.js"
+    },
+    "./runtime": {
+      "source": "./src/runtime/index.ts",
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
+    },
+    "./views": {
+      "source": "./src/views/index.ts",
+      "types": "./dist/views.d.ts",
+      "import": "./dist/views.js"
+    },
+    "./route-tree": {
+      "source": "./src/routeTree.gen.ts",
+      "types": "./dist/route-tree.d.ts",
+      "import": "./dist/route-tree.js"
+    },
+    "./routes/*": "./src/routes/*.tsx",
+    "./theme.css": "./theme.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "tsc": "tsc",
+    "lint": "cd ../.. && oxlint packages/connect-core",
+    "build": "tsr generate && tsdown",
+    "routes": "tsr generate",
+    "test": "vitest --run",
+    "ui:shots": "tsx ./scripts/ui-shots.ts",
+    "ui:serve": "tsx ./scripts/ui-shots.ts --serve"
+  },
+  "dependencies": {
+    "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-router": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "document-model": "workspace:*"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@playwright/test": "^1.60.0",
+    "@renown/sdk": "workspace:*",
+    "@tanstack/react-router": "^1.170.41",
+    "@tanstack/router-cli": "1.167.40",
+    "@tanstack/router-core": "1.171.34",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "happy-dom": "^20.8.9",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@tanstack/react-router": "^1.170.41",
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  }
+}

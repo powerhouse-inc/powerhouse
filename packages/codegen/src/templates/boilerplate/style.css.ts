@@ -1,10 +1,16 @@
 import { css } from "@tmpl/core";
 
-export const styleTemplate = css`
-  @import "@powerhousedao/design-system/theme.css";
-  @custom-variant dark (&:where(.dark, .dark *));
+/** The imports `ph migrate` keeps current; the rest of style.css is the project's. */
+export const styleImportsTemplate = css`
+  /* Package CSS goes in external-packages, between Connect's components and utilities. */
+  @layer theme, base, components, external-packages, utilities;
   @import "tailwindcss";
-  @import "@powerhousedao/connect/style.css";
+  /* Connect's tokens, rules and classes, generated in this one build. */
+  @import "@powerhousedao/connect/tailwind.css";
+`.raw;
+
+export const styleTemplate = css`
+  ${styleImportsTemplate}
 
   @theme {
     /* You can customize the theme by overriding the theme variables here */

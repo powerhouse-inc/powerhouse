@@ -201,7 +201,10 @@ describe("SHARED_DEP_SPECIFIERS", () => {
     // so a package must not carry its own copy of it either.
     expect(SHARED_DEP_SPECIFIERS).toContain("zod");
     expect(SHARED_DEP_SPECIFIERS).not.toContain("@powerhousedao/connect");
-    expect(SHARED_DEP_SPECIFIERS).toHaveLength(7);
+    // One core and one router, so a package's slots and routes reach Connect's.
+    expect(SHARED_DEP_SPECIFIERS).toContain("@powerhousedao/connect-core");
+    expect(SHARED_DEP_SPECIFIERS).toContain("@tanstack/react-router");
+    expect(SHARED_DEP_SPECIFIERS).toHaveLength(9);
   });
 });
 
