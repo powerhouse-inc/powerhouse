@@ -33,11 +33,12 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
-import type {
-  ArrayMapToken,
-  ItemToken,
-  OutputToken,
-  RecordMapToken,
+import {
+  ref,
+  type ArrayMapToken,
+  type ItemToken,
+  type OutputToken,
+  type RecordMapToken,
 } from "../src/tokens.js";
 
 /** `$map` / `$item` / `$key` (typed-host-configs 3.3) over canned outputs. */
@@ -504,6 +505,112 @@ describe("$map errors (3.3)", () => {
       validateHost(runner, "m", resolved, "hosts/x/host.js"),
     ).toThrow(
       /reactor\.drives\.0\.availableOffline \(\$map element "a-plugin"\): /,
+    );
+  });
+});
+
+describe("declared validation: $map placement", () => {
+  const { declaredHostSchema, hostSchema } = defineHostSchemas(
+    (s) => s.reactorHostSchema,
+  );
+  const runner: RunnerModule = {
+    kind: "reactor",
+    run: () => Promise.resolve(undefined),
+    hostSchema,
+    declaredHostSchema,
+  };
+  // No outputsSchemaOf: the placement check needs no producer.
+  const declared = (reactor: Record<string, unknown>) => () =>
+    validateDeclaredHost(
+      runner,
+      "m",
+      { name: "x", runner: { module: "m" }, reactor },
+      "hosts/x/host.js",
+    );
+  const driveMap = (to: unknown, extra: Record<string, unknown> = {}) => ({
+    $map: { over: out("switchboard", ["drives"]), to, ...extra },
+  });
+
+  it("rejects a $map in a string field, naming its path", () => {
+    expect(
+      declared({
+        backends: {
+          sb: {
+            kind: "remote",
+            remote: { url: driveMap("x") },
+          },
+        },
+      }),
+    ).toThrow(
+      /hosts\/x\/host\.js failed validation[\s\S]*reactor\.backends\.sb\.remote\.url\.\$map: a \$map renders an array, but this field holds a string\. A \$map fills only a list field/,
+    );
+  });
+
+  it('rejects into: "record" in an array field', () => {
+    expect(
+      declared({
+        drives: driveMap({ slug: { $key: true } }, { into: "record" }),
+      }),
+    ).toThrow(
+      /reactor\.drives\.\$map: a \$map with into: "record" renders a record, but this field holds an array\. Drop into: "record"\./,
+    );
+  });
+
+  it("rejects a $map nested in a template where the element holds a string", () => {
+    expect(
+      declared({
+        drives: driveMap({
+          slug: { $key: true },
+          remote: { url: { $map: { over: { $item: ["urls"] }, to: "u" } } },
+        }),
+      }),
+    ).toThrow(
+      /reactor\.drives\.\$map\.to\.remote\.url\.\$map: a \$map renders an array, but this field holds a string\./,
+    );
+    expect(
+      declared({
+        drives: driveMap({
+          slug: { $key: true },
+          name: { $map: { over: { $item: ["names"] }, to: "n" } },
+        }),
+      }),
+    ).toThrow(/reactor\.drives\.\$map\.to\.name\.\$map: a \$map renders/);
+  });
+
+  it("accepts a $map where the field holds a list", () => {
+    expect(
+      declared({
+        drives: driveMap({ slug: { $key: true }, name: { $item: ["id"] } }),
+      }),
+    ).not.toThrow();
+  });
+
+  it("checks ref() fields too, and leaves fields of unknown shape to resolved validation", () => {
+    const schema = z.strictObject({
+      url: ref(z.url()).optional(),
+      list: ref(z.array(z.string())).optional(),
+      either: ref(z.union([z.string(), z.array(z.string())])).optional(),
+      byName: ref(z.record(z.string(), z.string())).optional(),
+    });
+    const map = (extra: Record<string, unknown> = {}) => ({
+      $map: { over: out("p", ["xs"]), to: { $key: true }, ...extra },
+    });
+    const urlIssue = schema.safeParse({ url: map() }).error?.issues;
+    expect(urlIssue).toEqual([
+      expect.objectContaining({
+        path: ["url", "$map"],
+        message: expect.stringContaining(
+          "this field holds a string",
+        ) as unknown,
+      }),
+    ]);
+    expect(schema.safeParse({ list: map() }).success).toBe(true);
+    expect(schema.safeParse({ either: map() }).success).toBe(true);
+    expect(schema.safeParse({ byName: map({ into: "record" }) }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ byName: map() }).error?.issues[0]?.message).toBe(
+      'a $map renders an array, but this field holds a record. Add into: "record" (and map over a record).',
     );
   });
 });

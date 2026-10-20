@@ -301,6 +301,217 @@ export function findToken(
   return undefined;
 }
 
+/* ------------------------------------------------------- $map placement */
+
+// A `$map` renders an array (a record with `into: "record"`), so it fits
+// only a field holding one. Token-able fields accept every token shape at
+// runtime (the field's own schema checks the rendered value at resolved
+// validation); this check catches a `$map` in a non-collection field at
+// DECLARED validation instead, inside `$map` templates too (their `to` is
+// not parsed until rendered).
+
+/** The value schema behind a token-able field (`ref` / `tokenable`), so a
+ * template can be checked against what its fields hold. */
+const tokenableValue = new WeakMap<object, unknown>();
+
+type ZodDef = Record<string, unknown> & { type: string };
+
+function defOf(schema: unknown): ZodDef | undefined {
+  if (schema === null || typeof schema !== "object") return undefined;
+  const internals = (schema as { _zod?: unknown })._zod;
+  if (internals === null || typeof internals !== "object") return undefined;
+  const def = (internals as { def?: unknown }).def;
+  if (def === null || typeof def !== "object") return undefined;
+  const type = (def as { type?: unknown }).type;
+  return typeof type === "string" ? { ...def, type } : undefined;
+}
+
+const WRAPPERS = new Set([
+  "optional",
+  "nullable",
+  "default",
+  "prefault",
+  "readonly",
+  "nonoptional",
+  "catch",
+]);
+
+const SCALARS = new Set([
+  "string",
+  "number",
+  "int",
+  "boolean",
+  "bigint",
+  "date",
+  "enum",
+  "literal",
+  "null",
+  "nan",
+  "template_literal",
+]);
+
+/** What a field holds, as far as its schema tells. */
+type FieldShape =
+  | { kind: "array"; element: unknown }
+  | { kind: "record"; value: unknown }
+  | { kind: "object"; shape: Record<string, unknown> }
+  | { kind: "scalar"; type: string }
+  | { kind: "unknown" };
+
+/** `schema` without wrappers: optional & co, lazy, a pipe's input, a
+ * token-able field's token branch and a one-option union. */
+function unwrapField(schema: unknown): unknown {
+  let current = schema;
+  for (let guard = 0; guard < 32; guard++) {
+    if (
+      current !== null &&
+      typeof current === "object" &&
+      tokenableValue.has(current)
+    ) {
+      current = tokenableValue.get(current);
+      continue;
+    }
+    const def = defOf(current);
+    if (!def) return current;
+    if (WRAPPERS.has(def.type)) current = def.innerType;
+    else if (def.type === "lazy" && typeof def.getter === "function") {
+      current = (def.getter as () => unknown)();
+    } else if (def.type === "pipe") current = def.in;
+    else if (
+      def.type === "union" &&
+      Array.isArray(def.options) &&
+      def.options.length === 1
+    ) {
+      current = def.options[0];
+    } else return current;
+  }
+  return current;
+}
+
+function fieldShapeOf(schema: unknown): FieldShape {
+  const def = defOf(unwrapField(schema));
+  if (!def) return { kind: "unknown" };
+  if (def.type === "array") return { kind: "array", element: def.element };
+  if (def.type === "tuple") return { kind: "array", element: undefined };
+  if (def.type === "record") return { kind: "record", value: def.valueType };
+  if (def.type === "object") {
+    const shape = isPlainObject(def.shape) ? def.shape : {};
+    const catchall = defOf(def.catchall);
+    if (catchall && catchall.type !== "never") {
+      return {
+        kind: "record",
+        value: Object.keys(shape).length === 0 ? def.catchall : undefined,
+      };
+    }
+    return { kind: "object", shape };
+  }
+  if (SCALARS.has(def.type)) return { kind: "scalar", type: def.type };
+  return { kind: "unknown" };
+}
+
+interface PlacementIssue {
+  path: (string | number)[];
+  message: string;
+}
+
+/** Every `$map` in `value` (a field value, or a template inside one) that
+ * renders a collection its field cannot hold. Paths end at the `$map`
+ * operand (`…url.$map`), whose message the host error keeps. */
+function mapPlacementIssues(
+  value: unknown,
+  schema: unknown,
+  path: (string | number)[],
+  issues: PlacementIssue[],
+): void {
+  const key = tokenKeyOf(value);
+  if (key === "$map") {
+    const operand = (value as { $map: unknown }).$map;
+    if (!isPlainObject(operand)) return; // malformed: reported elsewhere
+    const into = operand.into === "record";
+    const field = fieldShapeOf(schema);
+    const at = [...path, "$map"];
+    const renders = into ? 'a record (into: "record")' : "an array";
+    if (field.kind === "scalar" || field.kind === "object") {
+      const holds = field.kind === "object" ? "an object" : `a ${field.type}`;
+      issues.push({
+        path: at,
+        message: `a $map renders ${renders}, but this field holds ${holds}. A $map fills only a list field (or, with into: "record", a record field).`,
+      });
+      return;
+    }
+    if (field.kind === "array" && into) {
+      issues.push({
+        path: at,
+        message:
+          'a $map with into: "record" renders a record, but this field holds an array. Drop into: "record".',
+      });
+      return;
+    }
+    if (field.kind === "record" && !into) {
+      issues.push({
+        path: at,
+        message:
+          'a $map renders an array, but this field holds a record. Add into: "record" (and map over a record).',
+      });
+      return;
+    }
+    const element =
+      field.kind === "array"
+        ? field.element
+        : field.kind === "record"
+          ? field.value
+          : undefined;
+    if (element !== undefined) {
+      mapPlacementIssues(operand.to, element, [...at, "to"], issues);
+    }
+    return;
+  }
+  if (key) return;
+  if (Array.isArray(value)) {
+    const field = fieldShapeOf(schema);
+    if (field.kind !== "array" || field.element === undefined) return;
+    value.forEach((item, index) =>
+      mapPlacementIssues(item, field.element, [...path, index], issues),
+    );
+    return;
+  }
+  if (!isPlainObject(value)) return;
+  const keys = Object.keys(value);
+  if (keys.length === 1 && keys[0] === TOKEN_ESCAPE_KEY) return;
+  const field = fieldShapeOf(schema);
+  for (const [childKey, child] of Object.entries(value)) {
+    const childSchema =
+      field.kind === "object"
+        ? field.shape[childKey]
+        : field.kind === "record"
+          ? field.value
+          : undefined;
+    if (childSchema !== undefined) {
+      mapPlacementIssues(child, childSchema, [...path, childKey], issues);
+    }
+  }
+}
+
+/** Adds the `$map` placement check to a token-able field's union. Only a
+ * value the union accepted reaches it, so a `$map` here came through the
+ * token branch. */
+function withMapPlacement<U extends z.ZodType>(schema: z.ZodType, union: U): U {
+  const checked = union.superRefine((value, ctx) => {
+    if (tokenKeyOf(value) !== "$map") return;
+    const issues: PlacementIssue[] = [];
+    mapPlacementIssues(value, schema, [], issues);
+    for (const issue of issues) {
+      ctx.addIssue({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
+      });
+    }
+  });
+  tokenableValue.set(checked, schema);
+  return checked;
+}
+
 /* ---------------------------------------------------------------------- ref */
 
 /** A token-able field: `T | Token` (declared form). Host schemas take it
@@ -315,7 +526,7 @@ export function ref<S extends z.ZodType>(
     Token,
     TokenFor<Untokened<z.input<S>>>
   >;
-  return z.union([schema, token]);
+  return withMapPlacement(schema, z.union([schema, token]));
 }
 
 /** Resolved form of a ref field: tokens are not accepted. */
@@ -355,7 +566,7 @@ export function tokenable<S extends z.ZodType>(schema: S): TokenableSchema<S> {
     never,
     TokenFor<Untokened<z.input<S>>>
   >;
-  return z.union([schema, token]);
+  return withMapPlacement(schema, z.union([schema, token]));
 }
 
 /** Like `tokenable`, but the only token accepted is `$env` (e.g.
