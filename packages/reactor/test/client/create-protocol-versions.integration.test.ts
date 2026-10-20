@@ -226,20 +226,15 @@ describe("create paths for a model whose reducer createReducer did not build", (
     expect(modelName(renamed)).toBe("second");
   });
 
-  it("keeps an explicit base-reducer 3, which cannot rebuild cold", async () => {
-    const { client, module } = await build();
-    const document = await client.createEmpty(DOCUMENT_MODEL, {
-      protocolVersions: { "base-reducer": 3 },
-    });
-    expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
-    await client.execute(document.header.id, "main", [
-      setModelName({ name: "first" }),
-    ]);
-
-    module.writeCache.clear();
+  it("refuses an explicit base-reducer 3, which it cannot run", async () => {
+    const { client } = await build();
     await expect(
-      module.writeCache.getState(document.header.id, "global", "main"),
-    ).rejects.toThrow("not built by createReducer");
+      client.createEmpty(DOCUMENT_MODEL, {
+        protocolVersions: { "base-reducer": 3 },
+      }),
+    ).rejects.toThrow(
+      `requires base-reducer 3, which this reactor cannot run for ${DOCUMENT_MODEL}`,
+    );
   });
 });
 
