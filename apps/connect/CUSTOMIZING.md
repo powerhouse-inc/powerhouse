@@ -75,7 +75,7 @@ function Status() {
 Rules:
 
 - Connect reads routes only from `hosts/connect/routes/`.
-- A route whose path equals a core route's path fails the build. Core routes are `/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings` and its tabs, and the catch-all `$`. They cannot be overridden.
+- Core routes are `/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings` with its Appearance and Connection tabs, and the catch-all `$`. They live in `@powerhousedao/connect-core`. A file in `_app/` at a core route's path overrides it; see [Override a core route](#override-a-core-route). Any other route at a core route's URL fails the build.
 - Files and folders starting with `-` are not routes. Use them for shared components.
 - Route groups, `(name)/`, only organize files.
 - Each route is code-split into its own chunk.
@@ -136,11 +136,11 @@ export const Route = createFileRoute("/_app/settings/inventory")({
 
 - `icon` and `destructive` are optional.
 - The page title becomes `Settings · Inventory · <app>`. The tab needs no `head`.
-- `_app/settings.tsx` belongs to Connect. A project file for it fails the build.
+- Connect's own tabs (Package Manager, Default Editors, Danger Zone, About, AI Assistant) are listed while the generic plugin is active. Core's tabs (Appearance, Packages) are listed without it. A project file at a tab's path, e.g. `_app/settings/about.tsx`, replaces that tab; see [Override a Connect route](#override-a-connect-route).
 
 ## Replace the sidebar
 
-A project's `_app.tsx` replaces Connect's `_app` layout. Connect's core routes and the project's `_app/` routes then render inside it.
+A project's `_app.tsx` replaces Connect's `_app` layout. Connect's routes and the project's `_app/` routes then render inside it.
 
 To keep Connect's layout and change only the sidebar, render `AppLayout` with your own `sidebar`. `ConnectSidebar` is Connect's sidebar; `extraItems` go after the drives and nav links:
 
@@ -204,14 +204,19 @@ A plain `href` makes the browser load the whole app again. Use it for external l
 | `SidebarItem` | One sidebar item. |
 | `useNavRoutes()` | The `staticData.nav` routes, sorted: `{ label, icon, order, routeId, to }`. |
 | `useSidebarMode()` | The current route's `staticData.sidebar`. |
+| `ContentOutlet` | The matched route, in the container whose scroll Connect resets on new pages and restores on back and forward. |
 
-A layout renders an `<Outlet />` for the matched route. This one replaces the sidebar with a top bar:
+A layout renders a `<ContentOutlet />` for the matched route; a plain `<Outlet />` works too, without the scroll handling. This one replaces the sidebar with a top bar:
 
 ```tsx
 // hosts/connect/routes/_app.tsx
-import { useNavRoutes, useSidebarMode } from "@powerhousedao/connect/layout";
+import {
+  ContentOutlet,
+  useNavRoutes,
+  useSidebarMode,
+} from "@powerhousedao/connect/layout";
 import { makeDriveSlug, useDrives, useLinkProps } from "@powerhousedao/reactor-browser";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
   component: TopNavLayout,
@@ -245,8 +250,8 @@ function TopNavLayout() {
           <a {...settings} className="ml-auto">Settings</a>
         </nav>
       )}
-      <main className="relative flex-1 overflow-auto">
-        <Outlet />
+      <main className="relative min-h-0 flex-1">
+        <ContentOutlet />
       </main>
     </div>
   );
@@ -255,7 +260,7 @@ function TopNavLayout() {
 
 - `Link` sets `aria-current="page"` and the `active` class on the current route, for styling.
 - A replaced layout is responsible for `staticData.sidebar` and embedded mode; `AppLayout` handles both, a layout of your own does not.
-- The loading shell prerendered into `index.html` always shows Connect's sidebar. The page switches to your layout once the app renders.
+- The loading screen in `index.html` is your layout, with `_app`'s `pendingComponent` as its content; see [The loading screen](#the-loading-screen).
 
 `test/versioned-documents/hosts/connect/routes/` holds a working project: a full page, and a sidebar route with search params and a nested route.
 
@@ -303,6 +308,19 @@ function DocumentSummary() {
 - Connect starts the reactor before it renders the router, so `reactorClient` is set in Connect. The check satisfies the type.
 - Loader data is a snapshot. It does not update when the document changes. For live data, read it in the component with the `@powerhousedao/reactor-browser` hooks (`useDrives`, `useDocument`, `useDocumentById`).
 - `store.drives` holds the drives that have arrived. On a deep link to a remote drive, it can be incomplete while `arrivals.isPending()` is true.
+
+### The open drive and document
+
+A view reads the drive route's drive, folder and document with `useDriveRouteData()` from `@powerhousedao/connect/layout`:
+
+```tsx
+const { drive, folder, documentId } = useDriveRouteData();
+```
+
+- `useDriveRouteIds()` gives the ids alone, from the matched route's loader.
+- Drive apps and editors keep using `useSelectedDrive`, `useSelectedNode` and the generated `useSelected<Model>Document()`. The drive layout renders them inside `RouteSelection`, so those hooks read the route they are shown in, not the app-wide selection.
+- `OpenDocument`, for a project's drive route override, scopes its editor the same way. A project route that renders a drive app or an editor itself wraps it in `RouteSelection` (from `@powerhousedao/connect/layout`).
+- Connect still writes the route's ids to the app-wide selection (`store.selectedDriveId`, `store.selectedNodeId`) for code outside a route, such as a sidebar widget.
 
 ## Read and write search params
 
@@ -369,7 +387,7 @@ function Inventory() {
 
 - `Route.useSearch()` also returns every other param in the URL, typed `string | undefined`.
 - A route's own params are dropped when the user navigates to another route.
-- Global params survive every navigation: `driveUrl`, `theme`, `embed`, `LOG_LEVEL`, `reactorWorker`, and any `FEATURE_*` flag. The list is `GLOBAL_SEARCH_PARAMS` in `@powerhousedao/reactor-browser`; Connect's root route keeps them (`src/router/search.ts`).
+- Global params survive every navigation: `driveUrl`, `theme`, `embed`, `LOG_LEVEL`, `reactorWorker`, and any `FEATURE_*` flag. The list is `GLOBAL_SEARCH_PARAMS` in `@powerhousedao/reactor-browser`; Connect's root route keeps them (`packages/connect-core/src/router/search.ts`).
 - Non-string values are written with `JSON.stringify`, so `2` becomes `?page=2` and reads back as `"2"`.
 
 ## Set the page title
@@ -387,12 +405,89 @@ export const Route = createFileRoute("/_app/inventory")({
 
 - The deepest route with a title wins. Without one, the page keeps Connect's: the app name.
 - `head` also receives `loaderData`, e.g. `` title: `${loaderData?.name} · ${appName}` ``.
-- Connect's own titles are in `src/router/titles.ts`: `<node> · <drive> · <app>`, `Settings · <tab> · <app>`, `Not found · <app>`.
+- Connect's own titles are in `packages/connect-core/src/router/titles.ts`: `<node> · <drive> · <app>`, `Settings · <tab> · <app>`, `Not found · <app>`.
 
-## Show not found
+## Styles
 
-- A path no route matches renders Connect's 404 page inside the layout, titled `Not found · <app>`. The URL stays as typed.
-- A loader that throws `notFound()` renders its route's `notFoundComponent`; without one, Connect's 404 page renders in its place:
+A project's `style.css` is the page's one Tailwind build. It imports Connect's Tailwind source rather than Connect's compiled CSS:
+
+```css
+/* style.css */
+@layer theme, base, components, external-packages, utilities;
+@import "tailwindcss";
+@import "@powerhousedao/connect/tailwind.css";
+
+@theme {
+  --color-brand: #f60;
+}
+```
+
+- `@powerhousedao/connect/tailwind.css` brings the design system's tokens, core's theme, Connect's own rules and the `@source` lines for the classes Connect's code uses. Tailwind generates those classes in the project's build, next to the project's own.
+- One build means one copy of each utility, in one `utilities` layer, ordered by Tailwind. Importing a second build (`@powerhousedao/connect/style.css`, or a package's compiled `dist/style.css`) emits the utilities again in source order, so a later `.px-3` beats an earlier `.pl-7`.
+- Third-party CSS (toasts, the JSON viewer, the workflow canvas) comes in through `vendor.css` files: plain rules that Tailwind passes through.
+- Override tokens in `@theme`, and add plain CSS below it. Plain rules outside a `@layer` win over all of Connect's CSS, which is layered; put a rule in `@layer components` to let utilities override it.
+- The design system defines the `dark` variant (`.dark` on `<html>`), so a project's `dark:` classes follow Connect's theme toggle.
+- `ph migrate` rewrites the imports at the top of an existing `style.css` to these and keeps the rest of the file.
+
+## Loading, not found and errors
+
+Connect uses the router's own states: a route's `pendingComponent`, `notFoundComponent` and `errorComponent`. A project sets them on its routes, or on its overrides of Connect's routes (see [Override a Connect route](#override-a-connect-route)).
+
+### The loading screen
+
+`ph connect build` renders the project's routes at `/` and inlines the result into `index.html`, so the page shows the layout before any JavaScript runs. In that render the layout's content area (`ContentOutlet`) shows the `_app` route's `pendingComponent` in place of the page:
+
+```tsx
+// hosts/connect/routes/_app.tsx
+export const Route = createFileRoute("/_app")({
+  component: Layout,
+  // The loading screen's content, and the layout's own pending view at runtime.
+  pendingComponent: () => <div role="status" className="m-auto">Loading…</div>,
+});
+```
+
+- Without a `pendingComponent` on `_app`, the loading screen shows core's spinner.
+- The render runs at build time, in Node, with no drives: components on the path to `/` must not touch `window` while rendering, and should show nothing for data that isn't there yet (e.g. `useDrives()` is `undefined`).
+- On a deep link the screen is the same, with no tab marked current; the page appears once the app routes.
+- The screen's CSS is inlined: Tailwind builds the project's `style.css` for just the classes in the screen's markup, with its tokens and rules and without third-party CSS. The full stylesheet loads without blocking the first paint.
+- `staticData.nav` items are links the layout renders, so they appear on the loading screen; drives arrive later, so put them after the static items to avoid a shift.
+
+### Slow routes
+
+A route whose loader takes longer than its `pendingMs` shows its `pendingComponent`. Connect's drive routes show a "Loading drive…" note on a cold start and keep the open view on warm navigations. An override spreads their `options` and can set its own:
+
+```tsx
+export const Route = createFileRoute("/_app/d/$driveSlug")({
+  ...options,
+  pendingComponent: DriveSkeleton,
+  component: InventoryDrive,
+});
+```
+
+### Not found
+
+| What | Where to change it |
+| --- | --- |
+| A path no route serves | Override `_app/$.tsx`, spreading its `options`. It renders inside the layout, titled `Not found · <app>`; the URL stays as typed. Its loader waits for packages' routes still loading (up to 10 s), so a deep link to a package's page shows the loading state, not this page. |
+| A drive that isn't listed once drives arrive | `notFoundComponent` on an override of `_app/d/$driveSlug.tsx`; `isDriveNotFound(data)` gives the slug. |
+| A project route's own `notFound()` | That route's `notFoundComponent`. |
+| Anything else | Connect's 404 page. |
+
+```tsx
+// hosts/connect/routes/_app/d/$driveSlug.tsx
+import { isDriveNotFound } from "@powerhousedao/connect/router";
+import { options } from "@powerhousedao/connect/routes/_app/d/$driveSlug";
+import type { NotFoundRouteProps } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/d/$driveSlug")({
+  ...options,
+  component: InventoryDrive,
+  notFoundComponent: ({ data }: NotFoundRouteProps) =>
+    isDriveNotFound(data) ? <p>No drive {data.driveSlug}.</p> : <p>Not found.</p>,
+});
+```
+
+A project route throws `notFound()` the same way:
 
 ```tsx
 export const Route = createFileRoute("/_app/documents/$documentId")({
@@ -404,6 +499,102 @@ export const Route = createFileRoute("/_app/documents/$documentId")({
   component: DocumentSummary,
 });
 ```
+
+### Errors
+
+A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
+
+```tsx
+export const Route = createFileRoute("/_app/reports")({
+  loader: loadReports,
+  errorComponent: ({ error, reset }) => (
+    <div role="alert">
+      <p>{error.message}</p>
+      <button onClick={reset}>Try again</button>
+    </div>
+  ),
+  component: Reports,
+});
+```
+
+## Modals
+
+Editors, drive apps and Connect open modals with `showPHModal(modal)` from `@powerhousedao/reactor-browser`; the open modal's view reads it with `usePHModal()` and closes it with `closePHModal()`.
+
+**Routed modals live in the URL:** `?modal=<id>` plus their fields. A link opens them (`modalHref(modal)` gives the href) and a reload keeps them open. Opening and closing replace the current history entry, so a modal is never a step of its own: Back leaves the page, not the modal.
+
+| Modal | `?modal=` | Owner |
+| --- | --- | --- |
+| `createDocument` | `create-document&documentType=…[&documentModelVersion=…]` | core |
+| `login` | `login` | core |
+| `addDrive` | `add-drive` | generic |
+| `driveSettings` | `drive-settings&driveId=…` | generic |
+| `debugSettings`, `inspector` | `debug-settings`, `inspector` | generic |
+| `disclaimer` | `disclaimer` | generic |
+| `cookiesPolicy` | `cookies-policy` | Connect (analytics consent) |
+
+**Confirmations and notices stay out of the URL:** `deleteItem`, `confirmDocumentUpgrade`, `downloadDocumentWithErrors`, `documentVersionUnsupported` and `driveAuthRequired` (core's), `deleteDrive`, `upgradeDrive` and `clearStorage` (generic's), and `openFileDocuments` (Connect's file handler).
+
+- **Core** has a plain view for each of its modals, so every host can show what editors and drive apps open.
+- **With the generic plugin**, Connect shows its design-system views for all of them; without it, core's.
+
+### Replace a modal's view
+
+A route's `staticData.modals` replaces the host's view of a modal while the route matches; the deepest matched route wins. The view reads the modal with `usePHModal()`:
+
+```tsx
+// hosts/connect/routes/_app.tsx
+import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
+
+export const Route = createFileRoute("/_app")({
+  component: Layout,
+  staticData: { modals: { createDocument: CreateTodoList } },
+});
+
+function CreateTodoList() {
+  const modal = usePHModal();
+  if (modal?.type !== "createDocument") return null;
+  return (
+    <dialog open>
+      New {modal.documentType}
+      <button onClick={closePHModal}>Cancel</button>
+    </dialog>
+  );
+}
+```
+
+- On an override of one of Connect's routes, spread `options.staticData` first if it has any.
+- A view that throws closes quietly; the error is logged.
+
+### Frame every modal
+
+A route's `staticData.modalFrame` lays out every core modal while the route matches, so one component restyles all of them. Each modal passes its title, content and buttons; `ModalDialog` keeps the dialog's behaviour (modal, Escape and the backdrop close it):
+
+```tsx
+// hosts/connect/routes/_app.tsx
+import type { ModalFrameProps } from "@powerhousedao/connect/layout";
+import { ModalDialog } from "@powerhousedao/connect/layout";
+
+export const Route = createFileRoute("/_app")({
+  component: Layout,
+  staticData: { modalFrame: Frame },
+});
+
+function Frame({ title, titleId, actions, children }: ModalFrameProps) {
+  return (
+    <ModalDialog labelledBy={titleId} className="rounded-xl p-0 shadow-2xl">
+      <h2 id={titleId}>{title}</h2>
+      <div>{children}</div>
+      <footer>{actions}</footer>
+    </ModalDialog>
+  );
+}
+```
+
+- The deepest matched route's frame wins, as with `staticData.modals`. On `_app` it frames the modals opened inside the layout; on the root route, all of them.
+- It frames core's modals. The generic plugin's design-system modals, and views a route gives in `staticData.modals`, draw their own.
+- The content and buttons keep core's markup; style them from the frame, e.g. with `[&_button]:…` classes.
+- `test/versioned-documents/hosts/connect/ui/modal-frame.tsx` is a working frame.
 
 ## Navigate from an editor
 
@@ -457,8 +648,8 @@ export function TabSwitch() {
 The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's routes and the project's. It registers the router type, so `createFileRoute` ids, `Link`, `useNavigate`, loader data and search params are typed.
 
 - `ph connect build`, `ph connect studio`, `ph connect preview` and `ph build` generate it. `ph connect studio` regenerates it as route files change.
-- The project's `tsconfig.json` includes `.ph/connect-routes.gen.ts` and maps `"@powerhousedao/connect/route-tree": ["./.ph/connect-routes.gen.ts"]` in `paths`. New projects are scaffolded with both. In an older project, add both by hand, and drop `.ph` from `exclude`.
-- Until the first build, `@powerhousedao/connect/route-tree` resolves to Connect's core tree. Project routes show type errors (unknown route ids) until `ph connect build` or `ph connect studio` has run.
+- The project's `tsconfig.json` includes `.ph/connect-routes.gen.ts` and maps both `"@powerhousedao/connect-core/route-tree"` and `"@powerhousedao/connect/route-tree"` to `["./.ph/connect-routes.gen.ts"]` in `paths`. New projects are scaffolded with them. In an older project, add them by hand, and drop `.ph` from `exclude`. Core's router types name the tree by `@powerhousedao/connect-core/route-tree`; without that path they use core's own routes.
+- Until the first build, both specifiers resolve to core's own tree. Project routes show type errors (unknown route ids) until `ph connect build` or `ph connect studio` has run.
 - `ph connect build` type-checks the routes and fails on errors. `--ignore-type-errors` skips the check.
 - `@tanstack/react-router` must be the version Connect uses. The routes and Connect share one router, and its types come from the project's copy.
 
@@ -466,29 +657,143 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 
 | Symptom | Cause |
 | --- | --- |
-| `Connect could not mount the routes in hosts/connect/routes/` | A route collides with a core route, or `_app/settings.tsx` exists. The message names the files. |
+| `Connect could not mount the routes in hosts/connect/routes/` | A route outside `_app/` collides with one of Connect's, or two project files have one path. The message names the files. |
 | A new routes folder is ignored by a running `ph connect studio` | Connect checks for the folder at startup. Restart it. |
 | `createFileRoute("/_app/x")` is a type error | The tree is not generated yet, or the tsconfig lacks the `route-tree` path. See [Types](#types). |
 | A sidebar link reloads the whole app | It is a plain `href`. Navigate through the router; see [Replace the sidebar](#replace-the-sidebar). |
 | A `staticData.nav` route is missing from the sidebar | Its path has a param, or it is not in `_app/`, or a replaced layout does not render `SidebarNavItems`/`useNavRoutes`. |
 | A route's search param is gone after navigating | Only global params survive a navigation. Pass the param in `search` on the link. |
 | A loader sees no drive on a deep link | The drive has not arrived yet; see [Load data](#load-data). |
+| A class has no effect, e.g. `pl-7` next to `px-3` | `style.css` imports a second Tailwind build, such as `@powerhousedao/connect/style.css`. Import `@powerhousedao/connect/tailwind.css` instead, or run `ph migrate`; see [Styles](#styles). |
+
+## Upgrading
+
+`ph migrate` updates a project for this version:
+
+- `style.css` imports `@powerhousedao/connect/tailwind.css` instead of `@powerhousedao/design-system/theme.css` and `@powerhousedao/connect/style.css`. The project's own rules stay.
+- `tsconfig.json` includes `.ph/connect-routes.gen.ts`, the generated tree that types the project's routes.
+
+Two `@powerhousedao/reactor-browser` types lost a member, which a project that used them updates by hand:
+
+- `PHModal` has no `missingPackage` modal.
+- `PHGlobal` has no `revisionHistoryVisible`. `useRevisionHistoryVisible`, `showRevisionHistory` and `hideRevisionHistory` work as before.
 
 ## Related: host plugins
 
-`hosts/connect/host.js` also lists `runner.plugins`, read by `ph run connect`. Today they only transform the served runtime config, through built-in plugins in `src/plugin-host.ts`: `@powerhousedao/connect/plugins/generic` (branding, `allowAddDrive`, drive sections), `.../sentry`, `.../openpanel` and `.../assistant`. A listed plugin switches its slice of the config on, and an unlisted one switches it off. Other modules are skipped with a warning. Plugins do not add routes or UI; use the routes folder for that.
+`hosts/connect/host.js` also lists `runner.plugins`, read by `ph run connect`. They transform the served runtime config through the plugin host in `@powerhousedao/connect-core` (`packages/connect-core/src/plugins/plugin-host.ts`), which runs the built-in plugins Connect registers (`apps/connect/src/plugins/`): `@powerhousedao/connect/plugins/generic` (`allowAddDrive`, drive sections), `.../sentry`, `.../openpanel` and `.../assistant`. A listed plugin switches its slice of the config on, and an unlisted one switches it off. Other modules are skipped with a warning.
+
+The generic plugin is also Connect's chrome: its sidebar, home screen and settings page. A composition that leaves it out shows core's views instead: a header, an index of the drives, a directory listing for a drive without a drive app, and a JSON view for a document without an editor. Without a declared composition, Connect is classic.
+
+## Override a Connect route
+
+Every page Connect shows is a file route in `apps/connect/src/routes/`. A project file at the same path replaces Connect's file. Each of Connect's files exports `options`: everything but the component (loader, search params, pending view, title). An override spreads them and sets its own `component`:
+
+```tsx
+// hosts/connect/routes/_app/d/$driveSlug.tsx
+import { useDriveRouteData } from "@powerhousedao/connect/layout";
+import { options } from "@powerhousedao/connect/routes/_app/d/$driveSlug";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/d/$driveSlug")({
+  ...options,
+  component: InventoryDrive,
+});
+
+function InventoryDrive() {
+  const { drive, folder, documentId } = useDriveRouteData();
+  if (!drive) return null;
+  // The node route renders the open document in the outlet.
+  if (documentId) return <Outlet />;
+  return <p>{folder?.name ?? drive.header.name}</p>;
+}
+```
+
+| Path | File | What it renders |
+| --- | --- | --- |
+| (every page) | `__root.tsx` | The page, the title, the loading shell. Not overridable. |
+| (layout) | `_app.tsx` | The sidebar beside the content; see [Replace the layout](#replace-the-layout). |
+| `/` | `_app/index.tsx` | Home: the drives. |
+| `/d/$driveSlug` | `_app/d/$driveSlug.tsx` | The drive: its drive app, or the sign-in gate, around the node route. |
+| `/d/$driveSlug/{-$nodeSlug}` | `_app/d/$driveSlug/{-$nodeSlug}.tsx` | The open document: its editor, or its revision history with `?history`. Nothing on a folder. |
+| `/settings` | `_app/settings.tsx` | The settings page around the shown tab. |
+| `/settings/<tab>` | `_app/settings/<tab>.tsx` | One settings tab. |
+| unknown paths | `_app/$.tsx` | The 404 page. |
+
+- `useDriveRouteData()` returns the open `drive`, `folder` and `documentId` from the drive routes' loaders, live.
+- Connect's routes nested under an overridden one stay: the node route renders in an overridden drive route's `<Outlet />`, and the tabs in an overridden settings page's.
+- Drive apps and editors come from packages, not routes. Override a route only to change Connect around them.
+- Without the generic plugin, each of Connect's files shows core's view instead (a header, an index of drives, a directory listing, a JSON view). An override shows the same view either way.
+- To hide a route, override it with a `beforeLoad` that throws `notFound()` or `redirect()`.
+
+## Extend Connect from a package
+
+### Offer a package's routes
+
+A package's `hosts/connect/routes/` also adds routes to every Connect that loads the package, e.g. a Reports page or a settings tab, without code:
+
+- Offered: every route file but `_app.tsx` and the files that override Connect's `_app/` routes. Those two only apply to the package's own host. A child of an override joins the loading Connect's route with that id.
+- `ph build` builds them as `./connect-routes` (`dist/browser/connect-routes.js`) and sets `connectRoutes: true` in the package's manifest. Connect loads the module when it loads a package with the flag, and takes the routes out when the package is removed, replaced or reinstalled.
+- They join the loading Connect's routes by id (`/_app`, `/_app/settings`, `/_app/d/$driveSlug`, ...). A route at an id that Connect already serves is skipped with a warning; `staticData.nav` and `staticData.settings` list them as for a project's routes.
+- A deep link or reload on a package's page waits for the package: Connect holds unknown paths while packages and their routes load (see [Not found](#not-found)).
+- Removing a package while one of its pages is open takes the app home first.
+- Bundled packages (`ph install --local`, `provider: "local"`) register in a production build through the page's import map, as on the dev server.
+- An offered route imports `@powerhousedao/connect-core` (`ContentOutlet`, `useDriveRouteData`, `RouteSelection`, `ModalDialog`), `@tanstack/react-router` and `@powerhousedao/reactor-browser`, which Connect shares with packages. `@powerhousedao/connect` is not shared, so `ph build` fails, naming the file, if an offered route imports it.
+- The project's own package is the exception: its host build already has its routes.
+
+### Register routes from code
+
+A package that Connect loads can also register routes from its own module. The registrations live in one registry per page, on `globalThis`, so a package bundled with its own copy of `@powerhousedao/connect-core` still reaches the app. A production build also shares `@powerhousedao/connect-core` and `@tanstack/react-router` through the import map, so the package and Connect use one router.
+
+```tsx
+import { registerConnectRoutes } from "@powerhousedao/connect-core/router";
+import { createRoute } from "@tanstack/react-router";
+
+// A settings tab; a router already running takes it in.
+registerConnectRoutes(({ settingsRoute }) => [
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "inventory",
+    staticData: { settings: { label: "Inventory", order: 50 } },
+    component: InventorySettings,
+  }),
+]);
+```
+
+- It returns the unregister.
+- A route at a path a route already serves is skipped with a warning.
+- Core's views are styled with Tailwind classes and `theme.css` tokens (`bg-core-bg`, `text-core-fg`, ...). Core ships no compiled CSS: its host builds with Tailwind 4 and imports `@powerhousedao/connect-core/theme.css`, which defines the tokens and makes Tailwind scan core's sources. `@powerhousedao/connect/tailwind.css` does this; see [Styles](#styles).
+
+## UI screenshots of core's views
+
+`ui:shots` in `@powerhousedao/connect-core` renders core's views in a real Connect and saves one PNG per scene to `packages/connect-core/.ui-shots/` (gitignored):
+
+```sh
+pnpm --filter @powerhousedao/connect-core ui:serve    # Connect plus a browser window on seeded drives
+pnpm --filter @powerhousedao/connect-core ui:shots    # every scene
+pnpm --filter @powerhousedao/connect-core ui:shots document-json --theme dark
+pnpm --filter @powerhousedao/connect-core ui:shots --list
+```
+
+- Connect is a production build of `test/versioned-documents` (`ph connect build --outDir .ph/ui-shots/dist`), served by `ph connect preview` on `:4350` (`UI_SHOTS_CONNECT_PORT`, 4350-4359). The stack starts it unless the port answers, stops what it started, and rebuilds when the connect-core, Connect, builder-tools or project sources are newer than the build. `UI_CONNECT_DEV=1` runs `ph connect studio` instead.
+- Each browser context overrides the served `powerhouse.config.json` with `connect.composition: []`, so the generic plugin is absent and core's views show. `--generic` keeps the classic chrome, for comparison.
+- Each run seeds local drives through Connect's reactor: folders, a Todo document, Reactor Group documents (no editor, so the JSON view) and a drive whose `preferredEditor` is a drive app.
+- Flags: `--width`, `--height`, `--out`; `UI_SHOTS_VERBOSE=1` prints the server logs. Scenes live in `SCENES` in `packages/connect-core/scripts/ui-shots.ts`.
 
 ## Reference: key files
 
 | File | What it holds |
 | --- | --- |
-| `apps/connect/src/routes/` | Connect's root route and core routes. |
+| `apps/connect/src/routes/` | Connect's routes, which a project's files override: core's `options` with Connect's views. |
+| `packages/connect-core/src/routes/` | Core's routes: each file's `options` and core's view. |
+| `apps/connect/src/components/generic-view.tsx` | `generic()`: Connect's view with the generic plugin, core's without. |
 | `apps/connect/src/layout/index.ts` | The `@powerhousedao/connect/layout` exports. |
-| `apps/connect/src/router/sidebar.ts` | `staticData.nav` and `staticData.sidebar`. |
-| `apps/connect/src/router/settings.ts` | `staticData.settings`. |
-| `apps/connect/src/router/drive-route-loader.ts` | `ConnectRouterContext`. |
-| `apps/connect/src/router/search.ts` | Search param parsing and the global params. |
-| `apps/connect/src/router/titles.ts` | Connect's titles. |
+| `packages/connect-core/src/router/sidebar.ts` | `staticData.nav` and `staticData.sidebar`. |
+| `packages/connect-core/src/router/settings.ts` | `staticData.settings`. |
+| `packages/connect-core/src/router/drive-route-loader.ts` | `ConnectRouterContext`. |
+| `packages/connect-core/src/router/search.ts` | Search param parsing and the global params. |
+| `packages/connect-core/src/router/titles.ts` | Connect's titles. |
 | `packages/builder-tools/connect-utils/vite-plugins/connect-routes.ts` | Routes folder lookup and tree generation. |
+| `apps/connect/tailwind.css` | Connect's Tailwind source, which a project's `style.css` imports. |
+| `apps/connect/src/prerender/shell-css.ts` | The loading screen's CSS, built by Tailwind's compiler. |
 | `packages/reactor-browser/src/hooks/navigation.ts`, `link-props.ts` | The navigation API for editors. |
 | `test/versioned-documents/hosts/connect/routes/` | A working example project. |

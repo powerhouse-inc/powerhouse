@@ -84,7 +84,7 @@ export const Route = createFileRoute("/hello")({
 ```
 
 - The build mounts the routes folder under Connect's root route (global search params and titles included) and code-splits each route.
-- The route tree is generated into `.ph/connect-routes.gen.ts`, which also registers the router type, so `Link` and `navigate` are typed with the project's routes. To type-check route files, the tsconfig includes `.ph/connect-routes.gen.ts` and maps `"@powerhousedao/connect/route-tree": ["./.ph/connect-routes.gen.ts"]` in `paths`; new projects are scaffolded with both, and older ones add them by hand (drop `.ph` from `exclude` too, or it filters the file out). Until a build generates the tree, the import falls back to Connect's core tree. `ph build` generates it before it runs tsc.
+- The route tree is generated into `.ph/connect-routes.gen.ts`, which also registers the router type, so `Link` and `navigate` are typed with the project's routes. To type-check route files, the tsconfig includes `.ph/connect-routes.gen.ts` and maps `"@powerhousedao/connect-core/route-tree"` and `"@powerhousedao/connect/route-tree"` to `["./.ph/connect-routes.gen.ts"]` in `paths`; new projects are scaffolded with them, and older ones add them by hand (drop `.ph` from `exclude` too, or it filters the file out). Until a build generates the tree, both imports fall back to core's own tree. `ph build` generates it before it runs tsc.
 - A route whose full path equals a core route's (e.g. `index.tsx` for `/`) fails the build. Core routes cannot be overridden.
 - The project needs `@tanstack/react-router` as a dependency, in the version Connect uses.
 - Without a routes folder, no router plugin runs and Connect uses its prebuilt route tree.
