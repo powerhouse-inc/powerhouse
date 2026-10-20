@@ -47,21 +47,20 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
   HomeScreenItem: ({ title }: { title: string }) => <div>{title}</div>,
 }));
 
-vi.mock("@powerhousedao/connect/components", () => ({
+vi.mock("../components/app-container.js", () => ({
   AppContainer: () => <div data-testid="app-container" />,
-  DriveIcon: () => null,
-  // Pass-through: with no declared composition (getRuntimeConfig mock below
-  // returns connect:{}), the real IfPlugin renders its children — the chrome
-  // is active. The mock mirrors that so the home-screen assertions hold.
-  IfPlugin: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
+vi.mock("../components/document-editor-container.js", () => ({
+  DocumentEditorContainer: () => null,
+}));
+vi.mock("../components/drive-icon.js", () => ({ DriveIcon: () => null }));
 
 vi.mock("@powerhousedao/connect/config", () => ({
   defaultPHAppConfig: {},
   defaultPHDocumentEditorConfig: {},
 }));
 
-vi.mock("../runtime-config.js", () => ({
+vi.mock("@powerhousedao/connect-core/runtime-config", () => ({
   getRuntimeConfig: () => ({ connect: {} }),
 }));
 
@@ -85,21 +84,35 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useLinkProps: () => ({ href: "/", onClick: vi.fn() }),
   useRenownAuth: () => ({ login: vi.fn(), pending: false, error: undefined }),
   useRenownLoginMethods: () => [],
+  // No store: RouteSelection renders the drive app unscoped.
+  usePHStore: () => undefined,
+  getPHStore: () => undefined,
+  createScopedPHStore: vi.fn(),
+  PHStoreProvider: ({ children }: { children?: React.ReactNode }) => children,
   useSelectedDocumentId: () => undefined,
   useSelectedDriveSafe: () => [undefined],
   useSelectedFolder: () => undefined,
 }));
 
-import { Content } from "../pages/content.js";
+import { DriveLayout, Home } from "../pages/content.js";
 
-// Content renders route outlets, so it needs a router around it.
-async function renderContent() {
-  const rootRoute = createRootRoute({ component: Content });
+// Home at `/` and the drive layout at `/d`, as Connect's routes render them.
+async function renderContent(path = "/") {
+  const rootRoute = createRootRoute();
   const router = createRouter({
     routeTree: rootRoute.addChildren([
-      createRoute({ getParentRoute: () => rootRoute, path: "/" }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/",
+        component: Home,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/d",
+        component: DriveLayout,
+      }),
     ]),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
   });
   await router.load();
   return render(<RouterProvider router={router} />);
@@ -109,7 +122,7 @@ import {
   hideDriveForSession,
 } from "../components/use-drive-auth-gate.js";
 
-describe("Content drive auth gate wiring", () => {
+describe("Drive auth gate wiring", () => {
   beforeEach(() => {
     mockGate.gate = null;
     mockGate.dismiss.mockClear();
@@ -119,21 +132,21 @@ describe("Content drive auth gate wiring", () => {
 
   it("renders the login gate when gate is 'login'", async () => {
     mockGate.gate = "login";
-    await renderContent();
+    await renderContent("/d");
     expect(screen.getByText("Log in to access this drive")).toBeDefined();
-    expect(screen.queryByTestId("home-screen")).toBeNull();
+    expect(screen.queryByTestId("app-container")).toBeNull();
   });
 
-  it("renders the home screen (not the gate) when gate is null", async () => {
+  it("renders the drive app (not the gate) when gate is null", async () => {
     mockGate.gate = null;
-    await renderContent();
+    await renderContent("/d");
     expect(screen.queryByText("Log in to access this drive")).toBeNull();
-    expect(screen.getByTestId("home-screen")).toBeDefined();
+    expect(screen.getByTestId("app-container")).toBeDefined();
   });
 
   it("gives the full-page gate a close control wired to dismiss", async () => {
     mockGate.gate = "login";
-    await renderContent();
+    await renderContent("/d");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(mockGate.dismiss).toHaveBeenCalledOnce();
   });

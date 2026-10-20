@@ -1,7 +1,7 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import { useSyncExternalStore } from "react";
 
-import { getIsEmbedded } from "./useIsEmbedded.js";
+import { getIsEmbedded } from "@powerhousedao/connect-core/embedded";
 
 const namespace = connectConfig.routerBasename;
 

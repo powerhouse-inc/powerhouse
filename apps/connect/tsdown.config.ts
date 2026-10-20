@@ -11,7 +11,9 @@ export default defineConfig({
     main: "main.tsx",
     router: "src/router/index.ts",
     layout: "src/layout/index.ts",
-    "route-tree": "src/routeTree.gen.ts",
+    "route-tree": "src/route-tree.ts",
+    "route-views": "src/route-views/index.ts",
+    prerender: "src/prerender/shell.tsx",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
     "reactor.worker": "src/reactor.worker.ts",
@@ -33,6 +35,8 @@ export default defineConfig({
       "@powerhousedao/connect/route-tree",
       // Resolved by the project build (builder-tools' phBundledPackagesPlugin).
       "ph-bundled-packages-virtual",
+      // Shared with project code, which registers routes and plugins on it.
+      /^@powerhousedao\/connect-core(\/.*)?$/,
     ],
   },
   loader: {

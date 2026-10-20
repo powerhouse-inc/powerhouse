@@ -1,5 +1,4 @@
 export * from "./analytics.js";
-export * from "./if-plugin.js";
 export * from "./openpanel.js";
 export * from "./app-container.js";
 export * from "./app-layout.js";
@@ -17,3 +16,4 @@ export * from "./root.js";
 export * from "./router.js";
 export * from "./search-bar.js";
 export * from "./sidebar.js";
+export { loadLocalPackage } from "@powerhousedao/connect-core/runtime";

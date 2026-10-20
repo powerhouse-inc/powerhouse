@@ -3,17 +3,17 @@ import { GenericDriveExplorer } from "@powerhousedao/powerhouse-vetra-packages/e
 import {
   useAppModuleById,
   useDefaultAppModule,
-  useSelectedDocumentId,
-  useSelectedDriveSafe,
 } from "@powerhousedao/reactor-browser";
+import { useDriveRouteData } from "@powerhousedao/connect-core/router";
+import type { ReactNode } from "react";
 import { Suspense } from "react";
-import { DocumentEditorContainer } from "./document-editor-container.js";
 import { EditorLoader } from "./editor-loader.js";
 import { ErrorBoundary } from "./error-boundary.js";
 
-export function AppContainer() {
-  const [selectedDrive] = useSelectedDriveSafe();
-  const selectedDocumentId = useSelectedDocumentId();
+/** The route's drive's app around `children`, the open document's view;
+ * drive apps show their own view while `children` is null. */
+export function AppContainer({ children = null }: { children?: ReactNode }) {
+  const selectedDrive = useDriveRouteData().drive;
 
   const app = useAppModuleById(selectedDrive?.header.meta?.preferredEditor);
   const defaultApp = useDefaultAppModule();
@@ -24,10 +24,6 @@ export function AppContainer() {
 
   const AppComponent =
     app?.Component ?? defaultApp?.Component ?? GenericDriveExplorer.Component;
-
-  if (!AppComponent) {
-    throw new Error("No app component found");
-  }
   return (
     <ErrorBoundary
       variant="detailed"
@@ -36,9 +32,7 @@ export function AppContainer() {
     >
       <Suspense fallback={<EditorLoader />}>
         <DropZoneWrapper className="flex h-full flex-col overflow-auto">
-          <AppComponent>
-            {selectedDocumentId ? <DocumentEditorContainer /> : null}
-          </AppComponent>
+          <AppComponent>{children}</AppComponent>
         </DropZoneWrapper>
       </Suspense>
     </ErrorBoundary>

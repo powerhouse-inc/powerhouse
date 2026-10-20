@@ -1,7 +1,7 @@
 import { DEFAULT_RELATIONAL_PROCESSOR_DB_NAME } from "@powerhousedao/shared/processors";
 import { ROOT_STORAGE_NAMESPACE } from "@powerhousedao/shared/connect";
 import { PH_CONNECT_BASE_PATH } from "../connect.config.js";
-import { getRuntimeConfig } from "../runtime-config.js";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import { resolveReactorNamespace } from "./reactor-namespace.js";
 
 export const REACTOR_INSTANCE_NAMESPACE = resolveReactorNamespace({

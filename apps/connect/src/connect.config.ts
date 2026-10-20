@@ -10,7 +10,7 @@ import {
   normalizeBasePath,
 } from "@powerhousedao/shared/connect";
 import { logger } from "document-model";
-import { getRuntimeConfig } from "./runtime-config.js";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import { resolveOpenPanelConfig } from "./utils/openpanel-config.js";
 
 // Env vars are reserved for version stamps and analytics processor toggles.

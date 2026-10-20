@@ -1,14 +1,19 @@
 import { DocumentEditor } from "./editors.js";
 import {
   setSelectedNode,
+  useDocument,
   useNodeParentFolderById,
-  useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
-export function DocumentEditorContainer() {
-  const [selectedDocument] = useSelectedDocument();
-  const parentFolder = useNodeParentFolderById(selectedDocument.header.id);
+/** The editor of the document `documentId` names. */
+export function DocumentEditorContainer({
+  documentId,
+}: {
+  documentId: string;
+}) {
+  const selectedDocument = useDocument(documentId);
+  const parentFolder = useNodeParentFolderById(documentId);
 
   // TODO: unused
   const _onOpenSwitchboardLink = useMemo(() => {
@@ -21,6 +26,7 @@ export function DocumentEditorContainer() {
     setSelectedNode(parentFolder);
   }, [parentFolder]);
 
+  if (!selectedDocument) return null;
   return (
     <div
       id="document-editor-container"
