@@ -442,6 +442,65 @@ export default {
 };
 `,
     );
+    // $map (T4): the cli shape — every drive the switchboard serves, by a
+    // $map over its `drives` output — checks clean, while a branded $item
+    // in a non-string slot fails. mapbad is also the CROSS-COPY regression
+    // test: its $item comes from outputs.d.ts (host-core/schema) and its
+    // target type from the ph-cli runner dist, which inlines its own copy of
+    // host-core's token types; the brands must still agree.
+    writeFixture(
+      dir,
+      "mapcli",
+      `// @ts-check
+import connect from "../connect/host.js";
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "mapcli",
+  runner: { module: "@powerhousedao/host-core/runners/compound" },
+  children: {
+    "cli-switchboard": { host: "switchboard" },
+    "cli-connect": {
+      host: "connect",
+      reactor: {
+        protocol: connect.reactor.protocol,
+        backends: {
+          sb: { kind: "remote", remote: { url: switchboard.endpoints.graphql } },
+        },
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: switchboard.drives.$item.url } },
+          },
+        },
+      },
+    },
+  },
+};
+`,
+    );
+    writeFixture(
+      dir,
+      "mapbad",
+      `// @ts-check
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "mapbad",
+  runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+  reactor: {
+    drives: {
+      $map: {
+        over: { $output: { host: "switchboard", path: ["drives"] } },
+        to: { slug: { $key: true }, availableOffline: switchboard.drives.$item.url },
+      },
+    },
+  },
+};
+`,
+    );
     const { status, errors } = tscHosts(dir);
     expect(status).not.toBe(0);
     const byFile = (host: string) =>
@@ -452,6 +511,10 @@ export default {
       // the target union lists the tokens that fit a string field
       /error TS2322: Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| [^']*OutputToken<string>[^']*'/,
     );
+    expect(byFile("mapcli")).toEqual([]);
+    expect(byFile("mapbad").join("\n")).toMatch(
+      /error TS2322: [^\n]*availableOffline: ItemToken<string>/,
+    );
     expect(byFile("typo").join("\n")).toMatch(/'drive' does not exist/);
     expect(byFile("badpath").join("\n")).toMatch(
       /Property 'workflow' does not exist/,
@@ -459,7 +522,8 @@ export default {
     expect(byFile("badplugin").join("\n")).toMatch(/allowAddDrives/);
     expect(
       errors.filter(
-        (line) => !/^hosts\/(typo|badpath|badplugin|baddrive)\//.test(line),
+        (line) =>
+          !/^hosts\/(typo|badpath|badplugin|baddrive|mapbad)\//.test(line),
       ),
     ).toEqual([]);
   }, 240_000);
