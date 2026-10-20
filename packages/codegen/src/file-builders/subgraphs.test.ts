@@ -396,7 +396,7 @@ function exportedClasses(root: string) {
         .filter(Node.isClassDeclaration)
         .map(
           (declaration) =>
-            `${name}=${declaration.getName()}@${relative(root, declaration.getSourceFile().getFilePath())}`,
+            `${name}=${declaration.getName()}@${relative(root, declaration.getSourceFile().getFilePath()).replaceAll("\\", "/")}`,
         ),
     )
     .sort();

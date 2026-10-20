@@ -9,7 +9,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { IndentationText, Node, Project, Scope, SyntaxKind } from "ts-morph";
 import { afterEach, describe, expect, it } from "vitest";
@@ -138,7 +138,9 @@ async function expectFactoryRefused(
   resolvers.replaceWithText(resolverSource);
   expect(await migrateSubgraphSourceFile(file)).toStrictEqual({
     changed: false,
-    diagnostics: [{ file: "/subgraphs/example/resolvers.ts", line, message }],
+    diagnostics: [
+      { file: normalize("/subgraphs/example/resolvers.ts"), line, message },
+    ],
   });
   expect(file.getFullText()).toBe(source);
   expect(resolvers.getFullText()).toBe(resolverSource);
@@ -679,7 +681,11 @@ ${legacyClass("X", "x", "getResolvers(this)")}`,
       outcome: {
         changed: false,
         diagnostics: [
-          { file: "/subgraphs/x.ts", line: 4, message: sharedFactory("X") },
+          {
+            file: normalize("/subgraphs/x.ts"),
+            line: 4,
+            message: sharedFactory("X"),
+          },
         ],
       },
       texts: files,
@@ -913,7 +919,7 @@ ${legacyClass("Good", "good", "getResolvers(this)", `  ${method}\n`)}`,
           changed: false,
           diagnostics: [
             {
-              file: "/subgraphs/good.ts",
+              file: normalize("/subgraphs/good.ts"),
               line: 3,
               message: `Resolver factory ${nameAccess}`,
             },
@@ -962,7 +968,7 @@ ${legacyClass("Good", "good", "getResolvers(this)", `  ${method}\n`)}`,
     expect(outcome.changed).toBe(false);
     expect(outcome.diagnostics).toStrictEqual([
       {
-        file: "/subgraphs/example/index.ts",
+        file: normalize("/subgraphs/example/index.ts"),
         line: 7,
         message:
           "Old-style subgraph extends a shared base; update its inherited fields and schema manually.",
@@ -986,7 +992,7 @@ ${legacyClass("Good", "good", "getResolvers(this)", `  ${method}\n`)}`,
         changed: false,
         diagnostics: [
           {
-            file: "/subgraphs/example/index.ts",
+            file: normalize("/subgraphs/example/index.ts"),
             line: 9,
             message: resolversForm,
           },
@@ -1096,7 +1102,7 @@ ${legacyClass("Good", "good", "getResolvers(this)", `  ${method}\n`)}`,
         changed: false,
         diagnostics: [
           {
-            file: "/subgraphs/example/index.ts",
+            file: normalize("/subgraphs/example/index.ts"),
             line,
             message: `Instance code ${message}`,
           },
@@ -1475,7 +1481,7 @@ void checkExampleExampleSubgraph;
       expect(await migrateInMemory("/subgraphs/x.ts", files)).toStrictEqual({
         outcome: {
           changed: false,
-          diagnostics: [{ file: "/subgraphs/x.ts", line, message }],
+          diagnostics: [{ file: normalize("/subgraphs/x.ts"), line, message }],
         },
         texts: files,
       });

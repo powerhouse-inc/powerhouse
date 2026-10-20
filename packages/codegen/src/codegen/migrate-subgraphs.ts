@@ -4,7 +4,7 @@ import {
   typeKindsOfDocument,
 } from "document-model/tooling";
 import { existsSync, readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import {
   IndentationText,
   Node,
@@ -1063,7 +1063,7 @@ async function migrateSourceFiles(files: readonly SourceFile[]) {
     } catch (error) {
       if (!(error instanceof UnsupportedSubgraph)) throw error;
       const diagnostic = {
-        file: error.node.getSourceFile().getFilePath(),
+        file: normalize(error.node.getSourceFile().getFilePath()),
         line: error.node.getStartLineNumber(),
         message: error.message,
       };
@@ -1166,12 +1166,12 @@ export async function migrateSubgraphs(
       requireClassExports: converted,
     });
     if (barrel.getFullText() !== before)
-      result.changedFiles.push(barrel.getFilePath());
+      result.changedFiles.push(normalize(barrel.getFilePath()));
   }
   for (const file of project.getSourceFiles()) {
     if (!file.isSaved()) {
       await file.save();
-      result.changedFiles.push(file.getFilePath());
+      result.changedFiles.push(normalize(file.getFilePath()));
     }
   }
   return result;

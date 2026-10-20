@@ -292,8 +292,11 @@ function subgraphFileOfSpecifier(
     `${target}.ts`,
     path.join(target, "index.ts"),
   ];
-  const file =
-    candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+  // ts-morph spells every path with forward slashes, as on Windows
+  // path.resolve does not, and the barrel compares the two as strings.
+  const file = (
+    candidates.find((candidate) => existsSync(candidate)) ?? candidates[0]
+  ).replaceAll(path.sep, "/");
   return file === rootPath ? undefined : file;
 }
 
