@@ -360,7 +360,11 @@ describe("compiler graph behavior", () => {
     const reads = commands()
       .filter((args) => args.includes("--showConfig"))
       .map((args) =>
-        relative(realpathSync(dirname(root)), args[args.indexOf("-p") + 1]),
+        // Both resolved: Windows may spell the temp folder in its 8.3 form.
+        relative(
+          realpathSync.native(dirname(root)),
+          realpathSync.native(args[args.indexOf("-p") + 1]),
+        ),
       );
     expect(reads.sort()).toEqual(
       [
