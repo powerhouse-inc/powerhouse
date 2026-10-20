@@ -176,24 +176,20 @@ describe("AttachmentSchemaCompiler", () => {
     ).toEqual([REF_B]);
   });
 
-  it("rejects unresolved model actions instead of dropping attachment references", () => {
-    const module = codeFirstModule(schemaFirstSpecification({}));
-    expect(() =>
-      new AttachmentSchemaCompiler().forModuleAction(module, "UNKNOWN_ACTION"),
-    ).toThrow(
-      'Attachment schema compilation failed for document type "example/attachment-title", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
-    );
+  it("compiles an action the model does not declare to the no-reference path", () => {
+    const codeFirst = codeFirstModule(schemaFirstSpecification({}));
     const schemaFirst = documentModule([
       specification(1, [
         operation("SET_TITLE", "input SetTitleInput { title: AttachmentRef! }"),
       ]),
     ]);
-    expect(() =>
-      new AttachmentSchemaCompiler().forModuleAction(
-        schemaFirst,
-        "UNKNOWN_ACTION",
-      ),
-    ).toThrow("no operation maps to the action");
+    for (const module of [codeFirst, schemaFirst]) {
+      expect(
+        new AttachmentSchemaCompiler()
+          .forModuleAction(module, "ARCHIVE_ITEM")
+          .extract(action("ARCHIVE_ITEM", { title: REF_A })),
+      ).toEqual([]);
+    }
   });
 
   it("extracts direct, optional, and null AttachmentRef fields", () => {

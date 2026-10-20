@@ -137,28 +137,20 @@ describe("SchemaCompiledOperationRefs", () => {
     expect(diagnostics[0]).toContain("ATTACH_FILE");
   });
 
-  it("reports an unresolved model action instead of silently dropping its refs", () => {
-    const diagnostics: { message: string; error: unknown }[] = [];
+  it("returns no refs and no diagnostic for an action the model does not declare", () => {
+    const diagnostics: string[] = [];
     const refs = new SchemaCompiledOperationRefs(
       registry(module),
       new AttachmentSchemaCompiler(),
-      (message, error) => diagnostics.push({ message, error }),
+      (message) => diagnostics.push(message),
     );
     expect(
-      refs.refsOf(item({ ref: REF_A }, { actionType: "UNKNOWN_ACTION" })),
+      refs.refsOf(item({ ref: REF_A }, { actionType: "ARCHIVE_ITEM" })),
     ).toEqual([]);
-    expect(diagnostics).toEqual([
-      {
-        message:
-          "extracting attachment refs from example/attachment-document/UNKNOWN_ACTION failed",
-        error: new Error(
-          'Attachment schema compilation failed for document type "example/attachment-document", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
-        ),
-      },
-    ]);
+    expect(diagnostics).toEqual([]);
   });
 
-  it("logs an unresolved model action when no diagnostic callback is supplied", () => {
+  it("logs an extraction failure when no diagnostic callback is supplied", () => {
     const messages: unknown[] = [];
     const errorLog = vi
       .spyOn(console, "error")
@@ -171,11 +163,13 @@ describe("SchemaCompiledOperationRefs", () => {
         new AttachmentSchemaCompiler(),
       );
       expect(
-        refs.refsOf(item({ ref: REF_A }, { actionType: "UNKNOWN_ACTION" })),
+        refs.refsOf(item({ ref: REF_A }, { actionType: "ARCHIVE_ITEM" })),
       ).toEqual([]);
+      expect(messages).toEqual([]);
+      expect(refs.refsOf(item({ ref: "not-a-ref" }))).toEqual([]);
       expect(messages).toEqual([
         expect.stringContaining(
-          'Attachment schema compilation failed for document type "example/attachment-document", version 1, action "UNKNOWN_ACTION": no operation maps to the action',
+          'Attachment extraction failed for document type "example/attachment-document", version 1, action "ATTACH_FILE" at input.ref: the AttachmentRef is malformed',
         ),
       ]);
     } finally {
