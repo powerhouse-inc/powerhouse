@@ -411,15 +411,18 @@ export type ProjectFavicon = ProjectAsset & {
 /**
  * The favicons: the `_16x16` / `_32x32` / `_64x64` siblings of
  * `branding.icon` (an SVG master is one scalable favicon). They replace
- * Connect's static icon.ico link in index.html; none keeps it.
+ * Connect's static icon.ico link in index.html; none keeps it. A favicon
+ * named outright (`faviconPath`: `branding.favicon` or `--favicon`) wins: it
+ * is built as icon.ico, so the icon's siblings stand aside.
  */
 export function resolveProjectFavicons(
   projectRoot: string,
   branding: PHConnectBranding | undefined,
   warn?: Warn,
+  faviconPath?: string,
 ): ProjectFavicon[] {
   const app = branding?.icon;
-  if (!app) return [];
+  if (!app || faviconPath) return [];
   if (isPassthroughImageRef(app)) {
     warn?.(
       `[branding] icon ${app}: use a project file path here, not a URL. Connect's favicon stays.`,

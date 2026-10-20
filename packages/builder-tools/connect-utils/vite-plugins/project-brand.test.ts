@@ -344,6 +344,20 @@ describe("favicons", () => {
     expect(out.indexOf("<title>")).toBeLessThan(out.indexOf("favicon-16x16"));
   });
 
+  it("a favicon named outright wins over the icon's siblings", () => {
+    const dir = project({
+      "icons/app.png": png(1024, 1024),
+      "icons/app_16x16.png": png(16, 16),
+      "icons/app.ico": "ico",
+    });
+    const icon = "./icons/app.png";
+    expect(resolveProjectFavicons(dir, { icon })).toHaveLength(1);
+    // branding.favicon or ph connect build --favicon
+    expect(
+      resolveProjectFavicons(dir, { icon }, undefined, "icons/app.ico"),
+    ).toEqual([]);
+  });
+
   it("an SVG master is one scalable favicon; no siblings keep Connect's", () => {
     const warnings: string[] = [];
     const dir = project({ "a.svg": "<svg/>", "b.png": png(2, 2) });

@@ -395,11 +395,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     branding,
     brandWarn,
   );
-  const projectFavicons = resolveProjectFavicons(
-    options.dirname,
-    branding,
-    brandWarn,
-  );
   const runtimeBranding = resolveRuntimeBranding(
     options.dirname,
     branding,
@@ -429,6 +424,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   });
   // The loading shell renders ahead of the app: the served composition and name pick it.
   const servedConnect = configPlugin.api.connect;
+  // The tab icon: a favicon named outright (--favicon over branding.favicon),
+  // else branding.icon's sized siblings, else Connect's.
+  const faviconPath = options.favicon ?? configPlugin.api.favicon;
+  const projectFavicons = resolveProjectFavicons(
+    options.dirname,
+    branding,
+    brandWarn,
+    faviconPath,
+  );
   const pwaPlugins: PluginOption = (async () => {
     if (!offlineEnabled) return connectPwaPlugins({ offlineEnabled });
     const contributions = await collectPackagePwaContributions({
@@ -596,7 +600,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
         : []),
       connectFaviconPlugin({
-        faviconPath: options.favicon ?? configPlugin.api.favicon,
+        faviconPath,
       }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
