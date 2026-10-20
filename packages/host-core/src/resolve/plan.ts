@@ -106,7 +106,7 @@ function declaredOrder(
   startOrder: readonly string[],
 ): string[] {
   const keys = members.map((m) => m.key);
-  const named = startOrder.filter((k) => keys.includes(k));
+  const named = [...new Set(startOrder)].filter((k) => keys.includes(k));
   return [...named, ...keys.filter((k) => !named.includes(k))];
 }
 

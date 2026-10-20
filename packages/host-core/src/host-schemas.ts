@@ -86,6 +86,14 @@ export function refineStartOrder(
   if (!Array.isArray(startOrder)) return;
   const members = Object.keys(host.children);
   startOrder.forEach((name: unknown, index) => {
+    if (startOrder.indexOf(name) !== index) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["config", "startOrder", index],
+        message: `startOrder names "${String(name)}" twice; each member starts once.`,
+      });
+      return;
+    }
     if (typeof name === "string" && members.includes(name)) return;
     ctx.addIssue({
       code: "custom",

@@ -20,6 +20,7 @@ export {
 export {
   getVerb,
   listVerbs,
+  ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
   validateDeclaredHost,

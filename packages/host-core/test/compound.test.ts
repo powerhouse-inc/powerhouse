@@ -97,6 +97,9 @@ export async function dev(host, ctx) {
   return { outputs: { origin: "http://localhost:" + host.runner.port }, shutdown };
 }
 export const run = dev;
+export async function build(host) {
+  log({ event: "build", name: host.name, plugins: host.runner.plugins ?? null });
+}
 `,
   );
 
@@ -325,6 +328,34 @@ describe("runCompound", () => {
     await expect(run(dir)).rejects.toThrow(
       /config\.projectDrivesIntoConnect was removed;[\s\S]*config\.drivesPublicBase was removed/,
     );
+  });
+
+  it("build: members get their declared hosts, no outputs are needed", async () => {
+    const { dir, sink } = makeProject({
+      connectPlugins: [{ module: WF, config: { drive: workflowsUrl } }],
+    });
+    const result = await runCompound(
+      await appHost(dir),
+      { ...ctx(dir), verb: "build" },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    const builds = calls(sink).filter((c) => (c.event as string) === "build");
+    expect(builds.map((c) => c.name)).toEqual([
+      "lab-switchboard",
+      "lab-connect",
+    ]);
+    expect(builds[1].plugins).toEqual([
+      { module: WF, config: { drive: workflowsUrl } },
+    ]);
+    await result.shutdown();
+  });
+
+  it("rejects a startOrder that names a member twice", async () => {
+    const { dir, sink } = makeProject({
+      startOrder: ["app-switchboard", "app-switchboard", "app-connect"],
+    });
+    await expect(run(dir)).rejects.toThrow(/names "app-switchboard" twice/);
+    expect(calls(sink)).toEqual([]);
   });
 
   it("forwards cspRegistrySync only to Connect-runner members", async () => {

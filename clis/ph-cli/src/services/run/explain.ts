@@ -1,5 +1,5 @@
 import {
-  childrenSchema,
+  declaredHostSchemas,
   describeToken,
   drivesSchema,
   envSitesOf,
@@ -13,7 +13,6 @@ import {
   outputRefsOf,
   outputSitesOf,
   planCompound,
-  probeRun,
   processResolveEnv,
   producerOutputsSchemas,
   readProjectName,
@@ -21,6 +20,7 @@ import {
   resolvePluginContributions,
   resolveRunnerModule,
   runnerOutputsSchema,
+  runRecordOutputSource,
   validateDeclaredHost,
   validateHost,
   type ChildWrapper,
@@ -99,7 +99,9 @@ async function loadView(
   validateDeclaredHost(runner, specifier, loaded.host, file);
   validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
   // The compound runner's schema owns `config`; `children` is shared.
-  const children = childrenSchema.parse(loaded.host.children);
+  const children = declaredHostSchemas.childrenSchema.parse(
+    loaded.host.children,
+  );
   const members: MemberView[] = [];
   for (const [key, wrapper] of Object.entries(children)) {
     const base = (await loadHost(projectRoot, wrapper.host)).host;
@@ -301,15 +303,20 @@ async function explainOutputs(
       projectRoot,
       outputRefsOf(view.host),
     );
+    // The same lookup `ph run` resolves through.
+    const source = runRecordOutputSource(projectRoot, {
+      consumer: name,
+      producers,
+      projectName,
+    });
     console.log(`[${name}] ${view.specifier}`);
     console.log(`  produces: ${outputKeys(view.runner)}`);
-    printConsumes(view.host, "  ", (folder) => {
-      const info = producers.get(folder);
-      if (!info || "error" in info) return "";
-      const probe = probeRun(projectRoot, info.name, projectName);
-      return probe.status === "live" && probe.record.outputs
-        ? `  (host "${info.name}": running, pid ${probe.record.pid})`
-        : `  (host "${info.name}": not running; start it first: ph run ${folder})`;
+    printConsumes(view.host, "  ", (folder, member) => {
+      const ref =
+        member === undefined ? { host: folder } : { host: folder, member };
+      return source.lookup(ref).status === "available"
+        ? `  (host "${folder}": running)`
+        : `  (host "${folder}": not running; start it first: ph run ${folder})`;
     });
     return;
   }

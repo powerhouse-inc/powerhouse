@@ -3,6 +3,7 @@ import {
   getVerb,
   loadHost,
   loadProducers,
+  ONE_SHOT_VERBS,
   outputRefsOf,
   probeRun,
   processResolveEnv,
@@ -75,8 +76,15 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   validateDeclaredHost(runner, specifier, loaded.host, file, {
     outputsSchemaOf: producerOutputsSchemas(producers),
   });
-  const publishes =
-    isSchemaLike(runner.outputsSchema) && !ONE_SHOT_VERBS.has(verb);
+  const oneShot = ONE_SHOT_VERBS.has(verb);
+  if (oneShot) {
+    // `build` reads no other host's outputs: no producer needs to run.
+    const host = validateHost(runner, specifier, loaded.host, file, {
+      tokens: "allow",
+    });
+    return fn(host, { projectRoot, verb, env: process.env });
+  }
+  const publishes = isSchemaLike(runner.outputsSchema);
   // Before the verb starts anything: a second live instance would take
   // over the first one's record (and clear it on exit).
   if (publishes) assertNotRunning(projectRoot, loaded.host.name, projectName);
@@ -102,9 +110,6 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   }
   return result;
 }
-
-/** Verbs that produce something and start nothing: no lock, no record. */
-const ONE_SHOT_VERBS = new Set(["build"]);
 
 function assertNotRunning(
   projectRoot: string,

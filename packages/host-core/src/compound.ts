@@ -22,6 +22,7 @@ import {
 import { toStartedHandle, type StartedHandle } from "./runner-handle.js";
 import {
   getVerb,
+  ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
   validateDeclaredHost,
@@ -236,16 +237,28 @@ export async function runCompound(
     for (const name of plan.order) {
       const m = byKey.get(name);
       if (!m) continue;
-      const resolved = resolveHostOutputs(m.draft, {
-        outputs,
-        ...resolveEnv,
-        where: m.file,
-      });
+      const memberVerb = memberVerbOf(verb, m.draft.runner);
+      const oneShot = ONE_SHOT_VERBS.has(memberVerb);
+      // A one-shot member (build) needs no other member's outputs: it gets
+      // its declared host. Everything else resolves against the members
+      // started before it and is validated in resolved form.
+      const resolved = oneShot
+        ? { ...m.draft }
+        : resolveHostOutputs(m.draft, {
+            outputs,
+            ...resolveEnv,
+            where: m.file,
+          });
       if (wiring.cspRegistrySync && m.specifier === CONNECT_RUNNER) {
         resolved.runner = { ...resolved.runner, cspRegistrySync: true };
       }
-      const validated = validateHost(m.runner, m.specifier, resolved, m.file);
-      const memberVerb = memberVerbOf(verb, resolved.runner);
+      const validated = validateHost(
+        m.runner,
+        m.specifier,
+        resolved,
+        m.file,
+        oneShot ? { tokens: "allow" } : {},
+      );
       const fn = getVerb(m.runner, m.specifier, memberVerb);
       const where = `${name} (${m.specifier} ${memberVerb})`;
       const handle = toStartedHandle(
@@ -268,7 +281,7 @@ export async function runCompound(
         handle,
       });
       if (handle.ready) await handle.ready;
-      if (isSchemaLike(m.runner.outputsSchema)) {
+      if (!oneShot && isSchemaLike(m.runner.outputsSchema)) {
         const checked = m.runner.outputsSchema.safeParse(handle.outputs);
         if (!checked.success) {
           throw new Error(

@@ -89,6 +89,7 @@ export async function run(host) {
 export async function run(host) {
   log({ name: host.name, host });
 }
+export const build = run;
 `,
   );
   const write = (name: string, host: unknown) => {
@@ -285,6 +286,14 @@ describe("standalone ph run resolves output tokens", () => {
     );
   });
 
+  it("build needs no running producer (one-shot verbs resolve nothing)", async () => {
+    const { dir, sink } = makeProject(withDrive(workflowsUrl));
+    await startRun({ host: "connect", verb: "build", projectRoot: dir });
+    expect(calls(sink)[0].host?.runner.plugins?.[0].config.drive).toEqual(
+      workflowsUrl,
+    );
+  });
+
   it("refuses a second live instance before its verb starts anything", async () => {
     const { dir, sink } = makeProject({});
     liveSwitchboard(dir);
@@ -322,12 +331,12 @@ describe("--explain outputs", () => {
       "runner.plugins[0].config.drive ← $output switchboard › drives.workflows.url",
     );
     expect(before).toContain(
-      'host "lab-switchboard": not running; start it first: ph run switchboard',
+      'host "switchboard": not running; start it first: ph run switchboard',
     );
     liveSwitchboard(dir);
     vi.restoreAllMocks();
     expect(await explain(dir, "connect")).toContain(
-      `host "lab-switchboard": running, pid ${process.pid}`,
+      'host "switchboard": running',
     );
   });
 
@@ -340,7 +349,24 @@ describe("--explain outputs", () => {
         name: "studio",
         runner: { module: "@powerhousedao/host-core/runners/compound" },
         children: {
-          "studio-connect": { host: "connect" },
+          "studio-connect": {
+            host: "connect",
+            reactor: {
+              drives: [
+                {
+                  slug: "sektar",
+                  remote: {
+                    url: {
+                      $output: {
+                        host: "switchboard",
+                        path: ["drives", "sektar", "url"],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
           "studio-switchboard": { host: "switchboard" },
         },
       })};`,
@@ -351,5 +377,8 @@ describe("--explain outputs", () => {
       /1\. studio-switchboard \(switchboard\)\n {2}2\. studio-connect \(connect\) {2}after studio-switchboard/,
     );
     expect(out).toContain('(member "studio-switchboard", live outputs)');
+    expect(out).toContain(
+      "reactor.drives[0].remote.url ← $output switchboard › drives.sektar.url",
+    );
   });
 });
