@@ -548,6 +548,12 @@ export type TokenableSchema<
   K = TokenFor<Untokened<z.input<S>>>,
 > = z.ZodType<z.output<S>, z.input<S> | K>;
 
+/** A schema set's wrapper for its token-able fields: `tokenable` in the
+ * declared form, a plain one-option union in the resolved form (host-core's
+ * `s.tokenable`). Both share this static type: declared input, resolved
+ * output. */
+export type TokenField = <S extends z.ZodType>(schema: S) => TokenableSchema<S>;
+
 // The token branch's output is `never`, so a field's z.output stays the
 // resolved type. At runtime a token passes through untouched: declared
 // validation accepts it here, and validateHost's no-token walk (plus
