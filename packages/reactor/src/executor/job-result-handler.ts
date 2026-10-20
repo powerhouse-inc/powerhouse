@@ -114,6 +114,25 @@ export class JobResultHandler implements IJobResultHandler {
       } catch (error) {
         // No retry can reach a model the workers cannot import.
         if (ModelNotWorkerImportableError.isError(error)) {
+          // A create at 3 is a version this reactor cannot run: the refusal.
+          const createdAt3 = this.createdAtBaseReducer3(handle.job);
+          if (createdAt3 !== undefined) {
+            this.logger.warn(
+              "Refusing base-reducer 3 create of @documentId: @error",
+              createdAt3,
+              error.message,
+            );
+            this.failNow(
+              handle,
+              new UnsupportedProtocolVersionError(
+                createdAt3,
+                "base-reducer",
+                3,
+                error.documentType,
+              ),
+            );
+            return;
+          }
           this.failNow(handle, error);
           return;
         }
@@ -261,6 +280,25 @@ export class JobResultHandler implements IJobResultHandler {
       }
     }
     return conflicts;
+  }
+
+  /** The id a CREATE_DOCUMENT at base-reducer 3 in the job creates. */
+  private createdAtBaseReducer3(job: Job): string | undefined {
+    const actions = [
+      ...job.actions,
+      ...job.operations.map((operation) => operation.action),
+    ];
+    for (const action of actions) {
+      if (action.type !== "CREATE_DOCUMENT") continue;
+      const input = action.input as {
+        documentId?: string;
+        protocolVersions?: { readonly [protocol: string]: number };
+      };
+      if (input.protocolVersions?.["base-reducer"] === 3) {
+        return input.documentId ?? job.documentId;
+      }
+    }
+    return undefined;
   }
 
   private hasCreateDocumentAction(job: Job): boolean {
