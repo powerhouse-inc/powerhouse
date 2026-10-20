@@ -42,7 +42,7 @@ const document = await client.createEmpty("powerhouse/todo-list", {
 
 A document headed outside a reactor, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is added to a drive.
 
-The GraphQL light client picks from its `featureFlags` and `documentModels` options, capped at the version the Switchboard's `createDefaults` query selects. Against a Switchboard without that query it picks version 2.
+The GraphQL light client picks from its `featureFlags` and `documentModels` options, capped at the version the Switchboard's `createDefaults` query selects. Against a Switchboard without that query it picks version 2, but it cannot create there: it also reads the signature policy from that query.
 
 An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
 

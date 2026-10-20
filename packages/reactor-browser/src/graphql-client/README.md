@@ -191,7 +191,7 @@ interface:
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
 | `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
-| `getCreateProtocolVersions`                             | Picked by this client from its `featureFlags` and `documentModels`, capped at what `createDefaults` selects. A Switchboard without that query caps base-reducer at 2. |
+| `getCreateProtocolVersions`                             | Picked by this client from its `featureFlags` and `documentModels`, capped at what `createDefaults` selects. A Switchboard without that query caps base-reducer at 2, though `getCreateSignaturePolicy` refuses there. |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
 module getters are not implemented here.
