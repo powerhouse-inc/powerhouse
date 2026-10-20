@@ -1,3 +1,56 @@
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🚀 Features
+
+- **desktop:** the loading page shows the app's full-resolution icon ([a469c79ee0](https://github.com/powerhouse-inc/powerhouse/commit/a469c79ee0))
+- **shared,switchboard,ph-cli,host-core,reactor-api:** one .ph root, user data under PH_USER_DATA_DIR (A3, A4b) ([19d53aeb36](https://github.com/powerhouse-inc/powerhouse/commit/19d53aeb36))
+
+### 🩹 Fixes
+
+- **codegen,host-core:** desktop host stores in ${userData}/.ph, one dir per PGlite store (A4, A5) ([de35d74a9d](https://github.com/powerhouse-inc/powerhouse/commit/de35d74a9d))
+- **ph-cli:** switchboard runner passes the classic args shape (A1, A2) ([01298f72ae](https://github.com/powerhouse-inc/powerhouse/commit/01298f72ae))
+- **reactor:** move executor event ids off the sync id range ([1236ea54da](https://github.com/powerhouse-inc/powerhouse/commit/1236ea54da))
+- **reactor-api:** keep a package removed while its load is in flight removed ([08ac777687](https://github.com/powerhouse-inc/powerhouse/commit/08ac777687))
+- **reactor-api:** throw from the vite loader when a package module fails to load ([e721fcc7ce](https://github.com/powerhouse-inc/powerhouse/commit/e721fcc7ce))
+- **reactor-api:** unregister the document models of a package that goes away ([9c85994b60](https://github.com/powerhouse-inc/powerhouse/commit/9c85994b60))
+- **reactor-api:** check subgraph claim ownership in the first supergraph ([1062f09191](https://github.com/powerhouse-inc/powerhouse/commit/1062f09191))
+- **reactor-api:** strip federation directives a @link renames from the stream ([1ca83bd8d3](https://github.com/powerhouse-inc/powerhouse/commit/1ca83bd8d3))
+- **reactor-api:** stream entity extensions whose base type is absent ([7b69672252](https://github.com/powerhouse-inc/powerhouse/commit/7b69672252))
+- **reactor-api:** mount the stream for subscription-only subgraphs ([5d173f7189](https://github.com/powerhouse-inc/powerhouse/commit/5d173f7189))
+- **reactor-api:** stop vite-loader reloads from reaching unsubscribed handlers ([f922c8c279](https://github.com/powerhouse-inc/powerhouse/commit/f922c8c279))
+- **reactor-api:** serve every subscription subgraph from one WebSocket server ([fe7d1bb338](https://github.com/powerhouse-inc/powerhouse/commit/fe7d1bb338))
+- **reactor-api:** keep a failed package's subgraphs, processors and pieces ([50f36b3cb2](https://github.com/powerhouse-inc/powerhouse/commit/50f36b3cb2))
+- **reactor-api:** unregister upgrade manifests on package uninstall ([a0a4dad867](https://github.com/powerhouse-inc/powerhouse/commit/a0a4dad867))
+- **reactor-api:** uninstall packages loaded at boot ([337e95693d](https://github.com/powerhouse-inc/powerhouse/commit/337e95693d))
+- **reactor-api:** run the subgraph lint through the server's admission rules ([96b11aa864](https://github.com/powerhouse-inc/powerhouse/commit/96b11aa864))
+- **reactor-api:** load graphql-ws's useServer in every environment ([ff29e213c7](https://github.com/powerhouse-inc/powerhouse/commit/ff29e213c7))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** refuse every version of a model whose latest version is refused ([27f70b4d6d](https://github.com/powerhouse-inc/powerhouse/commit/27f70b4d6d))
+- **reactor-api:** break the subgraph-types import cycle ([bfd87fc15a](https://github.com/powerhouse-inc/powerhouse/commit/bfd87fc15a))
+- **reactor-api:** unregister the document models of a package that goes away ([#3247](https://github.com/powerhouse-inc/powerhouse/pull/3247))
+- **reactor-api:** serve every subscription subgraph from one WebSocket server ([#3246](https://github.com/powerhouse-inc/powerhouse/pull/3246))
+- **reactor-api:** close four subgraph registry lows ([#3248](https://github.com/powerhouse-inc/powerhouse/pull/3248))
+- **reactor-api:** skip host fsync on read-only pglite streams ([#3241](https://github.com/powerhouse-inc/powerhouse/issues/3241))
+- **reactor-api:** skip host fsync on read-only pglite streams ([#3250](https://github.com/powerhouse-inc/powerhouse/pull/3250))
+- **registry:** roll back failed publishes, stop abandoned tarball reads, name packages by npm name ([#3244](https://github.com/powerhouse-inc/powerhouse/pull/3244))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+
+### 🔥 Performance
+
+- **ph-cli:** precompress wasm and data with gzip in connect build ([06e30ea689](https://github.com/powerhouse-inc/powerhouse/commit/06e30ea689))
+- **ph-cli:** start connect preview without the build's vite plugin stack ([720e598118](https://github.com/powerhouse-inc/powerhouse/commit/720e598118))
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+- **reactor-api:** load the subgraph lint's check only when it runs ([a1cb005113](https://github.com/powerhouse-inc/powerhouse/commit/a1cb005113))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Frank @froid1911
+- Wouter Kampmann
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features

@@ -1,3 +1,30 @@
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🚀 Features
+
+- **shared,switchboard,ph-cli,host-core,reactor-api:** one .ph root, user data under PH_USER_DATA_DIR (A3, A4b) ([19d53aeb36](https://github.com/powerhouse-inc/powerhouse/commit/19d53aeb36))
+
+### 🩹 Fixes
+
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+- **ph-cli:** switchboard runner passes the classic args shape (A1, A2) ([01298f72ae](https://github.com/powerhouse-inc/powerhouse/commit/01298f72ae))
+
+### 🔥 Performance
+
+- **reactor-api:** load the subgraph lint's check only when it runs ([a1cb005113](https://github.com/powerhouse-inc/powerhouse/commit/a1cb005113))
+- **ph-cli:** start connect preview without the build's vite plugin stack ([720e598118](https://github.com/powerhouse-inc/powerhouse/commit/720e598118))
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+- **ph-cli:** precompress wasm and data with gzip in connect build ([06e30ea689](https://github.com/powerhouse-inc/powerhouse/commit/06e30ea689))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features

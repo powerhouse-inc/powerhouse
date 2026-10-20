@@ -1,3 +1,27 @@
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🚀 Features
+
+- **shared,switchboard,ph-cli,host-core,reactor-api:** one .ph root, user data under PH_USER_DATA_DIR (A3, A4b) ([19d53aeb36](https://github.com/powerhouse-inc/powerhouse/commit/19d53aeb36))
+
+### 🩹 Fixes
+
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+- **codegen,host-core:** desktop host stores in ${userData}/.ph, one dir per PGlite store (A4, A5) ([de35d74a9d](https://github.com/powerhouse-inc/powerhouse/commit/de35d74a9d))
+
+### 🔥 Performance
+
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features
