@@ -6,20 +6,17 @@ import {
 } from "@powerhousedao/shared/clis";
 import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import {
+  defineHostSchemas,
   entryActiveForVerb,
   findDeadConnectConfig,
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
-  PluginError,
-  unresolvedDriveReferences,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
-  reactorHostSchema,
   remoteBackendUrls,
-  runnerBaseSchema,
   type ReactorConfig,
   type RunnerContext,
   type RunnerHandle,
@@ -42,26 +39,33 @@ export const kind = "reactor";
 
 /** The connect host: the host-core reactor host with every runner option
  * this module reads declared (strict: an unknown runner key fails), and
- * `config` typed by Connect's own zod schema (the authored `connect` block). */
-export const hostSchema = reactorHostSchema.extend({
-  runner: runnerBaseSchema
-    .extend({
-      /** Open a browser tab once listening (dev/serve). */
-      openBrowser: z.boolean().optional(),
-      /** Fail instead of moving to the next free port when `port` is taken. */
-      strictPort: z.boolean().optional(),
-      /** The Connect build output dir (`build` writes it, `serve` serves it). */
-      outDir: z.string().min(1).optional(),
-      /** Patch the baked CSP for the runtime registry (`serve`); a compound's
-       * wiring sets it on its connect member. */
-      cspRegistrySync: z.boolean().optional(),
-    })
-    .strict(),
-  config: connectConfigSchema.optional(),
-});
+ * `config` typed by Connect's own zod schema (the authored `connect` block).
+ * One definition, two schemas: `declaredHostSchema` (token-able fields take
+ * output tokens; types host files) and `hostSchema` (resolved; checked
+ * right before the verb). */
+const schemas = defineHostSchemas((s) =>
+  s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema
+      .extend({
+        /** Open a browser tab once listening (dev/serve). */
+        openBrowser: z.boolean().optional(),
+        /** Fail instead of moving to the next free port when `port` is taken. */
+        strictPort: z.boolean().optional(),
+        /** The Connect build output dir (`build` writes it, `serve` serves it). */
+        outDir: z.string().min(1).optional(),
+        /** Patch the baked CSP for the runtime registry (`serve`); a
+         * compound's wiring sets it on its connect member. */
+        cspRegistrySync: z.boolean().optional(),
+      })
+      .strict(),
+    config: connectConfigSchema.optional(),
+  }),
+);
+export const declaredHostSchema = schemas.declaredHostSchema;
+export const hostSchema = schemas.hostSchema;
 
 /** What a connect host.js author writes. */
-export type ConnectHost = z.input<typeof hostSchema>;
+export type ConnectHost = z.input<typeof declaredHostSchema>;
 /** What a verb receives (defaults applied). */
 export type ConnectHostParsed = z.output<typeof hostSchema>;
 
@@ -176,18 +180,10 @@ function callerOverride(
       : normalizePluginEntries(entries, `hosts/${host.name}/host.js`)
           .filter((entry) => entryActiveForVerb(entry, verb))
           .map((entry) => ({ module: entry.module, config: entry.config }));
-  // A drive reference (`{ from, slug }`) is derived by a supervising compound
-  // from the referenced member's drives. Reaching this runner unresolved
-  // means there is no such member: standalone `ph run connect`, or a
-  // compound member that is not started before this one.
-  for (const entry of composition ?? []) {
-    for (const { key, reference } of unresolvedDriveReferences(entry.config)) {
-      throw new PluginError(
-        `hosts/${host.name}/host.js: plugin "${entry.module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", but this Connect is not running inside a compound that started it.`,
-        `Run the compound that declares "${reference.from}" (and list it before this member in config.startOrder), or spell the drive URL: { ${key}: "http://localhost:<port>/d/${reference.slug}" }.`,
-      );
-    }
-  }
+  // Entry configs arrive RESOLVED: output tokens (e.g. the workflows
+  // plugin's `drive: switchboard.drives.workflows.url`) were replaced by
+  // `ph run` (standalone: the producer's run record; in a compound: the
+  // member's live outputs) before validateHost let this verb run.
   if (entries !== undefined) {
     // Change 2: show the composition plan on the `ph run connect` terminal.
     // The pipeline itself runs in the browser (hook execution logs to the
@@ -276,6 +272,34 @@ function callerOverride(
   };
 }
 
+/**
+ * Start a server; under a supervising compound (`ctx.parent`), drop the
+ * process-exiting signal listeners it installed (vite's dev and preview
+ * servers exit on SIGTERM): the compound owns the exit and stops members in
+ * reverse dependency order through their handles.
+ */
+async function startUnderSupervisor<T>(
+  ctx: RunnerContext,
+  start: () => Promise<T>,
+): Promise<T> {
+  if (!ctx.parent) return start();
+  const signals = ["SIGINT", "SIGTERM"] as const;
+  const before = new Map(
+    signals.map((signal) => [signal, new Set(process.listeners(signal))]),
+  );
+  try {
+    return await start();
+  } finally {
+    for (const signal of signals) {
+      for (const listener of process.listeners(signal)) {
+        if (!before.get(signal)?.has(listener)) {
+          process.off(signal, listener);
+        }
+      }
+    }
+  }
+}
+
 /** Fail at `ph run`, naming the plugin and key, when a composed Connect
  * plugin's entry config does not match its schema. */
 async function validateComposition(
@@ -299,10 +323,8 @@ export async function dev(
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = toStudioArgs(host);
-  const server = await runConnectStudio(
-    args,
-    undefined,
-    callerOverride(host, ctx, ctx.verb),
+  const server = await startUnderSupervisor(ctx, () =>
+    runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb)),
   );
   // vite's dev server binds its default host ("localhost") here.
   return connectHandle(server, { host: "localhost", port: args.port });
@@ -355,9 +377,11 @@ export async function serve(
     host: bind,
   };
   const override = callerOverride(host, ctx, ctx.verb);
-  const server = await runConnectPreview(args as ConnectPreviewArgs, {
-    connect: override,
-    cspRegistrySync: runner.cspRegistrySync === true,
-  });
+  const server = await startUnderSupervisor(ctx, () =>
+    runConnectPreview(args as ConnectPreviewArgs, {
+      connect: override,
+      cspRegistrySync: runner.cspRegistrySync === true,
+    }),
+  );
   return connectHandle(server, { host: bind, port });
 }

@@ -72,7 +72,29 @@ export default {
     });
     const messages = await explainWarnings(project, "lab");
     expect(messages).toHaveLength(1);
-    expect(messages[0]).toContain("config.drives.allowAddDrive");
+    expect(messages[0]).toContain(
+      "hosts/connect/host.js: config.drives.allowAddDrive",
+    );
+  });
+
+  it("names the compound's file when the dead config is the wrapper's", async () => {
+    const project = makeProject({
+      connect: CONNECT_HOST.replace("allowAddDrive: true", "sections: {}"),
+      lab: `
+export default {
+  name: "lab",
+  runner: { module: "@powerhousedao/desktop/runner", defaultVerb: "run" },
+  children: {
+    studio: { host: "connect", config: { drives: { allowAddDrive: true } } },
+  },
+};
+`,
+    });
+    const messages = await explainWarnings(project, "lab");
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toContain(
+      "hosts/lab/host.js (children.studio.config): config.drives.allowAddDrive",
+    );
   });
 
   it("stays quiet when the owning plugin is composed", async () => {

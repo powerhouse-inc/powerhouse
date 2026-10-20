@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  declaredGenericCompoundHostSchema,
   genericCompoundHostSchema,
   type HostDefinition,
 } from "../host-schemas.js";
@@ -23,6 +24,7 @@ import type { RunnerContext } from "../runner-resolver.js";
 export const kind = "compound";
 
 export const hostSchema = genericCompoundHostSchema;
+export const declaredHostSchema = declaredGenericCompoundHostSchema;
 
 function projectName(projectRoot: string): string {
   try {

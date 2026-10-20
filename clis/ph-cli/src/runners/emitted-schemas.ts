@@ -12,7 +12,7 @@ export function emittedRunnerSchemas(): Record<string, unknown> {
   return {
     "runner-connect.schema.json": emitHostJsonSchema(
       "ph-cli/runner-connect",
-      connect.hostSchema,
+      connect.declaredHostSchema,
     ),
     "runner-connect.outputs.schema.json": emitHostJsonSchema(
       "ph-cli/runner-connect.outputs",
@@ -20,7 +20,7 @@ export function emittedRunnerSchemas(): Record<string, unknown> {
     ),
     "runner-switchboard.schema.json": emitHostJsonSchema(
       "ph-cli/runner-switchboard",
-      switchboard.hostSchema,
+      switchboard.declaredHostSchema,
     ),
     "runner-switchboard.outputs.schema.json": emitHostJsonSchema(
       "ph-cli/runner-switchboard.outputs",

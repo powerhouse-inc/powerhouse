@@ -1,22 +1,43 @@
 import {
+  declaredHostSchemas,
+  describeToken,
+  drivesSchema,
+  envSitesOf,
   explainDrivePlan,
   findDeadConnectConfig,
+  isToken,
   loadHost,
+  loadProducers,
+  memberForRef,
   mergeDrivePlan,
+  outputRefsOf,
+  outputSitesOf,
+  planCompound,
+  processResolveEnv,
+  producerOutputsSchemas,
+  readProjectName,
+  renderTokens,
   resolvePluginContributions,
-  drivesSchema,
-  isDriveReference,
+  resolveRunnerModule,
+  runnerOutputsSchema,
+  runRecordOutputSource,
+  validateDeclaredHost,
+  validateHost,
+  type ChildWrapper,
   type DriveDeclaration,
+  type HostDefinition,
   type PluginEntry,
+  type ReactorHostInput,
+  type RunnerModule,
 } from "@powerhousedao/host-core";
 
 /**
- * `ph run <host> --explain drives` (R1): print the merged drive plan with
- * provenance instead of running — the host's own declarations plus what the
- * composition's plugins contribute (e.g. the workflows plugin's Workflows
- * drive), each labelled with its source. Plugins that only exist in the
- * browser (Connect's built-ins) have no Node-resolvable module; their entries
- * are listed as such, with a `drive` config value shown when they carry one.
+ * `ph run <host> --explain <topic>`: print instead of running, after the
+ * same declared validation `ph run` does first (so a printed explain is a
+ * host that loads). `drives`: the merged drive plan with provenance
+ * (browser-only plugins listed as unresolvable). `outputs`: the resolution
+ * plan — consumed outputs and their producers, `$env` names, the compound
+ * start order the tokens imply, and which producers are running.
  */
 
 interface ExplainOptions {
@@ -24,33 +45,157 @@ interface ExplainOptions {
   topic: string;
 }
 
-interface ReactorSection {
-  drives?: DriveDeclaration[];
-}
+const TOPICS = ["drives", "outputs"];
+const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
-interface RunnerSection {
-  module?: string;
-  plugins?: PluginEntry[];
-  defaultVerb?: string;
-}
-
-interface ChildWrapper {
-  host: string;
+/** A reactor host as explained: a standalone host, or a compound member
+ * with its wrapper applied (declared form). */
+interface ReactorView {
+  name: string;
+  runner: HostDefinition["runner"];
   config?: Record<string, unknown>;
-  reactor?: ReactorSection;
-  runner?: RunnerSection;
+  reactor?: ReactorHostInput["reactor"];
 }
 
-async function explainOne(
+interface MemberView {
+  key: string;
+  wrapper: ChildWrapper;
+  host: ReactorView;
+  runner: RunnerModule;
+  specifier: string;
+  file: string;
+  /** Where the effective `config` lives (a wrapper `config` is a full
+   * statement in the compound's file). */
+  configWhere: string;
+}
+
+interface LoadedView {
+  host: HostDefinition;
+  runner: RunnerModule;
+  specifier: string;
+  file: string;
+  /** Set for a compound. */
+  members?: MemberView[];
+}
+
+async function loadView(
+  projectRoot: string,
+  name: string,
+): Promise<LoadedView> {
+  const loaded = await loadHost(projectRoot, name);
+  const specifier = loaded.host.runner.module;
+  const runner = await resolveRunnerModule(projectRoot, specifier);
+  const file = `hosts/${name}/host.js`;
+  if (runner.kind !== "compound") {
+    const producers = await loadProducers(
+      projectRoot,
+      outputRefsOf(loaded.host),
+    );
+    validateDeclaredHost(runner, specifier, loaded.host, file, {
+      outputsSchemaOf: producerOutputsSchemas(producers),
+    });
+    return { host: loaded.host, runner, specifier, file };
+  }
+  validateDeclaredHost(runner, specifier, loaded.host, file);
+  validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
+  // The compound runner's schema owns `config`; `children` is shared.
+  const children = declaredHostSchemas.childrenSchema.parse(
+    loaded.host.children,
+  );
+  const members: MemberView[] = [];
+  for (const [key, wrapper] of Object.entries(children)) {
+    const base = (await loadHost(projectRoot, wrapper.host)).host;
+    const reactor = wrapper.reactor ?? base.reactor;
+    const config = wrapper.config ?? base.config;
+    const host: ReactorView = {
+      name: base.name,
+      runner: { ...base.runner, ...wrapper.runner },
+      ...(config !== undefined ? { config } : {}),
+      ...(reactor !== undefined ? { reactor } : {}),
+    };
+    const memberSpecifier = host.runner.module;
+    members.push({
+      key,
+      wrapper,
+      host,
+      runner: await resolveRunnerModule(projectRoot, memberSpecifier),
+      specifier: memberSpecifier,
+      file: `hosts/${wrapper.host}/host.js`,
+      configWhere:
+        wrapper.config !== undefined
+          ? `hosts/${name}/host.js (children.${key}.config)`
+          : `hosts/${wrapper.host}/host.js`,
+    });
+  }
+  const refs = members.map((m) => ({ key: m.key, host: m.wrapper.host }));
+  for (const m of members) {
+    validateDeclaredHost(m.runner, m.specifier, m.host, m.file, {
+      outputsSchemaOf: (ref) => {
+        const target = memberForRef(ref, refs);
+        if ("error" in target) return { error: target.error };
+        const producer = members.find((p) => p.key === target.key);
+        return producer
+          ? runnerOutputsSchema(
+              producer.runner,
+              producer.specifier,
+              `member "${producer.key}"`,
+            )
+          : { error: `names member "${target.key}", which is not declared.` };
+      },
+    });
+  }
+  return { host: loaded.host, runner, specifier, file, members };
+}
+
+export async function explainHost(options: ExplainOptions): Promise<void> {
+  if (!TOPICS.includes(options.topic)) {
+    throw new Error(
+      `Unknown --explain topic "${options.topic}" (supported: ${TOPICS.join(", ")}).`,
+    );
+  }
+  const projectRoot = process.cwd();
+  const view = await loadView(projectRoot, options.host);
+  if (options.topic === "outputs") {
+    await explainOutputs(projectRoot, options.host, view);
+    return;
+  }
+
+  if (view.members) {
+    // One plan per member, with the wrapper's full-statement semantics.
+    const verb = view.host.runner.defaultVerb ?? "run";
+    for (const m of view.members) {
+      await explainDrives(
+        projectRoot,
+        `${options.host} › ${m.key} (${m.wrapper.host})`,
+        m.host,
+        verb,
+        m.file,
+        m.configWhere,
+      );
+    }
+    return;
+  }
+  await explainDrives(
+    projectRoot,
+    options.host,
+    view.host,
+    "run",
+    view.file,
+    view.file,
+  );
+}
+
+/* ------------------------------------------------------------------ drives */
+
+async function explainDrives(
   projectRoot: string,
   label: string,
-  reactor: ReactorSection,
-  runner: RunnerSection | undefined,
+  host: ReactorView,
   verb: string,
   where: string,
-  config?: Record<string, unknown>,
+  configWhere: string,
 ): Promise<void> {
-  const entries = runner?.plugins ?? [];
+  const entries: PluginEntry[] = host.runner.plugins ?? [];
   const contributions =
     entries.length > 0
       ? await resolvePluginContributions(projectRoot, verb, entries, where)
@@ -64,90 +209,164 @@ async function explainOne(
     }
     return { declaration: parsed.data[0], source };
   });
+  // Declared drives may carry output tokens (a remote url): shown as
+  // «$output …», resolved only at `ph run`.
+  const declared = drivesSchema.parse(
+    renderTokens(host.reactor?.drives ?? []),
+  ) satisfies DriveDeclaration[];
   console.log(`[${label}]`);
   console.log(
-    explainDrivePlan(
-      mergeDrivePlan(projectRoot, reactor.drives ?? [], contributed),
-    ),
+    explainDrivePlan(mergeDrivePlan(projectRoot, declared, contributed)),
   );
   for (const module of contributions.unresolved) {
     const entry = entries
       .map((e) => (typeof e === "string" ? { module: e } : e))
       .find((e) => e.module === module);
-    const drive = (entry as { config?: Record<string, unknown> } | undefined)
-      ?.config?.drive;
+    const drive: unknown =
+      entry && "config" in entry ? entry.config?.drive : undefined;
     const attached =
       typeof drive === "string"
         ? `  attaches ${drive}`
-        : isDriveReference(drive)
-          ? `  attaches drive "${drive.slug}" of member "${drive.from}"`
+        : isToken(drive)
+          ? `  attaches «${describeToken(drive)}»`
           : "";
     console.log(
       `  (browser plugin ${module}: not resolvable from the project tree)${attached}`,
     );
   }
-  // The same dead-config warnings the connect runner prints at boot.
-  if (runner?.module === CONNECT_RUNNER) {
+  // The same dead-config warnings the connect runner prints at boot,
+  // naming the file the config lives in.
+  if (host.runner.module === CONNECT_RUNNER) {
     for (const warning of findDeadConnectConfig(
-      config,
-      runner.plugins,
+      host.config,
+      host.runner.plugins,
       verb,
-      where,
+      configWhere,
     )) {
       console.warn(warning.message);
     }
   }
 }
 
-const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
+/* ----------------------------------------------------------------- outputs */
 
-export async function explainHost(options: ExplainOptions): Promise<void> {
-  if (options.topic !== "drives") {
-    throw new Error(
-      `Unknown --explain topic "${options.topic}" (supported: drives).`,
+function outputKeys(runner: RunnerModule): string {
+  const schema = runner.outputsSchema;
+  if (typeof schema !== "object" || schema === null) return "(no outputs)";
+  const shape =
+    "shape" in schema && typeof schema.shape === "object" && schema.shape
+      ? Object.keys(schema.shape)
+      : [];
+  return shape.length ? shape.join(", ") : "(declared)";
+}
+
+function printConsumes(
+  host: unknown,
+  indent: string,
+  producerNote: (folder: string, member?: string) => string,
+): void {
+  const outputs = outputSitesOf(host);
+  const env = envSitesOf(host);
+  if (outputs.length === 0 && env.length === 0) {
+    console.log(`${indent}consumes: nothing (no $output or $env tokens)`);
+    return;
+  }
+  for (const site of outputs) {
+    const token = { $output: { ...site.ref, path: site.outputPath } };
+    console.log(
+      `${indent}${site.path} ← ${describeToken(token)}${producerNote(site.ref.host, site.ref.member)}`,
     );
   }
-  const projectRoot = process.cwd();
-  const loaded = await loadHost(projectRoot, options.host);
-  const host = loaded.host;
-  const hostRunner = host.runner as RunnerSection;
+  const { env: processEnv } = processResolveEnv(process.cwd());
+  for (const site of env) {
+    const builtin = site.name === "userData" || site.name === "projectRoot";
+    const state =
+      builtin || processEnv?.[site.name] !== undefined
+        ? "set"
+        : site.optional
+          ? "unset: the property is omitted"
+          : "UNSET: ph run fails";
+    console.log(
+      `${indent}${site.path} ← $env ${site.name}${site.optional ? " (optional)" : ""} [${state}]`,
+    );
+  }
+}
 
-  if (host.children !== undefined) {
-    // Compound: one plan per member, with the wrapper's full-statement
-    // semantics (wrapper reactor replaces the member's when present; wrapper
-    // runner keys override the member's).
-    const children = host.children as Record<string, ChildWrapper>;
-    const verb = hostRunner.defaultVerb ?? "run";
-    for (const [name, wrapper] of Object.entries(children)) {
-      const member = await loadHost(projectRoot, wrapper.host);
-      const reactor = (wrapper.reactor ??
-        member.host.reactor ??
-        {}) as ReactorSection;
-      const runner = {
-        ...(member.host.runner as RunnerSection),
-        ...(wrapper.runner ?? {}),
-      };
-      await explainOne(
-        projectRoot,
-        `${options.host} › ${name} (${wrapper.host})`,
-        reactor,
-        runner,
-        verb,
-        `hosts/${wrapper.host}/host.js`,
-        wrapper.config ?? member.host.config,
-      );
-    }
+async function explainOutputs(
+  projectRoot: string,
+  name: string,
+  view: LoadedView,
+): Promise<void> {
+  if (!view.members) {
+    const projectName = readProjectName(projectRoot);
+    const producers = await loadProducers(
+      projectRoot,
+      outputRefsOf(view.host),
+    );
+    // The same lookup `ph run` resolves through.
+    const source = runRecordOutputSource(projectRoot, {
+      consumer: name,
+      producers,
+      projectName,
+    });
+    console.log(`[${name}] ${view.specifier}`);
+    console.log(`  produces: ${outputKeys(view.runner)}`);
+    printConsumes(view.host, "  ", (folder, member) => {
+      const ref =
+        member === undefined ? { host: folder } : { host: folder, member };
+      return source.lookup(ref).status === "available"
+        ? `  (host "${folder}": running)`
+        : `  (host "${folder}": not running; start it first: ph run ${folder})`;
+    });
     return;
   }
 
-  const reactor = (host.reactor ?? {}) as ReactorSection;
-  await explainOne(
-    projectRoot,
-    options.host,
-    reactor,
-    hostRunner,
-    "run",
-    `hosts/${options.host}/host.js`,
-    host.config,
+  const members = view.members;
+  const refs = members.map((x) => ({ key: x.key, host: x.wrapper.host }));
+  const config: unknown = view.host.config;
+  const startOrder =
+    typeof config === "object" &&
+    config !== null &&
+    "startOrder" in config &&
+    Array.isArray(config.startOrder)
+      ? config.startOrder.filter((k): k is string => typeof k === "string")
+      : undefined;
+  const plan = planCompound(
+    members.map((m) => ({
+      key: m.key,
+      host: m.wrapper.host,
+      refs: outputSitesOf(m.host).map(({ ref, path }) => ({ ref, path })),
+    })),
+    startOrder,
   );
+  console.log(
+    `[${name}] start order (${plan.source === "tokens" ? "from the output tokens" : "config.startOrder, checked against the tokens"}):`,
+  );
+  plan.order.forEach((key, index) => {
+    const m = members.find((x) => x.key === key);
+    const needs = plan.edges
+      .filter((e) => e.consumer === key)
+      .map((e) => e.producer);
+    console.log(
+      `  ${index + 1}. ${key} (${m?.wrapper.host ?? "?"})${needs.length ? `  after ${needs.join(", ")}` : ""}`,
+    );
+  });
+  console.log("  Ctrl-C stops members in reverse order (consumers first).");
+  for (const key of plan.order) {
+    const m = members.find((x) => x.key === key);
+    if (!m) continue;
+    console.log(`[${name} › ${key} (${m.wrapper.host})] ${m.specifier}`);
+    console.log(`  produces: ${outputKeys(m.runner)}`);
+    printConsumes(m.host, "  ", (folder, member) => {
+      const ref =
+        member === undefined ? { host: folder } : { host: folder, member };
+      const target = memberForRef(ref, refs);
+      return "key" in target ? `  (member "${target.key}", live outputs)` : "";
+    });
+  }
+  const own = { ...view.host, children: undefined };
+  if (outputSitesOf(own).length > 0 || envSitesOf(own).length > 0) {
+    console.log(`[${name}] the compound's own fields:`);
+    printConsumes(own, "  ", () => "");
+  }
 }

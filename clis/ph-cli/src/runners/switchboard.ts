@@ -1,10 +1,9 @@
 import {
+  defineHostSchemas,
   drivesSchema,
   mergeDrivePlan,
-  reactorHostSchema,
   resolveDriveDeclaration,
   resolveHostPlugins,
-  runnerBaseSchema,
   seedDrives,
   type DriveSeederClient,
   type ResolvedDrive,
@@ -28,21 +27,28 @@ export const kind = "reactor";
 
 /** The switchboard host: the host-core reactor host with every runner option
  * this module reads declared (strict: an unknown runner key fails). The
- * runner reads nothing from `config`, so only an empty one is accepted. */
-export const hostSchema = reactorHostSchema.extend({
-  runner: runnerBaseSchema
-    .extend({
-      /** Dev mode without the `dev` verb (the Vite package loader). */
-      dev: z.boolean().optional(),
-      /** The project package output dir `build` writes (default "dist"). */
-      outDir: z.string().min(1).optional(),
-    })
-    .strict(),
-  config: z.strictObject({}).optional(),
-});
+ * runner reads nothing from `config`, so only an empty one is accepted.
+ * One definition, two schemas: `declaredHostSchema` (token-able fields take
+ * output tokens; types host files) and `hostSchema` (resolved; checked
+ * right before the verb). */
+const schemas = defineHostSchemas((s) =>
+  s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema
+      .extend({
+        /** Dev mode without the `dev` verb (the Vite package loader). */
+        dev: z.boolean().optional(),
+        /** The project package output dir `build` writes (default "dist"). */
+        outDir: z.string().min(1).optional(),
+      })
+      .strict(),
+    config: z.strictObject({}).optional(),
+  }),
+);
+export const declaredHostSchema = schemas.declaredHostSchema;
+export const hostSchema = schemas.hostSchema;
 
 /** What a switchboard host.js author writes. */
-export type SwitchboardHost = z.input<typeof hostSchema>;
+export type SwitchboardHost = z.input<typeof declaredHostSchema>;
 /** What a verb receives (defaults applied). */
 export type SwitchboardHostParsed = z.output<typeof hostSchema>;
 
@@ -124,21 +130,6 @@ function defaultDriveSlug(url: string | undefined): string {
   return match ? decodeURIComponent(match[1]) : DEFAULT_DRIVE_SLUG;
 }
 
-/** Set once SIGINT/SIGTERM arrives. The owned reactor's own signal handler
- * then kills the reactor and drains this api in order; a supervisor's
- * shutdown() must not drain it a second time in parallel. */
-let signalled = false;
-let signalWatch = false;
-function watchSignals(): void {
-  if (signalWatch) return;
-  signalWatch = true;
-  const mark = () => {
-    signalled = true;
-  };
-  process.prependListener("SIGINT", mark);
-  process.prependListener("SIGTERM", mark);
-}
-
 /** A drive in the plan with the slug its declaration used (a `projectHash:
  * true` drive is served under its hashed slug; outputs key it by this one). */
 interface PlannedDrive {
@@ -213,17 +204,8 @@ async function waitForDrive(url: string, timeoutMs: number): Promise<void> {
   }
 }
 
-/** What a started switchboard returns: the typed handle, plus the phase-1
- * facts a supervising compound still reads until T3 (`driveUrls` feeds
- * `{ from, slug }` drive references). */
-export interface SwitchboardHandle extends RunnerHandle<SwitchboardOutputs> {
-  /** @deprecated read `outputs.origin`. */
-  port: number;
-  /** @deprecated read `outputs.drives`. */
-  driveUrls: string[];
-  /** @deprecated read `outputs.endpoints`. */
-  endpoints: Record<string, string>;
-}
+/** What a started switchboard returns. */
+export type SwitchboardHandle = RunnerHandle<SwitchboardOutputs>;
 
 /** The slice of the switchboard's reactor client (IReactorClient) the seeder
  * reads: id-or-slug resolution against the read model (live documents). */
@@ -348,6 +330,9 @@ async function start(
     // contribution adds to whatever the host serves.
     ...(hostDrives.length > 0 ? { drive: undefined } : {}),
     ...(remoteDrives.length > 0 ? { remoteDrives } : {}),
+    // A compound member: the compound owns SIGINT/SIGTERM and the exit, and
+    // stops this reactor through the handle's shutdown().
+    ...(ctx.parent ? { signalHandlers: false } : {}),
   };
 
   const switchboard = await startSwitchboard(serverArgs);
@@ -383,10 +368,6 @@ async function start(
   const slug =
     localHostDrives.length > 0 ? localHostDrives[0].drive.slug : defaultSlug;
   const driveUrl = driveUrlOf(slug);
-  const driveUrls = [
-    ...(localHostDrives.length > 0 ? [] : [driveUrl]),
-    ...localPlanned.map((p) => driveUrlOf(p.drive.slug)),
-  ];
 
   // No composition declared (the deprecated `reactor.workflows` switch): the
   // workflows flag still seeds the SAME project-hashed drive the classic
@@ -396,7 +377,6 @@ async function start(
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
     const { generateProjectDriveId } = await import("../utils.js");
     const url = await seedWorkflowsDrive(switchboard.reactor, port);
-    driveUrls.push(url);
     drives.workflows = { id: generateProjectDriveId("workflows"), url };
   }
 
@@ -405,11 +385,11 @@ async function start(
   // (or a test with the service mocked) must not die of an unhandled one.
   ready.catch(() => undefined);
   const graphql = `${origin}/graphql`;
-  // Drains the HTTP server, GraphQL, MCP, attachments, the plugins'
-  // onShutdown and the read-model db, which frees the port. The reactor the
-  // server owns is not stopped here: SwitchboardReactor exposes no kill; its
-  // own SIGINT/SIGTERM handlers stop it (and drain the api themselves).
-  watchSignals();
+  // Stops the reactor the server owns, then drains the HTTP server (freeing
+  // the port), GraphQL, MCP, attachments, the plugins' onShutdown and the
+  // read-model db, then closes the reactor database. SwitchboardReactor
+  // memoizes it; standalone, SIGINT/SIGTERM run the same teardown, so a
+  // shutdown() during or after a signal joins it instead of draining twice.
   let stopping: Promise<void> | undefined;
   return {
     outputs: outputsSchema.parse({
@@ -421,11 +401,7 @@ async function start(
       drives,
     }),
     ready,
-    shutdown: () =>
-      (stopping ??= signalled ? Promise.resolve() : switchboard.shutdown()),
-    port,
-    driveUrls,
-    endpoints: { graphql },
+    shutdown: () => (stopping ??= switchboard.shutdown()),
   };
 }
 

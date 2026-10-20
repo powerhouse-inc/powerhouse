@@ -20,26 +20,31 @@ export {
 export {
   getVerb,
   listVerbs,
+  ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
+  validateDeclaredHost,
   validateHost,
+  type DeclaredHostOptions,
   type HostSchemaIssue,
   type HostSchemaLike,
   type RunnerContext,
   type RunnerModule,
   type RunnerVerb,
+  type ValidateHostOptions,
 } from "./runner-resolver.js";
 export {
   clearRunRecord,
   isPidAlive,
+  listRunRecords,
   probeRun,
+  readProjectName,
   readRunRecord,
   writeRunRecord,
   type RunProbe,
 } from "./run-record.js";
 export {
   runCompound,
-  resolveDriveReferences,
   type RunCompoundOptions,
   type RunCompoundResult,
 } from "./compound.js";
@@ -62,10 +67,6 @@ export {
   runObserveHook,
   runObserveHookSequential,
   mergeContributions,
-  driveReferenceSchema,
-  isDriveReference,
-  unresolvedDriveReferences,
-  type DriveReference,
   type NormalizedPluginEntry,
   type HostPlugin,
   type HostPluginModule,
@@ -101,6 +102,9 @@ export {
   childWrapperSchema,
   compoundHostSchema,
   compoundWiringSchema,
+  declaredGenericCompoundHostSchema,
+  declaredHostSchemas,
+  defineHostSchemas,
   emitHostJsonSchema,
   emittedHostSchemas,
   genericCompoundHostSchema,
@@ -134,6 +138,7 @@ export {
   type RunnerKind,
 } from "./host-schemas.js";
 export {
+  buildDriveDeclarationSchema,
   driveDeclarationSchema,
   drivesSchema,
   projectDriveIdWith,
@@ -150,7 +155,9 @@ export {
   keyTokenSchema,
   mapTokenSchema,
   outputTokenSchema,
+  envTokenable,
   ref,
+  tokenable,
   tokenKeyOf,
   tokenSchema,
   TOKEN_ESCAPE_KEY,
@@ -164,6 +171,7 @@ export {
   type OutputToken,
   type RefFn,
   type Token,
+  type TokenableSchema,
   type TokenKey,
   type TokenMode,
 } from "./tokens.js";
@@ -215,3 +223,16 @@ export {
   type DeadConfigWarning,
   type OwnedConfigSlice,
 } from "./plugins-resolve.js";
+
+// typed-host-configs T3: the output-token resolver (neutral part, also in
+// ./projection) and its node adapters.
+export * from "./resolve/index.js";
+export {
+  loadProducers,
+  processResolveEnv,
+  producerOutputsSchemas,
+  runRecordOutputSource,
+  runnerOutputsSchema,
+  type ProducerInfo,
+  type ProducerMap,
+} from "./resolve/node.js";

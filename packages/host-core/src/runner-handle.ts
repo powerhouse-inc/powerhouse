@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 /**
- * What a server verb returns to its supervisor (typed-host-configs 3.1/3.6).
- * The target contract is `RunnerHandle<O>`; T2 runners adopt it. Until then
- * the compound also accepts the phase-1 facts (`port`, `driveUrls`,
- * `endpoints`) and verbs that return nothing.
+ * What a server verb returns to its supervisor (typed-host-configs 3.1/3.6):
+ * `RunnerHandle<O>`. Consumers read a started host only through `outputs`
+ * (and `$output` tokens over them). A verb that returns nothing (one-shot,
+ * or self-sustaining) is an empty handle.
  */
 export interface RunnerHandle<O = Record<string, unknown>> {
   outputs: O;
@@ -18,12 +18,6 @@ export interface RunnerHandle<O = Record<string, unknown>> {
  * are functions and promises, so they are checked as TS fields, not here. */
 export const runnerHandleSchema = z.looseObject({
   outputs: z.record(z.string(), z.unknown()).optional(),
-  /** @deprecated phase-1 fact; replaced by outputs in T3. */
-  port: z.number().int().optional(),
-  /** @deprecated read only by `{ from, slug }` drive references (T3). */
-  driveUrls: z.array(z.string().nullish()).optional(),
-  /** @deprecated phase-1 fact; replaced by outputs in T3. */
-  endpoints: z.record(z.string(), z.string()).optional(),
 });
 
 export type RunnerHandleData = z.infer<typeof runnerHandleSchema>;

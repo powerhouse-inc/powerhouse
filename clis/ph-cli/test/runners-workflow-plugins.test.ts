@@ -18,8 +18,8 @@ import {
  *    reports them on the handle (a compound hands them to connect), while the
  *    host's own declarations still decide whether the implicit default drive
  *    is replaced;
- *  - the connect runner refuses an unresolved drive reference (nothing
- *    outside a compound can resolve `{ from, slug }`).
+ *  - a compound member (connect, switchboard) leaves SIGINT/SIGTERM to the
+ *    compound.
  */
 
 vi.mock("../src/services/connect-studio.js", () => ({
@@ -139,8 +139,8 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(seeded.global.name).toBe("Workflows");
     // the composed path never runs the classic implicit seed
     expect(vi.mocked(seedWorkflowsDrive)).not.toHaveBeenCalled();
-    // the handle reports the default drive first, then the contribution
-    expect(handle.driveUrls).toEqual([
+    // the default drive first, then the contribution
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/workflows",
     ]);
@@ -191,7 +191,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(seeded).toHaveLength(2);
     expect(seeded[0]).toMatchObject({ slug: "sektar", id: "sektar" });
     expect(seeded[1]).toMatchObject({ slug: "workflows", id: "flows-fixed" });
-    expect(handle.driveUrls).toEqual([
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/sektar",
       "http://localhost:7599/d/workflows",
     ]);
@@ -225,7 +225,6 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const handle = await runner.run(switchboardHost(), ctx);
     expect(resolveIdOrSlug).toHaveBeenCalledWith("workflows");
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
-    expect(handle.driveUrls).toContain("http://localhost:7599/d/workflows");
     // the outputs report the id the live drive actually has
     expect(handle.outputs.drives.workflows).toEqual({
       id: "workflows-other-hash",
@@ -245,7 +244,9 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const runner = await import("../src/runners/switchboard.js");
     const handle = await runner.run(switchboardHost(), ctx);
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
-    expect(handle.driveUrls).toEqual(["http://localhost:7599/d/powerhouse"]);
+    expect(handle.outputs.drives).toEqual({
+      powerhouse: { id: "powerhouse", url: "http://localhost:7599/d/powerhouse" },
+    });
   });
 
   it("without a composition the deprecated reactor.workflows path still seeds the classic drive", async () => {
@@ -264,7 +265,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
       ctx,
     );
     expect(vi.mocked(seedWorkflowsDrive)).toHaveBeenCalledTimes(1);
-    expect(handle.driveUrls).toEqual([
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/implicit",
     ]);
@@ -274,26 +275,58 @@ describe("switchboard runner — plugin-contributed drives", () => {
   });
 });
 
-describe("connect runner — drive references", () => {
-  it("refuses an unresolved { from, slug } with the compound hint", async () => {
+describe("switchboard runner — signal ownership", () => {
+  it("leaves SIGINT/SIGTERM to a supervising compound, keeps them standalone", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const runner = await import("../src/runners/switchboard.js");
+    const argsOf = async (context: RunnerContext) => {
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(switchboardHost(), context);
+      return vi.mocked(startSwitchboard).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+    };
+    expect(
+      (await argsOf({ ...ctx, parent: { host: "desktop", verb: "run" } }))
+        .signalHandlers,
+    ).toBe(false);
+    expect("signalHandlers" in (await argsOf(ctx))).toBe(false);
+  });
+});
+
+describe("connect runner — signal ownership", () => {
+  it("drops the exit-on-SIGTERM listener vite installs, only under a compound", async () => {
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
     const runner = await import("../src/runners/connect.js");
     const host = connect({
       name: "lab-connect",
-      runner: {
-        module: "@powerhousedao/ph-cli/runners/connect",
-        plugins: [
-          {
-            module: "@powerhousedao/connect/plugins/workflows",
-            config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
-          },
-        ],
-      },
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
     });
-    await expect(runner.dev(host, ctx)).rejects.toThrow(
-      /refers to drive "workflows" of member "vetra-switchboard".*not running inside a compound/s,
-    );
-  });
+    const viteExit = () => undefined;
+    const started = vi.mocked(runConnectStudio).getMockImplementation();
+    if (!started) throw new Error("runConnectStudio mock has no default");
+    const startAddingListener: typeof started = (...args) => {
+      process.once("SIGTERM", viteExit);
+      return started(...args);
+    };
+    vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);
+    await runner.dev(host, { ...ctx, parent: { host: "desktop", verb: "run" } });
+    expect(process.listeners("SIGTERM")).not.toContain(viteExit);
 
+    vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);
+    await runner.dev(host, ctx);
+    expect(process.listeners("SIGTERM")).toContain(viteExit);
+    process.off("SIGTERM", viteExit);
+  });
+});
+
+describe("connect runner — workflows drive", () => {
   it("passes a resolved URL through as composition data", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =

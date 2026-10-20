@@ -69,7 +69,9 @@
                     "additionalProperties": {}
                   }
                 },
-                "required": ["module"],
+                "required": [
+                  "module"
+                ],
                 "additionalProperties": false
               }
             ]
@@ -89,7 +91,9 @@
           "type": "boolean"
         }
       },
-      "required": ["module"],
+      "required": [
+        "module"
+      ],
       "additionalProperties": false
     },
     "config": {
@@ -100,7 +104,10 @@
           "properties": {
             "appName": {
               "description": "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'.",
-              "type": ["string", "null"]
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "icon": {
               "description": "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon.",
@@ -135,7 +142,11 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "enum": ["pulse", "spin", "none"]
+                              "enum": [
+                                "pulse",
+                                "spin",
+                                "none"
+                              ]
                             },
                             {
                               "type": "null"
@@ -156,7 +167,9 @@
                           ]
                         }
                       },
-                      "required": ["src"],
+                      "required": [
+                        "src"
+                      ],
                       "additionalProperties": false
                     }
                   ]
@@ -200,10 +213,15 @@
                                       "type": "string"
                                     },
                                     "dark": {
-                                      "type": ["string", "null"]
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
                                     }
                                   },
-                                  "required": ["light"],
+                                  "required": [
+                                    "light"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -243,7 +261,9 @@
                                         ]
                                       }
                                     },
-                                    "required": ["light"],
+                                    "required": [
+                                      "light"
+                                    ],
                                     "additionalProperties": false
                                   }
                                 ],
@@ -257,19 +277,35 @@
                                     "properties": {
                                       "top": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "right": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "bottom": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "left": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       }
                                     },
                                     "additionalProperties": false
@@ -281,27 +317,51 @@
                               },
                               "width": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "height": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "minWidth": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "minHeight": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "maxWidth": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "maxHeight": {
                                 "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                "type": ["number", "string", "null"]
+                                "type": [
+                                  "number",
+                                  "string",
+                                  "null"
+                                ]
                               },
                               "opacity": {
                                 "description": "0 to 1 (default 1).",
@@ -324,19 +384,35 @@
                                     "properties": {
                                       "top": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "right": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "bottom": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       },
                                       "left": {
                                         "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
-                                        "type": ["number", "string", "null"]
+                                        "type": [
+                                          "number",
+                                          "string",
+                                          "null"
+                                        ]
                                       }
                                     },
                                     "additionalProperties": false
@@ -347,14 +423,18 @@
                                 ]
                               }
                             },
-                            "required": ["src"],
+                            "required": [
+                              "src"
+                            ],
                             "additionalProperties": false,
                             "description": "An image laid over the page, absolutely positioned: the edges set in `position` pin it, an axis with neither edge set is centred."
                           },
                           "description": "Painted in order; the first is at the back."
                         }
                       },
-                      "required": ["layers"],
+                      "required": [
+                        "layers"
+                      ],
                       "additionalProperties": false
                     }
                   ],
@@ -376,7 +456,12 @@
               "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",
               "default": "info",
               "type": "string",
-              "enum": ["debug", "info", "warn", "error"]
+              "enum": [
+                "debug",
+                "info",
+                "warn",
+                "error"
+              ]
             },
             "basePath": {
               "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
@@ -451,13 +536,21 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": ["string", "null"]
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "icon": {
-                        "type": ["string", "null"]
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
                     },
-                    "required": ["url"],
+                    "required": [
+                      "url"
+                    ],
                     "additionalProperties": false
                   },
                   {
@@ -473,17 +566,26 @@
                         "description": "Stable drive id. The drive is created with this id on first boot and is not re-created on later boots."
                       },
                       "name": {
-                        "type": ["string", "null"]
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "icon": {
-                        "type": ["string", "null"]
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       },
                       "app": {
                         "description": "Drive app (preferred editor) to open on the drive.",
                         "type": "string"
                       }
                     },
-                    "required": ["local", "id"],
+                    "required": [
+                      "local",
+                      "id"
+                    ],
                     "additionalProperties": false
                   }
                 ]
@@ -492,7 +594,10 @@
             "preserveStrategy": {
               "description": "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only.",
               "type": "string",
-              "enum": ["preserve-all", "preserve-by-url-and-detach"]
+              "enum": [
+                "preserve-all",
+                "preserve-by-url-and-detach"
+              ]
             },
             "sections": {
               "type": "object",
@@ -710,7 +815,10 @@
             "dsn": {
               "description": "Sentry DSN URL. `null` disables Sentry entirely; the SPA never loads the Sentry SDK chunk.",
               "default": null,
-              "type": ["string", "null"]
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "env": {
               "description": "Sentry environment label, surfaced as the `environment` tag on every event.",
@@ -758,7 +866,10 @@
             "namespace": {
               "description": "Explicit storage/SharedWorker namespace for this instance. `null` derives it from the base path (and, later, the configured endpoint), so root deployments stay byte-identical.",
               "default": null,
-              "type": ["string", "null"]
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "reactorWorker": {
               "type": "boolean",
@@ -771,7 +882,10 @@
               "type": "boolean"
             }
           },
-          "required": ["namespace", "reactorWorker"],
+          "required": [
+            "namespace",
+            "reactorWorker"
+          ],
           "additionalProperties": false,
           "description": "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace."
         },
@@ -809,13 +923,19 @@
               "description": "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",
               "default": "v2-required",
               "type": "string",
-              "enum": ["legacy", "v2-required"]
+              "enum": [
+                "legacy",
+                "v2-required"
+              ]
             },
             "unsupportedStoredDocuments": {
               "description": "What the reactor does when this browser's store holds documents at protocol versions this build does not run. `refuse` fails the boot and names the versions; `read-only` boots and keeps those documents read-only.",
               "default": "refuse",
               "type": "string",
-              "enum": ["refuse", "read-only"]
+              "enum": [
+                "refuse",
+                "read-only"
+              ]
             }
           },
           "additionalProperties": false,
@@ -844,7 +964,12 @@
                 },
                 "display": {
                   "type": "string",
-                  "enum": ["fullscreen", "standalone", "minimal-ui", "browser"]
+                  "enum": [
+                    "fullscreen",
+                    "standalone",
+                    "minimal-ui",
+                    "browser"
+                  ]
                 },
                 "start_url": {
                   "type": "string"
@@ -871,7 +996,9 @@
                         "type": "string"
                       }
                     },
-                    "required": ["src"],
+                    "required": [
+                      "src"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -914,16 +1041,23 @@
                               "type": "string"
                             }
                           },
-                          "required": ["src"],
+                          "required": [
+                            "src"
+                          ],
                           "additionalProperties": false
                         }
                       },
                       "launch_type": {
                         "type": "string",
-                        "enum": ["single-client", "multiple-clients"]
+                        "enum": [
+                          "single-client",
+                          "multiple-clients"
+                        ]
                       }
                     },
-                    "required": ["accept"],
+                    "required": [
+                      "accept"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -941,7 +1075,9 @@
                       ]
                     }
                   },
-                  "required": ["client_mode"],
+                  "required": [
+                    "client_mode"
+                  ],
                   "additionalProperties": false
                 }
               },
@@ -989,7 +1125,9 @@
                             "type": "string"
                           }
                         },
-                        "required": ["source"],
+                        "required": [
+                          "source"
+                        ],
                         "additionalProperties": false
                       }
                     ],
@@ -1007,7 +1145,14 @@
                   },
                   "method": {
                     "type": "string",
-                    "enum": ["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"]
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "DELETE",
+                      "HEAD",
+                      "PATCH"
+                    ]
                   },
                   "options": {
                     "type": "object",
@@ -1056,7 +1201,10 @@
                     "additionalProperties": false
                   }
                 },
-                "required": ["urlPattern", "handler"],
+                "required": [
+                  "urlPattern",
+                  "handler"
+                ],
                 "additionalProperties": false
               }
             },
@@ -1080,7 +1228,9 @@
                         "type": "string"
                       }
                     },
-                    "required": ["source"],
+                    "required": [
+                      "source"
+                    ],
                     "additionalProperties": false
                   }
                 ],
@@ -1128,23 +1278,73 @@
             "properties": {
               "kind": {
                 "type": "string",
-                "enum": ["in-process", "worker", "remote"]
+                "enum": [
+                  "in-process",
+                  "worker",
+                  "remote"
+                ]
               },
               "storage": {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "enum": ["idb", "memory", "path", "postgres"]
+                    "enum": [
+                      "idb",
+                      "memory",
+                      "path",
+                      "postgres"
+                    ]
                   },
                   "dataDir": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "$env": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "optional": {
+                                    "type": "boolean",
+                                    "const": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "optional"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "$env"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
                   },
                   "url": {
                     "type": "string"
                   }
                 },
-                "required": ["kind"],
+                "required": [
+                  "kind"
+                ],
                 "additionalProperties": false
               },
               "readModel": {
@@ -1177,13 +1377,21 @@
               "remote": {
                 "type": "object",
                 "properties": {
-                  "host": {
-                    "type": "string"
-                  },
                   "url": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    ]
                   }
                 },
+                "required": [
+                  "url"
+                ],
                 "additionalProperties": false
               },
               "projection": {
@@ -1220,7 +1428,9 @@
                 "additionalProperties": false
               }
             },
-            "required": ["kind"],
+            "required": [
+              "kind"
+            ],
             "additionalProperties": false
           }
         },
@@ -1261,11 +1471,17 @@
             },
             "createSignaturePolicy": {
               "type": "string",
-              "enum": ["legacy", "v2-required"]
+              "enum": [
+                "legacy",
+                "v2-required"
+              ]
             },
             "unsupportedStoredDocuments": {
               "type": "string",
-              "enum": ["refuse", "read-only"]
+              "enum": [
+                "refuse",
+                "read-only"
+              ]
             }
           },
           "additionalProperties": false
@@ -1359,7 +1575,11 @@
               },
               "sharingType": {
                 "type": "string",
-                "enum": ["public", "private", "shared"]
+                "enum": [
+                  "public",
+                  "private",
+                  "shared"
+                ]
               },
               "availableOffline": {
                 "type": "boolean"
@@ -1368,15 +1588,26 @@
                 "type": "object",
                 "properties": {
                   "url": {
-                    "type": "string",
-                    "minLength": 1
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    ]
                   }
                 },
-                "required": ["url"],
+                "required": [
+                  "url"
+                ],
                 "additionalProperties": false
               }
             },
-            "required": ["slug"],
+            "required": [
+              "slug"
+            ],
             "additionalProperties": false
           }
         }
@@ -1384,6 +1615,326 @@
       "additionalProperties": false
     }
   },
-  "required": ["name", "runner"],
-  "additionalProperties": false
+  "required": [
+    "name",
+    "runner"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "$output": {
+              "type": "object",
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "member": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "host",
+                "path"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "$output"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$concat": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
+              }
+            }
+          },
+          "required": [
+            "$concat"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$map": {
+              "type": "object",
+              "properties": {
+                "over": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "$output": {
+                          "type": "object",
+                          "properties": {
+                            "host": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "member": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "host",
+                            "path"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "$output"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "$item": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "as": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "path": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "as",
+                                "path"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "$item"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "as": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "to": {},
+                "into": {
+                  "type": "string",
+                  "const": "record"
+                }
+              },
+              "required": [
+                "over",
+                "to"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "$map"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$item": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "as": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "as",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "$item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$key": {
+              "anyOf": [
+                {
+                  "type": "boolean",
+                  "const": true
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          "required": [
+            "$key"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$env": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "optional": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "optional"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": [
+            "$env"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
 }

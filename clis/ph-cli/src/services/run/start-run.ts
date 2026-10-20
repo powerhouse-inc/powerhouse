@@ -1,16 +1,24 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   clearRunRecord,
   getVerb,
   loadHost,
+  loadProducers,
+  ONE_SHOT_VERBS,
+  outputRefsOf,
   probeRun,
+  processResolveEnv,
+  producerOutputsSchemas,
+  readProjectName,
   readRunRecord,
+  resolveHostOutputs,
   resolveRunnerModule,
+  runRecordOutputSource,
   toStartedHandle,
+  validateDeclaredHost,
   validateHost,
   writeRunRecord,
   type HostSchemaLike,
+  type RunnerModule,
 } from "@powerhousedao/host-core";
 
 export interface StartRunArgs {
@@ -22,8 +30,16 @@ export interface StartRunArgs {
 
 /**
  * `ph run <host> [verb]`: dispatch the verb (default `run`) of the host's
- * declared runner with the PARSED host. There is deliberately no
- * type→runner registry — what a host does is written in its own file.
+ * declared runner. There is deliberately no type→runner registry — what a
+ * host does is written in its own file.
+ *
+ * The pipeline (typed-host-configs 3.5): declared validation (token shapes,
+ * `$output` paths against the producers' outputsSchemas, the runner's
+ * declaredHostSchema), the live-instance lock, resolution (`$output` from
+ * the producers' live run records, `$env` from this process, the
+ * `${userData}` sugar), resolved validation, then the verb with the parsed
+ * host. A compound runner gets its declared host: its members resolve their
+ * own tokens as they start.
  *
  * A reactor runner that exports `outputsSchema` has its handle's outputs
  * published in a v2 `.ph/run/<name>.json` record once ready; this is the only
@@ -37,22 +53,56 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   warnSupersededConfigKeys(projectRoot);
   const specifier = loaded.host.runner.module;
   const runner = await resolveRunnerModule(projectRoot, specifier);
-  const host = validateHost(runner, specifier, loaded.host, loaded.file);
   const verb = args.verb ?? "run";
   const fn = getVerb(runner, specifier, verb);
+  const file = loaded.file;
   if (args.debug) {
     console.log({ host: loaded.host.name, runner: specifier, verb });
   }
+
+  if (runner.kind === "compound") {
+    validateDeclaredHost(runner, specifier, loaded.host, file);
+    const host = validateHost(runner, specifier, loaded.host, file, {
+      tokens: "allow",
+    });
+    return fn(host, { projectRoot, verb, env: process.env });
+  }
+
+  const projectName = readProjectName(projectRoot);
+  const producers = await loadProducers(
+    projectRoot,
+    outputRefsOf(loaded.host),
+  );
+  validateDeclaredHost(runner, specifier, loaded.host, file, {
+    outputsSchemaOf: producerOutputsSchemas(producers),
+  });
+  const oneShot = ONE_SHOT_VERBS.has(verb);
+  if (oneShot) {
+    // `build` reads no other host's outputs: no producer needs to run.
+    const host = validateHost(runner, specifier, loaded.host, file, {
+      tokens: "allow",
+    });
+    return fn(host, { projectRoot, verb, env: process.env });
+  }
+  const publishes = isSchemaLike(runner.outputsSchema);
+  // Before the verb starts anything: a second live instance would take
+  // over the first one's record (and clear it on exit).
+  if (publishes) assertNotRunning(projectRoot, loaded.host.name, projectName);
+  const resolved = resolveHostOutputs(loaded.host, {
+    outputs: runRecordOutputSource(projectRoot, {
+      consumer: args.host,
+      producers,
+      projectName,
+    }),
+    ...processResolveEnv(projectRoot),
+    where: `hosts/${args.host}/host.js`,
+  });
+  const host = validateHost(runner, specifier, resolved, file);
   const result = await fn(host, { projectRoot, verb, env: process.env });
-  const outputsSchema: unknown = runner.outputsSchema;
-  if (
-    runner.kind === "reactor" &&
-    isSchemaLike(outputsSchema) &&
-    result !== undefined &&
-    result !== null
-  ) {
-    await publishOutputs(outputsSchema, result, {
+  if (publishes && result !== undefined && result !== null) {
+    await publishOutputs(runner, result, {
       projectRoot,
+      projectName,
       hostName: loaded.host.name,
       specifier,
       verb,
@@ -61,8 +111,27 @@ export async function startRun(args: StartRunArgs): Promise<unknown> {
   return result;
 }
 
+function assertNotRunning(
+  projectRoot: string,
+  hostName: string,
+  projectName: string,
+): void {
+  const probe = probeRun(projectRoot, hostName, projectName);
+  if (probe.status === "live" && probe.record.pid !== process.pid) {
+    throw new Error(
+      `${hostName} is already running for this project (pid ${probe.record.pid}). Stop it before starting another.`,
+    );
+  }
+  if (probe.status === "foreign") {
+    throw new Error(
+      `.ph/run/${hostName}.json describes a live "${probe.record.projectName}", but this project is "${projectName}". Refusing to start a second instance.`,
+    );
+  }
+}
+
 interface PublishTarget {
   projectRoot: string;
+  projectName: string;
   hostName: string;
   specifier: string;
   verb: string;
@@ -81,30 +150,20 @@ function isSchemaLike(value: unknown): value is HostSchemaLike {
  * exit. A handle that never gets ready or reports invalid outputs is shut
  * down before the error propagates. */
 async function publishOutputs(
-  outputsSchema: HostSchemaLike,
+  runner: RunnerModule,
   result: unknown,
   target: PublishTarget,
 ): Promise<void> {
   const where = `${target.specifier} ${target.verb}`;
   const handle = toStartedHandle(result, where);
-  const name = projectName(target.projectRoot);
+  const name = target.projectName;
   let outputs: unknown;
   try {
-    // A second instance of this host would take over the first one's record
-    // (and clear it on exit): refuse, as the compound's lock does.
-    const probe = probeRun(target.projectRoot, target.hostName, name);
-    if (probe.status === "live" && probe.record.pid !== process.pid) {
-      throw new Error(
-        `${target.hostName} is already running for this project (pid ${probe.record.pid}). Stop it before starting another.`,
-      );
-    }
-    if (probe.status === "foreign") {
-      throw new Error(
-        `.ph/run/${target.hostName}.json describes a live "${probe.record.projectName}", but this project is "${name}". Refusing to start a second instance.`,
-      );
-    }
+    if (!isSchemaLike(runner.outputsSchema)) return;
+    // Checked again after the start: an instance that started meanwhile.
+    assertNotRunning(target.projectRoot, target.hostName, name);
     if (handle.ready) await handle.ready;
-    const parsed = outputsSchema.safeParse(handle.outputs);
+    const parsed = runner.outputsSchema.safeParse(handle.outputs);
     if (!parsed.success) {
       const issues = parsed.error.issues
         .map(
@@ -140,18 +199,4 @@ async function publishOutputs(
     if (readRunRecord(target.projectRoot, target.hostName)?.pid === process.pid)
       clearRunRecord(target.projectRoot, target.hostName);
   });
-}
-
-/** The project identity the run record's live/foreign probe compares
- * (package.json name, else the folder name), as the compound uses. */
-function projectName(projectRoot: string): string {
-  try {
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
-    ) as { name?: string };
-    if (pkg.name) return pkg.name;
-  } catch {
-    // fall through
-  }
-  return path.basename(projectRoot);
 }

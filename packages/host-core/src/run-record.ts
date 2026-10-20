@@ -42,6 +42,36 @@ export function readRunRecord(
   return parsed.success ? parsed.data : undefined;
 }
 
+/** Every valid v2 record under `.ph/run/` (invalid and v1 files skipped). */
+export function listRunRecords(projectDir: string): RunRecord[] {
+  let files: string[];
+  try {
+    files = fs.readdirSync(runDir(projectDir));
+  } catch {
+    return [];
+  }
+  return files
+    .filter((file) => file.endsWith(".json"))
+    .flatMap((file) => {
+      const record = readRunRecord(projectDir, file.slice(0, -".json".length));
+      return record ? [record] : [];
+    });
+}
+
+/** The project identity the live/foreign probe compares: package.json
+ * `name`, else the folder name. */
+export function readProjectName(projectDir: string): string {
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(projectDir, "package.json"), "utf8"),
+    ) as { name?: unknown };
+    if (typeof pkg.name === "string" && pkg.name) return pkg.name;
+  } catch {
+    // fall through
+  }
+  return path.basename(path.resolve(projectDir));
+}
+
 export function writeRunRecord(projectDir: string, record: RunRecord): void {
   const target = recordPath(projectDir, record.host);
   const valid = runRecordSchema.parse(record);

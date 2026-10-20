@@ -80,6 +80,8 @@ export async function startSwitchboard(
     drive?: StartServerOptions["drive"];
     strictPort?: boolean;
     processorConfig?: Map<string, unknown>;
+    /** False under a supervising compound, which owns SIGINT/SIGTERM. */
+    signalHandlers?: boolean;
   },
   logger?: ILogger,
 ) {

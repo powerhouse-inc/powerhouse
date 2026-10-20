@@ -4,8 +4,9 @@ import { z } from "zod";
  * Output tokens (typed-host-configs G3): plain-JSON operators a host file
  * uses to consume values another host's creation produces. An object whose
  * SOLE key is one of TOKEN_KEYS is an operator; `$$` escapes a literal
- * `$`-prefixed sole key. T1 declares the shapes only: no field accepts a
- * token yet and `validateHost` forbids them (resolution arrives in T3).
+ * `$`-prefixed sole key. Host-core fields accept them through `tokenable()`
+ * (declared form); `resolveHostOutputs` (resolve/) replaces them before a
+ * verb runs, and `validateHost` rejects any that remain.
  */
 
 export type OutputPath = (string | number)[];
@@ -112,13 +113,13 @@ export const mapTokenSchema = z.strictObject({
 });
 
 // $concat parts may themselves be tokens: the recursive member is lazy.
-export const concatTokenSchema: z.ZodType<ConcatToken> = z.strictObject({
+export const concatTokenSchema: z.ZodType<ConcatToken, ConcatToken> = z.strictObject({
   $concat: z.array(
     z.union([z.string(), z.number(), z.lazy(() => tokenSchema)]),
   ),
 });
 
-export const tokenSchema: z.ZodType<Token> = z.union([
+export const tokenSchema: z.ZodType<Token, Token> = z.union([
   outputTokenSchema,
   concatTokenSchema,
   mapTokenSchema,
@@ -191,3 +192,34 @@ export function forbidRef<S extends z.ZodType>(schema: S): S {
 
 export type TokenMode = "allow" | "forbid";
 export type RefFn = typeof ref | typeof forbidRef;
+
+/** A token-able host field as runners see it: authors may write `T | Token`
+ * (z.input), verbs receive `T` (z.output). */
+export type TokenableSchema<S extends z.ZodType, K extends Token = Token> =
+  z.ZodType<z.output<S>, z.input<S> | K>;
+
+// The token branch's output is `never`, so a field's z.output stays the
+// resolved type. At runtime a token passes through untouched: declared
+// validation accepts it here, and validateHost's no-token walk (plus
+// resolveHostOutputs before it) guarantees a verb never receives one.
+const passthrough = <K extends Token>(schema: z.ZodType<K, K>) =>
+  schema.pipe(z.custom<never>());
+
+/**
+ * The host-core field wrapper (declared input, resolved output): accepts
+ * `T` or any output token (`$output`, `$concat`, `$env`, …). Plugin
+ * configSchemas keep using `ref()`; this is for schemas whose verbs must see
+ * resolved types (the base host schemas every runner extends).
+ */
+export function tokenable<S extends z.ZodType>(schema: S): TokenableSchema<S> {
+  return z.union([schema, passthrough(tokenSchema)]);
+}
+
+/** Like `tokenable`, but the only token accepted is `$env` (e.g.
+ * `storage.dataDir`: a path is an environment fact, never another host's
+ * output). */
+export function envTokenable<S extends z.ZodType>(
+  schema: S,
+): TokenableSchema<S, EnvToken> {
+  return z.union([schema, passthrough<EnvToken>(envTokenSchema)]);
+}
