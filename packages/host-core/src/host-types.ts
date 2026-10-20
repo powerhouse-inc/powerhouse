@@ -6,7 +6,7 @@
  */
 
 import type { z } from "zod";
-import type { genericCompoundHostSchema } from "./host-schemas.js";
+import type { declaredGenericCompoundHostSchema } from "./host-schemas.js";
 
 declare global {
   /** `"<runner specifier>": { host: <z.input of its hostSchema>; outputs:
@@ -80,7 +80,7 @@ export type PluginEntry =
 declare global {
   interface PHHostRunners {
     "@powerhousedao/host-core/runners/compound": {
-      host: z.input<typeof genericCompoundHostSchema>;
+      host: z.input<typeof declaredGenericCompoundHostSchema>;
       outputs: Record<string, never>;
     };
   }
