@@ -1,12 +1,15 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
+  deriveOperationId,
   setModelName,
   withSignaturePolicy,
   type DocumentModelModule,
+  type Operation,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
+import { createDefaultDatabase } from "../../src/core/create-default-database.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
@@ -87,7 +90,7 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
   });
 
   async function build(
-    model: DocumentModelModule<any>,
+    model: DocumentModelModule<any> | undefined,
     configure: (builder: ReactorBuilder) => ReactorBuilder = (b) => b,
   ): Promise<Node> {
     const built = await new ReactorClientBuilder()
@@ -97,7 +100,7 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
             .withLogger(createMockLogger())
             .withDocumentModelSources([
               driveDocumentModelModule as never,
-              model as never,
+              ...(model ? [model as never] : []),
             ]),
         ),
       )
@@ -153,6 +156,50 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
   });
 
+  it("accepts a creation at 3 of a tagged model the loader supplies, by submit and by load", async () => {
+    const load = vi.fn(() => Promise.resolve(documentModelDocumentModelModule));
+    const { reactor } = await build(undefined, (b) =>
+      b.withDocumentModelLoader({ load: load as never }),
+    );
+
+    const submitted = await settled(
+      reactor,
+      (await reactor.create(modelAt("lazy-submit", V3))).id,
+    );
+    expect(submitted.error?.message ?? submitted.status).toBe(
+      JobStatus.READ_READY,
+    );
+    expect(load).toHaveBeenCalledWith(MODEL);
+
+    // A reactor whose first sight of the model is a loaded creation.
+    const loadOnly = vi.fn(() =>
+      Promise.resolve(documentModelDocumentModelModule),
+    );
+    const other = (
+      await build(undefined, (b) =>
+        b.withDocumentModelLoader({ load: loadOnly as never }),
+      )
+    ).reactor;
+    const loaded = await settled(
+      other,
+      (
+        await other.load("lazy-load", "main", [
+          createCreateDocumentOperation(
+            "lazy-load",
+            MODEL,
+            {},
+            { protocolVersions: V3 },
+          ),
+        ])
+      ).id,
+    );
+    expect(loaded.error?.message ?? loaded.status).toBe(JobStatus.READ_READY);
+    expect(loadOnly).toHaveBeenCalledWith(MODEL);
+    expect(
+      (await other.get("lazy-load")).header.protocolVersions?.["base-reducer"],
+    ).toBe(3);
+  });
+
   it("refuses a creation at 3 of a model that cannot load, after trying the loader", async () => {
     const load = vi.fn(() => Promise.reject(new Error("no such package")));
     const { reactor } = await build(documentModelDocumentModelModule, (b) =>
@@ -193,6 +240,57 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     expect(v2.error?.name).toBe("Error");
   });
 
+  it("refuses writes, loads and deletes on a stored v3 document once its model is untagged", async () => {
+    const db = await createDefaultDatabase();
+    const tagged = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    const created = await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(modelAt("stored-3", V3))).id,
+    );
+    expect(created.error?.message ?? created.status).toBe(JobStatus.READ_READY);
+    await tagged.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(tagged.reactor), 1);
+
+    const { reactor } = await build(
+      untagged(documentModelDocumentModelModule),
+      (b) => b.withKysely(db),
+    );
+
+    const write = await settled(
+      reactor,
+      (
+        await reactor.execute("stored-3", "main", [
+          setModelName({ name: "written" }),
+        ])
+      ).id,
+    );
+    expectRefused(write, MODEL);
+
+    const action = setModelName({ name: "loaded" });
+    const operation: Operation = {
+      id: deriveOperationId("stored-3", action.scope, "main", action.id),
+      index: 0,
+      skip: 0,
+      hash: "",
+      timestampUtcMs: action.timestampUtcMs,
+      action,
+    };
+    const load = await settled(
+      reactor,
+      (await reactor.load("stored-3", "main", [operation])).id,
+    );
+    expectRefused(load, MODEL);
+
+    const deletion = await settled(
+      reactor,
+      (await reactor.deleteDocument("stored-3")).id,
+    );
+    expectRefused(deletion, MODEL);
+    expect((await reactor.get("stored-3")).header.id).toBe("stored-3");
+  });
+
   it("dead-letters a synced creation at 3 as UNSUPPORTED_PROTOCOL without quarantine, and keeps syncing the rest", async () => {
     const channels = new Map<string, TestChannel>();
     const peers = new Map([
@@ -218,9 +316,11 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
         return channel;
       },
     } as IChannelFactory;
+    const deferredJobTtlMs = 200;
     const withSync = (b: ReactorBuilder) =>
       b
         .withEventBus(new EventBus())
+        .withExecutorConfig({ deferredJobTtlMs })
         .withSync(new SyncBuilder().withChannelFactory(channelFactory));
 
     const a = await build(documentModelDocumentModelModule, withSync);
@@ -288,11 +388,21 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     );
 
     expect(await has(b, "m3")).toBe(false);
+    // The later write waits for a creation that never lands, then expires once.
     const refusals = () =>
-      deadLetters.items.filter((item) => item.documentId === "m3").length;
+      deadLetters.items
+        .filter((item) => item.documentId === "m3")
+        .map((item) => syncOperationErrorType(item.error));
+    await vi.waitFor(() => expect(refusals()).toContain("MISSING_OPERATIONS"), {
+      timeout: 10_000,
+    });
     const settledRefusals = refusals();
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(refusals()).toBe(settledRefusals);
+    expect(settledRefusals).toEqual([
+      "UNSUPPORTED_PROTOCOL",
+      "MISSING_OPERATIONS",
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 5 * deferredJobTtlMs));
+    expect(refusals()).toEqual(settledRefusals);
     const quarantined =
       await b.module.syncModule!.deadLetterStorage.listQuarantinedDocumentIds();
     expect(quarantined).not.toContain("m3");
