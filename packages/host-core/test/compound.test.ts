@@ -10,7 +10,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCompound } from "../src/compound.js";
 import { loadHost } from "../src/host-loader.js";
 import { readRunRecord } from "../src/run-record.js";
@@ -41,6 +41,8 @@ function makeProject(opts?: {
   connectReactor?: unknown;
   /** Extra keys for the connect member wrapper's `runner`. */
   connectRunner?: Record<string, unknown>;
+  /** The connect host's runner specifier (default "fake-runner"). */
+  connectModule?: string;
 }): {
   dir: string;
   sink: string;
@@ -106,6 +108,33 @@ export async function build(host) {
 `,
   );
 
+  // a Connect-shaped runner under a non-canonical specifier: fake-runner's
+  // verbs, with a zod hostSchema that declares runner.cspRegistrySync
+  const connectPkg = path.join(dir, "node_modules", "fake-connect");
+  mkdirSync(connectPkg, { recursive: true });
+  writeFileSync(
+    path.join(connectPkg, "package.json"),
+    JSON.stringify({
+      name: "fake-connect",
+      type: "module",
+      exports: { ".": { import: "./index.js", default: "./index.js" } },
+    }),
+  );
+  writeFileSync(
+    path.join(connectPkg, "index.js"),
+    `
+import { z } from "zod";
+export * from "fake-runner";
+export const hostSchema = z.looseObject({
+  name: z.string(),
+  runner: z.looseObject({
+    module: z.string(),
+    cspRegistrySync: z.boolean().optional(),
+  }),
+});
+`,
+  );
+
   const write = (name: string, source: string) => {
     const d = path.join(dir, "hosts", name);
     mkdirSync(d, { recursive: true });
@@ -113,7 +142,7 @@ export async function build(host) {
   };
   write(
     "connect",
-    `export default { name: "lab-connect", runner: { module: "fake-runner", port: 2064 } };`,
+    `export default { name: "lab-connect", runner: { module: ${JSON.stringify(opts?.connectModule ?? "fake-runner")}, port: 2064 } };`,
   );
   write(
     "switchboard",
@@ -464,12 +493,37 @@ describe("runCompound", () => {
     expect(calls(sink)).toEqual([]);
   });
 
-  it("forwards cspRegistrySync only to Connect-runner members", async () => {
+  it("forwards cspRegistrySync only to Connect-runner members, warning when none takes it", async () => {
     const { dir, sink } = makeProject({ wiring: { cspRegistrySync: true } });
-    await run(dir);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await run(dir);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /config\.cspRegistrySync is set, but no member's runner declares runner\.cspRegistrySync/,
+        ),
+      );
+    } finally {
+      warn.mockRestore();
+    }
     for (const c of calls(sink).filter((c) => c.event === "start")) {
       expect(c.runner.cspRegistrySync).toBeUndefined();
     }
+  });
+
+  it("forwards cspRegistrySync to a member whose runner declares it, whatever its specifier", async () => {
+    const { dir, sink } = makeProject({
+      wiring: { cspRegistrySync: true },
+      connectModule: "fake-connect",
+    });
+    await run(dir);
+    const starts = calls(sink).filter((c) => c.event === "start");
+    expect(
+      starts.find((c) => c.name === "lab-connect")?.runner.cspRegistrySync,
+    ).toBe(true);
+    expect(
+      starts.find((c) => c.name === "lab-switchboard")?.runner.cspRegistrySync,
+    ).toBeUndefined();
   });
 
   it("on a signal: shuts members down consumers-first, then exits once", async () => {

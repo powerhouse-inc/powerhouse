@@ -313,6 +313,26 @@ export function schemaAtPath(
   return { ok: true, schema: current };
 }
 
+/** Whether the object schema at `path` names `key` in its shape (a
+ * catchall does not count): what a runner's schema explicitly declares,
+ * e.g. `runner.cspRegistrySync`. A union declares a key any member does. */
+export function declaresKey(
+  schema: unknown,
+  path: OutputPath,
+  key: string,
+): boolean {
+  const at = schemaAtPath(schema, path);
+  if (!at.ok) return false;
+  const def = defOf(at.schema);
+  if (def?.type === "object") {
+    return isPlainObjectLike(def.shape) && key in def.shape;
+  }
+  if (def?.type === "union" && Array.isArray(def.options)) {
+    return def.options.some((option: unknown) => declaresKey(option, [], key));
+  }
+  return false;
+}
+
 /** What a `$map` iterates, as far as the schemas tell: its element schema
  * (undefined: unknown, so its `$item` paths are not checked) and a label for
  * messages. */

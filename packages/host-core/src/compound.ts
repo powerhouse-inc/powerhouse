@@ -8,7 +8,7 @@ import {
 } from "./host-schemas.js";
 import { substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost } from "./host-loader.js";
-import { outputSitesOf } from "./resolve/declared.js";
+import { declaresKey, outputSitesOf } from "./resolve/declared.js";
 import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
 import { memberForRef, planCompound } from "./resolve/plan.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
@@ -99,6 +99,17 @@ async function memberDraft(
     ...(config !== undefined ? { config } : {}),
     ...(reactor !== undefined ? { reactor } : {}),
   };
+}
+
+/** Whether a member receives the compound's `cspRegistrySync` wiring (as
+ * `runner.cspRegistrySync`): its runner declares that option (any specifier
+ * that reaches the Connect runner), or it names the Connect runner. A
+ * member's role is its runner, not its folder. */
+function takesCspRegistrySync(m: PreparedMember): boolean {
+  return (
+    m.specifier === CONNECT_RUNNER ||
+    declaresKey(m.runner.hostSchema, ["runner"], "cspRegistrySync")
+  );
 }
 
 export interface RunCompoundOptions {
@@ -211,6 +222,12 @@ export async function runCompound(
     });
   }
 
+  if (wiring.cspRegistrySync && !prepared.some(takesCspRegistrySync)) {
+    console.warn(
+      `${compoundFile}: config.cspRegistrySync is set, but no member's runner declares runner.cspRegistrySync (members run: ${prepared.map((m) => m.specifier).join(", ")}); the baked Connect CSP is not patched for the runtime registry.`,
+    );
+  }
+
   const started: StartedMember[] = [];
   const liveOutputs = new Map<string, Record<string, unknown>>();
   const outputs = compoundOutputSource(members, liveOutputs, host.name);
@@ -249,7 +266,7 @@ export async function runCompound(
             ...resolveEnv,
             where: m.file,
           });
-      if (wiring.cspRegistrySync && m.specifier === CONNECT_RUNNER) {
+      if (wiring.cspRegistrySync && takesCspRegistrySync(m)) {
         resolved.runner = { ...resolved.runner, cspRegistrySync: true };
       }
       const validated = validateHost(
