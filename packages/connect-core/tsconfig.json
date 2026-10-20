@@ -1,0 +1,36 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./.tsbuild",
+    "paths": {
+      "@powerhousedao/connect-core/route-tree": ["./src/routeTree.gen.ts"]
+    },
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"]
+  },
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../host-core"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../reactor-router"
+    },
+    {
+      "path": "../renown"
+    },
+    {
+      "path": "../shared"
+    }
+  ]
+}
