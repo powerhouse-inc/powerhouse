@@ -194,6 +194,9 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  // the switchboard plugins the scaffolded switchboard host composes
+  // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
+  "@powerhousedao/switchboard",
 ];
 
 export const packageJsonExports = {
