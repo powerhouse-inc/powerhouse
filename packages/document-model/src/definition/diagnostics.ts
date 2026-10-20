@@ -218,7 +218,7 @@ const catalog = {
     severity: "error",
     phase: "definition",
     meaning:
-      "A computed field is malformed, unbound, bound twice, or bound where it does not exist",
+      "A computed field is malformed, unbound, bound twice, bound where it does not exist, or declared in document state",
   },
   "PH-SG-PARENT-FIELDS-DROPPED": {
     severity: "warning",

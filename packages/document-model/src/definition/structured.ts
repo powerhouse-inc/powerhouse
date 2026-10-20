@@ -43,6 +43,7 @@ import {
   inputDefaultCycle,
   inputDefaultProblem,
 } from "./input-default.js";
+import { interfaceConformanceProblems } from "./interface-conformance.js";
 import {
   checkDerivedNameCollisions,
   type DerivedModuleNames,
@@ -397,6 +398,19 @@ export class DescriptorWalk {
     }
   }
 
+  /** GraphQL's interface implementation rules, over what the walk emitted. */
+  checkInterfaceImplementations(): void {
+    for (const { owner, ...problem } of interfaceConformanceProblems(
+      this.definitions,
+    )) {
+      this.#collector.add({
+        code: "PH-DM-INTERFACE-INVALID",
+        path: this.#claims.get(owner)?.path ?? [],
+        ...problem,
+      });
+    }
+  }
+
   #implemented(
     descriptor: ObjectDescriptor | InterfaceDescriptor,
     path: DefinitionPath,
@@ -433,7 +447,10 @@ export class DescriptorWalk {
   ): TypeReferenceDefinition | undefined {
     return this.#attempt(() => {
       const reference = this.#typeReference(field, path);
-      if (position === "input") this.#checkInputDefault(field, reference, path);
+      if (position === "input") {
+        this.#checkInputDefault(field, reference, path);
+        this.#checkInputDeprecation(field, reference, path, "argument");
+      }
       // Resolving a reference is not the same as reaching its target: without
       // this, a type named only by an entry's return would never be emitted.
       this.#visitField(field, position, path);
@@ -506,10 +523,11 @@ export class DescriptorWalk {
     path: DefinitionPath,
   ): FieldDefinition[] {
     const stored = object.fields as ObjectFields;
-    if (
-      this.#policy.computedFieldsAreMembers &&
-      Object.keys(stored).length === 0
-    ) {
+    if (!this.#policy.computedFieldsAreMembers) {
+      this.#refuseComputed(object, name, path);
+      return this.#requireFields(stored, "object", name, path);
+    }
+    if (Object.keys(stored).length === 0) {
       const computed = this.#computedFields(object, path);
       if (computed.length > 0) return computed;
     }
@@ -517,6 +535,24 @@ export class DescriptorWalk {
       ...this.#requireFields(stored, "object", name, path),
       ...this.#computedFields(object, path),
     ];
+  }
+
+  #refuseComputed(
+    object: ObjectDescriptor,
+    name: string,
+    path: DefinitionPath,
+  ): void {
+    for (const key of Object.keys(object.computed ?? {})) {
+      this.#collector.add({
+        code: "PH-SG-COMPUTED-FIELD-INVALID",
+        path: [...path, "fields", key],
+        message: `Field ${JSON.stringify(key)} of ${name} is computed, and a document model stores every field of its state, so no resolver could supply it.`,
+        expected: "a stored field use",
+        received: "ph.field",
+        repair:
+          "Declare it with an ordinary field use the reducer sets, or move the computed field to an output object of a subgraph.",
+      });
+    }
   }
 
   #computedFields(
@@ -580,6 +616,7 @@ export class DescriptorWalk {
       if (!this.#checkInputDefault(field, type, fieldPath) && owner) {
         this.#checkDefaultCycle(owner, key, fieldPath);
       }
+      this.#checkInputDeprecation(field, type, fieldPath, "input field");
       return {
         key,
         name: key,
@@ -746,6 +783,29 @@ export class DescriptorWalk {
       repair: "Use a default the field's type accepts, or remove defaultValue.",
     });
     return true;
+  }
+
+  #checkInputDeprecation(
+    field: AnyFieldDescriptor,
+    type: TypeReferenceDefinition,
+    path: DefinitionPath,
+    noun: "input field" | "argument",
+  ): void {
+    if (
+      field.presentation.deprecated === null ||
+      !type.required ||
+      fieldDefault(field) !== undefined
+    )
+      return;
+    this.#collector.add({
+      code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+      path: [...path, "deprecated"],
+      message: `Required ${noun} ${String(path.at(-1))} cannot be deprecated: a caller has to supply it, so GraphQL refuses the schema.`,
+      expected: `no deprecated on a required ${noun} without a defaultValue`,
+      received: "deprecated",
+      repair:
+        "Remove required, give the field a defaultValue, or remove deprecated.",
+    });
   }
 
   #checkDefaultCycle(
@@ -1192,7 +1252,10 @@ export function compileDocumentModelVersion(
     allowOutputDefaults: false,
     allowEquals: true,
     validateInputDefaults: true,
-    computedFieldsAreMembers: false,
+    // A retained schema-first state type may give a field arguments, which
+    // only ph.field can spell; the retained document already stores it.
+    computedFieldsAreMembers:
+      config.specifications.graphQLCompatibility !== null,
     internalScalarsAreReferenceable: false,
   });
   const compatibility = new AppliedCompatibility(
@@ -1541,6 +1604,7 @@ export function compileDocumentModelVersion(
     ]),
   );
 
+  walk.checkInterfaceImplementations();
   collector.throwIfFailed();
 
   const inventory: readonly NamedGraphQLTypeDefinition[] = walk.definitions;

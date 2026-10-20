@@ -18,12 +18,8 @@ import {
 } from "graphql";
 import type { NormalizedDocumentModelArtifact } from "../adapters/types.js";
 import { createDiagnostic, sortDefinitionDiagnostics } from "../diagnostics.js";
-import {
-  documentModelGraphQLProjection,
-  foldTypeExtensions,
-} from "../graphql-ast.js";
+import { foldTypeExtensions } from "../graphql-ast.js";
 import { scalarCatalog } from "../scalars/catalog.js";
-import { schemaFirstGraphQLDocument } from "./graphql-document.js";
 
 const DEFINITION_KINDS = {
   ObjectTypeDefinition: Kind.OBJECT_TYPE_DEFINITION,
@@ -33,15 +29,12 @@ const DEFINITION_KINDS = {
   UnionTypeDefinition: Kind.UNION_TYPE_DEFINITION,
 } as const;
 
-function buildProjectedSchema(
+function buildRetainedSchema(
   specification: DocumentModelSpecificationDefinition,
   specIndex: number,
 ) {
-  const projection = documentModelGraphQLProjection(specification);
-  const document =
-    projection.kind === "graphql-ast-v1"
-      ? projection.document
-      : schemaFirstGraphQLDocument(projection.segments).document;
+  if (specification.graphQLCompatibility === null) return undefined;
+  const { document } = specification.graphQLCompatibility;
   const documentPath: DefinitionPath = [
     "specifications",
     specIndex,
@@ -109,6 +102,12 @@ function buildProjectedSchema(
   return { schema, owners };
 }
 
+/**
+ * finalize() already refuses a declaration that breaks an implementation rule.
+ * A retained schema-first document can add what a declaration cannot spell:
+ * field arguments, type extensions and implementations on root types. Only
+ * graphql-js composes those, and tooling is where that optional peer loads.
+ */
 export function checkInterfaceImplementations(
   artifact: NormalizedDocumentModelArtifact,
 ): readonly DefinitionDiagnostic[] {
@@ -119,9 +118,9 @@ export function checkInterfaceImplementations(
       key: artifact.documentType,
       version: specification.version,
     };
-    let projected: ReturnType<typeof buildProjectedSchema>;
+    let projected: ReturnType<typeof buildRetainedSchema>;
     try {
-      projected = buildProjectedSchema(specification, specIndex);
+      projected = buildRetainedSchema(specification, specIndex);
     } catch (error) {
       if (!(error instanceof Error)) throw error;
       diagnostics.push(

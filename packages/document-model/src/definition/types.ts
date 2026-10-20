@@ -407,7 +407,8 @@ export type ObjectDescriptor<
    *
    * Separate from `fields` so every existing reader of `fields` sees what it
    * always saw: a computed member belongs to the schema, not to the stored
-   * shape, and a document model's state root may not declare one at all.
+   * shape, and a document model's state may not declare one unless a retained
+   * schema-first document stores it.
    */
   readonly computed?: Readonly<Record<string, unknown>>;
   /** `Type.computedTokens.<field>`, the handle a subgraph binds through. */
