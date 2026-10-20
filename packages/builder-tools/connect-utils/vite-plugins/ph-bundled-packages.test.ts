@@ -111,4 +111,27 @@ describe("phBundledPackagesPlugin build", () => {
     );
     expect(js).not.toContain("addLocalPackage");
   }, 120_000);
+
+  it("loads a package's offered routes from their own chunk", async () => {
+    // `ph build` output; by path, as an unmigrated package doesn't export it.
+    const routes = join(root, "node_modules/local-pkg/dist/browser");
+    mkdirSync(routes, { recursive: true });
+    writeFileSync(
+      join(routes, "connect-routes.js"),
+      `export const connectRoutes = ["local-route"];`,
+    );
+    await buildJs(["local-pkg"]);
+    const assets = readdirSync(join(root, "dist/assets"));
+    const chunk = assets.find((f) => /^connect-routes-.*\.js$/.test(f));
+    expect(chunk).toBeDefined();
+    expect(readFileSync(join(root, "dist/assets", chunk!), "utf8")).toContain(
+      "local-route",
+    );
+    const entry = assets
+      .filter((f) => f !== chunk && f.endsWith(".js"))
+      .map((f) => readFileSync(join(root, "dist/assets", f), "utf8"))
+      .join("\n");
+    expect(entry).toContain(chunk);
+    expect(entry).not.toContain("local-route");
+  }, 120_000);
 });
