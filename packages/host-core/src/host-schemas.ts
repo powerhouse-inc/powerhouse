@@ -17,8 +17,8 @@ import {
  * `config` is runner-defined.
  *
  * Token-able fields (typed-host-configs 3.5): `reactor.backends.*.remote.url`
- * (required), `reactor.drives[].remote.url` and `storage.dataDir` (`$env`
- * only). Their z.input admits tokens, their z.output is the resolved type.
+ * (required), `reactor.drives` (whole list, e.g. `$map`),
+ * `reactor.drives[].remote.url` and `storage.dataDir` (`$env` only). Their z.input admits tokens, their z.output is the resolved type.
  */
 
 export const profileSchema = z.strictObject({
@@ -216,8 +216,12 @@ function buildHostSchemas(tokenField: FieldWrappers) {
         renown: z.looseObject({}).optional(),
       })
       .optional(),
-    // Core-declared, seeded by the host runtime.
-    drives: z.array(buildDriveDeclarationSchema(tokenField.any)).optional(),
+    // Core-declared, seeded by the host runtime. Token-able as a whole
+    // (3.3): a `$map` over a producer's `drives` output (or an `$output` of
+    // an array of declarations) renders the list at resolve time.
+    drives: tokenField
+      .any(z.array(buildDriveDeclarationSchema(tokenField.any)))
+      .optional(),
   });
 
   /** Common runner options; runner modules extend it with their own. */

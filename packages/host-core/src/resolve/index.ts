@@ -27,6 +27,7 @@ export {
   type PlanMember,
 } from "./plan.js";
 export {
+  describeMapElements,
   resolveHostOutputs,
   TokenResolutionError,
   type DeferredResolution,

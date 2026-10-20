@@ -69,18 +69,14 @@
                     "additionalProperties": {}
                   }
                 },
-                "required": [
-                  "module"
-                ],
+                "required": ["module"],
                 "additionalProperties": false
               }
             ]
           }
         }
       },
-      "required": [
-        "module"
-      ],
+      "required": ["module"],
       "additionalProperties": {}
     },
     "children": {
@@ -157,9 +153,7 @@
                           "additionalProperties": {}
                         }
                       },
-                      "required": [
-                        "module"
-                      ],
+                      "required": ["module"],
                       "additionalProperties": false
                     }
                   ]
@@ -186,23 +180,14 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": [
-                        "in-process",
-                        "worker",
-                        "remote"
-                      ]
+                      "enum": ["in-process", "worker", "remote"]
                     },
                     "storage": {
                       "type": "object",
                       "properties": {
                         "kind": {
                           "type": "string",
-                          "enum": [
-                            "idb",
-                            "memory",
-                            "path",
-                            "postgres"
-                          ]
+                          "enum": ["idb", "memory", "path", "postgres"]
                         },
                         "dataDir": {
                           "anyOf": [
@@ -230,18 +215,13 @@
                                           "const": true
                                         }
                                       },
-                                      "required": [
-                                        "name",
-                                        "optional"
-                                      ],
+                                      "required": ["name", "optional"],
                                       "additionalProperties": false
                                     }
                                   ]
                                 }
                               },
-                              "required": [
-                                "$env"
-                              ],
+                              "required": ["$env"],
                               "additionalProperties": false
                             }
                           ]
@@ -250,9 +230,7 @@
                           "type": "string"
                         }
                       },
-                      "required": [
-                        "kind"
-                      ],
+                      "required": ["kind"],
                       "additionalProperties": false
                     },
                     "readModel": {
@@ -297,9 +275,7 @@
                           ]
                         }
                       },
-                      "required": [
-                        "url"
-                      ],
+                      "required": ["url"],
                       "additionalProperties": false
                     },
                     "projection": {
@@ -336,9 +312,7 @@
                       "additionalProperties": false
                     }
                   },
-                  "required": [
-                    "kind"
-                  ],
+                  "required": ["kind"],
                   "additionalProperties": false
                 }
               },
@@ -379,17 +353,11 @@
                   },
                   "createSignaturePolicy": {
                     "type": "string",
-                    "enum": [
-                      "legacy",
-                      "v2-required"
-                    ]
+                    "enum": ["legacy", "v2-required"]
                   },
                   "unsupportedStoredDocuments": {
                     "type": "string",
-                    "enum": [
-                      "refuse",
-                      "read-only"
-                    ]
+                    "enum": ["refuse", "read-only"]
                   }
                 },
                 "additionalProperties": false
@@ -448,84 +416,81 @@
                 "additionalProperties": false
               },
               "drives": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "slug": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "projectHash": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "string",
-                          "const": "id"
-                        }
-                      ]
-                    },
-                    "name": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "icon": {
-                      "type": "string"
-                    },
-                    "preferredEditor": {
-                      "type": "string"
-                    },
-                    "sharingType": {
-                      "type": "string",
-                      "enum": [
-                        "public",
-                        "private",
-                        "shared"
-                      ]
-                    },
-                    "availableOffline": {
-                      "type": "boolean"
-                    },
-                    "remote": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
                       "type": "object",
                       "properties": {
-                        "url": {
+                        "slug": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "projectHash": {
                           "anyOf": [
                             {
-                              "type": "string",
-                              "minLength": 1
+                              "type": "boolean"
                             },
                             {
-                              "$ref": "#/$defs/__schema0"
+                              "type": "string",
+                              "const": "id"
                             }
                           ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "icon": {
+                          "type": "string"
+                        },
+                        "preferredEditor": {
+                          "type": "string"
+                        },
+                        "sharingType": {
+                          "type": "string",
+                          "enum": ["public", "private", "shared"]
+                        },
+                        "availableOffline": {
+                          "type": "boolean"
+                        },
+                        "remote": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["url"],
+                          "additionalProperties": false
                         }
                       },
-                      "required": [
-                        "url"
-                      ],
+                      "required": ["slug"],
                       "additionalProperties": false
                     }
                   },
-                  "required": [
-                    "slug"
-                  ],
-                  "additionalProperties": false
-                }
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
               }
             },
             "additionalProperties": false
           }
         },
-        "required": [
-          "host"
-        ],
+        "required": ["host"],
         "additionalProperties": false
       }
     },
@@ -555,11 +520,7 @@
       "additionalProperties": false
     }
   },
-  "required": [
-    "name",
-    "runner",
-    "children"
-  ],
+  "required": ["name", "runner", "children"],
   "additionalProperties": false,
   "$defs": {
     "__schema0": {
@@ -594,16 +555,11 @@
                   }
                 }
               },
-              "required": [
-                "host",
-                "path"
-              ],
+              "required": ["host", "path"],
               "additionalProperties": false
             }
           },
-          "required": [
-            "$output"
-          ],
+          "required": ["$output"],
           "additionalProperties": false
         },
         {
@@ -626,9 +582,7 @@
               }
             }
           },
-          "required": [
-            "$concat"
-          ],
+          "required": ["$concat"],
           "additionalProperties": false
         },
         {
@@ -669,16 +623,11 @@
                               }
                             }
                           },
-                          "required": [
-                            "host",
-                            "path"
-                          ],
+                          "required": ["host", "path"],
                           "additionalProperties": false
                         }
                       },
-                      "required": [
-                        "$output"
-                      ],
+                      "required": ["$output"],
                       "additionalProperties": false
                     },
                     {
@@ -724,18 +673,13 @@
                                   }
                                 }
                               },
-                              "required": [
-                                "as",
-                                "path"
-                              ],
+                              "required": ["as", "path"],
                               "additionalProperties": false
                             }
                           ]
                         }
                       },
-                      "required": [
-                        "$item"
-                      ],
+                      "required": ["$item"],
                       "additionalProperties": false
                     }
                   ]
@@ -750,16 +694,11 @@
                   "const": "record"
                 }
               },
-              "required": [
-                "over",
-                "to"
-              ],
+              "required": ["over", "to"],
               "additionalProperties": false
             }
           },
-          "required": [
-            "$map"
-          ],
+          "required": ["$map"],
           "additionalProperties": false
         },
         {
@@ -805,18 +744,13 @@
                       }
                     }
                   },
-                  "required": [
-                    "as",
-                    "path"
-                  ],
+                  "required": ["as", "path"],
                   "additionalProperties": false
                 }
               ]
             }
           },
-          "required": [
-            "$item"
-          ],
+          "required": ["$item"],
           "additionalProperties": false
         },
         {
@@ -835,9 +769,7 @@
               ]
             }
           },
-          "required": [
-            "$key"
-          ],
+          "required": ["$key"],
           "additionalProperties": false
         },
         {
@@ -861,18 +793,13 @@
                       "const": true
                     }
                   },
-                  "required": [
-                    "name",
-                    "optional"
-                  ],
+                  "required": ["name", "optional"],
                   "additionalProperties": false
                 }
               ]
             }
           },
-          "required": [
-            "$env"
-          ],
+          "required": ["$env"],
           "additionalProperties": false
         }
       ]

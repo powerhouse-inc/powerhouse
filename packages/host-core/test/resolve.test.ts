@@ -94,7 +94,11 @@ describe("resolveHostOutputs", () => {
       hostSchema: { safeParse: (v: unknown) => ({ success: true, data: v }) },
     };
     const resolved = resolveHostOutputs(
-      { name: "x", runner: { module: "m" }, config: { f: { $$: { $env: "X" } } } },
+      {
+        name: "x",
+        runner: { module: "m" },
+        config: { f: { $$: { $env: "X" } } },
+      },
       sources,
     );
     expect(validateHost(runner, "m", resolved, "f")).toEqual({
@@ -187,7 +191,11 @@ describe("resolveHostOutputs", () => {
 
     const live = new Map([["assistant", { origin: "http://127.0.0.1:4910" }]]);
     const done = deferred.finish(
-      compoundOutputSource([{ key: "assistant", host: "assistant" }], live, "clint"),
+      compoundOutputSource(
+        [{ key: "assistant", host: "assistant" }],
+        live,
+        "clint",
+      ),
     );
     expect(done.config.agents.assistant.url).toBe("http://127.0.0.1:4910/a");
     // finishing before the member runs names it
@@ -216,7 +224,9 @@ describe("declared validation", () => {
       (ref) =>
         ref.host === "switchboard"
           ? { schema: outputsSchema, label: '"sb-runner"' }
-          : { error: `names host "${ref.host}", which exports no outputsSchema.` },
+          : {
+              error: `names host "${ref.host}", which exports no outputsSchema.`,
+            },
     );
     expect(issues).toEqual([
       {
@@ -239,7 +249,10 @@ describe("declared validation", () => {
   it("walks zod wrappers, records, arrays and unions", () => {
     const schema = z.object({
       list: z.array(z.object({ a: z.string() })).optional(),
-      either: z.union([z.object({ x: z.string() }), z.object({ y: z.number() })]),
+      either: z.union([
+        z.object({ x: z.string() }),
+        z.object({ y: z.number() }),
+      ]),
     });
     expect(schemaAtPath(schema, ["list", 0, "a"]).ok).toBe(true);
     expect(schemaAtPath(schema, ["list", "a"]).ok).toBe(false);
@@ -254,9 +267,10 @@ describe("declared validation", () => {
         list: [{ $env: { name: "B", optional: true } }],
         cat: { $concat: ["x", { $env: { name: "C", optional: true } }] },
         bad: { $output: { host: "switchboard" } },
-        later: { $map: { over: out("s", []), to: 1 } },
+        mapped: { $map: { over: out("s", []), to: 1 } },
+        stray: { $item: ["x"] },
       }).map((i) => i.path),
-    ).toEqual(["list[0]", "cat.$concat[1]", "bad", "later"]);
+    ).toEqual(["list[0]", "cat.$concat[1]", "bad", "stray"]);
   });
 
   it("names the token form for every removed cross-host form", () => {
@@ -271,12 +285,16 @@ describe("declared validation", () => {
             plugins: [
               {
                 module: "w",
-                config: { drive: { from: "desktop-switchboard", slug: "workflows" } },
+                config: {
+                  drive: { from: "desktop-switchboard", slug: "workflows" },
+                },
               },
             ],
           },
           reactor: {
-            backends: { sb: { kind: "remote", remote: { host: "switchboard" } } },
+            backends: {
+              sb: { kind: "remote", remote: { host: "switchboard" } },
+            },
           },
         },
         "desktop-switchboard": { host: "switchboard" },
@@ -294,8 +312,8 @@ describe("declared validation", () => {
   });
 
   it("validateDeclaredHost runs the runner's declaredHostSchema; validateHost its resolved one", () => {
-    const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
-      s.reactorHostSchema,
+    const { declaredHostSchema, hostSchema } = defineHostSchemas(
+      (s) => s.reactorHostSchema,
     );
     const runner: RunnerModule = {
       kind: "reactor",
@@ -328,9 +346,22 @@ describe("declared validation", () => {
 
 describe("dependency plan", () => {
   const members = [
-    { key: "app-connect", host: "connect", refs: [{ ref: { host: "switchboard" }, path: "runner.plugins[0].config.drive" }] },
+    {
+      key: "app-connect",
+      host: "connect",
+      refs: [
+        {
+          ref: { host: "switchboard" },
+          path: "runner.plugins[0].config.drive",
+        },
+      ],
+    },
     { key: "app-switchboard", host: "switchboard", refs: [] },
-    { key: "app-proxy", host: "proxy", refs: [{ ref: { host: "connect" }, path: "config.target" }] },
+    {
+      key: "app-proxy",
+      host: "proxy",
+      refs: [{ ref: { host: "connect" }, path: "config.target" }],
+    },
   ];
 
   it("orders producers before consumers, ties in declaration order", () => {

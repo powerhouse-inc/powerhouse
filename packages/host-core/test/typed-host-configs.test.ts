@@ -29,7 +29,7 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
-import { findToken, isToken, ref, type Token } from "../src/tokens.js";
+import { findToken, isToken, ref, type TokenFor } from "../src/tokens.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -164,7 +164,7 @@ describe("host schemas: invariants owned by the schema", () => {
       >[string]["remote"]
     >["url"];
     expectTypeOf<UrlOut>().toEqualTypeOf<string>();
-    expectTypeOf<Url>().toEqualTypeOf<string | Token>();
+    expectTypeOf<Url>().toEqualTypeOf<string | TokenFor<string>>();
     // ref()'s input is `T | Token`, not unknown: a drive declaration object
     // where a URL (or token) is expected is a compile error.
     const driveRef = ref(z.url());
