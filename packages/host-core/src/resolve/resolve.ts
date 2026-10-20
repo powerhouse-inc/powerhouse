@@ -666,6 +666,10 @@ export function resolveHostOutputs<T>(
       const late = new Resolver({ ...sources, outputs });
       for (const site of sites) {
         const value = late.token(site.token, site.trail);
+        // An array slot has no property to omit (as when resolving eagerly).
+        if (value === OMIT && typeof site.trail.at(-1) === "number") {
+          late.fail(site.trail, `is ${late.omitted} inside an array.`);
+        }
         setAt(
           done,
           site.trail,

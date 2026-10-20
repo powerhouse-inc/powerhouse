@@ -392,6 +392,35 @@ describe("absent optional outputs", () => {
     );
     expect(done.config).toEqual({});
   });
+
+  it("finish(): a deferred token on an absent optional field inside an array fails", () => {
+    const deferred = resolveHostOutputs(
+      {
+        name: "c",
+        config: { urls: [out("assistant", ["mcp"])] },
+        children: {},
+      },
+      {},
+      { deferSelf: { members: [{ key: "assistant", host: "assistant" }] } },
+    );
+    expect(() =>
+      deferred.finish(
+        compoundOutputSource(
+          [{ key: "assistant", host: "assistant" }],
+          new Map([["assistant", { origin: "http://x" }]]),
+          "c",
+          new Map([
+            [
+              "assistant",
+              z.strictObject({ origin: z.url(), mcp: z.url().optional() }),
+            ],
+          ]),
+        ),
+      ),
+    ).toThrow(
+      /`config\.urls\[0\]` is an absent optional output inside an array/,
+    );
+  });
 });
 
 describe("declared validation", () => {
