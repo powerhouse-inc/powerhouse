@@ -874,6 +874,7 @@ function checkBuilds(
         ),
         subgraph?.typeDefs ?? EMPTY_DOCUMENT,
         subgraph?.typeNames,
+        subgraph?.descriptions,
       ),
     },
   ]);
@@ -1026,9 +1027,6 @@ export function findSubgraphTypeCollisions(
   typeDefs: DocumentNode,
   ownTypeNames?: ReadonlySet<string>,
 ): string[] {
-  ownTypeNames ??= templateOwners.has(typeDefs)
-    ? typeDefinitionNames(typeDefs)
-    : undefined;
   const collisions: string[] = [];
   for (const def of typeDefs.definitions) {
     if (def.kind === Kind.SCALAR_TYPE_DEFINITION) continue;
@@ -1045,7 +1043,7 @@ export function assembleSubgraphTypeDefs(
   generated: GeneratedDocumentModelTypes,
   typeDefs: DocumentNode,
   ownTypeNames?: ReadonlySet<string>,
-  ownDescriptions = templateOwners.get(typeDefs),
+  ownDescriptions?: TemplateDescriptions,
 ): DocumentNode {
   const collisions = findSubgraphTypeCollisions(
     generated,
@@ -1426,7 +1424,9 @@ function storedInitialState(
 /**
  * Generates a document model's subgraph schema. Pass the module so a
  * code-first model is projected from its structured definition. A
- * schema-first caller may pass the stored global state instead.
+ * schema-first caller may pass the stored global state instead. To build it
+ * beside the generated types, use {@link documentModelSubgraphTypes}, whose
+ * type names and descriptions the schema options take.
  */
 export function generateDocumentModelSchema(
   source: DocumentModelSource,
@@ -1434,14 +1434,6 @@ export function generateDocumentModelSchema(
 ): DocumentNode {
   return modelTemplate(source, options).typeDefs;
 }
-
-/**
- * The template output each model generated, so a caller that passes only the
- * template still gets its own types and descriptions. SDL content cannot prove
- * ownership, because any subgraph may declare the same type names. The host
- * passes both explicitly, since its templates arrive as copies.
- */
-const templateOwners = new WeakMap<DocumentNode, TemplateDescriptions>();
 
 function modelTemplate(
   source: DocumentModelSource,
@@ -1481,6 +1473,5 @@ function modelTemplate(
       }
     }
   }
-  templateOwners.set(document, descriptions);
   return { typeDefs: document, descriptions };
 }

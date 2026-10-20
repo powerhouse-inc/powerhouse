@@ -9,7 +9,13 @@ import type { ExecutionResult, GraphQLSchema } from "graphql";
 import { documentModelSubgraphClass } from "../../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../../src/graphql/types.js";
 import type { IAuthorizationService } from "../../src/services/authorization.service.js";
-import { createSchema } from "../../src/utils/create-schema.js";
+import {
+  createSchema,
+  documentModelSubgraphTypes,
+  generateDocumentModelSchema,
+  type GeneratedDocumentModelTypes,
+  typeDefinitionNames,
+} from "../../src/utils/create-schema.js";
 import { servedSubgraph } from "./served-subgraph.js";
 
 /**
@@ -30,6 +36,19 @@ export function printSchema(schema: GraphQLSchema | string): string {
       typeof schema === "string" ? buildSchema(schema) : schema,
     ),
   );
+}
+
+/** The schema `module`'s own subgraph is built with, as the host builds it. */
+export function ownModelSchema(
+  module: DocumentModelModule,
+  options: { useNewApi: boolean; generated?: GeneratedDocumentModelTypes },
+): GraphQLSchema {
+  const typeDefs = generateDocumentModelSchema(module, options);
+  return createSchema([module], {}, typeDefs, {
+    generated: options.generated,
+    ownTypeNames: typeDefinitionNames(typeDefs),
+    ownDescriptions: documentModelSubgraphTypes(module).descriptions,
+  });
 }
 
 export function asSchemaFirst(

@@ -269,6 +269,7 @@ export function hostDocumentModels<M extends DocumentModelSource>(
       createSchema(modules, {}, own.typeDefs, {
         generated,
         ownTypeNames: own.typeNames,
+        ownDescriptions: own.descriptions,
         reportScalars: false,
       });
     } catch (error) {

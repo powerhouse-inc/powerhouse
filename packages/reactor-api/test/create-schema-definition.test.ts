@@ -32,6 +32,7 @@ import {
   asSchemaFirst,
   hostFor,
   messages,
+  ownModelSchema,
   printSchema,
 } from "./utils/graphql-host.js";
 
@@ -774,13 +775,7 @@ describe("a field that declares equals", () => {
     for (const useNewApi of [false, true]) {
       it(`serves the schema it serves without equals, retained: ${String(retained)}, useNewApi: ${String(useNewApi)}`, () => {
         const served = (module: DocumentModelModule) =>
-          printSchema(
-            createSchema(
-              [module],
-              {},
-              generateDocumentModelSchema(module, { useNewApi }),
-            ),
-          );
+          printSchema(ownModelSchema(module, { useNewApi }));
         const withEquals = served(buildCodes({ equals: true, retained }));
         expect(withEquals).toBe(
           served(buildCodes({ equals: false, retained })),
@@ -853,13 +848,7 @@ describe("an operation input with default values", () => {
   ]) {
     it(`serves the stored SDL's defaults, retained: ${String(retained)}, useNewApi: ${String(useNewApi)}`, () => {
       const served = (module: DocumentModelModule) =>
-        printSchema(
-          createSchema(
-            [module],
-            {},
-            generateDocumentModelSchema(module, { useNewApi }),
-          ),
-        );
+        printSchema(ownModelSchema(module, { useNewApi }));
       const structured = served(buildDefaults(retained));
       expect(structured).toBe(served(asSchemaFirst(buildDefaults(retained))));
       expect(structured).toContain("  level: Defaults_Level! = LOW\n");

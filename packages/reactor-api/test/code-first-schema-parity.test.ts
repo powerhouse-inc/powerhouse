@@ -9,10 +9,9 @@ import { type GraphQLSchema, parse } from "graphql";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   createSchema,
-  generateDocumentModelSchema,
   getGeneratedDocumentModelTypes,
 } from "../src/utils/create-schema.js";
-import { printSchema } from "./utils/graphql-host.js";
+import { ownModelSchema, printSchema } from "./utils/graphql-host.js";
 import {
   initAndFlush,
   makeDriveModule,
@@ -56,13 +55,7 @@ async function hostedSchema(module: DocumentModelModule): Promise<string> {
 }
 
 function servedSchema(module: DocumentModelModule, useNewApi: boolean) {
-  return printSchema(
-    createSchema(
-      [module],
-      {},
-      generateDocumentModelSchema(module, { useNewApi }),
-    ),
-  );
+  return printSchema(ownModelSchema(module, { useNewApi }));
 }
 
 describe.each(ROOTS)("the %s golden", (root) => {
@@ -326,12 +319,7 @@ describe.each([
   it("keeps template descriptions when generated types are cached", () => {
     const generated = getGeneratedDocumentModelTypes([codeFirst]);
     const schema = printSchema(
-      createSchema(
-        [codeFirst],
-        {},
-        generateDocumentModelSchema(codeFirst, { useNewApi: true }),
-        { generated },
-      ),
+      ownModelSchema(codeFirst, { useNewApi: true, generated }),
     );
     expect(schema).toBe(servedSchema(schemaFirst, true));
     expect(schema).toContain(proof);
