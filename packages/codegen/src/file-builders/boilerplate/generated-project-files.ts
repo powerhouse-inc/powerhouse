@@ -7,6 +7,12 @@ import {
 } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
+import {
+  buildHostsTypesDts,
+  declaredDependencies,
+  hostsTsconfigTemplate,
+  withHostsTscScript,
+} from "../hosts/host-typing-files.js";
 import { writeJsonFile } from "write-json-file";
 import {
   agentsTemplate,
@@ -232,6 +238,7 @@ export async function writeGeneratedHostsFiles(
     join(projectDir, "hosts/cli/host.js"),
     templates.cliHost,
   );
+  await writeHostsTypingFiles(projectDir);
   await seedUserOwnedFile(
     join(projectDir, "agents/README.md"),
     templates.agentsReadme,
@@ -255,6 +262,30 @@ export async function writeGeneratedHostsFiles(
     join(projectDir, "agents/index.ts"),
     templates.agentsIndex,
   );
+}
+
+/** `tsc -p hosts` wiring: seeds hosts/tsconfig.json (user-owned), writes
+ * hosts/types.d.ts (codegen-owned; `ph generate hosts` refreshes it) and
+ * appends `tsc -p hosts` to the package.json `tsc` script. */
+async function writeHostsTypingFiles(projectDir: string) {
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/tsconfig.json"),
+    hostsTsconfigTemplate,
+  );
+  const pkgPath = join(projectDir, "package.json");
+  const pkg = existsSync(pkgPath)
+    ? ((await loadJsonFile(pkgPath)) as Record<string, unknown>)
+    : undefined;
+  await writeFileEnsuringDir(
+    join(projectDir, "hosts/types.d.ts"),
+    buildHostsTypesDts(declaredDependencies(pkg)),
+  );
+  if (!pkg) return;
+  const scripts = (pkg.scripts ?? {}) as Record<string, string>;
+  const tsc = withHostsTscScript(scripts.tsc);
+  if (scripts.tsc === tsc) return;
+  pkg.scripts = { ...scripts, tsc };
+  await writeJsonFile(pkgPath, pkg, { indent: 2 });
 }
 
 export async function writeAiConfigFiles(projectDir = process.cwd()) {
