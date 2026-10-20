@@ -500,6 +500,12 @@ const scaffoldSwitchboard = reactor({
   name: "my-project-switchboard",
   drives: [workflowsDrive, local("powerhouse")],
 });
+/** Every drive the scaffold switchboard reports (declared `powerhouse`,
+ * plugin-created `workflows`), attached by URL through `$map`, key-sorted. */
+const scaffoldDrivesAsRemotes = [
+  remote("powerhouse", `${SCAFFOLD_SB}/d/powerhouse`),
+  remote("workflows", `${SCAFFOLD_SB}/d/workflows`),
+];
 const scaffoldConnect = reactor({
   name: "my-project-connect",
   clientMode: "worker",
@@ -590,7 +596,8 @@ const ROWS: Row[] = [
   {
     project: "scaffold",
     host: "cli",
-    cells: "generic compound · remote-client member · remote drives by token",
+    cells:
+      "generic compound · remote-client member · $map over every switchboard drive (incl. plugin-created) · protocol restored",
     expected: compound("cli", {
       startOrder: ["cli-switchboard", "cli-connect"],
       members: {
@@ -607,16 +614,12 @@ const ROWS: Row[] = [
                 "url",
               ]),
               graphql("reactor.backends.sb.remote.url"),
-              reads("reactor.drives[0].remote.url", "switchboard", [
-                "drives",
-                "powerhouse",
-                "url",
-              ]),
+              reads("reactor.drives.$map.over", "switchboard", ["drives"]),
             ],
             clientMode: "remote",
             backends: [{ name: "sb", kind: "remote" }],
             remotes: [`${SCAFFOLD_SB}/graphql`],
-            drives: [remote("powerhouse", `${SCAFFOLD_SB}/d/powerhouse`)],
+            drives: scaffoldDrivesAsRemotes,
           }),
           ["cli-switchboard"],
         ),
@@ -626,7 +629,8 @@ const ROWS: Row[] = [
   {
     project: "scaffold",
     host: "desktop",
-    cells: "desktop runner · path + ${userData} · member at serve",
+    cells:
+      "desktop runner · path + ${userData} · member at serve · $map remote drives",
     expected: compound("desktop", {
       startOrder: ["desktop-switchboard", "desktop-connect"],
       members: {
@@ -659,13 +663,9 @@ const ROWS: Row[] = [
                 "workflows",
                 "url",
               ]),
-              reads("reactor.drives[0].remote.url", "switchboard", [
-                "drives",
-                "powerhouse",
-                "url",
-              ]),
+              reads("reactor.drives.$map.over", "switchboard", ["drives"]),
             ],
-            drives: [remote("powerhouse", `${SCAFFOLD_SB}/d/powerhouse`)],
+            drives: scaffoldDrivesAsRemotes,
           }),
           ["desktop-switchboard"],
         ),
@@ -907,8 +907,6 @@ const ROWS: Row[] = [
     }),
   },
   {
-    // TODO(T4-A): the `at` of a token inside `$map` assumes the walk path
-    // format `reactor.drives.$map.over`; adjust to T4-A's if it differs.
     project: "matrix",
     host: "cli-map",
     cells:
@@ -934,7 +932,6 @@ const ROWS: Row[] = [
     }),
   },
   {
-    // TODO(T4-A): see cli-map.
     project: "matrix",
     host: "desktop-map",
     cells: "desktop runner · router member at serve · $map remote drives",
@@ -1045,6 +1042,11 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
     async () => {
       const cli = await pipeline("matrix", "cli-map");
       expect(cli.resolved["cli-connect"].reactor).toMatchObject({
+        protocol: { createSignaturePolicy: "v2-required" },
+      });
+      // the scaffold cli does the same (from powerhouse.config.json)
+      const scaffoldCli = await pipeline("scaffold", "cli");
+      expect(scaffoldCli.resolved["cli-connect"].reactor).toMatchObject({
         protocol: { createSignaturePolicy: "v2-required" },
       });
     },

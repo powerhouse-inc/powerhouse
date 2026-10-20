@@ -119,8 +119,18 @@ describe("writeGeneratedHostsFiles", () => {
     expect(desktop).toContain(
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
-    expect(desktop).toContain(`path: ["drives", d.slug, "url"]`);
+    // T4: the connect member attaches every drive the server member reports
+    // (declared and plugin-created) by `$map` over its drives output
+    expect(desktop).toContain(
+      '$map: {\n            over: { $output: { host: "switchboard", path: ["drives"] } },',
+    );
+    expect(desktop).toContain(
+      'to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },',
+    );
+    expect(desktop).toContain("drives: switchboard.reactor.drives");
     expect(desktop).not.toContain("serverPort");
+    expect(desktop).not.toContain("serverDrives");
+    expect(desktop).not.toContain("plugins: [...switchboard.runner.plugins]");
     // the switchboard side serves the runtime and its drive:
     expect(switchboard).toContain(
       "@powerhousedao/switchboard/plugins/workflows",
@@ -143,8 +153,18 @@ describe("writeGeneratedHostsFiles", () => {
     // REMOTE CLIENT (lone remote backend → reactorClient "remote", no PGlite).
     const cli = readFileSync(join(dir, "hosts/cli/host.js"), "utf-8");
     expect(cli).toContain("@powerhousedao/host-core/runners/compound");
-    expect(cli).toContain('import switchboard from "../switchboard/host.js"');
+    expect(cli).not.toContain("../switchboard/host.js");
     expect(cli).toContain('import connect from "../connect/host.js"');
+    // the full-statement reactor override keeps the connect host's protocol
+    expect(cli).toContain("protocol: connect.reactor.protocol");
+    expect(cli).not.toContain("serverDrives");
+    expect(cli).not.toMatch(/startOrder: \[/);
+    expect(cli).toContain(
+      '$map: {\n            over: { $output: { host: "switchboard", path: ["drives"] } },',
+    );
+    expect(cli).toContain(
+      'to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },',
+    );
     expect(cli).toContain('"cli-switchboard": { host: "switchboard" }');
     expect(cli).toContain(
       `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,

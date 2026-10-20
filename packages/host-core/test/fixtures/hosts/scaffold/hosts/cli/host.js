@@ -7,12 +7,7 @@
 // a SYNCHRONIZED remote drive — a local replica, which keeps PGlite by
 // design. remote client = no local store; synchronized remote drive = local
 // store.) Standalone `ph run connect` is untouched — still a local reactor.
-import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
-
-// The drive(s) the switchboard declares — the single source Connect's
-// remote attachment derives from.
-const serverDrives = switchboard.reactor.drives ?? [];
 
 /** @satisfies {PHHost} */
 export default {
@@ -23,10 +18,8 @@ export default {
   runner: {
     module: "@powerhousedao/host-core/runners/compound",
   },
-
-  config: {
-    startOrder: ["cli-switchboard", "cli-connect"],
-  },
+  // No startOrder: the cli-connect member's output tokens start the
+  // switchboard first (`ph run cli --explain outputs` prints the order).
 
   children: {
     // Inherits the switchboard host wholesale — including its drive.
@@ -34,8 +27,8 @@ export default {
 
     // Connect as a remote client (full-statement reactor override; the
     // standalone connect host's own reactor is untouched). The lone remote
-    // backend selects reactorClient "remote"; the remote default drive(s)
-    // give the client the Switchboard URL to proxy to.
+    // backend selects reactorClient "remote"; the remote drives give the
+    // client the Switchboard URL to proxy to.
     "cli-connect": {
       host: "connect",
       runner: {
@@ -58,6 +51,8 @@ export default {
       // Every URL is the switchboard member's output (what it actually
       // bound), so the compound starts it first.
       reactor: {
+        // the override is a full statement: keep the connect host's protocol
+        protocol: connect.reactor.protocol,
         backends: {
           sb: {
             kind: "remote",
@@ -71,17 +66,17 @@ export default {
             },
           },
         },
-        drives: serverDrives.map((drive) => ({
-          slug: drive.slug,
-          remote: {
-            url: {
-              $output: {
-                host: "switchboard",
-                path: ["drives", drive.slug, "url"],
-              },
-            },
+        // Every drive the switchboard member actually serves — its declared
+        // ones and the ones its plugins create (workflows) — by the URL it
+        // reports, in key-sorted order. (After `ph generate hosts`,
+        // `{ $item: ["url"] }` is switchboard.drives.$item.url from
+        // ../switchboard/outputs.js.)
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
           },
-        })),
+        },
       },
     },
   },
