@@ -5,8 +5,8 @@ import { Outlet } from "@tanstack/react-router";
 import { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { twMerge } from "tailwind-merge";
-import type { SettingsTabEntry } from "../../router/settings.js";
-import { useSettingsTabs } from "../../router/settings.js";
+import type { SettingsTabEntry } from "@powerhousedao/connect-core/router";
+import { useSettingsTabs } from "@powerhousedao/connect-core/router";
 
 function SettingsTabLink({ tab }: { tab: SettingsTabEntry }) {
   const link = useLinkProps({ settings: tab.id });

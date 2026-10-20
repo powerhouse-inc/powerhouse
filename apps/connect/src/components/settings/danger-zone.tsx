@@ -5,7 +5,7 @@ import {
   useDrives,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import { useForgetSettingsOpenedFrom } from "../../router/settings.js";
+import { useForgetSettingsOpenedFrom } from "@powerhousedao/connect-core/router";
 
 export const DangerZone: React.FC = () => {
   const drives = useDrives();
