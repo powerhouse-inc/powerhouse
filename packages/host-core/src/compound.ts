@@ -12,6 +12,7 @@ import { outputSitesOf } from "./resolve/declared.js";
 import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
 import { memberForRef, planCompound } from "./resolve/plan.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
+import { isPlainObject } from "./resolve/walk.js";
 import { resolveHostOutputs } from "./resolve/resolve.js";
 import { compoundOutputSource } from "./resolve/sources.js";
 import {
@@ -60,6 +61,9 @@ interface StartedMember {
   kind: RunnerKind;
   verb: string;
   handle: StartedHandle;
+  /** The outputs consumers read and the record holds: the handle's outputs
+   * as parsed by the member runner's outputsSchema. */
+  outputs: Record<string, unknown>;
 }
 
 /** A member host before its runner validates it: the member's host.js with
@@ -275,8 +279,12 @@ export async function runCompound(
         kind: m.runner.kind,
         verb: memberVerb,
         handle,
+        outputs: handle.outputs,
       });
       if (handle.ready) await handle.ready;
+      // Consumers and the record see the PARSED outputs (schema defaults,
+      // transforms, stripped keys), as a standalone run publishes them.
+      let memberOutputs = handle.outputs;
       if (!oneShot && isSchemaLike(m.runner.outputsSchema)) {
         const checked = m.runner.outputsSchema.safeParse(handle.outputs);
         if (!checked.success) {
@@ -284,8 +292,15 @@ export async function runCompound(
             `${where} reported outputs that fail its outputsSchema:\n${checked.error.issues.map((i) => `  - ${i.path.map(String).join(".") || "<root>"}: ${i.message}`).join("\n")}`,
           );
         }
+        if (!isPlainObject(checked.data)) {
+          throw new Error(
+            `${where}: its outputsSchema parsed the outputs to ${JSON.stringify(checked.data)}, not an object.`,
+          );
+        }
+        memberOutputs = checked.data;
       }
-      liveOutputs.set(name, handle.outputs);
+      started[started.length - 1].outputs = memberOutputs;
+      liveOutputs.set(name, memberOutputs);
     }
   } catch (error) {
     await shutdown();
@@ -300,7 +315,7 @@ export async function runCompound(
         runnerModule: m.specifier,
         kind: m.kind,
         verb: m.verb,
-        outputs: m.handle.outputs,
+        outputs: m.outputs,
       };
     }
     writeRunRecord(projectRoot, {

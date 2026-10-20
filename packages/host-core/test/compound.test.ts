@@ -79,6 +79,7 @@ export const kind = "reactor";
 export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export const outputsSchema = z.strictObject({
   origin: z.url(),
+  tier: z.string().default("dev"),
   drives: z.record(z.string(), z.strictObject({ id: z.string(), url: z.url() })).optional(),
 });
 export async function dev(host, ctx) {
@@ -245,10 +246,34 @@ describe("runCompound", () => {
     });
     expect(record?.members?.["app-connect"]?.outputs).toEqual({
       origin: "http://localhost:2064",
+      tier: "dev",
     });
 
     await result.shutdown();
     expect(readRunRecord(dir, "app")).toBeUndefined();
+  });
+
+  it("records and serves the outputsSchema-parsed outputs, not the raw ones", async () => {
+    const { dir, sink } = makeProject({
+      connectPlugins: [
+        {
+          module: WF,
+          config: {
+            tier: { $output: { host: "switchboard", path: ["tier"] } },
+          },
+        },
+      ],
+    });
+    const result = await run(dir);
+    const connect = calls(sink).find(
+      (c) => c.event === "start" && c.name === "lab-connect",
+    );
+    // the default the switchboard's outputsSchema fills in
+    expect(connect?.plugins).toEqual([{ module: WF, config: { tier: "dev" } }]);
+    expect(
+      readRunRecord(dir, "app")?.members?.["app-switchboard"]?.outputs,
+    ).toMatchObject({ tier: "dev" });
+    await result.shutdown();
   });
 
   it("accepts a startOrder that agrees with the tokens", async () => {
