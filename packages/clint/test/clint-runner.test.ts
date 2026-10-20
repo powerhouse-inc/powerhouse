@@ -6,6 +6,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -297,6 +298,60 @@ describe("clint-runner (P5.4)", () => {
     await expect(runner.run(host, ctx(dir))).rejects.toThrow(
       /member "assistant" is up .* within 1000 ms .*; member "web" read its outputs\./,
     );
+  }, 60_000);
+
+  it("waits for the run record of a member re-attached because its port is already serving", async () => {
+    // A free port, then held: the member "is already serving" there (e.g.
+    // still booting from an earlier detached run) and publishes late.
+    const probe = net.createServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    const address = probe.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    await new Promise<void>((resolve) => probe.close(() => resolve()));
+    const holder = net.createServer();
+    await new Promise<void>((resolve) =>
+      holder.listen(port, "127.0.0.1", resolve),
+    );
+    try {
+      const { dir } = makeProject({ port, readinessTimeout: 20_000 });
+      const timer = setTimeout(() => {
+        mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
+        writeFileSync(
+          path.join(dir, ".ph", "run", "cli-assistant.json"),
+          JSON.stringify({
+            version: 2,
+            host: "cli-assistant",
+            projectName: "cli-lab",
+            kind: "reactor",
+            verb: "run",
+            startedAt: "2026-10-20T00:00:00.000Z",
+            pid: process.pid,
+            outputs: {
+              origin: `http://127.0.0.1:${port}`,
+              endpoints: { openai: `http://127.0.0.1:${port}/v1/` },
+            },
+          }),
+        );
+      }, 800);
+      try {
+        const handle = await runner.run(await declaredCli(dir), ctx(dir));
+        try {
+          expect(handle.outputs).toEqual({
+            agents: { main: `http://127.0.0.1:${port}/v1` },
+          });
+          // re-attached: clint never spawned it
+          expect(handle.services.list("assistant")[0]?.status).not.toBe(
+            "ready",
+          );
+        } finally {
+          await handle.shutdown();
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    } finally {
+      await new Promise<void>((resolve) => holder.close(() => resolve()));
+    }
   }, 60_000);
 
   it("fails naming the member, its timeout and the reading path when the member never publishes", async () => {

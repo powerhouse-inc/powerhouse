@@ -392,7 +392,15 @@ async function startShell(
   for (const edge of plan.edges) {
     addReader(edge.producer, `member "${edge.consumer}"`);
   }
-  const waitForRecord = async (id: string, memberHost: string) => {
+  /** Wait for a member's live run record when something reads it. With
+   * `managed` (clint's own service state describes it), a failed or stopped
+   * service ends the wait early; a member found serving on its port is not
+   * clint's to watch, so it gets the full timeout. */
+  const waitForRecord = async (
+    id: string,
+    memberHost: string,
+    managed = true,
+  ) => {
     const read = readers.get(id);
     if (!read) return;
     try {
@@ -401,7 +409,12 @@ async function startShell(
         host: memberHost,
         timeout: children[id].config?.readiness?.timeout ?? READINESS_TIMEOUT,
         readers: read,
-        status: () => services.list(id).find((s) => s.serviceId === id)?.status,
+        ...(managed
+          ? {
+              status: () =>
+                services.list(id).find((s) => s.serviceId === id)?.status,
+            }
+          : {}),
       });
     } catch (error) {
       if (lifecycle === "attached") await stopAll(services, names);
@@ -437,6 +450,9 @@ async function startShell(
       console.log(
         `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
       );
+      // It may still be booting (an earlier detached run, or started by
+      // hand): its readers need its record, as after a fresh start.
+      await waitForRecord(id, member.host.name, false);
       continue;
     }
     const already = services
