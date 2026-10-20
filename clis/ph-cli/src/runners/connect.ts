@@ -56,6 +56,9 @@ const schemas = defineHostSchemas((s) =>
         /** Patch the baked CSP for the runtime registry (`serve`); a
          * compound's wiring sets it on its connect member. */
         cspRegistrySync: z.boolean().optional(),
+        /** The host's routes folder, project-relative; false for none.
+         * Default: hosts/connect/routes. */
+        routes: z.union([z.string(), z.literal(false)]).optional(),
       })
       .strict(),
     config: connectConfigSchema.optional(),
@@ -316,6 +319,13 @@ async function validateComposition(
   );
 }
 
+// The favicon was built into the dist; served, its path would mean nothing.
+function withoutFavicon(config: PHConnectRuntimeConfig | undefined) {
+  if (config?.branding?.favicon === undefined) return config;
+  const { favicon: _, ...branding } = config.branding;
+  return { ...config, branding };
+}
+
 export async function dev(
   host: ConnectHostParsed,
   ctx: RunnerContext,
@@ -324,7 +334,9 @@ export async function dev(
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = toStudioArgs(host);
   const server = await startUnderSupervisor(ctx, () =>
-    runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb)),
+    runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
+      routes: host.runner.routes,
+    }),
   );
   // vite's dev server binds its default host ("localhost") here.
   return connectHandle(server, { host: "localhost", port: args.port });
@@ -337,13 +349,19 @@ export const run = dev;
 /** P3.3 — `build`: the SAME service as classic `ph connect build`. */
 export async function build(
   host: ConnectHostParsed,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<void> {
+  await validateComposition(host, ctx);
   const { runConnectBuild } = await import("../services/connect-build.js");
   const args: Partial<ConnectBuildArgs> = {
     outDir: host.runner.outDir ?? "dist",
   };
-  await runConnectBuild(args as ConnectBuildArgs);
+  // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
+  await runConnectBuild(
+    args as ConnectBuildArgs,
+    callerOverride(host, ctx, ctx.verb),
+    { routes: host.runner.routes },
+  );
 }
 
 /** P3.3 — `serve`: the SAME vite preview server as classic
@@ -376,7 +394,7 @@ export async function serve(
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
     host: bind,
   };
-  const override = callerOverride(host, ctx, ctx.verb);
+  const override = withoutFavicon(callerOverride(host, ctx, ctx.verb));
   const server = await startUnderSupervisor(ctx, () =>
     runConnectPreview(args as ConnectPreviewArgs, {
       connect: override,

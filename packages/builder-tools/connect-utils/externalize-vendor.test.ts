@@ -247,6 +247,55 @@ describe("vendored dynamic-base helpers", () => {
   }, 240_000);
 });
 
+describe("prebuildConnectVendor default base", () => {
+  // A package with an emitted asset and a BASE_URL read, like Connect's
+  // in-browser PGlite (`new URL("./pglite.data", import.meta.url)`).
+  const FIXTURE = "ph-vendor-base-fixture";
+  const fixtureDir = join(DIRNAME, "node_modules", FIXTURE);
+
+  beforeAll(() => {
+    mkdirSync(fixtureDir, { recursive: true });
+    writeFileSync(
+      join(fixtureDir, "package.json"),
+      JSON.stringify({
+        name: FIXTURE,
+        version: "1.0.0",
+        type: "module",
+        exports: { ".": "./index.js" },
+      }),
+    );
+    writeFileSync(
+      join(fixtureDir, "index.js"),
+      [
+        `export const dataUrl = () => new URL("./fixture.data", import.meta.url).href;`,
+        `export const baseUrl = import.meta.env.BASE_URL;`,
+      ].join("\n"),
+    );
+    writeFileSync(join(fixtureDir, "fixture.data"), "x".repeat(8192));
+  });
+  afterAll(() => {
+    rmSync(fixtureDir, { recursive: true, force: true });
+  });
+
+  it("emits asset URLs under a single vendor segment and keeps BASE_URL at the app base", async () => {
+    const vendorDir = join(dir, "default-base");
+    const v = (await prebuildConnectVendor({
+      dirname: DIRNAME,
+      include: [FIXTURE],
+      vendorDir,
+    })) as PrebuiltVendor;
+    expect(v).not.toBeNull();
+    const entry = readFileSync(
+      join(vendorDir, v.imports[FIXTURE].slice("/__vendor__/".length)),
+      "utf8",
+    );
+    expect(entry).toMatch(/"__vendor__\/assets\/fixture-[\w-]+\.data"/);
+    expect(entry).not.toContain("__vendor__/__vendor__");
+    // BASE_URL is the app base: the runtime base expression, no vendor segment.
+    expect(entry).not.toMatch(/baseUrl = \([^;]*__vendor__/);
+  }, 240_000);
+});
+
 describe("vendor cache key", () => {
   it("rebuilds when the base or NODE_ENV changes", async () => {
     const vendorDir = join(dir, "key");

@@ -1,97 +1,35 @@
-import { Root } from "./root.js";
 import { connectConfig } from "@powerhousedao/connect/config";
-import { Content } from "../pages/content.js";
-import type { PHStore } from "@powerhousedao/reactor-browser";
+import { routeTree } from "@powerhousedao/connect/route-tree";
+import type { ConnectAppRouterOptions } from "@powerhousedao/connect-core/router";
 import {
-  createDriveArrivals,
-  ensurePHStore,
-  usePHStore,
-} from "@powerhousedao/reactor-browser";
+  disposeConnectAppRouter,
+  getConnectAppRouter,
+} from "@powerhousedao/connect-core/router";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import { ensurePHStore, usePHStore } from "@powerhousedao/reactor-browser";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
-import { getRuntimeConfig } from "../runtime-config.js";
-import type { ConnectRouteComponents } from "../router/route-components.js";
-import type * as SettingsModule from "./settings/index.js";
-import { AppLayout } from "./app-layout.js";
-import { LoadingShell } from "./prerendered-shell.js";
-import {
-  bindConnectRouter,
-  createConnectRouter,
-} from "../router/connect-router.js";
-import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
-import { DrivePending, RouteError, RouterChrome } from "./route-views.js";
+import { reportRouteError } from "../services/sentry.js";
+import { ColdStartPending } from "./prerendered-shell.js";
+import { RouterChrome } from "./route-views.js";
 
-const EmptyView = () => null;
-
-const settingsModule = () => import("./settings/index.js");
-const lazySettings = (name: keyof typeof SettingsModule) =>
-  lazy(() => settingsModule().then((m) => ({ default: m[name] })));
-const SettingsPage = lazySettings("SettingsPage");
-
-export const connectRouteComponents: ConnectRouteComponents = {
-  root: () => (
-    <Suspense name="RouteRoot" fallback={<LoadingShell Fallback={EmptyView} />}>
-      <Root />
-    </Suspense>
-  ),
-  app: () => <AppLayout />,
-  content: () => (
-    <Suspense name="Drive">
-      <Content />
-    </Suspense>
-  ),
-  notFound: NotFoundPage,
-  drivePending: DrivePending,
-  driveNotFound: DriveNotFoundPage,
-  error: RouteError,
-  settings: () => (
-    <Suspense name="Settings">
-      <SettingsPage />
-    </Suspense>
-  ),
-  settingsTabs: {
-    ...(connectConfig.aiAssistantEnabled && {
-      "ai-assistant": lazySettings("AiAssistant"),
-    }),
-    "package-manager": lazySettings("ConnectPackageManager"),
-    "default-editors": lazySettings("DefaultEditor"),
-    "danger-zone": lazySettings("DangerZone"),
-    about: lazySettings("About"),
-  },
-};
-
-let connectRouter: ReturnType<typeof createConnectRouter> | undefined;
-let routerStore: PHStore | undefined;
-let unbindConnectRouter: (() => void) | undefined;
-
-// HMR re-runs this module: the replaced router must stop writing the selection.
-import.meta.hot?.dispose(() => unbindConnectRouter?.());
-
-// One router per app; its context is the app's PH store. It becomes the PH
-// navigator as it is created, so selection setters navigate from the start.
-function getConnectRouterFor(store: PHStore) {
-  if (connectRouter) {
-    if (import.meta.env.DEV && store !== routerStore) {
-      throw new Error("Connect's router is already bound to another PH store");
-    }
-    return connectRouter;
-  }
-  routerStore = store;
-  connectRouter = createConnectRouter({
-    store,
-    arrivals: createDriveArrivals(store),
-    components: connectRouteComponents,
+function connectRouterOptions(): ConnectAppRouterOptions {
+  return {
+    routeTree,
     basepath: connectConfig.routerBasename,
     InnerWrap: RouterChrome,
+    pendingComponent: ColdStartPending,
     appName: getRuntimeConfig().connect.branding?.appName ?? undefined,
-  });
-  unbindConnectRouter = bindConnectRouter(connectRouter, store);
-  return connectRouter;
+    onCatch: reportRouteError,
+  };
 }
+
+// HMR re-runs this module: the replaced router must stop writing the selection.
+import.meta.hot?.dispose(() => disposeConnectAppRouter());
 
 /** The app's router, e.g. for tracing. */
 export function getConnectRouter() {
-  return getConnectRouterFor(ensurePHStore()).router;
+  return getConnectAppRouter(ensurePHStore(), connectRouterOptions).router;
 }
 
 // Dev only: production builds drop the import with this branch.
@@ -105,7 +43,7 @@ const RouterDevtools = import.meta.env.DEV
 
 export const Router = () => {
   const store = usePHStore() ?? ensurePHStore();
-  const { router } = getConnectRouterFor(store);
+  const { router } = getConnectAppRouter(store, connectRouterOptions);
   return (
     <>
       <RouterProvider router={router} />

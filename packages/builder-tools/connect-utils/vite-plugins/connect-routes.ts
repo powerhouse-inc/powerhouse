@@ -1,14 +1,23 @@
 import { Generator, getConfig } from "@tanstack/router-generator";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { layout, physical, rootRoute } from "@tanstack/virtual-file-routes";
+import type { GeneratorPlugin } from "@tanstack/router-generator";
+import type { VirtualRouteNode } from "@tanstack/virtual-file-routes";
+import {
+  index,
+  layout,
+  physical,
+  rootRoute,
+  route,
+} from "@tanstack/virtual-file-routes";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Alias, Plugin, PluginOption } from "vite";
 import { resolvePackage } from "../helpers.js";
 
@@ -18,13 +27,42 @@ export const HOST_ROUTES_DIR = "hosts/connect/routes";
 export const CONNECT_ROUTES_GEN = ".ph/connect-routes.gen.ts";
 /** Connect's dist imports its route tree by this specifier. */
 export const ROUTE_TREE_SPECIFIER = "@powerhousedao/connect/route-tree";
+/** Core's types name the app's tree by this one; both resolve to one tree. */
+export const CORE_ROUTE_TREE_SPECIFIER =
+  "@powerhousedao/connect-core/route-tree";
 
-/** The project's routes folder, `hosts/connect/routes/`; undefined if none. */
+const ROUTE_TREE_FIND = new RegExp(
+  `^(${[ROUTE_TREE_SPECIFIER, CORE_ROUTE_TREE_SPECIFIER].map(escapeRegExp).join("|")})$`,
+);
+
+/** A host's routes folder: `routes` (a host's `runner.routes`), relative to the
+ * project, else `hosts/connect/routes/`; undefined if none or `false`. */
 export function resolveConnectRoutesDir(
   projectRoot: string,
+  routes?: string | false,
 ): string | undefined {
+  if (routes === false) return undefined;
+  if (routes !== undefined) {
+    const dir = resolve(projectRoot, routes);
+    if (!existsSync(dir)) {
+      throw new Error(`The routes folder ${routes} does not exist.`);
+    }
+    return dir;
+  }
   const dir = join(projectRoot, HOST_ROUTES_DIR);
   return existsSync(dir) ? dir : undefined;
+}
+
+const isDefaultRoutesDir = (projectRoot: string, routesDir: string) =>
+  resolve(routesDir) === join(resolve(projectRoot), HOST_ROUTES_DIR);
+
+/** The tree generated from `routesDir`: `.ph/connect-routes.gen.ts` for
+ * `hosts/connect/routes/`, else `.ph/<folder>.gen.ts`. */
+export function connectRoutesTreeOf(projectRoot: string, routesDir: string) {
+  if (isDefaultRoutesDir(projectRoot, routesDir)) {
+    return join(projectRoot, CONNECT_ROUTES_GEN);
+  }
+  return join(projectRoot, ".ph", `${relative(projectRoot, routesDir)}.gen.ts`);
 }
 
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */
@@ -42,43 +80,260 @@ export function hasProjectAppLayout(routesDir: string | undefined): boolean {
 }
 
 export type ConnectRoutes = {
-  /** Points Connect at the tree to route with. */
-  alias: Alias;
+  /** Points Connect at the tree to route with, then at what its route files render. */
+  aliases: Alias[];
   /** The router plugin, only when the project has routes. */
   plugins: PluginOption[];
   /** Connect's route files and the project's share one router. */
   dedupe: string[];
 };
 
-/** The router plugin's config: Connect's root, its core routes and the project's. */
+/** Connect's route files: core's routes with Connect's views. */
+export function connectRoutesDirOf(connectDir: string) {
+  return join(connectDir, "src/routes");
+}
+
+const ROUTE_FILE = /\.[cm]?[jt]sx?$/;
+
+// Not routes: dotfiles and the generator's routeFileIgnorePrefix.
+const isRouteEntry = (name: string) =>
+  !name.startsWith(".") && !name.startsWith("-");
+
+/** The route files under `dir`, by path relative to it. */
+function routeFilesIn(dir: string, at = ""): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(join(dir, at), { withFileTypes: true })
+    .filter((entry) => isRouteEntry(entry.name))
+    .flatMap((entry) => {
+      const path = at ? `${at}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) return routeFilesIn(dir, path);
+      return ROUTE_FILE.test(entry.name) ? [path] : [];
+    });
+}
+
+/** A route file's id below its folder: route groups and `route` files
+ * resolved, flat `a.b` names read as folders. */
+export function routeIdOf(file: string) {
+  const segments = file
+    .replace(ROUTE_FILE, "")
+    .split("/")
+    .filter((segment) => !/^\(.+\)$/.test(segment));
+  if (segments.at(-1) === "route") segments.pop();
+  return segments.join("/").replaceAll(".", "/");
+}
+
+/** Connect's `_app/` route files that a project file at the same id replaces. */
+export function overriddenConnectRoutes(
+  connectAppDir: string,
+  projectAppDir: string,
+) {
+  const projectIds = new Set(routeFilesIn(projectAppDir).map(routeIdOf));
+  return new Set(
+    routeFilesIn(connectAppDir).filter((file) =>
+      projectIds.has(routeIdOf(file)),
+    ),
+  );
+}
+
+const stemOf = (name: string) => name.replace(ROUTE_FILE, "");
+
+/** Mounts Connect's routes in `dir` without the `overridden` files: a folder
+ * whole when none is in it, else file by file. */
+function mountConnectRoutes(
+  routesDirectory: string,
+  dir: string,
+  overridden: ReadonlySet<string>,
+  prefix = "",
+): VirtualRouteNode[] {
+  if (![...overridden].some((file) => file.startsWith(`${dir}/`))) {
+    return [physical(prefix, dir)];
+  }
+  const entries = readdirSync(join(routesDirectory, dir), {
+    withFileTypes: true,
+  }).filter((entry) => isRouteEntry(entry.name));
+  const files = entries
+    .filter((entry) => entry.isFile() && ROUTE_FILE.test(entry.name))
+    .map((entry) => entry.name);
+  const folders = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
+  const at = (name: string) => (prefix ? `${prefix}/${name}` : name);
+  const nodes: VirtualRouteNode[] = [];
+  for (const name of files) {
+    const file = `${dir}/${name}`;
+    const stem = stemOf(name);
+    const folder = folders.includes(stem) ? `${dir}/${stem}` : undefined;
+    if (overridden.has(file)) {
+      // Its child routes nest in the project's file, which has the same path.
+      if (folder) nodes.push(physical(at(stem), folder));
+      continue;
+    }
+    const children =
+      folder && mountConnectRoutes(routesDirectory, folder, overridden);
+    if (stem === "index") {
+      nodes.push(prefix ? route(`${prefix}/`, file) : index(file));
+    } else if (!prefix && stem.startsWith("_")) {
+      nodes.push(layout(stem, file, children || []));
+    } else {
+      nodes.push(
+        children ? route(at(stem), file, children) : route(at(stem), file),
+      );
+    }
+  }
+  // A folder without a route file of its own only adds to its routes' paths.
+  for (const name of folders) {
+    if (files.some((file) => stemOf(file) === name)) continue;
+    nodes.push(
+      ...mountConnectRoutes(
+        routesDirectory,
+        `${dir}/${name}`,
+        overridden,
+        at(name),
+      ),
+    );
+  }
+  return nodes;
+}
+
+/** The routes a package offers other Connects, as `ph build` publishes them
+ * (`./connect-routes`); generated beside the route tree. */
+export const PACKAGE_ROUTES_MODULE = ".ph/connect-routes.package.ts";
+
+type RouteNodes = Parameters<
+  NonNullable<GeneratorPlugin["onRouteTreeChanged"]>
+>[0]["routeNodes"];
+
+/** Writes the package's routes for registerPackageRoutes: its files but its
+ * `_app` layout and its overrides of Connect's `_app/` routes, parents first. */
+function writePackageRoutesModule(
+  projectRoot: string,
+  projectRoutes: string,
+  routeNodes: RouteNodes,
+  options: { routesDirectory: string; connectAppIds: ReadonlySet<string> },
+) {
+  const module = join(projectRoot, PACKAGE_ROUTES_MODULE);
+  const appDir = join(projectRoutes, APP_LAYOUT);
+  const offered = routeNodes
+    .map((node) => ({
+      node,
+      file: join(options.routesDirectory, node.filePath),
+    }))
+    .filter(({ node, file }) => {
+      if (!file.startsWith(`${projectRoutes}${sep}`)) return false;
+      if (node.routePath === `/${APP_LAYOUT}`) return false;
+      if (!file.startsWith(`${appDir}${sep}`)) return true;
+      const id = routeIdOf(relative(appDir, file).split(sep).join("/"));
+      return !options.connectAppIds.has(id);
+    })
+    .sort(
+      (a, b) =>
+        (a.node.routePath ?? "").split("/").length -
+        (b.node.routePath ?? "").split("/").length,
+    );
+  if (offered.length === 0) {
+    rmSync(module, { force: true });
+    return;
+  }
+  const from = (file: string) => {
+    const path = relative(dirname(module), file).split(sep).join("/");
+    return path.replace(ROUTE_FILE, ".js");
+  };
+  const lines = [
+    "// Generated by ph build: the routes this package offers other Connects.",
+    'import type { PackageRoute } from "@powerhousedao/connect-core/router";',
+    ...offered.map(
+      ({ file }, i) => `import { Route as r${i} } from "${from(file)}";`,
+    ),
+    "",
+    "export const connectRoutes: PackageRoute[] = [",
+    ...offered.map(({ node }, i) => {
+      const pathless = node._fsRouteType === "pathless_layout";
+      const entry = {
+        id: node.routePath,
+        ...(pathless ? {} : { path: node.path }),
+        parentId: node.parent?.routePath ?? "__root__",
+      };
+      const fields = Object.entries(entry)
+        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+        .join(", ");
+      return `  { route: r${i}, ${fields} },`;
+    }),
+    "];",
+    "",
+  ];
+  mkdirSync(dirname(module), { recursive: true });
+  const text = lines.join("\n");
+  if (!existsSync(module) || readFileSync(module, "utf8") !== text) {
+    writeFileSync(module, text);
+  }
+}
+
+/** The router plugin's config: Connect's root and routes, and the project's. */
 export function connectRoutesGeneratorConfig(
   connectDir: string,
   projectRoot: string,
   projectRoutes: string,
 ) {
-  const routesDirectory = join(connectDir, "src/routes");
+  const routesDirectory = connectRoutesDirOf(connectDir);
   const fromRoutes = (path: string) => relative(routesDirectory, path);
-  // A project's _app.tsx replaces Connect's layout; its _app/ routes nest in it.
-  const appLayout = findRouteFile(projectRoutes, APP_LAYOUT);
-  const appRoutes = join(projectRoutes, APP_LAYOUT);
+  // Read on every generation, so dev sees an override added or removed.
+  const virtualRouteConfig = () => {
+    // A project's _app.tsx replaces Connect's layout; its _app/ routes nest in it.
+    const appLayout = findRouteFile(projectRoutes, APP_LAYOUT);
+    const appRoutes = join(projectRoutes, APP_LAYOUT);
+    const overridden = new Set(
+      [
+        ...overriddenConnectRoutes(
+          join(routesDirectory, APP_LAYOUT),
+          appRoutes,
+        ),
+      ].map((file) => `${APP_LAYOUT}/${file}`),
+    );
+    return rootRoute("__root.tsx", [
+      layout(
+        APP_LAYOUT,
+        appLayout ? fromRoutes(appLayout) : `${APP_LAYOUT}.tsx`,
+        [
+          ...mountConnectRoutes(routesDirectory, APP_LAYOUT, overridden),
+          ...(existsSync(appRoutes)
+            ? [physical("", fromRoutes(appRoutes))]
+            : []),
+        ],
+      ),
+      physical("", fromRoutes(projectRoutes)),
+    ]);
+  };
+  // The router plugin parses a copy of its config; this reaches its generator's.
+  const overrides: GeneratorPlugin = {
+    name: "ph-connect-route-overrides",
+    init: ({ generator }) => {
+      Object.defineProperty(generator.config, "virtualRouteConfig", {
+        get: virtualRouteConfig,
+        configurable: true,
+        enumerable: true,
+      });
+    },
+  };
+  // Only hosts/connect/routes/ is offered to other Connects; a host's own folder is not.
+  const offers = isDefaultRoutesDir(projectRoot, projectRoutes);
+  const offered: GeneratorPlugin = {
+    name: "ph-connect-offered-routes",
+    onRouteTreeChanged: ({ routeNodes }) => {
+      writePackageRoutesModule(projectRoot, projectRoutes, routeNodes, {
+        routesDirectory,
+        connectAppIds: new Set(
+          routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
+        ),
+      });
+    },
+  };
   return getConfig(
     {
       target: "react",
       routesDirectory,
-      generatedRouteTree: join(projectRoot, CONNECT_ROUTES_GEN),
-      virtualRouteConfig: rootRoute("__root.tsx", [
-        layout(
-          APP_LAYOUT,
-          appLayout ? fromRoutes(appLayout) : `core/${APP_LAYOUT}.tsx`,
-          [
-            physical("", `core/${APP_LAYOUT}`),
-            ...(existsSync(appRoutes)
-              ? [physical("", fromRoutes(appRoutes))]
-              : []),
-          ],
-        ),
-        physical("", fromRoutes(projectRoutes)),
-      ]),
+      generatedRouteTree: connectRoutesTreeOf(projectRoot, projectRoutes),
+      virtualRouteConfig: virtualRouteConfig(),
+      plugins: offers ? [overrides, offered] : [overrides],
       // The project's _app layout and folder are mounted above, not again at the root.
       routeFileIgnorePattern: `^${APP_LAYOUT}(\\.[cm]?[jt]sx?)?$`,
       quoteStyle: "double",
@@ -100,7 +355,7 @@ export function connectRoutesGeneratorConfig(
 }
 
 /** Writes the route tree of Connect's and the project's routes; throws on a
- * collision with a core route, which the router plugin would only log. */
+ * collision that is not an override, which the router plugin would only log. */
 export async function generateConnectRoutes(
   projectRoot: string,
   routesDir: string,
@@ -114,7 +369,7 @@ export async function generateConnectRoutes(
   try {
     await new Generator({ config, root: projectRoot }).run();
     assertNoDuplicateRoutes(config.generatedRouteTree);
-    importCoreRoutesByPackage(
+    importConnectRoutesByPackage(
       config.generatedRouteTree,
       config.routesDirectory,
     );
@@ -131,12 +386,16 @@ export async function generateConnectRoutes(
   }
 }
 
-/** Connect's route files, as the generated tree imports them. */
+/** Connect's route files, as the generated tree imports them: by Connect's
+ * package name, which a project depends on. */
 export const CONNECT_ROUTES_SPECIFIER = "@powerhousedao/connect/routes";
 
 // By package name, Connect's route files are a library to tsc: no rootDir error
 // and no declarations emitted for them. Vite resolves either form.
-function importCoreRoutesByPackage(treeFile: string, routesDirectory: string) {
+function importConnectRoutesByPackage(
+  treeFile: string,
+  routesDirectory: string,
+) {
   const relativeDir = relative(dirname(treeFile), routesDirectory);
   const prefix = `"./${relativeDir.split(sep).join("/")}/`;
   const tree = readFileSync(treeFile, "utf8");
@@ -176,6 +435,7 @@ export async function syncConnectRoutes(
     await generateConnectRoutes(projectRoot, routesDir);
   } else {
     rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
+    rmSync(join(projectRoot, PACKAGE_ROUTES_MODULE), { force: true });
   }
 }
 
@@ -185,18 +445,22 @@ function connectDirOf(projectRoot: string) {
   );
 }
 
-/** Mounts a project's routes folder beside Connect's core routes; without one,
- * Connect keeps its prebuilt core tree and no router plugin runs. */
+/** Mounts a project's routes folder over Connect's routes; without one,
+ * Connect keeps its prebuilt tree and no router plugin runs. */
 export function connectRoutes(
   projectRoot: string,
-  routesDir = resolveConnectRoutesDir(projectRoot),
+  routesDir: string | false | undefined = resolveConnectRoutesDir(projectRoot),
 ): ConnectRoutes {
   const connectDir = connectDirOf(projectRoot);
-  const find = new RegExp(`^${ROUTE_TREE_SPECIFIER}$`);
+  const find = ROUTE_TREE_FIND;
   if (!routesDir) {
-    rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
+    // Stale only without hosts/connect/routes/: a routeless host keeps the project's tree.
+    if (!resolveConnectRoutesDir(projectRoot)) {
+      rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
+    }
+    // Connect's prebuilt tree, for core's types' specifier too.
     return {
-      alias: { find, replacement: join(connectDir, "dist/route-tree.js") },
+      aliases: [{ find, replacement: join(connectDir, "dist/route-tree.js") }],
       plugins: [],
       dedupe: [],
     };
@@ -212,7 +476,15 @@ export function connectRoutes(
     buildStart: () => generateConnectRoutes(projectRoot, routesDir, config),
   };
   return {
-    alias: { find, replacement: config.generatedRouteTree },
+    aliases: [
+      { find, replacement: config.generatedRouteTree },
+      // Connect's route files compile in the project's build; their views are
+      // Connect's dist, not the sources its tsconfig paths name in the monorepo.
+      {
+        find: /^@powerhousedao\/connect\/route-views$/,
+        replacement: join(connectDir, "dist/route-views.js"),
+      },
+    ],
     plugins: [
       check,
       // Before react(): it splits route files ahead of the JSX transform.
@@ -227,7 +499,7 @@ const ROUTER_PACKAGES =
 
 /** One chunk for the router and the project's route configs, which the split
  * route components would otherwise spread over several shared chunks. */
-export function connectRouterChunkGroups(routesDir?: string) {
+export function connectRouterChunkGroups(routesDir?: string | false) {
   const routes = routesDir && join(routesDir, sep);
   return [
     // Its own chunk: the entry imports it, and must not load the router with it.

@@ -1,0 +1,12 @@
+/* Connect for a Tailwind host: a project's style.css imports this after
+   tailwindcss, and its one build has Connect's tokens, rules and classes. */
+@import "@powerhousedao/design-system/tailwind.css";
+@import "@powerhousedao/connect-core/theme.css";
+@import "@powerhousedao/powerhouse-vetra-packages/style.css";
+@import "@powerhousedao/vetra/style.css";
+@import "@powerhousedao/workflow/workflow.css";
+/* Third-party CSS: plain rules, which the loading screen leaves out. */
+@import "@powerhousedao/design-system/vendor.css";
+@import "@powerhousedao/workflow/vendor.css";
+
+@source "./dist";

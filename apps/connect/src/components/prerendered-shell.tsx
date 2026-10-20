@@ -41,6 +41,14 @@ export function LoadingShell({ Fallback }: { Fallback: ComponentType }) {
   );
 }
 
+const Blank = () => null;
+
+/** The router's pending view: the shell while a cold start's route chunks
+ * load, so a lazy layout leaves no blank frame; nothing once released. */
+export function ColdStartPending() {
+  return <LoadingShell Fallback={Blank} />;
+}
+
 /** Drops the shell once the app shows; later loads use their own fallback. */
 export function useReleasePrerenderedShell(released: boolean) {
   useEffect(() => {

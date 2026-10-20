@@ -1,0 +1,134 @@
+import { toast } from "@powerhousedao/connect/services";
+import type {
+  AddRemoteDriveInput,
+  AppOptions,
+} from "@powerhousedao/design-system/connect";
+import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system/connect";
+import {
+  addDrive,
+  addRemoteDrive,
+  closePHModal,
+  extractDriveSlugFromPath,
+  fetchDriveInfo,
+  getFullReactorClient,
+  getDrives,
+  getPHNavigation,
+  setSelectedDrive,
+  useAppModules,
+  usePHModal,
+  waitForDocumentReady,
+  getPHStore,
+} from "@powerhousedao/reactor-browser";
+import { t } from "i18next";
+import { getCreateDriveAppOptions } from "../pages/create-drive-app-options.js";
+
+// Max wait for a remote drive's initial sync before skipping navigation.
+// Safe to be generous: navigation only fires if the user is still on home.
+const REMOTE_DRIVE_NAV_TIMEOUT_MS = 30_000;
+
+export function AddDriveModal() {
+  const phModal = usePHModal();
+  const open = phModal?.type === "addDrive";
+  const appModules = useAppModules();
+  const onAddLocalDrive = async (data: AppOptions) => {
+    try {
+      const app = appModules?.find((a) => a.config.id === data.id);
+      const newDrive = await addDrive(
+        {
+          id: "",
+          slug: "",
+          global: {
+            name: data.name,
+            icon: null,
+          },
+          local: {
+            availableOffline: data.availableOffline,
+            sharingType: data.sharingType.toLowerCase(),
+            listeners: [],
+            triggers: [],
+          },
+        },
+        app?.config.id,
+      );
+
+      toast(t("notifications.addDriveSuccess"), {
+        type: "connect-success",
+      });
+
+      if (!newDrive) {
+        return;
+      }
+
+      setSelectedDrive(newDrive);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
+    try {
+      const driveId = await addRemoteDrive(data.url, data.id);
+
+      toast(t("notifications.addDriveSuccess"), {
+        type: "connect-success",
+      });
+
+      // Navigate into the drive if its initial sync lands in time.
+      // Not awaited so the modal closes immediately.
+      // waiting for the drive and listing drives both need the full reactor client
+      const reactorClient = getFullReactorClient();
+      // Only a still unselected, un-pinned (home) view gets pulled into the
+      // new drive — the user may have navigated elsewhere meanwhile.
+      const stillOnHome = () =>
+        !getPHStore()?.selectedDriveId &&
+        !extractDriveSlugFromPath(getPHNavigation().location().pathname);
+      void (async () => {
+        try {
+          if (!reactorClient) {
+            return;
+          }
+          await waitForDocumentReady(reactorClient, driveId, {
+            timeoutMs: REMOTE_DRIVE_NAV_TIMEOUT_MS,
+          });
+          const drives = await getDrives(reactorClient);
+          const drive = drives.find((d) => d.header.id === driveId);
+          if (drive && stillOnHome()) {
+            setSelectedDrive(drive);
+          }
+        } catch {
+          // sync still in flight — the drive shows up on home once it lands
+        }
+      })();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  async function onAddLocalDriveSubmit(data: AppOptions) {
+    await onAddLocalDrive(data);
+    closePHModal();
+  }
+
+  async function onAddRemoteDriveSubmit(data: AddRemoteDriveInput) {
+    await onAddRemoteDrive(data);
+    closePHModal();
+  }
+
+  const ready = !!appModules?.length;
+
+  return (
+    <ConnectAddLocalDriveModal
+      open={open && ready}
+      onAddLocalDrive={(data) => {
+        void onAddLocalDriveSubmit(data);
+      }}
+      onAddRemoteDrive={(data) => {
+        void onAddRemoteDriveSubmit(data);
+      }}
+      requestPublicDrive={(url: string) => fetchDriveInfo(url)}
+      onOpenChange={(status) => {
+        if (!status) return closePHModal();
+      }}
+      appOptions={getCreateDriveAppOptions(appModules)}
+    />
+  );
+}

@@ -6,7 +6,7 @@ import createAssistantPlugin from "../plugins/assistant.js";
 import createGenericPlugin from "../plugins/generic.js";
 import createOpenPanelPlugin from "../plugins/openpanel.js";
 import createSentryPlugin from "../plugins/sentry.js";
-import type { ConnectPluginFactory } from "../plugins/types.js";
+import type { ConnectPluginFactory } from "@powerhousedao/connect-core/plugins";
 import createVetraStudioPlugin from "../plugins/vetra-studio.js";
 import createWorkflowsPlugin from "../plugins/workflows.js";
 import { connectPluginConfigSchemas } from "./index.js";

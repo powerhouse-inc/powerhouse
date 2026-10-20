@@ -1,28 +1,12 @@
+import { options } from "@powerhousedao/connect-core/routes/__root";
+import type { ConnectRouterContext } from "@powerhousedao/connect-core/router";
+import { ConnectRoot } from "@powerhousedao/connect/route-views";
 import { createRootRouteWithContext } from "@tanstack/react-router";
-// Types by package name, so a project's declarations can name them.
-import type { ConnectRouterContext } from "@powerhousedao/connect/router";
-import { RootView } from "../router/route-components.js";
-import {
-  connectSearchMiddlewares,
-  validateConnectSearch,
-} from "../router/search.js";
-import { appTitle, notFoundTitle } from "../router/titles.js";
 
+export { options };
+
+// Core's search and title; Connect's page, with or without the generic plugin.
 export const Route = createRootRouteWithContext<ConnectRouterContext>()({
-  // Passes every param through; only the global ones outlive a navigation.
-  // Inline type: project declaration emit can't name this module's types.
-  validateSearch: (search: Record<string, unknown>) =>
-    validateConnectSearch(search) as Record<string, string | undefined>,
-  search: { middlewares: connectSearchMiddlewares },
-  // Child routes' titles replace this one; a notFound() skips the heads below it.
-  head: ({ match, matches }) => ({
-    meta: [
-      {
-        title: matches.some((m) => m.status === "notFound")
-          ? notFoundTitle(match.context.appName)
-          : appTitle(match.context.appName),
-      },
-    ],
-  }),
-  component: RootView,
+  ...options,
+  component: ConnectRoot,
 });

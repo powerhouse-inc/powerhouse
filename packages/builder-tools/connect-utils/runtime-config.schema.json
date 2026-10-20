@@ -90,6 +90,10 @@
                 }
               ]
             },
+            "favicon": {
+              "description": "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it.",
+              "type": ["string", "null"]
+            },
             "loader": {
               "description": "The loading image (first paint, app start, drive and editor loading). A path gets a gentle pulse; { src, animation, size } says otherwise, with animation \"none\" for an image that animates itself (animated SVG, GIF or WebP). null or omitted: Connect's animated logo.",
               "anyOf": [

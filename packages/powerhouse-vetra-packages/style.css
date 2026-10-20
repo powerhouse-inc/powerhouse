@@ -1,1 +1,3 @@
 @import "@powerhousedao/design-system/theme.css";
+/* A Tailwind host that imports this file generates the editors' classes. */
+@source "./dist";

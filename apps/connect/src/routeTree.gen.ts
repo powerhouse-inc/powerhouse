@@ -9,108 +9,84 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root.js";
-import { Route as coreAppRouteImport } from "./routes/core/_app.js";
-import { Route as SplatRouteImport } from "./routes/core/_app/$.js";
-import { Route as ContentRouteImport } from "./routes/core/_app/_content.js";
-import { Route as SettingsRouteImport } from "./routes/core/_app/settings.js";
-import { Route as ContentIndexRouteImport } from "./routes/core/_app/_content/index.js";
-import { Route as SettingsAboutRouteImport } from "./routes/core/_app/settings/about.js";
-import { Route as SettingsAiAssistantRouteImport } from "./routes/core/_app/settings/ai-assistant.js";
-import { Route as SettingsDangerZoneRouteImport } from "./routes/core/_app/settings/danger-zone.js";
-import { Route as SettingsDefaultEditorsRouteImport } from "./routes/core/_app/settings/default-editors.js";
-import { Route as SettingsPackageManagerRouteImport } from "./routes/core/_app/settings/package-manager.js";
-import { Route as ContentDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/core/_app/_content/d/$driveSlug/{-$nodeSlug}.js";
+import { Route as AppRouteImport } from "./routes/_app.js";
+import { Route as AppIndexRouteImport } from "./routes/_app/index.js";
+import { Route as AppSplatRouteImport } from "./routes/_app/$.js";
+import { Route as AppSettingsRouteImport } from "./routes/_app/settings.js";
+import { Route as AppDDriveSlugRouteImport } from "./routes/_app/d/$driveSlug.js";
+import { Route as AppSettingsAppearanceRouteImport } from "./routes/_app/settings/appearance.js";
+import { Route as AppSettingsPackagesRouteImport } from "./routes/_app/settings/packages.js";
+import { Route as AppDDriveSlugChar123NodeSlugChar125RouteImport } from "./routes/_app/d/$driveSlug/{-$nodeSlug}.js";
 
-const coreAppRoute = coreAppRouteImport.update({
+const AppRoute = AppRouteImport.update({
   id: "/_app",
   getParentRoute: () => rootRouteImport,
 } as any);
-const SplatRoute = SplatRouteImport.update({
-  id: "/$",
-  path: "/$",
-  getParentRoute: () => coreAppRoute,
-} as any);
-const ContentRoute = ContentRouteImport.update({
-  id: "/_content",
-  getParentRoute: () => coreAppRoute,
-} as any);
-const SettingsRoute = SettingsRouteImport.update({
-  id: "/settings",
-  path: "/settings",
-  getParentRoute: () => coreAppRoute,
-} as any);
-const ContentIndexRoute = ContentIndexRouteImport.update({
+const AppIndexRoute = AppIndexRouteImport.update({
   id: "/",
   path: "/",
-  getParentRoute: () => ContentRoute,
+  getParentRoute: () => AppRoute,
 } as any);
-const SettingsAboutRoute = SettingsAboutRouteImport.update({
-  id: "/about",
-  path: "/about",
-  getParentRoute: () => SettingsRoute,
+const AppSplatRoute = AppSplatRouteImport.update({
+  id: "/$",
+  path: "/$",
+  getParentRoute: () => AppRoute,
 } as any);
-const SettingsAiAssistantRoute = SettingsAiAssistantRouteImport.update({
-  id: "/ai-assistant",
-  path: "/ai-assistant",
-  getParentRoute: () => SettingsRoute,
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: "/settings",
+  path: "/settings",
+  getParentRoute: () => AppRoute,
 } as any);
-const SettingsDangerZoneRoute = SettingsDangerZoneRouteImport.update({
-  id: "/danger-zone",
-  path: "/danger-zone",
-  getParentRoute: () => SettingsRoute,
+const AppDDriveSlugRoute = AppDDriveSlugRouteImport.update({
+  id: "/d/$driveSlug",
+  path: "/d/$driveSlug",
+  getParentRoute: () => AppRoute,
 } as any);
-const SettingsDefaultEditorsRoute = SettingsDefaultEditorsRouteImport.update({
-  id: "/default-editors",
-  path: "/default-editors",
-  getParentRoute: () => SettingsRoute,
+const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
+  id: "/appearance",
+  path: "/appearance",
+  getParentRoute: () => AppSettingsRoute,
 } as any);
-const SettingsPackageManagerRoute = SettingsPackageManagerRouteImport.update({
-  id: "/package-manager",
-  path: "/package-manager",
-  getParentRoute: () => SettingsRoute,
+const AppSettingsPackagesRoute = AppSettingsPackagesRouteImport.update({
+  id: "/packages",
+  path: "/packages",
+  getParentRoute: () => AppSettingsRoute,
 } as any);
-const ContentDDriveSlugChar123NodeSlugChar125Route =
-  ContentDDriveSlugChar123NodeSlugChar125RouteImport.update({
-    id: "/d/$driveSlug/{-$nodeSlug}",
-    path: "/d/$driveSlug/{-$nodeSlug}",
-    getParentRoute: () => ContentRoute,
+const AppDDriveSlugChar123NodeSlugChar125Route =
+  AppDDriveSlugChar123NodeSlugChar125RouteImport.update({
+    id: "/{-$nodeSlug}",
+    path: "/{-$nodeSlug}",
+    getParentRoute: () => AppDDriveSlugRoute,
   } as any);
 
 export interface FileRoutesByFullPath {
-  "/": typeof ContentIndexRoute;
-  "/$": typeof SplatRoute;
-  "/settings": typeof SettingsRouteWithChildren;
-  "/settings/about": typeof SettingsAboutRoute;
-  "/settings/ai-assistant": typeof SettingsAiAssistantRoute;
-  "/settings/danger-zone": typeof SettingsDangerZoneRoute;
-  "/settings/default-editors": typeof SettingsDefaultEditorsRoute;
-  "/settings/package-manager": typeof SettingsPackageManagerRoute;
-  "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
+  "/": typeof AppIndexRoute;
+  "/$": typeof AppSplatRoute;
+  "/settings": typeof AppSettingsRouteWithChildren;
+  "/d/$driveSlug": typeof AppDDriveSlugRouteWithChildren;
+  "/settings/appearance": typeof AppSettingsAppearanceRoute;
+  "/settings/packages": typeof AppSettingsPackagesRoute;
+  "/d/$driveSlug/{-$nodeSlug}": typeof AppDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesByTo {
-  "/": typeof ContentIndexRoute;
-  "/$": typeof SplatRoute;
-  "/settings": typeof SettingsRouteWithChildren;
-  "/settings/about": typeof SettingsAboutRoute;
-  "/settings/ai-assistant": typeof SettingsAiAssistantRoute;
-  "/settings/danger-zone": typeof SettingsDangerZoneRoute;
-  "/settings/default-editors": typeof SettingsDefaultEditorsRoute;
-  "/settings/package-manager": typeof SettingsPackageManagerRoute;
-  "/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
+  "/$": typeof AppSplatRoute;
+  "/settings": typeof AppSettingsRouteWithChildren;
+  "/": typeof AppIndexRoute;
+  "/d/$driveSlug": typeof AppDDriveSlugRouteWithChildren;
+  "/settings/appearance": typeof AppSettingsAppearanceRoute;
+  "/settings/packages": typeof AppSettingsPackagesRoute;
+  "/d/$driveSlug/{-$nodeSlug}": typeof AppDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
-  "/_app": typeof coreAppRouteWithChildren;
-  "/_app/$": typeof SplatRoute;
-  "/_app/_content": typeof ContentRouteWithChildren;
-  "/_app/settings": typeof SettingsRouteWithChildren;
-  "/_app/settings/about": typeof SettingsAboutRoute;
-  "/_app/settings/ai-assistant": typeof SettingsAiAssistantRoute;
-  "/_app/settings/danger-zone": typeof SettingsDangerZoneRoute;
-  "/_app/settings/default-editors": typeof SettingsDefaultEditorsRoute;
-  "/_app/settings/package-manager": typeof SettingsPackageManagerRoute;
-  "/_app/_content/": typeof ContentIndexRoute;
-  "/_app/_content/d/$driveSlug/{-$nodeSlug}": typeof ContentDDriveSlugChar123NodeSlugChar125Route;
+  "/_app": typeof AppRouteWithChildren;
+  "/_app/$": typeof AppSplatRoute;
+  "/_app/settings": typeof AppSettingsRouteWithChildren;
+  "/_app/": typeof AppIndexRoute;
+  "/_app/d/$driveSlug": typeof AppDDriveSlugRouteWithChildren;
+  "/_app/settings/appearance": typeof AppSettingsAppearanceRoute;
+  "/_app/settings/packages": typeof AppSettingsPackagesRoute;
+  "/_app/d/$driveSlug/{-$nodeSlug}": typeof AppDDriveSlugChar123NodeSlugChar125Route;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -118,40 +94,33 @@ export interface FileRouteTypes {
     | "/"
     | "/$"
     | "/settings"
-    | "/settings/about"
-    | "/settings/ai-assistant"
-    | "/settings/danger-zone"
-    | "/settings/default-editors"
-    | "/settings/package-manager"
+    | "/d/$driveSlug"
+    | "/settings/appearance"
+    | "/settings/packages"
     | "/d/$driveSlug/{-$nodeSlug}";
   fileRoutesByTo: FileRoutesByTo;
   to:
-    | "/"
     | "/$"
     | "/settings"
-    | "/settings/about"
-    | "/settings/ai-assistant"
-    | "/settings/danger-zone"
-    | "/settings/default-editors"
-    | "/settings/package-manager"
+    | "/"
+    | "/d/$driveSlug"
+    | "/settings/appearance"
+    | "/settings/packages"
     | "/d/$driveSlug/{-$nodeSlug}";
   id:
     | "__root__"
     | "/_app"
     | "/_app/$"
-    | "/_app/_content"
     | "/_app/settings"
-    | "/_app/settings/about"
-    | "/_app/settings/ai-assistant"
-    | "/_app/settings/danger-zone"
-    | "/_app/settings/default-editors"
-    | "/_app/settings/package-manager"
-    | "/_app/_content/"
-    | "/_app/_content/d/$driveSlug/{-$nodeSlug}";
+    | "/_app/"
+    | "/_app/d/$driveSlug"
+    | "/_app/settings/appearance"
+    | "/_app/settings/packages"
+    | "/_app/d/$driveSlug/{-$nodeSlug}";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  coreAppRoute: typeof coreAppRouteWithChildren;
+  AppRoute: typeof AppRouteWithChildren;
 }
 
 declare module "@tanstack/react-router" {
@@ -160,133 +129,106 @@ declare module "@tanstack/react-router" {
       id: "/_app";
       path: "";
       fullPath: "/";
-      preLoaderRoute: typeof coreAppRouteImport;
+      preLoaderRoute: typeof AppRouteImport;
       parentRoute: typeof rootRouteImport;
+    };
+    "/_app/": {
+      id: "/_app/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof AppIndexRouteImport;
+      parentRoute: typeof AppRoute;
     };
     "/_app/$": {
       id: "/_app/$";
       path: "/$";
       fullPath: "/$";
-      preLoaderRoute: typeof SplatRouteImport;
-      parentRoute: typeof coreAppRoute;
-    };
-    "/_app/_content": {
-      id: "/_app/_content";
-      path: "";
-      fullPath: "/";
-      preLoaderRoute: typeof ContentRouteImport;
-      parentRoute: typeof coreAppRoute;
+      preLoaderRoute: typeof AppSplatRouteImport;
+      parentRoute: typeof AppRoute;
     };
     "/_app/settings": {
       id: "/_app/settings";
       path: "/settings";
       fullPath: "/settings";
-      preLoaderRoute: typeof SettingsRouteImport;
-      parentRoute: typeof coreAppRoute;
+      preLoaderRoute: typeof AppSettingsRouteImport;
+      parentRoute: typeof AppRoute;
     };
-    "/_app/_content/": {
-      id: "/_app/_content/";
-      path: "/";
-      fullPath: "/";
-      preLoaderRoute: typeof ContentIndexRouteImport;
-      parentRoute: typeof ContentRoute;
+    "/_app/d/$driveSlug": {
+      id: "/_app/d/$driveSlug";
+      path: "/d/$driveSlug";
+      fullPath: "/d/$driveSlug";
+      preLoaderRoute: typeof AppDDriveSlugRouteImport;
+      parentRoute: typeof AppRoute;
     };
-    "/_app/settings/about": {
-      id: "/_app/settings/about";
-      path: "/about";
-      fullPath: "/settings/about";
-      preLoaderRoute: typeof SettingsAboutRouteImport;
-      parentRoute: typeof SettingsRoute;
+    "/_app/settings/appearance": {
+      id: "/_app/settings/appearance";
+      path: "/appearance";
+      fullPath: "/settings/appearance";
+      preLoaderRoute: typeof AppSettingsAppearanceRouteImport;
+      parentRoute: typeof AppSettingsRoute;
     };
-    "/_app/settings/ai-assistant": {
-      id: "/_app/settings/ai-assistant";
-      path: "/ai-assistant";
-      fullPath: "/settings/ai-assistant";
-      preLoaderRoute: typeof SettingsAiAssistantRouteImport;
-      parentRoute: typeof SettingsRoute;
+    "/_app/settings/packages": {
+      id: "/_app/settings/packages";
+      path: "/packages";
+      fullPath: "/settings/packages";
+      preLoaderRoute: typeof AppSettingsPackagesRouteImport;
+      parentRoute: typeof AppSettingsRoute;
     };
-    "/_app/settings/danger-zone": {
-      id: "/_app/settings/danger-zone";
-      path: "/danger-zone";
-      fullPath: "/settings/danger-zone";
-      preLoaderRoute: typeof SettingsDangerZoneRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
-    "/_app/settings/default-editors": {
-      id: "/_app/settings/default-editors";
-      path: "/default-editors";
-      fullPath: "/settings/default-editors";
-      preLoaderRoute: typeof SettingsDefaultEditorsRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
-    "/_app/settings/package-manager": {
-      id: "/_app/settings/package-manager";
-      path: "/package-manager";
-      fullPath: "/settings/package-manager";
-      preLoaderRoute: typeof SettingsPackageManagerRouteImport;
-      parentRoute: typeof SettingsRoute;
-    };
-    "/_app/_content/d/$driveSlug/{-$nodeSlug}": {
-      id: "/_app/_content/d/$driveSlug/{-$nodeSlug}";
-      path: "/d/$driveSlug/{-$nodeSlug}";
+    "/_app/d/$driveSlug/{-$nodeSlug}": {
+      id: "/_app/d/$driveSlug/{-$nodeSlug}";
+      path: "/{-$nodeSlug}";
       fullPath: "/d/$driveSlug/{-$nodeSlug}";
-      preLoaderRoute: typeof ContentDDriveSlugChar123NodeSlugChar125RouteImport;
-      parentRoute: typeof ContentRoute;
+      preLoaderRoute: typeof AppDDriveSlugChar123NodeSlugChar125RouteImport;
+      parentRoute: typeof AppDDriveSlugRoute;
     };
   }
 }
 
-interface ContentRouteChildren {
-  ContentIndexRoute: typeof ContentIndexRoute;
-  ContentDDriveSlugChar123NodeSlugChar125Route: typeof ContentDDriveSlugChar123NodeSlugChar125Route;
+interface AppSettingsRouteChildren {
+  AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute;
+  AppSettingsPackagesRoute: typeof AppSettingsPackagesRoute;
 }
 
-const ContentRouteChildren: ContentRouteChildren = {
-  ContentIndexRoute: ContentIndexRoute,
-  ContentDDriveSlugChar123NodeSlugChar125Route:
-    ContentDDriveSlugChar123NodeSlugChar125Route,
+const AppSettingsRouteChildren: AppSettingsRouteChildren = {
+  AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
+  AppSettingsPackagesRoute: AppSettingsPackagesRoute,
 };
 
-const ContentRouteWithChildren =
-  ContentRoute._addFileChildren(ContentRouteChildren);
-
-interface SettingsRouteChildren {
-  SettingsAboutRoute: typeof SettingsAboutRoute;
-  SettingsAiAssistantRoute: typeof SettingsAiAssistantRoute;
-  SettingsDangerZoneRoute: typeof SettingsDangerZoneRoute;
-  SettingsDefaultEditorsRoute: typeof SettingsDefaultEditorsRoute;
-  SettingsPackageManagerRoute: typeof SettingsPackageManagerRoute;
-}
-
-const SettingsRouteChildren: SettingsRouteChildren = {
-  SettingsAboutRoute: SettingsAboutRoute,
-  SettingsAiAssistantRoute: SettingsAiAssistantRoute,
-  SettingsDangerZoneRoute: SettingsDangerZoneRoute,
-  SettingsDefaultEditorsRoute: SettingsDefaultEditorsRoute,
-  SettingsPackageManagerRoute: SettingsPackageManagerRoute,
-};
-
-const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
-  SettingsRouteChildren,
+const AppSettingsRouteWithChildren = AppSettingsRoute._addFileChildren(
+  AppSettingsRouteChildren,
 );
 
-interface coreAppRouteChildren {
-  SplatRoute: typeof SplatRoute;
-  ContentRoute: typeof ContentRouteWithChildren;
-  SettingsRoute: typeof SettingsRouteWithChildren;
+interface AppDDriveSlugRouteChildren {
+  AppDDriveSlugChar123NodeSlugChar125Route: typeof AppDDriveSlugChar123NodeSlugChar125Route;
 }
 
-const coreAppRouteChildren: coreAppRouteChildren = {
-  SplatRoute: SplatRoute,
-  ContentRoute: ContentRouteWithChildren,
-  SettingsRoute: SettingsRouteWithChildren,
+const AppDDriveSlugRouteChildren: AppDDriveSlugRouteChildren = {
+  AppDDriveSlugChar123NodeSlugChar125Route:
+    AppDDriveSlugChar123NodeSlugChar125Route,
 };
 
-const coreAppRouteWithChildren =
-  coreAppRoute._addFileChildren(coreAppRouteChildren);
+const AppDDriveSlugRouteWithChildren = AppDDriveSlugRoute._addFileChildren(
+  AppDDriveSlugRouteChildren,
+);
+
+interface AppRouteChildren {
+  AppSplatRoute: typeof AppSplatRoute;
+  AppSettingsRoute: typeof AppSettingsRouteWithChildren;
+  AppIndexRoute: typeof AppIndexRoute;
+  AppDDriveSlugRoute: typeof AppDDriveSlugRouteWithChildren;
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppSplatRoute: AppSplatRoute,
+  AppSettingsRoute: AppSettingsRouteWithChildren,
+  AppIndexRoute: AppIndexRoute,
+  AppDDriveSlugRoute: AppDDriveSlugRouteWithChildren,
+};
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
-  coreAppRoute: coreAppRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

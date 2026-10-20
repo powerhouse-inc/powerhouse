@@ -48,68 +48,7 @@ See: `src/core/reactor-builder.ts`
 
 ## System Architecture
 
-```mermaid
-graph TB
-    subgraph ClientLayer["Client Layer"]
-        Client["ReactorClient"]
-        Signer["ISigner"]
-    end
-
-    subgraph WriteLayer["Write Layer"]
-        Queue["IQueue"]
-        ExecMgr["IJobExecutorManager"]
-        Executor["IJobExecutor"]
-        WriteCache["IWriteCache"]
-    end
-
-    subgraph StorageLayer["Storage Layer"]
-        OpStore["IOperationStore"]
-        OpIndex["IOperationIndex"]
-        KeyframeStore["IKeyframeStore"]
-    end
-
-    subgraph ReadLayer["Read Layer"]
-        Coordinator["IReadModelCoordinator"]
-        DocView["IDocumentView"]
-        DocIndexer["IDocumentIndexer"]
-    end
-
-    subgraph EventLayer["Event Layer"]
-        EventBus["IEventBus"]
-    end
-
-    subgraph SyncLayer["Synchronization Layer"]
-        SyncMgr["ISyncManager"]
-        Channel["IChannel"]
-        Inbox["Inbox"]
-        Outbox["Outbox"]
-    end
-
-    Client -->|"execute/create"| Queue
-    Client -->|"get/find"| DocView
-    Client -->|"relationships"| DocIndexer
-    Signer -->|"sign actions"| Client
-
-    Queue -->|"dequeue"| ExecMgr
-    ExecMgr -->|"dispatch"| Executor
-    Executor -->|"getState"| WriteCache
-    Executor -->|"apply"| OpStore
-    Executor -->|"index"| OpIndex
-    WriteCache -->|"getSince"| OpStore
-
-    Executor -->|"JOB_WRITE_READY"| EventBus
-    EventBus -->|"subscribe"| Coordinator
-    EventBus -->|"subscribe"| SyncMgr
-
-    Coordinator -->|"indexOperations"| DocView
-    Coordinator -->|"indexOperations"| DocIndexer
-
-    SyncMgr -->|"find"| OpIndex
-    SyncMgr -->|"add"| Outbox
-    Inbox -->|"load"| Queue
-    Channel --> Inbox
-    Channel --> Outbox
-```
+![Reactor components: ReactorClient over IReactor, with the write side, event bus, read side, sync and storage](images/reactor-components-light.png)
 
 ---
 
@@ -249,37 +188,7 @@ Consistency tokens are updated on `JOB_WRITE_READY` and become visible to reads 
 
 ### Write Path
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Reactor
-    participant Queue
-    participant Executor
-    participant WriteCache
-    participant OpStore
-    participant EventBus
-    participant Coordinator
-
-    Client->>Reactor: execute(docId, branch, actions)
-    Reactor->>Queue: enqueue(Job)
-    Reactor-->>Client: JobInfo (PENDING)
-
-    Queue->>Executor: dequeue Job
-    Executor->>WriteCache: getState(docId, scope, branch, revision)
-    WriteCache->>OpStore: getSince(docId, scope, branch, revision)
-    OpStore-->>WriteCache: operations
-    WriteCache-->>Executor: document state
-
-    Note over Executor: Reduce actions to operations
-
-    Executor->>OpStore: apply(operations)
-    Executor->>WriteCache: putState(newState)
-    Executor->>EventBus: emit(JOB_WRITE_READY)
-
-    EventBus->>Coordinator: operations
-    Coordinator->>Coordinator: indexOperations()
-    Coordinator->>EventBus: emit(JOB_READ_READY)
-```
+![Reactor write path: queue, job executor (signatures, authorization, reduce, commit), JOB_WRITE_READY, read models, JOB_READ_READY](images/reactor-write-path-light.png)
 
 **Key points:**
 
@@ -318,22 +227,7 @@ sequenceDiagram
 
 ### Sync Path
 
-```mermaid
-sequenceDiagram
-    participant LocalBus as EventBus (Local)
-    participant SyncMgr as SyncManager
-    participant Channel
-    participant RemoteChannel as Remote Channel
-    participant RemoteReactor as Remote Reactor
-
-    LocalBus->>SyncMgr: JOB_WRITE_READY
-    SyncMgr->>Channel: outbox.add(SyncOperation)
-    Channel->>RemoteChannel: transport operations
-    RemoteChannel->>RemoteReactor: load(operations)
-    RemoteReactor-->>RemoteChannel: success
-    RemoteChannel->>Channel: ACK
-    Channel->>SyncMgr: outbox.remove()
-```
+![Reactor sync: outbox derived from the operation index, inbox applied through IReactor, mailboxes per remote channel](images/reactor-sync-light.png)
 
 **Key points:**
 

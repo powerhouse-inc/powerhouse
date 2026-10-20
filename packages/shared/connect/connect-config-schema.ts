@@ -158,6 +158,13 @@ export const connectBrandingSchema = z
     icon: optionalImageRef(
       "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon.",
     ),
+    favicon: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it.",
+      ),
     loader: z
       .union([connectImageRefSchema, connectLoaderSchema])
       .nullable()

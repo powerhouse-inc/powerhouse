@@ -1,12 +1,18 @@
 import { CONNECT_PLUGIN_OWNED_SLICES } from "@powerhousedao/host-core";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
+import {
+  applyComposition,
+  registerConnectPlugins,
+} from "@powerhousedao/connect-core/plugins";
 import { describe, expect, it, vi } from "vitest";
-import { applyComposition } from "../plugin-host.js";
+import { connectPlugins } from "./index.js";
+
+registerConnectPlugins(connectPlugins);
 
 // host-core's dead-config warning (typed-host-configs 1.6) declares, as data,
 // which connect config slices each built-in Connect plugin owns and what
 // Connect serves there while the plugin is absent. That table must match what
-// plugin-host actually zeroes; this test pins the two together.
+// the built-ins' whenAbsent actually zeroes; this test pins the two together.
 
 /** A served config where every owned slice holds a non-zero value. */
 function live(): PHConnectRuntimeConfig {

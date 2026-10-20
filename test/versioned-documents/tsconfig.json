@@ -13,6 +13,7 @@
       "subgraphs": ["./subgraphs/index.ts"],
       "subgraphs/*": ["./subgraphs/*/index.ts"],
       // Connect routes with the tree generated from hosts/connect/routes/ (see .ph below).
+      "@powerhousedao/connect-core/route-tree": ["./.ph/connect-routes.gen.ts"],
       "@powerhousedao/connect/route-tree": ["./.ph/connect-routes.gen.ts"]
     },
     "module": "nodenext",

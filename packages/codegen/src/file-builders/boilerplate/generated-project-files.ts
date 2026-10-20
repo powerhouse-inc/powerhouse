@@ -44,7 +44,6 @@ import {
   processorsIndexTemplate,
   reactorTsTemplate,
   readmeTemplate,
-  styleTemplate,
   subgraphsIndexTemplate,
   switchboardEntrypointTemplate,
   syncAndPublishWorkflowTemplate,
@@ -53,6 +52,7 @@ import {
   vitestConfigTemplate,
 } from "templates";
 import { formatSafe } from "utils";
+import { migratedStyle, readStyle } from "./migrate-style.js";
 
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
   await writeFileEnsuringDir(
@@ -83,9 +83,10 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, "reactor/index.ts"),
     await formatSafe(reactorTsTemplate),
   );
+  // An existing style.css keeps the project's rules; only Connect's imports change.
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
-    await formatSafe(styleTemplate, "css"),
+    await formatSafe(migratedStyle(readStyle(projectDir)), "css"),
   );
   await writeFileEnsuringDir(
     join(projectDir, "vitest.config.ts"),

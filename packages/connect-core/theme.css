@@ -1,0 +1,41 @@
+/* Core's light and dark tokens. `.dark` on <html> picks dark; reactor-browser's
+   useTheme sets it from the stored choice or prefers-color-scheme. */
+
+/* A Tailwind host that imports this file generates core's utility classes. */
+@source "./src/**/*.{ts,tsx}";
+@theme inline {
+  --color-core-bg: var(--ph-core-bg);
+  --color-core-fg: var(--ph-core-fg);
+  --color-core-muted: var(--ph-core-muted);
+  --color-core-border: var(--ph-core-border);
+  --color-core-hover: var(--ph-core-hover);
+  --color-core-link: var(--ph-core-link);
+  --color-core-string: var(--ph-core-string);
+  --color-core-number: var(--ph-core-number);
+  --color-core-danger: var(--ph-core-danger);
+}
+
+/* A host theme's tokens (e.g. the design system's) win over core's own. */
+:root {
+  --ph-core-bg: var(--background, #ffffff);
+  --ph-core-fg: var(--foreground, #1f2328);
+  --ph-core-muted: var(--muted-foreground, #59636e);
+  --ph-core-border: var(--border, #d1d9e0);
+  --ph-core-hover: var(--accent, #f6f8fa);
+  --ph-core-link: #0969da;
+  --ph-core-string: #0a3069;
+  --ph-core-number: #953800;
+  --ph-core-danger: var(--destructive, #d1242f);
+}
+
+:root.dark {
+  --ph-core-bg: var(--background, #0d1117);
+  --ph-core-fg: var(--foreground, #e6edf3);
+  --ph-core-muted: var(--muted-foreground, #9198a1);
+  --ph-core-border: var(--border, #3d444d);
+  --ph-core-hover: var(--accent, #151b23);
+  --ph-core-link: #4493f8;
+  --ph-core-string: #a5d6ff;
+  --ph-core-number: #ffa657;
+  --ph-core-danger: var(--destructive, #f85149);
+}

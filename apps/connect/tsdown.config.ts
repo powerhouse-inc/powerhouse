@@ -11,7 +11,10 @@ export default defineConfig({
     main: "main.tsx",
     router: "src/router/index.ts",
     layout: "src/layout/index.ts",
-    "route-tree": "src/routeTree.gen.ts",
+    generic: "src/generic/index.ts",
+    "route-tree": "src/route-tree.ts",
+    "route-views": "src/route-views/index.ts",
+    prerender: "src/prerender/shell.tsx",
     "plugin-configs": "src/plugin-configs/index.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
@@ -32,6 +35,10 @@ export default defineConfig({
       "@powerhousedao/connect/fonts.css",
       // Resolved by the project build, which may swap in a tree with its routes.
       "@powerhousedao/connect/route-tree",
+      // Resolved by the project build (builder-tools' phBundledPackagesPlugin).
+      "ph-bundled-packages-virtual",
+      // Shared with project code, which registers routes and plugins on it.
+      /^@powerhousedao\/connect-core(\/.*)?$/,
     ],
   },
   loader: {

@@ -4,11 +4,11 @@ import type {
   PHConnectExplorerIcons,
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
-import {
-  parseEntryConfig,
-  type ConnectPlugin,
-  type ConnectPluginFactory,
-} from "./types.js";
+import type {
+  ConnectPlugin,
+  ConnectPluginFactory,
+} from "@powerhousedao/connect-core/plugins";
+import { parseEntryConfig } from "./entry-config.js";
 import {
   genericConfigSchema,
   type GenericConfig,
@@ -32,8 +32,8 @@ import {
  *
  *   - present + entry provides a value  -> that value
  *   - present + entry omits it          -> inherit DEFAULT_CONNECT_CONFIG
- *   - absent from the composition       -> zeroed off (see plugin-host's
- *                                          zeroAbsentSlices — no chrome, no
+ *   - absent from the composition       -> zeroed off (see its whenAbsent
+ *                                          in ./index.ts — no chrome, no
  *                                          toggles)
  *
  * The top-level served value is deliberately NOT a fallback: ownership means a

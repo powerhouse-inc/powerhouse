@@ -64,8 +64,9 @@ export interface VendorPrebuildOptions {
    * The APP's base — the same string the app build uses (the dynamic-base
    * placeholder, or a normalized deploy base like "/app/"). The vendor's own
    * build base is this plus the vendor segment, so emitted asset URLs land
-   * under <app-base>__vendor__/. Default: the dynamic placeholder + segment
-   * (dev behavior). Import-map values stay base-relative; the production
+   * under <app-base>__vendor__/. Default: the dynamic placeholder (dev
+   * behavior; the segment is still appended once by the build worker).
+   * Import-map values stay base-relative; the production
    * build strips the leading slash (values then resolve against the page URL
    * under any deploy base), the dev flow prefixes its own base.
    */
@@ -89,7 +90,18 @@ export const DEFAULT_VENDOR_INCLUDE = [
   "@powerhousedao/design-system/connect",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/document-engineering",
+  "@powerhousedao/connect-core",
+  "@tanstack/react-router",
 ];
+
+/** Never vendored: the route tree is the project's, the config path the app's
+ * base, and SSR server-only. */
+export const VENDOR_SKIP_SUBPATHS = new Set([
+  "@powerhousedao/connect-core/route-tree",
+  "@powerhousedao/connect-core/runtime-config",
+  "@tanstack/react-router/ssr/client",
+  "@tanstack/react-router/ssr/server",
+]);
 
 /**
  * React-family specifiers kept external to the vendor build. The vendor's chunks
@@ -156,7 +168,10 @@ export async function prebuildConnectVendor(
     [...include, ...external],
     stamps,
   );
-  const base = options.base ?? VENDOR_DYNAMIC_BASE;
+  // An APP base: the build worker appends the vendor segment itself, so the
+  // default must not carry it (it would land assets under __vendor__/__vendor__/
+  // and set the vendored Connect's BASE_URL to the vendor dir).
+  const base = options.base ?? DYNAMIC_BASE_PLACEHOLDER;
   const nodeEnv = options.nodeEnv ?? "development";
   const versionDigest = resolveVersionDigest(versions, own, stamps, {
     base,
@@ -665,7 +680,8 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
       // Skip subpaths whose target file isn't shipped (e.g. a `./test` export
       // pointing at unbuilt dist) — they'd fail the build.
       if (!existsSync(join(pkgRoot, target))) continue;
-      out.add(key === "." ? pkg : pkg + key.slice(1));
+      const expanded = key === "." ? pkg : pkg + key.slice(1);
+      if (!VENDOR_SKIP_SUBPATHS.has(expanded)) out.add(expanded);
     }
   }
   return [...out];
@@ -694,9 +710,9 @@ export function missingVendorEntries(
  * under that base rather than the server root. A dynamic-base build keeps its
  * placeholder, which the runtime substitutes.
  *
- * `base` is the app base from `prebuildConnectVendor` callers, but the
- * VENDOR_DYNAMIC_BASE default already carries the vendor segment — that
- * trailing segment is dropped first so it is never doubled.
+ * `base` is the app base from `prebuildConnectVendor` callers; a base that
+ * already carries the vendor segment has it dropped first so it is never
+ * doubled.
  */
 export function withVendorBase(
   imports: Record<string, string>,

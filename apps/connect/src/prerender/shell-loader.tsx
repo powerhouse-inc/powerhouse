@@ -22,3 +22,16 @@ export function ShellLoader() {
     </div>
   );
 }
+
+// Core's "starting" state: a small neutral spinner, no logo.
+export function CoreShellLoader() {
+  return (
+    <div
+      role="status"
+      aria-label="Starting"
+      className={`${SHELL_LOADER_CLASS} pointer-events-none fixed inset-0 z-10 flex items-center justify-center`}
+    >
+      <div className="size-5 animate-spin rounded-full border-2 border-core-border border-t-core-muted motion-reduce:animate-none" />
+    </div>
+  );
+}

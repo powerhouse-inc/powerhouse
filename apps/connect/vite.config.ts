@@ -1,7 +1,7 @@
 import tailwind from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -43,6 +43,41 @@ function phLocalPackageDistRewrite(): Plugin {
   };
 }
 
+// Connect's own dev server and build have no provider:"local" packages.
+// Resolve the bundled-packages virtual module (provided by builder-tools'
+// phBundledPackagesPlugin in project builds) to a no-op register function, so
+// the static import in src/store/reactor.ts always resolves.
+function phNoBundledPackages(): Plugin {
+  const id = "ph-bundled-packages-virtual";
+  const resolvedId = "\0virtual:" + id;
+  return {
+    name: "ph-no-bundled-packages",
+    enforce: "pre",
+    resolveId(source) {
+      if (source === id) return resolvedId;
+    },
+    load(loadId) {
+      if (loadId === resolvedId) return "export default () => {};\n";
+    },
+  };
+}
+
+// A package's tsr.config.json, with its paths made absolute.
+function routerConfig(dir: string) {
+  const packageDir = path.resolve(import.meta.dirname, dir);
+  const config = JSON.parse(
+    readFileSync(path.join(packageDir, "tsr.config.json"), "utf8"),
+  ) as Parameters<typeof tanstackRouter>[0] & {
+    routesDirectory: string;
+    generatedRouteTree: string;
+  };
+  return {
+    ...config,
+    routesDirectory: path.join(packageDir, config.routesDirectory),
+    generatedRouteTree: path.join(packageDir, config.generatedRouteTree),
+  };
+}
+
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
 const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
@@ -77,8 +112,15 @@ export default defineConfig(({ command }) => ({
       "pglite-tools-legacy-02",
     ],
   },
-  // Reads tsr.config.json; regenerates src/routeTree.gen.ts as routes change.
-  plugins: [tanstackRouter(), tailwind(), react(), phLocalPackageDistRewrite()],
+  // Core's and Connect's route files: regenerates their trees as they change.
+  plugins: [
+    tanstackRouter(routerConfig("../../packages/connect-core")),
+    tanstackRouter(routerConfig(".")),
+    tailwind(),
+    react(),
+    phLocalPackageDistRewrite(),
+    phNoBundledPackages(),
+  ],
   worker: {
     format: "es",
   },

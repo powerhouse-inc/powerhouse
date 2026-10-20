@@ -1,9 +1,9 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import {
-  parseEntryConfig,
-  type ConnectPlugin,
-  type ConnectPluginFactory,
-} from "./types.js";
+import type {
+  ConnectPlugin,
+  ConnectPluginFactory,
+} from "@powerhousedao/connect-core/plugins";
+import { parseEntryConfig } from "./entry-config.js";
 import {
   assistantConfigSchema,
   type AssistantConfigInput,

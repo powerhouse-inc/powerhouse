@@ -17,29 +17,87 @@ const COMMITS = 10;
 
 interface HostFsSpy {
   hostFs: NonNullable<DurableNodeFsOptions["hostFs"]>;
-  counts: { fsync: number; fdatasync: number };
+  /** NodeFS that records which host fds NODEFS opened read-only. */
+  Base: typeof NodeFS;
+  counts: { fsync: number; fdatasync: number; readOnly: number };
   failFdatasync: { current: boolean };
 }
 
+interface TrackedStream {
+  nfd?: number;
+  flags: number;
+}
+
+interface TrackedMod {
+  FS: {
+    filesystems: {
+      NODEFS: {
+        stream_ops: {
+          open(stream: TrackedStream): void;
+          close(stream: TrackedStream): void;
+        };
+      };
+    };
+  };
+}
+
+function errnoError(code: string, message: string): Error {
+  const err = new Error(message) as Error & { code: string };
+  err.code = code;
+  return err;
+}
+
+// Windows semantics: FlushFileBuffers refuses a handle without write access.
 function spyHostFs(): HostFsSpy {
-  const counts = { fsync: 0, fdatasync: 0 };
+  const counts = { fsync: 0, fdatasync: 0, readOnly: 0 };
   const failFdatasync = { current: false };
+  const readOnlyFds = new Set<number>();
+  const refuseReadOnly = (fd: number) => {
+    if (!readOnlyFds.has(fd)) return;
+    counts.readOnly++;
+    throw errnoError("EPERM", "EPERM: operation not permitted, fsync");
+  };
+  class Base extends NodeFS {
+    async init(pg: PGlite, opts: Parameters<NodeFS["init"]>[1]) {
+      const { emscriptenOpts } = await super.init(pg, opts);
+      const base = emscriptenOpts as { preRun?: ((mod: TrackedMod) => void)[] };
+      const track = (mod: TrackedMod) => {
+        const ops = mod.FS.filesystems.NODEFS.stream_ops;
+        const { open, close } = ops;
+        ops.open = (stream) => {
+          open(stream);
+          if (typeof stream.nfd === "number" && (stream.flags & 3) === 0) {
+            readOnlyFds.add(stream.nfd);
+          }
+        };
+        ops.close = (stream) => {
+          if (typeof stream.nfd === "number") readOnlyFds.delete(stream.nfd);
+          close(stream);
+        };
+      };
+      return {
+        emscriptenOpts: {
+          ...base,
+          preRun: [...(base.preRun ?? []), track],
+        } as typeof emscriptenOpts,
+      };
+    }
+  }
   return {
+    Base,
     counts,
     failFdatasync,
     hostFs: {
       fsyncSync: (fd) => {
+        refuseReadOnly(fd);
         nodeFs.fsyncSync(fd);
         counts.fsync++;
       },
       fdatasyncSync: (fd) => {
         if (failFdatasync.current) {
-          const err = new Error("ENOSPC: no space left on device") as Error & {
-            code: string;
-          };
-          err.code = "ENOSPC";
-          throw err;
+          throw errnoError("ENOSPC", "ENOSPC: no space left on device");
         }
+        refuseReadOnly(fd);
         nodeFs.fdatasyncSync(fd);
         counts.fdatasync++;
       },
@@ -78,10 +136,13 @@ describe("createDurableNodeFs", () => {
     }
   });
 
-  async function start(options: DurableNodeFsOptions) {
+  async function start(
+    options: DurableNodeFsOptions,
+    Base: typeof NodeFS = NodeFS,
+  ) {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "durable-nodefs-"));
     tempDirs.push(dir);
-    const fsImpl = createDurableNodeFs(NodeFS, dir, {
+    const fsImpl = createDurableNodeFs(Base, dir, {
       maintenanceIntervalMs: 0,
       ...options,
     });
@@ -95,7 +156,7 @@ describe("createDurableNodeFs", () => {
     "issues one fdatasync per commit with fsync on",
     async () => {
       const spy = spyHostFs();
-      const { pg } = await start({ hostFs: spy.hostFs });
+      const { pg } = await start({ hostFs: spy.hostFs }, spy.Base);
       await pg.exec("CREATE TABLE t (v int)");
       const before = spy.counts.fdatasync;
       for (let i = 0; i < COMMITS; i++) {
@@ -110,12 +171,13 @@ describe("createDurableNodeFs", () => {
     "fresh initdb issues no host syncs until init completes, then one tree sync",
     async () => {
       const spy = spyHostFs();
-      const { dir, pg } = await start({ hostFs: spy.hostFs });
+      const { dir, pg } = await start({ hostFs: spy.hostFs }, spy.Base);
       // initdb alone issues 746 fdatasyncs on 0.3.15.
       expect(spy.counts.fdatasync).toBe(0);
       const inodes = await countInodes(dir);
       const dirSyncs = syncDirectory(dir) ? inodes.dirs : 0;
       expect(spy.counts.fsync).toBe(inodes.files + dirSyncs);
+      expect(spy.counts.readOnly).toBe(0);
 
       await pg.exec("CREATE TABLE t (v int)");
       const before = spy.counts.fdatasync;
@@ -156,6 +218,44 @@ describe("createDurableNodeFs", () => {
   );
 
   it(
+    "crash recovery skips the read-only pre-sync pass and fsyncs every file",
+    async () => {
+      const first = await start({});
+      await first.pg.exec("CREATE TABLE t (v int)");
+      for (let i = 0; i < COMMITS; i++) {
+        await first.pg.exec(`INSERT INTO t VALUES (${i})`);
+      }
+      // A copy of a live store is a crash image: startup runs SyncDataDirectory.
+      const crashed = `${first.dir}-crashed`;
+      tempDirs.push(crashed);
+      await fs.cp(first.dir, crashed, { recursive: true });
+      await first.pg.close();
+      const inodes = await countInodes(crashed);
+
+      const spy = spyHostFs();
+      const warn = vi.fn();
+      const pg = new PGlite({
+        fs: createDurableNodeFs(spy.Base, crashed, {
+          maintenanceIntervalMs: 0,
+          hostFs: spy.hostFs,
+          logger: { warn },
+        }),
+      });
+      open.push(pg);
+      await pg.waitReady;
+
+      expect(spy.counts.readOnly).toBe(0);
+      expect(warn).not.toHaveBeenCalled();
+      expect(spy.counts.fsync).toBeGreaterThanOrEqual(inodes.files);
+      const res = await pg.query<{ n: number }>(
+        "SELECT count(*)::int AS n FROM t",
+      );
+      expect(res.rows[0].n).toBe(COMMITS);
+    },
+    BOOT,
+  );
+
+  it(
     "issues none with fsync off",
     async () => {
       const spy = spyHostFs();
@@ -165,7 +265,7 @@ describe("createDurableNodeFs", () => {
         await pg.exec(`INSERT INTO t VALUES (${i})`);
       }
       await pg.exec("CHECKPOINT");
-      expect(spy.counts).toEqual({ fsync: 0, fdatasync: 0 });
+      expect(spy.counts).toEqual({ fsync: 0, fdatasync: 0, readOnly: 0 });
     },
     BOOT,
   );
@@ -174,7 +274,7 @@ describe("createDurableNodeFs", () => {
     "fsyncs data files on an explicit CHECKPOINT",
     async () => {
       const spy = spyHostFs();
-      const { pg } = await start({ hostFs: spy.hostFs });
+      const { pg } = await start({ hostFs: spy.hostFs }, spy.Base);
       await pg.exec("CREATE TABLE t (v int)");
       for (let i = 0; i < COMMITS; i++) {
         await pg.exec(`INSERT INTO t VALUES (${i})`);

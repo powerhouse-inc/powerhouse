@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type * as RuntimeConfig from "../src/runtime-config.js";
+import type * as RuntimeConfig from "@powerhousedao/connect-core/runtime-config";
 
 /**
  * The bootstrap paints the skeleton *before* `loadRuntimeConfig()` resolves,
@@ -20,19 +20,22 @@ import type * as RuntimeConfig from "../src/runtime-config.js";
  * are untouched — those run after the config is warm, which is exactly the
  * distinction the invariant draws.
  */
-vi.mock("../src/runtime-config.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof RuntimeConfig>();
-  return {
-    ...actual,
-    getRuntimeConfig: () => {
-      throw new Error(
-        "getRuntimeConfig() was called while evaluating a module that the " +
-          "bootstrap loads before the runtime config is fetched. Import the " +
-          "leaf module you need instead of a barrel that re-exports it.",
-      );
-    },
-  };
-});
+vi.mock(
+  "@powerhousedao/connect-core/runtime-config",
+  async (importOriginal) => {
+    const actual = await importOriginal<typeof RuntimeConfig>();
+    return {
+      ...actual,
+      getRuntimeConfig: () => {
+        throw new Error(
+          "getRuntimeConfig() was called while evaluating a module that the " +
+            "bootstrap loads before the runtime config is fetched. Import the " +
+            "leaf module you need instead of a barrel that re-exports it.",
+        );
+      },
+    };
+  },
+);
 
 // Evaluating the skeleton pulls in the design-system and reactor-browser
 // graphs, which take a few seconds to transform on a cold vite cache.

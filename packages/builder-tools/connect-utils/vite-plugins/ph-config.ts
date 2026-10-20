@@ -74,7 +74,13 @@ export function withAppTitle(html: string, appName: string | undefined) {
   );
 }
 
-export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
+type PhConfigApi = { connect: PHConnectRuntimeConfig; favicon?: string };
+
+/** `api.connect`: the connect config the app is served, for plugins that render
+ * ahead of it; `api.favicon`: its `branding.favicon`, which it leaves out. */
+export function phConfigPlugin(
+  options: PhConfigPluginOptions,
+): Plugin<PhConfigApi> & { api: PhConfigApi } {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
 
@@ -97,12 +103,18 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
   const mergedConnect = options.cliConnectOverride
     ? deepMerge(withDefaults, options.cliConnectOverride)
     : withDefaults;
+  // The favicon is a build input: a project file the app never reads.
+  const { favicon, ...branding } = mergedConnect.branding ?? {};
   const source = {
     packages: options.packages,
     packageRegistryUrl: options.packageRegistryUrl,
+    // The resolved branding (images as data URIs) replaces the merged block;
+    // without it, the merged block less the favicon.
     connect: options.branding
       ? { ...mergedConnect, branding: options.branding }
-      : mergedConnect,
+      : mergedConnect.branding
+        ? { ...mergedConnect, branding }
+        : mergedConnect,
   };
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);
@@ -114,6 +126,7 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
 
   return {
     name: "vite-plugin-ph-config",
+    api: { connect: runtimeConfig.connect, favicon: favicon ?? undefined },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url?.endsWith("/powerhouse.config.json")) {

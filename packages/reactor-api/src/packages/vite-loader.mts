@@ -27,7 +27,12 @@ import type {
   ISubscriptionOptions,
   PackagePieceEntry,
 } from "./types.js";
-import { debounce, extractUpgradeManifests, isSubpath } from "./util.js";
+import {
+  PACKAGE_MODULE_FAILED,
+  debounce,
+  extractUpgradeManifests,
+  isSubpath,
+} from "./util.js";
 import { runDetached, type ReportError } from "../utils/detached.js";
 
 export function createViteLogger(logger: ILogger, prefix = "") {
@@ -114,7 +119,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 
   // Resolved before it is loaded, so only a module that exists and fails is
-  // reported; one a package does not have is a debug-level miss.
+  // reported and thrown; one a package does not have is a debug-level miss.
   async #load(
     identifier: string,
     subpath: string,
@@ -131,14 +136,19 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       >;
       return { id, namespace };
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
       this.logger.error(
         "Failed to load @subpath of @pkg from @id: @error",
         subpath,
         identifier,
         id,
-        e instanceof Error ? e.message : e,
+        message,
       );
-      return undefined;
+      // Tagged: vite's own code can read as a package without the module.
+      throw Object.assign(
+        new Error(`Failed to load ${id}: ${message}`, { cause: e }),
+        { code: PACKAGE_MODULE_FAILED },
+      );
     }
   }
 
@@ -279,23 +289,48 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     return pieces;
   }
 
-  // One reload per burst of file events, run detached.
-  #watcherListener(
+  // One detached reload per burst of file events. "add" and "unlink" too, or a
+  // removed entry never reports empty and its registrations leak. Once
+  // unsubscribed, no pending or running reload reaches `handler`, and a
+  // failed load leaves the last good set.
+  #watch<T>(
     label: string,
     matches: (changedPath: string) => unknown,
-    reload: () => Promise<void>,
+    load: () => Promise<T>,
+    handler: (value: T) => void,
     options?: ISubscriptionOptions,
-  ): (changedPath: string) => void {
+  ): () => void {
+    let subscribed = true;
     const reloadOnce = debounce(
       () =>
-        runDetached(label, reload, {
-          logger: this.logger,
-          report: this.#reportError,
-        }),
+        runDetached(
+          label,
+          async () => {
+            if (!subscribed) return;
+            let value: T;
+            try {
+              value = await load();
+            } catch (e) {
+              if ((e as NodeJS.ErrnoException).code === PACKAGE_MODULE_FAILED) {
+                return;
+              }
+              throw e;
+            }
+            if (subscribed) handler(value);
+          },
+          { logger: this.logger, report: this.#reportError },
+        ),
       options?.debounce ?? 100,
     );
-    return (changedPath) => {
+    const listener = (changedPath: string) => {
       if (matches(changedPath)) void reloadOnce();
+    };
+    const events = ["change", "add", "unlink"] as const;
+    for (const event of events) this.vite.watcher.on(event, listener);
+
+    return () => {
+      subscribed = false;
+      for (const event of events) this.vite.watcher.off(event, listener);
     };
   }
 
@@ -305,25 +340,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const documentModelsPath = this.getDocumentModelsPath(identifier);
-    const listener = this.#watcherListener(
+    return this.#watch(
       `Reloading the document models of ${identifier}`,
       (changedPath) => isSubpath(documentModelsPath, changedPath),
-      async () => handler(await this.loadDocumentModels(identifier)),
+      () => this.loadDocumentModels(identifier),
+      handler,
       options,
     );
-
-    // "change" alone misses files that are created or deleted: a removed
-    // document-models/ entry would never report an empty result, and the
-    // package's registered models would leak.
-    this.vite.watcher.on("change", listener);
-    this.vite.watcher.on("add", listener);
-    this.vite.watcher.on("unlink", listener);
-
-    return () => {
-      this.vite.watcher.off("change", listener);
-      this.vite.watcher.off("add", listener);
-      this.vite.watcher.off("unlink", listener);
-    };
   }
 
   onSubgraphsChange(
@@ -332,24 +355,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const subgraphsPath = this.getSubgraphsPath(identifier);
-    const listener = this.#watcherListener(
+    return this.#watch(
       `Reloading the subgraphs of ${identifier}`,
       (changedPath) => isSubpath(subgraphsPath, changedPath),
-      async () => handler(await this.loadSubgraphs(identifier)),
+      () => this.loadSubgraphs(identifier),
+      handler,
       options,
     );
-    // "change" alone misses files that are created or deleted: a removed
-    // subgraphs/ entry would never report an empty result, and the
-    // package's registered subgraphs would leak.
-    this.vite.watcher.on("change", listener);
-    this.vite.watcher.on("add", listener);
-    this.vite.watcher.on("unlink", listener);
-
-    return () => {
-      this.vite.watcher.off("change", listener);
-      this.vite.watcher.off("add", listener);
-      this.vite.watcher.off("unlink", listener);
-    };
   }
 
   onProcessorsChange(
@@ -358,24 +370,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     options?: ISubscriptionOptions,
   ): () => void {
     const processorsPath = this.getProcessorsPath(identifier);
-    const listener = this.#watcherListener(
+    return this.#watch(
       `Reloading the processors of ${identifier}`,
       (changedPath) => isSubpath(processorsPath, changedPath),
-      async () => handler(await this.loadProcessors(identifier)),
+      () => this.loadProcessors(identifier),
+      handler,
       options,
     );
-    // "change" alone misses files that are created or deleted: a removed
-    // processors/ entry would never report an empty result, and the
-    // package's registered processor factories would leak.
-    this.vite.watcher.on("change", listener);
-    this.vite.watcher.on("add", listener);
-    this.vite.watcher.on("unlink", listener);
-
-    return () => {
-      this.vite.watcher.off("change", listener);
-      this.vite.watcher.off("add", listener);
-      this.vite.watcher.off("unlink", listener);
-    };
   }
 
   onPiecesChange(
@@ -390,23 +391,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     if (root !== undefined) {
       watched.push(path.dirname(path.resolve(root, BUILT_PIECE_LIST)));
     }
-    const listener = this.#watcherListener(
+    return this.#watch(
       `Reloading the pieces of ${identifier}`,
       (changedPath) => watched.some((dir) => isSubpath(dir, changedPath)),
-      async () => handler(await this.loadPieces(identifier)),
+      () => this.loadPieces(identifier),
+      handler,
       options,
     );
-    // "change" alone misses files that are created or deleted, and a piece
-    // appearing for the first time is exactly the build this watches for.
-    this.vite.watcher.on("change", listener);
-    this.vite.watcher.on("add", listener);
-    this.vite.watcher.on("unlink", listener);
-
-    return () => {
-      this.vite.watcher.off("change", listener);
-      this.vite.watcher.off("add", listener);
-      this.vite.watcher.off("unlink", listener);
-    };
   }
 }
 

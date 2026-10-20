@@ -1,3 +1,7 @@
+import type {
+  LocalPackageSource,
+  ModuleNamespace,
+} from "@powerhousedao/connect-core";
 import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
 import { bootConnect } from "./src/boot.js";
 
@@ -31,10 +35,10 @@ const components = root ? await import("./src/components/index.js") : null;
  * }
  */
 
-// Type for Vite HMR modules
-export type ModuleNamespace = Record<string, any> & {
-  [Symbol.toStringTag]: "Module";
-};
+export type {
+  LocalPackageSource,
+  ModuleNamespace,
+} from "@powerhousedao/connect-core";
 
 /** `import.meta` extended with the minimal subset of Vite's HMR API used by the
  * codegen-generated `main.tsx`. Exported so consumer projects can cast
@@ -53,20 +57,11 @@ function updateLocalPackage(pkg: DocumentModelLib<any> | ModuleNamespace) {
   window.ph?.vetraPackageManager?.updateLocalPackage(pkg as DocumentModelLib);
 }
 
-type LocalPackage = DocumentModelLib<any> | ModuleNamespace;
-
-/** The package itself, or a loader (`() => import("./index.js")`) that keeps it off the boot path. */
-export type LocalPackageSource = LocalPackage | (() => Promise<LocalPackage>);
-
 export function startConnect(localPackage: LocalPackageSource) {
   // Rendered into the same root the skeleton was painted into, so the swap is
   // a reconciliation rather than a second mount point.
   if (root && components) {
-    const pkg = (
-      typeof localPackage === "function" ? localPackage() : localPackage
-    ) as DocumentModelLib | Promise<DocumentModelLib>;
-    // Load awaits it; this only stops an early rejection being reported as unhandled.
-    if (pkg instanceof Promise) pkg.catch(() => undefined);
+    const pkg = components.loadLocalPackage(localPackage);
     root.render(<components.AppLoader localPackage={pkg} />);
   }
 

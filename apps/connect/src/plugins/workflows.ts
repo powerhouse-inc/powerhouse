@@ -3,11 +3,11 @@ import type {
   PHConnectDefaultDrive,
   PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
-import {
-  parseEntryConfig,
-  type ConnectPlugin,
-  type ConnectPluginFactory,
-} from "./types.js";
+import type {
+  ConnectPlugin,
+  ConnectPluginFactory,
+} from "@powerhousedao/connect-core/plugins";
+import { parseEntryConfig } from "./entry-config.js";
 import {
   workflowsConnectConfigSchema,
   type WorkflowsConnectConfig,
@@ -23,7 +23,7 @@ import {
  * Workflow Studio, the drive app the Workflows drive names as its preferred
  * editor, exists) and attaches the configured drive as a remote default
  * drive. Absent from a declared composition, `app.workflowsEnabled` is zeroed
- * (plugin-host's zeroAbsentSlices) — the classic `workflows.enabled` /
+ * (its whenAbsent in ./index.ts) — the classic `workflows.enabled` /
  * `connect.app.workflowsEnabled` values stop being the switch.
  *
  * `drive` is the switchboard's drive URL (`http://host:port/d/<slug>`). The
