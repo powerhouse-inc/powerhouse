@@ -100,22 +100,28 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
 const OFFERED_ROUTES_MODULE = ".ph/connect-routes.package.ts";
 const HOST_ROUTES_DIR = "hosts/connect/routes";
 
-// The manifest with `connectRoutes` set when the package offers routes.
+// The manifest with `connectRoutes` set when the package offers routes; as it
+// is, byte for byte, when the flag is already right.
 function withOfferedRoutes(json: string, offers: boolean) {
   const manifest = JSON.parse(json) as { connectRoutes?: boolean };
+  if (offers ? manifest.connectRoutes === true : !("connectRoutes" in manifest))
+    return json;
   if (offers) manifest.connectRoutes = true;
   else delete manifest.connectRoutes;
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
+const slashes = (path: string) => path.replaceAll("\\", "/");
+
 /** Sets `connectRoutes` in the manifest the package's root module imports,
  * leaving the project's file as it is. */
 export function offeredRoutesManifest(projectRoot: string, offers: boolean) {
-  const manifestPath = join(projectRoot, "powerhouse.manifest.json");
+  // Vite's ids use forward slashes on Windows too.
+  const manifestPath = slashes(join(projectRoot, "powerhouse.manifest.json"));
   return {
     name: "ph-offered-routes-manifest",
     transform(code: string, id: string) {
-      if (id !== manifestPath) return null;
+      if (slashes(id) !== manifestPath) return null;
       return { code: withOfferedRoutes(code, offers), map: null };
     },
   };
