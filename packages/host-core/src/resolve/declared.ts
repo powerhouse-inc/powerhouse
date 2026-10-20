@@ -4,6 +4,7 @@ import {
   describeToken,
   formatPath,
   isPlainObject,
+  type MapScope,
   type TokenSite,
 } from "./walk.js";
 
@@ -28,9 +29,6 @@ export interface DeclaredIssue {
   path: string;
   message: string;
 }
-
-/** The operators T3 resolves. `$map`, `$item` and `$key` arrive in T4. */
-const NOT_YET = new Set(["$map", "$item", "$key"]);
 
 function refOf(site: TokenSite): OutputRef | undefined {
   const operand = site.token.$output;
@@ -83,44 +81,90 @@ export function outputSitesOf(
 export function envSitesOf(
   host: unknown,
 ): { path: string; name: string; optional: boolean }[] {
-  return collectTokenSites(host).flatMap((site): {
-    path: string;
-    name: string;
-    optional: boolean;
-  }[] => {
-    if (site.key !== "$env") return [];
-    const operand = site.token.$env;
-    if (typeof operand === "string") {
-      return [{ path: formatPath(site.path), name: operand, optional: false }];
-    }
-    if (isPlainObject(operand) && typeof operand.name === "string") {
-      return [
-        { path: formatPath(site.path), name: operand.name, optional: true },
-      ];
-    }
-    return [];
-  });
+  return collectTokenSites(host).flatMap(
+    (
+      site,
+    ): {
+      path: string;
+      name: string;
+      optional: boolean;
+    }[] => {
+      if (site.key !== "$env") return [];
+      const operand = site.token.$env;
+      if (typeof operand === "string") {
+        return [
+          { path: formatPath(site.path), name: operand, optional: false },
+        ];
+      }
+      if (isPlainObject(operand) && typeof operand.name === "string") {
+        return [
+          { path: formatPath(site.path), name: operand.name, optional: true },
+        ];
+      }
+      return [];
+    },
+  );
 }
 
-/** Operator shapes and placement: malformed operands, operators T3 does not
- * resolve, and `{ $env: { name, optional: true } }` anywhere but the direct
- * value of an object property (it omits that property when unset). */
+/** The binding name an `$item`/`$key` site names (undefined: innermost). */
+function bindingNameOf(site: TokenSite): string | undefined {
+  const operand = site.token[site.key];
+  if (site.key === "$key")
+    return typeof operand === "string" ? operand : undefined;
+  if (site.key === "$item" && isPlainObject(operand)) {
+    return typeof operand.as === "string" ? operand.as : undefined;
+  }
+  return undefined;
+}
+
+/** The enclosing `$map` an `$item`/`$key` site binds to, or why none. */
+function scopeOf(site: TokenSite): MapScope | { error: string } {
+  const name = bindingNameOf(site);
+  if (site.scopes.length === 0) {
+    return {
+      error: `${site.key} is used outside any $map; it reads the element a $map template is rendering, so it is legal only inside a $map's \`to\` (or a nested $map's \`over\`).`,
+    };
+  }
+  if (name === undefined) return site.scopes[site.scopes.length - 1];
+  for (let i = site.scopes.length - 1; i >= 0; i--) {
+    if (site.scopes[i].as === name) return site.scopes[i];
+  }
+  const named = site.scopes.flatMap((s) => (s.as ? [`"${s.as}"`] : []));
+  return {
+    error: `${describeToken(site.token)} names the $map binding "${name}", which no enclosing $map declares (enclosing bindings: ${named.join(", ") || 'none; add as: "' + name + '" to the outer $map'}).`,
+  };
+}
+
+/** Item path of an `$item` site. */
+function itemPathOf(site: TokenSite): OutputPath {
+  const operand = site.token.$item;
+  const raw: unknown = isPlainObject(operand) ? operand.path : operand;
+  return Array.isArray(raw)
+    ? raw.filter(
+        (p): p is string | number =>
+          typeof p === "string" || typeof p === "number",
+      )
+    : [];
+}
+
+/** Operator shapes and placement: malformed operands, `$item`/`$key`
+ * outside any `$map` or naming an unknown binding, and
+ * `{ $env: { name, optional: true } }` anywhere but the direct value of an
+ * object property (it omits that property when unset). */
 export function checkTokenSites(host: unknown): DeclaredIssue[] {
   const issues: DeclaredIssue[] = [];
   for (const site of collectTokenSites(host)) {
     const path = formatPath(site.path);
-    if (NOT_YET.has(site.key)) {
-      issues.push({
-        path,
-        message: `${site.key} is not supported yet (it arrives with $map); spell the value with $output/$concat.`,
-      });
-      continue;
-    }
     if (!tokenSchema.safeParse(site.token).success) {
       issues.push({
         path,
-        message: `malformed ${site.key} token ${JSON.stringify(site.token)}. Shapes: { $output: { host, member?, path: [...] } }, { $concat: [string | number | token, ...] }, { $env: "NAME" } or { $env: { name: "NAME", optional: true } }.`,
+        message: `malformed ${site.key} token ${JSON.stringify(site.token)}. Shapes: { $output: { host, member?, path: [...] } }, { $concat: [string | number | token, ...] }, { $env: "NAME" } or { $env: { name: "NAME", optional: true } }, { $map: { over: $output | $item, as?: "name", to: template, into?: "record" } }, { $item: [path] } or { $item: { as: "name", path: [...] } }, { $key: true } or { $key: "name" }.`,
       });
+      continue;
+    }
+    if (site.key === "$item" || site.key === "$key") {
+      const scope = scopeOf(site);
+      if ("error" in scope) issues.push({ path, message: scope.error });
       continue;
     }
     const operand = site.token.$env;
@@ -134,7 +178,9 @@ export function checkTokenSites(host: unknown): DeclaredIssue[] {
           ? "a $concat part"
           : site.position === "element"
             ? "an array element"
-            : "the whole host";
+            : site.position === "template"
+              ? "the whole $map template"
+              : "the whole host";
       issues.push({
         path,
         message: `{ $env: { name, optional: true } } is legal only as the direct value of an object property (it omits that property when ${String(operand.name)} is unset), not as ${where}. Use { $env: ${JSON.stringify(operand.name)} } here.`,
@@ -166,8 +212,7 @@ function defOf(schema: unknown): ZodDef | undefined {
 // zod schemas are class instances, so "plain object" is too strict here.
 function isPlainObjectLike(value: unknown): value is Record<string, unknown> {
   return (
-    (typeof value === "object" || typeof value === "function") &&
-    value !== null
+    (typeof value === "object" || typeof value === "function") && value !== null
   );
 }
 
@@ -187,9 +232,7 @@ const WRAPPERS = new Set([
 export function schemaAtPath(
   schema: unknown,
   path: OutputPath,
-):
-  | { ok: true; schema: unknown }
-  | { ok: false; at: number; reason: string } {
+): { ok: true; schema: unknown } | { ok: false; at: number; reason: string } {
   let current = schema;
   for (let i = 0; i <= path.length; i++) {
     // unwrap
@@ -260,23 +303,96 @@ export function schemaAtPath(
         return { ok: false, at: i, reason: "matches no union member" };
       }
       default:
-        return { ok: false, at: i, reason: `is a ${def.type}, not a container` };
+        return {
+          ok: false,
+          at: i,
+          reason: `is a ${def.type}, not a container`,
+        };
     }
   }
   return { ok: true, schema: current };
 }
 
+/** What a `$map` iterates, as far as the schemas tell: its element schema
+ * (undefined: unknown, so its `$item` paths are not checked) and a label for
+ * messages. */
+interface MapElement {
+  element: unknown;
+  label: string;
+}
+
+/** The collection kind of a schema (unwrapped): array, record, unknown (no
+ * check possible) or something else. */
+function collectionOf(
+  schema: unknown,
+):
+  | { kind: "array" | "record"; element: unknown }
+  | { kind: "unknown" }
+  | { kind: "other"; type: string } {
+  const unwrapped = schemaAtPath(schema, []);
+  const def = unwrapped.ok ? defOf(unwrapped.schema) : undefined;
+  if (!def) return { kind: "unknown" };
+  if (def.type === "array") return { kind: "array", element: def.element };
+  if (def.type === "record") return { kind: "record", element: def.valueType };
+  // An object with a catchall is a record of its catchall (known keys may
+  // differ: no element schema); a tuple renders like an array.
+  if (def.type === "object") {
+    const catchall = defOf(def.catchall);
+    if (catchall && catchall.type !== "never") {
+      const shape = isPlainObjectLike(def.shape) ? def.shape : {};
+      return Object.keys(shape).length === 0
+        ? { kind: "record", element: def.catchall }
+        : { kind: "record", element: undefined };
+    }
+  }
+  if (def.type === "tuple") return { kind: "array", element: undefined };
+  if (def.type === "any" || def.type === "unknown" || def.type === "union") {
+    return { kind: "unknown" };
+  }
+  return { kind: "other", type: def.type };
+}
+
 /** Every `$output` token's producer exists and its path is valid against
- * the producer's `outputsSchema`. */
+ * the producer's `outputsSchema`; every `$map`'s `over` is a collection
+ * there (a record under `into: "record"`), and every `$item` path exists
+ * in the element schema of the map it binds. */
 export function checkOutputPaths(
   host: unknown,
   outputsSchemaOf: (ref: OutputRef) => OutputsSchemaLookup,
 ): DeclaredIssue[] {
   const issues: DeclaredIssue[] = [];
+  // Element schema per `$map` token; outer maps are visited before the
+  // tokens of their templates (document order).
+  const elements = new Map<Record<string, unknown>, MapElement | undefined>();
+  const elementOf = (scope: MapScope | { error: string }) =>
+    "error" in scope ? undefined : elements.get(scope.token);
   for (const site of collectTokenSites(host)) {
-    if (site.key !== "$output" || !tokenSchema.safeParse(site.token).success) {
+    if (!tokenSchema.safeParse(site.token).success) continue;
+    if (site.key === "$map") {
+      elements.set(
+        site.token,
+        checkMap(site, outputsSchemaOf, elementOf, issues),
+      );
       continue;
     }
+    if (site.key === "$item") {
+      const scope = scopeOf(site);
+      const element = elementOf(scope);
+      if (!element || element.element === undefined || "error" in scope) {
+        continue;
+      }
+      const itemPath = itemPathOf(site);
+      const hit = schemaAtPath(element.element, itemPath);
+      if (!hit.ok) {
+        const parent = itemPath.slice(0, hit.at);
+        issues.push({
+          path: formatPath(site.path),
+          message: `${describeToken(site.token)}: the element${parent.length ? `'s ${formatPath(parent)}` : ""} of the $map at ${formatPath(scope.path)}${scope.as ? ` (as "${scope.as}")` : ""} ${hit.reason} (element of ${element.label}).`,
+        });
+      }
+      continue;
+    }
+    if (site.key !== "$output") continue;
     const ref = refOf(site);
     if (!ref) continue;
     const path = formatPath(site.path);
@@ -299,4 +415,62 @@ export function checkOutputPaths(
     }
   }
   return issues;
+}
+
+/** A `$map`'s `over` against its schema: a collection (a record under
+ * `into: "record"`). Returns the element schema for the map's `$item`s. */
+function checkMap(
+  site: TokenSite,
+  outputsSchemaOf: (ref: OutputRef) => OutputsSchemaLookup,
+  elementOf: (scope: MapScope | { error: string }) => MapElement | undefined,
+  issues: DeclaredIssue[],
+): MapElement | undefined {
+  const operand = site.token.$map;
+  if (!isPlainObject(operand)) return undefined;
+  const over = operand.over;
+  const into = operand.into === "record";
+  let schema: unknown;
+  let label: string;
+  // The over's own token site reports a bad producer or path; here only a
+  // valid one is classified.
+  if (isPlainObject(over) && "$output" in over) {
+    const overSite: TokenSite = { ...site, key: "$output", token: over };
+    const ref = refOf(overSite);
+    if (!ref) return undefined;
+    const lookup = outputsSchemaOf(ref);
+    if ("error" in lookup) return undefined;
+    const hit = schemaAtPath(lookup.schema, pathOf(overSite));
+    if (!hit.ok) return undefined;
+    schema = hit.schema;
+    label = `${describeToken(over)} in the outputsSchema of ${lookup.label}`;
+  } else if (isPlainObject(over) && "$item" in over) {
+    const overSite: TokenSite = { ...site, key: "$item", token: over };
+    const scope = scopeOf(overSite);
+    const outer = elementOf(scope);
+    if (!outer || outer.element === undefined) return undefined;
+    const hit = schemaAtPath(outer.element, itemPathOf(overSite));
+    if (!hit.ok) return undefined;
+    schema = hit.schema;
+    label = `${describeToken(over)} (element of ${outer.label})`;
+  } else {
+    return undefined;
+  }
+  const path = formatPath(site.path);
+  const collection = collectionOf(schema);
+  if (collection.kind === "unknown") return undefined;
+  if (collection.kind === "other") {
+    issues.push({
+      path,
+      message: `$map over ${label} is a ${collection.type}, not an array or a record; a $map iterates a collection.`,
+    });
+    return undefined;
+  }
+  if (into && collection.kind === "array") {
+    issues.push({
+      path,
+      message: `$map with into: "record" maps over ${label}, which is an array: an array has no keys to keep. Drop into: "record" (the result is an array) or map over a record.`,
+    });
+    return undefined;
+  }
+  return { element: collection.element, label };
 }

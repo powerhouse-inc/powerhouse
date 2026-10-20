@@ -1,10 +1,13 @@
 import {
+  collectTokenSites,
+  compoundOutputSource,
   declaredHostSchemas,
   describeToken,
   drivesSchema,
   envSitesOf,
   explainDrivePlan,
   findDeadConnectConfig,
+  formatPath,
   isToken,
   loadHost,
   loadProducers,
@@ -13,10 +16,12 @@ import {
   outputRefsOf,
   outputSitesOf,
   planCompound,
+  probeRun,
   processResolveEnv,
   producerOutputsSchemas,
   readProjectName,
   renderTokens,
+  resolveHostOutputs,
   resolvePluginContributions,
   resolveRunnerModule,
   runnerOutputsSchema,
@@ -26,6 +31,7 @@ import {
   type ChildWrapper,
   type DriveDeclaration,
   type HostDefinition,
+  type OutputSource,
   type PluginEntryData,
   type ReactorHostInput,
   type RunnerModule,
@@ -37,7 +43,10 @@ import {
  * host that loads). `drives`: the merged drive plan with provenance
  * (browser-only plugins listed as unresolvable). `outputs`: the resolution
  * plan — consumed outputs and their producers, `$env` names, the compound
- * start order the tokens imply, and which producers are running.
+ * start order the tokens imply, which producers are running and, for a
+ * running producer, the value each token resolves to now. A `$map` in
+ * `reactor.drives` is shown as the token and, when its producer runs, as the
+ * drives it renders.
  */
 
 interface ExplainOptions {
@@ -76,6 +85,10 @@ interface LoadedView {
   file: string;
   /** Set for a compound. */
   members?: MemberView[];
+  /** Where tokens resolve NOW (for printing values): a standalone host's
+   * producers' live run records; a compound's own live record (its members'
+   * outputs), or none when it is not running. */
+  source?: OutputSource;
 }
 
 async function loadView(
@@ -94,7 +107,13 @@ async function loadView(
     validateDeclaredHost(runner, specifier, loaded.host, file, {
       outputsSchemaOf: producerOutputsSchemas(producers),
     });
-    return { host: loaded.host, runner, specifier, file };
+    // The same lookup `ph run` resolves through.
+    const source = runRecordOutputSource(projectRoot, {
+      consumer: name,
+      producers,
+      projectName: readProjectName(projectRoot),
+    });
+    return { host: loaded.host, runner, specifier, file, source };
   }
   validateDeclaredHost(runner, specifier, loaded.host, file);
   validateHost(runner, specifier, loaded.host, file, { tokens: "allow" });
@@ -144,7 +163,39 @@ async function loadView(
       },
     });
   }
-  return { host: loaded.host, runner, specifier, file, members };
+  // Members read each other's live outputs: shown only while this
+  // compound runs (its record carries every member's outputs).
+  const probe = probeRun(
+    projectRoot,
+    loaded.host.name,
+    readProjectName(projectRoot),
+  );
+  const live = new Map<string, unknown>();
+  if (probe.status === "live") {
+    for (const [key, member] of Object.entries(probe.record.members ?? {})) {
+      live.set(key, member.outputs);
+    }
+  }
+  const source =
+    probe.status === "live"
+      ? compoundOutputSource(refs, live, loaded.host.name)
+      : undefined;
+  return { host: loaded.host, runner, specifier, file, members, source };
+}
+
+/** A token's value from running producers, or undefined (producer not
+ * running, or the token reads the environment: `$env` values may be
+ * secrets, so explain never prints them). */
+function currentValue(token: unknown, source?: OutputSource): unknown {
+  if (!source) return undefined;
+  if (collectTokenSites(token).some((site) => site.key === "$env")) {
+    return undefined;
+  }
+  try {
+    return resolveHostOutputs(token, { outputs: source });
+  } catch {
+    return undefined;
+  }
 }
 
 export async function explainHost(options: ExplainOptions): Promise<void> {
@@ -156,7 +207,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
   const projectRoot = process.cwd();
   const view = await loadView(projectRoot, options.host);
   if (options.topic === "outputs") {
-    await explainOutputs(projectRoot, options.host, view);
+    explainOutputs(options.host, view);
     return;
   }
 
@@ -171,6 +222,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
         verb,
         m.file,
         m.configWhere,
+        view.source,
       );
     }
     return;
@@ -182,6 +234,7 @@ export async function explainHost(options: ExplainOptions): Promise<void> {
     "run",
     view.file,
     view.file,
+    view.source,
   );
 }
 
@@ -194,6 +247,7 @@ async function explainDrives(
   verb: string,
   where: string,
   configWhere: string,
+  source?: OutputSource,
 ): Promise<void> {
   const entries: PluginEntryData[] = host.runner.plugins ?? [];
   const contributions =
@@ -210,11 +264,36 @@ async function explainDrives(
     return { declaration: parsed.data[0], source };
   });
   // Declared drives may carry output tokens (a remote url): shown as
-  // «$output …», resolved only at `ph run`.
-  const declared = drivesSchema.parse(
-    renderTokens(host.reactor?.drives ?? []),
-  ) satisfies DriveDeclaration[];
+  // «$output …», resolved only at `ph run`. The whole list may be a token
+  // (`$map` over a producer's drives): rendered from the running producer
+  // when there is one, otherwise named and left out of the plan.
+  const rawDrives: unknown = host.reactor?.drives ?? [];
+  let listed: unknown = rawDrives;
+  let listNote: string | undefined;
+  if (isToken(rawDrives)) {
+    const value = currentValue(rawDrives, source);
+    listed = Array.isArray(value) ? value : [];
+    listNote = `  reactor.drives ← «${describeToken(rawDrives)}»${
+      Array.isArray(value)
+        ? " (rendered from the running producer's outputs)"
+        : " (rendered at ph run from the producer's live outputs; its producer is not running now, so the plan below leaves them out)"
+    }`;
+  }
+  const parsed = drivesSchema.safeParse(renderTokens(listed));
+  if (!parsed.success && listNote === undefined) {
+    // a literal list: declared validation already ran; keep its error
+    throw parsed.error;
+  }
+  const declared: DriveDeclaration[] = parsed.success ? parsed.data : [];
   console.log(`[${label}]`);
+  if (listNote) console.log(listNote);
+  if (!parsed.success) {
+    console.log(
+      `  the rendered drives fail the drive schema (ph run rejects them): ${parsed.error.issues
+        .map((i) => `${i.path.map(String).join(".") || "<root>"}: ${i.message}`)
+        .join("; ")}`,
+    );
+  }
   console.log(
     explainDrivePlan(mergeDrivePlan(projectRoot, declared, contributed)),
   );
@@ -264,6 +343,7 @@ function printConsumes(
   host: unknown,
   indent: string,
   producerNote: (folder: string, member?: string) => string,
+  source?: OutputSource,
 ): void {
   const outputs = outputSitesOf(host);
   const env = envSitesOf(host);
@@ -271,11 +351,31 @@ function printConsumes(
     console.log(`${indent}consumes: nothing (no $output or $env tokens)`);
     return;
   }
+  const valueLine = (token: unknown) => {
+    const value = currentValue(token, source);
+    if (value !== undefined) {
+      console.log(`${indent}    = ${JSON.stringify(value)}`);
+    }
+  };
   for (const site of outputs) {
     const token = { $output: { ...site.ref, path: site.outputPath } };
     console.log(
       `${indent}${site.path} ← ${describeToken(token)}${producerNote(site.ref.host, site.ref.member)}`,
     );
+    valueLine(token);
+  }
+  // Composite tokens (`$concat`, `$map`) outside any template: the value
+  // the field gets, once its producers run.
+  for (const site of collectTokenSites(host)) {
+    const nested =
+      site.scopes.length > 0 ||
+      site.position === "concat" ||
+      site.position === "over";
+    if (nested || (site.key !== "$concat" && site.key !== "$map")) continue;
+    console.log(
+      `${indent}${formatPath(site.path)} ← ${describeToken(site.token)}`,
+    );
+    valueLine(site.token);
   }
   const { env: processEnv } = processResolveEnv(process.cwd());
   for (const site of env) {
@@ -292,29 +392,23 @@ function printConsumes(
   }
 }
 
-async function explainOutputs(
-  projectRoot: string,
-  name: string,
-  view: LoadedView,
-): Promise<void> {
+function explainOutputs(name: string, view: LoadedView): void {
   if (!view.members) {
-    const projectName = readProjectName(projectRoot);
-    const producers = await loadProducers(projectRoot, outputRefsOf(view.host));
-    // The same lookup `ph run` resolves through.
-    const source = runRecordOutputSource(projectRoot, {
-      consumer: name,
-      producers,
-      projectName,
-    });
+    const source = view.source;
     console.log(`[${name}] ${view.specifier}`);
     console.log(`  produces: ${outputKeys(view.runner)}`);
-    printConsumes(view.host, "  ", (folder, member) => {
-      const ref =
-        member === undefined ? { host: folder } : { host: folder, member };
-      return source.lookup(ref).status === "available"
-        ? `  (host "${folder}": running)`
-        : `  (host "${folder}": not running; start it first: ph run ${folder})`;
-    });
+    printConsumes(
+      view.host,
+      "  ",
+      (folder, member) => {
+        const ref =
+          member === undefined ? { host: folder } : { host: folder, member };
+        return source?.lookup(ref).status === "available"
+          ? `  (host "${folder}": running)`
+          : `  (host "${folder}": not running; start it first: ph run ${folder})`;
+      },
+      source,
+    );
     return;
   }
 
@@ -354,12 +448,19 @@ async function explainOutputs(
     if (!m) continue;
     console.log(`[${name} › ${key} (${m.wrapper.host})] ${m.specifier}`);
     console.log(`  produces: ${outputKeys(m.runner)}`);
-    printConsumes(m.host, "  ", (folder, member) => {
-      const ref =
-        member === undefined ? { host: folder } : { host: folder, member };
-      const target = memberForRef(ref, refs);
-      return "key" in target ? `  (member "${target.key}", live outputs)` : "";
-    });
+    printConsumes(
+      m.host,
+      "  ",
+      (folder, member) => {
+        const ref =
+          member === undefined ? { host: folder } : { host: folder, member };
+        const target = memberForRef(ref, refs);
+        return "key" in target
+          ? `  (member "${target.key}", live outputs)`
+          : "";
+      },
+      view.source,
+    );
   }
   const own = { ...view.host, children: undefined };
   if (outputSitesOf(own).length > 0 || envSitesOf(own).length > 0) {

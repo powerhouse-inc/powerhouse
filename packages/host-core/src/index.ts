@@ -248,3 +248,11 @@ export {
   type HostImports,
   type HostOutputsDescription,
 } from "./host-loader.js";
+
+// typed-host-configs T4: $map field typing.
+export type {
+  ArrayMapToken,
+  RecordMapToken,
+  Template,
+  TokenFor,
+} from "./tokens.js";

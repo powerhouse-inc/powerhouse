@@ -11,13 +11,18 @@ import { z } from "zod";
 
 export type OutputPath = (string | number)[];
 
-declare const tokenValue: unique symbol;
+/* The phantom brand key `"~value"` of `OutputToken<T>` / `ItemToken<T>` (type level
+ * only; no runtime object has it). A STRING key, not a `unique symbol`: the
+ * dts bundler copies this file into more than one chunk (`./schema` and
+ * `.`), and two `unique symbol`s would make two unrelated brands, so an
+ * `ItemToken<string>` from `outputs.d.ts` (`./schema`) would fit a boolean
+ * field typed through `.`. */
 
 /** `{ $output: { host, member?, path } }` — the value at `path` in that
  * host's outputs. `T` is a phantom brand for generated `outputs.d.ts`. */
 export interface OutputToken<T = unknown> {
   $output: { host: string; member?: string; path: OutputPath };
-  readonly [tokenValue]?: T;
+  readonly "~value"?: T;
 }
 
 /** `{ $concat: [...] }` — a string; every part resolves to string|number. */
@@ -29,7 +34,7 @@ export interface ConcatToken {
  * the named outer binding). */
 export interface ItemToken<T = unknown> {
   $item: OutputPath | { as: string; path: OutputPath };
-  readonly [tokenValue]?: T;
+  readonly "~value"?: T;
 }
 
 /** `$key` inside a `$map` template: the current key (`true` = innermost). */
@@ -37,11 +42,14 @@ export interface KeyToken {
   $key: true | string;
 }
 
-export interface MapToken {
+/** `{ $map: { over, as?, to, into? } }`: `to` rendered once per element of
+ * `over` (arrays in order, records key-sorted); an array, or a record
+ * keeping the input keys with `into: "record"` (3.3). */
+export interface MapToken<To = unknown> {
   $map: {
     over: OutputToken | ItemToken;
     as?: string;
-    to: unknown;
+    to: To;
     into?: "record";
   };
 }
@@ -72,6 +80,75 @@ export type TokenKey = (typeof TOKEN_KEYS)[number];
 
 /** The escape key: `{ $$: { $output: … } }` is the literal object. */
 export const TOKEN_ESCAPE_KEY = "$$";
+
+/* ------------------------------------------------------------- field typing */
+
+/** A value with the (untyped) tokens of its own union removed: what a
+ * token in that position must produce. */
+type Untokened<T> = Exclude<T, Token>;
+
+/** A collection a `$map` may iterate. */
+type MapCollection = readonly unknown[] | Readonly<Record<string, unknown>>;
+
+/** `$map` producing an array of `E` (no `into`). */
+export interface ArrayMapToken<E> {
+  $map: {
+    over: OutputToken<MapCollection> | ItemToken<MapCollection>;
+    as?: string;
+    to: Template<E>;
+    into?: never;
+  };
+}
+
+/** `$map` producing a record of `V` (`into: "record"`, record `over`). */
+export interface RecordMapToken<V> {
+  $map: {
+    over:
+      | OutputToken<Readonly<Record<string, unknown>>>
+      | ItemToken<Readonly<Record<string, unknown>>>;
+    as?: string;
+    to: Template<V>;
+    into: "record";
+  };
+}
+
+type MapTokenFor<T> = T extends readonly unknown[]
+  ? ArrayMapToken<T[number]>
+  : T extends object
+    ? string extends keyof T
+      ? RecordMapToken<T[string & keyof T]>
+      : never
+    : never;
+
+/**
+ * The tokens that may stand where a value of type `T` is expected:
+ * `$output`/`$item` whose (branded) value fits `T` (a hand-written literal
+ * carries no brand and fits anywhere; the loader checks its path),
+ * `$concat`/`$env` where a string fits, `$key` where a string or number
+ * fits, and `$map` where `T` is an array (or, `into: "record"`, a record).
+ */
+export type TokenFor<T> = unknown extends T
+  ? Token
+  :
+      | OutputToken<T>
+      | ItemToken<T>
+      | (string extends T ? ConcatToken | EnvToken | KeyToken : never)
+      | (number extends T ? KeyToken : never)
+      | MapTokenFor<T>;
+
+/**
+ * A `$map` template for an element of type `T`: `T`'s shape with a fitting
+ * token allowed at EVERY position (the rendered element is validated
+ * against the field's schema after resolution, so non-ref fields such as a
+ * drive `slug` may take `$key`/`$item` here).
+ */
+export type Template<T> = TokenFor<Untokened<T>> | TemplateShape<Untokened<T>>;
+
+type TemplateShape<T> = T extends readonly unknown[]
+  ? Template<T[number]>[]
+  : T extends object
+    ? { [K in keyof T]: Template<T[K]> }
+    : T;
 
 /* ------------------------------------------------------------------ schemas */
 
@@ -113,11 +190,12 @@ export const mapTokenSchema = z.strictObject({
 });
 
 // $concat parts may themselves be tokens: the recursive member is lazy.
-export const concatTokenSchema: z.ZodType<ConcatToken, ConcatToken> = z.strictObject({
-  $concat: z.array(
-    z.union([z.string(), z.number(), z.lazy(() => tokenSchema)]),
-  ),
-});
+export const concatTokenSchema: z.ZodType<ConcatToken, ConcatToken> =
+  z.strictObject({
+    $concat: z.array(
+      z.union([z.string(), z.number(), z.lazy(() => tokenSchema)]),
+    ),
+  });
 
 export const tokenSchema: z.ZodType<Token, Token> = z.union([
   outputTokenSchema,
@@ -181,8 +259,16 @@ export function findToken(
 /** A token-able field: `T | Token` (declared form). Host schemas take it
  * through `makeHostSchemas`' ref function; plugin configSchemas use it
  * directly. */
-export function ref<S extends z.ZodType>(schema: S) {
-  return z.union([schema, tokenSchema]);
+export function ref<S extends z.ZodType>(
+  schema: S,
+): z.ZodUnion<[S, z.ZodType<Token, TokenFor<Untokened<z.input<S>>>>]> {
+  // Same runtime schema; the token option's INPUT type is narrowed to the
+  // tokens that fit the field (its output stays `Token`).
+  const token = tokenSchema as z.ZodType<
+    Token,
+    TokenFor<Untokened<z.input<S>>>
+  >;
+  return z.union([schema, token]);
 }
 
 /** Resolved form of a ref field: tokens are not accepted. */
@@ -195,8 +281,10 @@ export type RefFn = typeof ref | typeof forbidRef;
 
 /** A token-able host field as runners see it: authors may write `T | Token`
  * (z.input), verbs receive `T` (z.output). */
-export type TokenableSchema<S extends z.ZodType, K extends Token = Token> =
-  z.ZodType<z.output<S>, z.input<S> | K>;
+export type TokenableSchema<
+  S extends z.ZodType,
+  K = TokenFor<Untokened<z.input<S>>>,
+> = z.ZodType<z.output<S>, z.input<S> | K>;
 
 // The token branch's output is `never`, so a field's z.output stays the
 // resolved type. At runtime a token passes through untouched: declared
@@ -207,12 +295,20 @@ const passthrough = <K extends Token>(schema: z.ZodType<K, K>) =>
 
 /**
  * The host-core field wrapper (declared input, resolved output): accepts
- * `T` or any output token (`$output`, `$concat`, `$env`, …). Plugin
+ * `T` or an output token that fits it (`TokenFor<T>`: `$output`, `$concat`,
+ * `$env`, `$map` for a collection, …). Plugin
  * configSchemas keep using `ref()`; this is for schemas whose verbs must see
  * resolved types (the base host schemas every runner extends).
  */
 export function tokenable<S extends z.ZodType>(schema: S): TokenableSchema<S> {
-  return z.union([schema, passthrough(tokenSchema)]);
+  // Every token passes at runtime (declared validation checks paths and
+  // bindings; resolved validation the values); the static input admits only
+  // the tokens that fit the field (`TokenFor`).
+  const token = passthrough(tokenSchema) as z.ZodType<
+    never,
+    TokenFor<Untokened<z.input<S>>>
+  >;
+  return z.union([schema, token]);
 }
 
 /** Like `tokenable`, but the only token accepted is `$env` (e.g.
