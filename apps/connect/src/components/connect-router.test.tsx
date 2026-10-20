@@ -11,6 +11,8 @@ import type { PHStore, SetSearchParams } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
   bindPHStoreToWindow,
+  clearDriveAuthRefusal,
+  recordDriveAuthRefusal,
   login,
   createDriveArrivals,
   createPHStore,
@@ -758,6 +760,25 @@ describe("Connect router", () => {
     expect(screen.queryByTestId("selection")).toBeNull();
     expect(store.selectedDriveId).toBeUndefined();
     await vi.waitFor(() => expect(document.title).toBe("Not found · Connect"));
+  });
+
+  it("offers a sign-in, not a 404, for a drive whose discovery was refused", async () => {
+    // A protected switchboard answers discovery of a drive the caller may not
+    // read with a challenged 404, so the drive is never listed and the route
+    // ends in "not found". The drive-auth modal sits over a translucent
+    // backdrop; underneath, the page must not claim the drive does not exist.
+    recordDriveAuthRefusal("http://switchboard.test/d/protected-drive");
+    try {
+      mount("/d/protected-drive");
+      await vi.waitFor(() =>
+        expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+          "Log in to access this drive",
+        ),
+      );
+      expect(screen.queryByText("Drive protected-drive not found")).toBeNull();
+    } finally {
+      clearDriveAuthRefusal("http://switchboard.test/d/protected-drive");
+    }
   });
 
   it("shows the drive's 404 page only once a deep-linked drive's arrivals settle", async () => {

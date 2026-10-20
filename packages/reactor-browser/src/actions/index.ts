@@ -1,6 +1,13 @@
 export { dispatchActions } from "./dispatch.js";
 export { fetchDriveInfo, type DriveInfo } from "./drive-info.js";
 export {
+  clearDriveAuthRefusal,
+  driveUrlKey,
+  isDriveAuthRefused,
+  recordDriveAuthRefusal,
+  subscribeDriveAuthRefusals,
+} from "./drive-auth-refusals.js";
+export {
   addDocument,
   addFileWithProgress,
   addFolder,
