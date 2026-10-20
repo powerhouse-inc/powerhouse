@@ -154,6 +154,41 @@ describe("connect bridge runner", () => {
       runner.hostSchema.safeParse({ runner: { module: "m" } }).success,
     ).toBe(false);
   });
+
+  it("takes output tokens in config.drives.defaultDrives[].url and renown.switchboardUrl (declared form only)", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const graphql = {
+      $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+    };
+    const host: ConnectHost = {
+      name: "connect",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      config: {
+        drives: {
+          defaultDrives: [
+            {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "sektar", "url"],
+                },
+              },
+            },
+          ],
+        },
+        renown: { switchboardUrl: graphql },
+      },
+    };
+    expect(runner.declaredHostSchema.safeParse(host).error).toBeUndefined();
+    expect(runner.hostSchema.safeParse(host).success).toBe(false);
+    // a field that names no other host's output stays plain
+    expect(
+      runner.declaredHostSchema.safeParse({
+        ...host,
+        config: { renown: { url: graphql } },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("switchboard bridge runner", () => {
