@@ -26,7 +26,7 @@ import {
   type ChildWrapper,
   type DriveDeclaration,
   type HostDefinition,
-  type PluginEntry,
+  type PluginEntryData,
   type ReactorHostInput,
   type RunnerModule,
 } from "@powerhousedao/host-core";
@@ -195,7 +195,7 @@ async function explainDrives(
   where: string,
   configWhere: string,
 ): Promise<void> {
-  const entries: PluginEntry[] = host.runner.plugins ?? [];
+  const entries: PluginEntryData[] = host.runner.plugins ?? [];
   const contributions =
     entries.length > 0
       ? await resolvePluginContributions(projectRoot, verb, entries, where)
@@ -299,10 +299,7 @@ async function explainOutputs(
 ): Promise<void> {
   if (!view.members) {
     const projectName = readProjectName(projectRoot);
-    const producers = await loadProducers(
-      projectRoot,
-      outputRefsOf(view.host),
-    );
+    const producers = await loadProducers(projectRoot, outputRefsOf(view.host));
     // The same lookup `ph run` resolves through.
     const source = runRecordOutputSource(projectRoot, {
       consumer: name,
