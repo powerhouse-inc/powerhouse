@@ -180,7 +180,8 @@ function callerOverride(
   const { connect } = projectReactorToConnect(reactor);
   const structural = isStructuralMultiReactor(reactor);
   if (!connect.reactor && !connect.instance && !connect.app && !structural) {
-    return host.config as PHConnectRuntimeConfig | undefined;
+    // `base` is host.config when there is one; without, it may still carry the composition.
+    return host.config !== undefined || composition ? base : undefined;
   }
   const drives = structural
     ? projectDrivesIntoConnect({
@@ -228,14 +229,23 @@ export const run = dev;
 /** P3.3 — `build`: the SAME service as classic `ph connect build`. */
 export async function build(
   host: HostDefinition,
-  _ctx: RunnerContext,
+  ctx: RunnerContext,
 ): Promise<void> {
   const { runConnectBuild } = await import("../services/connect-build.js");
   const runner = host.runner;
   const args: Partial<ConnectBuildArgs> = {
     outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
   };
-  await runConnectBuild(args as ConnectBuildArgs);
+  // The host's composition bakes in, so the build's loading shell matches its views.
+  const composition = callerOverride(
+    host,
+    ctx,
+    ctx.verb ?? "build",
+  )?.composition;
+  await runConnectBuild(
+    args as ConnectBuildArgs,
+    composition ? { composition } : undefined,
+  );
 }
 
 /** P3.3 — `serve`: the SAME vite preview server as classic

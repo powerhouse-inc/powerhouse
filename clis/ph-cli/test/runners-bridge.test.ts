@@ -220,6 +220,33 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
       outDir: "dist",
     });
+    // No plugins list: a classic build, no composition passed.
+    expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toBeUndefined();
+  });
+
+  it("build passes the host's composition for the build verb", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      {
+        name: "lab-connect",
+        runner: {
+          module: "m",
+          plugins: [
+            "@powerhousedao/connect/plugins/core-only",
+            { module: "./dev-tools.js", verbs: ["dev"] },
+          ],
+        },
+      },
+      { ...ctx, verb: "build" },
+    );
+    expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toEqual({
+      composition: [
+        { module: "@powerhousedao/connect/plugins/core-only", config: {} },
+      ],
+    });
   });
 });
 

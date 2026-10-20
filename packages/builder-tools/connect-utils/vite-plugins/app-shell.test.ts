@@ -1,10 +1,31 @@
-import { describe, expect, it } from "vitest";
-import { injectAppShell } from "./app-shell.js";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
+import { build, createServer } from "vite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  APP_SHELLS_FILE,
+  appShellVariant,
+  appShellVariantOf,
+  connectAppShellPlugin,
+  GENERIC_PLUGIN_MODULE,
+  injectAppShell,
+  swapAppShell,
+  withShellAppName,
+  type AppShells,
+} from "./app-shell.js";
 
 const shell = {
   body: `<div data-ph-shell style="display:contents"><div class="h-screen"></div></div>`,
   head: `<style data-ph-shell>.h-screen{height:100vh}</style>`,
 };
+
+const NAME = "<!--ph-shell:app-name-->Connect<!--/ph-shell:app-name-->";
 
 const html = [
   `<!doctype html><html><head>`,
@@ -15,7 +36,9 @@ const html = [
 describe("injectAppShell", () => {
   it("fills #root, inlines the critical CSS and defers the stylesheet", () => {
     const out = injectAppShell(html, shell);
-    expect(out).toContain(`<div id="root">${shell.body}</div>`);
+    expect(out).toContain(`<div id="root">`);
+    expect(out).toMatch(/<div id="root"><!--ph-shell:body-->.*<\/div><\/div>/);
+    expect(out).toContain(shell.body);
     // Ahead of the stylesheet, so the full CSS wins equal-specificity rules.
     expect(out.indexOf(shell.head)).toBeGreaterThan(0);
     expect(out.indexOf(shell.head)).toBeLessThan(out.indexOf("index-abc.css"));
@@ -27,6 +50,15 @@ describe("injectAppShell", () => {
     );
   });
 
+  it("keeps the stylesheets blocking when asked", () => {
+    const out = injectAppShell(html, shell, "/", { deferStyles: false });
+    expect(out).toContain(shell.body);
+    expect(out).toContain(
+      `<link rel="stylesheet" crossorigin href="/assets/index-abc.css">`,
+    );
+    expect(out).not.toContain("preload");
+  });
+
   it("applies once and leaves a page without an empty root alone", () => {
     const once = injectAppShell(html, shell);
     expect(injectAppShell(once, shell)).toBe(once);
@@ -35,5 +67,227 @@ describe("injectAppShell", () => {
       `<div id="root">x</div>`,
     );
     expect(injectAppShell(filled, shell)).toBe(filled);
+  });
+});
+
+const generic = {
+  body: `<div data-ph-shell="generic"><a href="/settings">G</a><nav id="sidebar"></nav></div>`,
+  head: `<style data-ph-shell="generic">#sidebar{}</style><script data-ph-shell="generic"></script>`,
+};
+const core = {
+  body: `<div data-ph-shell="core"><header><a href="/"><!--ph-shell:app-name-->Connect<!--/ph-shell:app-name--></a><a href="/settings">C</a></header></div>`,
+  head: `<style data-ph-shell="core">header{}</style><script data-ph-shell="core"></script>`,
+};
+
+describe("the shell variants", () => {
+  it("picks core's only for a declared composition without the generic plugin", () => {
+    expect(appShellVariant(undefined)).toBe("generic");
+    expect(appShellVariant(null)).toBe("generic");
+    expect(appShellVariant([{ module: GENERIC_PLUGIN_MODULE }])).toBe(
+      "generic",
+    );
+    expect(appShellVariant([])).toBe("core");
+    expect(appShellVariant([{ module: "./plugins/mine.js" }])).toBe("core");
+  });
+
+  it("swaps one variant for the other, rebased, and back", () => {
+    const withGeneric = injectAppShell(html, generic, "/connect/");
+    expect(appShellVariantOf(withGeneric)).toBe("generic");
+    const withCore = swapAppShell(withGeneric, core, "/connect/");
+    expect(appShellVariantOf(withCore)).toBe("core");
+    expect(withCore).toContain(`<a href="/connect/settings">C</a>`);
+    expect(withCore).not.toContain("sidebar");
+    // The deferred stylesheet and the recovery script stay as they were.
+    expect(withCore).toContain(`rel="preload" as="style"`);
+    expect(withCore).toContain("data-ph-boot-recover");
+    expect(swapAppShell(withCore, generic, "/connect/")).toBe(withGeneric);
+  });
+
+  it("leaves a page without a shell alone", () => {
+    expect(appShellVariantOf(html)).toBeUndefined();
+    expect(swapAppShell(html, core)).toBe(html);
+  });
+});
+
+// A project whose installed Connect ships both shells. Inside cwd: Vite's
+// build-html rejects an index.html outside it (see pwa.e2e.test.ts).
+let root: string;
+beforeAll(() => {
+  root = mkdtempSync(join(process.cwd(), "node_modules", ".app-shell-"));
+  const connect = join(root, "node_modules/@powerhousedao/connect");
+  mkdirSync(join(connect, "dist"), { recursive: true });
+  writeFileSync(
+    join(connect, "package.json"),
+    `{"name":"@powerhousedao/connect"}`,
+  );
+  writeFileSync(join(connect, "dist/shell.html"), generic.body);
+  writeFileSync(join(connect, "dist/shell-head.html"), generic.head);
+  writeFileSync(join(connect, "dist/shell-core.html"), core.body);
+  writeFileSync(join(connect, "dist/shell-core-head.html"), core.head);
+  writeFileSync(
+    join(root, "index.html"),
+    `<!doctype html><html><head></head><body><div id="root"></div><script type="module" src="/main.js"></script></body></html>`,
+  );
+  writeFileSync(join(root, "main.js"), `console.log("app");`);
+});
+afterAll(() => rmSync(root, { recursive: true, force: true }));
+
+async function buildWith(composition?: { module: string }[], appName?: string) {
+  const outDir = join(
+    root,
+    `dist-${composition ? composition.length : "none"}-${appName ?? ""}`,
+  );
+  await build({
+    root,
+    logLevel: "silent",
+    build: { outDir, emptyOutDir: true },
+    plugins: [connectAppShellPlugin(root, { composition, appName })],
+  });
+  return {
+    html: readFileSync(join(outDir, "index.html"), "utf8"),
+    shells: JSON.parse(
+      readFileSync(join(outDir, APP_SHELLS_FILE), "utf8"),
+    ) as AppShells,
+  };
+}
+
+async function devIndex(composition?: { module: string }[], appName?: string) {
+  const server = await createServer({
+    root,
+    logLevel: "silent",
+    server: { middlewareMode: true, ws: false },
+    plugins: [connectAppShellPlugin(root, { composition, appName })],
+  });
+  try {
+    return await server.transformIndexHtml(
+      "/",
+      readFileSync(join(root, "index.html"), "utf8"),
+    );
+  } finally {
+    await server.close();
+  }
+}
+
+describe("connectAppShellPlugin", () => {
+  it("builds the composition's shell into index.html and ships both", async () => {
+    const classic = await buildWith();
+    expect(appShellVariantOf(classic.html)).toBe("generic");
+    expect(classic.shells).toEqual({ generic, core });
+
+    const withGeneric = await buildWith([{ module: GENERIC_PLUGIN_MODULE }]);
+    expect(appShellVariantOf(withGeneric.html)).toBe("generic");
+
+    const coreOnly = await buildWith([]);
+    expect(appShellVariantOf(coreOnly.html)).toBe("core");
+    expect(coreOnly.html).toContain("<header>");
+    expect(coreOnly.html).not.toContain("sidebar");
+  });
+
+  it("injects core's shell in dev for a core-only composition, and none otherwise", async () => {
+    const coreOnly = await devIndex([{ module: "./plugins/mine.js" }]);
+    expect(appShellVariantOf(coreOnly)).toBe("core");
+    expect(coreOnly).toContain("data-ph-boot-recover");
+
+    expect(appShellVariantOf(await devIndex())).toBeUndefined();
+    expect(
+      appShellVariantOf(await devIndex([{ module: GENERIC_PLUGIN_MODULE }])),
+    ).toBeUndefined();
+  });
+
+  it("titles core's shell with the served app name, as the app does", async () => {
+    const named = await buildWith([], "Acme <Docs>");
+    expect(named.html).toContain(
+      "<!--ph-shell:app-name-->Acme &lt;Docs&gt;<!--/ph-shell:app-name-->",
+    );
+    // No branding name: the app's own fallback.
+    const unnamed = await buildWith([], "");
+    expect(unnamed.html).toContain(NAME);
+    expect(await devIndex([], "Acme")).toContain(
+      "<!--ph-shell:app-name-->Acme<!--/ph-shell:app-name-->",
+    );
+  });
+
+  it("renders a project's shells from its routes and stylesheet, in build only", async () => {
+    // Connect's renderer: each variant's nav, and the stylesheet it was given.
+    const connect = join(root, "node_modules/@powerhousedao/connect");
+    writeFileSync(
+      join(connect, "package.json"),
+      `{"name":"@powerhousedao/connect","exports":{"./prerender":"./prerender.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "prerender.js"),
+      `import { readFileSync } from "node:fs";
+      export async function renderProjectShells(stylesheet) {
+        const css = readFileSync(stylesheet, "utf8");
+        const shell = (v) => ({
+          body: \`<div data-ph-shell="\${v}"><nav class="acme"><!--ph-shell:app-name--><!--/ph-shell:app-name--></nav></div>\`,
+          head: \`<style data-ph-shell="\${v}">\${css.includes(".acme") ? ".acme{color:red}" : ""}</style>\`,
+        });
+        return { generic: shell("generic"), core: shell("core") };
+      }`,
+    );
+    writeFileSync(join(root, "style.css"), `.acme{color:red}`);
+    const routeAliases = [{ find: /^never$/, replacement: "never" }];
+    try {
+      const outDir = join(root, "dist-routes");
+      await build({
+        root,
+        logLevel: "silent",
+        build: { outDir, emptyOutDir: true },
+        plugins: [
+          connectAppShellPlugin(root, {
+            composition: [],
+            appName: "Acme",
+            routeAliases,
+          }),
+        ],
+      });
+      const html = readFileSync(join(outDir, "index.html"), "utf8");
+      expect(appShellVariantOf(html)).toBe("core");
+      expect(html).toContain(
+        `<nav class="acme"><!--ph-shell:app-name-->Acme<!--/ph-shell:app-name--></nav>`,
+      );
+      expect(html).toContain(`.acme{color:red}</style>`);
+      const shells = JSON.parse(
+        readFileSync(join(outDir, APP_SHELLS_FILE), "utf8"),
+      ) as AppShells;
+      expect(Object.keys(shells).sort()).toEqual(["core", "generic"]);
+
+      const server = await createServer({
+        root,
+        logLevel: "silent",
+        server: { middlewareMode: true, ws: false },
+        plugins: [connectAppShellPlugin(root, { routeAliases })],
+      });
+      try {
+        const dev = await server.transformIndexHtml(
+          "/",
+          readFileSync(join(root, "index.html"), "utf8"),
+        );
+        expect(dev).not.toContain("acme");
+      } finally {
+        await server.close();
+      }
+    } finally {
+      writeFileSync(
+        join(connect, "package.json"),
+        `{"name":"@powerhousedao/connect"}`,
+      );
+      rmSync(join(root, "style.css"));
+    }
+  });
+});
+
+describe("the shell's app name", () => {
+  it("is filled in on a swap, with the app's fallback", () => {
+    const withGeneric = injectAppShell(html, generic);
+    expect(swapAppShell(withGeneric, core, "/", "Acme")).toContain(
+      "<!--ph-shell:app-name-->Acme<!--/ph-shell:app-name-->",
+    );
+    const unnamed = swapAppShell(withGeneric, core);
+    expect(unnamed).toContain(NAME);
+    expect(withShellAppName(unnamed, "Beta")).toContain(
+      "<!--ph-shell:app-name-->Beta<!--/ph-shell:app-name-->",
+    );
   });
 });
