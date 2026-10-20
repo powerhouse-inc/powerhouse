@@ -482,7 +482,7 @@ export function cn(...inputs: ClassValue[]) {
 
 #### Step 4 — extend `style.css` with the shadcn theme variables
 
-The boilerplate `style.css` already imports `tailwindcss`, `@powerhousedao/design-system/theme.css`, and `@powerhousedao/connect/style.css`. **Append** (do not replace) the shadcn additions:
+The boilerplate `style.css` already imports `tailwindcss` and `@powerhousedao/connect/tailwind.css`, which brings the design system's theme. **Append** (do not replace) the shadcn additions:
 
 - `@import "tw-animate-css";` (after the existing `@import "tailwindcss";`)
 - `@custom-variant dark (&:is(.dark *));`
@@ -490,7 +490,7 @@ The boilerplate `style.css` already imports `tailwindcss`, `@powerhousedao/desig
 - `:root { ... }` and `.dark { ... }` blocks with `oklch(...)` color values
 - `@layer base { * { @apply border-border outline-ring/50; } body { @apply bg-background text-foreground; } }`
 
-⚠️ **Theme conflict warning**: `@powerhousedao/design-system/theme.css` already declares its own theme tokens. Adding shadcn's color variables on top has not been verified for conflicts — after this step, render a Connect view and confirm both the editor and the rest of Connect still look correct in light and dark mode. If the design-system theme breaks, fall back to using `@powerhousedao/design-system` and `@powerhousedao/document-engineering` primitives instead of shadcn.
+⚠️ **Theme conflict warning**: The design system's theme (from `@powerhousedao/connect/tailwind.css`) already declares its own tokens. Adding shadcn's color variables on top has not been verified for conflicts — after this step, render a Connect view and confirm both the editor and the rest of Connect still look correct in light and dark mode. If the design-system theme breaks, fall back to using `@powerhousedao/design-system` and `@powerhousedao/document-engineering` primitives instead of shadcn.
 
 #### Step 5 — install AI Elements (Vercel's CLI, NOT shadcn's)
 

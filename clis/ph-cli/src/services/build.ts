@@ -27,7 +27,7 @@ import {
   EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { nodeFileTrace } from "@vercel/nft";
 import { detect, resolveCommand, type Agent } from "package-manager-detector";
@@ -95,6 +95,52 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
   }
 }
 
+// builder-tools' PACKAGE_ROUTES_MODULE, without loading it for packages with no routes.
+const OFFERED_ROUTES_MODULE = ".ph/connect-routes.package.ts";
+
+// The manifest with `connectRoutes` set when the package offers routes.
+function withOfferedRoutes(json: string, offers: boolean) {
+  const manifest = JSON.parse(json) as { connectRoutes?: boolean };
+  if (offers) manifest.connectRoutes = true;
+  else delete manifest.connectRoutes;
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+/** Sets `connectRoutes` in the manifest the package's root module imports,
+ * leaving the project's file as it is. */
+export function offeredRoutesManifest(projectRoot: string, offers: boolean) {
+  const manifestPath = join(projectRoot, "powerhouse.manifest.json");
+  return {
+    name: "ph-offered-routes-manifest",
+    transform(code: string, id: string) {
+      if (id !== manifestPath) return null;
+      return { code: withOfferedRoutes(code, offers), map: null };
+    },
+  };
+}
+
+/** Sets `connectRoutes` in the dist copy of the manifest. */
+export function markOfferedRoutes(dir: string, offers: boolean) {
+  const manifestPath = join(dir, "powerhouse.manifest.json");
+  if (!existsSync(manifestPath)) return;
+  const json = readFileSync(manifestPath, "utf-8");
+  writeFileSync(manifestPath, withOfferedRoutes(json, offers));
+}
+
+/** Fails the offered routes' build on an import of Connect, which other
+ * Connects don't share with the package. */
+export function noConnectImports() {
+  return {
+    name: "ph-offered-routes-imports",
+    resolveId(source: string, importer: string | undefined) {
+      if (!/^@powerhousedao\/connect(\/|$)/.test(source)) return null;
+      throw new Error(
+        `${importer ?? "A route"} imports "${source}". Routes a package offers other Connects import @powerhousedao/connect-core instead; only its own host's _app.tsx and overrides may use @powerhousedao/connect.`,
+      );
+    },
+  };
+}
+
 export async function runBuild(args: BuildArgs) {
   const { outDir } = args;
   const projectRoot = process.cwd();
@@ -117,12 +163,18 @@ export async function runBuild(args: BuildArgs) {
 
   // Project routes type-check against the tree generated from them. The
   // probes mirror resolveConnectRoutesDir, so builder-tools loads only when needed.
-  const routeProbes = ["hosts/connect/routes", ".ph/connect-routes.gen.ts"];
+  const routeProbes = [
+    "hosts/connect/routes",
+    ".ph/connect-routes.gen.ts",
+    OFFERED_ROUTES_MODULE,
+  ];
   if (routeProbes.some((p) => existsSync(join(projectRoot, p)))) {
     const { resolveConnectRoutesDir, syncConnectRoutes } =
       await import("@powerhousedao/builder-tools");
     await syncConnectRoutes(projectRoot, resolveConnectRoutesDir(projectRoot));
   }
+  // Connect reads the manifest's flag to load the package's routes.
+  const offersRoutes = existsSync(join(projectRoot, OFFERED_ROUTES_MODULE));
 
   // Before any bundler runs, so declining leaves nothing half built.
   const typesOk = emitTypes(agent, outDir);
@@ -143,10 +195,22 @@ export async function runBuild(args: BuildArgs) {
           browser: true,
           cache: detection,
         }),
+        offeredRoutesManifest(projectRoot, offersRoutes),
       ],
     }),
     outDir: join(outDir, "browser"),
   });
+  if (offersRoutes) {
+    // Its own build: other Connects load it beside the package, and share
+    // connect-core with it, not Connect.
+    await tsdownBuild({
+      ...buildBrowserBuildConfig({ sharedDeps, plugins: [noConnectImports()] }),
+      // Absolute: a relative entry is a glob, and globs skip `.ph`.
+      entry: { "connect-routes": join(projectRoot, OFFERED_ROUTES_MODULE) },
+      outDir: join(outDir, "browser"),
+      clean: false,
+    });
+  }
 
   // Advisory: a shared dep the source imports but the output no longer
   // references as a bare import was inlined despite the external set.
@@ -201,6 +265,7 @@ export async function runBuild(args: BuildArgs) {
     built,
     externalDependencyVersions(external.values()),
   );
+  markOfferedRoutes(outDir, offersRoutes);
 
   const executeLocalCommand = resolveCommand(agent, "execute-local", [
     "tailwindcss",

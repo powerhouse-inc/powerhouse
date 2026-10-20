@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanDistExcept,
   isVendorEnabled,
+  CONNECT_OWN_VENDOR_DEPS,
   productionVendorInclude,
   runConnectBuild,
   vendorImportMapEntries,
@@ -130,9 +131,19 @@ describe("productionVendorInclude", () => {
   // The app build never externalizes Connect (SHARED_DEP_SPECIFIERS omits it),
   // so an import-map entry for it would be dead weight even if it did build.
   it("omits every @powerhousedao/connect subpath", () => {
-    expect(include.some((s) => s.startsWith("@powerhousedao/connect"))).toBe(
-      false,
-    );
+    expect(
+      include.some(
+        (s) =>
+          s === "@powerhousedao/connect" ||
+          s.startsWith("@powerhousedao/connect/"),
+      ),
+    ).toBe(false);
+  });
+
+  // One core and one router for Connect and the packages it loads.
+  it("vendors connect-core and the router", () => {
+    expect(include).toContain("@powerhousedao/connect-core");
+    expect(include).toContain("@tanstack/react-router");
   });
 
   // The bare root's barrel reaches node-only modules; only its browser-safe
@@ -159,6 +170,26 @@ describe("productionVendorInclude", () => {
 
   it("has no duplicates", () => {
     expect(include.length).toBe(new Set(include).size);
+  });
+});
+
+describe("CONNECT_OWN_VENDOR_DEPS", () => {
+  // Projects don't install connect-core, so its subpaths resolve from Connect.
+  it("lists connect-core's shared subpaths, not its route tree or boot config", () => {
+    expect(CONNECT_OWN_VENDOR_DEPS).toEqual(
+      expect.arrayContaining([
+        "@powerhousedao/connect-core",
+        "@powerhousedao/connect-core/router",
+        "@powerhousedao/connect-core/views",
+        "@tanstack/react-router",
+      ]),
+    );
+    expect(CONNECT_OWN_VENDOR_DEPS).not.toContain(
+      "@powerhousedao/connect-core/route-tree",
+    );
+    expect(CONNECT_OWN_VENDOR_DEPS).not.toContain(
+      "@powerhousedao/connect-core/runtime-config",
+    );
   });
 });
 

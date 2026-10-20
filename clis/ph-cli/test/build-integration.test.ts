@@ -403,6 +403,75 @@ describe("runBuild on a package with a top-level routes folder", () => {
   }, 120_000);
 });
 
+// Routes in hosts/connect/routes are offered to other Connects, but its own
+// layout and overrides of Connect's routes, which only its own host uses.
+describe("runBuild on a package that offers routes", () => {
+  const fixture = join(fixtures, "routes-package");
+  const routes = join(fixture, "hosts", "connect", "routes");
+  const route = (file: string, id: string, source = "") => {
+    mkdirSync(join(routes, file, ".."), { recursive: true });
+    writeFileSync(
+      join(routes, file),
+      `import { createFileRoute } from "@tanstack/react-router";\n${source}export const Route = createFileRoute("${id}")({});\n`,
+    );
+  };
+  const setUp = () => {
+    rmSync(fixture, { recursive: true, force: true });
+    cpSync(join(fixtures, "classic-package"), fixture, { recursive: true });
+    clean(fixture);
+    route("_app.tsx", "/_app");
+    route("_app/index.tsx", "/_app/");
+    route("_app/reports.tsx", "/_app/reports");
+    // As a generated project's root module exports it, for Connect to read.
+    writeFileSync(
+      join(fixture, "index.ts"),
+      `${readFileSync(join(fixture, "index.ts"), "utf8")}import manifestJson from "./powerhouse.manifest.json" with { type: "json" };\nexport const manifest = manifestJson;\n`,
+    );
+    process.chdir(fixture);
+  };
+
+  afterAll(() => {
+    rmSync(fixture, { recursive: true, force: true });
+  });
+
+  it("builds them as ./connect-routes and flags the manifest, not the source", async () => {
+    setUp();
+    const source = readFileSync(join(fixture, "powerhouse.manifest.json"));
+
+    await runBuild({ ...args, ignoreTypeErrors: true });
+
+    const built = readFileSync(
+      join(fixture, "dist", "browser", "connect-routes.js"),
+      "utf8",
+    );
+    expect(built).toContain('id: "/_app/reports"');
+    expect(built).not.toContain('id: "/_app/"');
+    expect(
+      readJson<Manifest>(join(fixture, "dist", "powerhouse.manifest.json"))
+        .connectRoutes,
+    ).toBe(true);
+    expect(
+      readFileSync(join(fixture, "dist", "browser", "index.js"), "utf8"),
+    ).toMatch(/connectRoutes:\s*true/);
+    expect(
+      readFileSync(join(fixture, "powerhouse.manifest.json")).equals(source),
+    ).toBe(true);
+  }, 120_000);
+
+  it("fails on an offered route that imports Connect", async () => {
+    setUp();
+    route(
+      "_app/bad.tsx",
+      "/_app/bad",
+      'import "@powerhousedao/connect/layout";\n',
+    );
+
+    await expect(runBuild({ ...args, ignoreTypeErrors: true })).rejects.toThrow(
+      /bad\.tsx imports "@powerhousedao\/connect\/layout"/,
+    );
+  }, 120_000);
+});
+
 // Nothing under pieces/<dir>, so nothing is bundled; the built list is still
 // there, and what it declares is still the build's to check.
 describe("runBuild on a package that only lists a piece", () => {
