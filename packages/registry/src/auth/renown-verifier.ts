@@ -51,11 +51,12 @@ export function createRenownVerifier(
       : [undefined];
     let did: string | undefined;
     for (const renownUrl of issuers) {
+      // One issuer being unreachable must not block the others.
       const result = await verifyAuthCredential(token, {
         audience: config.publicUrl,
         renownUrl,
         switchboardUrl: config.switchboardUrl,
-      });
+      }).catch(() => undefined);
       did = result?.did;
       if (did) break;
     }

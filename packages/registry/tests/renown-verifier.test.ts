@@ -65,6 +65,17 @@ describe("renown issuer list", () => {
     expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(2);
   });
 
+  it("an unreachable issuer does not block the next one", async () => {
+    mockVerifyAuthCredential
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce({ did: DID });
+    const verify = createRenownVerifier({
+      publicUrl: "https://reg.test",
+      renownUrls: ["https://a.test", "https://b.test"],
+    });
+    expect(await verify("t")).toBe(DID);
+  });
+
   it("a token no issuer accepts is refused", async () => {
     mockVerifyAuthCredential.mockResolvedValue(undefined);
     expect(await make([A, B])("t")).toBeUndefined();
