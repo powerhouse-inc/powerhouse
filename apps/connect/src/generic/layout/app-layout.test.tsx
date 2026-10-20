@@ -22,7 +22,7 @@ import {
   bindConnectRouter,
   createConnectRouter,
 } from "@powerhousedao/connect-core/router";
-import { setRouteComponents } from "../../test/route-components.js";
+import { setRouteComponents } from "../../../test/route-components.js";
 import type * as RuntimeConfigModule from "@powerhousedao/connect-core/runtime-config";
 import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import {
@@ -194,20 +194,6 @@ describe("Connect's _app layout", () => {
     await vi.waitFor(() => expect(shownPage()).toBe("compact"));
     expect(sidebar()).toBeTruthy();
     expect(navLinks()).toEqual([]);
-  });
-
-  it("drops Connect's sidebar when a composition leaves out the generic plugin", async () => {
-    served.composition = [{ module: "@powerhousedao/connect/plugins/sentry" }];
-    mount("/");
-    await vi.waitFor(() => expect(shownPage()).toBe("home"));
-    expect(sidebar()).toBeNull();
-    cleanup();
-    unbind?.();
-
-    served.composition = [{ module: "@powerhousedao/connect/plugins/generic" }];
-    mount("/");
-    await vi.waitFor(() => expect(shownPage()).toBe("home"));
-    expect(sidebar()).toBeTruthy();
   });
 
   it("keeps a layout's own sidebar without the generic plugin", async () => {

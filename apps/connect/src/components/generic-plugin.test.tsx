@@ -4,6 +4,17 @@ import {
   bindConnectRouter,
   createConnectRouter,
 } from "@powerhousedao/connect-core";
+import {
+  addConnectRoutes,
+  connectRoutes,
+  removeConnectRoutes,
+} from "@powerhousedao/connect-core/router";
+import {
+  getConnectPluginUi,
+  loadConnectPluginUi,
+  registerConnectPlugins,
+  resetConnectPluginUi,
+} from "@powerhousedao/connect-core/plugins";
 import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import {
@@ -15,9 +26,15 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
+import type { AnyRoute } from "@tanstack/react-router";
+import {
+  createMemoryHistory,
+  createRoute,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type * as RouteTreeModule from "@powerhousedao/connect/route-tree";
+import { connectPlugins } from "../plugins/index.js";
 import { GENERIC_PLUGIN } from "../plugins/ids.js";
 
 let store: PHStore;
@@ -44,22 +61,26 @@ beforeAll(async () => {
   store.drives = [drive];
   bindPHStoreToWindow(store);
   addPHEventHandlers();
+  registerConnectPlugins(connectPlugins);
 }, 60_000);
 
 afterEach(() => {
   cleanup();
   unbind?.();
   unbind = undefined;
+  resetConnectPluginUi(routeTree);
 });
 
-// Connect's router as the app builds it, for the served composition.
-function mount(path: string, composition?: { module: string }[]) {
+// Connect's router as the app builds it, with the served composition's plugins' UI.
+async function mount(path: string, composition?: { module: string }[]) {
   serve(composition);
+  await loadConnectPluginUi(composition);
   const history = createMemoryHistory({ initialEntries: [path] });
   const connectRouter = createConnectRouter({
     routeTree,
     store,
     history,
+    pluginUi: getConnectPluginUi(),
   });
   unbind = bindConnectRouter(connectRouter, store);
   render(
@@ -77,8 +98,26 @@ const settingsTabLabels = async () => {
 };
 
 describe("Connect with and without the generic plugin", () => {
+  it("sets its views only on routes the tree has", async () => {
+    const { default: genericUi } = await import("../generic/ui.js");
+    const ids = new Set<string>();
+    const walk = (route: AnyRoute, parent?: string) => {
+      const segment = (route.options as { id?: string }).id;
+      const id =
+        parent === undefined
+          ? "__root__"
+          : `${parent === "__root__" ? "" : parent}${segment}`;
+      ids.add(id);
+      for (const child of (route.children ?? []) as AnyRoute[]) walk(child, id);
+    };
+    walk(routeTree as AnyRoute);
+    expect(
+      Object.keys(genericUi.routes ?? {}).filter((id) => !ids.has(id)),
+    ).toEqual([]);
+  });
+
   it("is classic Connect when the composition has the generic plugin", async () => {
-    mount("/", [{ module: GENERIC_PLUGIN }]);
+    await mount("/", [{ module: GENERIC_PLUGIN }]);
     await vi.waitFor(() =>
       expect(document.getElementById("sidebar")).toBeTruthy(),
     );
@@ -87,7 +126,7 @@ describe("Connect with and without the generic plugin", () => {
   });
 
   it("is classic Connect without a declared composition", async () => {
-    mount("/");
+    await mount("/");
     await vi.waitFor(() =>
       expect(document.getElementById("sidebar")).toBeTruthy(),
     );
@@ -95,7 +134,7 @@ describe("Connect with and without the generic plugin", () => {
   });
 
   it("renders core's views when the composition leaves the generic plugin out", async () => {
-    mount("/", [{ module: "@powerhousedao/connect/plugins/sentry" }]);
+    await mount("/", [{ module: "@powerhousedao/connect/plugins/sentry" }]);
     const drives = await screen.findByRole("table", { name: "Drives" });
     expect(within(drives).getByRole("link", { name: "Team/" })).toBeTruthy();
     expect(document.getElementById("sidebar")).toBeNull();
@@ -105,7 +144,7 @@ describe("Connect with and without the generic plugin", () => {
   });
 
   it("lists Connect's settings tabs with the generic plugin, core's without", async () => {
-    mount("/settings", [{ module: GENERIC_PLUGIN }]);
+    await mount("/settings", [{ module: GENERIC_PLUGIN }]);
     expect(await settingsTabLabels()).toEqual([
       "Package Manager",
       "Default Editors",
@@ -114,8 +153,34 @@ describe("Connect with and without the generic plugin", () => {
     ]);
     cleanup();
     unbind?.();
+    resetConnectPluginUi(routeTree);
 
-    mount("/settings", []);
+    await mount("/settings", []);
     expect(await settingsTabLabels()).toEqual(["Appearance", "Packages"]);
+  });
+
+  it("lets a project route at a tab's path replace its view, keeping its options", async () => {
+    const { genericSettingsTabs } = await import("../generic/index.js");
+    const { settingsRoute } = connectRoutes(routeTree);
+    // As a project's _app/settings/about.tsx joins the tree before the plugin's tabs.
+    const about = createRoute({
+      getParentRoute: () => settingsRoute,
+      path: "about",
+      ...genericSettingsTabs.about,
+      component: () => <p>project about</p>,
+    }) as AnyRoute;
+    addConnectRoutes([about]);
+    try {
+      await mount("/settings/about", [{ module: GENERIC_PLUGIN }]);
+      expect(await screen.findByText("project about")).toBeTruthy();
+      expect(await settingsTabLabels()).toEqual([
+        "Package Manager",
+        "Default Editors",
+        "Danger Zone",
+        "About",
+      ]);
+    } finally {
+      removeConnectRoutes([about]);
+    }
   });
 });

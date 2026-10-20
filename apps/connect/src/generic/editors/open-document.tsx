@@ -4,7 +4,7 @@ import {
 } from "@powerhousedao/connect-core/router";
 import { lazy, Suspense } from "react";
 import { EditorLoader } from "./editor-loader.js";
-import { ErrorBoundary } from "./error-boundary.js";
+import { ErrorBoundary } from "@powerhousedao/connect/components/shared";
 
 const DocumentEditorContainer = lazy(() =>
   import("./document-editor-container.js").then((module) => ({

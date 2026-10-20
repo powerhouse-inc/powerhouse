@@ -2,7 +2,6 @@ import { connectConfig } from "@powerhousedao/connect/config";
 import { routeTree } from "@powerhousedao/connect/route-tree";
 import type { ConnectAppRouterOptions } from "@powerhousedao/connect-core/router";
 import {
-  CoreError,
   disposeConnectAppRouter,
   getConnectAppRouter,
 } from "@powerhousedao/connect-core/router";
@@ -11,9 +10,8 @@ import { ensurePHStore, usePHStore } from "@powerhousedao/reactor-browser";
 import { RouterProvider } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { reportRouteError } from "../services/sentry.js";
-import { generic } from "./generic-view.js";
 import { ColdStartPending } from "./prerendered-shell.js";
-import { RouteError, RouterChrome } from "./route-views.js";
+import { RouterChrome } from "./route-views.js";
 
 function connectRouterOptions(): ConnectAppRouterOptions {
   return {
@@ -21,7 +19,6 @@ function connectRouterOptions(): ConnectAppRouterOptions {
     basepath: connectConfig.routerBasename,
     InnerWrap: RouterChrome,
     pendingComponent: ColdStartPending,
-    errorComponent: generic(RouteError, CoreError),
     appName: getRuntimeConfig().connect.branding?.appName,
     onCatch: reportRouteError,
   };

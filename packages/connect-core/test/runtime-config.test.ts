@@ -319,4 +319,40 @@ describe("runtime-config loader", () => {
     ]);
     expect(config.connect.drives?.preserveStrategy).toBe("preserve-all");
   });
+
+  describe("the plugins' UI", () => {
+    const plugins = () =>
+      Promise.resolve({
+        "@acme/chrome": {
+          create: () => ({ name: "chrome" }) as never,
+          ui: () => Promise.resolve({ commonEditors: true }),
+        },
+      });
+
+    it("loads every plugin's UI without a composition", async () => {
+      stubFetch({ schemaVersion: 2, packages: [], connect: {} });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { getConnectPluginUi } =
+        await import("../src/plugins/plugin-ui.js");
+      await loadRuntimeConfig({ plugins });
+      expect(getConnectPluginUi().commonEditors).toBe(true);
+    });
+
+    it("loads only the composition's plugins' UI", async () => {
+      // The composition's runtime flag reads the URL.
+      vi.stubGlobal("window", { location: { search: "" } });
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: { composition: [] },
+      });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { getConnectPluginUi } =
+        await import("../src/plugins/plugin-ui.js");
+      await loadRuntimeConfig({ plugins });
+      expect(getConnectPluginUi().commonEditors).toBe(false);
+    });
+  });
 });

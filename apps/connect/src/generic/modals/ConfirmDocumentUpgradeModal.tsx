@@ -9,7 +9,7 @@ import {
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { childLogger } from "document-model";
-import { toast } from "../../../services/toast.js";
+import { toast } from "@powerhousedao/connect/services";
 
 const logger = childLogger(["ConfirmDocumentUpgradeModal"]);
 

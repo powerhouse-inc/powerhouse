@@ -57,6 +57,7 @@ export {
   CoreNotFound,
   CoreError,
   coreView,
+  isCoreView,
   DrivePending,
 } from "./route-components.js";
 export type { DocumentViewProps, DriveViewProps } from "./route-components.js";

@@ -30,9 +30,3 @@ export function isPluginActive(module: string): boolean {
   const active = getActivePluginModules();
   return active === null ? true : active.has(module);
 }
-
-/** Hook form; the composition is fixed for the page's lifetime, so this is a
- * plain synchronous read (no subscription needed). */
-export function useIsPluginActive(module: string): boolean {
-  return isPluginActive(module);
-}

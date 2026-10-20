@@ -4,10 +4,16 @@ import type { AnyRoute } from "@tanstack/react-router";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { prerender } from "react-dom/static";
 import {
+  getConnectPluginUi,
+  loadConnectPluginUi,
+  registerConnectPlugins,
+  resetConnectPluginUi,
+} from "@powerhousedao/connect-core/plugins";
+import {
   getRuntimeConfig,
+  loadRuntimeConfig,
   primeRuntimeConfig,
 } from "@powerhousedao/connect-core/runtime-config";
-import { loadRuntimeConfig } from "../load-runtime-config.js";
 import type { AppShellKind } from "./app-shell.js";
 import { APP_NAME_TOKEN, appShell, shellMarkup } from "./app-shell.js";
 import { shellCss } from "./shell-css.js";
@@ -18,7 +24,7 @@ export type { AppShellKind };
 
 // The config file is read at runtime; the shell renders Connect's defaults.
 // The loader fetches only in a browser, so one is stood in for the read.
-async function loadDefaultConfig(variant: ShellVariant) {
+async function readDefaultConfig() {
   const global = globalThis as { window?: unknown };
   const fetch = globalThis.fetch;
   global.window = globalThis;
@@ -30,15 +36,40 @@ async function loadDefaultConfig(variant: ShellVariant) {
     globalThis.fetch = fetch;
     delete global.window;
   }
-  // Core's shell is the one for a composition without the generic plugin.
-  const config = getRuntimeConfig();
+  return getRuntimeConfig();
+}
+
+let defaultConfig: ReturnType<typeof getRuntimeConfig> | undefined;
+
+async function loadDefaultConfig(variant: ShellVariant) {
+  // Read once: a later read would return the previous variant's primed config.
+  defaultConfig ??= await readDefaultConfig();
+  // Core's shell is the one for a composition without a plugin that has a shell.
   primeRuntimeConfig({
-    ...config,
+    ...defaultConfig,
     connect: {
-      ...config.connect,
+      ...defaultConfig.connect,
       composition: variant === "core" ? [] : undefined,
     },
   });
+  // After the stand-in window: the plugins' UI modules read the real one.
+  registerConnectPlugins(connectPlugins);
+  const plugin = (await shellPlugins())[variant];
+  await loadConnectPluginUi(plugin ? [{ module: plugin }] : []);
+}
+
+const connectPlugins = () =>
+  import("../plugins/index.js").then((m) => m.connectPlugins);
+
+/** Each prerendered shell's plugin, whose presence in a composition picks it; core's has none. */
+export async function shellPlugins(): Promise<
+  Partial<Record<ShellVariant, string>>
+> {
+  return Object.fromEntries(
+    Object.entries(await connectPlugins()).flatMap(([module, definition]) =>
+      definition.shell ? [[definition.shell, module]] : [],
+    ),
+  );
 }
 
 /** `generic`: Connect's chrome. `core`: core's views, for a composition without the generic plugin. */
@@ -61,6 +92,8 @@ export async function renderShell(
   ]);
   // No reactor and no drives, as the app is until the reactor is up.
   const store = createPHStore();
+  // A server router reuses the tree processed for the last variant; plugins' routes change it.
+  delete (globalThis as { __TSR_CACHE__?: unknown }).__TSR_CACHE__;
   const connectRouter = routerModule.createConnectRouter({
     routeTree,
     store,
@@ -70,6 +103,7 @@ export async function renderShell(
     appName: APP_NAME_TOKEN,
     // A project's layout shows its pendingComponent in place of the page.
     shell: kind === "project",
+    pluginUi: getConnectPluginUi(),
   });
   routerModule.bindConnectRouter(connectRouter, store);
   await connectRouter.router.load();
@@ -97,6 +131,8 @@ export async function renderShell(
       },
     },
   );
+  // The next variant renders the tree with its own plugins' UI.
+  resetConnectPluginUi(routeTree as AnyRoute);
   // A boundary that errored renders its fallback, which is not the shell.
   if (errors.length) {
     throw new AggregateError(errors, "The app shell failed to prerender");

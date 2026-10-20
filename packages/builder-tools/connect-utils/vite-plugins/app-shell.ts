@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import type { Alias, Plugin, ResolvedConfig } from "vite";
 import { createServer } from "vite";
 import { resolvePackage } from "../helpers.js";
@@ -20,8 +20,11 @@ export type AppShellVariant = "generic" | "core";
 
 export type AppShells = Partial<Record<AppShellVariant, AppShell>>;
 
-/** The plugin whose presence in a composition picks Connect's chrome. */
-export const GENERIC_PLUGIN_MODULE = "@powerhousedao/connect/plugins/generic";
+/** Each plugin specifier Connect ships a shell for, to the variant it picks. */
+export type ShellPlugins = Record<string, AppShellVariant>;
+
+/** In Connect's dist, and copied to a project's: the plugins that pick a shell. */
+export const SHELL_PLUGINS_FILE = "shell-plugins.json";
 
 /** In a project's dist: every variant, for a server that swaps the shell to the served composition. */
 export const APP_SHELLS_FILE = "app-shells.json";
@@ -31,24 +34,23 @@ const SHELL_FILES: Record<AppShellVariant, string> = {
   core: "shell-core",
 };
 
-/** Core's shell for a declared composition without the generic plugin; no composition is classic. */
+/** The shell of the composition's first plugin that has one, else core's; no composition is classic.
+ * Without `plugins` (an older Connect): core for a composition, generic for classic. */
 export function appShellVariant(
   composition: readonly { module: string }[] | null | undefined,
+  plugins: ShellPlugins | undefined,
 ): AppShellVariant {
-  if (!composition) return "generic";
-  return composition.some((entry) => entry.module === GENERIC_PLUGIN_MODULE)
-    ? "generic"
-    : "core";
+  if (!plugins) return composition ? "core" : "generic";
+  if (!composition) return Object.values(plugins)[0] ?? "core";
+  for (const { module } of composition) {
+    if (Object.hasOwn(plugins, module)) return plugins[module];
+  }
+  return "core";
 }
 
-/** The shell Connect's build prerendered, if the installed Connect ships one. */
-export function readAppShell(
-  projectRoot: string,
-  variant: AppShellVariant = "generic",
-): AppShell | undefined {
-  let distDir: string;
+function connectDistDir(projectRoot: string): string | undefined {
   try {
-    distDir = join(
+    return join(
       dirname(
         resolvePackage("@powerhousedao/connect/package.json", projectRoot),
       ),
@@ -57,6 +59,44 @@ export function readAppShell(
   } catch {
     return undefined;
   }
+}
+
+/** The plugins' shell manifest in `dir`, if there is a valid one. */
+export function readShellPluginsIn(dir: string): ShellPlugins | undefined {
+  const file = join(dir, SHELL_PLUGINS_FILE);
+  if (!existsSync(file)) return undefined;
+  try {
+    const manifest = JSON.parse(readFileSync(file, "utf8")) as Record<
+      string,
+      unknown
+    > | null;
+    if (!manifest || typeof manifest !== "object") return undefined;
+    const plugins: ShellPlugins = {};
+    for (const [module, variant] of Object.entries(manifest)) {
+      if (variant === "generic" || variant === "core")
+        plugins[module] = variant;
+    }
+    return plugins;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The shell manifest of the installed Connect, if it ships one. */
+export function readShellPlugins(
+  projectRoot: string,
+): ShellPlugins | undefined {
+  const distDir = connectDistDir(projectRoot);
+  return distDir ? readShellPluginsIn(distDir) : undefined;
+}
+
+/** The shell Connect's build prerendered, if the installed Connect ships one. */
+export function readAppShell(
+  projectRoot: string,
+  variant: AppShellVariant = "generic",
+): AppShell | undefined {
+  const distDir = connectDistDir(projectRoot);
+  if (!distDir) return undefined;
   const body = join(distDir, `${SHELL_FILES[variant]}.html`);
   const head = join(distDir, `${SHELL_FILES[variant]}-head.html`);
   if (!existsSync(body) || !existsSync(head)) return undefined;
@@ -200,7 +240,12 @@ export type ConnectAppShellOptions = {
   appName?: string;
   /** With the project's routes: the aliases that point Connect at its tree. */
   routeAliases?: Alias[];
+  /** The project's routes folder; dev renders the shell again when it changes. */
+  routesDir?: string;
 };
+
+// The first page waits this long for the project's shell; later ones have it.
+const DEV_SHELL_WAIT_MS = 10_000;
 
 type ShellRenderer = {
   renderProjectShells: (stylesheet: string) => Promise<AppShells>;
@@ -242,13 +287,20 @@ const sourceText = (source: string | Uint8Array) =>
   typeof source === "string" ? source : new TextDecoder().decode(source);
 
 /** Build: the composition's shell in #root and every variant in the dist, from
- * the project's routes when it has them. Dev: core's shell for a core composition. */
+ * the project's routes when it has them. Dev: the shell from the project's routes
+ * when it has them, else core's for a core composition. */
 export function connectAppShellPlugin(
   projectRoot: string,
-  { composition, appName, routeAliases }: ConnectAppShellOptions = {},
+  {
+    composition,
+    appName,
+    routeAliases,
+    routesDir,
+  }: ConnectAppShellOptions = {},
 ): Plugin {
-  const variant = appShellVariant(composition);
+  let variant: AppShellVariant = "generic";
   let shells: AppShells = {};
+  let shellPlugins: ShellPlugins | undefined;
   let base = "/";
   let isBuild = true;
   let config: ResolvedConfig | undefined;
@@ -258,19 +310,60 @@ export function connectAppShellPlugin(
     if (fromRoutes()) return undefined;
     return isBuild || variant === "core" ? shells[variant] : undefined;
   };
+  // Dev with routes: the project's shells, rendered at start and on route edits.
+  let devShells: Promise<AppShells> | undefined;
+  let devRender: ReturnType<typeof setTimeout> | undefined;
+  const renderDevShells = () => {
+    if (!config || !routeAliases) return;
+    const logger = config.logger;
+    devShells = renderProjectAppShells(projectRoot, config, routeAliases).catch(
+      (error: unknown) => {
+        logger.warn(
+          `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
+        );
+        return {};
+      },
+    );
+  };
+  const devShell = async () => {
+    if (!devShells) return undefined;
+    const wait = new Promise<undefined>((resolve) =>
+      setTimeout(resolve, DEV_SHELL_WAIT_MS),
+    );
+    return (await Promise.race([devShells, wait]))?.[variant];
+  };
   return {
     name: "ph-connect-app-shell",
+    configureServer(server) {
+      if (!routeAliases) return;
+      renderDevShells();
+      const stylesheet = join(projectRoot, "style.css");
+      const rerender = (file: string) => {
+        const changed =
+          file === stylesheet ||
+          (!!routesDir && file.startsWith(`${routesDir}${sep}`));
+        if (!changed) return;
+        clearTimeout(devRender);
+        devRender = setTimeout(renderDevShells, 300);
+      };
+      server.watcher.on("change", rerender);
+      server.watcher.on("add", rerender);
+      server.watcher.on("unlink", rerender);
+    },
     configResolved(resolved) {
       config = resolved;
       base = resolved.base;
       isBuild = resolved.command === "build";
       shells = readAppShells(projectRoot);
+      shellPlugins = readShellPlugins(projectRoot);
+      variant = appShellVariant(composition, shellPlugins);
     },
     transformIndexHtml: {
       // After Vite injects the built CSS links.
       order: "post",
-      handler: (html) => {
-        const current = shell();
+      handler: async (html) => {
+        // Never Connect's prebuilt shell for a project with its own layout.
+        const current = !isBuild && routeAliases ? await devShell() : shell();
         // Dev keeps blocking CSS for HMR.
         return current
           ? injectAppShell(html, current, base, {
@@ -308,6 +401,13 @@ export function connectAppShellPlugin(
           fileName: APP_SHELLS_FILE,
           source: JSON.stringify(shells),
         });
+        if (shellPlugins) {
+          this.emitFile({
+            type: "asset",
+            fileName: SHELL_PLUGINS_FILE,
+            source: JSON.stringify(shellPlugins),
+          });
+        }
       },
     },
   };

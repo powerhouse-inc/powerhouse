@@ -46,6 +46,11 @@
       "types": "./dist/layout.d.ts",
       "import": "./dist/layout.js"
     },
+    "./generic": {
+      "source": "./src/generic/index.ts",
+      "types": "./dist/generic.d.ts",
+      "import": "./dist/generic.js"
+    },
     "./route-tree": {
       "source": "./src/route-tree.ts",
       "types": "./dist/route-tree.d.ts",

@@ -28,7 +28,8 @@ export function registerConnectPlugins(
   else Object.assign(registry.plugins, plugins);
 }
 
-async function knownPlugins(): Promise<PluginDefinitions> {
+/** Every plugin module made known, its loaders run. */
+export async function knownPlugins(): Promise<PluginDefinitions> {
   const registry = getConnectRegistry();
   const pending = registry.pluginLoaders;
   registry.pluginLoaders = [];

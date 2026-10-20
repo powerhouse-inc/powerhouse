@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,17 +14,23 @@ import {
   appShellVariant,
   appShellVariantOf,
   connectAppShellPlugin,
-  GENERIC_PLUGIN_MODULE,
   injectAppShell,
+  readShellPlugins,
+  SHELL_PLUGINS_FILE,
   swapAppShell,
   withShellAppName,
   type AppShells,
+  type ShellPlugins,
 } from "./app-shell.js";
 
 const shell = {
   body: `<div data-ph-shell style="display:contents"><div class="h-screen"></div></div>`,
   head: `<style data-ph-shell>.h-screen{height:100vh}</style>`,
 };
+
+// A plugin Connect ships a shell for, as its manifest declares it.
+const SHELL_PLUGIN = "@acme/connect-shell/plugin";
+const manifest: ShellPlugins = { [SHELL_PLUGIN]: "generic" };
 
 const NAME = "<!--ph-shell:app-name-->Connect<!--/ph-shell:app-name-->";
 
@@ -80,14 +87,37 @@ const core = {
 };
 
 describe("the shell variants", () => {
-  it("picks core's only for a declared composition without the generic plugin", () => {
-    expect(appShellVariant(undefined)).toBe("generic");
-    expect(appShellVariant(null)).toBe("generic");
-    expect(appShellVariant([{ module: GENERIC_PLUGIN_MODULE }])).toBe(
+  it("picks the shell of the composition's first plugin that has one, else core's", () => {
+    expect(appShellVariant([{ module: SHELL_PLUGIN }], manifest)).toBe(
       "generic",
     );
-    expect(appShellVariant([])).toBe("core");
-    expect(appShellVariant([{ module: "./plugins/mine.js" }])).toBe("core");
+    expect(
+      appShellVariant(
+        [{ module: "./plugins/mine.js" }, { module: SHELL_PLUGIN }],
+        manifest,
+      ),
+    ).toBe("generic");
+    expect(appShellVariant([], manifest)).toBe("core");
+    expect(appShellVariant([{ module: "./plugins/mine.js" }], manifest)).toBe(
+      "core",
+    );
+    expect(appShellVariant([{ module: "constructor" }], manifest)).toBe("core");
+    const both: ShellPlugins = { "./a.js": "core", [SHELL_PLUGIN]: "generic" };
+    expect(
+      appShellVariant([{ module: SHELL_PLUGIN }, { module: "./a.js" }], both),
+    ).toBe("generic");
+  });
+
+  it("picks any manifest plugin's shell for no composition, as every built-in is active", () => {
+    expect(appShellVariant(undefined, manifest)).toBe("generic");
+    expect(appShellVariant(null, manifest)).toBe("generic");
+    expect(appShellVariant(undefined, {})).toBe("core");
+  });
+
+  it("without a manifest, picks core for a composition and generic for none", () => {
+    expect(appShellVariant(undefined, undefined)).toBe("generic");
+    expect(appShellVariant([{ module: SHELL_PLUGIN }], undefined)).toBe("core");
+    expect(appShellVariant([], undefined)).toBe("core");
   });
 
   it("swaps one variant for the other, rebased, and back", () => {
@@ -125,6 +155,10 @@ beforeAll(() => {
   writeFileSync(join(connect, "dist/shell-core.html"), core.body);
   writeFileSync(join(connect, "dist/shell-core-head.html"), core.head);
   writeFileSync(
+    join(connect, "dist", SHELL_PLUGINS_FILE),
+    JSON.stringify(manifest),
+  );
+  writeFileSync(
     join(root, "index.html"),
     `<!doctype html><html><head></head><body><div id="root"></div><script type="module" src="/main.js"></script></body></html>`,
   );
@@ -148,6 +182,11 @@ async function buildWith(composition?: { module: string }[], appName?: string) {
     shells: JSON.parse(
       readFileSync(join(outDir, APP_SHELLS_FILE), "utf8"),
     ) as AppShells,
+    plugins: existsSync(join(outDir, SHELL_PLUGINS_FILE))
+      ? (JSON.parse(
+          readFileSync(join(outDir, SHELL_PLUGINS_FILE), "utf8"),
+        ) as ShellPlugins)
+      : undefined,
   };
 }
 
@@ -174,13 +213,35 @@ describe("connectAppShellPlugin", () => {
     expect(appShellVariantOf(classic.html)).toBe("generic");
     expect(classic.shells).toEqual({ generic, core });
 
-    const withGeneric = await buildWith([{ module: GENERIC_PLUGIN_MODULE }]);
+    expect(classic.plugins).toEqual(manifest);
+
+    const withGeneric = await buildWith([{ module: SHELL_PLUGIN }]);
     expect(appShellVariantOf(withGeneric.html)).toBe("generic");
 
     const coreOnly = await buildWith([]);
     expect(appShellVariantOf(coreOnly.html)).toBe("core");
     expect(coreOnly.html).toContain("<header>");
     expect(coreOnly.html).not.toContain("sidebar");
+  });
+
+  it("builds without the manifest of an older Connect: core for a composition, generic for none", async () => {
+    const file = join(
+      root,
+      "node_modules/@powerhousedao/connect/dist",
+      SHELL_PLUGINS_FILE,
+    );
+    rmSync(file);
+    try {
+      expect(readShellPlugins(root)).toBeUndefined();
+      const classic = await buildWith();
+      expect(appShellVariantOf(classic.html)).toBe("generic");
+      expect(classic.plugins).toBeUndefined();
+      const declared = await buildWith([{ module: SHELL_PLUGIN }]);
+      expect(appShellVariantOf(declared.html)).toBe("core");
+    } finally {
+      writeFileSync(file, JSON.stringify(manifest));
+    }
+    expect(readShellPlugins(root)).toEqual(manifest);
   });
 
   it("injects core's shell in dev for a core-only composition, and none otherwise", async () => {
@@ -190,7 +251,7 @@ describe("connectAppShellPlugin", () => {
 
     expect(appShellVariantOf(await devIndex())).toBeUndefined();
     expect(
-      appShellVariantOf(await devIndex([{ module: GENERIC_PLUGIN_MODULE }])),
+      appShellVariantOf(await devIndex([{ module: SHELL_PLUGIN }])),
     ).toBeUndefined();
   });
 
@@ -207,7 +268,7 @@ describe("connectAppShellPlugin", () => {
     );
   });
 
-  it("renders a project's shells from its routes and stylesheet, in build only", async () => {
+  it("renders a project's shells from its routes and stylesheet, in build and dev", async () => {
     // Connect's renderer: each variant's nav, and the stylesheet it was given.
     const connect = join(root, "node_modules/@powerhousedao/connect");
     writeFileSync(
@@ -257,14 +318,18 @@ describe("connectAppShellPlugin", () => {
         root,
         logLevel: "silent",
         server: { middlewareMode: true, ws: false },
-        plugins: [connectAppShellPlugin(root, { routeAliases })],
+        plugins: [
+          connectAppShellPlugin(root, { composition: [], routeAliases }),
+        ],
       });
       try {
+        // The project's core shell, never Connect's prebuilt one.
         const dev = await server.transformIndexHtml(
           "/",
           readFileSync(join(root, "index.html"), "utf8"),
         );
-        expect(dev).not.toContain("acme");
+        expect(appShellVariantOf(dev)).toBe("core");
+        expect(dev).toContain(`<nav class="acme">`);
       } finally {
         await server.close();
       }

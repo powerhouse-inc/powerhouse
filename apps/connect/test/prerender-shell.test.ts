@@ -19,6 +19,24 @@ beforeAll(() => {
 }, 120_000);
 
 describe("the prerendered shells", () => {
+  it("maps each plugin that picks a shell to it, in a manifest", () => {
+    const manifest = JSON.parse(dist("shell-plugins.json")) as Record<
+      string,
+      string
+    >;
+    const entries = Object.entries(manifest);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [module, variant] of entries) {
+      expect(module).toBeTruthy();
+      // Each shell the manifest names was rendered.
+      expect(["generic", "core"]).toContain(variant);
+      expect(
+        dist(variant === "core" ? "shell-core.html" : "shell.html"),
+      ).toContain(`data-ph-shell="${variant}"`);
+    }
+    expect(Object.values(manifest)).toContain("generic");
+  });
+
   it("emits Connect's chrome as the generic variant", () => {
     const body = dist("shell.html");
     expect(body.startsWith(`<div data-ph-shell="generic" inert`)).toBe(true);

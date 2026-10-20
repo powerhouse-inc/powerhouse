@@ -7,7 +7,7 @@ import {
   useUser,
 } from "@powerhousedao/reactor-browser";
 import React, { useLayoutEffect, useMemo } from "react";
-import { useRenownLoginProps } from "../../../hooks/use-renown-login.js";
+import { useRenownLoginProps } from "../hooks/use-renown-login.js";
 
 // The single login surface, opened via showPHModal({ type: "login" }). Matches
 // the other modals' chrome (title + close, rounded-2xl, p-6).

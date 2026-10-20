@@ -40,7 +40,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useUser: () => mocks.user,
 }));
 
-vi.mock("../../../hooks/use-renown-login.js", () => ({
+vi.mock("../hooks/use-renown-login.js", () => ({
   useOpenRenownLogin: () => mocks.openLogin,
 }));
 

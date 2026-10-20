@@ -76,9 +76,21 @@ export function DrivePending() {
 // Core's views load only when a page shows one.
 const views = () => import("@powerhousedao/connect-core/views");
 
+const CORE_VIEW = Symbol.for("@powerhousedao/connect-core/core-view");
+
 /** One of core's views, loaded with the route that shows it. */
 export function coreView(name: keyof Awaited<ReturnType<typeof views>>) {
-  return lazyRouteComponent(views, name) as RouteComponent;
+  return Object.assign(lazyRouteComponent(views, name), {
+    [CORE_VIEW]: true,
+  }) as RouteComponent;
+}
+
+/** Whether a route's component is one of core's views, which a plugin's UI replaces. */
+export function isCoreView(component: unknown) {
+  return (
+    typeof component === "function" &&
+    (component as { [CORE_VIEW]?: true })[CORE_VIEW] === true
+  );
 }
 
 const NotFoundPage = coreView("NotFoundPage");

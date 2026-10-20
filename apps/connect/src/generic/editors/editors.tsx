@@ -1,5 +1,5 @@
 import { EditorLoader } from "./editor-loader.js";
-import { useUndoRedoShortcuts } from "../hooks/useUndoRedoShortcuts.js";
+import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import {
@@ -19,7 +19,10 @@ import {
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
 import { createElement, Suspense, useEffect, useState } from "react";
-import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
+import {
+  CenteredErrorMessage,
+  ErrorBoundary,
+} from "@powerhousedao/connect/components/shared";
 import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
 import { GenericRevisionHistory } from "./revision-history-view.js";
 

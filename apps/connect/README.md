@@ -115,11 +115,11 @@ export const Route = createFileRoute("/_app/focus")({
 });
 ```
 
-A project's `_app.tsx` replaces Connect's layout: Connect's core routes and the project's `_app/` routes then render inside it. `@powerhousedao/connect/layout` exports the parts to compose one: `AppLayout` (the default, with a `sidebar` prop), `ConnectSidebar` (with `extraItems` and `collapsed`), `SidebarDriveItems`, `SidebarNavItems`, `SidebarItem`, `useNavRoutes` and `useSidebarMode`.
+A project's `_app.tsx` replaces Connect's layout: Connect's core routes and the project's `_app/` routes then render inside it. `@powerhousedao/connect/layout` exports core's parts to compose one (`ContentOutlet`, `SidebarItem`, `useNavRoutes`, `useSidebarMode`), and `@powerhousedao/connect/generic` adds the generic plugin's: `AppLayout` (the default, with a `sidebar` prop), `ConnectSidebar` (with `extraItems` and `collapsed`), `SidebarDriveItems` and `SidebarNavItems`. Importing the generic ones loads the generic UI even without the plugin.
 
 ```tsx
 // hosts/connect/routes/_app.tsx
-import { AppLayout, ConnectSidebar, SidebarItem } from "@powerhousedao/connect/layout";
+import { AppLayout, ConnectSidebar, SidebarItem } from "@powerhousedao/connect/generic";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({

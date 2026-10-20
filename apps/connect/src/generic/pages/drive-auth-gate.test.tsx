@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type * as UseDriveAuthGateModule from "../components/use-drive-auth-gate.js";
+import type * as UseDriveAuthGateModule from "./use-drive-auth-gate.js";
 
 // Controls useDriveAuthGate's return between tests.
 const mockGate = vi.hoisted(() => ({
@@ -26,7 +26,7 @@ const mockDrives = vi.hoisted(() => ({
 
 // Only the gate decision is stubbed; `useVisibleDrives` and the hidden-drive
 // store stay real so the home screen filters for real.
-vi.mock("../components/use-drive-auth-gate.js", async (importOriginal) => ({
+vi.mock("./use-drive-auth-gate.js", async (importOriginal) => ({
   ...(await importOriginal<typeof UseDriveAuthGateModule>()),
   useDriveAuthGate: () => mockGate,
 }));
@@ -47,13 +47,15 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
   HomeScreenItem: ({ title }: { title: string }) => <div>{title}</div>,
 }));
 
-vi.mock("../components/app-container.js", () => ({
+vi.mock("../editors/app-container.js", () => ({
   AppContainer: () => <div data-testid="app-container" />,
 }));
-vi.mock("../components/document-editor-container.js", () => ({
+vi.mock("../editors/document-editor-container.js", () => ({
   DocumentEditorContainer: () => null,
 }));
-vi.mock("../components/drive-icon.js", () => ({ DriveIcon: () => null }));
+vi.mock("@powerhousedao/connect/components/shared", () => ({
+  DriveIcon: () => null,
+}));
 
 vi.mock("@powerhousedao/connect/config", () => ({
   defaultPHAppConfig: {},
@@ -94,7 +96,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useSelectedFolder: () => undefined,
 }));
 
-import { DriveLayout, Home } from "../pages/content.js";
+import { DriveLayout, Home } from "./content.js";
 
 // Home at `/` and the drive layout at `/d`, as Connect's routes render them.
 async function renderContent(path = "/") {
@@ -120,7 +122,7 @@ async function renderContent(path = "/") {
 import {
   clearHiddenDrives,
   hideDriveForSession,
-} from "../components/use-drive-auth-gate.js";
+} from "./use-drive-auth-gate.js";
 
 describe("Drive auth gate wiring", () => {
   beforeEach(() => {

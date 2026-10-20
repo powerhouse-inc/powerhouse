@@ -1,12 +1,12 @@
 import { connectConfig } from "@powerhousedao/connect/config";
 import { lazyRouteComponent } from "@tanstack/react-router";
-import type * as SettingsModule from "../components/settings/index.js";
+import type * as SettingsModule from "./index.js";
 
 /** Whether the AI assistant is configured. */
 export const aiAssistantEnabled = () => connectConfig.aiAssistantEnabled;
 
 // Loaded with the settings page, not with the app; the router preloads it on intent.
-const settings = () => import("../components/settings/index.js");
+const settings = () => import("./index.js");
 
 /** Connect's settings page around the shown tab. */
 export const SettingsPage = lazyRouteComponent(settings, "SettingsPage");
