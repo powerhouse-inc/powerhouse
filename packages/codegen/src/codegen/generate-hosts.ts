@@ -10,8 +10,10 @@ import { writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  buildConfigJsonDeclaration,
   buildHostsTypesDts,
   buildOutputsFiles,
+  CONFIG_JSON_DECLARATION_FILE,
   declaredDependencies,
 } from "file-builders";
 import { formatSafe } from "utils";
@@ -67,19 +69,31 @@ async function writeOutputsFiles(
   ];
 }
 
-/** Writes `hosts/types.d.ts` from the project's declared dependencies. */
-export async function writeHostsTypesDts(projectRoot: string): Promise<void> {
+/** Writes the codegen-owned typing files from the project's declared
+ * dependencies: `hosts/types.d.ts` and `powerhouse.config.d.json.ts`.
+ * Returns the project-relative paths written. */
+export async function writeHostsTypesDts(
+  projectRoot: string,
+): Promise<string[]> {
   const pkgPath = join(projectRoot, "package.json");
   const pkg: unknown = existsSync(pkgPath)
     ? JSON.parse(readFileSync(pkgPath, "utf8"))
     : {};
+  const dependencies = declaredDependencies(pkg);
   await writeFileEnsuringDir(
     join(projectRoot, "hosts", "types.d.ts"),
-    await formatSafe(
-      buildHostsTypesDts(declaredDependencies(pkg)),
-      "typescript",
-    ),
+    await formatSafe(buildHostsTypesDts(dependencies), "typescript"),
   );
+  const written = ["hosts/types.d.ts"];
+  const configDeclaration = buildConfigJsonDeclaration(dependencies);
+  if (configDeclaration) {
+    await writeFileEnsuringDir(
+      join(projectRoot, CONFIG_JSON_DECLARATION_FILE),
+      configDeclaration,
+    );
+    written.push(CONFIG_JSON_DECLARATION_FILE);
+  }
+  return written;
 }
 
 /**
@@ -95,8 +109,7 @@ export async function generateHostsFiles(
   const result: GenerateHostsResult = { written: [], skipped: [], failed: [] };
   if (probe.kind !== "present") return result;
 
-  await writeHostsTypesDts(projectRoot);
-  result.written.push("hosts/types.d.ts");
+  result.written.push(...(await writeHostsTypesDts(projectRoot)));
 
   let pending = [...probe.hosts];
   while (pending.length > 0) {

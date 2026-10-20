@@ -2,6 +2,7 @@ import type { HostOutputsDescription } from "@powerhousedao/host-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  buildConfigJsonDeclaration,
   buildHostsTypesDts,
   declaredDependencies,
   withHostsTscScript,
@@ -125,6 +126,13 @@ describe("host typing files", () => {
     expect(dts).not.toContain("@powerhousedao/clint");
     expect(dts).toContain("type PHHost = HostDefinitionByRunner;");
     expect(buildHostsTypesDts(new Set())).not.toContain("PHHost =");
+  });
+
+  it("types powerhouse.config.json imports only when shared is declared", () => {
+    expect(
+      buildConfigJsonDeclaration(new Set(["@powerhousedao/shared"])),
+    ).toContain('import("@powerhousedao/shared/clis").PowerhouseConfig');
+    expect(buildConfigJsonDeclaration(new Set())).toBeUndefined();
   });
 
   it("appends tsc -p hosts to the tsc script once", () => {

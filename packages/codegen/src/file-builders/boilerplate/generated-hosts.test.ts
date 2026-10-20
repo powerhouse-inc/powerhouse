@@ -305,6 +305,33 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
 
     // the scaffold as generated type-checks
     expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
+    expect(
+      readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
+    ).toContain("PowerhouseConfig");
+
+    // ...and still does with every scaffold host annotated
+    // `@satisfies {PHHost}` (the T3 template edit the integrator applies;
+    // injected here so the template content stays untouched)
+    for (const host of [
+      "connect",
+      "switchboard",
+      "vetra",
+      "desktop",
+      "assistant",
+      "cli",
+    ]) {
+      const file = join(dir, "hosts", host, "host.js");
+      const source = readFileSync(file, "utf-8");
+      expect(source).toMatch(/^export default \{/m);
+      writeFileSync(
+        file,
+        source.replace(
+          /^export default \{/m,
+          "/** @satisfies {PHHost} */\nexport default {",
+        ),
+      );
+    }
+    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
 
     // a typed host consuming the generated tokens checks clean...
     writeFixture(
