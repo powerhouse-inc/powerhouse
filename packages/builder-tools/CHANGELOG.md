@@ -1,3 +1,13 @@
+## 6.2.3-dev.66 (2026-10-20)
+
+### 🩹 Fixes
+
+- **builder-tools:** default the vendor prebuild to the app base ([#3252](https://github.com/powerhouse-inc/powerhouse/pull/3252))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.3-dev.65 (2026-10-20)
 
 ### 🩹 Fixes
