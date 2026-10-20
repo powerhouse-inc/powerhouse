@@ -32,6 +32,12 @@ export const SHARED_DEPS: readonly SharedDep[] = [
   // each package inlined a private copy anyway. It is the single biggest
   // dependency left in a minimal package.
   { specifier: "zod", package: "zod" },
+  // One core and one router: slots, routes and router context reach every package.
+  {
+    specifier: "@powerhousedao/connect-core",
+    package: "@powerhousedao/connect-core",
+  },
+  { specifier: "@tanstack/react-router", package: "@tanstack/react-router" },
 ];
 
 export const SHARED_DEP_SPECIFIERS: readonly string[] = SHARED_DEPS.map(

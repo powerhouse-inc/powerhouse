@@ -234,8 +234,9 @@
     },
     {
       "files": [
-        "apps/connect/src/router/**/*.{ts,tsx}",
-        "apps/connect/src/routes/**/*.{ts,tsx}",
+        "packages/connect-core/src/router/**/*.{ts,tsx}",
+        "packages/connect-core/src/routes/**/*.{ts,tsx}",
+        "apps/connect/src/components/settings-tabs.tsx",
         "apps/connect/src/components/drive-auth-gate.test.tsx"
       ],
       "jsPlugins": [
