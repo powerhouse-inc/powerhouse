@@ -74,37 +74,94 @@ export const OUTPUTS_FILE = "outputs.js";
 const GENERATE_HINT =
   "Run `ph generate hosts` to (re)generate hosts/<name>/outputs.js from the producer's runner outputsSchema and declared drives.";
 
-/** Blank out `//` and block comments, keeping string and template literals
- * (URLs contain `//`) and every newline, so line-anchored checks still see
- * the code's own lines. A JSDoc `import("…")` type is a comment, not code. */
-export function stripComments(source: string): string {
+/**
+ * One pass over JS source that blanks every comment and, with
+ * `literals: "blank"`, the CONTENTS of string literals and template-literal
+ * text (quotes, backticks and `${`/`}` kept). A template's `${…}` holes are
+ * code: they are scanned like the rest (strings, nested templates and braces
+ * inside them included). Every newline survives, so line-anchored checks and
+ * line numbers still match the original source. Regex literals are not
+ * recognised (host files are data; a regex is not one).
+ */
+function scanSource(source: string, literals: "keep" | "blank"): string {
+  const blank = (text: string) => text.replace(/[^\n]/g, " ");
+  const literal = (text: string) => (literals === "blank" ? blank(text) : text);
   let out = "";
   let i = 0;
+  // One entry per open `${` hole: the depth of `{` opened inside it.
+  const holes: number[] = [];
+  /** Template text from `i` (just after a backtick or a hole's `}`) up to
+   * and including its closing backtick, or up to and including the next
+   * `${` (pushing a hole). */
+  const templateText = (): void => {
+    let j = i;
+    while (j < source.length) {
+      const ch = source[j];
+      if (ch === "\\") {
+        j += 2;
+        continue;
+      }
+      if (ch === "`") break;
+      if (ch === "$" && source[j + 1] === "{") break;
+      j++;
+    }
+    out += literal(source.slice(i, Math.min(j, source.length)));
+    if (j >= source.length) {
+      i = source.length;
+    } else if (source[j] === "`") {
+      out += "`";
+      i = j + 1;
+    } else {
+      out += "${";
+      holes.push(0);
+      i = j + 2;
+    }
+  };
   while (i < source.length) {
     const ch = source[i];
     const next = source[i + 1];
     if (ch === "/" && next === "/") {
-      while (i < source.length && source[i] !== "\n") {
-        out += " ";
-        i++;
-      }
+      const end = source.indexOf("\n", i);
+      const stop = end === -1 ? source.length : end;
+      out += blank(source.slice(i, stop));
+      i = stop;
       continue;
     }
     if (ch === "/" && next === "*") {
       const end = source.indexOf("*/", i + 2);
       const stop = end === -1 ? source.length : end + 2;
-      out += source.slice(i, stop).replace(/[^\n]/g, " ");
+      out += blank(source.slice(i, stop));
       i = stop;
       continue;
     }
-    if (ch === '"' || ch === "'" || ch === "`") {
+    if (ch === '"' || ch === "'") {
+      // Up to the closing quote; an unterminated one stops at the newline.
       let j = i + 1;
-      while (j < source.length && source[j] !== ch) {
+      while (j < source.length && source[j] !== ch && source[j] !== "\n") {
         j += source[j] === "\\" ? 2 : 1;
       }
-      out += source.slice(i, j + 1);
-      i = j + 1;
+      const close = source[j] === ch ? ch : "";
+      out += ch + literal(source.slice(i + 1, Math.min(j, source.length)));
+      out += close;
+      i = close ? j + 1 : j;
       continue;
+    }
+    if (ch === "`") {
+      out += "`";
+      i++;
+      templateText();
+      continue;
+    }
+    if (holes.length > 0 && ch === "{") holes[holes.length - 1]++;
+    if (holes.length > 0 && ch === "}") {
+      if (holes[holes.length - 1] === 0) {
+        holes.pop();
+        out += "}";
+        i++;
+        templateText();
+        continue;
+      }
+      holes[holes.length - 1]--;
     }
     out += ch;
     i++;
@@ -112,16 +169,19 @@ export function stripComments(source: string): string {
   return out;
 }
 
-/** Blank out the contents of '…' and "…" string literals (quotes kept) in
- * already comment-stripped source, so a word inside a string (a URL, a
- * description) is not mistaken for code. Template literals are kept whole:
- * their `${…}` holes are code. */
-function blankQuotedStrings(source: string): string {
-  return source.replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, (literal) =>
-    literal.length <= 2
-      ? literal
-      : `${literal[0]}${" ".repeat(literal.length - 2)}${literal[0]}`,
-  );
+/** Blank out `//` and block comments, keeping string and template literals
+ * (URLs contain `//`) and every newline, so line-anchored checks still see
+ * the code's own lines. A JSDoc `import("…")` type is a comment, not code. */
+export function stripComments(source: string): string {
+  return scanSource(source, "keep");
+}
+
+/** Blank out comments and the contents of string literals and
+ * template-literal text, so a word inside a string (a URL, a description,
+ * an apostrophe in template text) is neither mistaken for code nor able to
+ * hide code. Template `${…}` holes are code and are kept. */
+function blankLiterals(source: string): string {
+  return scanSource(source, "blank");
 }
 
 // Not after `.`/identifier chars: `base.runner.process.args` is a property.
@@ -132,7 +192,7 @@ const PROCESS_ACCESS = /(?<![.\w$])process\s*(?:\?\.|\.|\[)/;
  * values go through `$env`, which resolves at start in the resolving
  * process. Comments are already stripped, so a mention there is fine. */
 function rejectProcessAccess(source: string, file: string): void {
-  const match = PROCESS_ACCESS.exec(blankQuotedStrings(source));
+  const match = PROCESS_ACCESS.exec(blankLiterals(source));
   if (!match) return;
   const line = source.slice(0, match.index).split("\n").length;
   throw new HostLoadError(

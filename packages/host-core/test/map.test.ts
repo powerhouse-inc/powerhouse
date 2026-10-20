@@ -33,7 +33,13 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
-import type { ItemToken, OutputToken } from "../src/tokens.js";
+import {
+  ref,
+  type ArrayMapToken,
+  type ItemToken,
+  type OutputToken,
+  type RecordMapToken,
+} from "../src/tokens.js";
 
 /** `$map` / `$item` / `$key` (typed-host-configs 3.3) over canned outputs. */
 
@@ -503,6 +509,112 @@ describe("$map errors (3.3)", () => {
   });
 });
 
+describe("declared validation: $map placement", () => {
+  const { declaredHostSchema, hostSchema } = defineHostSchemas(
+    (s) => s.reactorHostSchema,
+  );
+  const runner: RunnerModule = {
+    kind: "reactor",
+    run: () => Promise.resolve(undefined),
+    hostSchema,
+    declaredHostSchema,
+  };
+  // No outputsSchemaOf: the placement check needs no producer.
+  const declared = (reactor: Record<string, unknown>) => () =>
+    validateDeclaredHost(
+      runner,
+      "m",
+      { name: "x", runner: { module: "m" }, reactor },
+      "hosts/x/host.js",
+    );
+  const driveMap = (to: unknown, extra: Record<string, unknown> = {}) => ({
+    $map: { over: out("switchboard", ["drives"]), to, ...extra },
+  });
+
+  it("rejects a $map in a string field, naming its path", () => {
+    expect(
+      declared({
+        backends: {
+          sb: {
+            kind: "remote",
+            remote: { url: driveMap("x") },
+          },
+        },
+      }),
+    ).toThrow(
+      /hosts\/x\/host\.js failed validation[\s\S]*reactor\.backends\.sb\.remote\.url\.\$map: a \$map renders an array, but this field holds a string\. A \$map fills only a list field/,
+    );
+  });
+
+  it('rejects into: "record" in an array field', () => {
+    expect(
+      declared({
+        drives: driveMap({ slug: { $key: true } }, { into: "record" }),
+      }),
+    ).toThrow(
+      /reactor\.drives\.\$map: a \$map with into: "record" renders a record, but this field holds an array\. Drop into: "record"\./,
+    );
+  });
+
+  it("rejects a $map nested in a template where the element holds a string", () => {
+    expect(
+      declared({
+        drives: driveMap({
+          slug: { $key: true },
+          remote: { url: { $map: { over: { $item: ["urls"] }, to: "u" } } },
+        }),
+      }),
+    ).toThrow(
+      /reactor\.drives\.\$map\.to\.remote\.url\.\$map: a \$map renders an array, but this field holds a string\./,
+    );
+    expect(
+      declared({
+        drives: driveMap({
+          slug: { $key: true },
+          name: { $map: { over: { $item: ["names"] }, to: "n" } },
+        }),
+      }),
+    ).toThrow(/reactor\.drives\.\$map\.to\.name\.\$map: a \$map renders/);
+  });
+
+  it("accepts a $map where the field holds a list", () => {
+    expect(
+      declared({
+        drives: driveMap({ slug: { $key: true }, name: { $item: ["id"] } }),
+      }),
+    ).not.toThrow();
+  });
+
+  it("checks ref() fields too, and leaves fields of unknown shape to resolved validation", () => {
+    const schema = z.strictObject({
+      url: ref(z.url()).optional(),
+      list: ref(z.array(z.string())).optional(),
+      either: ref(z.union([z.string(), z.array(z.string())])).optional(),
+      byName: ref(z.record(z.string(), z.string())).optional(),
+    });
+    const map = (extra: Record<string, unknown> = {}) => ({
+      $map: { over: out("p", ["xs"]), to: { $key: true }, ...extra },
+    });
+    const urlIssue = schema.safeParse({ url: map() }).error?.issues;
+    expect(urlIssue).toEqual([
+      expect.objectContaining({
+        path: ["url", "$map"],
+        message: expect.stringContaining(
+          "this field holds a string",
+        ) as unknown,
+      }),
+    ]);
+    expect(schema.safeParse({ list: map() }).success).toBe(true);
+    expect(schema.safeParse({ either: map() }).success).toBe(true);
+    expect(schema.safeParse({ byName: map({ into: "record" }) }).success).toBe(
+      true,
+    );
+    expect(schema.safeParse({ byName: map() }).error?.issues[0]?.message).toBe(
+      'a $map renders an array, but this field holds a record. Add into: "record" (and map over a record).',
+    );
+  });
+});
+
 describe("$map review fixes", () => {
   it("declared: a catchall object and a tuple are collections", () => {
     const loose = z.strictObject({
@@ -725,6 +837,96 @@ describe("$map typing (tsc -p hosts positions)", () => {
       mapInString,
       optionalOutput,
     ]).toHaveLength(5);
+  });
+});
+
+describe("$map template typing: $key and optional slots", () => {
+  type DeclaredHost = z.input<typeof declaredHostSchemas.reactorHostSchema>;
+  type Listener = { name: string; port?: number };
+  // Branded overs, as outputs.d.ts types a nested collection ($item leaf).
+  const listeners: ItemToken<{ name: string }[]> = { $item: ["listeners"] };
+  const listenerList: OutputToken<{ name: string }[]> = out("sb", ["l"]);
+  const driveRecord: OutputToken<Record<string, { url: string }>> = out("sb", [
+    "drives",
+  ]);
+
+  it("types $key: true by the over: a number over an array, a string over a record", () => {
+    const numberKey: ArrayMapToken<Listener> = {
+      $map: { over: listenerList, to: { name: "x", port: { $key: true } } },
+    };
+    const stringKey: ArrayMapToken<Listener> = {
+      $map: { over: driveRecord, to: { name: { $key: true } } },
+    };
+    const arrayKeyInString: ArrayMapToken<Listener> = {
+      // @ts-expect-error -- an array map's $key is a number; name takes a string
+      $map: { over: listenerList, to: { name: { $key: true } } },
+    };
+    const recordKeyInNumber: ArrayMapToken<Listener> = {
+      // @ts-expect-error -- a record map's $key is a string; port takes a number
+      $map: { over: driveRecord, to: { name: "x", port: { $key: true } } },
+    };
+    // A hand-written over carries no brand: either key type may be meant.
+    const unbranded: ArrayMapToken<Listener> = {
+      $map: { over: out("sb", ["l"]), to: { name: { $key: true } } },
+    };
+    // A named outer key's type is not tracked.
+    const named: ArrayMapToken<Listener> = {
+      $map: { over: listenerList, to: { name: { $key: "outer" } } },
+    };
+    const recordInto: RecordMapToken<Listener> = {
+      $map: { over: driveRecord, to: { name: { $key: true } }, into: "record" },
+    };
+    expect([
+      numberKey,
+      stringKey,
+      arrayKeyInString,
+      recordKeyInNumber,
+      unbranded,
+      named,
+      recordInto,
+    ]).toHaveLength(7);
+  });
+
+  it("rejects an array map's $key in a drive slug (reactor.drives)", () => {
+    const host: DeclaredHost = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        // @ts-expect-error -- the over is an array: $key is a number, slug a string
+        drives: { $map: { over: listenerList, to: { slug: { $key: true } } } },
+      },
+    };
+    const nested: DeclaredHost = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        drives: {
+          $map: {
+            over: driveRecord,
+            as: "drive",
+            to: { slug: { $key: true }, name: { $key: "drive" } },
+          },
+        },
+      },
+    };
+    expect([host, nested, listeners]).toHaveLength(3);
+  });
+
+  it("lets a token that may produce undefined fill an optional slot", () => {
+    const maybeName: ItemToken<string | undefined> = { $item: ["name"] };
+    const host = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        drives: {
+          $map: {
+            over: driveRecord,
+            to: { slug: { $key: true }, name: maybeName },
+          },
+        },
+      },
+    } satisfies DeclaredHost;
+    expect(host.name).toBe("x");
   });
 });
 

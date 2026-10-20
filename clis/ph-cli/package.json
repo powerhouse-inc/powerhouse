@@ -44,7 +44,8 @@
     "postbuild": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "bun run ./src/cli.ts",
-    "cli": "node ./dist/cli.mjs"
+    "cli": "node ./dist/cli.mjs",
+    "emit-schemas": "tsx scripts/emit-runner-schemas.ts"
   },
   "keywords": [],
   "author": "",

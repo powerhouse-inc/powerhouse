@@ -18,6 +18,7 @@ import {
   resolveHostPlugins,
   runRecordOutputSource,
   type DeferredResolution,
+  type LoadedHost,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
@@ -29,6 +30,7 @@ import {
   proxyPluginConfigSchema,
   type ClintCompoundContext,
 } from "./proxy-plugin.js";
+import { awaitRunRecord } from "./member-records.js";
 import { quotedHost, removedKeyError } from "./removed-forms.js";
 import fs from "node:fs";
 import { createEventBus } from "../core/events.js";
@@ -252,6 +254,9 @@ declare global {
 // (switchboard prints "MCP server available at http://…", preview "Local:",
 // the agent "agent API … http://…").
 const DEFAULT_READINESS = "https?://|listening|ready";
+/** How long a member may take to print its readiness line, in ms; also how
+ * long clint then waits for its run record when something reads it. */
+const READINESS_TIMEOUT = 180_000;
 
 /** Resolve the project's ph-cli entry the same way host-core resolves runner
  * modules: from the PROJECT's dependency tree. */
@@ -287,7 +292,7 @@ function childServices(
             ),
           },
         ],
-        timeout: wrapper.config?.readiness?.timeout ?? 180_000,
+        timeout: wrapper.config?.readiness?.timeout ?? READINESS_TIMEOUT,
       },
     }),
   );
@@ -356,6 +361,44 @@ async function startShell(
     ...(config.startOrder ?? []).filter((n) => names.includes(n)),
     ...names.filter((n) => !(config.startOrder ?? []).includes(n)),
   ];
+  // Whose outputs are read, and by whom: the shell's deferred self fields,
+  // and sibling members' `$output` tokens (each member resolves its own
+  // tokens from its producers' run records as it starts).
+  const loaded = new Map<string, LoadedHost>();
+  for (const id of ordered) {
+    loaded.set(id, await loadHost(ctx.projectRoot, children[id].host));
+  }
+  const readers = new Map<string, string[]>();
+  const addReader = (id: string, reader: string) =>
+    readers.set(id, [...(readers.get(id) ?? []), reader]);
+  for (const deferred of pending.deferred) {
+    for (const id of deferred.members) addReader(id, deferred.path);
+  }
+  for (const reader of ordered) {
+    const refs = outputRefsOf(loaded.get(reader)?.host);
+    for (const id of ordered) {
+      if (id !== reader && refs.some((r) => r.host === children[id].host)) {
+        addReader(id, `member "${reader}"`);
+      }
+    }
+  }
+  const waitForRecord = async (id: string, memberHost: string) => {
+    const read = readers.get(id);
+    if (!read) return;
+    try {
+      await awaitRunRecord(ctx.projectRoot, projectName, host.name, {
+        id,
+        host: memberHost,
+        timeout: children[id].config?.readiness?.timeout ?? READINESS_TIMEOUT,
+        readers: read,
+        status: () => services.list(id).find((s) => s.serviceId === id)?.status,
+      });
+    } catch (error) {
+      if (lifecycle === "attached") await stopAll(services, names);
+      throw error;
+    }
+  };
+
   const memberHosts: Record<string, string> = {};
   for (const id of ordered) {
     // Re-attach checks, strongest first. (1) The member's OWN run record —
@@ -364,7 +407,8 @@ async function startShell(
     // service state file — weakest on Windows, where it records the cmd shim
     // pid, which dies on console teardown while the node grandchild survives.
     const wrapper = children[id];
-    const member = await loadHost(ctx.projectRoot, wrapper.host);
+    const member =
+      loaded.get(id) ?? (await loadHost(ctx.projectRoot, wrapper.host));
     memberHosts[id] = member.host.name;
     const record = probeRun(ctx.projectRoot, member.host.name, projectName);
     if (record.status === "live") {
@@ -390,6 +434,7 @@ async function startShell(
       .some((s) => s.status === "ready" || s.status === "starting");
     if (already) {
       console.log(`[${resolved.name}] ${id}: already running — re-attached`);
+      await waitForRecord(id, member.host.name);
       continue;
     }
     console.log(`[${resolved.name}] starting ${id}…`);
@@ -399,6 +444,9 @@ async function startShell(
     });
     const status = services.list(id).find((s) => s.serviceId === id);
     if (status) console.log(`  ${formatStatus(status)}`);
+    // Before anything reads its outputs (the next member, or the shell's
+    // own deferred fields below).
+    await waitForRecord(id, member.host.name);
   }
 
   // The deferred self fields (agent urls, proxy upstreams) name the

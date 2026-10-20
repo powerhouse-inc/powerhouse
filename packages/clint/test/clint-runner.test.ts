@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import * as runner from "../src/runners/clint-runner.js";
+import { awaitRunRecord } from "../src/runners/member-records.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -25,8 +26,20 @@ afterEach(() => {
 
 /** A hosts project with a fake ph-cli entry and fake member runners. With
  * `publish`, the fake member writes its v2 run record (as `ph run` does once
- * the member is ready) before printing its readiness line. */
-function makeProject(options: { publish?: boolean } = {}): {
+ * the member is ready) before printing its readiness line; with
+ * `publishAfter`, that many ms AFTER it (the cold-start race: `ph run`
+ * writes the record only once the runner's `ready` resolves).
+ * `readinessTimeout` sets the assistant child's readiness timeout. */
+function makeProject(
+  options: {
+    publish?: boolean;
+    publishAfter?: number;
+    readinessTimeout?: number;
+    /** Add a `web` member whose host reads the assistant's outputs; its
+     * fake process fails unless the assistant's record already exists. */
+    sibling?: boolean;
+  } = {},
+): {
   dir: string;
   sink: string;
 } {
@@ -58,16 +71,23 @@ function makeProject(options: { publish?: boolean } = {}): {
       endpoints: { openai: "http://127.0.0.1:4919/v1/" },
     },
   };
-  const publish = options.publish
-    ? `
-import { mkdirSync, writeFileSync } from "node:fs";
+  const writeRecord = `
 mkdirSync(".ph/run", { recursive: true });
 writeFileSync(".ph/run/cli-assistant.json", JSON.stringify({ ...${JSON.stringify(record)}, pid: process.pid }));
-`
-    : "";
+`;
+  // argv: node cli.mjs run <host>
   writeFileSync(
     path.join(phCliDir, "dist", "cli.mjs"),
-    `${publish}
+    `import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+const member = process.argv[3];
+if (member === "web" && !existsSync(".ph/run/cli-assistant.json")) {
+  console.error("web: the assistant has no run record yet");
+  process.exit(1);
+}
+if (member === "assistant") {
+${options.publish ? writeRecord : ""}
+${options.publishAfter === undefined ? "" : `setTimeout(() => {${writeRecord}}, ${options.publishAfter});`}
+}
 console.log("fake ph run", process.argv.slice(2).join(" "), "listening");
 setTimeout(() => {}, 30_000);
 `,
@@ -106,12 +126,28 @@ export async function build(host) {
     "assistant",
     `export default { name: "cli-assistant", runner: { module: "fake-runner", port: 4919 } };`,
   );
+  if (options.sibling) {
+    write(
+      "web",
+      `export default {
+        name: "cli-web",
+        runner: { module: "fake-runner" },
+        config: { api: { $output: { host: "assistant", path: ["origin"] } } },
+      };`,
+    );
+  }
   write(
     "cli",
     `export default {
       name: "cli",
       runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
-      children: { assistant: { host: "assistant" } },
+      children: {
+        assistant: { host: "assistant"${
+          options.readinessTimeout === undefined
+            ? ""
+            : `, config: { readiness: { timeout: ${options.readinessTimeout} } }`
+        } },${options.sibling ? '\n        web: { host: "web" },' : ""}
+      },
       // Resolved form: the declared host writes the assistant's
       // endpoints.openai output token; ph run substitutes the URL.
       config: { agents: { main: { url: "http://127.0.0.1:4919/v1/" } } },
@@ -184,11 +220,54 @@ describe("clint-runner (P5.4)", () => {
     }
   }, 60_000);
 
-  it("fails naming the path and the member when the member publishes no outputs", async () => {
-    const { dir } = makeProject();
-    await expect(runner.run(await declaredCli(dir), ctx(dir))).rejects.toThrow(
-      /hosts\/cli\/host\.js: config\.agents\.main\.url read the outputs of member "assistant", which is up but published no live run record/,
+  it("waits for a member that publishes its run record after its readiness line", async () => {
+    const { dir } = makeProject({
+      publishAfter: 1_500,
+      readinessTimeout: 20_000,
+    });
+    const handle = await runner.run(await declaredCli(dir), ctx(dir));
+    try {
+      expect(handle.outputs).toEqual({
+        agents: { main: "http://127.0.0.1:4919/v1" },
+      });
+    } finally {
+      await handle.shutdown();
+    }
+  }, 60_000);
+
+  it("starts a member that reads a sibling's outputs only once the sibling's run record is live", async () => {
+    const { dir } = makeProject({
+      publishAfter: 1_500,
+      readinessTimeout: 20_000,
+      sibling: true,
+    });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
+    const handle = await runner.run(host, ctx(dir));
+    try {
+      const web = handle.services.list("web")[0];
+      expect(web?.status === "ready" || web?.status === "starting").toBe(true);
+    } finally {
+      await handle.shutdown();
+    }
+  }, 60_000);
+
+  it("names the sibling reader when a member never publishes", async () => {
+    const { dir } = makeProject({ readinessTimeout: 1_000, sibling: true });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
+    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
+      /member "assistant" is up .* within 1000 ms .*; member "web" read its outputs\./,
     );
+  }, 60_000);
+
+  it("fails naming the member, its timeout and the reading path when the member never publishes", async () => {
+    const { dir } = makeProject({ readinessTimeout: 1_200 });
+    const started = Date.now();
+    await expect(runner.run(await declaredCli(dir), ctx(dir))).rejects.toThrow(
+      /hosts\/cli\/host\.js: member "assistant" is up \(its readiness line matched\) but published no live run record within 1200 ms \(children\.assistant\.config\.readiness\.timeout\) \(\.ph\/run\/cli-assistant\.json\); config\.agents\.main\.url read its outputs\./,
+    );
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1_200);
   }, 60_000);
 
   it("resolves its own $env tokens before any member starts", async () => {
@@ -216,4 +295,59 @@ describe("clint-runner (P5.4)", () => {
       await handle.shutdown();
     }
   }, 60_000);
+});
+
+describe("awaitRunRecord", () => {
+  const wait = (status?: () => string | undefined) => ({
+    id: "assistant",
+    host: "cli-assistant",
+    timeout: 5_000,
+    readers: ["config.agents.main.url"],
+    status,
+  });
+
+  it("ends early when the member's service failed", async () => {
+    const { dir } = makeProject();
+    const started = Date.now();
+    await expect(
+      awaitRunRecord(
+        dir,
+        "cli-lab",
+        "cli",
+        wait(() => "failed"),
+        20,
+      ),
+    ).rejects.toThrow(
+      /member "assistant" is up \(its readiness line matched\) but failed before publishing its live run record \(\.ph\/run\/cli-assistant\.json\)/,
+    );
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
+  it("waits past an earlier run's stale record for the live one", async () => {
+    const { dir } = makeProject();
+    const runDir = path.join(dir, ".ph", "run");
+    mkdirSync(runDir, { recursive: true });
+    const record = (pid: number) =>
+      JSON.stringify({
+        version: 2,
+        host: "cli-assistant",
+        projectName: "cli-lab",
+        kind: "reactor",
+        verb: "run",
+        startedAt: "2026-10-20T00:00:00.000Z",
+        pid,
+        outputs: {},
+      });
+    // A pid that is not running: an earlier run's record.
+    writeFileSync(path.join(runDir, "cli-assistant.json"), record(2 ** 22 - 1));
+    setTimeout(() => {
+      writeFileSync(
+        path.join(runDir, "cli-assistant.json"),
+        record(process.pid),
+      );
+    }, 300);
+    const started = Date.now();
+    await awaitRunRecord(dir, "cli-lab", "cli", wait(), 20);
+    expect(Date.now() - started).toBeGreaterThanOrEqual(250);
+  });
 });

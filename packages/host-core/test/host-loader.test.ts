@@ -252,4 +252,13 @@ describe("stripComments", () => {
     expect(out).toContain("`//`");
     expect(out).not.toMatch(/\bc\b|\bd\b|\be\b/);
   });
+
+  it("keeps nested template literals whole and still strips the comment after them", () => {
+    const source = "t = `a ${`//b ${'/*'}`} c`; // gone\nu = `x`;";
+    const out = stripComments(source);
+    expect(out).toContain("`a ${`//b ${'/*'}`} c`;");
+    expect(out).toContain("u = `x`;");
+    expect(out).not.toContain("gone");
+    expect(out).toHaveLength(source.length);
+  });
 });
