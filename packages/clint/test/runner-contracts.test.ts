@@ -141,11 +141,11 @@ describe("mastra-runner host contract", () => {
   });
 
   it("resolved form: apiKey is a string, tokens are rejected", () => {
-    const declared = declaredAssistantHost();
-    expect(mastraRunner.hostSchema.safeParse(declared).success).toBe(false);
-    expect(() => validate.mastra(declared)).toThrow(
-      /config\.apiKey` is an output token \(\$env\)/,
-    );
+    const result = mastraRunner.hostSchema.safeParse(declaredAssistantHost());
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path)).toEqual([
+      ["config", "apiKey"],
+    ]);
   });
 
   it("rejects an unknown runner key, including the retired workdir", () => {
@@ -220,10 +220,16 @@ describe("clint-runner host contract", () => {
     );
   });
 
-  it("resolved form: tokens are rejected", () => {
-    const declared = declaredCliHost();
-    expect(clintRunner.hostSchema.safeParse(declared).success).toBe(false);
-    expect(() => validate.clint(declared)).toThrow(/is an output token/);
+  it("resolved form: agents and proxy upstreams are deferred self fields that keep their tokens", () => {
+    // They name the compound's own members' outputs, which exist only after
+    // the verb starts them; clint resolves them then (resolveOwnFields).
+    const parsed = clintRunner.hostSchema.parse(declaredCliHost());
+    expect(parsed.config?.agents?.main?.url).toEqual({
+      $output: { host: "assistant", path: ["endpoints", "openai"] },
+    });
+    expect(parsed.runner.proxy?.routes["/agent"]?.upstream).toEqual({
+      $output: { host: "assistant", path: ["origin"] },
+    });
   });
 
   it("rejects the removed agents.<x>.host and proxy member forms naming the token form", () => {
@@ -340,6 +346,25 @@ describe("clint-runner host contract", () => {
     expect(
       clintRunner.outputsSchema.safeParse({ agents: { main: "nope" } }).success,
     ).toBe(false);
+  });
+});
+
+describe("declared verbs", () => {
+  const functions = (mod: Record<string, unknown>) =>
+    Object.entries(mod)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name]) => name);
+
+  it("mastra lists exactly its verb functions (not promptFromMessages)", () => {
+    expect([...mastraRunner.verbs].sort()).toEqual(
+      functions(mastra)
+        .filter((name) => name !== "promptFromMessages")
+        .sort(),
+    );
+  });
+
+  it("clint lists exactly its verb functions", () => {
+    expect([...clintRunner.verbs].sort()).toEqual(functions(clint).sort());
   });
 });
 

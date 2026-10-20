@@ -38,6 +38,9 @@ import {
 
 export const kind = "reactor";
 
+/** The verbs this runner exports (`promptFromMessages` is a helper). */
+export const verbs = ["run", "serve", "build"] as const;
+
 /** The token a host writes for the switchboard endpoint (error hints). */
 const REMOTE_URL_HINT =
   'remote: { url: switchboard.endpoints.graphql } (from ../switchboard/outputs.js), or literally { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }';
