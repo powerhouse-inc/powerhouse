@@ -254,9 +254,11 @@ function valueAt(host: unknown, path: readonly PropertyKey[]): unknown {
   return current;
 }
 
-interface ValidateHostOptions {
-  /** "forbid" (default): no token may remain (resolved form). "allow":
-   * declared form, used by `validateDeclaredHost`. */
+export interface ValidateHostOptions {
+  /** "forbid" (default): the resolved form, checked with `hostSchema`; no
+   * token may remain. "allow": the declared form, checked with
+   * `declaredHostSchema` (else `hostSchema`) — what a COMPOUND runner's verb
+   * receives, since its members resolve their own tokens. */
   tokens?: TokenMode;
 }
 
@@ -273,7 +275,20 @@ export function validateHost<O>(
   file: string,
   options: ValidateHostOptions = {},
 ): O {
-  return parseHost(runner, runner.hostSchema, specifier, host, file, options);
+  const schema =
+    options.tokens === "allow"
+      ? (runner.declaredHostSchema ?? runner.hostSchema)
+      : runner.hostSchema;
+  // Same definition (defineHostSchemas), so the declared parse has the
+  // verb's shape; only token-able fields may still hold tokens.
+  return parseHost(
+    runner,
+    schema as HostSchemaLike<O>,
+    specifier,
+    host,
+    file,
+    options,
+  );
 }
 
 function parseHost<O>(

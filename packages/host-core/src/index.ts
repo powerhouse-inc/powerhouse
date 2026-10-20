@@ -30,6 +30,7 @@ export {
   type RunnerContext,
   type RunnerModule,
   type RunnerVerb,
+  type ValidateHostOptions,
 } from "./runner-resolver.js";
 export {
   clearRunRecord,
