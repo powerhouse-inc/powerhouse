@@ -20,6 +20,7 @@ import {
   resolveManagedDependencies,
 } from "@powerhousedao/codegen";
 import { cleanUp, packageWith, writeTsconfig } from "./helpers/declarations.js";
+import { hostGuard } from "./helpers/subgraph-host-guard.js";
 import { plainCompile } from "./helpers/workspace.js";
 
 const fixtures = fileURLToPath(
@@ -1242,6 +1243,7 @@ import { ExampleSubgraph as ExampleExampleSubgraph } from "./example/index.js";
 export * as ExampleSubgraph from "./example/index.js";
 export * as Helpers from "./example/schema.js";
 
+${hostGuard("ExampleExampleSubgraph")}
 export { ExampleExampleSubgraph };
 const checkExampleExampleSubgraph: SubgraphCheck<
   typeof ExampleExampleSubgraph
