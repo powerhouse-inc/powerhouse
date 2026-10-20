@@ -601,6 +601,12 @@ Decided during T3 (user, 2026-10-20):
 24. **Third-party plugin config.** Requires `PHPluginConfigs` registration; the fallback entry form is config-less (1.4).
 25. **Sektar dead Connect config.** `connect.drives.allowAddDrive` and `drives.sections` are deleted, not moved into a generic plugin entry.
 
+Decided during T4 (user, 2026-10-20):
+
+26. **Assistant port.** `PowerhouseConfig` and the source config JSON Schema gain `assistant: { port }`; the assistant host reads `config.assistant?.port ?? 4910` (Sektar and scaffold), the scaffold writes `assistant: { port: 4910 }` (fixed, not name-derived), and the mastra runner default stays 4910.
+27. **vetra serves the project drives.** vetra-switchboard's drives are the switchboard host's drives followed by `vetra` and `vetra-preview` (Sektar and scaffold), so `ph run vetra` serves the project drive too.
+28. **Remote backend without a block.** `{ kind: "remote" }` with no `remote` block fails host validation (a backend-schema refinement naming `remote.url` and the token form), closing the 2.1 gap the G2 fixtures found.
+
 ## Out of scope / future
 
 - reactor-monitor integration: consuming host definitions to spin up configurations (Node and browser), a permutation harness, results UI.
