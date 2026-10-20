@@ -18,6 +18,7 @@ import {
   connectRouterChunkGroups,
   connectRoutes,
   connectRoutesGeneratorConfig,
+  connectRoutesTreeOf,
   generateConnectRoutes,
   PACKAGE_ROUTES_MODULE,
   resolveConnectRoutesDir,
@@ -218,6 +219,51 @@ describe("resolveConnectRoutesDir", () => {
   it("ignores a routes folder at the project root", () => {
     addRoute("hello.tsx", "/hello", "routes");
     expect(resolveConnectRoutesDir(project)).toBeUndefined();
+  });
+
+  it("takes a host's routes folder, or none for false", () => {
+    addRoute("hello.tsx", "/hello");
+    addRoute("lab.tsx", "/lab", "hosts/lab/routes");
+    expect(resolveConnectRoutesDir(project, "hosts/lab/routes")).toBe(
+      join(project, "hosts/lab/routes"),
+    );
+    expect(resolveConnectRoutesDir(project, false)).toBeUndefined();
+    expect(() => resolveConnectRoutesDir(project, "hosts/none")).toThrow(
+      "The routes folder hosts/none does not exist.",
+    );
+  });
+});
+
+describe("a host's own routes folder", () => {
+  it("generates its own tree and offers nothing to other Connects", async () => {
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    expect(existsSync(join(project, PACKAGE_ROUTES_MODULE))).toBe(true);
+    rmSync(join(project, PACKAGE_ROUTES_MODULE));
+
+    addRoute("lab.tsx", "/lab", "hosts/lab/routes");
+    const labDir = join(project, "hosts/lab/routes");
+    await generate(labDir);
+    const labTree = connectRoutesTreeOf(project, labDir);
+    expect(labTree).toBe(join(project, ".ph/hosts/lab/routes.gen.ts"));
+    expect(readFileSync(labTree, "utf8")).toContain('"/lab"');
+    expect(readFileSync(labTree, "utf8")).not.toContain('"/hello"');
+    // The project's tree and offered routes stay hosts/connect/routes'.
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).toContain('"/hello"');
+    expect(tree).not.toContain('"/lab"');
+    expect(existsSync(join(project, PACKAGE_ROUTES_MODULE))).toBe(false);
+  });
+
+  it("keeps the project's tree for a host without routes", async () => {
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    const { plugins, aliases } = connectRoutes(project, false);
+    expect(plugins).toEqual([]);
+    expect(aliases[0].replacement).toMatch(
+      /connect[\\/]dist[\\/]route-tree\.js$/,
+    );
+    expect(existsSync(join(project, CONNECT_ROUTES_GEN))).toBe(true);
   });
 });
 

@@ -17,7 +17,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Alias, Plugin, PluginOption } from "vite";
 import { resolvePackage } from "../helpers.js";
 
@@ -35,12 +35,34 @@ const ROUTE_TREE_FIND = new RegExp(
   `^(${[ROUTE_TREE_SPECIFIER, CORE_ROUTE_TREE_SPECIFIER].map(escapeRegExp).join("|")})$`,
 );
 
-/** The project's routes folder, `hosts/connect/routes/`; undefined if none. */
+/** A host's routes folder: `routes` (a host's `runner.routes`), relative to the
+ * project, else `hosts/connect/routes/`; undefined if none or `false`. */
 export function resolveConnectRoutesDir(
   projectRoot: string,
+  routes?: string | false,
 ): string | undefined {
+  if (routes === false) return undefined;
+  if (routes !== undefined) {
+    const dir = resolve(projectRoot, routes);
+    if (!existsSync(dir)) {
+      throw new Error(`The routes folder ${routes} does not exist.`);
+    }
+    return dir;
+  }
   const dir = join(projectRoot, HOST_ROUTES_DIR);
   return existsSync(dir) ? dir : undefined;
+}
+
+const isDefaultRoutesDir = (projectRoot: string, routesDir: string) =>
+  resolve(routesDir) === join(resolve(projectRoot), HOST_ROUTES_DIR);
+
+/** The tree generated from `routesDir`: `.ph/connect-routes.gen.ts` for
+ * `hosts/connect/routes/`, else `.ph/<folder>.gen.ts`. */
+export function connectRoutesTreeOf(projectRoot: string, routesDir: string) {
+  if (isDefaultRoutesDir(projectRoot, routesDir)) {
+    return join(projectRoot, CONNECT_ROUTES_GEN);
+  }
+  return join(projectRoot, ".ph", `${relative(projectRoot, routesDir)}.gen.ts`);
 }
 
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */
@@ -287,6 +309,8 @@ export function connectRoutesGeneratorConfig(
       });
     },
   };
+  // Only hosts/connect/routes/ is offered to other Connects; a host's own folder is not.
+  const offers = isDefaultRoutesDir(projectRoot, projectRoutes);
   const offered: GeneratorPlugin = {
     name: "ph-connect-offered-routes",
     onRouteTreeChanged: ({ routeNodes }) => {
@@ -302,9 +326,9 @@ export function connectRoutesGeneratorConfig(
     {
       target: "react",
       routesDirectory,
-      generatedRouteTree: join(projectRoot, CONNECT_ROUTES_GEN),
+      generatedRouteTree: connectRoutesTreeOf(projectRoot, projectRoutes),
       virtualRouteConfig: virtualRouteConfig(),
-      plugins: [overrides, offered],
+      plugins: offers ? [overrides, offered] : [overrides],
       // The project's _app layout and folder are mounted above, not again at the root.
       routeFileIgnorePattern: `^${APP_LAYOUT}(\\.[cm]?[jt]sx?)?$`,
       quoteStyle: "double",
@@ -420,12 +444,15 @@ function connectDirOf(projectRoot: string) {
  * Connect keeps its prebuilt tree and no router plugin runs. */
 export function connectRoutes(
   projectRoot: string,
-  routesDir = resolveConnectRoutesDir(projectRoot),
+  routesDir: string | false | undefined = resolveConnectRoutesDir(projectRoot),
 ): ConnectRoutes {
   const connectDir = connectDirOf(projectRoot);
   const find = ROUTE_TREE_FIND;
   if (!routesDir) {
-    rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
+    // Stale only without hosts/connect/routes/: a routeless host keeps the project's tree.
+    if (!resolveConnectRoutesDir(projectRoot)) {
+      rmSync(join(projectRoot, CONNECT_ROUTES_GEN), { force: true });
+    }
     // Connect's prebuilt tree, for core's types' specifier too.
     return {
       aliases: [{ find, replacement: join(connectDir, "dist/route-tree.js") }],
@@ -467,7 +494,7 @@ const ROUTER_PACKAGES =
 
 /** One chunk for the router and the project's route configs, which the split
  * route components would otherwise spread over several shared chunks. */
-export function connectRouterChunkGroups(routesDir?: string) {
+export function connectRouterChunkGroups(routesDir?: string | false) {
   const routes = routesDir && join(routesDir, sep);
   return [
     // Its own chunk: the entry imports it, and must not load the router with it.

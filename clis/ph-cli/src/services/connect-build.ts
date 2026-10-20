@@ -36,6 +36,7 @@ import { runBuild } from "./build.js";
 export async function runConnectBuild(
   args: ConnectBuildArgs,
   callerOverride?: PHConnectRuntimeConfig,
+  { routes }: { routes?: string | false } = {},
 ) {
   const { outDir, debug, dynamicBase, favicon } = args;
 
@@ -162,6 +163,7 @@ export async function runConnectBuild(
     cliPackageRegistryUrl: packageRegistryUrl,
     dynamicBase,
     favicon,
+    routes,
     // Vendor import-map entries are relative (leading slash stripped) so
     // they resolve against the page URL under any deploy base — root or
     // subpath, dynamic or concrete.
