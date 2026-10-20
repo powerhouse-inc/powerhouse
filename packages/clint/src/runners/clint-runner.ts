@@ -3,8 +3,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  childWrapperSchema,
-  compoundHostSchema,
   defaultUserDataDir,
   loadHost,
   probeRun,
@@ -13,25 +11,27 @@ import {
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
-  runnerBaseSchema,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import {
+  findToken,
+  makeHostSchemas,
+  ref,
+  type HostSchemas,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
   createProxyPlugin,
+  declaredProxyPluginConfigSchema,
   proxyPluginConfigSchema,
   type ClintCompoundContext,
-  type MemberEndpoints,
 } from "./proxy-plugin.js";
+import { quotedHost, removedKeyError } from "./removed-forms.js";
 import fs from "node:fs";
 import { createEventBus } from "../core/events.js";
 import { isPortFree } from "../core/preflight.js";
-import {
-  createServiceManager,
-  defineService,
-  resolveServiceName,
-} from "../core/services.js";
+import { createServiceManager, defineService } from "../core/services.js";
 import { formatStatus } from "../core/service-command.js";
 import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
@@ -45,8 +45,8 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
  * the next run, `"attached"` tears them down vetra-style.
  *
  * The agents manager (config.agents) maps names to OpenAI-compatible
- * endpoints — a sibling host reference resolves through that host's
- * runner.port (the mastra-runner serves /v1 there). `dev` adds a line chat
+ * endpoints — each `url` a literal or an output token (an agent host's
+ * `endpoints.openai`), resolved before the runner sees it. `dev` adds a line chat
  * loop against the first agent; the full ink REPL remains the library path
  * (defineCli) for implementation projects, as scaffolded clint CLIs use it
  * natively — noted in the phase-5 WBS.
@@ -54,67 +54,157 @@ import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
 export const kind = "compound";
 
-/** clint-runner's own `runner` options, on top of the common base. */
-const clintRunnerOptionsSchema = runnerBaseSchema
-  .extend({
-    /** "detached" (default): children outlive the shell and are re-attached
-     * on the next run. "attached": the shell tears them down on exit. */
-    lifecycle: z.enum(["attached", "detached"]).optional(),
-    /** One front port routing to the members (the clint proxy plugin). */
-    proxy: proxyPluginConfigSchema.optional(),
-  })
-  .strict();
+/** The token form that replaced an agent's sibling `host` reference. */
+function agentHostHint(input: Record<string, unknown>): string {
+  const host = quotedHost(input.host, '"<agent host>"');
+  return `use url: <host>.endpoints.openai from ../<host>/outputs.js, or { url: { $output: { host: ${host}, path: ["endpoints", "openai"] } } }.`;
+}
 
-/** A member's scheduling knobs. Members run as their own `ph-cli run
- * <host>` process, so the wrapper's `config` is read by clint (not passed to
- * the member) and holds only these. */
-const clintMemberConfigSchema = z.strictObject({
-  /** When the member counts as up: a stdout pattern (regex source, case
-   * insensitive) and a timeout in ms. */
-  readiness: z
-    .strictObject({
-      pattern: z.string().min(1).optional(),
-      timeout: z.number().int().positive().optional(),
+/** An agent the shell can chat with: the OpenAI-compatible base URL of an
+ * agent API (an agent host's `endpoints.openai` output, or external). */
+function agentRefSchema<U extends z.ZodType>(url: U) {
+  return z.strictObject(
+    { url },
+    { error: removedKeyError("host", agentHostHint) },
+  );
+}
+
+/**
+ * The clint compound host, built once per form from one definition:
+ * DECLARED (`tokens: "allow"`; what host.js authors write) and RESOLVED
+ * (`tokens: "forbid"`; what `validateHost` checks before the verb).
+ * Host-core's base blocks come from `makeHostSchemas` in the same form.
+ *
+ * `config.agents.*.url` and `runner.proxy.routes.*.upstream` are DEFERRED
+ * self fields: they typically name outputs of this compound's own members,
+ * which exist only once clint has started them inside the verb. They take
+ * tokens in BOTH forms, and the runner resolves them after its members are
+ * up (`resolveOwnFields`), then parses them with `ownFieldsSchema`.
+ */
+function buildHostSchema(base: HostSchemas) {
+  /** clint-runner's own `runner` options, on top of the common base. */
+  const clintRunnerOptionsSchema = base.runnerBaseSchema
+    .extend({
+      /** "detached" (default): children outlive the shell and are
+       * re-attached on the next run. "attached": the shell tears them down
+       * on exit. */
+      lifecycle: z.enum(["attached", "detached"]).optional(),
+      /** One front port routing to upstreams (the clint proxy plugin). */
+      proxy: declaredProxyPluginConfigSchema.optional(),
     })
-    .optional(),
-});
+    .strict();
 
-/** An agent the shell can chat with: a sibling host serving the mastra
- * agent API (resolved through its runner.port) or an explicit URL. */
-const agentRefSchema = z
-  .strictObject({
-    host: z.string().min(1).optional(),
-    url: z.url().optional(),
-  })
-  .refine((agent) => agent.host !== undefined || agent.url !== undefined, {
-    message: "an agents entry needs { host } or { url }",
+  /** A member's scheduling knobs. Members run as their own `ph-cli run
+   * <host>` process, so the wrapper's `config` is read by clint (not passed
+   * to the member) and holds only these. */
+  const clintMemberConfigSchema = z.strictObject({
+    /** When the member counts as up: a stdout pattern (regex source, case
+     * insensitive) and a timeout in ms. */
+    readiness: z
+      .strictObject({
+        pattern: z.string().min(1).optional(),
+        timeout: z.number().int().positive().optional(),
+      })
+      .optional(),
   });
 
-const cliHostConfigSchema = z.strictObject({
-  agents: z.record(z.string(), agentRefSchema).optional(),
-  /** Member start order; must name declared children. Unnamed members start
-   * after the named ones, in declaration order. */
-  startOrder: z.array(z.string().min(1)).optional(),
+  const cliHostConfigSchema = z.strictObject({
+    agents: z.record(z.string(), agentRefSchema(ref(z.url()))).optional(),
+    /** Member start order; must name declared children. Unnamed members
+     * start after the named ones, in declaration order. */
+    startOrder: z.array(z.string().min(1)).optional(),
+  });
+
+  // Extend the unrefined base, refine last (zod refuses to extend a refined
+  // object).
+  return base.compoundHostSchema
+    .extend({
+      runner: clintRunnerOptionsSchema,
+      children: z.record(
+        z.string(),
+        base.childWrapperSchema.extend({
+          config: clintMemberConfigSchema.optional(),
+        }),
+      ),
+      config: cliHostConfigSchema.optional(),
+    })
+    .superRefine(refineStartOrder);
+}
+
+/** Resolved form: what `validateHost` checks and the verbs receive (the
+ * deferred self fields may still carry tokens; see buildHostSchema). */
+export const hostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "forbid" }),
+);
+
+/** Declared form: what a host file may contain before resolution. */
+export const declaredHostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "allow" }),
+);
+
+/** The deferred self fields once resolved (after member start). */
+const ownFieldsSchema = z.strictObject({
+  agents: z.record(z.string(), agentRefSchema(z.url())).optional(),
+  proxy: proxyPluginConfigSchema.optional(),
 });
 
-/** The clint compound host. Extend the unrefined base, refine last (zod
- * refuses to extend a refined object). */
-export const hostSchema = compoundHostSchema
-  .extend({
-    runner: clintRunnerOptionsSchema,
-    children: z.record(
-      z.string(),
-      childWrapperSchema.extend({ config: clintMemberConfigSchema.optional() }),
-    ),
-    config: cliHostConfigSchema.optional(),
-  })
-  .superRefine(refineStartOrder);
-
 /** What a clint host.js author writes. */
-export type ClintHostInput = z.input<typeof hostSchema>;
+export type ClintHostInput = z.input<typeof declaredHostSchema>;
 /** What the verbs receive. */
 export type ClintHost = z.output<typeof hostSchema>;
-type AgentRef = z.output<typeof agentRefSchema>;
+type OwnFields = z.output<typeof ownFieldsSchema>;
+
+/** The verbs this runner exports (the rest of its exports are not verbs). */
+export const verbs = ["run", "serve", "dev", "build"] as const;
+
+/** Live outputs of the compound's members, keyed by child name
+ * (`outputs` undefined when the member published no live run record). */
+export type LiveMemberOutputs = Record<
+  string,
+  { host: string; outputs: unknown }
+>;
+
+/**
+ * Resolve the deferred self fields against the members' live outputs.
+ *
+ * TODO(typed-host-configs T3-A): delegate to host-core's deferred
+ * self-resolution — expected as `resolveHostOutputs(host, sources,
+ * { deferSelf: true })` with a source over `members` — once it merges. The
+ * integrator wires it; until then a field that still carries a token after
+ * the pre-verb resolve fails here, naming its path. Literal values (and
+ * tokens the pre-verb resolve already substituted) pass through.
+ */
+function resolveOwnFields(
+  fields: { agents?: unknown; proxy?: unknown },
+  members: LiveMemberOutputs,
+  file: string,
+): unknown {
+  const token = findToken(fields);
+  if (token) {
+    throw new Error(
+      `${file}: \`${token.path}\` is an output token (${token.key}) that clint resolves after starting its members (${Object.keys(members).join(", ") || "none"}); deferred self-resolution is not wired to host-core yet. Spell the value literally for now.`,
+    );
+  }
+  return fields;
+}
+
+/** Started members' outputs, read from their own run records (members run
+ * as separate `ph-cli run` processes, which publish their outputs there). */
+function liveMemberOutputs(
+  projectRoot: string,
+  projectName: string,
+  memberHosts: Record<string, string>,
+): LiveMemberOutputs {
+  const members: LiveMemberOutputs = {};
+  for (const [id, hostName] of Object.entries(memberHosts)) {
+    const probe = probeRun(projectRoot, hostName, projectName);
+    members[id] = {
+      host: hostName,
+      outputs: probe.status === "live" ? probe.record.outputs : undefined,
+    };
+  }
+  return members;
+}
 
 /** What starting the shell produces: the resolved agent endpoints and, when
  * `runner.proxy` is set, the proxy's URL. Member outputs belong to the
@@ -180,21 +270,6 @@ function childServices(
   );
 }
 
-async function resolveAgentEndpoint(
-  ref: AgentRef,
-  ctx: RunnerContext,
-): Promise<string> {
-  if (ref.url) return ref.url.replace(/\/$/, "");
-  if (ref.host) {
-    const sibling = await loadHost(ctx.projectRoot, ref.host);
-    const port = sibling.host.runner.port ?? 4910;
-    return `http://127.0.0.1:${String(port)}/v1`;
-  }
-  // The schema requires one of them; a verb called with an unparsed host
-  // still fails loudly.
-  throw new Error("agents entries need { host } or { url }");
-}
-
 function readProjectName(projectRoot: string, fallback: string): string {
   try {
     return (
@@ -206,6 +281,19 @@ function readProjectName(projectRoot: string, fallback: string): string {
     );
   } catch {
     return fallback;
+  }
+}
+
+async function stopAll(
+  services: ServiceManager,
+  names: string[],
+): Promise<void> {
+  for (const id of names) {
+    try {
+      await services.stop(id);
+    } catch {
+      // already stopped
+    }
   }
 }
 
@@ -231,7 +319,6 @@ async function startShell(
   // R5: compound plugins (appliesTo "compound" — e.g. the proxy) run over the
   // member set. Built-ins resolve from a declared `runner.plugins`; the proxy
   // is registered when a `runner.proxy` block is present (ergonomic alias).
-  const memberEndpoints: MemberEndpoints = {};
   const servicesDir = path.join(ctx.projectRoot, ".ph", "services");
   const services = createServiceManager(definitions, {
     config: {},
@@ -245,6 +332,7 @@ async function startShell(
     ...(config.startOrder ?? []).filter((n) => names.includes(n)),
     ...names.filter((n) => !(config.startOrder ?? []).includes(n)),
   ];
+  const memberHosts: Record<string, string> = {};
   for (const id of ordered) {
     // Re-attach checks, strongest first. (1) The member's OWN run record —
     // written with the member process's real pid (mastra-runner, the generic
@@ -253,6 +341,7 @@ async function startShell(
     // pid, which dies on console teardown while the node grandchild survives.
     const wrapper = children[id];
     const member = await loadHost(ctx.projectRoot, wrapper.host);
+    memberHosts[id] = member.host.name;
     const record = probeRun(ctx.projectRoot, member.host.name, projectName);
     if (record.status === "live") {
       console.log(
@@ -266,14 +355,6 @@ async function startShell(
         : typeof member.host.runner.port === "number"
           ? member.host.runner.port
           : undefined;
-    if (memberPort !== undefined) {
-      const memberHost =
-        (typeof wrapper.runner?.host === "string" && wrapper.runner.host) ||
-        (typeof member.host.runner.host === "string" &&
-          member.host.runner.host) ||
-        "127.0.0.1";
-      memberEndpoints[id] = { host: memberHost, port: memberPort };
-    }
     if (memberPort !== undefined && !(await isPortFree(memberPort))) {
       console.log(
         `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
@@ -296,6 +377,28 @@ async function startShell(
     if (status) console.log(`  ${formatStatus(status)}`);
   }
 
+  // The deferred self fields (agent urls, proxy upstreams) name the
+  // members' outputs, which exist now.
+  let own: OwnFields;
+  try {
+    const parsedOwn = ownFieldsSchema.safeParse(
+      resolveOwnFields(
+        { agents: config.agents, proxy: resolved.runner.proxy },
+        liveMemberOutputs(ctx.projectRoot, projectName, memberHosts),
+        `hosts/${host.name}/host.js`,
+      ),
+    );
+    if (!parsedOwn.success) {
+      throw new Error(
+        `hosts/${host.name}: agents/proxy resolved to invalid values:\n${z.prettifyError(parsedOwn.error)}`,
+      );
+    }
+    own = parsedOwn.data;
+  } catch (error) {
+    if (lifecycle === "attached") await stopAll(services, names);
+    throw error;
+  }
+
   // Compound-plugin pipeline (CompoundCore): resolve entries + the proxy
   // ergonomic alias, then fire onMembersReady now that endpoints are known.
   const pluginEntries = resolved.runner.plugins;
@@ -310,12 +413,11 @@ async function startShell(
         )
       ).map((r) => r.plugin)
     : [];
-  const proxyBlock = resolved.runner.proxy;
+  const proxyBlock = own.proxy;
   if (proxyBlock) {
     resolvedPlugins.push(createProxyPlugin(proxyBlock));
   }
   const compoundCtx: ClintCompoundContext = {
-    memberEndpoints,
     logger: { info: (m: string) => console.log(m) },
   };
   if (resolvedPlugins.length > 0) {
@@ -323,8 +425,8 @@ async function startShell(
   }
 
   const agents: Record<string, string> = {};
-  for (const [name, ref] of Object.entries(config.agents ?? {})) {
-    agents[name] = await resolveAgentEndpoint(ref, ctx);
+  for (const [name, agent] of Object.entries(own.agents ?? {})) {
+    agents[name] = agent.url.replace(/\/$/, "");
   }
   if (Object.keys(agents).length > 0) {
     console.log(
@@ -343,13 +445,7 @@ async function startShell(
       );
     }
     if (lifecycle === "attached") {
-      for (const id of names) {
-        try {
-          await services.stop(id);
-        } catch {
-          // already stopped
-        }
-      }
+      await stopAll(services, names);
     } else {
       console.log(
         `[${resolved.name}] detached lifecycle: children keep running ` +

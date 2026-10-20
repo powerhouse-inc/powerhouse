@@ -113,6 +113,17 @@ describe("desktop runner host contract", () => {
   });
 });
 
+describe("declared verbs", () => {
+  it("lists exactly the verb functions (not the shellMode helper)", () => {
+    const fns = Object.entries(desktopRunner)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name]) => name);
+    expect([...desktopRunner.verbs].sort()).toEqual(
+      fns.filter((name) => name !== "shellMode").sort(),
+    );
+  });
+});
+
 describe("types", () => {
   it("shellOptionsSchema and ShellOptions stay in step", () => {
     type Declared = z.output<typeof desktopRunner.shellOptionsSchema>;
@@ -151,7 +162,10 @@ describe("emitted runner host schema drift", () => {
       ),
     ) as unknown;
     expect(committed).toEqual(
-      emitHostJsonSchema("host-desktop-runner", desktopRunner.hostSchema),
+      emitHostJsonSchema(
+        "host-desktop-runner",
+        desktopRunner.declaredHostSchema,
+      ),
     );
   });
 });

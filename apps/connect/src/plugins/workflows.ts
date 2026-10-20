@@ -1,4 +1,4 @@
-import { isDriveReference } from "@powerhousedao/host-core/plugins";
+import { findToken } from "@powerhousedao/host-core/schema";
 import type {
   PHConnectDefaultDrive,
   PHConnectRuntimeConfig,
@@ -30,10 +30,10 @@ import {
  * drive has to be a REMOTE of the switchboard that runs the workflow runtime:
  * Workflow Studio reaches that runtime through the selected drive's
  * switchboard, so a local copy would render the studio against the wrong
- * endpoint. Inside a compound the entry may say `{ from: "<member>", slug }`
- * instead; the compound runner substitutes the member's URL before this
- * config reaches the browser, and the connect runner rejects a reference
- * that was never substituted.
+ * endpoint. Host files write it as the output token
+ * `switchboard.drives.workflows.url`; `ph run` resolves it (from the
+ * compound's live member or the switchboard's run record) before this
+ * config reaches the browser.
  */
 
 // Schema and PHPluginConfigs augmentation: ../plugin-configs (zod-only).
@@ -83,9 +83,9 @@ export const createWorkflowsPlugin: ConnectPluginFactory = (rawConfig) => {
               config.name,
             ),
           } as never;
-        } else if (isDriveReference(drive)) {
+        } else if (drive !== undefined) {
           console.warn(
-            `${LOG} drive reference { from: "${drive.from}", slug: "${drive.slug}" } was not resolved by a compound; no Workflows drive attached.`,
+            `${LOG} drive is an unresolved output token (${findToken(drive)?.key ?? "unknown"}); no Workflows drive attached.`,
           );
         }
         return out;

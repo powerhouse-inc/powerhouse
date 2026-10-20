@@ -173,7 +173,27 @@ describe("applyComposition", () => {
     expect(bareOut.drives?.defaultDrives).toBeUndefined();
   });
 
-  it("workflows: an unresolved drive reference attaches nothing (the compound resolves it)", async () => {
+  it("workflows: an unresolved output token attaches nothing (ph run resolves it)", async () => {
+    const cfg = base();
+    cfg.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: {
+          drive: {
+            $output: {
+              host: "switchboard",
+              path: ["drives", "workflows", "url"],
+            },
+          },
+        },
+      },
+    ];
+    const out = await applyComposition(cfg);
+    expect(out.app?.workflowsEnabled).toBe(true);
+    expect(out.drives?.defaultDrives).toBeUndefined();
+  });
+
+  it("workflows: the removed { from, slug } reference fails naming the token form", async () => {
     const cfg = base();
     cfg.composition = [
       {
@@ -181,9 +201,9 @@ describe("applyComposition", () => {
         config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
       },
     ];
-    const out = await applyComposition(cfg);
-    expect(out.app?.workflowsEnabled).toBe(true);
-    expect(out.drives?.defaultDrives).toBeUndefined();
+    await expect(applyComposition(cfg)).rejects.toThrow(
+      /\{ from, slug \} was removed; use switchboard\.drives\.workflows\.url/,
+    );
   });
 
   it("unknown specifier warns and skips without throwing", async () => {

@@ -88,7 +88,9 @@ export async function build(host) {
       name: "cli",
       runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
       children: { assistant: { host: "assistant" } },
-      config: { agents: { main: { host: "assistant" } } },
+      // Resolved form: the declared host writes the assistant's
+      // endpoints.openai output token; ph run substitutes the URL.
+      config: { agents: { main: { url: "http://127.0.0.1:4919/v1/" } } },
     };`,
   );
   return { dir, sink };
@@ -97,7 +99,7 @@ export async function build(host) {
 const ctx = (dir: string) => ({ projectRoot: dir, verb: "run", env: {} });
 
 describe("clint-runner (P5.4)", () => {
-  it("schedules children as clint services and resolves agent endpoints", async () => {
+  it("schedules children as clint services and publishes the resolved agent urls", async () => {
     const { dir } = makeProject();
     const { loadHost } = await import("@powerhousedao/host-core");
     const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
@@ -127,4 +129,25 @@ describe("clint-runner (P5.4)", () => {
     const built = readFileSync(sink, "utf8").trim();
     expect(JSON.parse(built)).toEqual({ built: "cli-assistant" });
   }, 30_000);
+
+  it("resolves its deferred self fields only after starting members; a token still unresolved then fails naming its path", async () => {
+    const { dir } = makeProject();
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const declared = (await loadHost(dir, "cli")).host;
+    const host = runner.hostSchema.parse({
+      ...declared,
+      config: {
+        agents: {
+          main: {
+            url: {
+              $output: { host: "assistant", path: ["endpoints", "openai"] },
+            },
+          },
+        },
+      },
+    });
+    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
+      /`agents\.main\.url` is an output token \(\$output\) that clint resolves after starting its members \(assistant\)/,
+    );
+  }, 60_000);
 });

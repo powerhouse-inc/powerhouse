@@ -2,12 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { emitHostJsonSchema } from "@powerhousedao/host-core";
-import { hostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
-import { hostSchema as mastraHostSchema } from "../src/runners/mastra-runner.js";
+import { declaredHostSchema as clintHostSchema } from "../src/runners/clint-runner.js";
+import { declaredHostSchema as mastraHostSchema } from "../src/runners/mastra-runner.js";
 
 /**
  * Writes the editor JSON schemas for hosts run by the clint runners into
- * packages/clint/schemas/. Run via `pnpm --filter @powerhousedao/clint
+ * packages/clint/schemas/, in their DECLARED form (token-able fields accept
+ * output/`$env` tokens). Run via `pnpm --filter @powerhousedao/clint
  * emit-schemas` after changing a runner's hostSchema; the drift test in
  * test/runner-contracts.test.ts fails if the committed files fall behind.
  */

@@ -2,17 +2,19 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
-  compoundHostSchema,
   compoundWiringSchema,
   getVerb,
   loadHost,
   refineStartOrder,
   resolveRunnerModule,
-  runnerBaseSchema,
   validateHost,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import {
+  makeHostSchemas,
+  type HostSchemas,
+} from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleStack } from "./bundle-stack.js";
@@ -51,6 +53,9 @@ import { launchShell, resolveShell, shellEnv } from "./shell.js";
 
 export const kind = "compound";
 
+/** The verbs this runner exports (`shellMode` is a helper). */
+export const verbs = ["run", "serve", "dev", "build"] as const;
+
 /** `runner.shell`: a prebuilt or hand-maintained shell (mode 2). Mirrors
  * `ShellOptions` (shell.ts); a type test pins the two together. */
 export const shellOptionsSchema = z.strictObject({
@@ -67,32 +72,51 @@ export const shellOptionsSchema = z.strictObject({
   fileAssociations: z.array(z.string().min(1)).optional(),
 });
 
-/** The desktop runner's own `runner` options, on top of the common base. */
-const desktopRunnerOptionsSchema = runnerBaseSchema
-  .extend({
-    shell: shellOptionsSchema.optional(),
-    /** build: vendor ph-cli into the staged stack (default true). */
-    vendorStack: z.boolean().optional(),
-    /** build: the ph-cli version/tag to vendor (default "dev"). */
-    phCliVersion: z.string().min(1).optional(),
-    /** build: full install spec override (e.g. a pnpm-pack tarball path) for a
-     * ph-cli not yet on the registry. */
-    phCliSpec: z.string().min(1).optional(),
-  })
-  .strict();
+/**
+ * The desktop host, built once per form from one definition: DECLARED
+ * (`tokens: "allow"`; what host.js authors write) and RESOLVED
+ * (`tokens: "forbid"`; what the verbs receive). The runner adds no
+ * token-able fields of its own; the forms differ in host-core's base blocks
+ * (member wrappers' reactor URLs and the like).
+ */
+function buildHostSchema(base: HostSchemas) {
+  /** The desktop runner's own `runner` options, on top of the common base. */
+  const desktopRunnerOptionsSchema = base.runnerBaseSchema
+    .extend({
+      shell: shellOptionsSchema.optional(),
+      /** build: vendor ph-cli into the staged stack (default true). */
+      vendorStack: z.boolean().optional(),
+      /** build: the ph-cli version/tag to vendor (default "dev"). */
+      phCliVersion: z.string().min(1).optional(),
+      /** build: full install spec override (e.g. a pnpm-pack tarball path)
+       * for a ph-cli not yet on the registry. */
+      phCliSpec: z.string().min(1).optional(),
+    })
+    .strict();
 
-/** The desktop host: the generic compound's wiring config plus the shell and
- * packaging options. Extend the unrefined base, refine last (zod refuses to
- * extend a refined object). */
-export const hostSchema = compoundHostSchema
-  .extend({
-    runner: desktopRunnerOptionsSchema,
-    config: compoundWiringSchema.optional(),
-  })
-  .superRefine(refineStartOrder);
+  /** The generic compound's wiring config plus the shell and packaging
+   * options. Extend the unrefined base, refine last (zod refuses to extend
+   * a refined object). */
+  return base.compoundHostSchema
+    .extend({
+      runner: desktopRunnerOptionsSchema,
+      config: compoundWiringSchema.optional(),
+    })
+    .superRefine(refineStartOrder);
+}
+
+/** Resolved form: what the verbs receive (and `validateHost` checks). */
+export const hostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "forbid" }),
+);
+
+/** Declared form: what a host file may contain before resolution. */
+export const declaredHostSchema = buildHostSchema(
+  makeHostSchemas({ tokens: "allow" }),
+);
 
 /** What a desktop host.js author writes. */
-export type DesktopHostInput = z.input<typeof hostSchema>;
+export type DesktopHostInput = z.input<typeof declaredHostSchema>;
 /** What the verbs receive. */
 export type DesktopHost = z.output<typeof hostSchema>;
 

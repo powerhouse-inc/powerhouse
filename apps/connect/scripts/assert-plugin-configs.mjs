@@ -15,7 +15,7 @@ const ENTRY = "plugin-configs.js";
 const ALLOWED = new Set([
   "zod",
   "@powerhousedao/shared/connect/connect-config-schema",
-  "@powerhousedao/host-core/plugins",
+  "@powerhousedao/host-core/schema",
 ]);
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
 
