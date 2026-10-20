@@ -295,6 +295,8 @@ export type SubgraphSchemaOptions = {
    * subgraph has. These may repeat a generated definition, which is kept.
    */
   ownTypeNames?: ReadonlySet<string>;
+  /** Descriptions the subgraph's own model adds to its generated types. */
+  ownDescriptions?: TemplateDescriptions;
   /** Generated types already built for `documentModels`. */
   generated?: GeneratedDocumentModelTypes;
   /**
@@ -325,6 +327,7 @@ export const buildSubgraphSchemaModule = (
     options.generated ?? getGeneratedDocumentModelTypes(documentModels),
     typeDefs,
     options.ownTypeNames,
+    options.ownDescriptions,
   );
   const boundPackageScalars = new Set([
     ...packageScalars.map(({ name }) => name),
@@ -816,7 +819,7 @@ export type DocumentModelSchema = {
   /** Its definitions in the generated schema every subgraph carries. */
   generated: readonly DefinitionNode[];
   /** Its own subgraph's types, when it has operations to serve. */
-  subgraph?: { typeDefs: DocumentNode; typeNames: ReadonlySet<string> };
+  subgraph?: DocumentModelSubgraphTypes;
   /** Why its own subgraph cannot be served; its generated types still can. */
   subgraphError?: Error;
 };
@@ -830,17 +833,27 @@ export function hasOperationSchemas(documentModel: DocumentModelGlobalState) {
   );
 }
 
+/** Host descriptions keyed by definition kind and name. */
+export type TemplateDescriptions = ReadonlyMap<string, StringValueNode>;
+
+export type DocumentModelSubgraphTypes = {
+  readonly typeDefs: DocumentNode;
+  readonly typeNames: ReadonlySet<string>;
+  /** Descriptions its generated types carry in this subgraph only. */
+  readonly descriptions: TemplateDescriptions;
+};
+
 /**
  * The types of a document model's own subgraph. Pass the module so a
  * code-first model is projected from its structured definition.
  */
 export function documentModelSubgraphTypes(
   documentModel: DocumentModelSource,
-): { typeDefs: DocumentNode; typeNames: ReadonlySet<string> } {
-  const typeDefs = generateDocumentModelSchema(documentModel, {
+): DocumentModelSubgraphTypes {
+  const { typeDefs, descriptions } = modelTemplate(documentModel, {
     useNewApi: true,
   });
-  return { typeDefs, typeNames: typeDefinitionNames(typeDefs) };
+  return { typeDefs, typeNames: typeDefinitionNames(typeDefs), descriptions };
 }
 
 const toError = (error: unknown): Error =>
@@ -1032,6 +1045,7 @@ export function assembleSubgraphTypeDefs(
   generated: GeneratedDocumentModelTypes,
   typeDefs: DocumentNode,
   ownTypeNames?: ReadonlySet<string>,
+  ownDescriptions = templateOwners.get(typeDefs),
 ): DocumentNode {
   const collisions = findSubgraphTypeCollisions(
     generated,
@@ -1047,7 +1061,6 @@ export function assembleSubgraphTypeDefs(
       !generated.names.has(def.name.value),
   );
 
-  const ownDescriptions = templateOwners.get(typeDefs);
   const definitions = generated.definitions.map((def) => {
     if (
       !("name" in def) ||
@@ -1415,20 +1428,25 @@ function storedInitialState(
  * code-first model is projected from its structured definition. A
  * schema-first caller may pass the stored global state instead.
  */
-/**
- * The template output each model generated, so the host can tell
- * a model's own subgraph from a foreign one by identity. SDL content cannot
- * prove it, because any subgraph may declare the same type names.
- */
-const templateOwners = new WeakMap<
-  DocumentNode,
-  ReadonlyMap<string, StringValueNode>
->();
-
 export function generateDocumentModelSchema(
   source: DocumentModelSource,
   options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
+  return modelTemplate(source, options).typeDefs;
+}
+
+/**
+ * The template output each model generated, so a caller that passes only the
+ * template still gets its own types and descriptions. SDL content cannot prove
+ * ownership, because any subgraph may declare the same type names. The host
+ * passes both explicitly, since its templates arrive as copies.
+ */
+const templateOwners = new WeakMap<DocumentNode, TemplateDescriptions>();
+
+function modelTemplate(
+  source: DocumentModelSource,
+  options: DocumentModelSchemaOptions,
+): { typeDefs: DocumentNode; descriptions: TemplateDescriptions } {
   const documentModel = globalStateOf(source);
   const documentName = getDocumentModelSchemaName(documentModel);
   const structured = isDocumentModelModule(source)
@@ -1464,5 +1482,5 @@ export function generateDocumentModelSchema(
     }
   }
   templateOwners.set(document, descriptions);
-  return document;
+  return { typeDefs: document, descriptions };
 }

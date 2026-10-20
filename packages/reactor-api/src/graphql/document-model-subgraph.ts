@@ -4,12 +4,14 @@ import {
   type Action,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import { type DocumentNode, GraphQLError, Kind, parse } from "graphql";
+import { GraphQLError, Kind, parse } from "graphql";
 import { optionalOneOf, requireOneOf } from "./argument-aliases.js";
 import {
+  type DocumentModelSubgraphTypes,
   documentModelSubgraphTypes,
   getDocumentModelSchemaName,
   getDocumentModelSubgraphName,
+  type TemplateDescriptions,
 } from "../utils/create-schema.js";
 import type { CanonicalDocumentId } from "../services/authorization.service.js";
 import { BaseSubgraph } from "./base-subgraph.js";
@@ -829,11 +831,6 @@ type GeneratedClassSource = {
   readonly resolverCoordinates: readonly ResolverCoordinate[];
 };
 
-type DocumentModelSubgraphTypes = {
-  readonly typeDefs: DocumentNode;
-  readonly typeNames: ReadonlySet<string>;
-};
-
 const generatedSources = new WeakMap<object, GeneratedClassSource>();
 
 function generatedSourceOf(subgraphClass: object): GeneratedClassSource {
@@ -862,12 +859,15 @@ export abstract class DocumentModelSubgraph extends BaseSubgraph {
   readonly #resolvers: DocumentModelSubgraphResolvers;
   /** Names of the types its schema generator emits for the model. */
   readonly generatedTypeNames: ReadonlySet<string>;
+  /** Descriptions it adds to the model's generated types. */
+  readonly generatedDescriptions: TemplateDescriptions;
 
   constructor(args: SubgraphArgs) {
     super(args);
     const { documentModel, types } = generatedSourceOf(new.target);
     this.#documentModel = documentModel;
     this.generatedTypeNames = types.typeNames;
+    this.generatedDescriptions = types.descriptions;
     this.#resolvers = documentModelResolvers(documentModel, this);
   }
 

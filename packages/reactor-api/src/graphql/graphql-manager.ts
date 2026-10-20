@@ -854,12 +854,14 @@ export class GraphQLManager {
   }
 
   #schemaOptions(subgraph: HostedSubgraph): SubgraphSchemaOptions {
+    const own =
+      subgraph.instance instanceof DocumentModelSubgraph
+        ? subgraph.instance
+        : undefined;
     return {
       generated: this.#generated(),
-      ownTypeNames:
-        subgraph.instance instanceof DocumentModelSubgraph
-          ? subgraph.instance.generatedTypeNames
-          : undefined,
+      ownTypeNames: own?.generatedTypeNames,
+      ownDescriptions: own?.generatedDescriptions,
     };
   }
 
