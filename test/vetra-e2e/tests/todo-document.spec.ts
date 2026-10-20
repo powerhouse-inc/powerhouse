@@ -276,7 +276,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 
 test("Build and Publish to Registry", async () => {
   test.skip(reactorWorkerModeRequested(), SKIP_IN_WORKER_MODE);
-  test.setTimeout(180_000);
+  test.setTimeout(480_000);
 
   const testDir = process.cwd();
   const registryStoragePath = path.join(testDir, ".registry-storage");
@@ -303,12 +303,13 @@ test("Build and Publish to Registry", async () => {
   currentManifest.name = "test-package-vetra";
   fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 4));
 
-  // Build the package with ph-cli build
+  // Build the package with ph-cli build. It type-checks every project this
+  // package's tsconfig references, which here is most of the monorepo.
   console.log("Building package with ph-cli build...");
   execSync("pnpm build", {
     cwd: testDir,
     stdio: "pipe",
-    timeout: 120_000,
+    timeout: 180_000,
   });
 
   // Verify dist/ was created
@@ -325,12 +326,13 @@ test("Build and Publish to Registry", async () => {
   expect(manifest.documentModels.length).toBeGreaterThan(0);
   expect(manifest.editors.length).toBeGreaterThan(0);
 
-  // Publish to the local registry
+  // Publish to the local registry. A package without code-first definitions
+  // retains no release approval, so publish runs the same build again.
   console.log("Publishing package to local registry...");
   execSync("pnpm exec ph-cli publish", {
     cwd: testDir,
     stdio: "pipe",
-    timeout: 60_000,
+    timeout: 180_000,
   });
 
   // Verify the package was published
