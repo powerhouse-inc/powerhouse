@@ -3,12 +3,13 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   writeFileSync,
   chmodSync,
   rmSync,
   renameSync,
 } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, relative, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -322,6 +323,55 @@ describe("compiler graph behavior", () => {
 
 describe("compiler graph behavior", () => {
   afterEach(cleanUp);
+
+  // Its outputs are not retained, so an external reference is read for the
+  // plan and once more after the last build, however its builds write.
+  it("reads a chain of external references twice", async () => {
+    const { root } = siblingPackage("schema-first");
+    writeTsconfig(root, { declaration: true, declarationDir: "types" });
+    for (let index = 0; index < 3; index++)
+      addReference(root, `../lib${index}`, {
+        compilerOptions: { rootDir: undefined, outDir: undefined },
+        files: ["index.ts"],
+      });
+    const parse = (file: string) =>
+      z.looseObject({}).parse(JSON.parse(readFileSync(file, "utf8")));
+    for (let index = 1; index < 3; index++) {
+      const config = join(root, `../lib${index}/tsconfig.json`);
+      writeFileSync(
+        config,
+        JSON.stringify({
+          ...parse(config),
+          references: [{ path: `../lib${index - 1}` }],
+        }),
+      );
+    }
+    const config = join(root, "tsconfig.json");
+    writeFileSync(
+      config,
+      JSON.stringify({ ...parse(config), references: [{ path: "../lib2" }] }),
+    );
+    const commands = recordTsc(root);
+    const result = await build(root, "schema-first");
+    expect(result.exitCode, result.log).toBe(0);
+    const reads = commands()
+      .filter((args) => args.includes("--showConfig"))
+      .map((args) =>
+        relative(realpathSync(dirname(root)), args[args.indexOf("-p") + 1]),
+      );
+    expect(reads.sort()).toEqual(
+      [
+        join("lib0", "tsconfig.json"),
+        join("lib1", "tsconfig.json"),
+        join("lib2", "tsconfig.json"),
+        join("package", "tsconfig.json"),
+      ].flatMap((file) => [file, file]),
+    );
+    expect(existsSync(join(root, "../lib0/index.js"))).toBe(true);
+    // Nothing had build info yet, so --force would only rebuild each
+    // reference's dependencies again.
+    expect(commands().filter((args) => args.includes("--force"))).toEqual([]);
+  }, 120_000);
 
   it("honours ignore-type-errors for a failing reference build", async () => {
     const root = packageWith("code-first");

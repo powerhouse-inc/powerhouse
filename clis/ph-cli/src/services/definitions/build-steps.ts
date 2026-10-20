@@ -202,8 +202,16 @@ export function createTypecheckStep(
         plan,
       };
     }
+    // A reference in the package is read again before it is built, so its
+    // outputs are retained as they are now. An external reference's outputs
+    // are not retained, and the whole graph is read again after the last
+    // build, so it keeps the reading the plan began with.
     for (const reference of references) {
-      plan = await refreshCompileGraph(packageRoot, agent, plan, reference);
+      if (
+        plan.projects.find((project) => project.configFile === reference)
+          ?.external !== true
+      )
+        plan = await refreshCompileGraph(packageRoot, agent, plan, reference);
       retainOutputs(plan);
       const built = await runLocal(packageRoot, agent, [
         "tsc",

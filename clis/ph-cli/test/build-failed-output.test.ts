@@ -163,7 +163,7 @@ it("rebuilds incrementally after a failed build and writes the new declaration",
     compilerCalls().filter(([command]) => command === "--build");
   const first = await build(root, "code-first");
   expect(first.exitCode, first.log).toBe(0);
-  expect(builds()).toEqual([["--build", "--force"]]);
+  expect(builds()).toEqual([["--build"]]);
   const index = readFileSync(join(root, "index.ts"), "utf8");
   appendFileSync(
     join(root, "index.ts"),
@@ -175,7 +175,7 @@ it("rebuilds incrementally after a failed build and writes the new declaration",
   writeFileSync(join(root, "index.ts"), `${index}${addedExport}`);
   const fixed = await build(root, "code-first");
   expect(fixed.exitCode, fixed.log).toBe(0);
-  expect(builds()).toEqual([["--build", "--force"], ["--build"], ["--build"]]);
+  expect(builds()).toEqual([["--build"], ["--build"], ["--build"]]);
   expect(indexDeclaration(root)).toContain("export declare const added = 2;");
 }, 240_000);
 

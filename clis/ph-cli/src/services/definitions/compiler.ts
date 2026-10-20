@@ -695,6 +695,12 @@ export async function refreshCompileGraph(
   );
 }
 
+/**
+ * Whether `tsc --build configFile` needs `--force`: a project's build info
+ * says it is up to date while one of its outputs is gone. Without build info
+ * tsc builds the project anyway, and `--force` would rebuild every project
+ * it references as well.
+ */
 export function hasMissingCompileOutputs(
   plan: CompilePlan,
   configFile = plan.projects[0].configFile,
@@ -706,12 +712,13 @@ export function hasMissingCompileOutputs(
     const project = plan.projects.find(
       (project) => project.configFile === configFile,
     );
+    if (project === undefined) return false;
+    const outputs = outputFiles(project, plan.emitsBuildInfoInBuildMode);
+    const buildInfo = outputs.find((path) => /\.tsbuildinfo$/i.test(path));
     return (
-      project !== undefined &&
-      (outputFiles(project, plan.emitsBuildInfoInBuildMode).some(
-        (path) => !existsSync(path),
-      ) ||
-        project.references.some(missing))
+      ((buildInfo === undefined || existsSync(buildInfo)) &&
+        outputs.some((path) => !existsSync(path))) ||
+      project.references.some(missing)
     );
   };
   return missing(configFile);
