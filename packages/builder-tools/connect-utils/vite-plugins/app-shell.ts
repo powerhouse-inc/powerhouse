@@ -4,6 +4,7 @@ import { dirname, join, sep } from "node:path";
 import type { Alias, Plugin, ResolvedConfig } from "vite";
 import { createServer } from "vite";
 import { resolvePackage } from "../helpers.js";
+import { withNodeDedupe } from "./node-dedupe.js";
 import { replaceShellLoader, type ProjectLoader } from "./project-brand.js";
 
 /** On the prerendered shell's elements; marks an index.html that has it. */
@@ -276,11 +277,18 @@ async function renderProjectAppShells(
     define: config.define,
   });
   try {
-    const renderer = (await server.ssrLoadModule(
-      "@powerhousedao/connect/prerender",
-    )) as ShellRenderer;
-    // The stylesheet index.html links, which Tailwind builds for the shell's classes.
-    return await renderer.renderProjectShells(join(projectRoot, "style.css"));
+    // What the server externalizes loads through Node: dedupe there too.
+    return await withNodeDedupe(
+      projectRoot,
+      config.resolve.dedupe,
+      async () => {
+        const renderer = (await server.ssrLoadModule(
+          "@powerhousedao/connect/prerender",
+        )) as ShellRenderer;
+        // The stylesheet index.html links, which Tailwind builds for the shell's classes.
+        return renderer.renderProjectShells(join(projectRoot, "style.css"));
+      },
+    );
   } finally {
     await server.close();
   }
