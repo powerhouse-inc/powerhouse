@@ -1,31 +1,14 @@
 /* Package CSS goes in external-packages: above the reset, below Connect's
    utilities. Keep in sync with LAYER_ORDER in src/package-manager.ts. */
 @layer theme, base, components, external-packages, utilities;
-/* Pull in the design-system's Tailwind theme extension (theme block with all
-   color, font, and spacing tokens) so they are available before Tailwind
-   generates utility classes below. Also defines the dark-mode custom variant. */
-@import "@powerhousedao/design-system/theme.css";
-
-/* Generate all Tailwind base styles and utility classes, extended by the
-   design-system theme tokens imported above. */
 @import "tailwindcss";
+@import "./tailwind.css";
 
-/* Tell Tailwind's scanner to look for utility class usage in these packages so
-   their classes are included in the compiled output. Tailwind does not scan
-   node_modules by default, so each workspace package needs an explicit @source. */
+/* In the monorepo, the sources too, so dev sees classes before a build. */
+@source "./src";
 @source "../../packages/design-system/src/**/*.{tsx,ts}";
+@source "../../packages/connect-core/src/**/*.{tsx,ts}";
 @source "../../packages/reactor-browser/src/ai/**/*.{tsx,ts}";
 @source "../../packages/powerhouse-vetra-packages/**/*.{tsx,ts}";
 @source "../../packages/vetra/**/*.{tsx,ts}";
-
-/* Third-party overrides and component-level styles from the design-system
-   (e.g. react-toastify, scrollbar plugin, form element resets). */
-@import "@powerhousedao/design-system/style.css";
-
-/* Component styles for powerhouse-vetra-packages and vetra. */
-@import "@powerhousedao/powerhouse-vetra-packages/style.css";
-@import "@powerhousedao/vetra/style.css";
-/* Loaded like vetra's: a local package mounts no stylesheet of its own, so the
-   workflow editors' and canvas styles ride with Connect's. Class-scoped, so a
-   deployment with workflows off pays bytes, not behaviour. */
-@import "@powerhousedao/workflow/style.css";
+@source "../../packages/workflow/editors/**/*.{tsx,ts}";
