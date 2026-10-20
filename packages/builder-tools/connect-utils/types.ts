@@ -33,6 +33,9 @@ export type IConnectOptions = {
    * Connect asset. Build input (not runtime config); from
    * `ph connect build --favicon`. Non-absolute paths resolve against the build cwd. */
   favicon?: string;
+  /** The routes folder, relative to the project (a host's `runner.routes`);
+   * `false` for none. Default: `hosts/connect/routes/` when it exists. */
+  routes?: string | false;
   /**
    * Production vendor: the prebuilt shared-dependency bundle's import map and
    * version table (from `prebuildConnectVendor`). When set on a production

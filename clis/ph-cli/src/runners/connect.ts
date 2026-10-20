@@ -50,6 +50,8 @@ export const hostSchema = z.looseObject({
     host: z.string().optional(),
     https: z.boolean().optional(),
     openBrowser: z.boolean().optional(),
+    // The host's routes folder, project-relative; false for none. Default: hosts/connect/routes.
+    routes: z.union([z.string(), z.literal(false)]).optional(),
     // THE COMPOSITION (rewire R3): plugin entries, presence is activation.
     plugins: z.array(pluginEntrySchema).optional(),
   }),
@@ -210,6 +212,18 @@ function callerOverride(
   };
 }
 
+// The favicon was built into the dist; served, its path would mean nothing.
+function withoutFavicon(config: PHConnectRuntimeConfig | undefined) {
+  if (config?.branding?.favicon === undefined) return config;
+  const { favicon: _, ...branding } = config.branding;
+  return { ...config, branding };
+}
+
+const routesOf = (host: HostDefinition) => {
+  const routes = host.runner.routes;
+  return typeof routes === "string" || routes === false ? routes : undefined;
+};
+
 export async function dev(
   host: HostDefinition,
   ctx: RunnerContext,
@@ -219,6 +233,7 @@ export async function dev(
     toStudioArgs(host),
     undefined,
     callerOverride(host, ctx, ctx.verb ?? "dev"),
+    { routes: routesOf(host) },
   );
 }
 
@@ -236,15 +251,11 @@ export async function build(
   const args: Partial<ConnectBuildArgs> = {
     outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
   };
-  // The host's composition bakes in, so the build's loading shell matches its views.
-  const composition = callerOverride(
-    host,
-    ctx,
-    ctx.verb ?? "build",
-  )?.composition;
+  // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
   await runConnectBuild(
     args as ConnectBuildArgs,
-    composition ? { composition } : undefined,
+    callerOverride(host, ctx, ctx.verb ?? "build"),
+    { routes: routesOf(host) },
   );
 }
 
@@ -278,7 +289,9 @@ export async function serve(
     // (ph-win) probes 127.0.0.1 — the sidecar this replaces bound 127.0.0.1.
     host: typeof runner.host === "string" ? runner.host : "127.0.0.1",
   };
-  const override = callerOverride(host, ctx, ctx.verb ?? "serve");
+  const override = withoutFavicon(
+    callerOverride(host, ctx, ctx.verb ?? "serve"),
+  );
   await runConnectPreview(args as ConnectPreviewArgs, {
     connect: override,
     cspRegistrySync: runner.cspRegistrySync === true,

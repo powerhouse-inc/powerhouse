@@ -9,6 +9,7 @@ export async function runConnectStudio(
   args: ConnectStudioArgs,
   customLogger?: Logger,
   callerOverride?: PHConnectRuntimeConfig,
+  { routes }: { routes?: string | false } = {},
 ) {
   const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
     args;
@@ -22,6 +23,7 @@ export async function runConnectStudio(
     mode,
     dirname,
     cliConnectOverride,
+    routes,
   });
 
   const devServerConfig: InlineConfig = {

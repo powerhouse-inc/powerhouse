@@ -31,6 +31,8 @@ export type PowerhousePackage = {
 export type PHConnectBranding = {
   appName?: string;
   homeBackground?: string | null;
+  /** The tab icon's file, relative to the project; read at build, not shipped. */
+  favicon?: string | null;
 };
 
 export type PHConnectDefaultDriveRemote = {

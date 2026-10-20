@@ -422,7 +422,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     })
     .filter((p): p is string => p !== null);
 
-  const routesDir = resolveConnectRoutesDir(options.dirname);
+  const routesDir =
+    resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
   const routes = connectRoutes(options.dirname, routesDir);
 
   const config: InlineConfig = {
@@ -536,7 +537,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       ...(options.vendor && mode === "production"
         ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
         : []),
-      connectFaviconPlugin({ faviconPath: options.favicon }),
+      connectFaviconPlugin({
+        faviconPath: options.favicon ?? configPlugin.api.favicon,
+      }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
       connectThemeBootPlugin(),

@@ -407,6 +407,23 @@ export const Route = createFileRoute("/_app/inventory")({
 - `head` also receives `loaderData`, e.g. `` title: `${loaderData?.name} · ${appName}` ``.
 - Connect's own titles are in `packages/connect-core/src/router/titles.ts`: `<node> · <drive> · <app>`, `Settings · <tab> · <app>`, `Not found · <app>`.
 
+## Name and icon per host
+
+`connect.branding.appName` and `connect.branding.favicon` in `powerhouse.config.json` name the app and set its tab icon for every host. A host overrides either in its `config`:
+
+```js
+// hosts/lab/host.js
+export default {
+  name: "lab",
+  runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+  config: { branding: { appName: "Lab", favicon: "hosts/lab/icon.svg" } },
+};
+```
+
+- A host's `config` merges over the project's `connect` block field by field, so a host inherits what it doesn't set.
+- `branding.favicon` is a file (`.ico`, `.svg` or `.png`) relative to the project. `ph run lab dev` serves it and `ph run lab build` builds it as `icon.ico`; the built `powerhouse.config.json` leaves the path out. `ph connect build --favicon` wins over it.
+- `ph run lab build` bakes the host's `config` into the build, over `powerhouse.config.json`: the `<title>` and the loading screen take its `branding.appName`, and the build uses its `app.basePath` and `pwa`.
+
 ## Styles
 
 A project's `style.css` is the page's one Tailwind build. It imports Connect's Tailwind source rather than Connect's compiled CSS:
@@ -724,6 +741,43 @@ function InventoryDrive() {
 - Drive apps and editors come from packages, not routes. Override a route only to change Connect around them.
 - Without the generic plugin, each of Connect's files shows core's view instead (a header, an index of drives, a directory listing, a JSON view). An override shows the same view either way.
 - To hide a route, override it with a `beforeLoad` that throws `notFound()` or `redirect()`.
+
+## Routes per host
+
+Every host of a project mounts `hosts/connect/routes/` by default. A host picks another folder, or none, with `runner.routes`:
+
+```js
+// hosts/lab/host.js
+export default {
+  name: "lab",
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/connect",
+    routes: "hosts/lab/routes", // or false: Connect's routes only
+  },
+};
+```
+
+- The folder works like `hosts/connect/routes/`: `_app.tsx`, `_app/` and overrides of Connect's routes apply to that host only.
+- `ph run lab dev` and `ph run lab build` generate its tree in `.ph/hosts/lab/routes.gen.ts`; `hosts/connect/routes/` keeps `.ph/connect-routes.gen.ts`.
+- Only `hosts/connect/routes/` is offered to other Connects (see [Offer a package's routes](#offer-a-packages-routes)) and type-checked by `ph build`.
+- To type-check a host's folder, exclude it from the project's `tsconfig.json` and give it its own, which maps the route tree to its generated file:
+
+  ```jsonc
+  // hosts/lab/routes/tsconfig.json
+  {
+    "extends": "../../../tsconfig.json",
+    "compilerOptions": {
+      "noEmit": true,
+      "incremental": false,
+      // Replaces the project's paths: copy any others the routes import.
+      "paths": {
+        "@powerhousedao/connect/route-tree": ["../../../.ph/hosts/lab/routes.gen.ts"],
+        "@powerhousedao/connect-core/route-tree": ["../../../.ph/hosts/lab/routes.gen.ts"]
+      }
+    },
+    "include": [".", "../../../.ph/hosts/lab/routes.gen.ts"]
+  }
+  ```
 
 ## Extend Connect from a package
 
