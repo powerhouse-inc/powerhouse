@@ -15,10 +15,15 @@
           "format": "uri"
         }
       },
-      "required": ["connect"],
+      "required": [
+        "connect"
+      ],
       "additionalProperties": false
     }
   },
-  "required": ["origin", "endpoints"],
+  "required": [
+    "origin",
+    "endpoints"
+  ],
   "additionalProperties": false
 }

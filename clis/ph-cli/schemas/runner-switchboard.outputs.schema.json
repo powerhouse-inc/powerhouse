@@ -19,7 +19,9 @@
           "format": "uri"
         }
       },
-      "required": ["graphql"],
+      "required": [
+        "graphql"
+      ],
       "additionalProperties": false
     },
     "drives": {
@@ -39,11 +41,18 @@
             "format": "uri"
           }
         },
-        "required": ["id", "url"],
+        "required": [
+          "id",
+          "url"
+        ],
         "additionalProperties": false
       }
     }
   },
-  "required": ["origin", "endpoints", "drives"],
+  "required": [
+    "origin",
+    "endpoints",
+    "drives"
+  ],
   "additionalProperties": false
 }

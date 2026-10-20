@@ -139,8 +139,8 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(seeded.global.name).toBe("Workflows");
     // the composed path never runs the classic implicit seed
     expect(vi.mocked(seedWorkflowsDrive)).not.toHaveBeenCalled();
-    // the handle reports the default drive first, then the contribution
-    expect(handle.driveUrls).toEqual([
+    // the default drive first, then the contribution
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/workflows",
     ]);
@@ -191,7 +191,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
     expect(seeded).toHaveLength(2);
     expect(seeded[0]).toMatchObject({ slug: "sektar", id: "sektar" });
     expect(seeded[1]).toMatchObject({ slug: "workflows", id: "flows-fixed" });
-    expect(handle.driveUrls).toEqual([
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/sektar",
       "http://localhost:7599/d/workflows",
     ]);
@@ -225,7 +225,6 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const handle = await runner.run(switchboardHost(), ctx);
     expect(resolveIdOrSlug).toHaveBeenCalledWith("workflows");
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
-    expect(handle.driveUrls).toContain("http://localhost:7599/d/workflows");
     // the outputs report the id the live drive actually has
     expect(handle.outputs.drives.workflows).toEqual({
       id: "workflows-other-hash",
@@ -245,7 +244,9 @@ describe("switchboard runner — plugin-contributed drives", () => {
     const runner = await import("../src/runners/switchboard.js");
     const handle = await runner.run(switchboardHost(), ctx);
     expect(vi.mocked(addDefaultDrive)).not.toHaveBeenCalled();
-    expect(handle.driveUrls).toEqual(["http://localhost:7599/d/powerhouse"]);
+    expect(handle.outputs.drives).toEqual({
+      powerhouse: { id: "powerhouse", url: "http://localhost:7599/d/powerhouse" },
+    });
   });
 
   it("without a composition the deprecated reactor.workflows path still seeds the classic drive", async () => {
@@ -264,7 +265,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
       ctx,
     );
     expect(vi.mocked(seedWorkflowsDrive)).toHaveBeenCalledTimes(1);
-    expect(handle.driveUrls).toEqual([
+    expect(Object.values(handle.outputs.drives).map((d) => d.url)).toEqual([
       "http://localhost:7599/d/powerhouse",
       "http://localhost:7599/d/implicit",
     ]);
@@ -274,26 +275,7 @@ describe("switchboard runner — plugin-contributed drives", () => {
   });
 });
 
-describe("connect runner — drive references", () => {
-  it("refuses an unresolved { from, slug } with the compound hint", async () => {
-    const runner = await import("../src/runners/connect.js");
-    const host = connect({
-      name: "lab-connect",
-      runner: {
-        module: "@powerhousedao/ph-cli/runners/connect",
-        plugins: [
-          {
-            module: "@powerhousedao/connect/plugins/workflows",
-            config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
-          },
-        ],
-      },
-    });
-    await expect(runner.dev(host, ctx)).rejects.toThrow(
-      /refers to drive "workflows" of member "vetra-switchboard".*not running inside a compound/s,
-    );
-  });
-
+describe("connect runner — workflows drive", () => {
   it("passes a resolved URL through as composition data", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =

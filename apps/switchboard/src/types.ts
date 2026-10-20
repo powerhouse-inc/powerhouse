@@ -80,6 +80,13 @@ export type StartServerOptions = {
    */
   fatalErrorShutdown?: boolean;
   /**
+   * Install the owned reactor's SIGINT/SIGTERM handlers (default true).
+   * False when a supervisor owns the process exit (a `ph run` compound
+   * member): the reactor then stops only through `shutdown()`. Ignored with
+   * a caller-provided `reactor`.
+   */
+  signalHandlers?: boolean;
+  /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.
    * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the

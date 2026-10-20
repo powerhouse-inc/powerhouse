@@ -791,6 +791,7 @@ async function initServer(
       : [];
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
+      signalHandlers: options.signalHandlers,
       documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
       executorConfig:

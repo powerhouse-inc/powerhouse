@@ -6,20 +6,17 @@ import {
 } from "@powerhousedao/shared/clis";
 import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
 import {
+  defineHostSchemas,
   entryActiveForVerb,
   findDeadConnectConfig,
   isStructuralMultiReactor,
   mergeDefaultDrives,
   normalizePluginEntries,
-  PluginError,
-  unresolvedDriveReferences,
   resolveDriveDeclaration,
   type DriveDeclaration,
   projectDrivesIntoConnect,
   projectReactorToConnect,
-  reactorHostSchema,
   remoteBackendUrls,
-  runnerBaseSchema,
   type ReactorConfig,
   type RunnerContext,
   type RunnerHandle,
@@ -42,26 +39,33 @@ export const kind = "reactor";
 
 /** The connect host: the host-core reactor host with every runner option
  * this module reads declared (strict: an unknown runner key fails), and
- * `config` typed by Connect's own zod schema (the authored `connect` block). */
-export const hostSchema = reactorHostSchema.extend({
-  runner: runnerBaseSchema
-    .extend({
-      /** Open a browser tab once listening (dev/serve). */
-      openBrowser: z.boolean().optional(),
-      /** Fail instead of moving to the next free port when `port` is taken. */
-      strictPort: z.boolean().optional(),
-      /** The Connect build output dir (`build` writes it, `serve` serves it). */
-      outDir: z.string().min(1).optional(),
-      /** Patch the baked CSP for the runtime registry (`serve`); a compound's
-       * wiring sets it on its connect member. */
-      cspRegistrySync: z.boolean().optional(),
-    })
-    .strict(),
-  config: connectConfigSchema.optional(),
-});
+ * `config` typed by Connect's own zod schema (the authored `connect` block).
+ * One definition, two schemas: `declaredHostSchema` (token-able fields take
+ * output tokens; types host files) and `hostSchema` (resolved; checked
+ * right before the verb). */
+const schemas = defineHostSchemas((s) =>
+  s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema
+      .extend({
+        /** Open a browser tab once listening (dev/serve). */
+        openBrowser: z.boolean().optional(),
+        /** Fail instead of moving to the next free port when `port` is taken. */
+        strictPort: z.boolean().optional(),
+        /** The Connect build output dir (`build` writes it, `serve` serves it). */
+        outDir: z.string().min(1).optional(),
+        /** Patch the baked CSP for the runtime registry (`serve`); a
+         * compound's wiring sets it on its connect member. */
+        cspRegistrySync: z.boolean().optional(),
+      })
+      .strict(),
+    config: connectConfigSchema.optional(),
+  }),
+);
+export const declaredHostSchema = schemas.declaredHostSchema;
+export const hostSchema = schemas.hostSchema;
 
 /** What a connect host.js author writes. */
-export type ConnectHost = z.input<typeof hostSchema>;
+export type ConnectHost = z.input<typeof declaredHostSchema>;
 /** What a verb receives (defaults applied). */
 export type ConnectHostParsed = z.output<typeof hostSchema>;
 
@@ -176,18 +180,10 @@ function callerOverride(
       : normalizePluginEntries(entries, `hosts/${host.name}/host.js`)
           .filter((entry) => entryActiveForVerb(entry, verb))
           .map((entry) => ({ module: entry.module, config: entry.config }));
-  // A drive reference (`{ from, slug }`) is derived by a supervising compound
-  // from the referenced member's drives. Reaching this runner unresolved
-  // means there is no such member: standalone `ph run connect`, or a
-  // compound member that is not started before this one.
-  for (const entry of composition ?? []) {
-    for (const { key, reference } of unresolvedDriveReferences(entry.config)) {
-      throw new PluginError(
-        `hosts/${host.name}/host.js: plugin "${entry.module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", but this Connect is not running inside a compound that started it.`,
-        `Run the compound that declares "${reference.from}" (and list it before this member in config.startOrder), or spell the drive URL: { ${key}: "http://localhost:<port>/d/${reference.slug}" }.`,
-      );
-    }
-  }
+  // Entry configs arrive RESOLVED: output tokens (e.g. the workflows
+  // plugin's `drive: switchboard.drives.workflows.url`) were replaced by
+  // `ph run` (standalone: the producer's run record; in a compound: the
+  // member's live outputs) before validateHost let this verb run.
   if (entries !== undefined) {
     // Change 2: show the composition plan on the `ph run connect` terminal.
     // The pipeline itself runs in the browser (hook execution logs to the
