@@ -39,8 +39,9 @@ export type { RunnerHandle, StartedHandle } from "./runner-handle.js";
 /**
  * The generic compound runner: supervises the members a compound host
  * declares, each started via its OWN declared runner at its own effective
- * verb, writes a v2 .ph/run/<host>.json record, holds a per-project lock,
- * and tears members down in reverse order through their `shutdown()`.
+ * verb, writes a v2 .ph/run/<host>.json record, holds a per-project lock
+ * (neither at a one-shot verb such as build, which starts nothing), and
+ * tears members down in reverse order through their `shutdown()`.
  *
  * Members consume each other's outputs through `$output` tokens: the
  * dependency plan (resolve/plan.ts) orders the start, each member's tokens
@@ -152,16 +153,22 @@ export async function runCompound(
   const wiring: CompoundWiring = host.config ?? {};
   // Resolved by the calling runner module: its `run` maps to defaultVerb.
   const verb = ctx.verb;
+  // A one-shot compound verb (build) starts nothing: no lock, and no record
+  // to write or clear (clearing would delete a live instance's record).
+  const oneShotCompound = ONE_SHOT_VERBS.has(verb);
+  const keepsRecord = wiring.runtimeRecord !== false && !oneShotCompound;
 
   // Lock: one live instance per project per host (storage-root contention).
-  const probe = probeRun(projectRoot, host.name, options.projectName);
-  if (probe.status === "live") {
+  const probe = oneShotCompound
+    ? undefined
+    : probeRun(projectRoot, host.name, options.projectName);
+  if (probe?.status === "live") {
     throw new Error(
       `${host.name} is already running for this project (pid ${probe.record.pid}). ` +
         `Stop it before starting another.`,
     );
   }
-  if (probe.status === "foreign") {
+  if (probe?.status === "foreign") {
     throw new Error(
       `.ph/run/${host.name}.json describes a live "${probe.record.projectName}", ` +
         `but this project is "${options.projectName}". Refusing to start a second instance.`,
@@ -216,9 +223,7 @@ export async function runCompound(
           // best effort — keep tearing down the rest
         }
       }
-      if (wiring.runtimeRecord !== false) {
-        clearRunRecord(projectRoot, host.name);
-      }
+      if (keepsRecord) clearRunRecord(projectRoot, host.name);
     })());
 
   try {
@@ -284,7 +289,7 @@ export async function runCompound(
     throw error;
   }
 
-  if (wiring.runtimeRecord !== false) {
+  if (keepsRecord) {
     const recordMembers: Record<string, RunRecordMember> = {};
     for (const m of started) {
       recordMembers[m.name] = {
@@ -320,8 +325,7 @@ export async function runCompound(
   };
   if (options.installSignalHandlers !== false) {
     process.on("exit", () => {
-      if (wiring.runtimeRecord !== false)
-        clearRunRecord(projectRoot, host.name);
+      if (keepsRecord) clearRunRecord(projectRoot, host.name);
     });
     process.on("SIGINT", () => void handleSignal("SIGINT"));
     process.on("SIGTERM", () => void handleSignal("SIGTERM"));

@@ -375,6 +375,34 @@ describe("runCompound", () => {
     await result.shutdown();
   });
 
+  it("build: takes no lock and leaves a live instance's record alone", async () => {
+    const { dir, sink } = makeProject();
+    const { writeRunRecord } = await import("../src/run-record.js");
+    const live = {
+      version: 2 as const,
+      host: "app",
+      projectName: "lab",
+      kind: "compound" as const,
+      verb: "dev",
+      pid: process.pid,
+      startedAt: "x",
+      members: {},
+    };
+    writeRunRecord(dir, live);
+    const result = await runCompound(
+      await appHost(dir),
+      { ...ctx(dir), verb: "build" },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    expect(
+      calls(sink).filter((c) => (c.event as string) === "build"),
+    ).toHaveLength(2);
+    // no record of its own while building, and the live one survives
+    expect(readRunRecord(dir, "app")).toEqual(live);
+    await result.shutdown();
+    expect(readRunRecord(dir, "app")).toEqual(live);
+  });
+
   it("rejects a startOrder that names a member twice", async () => {
     const { dir, sink } = makeProject({
       startOrder: ["app-switchboard", "app-switchboard", "app-connect"],
