@@ -292,7 +292,12 @@ The change must ship as a major release. That is a release requirement, not
 generator behavior: the generator writes the `@powerhousedao/reactor-api` peer
 at the project's exact `document-model` pin and holds no range. The old major
 is excluded only when the release workflow publishes a major version and
-`ph migrate` rewrites a project's pin to that release.
+`ph migrate` rewrites a project's pin to that release. A host that loads the
+package anyway, such as one reading the HTTP registry, resolves no peers. The
+generated `subgraphs/index.ts` therefore throws on import when the first class
+it exports lacks `Symbol.for("powerhouse.subgraph")`. An old host logs the
+error and serves none of the package's subgraphs instead of serving them as
+`example`.
 
 ### 10. Reserved names
 

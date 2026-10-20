@@ -548,11 +548,11 @@ A concrete literal-name parent cannot be renamed by a subclass (TS2417). Use an 
 
 ### Host and package compatibility
 
-| Host     | Package                     | Result                                                                                                                         |
-| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice. |
-| New host | New class-based package     | Served through protocol version 1.                                                                                             |
-| Old host | New class-based package     | Unsupported. Use matching CLI, package, and host API releases.                                                                 |
+| Host     | Package                     | Result                                                                                                                                                                                   |
+| -------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice.                                                           |
+| New host | New class-based package     | Served through protocol version 1.                                                                                                                                                       |
+| Old host | New class-based package     | Refused. The generated `subgraphs/index.ts` throws on import and asks for a newer host, so the host serves none of the package's subgraphs and logs why. Its document models still load. |
 
 Compatibility for published packages does not permit old authoring code in developer tooling. Build, check, generate, publish, prepack, and Vetra reject it with migration guidance. Nameless classes are refused unless they are shared ancestors of exported concrete classes in the same entry.
 

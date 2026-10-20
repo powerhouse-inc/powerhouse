@@ -43,13 +43,13 @@ When `NODE_ENV` is unset, `development`, or `test`, the host calls each class's 
 4. Make setup and teardown overrides call `super`, and make teardown safe after partial setup.
 5. Run `ph model check`, `ph build`, and resolver tests. Compare schema and resolver coordinates before publishing.
 
-| Host     | Package                     | Compatibility                                                                                                                  |
-| -------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice. |
-| New host | New class-based package     | Served through the versioned subgraph protocol.                                                                                |
-| Old host | New class-based package     | Unsupported. Use matching CLI, package, and host API releases.                                                                 |
+| Host     | Package                     | Compatibility                                                                                                                                                                            |
+| -------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice.                                                           |
+| New host | New class-based package     | Served through the versioned subgraph protocol.                                                                                                                                          |
+| Old host | New class-based package     | Refused. The generated `subgraphs/index.ts` throws on import and asks for a newer host, so the host serves none of the package's subgraphs and logs why. Its document models still load. |
 
-This release must bump the major version. `FEATURE_DEPENDENCIES.subgraph` peer ranges must exclude the old major so an old host cannot accept a new class-based package. `ph migrate` updates an existing `@powerhousedao/reactor-api` peer to the target release pin.
+This release must bump the major version. `FEATURE_DEPENDENCIES.subgraph` peer ranges must exclude the old major so an old host cannot accept a new class-based package. A host that loads one anyway, such as a Switchboard reading the HTTP registry, would serve it as `example` with a placeholder `hello` query. The generated `subgraphs/index.ts` refuses such a host when it is imported. `ph generate` and `ph migrate` write the check. `ph migrate` updates an existing `@powerhousedao/reactor-api` peer to the target release pin.
 
 ### DOCUMENTATION
 
