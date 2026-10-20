@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import type { UseUndoRedoShortcutsProps } from "../hooks/useUndoRedoShortcuts.js";
+import type { UseUndoRedoShortcutsProps } from "@powerhousedao/connect/hooks";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +16,7 @@ const state = vi.hoisted(() => ({
 vi.mock("./editor-loader.js", () => ({
   EditorLoader: () => null,
 }));
-vi.mock("../hooks/useUndoRedoShortcuts.js", () => ({
+vi.mock("@powerhousedao/connect/hooks", () => ({
   useUndoRedoShortcuts: (props: UseUndoRedoShortcutsProps) => {
     state.shortcuts = props;
   },
@@ -59,12 +59,15 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useVetraPackageManager: () => undefined,
   useVetraPackages: () => [],
 }));
-vi.mock("./error-boundary.js", () => ({
+vi.mock("@powerhousedao/connect/components/shared", () => ({
   CenteredErrorMessage: () => null,
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("./document-upgrade-toast.js", () => ({
   DocumentUpgradeToast: () => null,
+}));
+vi.mock("./revision-history-view.js", () => ({
+  GenericRevisionHistory: () => null,
 }));
 
 const { DocumentEditor } = await import("./editors.js");
