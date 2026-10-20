@@ -64,8 +64,9 @@ export interface VendorPrebuildOptions {
    * The APP's base — the same string the app build uses (the dynamic-base
    * placeholder, or a normalized deploy base like "/app/"). The vendor's own
    * build base is this plus the vendor segment, so emitted asset URLs land
-   * under <app-base>__vendor__/. Default: the dynamic placeholder + segment
-   * (dev behavior). Import-map values stay base-relative; the production
+   * under <app-base>__vendor__/. Default: the dynamic placeholder (dev
+   * behavior; the segment is still appended once by the build worker).
+   * Import-map values stay base-relative; the production
    * build strips the leading slash (values then resolve against the page URL
    * under any deploy base), the dev flow prefixes its own base.
    */
@@ -156,7 +157,10 @@ export async function prebuildConnectVendor(
     [...include, ...external],
     stamps,
   );
-  const base = options.base ?? VENDOR_DYNAMIC_BASE;
+  // An APP base: the build worker appends the vendor segment itself, so the
+  // default must not carry it (it would land assets under __vendor__/__vendor__/
+  // and set the vendored Connect's BASE_URL to the vendor dir).
+  const base = options.base ?? DYNAMIC_BASE_PLACEHOLDER;
   const nodeEnv = options.nodeEnv ?? "development";
   const versionDigest = resolveVersionDigest(versions, own, stamps, {
     base,
@@ -694,9 +698,9 @@ export function missingVendorEntries(
  * under that base rather than the server root. A dynamic-base build keeps its
  * placeholder, which the runtime substitutes.
  *
- * `base` is the app base from `prebuildConnectVendor` callers, but the
- * VENDOR_DYNAMIC_BASE default already carries the vendor segment — that
- * trailing segment is dropped first so it is never doubled.
+ * `base` is the app base from `prebuildConnectVendor` callers; a base that
+ * already carries the vendor segment has it dropped first so it is never
+ * doubled.
  */
 export function withVendorBase(
   imports: Record<string, string>,
