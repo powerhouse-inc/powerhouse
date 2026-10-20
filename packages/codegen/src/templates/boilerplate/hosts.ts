@@ -39,9 +39,20 @@ export default {
 };
 \`\`\`
 
-Rules: the only legal import is the project's powerhouse.config.json; the
-export must survive a JSON round trip (no functions); \`ph <host-name>\` is
-sugar for \`ph run <host-name>\` (built-in commands win name collisions).
+Rules: a host.js may import the project's powerhouse.config.json and its
+sibling hosts' \`../<host>/host.js\` and generated \`../<host>/outputs.js\`,
+nothing else; \`process.\` is banned (read the environment with
+\`{ $env: "NAME" }\`); the export must survive a JSON round trip (no
+functions); \`ph <host-name>\` is sugar for \`ph run <host-name>\` (built-in
+commands win name collisions).
+
+Another host's outputs (its URLs, drive ids, …) are read with output tokens,
+e.g. \`{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }\`,
+resolved when the host starts (the producer must be running, or a member of
+the same compound). \`ph generate hosts\` writes each producer's
+\`outputs.js\` (typed shortcuts: \`switchboard.endpoints.graphql\`) and
+\`types.d.ts\`; \`/** @satisfies {PHHost} */\` plus \`tsc -p hosts\` type-check
+every host file.
 
 Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
 server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
@@ -76,6 +87,7 @@ at the switchboard's.
 // runtime behavior lives in the runner module named below.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-connect",
 
@@ -138,6 +150,7 @@ export default {
   const switchboardHost = `// @ts-check
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-switchboard",
 
@@ -184,6 +197,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
+/** @satisfies {PHHost} */
 export default {
   name: "vetra",
 
@@ -218,11 +232,13 @@ export default {
           ...connect.runner.plugins,
           { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },
           // The browser half of workflows: loads Workflow Studio and attaches
-          // the Workflows drive the sibling's workflows plugin serves — the
-          // compound derives the URL from that member, so the link is here.
+          // the Workflows drive the switchboard member serves (its output,
+          // so the compound starts that member first).
           {
             module: "@powerhousedao/connect/plugins/workflows",
-            config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
           },
         ],
       },
@@ -249,9 +265,9 @@ import connect from "../connect/host.js";
 // Declared once: the server member serves these locally; the connect member
 // attaches the SAME list as remote drives (a compound's Connect must not
 // duplicate-declare the local drives the server owns).
-const serverPort = switchboard.runner.port;
 const serverDrives = [{ slug: "powerhouse", name: "${projectName}" }];
 
+/** @satisfies {PHHost} */
 export default {
   name: "desktop",
 
@@ -320,20 +336,24 @@ export default {
         port: config.studio?.port ?? 3000,
         plugins: [
           ...connect.runner.plugins,
-          // Workflow Studio over the server's Workflows drive (derived).
+          // Workflow Studio over the server's Workflows drive (its output).
           {
             module: "@powerhousedao/connect/plugins/workflows",
-            config: { drive: { from: "desktop-switchboard", slug: "workflows" } },
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
           },
         ],
       },
-      // Attach the server's drives as remotes (replaces the old implicit
-      // projectDrivesIntoConnect flag with legible derivation):
+      // Attach the server's drives as remotes, each by the URL the server
+      // member reports for it (its drives.<slug>.url output):
       reactor: {
         ...connect.reactor,
         drives: serverDrives.map((d) => ({
           slug: d.slug,
-          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${d.slug}\` },
+          remote: {
+            url: { $output: { host: "switchboard", path: ["drives", d.slug, "url"] } },
+          },
         })),
       },
     },
@@ -350,13 +370,13 @@ export default {
 // Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-assistant",
 
   runner: {
     module: "@powerhousedao/clint/mastra-runner",
     port: 4910,
-    workdir: "\${userData}/assistant",
   },
 
   profile: {
@@ -372,17 +392,23 @@ export default {
     backends: {
       switchboard: {
         kind: "remote",
-        remote: { host: "switchboard" }, // sibling host reference; use
-                                         // { url: "https://…/graphql" } for
-                                         // an external switchboard
+        // The running switchboard's GraphQL endpoint, read from its live
+        // outputs (after \`ph generate hosts\`: switchboard.endpoints.graphql
+        // from ../switchboard/outputs.js). A literal URL attaches to an
+        // external switchboard.
+        remote: {
+          url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+        },
       },
     },
     protocol: config.connect?.reactor ?? {},
   },
 
   config: {
-    // model: "anthropic/claude-sonnet-4-5", // enable for real LLM responses
-    //                                        (provider API key via env)
+    // Enable for real LLM responses. The key is read from the environment
+    // when the host starts (\`ph run assistant\` fails naming it when unset):
+    // model: "openrouter/anthropic/claude-sonnet-4.5",
+    // apiKey: { $env: "OPENROUTER_API_KEY" },
     prompts: { skillsDir: "agents", outDir: "dist/skills" },
   },
 };
@@ -400,11 +426,11 @@ export default {
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-// The drive(s) the switchboard serves, and its port — the single source
-// Connect's remote attachment derives from.
-const serverPort = switchboard.runner.port;
+// The drive(s) the switchboard declares — the single source Connect's
+// remote attachment derives from.
 const serverDrives = switchboard.reactor.drives ?? [];
 
+/** @satisfies {PHHost} */
 export default {
   name: "cli",
 
@@ -431,23 +457,31 @@ export default {
       runner: {
         plugins: [
           ...connect.runner.plugins,
-          // Workflow Studio over the server's Workflows drive (derived).
+          // Workflow Studio over the server's Workflows drive (its output).
           {
             module: "@powerhousedao/connect/plugins/workflows",
-            config: { drive: { from: "cli-switchboard", slug: "workflows" } },
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
           },
         ],
       },
+      // Every URL is the switchboard member's output (what it actually
+      // bound), so the compound starts it first.
       reactor: {
         backends: {
           sb: {
             kind: "remote",
-            remote: { url: \`http://127.0.0.1:\${serverPort}/graphql\` },
+            remote: {
+              url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+            },
           },
         },
         drives: serverDrives.map((drive) => ({
           slug: drive.slug,
-          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${drive.slug}\` },
+          remote: {
+            url: { $output: { host: "switchboard", path: ["drives", drive.slug, "url"] } },
+          },
         })),
       },
     },

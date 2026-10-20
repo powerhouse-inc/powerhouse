@@ -82,12 +82,13 @@ describe("writeGeneratedHostsFiles", () => {
     expect(vetra).toContain("@powerhousedao/vetra-studio/switchboard");
     expect(vetra).toContain("@powerhousedao/vetra-studio/connect");
     expect(vetra).not.toContain("@powerhousedao/ph-cli/runners/compound");
-    // workflow plugins: the connect member derives the Workflows drive from
-    // the switchboard member (a drive reference, resolved by the compound)
+    // workflow plugins: the connect member reads the Workflows drive URL
+    // from the switchboard member's outputs (an output token)
     expect(vetra).toContain("@powerhousedao/connect/plugins/workflows");
     expect(vetra).toContain(
-      `drive: { from: "vetra-switchboard", slug: "workflows" }`,
+      `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
+    expect(vetra).not.toContain("from:");
 
     // P2.8: single-sourced protocol — the switchboard host references the
     // SAME connect.reactor block the connect host receives via its config.
@@ -113,22 +114,28 @@ describe("writeGeneratedHostsFiles", () => {
     expect(desktop).toContain(`defaultVerb: "serve"`);
     expect(desktop).toContain("cspRegistrySync: true");
     expect(desktop).toContain(
-      `drive: { from: "desktop-switchboard", slug: "workflows" }`,
+      `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
+    expect(desktop).toContain(`path: ["drives", d.slug, "url"]`);
+    expect(desktop).not.toContain("serverPort");
     // the switchboard side serves the runtime and its drive:
     expect(switchboard).toContain(
       "@powerhousedao/switchboard/plugins/workflows",
     );
 
-    // P5.8: the agent + cli hosts ride the clint runners; ${userData} stays
-    // a literal placeholder; the agents manager references the sibling host.
+    // P5.8: the agent rides the mastra runner, attached to the running
+    // switchboard by its graphql endpoint output.
     const assistant = readFileSync(
       join(dir, "hosts/assistant/host.js"),
       "utf-8",
     );
     expect(assistant).toContain("@powerhousedao/clint/mastra-runner");
-    expect(assistant).toContain('remote: { host: "switchboard" }');
-    expect(assistant).toContain('workdir: "${userData}/assistant"');
+    expect(assistant).toContain(
+      '$output: { host: "switchboard", path: ["endpoints", "graphql"] }',
+    );
+    expect(assistant).not.toContain("remote: { host");
+    expect(assistant).not.toContain("workdir");
+    expect(assistant).toContain('apiKey: { $env: "OPENROUTER_API_KEY" }');
     // cli: the generic compound over switchboard + Connect, Connect as a
     // REMOTE CLIENT (lone remote backend → reactorClient "remote", no PGlite).
     const cli = readFileSync(join(dir, "hosts/cli/host.js"), "utf-8");
@@ -137,10 +144,13 @@ describe("writeGeneratedHostsFiles", () => {
     expect(cli).toContain('import connect from "../connect/host.js"');
     expect(cli).toContain('"cli-switchboard": { host: "switchboard" }');
     expect(cli).toContain(
-      `drive: { from: "cli-switchboard", slug: "workflows" }`,
+      `$output: { host: "switchboard", path: ["drives", "workflows", "url"] }`,
     );
     expect(cli).toContain(`kind: "remote"`);
-    expect(cli).toContain("/graphql");
+    expect(cli).toContain(
+      '$output: { host: "switchboard", path: ["endpoints", "graphql"] }',
+    );
+    expect(cli).not.toContain("127.0.0.1");
     expect(cli).not.toContain("@powerhousedao/clint/clint-runner");
   });
 
@@ -309,9 +319,8 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
     ).toContain("PowerhouseConfig");
 
-    // ...and still does with every scaffold host annotated
-    // `@satisfies {PHHost}` (the T3 template edit the integrator applies;
-    // injected here so the template content stays untouched)
+    // every scaffold host carries `@satisfies {PHHost}`, so the clean tsc
+    // run above type-checked each against its runner's declared schema
     for (const host of [
       "connect",
       "switchboard",
@@ -320,18 +329,10 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
       "assistant",
       "cli",
     ]) {
-      const file = join(dir, "hosts", host, "host.js");
-      const source = readFileSync(file, "utf-8");
-      expect(source).toMatch(/^export default \{/m);
-      writeFileSync(
-        file,
-        source.replace(
-          /^export default \{/m,
-          "/** @satisfies {PHHost} */\nexport default {",
-        ),
-      );
+      expect(
+        readFileSync(join(dir, "hosts", host, "host.js"), "utf-8"),
+      ).toMatch(/^\/\*\* @satisfies \{PHHost\} \*\/\nexport default \{/m);
     }
-    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
 
     // a typed host consuming the generated tokens checks clean...
     writeFixture(
@@ -358,11 +359,51 @@ export default {
     // ...while a typo, a wrong token path and a wrong plugin config fail.
     // The wrong path fails as a property access on the generated tree
     // (outputs.d.ts), independent of how ref() fields type tokens.
-    // INTEGRATOR, after T3-A (token input types) and T3-B (connect workflows
-    // \`drive: ref(z.url())\`) merge: also confirm that
-    // \`config: { drive: switchboard.drives.workflows.url }\` on the connect
-    // workflows plugin checks clean, and \`drive: switchboard.drives.workflows\`
-    // (an object, not a token) fails.
+    // ...and a connect host taking the workflows drive as that token: the
+    // plugin's `drive` is ref(z.url()), so the token checks clean while the
+    // drive entry itself (an object, not a token) fails.
+    writeFixture(
+      dir,
+      "labconnect",
+      `// @ts-check
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "labconnect",
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/connect",
+    plugins: [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: switchboard.drives.workflows.url },
+      },
+    ],
+  },
+};
+`,
+    );
+    writeFixture(
+      dir,
+      "baddrive",
+      `// @ts-check
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "baddrive",
+  runner: {
+    module: "@powerhousedao/ph-cli/runners/connect",
+    plugins: [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: switchboard.drives.workflows },
+      },
+    ],
+  },
+};
+`,
+    );
     writeFixture(
       dir,
       "typo",
@@ -406,13 +447,19 @@ export default {
     const byFile = (host: string) =>
       errors.filter((line) => line.startsWith(`hosts/${host}/host.js`));
     expect(byFile("lab")).toEqual([]);
+    expect(byFile("labconnect")).toEqual([]);
+    expect(byFile("baddrive").join("\n")).toMatch(
+      /Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| Token \| undefined'/,
+    );
     expect(byFile("typo").join("\n")).toMatch(/'drive' does not exist/);
     expect(byFile("badpath").join("\n")).toMatch(
       /Property 'workflow' does not exist/,
     );
     expect(byFile("badplugin").join("\n")).toMatch(/allowAddDrives/);
     expect(
-      errors.filter((line) => !/^hosts\/(typo|badpath|badplugin)\//.test(line)),
+      errors.filter(
+        (line) => !/^hosts\/(typo|badpath|badplugin|baddrive)\//.test(line),
+      ),
     ).toEqual([]);
   }, 240_000);
 });
