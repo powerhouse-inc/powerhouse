@@ -4,11 +4,10 @@ import {
   closePHModal,
   setSelectedNode,
   useDocumentModelModuleById,
-  useParentFolderForSelectedNode,
+  useNodeParentFolderById,
   usePHModal,
-  useSelectedDriveSafe,
-  useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
+import { useDriveRouteData } from "@powerhousedao/connect-core/router";
 
 export const CreateDocumentModal: React.FC = () => {
   const phModal = usePHModal();
@@ -19,19 +18,19 @@ export const CreateDocumentModal: React.FC = () => {
     documentType,
     documentModelVersion,
   );
-  const [selectedDrive] = useSelectedDriveSafe();
-  const selectedFolder = useSelectedFolder();
-  const parentFolder = useParentFolderForSelectedNode();
+  // In the open folder, else beside the open document.
+  const { drive, folder, documentId } = useDriveRouteData();
+  const parentFolder = useNodeParentFolderById(documentId);
 
   const onCreateDocument = async (documentName: string) => {
     closePHModal();
-    if (!selectedDrive || !documentModel) return;
+    if (!drive || !documentModel) return;
 
     const node = await addDocument(
-      selectedDrive.header.id,
+      drive.header.id,
       documentName || `New ${documentModel.documentModel.global.name}`,
       documentModel.documentModel.global.id,
-      selectedFolder?.id ?? parentFolder?.id,
+      folder?.id ?? parentFolder?.id,
       undefined,
       undefined,
       undefined,
