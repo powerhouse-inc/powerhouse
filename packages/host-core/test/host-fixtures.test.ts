@@ -50,10 +50,9 @@ import {
  * powerhouse.config.json: refresh them when the template changes.
  */
 
-// TODO(T4-A): flip to false when `$map` lands. The guard test below fails
-// as soon as the resolver accepts `$map`, so the `$map` rows go live with
-// the T4-A merge.
-const MAP_PENDING = true;
+// `$map` landed with T4-A, so the `$map` rows run. The guard test below
+// fails if the resolver ever stops accepting `$map`.
+const MAP_PENDING = false;
 
 const FIXTURES = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -1015,7 +1014,6 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
   const labelled = (rows: Row[]) =>
     rows.map((row) => [`${row.project}/${row.host}`, row] as const);
   it.each(labelled(ROWS.filter((row) => !row.map)))("%s", runRow);
-  // TODO(T4-A): these run once MAP_PENDING is false.
   it.skipIf(MAP_PENDING).each(labelled(ROWS.filter((row) => row.map)))(
     "%s ($map)",
     runRow,
