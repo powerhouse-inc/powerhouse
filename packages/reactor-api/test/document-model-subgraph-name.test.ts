@@ -62,6 +62,7 @@ function cafeMenuTypes() {
   return {
     typeDefs: parse("type Query { menu: String }"),
     typeNames: new Set<string>(),
+    descriptions: new Map(),
   };
 }
 

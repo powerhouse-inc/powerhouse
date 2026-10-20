@@ -5,14 +5,20 @@ import type {
 import { adaptSchemaFirstDocumentModelModule } from "document-model/tooling";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parse } from "graphql";
-import { describe, expect, it } from "vitest";
+import { type GraphQLSchema, parse } from "graphql";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   createSchema,
   generateDocumentModelSchema,
   getGeneratedDocumentModelTypes,
 } from "../src/utils/create-schema.js";
 import { printSchema } from "./utils/graphql-host.js";
+import {
+  initAndFlush,
+  makeDriveModule,
+  makeHarness,
+  makeMockReactorClient,
+} from "./utils/graphql-manager-harness.js";
 
 const GOLDENS = fileURLToPath(
   new URL("../../document-model/test/parity/goldens/", import.meta.url),
@@ -25,6 +31,28 @@ const ROOTS = readdirSync(GOLDENS)
 
 function readJson(file: string): unknown {
   return JSON.parse(readFileSync(`${GOLDENS}${file}`, "utf8"));
+}
+
+/** The schema a GraphQLManager serves for `module`'s own subgraph. */
+async function hostedSchema(module: DocumentModelModule): Promise<string> {
+  vi.useFakeTimers();
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  const { manager, gatewayAdapter } = makeHarness({
+    enableDocumentModelSubgraphs: true,
+    reactorClient: makeMockReactorClient({
+      getDocumentModelModules: vi
+        .fn()
+        .mockResolvedValue({ results: [makeDriveModule(), module] }),
+    }),
+  });
+  await initAndFlush(manager);
+  const own = gatewayAdapter.createHandler.mock.calls
+    .map(([schema]) => schema as GraphQLSchema)
+    .filter((schema) => schema.getType("ExtensionsQueries") !== undefined);
+  expect(own).toHaveLength(1);
+  return printSchema(own[0]);
 }
 
 function servedSchema(module: DocumentModelModule, useNewApi: boolean) {
@@ -288,6 +316,12 @@ describe.each([
       expect(structured).toContain(proof);
     },
   );
+
+  it("serves the schema-first schema through the host", async () => {
+    const hosted = await hostedSchema(codeFirst);
+    expect(hosted).toBe(await hostedSchema(schemaFirst));
+    expect(hosted).toContain(proof);
+  });
 
   it("keeps template descriptions when generated types are cached", () => {
     const generated = getGeneratedDocumentModelTypes([codeFirst]);
