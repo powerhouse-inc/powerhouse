@@ -58,7 +58,6 @@ describe("@powerhousedao/connect/plugin-configs", () => {
       "zod",
       "@powerhousedao/shared/connect/connect-config-schema",
       "@powerhousedao/shared/host-tokens",
-      "@powerhousedao/host-core/schema",
     ]);
     const IMPORT = /(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g;
     for (const file of readdirSync(dir)) {
