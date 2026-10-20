@@ -354,5 +354,35 @@ describe("runtime-config loader", () => {
       await loadRuntimeConfig({ plugins });
       expect(getConnectPluginUi().commonEditors).toBe(false);
     });
+
+    it("loads the plugin modules while the config is fetched", async () => {
+      let respond!: () => void;
+      // @ts-expect-error partial mock is fine for tests
+      globalThis.fetch = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            respond = () =>
+              resolve({
+                ok: true,
+                status: 200,
+                statusText: "OK",
+                json: () =>
+                  Promise.resolve({
+                    schemaVersion: 2,
+                    packages: [],
+                    connect: {},
+                  }),
+              });
+          }),
+      );
+      const loadPlugins = vi.fn(plugins);
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const loaded = loadRuntimeConfig({ plugins: loadPlugins });
+      await vi.waitFor(() => expect(loadPlugins).toHaveBeenCalled());
+      expect(globalThis.fetch).toHaveBeenCalled();
+      respond();
+      await loaded;
+    });
   });
 });

@@ -17,7 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /** The node route's options: its loader, `?history` search and title. */
 export const options = {
-  // `?history` and its `page`; inline type, as in __root.tsx.
+  // `?history` and its `historyPage`; inline type, as in __root.tsx.
   validateSearch: (search: Record<string, unknown>) =>
     validateDriveSearch(search) as Record<string, string | undefined>,
   loader: {

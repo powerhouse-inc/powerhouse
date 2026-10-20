@@ -15,7 +15,7 @@ function defaultScope(scopes: readonly string[]) {
 }
 
 /** The generic chrome's `history` slot: the design system's RevisionHistory,
- * paged through `?history&page=N`. */
+ * paged through `?history&historyPage=N`. */
 export function GenericRevisionHistory({ document }: DocumentViewProps) {
   const { id, name, revision } = document.header;
   // The scopes a document carries operations for; every document has at least "global".
