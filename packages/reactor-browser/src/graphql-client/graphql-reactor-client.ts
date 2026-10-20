@@ -21,6 +21,7 @@ import type {
 import type {
   CreateDocumentActionInput,
   ISigner,
+  PeerCapabilityFlags,
   PHDocumentState,
   ProtocolVersions,
   SignaturePolicy,
@@ -32,8 +33,10 @@ import {
   appliedOperations,
   fitCreateBaseReducer,
   normalizeDocumentModelVersion,
+  PEER_CAPABILITIES,
   redo,
   redoTarget,
+  selectProtocolVersions,
   toTransportAction,
   undo,
   undoTarget,
@@ -176,6 +179,12 @@ export type GraphQLReactorClientOptions = {
     | (() => readonly DocumentModelModule<any>[]);
 
   /**
+   * This client's reactor feature flags, which pick the protocol versions of
+   * the documents it creates. `undoV3` defaults to on, as in the reactor.
+   */
+  featureFlags?: PeerCapabilityFlags;
+
+  /**
    * Signs the actions this client pushes, instead of the logged-in Renown user.
    *
    * Left out - the normal case - the signer is resolved per push from
@@ -232,6 +241,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
+  private readonly featureFlags: PeerCapabilityFlags;
   private readonly signer: ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
@@ -240,8 +250,6 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private realtimeErrorLogged = false;
   /** Whether the last socket died because the Switchboard refused its credentials. */
   private realtimeRefusedCredentials = false;
-  /** False once the Switchboard refuses `createDefaults(documentType:)`. */
-  private createDefaultsTakesType = true;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -254,6 +262,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const copied = [...(models ?? [])];
       this.documentModels = () => copied;
     }
+    this.featureFlags = {
+      ...options.featureFlags,
+      undoV3: options.featureFlags?.undoV3 ?? true,
+    };
     this.signer = options.signer;
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
@@ -866,86 +878,49 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * under-sign on a stricter host.
    */
   async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    const defaults = await this.createDefaults("getCreateSignaturePolicy");
-    return defaults.signaturePolicy;
-  }
-
-  /**
-   * The protocol versions the Switchboard selects for a new document of
-   * `documentType` under `parentIdentifier`, read from its `createDefaults`
-   * query. A parent the caller may not read is refused by the server, never
-   * answered as if none was named; a Switchboard without the query is refused
-   * with {@link GraphQLOperationNotSupportedError}. A Switchboard that
-   * predates the `documentType` argument answers without fitting to the type,
-   * so the answer is fitted here against `documentModels`.
-   */
-  async getCreateProtocolVersions(
-    { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
-    signal?: AbortSignal,
-  ): Promise<ProtocolVersions> {
-    if (documentType !== undefined && this.createDefaultsTakesType) {
-      try {
-        const result = await this.sdk.GetCreateProtocolVersions(
-          { parentIdOrSlug: parentIdentifier, documentType },
-          undefined,
-          signal,
-        );
-        return protocolVersionsFrom(result.createDefaults.protocolVersions);
-      } catch (error) {
-        if (rejectsArgument(error, "createDefaults", "documentType")) {
-          this.createDefaultsTakesType = false;
-        } else if (!queriesUnknownField(error, "createDefaults")) {
-          throw error;
-        }
-      }
-    }
-    const defaults = await this.createDefaults(
-      "getCreateProtocolVersions",
-      parentIdentifier,
-      signal,
-    );
-    return fitCreateBaseReducer(
-      defaults.protocolVersions,
-      documentType,
-      this.documentModels(),
-      logger,
-    );
-  }
-
-  private async createDefaults(
-    operation: string,
-    parentIdOrSlug?: string,
-    signal?: AbortSignal,
-  ): Promise<{
-    signaturePolicy: SignaturePolicy;
-    protocolVersions: ProtocolVersions;
-  }> {
     let result: GetCreateDefaultsQuery;
     try {
-      result = await this.sdk.GetCreateDefaults(
-        { parentIdOrSlug },
-        undefined,
-        signal,
-      );
+      result = await this.sdk.GetCreateDefaults({});
     } catch (error) {
       if (queriesUnknownField(error, "createDefaults")) {
         throw new GraphQLOperationNotSupportedError(
-          operation,
+          "getCreateSignaturePolicy",
           "the Switchboard predates the createDefaults query",
         );
       }
       throw error;
     }
-    const { signaturePolicy, protocolVersions } = result.createDefaults;
+    const { signaturePolicy } = result.createDefaults;
     if (!isSignaturePolicy(signaturePolicy)) {
       throw new Error(
         `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
       );
     }
-    return {
-      signaturePolicy,
-      protocolVersions: protocolVersionsFrom(protocolVersions),
-    };
+    return signaturePolicy;
+  }
+
+  /**
+   * The protocol versions this client gives a new document of `documentType`,
+   * from its own `featureFlags` and `documentModels`; the Switchboard is not
+   * asked. A host that does not run a chosen version refuses the create.
+   */
+  getCreateProtocolVersions(
+    { documentType }: CreateProtocolVersionsOptions,
+    _signal?: AbortSignal,
+  ): Promise<ProtocolVersions> {
+    const selected = selectProtocolVersions({
+      capabilities: PEER_CAPABILITIES,
+      flags: this.featureFlags,
+      members: [],
+    });
+    return Promise.resolve(
+      fitCreateBaseReducer(
+        selected,
+        documentType,
+        this.documentModels(),
+        logger,
+      ),
+    );
   }
 
   /**
@@ -1813,29 +1788,6 @@ function queriesUnknownField(error: unknown, field: string): boolean {
   );
 }
 
-/** Whether the server's schema has no such argument on a root field. */
-function rejectsArgument(
-  error: unknown,
-  field: string,
-  argument: string,
-): boolean {
-  const errors = (error as { response?: { errors?: unknown } } | null)?.response
-    ?.errors;
-  if (!Array.isArray(errors)) {
-    return false;
-  }
-  const prefix = `Unknown argument "${argument}" on field "`;
-  const suffix = `.${field}".`;
-  return errors.some((entry) => {
-    const message = (entry as { message?: unknown } | null)?.message;
-    return (
-      typeof message === "string" &&
-      message.startsWith(prefix) &&
-      message.includes(suffix)
-    );
-  });
-}
-
 /**
  * The header a Switchboard's drive middleware and load balancer key on. A
  * request carries it only when it is known to belong to that one drive: the
@@ -1894,25 +1846,6 @@ function wrongBackendErrorOf(
     payload,
     { cause: error },
   );
-}
-
-/** Protocol versions as the server sent them; anything but a version map throws. */
-function protocolVersionsFrom(value: unknown): ProtocolVersions {
-  if (!isPlainObject(value)) {
-    throw new Error(
-      "The Switchboard answered malformed create protocol versions",
-    );
-  }
-  const versions: ProtocolVersions = {};
-  for (const [protocol, version] of Object.entries(value)) {
-    if (typeof version !== "number" || !Number.isInteger(version)) {
-      throw new Error(
-        `The Switchboard answered a malformed version for protocol ${protocol}`,
-      );
-    }
-    versions[protocol] = version;
-  }
-  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {

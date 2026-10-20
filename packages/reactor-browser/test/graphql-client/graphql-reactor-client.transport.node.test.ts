@@ -1,6 +1,5 @@
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { buildSchema, parse, validate } from "graphql";
 import { logger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -99,7 +98,7 @@ function unknownField(field: string): Reply {
 }
 
 describe("GraphQLReactorClient create defaults over the wire", () => {
-  it("reads both defaults from createDefaults", async () => {
+  it("reads the signature policy from createDefaults", async () => {
     const { url, received } = await serve(() => ({
       status: 200,
       body: JSON.stringify({
@@ -111,156 +110,56 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
         },
       }),
     }));
-    const client = clientFor(url);
 
-    expect(await client.getCreateSignaturePolicy()).toBe("legacy");
-    expect(
-      await client.getCreateProtocolVersions({
-        documentType: undefined,
-        parentIdentifier: "parent-1",
-      }),
-    ).toEqual({
-      "base-reducer": 2,
-    });
-    expect(received.map((entry) => entry.body.variables)).toEqual([
-      {},
-      { parentIdOrSlug: "parent-1" },
-    ]);
+    expect(await clientFor(url).getCreateSignaturePolicy()).toBe("legacy");
+    expect(received.map((entry) => entry.body.variables)).toEqual([{}]);
   });
 
   it("refuses with a typed error against a Switchboard without createDefaults", async () => {
     const { url } = await serve(() => unknownField("createDefaults"));
-    const client = clientFor(url);
 
-    await expect(client.getCreateSignaturePolicy()).rejects.toBeInstanceOf(
-      GraphQLOperationNotSupportedError,
-    );
     await expect(
-      client.getCreateProtocolVersions({
-        documentType: undefined,
-        parentIdentifier: "parent-1",
-      }),
-    ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
-    await expect(
-      client.getCreateProtocolVersions({
-        documentType: "powerhouse/test",
-        parentIdentifier: "parent-1",
-      }),
+      clientFor(url).getCreateSignaturePolicy(),
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
   });
 });
 
-const CREATE_DEFAULTS_TYPES = /* GraphQL */ `
-  scalar JSONObject
-  type CreateDefaults {
-    signaturePolicy: String!
-    protocolVersions: JSONObject!
-  }
-`;
-
-/** A Switchboard validating each query against its own createDefaults. */
-function createDefaultsServer(
-  createDefaults: string,
-  protocolVersions: unknown,
-) {
-  const schema = buildSchema(
-    `${CREATE_DEFAULTS_TYPES} type Query { ${createDefaults} }`,
-  );
-  return (received: Received): Reply => {
-    const errors = validate(schema, parse(received.body.query));
-    if (errors.length > 0) {
-      return {
-        status: 400,
-        body: JSON.stringify({
-          errors: errors.map((error) => ({
-            message: error.message,
-            extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
-          })),
-        }),
-      };
-    }
-    return {
-      status: 200,
-      body: JSON.stringify({
-        data: {
-          createDefaults: { signaturePolicy: "legacy", protocolVersions },
-        },
-      }),
-    };
+describe("GraphQLReactorClient create protocol versions", () => {
+  const tagged =
+    documentModelDocumentModelModule as unknown as DocumentModelModule;
+  const untagged: DocumentModelModule = {
+    ...tagged,
+    reducer: ((...args) => (tagged.reducer as Reducer)(...args)) as Reducer,
   };
-}
 
-describe("GraphQLReactorClient create protocol versions for a document type", () => {
-  it("sends the type to a Switchboard that takes it", async () => {
-    const { url, received } = await serve(
-      createDefaultsServer(
-        "createDefaults(parentIdOrSlug: String, documentType: String): CreateDefaults!",
-        { "base-reducer": 2 },
-      ),
-    );
-    const client = clientFor(url);
+  async function clientKnowing(
+    documentModels: DocumentModelModule[],
+    featureFlags?: { undoV3?: boolean },
+  ) {
+    const { url, received } = await serve(() => unknownField("createDefaults"));
+    const client = new GraphQLReactorClient({
+      url,
+      realtime: false,
+      documentModels,
+      featureFlags,
+    });
+    return { client, received };
+  }
+
+  it("gives a model whose reducer createReducer built base-reducer 3 without asking the Switchboard", async () => {
+    const { client, received } = await clientKnowing([tagged]);
 
     expect(
       await client.getCreateProtocolVersions({
-        documentType: "powerhouse/test",
+        documentType: DOCUMENT_MODEL,
         parentIdentifier: "parent-1",
       }),
-    ).toEqual({ "base-reducer": 2 });
-    expect(received.map((entry) => entry.body.variables)).toEqual([
-      { parentIdOrSlug: "parent-1", documentType: "powerhouse/test" },
-    ]);
+    ).toEqual({ "base-reducer": 3 });
+    expect(received).toEqual([]);
   });
 
-  async function legacyServer() {
-    return serve(
-      createDefaultsServer(
-        "createDefaults(parentIdOrSlug: String): CreateDefaults!",
-        {
-          "base-reducer": 3,
-        },
-      ),
-    );
-  }
-
-  function clientKnowing(
-    url: string,
-    documentModels: DocumentModelModule[],
-  ): GraphQLReactorClient {
-    return new GraphQLReactorClient({ url, realtime: false, documentModels });
-  }
-
-  it("falls back once, then stops sending the type, to a Switchboard that predates it", async () => {
-    const { url, received } = await legacyServer();
-    const client = clientKnowing(url, [
-      documentModelDocumentModelModule as unknown as DocumentModelModule,
-    ]);
-    const options = {
-      documentType: DOCUMENT_MODEL,
-      parentIdentifier: "parent-1",
-    };
-
-    expect(await client.getCreateProtocolVersions(options)).toEqual({
-      "base-reducer": 3,
-    });
-    expect(await client.getCreateProtocolVersions(options)).toEqual({
-      "base-reducer": 3,
-    });
-    expect(received.map((entry) => entry.body.operationName)).toEqual([
-      "GetCreateProtocolVersions",
-      "GetCreateDefaults",
-      "GetCreateDefaults",
-    ]);
-  });
-
-  it("fits the old Switchboard's answer to a model whose reducer createReducer did not build", async () => {
-    const { url } = await legacyServer();
-    const tagged =
-      documentModelDocumentModelModule.reducer as unknown as Reducer;
-    const untagged = {
-      ...(documentModelDocumentModelModule as unknown as DocumentModelModule),
-      reducer: ((...args) => tagged(...args)) as Reducer,
-    };
-    const client = clientKnowing(url, [untagged]);
+  it("gives a model whose reducer createReducer did not build base-reducer 2", async () => {
+    const { client, received } = await clientKnowing([untagged]);
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
 
     try {
@@ -272,11 +171,11 @@ describe("GraphQLReactorClient create protocol versions for a document type", ()
     } finally {
       warn.mockRestore();
     }
+    expect(received).toEqual([]);
   });
 
-  it("fits the old Switchboard's answer to 2 for a type the client does not know", async () => {
-    const { url } = await legacyServer();
-    const client = clientFor(url);
+  it("gives a type the client does not know base-reducer 2", async () => {
+    const { client } = await clientKnowing([tagged]);
 
     expect(
       await client.getCreateProtocolVersions({
@@ -286,6 +185,14 @@ describe("GraphQLReactorClient create protocol versions for a document type", ()
     expect(
       await client.getCreateProtocolVersions({ documentType: undefined }),
     ).toEqual({ "base-reducer": 3 });
+  });
+
+  it("gives base-reducer 2 with undoV3 off", async () => {
+    const { client } = await clientKnowing([tagged], { undoV3: false });
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
   });
 });
 

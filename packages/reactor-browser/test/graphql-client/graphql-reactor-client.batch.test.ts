@@ -715,30 +715,20 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const policy = await createClientWith(sdk).getCreateSignaturePolicy();
 
     expect(policy).toBe("legacy");
-    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith(
-      { parentIdOrSlug: undefined },
-      undefined,
-      undefined,
-    );
+    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith({});
   });
 
-  it("reads create protocol versions under the parent from createDefaults", async () => {
-    const sdk = createMockSdk({
-      GetCreateDefaults: defaults("v2-required", { signature: 2 }),
+  it("selects create protocol versions without asking the Switchboard", async () => {
+    const sdk = createMockSdk();
+
+    const versions = await createClientWith(sdk).getCreateProtocolVersions({
+      documentType: undefined,
+      parentIdentifier: "parent-1",
     });
-    const controller = new AbortController();
 
-    const versions = await createClientWith(sdk).getCreateProtocolVersions(
-      { documentType: undefined, parentIdentifier: "parent-1" },
-      controller.signal,
-    );
-
-    expect(versions).toEqual({ signature: 2 });
-    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith(
-      { parentIdOrSlug: "parent-1" },
-      undefined,
-      controller.signal,
-    );
+    expect(versions).toEqual({ "base-reducer": 3 });
+    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
+    expect(sdk.GetCreateProtocolVersions).not.toHaveBeenCalled();
     expect(sdk.GetDocument).not.toHaveBeenCalled();
   });
 
@@ -750,21 +740,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     ).rejects.toThrow("unknown create signature policy: v3-maybe");
   });
 
-  it("refuses malformed protocol versions", async () => {
-    for (const malformed of [null, ["signature"], { signature: "2" }]) {
-      const sdk = createMockSdk({
-        GetCreateDefaults: defaults("v2-required", malformed),
-      });
-
-      await expect(
-        createClientWith(sdk).getCreateProtocolVersions({
-          documentType: undefined,
-        }),
-      ).rejects.toThrow("malformed");
-    }
-  });
-
-  it("refuses create defaults with a typed error against a Switchboard without createDefaults", async () => {
+  it("refuses the create signature policy with a typed error against a Switchboard without createDefaults", async () => {
     const olderServer = Object.assign(new Error("validation failed"), {
       response: {
         status: 400,
@@ -783,19 +759,12 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const client = createClientWith(sdk);
 
     const policy = client.getCreateSignaturePolicy();
-    const versions = client.getCreateProtocolVersions({
-      documentType: undefined,
-      parentIdentifier: "parent-1",
-    });
 
     await expect(policy).rejects.toBeInstanceOf(
       GraphQLOperationNotSupportedError,
     );
     await expect(policy).rejects.toMatchObject({
       operation: "getCreateSignaturePolicy",
-    });
-    await expect(versions).rejects.toMatchObject({
-      operation: "getCreateProtocolVersions",
     });
   });
 
@@ -810,54 +779,9 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
       GetCreateDefaults: vi.fn().mockRejectedValue(refused),
     });
 
-    await expect(
-      createClientWith(sdk).getCreateProtocolVersions({
-        documentType: undefined,
-        parentIdentifier: "parent-1",
-      }),
-    ).rejects.toBe(refused);
-  });
-
-  it("asks for protocol versions fitted to a document type", async () => {
-    const sdk = createMockSdk({
-      GetCreateProtocolVersions: vi.fn().mockResolvedValue({
-        createDefaults: { protocolVersions: { "base-reducer": 2 } },
-      }),
-    });
-    const controller = new AbortController();
-
-    const versions = await createClientWith(sdk).getCreateProtocolVersions(
-      { documentType: "powerhouse/test", parentIdentifier: "parent-1" },
-      controller.signal,
+    await expect(createClientWith(sdk).getCreateSignaturePolicy()).rejects.toBe(
+      refused,
     );
-
-    expect(versions).toEqual({ "base-reducer": 2 });
-    expect(sdk.GetCreateProtocolVersions).toHaveBeenCalledWith(
-      { parentIdOrSlug: "parent-1", documentType: "powerhouse/test" },
-      undefined,
-      controller.signal,
-    );
-    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
-  });
-
-  it("passes on a typed request's other failures untouched", async () => {
-    const refused = Object.assign(new Error("forbidden"), {
-      response: {
-        status: 200,
-        errors: [{ message: "Forbidden", extensions: { code: "FORBIDDEN" } }],
-      },
-    });
-    const sdk = createMockSdk({
-      GetCreateProtocolVersions: vi.fn().mockRejectedValue(refused),
-    });
-
-    await expect(
-      createClientWith(sdk).getCreateProtocolVersions({
-        documentType: "powerhouse/test",
-        parentIdentifier: "parent-1",
-      }),
-    ).rejects.toBe(refused);
-    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
   });
 
   it("sets the preferred editor as a signed action through execute", async () => {

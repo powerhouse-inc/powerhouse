@@ -112,6 +112,12 @@ export type GraphQLReactorProviderProps = {
    */
   documentModels?: readonly DocumentModelModule<any>[];
 
+  /**
+   * The reactor feature flags that pick the protocol versions of documents
+   * created below this provider. Read once, like `url`.
+   */
+  featureFlags?: GraphQLReactorClientOptions["featureFlags"];
+
   children: ReactNode;
 };
 
@@ -144,6 +150,7 @@ export function GraphQLReactorProvider({
   realtime,
   attachmentService,
   documentModels,
+  featureFlags,
   children,
 }: GraphQLReactorProviderProps) {
   const [client] = useState(() =>
@@ -155,6 +162,7 @@ export function GraphQLReactorProvider({
           subscriptionsUrl,
           realtime,
           documentModels,
+          featureFlags,
         }),
   );
 
