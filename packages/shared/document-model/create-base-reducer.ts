@@ -11,6 +11,23 @@ export type CreateBaseReducerLogger = {
 const warnedUntaggedTypes = new Set<string>();
 
 /**
+ * Whether base-reducer 3 can run `documentType`: every registered version's
+ * reducer is from createReducer. Undefined when no version is registered.
+ */
+export function runsBaseReducer3(
+  documentType: string,
+  modules: readonly DocumentModelModule[],
+): boolean | undefined {
+  const registered = modules.filter(
+    (module) => module.documentModel.global.id === documentType,
+  );
+  if (registered.length === 0) return undefined;
+  return registered.every(
+    (module) => stateReducerOf(module.reducer) !== undefined,
+  );
+}
+
+/**
  * Base-reducer 3 needs every registered version's reducer from createReducer.
  * An unregistered type takes 2: its reducer cannot be checked.
  */
@@ -23,10 +40,8 @@ export function fitCreateBaseReducer(
   if (documentType === undefined || selected["base-reducer"] !== 3) {
     return selected;
   }
-  const registered = modules.filter(
-    (module) => module.documentModel.global.id === documentType,
-  );
-  if (registered.length === 0) {
+  const runs = runsBaseReducer3(documentType, modules);
+  if (runs === undefined) {
     // Callers supply the type, so it is not remembered.
     logger.debug(
       "@documentType is not registered; its new documents take base-reducer 2",
@@ -34,10 +49,7 @@ export function fitCreateBaseReducer(
     );
     return { ...selected, "base-reducer": 2 };
   }
-  const untagged = registered.some(
-    (module) => stateReducerOf(module.reducer) === undefined,
-  );
-  if (!untagged) {
+  if (runs) {
     return selected;
   }
   if (!warnedUntaggedTypes.has(documentType)) {
