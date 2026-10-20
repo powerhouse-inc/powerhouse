@@ -166,6 +166,17 @@ function buildHostSchemas(tokenField: FieldWrappers) {
     // (storage.dataDir) and the read-model store (readModel.url) must differ.
     // Postgres is exempt: one database legitimately serves both stores.
     .superRefine((backend, ctx) => {
+      // 2.1 "a remote backend needs url": `remote` is optional for the
+      // in-process/worker kinds, but a remote backend attaches by URL only.
+      if (backend.kind === "remote" && !backend.remote) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["remote", "url"],
+          message:
+            'a "remote" backend needs remote.url: remote: { url: switchboard.endpoints.graphql } ' +
+            'with switchboard from ../switchboard/outputs.js, or remote: { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }.',
+        });
+      }
       const store = backend.storage;
       const storeDir = store?.kind === "path" ? store.dataDir : undefined;
       const readModel = backend.readModel?.url;

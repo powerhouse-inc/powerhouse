@@ -841,25 +841,6 @@ const ROWS: Row[] = [
   },
   {
     project: "matrix",
-    host: "connect-remote-no-url",
-    cells: "GAP: kind remote without a remote block passes the schema",
-    expected: reactor({
-      name: "lab-connect-no-url",
-      clientMode: "remote",
-      backends: [
-        {
-          name: "sb",
-          kind: "remote",
-          provisionError:
-            'Backend "sb" is kind "remote" but has no remote.url — a remote descriptor attaches to an already-running reactor by URL.',
-        },
-      ],
-      remotes: [],
-      drives: [],
-    }),
-  },
-  {
-    project: "matrix",
     host: "assistant",
     cells: "mastra · required $env (set) · verb serve",
     expected: reactor({
@@ -1159,6 +1140,12 @@ const NEGATIVES: Negative[] = [
     invariant: "a remote backend needs remote.url",
     error:
       /hosts\/remote-without-url\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: /,
+  },
+  {
+    host: "remote-without-block",
+    invariant: "a remote backend needs remote.url (no remote block at all)",
+    error:
+      /hosts\/remote-without-block\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: a "remote" backend needs remote\.url: remote: \{ url: switchboard\.endpoints\.graphql \}[\s\S]*\$output/,
   },
   {
     host: "undefined-value",
