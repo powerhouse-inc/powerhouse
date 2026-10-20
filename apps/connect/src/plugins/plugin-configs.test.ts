@@ -179,11 +179,24 @@ describe("PHPluginConfigs augmentation (type level)", () => {
       verbs: ["dev"],
     };
 
-    // `drive` is ref(z.url()). Host-core's tokenSchema is typed
-    // `z.ZodType<Token>` (input `unknown`), so a ref() field's input type is
-    // `unknown` and `drive: { slug, name }` cannot be a type error until
-    // host-core types the token input; the runtime rejection is pinned above.
-    // Restore `@ts-expect-error` on that entry once it is.
+    // `drive` is ref(z.url()): a URL or an output token, never the
+    // switchboard's drive declaration.
+    const token: EntryFor<"@powerhousedao/connect/plugins/workflows"> = {
+      module: "@powerhousedao/connect/plugins/workflows",
+      config: {
+        drive: {
+          $output: {
+            host: "switchboard",
+            path: ["drives", "workflows", "url"],
+          },
+        },
+      },
+    };
+    const declaration: EntryFor<"@powerhousedao/connect/plugins/workflows"> = {
+      module: "@powerhousedao/connect/plugins/workflows",
+      // @ts-expect-error -- Connect's workflows drive is a URL or token, not the switchboard's { slug, name } declaration
+      config: { drive: { slug: "workflows", name: "Workflows" } },
+    };
     const typo: EntryFor<"@powerhousedao/connect/plugins/generic"> = {
       module: "@powerhousedao/connect/plugins/generic",
       // @ts-expect-error -- `allowAddDrives` is not a generic config key
@@ -198,6 +211,13 @@ describe("PHPluginConfigs augmentation (type level)", () => {
     // The typed configs stay assignable to the runtime entry shape that
     // normalizePluginEntries takes (the type-alias rule from T1).
     const runtime: PluginEntryData[] = [generic, workflows, studio];
-    expect([sentry, typo, assistant, runtime]).toBeDefined();
+    expect([
+      sentry,
+      token,
+      declaration,
+      typo,
+      assistant,
+      runtime,
+    ]).toBeDefined();
   });
 });
