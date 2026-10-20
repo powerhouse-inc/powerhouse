@@ -53,6 +53,13 @@ beforeAll(async () => {
   // Connect's chrome reads the config, and a build-time define, as it evaluates.
   vi.stubGlobal("PH_CONNECT_SENTRY_RELEASE", "test");
   ({ routeTree } = await import("@powerhousedao/connect/route-tree"));
+  // The settings page and core's views are lazy route components. Load them
+  // here, within this hook's budget, so a cold transform on a slow runner isn't
+  // charged to the 1s a `findBy` query waits for the first render.
+  await Promise.all([
+    import("../generic/settings/index.js"),
+    import("@powerhousedao/connect-core/views"),
+  ]);
   store = createPHStore();
   const drive = driveDocumentModelModule.utils.createDocument();
   drive.header.slug = "team";
