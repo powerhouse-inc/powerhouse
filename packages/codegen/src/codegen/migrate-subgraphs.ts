@@ -4,7 +4,7 @@ import {
   typeKindsOfDocument,
 } from "document-model/tooling";
 import { existsSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   IndentationText,
   Node,
@@ -23,6 +23,7 @@ import {
   type PropertyAccessExpression,
   type SourceFile,
   type Symbol as MorphSymbol,
+  type Type,
 } from "ts-morph";
 
 import { makeSubgraphsIndexFile } from "../file-builders/subgraphs.js";
@@ -398,7 +399,7 @@ function factoryMap(
     type.getKind() !== SyntaxKind.UnknownKeyword &&
     !(
       Node.isTypeReference(type) &&
-      (importsBaseSubgraph(type.getTypeName()) ||
+      (isBaseSubgraph(type.getTypeName()) ||
         declarationsOf(type.getTypeName()).includes(klass))
     )
   )
@@ -762,23 +763,81 @@ function checkMemberAccess(subject: string, access: FieldAccess): string {
   return key;
 }
 
+const reactorApi = "@powerhousedao/reactor-api";
+
 function reactorImportsOf(file: SourceFile) {
   return file
     .getImportDeclarations()
-    .filter(
-      (entry) =>
-        entry.getModuleSpecifierValue() === "@powerhousedao/reactor-api",
-    );
+    .filter((entry) => entry.getModuleSpecifierValue() === reactorApi);
 }
 
-function importsBaseSubgraph(name: Node): boolean {
-  return reactorImportsOf(name.getSourceFile())
-    .flatMap((entry) => entry.getNamedImports())
-    .some(
-      (named) =>
-        named.getName() === "BaseSubgraph" &&
-        (named.getAliasNode()?.getText() ?? named.getName()) === name.getText(),
-    );
+/**
+ * Follows import and export aliases one step at a time, so a re-export of
+ * reactor-api is recognized even when the package is not installed.
+ */
+function reactorBinding(name: Node): string | undefined {
+  const seen = new Set<MorphSymbol>();
+  for (
+    let symbol = name.getSymbol();
+    symbol && !seen.has(symbol);
+    symbol = symbol.isAlias() ? symbol.getImmediatelyAliasedSymbol() : undefined
+  ) {
+    seen.add(symbol);
+    for (const declaration of symbol.getDeclarations()) {
+      const statement = declaration.getFirstAncestor(
+        (node) =>
+          Node.isImportDeclaration(node) || Node.isExportDeclaration(node),
+      );
+      if (statement?.getModuleSpecifierValue() !== reactorApi) continue;
+      if (
+        Node.isImportSpecifier(declaration) ||
+        Node.isExportSpecifier(declaration)
+      )
+        return declaration.getName();
+      if (
+        Node.isNamespaceImport(declaration) ||
+        Node.isNamespaceExport(declaration)
+      )
+        return "*";
+    }
+  }
+  return undefined;
+}
+
+function isReactorBaseSubgraph(declaration: Node): boolean {
+  if (
+    !Node.isClassDeclaration(declaration) ||
+    declaration.getName() !== "BaseSubgraph"
+  )
+    return false;
+  const files = declaration.getProject().getFileSystem();
+  for (
+    let directory = dirname(declaration.getSourceFile().getFilePath());
+    ;
+    directory = dirname(directory)
+  ) {
+    const manifest = join(directory, "package.json");
+    if (files.fileExistsSync(manifest))
+      return (
+        (JSON.parse(files.readFileSync(manifest)) as { name?: unknown })
+          .name === reactorApi
+      );
+    if (dirname(directory) === directory) return false;
+  }
+}
+
+function isBaseSubgraph(name: Node): boolean {
+  if (Node.isPropertyAccessExpression(name) || Node.isQualifiedName(name)) {
+    const [namespace, member] = Node.isQualifiedName(name)
+      ? [name.getLeft(), name.getRight()]
+      : [name.getExpression(), name.getNameNode()];
+    if (
+      member.getText() === "BaseSubgraph" &&
+      reactorBinding(namespace) === "*"
+    )
+      return true;
+  } else if (reactorBinding(name) === "BaseSubgraph") return true;
+  return declarationsOf(name).some(isReactorBaseSubgraph);
 }
 
 function hasOpaqueReturnType(factory: ResolverFactory): boolean {
@@ -793,45 +852,71 @@ function hasOpaqueReturnType(factory: ResolverFactory): boolean {
   );
 }
 
-function directlyExtendsBase(klass: ClassDeclaration): boolean {
-  const base = klass.getExtends()?.getExpression();
-  return Node.isIdentifier(base) && importsBaseSubgraph(base);
+function mayInheritBaseSubgraph(klass: ClassDeclaration): boolean {
+  const seen = new Set<Type>();
+  const reaches = (type: Type): boolean => {
+    if (seen.has(type)) return false;
+    seen.add(type);
+    return (
+      !!type.getSymbol()?.getDeclarations().some(isReactorBaseSubgraph) ||
+      type.getBaseTypes().some(reaches)
+    );
+  };
+  const bases = klass.getType().getBaseTypes();
+  return (
+    bases.length === 0 || bases.some((base) => base.isAny() || reaches(base))
+  );
 }
+
+type Ancestry = {
+  bases: ClassDeclaration[];
+  root: "BaseSubgraph" | "other" | "untraced";
+};
 
 function ancestry(
   klass: ClassDeclaration,
   seen = new Set<ClassDeclaration>(),
-): ClassDeclaration[] {
-  if (directlyExtendsBase(klass) || seen.has(klass)) return [];
+): Ancestry {
+  const base = klass.getExtends()?.getExpression();
+  if (!base || seen.has(klass)) return { bases: [], root: "other" };
   seen.add(klass);
-  const symbol = klass.getExtends()?.getExpression().getSymbol();
-  const parent = (symbol?.getAliasedSymbol() ?? symbol)
-    ?.getDeclarations()
-    .find(Node.isClassDeclaration);
-  return parent ? [parent, ...ancestry(parent, seen)] : [];
+  if (isBaseSubgraph(base)) return { bases: [], root: "BaseSubgraph" };
+  const declarations = declarationsOf(base);
+  const parent = declarations.find(Node.isClassDeclaration);
+  if (!parent)
+    return {
+      bases: [],
+      root: mayInheritBaseSubgraph(klass) ? "untraced" : "other",
+    };
+  const rest = ancestry(parent, seen);
+  return { bases: [parent, ...rest.bases], root: rest.root };
 }
 
 function isMigrationCandidate(klass: ClassDeclaration): boolean {
-  const bases = ancestry(klass);
+  const { bases, root } = ancestry(klass);
   if (
     ![klass, ...bases].some((candidate) =>
       candidate.getMembers().some(isLegacyMember),
     )
   )
     return false;
-  if (directlyExtendsBase(klass)) {
+  if (root === "untraced")
+    return unsupported(
+      klass,
+      `${klass.getName() ?? "An anonymous class"} declares old-style subgraph fields, but migration cannot trace its base ${klass.getExtendsOrThrow().getExpression().getText()} to BaseSubgraph from ${reactorApi}. Extend BaseSubgraph imported from ${reactorApi} and run ph migrate again, or update it manually.`,
+    );
+  if (root !== "BaseSubgraph") return false;
+  if (bases.length === 0) {
     if (klass.getDerivedClasses().length === 0) return true;
     return unsupported(
       klass,
       "Old-style subgraph is a shared base; update its inherited fields and schema manually.",
     );
   }
-  if (bases.some(directlyExtendsBase))
-    return unsupported(
-      klass,
-      "Old-style subgraph extends a shared base; update its inherited fields and schema manually.",
-    );
-  return false;
+  return unsupported(
+    klass,
+    "Old-style subgraph extends a shared base; update its inherited fields and schema manually.",
+  );
 }
 
 type PreparedClass = ReturnType<typeof prepareClass>;
@@ -925,10 +1010,9 @@ function rewriteFile({ file, prepared }: FilePlan) {
   };
   const reactorImports = reactorImportsOf(file);
   const reactorImport =
-    reactorImports.find((entry) => !entry.isTypeOnly()) ??
-    file.addImportDeclaration({
-      moduleSpecifier: "@powerhousedao/reactor-api",
-    });
+    reactorImports.find(
+      (entry) => !entry.isTypeOnly() && !entry.getNamespaceImport(),
+    ) ?? file.addImportDeclaration({ moduleSpecifier: reactorApi });
   const existingBuilderImport = reactorImports
     .flatMap((entry) => entry.getNamedImports())
     .find((named) => named.getName() === "SchemaBuilder");
