@@ -36,6 +36,7 @@ import {
   PEER_CAPABILITIES,
   redo,
   redoTarget,
+  selectionSupports,
   selectProtocolVersions,
   toTransportAction,
   undo,
@@ -878,19 +879,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    * under-sign on a stricter host.
    */
   async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    let result: GetCreateDefaultsQuery;
-    try {
-      result = await this.sdk.GetCreateDefaults({});
-    } catch (error) {
-      if (queriesUnknownField(error, "createDefaults")) {
-        throw new GraphQLOperationNotSupportedError(
-          "getCreateSignaturePolicy",
-          "the Switchboard predates the createDefaults query",
-        );
-      }
-      throw error;
+    const defaults = await this.createDefaults();
+    if (defaults === undefined) {
+      throw new GraphQLOperationNotSupportedError(
+        "getCreateSignaturePolicy",
+        "the Switchboard predates the createDefaults query",
+      );
     }
-    const { signaturePolicy } = result.createDefaults;
+    const { signaturePolicy } = defaults;
     if (!isSignaturePolicy(signaturePolicy)) {
       throw new Error(
         `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
@@ -900,27 +896,44 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   }
 
   /**
-   * The protocol versions this client gives a new document of `documentType`,
-   * from its own `featureFlags` and `documentModels`; the Switchboard is not
-   * asked. A host that does not run a chosen version refuses the create.
+   * The protocol versions this client gives a new document of `documentType`:
+   * its own `featureFlags` and `documentModels`, capped at what the
+   * Switchboard's reactor-wide `createDefaults` selects. A Switchboard without
+   * that query is capped at the baseline.
    */
-  getCreateProtocolVersions(
+  async getCreateProtocolVersions(
     { documentType }: CreateProtocolVersionsOptions,
-    _signal?: AbortSignal,
+    signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
+    const defaults = await this.createDefaults(signal);
     const selected = selectProtocolVersions({
       capabilities: PEER_CAPABILITIES,
       flags: this.featureFlags,
-      members: [],
+      members: [
+        selectionSupports(defaults?.protocolVersions, PEER_CAPABILITIES),
+      ],
     });
-    return Promise.resolve(
-      fitCreateBaseReducer(
-        selected,
-        documentType,
-        this.documentModels(),
-        logger,
-      ),
+    return fitCreateBaseReducer(
+      selected,
+      documentType,
+      this.documentModels(),
+      logger,
     );
+  }
+
+  /** The reactor-wide `createDefaults`; undefined from a host without the query. */
+  private async createDefaults(
+    signal?: AbortSignal,
+  ): Promise<GetCreateDefaultsQuery["createDefaults"] | undefined> {
+    try {
+      const result = await this.sdk.GetCreateDefaults({}, undefined, signal);
+      return result.createDefaults;
+    } catch (error) {
+      if (queriesUnknownField(error, "createDefaults")) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   /**

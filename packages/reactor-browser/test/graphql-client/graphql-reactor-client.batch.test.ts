@@ -715,21 +715,46 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
     const policy = await createClientWith(sdk).getCreateSignaturePolicy();
 
     expect(policy).toBe("legacy");
-    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith({});
+    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith(
+      {},
+      undefined,
+      undefined,
+    );
   });
 
-  it("selects create protocol versions without asking the Switchboard", async () => {
-    const sdk = createMockSdk();
-
-    const versions = await createClientWith(sdk).getCreateProtocolVersions({
-      documentType: undefined,
-      parentIdentifier: "parent-1",
+  it("caps create protocol versions at the Switchboard's reactor-wide selection", async () => {
+    const signal = new AbortController().signal;
+    const sdk = createMockSdk({
+      GetCreateDefaults: defaults("v2-required", { "base-reducer": 3 }),
     });
 
+    const versions = await createClientWith(sdk).getCreateProtocolVersions(
+      { documentType: undefined, parentIdentifier: "parent-1" },
+      signal,
+    );
+
     expect(versions).toEqual({ "base-reducer": 3 });
-    expect(sdk.GetCreateDefaults).not.toHaveBeenCalled();
+    expect(sdk.GetCreateDefaults).toHaveBeenCalledWith({}, undefined, signal);
     expect(sdk.GetCreateProtocolVersions).not.toHaveBeenCalled();
     expect(sdk.GetDocument).not.toHaveBeenCalled();
+  });
+
+  it("passes on a createDefaults failure when selecting create protocol versions", async () => {
+    const refused = Object.assign(new Error("forbidden"), {
+      response: {
+        status: 200,
+        errors: [{ message: "Forbidden", extensions: { code: "FORBIDDEN" } }],
+      },
+    });
+    const sdk = createMockSdk({
+      GetCreateDefaults: vi.fn().mockRejectedValue(refused),
+    });
+
+    await expect(
+      createClientWith(sdk).getCreateProtocolVersions({
+        documentType: undefined,
+      }),
+    ).rejects.toBe(refused);
   });
 
   it("refuses a signature policy it does not know rather than defaulting", async () => {
