@@ -143,6 +143,30 @@ export function legacySupports(
   return supportsFrom(capabilities, (capability) => capability.baseline);
 }
 
+/** What a peer runs, from what it selects for new documents; none is baseline. */
+export function selectionSupports(
+  selected: { readonly [protocol: string]: unknown } | undefined,
+  capabilities: readonly PeerCapability[],
+): Supports {
+  const supports = legacySupports(capabilities);
+  for (const capability of capabilities) {
+    if (capability.kind !== "protocol" || !capability.preferred) continue;
+    const version = selected?.[capability.name];
+    if (
+      typeof version !== "number" ||
+      !Number.isSafeInteger(version) ||
+      version < 1
+    ) {
+      continue;
+    }
+    supports.protocols[capability.name] = versionSet([
+      ...capability.baseline.filter((baseline) => baseline <= version),
+      version,
+    ]);
+  }
+  return supports;
+}
+
 export function manifestRevision(supports: Supports, sequence = 0): string {
   const preimage = canonicalJson(
     { protocols: supports.protocols, features: supports.features, sequence },

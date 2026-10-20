@@ -10,6 +10,7 @@ import {
   mergePeerCapabilities,
   peerSupports,
   readPeerManifest,
+  selectionSupports,
   selectProtocolVersions,
   type PeerCapability,
   type PeerCapabilityFlags,
@@ -354,5 +355,49 @@ describe("selectProtocolVersions", () => {
       extra: true,
     })!;
     expect(select([member])["test-protocol"]).toBe(2);
+  });
+});
+
+describe("selectionSupports", () => {
+  const baseReducer = (selected: Record<string, unknown> | undefined) =>
+    selectionSupports(selected, PEER_CAPABILITIES).protocols["base-reducer"];
+
+  it("runs the baseline up to the selected version", () => {
+    expect(baseReducer({ "base-reducer": 2 })).toEqual([1, 2]);
+    expect(baseReducer({ "base-reducer": 3 })).toEqual([1, 2, 3]);
+    expect(baseReducer({ "base-reducer": 1 })).toEqual([1]);
+  });
+
+  it("reads no selection as the baseline", () => {
+    for (const selected of [
+      undefined,
+      {},
+      { "base-reducer": "3" },
+      { "base-reducer": 2.5 },
+      { "base-reducer": 0 },
+    ]) {
+      expect(selectionSupports(selected, PEER_CAPABILITIES)).toEqual(
+        legacySupports(PEER_CAPABILITIES),
+      );
+    }
+  });
+
+  it("caps a creator's selection at the peer's", () => {
+    const create = (selected: Record<string, unknown> | undefined) =>
+      selectProtocolVersions({
+        capabilities: PEER_CAPABILITIES,
+        flags: { undoV3: true },
+        members: [selectionSupports(selected, PEER_CAPABILITIES)],
+      })["base-reducer"];
+    expect(create({ "base-reducer": 3 })).toBe(3);
+    expect(create({ "base-reducer": 2 })).toBe(2);
+    expect(create(undefined)).toBe(2);
+    expect(
+      selectProtocolVersions({
+        capabilities: PEER_CAPABILITIES,
+        flags: {},
+        members: [selectionSupports({ "base-reducer": 3 }, PEER_CAPABILITIES)],
+      })["base-reducer"],
+    ).toBe(2);
   });
 });
