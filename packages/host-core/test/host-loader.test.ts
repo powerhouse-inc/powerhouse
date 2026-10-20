@@ -41,7 +41,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 export default {
   name: "lab-vetra",
   runner: {
-    module: "@powerhousedao/ph-cli/runners/compound",
+    module: "@powerhousedao/host-core/runners/compound",
     defaultVerb: "dev",
   },
   children: {
@@ -80,7 +80,7 @@ describe("loadHost", () => {
     const loaded = await loadHost(project, "vetra");
     expect(loaded.host.name).toBe("lab-vetra");
     expect(loaded.host.runner.module).toBe(
-      "@powerhousedao/ph-cli/runners/compound",
+      "@powerhousedao/host-core/runners/compound",
     );
     // the projection resolved the referenced config value:
     expect(loaded.host.children).toMatchObject({
