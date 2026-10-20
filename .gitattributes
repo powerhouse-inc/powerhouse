@@ -1,2 +1,5 @@
 # Goldens are byte-exact generator output; a CRLF checkout would make them differ.
 **/test/**/goldens/** text eol=lf
+**/test/**/__golden__/** text eol=lf
+# Fixtures the ph-cli tests compare byte for byte or parse as captured output.
+clis/ph-cli/test/fixtures/** text eol=lf
