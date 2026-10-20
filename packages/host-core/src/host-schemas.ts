@@ -1,7 +1,13 @@
 import { z } from "zod";
-import { drivesSchema } from "./drive-schema.js";
+import { buildDriveDeclarationSchema } from "./drive-schema.js";
 import { pluginEntrySchema } from "./plugins.js";
-import { forbidRef, ref, type RefFn, type TokenMode } from "./tokens.js";
+import {
+  envTokenable,
+  tokenable,
+  type EnvToken,
+  type TokenableSchema,
+  type TokenMode,
+} from "./tokens.js";
 
 /**
  * The zod single source for host.js blocks (typed-host-configs G1). Every
@@ -9,6 +15,10 @@ import { forbidRef, ref, type RefFn, type TokenMode } from "./tokens.js";
  * Top-level host objects and the `reactor` block are STRICT (a typo fails);
  * `runner` stays loose until each runner declares its options (T2), and
  * `config` is runner-defined.
+ *
+ * Token-able fields (typed-host-configs 3.5): `reactor.backends.*.remote.url`
+ * (required), `reactor.drives[].remote.url` and `storage.dataDir` (`$env`
+ * only). Their z.input admits tokens, their z.output is the resolved type.
  */
 
 export const profileSchema = z.strictObject({
@@ -48,19 +58,20 @@ const samePath = (a: string, b: string): boolean => {
   return norm(a) === norm(b);
 };
 
-/** Compound wiring: the generic compound runner's `config` block. */
+/** Compound wiring: the generic compound runner's `config` block.
+ * (`projectDrivesIntoConnect` and `drivesPublicBase` were removed in T3: a
+ * member consumes another member's drives through `$output` tokens.) */
 export const compoundWiringSchema = z.strictObject({
-  /** Project the reactor member's created drives into the connect member. */
-  projectDrivesIntoConnect: z.boolean().optional(),
-  /** --drives-public-base equivalent. */
-  drivesPublicBase: z.string().nullable().optional(),
-  /** Member start order; must name declared children. Unnamed members start
-   * after the named ones, in declaration order. */
+  /** Member start order; must name declared children and agree with the
+   * output-token dependencies (resolve/plan.ts). Optional: without it the
+   * order is derived from the tokens. Unnamed members start after the named
+   * ones, in declaration order. */
   startOrder: z.array(z.string().min(1)).optional(),
   /** Write .ph/run/<host>.json (default true). */
   runtimeRecord: z.boolean().optional(),
-  /** Patch the baked CSP for the runtime registry on a served connect member
-   * (forwarded to the connect runner as a runner option). */
+  /** Patch the baked CSP for the runtime registry on a served Connect
+   * member (forwarded as `runner.cspRegistrySync` to every member whose
+   * runner is `@powerhousedao/ph-cli/runners/connect`). */
   cspRegistrySync: z.boolean().optional(),
 });
 
@@ -84,20 +95,34 @@ export function refineStartOrder(
   });
 }
 
+/** How a schema set wraps its token-able fields. Both modes share one static
+ * type (declared input, resolved output); they differ at runtime only. */
+interface FieldWrappers {
+  any: <S extends z.ZodType>(schema: S) => TokenableSchema<S>;
+  env: <S extends z.ZodType>(schema: S) => TokenableSchema<S, EnvToken>;
+}
+
+const ALLOW_TOKENS: FieldWrappers = { any: tokenable, env: envTokenable };
+// A one-option union: the same validation as `schema`, typed like the
+// "allow" wrappers so both modes share HostSchemas.
+const FORBID_TOKENS: FieldWrappers = {
+  any: (schema) => z.union([schema]),
+  env: (schema) => z.union([schema]),
+};
+
 /**
- * Builds the host schema set. `ref` is the token-able field wrapper: "allow"
- * (declared form) accepts `T | Token`, "forbid" (resolved form) accepts `T`.
- * T1 defines the seam only: no field is wrapped yet (T3 applies it to
- * remote/drive URLs, storage.dataDir, …), so both modes are identical today.
+ * Builds the host schema set. "allow" (declared form) accepts `T | Token` in
+ * every token-able field; "forbid" (resolved form) accepts `T` only.
  */
-function buildHostSchemas(_ref: RefFn) {
+function buildHostSchemas(tokenField: FieldWrappers) {
   const reactorBackendSchema = z
     .strictObject({
       kind: reactorBackendKindSchema,
       storage: z
         .strictObject({
           kind: z.enum(["idb", "memory", "path", "postgres"]),
-          dataDir: z.string().optional(),
+          /** `"${userData}/…"` sugar or `{ $env: "NAME" }`. */
+          dataDir: tokenField.env(z.string()).optional(),
           url: z.string().optional(),
         })
         .optional(),
@@ -110,14 +135,9 @@ function buildHostSchemas(_ref: RefFn) {
           dynamic: z.boolean().optional(),
         })
         .optional(),
-      // `host` (sibling reference) stays accepted until T3 makes `url` a
-      // required ref() and removes it.
-      remote: z
-        .strictObject({
-          host: z.string().optional(),
-          url: z.string().optional(),
-        })
-        .optional(),
+      // The reactor to attach to, by URL: typically a producer's
+      // `endpoints.graphql` output token. (`remote.host` was removed in T3.)
+      remote: z.strictObject({ url: tokenField.any(z.url()) }).optional(),
       // Deployment topology (R1): field names match the real switchboard
       // options (projectionWorker / workerPool).
       projection: z
@@ -141,7 +161,13 @@ function buildHostSchemas(_ref: RefFn) {
       const store = backend.storage;
       const storeDir = store?.kind === "path" ? store.dataDir : undefined;
       const readModel = backend.readModel?.url;
-      if (storeDir && readModel && samePath(storeDir, readModel)) {
+      // In the declared form dataDir may still be a `$env` token: compare
+      // only resolved strings (resolved validation re-runs this check).
+      if (
+        typeof storeDir === "string" &&
+        readModel &&
+        samePath(storeDir, readModel)
+      ) {
         ctx.addIssue({
           code: "custom",
           path: ["readModel", "url"],
@@ -183,7 +209,7 @@ function buildHostSchemas(_ref: RefFn) {
       })
       .optional(),
     // Core-declared, seeded by the host runtime.
-    drives: drivesSchema.optional(),
+    drives: z.array(buildDriveDeclarationSchema(tokenField.any)).optional(),
   });
 
   /** Common runner options; runner modules extend it with their own. */
@@ -238,26 +264,62 @@ function buildHostSchemas(_ref: RefFn) {
 
 export type HostSchemas = ReturnType<typeof buildHostSchemas>;
 
-/** The host schema set in declared ("allow": ref fields take tokens) or
- * resolved ("forbid") form. */
+/** The host schema set in declared ("allow": token-able fields take tokens)
+ * or resolved ("forbid") form. */
 export function makeHostSchemas(options: { tokens: TokenMode }): HostSchemas {
-  return buildHostSchemas(options.tokens === "allow" ? ref : forbidRef);
+  return buildHostSchemas(
+    options.tokens === "allow" ? ALLOW_TOKENS : FORBID_TOKENS,
+  );
 }
 
-const resolved = makeHostSchemas({ tokens: "forbid" });
+/**
+ * One runner schema definition, two schemas (typed-host-configs 3.5): the
+ * builder runs once over the DECLARED base set (token-able fields accept
+ * tokens; pipeline step 3, and `z.input` of it types host files) and once
+ * over the RESOLVED set (no tokens; `validateHost` checks it right before
+ * the verb, step 6). A runner module exports both:
+ *
+ *   const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
+ *     s.reactorHostSchema.extend({ runner: s.runnerBaseSchema.extend({…}).strict() }));
+ *   export { declaredHostSchema, hostSchema };
+ *   export type MyHost = z.input<typeof declaredHostSchema>;
+ *
+ * Apply refinements inside the builder, last (zod refuses `.extend()` on a
+ * refined object).
+ */
+export function defineHostSchemas<T>(build: (schemas: HostSchemas) => T): {
+  declaredHostSchema: T;
+  hostSchema: T;
+} {
+  return {
+    declaredHostSchema: build(declaredSchemas),
+    hostSchema: build(resolvedSchemas),
+  };
+}
 
-export const reactorBackendSchema = resolved.reactorBackendSchema;
-export const reactorSchema = resolved.reactorSchema;
-export const runnerBaseSchema = resolved.runnerBaseSchema;
-export const childWrapperSchema = resolved.childWrapperSchema;
-export const childrenSchema = resolved.childrenSchema;
-export const reactorHostSchema = resolved.reactorHostSchema;
-export const compoundHostSchema = resolved.compoundHostSchema;
+const declaredSchemas = makeHostSchemas({ tokens: "allow" });
+const resolvedSchemas = makeHostSchemas({ tokens: "forbid" });
+
+/* The exported base blocks are the RESOLVED form (what verbs receive). The
+ * declared forms are `declaredHostSchemas` / `defineHostSchemas`. */
+export const declaredHostSchemas: HostSchemas = declaredSchemas;
+export const reactorBackendSchema = resolvedSchemas.reactorBackendSchema;
+export const reactorSchema = resolvedSchemas.reactorSchema;
+export const runnerBaseSchema = resolvedSchemas.runnerBaseSchema;
+export const childWrapperSchema = resolvedSchemas.childWrapperSchema;
+export const childrenSchema = resolvedSchemas.childrenSchema;
+export const reactorHostSchema = resolvedSchemas.reactorHostSchema;
+export const compoundHostSchema = resolvedSchemas.compoundHostSchema;
 
 /** The generic compound runner's host: the base with its wiring config. */
-export const genericCompoundHostSchema = compoundHostSchema
-  .extend({ config: compoundWiringSchema.optional() })
-  .superRefine(refineStartOrder);
+const genericCompound = defineHostSchemas((s) =>
+  s.compoundHostSchema
+    .extend({ config: compoundWiringSchema.optional() })
+    .superRefine(refineStartOrder),
+);
+export const genericCompoundHostSchema = genericCompound.hostSchema;
+export const declaredGenericCompoundHostSchema =
+  genericCompound.declaredHostSchema;
 
 /* -------------------------------------------------------------------- types */
 
@@ -275,10 +337,14 @@ export type CompoundWiring = z.infer<typeof compoundWiringSchema>;
 
 /** What a host.js author writes (z.input), per runner kind. The `never`
  * sides make reactor XOR children a type error. */
-export type ReactorHostInput = z.input<typeof reactorHostSchema> & {
+export type ReactorHostInput = z.input<
+  typeof declaredSchemas.reactorHostSchema
+> & {
   children?: never;
 };
-export type CompoundHostInput = z.input<typeof compoundHostSchema> & {
+export type CompoundHostInput = z.input<
+  typeof declaredSchemas.compoundHostSchema
+> & {
   reactor?: never;
 };
 export type HostDefinition = ReactorHostInput | CompoundHostInput;
@@ -307,13 +373,14 @@ export function emitHostJsonSchema(
  * emit-schemas script writes these and the drift test re-derives them. */
 export function emittedHostSchemas(): Record<string, unknown> {
   return {
+    // Editor schemas describe what authors write: the declared form.
     "host-reactor.schema.json": emitHostJsonSchema(
       "host-reactor",
-      reactorHostSchema,
+      declaredSchemas.reactorHostSchema,
     ),
     "host-compound.schema.json": emitHostJsonSchema(
       "host-compound",
-      compoundHostSchema,
+      declaredSchemas.compoundHostSchema,
     ),
   };
 }

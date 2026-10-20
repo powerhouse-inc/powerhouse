@@ -1,19 +1,18 @@
-import type { PHConnectDefaultDrive } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import { projectDrivesIntoConnect } from "./connect-projection.js";
 import {
-  genericCompoundHostSchema,
+  declaredGenericCompoundHostSchema,
   type ChildWrapper,
   type CompoundWiring,
   type HostDefinition,
   type RunnerKind,
 } from "./host-schemas.js";
 import { loadHost } from "./host-loader.js";
-import {
-  defaultUserDataDir,
-  resolveUserDataPlaceholders,
-} from "./placeholders.js";
-import { unresolvedDriveReferences } from "./plugins.js";
+import { outputSitesOf } from "./resolve/declared.js";
+import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
+import { memberForRef, planCompound } from "./resolve/plan.js";
+import { findRemovedForms } from "./resolve/removed-forms.js";
+import { resolveHostOutputs } from "./resolve/resolve.js";
+import { compoundOutputSource } from "./resolve/sources.js";
 import {
   clearRunRecord,
   probeRun,
@@ -24,8 +23,12 @@ import { toStartedHandle, type StartedHandle } from "./runner-handle.js";
 import {
   getVerb,
   resolveRunnerModule,
+  RunnerError,
+  validateDeclaredHost,
   validateHost,
+  type HostSchemaLike,
   type RunnerContext,
+  type RunnerModule,
 } from "./runner-resolver.js";
 
 export type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
@@ -36,6 +39,11 @@ export type { RunnerHandle, StartedHandle } from "./runner-handle.js";
  * declares, each started via its OWN declared runner at its own effective
  * verb, writes a v2 .ph/run/<host>.json record, holds a per-project lock,
  * and tears members down in reverse order through their `shutdown()`.
+ *
+ * Members consume each other's outputs through `$output` tokens: the
+ * dependency plan (resolve/plan.ts) orders the start, each member's tokens
+ * resolve against the live outputs of the members started before it, and
+ * the member's runner validates the resolved host.
  *
  * Attached and in-process: member verbs start their servers (which hold the
  * event loop) and return a handle; the compound lives as long as they do.
@@ -51,141 +59,50 @@ interface StartedMember {
 }
 
 /** A member host before its runner validates it: the member's host.js with
- * the wrapper applied. */
+ * the wrapper applied (tokens still in place). */
 type MemberDraft = Record<string, unknown> & {
   name: string;
   runner: HostDefinition["runner"];
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+interface PreparedMember {
+  key: string;
+  member: ChildWrapper;
+  draft: MemberDraft;
+  specifier: string;
+  runner: RunnerModule;
+  file: string;
 }
 
-function orderedMembers(
-  children: Record<string, ChildWrapper>,
-  wiring: CompoundWiring,
-): [string, ChildWrapper][] {
-  const entries = Object.entries(children);
-  if (!wiring.startOrder) return entries;
-  const byName = new Map(entries);
-  const out: [string, ChildWrapper][] = [];
-  for (const name of wiring.startOrder) {
-    const member = byName.get(name);
-    if (member) {
-      out.push([name, member]);
-      byName.delete(name);
-    }
-  }
-  // any not named in startOrder keep declaration order, after the named ones
-  for (const [name, m] of entries) if (byName.has(name)) out.push([name, m]);
-  return out;
-}
+/** The runner a compound's `cspRegistrySync` wiring is forwarded to (as
+ * `runner.cspRegistrySync`): a member's role is its runner, not its folder. */
+const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
 /** Build the member host object the member runner sees: the member's own
  * host.js with the wrapper applied. A wrapper SECTION is a FULL STATEMENT —
  * `reactor` and `config`, when present on the wrapper, replace the member's
  * wholesale; `runner` key-merges (wrappers override port, host, plugins…). */
-async function resolveMemberHost(
+async function memberDraft(
   projectRoot: string,
   member: ChildWrapper,
-  userData: string,
-  configPatch?: Record<string, unknown>,
 ): Promise<MemberDraft> {
   const base: HostDefinition = (await loadHost(projectRoot, member.host)).host;
   const reactor = member.reactor ?? base.reactor;
-  const merged: MemberDraft = {
+  const config = member.config ?? base.config;
+  return {
     ...base,
     runner: { ...base.runner, ...member.runner },
-    config: { ...(member.config ?? base.config ?? {}), ...configPatch },
+    ...(config !== undefined ? { config } : {}),
     ...(reactor !== undefined ? { reactor } : {}),
   };
-  // ${userData} in the merged host (storage dirs etc.) resolves here — at the
-  // runner, never derived from the instance name, so renames stay safe.
-  return resolveUserDataPlaceholders(merged, userData);
 }
 
-interface DriveUrlSource {
-  name: string;
-  handle: { driveUrls?: (string | null | undefined)[] };
-}
-
-/**
- * Substitute DRIVE REFERENCES (`{ from: "<member>", slug }`) in the member's
- * plugin entry configs with the URL the referenced member's handle reported
- * in `driveUrls`. Fails loudly on an unknown member, a member that has not
- * started yet (fix startOrder) or a slug it does not serve. Removed in T3.
- */
-export function resolveDriveReferences<
-  H extends { runner: { plugins?: readonly unknown[] } },
->(
-  memberHost: H,
-  memberName: string,
-  started: readonly DriveUrlSource[],
-  declaredMembers: readonly string[],
-): H {
-  const plugins = memberHost.runner.plugins;
-  if (!plugins) return memberHost;
-  const substituted: string[] = [];
-  const resolved = plugins.map((entry: unknown) => {
-    if (!isRecord(entry)) return entry;
-    const config = isRecord(entry.config) ? entry.config : undefined;
-    const refs = unresolvedDriveReferences(config);
-    if (refs.length === 0) return entry;
-    const module = typeof entry.module === "string" ? entry.module : "(plugin)";
-    const next = { ...config };
-    for (const { key, reference } of refs) {
-      const source = started.find((m) => m.name === reference.from);
-      if (!source) {
-        const hint = declaredMembers.includes(reference.from)
-          ? `Member "${reference.from}" starts after "${memberName}"; list it first in config.startOrder.`
-          : `Members declared: ${declaredMembers.join(", ")}.`;
-        throw new Error(
-          `${memberName}: plugin "${module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", which is not started. ${hint}`,
-        );
-      }
-      const urls = (source.handle.driveUrls ?? []).filter(
-        (u): u is string => typeof u === "string",
-      );
-      const url = urls.find((u) => driveSlugOfUrl(u) === reference.slug);
-      if (!url) {
-        throw new Error(
-          `${memberName}: plugin "${module}" config.${key} refers to drive "${reference.slug}" of member "${reference.from}", which serves ${urls.length ? urls.map((u) => `"${driveSlugOfUrl(u)}"`).join(", ") : "no drives"}.`,
-        );
-      }
-      next[key] = url;
-      substituted.push(`${module}.${key}`);
-    }
-    return { ...entry, config: next };
-  });
-  if (substituted.length === 0) return memberHost;
-  return { ...memberHost, runner: { ...memberHost.runner, plugins: resolved } };
-}
-
-/** The `<slug>` of a `…/d/<slug>` drive URL (undefined for other URLs). */
-function driveSlugOfUrl(url: string): string | undefined {
-  const match = /\/d\/([^/?#]+)\/?$/.exec(url);
-  return match ? decodeURIComponent(match[1]) : undefined;
-}
-
-function isConnectMember(member: ChildWrapper): boolean {
-  return member.host === "connect";
-}
-function isReactorFactMember(member: ChildWrapper): boolean {
-  return member.host === "switchboard";
-}
-
-/** A connect member's configured `drives.defaultDrives` entries (config is
- * runner-defined, so the shape is checked here). */
-function configuredDefaultDrives(
-  config: Record<string, unknown> | undefined,
-): PHConnectDefaultDrive[] | undefined {
-  const drives = config?.drives;
-  if (!isRecord(drives) || !Array.isArray(drives.defaultDrives)) {
-    return undefined;
-  }
-  return drives.defaultDrives.filter(
-    (d: unknown): d is PHConnectDefaultDrive =>
-      isRecord(d) && (typeof d.url === "string" || d.local === true),
+function isSchemaLike(value: unknown): value is HostSchemaLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "safeParse" in value &&
+    typeof value.safeParse === "function"
   );
 }
 
@@ -194,13 +111,22 @@ export interface RunCompoundOptions {
   projectName: string;
   /** Extra record fields (e.g. mcpUrl). */
   recordExtra?: Record<string, unknown>;
-  /** Registers signal handlers for teardown (default true; tests pass false). */
+  /** Registers the SIGINT/SIGTERM handlers (default true; tests pass false
+   * and call `handleSignal`). */
   installSignalHandlers?: boolean;
+  /** How the compound exits after a signal (default `process.exit`). */
+  exit?: (code: number) => void;
 }
 
 export interface RunCompoundResult {
   started: StartedMember[];
+  /** Graceful teardown, consumers before producers (reverse dependency
+   * order); memoized. */
   shutdown: () => Promise<void>;
+  /** What the compound's signal handlers run: the first signal shuts the
+   * members down and exits once (130 / 143); later signals are ignored
+   * while that teardown runs. */
+  handleSignal: (signal: "SIGINT" | "SIGTERM") => Promise<void>;
 }
 
 /** At compound verb "run" each member runs its own (merged) defaultVerb —
@@ -218,10 +144,18 @@ export async function runCompound(
   ctx: RunnerContext,
   options: RunCompoundOptions,
 ): Promise<RunCompoundResult> {
-  const parsed = genericCompoundHostSchema.safeParse(hostInput);
+  const compoundFile = `hosts/${hostInput.name}`;
+  const removed = findRemovedForms(hostInput);
+  if (removed.length > 0) {
+    throw new RunnerError(
+      `${compoundFile}: removed form:\n${removed.map((r) => `  - ${r.path}: ${r.message}`).join("\n")}`,
+    );
+  }
+  // Declared form: member wrappers may hold tokens (resolved per member).
+  const parsed = declaredGenericCompoundHostSchema.safeParse(hostInput);
   if (!parsed.success) {
     throw new Error(
-      `hosts/${hostInput.name}: invalid compound host:\n${z.prettifyError(parsed.error)}`,
+      `${compoundFile}: invalid compound host:\n${z.prettifyError(parsed.error)}`,
     );
   }
   const host = parsed.data;
@@ -246,55 +180,74 @@ export async function runCompound(
   }
   // stale record: proceed (a dead pid does not hold the lock)
 
-  const userData = defaultUserDataDir(projectRoot, ctx.env);
-  const started: StartedMember[] = [];
-  const createdDriveUrls: (string | null | undefined)[] = [];
-  const declaredMembers = Object.keys(host.children);
+  // Declared phase: every member's draft, runner and tokens, before any
+  // member starts — a bad token or order fails with nothing running.
+  const prepared = await prepareMembers(projectRoot, host.children);
+  const plan = planCompound(
+    prepared.map((m) => ({
+      key: m.key,
+      host: m.member.host,
+      refs: outputSitesOf(m.draft).map(({ ref, path }) => ({ ref, path })),
+    })),
+    wiring.startOrder,
+  );
+  const byKey = new Map(prepared.map((m) => [m.key, m]));
+  const members = prepared.map((m) => ({ key: m.key, host: m.member.host }));
+  for (const m of prepared) {
+    validateDeclaredHost(m.runner, m.specifier, m.draft, m.file, {
+      outputsSchemaOf: (ref) => {
+        const target = memberForRef(ref, members);
+        if ("error" in target) return { error: target.error };
+        const producer = byKey.get(target.key);
+        return producer
+          ? runnerOutputsSchema(
+              producer.runner,
+              producer.specifier,
+              `member "${target.key}"`,
+            )
+          : { error: `names member "${target.key}", which was not prepared.` };
+      },
+    });
+  }
 
-  const shutdown = async () => {
-    for (const m of [...started].reverse()) {
-      try {
-        await m.handle.shutdown?.();
-      } catch {
-        // best effort — keep tearing down the rest
+  const started: StartedMember[] = [];
+  const liveOutputs = new Map<string, Record<string, unknown>>();
+  const outputs = compoundOutputSource(members, liveOutputs, host.name);
+  const resolveEnv = processResolveEnv(projectRoot, ctx.env);
+
+  // Members start in plan order (producers first), so the reverse is
+  // reverse dependency order: a consumer stops before what it reads.
+  let stopping: Promise<void> | undefined;
+  const shutdown = () =>
+    (stopping ??= (async () => {
+      for (const m of [...started].reverse()) {
+        try {
+          await m.handle.shutdown?.();
+        } catch {
+          // best effort — keep tearing down the rest
+        }
       }
-    }
-    if (wiring.runtimeRecord !== false) {
-      clearRunRecord(projectRoot, host.name);
-    }
-  };
+      if (wiring.runtimeRecord !== false) {
+        clearRunRecord(projectRoot, host.name);
+      }
+    })());
 
   try {
-    for (const [name, member] of orderedMembers(host.children, wiring)) {
-      // A connect member gets the reactor member's created drives.
-      let configPatch: Record<string, unknown> | undefined;
-      if (
-        isConnectMember(member) &&
-        wiring.projectDrivesIntoConnect &&
-        createdDriveUrls.length > 0
-      ) {
-        configPatch = projectDrivesIntoConnect({
-          createdDriveUrls,
-          configuredDefaultDrives: configuredDefaultDrives(member.config),
-          publicBase: wiring.drivesPublicBase,
-        });
+    for (const name of plan.order) {
+      const m = byKey.get(name);
+      if (!m) continue;
+      const resolved = resolveHostOutputs(m.draft, {
+        outputs,
+        ...resolveEnv,
+        where: m.file,
+      });
+      if (wiring.cspRegistrySync && m.specifier === CONNECT_RUNNER) {
+        resolved.runner = { ...resolved.runner, cspRegistrySync: true };
       }
-
-      const memberHost = resolveDriveReferences(
-        await resolveMemberHost(projectRoot, member, userData, configPatch),
-        name,
-        started,
-        declaredMembers,
-      );
-      if (isConnectMember(member) && wiring.cspRegistrySync) {
-        memberHost.runner = { ...memberHost.runner, cspRegistrySync: true };
-      }
-      const specifier = memberHost.runner.module;
-      const runner = await resolveRunnerModule(projectRoot, specifier);
-      const file = `hosts/${member.host}/host.js`;
-      const validated = validateHost(runner, specifier, memberHost, file);
-      const memberVerb = memberVerbOf(verb, memberHost.runner);
-      const fn = getVerb(runner, specifier, memberVerb);
+      const validated = validateHost(m.runner, m.specifier, resolved, m.file);
+      const memberVerb = memberVerbOf(verb, resolved.runner);
+      const fn = getVerb(m.runner, m.specifier, memberVerb);
+      const where = `${name} (${m.specifier} ${memberVerb})`;
       const handle = toStartedHandle(
         await fn(validated, {
           projectRoot,
@@ -302,23 +255,28 @@ export async function runCompound(
           verb: memberVerb,
           parent: { host: host.name, verb },
         }),
-        `${name} (${specifier} ${memberVerb})`,
+        where,
       );
       // Registered before `ready` settles, so a failed start still tears
       // this member down.
       started.push({
         name,
-        member,
-        specifier,
-        kind: runner.kind,
+        member: m.member,
+        specifier: m.specifier,
+        kind: m.runner.kind,
         verb: memberVerb,
         handle,
       });
       if (handle.ready) await handle.ready;
-
-      if (isReactorFactMember(member) && handle.driveUrls) {
-        createdDriveUrls.push(...handle.driveUrls);
+      if (isSchemaLike(m.runner.outputsSchema)) {
+        const checked = m.runner.outputsSchema.safeParse(handle.outputs);
+        if (!checked.success) {
+          throw new Error(
+            `${where} reported outputs that fail its outputsSchema:\n${checked.error.issues.map((i) => `  - ${i.path.map(String).join(".") || "<root>"}: ${i.message}`).join("\n")}`,
+          );
+        }
       }
+      liveOutputs.set(name, handle.outputs);
     }
   } catch (error) {
     await shutdown();
@@ -326,9 +284,9 @@ export async function runCompound(
   }
 
   if (wiring.runtimeRecord !== false) {
-    const members: Record<string, RunRecordMember> = {};
+    const recordMembers: Record<string, RunRecordMember> = {};
     for (const m of started) {
-      members[m.name] = {
+      recordMembers[m.name] = {
         host: m.member.host,
         runnerModule: m.specifier,
         kind: m.kind,
@@ -344,22 +302,50 @@ export async function runCompound(
       verb,
       pid: process.pid,
       startedAt: new Date().toISOString(),
-      members,
+      members: recordMembers,
       ...(options.recordExtra ? { extra: options.recordExtra } : {}),
     });
   }
 
+  // The compound owns the exit: members run without process-exiting signal
+  // handlers (ctx.parent is set), so one Ctrl-C reaches only this handler.
+  const exit = options.exit ?? ((code: number) => process.exit(code));
+  let signalled: Promise<void> | undefined;
+  const handleSignal = (signal: "SIGINT" | "SIGTERM") => {
+    if (signalled) return signalled;
+    const code = signal === "SIGINT" ? 130 : 143;
+    signalled = shutdown().finally(() => exit(code));
+    return signalled;
+  };
   if (options.installSignalHandlers !== false) {
-    const onSignal = (code: number) => {
-      void shutdown().finally(() => process.exit(code));
-    };
     process.on("exit", () => {
       if (wiring.runtimeRecord !== false)
         clearRunRecord(projectRoot, host.name);
     });
-    process.on("SIGINT", () => onSignal(130));
-    process.on("SIGTERM", () => onSignal(143));
+    process.on("SIGINT", () => void handleSignal("SIGINT"));
+    process.on("SIGTERM", () => void handleSignal("SIGTERM"));
   }
 
-  return { started, shutdown };
+  return { started, shutdown, handleSignal };
+}
+
+/** Load every member's draft and runner, in declaration order. */
+async function prepareMembers(
+  projectRoot: string,
+  children: Record<string, ChildWrapper>,
+): Promise<PreparedMember[]> {
+  const out: PreparedMember[] = [];
+  for (const [key, member] of Object.entries(children)) {
+    const draft = await memberDraft(projectRoot, member);
+    const specifier = draft.runner.module;
+    out.push({
+      key,
+      member,
+      draft,
+      specifier,
+      runner: await resolveRunnerModule(projectRoot, specifier),
+      file: `hosts/${member.host}/host.js`,
+    });
+  }
+  return out;
 }

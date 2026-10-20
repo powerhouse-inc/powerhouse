@@ -11,6 +11,9 @@ export {
   childWrapperSchema,
   compoundHostSchema,
   compoundWiringSchema,
+  declaredGenericCompoundHostSchema,
+  declaredHostSchemas,
+  defineHostSchemas,
   emitHostJsonSchema,
   emittedHostSchemas,
   genericCompoundHostSchema,
@@ -44,6 +47,7 @@ export {
   type RunnerKind,
 } from "./host-schemas.js";
 export {
+  buildDriveDeclarationSchema,
   driveDeclarationSchema,
   drivesSchema,
   projectDriveIdWith,
@@ -60,7 +64,9 @@ export {
   keyTokenSchema,
   mapTokenSchema,
   outputTokenSchema,
+  envTokenable,
   ref,
+  tokenable,
   tokenKeyOf,
   tokenSchema,
   TOKEN_ESCAPE_KEY,
@@ -74,6 +80,7 @@ export {
   type OutputToken,
   type RefFn,
   type Token,
+  type TokenableSchema,
   type TokenKey,
   type TokenMode,
 } from "./tokens.js";

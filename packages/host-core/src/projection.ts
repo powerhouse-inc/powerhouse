@@ -36,3 +36,7 @@ export {
   type RunRecord,
   type RunRecordMember,
 } from "./run-record-schema.js";
+
+// typed-host-configs T3: the output-token resolver (pure; node adapters ship
+// from the root entry only).
+export * from "./resolve/index.js";

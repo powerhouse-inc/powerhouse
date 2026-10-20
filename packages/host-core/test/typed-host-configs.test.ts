@@ -8,13 +8,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { runCompound } from "../src/compound.js";
 import { substituteBuiltinEnv } from "../src/env-substitution.js";
 import { loadHost } from "../src/host-loader.js";
 import {
   compoundHostSchema,
+  declaredHostSchemas,
+  defineHostSchemas,
   emitHostJsonSchema,
   genericCompoundHostSchema,
   makeHostSchemas,
@@ -27,7 +29,7 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
-import { findToken, isToken, ref } from "../src/tokens.js";
+import { findToken, isToken, ref, type Token } from "../src/tokens.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -96,18 +98,102 @@ describe("host schemas: invariants owned by the schema", () => {
     expect(issues(result)).toContain('"backends","main","kind"');
   });
 
-  it("still accepts remote: { host } until T3", () => {
-    expect(
-      reactorHostSchema.safeParse({
+  it("requires remote.url and no longer accepts remote: { host } (T3)", () => {
+    const withRemote = (remote: unknown, schema = reactorHostSchema) =>
+      schema.safeParse({
         name: "assistant",
         runner: { module: "m" },
-        reactor: {
-          backends: {
-            switchboard: { kind: "remote", remote: { host: "switchboard" } },
-          },
-        },
-      }).success,
+        reactor: { backends: { switchboard: { kind: "remote", remote } } },
+      }).success;
+    const graphql = {
+      url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+    };
+    expect(withRemote({ host: "switchboard" })).toBe(false);
+    expect(withRemote({})).toBe(false);
+    expect(withRemote({ url: "not a url" })).toBe(false);
+    expect(withRemote({ url: "http://127.0.0.1:4001/graphql" })).toBe(true);
+    // the exported base is the resolved form; the declared one takes tokens
+    expect(withRemote(graphql)).toBe(false);
+    expect(
+      withRemote(graphql, declaredHostSchemas.reactorHostSchema),
     ).toBe(true);
+    expect(
+      withRemote({ host: "switchboard" }, declaredHostSchemas.reactorHostSchema),
+    ).toBe(false);
+  });
+
+  it("declared vs resolved schema sets differ only in token-able fields", () => {
+    const declared = makeHostSchemas({ tokens: "allow" });
+    const resolved = makeHostSchemas({ tokens: "forbid" });
+    const host = (dataDir: unknown) => ({
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        backends: {
+          main: { kind: "in-process", storage: { kind: "path", dataDir } },
+        },
+      },
+    });
+    const env = { $env: "DATA_DIR" };
+    expect(declared.reactorHostSchema.safeParse(host(env)).success).toBe(true);
+    expect(resolved.reactorHostSchema.safeParse(host(env)).success).toBe(false);
+    expect(resolved.reactorHostSchema.safeParse(host("/d")).success).toBe(true);
+    // storage.dataDir is $env-only: another host's output is not a path.
+    const output = { $output: { host: "switchboard", path: ["origin"] } };
+    expect(declared.reactorHostSchema.safeParse(host(output)).success).toBe(
+      false,
+    );
+    // a token where no token-able field is: rejected in both forms
+    const named = { name: env, runner: { module: "m" } };
+    expect(declared.reactorHostSchema.safeParse(named).success).toBe(false);
+  });
+
+  it("types token-able fields as declared input / resolved output", () => {
+    const declared = declaredHostSchemas.reactorHostSchema;
+    type Url = NonNullable<
+      NonNullable<
+        NonNullable<z.input<typeof declared>["reactor"]>["backends"]
+      >[string]["remote"]
+    >["url"];
+    type UrlOut = NonNullable<
+      NonNullable<
+        NonNullable<z.output<typeof reactorHostSchema>["reactor"]>["backends"]
+      >[string]["remote"]
+    >["url"];
+    expectTypeOf<UrlOut>().toEqualTypeOf<string>();
+    expectTypeOf<Url>().toEqualTypeOf<string | Token>();
+    // ref()'s input is `T | Token`, not unknown: a drive declaration object
+    // where a URL (or token) is expected is a compile error.
+    const driveRef = ref(z.url());
+    // @ts-expect-error `{ slug, name }` is neither a URL nor a token
+    const wrong: z.input<typeof driveRef> = { slug: "workflows", name: "W" };
+    expect(driveRef.safeParse(wrong).success).toBe(false);
+    const right: z.input<typeof driveRef> = workflowsToken;
+    expect(driveRef.safeParse(right).success).toBe(true);
+  });
+
+  it("builds a runner's declared and resolved schemas from one definition", () => {
+    const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
+      s.reactorHostSchema.extend({
+        runner: s.runnerBaseSchema.extend({ extra: z.boolean().optional() }).strict(),
+      }),
+    );
+    const host = {
+      name: "x",
+      runner: { module: "m", extra: true },
+      reactor: { drives: [{ slug: "w", remote: { url: workflowsToken } }] },
+    };
+    expect(declaredHostSchema.safeParse(host).success).toBe(true);
+    expect(hostSchema.safeParse(host).success).toBe(false);
+    const resolved = {
+      ...host,
+      reactor: { drives: [{ slug: "w", remote: { url: "http://x/d/w" } }] },
+    };
+    expect(hostSchema.safeParse(resolved).success).toBe(true);
+    expect(
+      hostSchema.safeParse({ ...resolved, runner: { module: "m", extr: 1 } })
+        .success,
+    ).toBe(false);
   });
 
   it("makes reactor XOR children a type error on HostDefinition", () => {
@@ -129,7 +215,7 @@ describe("host schemas: invariants owned by the schema", () => {
     expect(emitted.additionalProperties).toBe(false);
   });
 
-  it("builds declared and resolved schema sets (identical until T3 applies ref)", () => {
+  it("builds declared and resolved schema sets that agree on token-free hosts", () => {
     const declared = makeHostSchemas({ tokens: "allow" });
     const resolved = makeHostSchemas({ tokens: "forbid" });
     const host = { name: "x", runner: { module: "m" } };
@@ -137,6 +223,10 @@ describe("host schemas: invariants owned by the schema", () => {
     expect(resolved.reactorHostSchema.safeParse(host).success).toBe(true);
   });
 });
+
+const workflowsToken = {
+  $output: { host: "switchboard", path: ["drives", "workflows", "url"] },
+};
 
 /* -------------------------------------------------------------- validateHost */
 
@@ -213,7 +303,7 @@ describe("validateHost", () => {
     ).toThrow(/plugin "p" is scoped to verb "bild"/);
   });
 
-  it("forbids output tokens until they are resolved (T3)", () => {
+  it("forbids output tokens that are still unresolved (resolved form)", () => {
     expect(() =>
       validateHost(
         reactorRunner,
@@ -225,7 +315,7 @@ describe("validateHost", () => {
         },
         "hosts/x/host.js",
       ),
-    ).toThrow(/`config.url` is an output token \(\$output\)/);
+    ).toThrow(/`config.url` is an unresolved output token \(\$output\)/);
   });
 
   it("returns the parsed host, so defaults reach the verb", () => {
@@ -300,7 +390,7 @@ describe("tokens", () => {
 describe("runner handles", () => {
   it("normalizes a void return and validates handle data", () => {
     expect(toStartedHandle(undefined, "m")).toEqual({ outputs: {} });
-    expect(() => toStartedHandle({ port: "4001" }, "m")).toThrow(
+    expect(() => toStartedHandle({ outputs: "x" }, "m")).toThrow(
       /m returned an invalid runner handle/,
     );
   });
