@@ -532,7 +532,9 @@ describe("LocalChannel", () => {
 
     // BUG: a receiver drops a push at or below its inbox ack, and a release
     // backfill carries the sender's original ordinals, so a document released
-    // toward a local peer never loads there.
+    // toward a local peer never loads there. A fix needs a release flag on the
+    // push frame, which this frame must then carry; the subscribe-time drop
+    // test above keeps the unflagged case.
     it.fails("loads a release backfill below its inbox ack", async () => {
       const cursors = new MemoryCursorStorage();
       await cursors.upsert({
