@@ -449,7 +449,8 @@ export default {
     expect(byFile("lab")).toEqual([]);
     expect(byFile("labconnect")).toEqual([]);
     expect(byFile("baddrive").join("\n")).toMatch(
-      /Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| Token \| undefined'/,
+      // the target union lists the tokens that fit a string field
+      /error TS2322: Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| [^']*OutputToken<string>[^']*'/,
     );
     expect(byFile("typo").join("\n")).toMatch(/'drive' does not exist/);
     expect(byFile("badpath").join("\n")).toMatch(
