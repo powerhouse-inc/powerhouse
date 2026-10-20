@@ -183,6 +183,31 @@ describe("--explain with $map", () => {
     vi.unstubAllEnvs();
   });
 
+  it("drives: a rendered list that fails the drive schema is reported, not thrown", async () => {
+    const dir = makeProject({
+      connect: {
+        name: "lab-connect",
+        runner: { module: "fake-runners/connect" },
+        reactor: {
+          drives: {
+            $map: {
+              over: { $output: { host: "switchboard", path: ["drives"] } },
+              // a whole element where the slug string belongs
+              to: { slug: { $item: [] } },
+            },
+          },
+        },
+      },
+    });
+    writeRunRecord(dir, {
+      ...record,
+      host: "lab-switchboard",
+      outputs: switchboardOutputs,
+    });
+    const out = await explain(dir, "connect", "drives");
+    expect(out).toContain("the rendered drives fail the drive schema");
+  });
+
   it("compound: a member's $map renders from the compound's own live record", async () => {
     const dir = makeProject({
       connect: {

@@ -334,6 +334,18 @@ function collectionOf(
   if (!def) return { kind: "unknown" };
   if (def.type === "array") return { kind: "array", element: def.element };
   if (def.type === "record") return { kind: "record", element: def.valueType };
+  // An object with a catchall is a record of its catchall (known keys may
+  // differ: no element schema); a tuple renders like an array.
+  if (def.type === "object") {
+    const catchall = defOf(def.catchall);
+    if (catchall && catchall.type !== "never") {
+      const shape = isPlainObjectLike(def.shape) ? def.shape : {};
+      return Object.keys(shape).length === 0
+        ? { kind: "record", element: def.catchall }
+        : { kind: "record", element: undefined };
+    }
+  }
+  if (def.type === "tuple") return { kind: "array", element: undefined };
   if (def.type === "any" || def.type === "unknown" || def.type === "union") {
     return { kind: "unknown" };
   }
@@ -366,7 +378,9 @@ export function checkOutputPaths(
     if (site.key === "$item") {
       const scope = scopeOf(site);
       const element = elementOf(scope);
-      if (!element || "error" in scope) continue;
+      if (!element || element.element === undefined || "error" in scope) {
+        continue;
+      }
       const itemPath = itemPathOf(site);
       const hit = schemaAtPath(element.element, itemPath);
       if (!hit.ok) {
@@ -433,7 +447,7 @@ function checkMap(
     const overSite: TokenSite = { ...site, key: "$item", token: over };
     const scope = scopeOf(overSite);
     const outer = elementOf(scope);
-    if (!outer) return undefined;
+    if (!outer || outer.element === undefined) return undefined;
     const hit = schemaAtPath(outer.element, itemPathOf(overSite));
     if (!hit.ok) return undefined;
     schema = hit.schema;

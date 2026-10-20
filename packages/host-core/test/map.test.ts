@@ -19,6 +19,8 @@ import {
   checkOutputPaths,
   checkTokenSites,
   collectTokenSites,
+  compoundOutputSource,
+  describeMapElements,
   describeToken,
   outputSitesOf,
   planCompound,
@@ -497,6 +499,55 @@ describe("$map errors (3.3)", () => {
       validateHost(runner, "m", resolved, "hosts/x/host.js"),
     ).toThrow(
       /reactor\.drives\.0\.availableOffline \(\$map element "a-plugin"\): /,
+    );
+  });
+});
+
+describe("$map review fixes", () => {
+  it("declared: a catchall object and a tuple are collections", () => {
+    const loose = z.strictObject({
+      tags: z.object({}).catchall(z.strictObject({ url: z.url() })),
+      pair: z.tuple([z.string(), z.number()]),
+    });
+    const lookup = (): OutputsSchemaLookup => ({ schema: loose, label: "x" });
+    const host = {
+      a: {
+        $map: {
+          over: out("switchboard", ["tags"]),
+          to: { $item: ["url"] },
+          into: "record",
+        },
+      },
+      b: { $map: { over: out("switchboard", ["pair"]), to: { $key: true } } },
+      c: {
+        $map: { over: out("switchboard", ["tags"]), to: { $item: ["nope"] } },
+      },
+    };
+    expect(checkOutputPaths(host, lookup).map((i) => i.path)).toEqual([
+      "c.$map.to",
+    ]);
+  });
+
+  it("deferSelf: finish() keeps the $map provenance of rendered arrays", () => {
+    const host = {
+      name: "shell",
+      reactor: { drives: drivesMap },
+      config: { url: out("agent", ["origin"]) },
+      children: { agent: { host: "agent" } },
+    };
+    const partial = resolveHostOutputs(host, sources, {
+      deferSelf: { members: [{ key: "agent", host: "agent" }] },
+    });
+    const done = partial.finish(
+      compoundOutputSource(
+        [{ key: "agent", host: "agent" }],
+        new Map([["agent", { origin: "http://a" }]]),
+        "shell",
+      ),
+    );
+    expect(done.config).toEqual({ url: "http://a" });
+    expect(describeMapElements(done, ["reactor", "drives", 1, "slug"])).toBe(
+      '$map element "sektar"',
     );
   });
 });

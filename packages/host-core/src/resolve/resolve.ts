@@ -114,6 +114,25 @@ export function describeMapElements(
   return found.length ? found.join(" › ") : undefined;
 }
 
+/** A deep copy of a resolved (JSON-shaped) value that keeps the `$map`
+ * provenance of its rendered arrays (structuredClone would drop it). */
+function cloneWithProvenance(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const copy = value.map(cloneWithProvenance);
+    const keys = renderedKeys.get(value);
+    if (keys) renderedKeys.set(copy, keys);
+    return copy;
+  }
+  if (isPlainObject(value)) {
+    const copy: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      copy[key] = cloneWithProvenance(child);
+    }
+    return copy;
+  }
+  return value;
+}
+
 type PathWalk =
   | { ok: true; value: unknown }
   | { ok: false; at: number; has: string };
@@ -545,7 +564,7 @@ export function resolveHostOutputs<T>(
     })),
     needs: [...new Set(sites.flatMap((d) => d.members))],
     finish(outputs: OutputSource): T {
-      const done: unknown = structuredClone(partial);
+      const done: unknown = cloneWithProvenance(partial);
       const late = new Resolver({ ...sources, outputs });
       for (const site of sites) {
         const value = late.token(site.token, site.trail);

@@ -279,11 +279,21 @@ async function explainDrives(
         : " (rendered at ph run from the producer's live outputs; its producer is not running now, so the plan below leaves them out)"
     }`;
   }
-  const declared = drivesSchema.parse(
-    renderTokens(listed),
-  ) satisfies DriveDeclaration[];
+  const parsed = drivesSchema.safeParse(renderTokens(listed));
+  if (!parsed.success && listNote === undefined) {
+    // a literal list: declared validation already ran; keep its error
+    throw parsed.error;
+  }
+  const declared: DriveDeclaration[] = parsed.success ? parsed.data : [];
   console.log(`[${label}]`);
   if (listNote) console.log(listNote);
+  if (!parsed.success) {
+    console.log(
+      `  the rendered drives fail the drive schema (ph run rejects them): ${parsed.error.issues
+        .map((i) => `${i.path.map(String).join(".") || "<root>"}: ${i.message}`)
+        .join("; ")}`,
+    );
+  }
   console.log(
     explainDrivePlan(mergeDrivePlan(projectRoot, declared, contributed)),
   );
