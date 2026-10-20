@@ -7,11 +7,6 @@ import type {
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
 import {
-  AUTH_ACTION_TYPES,
-  DOCUMENT_SCOPE_ACTION_TYPES,
-  RESERVED_OPERATION_NAMES,
-} from "@powerhousedao/shared/document-model";
-import {
   deriveDocumentModelOperationNames,
   inspectableDefinition,
   packageScalarNames,
@@ -39,13 +34,6 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-const SYSTEM_ACTION_TYPES: ReadonlySet<string> = new Set([
-  ...RESERVED_OPERATION_NAMES,
-  ...DOCUMENT_SCOPE_ACTION_TYPES,
-  ...AUTH_ACTION_TYPES,
-  "LOAD_STATE",
-  "PRUNE",
-]);
 
 type CompilerModule = Pick<DocumentModelModule, "documentModel" | "version">;
 
@@ -200,8 +188,9 @@ function selectOperation(
       return { kind: "input", ...selected, document: selected.document };
     }
   }
-  if (SYSTEM_ACTION_TYPES.has(context.actionType)) return { kind: "no-input" };
-  throw compilationError(context, "no operation maps to the action");
+  // The latest spec has no operation for system actions or for actions a later
+  // version dropped; failing them would stall reference indexing.
+  return { kind: "no-input" };
 }
 
 function buildEffectiveSchema(
