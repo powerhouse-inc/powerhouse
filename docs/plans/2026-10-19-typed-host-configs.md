@@ -161,7 +161,8 @@ export type ConnectOutputs = z.infer<typeof outputsSchema>;
   - This tells apart the two different `workflows` configs:
     - switchboard: `drive: {slug,name} | false` (`apps/switchboard/src/plugins/workflows.mts:74-77`);
     - connect: `drive: ref(z.url())` (`apps/connect/src/plugins/workflows.ts:34-41`).
-  - Unknown specifiers fall back to `{ module: string; config?: Record<string, unknown> }`, so third-party plugins keep working.
+  - Any specifier may be named bare or as `{ module, enabled?, verbs? }` with **no config** (decided in T3). A third-party plugin that takes config must augment `PHPluginConfigs`; a loose `config?: Record<string, unknown>` fallback would also accept a typo'd config on a known specifier.
+  - `PHHost` overrides `runner.plugins` with `PluginEntry[]`, so every runner's plugin list is typed the same way.
 - Considered: a per-file `@type {ConnectHost}`. Rejected because every host file would need an `import(` type and would name its runner's type twice.
 
 ### 1.5 Getting tsc to actually check host files
@@ -169,8 +170,10 @@ export type ConnectOutputs = z.infer<typeof outputsSchema>;
 - Today `npm run tsc` never sees `hosts/*.js`: there is no `allowJs`/`checkJs`.
 - The codegen scaffold emits:
   - `hosts/tsconfig.json`: extends root; `allowJs`, `checkJs`, `noEmit`, `resolveJsonModule`, **`exactOptionalPropertyTypes: true`**; includes `hosts/**/*.js`, `hosts/**/outputs.d.ts` and `hosts/types.d.ts`.
-  - `hosts/types.d.ts`: `/// <reference types="…" />` for each runner/plugin package in the project's dependencies.
-  - a `tsc` script: `tsc --noEmit && tsc -p hosts`.
+  - `hosts/types.d.ts`: `import type {} from "…"` for each runner/plugin package in the project's dependencies.
+  - `powerhouse.config.d.json.ts` (+ `allowArbitraryExtensions`): types `import config from "../../powerhouse.config.json"` as shared's `PowerhouseConfig`, so enum-typed values from the JSON pass `@satisfies {PHHost}` (decided in T3).
+  - a `tsc` script: `tsc && tsc -p hosts`.
+  - `ph generate hosts` rewrites `types.d.ts`, `powerhouse.config.d.json.ts` and every `outputs.js`; `ph generate all` runs it when `hosts/` exists. cmd-ts has no bare `ph generate`, so messages say `ph generate hosts`.
 - `exactOptionalPropertyTypes` makes the loader's "no `undefined`" rule (`host-loader.ts:135-136`) a compile error. It would have caught the Sektar assistant bug (see "Sektar and scaffold changes by stage").
 
 ### 1.6 Connect `config`
@@ -265,7 +268,7 @@ All tokens are plain JSON. An object whose **sole key** is one of `$output`, `$c
   - An unset variable fails resolution, naming the variable and the host path.
   - `{ $env: { name, optional: true } }` omits its enclosing property when the variable is unset. It is legal only as the direct value of an object property. Inside `$concat`, an array or the top of a `$map` template, declared validation rejects it. (The object form keeps the sole-key rule.)
 - **Authoring sugar: generated `outputs.js`.** `ph generate` writes `hosts/<name>/outputs.js` + `outputs.d.ts` from the runner's `outputsSchema` plus the host's declared drives (`reactor.drives` and plugin-declared drives such as switchboard workflows' `drive: { slug }`). Every leaf is a plain `$output` token, and the `.d.ts` brands each as `OutputToken<T>`. Record- and array-valued outputs also get an `$item` tree for use inside `$map`.
-  - The header carries a hash of both inputs: the producer runner's `outputsSchema` and the host's declared drives. When a consumer imports an `outputs.js` whose hash no longer matches, **the load fails** with "`hosts/<name>/outputs.js` is stale; run `ph generate`". There is no warn-and-continue.
+  - The header carries a hash of both inputs: the producer runner's `outputsSchema` and the host's declared drives. When a consumer imports an `outputs.js` whose hash no longer matches, **the load fails** with "`hosts/<name>/outputs.js` is stale; run `ph generate hosts`". There is no warn-and-continue.
 
   ```js
   // hosts/switchboard/outputs.js (GENERATED; plain data, header carries a schema hash)
@@ -587,6 +590,16 @@ All decisions are made.
 16. **Sektar pickup.** DECIDED: repoint Sektar's links to the host-icons worktree for the duration, as one revertable commit (Delivery).
 17. **Host content owner.** DECIDED: the integrator applies every scaffold and Sektar host edit, after the stage's lanes merge, so both copies change identically and are checked against the integrated branch.
 18. **Integration.** DECIDED: local `--no-ff` merges of lane branches into `feat/host-icons`; no push or PR without the user.
+
+Decided during T3 (user, 2026-10-20):
+
+19. **Two schemas, one definition.** Every runner exports `declaredHostSchema` (tokens allowed; `PHHostRunners[…].host` is its `z.input`) and `hostSchema` (resolved; `validateHost` before the verb), both from `defineHostSchemas((s) => …)`. Host-core's exported base blocks are the resolved form; a runner's own token-able field uses `s.tokenable` / `s.envTokenable`; refinements go inside the builder, last.
+20. **Token input types.** `tokenSchema` is `z.ZodType<Token, Token>` (and `$concat` likewise), so a `ref()` field's input is `T | Token`, not `unknown`.
+21. **Deferred self-references.** A compound's own fields that read its own members' outputs (clint `config.agents.*.url`, proxy `upstream`) resolve after those members start: `resolveHostOutputs(host, sources, { deferSelf: { members } })` resolves the rest now and returns `finish(outputSource)` for the deferred tokens.
+22. **Compound Ctrl-C.** The compound owns the exit: members inside a compound install no exiting signal handlers; the first SIGINT/SIGTERM shuts members down in reverse plan order (consumers before producers) and exits once. Standalone hosts keep their handlers.
+23. **Switchboard stop order.** Reactor first (`kill` → shutdown hooks incl. the HTTP drain → database), the same order as the signal path. Programmatic shutdown is the reactor module's idempotent `shutdown()` (extra unit RS).
+24. **Third-party plugin config.** Requires `PHPluginConfigs` registration; the fallback entry form is config-less (1.4).
+25. **Sektar dead Connect config.** `connect.drives.allowAddDrive` and `drives.sections` are deleted, not moved into a generic plugin entry.
 
 ## Out of scope / future
 
