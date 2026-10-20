@@ -171,12 +171,16 @@ const CONNECT_APP = join(ROOT, "apps/connect");
 
 const mtime = (path: string) => (existsSync(path) ? statSync(path).mtimeMs : 0);
 
-// Connect copies this package's stylesheet into its own when it builds, so a
-// stale copy leaves new classes unstyled. Its CSS step alone takes seconds.
+// Connect's stylesheet takes this package's workflow.css and the editors' classes
+// when it builds, so a stale one leaves new classes unstyled. It takes seconds.
 function buildConnectCssIfStale(): void {
-  const ours = join(PKG, "dist/style.css");
+  const ours = join(PKG, "dist/workflow.css");
   if (!existsSync(ours)) return;
-  if (mtime(join(CONNECT_APP, "dist/style.css")) >= mtime(ours)) return;
+  const newest = Math.max(
+    mtime(ours),
+    mtime(join(PKG, "dist/browser/index.js")),
+  );
+  if (mtime(join(CONNECT_APP, "dist/style.css")) >= newest) return;
   console.log("▶ rebuilding Connect's stylesheet");
   execSync("pnpm run build:css", {
     cwd: CONNECT_APP,
@@ -205,23 +209,13 @@ export function buildConnectIfStale(): void {
   });
 }
 
-// Connect dev imports the package's dist stylesheet; regenerate it from source.
-// Written only when it changed: every write makes Vite reload open pages.
+// Connect dev imports the package's dist workflow.css and scans the editors'
+// sources itself. Written only when it changed: every write makes Vite reload open pages.
 export async function buildCss(): Promise<void> {
   if (!connectDev()) return;
-  const target = join(PKG, "dist/style.css");
-  const scratch = join(PKG, ".ui-shots/style.css");
-  mkdirSync(dirname(scratch), { recursive: true });
-  execSync(`pnpm exec tailwindcss -i ./style.css -o ${scratch}`, {
-    cwd: PKG,
-    stdio: "ignore",
-  });
-  let css = readFileSync(scratch, "utf8");
-  try {
-    css += "\n" + readFileSync(join(PKG, "dist/browser/style.css"), "utf8");
-  } catch {
-    // No browser build yet; Connect dev loads the canvas CSS from source.
-  }
+  const target = join(PKG, "dist/workflow.css");
+  mkdirSync(dirname(target), { recursive: true });
+  const css = readFileSync(join(PKG, "workflow.css"), "utf8");
   const current = existsSync(target) ? readFileSync(target, "utf8") : "";
   if (css === current) return;
   writeFileSync(target, css);

@@ -4,7 +4,7 @@
 // module-evaluation (which throws if the config cache isn't warm), so they
 // must stay out of this graph.
 import { getBasePath } from "../utils/browser.js";
-import { getIsEmbedded } from "../hooks/useIsEmbedded.js";
+import { getIsEmbedded } from "@powerhousedao/connect-core/embedded";
 import {
   ConnectSidebar,
   HomeScreen,

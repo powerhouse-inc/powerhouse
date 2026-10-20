@@ -4,7 +4,9 @@
   "description": "Powerhouse document-engineering design system — GraphQL scalar UI components for building consistent Powerhouse editors.",
   "files": [
     "dist",
-    "theme.css"
+    "theme.css",
+    "tailwind.css",
+    "vendor.css"
   ],
   "type": "module",
   "repository": {
@@ -56,6 +58,8 @@
       "import": "./dist/connect/components/toast/toast.js"
     },
     "./style.css": "./dist/style.css",
+    "./tailwind.css": "./tailwind.css",
+    "./vendor.css": "./vendor.css",
     "./theme.css": "./theme.css"
   },
   "scripts": {
