@@ -2,6 +2,7 @@ import { print } from "graphql";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { runInThisContext } from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
 import { ph } from "../../src/definition/field.js";
@@ -18,6 +19,7 @@ import {
   readSubgraphEntries,
   subgraphEntrySpecifiers,
 } from "../../src/definition/tooling/subgraph-reader.js";
+import { materializeFixturePackage } from "./loader-contract.js";
 
 const PROTOCOL = Symbol.for("powerhouse.subgraph");
 
@@ -1109,6 +1111,71 @@ describe("subgraph discovery", () => {
         },
       },
     ]);
+  });
+
+  describe("next to the control document models", () => {
+    async function loadControlWith(subgraphs: Record<string, unknown>) {
+      const fixture = materializeFixturePackage("control");
+      mkdirSync(join(fixture.root, "subgraphs"));
+      writeFileSync(join(fixture.root, "subgraphs/index.ts"), "export {};\n");
+      const loader = new DefinitionSourceLoader({
+        importModule: async ({ packageRoot, specifier }) =>
+          specifier === "./subgraphs/index.ts"
+            ? subgraphs
+            : ((await import(
+                pathToFileURL(join(packageRoot, specifier)).href
+              )) as Record<string, unknown>),
+      });
+      try {
+        const loaded = await loader.normalizeDefinitionSources({
+          configFile: join(fixture.root, "powerhouse.config.json"),
+          packageRevision: revision,
+        });
+        return {
+          status: loaded.status,
+          diagnostics: loaded.diagnostics.map(({ code, severity }) => [
+            code,
+            severity,
+          ]),
+          documentModels: loaded.documentModels.length,
+          subgraphs: loaded.subgraphs.map(
+            ({ description }) => description.subgraphName,
+          ),
+        };
+      } finally {
+        await loader.dispose();
+        fixture.dispose();
+      }
+    }
+
+    it("stays ready and returns the warning when a subgraph only warns", async () => {
+      class Narrowed extends ReportsSubgraph {
+        static override readonly subgraphName = "narrowed";
+        static override getSchema(schema: never) {
+          return [stringQuery(schema as Builder, "narrow")];
+        }
+      }
+
+      expect(await loadControlWith({ Narrowed })).toEqual({
+        status: "ready",
+        diagnostics: [["PH-SG-PARENT-FIELDS-DROPPED", "warning"]],
+        documentModels: 2,
+        subgraphs: ["narrowed"],
+      });
+    });
+
+    it("fails when a subgraph has an error", async () => {
+      class OlderBase {}
+      Object.defineProperty(OlderBase, "name", { value: "BaseSubgraph" });
+      class LegacySubgraph extends OlderBase {}
+
+      expect(await loadControlWith({ LegacySubgraph })).toEqual({
+        status: "failed",
+        diagnostics: [["PH-SG-DEFINITION-INVALID", "error"]],
+        documentModels: 2,
+        subgraphs: [],
+      });
+    });
   });
 
   it("reports an entry that fails to import and still reads the others", async () => {
