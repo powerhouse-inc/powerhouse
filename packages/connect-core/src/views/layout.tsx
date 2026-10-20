@@ -5,13 +5,23 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { HeadContent, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { Suspense } from "react";
-import { coreModals, ModalOutlet } from "../router/modals.js";
+import type { ConnectModals } from "../router/modals.js";
+import { CORE_MODAL_VIEWS, ModalOutlet } from "../router/modals.js";
 import { ContentOutlet } from "../router/route-components.js";
 import { useNavRoutes, useSidebarMode } from "../router/sidebar.js";
 import { appTitle } from "../router/titles.js";
 import { useIsEmbedded } from "../runtime/embedded.js";
 import { ThemeToggle } from "./theme-toggle.js";
 import { linkClass } from "./index-table.js";
+import * as modalViews from "./modals.js";
+
+// The layout shares the modals' chunk, so it renders them directly.
+const coreModals: ConnectModals = Object.fromEntries(
+  Object.entries(CORE_MODAL_VIEWS).map(([type, name]) => [
+    type,
+    modalViews[name],
+  ]),
+);
 
 /** Core's root: the page, in the theme. */
 export function CoreRoot() {

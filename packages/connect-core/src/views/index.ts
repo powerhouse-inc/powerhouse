@@ -1,5 +1,4 @@
 // Core's plain views; a host loads them only when it shows them.
-export { ConnectCoreApp } from "./core-app.js";
 export { DocumentView, DriveLayout, NodeView } from "./content.js";
 export { DirectoryListing } from "./directory-listing.js";
 export { DocumentHistory, HISTORY_PAGE_SIZE } from "./document-history.js";

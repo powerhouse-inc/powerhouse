@@ -74,7 +74,7 @@ import {
   registerPackageRoutes,
 } from "../src/router/index.js";
 import { getConnectRegistry } from "../src/registry.js";
-import { ConnectCoreApp } from "../src/views/core-app.js";
+import { ConnectCoreApp } from "../src/router/core-app.js";
 import { HISTORY_PAGE_SIZE } from "../src/views/document-history.js";
 import { primeRuntimeConfig } from "../src/runtime/runtime-config.js";
 

@@ -1,24 +1,16 @@
 import type {
   AnyRoute,
   AnyRouter,
-  ErrorRouteComponent,
-  NotFoundRouteProps,
   RouteComponent,
 } from "@tanstack/react-router";
-import {
-  lazyRouteComponent,
-  Outlet,
-  useMatch,
-  useRouter,
-} from "@tanstack/react-router";
-import type { ComponentType, ReactNode } from "react";
+import { Outlet, useMatch, useRouter } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import type {
   DocumentDriveDocument,
   FolderNode,
 } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useIsColdStart } from "./cold-start.js";
-import { isDriveNotFound } from "./drive-route-loader.js";
 
 /** A drive view's props: drive apps and core's directory listing get the same. */
 export type DriveViewProps = {
@@ -72,40 +64,3 @@ export function DrivePending() {
     </p>
   );
 }
-
-// Core's views load only when a page shows one.
-const views = () => import("@powerhousedao/connect-core/views");
-
-const CORE_VIEW = Symbol.for("@powerhousedao/connect-core/core-view");
-
-/** One of core's views, loaded with the route that shows it. */
-export function coreView(name: keyof Awaited<ReturnType<typeof views>>) {
-  return Object.assign(lazyRouteComponent(views, name), {
-    [CORE_VIEW]: true,
-  }) as RouteComponent;
-}
-
-/** Whether a route's component is one of core's views, which a plugin's UI replaces. */
-export function isCoreView(component: unknown) {
-  return (
-    typeof component === "function" &&
-    (component as { [CORE_VIEW]?: true })[CORE_VIEW] === true
-  );
-}
-
-const NotFoundPage = coreView("NotFoundPage");
-const DriveNotFoundPage = coreView("DriveNotFoundPage") as ComponentType<{
-  driveSlug: string;
-}>;
-
-/** Core's not-found page; a missing drive's names the drive. */
-export function CoreNotFound({ data }: Partial<NotFoundRouteProps>) {
-  return isDriveNotFound(data) ? (
-    <DriveNotFoundPage driveSlug={data.driveSlug} />
-  ) : (
-    <NotFoundPage />
-  );
-}
-
-/** Core's view of a route's loader or render error. */
-export const CoreError = coreView("CoreRouteError") as ErrorRouteComponent;

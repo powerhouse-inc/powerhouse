@@ -21,11 +21,8 @@ import { bindConnectScroll, connectScrollRestoration } from "./scroll.js";
 import type { DriveRouteData } from "./drive-route-loader.js";
 import type { ConnectRootRoute, ConnectRoutes } from "./route-tree.js";
 import { createConnectNavigation } from "./navigation.js";
-import {
-  CONTENT_VIEW_ID,
-  CoreNotFound,
-  CoreError,
-} from "./route-components.js";
+import { CoreError, CoreNotFound } from "./core-views.js";
+import { CONTENT_VIEW_ID } from "./route-components.js";
 import { addConnectRoutes, connectRoutes } from "./route-tree.js";
 import { setSettingsRoute } from "./settings.js";
 import { parseConnectSearch, stringifyConnectSearch } from "./search.js";
