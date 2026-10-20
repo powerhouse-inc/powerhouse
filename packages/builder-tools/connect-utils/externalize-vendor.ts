@@ -90,7 +90,18 @@ export const DEFAULT_VENDOR_INCLUDE = [
   "@powerhousedao/design-system/connect",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/document-engineering",
+  "@powerhousedao/connect-core",
+  "@tanstack/react-router",
 ];
+
+/** Never vendored: the route tree is the project's, the config path the app's
+ * base, and SSR server-only. */
+export const VENDOR_SKIP_SUBPATHS = new Set([
+  "@powerhousedao/connect-core/route-tree",
+  "@powerhousedao/connect-core/runtime-config",
+  "@tanstack/react-router/ssr/client",
+  "@tanstack/react-router/ssr/server",
+]);
 
 /**
  * React-family specifiers kept external to the vendor build. The vendor's chunks
@@ -669,7 +680,8 @@ function expandIncludeSubpaths(dirname: string, include: string[]): string[] {
       // Skip subpaths whose target file isn't shipped (e.g. a `./test` export
       // pointing at unbuilt dist) — they'd fail the build.
       if (!existsSync(join(pkgRoot, target))) continue;
-      out.add(key === "." ? pkg : pkg + key.slice(1));
+      const expanded = key === "." ? pkg : pkg + key.slice(1);
+      if (!VENDOR_SKIP_SUBPATHS.has(expanded)) out.add(expanded);
     }
   }
   return [...out];
