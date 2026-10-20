@@ -5,8 +5,8 @@ import { emittedRunnerSchemas } from "../src/runners/emitted-schemas.js";
 
 /**
  * Writes the runners' editor JSON Schemas into clis/ph-cli/schemas/. Run
- * `pnpm --filter @powerhousedao/ph-cli exec tsx scripts/emit-runner-schemas.ts`
- * after changing a runner's hostSchema or outputsSchema; the drift test
+ * `pnpm --filter @powerhousedao/ph-cli emit-schemas` after changing a
+ * runner's hostSchema or outputsSchema; the drift test
  * (test/runner-schemas-drift.test.ts) fails while the files are behind.
  */
 const outDir = path.join(
