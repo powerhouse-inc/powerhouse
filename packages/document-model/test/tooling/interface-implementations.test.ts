@@ -1,26 +1,42 @@
 import type {
+  DefinitionCheckReport,
   DefinitionDiagnostic,
   DefinitionSource,
 } from "@powerhousedao/shared/document-model";
-import { describe, expect, it } from "vitest";
+import { join } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { adaptCodeFirstDocumentModelSource } from "../../src/definition/adapters/code-first-document-model-source-adapter.js";
 import type { NormalizedDocumentModelArtifact } from "../../src/definition/adapters/types.js";
 import { ph } from "../../src/definition/field.js";
 import { defineDocumentModel } from "../../src/definition/model.js";
 import { defineScalar } from "../../src/definition/scalars/define-scalar.js";
+import { checkDefinitions } from "../../src/definition/tooling/check-definitions.js";
+import { DefinitionSourceLoader } from "../../src/definition/tooling/definition-source-loader.js";
 import { schemaFirstGraphQLDocument } from "../../src/definition/tooling/graphql-document.js";
 import { checkInterfaceImplementations } from "../../src/definition/tooling/interface-implementations.js";
 import type {
   AnyTypeDescriptor,
   ObjectFields,
 } from "../../src/definition/types.js";
+import {
+  materializeFixturePackage,
+  packageRevisionOf,
+} from "./loader-contract.js";
 
 const SOURCE = {
   specifier: "./models/probe.ts",
   exportPath: ["Probe"],
 } satisfies DefinitionSource;
 const OWNER_PATH = ["specifications", 0, "types", 1];
+// finalize() reports a type where the walk first reaches it.
+const DECLARATION_PATH = [
+  "specifications",
+  "global",
+  "schema",
+  "fields",
+  "item",
+];
 
 function artifactOf(model: unknown): NormalizedDocumentModelArtifact {
   const result = adaptCodeFirstDocumentModelSource(model, SOURCE);
@@ -31,12 +47,46 @@ function artifactOf(model: unknown): NormalizedDocumentModelArtifact {
   return artifact;
 }
 
-function probe(options: {
+function finalizeProbe(
+  implementation: AnyTypeDescriptor,
+  specifications: {
+    readonly sdl?: readonly string[];
+    readonly auxiliaryTypes?: readonly AnyTypeDescriptor[];
+  } = {},
+) {
+  return defineDocumentModel({
+    id: "test/probe",
+    name: "Probe",
+    description: "",
+    extension: "probe",
+    version: 1,
+    author: { name: "Powerhouse" },
+    specifications: {
+      ...(specifications.sdl !== undefined && {
+        graphQLCompatibility: schemaFirstGraphQLDocument(specifications.sdl),
+      }),
+      ...(specifications.auxiliaryTypes !== undefined && {
+        auxiliaryTypes: specifications.auxiliaryTypes,
+      }),
+      global: {
+        schema: ph.object("ProbeState", {
+          fields: { item: ph.ref(implementation) },
+        }),
+        initialValue: { item: null },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  }).finalize({ modules: [] });
+}
+
+type ProbeOptions = {
   readonly interfaceFields: ObjectFields;
   readonly implementationFields: ObjectFields;
   readonly sdl?: readonly string[];
   readonly auxiliaryTypes?: readonly AnyTypeDescriptor[];
-}): NormalizedDocumentModelArtifact {
+};
+
+function finalizeContractProbe(options: ProbeOptions) {
   const Contract = ph.interface("Contract", {
     fields: options.interfaceFields,
   });
@@ -44,30 +94,30 @@ function probe(options: {
     implements: [Contract],
     fields: options.implementationFields,
   });
-  return artifactOf(
-    defineDocumentModel({
-      id: "test/probe",
-      name: "Probe",
-      description: "",
-      extension: "probe",
-      version: 1,
-      author: { name: "Powerhouse" },
-      specifications: {
-        ...(options.sdl !== undefined && {
-          graphQLCompatibility: schemaFirstGraphQLDocument(options.sdl),
-        }),
-        ...(options.auxiliaryTypes !== undefined && {
-          auxiliaryTypes: options.auxiliaryTypes,
-        }),
-        global: {
-          schema: ph.object("ProbeState", {
-            fields: { item: ph.ref(Implementation) },
-          }),
-          initialValue: { item: null },
-        },
-        local: { schema: null, initialValue: {} },
-      },
-    }).finalize({ modules: [] }),
+  return finalizeProbe(Implementation, options);
+}
+
+function probe(options: ProbeOptions): NormalizedDocumentModelArtifact {
+  return artifactOf(finalizeContractProbe(options));
+}
+
+function ancestorProbe(
+  interfaceOwner: boolean,
+  implemented: "Child" | "Child & Named",
+) {
+  const Named = ph.interface("Named", { fields: { label: ph.String() } });
+  const Child = ph.interface("Child", {
+    implements: [Named],
+    fields: { label: ph.String() },
+  });
+  const options = {
+    implements: implemented === "Child" ? [Child] : [Child, Named],
+    fields: { label: ph.String() },
+  };
+  return finalizeProbe(
+    interfaceOwner
+      ? ph.interface("Implementation", options)
+      : ph.object("Implementation", options),
   );
 }
 
@@ -90,60 +140,64 @@ function argumentProbe(contractArguments: string, arguments_: string) {
     ],
   });
 }
-
-describe("interface implementations", () => {
-  it("checks compatibility-only root implementations at their own AST path", () => {
-    const artifact = probe({
-      interfaceFields: { f: ph.String() },
-      implementationFields: { f: ph.String() },
-      sdl: [
-        "type ProbeState { item: Implementation }",
-        "interface Contract { f: String }",
-        "type Implementation implements Contract { f: String }",
-        "type Query implements Contract { other: String }",
-      ],
-    });
-    expect(summary(checkInterfaceImplementations(artifact))).toStrictEqual([
-      {
-        code: "PH-DM-INTERFACE-INVALID",
-        path: [
-          "specifications",
-          0,
-          "graphQLCompatibility",
-          "document",
-          "definitions",
-          3,
-        ],
-        message:
-          "Interface field Contract.f expected but Query does not provide it.",
-      },
-    ]);
+describe("a declaration that breaks an implementation rule", () => {
+  let fixture: ReturnType<typeof materializeFixturePackage>;
+  beforeAll(() => {
+    fixture = materializeFixturePackage("interfaces");
   });
+  afterAll(() => fixture.dispose());
 
-  it.each(["DateTime", "Amount_Money"])(
-    "accepts host scalar %s used only in compatibility arguments",
-    (name) => {
-      const artifact = argumentProbe(`(term: ${name})`, `(term: ${name})`);
-      expect(artifact.definition.specifications[0].scalars).toStrictEqual([]);
-      expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
-    },
-  );
+  /** `ph model check` on a package whose one source exports `build()`. */
+  async function check(build: () => unknown): Promise<DefinitionCheckReport> {
+    const loader = new DefinitionSourceLoader({
+      // Evaluating a source module is what runs its finalize().
+      importModule: () => Promise.resolve().then(() => ({ Probe: build() })),
+    });
+    try {
+      return await checkDefinitions({
+        profile: "edit",
+        loader,
+        packageRevision: packageRevisionOf(fixture.root),
+        configFile: join(fixture.root, "powerhouse.config.json"),
+      });
+    } finally {
+      await loader.dispose();
+    }
+  }
+
+  async function refusal(build: () => unknown) {
+    const report = await check(build);
+    expect(report.status).toBe("invalid");
+    return summary(report.diagnostics);
+  }
+
+  async function expectAccepted(build: () => unknown): Promise<void> {
+    const report = await check(build);
+    expect(report.status).toBe("ok");
+    expect(report.diagnostics).toStrictEqual([]);
+    expect(report.definitions.map(({ key }) => key)).toStrictEqual([
+      "test/probe",
+    ]);
+  }
 
   it.each([false, true])(
-    "reports a missing field even when required is %s, at its implementing object's own index",
-    (required) => {
-      const artifact = probe({
-        interfaceFields: { label: ph.String({ required }) },
-        implementationFields: { other: ph.String() },
-      });
-      expect(checkInterfaceImplementations(artifact)).toStrictEqual([
+    "is refused by finalize() for a missing field even when required is %s",
+    async (required) => {
+      const report = await check(() =>
+        finalizeContractProbe({
+          interfaceFields: { label: ph.String({ required }) },
+          implementationFields: { other: ph.String() },
+        }),
+      );
+      expect(report.status).toBe("invalid");
+      expect(report.diagnostics).toStrictEqual([
         {
           code: "PH-DM-INTERFACE-INVALID",
           severity: "error",
           phase: "definition",
-          source: SOURCE,
+          source: { specifier: "./src/missing-interface-field.ts" },
           definition: { kind: "document-model", key: "test/probe", version: 1 },
-          path: OWNER_PATH,
+          path: DECLARATION_PATH,
           message:
             "Interface field Contract.label expected but Implementation does not provide it.",
           expected: `Contract.label: String${required ? "!" : ""}`,
@@ -199,21 +253,19 @@ describe("interface implementations", () => {
       actualType: "[String]",
     },
   ])(
-    "rejects return type $actualType for $expectedType",
-    ({ expected, actual, expectedType, actualType }) => {
+    "is refused by finalize() for return type $actualType for $expectedType",
+    async ({ expected, actual, expectedType, actualType }) => {
       expect(
-        summary(
-          checkInterfaceImplementations(
-            probe({
-              interfaceFields: { f: expected },
-              implementationFields: { f: actual },
-            }),
-          ),
+        await refusal(() =>
+          finalizeContractProbe({
+            interfaceFields: { f: expected },
+            implementationFields: { f: actual },
+          }),
         ),
       ).toStrictEqual([
         {
           code: "PH-DM-INTERFACE-INVALID",
-          path: OWNER_PATH,
+          path: DECLARATION_PATH,
           message: `Interface field Contract.f expects type ${expectedType} but Implementation.f is type ${actualType}.`,
         },
       ]);
@@ -236,19 +288,17 @@ describe("interface implementations", () => {
     },
   ])(
     "accepts equal and covariant return wrappers %#",
-    ({ expected, actual }) => {
-      const artifact = probe({
-        interfaceFields: { f: expected },
-        implementationFields: { f: actual },
-      });
-      expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
-      expect(artifact.definition.specifications[0].types[1].name).toBe(
-        "Implementation",
+    async ({ expected, actual }) => {
+      await expectAccepted(() =>
+        finalizeContractProbe({
+          interfaceFields: { f: expected },
+          implementationFields: { f: actual },
+        }),
       );
     },
   );
 
-  it("accepts object, interface and union return covariance", () => {
+  it("accepts object, interface and union return covariance", async () => {
     const Named = ph.interface("Named", { fields: { label: ph.String() } });
     const Child = ph.interface("Child", {
       implements: [Named],
@@ -259,48 +309,116 @@ describe("interface implementations", () => {
       fields: { label: ph.String() },
     });
     const Result = ph.union("Result", { members: [Person] });
-    const artifact = probe({
-      interfaceFields: {
-        object: ph.ref(Named),
-        child: ph.ref(Named),
-        union: ph.ref(Result),
-      },
-      implementationFields: {
-        object: ph.ref(Person),
-        child: ph.ref(Child),
-        union: ph.ref(Person),
-      },
-    });
-    expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
-    expect(
-      artifact.definition.specifications[0].types.map(({ name }) => name),
-    ).toContain("Child");
+    await expectAccepted(() =>
+      finalizeContractProbe({
+        interfaceFields: {
+          object: ph.ref(Named),
+          child: ph.ref(Named),
+          union: ph.ref(Result),
+        },
+        implementationFields: {
+          object: ph.ref(Person),
+          child: ph.ref(Child),
+          union: ph.ref(Person),
+        },
+      }),
+    );
   });
 
-  it("rejects an object outside the interface or union it must narrow", () => {
+  it("is refused by finalize() for an object outside the interface or union it must narrow", async () => {
     const Named = ph.interface("Named", { fields: { label: ph.String() } });
     const Person = ph.object("Person", { fields: { label: ph.String() } });
     const Other = ph.object("Other", { fields: { label: ph.String() } });
     const Result = ph.union("Result", { members: [Other] });
-    const artifact = probe({
-      interfaceFields: { object: ph.ref(Named), union: ph.ref(Result) },
-      implementationFields: { object: ph.ref(Person), union: ph.ref(Person) },
-    });
-    expect(summary(checkInterfaceImplementations(artifact))).toStrictEqual([
+    expect(
+      await refusal(() =>
+        finalizeContractProbe({
+          interfaceFields: { object: ph.ref(Named), union: ph.ref(Result) },
+          implementationFields: {
+            object: ph.ref(Person),
+            union: ph.ref(Person),
+          },
+        }),
+      ),
+    ).toStrictEqual([
       {
         code: "PH-DM-INTERFACE-INVALID",
-        path: OWNER_PATH,
+        path: DECLARATION_PATH,
         message:
           "Interface field Contract.object expects type Named but Implementation.object is type Person.",
       },
       {
         code: "PH-DM-INTERFACE-INVALID",
-        path: OWNER_PATH,
+        path: DECLARATION_PATH,
         message:
           "Interface field Contract.union expects type Result but Implementation.union is type Person.",
       },
     ]);
   });
+
+  it.each([false, true])(
+    "is refused by finalize() without explicit ancestor interfaces on an %s interface owner",
+    async (interfaceOwner) => {
+      expect(
+        await refusal(() => ancestorProbe(interfaceOwner, "Child")),
+      ).toStrictEqual([
+        {
+          code: "PH-DM-INTERFACE-INVALID",
+          path: DECLARATION_PATH,
+          message:
+            "Type Implementation must implement Named because it is implemented by Child.",
+        },
+      ]);
+    },
+  );
+
+  it.each([false, true])(
+    "accepts explicit ancestor interfaces on an %s interface owner",
+    async (interfaceOwner) => {
+      await expectAccepted(() =>
+        ancestorProbe(interfaceOwner, "Child & Named"),
+      );
+    },
+  );
+});
+
+describe("a retained schema-first document", () => {
+  it("checks compatibility-only root implementations at their own AST path", () => {
+    const artifact = probe({
+      interfaceFields: { f: ph.String() },
+      implementationFields: { f: ph.String() },
+      sdl: [
+        "type ProbeState { item: Implementation }",
+        "interface Contract { f: String }",
+        "type Implementation implements Contract { f: String }",
+        "type Query implements Contract { other: String }",
+      ],
+    });
+    expect(summary(checkInterfaceImplementations(artifact))).toStrictEqual([
+      {
+        code: "PH-DM-INTERFACE-INVALID",
+        path: [
+          "specifications",
+          0,
+          "graphQLCompatibility",
+          "document",
+          "definitions",
+          3,
+        ],
+        message:
+          "Interface field Contract.f expected but Query does not provide it.",
+      },
+    ]);
+  });
+
+  it.each(["DateTime", "Amount_Money"])(
+    "accepts host scalar %s used only in compatibility arguments",
+    (name) => {
+      const artifact = argumentProbe(`(term: ${name})`, `(term: ${name})`);
+      expect(artifact.definition.specifications[0].scalars).toStrictEqual([]);
+      expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
+    },
+  );
 
   it.each(["String", "String!"])(
     "requires the interface argument %s even when optional",
@@ -394,93 +512,6 @@ describe("interface implementations", () => {
     },
   );
 
-  it.each([false, true])(
-    "requires explicit ancestor interfaces on an %s interface owner",
-    (interfaceOwner) => {
-      const Named = ph.interface("Named", { fields: { label: ph.String() } });
-      const Child = ph.interface("Child", {
-        implements: [Named],
-        fields: { label: ph.String() },
-      });
-      const Implementation = interfaceOwner
-        ? ph.interface("Implementation", {
-            implements: [Child],
-            fields: { label: ph.String() },
-          })
-        : ph.object("Implementation", {
-            implements: [Child],
-            fields: { label: ph.String() },
-          });
-      const model = defineDocumentModel({
-        id: "test/probe",
-        name: "Probe",
-        description: "",
-        extension: "probe",
-        version: 1,
-        author: { name: "Powerhouse" },
-        specifications: {
-          global: {
-            schema: ph.object("ProbeState", {
-              fields: { item: ph.ref(Implementation) },
-            }),
-            initialValue: { item: null },
-          },
-          local: { schema: null, initialValue: {} },
-        },
-      }).finalize({ modules: [] });
-      expect(
-        summary(checkInterfaceImplementations(artifactOf(model))),
-      ).toStrictEqual([
-        {
-          code: "PH-DM-INTERFACE-INVALID",
-          path: OWNER_PATH,
-          message:
-            "Type Implementation must implement Named because it is implemented by Child.",
-        },
-      ]);
-    },
-  );
-
-  it.each([false, true])(
-    "accepts explicit ancestor interfaces on an %s interface owner",
-    (interfaceOwner) => {
-      const Named = ph.interface("Named", { fields: { label: ph.String() } });
-      const Child = ph.interface("Child", {
-        implements: [Named],
-        fields: { label: ph.String() },
-      });
-      const Implementation = interfaceOwner
-        ? ph.interface("Implementation", {
-            implements: [Child, Named],
-            fields: { label: ph.String() },
-          })
-        : ph.object("Implementation", {
-            implements: [Child, Named],
-            fields: { label: ph.String() },
-          });
-      const model = defineDocumentModel({
-        id: "test/probe",
-        name: "Probe",
-        description: "",
-        extension: "probe",
-        version: 1,
-        author: { name: "Powerhouse" },
-        specifications: {
-          global: {
-            schema: ph.object("ProbeState", {
-              fields: { item: ph.ref(Implementation) },
-            }),
-            initialValue: { item: null },
-          },
-          local: { schema: null, initialValue: {} },
-        },
-      }).finalize({ modules: [] });
-      const artifact = artifactOf(model);
-      expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
-      expect(artifact.documentType).toBe("test/probe");
-    },
-  );
-
   it.each([
     {
       label: "self",
@@ -567,21 +598,29 @@ describe("interface implementations", () => {
   it("checks fields and implements contributed by compatibility extensions", () => {
     const artifact = probe({
       interfaceFields: { f: ph.String(), label: ph.String() },
-      implementationFields: { f: ph.String() },
+      implementationFields: { f: ph.String(), label: ph.String() },
       sdl: [
         "type ProbeState { item: Implementation }",
         "interface Contract { f: String }",
         "extend interface Contract { label: String }",
-        "type Implementation { f: String }",
-        "extend type Implementation implements Contract",
+        "type Implementation implements Contract { f: String, label: String }",
+        "type Query { f: String }",
+        "extend type Query implements Contract",
       ],
     });
     expect(summary(checkInterfaceImplementations(artifact))).toStrictEqual([
       {
         code: "PH-DM-INTERFACE-INVALID",
-        path: OWNER_PATH,
+        path: [
+          "specifications",
+          0,
+          "graphQLCompatibility",
+          "document",
+          "definitions",
+          4,
+        ],
         message:
-          "Interface field Contract.label expected but Implementation does not provide it.",
+          "Interface field Contract.label expected but Query does not provide it.",
       },
     ]);
   });
@@ -622,6 +661,11 @@ describe("interface implementations", () => {
         phone: Phone({ required: true }),
         amount: ph.Money({ required: true }),
       },
+      sdl: [
+        "type ProbeState { item: Implementation }",
+        "interface Contract { phone: Phone, amount: Amount_Money }",
+        "type Implementation implements Contract { phone: Phone!, amount: Amount_Money! }",
+      ],
     });
     expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
     expect(
@@ -647,39 +691,46 @@ describe("interface implementations", () => {
   });
 
   it("does not require a Query root", () => {
-    const artifact = probe({
-      interfaceFields: { f: ph.String() },
-      implementationFields: { f: ph.String() },
-    });
+    const artifact = argumentProbe("", "");
     expect(checkInterfaceImplementations(artifact)).toStrictEqual([]);
     expect(
-      artifact.definition.specifications[0].types.map(({ name }) => name),
-    ).toStrictEqual(["ProbeState", "Implementation", "Contract"]);
+      artifact.definition.specifications[0].graphQLCompatibility?.document.definitions.map(
+        (definition) => ("name" in definition ? definition.name.value : null),
+      ),
+    ).toStrictEqual(["ProbeState", "Contract", "Implementation"]);
   });
 
   it("reports construction failures and continues with the next specification version", () => {
-    const bad = probe({
+    const seed = probe({
       interfaceFields: { f: ph.String() },
       implementationFields: { f: ph.String() },
     });
-    const missing = probe({
-      interfaceFields: { label: ph.String() },
-      implementationFields: { other: ph.String() },
+    const [specification] = seed.definition.specifications;
+    const retaining = (sdl: readonly string[], version: number) => ({
+      ...specification,
+      version,
+      graphQLCompatibility: schemaFirstGraphQLDocument([
+        "type ProbeState { item: Implementation }",
+        "interface Contract { f: String }",
+        ...sdl,
+      ]),
     });
     const artifact = {
-      ...bad,
+      ...seed,
       definition: {
-        ...bad.definition,
+        ...seed.definition,
         specifications: [
-          {
-            ...bad.definition.specifications[0],
-            graphQLCompatibility: schemaFirstGraphQLDocument([
-              "type ProbeState { item: Implementation }",
-              "interface Contract { f: String }",
-              "type Implementation implements Contract { f: Undeclared }",
-            ]),
-          },
-          { ...missing.definition.specifications[0], version: 2 },
+          retaining(
+            ["type Implementation implements Contract { f: Undeclared }"],
+            1,
+          ),
+          retaining(
+            [
+              "type Implementation implements Contract { f: String }",
+              "type Query implements Contract { other: String }",
+            ],
+            2,
+          ),
         ],
       },
     };
@@ -702,9 +753,16 @@ describe("interface implementations", () => {
       },
       {
         code: "PH-DM-INTERFACE-INVALID",
-        path: ["specifications", 1, "types", 1],
+        path: [
+          "specifications",
+          1,
+          "graphQLCompatibility",
+          "document",
+          "definitions",
+          3,
+        ],
         message:
-          "Interface field Contract.label expected but Implementation does not provide it.",
+          "Interface field Contract.f expected but Query does not provide it.",
         definition: { kind: "document-model", key: "test/probe", version: 2 },
       },
     ]);

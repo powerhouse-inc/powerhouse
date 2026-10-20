@@ -102,22 +102,28 @@ const completeRelease = (
 });
 
 describe("checkDefinitions statuses and exit codes", () => {
-  it("rejects a finalized object missing a required interface field", async () => {
+  it("reports finalize()'s refusal of an object missing a required interface field", async () => {
     const { report } = await run({
       fixture: "interfaces",
     });
     expect(report.status).toBe("invalid");
     expect(exitCodeFor(report)).toBe(1);
-    expect(report.diagnostics).toContainEqual(
-      expect.objectContaining({
+    expect(report.diagnostics).toStrictEqual([
+      {
         code: "PH-DM-INTERFACE-INVALID",
         severity: "error",
         phase: "definition",
-        path: ["specifications", 0, "types", 0],
+        source: { specifier: "./src/missing-interface-field.ts" },
+        definition: { kind: "document-model", key: "test/missing", version: 1 },
+        path: ["specifications", "global", "schema"],
         message:
           "Interface field Named.label expected but MissingState does not provide it.",
-      }),
-    );
+        expected: "Named.label: String!",
+        received: "missing field",
+        repair:
+          "Add label with a type compatible with Named.label, or remove Named from MissingState's implemented interfaces.",
+      },
+    ]);
   });
 
   it("passes a healthy package", async () => {

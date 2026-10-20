@@ -572,6 +572,81 @@ describe("equals in a subgraph", () => {
   });
 });
 
+describe("deprecated required arguments in a subgraph", () => {
+  it("are refused wherever a caller has to supply them", () => {
+    const gone = () => ph.String({ required: true, deprecated: "gone" });
+    const Filter = ph.input("ShelfQuery", { fields: { code: gone() } });
+    const Book = ph.object("DeprecatedBook", {
+      fields: {
+        title: ph.String(),
+        pages: ph.field({ args: { from: gone() }, returns: ph.Int() }),
+      },
+    });
+    const { builders, exposed } = createEntryBuilders<
+      unknown,
+      unknown,
+      unknown,
+      unknown
+    >();
+    const compiled = compileSubgraphSchema({
+      name: "shelf",
+      entries: [
+        builders.query("book", {
+          args: {
+            code: gone(),
+            kept: ph.String({
+              required: true,
+              defaultValue: "a",
+              deprecated: "gone",
+            }),
+            filter: ph.ref(Filter),
+          },
+          returns: ph.ref(Book),
+          resolve: () => null,
+        }),
+        builders.field(Book.computedTokens.pages, { resolve: () => 0 }),
+      ],
+      exposed,
+    });
+    expect(
+      compiled.diagnostics.map(({ code, path, message }) => ({
+        code,
+        path,
+        message,
+      })),
+    ).toStrictEqual([
+      {
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path: ["entries", 0, "args", "code", "deprecated"],
+        message:
+          "Required argument code cannot be deprecated: a caller has to supply it, so GraphQL refuses the schema.",
+      },
+      {
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path: ["entries", 0, "args", "filter", "fields", "code", "deprecated"],
+        message:
+          "Required input field code cannot be deprecated: a caller has to supply it, so GraphQL refuses the schema.",
+      },
+      {
+        code: "PH-DEF-FIELD-OPTION-UNSUPPORTED",
+        path: [
+          "entries",
+          0,
+          "returns",
+          "computed",
+          "pages",
+          "args",
+          "fields",
+          "from",
+          "deprecated",
+        ],
+        message:
+          "Required input field from cannot be deprecated: a caller has to supply it, so GraphQL refuses the schema.",
+      },
+    ]);
+  });
+});
+
 describe("input defaults in a subgraph", () => {
   function shelf(options: {
     readonly limit: unknown;

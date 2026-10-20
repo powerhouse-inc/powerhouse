@@ -1,6 +1,11 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { fileURLToPath } from "node:url";
-import { canonicalDigest, defineDocumentModel, ph } from "document-model";
+import {
+  canonicalDigest,
+  defineDocumentModel,
+  DocumentModelDefinitionError,
+  ph,
+} from "document-model";
 import {
   checkDefinitions,
   DefinitionSourceLoader,
@@ -30,44 +35,48 @@ async function checkModel(model: unknown) {
   }
 }
 
-it("reports the missing interface field that the real host refuses", async () => {
+it("refuses at finalize the missing interface field that the real host refuses", () => {
   const Named = ph.interface("Named", {
     fields: { label: ph.String({ required: true }) },
   });
-  const missing = defineDocumentModel({
-    id: "test/missing",
-    name: "Missing",
-    description: "",
-    extension: "missing",
-    version: 1,
-    author: { name: "Powerhouse" },
-    specifications: {
-      global: {
-        schema: ph.object("MissingState", {
-          implements: [Named],
-          fields: { other: ph.String() },
-        }),
-        initialValue: { other: null },
+  const finalizeMissing = () =>
+    defineDocumentModel({
+      id: "test/missing",
+      name: "Missing",
+      description: "",
+      extension: "missing",
+      version: 1,
+      author: { name: "Powerhouse" },
+      specifications: {
+        global: {
+          schema: ph.object("MissingState", {
+            implements: [Named],
+            fields: { other: ph.String() },
+          }),
+          initialValue: { other: null },
+        },
+        local: { schema: null, initialValue: {} },
       },
-      local: { schema: null, initialValue: {} },
-    },
-  }).finalize({ modules: [] });
-  const report = await checkModel(missing);
-  expect(report.status).toBe("invalid");
-  expect(report.diagnostics).toContainEqual(
-    expect.objectContaining({
+    }).finalize({ modules: [] });
+  let refused: unknown;
+  try {
+    finalizeMissing();
+  } catch (error) {
+    refused = error;
+  }
+  expect(refused).toBeInstanceOf(DocumentModelDefinitionError);
+  expect(
+    (refused as DocumentModelDefinitionError).diagnostics.map(
+      ({ code, path, message }) => ({ code, path, message }),
+    ),
+  ).toStrictEqual([
+    {
       code: "PH-DM-INTERFACE-INVALID",
-      path: ["specifications", 0, "types", 0],
+      path: ["specifications", "global", "schema"],
       message:
         "Interface field Named.label expected but MissingState does not provide it.",
-    }),
-  );
-  expect(report.definitions).toHaveLength(1);
-  expect(() =>
-    buildDocumentModelSchema(missing as unknown as DocumentModelModule),
-  ).toThrow(
-    "Interface field Missing_Named.label expected but Missing_MissingState does not provide it.",
-  );
+    },
+  ]);
 });
 
 function compatibilityModel(withRootImplementation: boolean) {

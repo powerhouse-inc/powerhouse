@@ -1114,6 +1114,20 @@ describe("the stored SDL segments", () => {
         message:
           'The object type "OnlyComputed" declares no fields, and GraphQL cannot build a schema that contains it.',
       },
+      {
+        code: "PH-SG-COMPUTED-FIELD-INVALID",
+        path: [
+          "specifications",
+          "global",
+          "schema",
+          "fields",
+          "thing",
+          "fields",
+          "size",
+        ],
+        message:
+          'Field "size" of OnlyComputed is computed, and a document model stores every field of its state, so no resolver could supply it.',
+      },
     ]);
   });
 });
