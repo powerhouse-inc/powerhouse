@@ -49,7 +49,10 @@ commands win name collisions).
 Another host's outputs (its URLs, drive ids, …) are read with output tokens,
 e.g. \`{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }\`,
 resolved when the host starts (the producer must be running, or a member of
-the same compound). \`ph generate hosts\` writes each producer's
+the same compound). \`{ $map: { over, to } }\` renders a list from a
+collection output — e.g. one remote drive per drive the switchboard serves,
+with \`{ $key: true }\` and \`{ $item: ["url"] }\` naming each element.
+\`ph generate hosts\` writes each producer's
 \`outputs.js\` (typed shortcuts: \`switchboard.endpoints.graphql\`) and
 \`types.d.ts\`; \`/** @satisfies {PHHost} */\` plus \`tsc -p hosts\` type-check
 every host file.
@@ -69,7 +72,7 @@ runs — one field, derived from the backend topology:
 |---|---|---|---|
 | \`connect\` (standalone) | one \`worker\` | \`worker\` | the tab's own reactor in a SharedWorker (PGlite in-worker) |
 | \`cli\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
-| \`desktop\` → connect member | — (serverDrives remote drive) | router/local | the tab's reactor PLUS a SYNCHRONIZED remote drive (local replica, keeps PGlite) |
+| \`desktop\` → connect member | one \`worker\` + \`$map\` remote drives | \`worker\` | the tab's reactor PLUS SYNCHRONIZED remote drives (local replica, keeps PGlite) |
 
 The lesson the \`cli\` vs \`desktop\` split teaches: a **remote client** proxies
 to the switchboard and stores nothing locally (no PGlite); a **synchronized
@@ -79,7 +82,8 @@ The \`in-process\` mode (main-thread reactor) is the fourth option — set one
 
 The single project drive (\`powerhouse\`) is OWNED by the switchboard; standalone
 Connect has its own local copy; the \`cli\`/\`desktop\` compounds re-point Connect
-at the switchboard's.
+at the switchboard's — every drive it serves, plugin-created ones (Workflows)
+included, by \`$map\` over its \`drives\` output.
 `;
 
   const connectHost = `// @ts-check

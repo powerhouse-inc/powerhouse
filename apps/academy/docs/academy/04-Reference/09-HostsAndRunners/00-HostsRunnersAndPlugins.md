@@ -138,6 +138,13 @@ Anything expressible over arrays is expressible here —
 result is always readable in place. Import cycles between host files fail at
 load with both names.
 
+A host file may import exactly three things: the project's
+`powerhouse.config.json`, a sibling's `../<host>/host.js`, and a sibling's
+generated `../<host>/outputs.js` (`ph generate hosts`). `process.` is banned —
+read the environment with `{ $env: "NAME" }` (or
+`{ $env: { name: "NAME", optional: true } }` to omit the property when unset),
+resolved when the host starts.
+
 ## Core reactor config (not plugins)
 
 Some things every reactor has; they are **core config**, not plugins:
@@ -429,42 +436,54 @@ A compound host supervises *members* instead of owning a reactor. `children`
 replaces `reactor`; each member wraps a sibling host by folder name:
 
 ```js
-import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
+import { outputs as server } from "../switchboard/outputs.js";
 
-const serverPort = switchboard.runner.port;
-const serverDrives = [{ slug: "powerhouse", name: "Acme" }];
-
+/** @satisfies {PHHost} */
 export default {
   name: "desktop",
   runner: { module: "@powerhousedao/desktop/runner" },
-  config: { startOrder: ["server", "app"] },
   children: {
-    server: {
-      host: "switchboard",                       // the sibling folder
-      runner: { plugins: [...switchboard.runner.plugins] },
-      reactor: { ...switchboard.reactor, drives: serverDrives },
-    },
+    server: { host: "switchboard" },            // the sibling folder, as is
     app: {
       host: "connect",
-      runner: { defaultVerb: "serve", port: 3000,
-                plugins: [...connect.runner.plugins] },
-      // the SAME drive list, attached as remotes — declared once, projected twice
+      runner: { defaultVerb: "serve", port: 3000 },
+      // Every drive the server member serves (declared and plugin-created,
+      // e.g. Workflows), attached as a remote by the URL it reports.
       reactor: {
         ...connect.reactor,
-        drives: serverDrives.map((d) => ({
-          slug: d.slug,
-          remote: { url: `http://127.0.0.1:${serverPort}/d/${d.slug}` },
-        })),
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: server.drives.$item.url } },
+          },
+        },
       },
     },
   },
 };
 ```
 
-Wrapper semantics are **full-statement**: a section present on the wrapper
-replaces the member's section wholesale (spread the member's own section in,
-as above, when you mean "theirs plus mine"). Compound-level plugins
+Wrapper semantics are **full-statement** for `config` and `reactor`: a
+section present on the wrapper replaces the member's section wholesale
+(spread the member's own section in, as above, when you mean "theirs plus
+mine"). `runner` is the exception: it key-merges over the member's own, so
+`port` or `defaultVerb` alone keeps the member's plugins.
+
+**Start order comes from the tokens.** The `app` member reads the `server`
+member's outputs, so the compound starts `server` first and resolves `app`'s
+tokens from its live outputs; `config.startOrder` is optional (it must agree
+with the tokens). `ph run desktop --explain outputs` prints the order and,
+while a producer runs, each token's value.
+
+**`$map`** renders a list (or, with `into: "record"`, a record) from a
+collection output: `over` is an `$output` (or, nested, an `$item`), `to` is
+the template rendered once per element. Inside `to`, `{ $key: true }` is the
+element's key (the index for an array) and `{ $item: ["url"] }` — or the
+typed `server.drives.$item.url` from `outputs.js` — reads a path of the
+element. Records are visited in key-sorted order, so the result is
+deterministic. A nested map names outer bindings with `as` and
+`{ $item: { as, path } }` / `{ $key: "<as>" }`. Compound-level plugins
 (`appliesTo: "compound"`) act on the member set — the clint proxy is the
 reference example: one front port, routes declared per member, resolved from
 each child's `runner.{host, port}`.
@@ -474,6 +493,7 @@ each child's `runner.{host, port}`.
 | symptom | tool |
 | --- | --- |
 | which drives will exist, and why | `ph run <host> --explain drives` |
+| which outputs a host reads, start order, current values | `ph run <host> --explain outputs` |
 | plugin rejected on this host | the error names the plugin, its `appliesTo`, and the host type |
 | two plugins provide one hook | boot error naming both — provide hooks have one winner |
 | entry config rejected | boot error naming the entry and the schema failure |
