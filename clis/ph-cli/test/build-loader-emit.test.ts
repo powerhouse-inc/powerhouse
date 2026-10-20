@@ -201,6 +201,47 @@ it("neutralizes inherited compiler output options in the private loader config",
   expect(result.exitCode, result.log).toBe(0);
 }, 120_000);
 
+// A generated route tree's declaration imports routes its project's config
+// leaves out, as a Connect package's .ph/connect-routes.gen.ts does.
+describe("a reference declaration that imports an unlisted source", () => {
+  afterEach(cleanUp);
+
+  it("keeps the loader's emit of that source in its scratch root", async () => {
+    const { root } = siblingPackage("code-first");
+    writeFileSync(join(dirname(root), "package.json"), '{"type":"module"}\n');
+    writeTsconfig(root, { noEmit: true, emitDeclarationOnly: false });
+    const lib = join(dirname(root), "lib");
+    addReference(root, lib, { compilerOptions: { declarationMap: true } });
+    // As versioned-documents' tsconfig.json: everything but the routes.
+    const config = join(lib, "tsconfig.json");
+    writeFileSync(
+      config,
+      JSON.stringify({
+        ...z.looseObject({}).parse(JSON.parse(readFileSync(config, "utf8"))),
+        include: ["**/*"],
+        exclude: ["out", "routes"],
+      }),
+    );
+    // As TanStack Router's generated tree, which also silences TS6307.
+    writeFileSync(
+      join(lib, "tree.ts"),
+      '// @ts-nocheck\nexport { route } from "./routes/route.js";\n',
+    );
+    mkdirSync(join(lib, "routes"));
+    writeFileSync(join(lib, "routes", "route.ts"), "export const route = 1;\n");
+    writeFileSync(
+      join(lib, "index.ts"),
+      'export const value = 42;\nexport { route } from "./tree.js";\n',
+    );
+    importRuntime(root, "../../lib/out/index.js");
+
+    const result = await build(root, "code-first");
+
+    expect(result.exitCode, result.log).toBe(0);
+    expect(readdirSync(join(lib, "routes")).sort()).toEqual(["route.ts"]);
+  }, 120_000);
+});
+
 describe("module scope and resolution", () => {
   afterEach(cleanUp);
 

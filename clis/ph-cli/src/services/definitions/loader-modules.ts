@@ -291,19 +291,25 @@ async function emitLoaderPrograms({
         loaderConfig(project, canonicalFiles, rootDir, programRoot),
       ),
     );
-    if (resolveReferenceDeclarations(project)) {
-      const listed = await runLocal(packageRoot, agent, [
-        "tsc",
-        "-p",
-        configFile,
-        "--listFilesOnly",
-        "--pretty",
-        "false",
-      ]);
-      const context = listedFiles(listed.output, packageRoot).filter(
-        (file) => !/\.d\.[cm]?ts$/i.test(file),
-      );
-      if (context.length === 0) throw new CompilePreflightError(listed.output);
+    // A context declaration can import a source no project owns, as a
+    // generated route tree imports routes its project excludes. tsc emits that
+    // source too, so the root must cover it or it is written beside the source.
+    const listed = await runLocal(packageRoot, agent, [
+      "tsc",
+      "-p",
+      configFile,
+      "--listFilesOnly",
+      "--pretty",
+      "false",
+    ]);
+    const context = listedFiles(listed.output, packageRoot).filter(
+      (file) => !/\.d\.[cm]?ts$/i.test(file),
+    );
+    // TypeScript 5 needs the listed context to resolve reference
+    // declarations; otherwise a failed listing leaves the emit to report it.
+    if (context.length === 0 && resolveReferenceDeclarations(project))
+      throw new CompilePreflightError(listed.output);
+    if (context.length !== 0)
       rootDir = commonSourceDirectory(
         [
           ...canonicalFiles.filter((file) => !/\.d\.[cm]?ts$/i.test(file)),
@@ -311,13 +317,12 @@ async function emitLoaderPrograms({
         ],
         rootDir,
       );
-      writeFileSync(
-        configFile,
-        JSON.stringify(
-          loaderConfig(project, canonicalFiles, rootDir, programRoot),
-        ),
-      );
-    }
+    writeFileSync(
+      configFile,
+      JSON.stringify(
+        loaderConfig(project, canonicalFiles, rootDir, programRoot),
+      ),
+    );
     const emitted = await runLocal(packageRoot, agent, [
       "tsc",
       "-p",

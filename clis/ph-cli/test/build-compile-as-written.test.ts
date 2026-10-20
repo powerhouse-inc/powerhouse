@@ -253,7 +253,8 @@ describe("compiler work bounds", () => {
       const commands = readCommands();
       expect(result.exitCode, result.log).toBe(0);
       expect(refEmits.length).toBe(count);
-      expect(commands.length).toBeLessThanOrEqual(count === 0 ? 8 : 35);
+      // One listing per loader program covers sources its context imports.
+      expect(commands.length).toBeLessThanOrEqual(count === 0 ? 9 : 39);
       expect(
         commands.filter((args) => args.includes("--showConfig")).length,
       ).toBeLessThanOrEqual(count === 0 ? 2 : 11);
