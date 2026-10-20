@@ -330,6 +330,13 @@ async function buildMembers(
   }
 }
 
+/** PH_DESKTOP_LOCAL_PACKAGES: tarballs to vendor in place of the registry's
+ * (a machine path, so an env var rather than a host-file option). */
+function localPackagesDir(ctx: RunnerContext): string | undefined {
+  const dir = ctx.env.PH_DESKTOP_LOCAL_PACKAGES;
+  return dir ? path.resolve(ctx.projectRoot, dir) : undefined;
+}
+
 /** build = members' builds + the shippable stack + the native installer. */
 export async function build(
   host: DesktopHost,
@@ -359,6 +366,7 @@ export async function build(
       vendor: runnerOptions.vendorStack,
       phCliVersion: runnerOptions.phCliVersion,
       phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
+      localPackagesDir: localPackagesDir(ctx),
       connectPort: port,
       // the generated shell lives under hosts/ — never stage it into itself
       excludeDirs: [shellDir],
@@ -406,6 +414,7 @@ export async function build(
     vendor: runnerOptions.vendorStack,
     phCliVersion: runnerOptions.phCliVersion,
     phCliSpec: runnerOptions.phCliSpec ?? ctx.env.PH_DESKTOP_PHCLI_SPEC,
+    localPackagesDir: localPackagesDir(ctx),
     connectPort: port,
   });
   console.log(

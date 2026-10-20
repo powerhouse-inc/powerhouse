@@ -33,6 +33,12 @@ export interface BundleStackOptions {
   /** Overrides the ph-cli install spec entirely (e.g. a `pnpm pack` tarball
    * path for a not-yet-published build). */
   phCliSpec?: string;
+  /** A directory of `pnpm pack` tarballs (env PH_DESKTOP_LOCAL_PACKAGES).
+   * Each replaces its package everywhere in the vendored tree: a packed
+   * ph-cli alone would still pull its dependencies, at the same version
+   * number, from the registry. `pnpm pack:desktop-stack` in the monorepo
+   * packs the set ph-cli and host-core need. */
+  localPackagesDir?: string;
   /** The connect member's port — written into the stack's shell.json so the
    * shell knows where to probe/navigate with no environment at all. */
   connectPort?: number;
@@ -82,6 +88,82 @@ function copyDirFiltered(
   };
   walk(src, dest);
   return true;
+}
+
+/** The npm spec of each tarball in `dir`, by the package name inside it. */
+export function readLocalPackages(dir: string): Record<string, string> {
+  const root = path.resolve(dir);
+  const tarballs = fs.existsSync(root)
+    ? fs.readdirSync(root).filter((f) => f.endsWith(".tgz"))
+    : [];
+  if (tarballs.length === 0) {
+    throw new Error(`bundle-stack: no package tarballs (*.tgz) in ${root}`);
+  }
+  const specs: Record<string, string> = {};
+  for (const file of tarballs.sort()) {
+    const tarball = path.join(root, file);
+    const manifest = spawnSync(
+      "tar",
+      ["-xzOf", tarball, "package/package.json"],
+      {
+        encoding: "utf8",
+        windowsHide: true,
+      },
+    );
+    if (manifest.status !== 0) {
+      throw new Error(
+        `bundle-stack: ${tarball} has no package/package.json: ${manifest.stderr}`,
+      );
+    }
+    const { name } = JSON.parse(manifest.stdout) as { name: string };
+    specs[name] = `file:${tarball}`;
+  }
+  return specs;
+}
+
+export interface StackManifestOptions {
+  name: string;
+  /** The registry version for what `local` lacks. */
+  version: string;
+  phCliSpec?: string;
+  /** Package name → spec, from readLocalPackages. */
+  local?: Record<string, string>;
+}
+
+/**
+ * The staged stack's package.json. With local packages, every one is an
+ * override (so transitive dependents get it too) and the direct dependencies
+ * name the same spec: npm rejects an override that contradicts one.
+ */
+export function stackManifest(options: StackManifestOptions) {
+  const local = options.local ?? {};
+  const spec = (pkg: string, fallback: string) => local[pkg] ?? fallback;
+  return {
+    name: options.name,
+    private: true,
+    type: "module",
+    dependencies: {
+      "@powerhousedao/ph-cli": spec(
+        "@powerhousedao/ph-cli",
+        options.phCliSpec ?? options.version,
+      ),
+      "@powerhousedao/host-core": spec(
+        "@powerhousedao/host-core",
+        options.version,
+      ),
+    },
+    ...(Object.keys(local).length > 0 ? { overrides: local } : {}),
+  };
+}
+
+/** A vendored tree installed from local tarballs: the same version numbers
+ * as the registry's, so npm would take either for the other. */
+function vendoredFromLocal(stackDir: string): boolean {
+  const lock = path.join(stackDir, "package-lock.json");
+  return (
+    fs.existsSync(lock) &&
+    fs.readFileSync(lock, "utf8").includes('"resolved": "file:')
+  );
 }
 
 export function bundleStack(options: BundleStackOptions): BundleStackResult {
@@ -160,27 +242,47 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     fs.readFileSync(path.join(options.projectRoot, "package.json"), "utf8"),
   ) as { name?: string };
   const version = options.phCliVersion ?? "dev";
+  const name = sourcePkg.name ?? "powerhouse-desktop-stack";
+  const vendor = options.vendor !== false;
+  const local = options.localPackagesDir
+    ? readLocalPackages(options.localPackagesDir)
+    : undefined;
+  // Switching between local and registry packages starts the tree afresh:
+  // their version numbers match, so npm would keep whichever it has.
+  if (vendor && (local || vendoredFromLocal(stackDir))) {
+    for (const entry of ["node_modules", "package-lock.json"]) {
+      fs.rmSync(path.join(stackDir, entry), { recursive: true, force: true });
+    }
+  }
   fs.writeFileSync(
     path.join(stackDir, "package.json"),
     `${JSON.stringify(
-      {
-        name: sourcePkg.name ?? "powerhouse-desktop-stack",
-        private: true,
-        type: "module",
-        dependencies: { "@powerhousedao/ph-cli": version },
-      },
+      local
+        ? stackManifest({ name, version, phCliSpec: options.phCliSpec, local })
+        : {
+            name,
+            private: true,
+            type: "module",
+            dependencies: { "@powerhousedao/ph-cli": version },
+          },
       null,
       2,
     )}\n`,
   );
 
   let vendored = false;
-  if (options.vendor !== false) {
-    const phCliSpec = options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`;
-    // host-core rides along: host files resolve runner modules (the generic
+  if (vendor) {
+    // Local: the manifest names every spec. Registry: host-core rides along
+    // with ph-cli, since host files resolve runner modules (the generic
     // compound) from the STACK's own node_modules.
-    const specs = `"${phCliSpec}" "@powerhousedao/host-core@${version}"`;
-    log(`  vendoring ${specs} (hoisted, real files)…`);
+    const specs = local
+      ? ""
+      : `"${options.phCliSpec ?? `@powerhousedao/ph-cli@${version}`}" "@powerhousedao/host-core@${version}"`;
+    log(
+      local
+        ? `  vendoring ${Object.keys(local).length} local packages from ${options.localPackagesDir} (hoisted, real files)…`
+        : `  vendoring ${specs} (hoisted, real files)…`,
+    );
     // One command string: shell:true with an args ARRAY concatenates without
     // escaping (DEP0190 warns); the spec values are our own constants/paths.
     const result = spawnSync(
