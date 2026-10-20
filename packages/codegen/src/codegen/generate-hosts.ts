@@ -111,11 +111,27 @@ export async function generateHostsFiles(
 
   result.written.push(...(await writeHostsTypesDts(projectRoot)));
 
-  let pending = [...probe.hosts];
-  while (pending.length > 0) {
-    const ready = pending.filter(
-      (host) => missingOutputs(probe.dir, host).length === 0,
+  // A host whose import graph fails the lint (process., a disallowed
+  // import) is failed up front; scanning it again would throw.
+  const missing = new Map<string, string[]>();
+  for (const host of probe.hosts) {
+    try {
+      missing.set(host, missingOutputs(probe.dir, host));
+    } catch (error) {
+      result.failed.push({
+        host,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  const missingNow = (host: string) =>
+    (missing.get(host) ?? []).filter(
+      (producer) => !existsSync(join(probe.dir, producer, OUTPUTS_FILE)),
     );
+
+  let pending = [...missing.keys()];
+  while (pending.length > 0) {
+    const ready = pending.filter((host) => missingNow(host).length === 0);
     if (ready.length === 0) break;
     pending = pending.filter((host) => !ready.includes(host));
     for (const host of ready) {
@@ -144,10 +160,7 @@ export async function generateHostsFiles(
   for (const host of pending) {
     result.failed.push({
       host,
-      error: `hosts/${host} imports outputs.js of ${missingOutputs(
-        probe.dir,
-        host,
-      )
+      error: `hosts/${host} imports outputs.js of ${missingNow(host)
         .map((producer) => `hosts/${producer}`)
         .join(
           ", ",

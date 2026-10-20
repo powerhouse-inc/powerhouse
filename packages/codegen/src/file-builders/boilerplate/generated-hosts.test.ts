@@ -416,3 +416,26 @@ export default {
     ).toEqual([]);
   }, 240_000);
 });
+
+describe("generateHostsFiles error handling", () => {
+  it("reports a host failing the lint and keeps going", async () => {
+    const dir = makeTempProject();
+    writeFileSync(join(dir, "package.json"), "{}");
+    writeFixture(
+      dir,
+      "bad",
+      `export default { name: "bad", runner: { module: "x" }, v: process.env.X };`,
+    );
+    writeFixture(
+      dir,
+      "other",
+      `export default { name: "other", runner: { module: "not-installed" } };`,
+    );
+    const result = await generateHostsFiles(dir);
+    expect(result.failed.map((f) => f.host)).toEqual(["bad"]);
+    expect(result.failed[0]?.error).toMatch(/reads `process\.`/);
+    expect(result.skipped.map((s) => s.host)).toEqual(["other"]);
+    expect(result.skipped[0]?.reason).toMatch(/Cannot resolve/);
+    expect(result.written).toContain("hosts/types.d.ts");
+  });
+});

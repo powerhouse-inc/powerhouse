@@ -24,6 +24,8 @@ interface TreeNode {
 
 interface BuildContext {
   root: JsonSchema;
+  /** `$ref`s on the current path: a recursive schema (z.lazy) ends there. */
+  refs: ReadonlySet<string>;
   host: string;
   drives: readonly string[];
 }
@@ -32,14 +34,23 @@ function isSchema(value: unknown): value is JsonSchema {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-/** Follows a local `#/$defs/<name>` (or `#/definitions/<name>`) reference. */
-function deref(schema: JsonSchema, root: JsonSchema): JsonSchema {
+/** Follows a local `#/$defs/<name>` (or `#/definitions/<name>`) reference.
+ * A reference already on the path (a recursive schema) becomes `{}`, which
+ * renders as one `unknown` leaf. */
+function deref(
+  schema: JsonSchema,
+  root: JsonSchema,
+  refs: ReadonlySet<string>,
+): { schema: JsonSchema; refs: ReadonlySet<string> } {
   const ref = schema.$ref;
-  if (typeof ref !== "string") return schema;
+  if (typeof ref !== "string") return { schema, refs };
+  if (refs.has(ref)) return { schema: {}, refs };
   const match = /^#\/(\$defs|definitions)\/(.+)$/.exec(ref);
   const defs = match ? root[match[1]] : undefined;
   const target = isSchema(defs) && match ? defs[match[2]] : undefined;
-  return isSchema(target) ? deref(target, root) : {};
+  return isSchema(target)
+    ? deref(target, root, new Set([...refs, ref]))
+    : { schema: {}, refs };
 }
 
 function properties(schema: JsonSchema): Record<string, JsonSchema> {
@@ -85,8 +96,12 @@ function shapeOf(schema: JsonSchema): Shape {
 const quote = (key: string) => JSON.stringify(key);
 
 /** The TS type of an output value described by `schema`. */
-export function tsTypeOfSchema(input: JsonSchema, root: JsonSchema): string {
-  const schema = deref(input, root);
+export function tsTypeOfSchema(
+  input: JsonSchema,
+  root: JsonSchema,
+  outerRefs: ReadonlySet<string> = new Set(),
+): string {
+  const { schema, refs } = deref(input, root, outerRefs);
   if ("const" in schema) return JSON.stringify(schema.const);
   if (Array.isArray(schema.enum)) {
     return schema.enum.map((value) => JSON.stringify(value)).join(" | ");
@@ -95,12 +110,12 @@ export function tsTypeOfSchema(input: JsonSchema, root: JsonSchema): string {
   if (Array.isArray(union)) {
     const members = union
       .filter(isSchema)
-      .map((member) => tsTypeOfSchema(member, root));
+      .map((member) => tsTypeOfSchema(member, root, refs));
     return members.length > 0 ? [...new Set(members)].join(" | ") : "unknown";
   }
   if (Array.isArray(schema.type)) {
     return schema.type
-      .map((type) => tsTypeOfSchema({ ...schema, type }, root))
+      .map((type) => tsTypeOfSchema({ ...schema, type }, root, refs))
       .join(" | ");
   }
   switch (schema.type) {
@@ -117,14 +132,14 @@ export function tsTypeOfSchema(input: JsonSchema, root: JsonSchema): string {
   const shape = shapeOf(schema);
   switch (shape.kind) {
     case "array":
-      return `${wrap(tsTypeOfSchema(shape.items, root))}[]`;
+      return `${wrap(tsTypeOfSchema(shape.items, root, refs))}[]`;
     case "record":
-      return `Record<string, ${tsTypeOfSchema(shape.value, root)}>`;
+      return `Record<string, ${tsTypeOfSchema(shape.value, root, refs)}>`;
     case "object":
       return `{ ${Object.entries(shape.props)
         .map(
           ([key, child]) =>
-            `${quote(key)}${shape.required.has(key) ? "" : "?"}: ${tsTypeOfSchema(child, root)}`,
+            `${quote(key)}${shape.required.has(key) ? "" : "?"}: ${tsTypeOfSchema(child, root, refs)}`,
         )
         .join("; ")} }`;
     case "leaf":
@@ -150,9 +165,10 @@ function itemTree(
   input: JsonSchema,
   path: (string | number)[],
   optional: boolean,
-  context: BuildContext,
+  outer: BuildContext,
 ): TreeNode {
-  const schema = deref(input, context.root);
+  const { schema, refs } = deref(input, outer.root, outer.refs);
+  const context = { ...outer, refs };
   const shape = shapeOf(schema);
   if (shape.kind === "object") {
     return objectNode(
@@ -167,7 +183,7 @@ function itemTree(
       ]),
     );
   }
-  const type = tsTypeOfSchema(schema, context.root);
+  const type = tsTypeOfSchema(schema, context.root, context.refs);
   return {
     value: { $item: path },
     type: `ItemToken<${optional ? `${type} | undefined` : type}>`,
@@ -178,9 +194,10 @@ function outputTree(
   input: JsonSchema,
   path: (string | number)[],
   optional: boolean,
-  context: BuildContext,
+  outer: BuildContext,
 ): TreeNode {
-  const schema = deref(input, context.root);
+  const { schema, refs } = deref(input, outer.root, outer.refs);
+  const context = { ...outer, refs };
   const shape = shapeOf(schema);
   switch (shape.kind) {
     case "object":
@@ -211,7 +228,7 @@ function outputTree(
         [ITEM_KEY, itemTree(shape.items, [], false, context)],
       ]);
     case "leaf": {
-      const type = tsTypeOfSchema(schema, context.root);
+      const type = tsTypeOfSchema(schema, context.root, context.refs);
       return {
         value: { $output: { host: context.host, path } },
         type: `OutputToken<${optional ? `${type} | undefined` : type}>`,
@@ -227,6 +244,7 @@ export function buildOutputsTree(description: HostOutputsDescription): {
 } {
   const context: BuildContext = {
     root: description.outputsSchema,
+    refs: new Set(),
     host: description.host,
     drives: description.drives,
   };

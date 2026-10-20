@@ -89,6 +89,25 @@ describe("buildOutputsTree", () => {
   });
 });
 
+describe("recursive outputs schemas", () => {
+  it("ends a self-referencing $ref in an unknown leaf instead of recursing", () => {
+    interface Node {
+      name: string;
+      children: Node[];
+    }
+    const node: z.ZodType<Node> = z.lazy(() =>
+      z.strictObject({ name: z.string(), children: z.array(node) }),
+    );
+    const tree = buildOutputsTree(
+      describeOutputs(z.strictObject({ root: node }), []),
+    );
+    expect(tree.value).toMatchObject({
+      root: { name: { $output: { path: ["root", "name"] } } },
+    });
+    expect(tree.type).toContain("unknown");
+  });
+});
+
 describe("buildOutputsFiles", () => {
   it("writes plain data with the hash export, and a branded .d.ts", () => {
     const { js, dts } = buildOutputsFiles(
