@@ -1115,6 +1115,99 @@ describe("an old-style subgraph, served through the legacy adapter", () => {
     expect(calls).toEqual(["setup", "disconnect"]);
   });
 
+  const lateName = (calls: string[]) =>
+    class LateName extends PublishedBaseSubgraph {
+      override typeDefs = gql`
+        type Query {
+          ping: String
+        }
+      `;
+      override resolvers = { Query: { ping: () => "named late" } };
+      override async onSetup() {
+        calls.push("setup");
+        this.name = "late-name";
+        await super.onSetup();
+      }
+      override async onDisconnect() {
+        calls.push("disconnect");
+        await super.onDisconnect();
+      }
+    };
+
+  it("serves an old-style class that declares its schema fields but sets its name only in onSetup", async () => {
+    const calls: string[] = [];
+    const harness = servingHarness();
+    await initAndFlush(harness.manager);
+    const registered = await register(
+      harness.manager,
+      lateName(calls),
+      "@acme/late",
+    );
+
+    expect(calls).toEqual(["setup"]);
+    expect(harness.logger.error).not.toHaveBeenCalled();
+    expect(harness.manager.getSubgraphByName("late-name")).toBe(registered);
+    expect(
+      [...harness.mounts.keys()].filter((p) => p.includes("late")),
+    ).toEqual(["/late-name"]);
+    expect(await query(harness, "/late-name", "{ ping }")).toEqual({
+      data: { ping: "named late" },
+    });
+  });
+
+  it("ranks an old-style class named in onSetup under that name", async () => {
+    const calls: string[] = [];
+    class Holder extends sdlBase("type Query { held: String }") {
+      static override readonly subgraphName = "late-name";
+    }
+    const harness = servingHarness();
+    await initAndFlush(harness.manager);
+    const holder = await register(harness.manager, Holder, "@acme/first");
+
+    expect(
+      await register(harness.manager, lateName(calls), "@acme/late"),
+    ).toBeUndefined();
+    expect(calls).toEqual(["setup", "disconnect"]);
+    expect(harness.logger.error).toHaveBeenCalledWith(
+      "Rejecting subgraph @name from @origin: name is taken by a subgraph from @existing",
+      "late-name",
+      "package @acme/late",
+      "package @acme/first",
+    );
+    expect(harness.manager.getSubgraphByName("late-name")).toBe(holder);
+  });
+
+  it("refuses an old-style class that declares its schema fields but never sets a name, and disconnects it", async () => {
+    const calls: string[] = [];
+    class Unnamed extends PublishedBaseSubgraph {
+      override typeDefs = gql`
+        type Query {
+          ping: String
+        }
+      `;
+      override resolvers = { Query: { ping: () => "unnamed" } };
+      override async onSetup() {
+        calls.push("setup");
+        await super.onSetup();
+      }
+      override async onDisconnect() {
+        calls.push("disconnect");
+        await super.onDisconnect();
+      }
+    }
+    const { manager, mounts } = servingHarness();
+    await initAndFlush(manager);
+    const before = [...mounts.keys()];
+
+    expect(
+      await rejection(() => manager.registerSubgraph(Unnamed as never)),
+    ).toBe(
+      "Unnamed has no static subgraphName. Shared bases belong outside subgraphs/ or must be extended by an exported subgraph. Old-style subgraphs (`name`/`typeDefs`/`resolvers`): run `ph migrate`.",
+    );
+    expect(calls).toEqual(["setup", "disconnect"]);
+    expect([...mounts.keys()]).toEqual(before);
+  });
+
   it("disconnects an old-style class whose onSetup sets a name the host refuses", async () => {
     const calls: string[] = [];
     class LateEscape extends PublishedBaseSubgraph {
