@@ -62,6 +62,15 @@ async function startPreview(dir: string, port: number, base = "/") {
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
+/** Byte equality for the ~300 KB fixtures. `toEqual` walks Buffers element by
+ * element (~0.4 s each locally, ~2 s on CI runners), which pushed the
+ * three-request non-root test past the 5 s timeout; `Buffer.equals` is a
+ * memcmp. The length check keeps a readable failure message. */
+function expectBytes(actual: Buffer, expected: Buffer, label?: string) {
+  expect(actual.length, label).toBe(expected.length);
+  expect(actual.equals(expected), label).toBe(true);
+}
+
 describe("ph connect preview serving precompressed wasm/data", () => {
   let dir: string;
   let server: PreviewServer;
@@ -106,7 +115,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     expect(r.headers.vary).toContain("Accept-Encoding");
     expect(r.headers["cache-control"]).toBe(IMMUTABLE);
     expect(r.body.length).toBeLessThan(WASM.length / 10);
-    expect(gunzipSync(r.body)).toEqual(WASM);
+    expectBytes(gunzipSync(r.body), WASM);
   });
 
   it("serves identity bytes when only br is accepted", async () => {
@@ -115,7 +124,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     });
     expect(r.status).toBe(200);
     expect(r.headers["content-encoding"]).toBeUndefined();
-    expect(r.body).toEqual(WASM);
+    expectBytes(r.body, WASM);
   });
 
   it("serves gzip for .data", async () => {
@@ -124,14 +133,14 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     });
     expect(r.headers["content-encoding"]).toBe("gzip");
     expect(r.headers["content-type"]).toBe("application/octet-stream");
-    expect(gunzipSync(r.body)).toEqual(DATA);
+    expectBytes(gunzipSync(r.body), DATA);
   });
 
   it("serves identity bytes without Accept-Encoding", async () => {
     const r = await get(port, "/assets/pglite.wasm");
     expect(r.headers["content-encoding"]).toBeUndefined();
     expect(r.headers["content-type"]).toBe("application/wasm");
-    expect(r.body).toEqual(WASM);
+    expectBytes(r.body, WASM);
   });
 
   it("falls through to Vite for files without siblings and other types", async () => {
@@ -140,7 +149,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
     });
     expect(raw.status).toBe(200);
     expect(raw.headers["content-type"]).toBe("application/wasm");
-    expect(raw.body).toEqual(WASM);
+    expectBytes(raw.body, WASM);
 
     const js = await get(port, "/assets/app.js", { "accept-encoding": "gzip" });
     expect(js.status).toBe(200);
@@ -177,7 +186,7 @@ describe("ph connect preview serving precompressed wasm/data", () => {
       expect(r.headers["content-type"], path).toBe(type);
       expect(r.headers.vary, path).toContain("Accept-Encoding");
       expect(r.headers["cache-control"], path).toBe(IMMUTABLE);
-      expect(gunzipSync(r.body)).toEqual(body);
+      expectBytes(gunzipSync(r.body), body, path);
     }
   });
 
