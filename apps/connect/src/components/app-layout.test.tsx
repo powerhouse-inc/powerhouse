@@ -1,5 +1,7 @@
 // @vitest-environment happy-dom
 
+import type * as RouteTreeModule from "@powerhousedao/connect/route-tree";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
@@ -8,6 +10,7 @@ import {
   PHStoreProvider,
 } from "@powerhousedao/reactor-browser";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import type { RouteComponent } from "@tanstack/react-router";
 import {
   createMemoryHistory,
   createRoute,
@@ -18,10 +21,14 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   bindConnectRouter,
   createConnectRouter,
-} from "../router/connect-router.js";
-import type { ConnectRouteComponents } from "../router/route-components.js";
-import type * as RuntimeConfigModule from "../runtime-config.js";
-import { addConnectRoutes, connectRoutes } from "../router/route-tree.js";
+} from "@powerhousedao/connect-core/router";
+import { setRouteComponents } from "../../test/route-components.js";
+import type * as RuntimeConfigModule from "@powerhousedao/connect-core/runtime-config";
+import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import {
+  addConnectRoutes,
+  connectRoutes,
+} from "@powerhousedao/connect-core/router";
 import { AppLayout } from "./app-layout.js";
 import { Sidebar } from "./sidebar.js";
 
@@ -29,56 +36,69 @@ import { Sidebar } from "./sidebar.js";
 const served = vi.hoisted(() => ({
   composition: undefined as { module: string }[] | undefined,
 }));
-vi.mock("../runtime-config.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof RuntimeConfigModule>();
-  return {
-    ...actual,
-    getRuntimeConfig: () =>
-      served.composition
-        ? { connect: { composition: served.composition } }
-        : actual.getRuntimeConfig(),
-  };
-});
+vi.mock(
+  "@powerhousedao/connect-core/runtime-config",
+  async (importOriginal) => {
+    const actual = await importOriginal<typeof RuntimeConfigModule>();
+    return {
+      ...actual,
+      getRuntimeConfig: () =>
+        served.composition
+          ? { connect: { composition: served.composition } }
+          : actual.getRuntimeConfig(),
+    };
+  },
+);
 
 let store: PHStore;
 let unbind: (() => void) | undefined;
+let restore: (() => void) | undefined;
 
-const { rootRoute, appRoute } = connectRoutes();
+let routeTree: typeof RouteTreeModule.routeTree;
 const page = (name: string) => () => <p data-testid="page">{name}</p>;
-// Project routes as their folders place them: _app/ inside the layout, others outside.
-addConnectRoutes([
-  createRoute({
-    getParentRoute: () => appRoute,
-    path: "reports",
-    staticData: { nav: { label: "Reports", order: 20 } },
-    component: page("reports"),
-  }),
-  createRoute({
-    getParentRoute: () => appRoute,
-    path: "archive",
-    staticData: { nav: { label: "Archive", order: 10 } },
-    component: page("archive"),
-  }),
-  createRoute({
-    getParentRoute: () => appRoute,
-    path: "focus",
-    staticData: { sidebar: "hidden" },
-    component: page("focus"),
-  }),
-  createRoute({
-    getParentRoute: () => appRoute,
-    path: "compact",
-    staticData: { sidebar: "collapsed" },
-    component: page("compact"),
-  }),
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "kiosk",
-    component: page("kiosk"),
-  }),
-]);
 
-beforeAll(() => {
+// Project routes as their folders place them: _app/ inside the layout, others outside.
+function addProjectRoutes() {
+  const { rootRoute, appRoute } = connectRoutes(routeTree);
+  addConnectRoutes([
+    createRoute({
+      getParentRoute: () => appRoute,
+      path: "reports",
+      staticData: { nav: { label: "Reports", order: 20 } },
+      component: page("reports"),
+    }),
+    createRoute({
+      getParentRoute: () => appRoute,
+      path: "archive",
+      staticData: { nav: { label: "Archive", order: 10 } },
+      component: page("archive"),
+    }),
+    createRoute({
+      getParentRoute: () => appRoute,
+      path: "focus",
+      staticData: { sidebar: "hidden" },
+      component: page("focus"),
+    }),
+    createRoute({
+      getParentRoute: () => appRoute,
+      path: "compact",
+      staticData: { sidebar: "collapsed" },
+      component: page("compact"),
+    }),
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "kiosk",
+      component: page("kiosk"),
+    }),
+  ]);
+}
+
+beforeAll(async () => {
+  primeRuntimeConfig({ connect: DEFAULT_CONNECT_CONFIG } as never);
+  // Connect's route views read the config, and a build-time define, as they evaluate.
+  vi.stubGlobal("PH_CONNECT_SENTRY_RELEASE", "test");
+  ({ routeTree } = await import("@powerhousedao/connect/route-tree"));
+  addProjectRoutes();
   store = createPHStore();
   store.drives = [];
   bindPHStoreToWindow(store);
@@ -89,15 +109,22 @@ afterEach(() => {
   cleanup();
   unbind?.();
   unbind = undefined;
+  restore?.();
+  restore = undefined;
   served.composition = undefined;
 });
 
-function mount(path: string, app: ConnectRouteComponents["app"] = AppLayout) {
+function mount(path: string, layout: RouteComponent = () => <AppLayout />) {
+  restore = setRouteComponents(routeTree, {
+    root: Outlet,
+    layout,
+    home: page("home"),
+  });
   const history = createMemoryHistory({ initialEntries: [path] });
   const connectRouter = createConnectRouter({
+    routeTree,
     store,
     history,
-    components: { root: Outlet, app, content: page("home") },
   });
   unbind = bindConnectRouter(connectRouter, store);
   render(

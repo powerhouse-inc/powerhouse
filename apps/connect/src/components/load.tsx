@@ -10,7 +10,7 @@ import type { PHStore } from "@powerhousedao/reactor-browser";
 import { initTheme } from "@powerhousedao/reactor-browser";
 import type { DocumentModelLib } from "document-model";
 import { type ReactNode } from "react";
-import { loadRuntimeConfig } from "../runtime-config.js";
+import { loadRuntimeConfig } from "../load-runtime-config.js";
 
 export async function loadComponent(
   localPackage: DocumentModelLib | Promise<DocumentModelLib> | undefined,

@@ -1,27 +1,15 @@
 import { DefaultEditorLoader } from "@powerhousedao/design-system/connect";
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import { useMatch, useRouter, useRouterState } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import type { PropsWithChildren } from "react";
 import { useEffect, useState } from "react";
-import { HOME_ROUTE_ID } from "../router/route-tree.js";
+import { useIsColdStart } from "@powerhousedao/connect-core/router";
 import AppSkeleton from "./app-skeleton.js";
 import { CenteredErrorMessage } from "./error-boundary.js";
 import { LoadingShell } from "./prerendered-shell.js";
 
 // Loads quicker than this show no progress bar.
 const PROGRESS_DELAY_MS = 150;
-
-/** True until the router has resolved its first location. */
-export function useIsColdStart() {
-  return useRouterState({ select: (state) => !state.resolvedLocation });
-}
-
-/** Whether the content shows home: a cold deep link shows the pending view. */
-export function useShowsHomeScreen(hasSelection: boolean) {
-  const isColdStart = useIsColdStart();
-  const isHomeRoute = !!useMatch({ from: HOME_ROUTE_ID, shouldThrow: false });
-  return !hasSelection && (isHomeRoute || !isColdStart);
-}
 
 // Fades the cold-start loader in, so a load ending just past pendingMs doesn't flash.
 const DRIVE_PENDING_FADE = "ph-drive-pending-in 200ms ease-in 100ms both";

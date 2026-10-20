@@ -2,11 +2,9 @@ import { EditorLoader } from "./editor-loader.js";
 import { useUndoRedoShortcuts } from "../hooks/useUndoRedoShortcuts.js";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
-import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
   getRevisionFromDate,
   openTarget,
-  setRevisionHistoryVisible,
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
@@ -20,9 +18,10 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { redo, undo } from "@powerhousedao/shared/document-model";
-import { createElement, Suspense, useEffect, useMemo, useState } from "react";
+import { createElement, Suspense, useEffect, useState } from "react";
 import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 import { DocumentUpgradeToast } from "./document-upgrade-toast.js";
+import { GenericRevisionHistory } from "./revision-history-view.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;
@@ -53,12 +52,6 @@ function EditorError({
   );
 }
 
-// Prefers "global" when the document carries it, otherwise falls back to
-// the first available scope.
-function defaultScope(scopes: string[]): string {
-  return scopes.includes("global") ? "global" : scopes[0];
-}
-
 function OpenPackageManagerButton() {
   return (
     <PowerhouseButton
@@ -79,37 +72,8 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const revisionHistoryVisible = useRevisionHistoryVisible();
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const documentId = document?.header.id ?? undefined;
-  const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  // The scopes a document carries operations for; every document has at
-  // least "global".
-  const scopes = useMemo(() => {
-    const keys = Object.keys(document?.header.revision ?? {});
-    return keys.length > 0 ? keys : ["global"];
-  }, [document?.header.revision]);
-  const [operationScope, setOperationScope] = useState(() =>
-    defaultScope(scopes),
-  );
-  const selectedScope = scopes.includes(operationScope)
-    ? operationScope
-    : defaultScope(scopes);
-
-  // The history panel's operations: one scope, fetched only while the panel
-  // is open. The panel asks for further pages itself.
-  const {
-    operations: historyOperations,
-    isLoading: isLoadingHistory,
-    hasNextPage: historyHasNextPage,
-    fetchNextPage: fetchNextHistoryPage,
-    error: historyError,
-  } = useDocumentOperations(documentId, selectedScope, {
-    enabled: revisionHistoryVisible,
-    // A page fetch costs the same for 100 or 500 rows in the in-browser
-    // reactor, so fewer, bigger round trips are strictly cheaper.
-    limit: 500,
-  });
-
   // The timeline read-mode feature maps a selected date range to a global
   // revision, which needs the whole global history. Fetched only while a
   // timeline item is selected; shares the cache entry with the panel when
@@ -284,27 +248,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       data-document-type={documentType}
     >
       {revisionHistoryVisible ? (
-        <RevisionHistory
-          key={documentId}
-          documentTitle={documentName ?? ""}
-          documentId={documentId ?? ""}
-          operations={historyOperations}
-          isLoading={isLoadingHistory}
-          hasNextPage={historyHasNextPage}
-          onLoadNextPage={fetchNextHistoryPage}
-          error={historyError}
-          scopes={scopes}
-          scope={selectedScope}
-          onScopeChange={setOperationScope}
-          onClose={() => setRevisionHistoryVisible(false)}
-          documentState={document.state}
-          onCopyState={() => {
-            toast("Copied document state to clipboard", { type: "success" });
-          }}
-          onCopyDocId={() => {
-            toast("Copied document ID to clipboard", { type: "success" });
-          }}
-        />
+        <GenericRevisionHistory key={documentId} document={document} />
       ) : (
         <Suspense
           fallback={<EditorLoader message="Loading editor" />}

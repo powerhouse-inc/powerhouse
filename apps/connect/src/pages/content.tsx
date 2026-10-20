@@ -1,6 +1,6 @@
 import { AppContainer } from "../components/app-container.js";
+import { DocumentEditorContainer } from "../components/document-editor-container.js";
 import { DriveIcon } from "../components/drive-icon.js";
-import { IfPlugin } from "../components/if-plugin.js";
 import {
   defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
@@ -21,29 +21,26 @@ import {
   useAppModuleById,
   useIsAddDriveEnabled,
   useLinkProps,
-  useSelectedDocumentId,
-  useSelectedDriveSafe,
-  useSelectedFolder,
   getDriveName,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { getRuntimeConfig } from "../runtime-config.js";
-import { CONTENT_VIEW_ID } from "../router/connect-router.js";
-import { useShowsHomeScreen } from "../components/route-views.js";
+import {
+  RouteSelection,
+  useDriveRouteData,
+} from "@powerhousedao/connect-core/router";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import {
   useDriveAuthGate,
   useVisibleDrives,
 } from "../components/use-drive-auth-gate.js";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 
-export function Content() {
-  const { gate, dismiss } = useDriveAuthGate();
-  const openLogin = useOpenRenownLogin();
-  const [selectedDrive] = useSelectedDriveSafe();
-  const selectedFolder = useSelectedFolder();
-  const selectedDocumentId = useSelectedDocumentId();
+/** Puts back the default editor and app configs once nothing is open. */
+export function useResetEditorConfigs() {
+  const { drive: selectedDrive, documentId: selectedDocumentId } =
+    useDriveRouteData();
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -56,50 +53,56 @@ export function Content() {
       setPHAppConfig(defaultPHAppConfig);
     }
   }, [selectedDrive]);
+}
 
-  const hasSelection = !!(
-    selectedDocumentId ||
-    selectedDrive ||
-    selectedFolder
-  );
-  const showHomeScreen = useShowsHomeScreen(hasSelection);
+/** Connect's home: the drives, and adding one. */
+export function Home() {
+  const drives = useVisibleDrives();
+  const isAddDriveEnabled = useIsAddDriveEnabled();
+  const runtimeConfig = getRuntimeConfig();
+  const homeBackground = runtimeConfig.connect?.branding?.homeBackground;
   return (
-    <ContentContainer>
-      <Outlet />
-      {gate ? (
-        <div className="flex h-full items-center justify-center p-4">
-          <DriveAuthGate
-            mode={gate}
-            onLogin={openLogin}
-            onLogout={() => void logout()}
-            onClose={dismiss}
-          />
-        </div>
-      ) : showHomeScreen ? (
-        // The home screen is generic-shell chrome (the drive-list landing +
-        // add-drive). R3 gate: only when the generic plugin is composed in.
-        // Absent → no generic landing (a headless/custom shell renders its own
-        // or routes straight to a drive). Classic (no composition) = active.
-        <IfPlugin module="@powerhousedao/connect/plugins/generic">
-          <HomeScreenContainer />
-        </IfPlugin>
-      ) : hasSelection ? (
-        <AppContainer />
-      ) : null}
-    </ContentContainer>
+    <HomeScreen homeBackground={homeBackground}>
+      {drives?.map((drive) => {
+        return <DriveItem key={drive.header.id} drive={drive} />;
+      })}
+      {isAddDriveEnabled && <HomeScreenAddDriveItem />}
+    </HomeScreen>
   );
 }
 
-function ContentContainer({ children }: { children: React.ReactNode }) {
+/** Connect's drive layout: the drive app around the open document, or the
+ * sign-in gate when the drive's remote refuses the user. */
+export function DriveLayout() {
+  const { gate, dismiss } = useDriveAuthGate();
+  const openLogin = useOpenRenownLogin();
+  const { documentId } = useDriveRouteData();
+  if (gate) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <DriveAuthGate
+          mode={gate}
+          onLogin={openLogin}
+          onLogout={() => void logout()}
+          onClose={dismiss}
+        />
+      </div>
+    );
+  }
+  // The drive app and its editor: their useSelected* read this route.
   return (
-    <div
-      className="flex h-full flex-col overflow-auto"
-      id={CONTENT_VIEW_ID}
-      data-scroll-restoration-id={CONTENT_VIEW_ID}
-    >
-      {children}
-    </div>
+    <RouteSelection>
+      <AppContainer>{documentId ? <Outlet /> : null}</AppContainer>
+    </RouteSelection>
   );
+}
+
+/** Connect's node route: the open document's editor. */
+export function NodeView() {
+  const { documentId } = useDriveRouteData();
+  return documentId ? (
+    <DocumentEditorContainer documentId={documentId} />
+  ) : null;
 }
 
 function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
@@ -119,20 +122,5 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
       onClick={link.onClick}
       onPreload={() => preloadDrive(drive)}
     />
-  );
-}
-
-function HomeScreenContainer() {
-  const drives = useVisibleDrives();
-  const isAddDriveEnabled = useIsAddDriveEnabled();
-  const runtimeConfig = getRuntimeConfig();
-  const homeBackground = runtimeConfig.connect?.branding?.homeBackground;
-  return (
-    <HomeScreen homeBackground={homeBackground}>
-      {drives?.map((drive) => {
-        return <DriveItem key={drive.header.id} drive={drive} />;
-      })}
-      {isAddDriveEnabled && <HomeScreenAddDriveItem />}
-    </HomeScreen>
   );
 }

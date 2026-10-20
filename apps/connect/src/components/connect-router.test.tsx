@@ -20,7 +20,11 @@ import {
   getTargetHref,
   PHStoreProvider,
   setSelectedDrive,
-  setRevisionHistoryVisible,
+  hideRevisionHistory,
+  setRevisionHistoryPage,
+  showRevisionHistory,
+  useRevisionHistoryPage,
+  useRevisionHistoryVisible,
   setSelectedNode,
   trackDriveArrival,
   untilDriveListed,
@@ -62,18 +66,31 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import type {
+  ErrorRouteComponent,
+  RouteComponent,
+} from "@tanstack/react-router";
 import {
   createMemoryHistory,
   createRoute,
+  HeadContent,
   notFound,
   Outlet,
   RouterProvider,
+  useMatch,
 } from "@tanstack/react-router";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import type { ReactNode } from "react";
-import { Profiler, Suspense, useEffect, useSyncExternalStore } from "react";
+import type { ComponentType, ReactNode } from "react";
+import {
+  createContext,
+  Profiler,
+  Suspense,
+  use,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import {
   afterAll,
   afterEach,
@@ -85,24 +102,28 @@ import {
   vi,
 } from "vitest";
 import {
+  addConnectRoutes,
   bindConnectRouter,
+  connectRoutes,
   CONTENT_VIEW_ID,
   createConnectRouter,
-} from "../router/connect-router.js";
-import { addConnectRoutes, connectRoutes } from "../router/route-tree.js";
-import { setSentryModule } from "../services/sentry.js";
-import { DriveNotFoundPage, NotFoundPage } from "./not-found-page.js";
-import {
-  DrivePending,
-  RouteError,
-  RouteProgressBar,
-  useShowsHomeScreen,
-} from "./route-views.js";
+  HOME_ROUTE_ID,
+  isDriveNotFound,
+} from "@powerhousedao/connect-core/router";
+import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import { DriveNotFoundPage, NotFoundPage } from "@powerhousedao/connect-core";
+import type * as RouteTreeModule from "@powerhousedao/connect/route-tree";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import { setRouteComponents } from "../../test/route-components.js";
+import { reportRouteError, setSentryModule } from "../services/sentry.js";
+import { DrivePending, RouteError, RouteProgressBar } from "./route-views.js";
 
 let module: InProcessReactorClientModule;
 let store: PHStore;
 let gate: Gate;
 let unbind: (() => void) | undefined;
+let restore: (() => void) | undefined;
+let routeTree: typeof RouteTreeModule.routeTree;
 // Each content render, so a test can tell a blank or fallback ever showed.
 let renders: string[] = [];
 
@@ -140,6 +161,10 @@ function gatedClient(client: IReactorClient, gate: Gate) {
 }
 
 beforeAll(async () => {
+  primeRuntimeConfig({ connect: DEFAULT_CONNECT_CONFIG } as never);
+  // Connect's route views read the config, and a build-time define, as they evaluate.
+  vi.stubGlobal("PH_CONNECT_SENTRY_RELEASE", "test");
+  ({ routeTree } = await import("@powerhousedao/connect/route-tree"));
   const db = new Kysely<Database>({
     dialect: new PGliteDialect(new PGlite()),
   });
@@ -195,6 +220,8 @@ afterEach(async () => {
   cleanup();
   unbind?.();
   unbind = undefined;
+  restore?.();
+  restore = undefined;
   gate.open();
   for (const release of releases) release();
   releases = [];
@@ -258,7 +285,7 @@ function ContentProbe() {
   const isFolder = drive?.state.global.nodes.some(
     (n) => n.id === nodeId && n.kind === "folder",
   );
-  const showsHome = useShowsHomeScreen(!!driveId);
+  const showsHome = !!useMatch({ from: HOME_ROUTE_ID, shouldThrow: false });
   const view = driveId
     ? `drive:${drive?.header.name}`
     : showsHome
@@ -302,27 +329,80 @@ function UrlStateProbe() {
   return <p data-testid="params">{JSON.stringify(params)}</p>;
 }
 
+type Views = {
+  root?: RouteComponent;
+  layout?: RouteComponent;
+  /** Home's and the drive's view; the node route shows nothing of its own. */
+  content?: RouteComponent;
+  notFound?: ComponentType;
+  driveNotFound?: ComponentType<{ driveSlug: string }>;
+  drivePending?: RouteComponent;
+  error?: ErrorRouteComponent;
+};
+
+// Missing paths and loaders' notFound(): a missing drive's names the drive.
+function notFoundView(
+  NotFound: ComponentType,
+  DriveNotFound: ComponentType<{ driveSlug: string }>,
+) {
+  return function NotFoundView({ data }: { data?: unknown }) {
+    return isDriveNotFound(data) ? (
+      <DriveNotFound driveSlug={data.driveSlug} />
+    ) : (
+      <NotFound />
+    );
+  };
+}
+
+// The root as Connect's renders it: the matched routes' head, then the page.
+function HeadRoot() {
+  return (
+    <>
+      <HeadContent />
+      <Outlet />
+    </>
+  );
+}
+
+function routerViews(views: Views = {}) {
+  const content = views.content ?? ContentProbe;
+  const notFound = views.notFound ?? NotFoundPage;
+  restore = setRouteComponents(
+    routeTree,
+    {
+      root: views.root ?? HeadRoot,
+      layout: views.layout ?? Outlet,
+      home: content,
+      drive: content,
+      node: () => null,
+      splat: notFound as RouteComponent,
+    },
+    views.drivePending ?? DrivePending,
+  );
+  return {
+    errorComponent: views.error ?? RouteError,
+    notFoundComponent: notFoundView(
+      notFound,
+      views.driveNotFound ?? DriveNotFoundPage,
+    ),
+  };
+}
+
 function mount(
   path: string,
   basepath?: string,
   outsideRouter?: ReactNode,
-  overrides?: Partial<Parameters<typeof createConnectRouter>[0]["components"]>,
+  overrides?: Views,
 ) {
   const history = createMemoryHistory({ initialEntries: [path] });
   const connectRouter = createConnectRouter({
+    routeTree,
     store,
+    onCatch: reportRouteError,
     arrivals: createDriveArrivals(store),
     basepath,
     history,
-    components: {
-      root: Outlet,
-      content: ContentProbe,
-      notFound: NotFoundPage,
-      drivePending: DrivePending,
-      driveNotFound: DriveNotFoundPage,
-      error: RouteError,
-      ...overrides,
-    },
+    ...routerViews(overrides),
   });
   unbind = bindConnectRouter(connectRouter, store);
   render(
@@ -360,6 +440,12 @@ function scrollContent(top: number) {
     contentView().scrollTop = top;
     contentView().dispatchEvent(new Event("scroll"));
   });
+}
+
+function HistoryProbe() {
+  const visible = useRevisionHistoryVisible();
+  const page = useRevisionHistoryPage();
+  return <p data-testid="history">{visible ? `open ${page}` : "closed"}</p>;
 }
 
 async function settle(router: ReturnType<typeof mount>["router"]) {
@@ -493,26 +579,79 @@ describe("Connect router", () => {
     );
   });
 
-  it("closes revision history when another document opens", async () => {
+  it("opens revision history as ?history: Back closes it, another document drops it", async () => {
     const created = await createDrive("History");
     const first = await createFile(created, "First");
     const { drive, node: second } = await createFile(first.drive, "Second");
     store.drives = [drive];
-    const { router } = mount(`/d/${drive.header.slug}/first-${first.node.id}`);
-    await vi.waitFor(() => screen.getByText("document:First"));
-
-    act(() => setRevisionHistoryVisible(true));
-    // Same document, new params: history stays open.
-    act(() => setSelectedNode(first.node, { search: { item: "a" } }));
-    await vi.waitFor(() =>
-      expect(router.state.location.search).toEqual({ item: "a" }),
+    const { router } = mount(
+      `/d/${drive.header.slug}/first-${first.node.id}`,
+      undefined,
+      <HistoryProbe />,
     );
-    await settle(router);
-    expect(store.revisionHistoryVisible).toBe(true);
+    await vi.waitFor(() => screen.getByText("document:First"));
+    expect(screen.getByTestId("history").textContent).toBe("closed");
+
+    // The toolbar button's handler.
+    act(() => showRevisionHistory());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("open 1"),
+    );
+    expect(router.history.location.search).toBe("?history");
+
+    act(() => setRevisionHistoryPage(2));
+    await vi.waitFor(() =>
+      expect(router.history.location.search).toBe("?history&page=2"),
+    );
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("open 2"),
+    );
+
+    act(() => router.history.back());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("open 1"),
+    );
+    act(() => router.history.back());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("closed"),
+    );
+    act(() => router.history.forward());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("open 1"),
+    );
 
     act(() => setSelectedNode(second));
     await vi.waitFor(() => screen.getByText("document:Second"));
-    expect(store.revisionHistoryVisible).toBe(false);
+    expect(screen.getByTestId("history").textContent).toBe("closed");
+    expect(router.history.location.search).toBe("");
+  });
+
+  it("opens revision history from a deep link, on the page it names", async () => {
+    const created = await createDrive("Deep-History");
+    const { drive, node } = await createFile(created, "Linked");
+    const path = `/d/${drive.header.slug}/linked-${node.id}`;
+    store.drives = [drive];
+    mount(`${path}?history&page=3`, undefined, <HistoryProbe />);
+    await vi.waitFor(() => screen.getByText("document:Linked"));
+    expect(screen.getByTestId("history").textContent).toBe("open 3");
+    cleanup();
+    unbind?.();
+
+    // An invalid page is the first one.
+    const { router } = mount(
+      `${path}?history&page=x`,
+      undefined,
+      <HistoryProbe />,
+    );
+    await vi.waitFor(() => screen.getByText("document:Linked"));
+    expect(screen.getByTestId("history").textContent).toBe("open 1");
+    // The drive route's search schema drops it.
+    expect(router.state.matches.at(-1)?.search).toEqual({ history: "" });
+
+    act(() => hideRevisionHistory());
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("history").textContent).toBe("closed"),
+    );
   });
 
   it("restores drive and document on back and forward", async () => {
@@ -732,7 +871,7 @@ describe("Connect router", () => {
       undefined,
       undefined,
       {
-        app: SidebarLayout,
+        layout: SidebarLayout,
       },
     );
     await vi.waitFor(() => expect(selection()).toBe(`${drive.header.id}/-`));
@@ -794,7 +933,7 @@ describe("Connect router", () => {
       undefined,
       undefined,
       {
-        app: SidebarLayout,
+        layout: SidebarLayout,
       },
     );
     await settle(router);
@@ -849,7 +988,7 @@ describe("Connect router", () => {
   });
 
   it("keeps a route's own notFoundComponent for its loader's notFound()", async () => {
-    const { rootRoute } = connectRoutes();
+    const { rootRoute } = connectRoutes(routeTree);
     const reportRoute = createRoute({
       getParentRoute: () => rootRoute,
       path: "report/$driveSlug",
@@ -1179,12 +1318,12 @@ describe("Connect router query params", () => {
     const first = await createFile(created, "First");
     const { drive, node: second } = await createFile(first.drive, "Second");
     store.drives = [drive];
-    const { router, driveRoute } = mount(
+    const { router, nodeRoute } = mount(
       `/d/${drive.header.slug}/first-${first.node.id}`,
     );
     await settle(router);
     const loadedAt = () =>
-      router.state.matches.find((match) => match.routeId === driveRoute.id)
+      router.state.matches.find((match) => match.routeId === nodeRoute.id)
         ?.updatedAt;
     const firstLoad = loadedAt();
 
@@ -1397,6 +1536,8 @@ describe("Connect router links", () => {
   });
 });
 
+const ScopeName = createContext("");
+
 // An editor that knows only the store in context.
 function ScopedEditor({ name, nodes }: { name: string; nodes: FileNode[] }) {
   const driveId = useSelectedDriveId();
@@ -1426,18 +1567,22 @@ describe("Connect routers in scoped stores", () => {
     const nodes = [first.node, second];
     const drivePath = `/d/${drive.header.slug}`;
 
+    // One tree serves both routers; each names its editor through InnerWrap.
+    function ScopedContent() {
+      return <ScopedEditor name={use(ScopeName)} nodes={nodes} />;
+    }
+    const views = routerViews({ content: ScopedContent });
     const scopes = ["left", "right"].map((name) => {
       const scope = createScopedPHStore(store);
       const history = createMemoryHistory({ initialEntries: [drivePath] });
       const connectRouter = createConnectRouter({
+        routeTree,
         store: scope,
         history,
-        components: {
-          root: Outlet,
-          content: () => <ScopedEditor name={name} nodes={nodes} />,
-          notFound: NotFoundPage,
-          driveNotFound: DriveNotFoundPage,
-        },
+        ...views,
+        InnerWrap: ({ children }) => (
+          <ScopeName value={name}>{children}</ScopeName>
+        ),
       });
       const unbindScope = bindConnectRouter(connectRouter, scope);
       return { name, scope, history, ...connectRouter, unbindScope };
@@ -1510,7 +1655,7 @@ describe("Connect routes added in code", () => {
   it("renders a code route beside the file routes and returns to it on back", async () => {
     const drive = await createDrive("Extra");
     store.drives = [drive];
-    const { rootRoute } = connectRoutes();
+    const { rootRoute } = connectRoutes(routeTree);
     const extraRoute = createRoute({
       getParentRoute: () => rootRoute,
       path: "extra",

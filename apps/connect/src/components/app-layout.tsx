@@ -1,12 +1,12 @@
-import { useIsEmbedded } from "../hooks/useIsEmbedded.js";
-import { useIsPluginActive } from "../hooks/usePluginComposition.js";
-import { Outlet } from "@tanstack/react-router";
+import { useIsEmbedded } from "@powerhousedao/connect-core/embedded";
+import { useIsPluginActive } from "@powerhousedao/connect-core/plugins";
 import type { ReactNode } from "react";
-import { useSidebarMode } from "../router/sidebar.js";
+import {
+  ContentOutlet,
+  useSidebarMode,
+} from "@powerhousedao/connect-core/router";
+import { GENERIC_PLUGIN } from "../plugins/ids.js";
 import { Sidebar } from "./sidebar.js";
-
-/** The generic shell plugin: without it in a declared composition, Connect's sidebar is hidden. */
-const GENERIC_PLUGIN = "@powerhousedao/connect/plugins/generic";
 
 export type AppLayoutProps = {
   /** Replaces Connect's sidebar, e.g. `<ConnectSidebar extraItems={...} />`. */
@@ -30,9 +30,7 @@ export function AppLayout({ sidebar }: AppLayoutProps = {}) {
       {showSidebar &&
         (sidebar ??
           (genericActive && <Sidebar collapsed={mode === "collapsed"} />))}
-      <div className="relative flex-1 overflow-auto">
-        <Outlet />
-      </div>
+      <ContentOutlet className="relative flex flex-1 flex-col overflow-auto" />
     </div>
   );
 }
