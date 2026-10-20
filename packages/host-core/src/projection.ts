@@ -40,3 +40,16 @@ export {
 // typed-host-configs T3: the output-token resolver (pure; node adapters ship
 // from the root entry only).
 export * from "./resolve/index.js";
+
+// typed-host-configs T4 lane B: per-host expectations (pure).
+export {
+  expectHost,
+  type ConsumedOutput,
+  type ContributedDriveInput,
+  type ExpectedBackend,
+  type ExpectedDrive,
+  type ExpectHostInput,
+  type HostExpectation,
+  type MemberExpectation,
+  type MemberInput,
+} from "./expect-host.js";
