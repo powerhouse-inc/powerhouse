@@ -6,6 +6,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -38,6 +39,11 @@ function makeProject(
     /** Add a `web` member whose host reads the assistant's outputs; its
      * fake process fails unless the assistant's record already exists. */
     sibling?: boolean;
+    /** Declare `web` BEFORE `assistant` (no startOrder): only the token
+     * dependency puts the assistant first. Implies `sibling`. */
+    siblingFirst?: boolean;
+    /** The assistant's port (default 4919). */
+    port?: number;
   } = {},
 ): {
   dir: string;
@@ -124,9 +130,10 @@ export async function build(host) {
   };
   write(
     "assistant",
-    `export default { name: "cli-assistant", runner: { module: "fake-runner", port: 4919 } };`,
+    `export default { name: "cli-assistant", runner: { module: "fake-runner", port: ${options.port ?? 4919} } };`,
   );
-  if (options.sibling) {
+  const sibling = options.sibling === true || options.siblingFirst === true;
+  if (sibling) {
     write(
       "web",
       `export default {
@@ -141,12 +148,12 @@ export async function build(host) {
     `export default {
       name: "cli",
       runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
-      children: {
+      children: {${options.siblingFirst ? '\n        web: { host: "web" },' : ""}
         assistant: { host: "assistant"${
           options.readinessTimeout === undefined
             ? ""
             : `, config: { readiness: { timeout: ${options.readinessTimeout} } }`
-        } },${options.sibling ? '\n        web: { host: "web" },' : ""}
+        } },${options.sibling && !options.siblingFirst ? '\n        web: { host: "web" },' : ""}
       },
       // Resolved form: the declared host writes the assistant's
       // endpoints.openai output token; ph run substitutes the URL.
@@ -252,6 +259,38 @@ describe("clint-runner (P5.4)", () => {
     }
   }, 60_000);
 
+  it("starts a producer before the member reading it, whatever the declaration order", async () => {
+    const { dir } = makeProject({
+      publishAfter: 500,
+      readinessTimeout: 20_000,
+      siblingFirst: true,
+    });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
+    expect(Object.keys(host.children)).toEqual(["web", "assistant"]);
+    const handle = await runner.run(host, ctx(dir));
+    try {
+      const web = handle.services.list("web")[0];
+      expect(web?.status === "ready" || web?.status === "starting").toBe(true);
+    } finally {
+      await handle.shutdown();
+    }
+  }, 60_000);
+
+  it("rejects a startOrder that contradicts the members' tokens before starting anything", async () => {
+    const { dir } = makeProject({ siblingFirst: true });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const declared = (await loadHost(dir, "cli")).host;
+    const host = runner.hostSchema.parse({
+      ...declared,
+      config: { ...declared.config, startOrder: ["web", "assistant"] },
+    });
+    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
+      /startOrder starts "web" before "assistant"/,
+    );
+    expect(existsSync(path.join(dir, ".ph", "services", "web"))).toBe(false);
+  }, 60_000);
+
   it("names the sibling reader when a member never publishes", async () => {
     const { dir } = makeProject({ readinessTimeout: 1_000, sibling: true });
     const { loadHost } = await import("@powerhousedao/host-core");
@@ -259,6 +298,60 @@ describe("clint-runner (P5.4)", () => {
     await expect(runner.run(host, ctx(dir))).rejects.toThrow(
       /member "assistant" is up .* within 1000 ms .*; member "web" read its outputs\./,
     );
+  }, 60_000);
+
+  it("waits for the run record of a member re-attached because its port is already serving", async () => {
+    // A free port, then held: the member "is already serving" there (e.g.
+    // still booting from an earlier detached run) and publishes late.
+    const probe = net.createServer();
+    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+    const address = probe.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    await new Promise<void>((resolve) => probe.close(() => resolve()));
+    const holder = net.createServer();
+    await new Promise<void>((resolve) =>
+      holder.listen(port, "127.0.0.1", resolve),
+    );
+    try {
+      const { dir } = makeProject({ port, readinessTimeout: 20_000 });
+      const timer = setTimeout(() => {
+        mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
+        writeFileSync(
+          path.join(dir, ".ph", "run", "cli-assistant.json"),
+          JSON.stringify({
+            version: 2,
+            host: "cli-assistant",
+            projectName: "cli-lab",
+            kind: "reactor",
+            verb: "run",
+            startedAt: "2026-10-20T00:00:00.000Z",
+            pid: process.pid,
+            outputs: {
+              origin: `http://127.0.0.1:${port}`,
+              endpoints: { openai: `http://127.0.0.1:${port}/v1/` },
+            },
+          }),
+        );
+      }, 800);
+      try {
+        const handle = await runner.run(await declaredCli(dir), ctx(dir));
+        try {
+          expect(handle.outputs).toEqual({
+            agents: { main: `http://127.0.0.1:${port}/v1` },
+          });
+          // re-attached: clint never spawned it
+          expect(handle.services.list("assistant")[0]?.status).not.toBe(
+            "ready",
+          );
+        } finally {
+          await handle.shutdown();
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    } finally {
+      await new Promise<void>((resolve) => holder.close(() => resolve()));
+    }
   }, 60_000);
 
   it("fails naming the member, its timeout and the reading path when the member never publishes", async () => {

@@ -313,6 +313,106 @@ export function schemaAtPath(
   return { ok: true, schema: current };
 }
 
+/** Whether the object schema at `path` names `key` in its shape (a
+ * catchall does not count): what a runner's schema explicitly declares,
+ * e.g. `runner.cspRegistrySync`. A union declares a key any member does. */
+export function declaresKey(
+  schema: unknown,
+  path: OutputPath,
+  key: string,
+): boolean {
+  const at = schemaAtPath(schema, path);
+  if (!at.ok) return false;
+  const def = defOf(at.schema);
+  if (def?.type === "object") {
+    return isPlainObjectLike(def.shape) && key in def.shape;
+  }
+  if (def?.type === "union" && Array.isArray(def.options)) {
+    return def.options.some((option: unknown) => declaresKey(option, [], key));
+  }
+  return false;
+}
+
+/** Whether a (property) schema admits an absent value on the OUTPUT side:
+ * `.optional()` does; `.default()`/`.prefault()` fill it in, and
+ * `.nonoptional()` forbids it. */
+function mayBeAbsent(schema: unknown): boolean {
+  let current = schema;
+  for (let guard = 0; guard < 32; guard++) {
+    const internals = isPlainObjectLike(current) ? current._zod : undefined;
+    if (isPlainObjectLike(internals) && internals.optout === "optional") {
+      return true;
+    }
+    const def = defOf(current);
+    if (!def) return false;
+    if (def.type === "optional") return true;
+    if (
+      def.type === "default" ||
+      def.type === "prefault" ||
+      def.type === "nonoptional" ||
+      !WRAPPERS.has(def.type)
+    ) {
+      return false;
+    }
+    current = def.innerType;
+  }
+  return false;
+}
+
+/** Whether `key` may be absent from a value of the object schema `schema`:
+ * an optional property, or (in a union) one some member makes optional or
+ * lacks. A record value or an array element is never optional. */
+function optionalKeyIn(schema: unknown, key: string): boolean {
+  const unwrapped = schemaAtPath(schema, []);
+  const def = unwrapped.ok ? defOf(unwrapped.schema) : undefined;
+  if (def?.type === "object") {
+    const shape = isPlainObjectLike(def.shape) ? def.shape : {};
+    return key in shape && mayBeAbsent(shape[key]);
+  }
+  if (def?.type === "union" && Array.isArray(def.options)) {
+    return def.options.some((option: unknown) => {
+      const inner = schemaAtPath(option, []);
+      const optionDef = inner.ok ? defOf(inner.schema) : undefined;
+      const shape =
+        optionDef?.type === "object" && isPlainObjectLike(optionDef.shape)
+          ? optionDef.shape
+          : undefined;
+      return (
+        shape !== undefined && (!(key in shape) || mayBeAbsent(shape[key]))
+      );
+    });
+  }
+  return false;
+}
+
+/**
+ * Whether the field `path[at]` is OPTIONAL in `schema` (a producer's
+ * `outputsSchema`, or a `$map` element schema), given that `path[0..at-1]`
+ * exists: the codegen'd `OutputToken<T | undefined>` / `ItemToken<T |
+ * undefined>` positions, whose rendered property the resolver omits when
+ * the field is absent. False for a record key, an array index, or a path
+ * the schema does not describe.
+ */
+export function isOptionalField(
+  schema: unknown,
+  path: OutputPath,
+  at: number,
+): boolean {
+  const key = path[at];
+  if (typeof key !== "string") return false;
+  const parent = schemaAtPath(schema, path.slice(0, at));
+  return parent.ok && optionalKeyIn(parent.schema, key);
+}
+
+/** The element schema of a collection schema (array element, record
+ * value), or undefined when the schema does not say. */
+export function elementSchemaOf(schema: unknown): unknown {
+  const collection = collectionOf(schema);
+  return collection.kind === "array" || collection.kind === "record"
+    ? collection.element
+    : undefined;
+}
+
 /** What a `$map` iterates, as far as the schemas tell: its element schema
  * (undefined: unknown, so its `$item` paths are not checked) and a label for
  * messages. */

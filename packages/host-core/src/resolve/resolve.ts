@@ -1,6 +1,11 @@
 import { substituteBuiltinEnv, type BuiltinEnv } from "../env-substitution.js";
 import { tokenKeyOf, tokenSchema } from "../tokens.js";
-import type { OutputRef } from "./declared.js";
+import {
+  elementSchemaOf,
+  isOptionalField,
+  schemaAtPath,
+  type OutputRef,
+} from "./declared.js";
 import { memberForRef } from "./plan.js";
 import {
   collectTokenSites,
@@ -18,11 +23,20 @@ import {
  * resolving process; `$map` renders its `to` template once per element of
  * its `over` (arrays in order, records key-sorted; `$item`/`$key` read the
  * element being rendered); the `"${userData}"`/`"${projectRoot}"` string
- * sugar is substituted on the way. Pure and browser-safe.
+ * sugar is substituted on the way. An `$output`/`$item` that reads a field
+ * absent from the data but optional in the producer's schema (codegen's
+ * `OutputToken<T | undefined>`) omits its enclosing property, like an unset
+ * optional `$env`. Pure and browser-safe.
  */
 
 export type OutputLookup =
-  | { status: "available"; outputs: unknown }
+  | {
+      status: "available";
+      outputs: unknown;
+      /** The producer's `outputsSchema`, when known: an absent field it
+       * marks optional omits the consuming property instead of failing. */
+      schema?: unknown;
+    }
   /** `message` is the complete, user-facing reason (e.g. "connect needs
    * outputs from host "switchboard", which is not running. …"). */
   | { status: "unavailable"; message: string };
@@ -50,9 +64,16 @@ export class TokenResolutionError extends Error {
   }
 }
 
-/** A resolved `{ $env: { name, optional: true } }` whose variable is unset:
- * its enclosing property is omitted. */
+/** A resolved `{ $env: { name, optional: true } }` whose variable is unset,
+ * or an `$output`/`$item` reading an absent optional field: its enclosing
+ * property is omitted. */
 const OMIT = Symbol("omit");
+
+/** A resolved value with the schema describing it (when known). */
+interface Read {
+  value: unknown;
+  schema?: unknown;
+}
 
 type Trail = (string | number)[];
 
@@ -64,6 +85,8 @@ interface Binding {
   as?: string;
   key: string | number;
   item: unknown;
+  /** The element schema, when the `over` came from a schema'd output. */
+  schema?: unknown;
 }
 
 /** Innermost last. */
@@ -162,6 +185,13 @@ function walkPath(root: unknown, path: readonly unknown[]): PathWalk {
   return { ok: true, value: current };
 }
 
+/** The schema at `path` inside `schema`, when both are known. */
+function schemaOf(schema: unknown, path: (string | number)[]): unknown {
+  if (schema === undefined) return undefined;
+  const hit = schemaAtPath(schema, path);
+  return hit.ok ? hit.schema : undefined;
+}
+
 function pathSegments(path: readonly unknown[]): (string | number)[] {
   return path.filter(
     (p): p is string | number => typeof p === "string" || typeof p === "number",
@@ -204,6 +234,8 @@ interface DeferredSite {
 
 class Resolver {
   readonly deferred: DeferredSite[] = [];
+  /** What the last OMIT stood for, for the "nothing to omit" errors. */
+  omitted = "an optional $env";
 
   constructor(
     private readonly sources: ResolveSources,
@@ -256,7 +288,7 @@ class Resolver {
         if (out === OMIT) {
           this.fail(
             [...trail, index],
-            "is an optional $env inside an array.",
+            `is ${this.omitted} inside an array.`,
             scope,
           );
         }
@@ -354,18 +386,33 @@ class Resolver {
     }
     const into = operand.into === "record";
     const as = typeof operand.as === "string" ? operand.as : undefined;
-    const over = this.value(operand.over, [...trail, "$map", "over"], scope);
+    const read = this.readWithSchema(
+      operand.over,
+      [...trail, "$map", "over"],
+      scope,
+    );
+    const over = read.value;
+    // An absent optional collection: the mapped property is omitted.
+    if (over === OMIT) return OMIT;
+    const element =
+      read.schema === undefined ? undefined : elementSchemaOf(read.schema);
     const render = (key: string | number, item: unknown): unknown => {
       const inner: Scope = [
         ...scope,
-        { path: trail, key, item, ...(as !== undefined ? { as } : {}) },
+        {
+          path: trail,
+          key,
+          item,
+          ...(as !== undefined ? { as } : {}),
+          ...(element !== undefined ? { schema: element } : {}),
+        },
       ];
       const at = [...trail, "$map", "to"];
       const out = this.value(operand.to, at, inner);
       if (out === OMIT) {
         return this.fail(
           at,
-          "is an optional $env as the whole $map template; there is no property to omit.",
+          `is ${this.omitted} as the whole $map template; there is no property to omit.`,
           inner,
         );
       }
@@ -407,6 +454,31 @@ class Resolver {
   }
 
   item(operand: unknown, trail: Trail, scope: Scope): unknown {
+    return this.readItem(operand, trail, scope).value;
+  }
+
+  /** A `$map`'s `over` with the schema describing it, when it reads a
+   * schema'd `$output` (or an `$item` of a schema'd element). */
+  private readWithSchema(value: unknown, trail: Trail, scope: Scope): Read {
+    const key = tokenKeyOf(value);
+    if (
+      isPlainObject(value) &&
+      (key === "$output" || key === "$item") &&
+      tokenSchema.safeParse(value).success
+    ) {
+      return key === "$output"
+        ? this.readOutput(value, trail, scope)
+        : this.readItem(value.$item, trail, scope);
+    }
+    return { value: this.value(value, trail, scope) };
+  }
+
+  private omit(what: string): Read {
+    this.omitted = what;
+    return { value: OMIT };
+  }
+
+  private readItem(operand: unknown, trail: Trail, scope: Scope): Read {
     const named = isPlainObject(operand) ? operand : undefined;
     const name = named && typeof named.as === "string" ? named.as : undefined;
     const raw: unknown = named ? named.path : operand;
@@ -414,6 +486,12 @@ class Resolver {
     const binding = this.binding(name, "$item", trail, scope);
     const hit = walkPath(binding.item, path);
     if (!hit.ok) {
+      if (
+        binding.schema !== undefined &&
+        isOptionalField(binding.schema, path, hit.at)
+      ) {
+        return this.omit("an absent optional $item field");
+      }
       const missing = formatPath(path.slice(0, hit.at + 1));
       return this.fail(
         trail,
@@ -421,7 +499,10 @@ class Resolver {
         scope,
       );
     }
-    return structuredClone(hit.value);
+    return {
+      value: structuredClone(hit.value),
+      schema: schemaOf(binding.schema, path),
+    };
   }
 
   key(operand: unknown, trail: Trail, scope: Scope): string | number {
@@ -434,6 +515,14 @@ class Resolver {
     trail: Trail,
     scope: Scope = [],
   ): unknown {
+    return this.readOutput(token, trail, scope).value;
+  }
+
+  private readOutput(
+    token: Record<string, unknown>,
+    trail: Trail,
+    scope: Scope,
+  ): Read {
     const operand = token.$output;
     if (!isPlainObject(operand) || typeof operand.host !== "string") {
       return this.fail(trail, "is a malformed $output token.", scope);
@@ -459,6 +548,12 @@ class Resolver {
     }
     const hit = walkPath(lookup.outputs, path);
     if (!hit.ok) {
+      if (
+        lookup.schema !== undefined &&
+        isOptionalField(lookup.schema, path, hit.at)
+      ) {
+        return this.omit("an absent optional output");
+      }
       const parent = path.slice(0, hit.at);
       const container = parent.length
         ? `outputs.${formatPath(parent)}`
@@ -470,7 +565,10 @@ class Resolver {
         scope,
       );
     }
-    return structuredClone(hit.value);
+    return {
+      value: structuredClone(hit.value),
+      schema: schemaOf(lookup.schema, path),
+    };
   }
 
   env(operand: unknown, trail: Trail, scope: Scope = []): unknown {
@@ -485,7 +583,7 @@ class Resolver {
     }
     const value = this.sources.env?.[name];
     if (value !== undefined) return value;
-    if (optional) return OMIT;
+    if (optional) return this.omit("an optional $env").value;
     return this.fail(
       trail,
       `reads $env ${name}, which is not set. Set ${name} in the environment of the process that resolves this host (or declare { $env: { name: "${name}", optional: true } } to omit the property when unset).`,
@@ -502,7 +600,7 @@ class Resolver {
         const at = [...trail, "$concat", index];
         const value = this.value(part, at, scope);
         if (value === OMIT) {
-          return this.fail(at, "is an optional $env inside $concat.", scope);
+          return this.fail(at, `is ${this.omitted} inside $concat.`, scope);
         }
         if (typeof value === "string") return value;
         if (typeof value === "number") return String(value);
@@ -549,7 +647,7 @@ export function resolveHostOutputs<T>(
   const resolver = new Resolver(sources, options?.deferSelf);
   const out = resolver.value(host, []);
   if (out === OMIT) {
-    resolver.fail([], "is an optional $env with nothing to omit it from.");
+    resolver.fail([], `is ${resolver.omitted} with nothing to omit it from.`);
   }
   // Same shape as the declared input: every token-able field's input type
   // admits both the token and the value it resolves to.
@@ -568,6 +666,10 @@ export function resolveHostOutputs<T>(
       const late = new Resolver({ ...sources, outputs });
       for (const site of sites) {
         const value = late.token(site.token, site.trail);
+        // An array slot has no property to omit (as when resolving eagerly).
+        if (value === OMIT && typeof site.trail.at(-1) === "number") {
+          late.fail(site.trail, `is ${late.omitted} inside an array.`);
+        }
         setAt(
           done,
           site.trail,

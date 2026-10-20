@@ -10,7 +10,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCompound } from "../src/compound.js";
 import { loadHost } from "../src/host-loader.js";
 import { readRunRecord } from "../src/run-record.js";
@@ -39,6 +39,10 @@ function makeProject(opts?: {
   connectPlugins?: unknown[];
   /** The connect member wrapper's `reactor` section. */
   connectReactor?: unknown;
+  /** Extra keys for the connect member wrapper's `runner`. */
+  connectRunner?: Record<string, unknown>;
+  /** The connect host's runner specifier (default "fake-runner"). */
+  connectModule?: string;
 }): {
   dir: string;
   sink: string;
@@ -77,6 +81,8 @@ export const kind = "reactor";
 export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export const outputsSchema = z.strictObject({
   origin: z.url(),
+  tier: z.string().default("dev"),
+  mcp: z.url().optional(),
   drives: z.record(z.string(), z.strictObject({ id: z.string(), url: z.url() })).optional(),
 });
 export async function dev(host, ctx) {
@@ -98,8 +104,35 @@ export async function dev(host, ctx) {
 }
 export const run = dev;
 export async function build(host) {
-  log({ event: "build", name: host.name, plugins: host.runner.plugins ?? null });
+  log({ event: "build", name: host.name, plugins: host.runner.plugins ?? null, runner: host.runner });
 }
+`,
+  );
+
+  // a Connect-shaped runner under a non-canonical specifier: fake-runner's
+  // verbs, with a zod hostSchema that declares runner.cspRegistrySync
+  const connectPkg = path.join(dir, "node_modules", "fake-connect");
+  mkdirSync(connectPkg, { recursive: true });
+  writeFileSync(
+    path.join(connectPkg, "package.json"),
+    JSON.stringify({
+      name: "fake-connect",
+      type: "module",
+      exports: { ".": { import: "./index.js", default: "./index.js" } },
+    }),
+  );
+  writeFileSync(
+    path.join(connectPkg, "index.js"),
+    `
+import { z } from "zod";
+export * from "fake-runner";
+export const hostSchema = z.looseObject({
+  name: z.string(),
+  runner: z.looseObject({
+    module: z.string(),
+    cspRegistrySync: z.boolean().optional(),
+  }),
+});
 `,
   );
 
@@ -110,7 +143,7 @@ export async function build(host) {
   };
   write(
     "connect",
-    `export default { name: "lab-connect", runner: { module: "fake-runner", port: 2064 } };`,
+    `export default { name: "lab-connect", runner: { module: ${JSON.stringify(opts?.connectModule ?? "fake-runner")}, port: 2064 } };`,
   );
   write(
     "switchboard",
@@ -123,8 +156,13 @@ export async function build(host) {
   };
   const connectMember = {
     host: "connect",
-    ...(opts?.connectPlugins
-      ? { runner: { plugins: opts.connectPlugins } }
+    ...(opts?.connectPlugins || opts?.connectRunner
+      ? {
+          runner: {
+            ...opts.connectRunner,
+            ...(opts.connectPlugins ? { plugins: opts.connectPlugins } : {}),
+          },
+        }
       : {}),
     ...(opts?.connectReactor ? { reactor: opts.connectReactor } : {}),
   };
@@ -238,10 +276,56 @@ describe("runCompound", () => {
     });
     expect(record?.members?.["app-connect"]?.outputs).toEqual({
       origin: "http://localhost:2064",
+      tier: "dev",
     });
 
     await result.shutdown();
     expect(readRunRecord(dir, "app")).toBeUndefined();
+  });
+
+  it("records and serves the outputsSchema-parsed outputs, not the raw ones", async () => {
+    const { dir, sink } = makeProject({
+      connectPlugins: [
+        {
+          module: WF,
+          config: {
+            tier: { $output: { host: "switchboard", path: ["tier"] } },
+          },
+        },
+      ],
+    });
+    const result = await run(dir);
+    const connect = calls(sink).find(
+      (c) => c.event === "start" && c.name === "lab-connect",
+    );
+    // the default the switchboard's outputsSchema fills in
+    expect(connect?.plugins).toEqual([{ module: WF, config: { tier: "dev" } }]);
+    expect(
+      readRunRecord(dir, "app")?.members?.["app-switchboard"]?.outputs,
+    ).toMatchObject({ tier: "dev" });
+    await result.shutdown();
+  });
+
+  it("omits a consumer's property whose producer leaves an optional output out", async () => {
+    const { dir, sink } = makeProject({
+      connectPlugins: [
+        {
+          module: WF,
+          config: {
+            drive: workflowsUrl,
+            mcp: { $output: { host: "switchboard", path: ["mcp"] } },
+          },
+        },
+      ],
+    });
+    const result = await run(dir);
+    const connect = calls(sink).find(
+      (c) => c.event === "start" && c.name === "lab-connect",
+    );
+    expect(connect?.plugins).toEqual([
+      { module: WF, config: { drive: "http://localhost:7064/d/workflows" } },
+    ]);
+    await result.shutdown();
   });
 
   it("accepts a startOrder that agrees with the tokens", async () => {
@@ -375,6 +459,55 @@ describe("runCompound", () => {
     await result.shutdown();
   });
 
+  it("build: members still get the ${userData}/${projectRoot} string sugar", async () => {
+    const { dir, sink } = makeProject({
+      connectRunner: {
+        outDir: "${projectRoot}/dist",
+        cacheDir: "${userData}/.ph/cache",
+      },
+    });
+    await runCompound(
+      await appHost(dir),
+      { ...ctx(dir, { PH_USER_DATA_DIR: "/profile" }), verb: "build" },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    const connect = calls(sink).find(
+      (c) => (c.event as string) === "build" && c.name === "lab-connect",
+    );
+    expect(connect?.runner).toMatchObject({
+      outDir: `${path.resolve(dir)}/dist`,
+      cacheDir: "/profile/.ph/cache",
+    });
+  });
+
+  it("build: takes no lock and leaves a live instance's record alone", async () => {
+    const { dir, sink } = makeProject();
+    const { writeRunRecord } = await import("../src/run-record.js");
+    const live = {
+      version: 2 as const,
+      host: "app",
+      projectName: "lab",
+      kind: "compound" as const,
+      verb: "dev",
+      pid: process.pid,
+      startedAt: "x",
+      members: {},
+    };
+    writeRunRecord(dir, live);
+    const result = await runCompound(
+      await appHost(dir),
+      { ...ctx(dir), verb: "build" },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    expect(
+      calls(sink).filter((c) => (c.event as string) === "build"),
+    ).toHaveLength(2);
+    // no record of its own while building, and the live one survives
+    expect(readRunRecord(dir, "app")).toEqual(live);
+    await result.shutdown();
+    expect(readRunRecord(dir, "app")).toEqual(live);
+  });
+
   it("rejects a startOrder that names a member twice", async () => {
     const { dir, sink } = makeProject({
       startOrder: ["app-switchboard", "app-switchboard", "app-connect"],
@@ -383,12 +516,37 @@ describe("runCompound", () => {
     expect(calls(sink)).toEqual([]);
   });
 
-  it("forwards cspRegistrySync only to Connect-runner members", async () => {
+  it("forwards cspRegistrySync only to Connect-runner members, warning when none takes it", async () => {
     const { dir, sink } = makeProject({ wiring: { cspRegistrySync: true } });
-    await run(dir);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await run(dir);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /config\.cspRegistrySync is set, but no member's runner declares runner\.cspRegistrySync/,
+        ),
+      );
+    } finally {
+      warn.mockRestore();
+    }
     for (const c of calls(sink).filter((c) => c.event === "start")) {
       expect(c.runner.cspRegistrySync).toBeUndefined();
     }
+  });
+
+  it("forwards cspRegistrySync to a member whose runner declares it, whatever its specifier", async () => {
+    const { dir, sink } = makeProject({
+      wiring: { cspRegistrySync: true },
+      connectModule: "fake-connect",
+    });
+    await run(dir);
+    const starts = calls(sink).filter((c) => c.event === "start");
+    expect(
+      starts.find((c) => c.name === "lab-connect")?.runner.cspRegistrySync,
+    ).toBe(true);
+    expect(
+      starts.find((c) => c.name === "lab-switchboard")?.runner.cspRegistrySync,
+    ).toBeUndefined();
   });
 
   it("on a signal: shuts members down consumers-first, then exits once", async () => {

@@ -1,11 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   declaredGenericCompoundHostSchema,
   genericCompoundHostSchema,
   type HostDefinition,
 } from "../host-schemas.js";
 import { runCompound, type RunCompoundResult } from "../compound.js";
+import { readProjectName } from "../run-record.js";
 import type { RunnerContext } from "../runner-resolver.js";
 
 /**
@@ -26,18 +25,6 @@ export const kind = "compound";
 export const hostSchema = genericCompoundHostSchema;
 export const declaredHostSchema = declaredGenericCompoundHostSchema;
 
-function projectName(projectRoot: string): string {
-  try {
-    const pkg = JSON.parse(
-      fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"),
-    ) as { name?: string };
-    if (pkg.name) return pkg.name;
-  } catch {
-    // fall through
-  }
-  return path.basename(projectRoot);
-}
-
 async function startAt(
   host: HostDefinition,
   ctx: RunnerContext,
@@ -46,7 +33,7 @@ async function startAt(
   return runCompound(
     host,
     { ...ctx, verb: memberVerb },
-    { projectName: projectName(ctx.projectRoot) },
+    { projectName: readProjectName(ctx.projectRoot) },
   );
 }
 

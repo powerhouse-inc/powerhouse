@@ -8,11 +8,12 @@ import {
   loadHost,
   loadProducers,
   outputRefsOf,
+  outputSitesOf,
+  planCompound,
   probeRun,
   processResolveEnv,
   refineStartOrder,
   resolveHostOutputs,
-  resolveUserDataPlaceholders,
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
@@ -335,9 +336,10 @@ async function startShell(
   ctx: RunnerContext,
 ): Promise<CliRunHandle> {
   const projectName = readProjectName(ctx.projectRoot, host.name);
+  // resolveOwnTokens also substitutes the "${userData}"/"${projectRoot}"
+  // sugar (processResolveEnv's built-ins); member wrappers stay as declared.
   const pending = await resolveOwnTokens(host, ctx, projectName);
-  const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
-  const resolved = resolveUserDataPlaceholders(pending.host, userData);
+  const resolved = pending.host;
   const config = resolved.config ?? {};
   const lifecycle = resolved.runner.lifecycle ?? "detached";
 
@@ -355,34 +357,50 @@ async function startShell(
     eventBus,
   });
 
-  // Start order: config.startOrder first, then declaration order.
+  // Each member's own host.js: its `$output` tokens on sibling members
+  // decide the start order (each member resolves them from its producers'
+  // run records as it starts).
   const names = definitions.map((d) => d.id);
-  const ordered = [
-    ...(config.startOrder ?? []).filter((n) => names.includes(n)),
-    ...names.filter((n) => !(config.startOrder ?? []).includes(n)),
-  ];
-  // Whose outputs are read, and by whom: the shell's deferred self fields,
-  // and sibling members' `$output` tokens (each member resolves its own
-  // tokens from its producers' run records as it starts).
   const loaded = new Map<string, LoadedHost>();
-  for (const id of ordered) {
+  for (const id of names) {
     loaded.set(id, await loadHost(ctx.projectRoot, children[id].host));
   }
+  // Start order: the same dependency plan the generic compound uses —
+  // producers before consumers (ties keep declaration order); a
+  // config.startOrder must agree with the tokens. Tokens on hosts outside
+  // the compound read standalone producers and do not order members.
+  const memberRefs = names.map((key) => ({ key, host: children[key].host }));
+  const plan = planCompound(
+    names.map((key) => ({
+      key,
+      host: children[key].host,
+      refs: outputSitesOf(loaded.get(key)?.host)
+        .filter(({ ref }) => memberRefs.some((m) => m.host === ref.host))
+        .map(({ ref, path }) => ({ ref, path })),
+    })),
+    config.startOrder,
+  );
+  const ordered = plan.order;
+  // Whose outputs are read, and by whom: the shell's deferred self fields,
+  // and the members that consume a sibling.
   const readers = new Map<string, string[]>();
   const addReader = (id: string, reader: string) =>
     readers.set(id, [...(readers.get(id) ?? []), reader]);
   for (const deferred of pending.deferred) {
     for (const id of deferred.members) addReader(id, deferred.path);
   }
-  for (const reader of ordered) {
-    const refs = outputRefsOf(loaded.get(reader)?.host);
-    for (const id of ordered) {
-      if (id !== reader && refs.some((r) => r.host === children[id].host)) {
-        addReader(id, `member "${reader}"`);
-      }
-    }
+  for (const edge of plan.edges) {
+    addReader(edge.producer, `member "${edge.consumer}"`);
   }
-  const waitForRecord = async (id: string, memberHost: string) => {
+  /** Wait for a member's live run record when something reads it. With
+   * `managed` (clint's own service state describes it), a failed or stopped
+   * service ends the wait early; a member found serving on its port is not
+   * clint's to watch, so it gets the full timeout. */
+  const waitForRecord = async (
+    id: string,
+    memberHost: string,
+    managed = true,
+  ) => {
     const read = readers.get(id);
     if (!read) return;
     try {
@@ -391,7 +409,12 @@ async function startShell(
         host: memberHost,
         timeout: children[id].config?.readiness?.timeout ?? READINESS_TIMEOUT,
         readers: read,
-        status: () => services.list(id).find((s) => s.serviceId === id)?.status,
+        ...(managed
+          ? {
+              status: () =>
+                services.list(id).find((s) => s.serviceId === id)?.status,
+            }
+          : {}),
       });
     } catch (error) {
       if (lifecycle === "attached") await stopAll(services, names);
@@ -427,6 +450,9 @@ async function startShell(
       console.log(
         `[${resolved.name}] ${id}: port ${memberPort} already serving — re-attached`,
       );
+      // It may still be booting (an earlier detached run, or started by
+      // hand): its readers need its record, as after a fresh start.
+      await waitForRecord(id, member.host.name, false);
       continue;
     }
     const already = services

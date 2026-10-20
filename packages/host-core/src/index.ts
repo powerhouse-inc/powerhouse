@@ -18,7 +18,9 @@ export {
   type LoadedHost,
 } from "./host-loader.js";
 export {
+  CONNECT_RUNNER,
   getVerb,
+  isSchemaLike,
   listVerbs,
   ONE_SHOT_VERBS,
   resolveRunnerModule,

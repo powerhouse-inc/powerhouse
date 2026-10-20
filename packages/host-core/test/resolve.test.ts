@@ -211,6 +211,218 @@ describe("resolveHostOutputs", () => {
   });
 });
 
+describe("absent optional outputs", () => {
+  /** A live source that also hands the resolver each producer's schema. */
+  const typed = (
+    outputs: Record<string, unknown>,
+    schemas: Record<string, unknown>,
+  ): OutputSource => ({
+    lookup: (ref) => ({
+      status: "available",
+      outputs: outputs[ref.host],
+      schema: schemas[ref.host],
+    }),
+  });
+  const driveSchema = z.strictObject({
+    id: z.string(),
+    url: z.url(),
+    icon: z.string().optional(),
+    tier: z.string().default("dev"),
+  });
+  const schema = outputsSchema.extend({
+    drives: z.record(z.string(), driveSchema),
+  });
+  const sources = {
+    outputs: typed(
+      { switchboard: switchboardOutputs },
+      { switchboard: schema },
+    ),
+    where: "hosts/connect/host.js",
+  };
+
+  it("omits the property an absent optional output field fills", () => {
+    expect(
+      resolveHostOutputs(
+        {
+          graphql: out("switchboard", ["endpoints", "graphql"]),
+          mcp: out("switchboard", ["endpoints", "mcp"]),
+          // deeper than the absent field: absent too, so omitted
+          mcpHost: out("switchboard", ["endpoints", "mcp", "host"]),
+        },
+        sources,
+      ),
+    ).toEqual({ graphql: "http://localhost:4801/graphql" });
+  });
+
+  it("still fails on an absent required field or record key", () => {
+    expect(() =>
+      resolveHostOutputs(
+        { o: out("switchboard", ["origin"]) },
+        {
+          ...sources,
+          outputs: typed(
+            { switchboard: { endpoints: {}, drives: {} } },
+            { switchboard: schema },
+          ),
+        },
+      ),
+    ).toThrow(
+      /`o` reads \$output switchboard › origin, but host "switchboard" has no output at origin/,
+    );
+    expect(() =>
+      resolveHostOutputs(
+        { d: out("switchboard", ["drives", "vetra", "url"]) },
+        sources,
+      ),
+    ).toThrow(/has no output at drives\.vetra/);
+  });
+
+  it("still fails when the source carries no schema to tell optional from missing", () => {
+    expect(() =>
+      resolveHostOutputs(
+        { mcp: out("switchboard", ["endpoints", "mcp"]) },
+        { outputs: canned({ switchboard: switchboardOutputs }) },
+      ),
+    ).toThrow(/has no output at endpoints\.mcp/);
+  });
+
+  it("rejects an absent optional output where no property can be omitted", () => {
+    expect(() =>
+      resolveHostOutputs(
+        { list: [out("switchboard", ["endpoints", "mcp"])] },
+        sources,
+      ),
+    ).toThrow(/`list\[0\]` is an absent optional output inside an array/);
+    expect(() =>
+      resolveHostOutputs(
+        { s: { $concat: ["x", out("switchboard", ["endpoints", "mcp"])] } },
+        sources,
+      ),
+    ).toThrow(/is an absent optional output inside \$concat/);
+  });
+
+  it("$map: an $item that reads an absent optional field omits its property", () => {
+    const drives = {
+      ...switchboardOutputs.drives,
+      sektar: { ...switchboardOutputs.drives.sektar, icon: "star" },
+    };
+    const resolved = resolveHostOutputs(
+      {
+        drives: {
+          $map: {
+            over: out("switchboard", ["drives"]),
+            to: { id: { $item: ["id"] }, icon: { $item: ["icon"] } },
+          },
+        },
+      },
+      {
+        ...sources,
+        outputs: typed(
+          { switchboard: { ...switchboardOutputs, drives } },
+          { switchboard: schema },
+        ),
+      },
+    );
+    expect(resolved.drives).toEqual([
+      { id: "sektar", icon: "star" },
+      { id: "workflows-1" },
+    ]);
+  });
+
+  it("$map: an absent required $item field still fails", () => {
+    expect(() =>
+      resolveHostOutputs(
+        {
+          drives: {
+            $map: {
+              over: out("switchboard", ["drives"]),
+              to: { tier: { $item: ["tier"] } },
+            },
+          },
+        },
+        sources,
+      ),
+    ).toThrow(/reads \$item tier, but \$map element .* has no tier/);
+  });
+
+  it("$map: an absent optional collection omits the mapped property", () => {
+    const optionalDrives = outputsSchema.extend({
+      drives: z.record(z.string(), driveSchema).optional(),
+    });
+    const { drives: _drives, ...noDrives } = switchboardOutputs;
+    expect(
+      resolveHostOutputs(
+        {
+          keep: 1,
+          drives: {
+            $map: {
+              over: out("switchboard", ["drives"]),
+              to: { $item: ["id"] },
+            },
+          },
+        },
+        {
+          outputs: typed(
+            { switchboard: noDrives },
+            { switchboard: optionalDrives },
+          ),
+        },
+      ),
+    ).toEqual({ keep: 1 });
+  });
+
+  it("finish(): a deferred token on an absent optional field omits it", () => {
+    const deferred = resolveHostOutputs(
+      { name: "c", config: { mcp: out("assistant", ["mcp"]) }, children: {} },
+      {},
+      { deferSelf: { members: [{ key: "assistant", host: "assistant" }] } },
+    );
+    const done = deferred.finish(
+      compoundOutputSource(
+        [{ key: "assistant", host: "assistant" }],
+        new Map([["assistant", { origin: "http://x" }]]),
+        "c",
+        new Map([
+          [
+            "assistant",
+            z.strictObject({ origin: z.url(), mcp: z.url().optional() }),
+          ],
+        ]),
+      ),
+    );
+    expect(done.config).toEqual({});
+  });
+
+  it("finish(): a deferred token on an absent optional field inside an array fails", () => {
+    const deferred = resolveHostOutputs(
+      {
+        name: "c",
+        config: { urls: [out("assistant", ["mcp"])] },
+        children: {},
+      },
+      {},
+      { deferSelf: { members: [{ key: "assistant", host: "assistant" }] } },
+    );
+    expect(() =>
+      deferred.finish(
+        compoundOutputSource(
+          [{ key: "assistant", host: "assistant" }],
+          new Map([["assistant", { origin: "http://x" }]]),
+          "c",
+          new Map([
+            [
+              "assistant",
+              z.strictObject({ origin: z.url(), mcp: z.url().optional() }),
+            ],
+          ]),
+        ),
+      ),
+    ).toThrow(
+      /`config\.urls\[0\]` is an absent optional output inside an array/,
+    );
+  });
+});
+
 describe("declared validation", () => {
   it("checks $output paths against the producer's outputsSchema", () => {
     const issues = checkOutputPaths(
