@@ -18,6 +18,20 @@ const WEIGHTS = JSON.parse(
 ) as Record<string, number>;
 const DEFAULT_WEIGHT = 5;
 
+// Packages a suite needs BUILT that are not in its dependency closure (so a
+// filtered shard would not build them). codegen's typed-hosts test runs
+// `tsc -p hosts` against the runner/plugin packages' dists; they depend on
+// codegen, so they cannot be its devDependencies. Keep in sync with
+// LINKED_PACKAGES in packages/codegen/src/file-builders/boilerplate/generated-hosts.test.ts
+// (ph-cli's closure brings switchboard, desktop, host-core and shared).
+const EXTRA_BUILD_DEPS: Record<string, string[]> = {
+  "@powerhousedao/codegen": [
+    "@powerhousedao/ph-cli",
+    "@powerhousedao/clint",
+    "@powerhousedao/connect",
+  ],
+};
+
 // Read from the script so a package added there lands in a shard automatically.
 function packages(): string[] {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
@@ -80,7 +94,10 @@ if (!Number.isInteger(index) || index < 1 || index > total) {
 
 const mine = shards[index - 1];
 if (selectorsOnly) {
-  console.log(mine.names.map((n) => `${n}...`).join(" "));
+  const selected = [
+    ...new Set(mine.names.flatMap((n) => [n, ...(EXTRA_BUILD_DEPS[n] ?? [])])),
+  ];
+  console.log(selected.map((n) => `${n}...`).join(" "));
   process.exit(0);
 }
 console.log(`shard ${index}/${total}: ${mine.names.join(" ")}`);
