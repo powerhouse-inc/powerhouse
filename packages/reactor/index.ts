@@ -109,6 +109,7 @@ export {
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
+  UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
