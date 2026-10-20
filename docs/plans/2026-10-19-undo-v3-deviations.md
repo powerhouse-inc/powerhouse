@@ -197,10 +197,20 @@ Decisions:
   before fitting, so a lazily loaded tagged model lands at 3.
 - `fitCreateBaseReducer` moved to `@powerhousedao/shared/document-model` so
   the light client can use it without the reactor.
-- The creator chooses a new document's protocol versions. The GraphQL
-  client fits base-reducer against its own flags and document models
-  (tagged reducer with `undoV3` on: 3; otherwise 2) and asks the host only
-  for the signature policy. GraphQL `createDefaults` keeps its `documentType`
+- The creator chooses a new document's protocol versions, capped at what
+  the receiving peer agrees to: base-reducer is the lower of the creator's
+  own support (tagged reducer with `undoV3` on: 3; otherwise 2) and the
+  peer's. The GraphQL client reads the peer's side from the host's
+  reactor-wide `createDefaults` answer (no parent, no type), read as a peer
+  agreement member (`selectionSupports`) and passed to the same
+  `selectProtocolVersions` the reactor uses. A host without the query is
+  the baseline, [1, 2]. A selection only adds to the baseline, so no host
+  answer takes a create below 2. Switchboards from 6.2.3-dev.51 on, and
+  main, answer 2, so a current Connect creates there at 2 instead of being
+  refused. Connect's remote and
+  router modes reach the host through this one client, so this is the one
+  cap; the receiver's refusal stays as the backstop. Drive members still do
+  not narrow base-reducer. GraphQL `createDefaults` keeps its `documentType`
   argument for other callers and older clients.
 - A receiver refuses what it cannot run. Peer agreement already covered a
   reactor without base-reducer 3 (refused on submit and load, refused on
@@ -266,9 +276,20 @@ timestamps, which the user rejected):
 - Lost-operation resend (R1, R2) is not implemented. The base-reducer 3 twin
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
-- A current Connect creates tagged models at 3. A Switchboard from a release
-  without undo v3 refuses those creates (`UnsupportedProtocolVersionError`);
-  such a Connect needs `undoV3: false` to create there.
+- A create through the light client asks `createDefaults` twice, once for
+  the signature policy and once for the cap.
+- A copy keeps its source's versions, so a version 3 document copied into a
+  host that runs only 2 is refused there.
+- A Switchboard from before `createDefaults` (the 6.2.3 release) caps
+  creates at 2, but `getCreateSignaturePolicy` still refuses against it, as
+  on main, so the light client cannot create there at all. Pinned in
+  Connect's `create-protocol-versions` test.
+- The cap is reactor-wide, so it ignores whether the host's own build of a
+  model can run 3. A client with a tagged build of a model the host has
+  untagged sends 3 and is refused.
+- A host that selects a version above the client's highest (say 4) is read
+  as running the baseline and that version only, so the client creates at
+  2 until it is upgraded.
 - A reactor that stored version 3 documents while a model was tagged and
   then boots an untagged build of it refuses every write, load and delete
   for those documents. The startup stored-protocol check compares versions
