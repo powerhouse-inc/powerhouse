@@ -534,7 +534,7 @@ describe("ph build recognizes subgraphs through the subgraph entries", () => {
 
     const { result } = await withoutHostEnv(() => build(root));
     const printed: string[] = [];
-    await logBuildReport(result, (text) => printed.push(text));
+    logBuildReport(result, (text) => printed.push(text));
 
     expect(result.status).toBe("ok");
     expect(printed).toEqual([

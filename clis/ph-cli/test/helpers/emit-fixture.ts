@@ -14,6 +14,7 @@ export async function emitFixture(packageRoot: string, emittedRoot: string) {
     packageRoot,
     emittedRoot,
     plan: preflight.plan,
+    retainOutputs: () => undefined,
   });
 }
 

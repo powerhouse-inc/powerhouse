@@ -9,7 +9,7 @@ import fs, {
   realpathSync,
   readlinkSync,
 } from "node:fs";
-import { join, dirname, sep } from "node:path";
+import { join, dirname, relative, sep } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -26,6 +26,7 @@ import {
   siblingPackage,
   noInputProbe,
   addReference,
+  recordTsc,
 } from "./helpers/workspace.js";
 import { syncBuiltinESMExports } from "node:module";
 
@@ -492,13 +493,21 @@ describe("generated reference inputs", () => {
         protectedFile,
         join(root, "btypes", "generated", "index.d.ts"),
       );
+      const compilerCalls = recordTsc(root);
       const result = await build(root, "schema-first");
       expect(result.exitCode, result.log).toBe(2);
       expect(result.log).toContain("outside the package");
       expect(readFileSync(protectedFile, "utf8")).toBe("protected\n");
-      expect(existsSync(join(root, "btypes", "b", "index.d.ts"))).toBe(
-        order === "reversed",
+      expect(
+        compilerCalls()
+          .filter(([command]) => command === "--build")
+          .map(([, project]) => relative(realpathSync(root), project)),
+      ).toEqual(
+        order === "reversed"
+          ? [join("b", "tsconfig.json"), join("a", "tsconfig.json")]
+          : [join("a", "tsconfig.json")],
       );
+      expect(existsSync(join(root, "btypes", "b"))).toBe(false);
     },
     120_000,
   );

@@ -560,10 +560,7 @@ describe("the release profile through the command", () => {
       expect(report.profile).toBe("release");
       expect(report.status).toBe("ok");
       expect(code).toBe(0);
-      expect(readdirSync(join(fixture.root, "dist")).sort()).toEqual([
-        "shipped.js",
-        "types",
-      ]);
+      expect(readdirSync(join(fixture.root, "dist"))).toEqual(["shipped.js"]);
       expect(
         readFileSync(join(fixture.root, "dist", "shipped.js"), "utf8"),
       ).toBe("export const a = 1;\n");
@@ -1033,10 +1030,7 @@ describe("watch", () => {
           (text) => (JSON.parse(text) as DefinitionCheckReport).status,
         ),
       ).toEqual(["ok", "failed"]);
-      expect(
-        existsSync(join(fixture.root, "dist", "types", "src", "invoice.d.ts")),
-      ).toBe(true);
-      expect(existsSync(join(fixture.root, "dist", "node"))).toBe(false);
+      expect(existsSync(join(fixture.root, "dist"))).toBe(false);
       expect(
         existsSync(
           join(fixture.root, GENERATION_DIRECTORY, "release-approval.json"),

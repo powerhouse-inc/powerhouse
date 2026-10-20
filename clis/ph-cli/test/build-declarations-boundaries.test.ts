@@ -183,12 +183,8 @@ describe("where a declaration may be written", () => {
       });
       expect(result.exitCode).toBe(2);
       expect(result.log).toContain("nothing was promoted");
-      expect(
-        readFileSync(
-          join(root, "generated", "types", "src", "shape.d.ts"),
-          "utf8",
-        ),
-      ).toContain("a: string;");
+      expect(readdirSync(join(root, "generated", "types"))).toEqual([]);
+      expect(readdirSync(join(root, "generated", "other"))).toEqual([]);
       expect(existsSync(join(root, "dist"))).toBe(false);
     },
     120_000,

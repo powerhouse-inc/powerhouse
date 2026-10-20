@@ -859,9 +859,7 @@ describe("runtime loading", () => {
           .map((diagnostic) => diagnostic.received)
           .join("\n"),
       ).toContain("TS9999: private loader probe");
-      expect(
-        readFileSync(join(root, "types", "src", "shape.d.ts"), "utf8"),
-      ).toBe("export type Shape = {\n    a: string;\n};\n");
+      expect(existsSync(join(root, "types"))).toBe(false);
     },
     120_000,
   );

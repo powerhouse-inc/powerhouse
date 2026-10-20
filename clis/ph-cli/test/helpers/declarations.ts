@@ -161,7 +161,7 @@ export function declarationFiles(root: string): string[] {
 export const shapeDeclaration = (field: string): string =>
   `export type Shape = {\n    a: ${field};\n};\n//# sourceMappingURL=shape.d.ts.map`;
 
-export async function prepack(root: string) {
+export async function prepack(root: string, ignoreTypeErrors = false) {
   const messages: string[] = [];
   const result = await runPrepack(
     {
@@ -170,7 +170,7 @@ export async function prepack(root: string) {
       source: [],
       warningsAsErrors: false,
       noSharedDeps: false,
-      ignoreTypeErrors: false,
+      ignoreTypeErrors,
       debug: false,
     },
     { log: (text) => messages.push(text) },
