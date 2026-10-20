@@ -1,4 +1,5 @@
 import { getConfig } from "@powerhousedao/config/node";
+import type { AppShells } from "@powerhousedao/builder-tools";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { deepMerge, normalizeBasePath } from "@powerhousedao/shared/connect";
 import { existsSync, readFileSync } from "node:fs";
@@ -176,10 +177,47 @@ function previewCacheHeadersPlugin(outDir: string, base: string): Plugin {
   };
 }
 
+type HtmlTransform = (html: string) => string;
+
+/** The dist's shell for the served config: its composition's variant and its app name. */
+export async function shellSwapFor(
+  outDir: string,
+  override: ConnectServeOverride,
+  base = "/",
+): Promise<HtmlTransform | undefined> {
+  const composition = override.connect?.composition;
+  const renamed = override.connect?.branding?.appName !== undefined;
+  if (!composition && !renamed) return undefined;
+  const {
+    APP_SHELLS_FILE,
+    appShellVariant,
+    appShellVariantOf,
+    swapAppShell,
+    withShellAppName,
+  } = await import("@powerhousedao/builder-tools");
+  const file = path.join(outDir, APP_SHELLS_FILE);
+  const variant = composition && appShellVariant(composition);
+  const shell =
+    variant && existsSync(file)
+      ? (JSON.parse(readFileSync(file, "utf8")) as AppShells)[variant]
+      : undefined;
+  // The name the app will title itself with: the served (baked + override) config's.
+  const appName = (
+    JSON.parse(mergedConfigBody(outDir, override)) as {
+      connect?: { branding?: { appName?: string } };
+    }
+  ).connect?.branding?.appName;
+  return (html) =>
+    shell && appShellVariantOf(html) !== variant
+      ? swapAppShell(html, shell, base, appName)
+      : withShellAppName(html, appName);
+}
+
 function serveOverridePlugin(
   outDir: string,
   override: ConnectServeOverride,
   base = "/",
+  swapShell?: HtmlTransform,
 ): Plugin {
   return {
     name: "ph:serve-override",
@@ -199,19 +237,23 @@ function serveOverridePlugin(
           urlPath === "/" ||
           urlPath.endsWith("/index.html") ||
           !path.extname(urlPath);
-        if (override.cspRegistrySync && isHtml) {
+        if ((override.cspRegistrySync || swapShell) && isHtml) {
           const file = path.join(outDir, "index.html");
           if (existsSync(file)) {
-            const merged = JSON.parse(mergedConfigBody(outDir, override)) as {
-              packageRegistryUrl?: string;
-            };
-            const registry = merged.packageRegistryUrl;
-            const html = readFileSync(file, "utf8");
+            let html = readFileSync(file, "utf8");
+            if (override.cspRegistrySync) {
+              const merged = JSON.parse(mergedConfigBody(outDir, override)) as {
+                packageRegistryUrl?: string;
+              };
+              const registry = merged.packageRegistryUrl;
+              if (registry) html = patchCspScriptSrc(html, registry);
+            }
+            if (swapShell) html = swapShell(html);
             res.writeHead(200, {
               "content-type": "text/html; charset=utf-8",
               "cache-control": "no-store",
             });
-            res.end(registry ? patchCspScriptSrc(html, registry) : html);
+            res.end(html);
             return;
           }
         }
@@ -316,7 +358,14 @@ export async function runConnectPreview(
       previewCacheHeadersPlugin(outDirAbs, base),
       precompressedAssetsPlugin(outDirAbs, base),
       ...(serveOverride
-        ? [serveOverridePlugin(outDirAbs, serveOverride, base)]
+        ? [
+            serveOverridePlugin(
+              outDirAbs,
+              serveOverride,
+              base,
+              await shellSwapFor(outDirAbs, serveOverride, base),
+            ),
+          ]
         : []),
     ],
   };

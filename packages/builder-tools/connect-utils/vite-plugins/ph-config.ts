@@ -67,7 +67,12 @@ export function withAppTitle(html: string, appName: string | undefined) {
   );
 }
 
-export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
+type PhConfigApi = { connect: PHConnectRuntimeConfig };
+
+/** `api.connect`: the connect config the app is served, for plugins that render ahead of it. */
+export function phConfigPlugin(
+  options: PhConfigPluginOptions,
+): Plugin<PhConfigApi> & { api: PhConfigApi } {
   const projectRoot = options.projectRoot ?? process.cwd();
   const localPackage = readProjectPackageInfo(projectRoot);
 
@@ -105,6 +110,7 @@ export function phConfigPlugin(options: PhConfigPluginOptions): Plugin {
 
   return {
     name: "vite-plugin-ph-config",
+    api: { connect: runtimeConfig.connect },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url?.endsWith("/powerhouse.config.json")) {
