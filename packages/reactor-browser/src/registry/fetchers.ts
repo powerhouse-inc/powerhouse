@@ -71,8 +71,8 @@ export async function getPackagePage(
 }
 
 /**
- * Full package info for every package exposing a given document type. Used by
- * the MissingPackageModal to offer installs without loading the whole listing.
+ * Full package info for every package exposing a given document type, to offer
+ * installs without loading the whole listing.
  */
 export async function getPackagesForDocumentType(
   registryUrl: string,

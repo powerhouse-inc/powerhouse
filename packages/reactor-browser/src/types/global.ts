@@ -127,7 +127,6 @@ export type PHGlobal = PHGlobalConfig & {
   draggingNode?: DraggingNode;
   modal?: PHModal;
   selectedTimelineRevision?: string | number | null;
-  revisionHistoryVisible?: boolean;
   selectedTimelineItem?: TimelineItem | null;
   packageDiscoveryService?: IPackageDiscoveryService;
   features?: Map<string, boolean>;

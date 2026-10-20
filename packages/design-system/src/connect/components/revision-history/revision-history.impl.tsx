@@ -17,6 +17,9 @@ type CommonProps = {
   readonly documentState?: object;
   readonly onCopyState?: () => void;
   readonly onCopyDocId?: () => void;
+  /** Controlled: the page shown, from 1; pair with `onPageChange`. */
+  readonly page?: number;
+  readonly onPageChange?: (page: number) => void;
 };
 
 /** The current, scoped props. */
@@ -84,6 +87,8 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
     onCopyState,
     onCopyDocId,
     error,
+    page,
+    onPageChange,
   } = props;
 
   useEffect(() => {
@@ -127,6 +132,8 @@ function ScopedRevisionHistory(props: RevisionHistoryScopedProps) {
     isPreviousPageAvailable,
   } = usePagination(visibleOperations, {
     itemsPerPage,
+    page: page === undefined ? undefined : page - 1,
+    onPageChange: onPageChange && ((index) => onPageChange(index + 1)),
   });
 
   function onChangeScope(nextScope: string) {
