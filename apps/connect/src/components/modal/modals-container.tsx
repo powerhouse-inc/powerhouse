@@ -1,8 +1,7 @@
-import type { PHModal } from "@powerhousedao/reactor-browser";
-import { usePHModal } from "@powerhousedao/reactor-browser";
-import type { ComponentType } from "react";
-import { lazy, Suspense } from "react";
-import { ErrorBoundary } from "../error-boundary.js";
+import type { ConnectModals } from "@powerhousedao/connect-core/router";
+import { coreModals, ModalOutlet } from "@powerhousedao/connect-core/router";
+import { lazy } from "react";
+import { genericActive } from "../generic-view.js";
 
 const AddDriveModal = lazy(() =>
   import("./modals/AddDriveModal.js").then((m) => ({
@@ -74,11 +73,6 @@ const InspectorModal = lazy(() =>
     default: m.InspectorModal,
   })),
 );
-const MissingPackageModal = lazy(() =>
-  import("./modals/MissingPackageModal.js").then((m) => ({
-    default: m.ConnectMissingPackageModal,
-  })),
-);
 const DriveAuthRequiredModal = lazy(() =>
   import("./modals/DriveAuthRequiredModal.js").then((m) => ({
     default: m.DriveAuthRequiredModal,
@@ -94,11 +88,20 @@ const LoginModal = lazy(() =>
     default: m.LoginModal,
   })),
 );
-// "settings" is a page; showPHModal navigates to it.
-const modalComponents: Partial<Record<PHModal["type"], ComponentType>> = {
+
+// Connect's own, with or without the generic plugin: analytics consent and the
+// PWA's open-file picker.
+const appModals: ConnectModals = {
+  cookiesPolicy: CookiesPolicyModal,
+  openFileDocuments: OpenFileDocumentsModal,
+};
+
+/** The generic plugin's modals: its chrome's, and core's in its style.
+ * "settings" is a page; showPHModal navigates to it. */
+export const genericModals: ConnectModals = {
+  ...appModals,
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,
-  cookiesPolicy: CookiesPolicyModal,
   createDocument: CreateDocumentModal,
   debugSettings: DebugSettingsModal,
   deleteDrive: DeleteDriveModal,
@@ -110,29 +113,15 @@ const modalComponents: Partial<Record<PHModal["type"], ComponentType>> = {
   confirmDocumentUpgrade: ConfirmDocumentUpgradeModal,
   inspector: InspectorModal,
   upgradeDrive: UpgradeDriveModal,
-  missingPackage: MissingPackageModal,
   driveAuthRequired: DriveAuthRequiredModal,
-  openFileDocuments: OpenFileDocumentsModal,
   login: LoginModal,
 };
 
-export const ModalsContainer = lazy(() => {
-  return Promise.resolve({
-    default: () => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const phModal = usePHModal();
-
-      if (!phModal?.type) return null;
-
-      const ModalComponent = modalComponents[phModal.type];
-
-      return ModalComponent ? (
-        <ErrorBoundary variant="silent" loggerContext={["Connect", "Modals"]}>
-          <Suspense fallback={null}>
-            <ModalComponent />
-          </Suspense>
-        </ErrorBoundary>
-      ) : null;
-    },
-  });
-});
+/** The open modal, in the router so a route's `staticData.modals` can replace it:
+ * the generic plugin's views, else core's. */
+export function ConnectModalOutlet() {
+  const modals = genericActive()
+    ? genericModals
+    : { ...coreModals, ...appModals };
+  return <ModalOutlet modals={modals} />;
+}

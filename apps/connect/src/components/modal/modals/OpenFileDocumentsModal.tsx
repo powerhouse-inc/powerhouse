@@ -45,7 +45,7 @@ import { useTranslation } from "react-i18next";
 // panel (OpenFileUploadList) driven from utils/open-file-uploads.ts, the same
 // UI drag-and-drop uses.
 //
-// The component only mounts while the modal is shown (ModalsContainer keys on
+// The component only mounts while the modal is shown (ModalOutlet keys on
 // the modal type), so picker state starts fresh on every open.
 
 // Parse results are cached at module level so they survive the create-drive
