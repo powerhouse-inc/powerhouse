@@ -233,6 +233,19 @@ export const sourceConfigSchema = {
         },
       },
     },
+    assistant: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "The project's agent host (hosts/assistant): a headless Mastra agent API on the project switchboard.",
+      properties: {
+        port: {
+          type: "integer",
+          description:
+            "Port the assistant host's chat-completions API listens on. Read by hosts/assistant/host.js (default 4910).",
+        },
+      },
+    },
     workflows: {
       type: "object",
       additionalProperties: false,

@@ -205,6 +205,10 @@ export type PowerhouseConfig = {
     driveUrl?: string;
     connectPort?: number;
   };
+  // The project's agent host (hosts/assistant, clint mastra-runner).
+  assistant?: {
+    port?: number;
+  };
   // Powerhouse workflows on this reactor and in Connect. PH_WORKFLOWS_ENABLED
   // wins for the reactor, connect.app.workflowsEnabled for Connect.
   workflows?: {

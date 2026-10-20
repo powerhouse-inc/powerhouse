@@ -93,6 +93,12 @@ describe("buildPowerhouseConfigTemplate", () => {
     expect(parsed.reactor).toEqual({ port: ports.switchboardPort });
   });
 
+  test("emits the assistant port the assistant host reads", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as Plain;
+    expect(parsed.assistant).toEqual({ port: 4910 });
+  });
+
   test("gives two differently named projects different ports", async () => {
     const a = JSON.parse(
       await buildPowerhouseConfigTemplate({ name: "project-a" }),

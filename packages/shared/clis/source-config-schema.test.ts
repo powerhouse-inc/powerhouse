@@ -32,6 +32,7 @@ const EXPECTED_PROPERTIES = [
   "studio",
   "packages",
   "vetra",
+  "assistant",
   "workflows",
   "packageRegistryUrl",
   "connect",
@@ -184,5 +185,20 @@ describe("source-config schema", () => {
     expect(props.vetra.properties?.connectPort.type).toBe("integer");
     expect(props.vetra.properties?.driveId.type).toBe("string");
     expect(props.vetra.properties?.driveUrl.type).toBe("string");
+  });
+
+  it("assistant recognises port and requires no field", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        required?: readonly string[];
+        additionalProperties?: boolean;
+        properties?: Record<string, { type?: string }>;
+      }
+    >;
+    expect(props.assistant.required).toBeUndefined();
+    expect(props.assistant.additionalProperties).toBe(false);
+    expect(Object.keys(props.assistant.properties ?? {})).toEqual(["port"]);
+    expect(props.assistant.properties?.port.type).toBe("integer");
   });
 });

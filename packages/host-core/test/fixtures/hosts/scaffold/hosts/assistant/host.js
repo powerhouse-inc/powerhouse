@@ -13,7 +13,7 @@ export default {
 
   runner: {
     module: "@powerhousedao/clint/mastra-runner",
-    port: 4910,
+    port: config.assistant?.port ?? 4910, // referenced — single value store
   },
 
   profile: {
