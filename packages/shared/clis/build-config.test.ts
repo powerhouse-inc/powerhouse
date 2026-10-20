@@ -13,6 +13,7 @@ import {
   buildNodeBuildConfig,
   buildPieceBuildConfig,
   findBundledSharedDeps,
+  IMAGE_EXTENSIONS,
   nodeBuildConfig,
   PIECE_ENTRY_GLOB,
 } from "./build-config.mts";
@@ -173,6 +174,22 @@ describe("zod", () => {
     const matches = (id: string) => regexps.some((r) => r.test(id));
     expect(matches("zod/v4")).toBe(true);
     expect(matches("zod-validation-error")).toBe(false);
+  });
+});
+
+describe("image imports", () => {
+  // A route or editor importing an image builds; Vite gives such an import a
+  // URL, and a data URL resolves wherever Connect loads the chunk from.
+  it.each([
+    ["browser", buildBrowserBuildConfig()],
+    ["node", buildNodeBuildConfig()],
+  ])("the %s build loads every image type as a data URL", (_, cfg) => {
+    for (const ext of [".png", ".webp", ".svg", ".jpg"]) {
+      expect(IMAGE_EXTENSIONS).toContain(ext);
+    }
+    expect(cfg.loader).toEqual(
+      Object.fromEntries(IMAGE_EXTENSIONS.map((ext) => [ext, "dataurl"])),
+    );
   });
 });
 
