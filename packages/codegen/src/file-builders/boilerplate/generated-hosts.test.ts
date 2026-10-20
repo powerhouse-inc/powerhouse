@@ -4,11 +4,12 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { createRequire } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -280,6 +281,40 @@ function tscHosts(dir: string): { status: number | null; errors: string[] } {
   return { status: run.status, errors };
 }
 
+/** Why a scaffold that should type-check did not: a host's runner type
+ * collapsing (`Omit<unknown, …>`) means a linked package's types resolved to
+ * `any`, so report where tsc looked. Only computed on failure. */
+function resolutionDiagnostics(dir: string): string {
+  const run = spawnSync(
+    process.execPath,
+    [TSC, "-p", "hosts", "--traceResolution"],
+    {
+      cwd: dir,
+      encoding: "utf8",
+      maxBuffer: 512 * 1024 * 1024,
+    },
+  );
+  const unresolved = new Set<string>();
+  const resolved = new Set<string>();
+  for (const line of `${run.stdout}${run.stderr}`.split("\n")) {
+    const miss = /Module name '([^']+)' was not resolved/.exec(line);
+    const name = miss?.[1].replace(/^node:/, "");
+    if (name && !builtinModules.includes(name.split("/")[0]))
+      unresolved.add(name);
+    const hit =
+      /Module name '((?:zod|@powerhousedao\/)[^']*)' was successfully resolved to '([^']+)'/.exec(
+        line,
+      );
+    if (hit) resolved.add(`${hit[1]} -> ${hit[2]}`);
+  }
+  return [
+    `tsc -p hosts in ${dir} (realpath ${realpathSync.native(dir)}) failed;`,
+    `unresolved: ${[...unresolved].join(", ") || "(none)"}`,
+    "resolved:",
+    ...[...resolved].sort(),
+  ].join("\n");
+}
+
 function writeFixture(dir: string, host: string, source: string): void {
   mkdirSync(join(dir, "hosts", host), { recursive: true });
   writeFileSync(join(dir, "hosts", host, "host.js"), source);
@@ -337,7 +372,11 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
     ).toMatchSnapshot("switchboard outputs.d.ts");
 
     // the scaffold as generated type-checks
-    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
+    const scaffoldCheck = tscHosts(dir);
+    expect(
+      scaffoldCheck,
+      scaffoldCheck.status === 0 ? undefined : resolutionDiagnostics(dir),
+    ).toEqual({ status: 0, errors: [] });
     expect(
       readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
     ).toContain("PowerhouseConfig");
