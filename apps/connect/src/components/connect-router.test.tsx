@@ -116,7 +116,8 @@ import type * as RouteTreeModule from "@powerhousedao/connect/route-tree";
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { setRouteComponents } from "../../test/route-components.js";
 import { reportRouteError, setSentryModule } from "../services/sentry.js";
-import { DrivePending, RouteError, RouteProgressBar } from "./route-views.js";
+import { DrivePending, RouteError } from "../generic/layout/route-views.js";
+import { RouteProgressBar } from "./route-views.js";
 
 let module: InProcessReactorClientModule;
 let store: PHStore;

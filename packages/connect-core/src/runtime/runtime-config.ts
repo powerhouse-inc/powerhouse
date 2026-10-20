@@ -14,7 +14,8 @@ const loader = () =>
   ));
 
 export type LoadRuntimeConfigOptions = {
-  /** The host's plugin modules; loaded only when the config declares a composition. */
+  /** The host's plugin modules: the composition's transform the config, and
+   * the active ones' UI loads (every one's without a composition). */
   plugins?: () => Promise<Record<string, ConnectPluginDefinition>>;
 };
 
@@ -22,6 +23,12 @@ export async function loadRuntimeConfig(
   options: LoadRuntimeConfigOptions = {},
 ): Promise<RuntimePowerhouseConfig> {
   const config = (await loader().read()) as RuntimePowerhouseConfig;
+  const pluginHost = options.plugins
+    ? import("../plugins/plugin-host.js").then((host) => {
+        host.registerConnectPlugins(options.plugins!);
+        return host;
+      })
+    : undefined;
   // R3: a served composition (projected from host.js runner.plugins by the
   // uniform-runners connect runner) runs the plugin pipeline over the config
   // BEFORE the cache warms — every downstream consumer sees the transformed
@@ -36,12 +43,16 @@ export async function loadRuntimeConfig(
       readConfigFlag: () => true,
     });
     if (enabled) {
-      const { applyComposition, registerConnectPlugins } =
-        await import("../plugins/plugin-host.js");
-      if (options.plugins) registerConnectPlugins(options.plugins);
+      const { applyComposition } =
+        (await pluginHost) ?? (await import("../plugins/plugin-host.js"));
       config.connect = await applyComposition(config.connect);
       loader().prime(config);
     }
+  }
+  if (pluginHost) {
+    await pluginHost;
+    const { loadConnectPluginUi } = await import("../plugins/plugin-ui.js");
+    await loadConnectPluginUi(config.connect.composition);
   }
   return config;
 }

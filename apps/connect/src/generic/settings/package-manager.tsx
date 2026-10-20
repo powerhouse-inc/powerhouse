@@ -1,4 +1,4 @@
-import { useRegistryPackages } from "../../hooks/useRegistryPackages.js";
+import { useRegistryPackages } from "@powerhousedao/connect/hooks";
 import { toast } from "@powerhousedao/connect/services";
 import { PackageManager } from "@powerhousedao/design-system/connect";
 import { useVetraPackageManager } from "@powerhousedao/reactor-browser";

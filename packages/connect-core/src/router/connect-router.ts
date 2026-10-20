@@ -14,6 +14,8 @@ import type {
 } from "@tanstack/react-router";
 import { createRouter } from "@tanstack/react-router";
 import type { ErrorInfo, PropsWithChildren, ReactElement } from "react";
+import type { ConnectPluginUiSet } from "../plugins/plugin-ui.js";
+import { applyConnectPluginUi } from "../plugins/plugin-ui.js";
 import { markRouterNavigations } from "./perf-marks.js";
 import { bindConnectScroll, connectScrollRestoration } from "./scroll.js";
 import type { DriveRouteData } from "./drive-route-loader.js";
@@ -37,8 +39,10 @@ export type ConnectRouterOptions = {
   InnerWrap?: (props: PropsWithChildren) => ReactElement;
   /** Shown while a route's loader or chunks are pending, after the router's `pendingMs`. */
   pendingComponent?: RouteComponent;
-  /** Any route's loader or render error; core's error view by default. */
+  /** Any route's loader or render error; the plugins', else core's error view. */
   errorComponent?: ErrorRouteComponent;
+  /** The active plugins' UI, set on the routes that show core's views. */
+  pluginUi?: ConnectPluginUiSet;
   /** Loaders' notFound(), e.g. a missing drive's; core's page by default. */
   notFoundComponent?: NotFoundRouteComponent;
   /** The tree to route with: `@powerhousedao/connect/route-tree`, core's or a project's. */
@@ -80,6 +84,7 @@ export function createConnectRouter(
 ): ConnectRouterBundle {
   const { routeTree, homeRoute, driveRoute, nodeRoute, settingsRoute } =
     connectRoutes(options.routeTree);
+  if (options.pluginUi) applyConnectPluginUi(routeTree, options.pluginUi);
   if (options.routes) {
     addConnectRoutes(
       typeof options.routes === "function"
@@ -104,7 +109,8 @@ export function createConnectRouter(
     scrollToTopSelectors: [`#${CONTENT_VIEW_ID}`],
     InnerWrap: options.InnerWrap,
     defaultPendingComponent: options.pendingComponent,
-    defaultErrorComponent: options.errorComponent ?? CoreError,
+    defaultErrorComponent:
+      options.errorComponent ?? options.pluginUi?.errorComponent ?? CoreError,
     // Not per route: a route's notFoundComponent mounts a boundary that
     // re-renders on every navigation.
     defaultNotFoundComponent: options.notFoundComponent ?? CoreNotFound,

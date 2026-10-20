@@ -39,14 +39,19 @@ import {
   createConnectRouter,
   useForgetSettingsOpenedFrom,
 } from "@powerhousedao/connect-core/router";
+import {
+  applyConnectPluginUi,
+  mergeConnectPluginUi,
+} from "@powerhousedao/connect-core/plugins";
 import type { ComponentType } from "react";
+import type * as GenericUiModule from "../ui.js";
 import { SettingsPage } from "./settings-page.js";
 
 let store: PHStore;
 let unbind: (() => void) | undefined;
 let routeTree: typeof RouteTreeModule.routeTree;
 
-// Each mount picks the views of Connect's tab routes; a tab without one is hidden.
+// Each mount picks the views of the generic plugin's tab routes; a tab without one is hidden.
 let tabViews: Record<string, ComponentType> = {};
 const CONNECT_TABS = [
   "ai-assistant",
@@ -56,7 +61,9 @@ const CONNECT_TABS = [
   "about",
 ];
 
-function stubConnectTabs() {
+function stubConnectTabs(genericUi: typeof GenericUiModule.default) {
+  // The generic plugin's tabs, with core's hidden, as the app applies them.
+  applyConnectPluginUi(routeTree, mergeConnectPluginUi([genericUi]));
   const { settingsRoute } = connectRoutes(routeTree);
   for (const route of settingsRoute.children as unknown as AnyRoute[]) {
     const path = ((route.options as { path?: string }).path ?? "").replace(
@@ -64,7 +71,7 @@ function stubConnectTabs() {
       "",
     );
     if (!CONNECT_TABS.includes(path)) continue;
-    const options = route.options as {
+    const options = route.options as unknown as {
       component?: unknown;
       staticData: { settings: { enabled?: () => boolean } };
     };
@@ -90,7 +97,7 @@ beforeAll(async () => {
   // Connect's route views read the config, and a build-time define, as they evaluate.
   vi.stubGlobal("PH_CONNECT_SENTRY_RELEASE", "test");
   ({ routeTree } = await import("@powerhousedao/connect/route-tree"));
-  stubConnectTabs();
+  stubConnectTabs((await import("../ui.js")).default);
   store = createPHStore();
   bindPHStoreToWindow(store);
   addPHEventHandlers();

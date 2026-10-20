@@ -1,10 +1,6 @@
-import { AppContainer } from "../components/app-container.js";
-import { DocumentEditorContainer } from "../components/document-editor-container.js";
-import { DriveIcon } from "../components/drive-icon.js";
-import {
-  defaultPHAppConfig,
-  defaultPHDocumentEditorConfig,
-} from "@powerhousedao/connect/config";
+import { AppContainer } from "../editors/app-container.js";
+import { DocumentEditorContainer } from "../editors/document-editor-container.js";
+import { DriveIcon } from "@powerhousedao/connect/components/shared";
 import {
   DriveAuthGate,
   HomeScreen,
@@ -15,8 +11,6 @@ import {
   logout,
   makeDriveSlug,
   preloadDrive,
-  setPHAppConfig,
-  setPHDocumentEditorConfig,
   setSelectedDrive,
   useAppModuleById,
   useIsAddDriveEnabled,
@@ -25,35 +19,13 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
 import {
   RouteSelection,
   useDriveRouteData,
 } from "@powerhousedao/connect-core/router";
 import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
-import {
-  useDriveAuthGate,
-  useVisibleDrives,
-} from "../components/use-drive-auth-gate.js";
+import { useDriveAuthGate, useVisibleDrives } from "./use-drive-auth-gate.js";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
-
-/** Puts back the default editor and app configs once nothing is open. */
-export function useResetEditorConfigs() {
-  const { drive: selectedDrive, documentId: selectedDocumentId } =
-    useDriveRouteData();
-
-  useEffect(() => {
-    if (!selectedDocumentId) {
-      setPHDocumentEditorConfig(defaultPHDocumentEditorConfig);
-    }
-  }, [selectedDocumentId]);
-
-  useEffect(() => {
-    if (!selectedDrive) {
-      setPHAppConfig(defaultPHAppConfig);
-    }
-  }, [selectedDrive]);
-}
 
 /** Connect's home: the drives, and adding one. */
 export function Home() {

@@ -8,7 +8,7 @@ import { useDriveRouteData } from "@powerhousedao/connect-core/router";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { EditorLoader } from "./editor-loader.js";
-import { ErrorBoundary } from "./error-boundary.js";
+import { ErrorBoundary } from "@powerhousedao/connect/components/shared";
 
 /** The route's drive's app around `children`, the open document's view;
  * drive apps show their own view while `children` is null. */

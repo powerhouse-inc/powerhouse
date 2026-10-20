@@ -1,5 +1,6 @@
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import { createDriveArrivals } from "@powerhousedao/reactor-browser";
+import { getConnectPluginUi } from "../plugins/plugin-ui.js";
 import { getConnectRegistry } from "../registry.js";
 import type {
   ConnectRouterBundle,
@@ -31,6 +32,7 @@ export function getConnectAppRouter(
   const bundle = createConnectRouter({
     store,
     arrivals: createDriveArrivals(store),
+    pluginUi: getConnectPluginUi(),
     ...rest,
     routes: (tree) => [
       ...(routes ? resolveConnectRoutes(routes, tree.routeTree) : []),

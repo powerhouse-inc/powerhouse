@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { ConnectModalOutlet } from "../components/modal/modals-container.js";
 import { LoadingShell } from "../components/prerendered-shell.js";
 import { Root } from "../components/root.js";
-import { useResetEditorConfigs } from "../pages/content.js";
+import { useResetEditorConfigs } from "../hooks/use-reset-editor-configs.js";
 
 const EmptyView = () => null;
 

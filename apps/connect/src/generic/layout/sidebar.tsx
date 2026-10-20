@@ -26,9 +26,9 @@ import type { ReactNode } from "react";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 import type { NavRouteEntry } from "@powerhousedao/connect-core/router";
 import { useNavRoutes } from "@powerhousedao/connect-core/router";
-import { DriveIcon } from "./drive-icon.js";
-import { ErrorBoundary } from "./error-boundary.js";
-import { useVisibleDrives } from "./use-drive-auth-gate.js";
+import { DriveIcon } from "@powerhousedao/connect/components/shared";
+import { ErrorBoundary } from "@powerhousedao/connect/components/shared";
+import { useVisibleDrives } from "../pages/use-drive-auth-gate.js";
 
 function DriveSidebarItem(props: {
   drive: DocumentDriveDocument;

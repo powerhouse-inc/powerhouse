@@ -1,15 +1,6 @@
-// Building blocks for a project's own `_app` layout (hosts/connect/routes/_app.tsx).
+// Core's building blocks for a project's own `_app` layout (hosts/connect/routes/_app.tsx).
+// Connect's sidebar and AppLayout are the generic plugin's: `@powerhousedao/connect/generic`.
 export { SidebarItem } from "@powerhousedao/design-system/connect";
-export { AppLayout } from "../components/app-layout.js";
-export type { AppLayoutProps } from "../components/app-layout.js";
-// For a project's override of the drive routes.
-export { OpenDocument } from "../components/open-document.js";
-export {
-  Sidebar as ConnectSidebar,
-  SidebarDriveItems,
-  SidebarNavItems,
-} from "../components/sidebar.js";
-export type { SidebarProps as ConnectSidebarProps } from "../components/sidebar.js";
 export {
   ContentOutlet,
   ModalDialog,

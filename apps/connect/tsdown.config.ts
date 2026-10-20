@@ -11,6 +11,7 @@ export default defineConfig({
     main: "main.tsx",
     router: "src/router/index.ts",
     layout: "src/layout/index.ts",
+    generic: "src/generic/index.ts",
     "route-tree": "src/route-tree.ts",
     "route-views": "src/route-views/index.ts",
     prerender: "src/prerender/shell.tsx",

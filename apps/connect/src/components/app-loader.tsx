@@ -7,7 +7,7 @@ import AppSkeleton from "./app-skeleton.js";
 import { DetailedFallback, ErrorBoundary } from "./error-boundary.js";
 import { App } from "./app.js";
 import { ConnectionBanner } from "./connection-banner.js";
-import { CookieConsent } from "./cookie-consent.js";
+import { PluginRoots } from "./plugin-roots.js";
 import { MigrationBanner } from "./migration-banner.js";
 import { LoadingShell } from "./prerendered-shell.js";
 import { ServiceWorkerUpdatePrompt } from "./service-worker-update-prompt.js";
@@ -48,9 +48,9 @@ export const AppLoader = (props: {
             {/* eslint-disable-next-line react-hooks-extra/static-components */}
             <Load {...props}>
               <App />
+              <PluginRoots />
             </Load>
           </Suspense>
-          <CookieConsent />
           <MigrationBanner />
           <ServiceWorkerUpdatePrompt />
           <ConnectionBanner />

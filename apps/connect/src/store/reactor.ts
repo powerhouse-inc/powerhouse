@@ -4,9 +4,8 @@ import {
   phGlobalConfig,
 } from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
-import { isPluginActive } from "@powerhousedao/connect-core/plugins";
+import { getConnectPluginUi } from "@powerhousedao/connect-core/plugins";
 import { holdConnectRoutes } from "@powerhousedao/connect-core/router";
-import { GENERIC_PLUGIN } from "../plugins/ids.js";
 import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
@@ -298,7 +297,7 @@ export async function createReactor(
     runtimeConfig.localPackage?.version,
     phGlobalConfig.studioMode,
     connectConfig.workflowsEnabled,
-    isPluginActive(GENERIC_PLUGIN),
+    getConnectPluginUi().commonEditors,
   );
   // Register provider:"local" packages the vite plugin bundled in. The
   // specifier must stay a static string so the bundler resolves it through

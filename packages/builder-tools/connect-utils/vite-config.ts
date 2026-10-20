@@ -549,6 +549,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         appName: servedConnect.branding?.appName,
         // With routes, the shell is the project's layout, rendered from its tree.
         routeAliases: routesDir ? routes.aliases : undefined,
+        routesDir: routesDir || undefined,
       }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).

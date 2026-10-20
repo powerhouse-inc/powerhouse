@@ -8,6 +8,9 @@ import createVetraStudioPlugin from "./vetra-studio.js";
 
 export { GENERIC_PLUGIN };
 
+// Sentry and OpenPanel start only once the viewer accepts analytics cookies.
+const ANALYTICS_CONSENT = { consent: true };
+
 // Each built-in zeroes the config slice it owns when a composition leaves it out.
 const driveSectionOff = { enabled: false, allowAdd: false, allowDelete: false };
 
@@ -15,6 +18,8 @@ const driveSectionOff = { enabled: false, allowAdd: false, allowDelete: false };
 export const connectPlugins: Record<string, ConnectPluginDefinition> = {
   [GENERIC_PLUGIN]: {
     create: createGenericPlugin,
+    ui: () => import("../generic/ui.js").then((m) => m.default),
+    shell: "generic",
     // Branding is not zeroed: it is Connect-level and outlives the plugin.
     whenAbsent: (config) => ({
       ...config,
@@ -27,6 +32,7 @@ export const connectPlugins: Record<string, ConnectPluginDefinition> = {
   },
   "@powerhousedao/connect/plugins/sentry": {
     create: createSentryPlugin,
+    ui: () => Promise.resolve(ANALYTICS_CONSENT),
     whenAbsent: (config) => ({
       ...config,
       sentry: { ...config.sentry, dsn: null } as never,
@@ -34,6 +40,7 @@ export const connectPlugins: Record<string, ConnectPluginDefinition> = {
   },
   "@powerhousedao/connect/plugins/openpanel": {
     create: createOpenPanelPlugin,
+    ui: () => Promise.resolve(ANALYTICS_CONSENT),
     whenAbsent: (config) => ({
       ...config,
       openPanel: {

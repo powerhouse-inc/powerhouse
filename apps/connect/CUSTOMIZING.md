@@ -136,13 +136,13 @@ export const Route = createFileRoute("/_app/settings/inventory")({
 
 - `icon` and `destructive` are optional.
 - The page title becomes `Settings · Inventory · <app>`. The tab needs no `head`.
-- Connect's own tabs (Package Manager, Default Editors, Danger Zone, About, AI Assistant) are listed while the generic plugin is active. Core's tabs (Appearance, Packages) are listed without it. A project file at a tab's path, e.g. `_app/settings/about.tsx`, replaces that tab; see [Override a Connect route](#override-a-connect-route).
+- The generic plugin adds its tabs (Package Manager, Default Editors, Danger Zone, About, AI Assistant) as code routes and hides core's (Appearance, Packages); without it, core's are listed. A project file at a tab's path, e.g. `_app/settings/about.tsx`, replaces that tab; it spreads the tab's options from `genericSettingsTabs` (`@powerhousedao/connect/generic`), e.g. `...genericSettingsTabs.about`, to keep its label, icon and order.
 
 ## Replace the sidebar
 
 A project's `_app.tsx` replaces Connect's `_app` layout. Connect's routes and the project's `_app/` routes then render inside it.
 
-To keep Connect's layout and change only the sidebar, render `AppLayout` with your own `sidebar`. `ConnectSidebar` is Connect's sidebar; `extraItems` go after the drives and nav links:
+To keep Connect's layout and change only the sidebar, render `AppLayout` with your own `sidebar`. `ConnectSidebar` is Connect's sidebar; `extraItems` go after the drives and nav links. Both are the generic plugin's UI, exported from `@powerhousedao/connect/generic` with core's parts:
 
 ```tsx
 // hosts/connect/routes/_app.tsx
@@ -151,7 +151,7 @@ import {
   ConnectSidebar,
   SidebarItem,
   useSidebarMode,
-} from "@powerhousedao/connect/layout";
+} from "@powerhousedao/connect/generic";
 import { isPlainClick } from "@powerhousedao/reactor-browser";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 
@@ -193,18 +193,18 @@ A plain `href` makes the browser load the whole app again. Use it for external l
 
 ## Replace the layout
 
-`@powerhousedao/connect/layout` exports the parts to build a different layout:
+`@powerhousedao/connect/layout` exports core's parts to build a different layout, and `@powerhousedao/connect/generic` the generic plugin's as well. A layout that imports only from `/layout` doesn't load the generic UI:
 
-| Export | What it is |
-| --- | --- |
-| `AppLayout` | Connect's layout; `sidebar` replaces the sidebar. |
-| `ConnectSidebar` | Connect's sidebar; `extraItems`, `collapsed`. |
-| `SidebarDriveItems` | The drive items and the add-drive item. |
-| `SidebarNavItems` | The `staticData.nav` items. |
-| `SidebarItem` | One sidebar item. |
-| `useNavRoutes()` | The `staticData.nav` routes, sorted: `{ label, icon, order, routeId, to }`. |
-| `useSidebarMode()` | The current route's `staticData.sidebar`. |
-| `ContentOutlet` | The matched route, in the container whose scroll Connect resets on new pages and restores on back and forward. |
+| Export | From | What it is |
+| --- | --- | --- |
+| `AppLayout` | `/generic` | Connect's layout; `sidebar` replaces the sidebar. |
+| `ConnectSidebar` | `/generic` | Connect's sidebar; `extraItems`, `collapsed`. |
+| `SidebarDriveItems` | `/generic` | The drive items and the add-drive item. |
+| `SidebarNavItems` | `/generic` | The `staticData.nav` items. |
+| `SidebarItem` | `/layout` | One sidebar item. |
+| `useNavRoutes()` | `/layout` | The `staticData.nav` routes, sorted: `{ label, icon, order, routeId, to }`. |
+| `useSidebarMode()` | `/layout` | The current route's `staticData.sidebar`. |
+| `ContentOutlet` | `/layout` | The matched route, in the container whose scroll Connect resets on new pages and restores on back and forward. |
 
 A layout renders a `<ContentOutlet />` for the matched route; a plain `<Outlet />` works too, without the scroll handling. This one replaces the sidebar with a top bar:
 
@@ -319,7 +319,7 @@ const { drive, folder, documentId } = useDriveRouteData();
 
 - `useDriveRouteIds()` gives the ids alone, from the matched route's loader.
 - Drive apps and editors keep using `useSelectedDrive`, `useSelectedNode` and the generated `useSelected<Model>Document()`. The drive layout renders them inside `RouteSelection`, so those hooks read the route they are shown in, not the app-wide selection.
-- `OpenDocument`, for a project's drive route override, scopes its editor the same way. A project route that renders a drive app or an editor itself wraps it in `RouteSelection` (from `@powerhousedao/connect/layout`).
+- `OpenDocument` (from `@powerhousedao/connect/generic`), for a project's drive route override, scopes its editor the same way. A project route that renders a drive app or an editor itself wraps it in `RouteSelection` (from `@powerhousedao/connect/layout`).
 - Connect still writes the route's ids to the app-wide selection (`store.selectedDriveId`, `store.selectedNodeId`) for code outside a route, such as a sidebar widget.
 
 ## Read and write search params
@@ -695,11 +695,36 @@ Two `@powerhousedao/reactor-browser` types lost a member, which a project that u
 - `PHModal` has no `missingPackage` modal.
 - `PHGlobal` has no `revisionHistoryVisible`. `useRevisionHistoryVisible`, `showRevisionHistory` and `hideRevisionHistory` work as before.
 
+The generic plugin's UI moved behind the plugin, which a project's routes follow by hand:
+
+- `AppLayout`, `ConnectSidebar`, `SidebarDriveItems`, `SidebarNavItems` and `OpenDocument` import from `@powerhousedao/connect/generic`, not `/layout`.
+- `@powerhousedao/connect/route-views` exports only `ConnectRoot`; `Home`, `DriveLayout`, `NodeView`, `DrivePending` and `SettingsPage` import from `/generic`.
+- `generic()`, `genericActive`, `IfPlugin` and `useIsPluginActive` are gone; a plugin's `ui()` provides its views.
+- Connect's About, AI Assistant, Danger Zone, Default Editors and Package Manager tabs are the generic plugin's code routes, so `@powerhousedao/connect/routes/_app/settings/<tab>` no longer exists for them. An override imports the tab's options as `genericSettingsTabs["<tab>"]` from `@powerhousedao/connect/generic` instead; links to these tabs are untyped, so use `useLinkProps({ settings: "<tab>" })`.
+
 ## Related: host plugins
 
 `hosts/connect/host.js` also lists `runner.plugins`, read by `ph run connect`. They transform the served runtime config through the plugin host in `@powerhousedao/connect-core` (`packages/connect-core/src/plugins/plugin-host.ts`), which runs the built-in plugins Connect registers (`apps/connect/src/plugins/`): `@powerhousedao/connect/plugins/generic` (`allowAddDrive`, drive sections), `.../sentry`, `.../openpanel` and `.../assistant`. A listed plugin switches its slice of the config on, and an unlisted one switches it off. Other modules are skipped with a warning.
 
-The generic plugin is also Connect's chrome: its sidebar, home screen and settings page. A composition that leaves it out shows core's views instead: a header, an index of the drives, a directory listing for a drive without a drive app, and a JSON view for a document without an editor. Without a declared composition, Connect is classic.
+The generic plugin is also Connect's chrome: its sidebar, home screen and settings page. A composition that leaves it out shows core's views instead: a header, an index of the drives, a directory listing for a drive without a drive app, and a JSON view for a document without an editor. Without a declared composition, Connect is classic: every built-in plugin is active.
+
+### A plugin's UI
+
+A plugin definition's `ui()` loads what the plugin shows, only while the plugin is active (`ConnectPluginUi` in `@powerhousedao/connect-core/plugins`):
+
+| Field | What it does |
+| --- | --- |
+| `routes` | Route options by route id, e.g. `"/_app/": { component: Home }`. They apply only while the route shows core's view, so a project's own route file wins. `staticData` merges over the route's. |
+| `addRoutes` | Code routes, e.g. the generic plugin's settings tabs; a route at a path the tree already serves is skipped. |
+| `modals` | Modal views by type, over core's. |
+| `Root` | Rendered once beside the app. |
+| `errorComponent` | Any route's loader or render error. |
+| `commonEditors` | Keeps common's drive explorer and editors, which core leaves out. |
+| `consent` | Needs the viewer's consent to analytics cookies; Connect shows one banner when any active plugin needs it (Sentry and OpenPanel do). |
+
+- `loadRuntimeConfig` loads the active plugins' UI before the router exists; the router applies it once. Later plugins in the composition win.
+- `shell` on a definition names the prerendered loading screen that shows its UI; a composition picks the shell of its first plugin that has one, else core's.
+- The generic plugin's code lives in `apps/connect/src/generic/`, reached only through its `ui()`, so a composition without it doesn't download it. A project's route builds on it through `@powerhousedao/connect/generic` (or `/layout`).
 
 ## Override a Connect route
 
@@ -837,10 +862,12 @@ pnpm --filter @powerhousedao/connect-core ui:shots --list
 
 | File | What it holds |
 | --- | --- |
-| `apps/connect/src/routes/` | Connect's routes, which a project's files override: core's `options` with Connect's views. |
+| `apps/connect/src/routes/` | Connect's routes, which a project's files override: core's `options` and core's views, which plugins' UI replaces. |
 | `packages/connect-core/src/routes/` | Core's routes: each file's `options` and core's view. |
-| `apps/connect/src/components/generic-view.tsx` | `generic()`: Connect's view with the generic plugin, core's without. |
-| `apps/connect/src/layout/index.ts` | The `@powerhousedao/connect/layout` exports. |
+| `packages/connect-core/src/plugins/plugin-ui.ts` | Loading, merging and applying plugins' UI. |
+| `apps/connect/src/generic/ui.tsx` | The generic plugin's UI. |
+| `apps/connect/src/layout/index.ts` | The `@powerhousedao/connect/layout` exports: core's layout parts. |
+| `apps/connect/src/generic/index.ts` | The `@powerhousedao/connect/generic` exports: the generic plugin's parts, with core's. |
 | `packages/connect-core/src/router/sidebar.ts` | `staticData.nav` and `staticData.sidebar`. |
 | `packages/connect-core/src/router/settings.ts` | `staticData.settings`. |
 | `packages/connect-core/src/router/drive-route-loader.ts` | `ConnectRouterContext`. |

@@ -3,6 +3,7 @@
 import type { ConfigLoader } from "@powerhousedao/shared/connect/config-loader";
 import type { PHStore } from "@powerhousedao/reactor-browser";
 import type { AnyRoute } from "@tanstack/react-router";
+import type { ConnectPluginUiSet } from "./plugins/plugin-ui.js";
 import type { ConnectPluginDefinition } from "./plugins/types.js";
 import type { ConnectRouterBundle } from "./router/connect-router.js";
 import type { ConnectRoutes } from "./router/route-tree.js";
@@ -35,6 +36,8 @@ export type ConnectRegistry = {
   /** Route sources still loading, e.g. packages; unknown paths wait for them. */
   routeHolds?: { count: number; settled: Set<() => void> };
   app?: ConnectAppRouterBinding;
+  /** The active plugins' UI, loaded with the runtime config. */
+  ui?: ConnectPluginUiSet;
   runtimeConfig?: ConfigLoader;
 };
 

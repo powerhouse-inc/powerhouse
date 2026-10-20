@@ -20,7 +20,7 @@ import {
   getPHStore,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
-import { getCreateDriveAppOptions } from "../../../utils/create-drive-app-options.js";
+import { getCreateDriveAppOptions } from "../pages/create-drive-app-options.js";
 
 // Max wait for a remote drive's initial sync before skipping navigation.
 // Safe to be generous: navigation only fires if the user is still on home.

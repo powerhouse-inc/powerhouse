@@ -7,7 +7,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useOpenRenownLogin } from "../../../hooks/use-renown-login.js";
+import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 
 // Non-blocking overlay when a protected drive can't be added while signed out
 // (pointer-events-none backdrop keeps the cookie banner clickable). Opens login.

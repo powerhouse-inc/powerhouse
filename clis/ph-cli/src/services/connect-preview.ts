@@ -192,11 +192,14 @@ export async function shellSwapFor(
     APP_SHELLS_FILE,
     appShellVariant,
     appShellVariantOf,
+    readShellPluginsIn,
     swapAppShell,
     withShellAppName,
   } = await import("@powerhousedao/builder-tools");
   const file = path.join(outDir, APP_SHELLS_FILE);
-  const variant = composition && appShellVariant(composition);
+  // The manifest the build copied from the Connect it used.
+  const variant =
+    composition && appShellVariant(composition, readShellPluginsIn(outDir));
   const shell =
     variant && existsSync(file)
       ? (JSON.parse(readFileSync(file, "utf8")) as AppShells)[variant]

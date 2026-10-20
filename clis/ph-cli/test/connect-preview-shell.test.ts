@@ -1,9 +1,16 @@
 import {
   APP_SHELLS_FILE,
+  SHELL_PLUGINS_FILE,
   appShellVariantOf,
   injectAppShell,
 } from "@powerhousedao/builder-tools";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -13,7 +20,8 @@ import { runConnectPreview } from "../src/services/connect-preview.js";
 import type { ConnectPreviewArgs } from "../src/types.js";
 
 const PROJECT = resolve(__dirname, "../../../test/test-consumer-project");
-const GENERIC = "@powerhousedao/connect/plugins/generic";
+// The plugin the dist's manifest maps to the generic shell.
+const SHELL_PLUGIN = "@acme/connect-shell/plugin";
 
 const name = (text: string) =>
   `<!--ph-shell:app-name-->${text}<!--/ph-shell:app-name-->`;
@@ -49,6 +57,10 @@ beforeAll(() => {
   const page = `<!doctype html><html><head></head><body><div id="root"></div></body></html>`;
   writeFileSync(join(dist, "index.html"), injectAppShell(page, shells.generic));
   writeFileSync(join(dist, APP_SHELLS_FILE), JSON.stringify(shells));
+  writeFileSync(
+    join(dist, SHELL_PLUGINS_FILE),
+    JSON.stringify({ [SHELL_PLUGIN]: "generic" }),
+  );
   writeFileSync(join(dist, "powerhouse.config.json"), "{}");
 });
 afterAll(() => rmSync(dist, { recursive: true, force: true }));
@@ -87,15 +99,42 @@ describe("ph connect preview: the shell follows the served composition", () => {
     expect(appShellVariantOf(route)).toBe("core");
   }, 60_000);
 
-  it("keeps the generic shell with the generic plugin, or with no composition", async () => {
+  it("keeps the generic shell with its plugin, or with no composition", async () => {
     const withGeneric = await servedPage({
-      connect: { composition: [{ module: GENERIC }] },
+      connect: { composition: [{ module: SHELL_PLUGIN }] },
     });
     expect(appShellVariantOf(withGeneric)).toBe("generic");
     const classic = await servedPage({
       connect: { drives: { defaultDrives: [] } } as never,
     });
     expect(appShellVariantOf(classic)).toBe("generic");
+  }, 60_000);
+
+  it("picks the shell of the first composition plugin that has one", async () => {
+    const html = await servedPage({
+      connect: {
+        composition: [{ module: "./mine.js" }, { module: SHELL_PLUGIN }],
+      },
+    });
+    expect(appShellVariantOf(html)).toBe("generic");
+  }, 60_000);
+
+  it("serves core's shell for a declared composition when the dist has no manifest", async () => {
+    const file = join(dist, SHELL_PLUGINS_FILE);
+    const aside = `${file}.off`;
+    renameSync(file, aside);
+    try {
+      const declared = await servedPage({
+        connect: { composition: [{ module: SHELL_PLUGIN }] },
+      });
+      expect(appShellVariantOf(declared)).toBe("core");
+      const classic = await servedPage({
+        connect: { drives: { defaultDrives: [] } } as never,
+      });
+      expect(appShellVariantOf(classic)).toBe("generic");
+    } finally {
+      renameSync(aside, file);
+    }
   }, 60_000);
 
   it("titles core's shell with the served app name: the baked one, else the override's", async () => {
