@@ -714,11 +714,16 @@ describe("watch", () => {
       const source = join(fixture.root, "src", "invoice.ts");
       const originalWatch = fs.watch;
       let emitSourceChange: (() => void) | undefined;
+      // Only the watcher's own call: on Linux, a recursive fs.watch calls
+      // fs.watch again for every folder, now and as folders appear.
+      let intercepted = false;
       const watchSpy = vi
         .spyOn(fs, "watch")
         .mockImplementation((...args: Parameters<typeof fs.watch>) => {
           const listener = args.at(-1);
-          if (typeof listener !== "function") return originalWatch(...args);
+          if (intercepted || typeof listener !== "function")
+            return originalWatch(...args);
+          intercepted = true;
           emitSourceChange = () => listener("change", "src/invoice.ts");
           return originalWatch(
             fixture.root,
@@ -812,11 +817,13 @@ describe("watch", () => {
     let stopped = false;
     const originalWatch = fs.watch;
     let emitUnknownChange: (() => void) | undefined;
+    // Only the watcher's own call: on Linux, a recursive fs.watch calls
+    // fs.watch again for every folder, now and as folders appear.
     const watchSpy = vi
       .spyOn(fs, "watch")
       .mockImplementation((...args: Parameters<typeof fs.watch>) => {
         const listener = args.at(-1);
-        if (typeof listener === "function") {
+        if (emitUnknownChange === undefined && typeof listener === "function") {
           emitUnknownChange = () => listener("change", null);
         }
         return originalWatch(...args);
