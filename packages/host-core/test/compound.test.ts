@@ -82,6 +82,7 @@ export const hostSchema = { safeParse: (host) => ({ success: true, data: host })
 export const outputsSchema = z.strictObject({
   origin: z.url(),
   tier: z.string().default("dev"),
+  mcp: z.url().optional(),
   drives: z.record(z.string(), z.strictObject({ id: z.string(), url: z.url() })).optional(),
 });
 export async function dev(host, ctx) {
@@ -302,6 +303,28 @@ describe("runCompound", () => {
     expect(
       readRunRecord(dir, "app")?.members?.["app-switchboard"]?.outputs,
     ).toMatchObject({ tier: "dev" });
+    await result.shutdown();
+  });
+
+  it("omits a consumer's property whose producer leaves an optional output out", async () => {
+    const { dir, sink } = makeProject({
+      connectPlugins: [
+        {
+          module: WF,
+          config: {
+            drive: workflowsUrl,
+            mcp: { $output: { host: "switchboard", path: ["mcp"] } },
+          },
+        },
+      ],
+    });
+    const result = await run(dir);
+    const connect = calls(sink).find(
+      (c) => c.event === "start" && c.name === "lab-connect",
+    );
+    expect(connect?.plugins).toEqual([
+      { module: WF, config: { drive: "http://localhost:7064/d/workflows" } },
+    ]);
     await result.shutdown();
   });
 

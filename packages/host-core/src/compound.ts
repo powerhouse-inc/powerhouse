@@ -230,7 +230,12 @@ export async function runCompound(
 
   const started: StartedMember[] = [];
   const liveOutputs = new Map<string, Record<string, unknown>>();
-  const outputs = compoundOutputSource(members, liveOutputs, host.name);
+  const outputs = compoundOutputSource(
+    members,
+    liveOutputs,
+    host.name,
+    new Map(prepared.map((m) => [m.key, m.runner.outputsSchema])),
+  );
   const resolveEnv = processResolveEnv(projectRoot, ctx.env);
 
   // Members start in plan order (producers first), so the reverse is

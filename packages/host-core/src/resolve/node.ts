@@ -100,10 +100,20 @@ export function runRecordOutputSource(
     lookup(ref) {
       const notRunning = `${consumer} needs outputs from host "${ref.host}", which is not running. Start it first: ph run ${ref.host} (or run a compound that includes it).`;
       const info = producers.get(ref.host);
+      // The producer's outputsSchema: an absent optional field omits the
+      // consuming property instead of failing.
+      const schema =
+        info && !("error" in info) ? info.runner.outputsSchema : undefined;
+      const withSchema =
+        schema !== undefined && schema !== null ? { schema } : {};
       if (ref.member === undefined && info && !("error" in info)) {
         const probe = probeRun(projectRoot, info.name, projectName);
         if (probe.status === "live" && probe.record.outputs) {
-          return { status: "available", outputs: probe.record.outputs };
+          return {
+            status: "available",
+            outputs: probe.record.outputs,
+            ...withSchema,
+          };
         }
       }
       const members = listRunRecords(projectRoot)
@@ -123,7 +133,11 @@ export function runRecordOutputSource(
             .map(([key, member]) => ({ compound: record.host, key, member })),
         );
       if (members.length === 1) {
-        return { status: "available", outputs: members[0].member.outputs };
+        return {
+          status: "available",
+          outputs: members[0].member.outputs,
+          ...withSchema,
+        };
       }
       if (members.length > 1) {
         return {

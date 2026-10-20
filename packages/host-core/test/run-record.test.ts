@@ -139,3 +139,57 @@ describe("probeRun", () => {
     expect(probe.status).toBe("stale");
   });
 });
+
+describe("runRecordOutputSource", () => {
+  it("hands the resolver the producer's outputsSchema, so an absent optional field omits its property", async () => {
+    const { z } = await import("zod");
+    const { runRecordOutputSource } = await import("../src/resolve/node.js");
+    const { resolveHostOutputs } = await import("../src/resolve/resolve.js");
+    const dir = makeProject();
+    writeRunRecord(dir, {
+      version: 2,
+      host: "lab-switchboard",
+      projectName: "lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.pid,
+      startedAt: "x",
+      outputs: { origin: "http://localhost:4801" },
+    });
+    const outputsSchema = z.strictObject({
+      origin: z.url(),
+      mcp: z.url().optional(),
+    });
+    const source = runRecordOutputSource(dir, {
+      consumer: "connect",
+      projectName: "lab",
+      producers: new Map([
+        [
+          "switchboard",
+          {
+            folder: "switchboard",
+            name: "lab-switchboard",
+            specifier: "fake-runner",
+            runner: {
+              kind: "reactor",
+              run: () => Promise.resolve(undefined),
+              hostSchema: {
+                safeParse: (v: unknown) => ({ success: true, data: v }),
+              },
+              outputsSchema,
+            },
+          },
+        ],
+      ]),
+    });
+    const out = (p: string[]) => ({
+      $output: { host: "switchboard", path: p },
+    });
+    expect(
+      resolveHostOutputs(
+        { origin: out(["origin"]), mcp: out(["mcp"]) },
+        { outputs: source },
+      ),
+    ).toEqual({ origin: "http://localhost:4801" });
+  });
+});
