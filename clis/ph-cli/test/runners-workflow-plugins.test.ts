@@ -275,6 +275,30 @@ describe("switchboard runner — plugin-contributed drives", () => {
   });
 });
 
+describe("switchboard runner — signal ownership", () => {
+  it("leaves SIGINT/SIGTERM to a supervising compound, keeps them standalone", async () => {
+    const hostCore = await import("@powerhousedao/host-core");
+    vi.mocked(hostCore.resolveHostPlugins).mockResolvedValue(
+      workflowsComposition(),
+    );
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const runner = await import("../src/runners/switchboard.js");
+    const argsOf = async (context: RunnerContext) => {
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(switchboardHost(), context);
+      return vi.mocked(startSwitchboard).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+    };
+    expect(
+      (await argsOf({ ...ctx, parent: { host: "desktop", verb: "run" } }))
+        .signalHandlers,
+    ).toBe(false);
+    expect("signalHandlers" in (await argsOf(ctx))).toBe(false);
+  });
+});
+
 describe("connect runner — workflows drive", () => {
   it("passes a resolved URL through as composition data", async () => {
     const runner = await import("../src/runners/connect.js");
