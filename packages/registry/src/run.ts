@@ -59,6 +59,7 @@ import {
 } from "./late-header-guard.js";
 import { installUplinkMissCache } from "./uplink-miss-cache.js";
 import { buildVerdaccioConfig, S3_STORAGE_PLUGIN } from "./verdaccio-config.js";
+import { parseRenownUrls } from "./auth/renown-verifier.js";
 import {
   enqueueSweep,
   pruneCachedPackages,
@@ -269,6 +270,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
   // Renown auth needs both the opt-in and --public-url for the audience claim;
   // without either the registry keeps the htpasswd path
   const renownEnabled = authRenown === true && Boolean(publicUrl);
+  const renownUrls = parseRenownUrls(renownUrl);
   if (authRenown === true && !publicUrl) {
     console.warn(
       "[registry] auth-renown is enabled but --public-url / PH_REGISTRY_PUBLIC_URL is not set; Renown auth will be disabled.",
@@ -322,7 +324,12 @@ export async function runRegistry(args: RegistryCommandArgs) {
     ...(trustProxy ? { trustProxy: parseTrustProxy(trustProxy) } : {}),
     ...(localPackagePatterns?.length ? { localPackagePatterns } : {}),
     ...(renownEnabled && publicUrl
-      ? { renown: { publicUrl, ...(renownUrl ? { renownUrl } : {}) } }
+      ? {
+          renown: {
+            publicUrl,
+            ...(renownUrls ? { renownUrls } : {}),
+          },
+        }
       : {}),
     ...(s3 ? { s3 } : {}),
     ...(databaseUrl ? { databaseUrl } : {}),

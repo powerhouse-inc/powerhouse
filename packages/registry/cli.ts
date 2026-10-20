@@ -237,7 +237,7 @@ export const registryCommand = command({
       long: "renown-url",
       type: optional(string),
       description:
-        "Renown service base URL for credential verification. Defaults to https://www.renown.id.",
+        "Renown service base URL(s), comma-separated. Defaults to https://www.renown.id.",
       defaultValue: () => process.env.PH_REGISTRY_RENOWN_URL,
       defaultValueIsSerializable: true,
     }),

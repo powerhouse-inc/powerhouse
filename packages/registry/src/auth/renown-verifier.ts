@@ -6,12 +6,26 @@ export type RenownVerifier = (token: string) => Promise<string | undefined>;
 export interface RenownVerifierConfig {
   /** Expected `aud` on the bearer token — this registry's public URL. */
   publicUrl: string;
-  /** Renown service base URL (defaults to the SDK's default). */
-  renownUrl?: string;
+  /** Renown issuer base URLs, tried in order (defaults to the SDK's default). */
+  renownUrls?: string[];
   /** Switchboard GraphQL endpoint; when set, verify against the reactor directly. */
   switchboardUrl?: string;
   /** Result cache TTL; 0 disables caching. Defaults to 60s. */
   cacheTtlMs?: number;
+}
+
+// Parse a comma-separated list of Renown base URLs: trim, drop empties, strip
+// trailing slashes, dedupe. Undefined when nothing remains.
+export function parseRenownUrls(
+  value: string | undefined,
+): string[] | undefined {
+  if (!value) return undefined;
+  const urls = value
+    .split(",")
+    .map((u) => u.trim().replace(/\/+$/, ""))
+    .filter((u) => u.length > 0);
+  const unique = [...new Set(urls)];
+  return unique.length > 0 ? unique : undefined;
 }
 
 // Thin cache over the SDK's verifyAuthCredential (JWT + credential fetch) that
@@ -31,12 +45,20 @@ export function createRenownVerifier(
         cache.delete(token);
       }
     }
-    const result = await verifyAuthCredential(token, {
-      audience: config.publicUrl,
-      renownUrl: config.renownUrl,
-      switchboardUrl: config.switchboardUrl,
-    });
-    const did = result?.did;
+    // No list: a single call with renownUrl undefined (SDK default).
+    const issuers: (string | undefined)[] = config.renownUrls?.length
+      ? config.renownUrls
+      : [undefined];
+    let did: string | undefined;
+    for (const renownUrl of issuers) {
+      const result = await verifyAuthCredential(token, {
+        audience: config.publicUrl,
+        renownUrl,
+        switchboardUrl: config.switchboardUrl,
+      });
+      did = result?.did;
+      if (did) break;
+    }
     // Cache only positive results: a credential provisioned or revoked mid-TTL
     // must take effect without waiting out a cached miss. Bound the map size.
     if (ttl > 0 && did) {
