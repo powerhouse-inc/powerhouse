@@ -38,6 +38,11 @@ function makeProject(
     /** Add a `web` member whose host reads the assistant's outputs; its
      * fake process fails unless the assistant's record already exists. */
     sibling?: boolean;
+    /** Declare `web` BEFORE `assistant` (no startOrder): only the token
+     * dependency puts the assistant first. Implies `sibling`. */
+    siblingFirst?: boolean;
+    /** The assistant's port (default 4919). */
+    port?: number;
   } = {},
 ): {
   dir: string;
@@ -124,9 +129,10 @@ export async function build(host) {
   };
   write(
     "assistant",
-    `export default { name: "cli-assistant", runner: { module: "fake-runner", port: 4919 } };`,
+    `export default { name: "cli-assistant", runner: { module: "fake-runner", port: ${options.port ?? 4919} } };`,
   );
-  if (options.sibling) {
+  const sibling = options.sibling === true || options.siblingFirst === true;
+  if (sibling) {
     write(
       "web",
       `export default {
@@ -141,12 +147,12 @@ export async function build(host) {
     `export default {
       name: "cli",
       runner: { module: "@powerhousedao/clint/clint-runner", lifecycle: "attached" },
-      children: {
+      children: {${options.siblingFirst ? '\n        web: { host: "web" },' : ""}
         assistant: { host: "assistant"${
           options.readinessTimeout === undefined
             ? ""
             : `, config: { readiness: { timeout: ${options.readinessTimeout} } }`
-        } },${options.sibling ? '\n        web: { host: "web" },' : ""}
+        } },${options.sibling && !options.siblingFirst ? '\n        web: { host: "web" },' : ""}
       },
       // Resolved form: the declared host writes the assistant's
       // endpoints.openai output token; ph run substitutes the URL.
@@ -250,6 +256,38 @@ describe("clint-runner (P5.4)", () => {
     } finally {
       await handle.shutdown();
     }
+  }, 60_000);
+
+  it("starts a producer before the member reading it, whatever the declaration order", async () => {
+    const { dir } = makeProject({
+      publishAfter: 500,
+      readinessTimeout: 20_000,
+      siblingFirst: true,
+    });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const host = runner.hostSchema.parse((await loadHost(dir, "cli")).host);
+    expect(Object.keys(host.children)).toEqual(["web", "assistant"]);
+    const handle = await runner.run(host, ctx(dir));
+    try {
+      const web = handle.services.list("web")[0];
+      expect(web?.status === "ready" || web?.status === "starting").toBe(true);
+    } finally {
+      await handle.shutdown();
+    }
+  }, 60_000);
+
+  it("rejects a startOrder that contradicts the members' tokens before starting anything", async () => {
+    const { dir } = makeProject({ siblingFirst: true });
+    const { loadHost } = await import("@powerhousedao/host-core");
+    const declared = (await loadHost(dir, "cli")).host;
+    const host = runner.hostSchema.parse({
+      ...declared,
+      config: { ...declared.config, startOrder: ["web", "assistant"] },
+    });
+    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
+      /startOrder starts "web" before "assistant"/,
+    );
+    expect(existsSync(path.join(dir, ".ph", "services", "web"))).toBe(false);
   }, 60_000);
 
   it("names the sibling reader when a member never publishes", async () => {

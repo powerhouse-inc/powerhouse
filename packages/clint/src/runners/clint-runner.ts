@@ -8,6 +8,8 @@ import {
   loadHost,
   loadProducers,
   outputRefsOf,
+  outputSitesOf,
+  planCompound,
   probeRun,
   processResolveEnv,
   refineStartOrder,
@@ -355,32 +357,40 @@ async function startShell(
     eventBus,
   });
 
-  // Start order: config.startOrder first, then declaration order.
+  // Each member's own host.js: its `$output` tokens on sibling members
+  // decide the start order (each member resolves them from its producers'
+  // run records as it starts).
   const names = definitions.map((d) => d.id);
-  const ordered = [
-    ...(config.startOrder ?? []).filter((n) => names.includes(n)),
-    ...names.filter((n) => !(config.startOrder ?? []).includes(n)),
-  ];
-  // Whose outputs are read, and by whom: the shell's deferred self fields,
-  // and sibling members' `$output` tokens (each member resolves its own
-  // tokens from its producers' run records as it starts).
   const loaded = new Map<string, LoadedHost>();
-  for (const id of ordered) {
+  for (const id of names) {
     loaded.set(id, await loadHost(ctx.projectRoot, children[id].host));
   }
+  // Start order: the same dependency plan the generic compound uses —
+  // producers before consumers (ties keep declaration order); a
+  // config.startOrder must agree with the tokens. Tokens on hosts outside
+  // the compound read standalone producers and do not order members.
+  const memberRefs = names.map((key) => ({ key, host: children[key].host }));
+  const plan = planCompound(
+    names.map((key) => ({
+      key,
+      host: children[key].host,
+      refs: outputSitesOf(loaded.get(key)?.host)
+        .filter(({ ref }) => memberRefs.some((m) => m.host === ref.host))
+        .map(({ ref, path }) => ({ ref, path })),
+    })),
+    config.startOrder,
+  );
+  const ordered = plan.order;
+  // Whose outputs are read, and by whom: the shell's deferred self fields,
+  // and the members that consume a sibling.
   const readers = new Map<string, string[]>();
   const addReader = (id: string, reader: string) =>
     readers.set(id, [...(readers.get(id) ?? []), reader]);
   for (const deferred of pending.deferred) {
     for (const id of deferred.members) addReader(id, deferred.path);
   }
-  for (const reader of ordered) {
-    const refs = outputRefsOf(loaded.get(reader)?.host);
-    for (const id of ordered) {
-      if (id !== reader && refs.some((r) => r.host === children[id].host)) {
-        addReader(id, `member "${reader}"`);
-      }
-    }
+  for (const edge of plan.edges) {
+    addReader(edge.producer, `member "${edge.consumer}"`);
   }
   const waitForRecord = async (id: string, memberHost: string) => {
     const read = readers.get(id);
