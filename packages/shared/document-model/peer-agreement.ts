@@ -160,7 +160,7 @@ export function selectionSupports(
       continue;
     }
     supports.protocols[capability.name] = versionSet([
-      ...capability.baseline.filter((baseline) => baseline <= version),
+      ...capability.baseline,
       version,
     ]);
   }

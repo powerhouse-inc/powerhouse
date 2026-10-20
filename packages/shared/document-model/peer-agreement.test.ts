@@ -362,10 +362,11 @@ describe("selectionSupports", () => {
   const baseReducer = (selected: Record<string, unknown> | undefined) =>
     selectionSupports(selected, PEER_CAPABILITIES).protocols["base-reducer"];
 
-  it("runs the baseline up to the selected version", () => {
+  it("runs the baseline and the selected version", () => {
     expect(baseReducer({ "base-reducer": 2 })).toEqual([1, 2]);
     expect(baseReducer({ "base-reducer": 3 })).toEqual([1, 2, 3]);
-    expect(baseReducer({ "base-reducer": 1 })).toEqual([1]);
+    expect(baseReducer({ "base-reducer": 1 })).toEqual([1, 2]);
+    expect(baseReducer({ "base-reducer": 4 })).toEqual([1, 2, 4]);
   });
 
   it("reads no selection as the baseline", () => {
@@ -375,6 +376,9 @@ describe("selectionSupports", () => {
       { "base-reducer": "3" },
       { "base-reducer": 2.5 },
       { "base-reducer": 0 },
+      { "base-reducer": -1 },
+      { "base-reducer": 1e20 },
+      { "base-reducer": null },
     ]) {
       expect(selectionSupports(selected, PEER_CAPABILITIES)).toEqual(
         legacySupports(PEER_CAPABILITIES),
@@ -392,6 +396,9 @@ describe("selectionSupports", () => {
     expect(create({ "base-reducer": 3 })).toBe(3);
     expect(create({ "base-reducer": 2 })).toBe(2);
     expect(create(undefined)).toBe(2);
+    expect(create({ "base-reducer": 1 })).toBe(2);
+    // A selection past the creator's versions says nothing about those between.
+    expect(create({ "base-reducer": 4 })).toBe(2);
     expect(
       selectProtocolVersions({
         capabilities: PEER_CAPABILITIES,
