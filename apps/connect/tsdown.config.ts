@@ -31,6 +31,8 @@ export default defineConfig({
       "@powerhousedao/connect/fonts.css",
       // Resolved by the project build, which may swap in a tree with its routes.
       "@powerhousedao/connect/route-tree",
+      // Resolved by the project build (builder-tools' phBundledPackagesPlugin).
+      "ph-bundled-packages-virtual",
     ],
   },
   loader: {

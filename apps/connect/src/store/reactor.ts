@@ -294,19 +294,16 @@ export async function createReactor(
     phGlobalConfig.studioMode,
     connectConfig.workflowsEnabled,
   );
-  // Register provider:"local" packages the vite plugin bundled in. The virtual
-  // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
-  // failure under plain vite dev is expected; the indirection + @vite-ignore
-  // also stops Vite's dep scanner from pre-bundling the specifier.
-  try {
-    const bundledPackagesModule = "ph-bundled-packages-virtual";
-    const { default: registerBundledPackages } = (await import(
-      /* @vite-ignore */ bundledPackagesModule
-    )) as { default: (pm: IPackageManager) => void };
-    registerBundledPackages(packageManager);
-  } catch {
-    // no bundled packages in this build
-  }
+  // Register provider:"local" packages the vite plugin bundled in. The
+  // specifier must stay a static string so the bundler resolves it through
+  // phBundledPackagesPlugin (builder-tools), which always provides the module:
+  // a register function for the bundled packages, or a no-op when there are
+  // none. Connect's own vite config provides the no-op as well.
+  const { default: registerBundledPackages } =
+    (await import("ph-bundled-packages-virtual")) as {
+      default: (pm: IPackageManager) => void;
+    };
+  registerBundledPackages(packageManager);
   const remotePackages = runtimeConfig.packages
     .filter((p) => p.provider !== "local")
     .map((p) => (p.version ? `${p.packageName}@${p.version}` : p.packageName));

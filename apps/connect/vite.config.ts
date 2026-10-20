@@ -43,6 +43,25 @@ function phLocalPackageDistRewrite(): Plugin {
   };
 }
 
+// Connect's own dev server and build have no provider:"local" packages.
+// Resolve the bundled-packages virtual module (provided by builder-tools'
+// phBundledPackagesPlugin in project builds) to a no-op register function, so
+// the static import in src/store/reactor.ts always resolves.
+function phNoBundledPackages(): Plugin {
+  const id = "ph-bundled-packages-virtual";
+  const resolvedId = "\0virtual:" + id;
+  return {
+    name: "ph-no-bundled-packages",
+    enforce: "pre",
+    resolveId(source) {
+      if (source === id) return resolvedId;
+    },
+    load(loadId) {
+      if (loadId === resolvedId) return "export default () => {};\n";
+    },
+  };
+}
+
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
 const gitSha = process.env.WORKSPACE_GIT_SHA ?? "unknown";
@@ -78,7 +97,13 @@ export default defineConfig(({ command }) => ({
     ],
   },
   // Reads tsr.config.json; regenerates src/routeTree.gen.ts as routes change.
-  plugins: [tanstackRouter(), tailwind(), react(), phLocalPackageDistRewrite()],
+  plugins: [
+    tanstackRouter(),
+    tailwind(),
+    react(),
+    phLocalPackageDistRewrite(),
+    phNoBundledPackages(),
+  ],
   worker: {
     format: "es",
   },
