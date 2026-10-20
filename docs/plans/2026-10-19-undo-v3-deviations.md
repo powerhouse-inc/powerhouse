@@ -215,6 +215,10 @@ Decisions:
   it loads dead letters (start and remote reset). The manifest revision
   changes on every start and senders release their holds on it; a reloaded
   refusal was reported again and re-held the document for good.
+- A release backfill is kept out of ack trims until it is pushed (in-memory
+  `SyncOperation.awaitingPush`, cleared by the gql and local channels on a
+  successful push). The server's ack is already past the released history,
+  so a release toward a polled server was trimmed unsent.
 - The light client's header now carries `protocolVersions` from a current
   Switchboard. The `CREATE_DOCUMENT` fallbacks stay for older Switchboards.
 - Workflow's `creation()` reads the client through `getPHStore()`.
@@ -269,10 +273,12 @@ timestamps, which the user rejected):
   then boots an untagged build of it refuses every write, load and delete
   for those documents. The startup stored-protocol check compares versions
   only and does not catch it.
-- A release toward a polled server does not re-send the document: the touch
-  that delivers the new manifest releases the hold, then trims the outbox by
-  the server's ackOrdinal, which is past the released history. Pinned
-  `it.fails` in reactor-api `sync-server-refusal-restart.test.ts`.
+- A local-channel receiver drops a push at or below its inbox ack, so a
+  release toward a local peer still never loads there. Pinned `it.fails` in
+  reactor `local-channel/unit.test.ts`.
+- A release removes the hold when it queues the history, and the outbox is
+  not persisted: a restart before the push loses the document from that
+  peer.
 - A refusal is still reported on every poll within one incarnation, with a
   `logger.error` on the sender each time. A model reloaded at run time
   changes no revision, so its holds release only on the next restart.
