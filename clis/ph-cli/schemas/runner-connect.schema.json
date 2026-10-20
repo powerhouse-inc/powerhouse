@@ -463,7 +463,14 @@
                     "type": "object",
                     "properties": {
                       "url": {
-                        "type": "string"
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        ]
                       },
                       "name": {
                         "type": ["string", "null"]
@@ -669,7 +676,14 @@
             },
             "switchboardUrl": {
               "description": "Switchboard GraphQL URL. When set, Connect enables in-page (no-redirect) Renown sign-in; otherwise it falls back to the redirect flow via `url`.",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/__schema0"
+                }
+              ]
             },
             "adapters": {
               "type": "object",

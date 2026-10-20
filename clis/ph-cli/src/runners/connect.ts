@@ -4,7 +4,7 @@ import {
   type PHConnectDefaultDrive,
   type PHConnectRuntimeConfig,
 } from "@powerhousedao/shared/clis";
-import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
+import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import {
   defineHostSchemas,
@@ -40,7 +40,9 @@ export const kind = "reactor";
 
 /** The connect host: the host-core reactor host with every runner option
  * this module reads declared (strict: an unknown runner key fails), and
- * `config` typed by Connect's own zod schema (the authored `connect` block).
+ * `config` typed by Connect's own zod schema (the authored `connect` block),
+ * whose URL fields that name another host's outputs
+ * (`drives.defaultDrives[].url`, `renown.switchboardUrl`) are token-able.
  * One definition, two schemas: `declaredHostSchema` (token-able fields take
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
@@ -62,7 +64,7 @@ const schemas = defineHostSchemas((s) =>
         routes: z.union([z.string(), z.literal(false)]).optional(),
       })
       .strict(),
-    config: connectConfigSchema.optional(),
+    config: connectConfigSchemaWith(s.tokenable).optional(),
   }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;

@@ -44,6 +44,7 @@ export default defineConfig({
       "connect/pwa-manifest.test.ts",
       "connect/shared-deps.test.ts",
       "connect/connect-config-schema.test.ts",
+      "host-tokens/host-tokens.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-signature.test.ts",
       "document-model/action-transport.test.ts",

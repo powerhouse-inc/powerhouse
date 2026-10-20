@@ -1,5 +1,5 @@
 // Fixture mirror of clis/ph-cli/src/runners/connect.ts (contract only).
-import { connectConfigSchema } from "@powerhousedao/shared/connect/connect-config-schema";
+import { connectConfigSchemaWith } from "@powerhousedao/shared/connect/connect-config-schema";
 import { z } from "zod";
 import { defineHostSchemas } from "../../../../../src/host-schemas.js";
 import { neverLaunched } from "./never-launched.js";
@@ -16,7 +16,7 @@ const schemas = defineHostSchemas((s) =>
         cspRegistrySync: z.boolean().optional(),
       })
       .strict(),
-    config: connectConfigSchema.optional(),
+    config: connectConfigSchemaWith(s.tokenable).optional(),
   }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;

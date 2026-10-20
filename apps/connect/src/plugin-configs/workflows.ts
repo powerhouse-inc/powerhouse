@@ -1,4 +1,4 @@
-import { ref } from "@powerhousedao/host-core/schema";
+import { ref } from "@powerhousedao/shared/host-tokens";
 import { z } from "zod";
 
 /** The token form that replaced `{ from, slug }` drive references. */

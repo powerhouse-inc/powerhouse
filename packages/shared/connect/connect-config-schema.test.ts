@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DRIVES_PRESERVE_STRATEGIES } from "../clis/constants.js";
+import { z } from "zod";
 import {
   connectConfigSchema,
+  connectConfigSchemaWith,
   connectDrivePreserveStrategySchema,
   connectRuntimeConfigSchema,
+  declaredConnectConfigSchema,
 } from "./connect-config-schema.js";
 import { phConnectRuntimeConfigSchema } from "./schema-fragments.js";
 
@@ -240,6 +243,119 @@ describe("connectConfigSchema", () => {
     expect(connectDrivePreserveStrategySchema.options).toEqual([
       ...DRIVES_PRESERVE_STRATEGIES,
     ]);
+  });
+});
+
+const driveUrl = {
+  $output: { host: "switchboard", path: ["drives", "sektar", "url"] },
+};
+const graphqlUrl = {
+  $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+};
+
+describe("declaredConnectConfigSchema (a connect host's config)", () => {
+  it("takes output tokens in the fields that name another host's outputs", () => {
+    const value = {
+      drives: {
+        defaultDrives: [
+          { url: driveUrl, name: "Sektar" },
+          { url: { $concat: [graphqlUrl, "/d/x"] } },
+          { local: true, id: "scratch" },
+        ],
+      },
+      renown: { switchboardUrl: graphqlUrl },
+    };
+    expect(declaredConnectConfigSchema.safeParse(value).error).toBeUndefined();
+    // the plain schema (powerhouse.config.json, the served config) does not
+    expect(connectConfigSchema.safeParse(value).success).toBe(false);
+  });
+
+  it.each([
+    ["renown.url", { renown: { url: graphqlUrl } }],
+    [
+      "a drive name",
+      { drives: { defaultDrives: [{ url: "u", name: driveUrl }] } },
+    ],
+    [
+      "a local drive id",
+      { drives: { defaultDrives: [{ local: true, id: driveUrl }] } },
+    ],
+    [
+      "a $map as a drive url",
+      {
+        drives: {
+          defaultDrives: [{ url: { $map: { over: driveUrl, to: "x" } } }],
+        },
+      },
+    ],
+  ])("rejects a token in %s", (_name, value) => {
+    expect(declaredConnectConfigSchema.safeParse(value).success).toBe(false);
+  });
+
+  it("agrees with the plain schema on every token-free case, and on Sektar's block", () => {
+    for (const [, value, accepted] of cases) {
+      expect(declaredConnectConfigSchema.safeParse(value).success).toBe(
+        accepted,
+      );
+    }
+    expect(declaredConnectConfigSchema.parse(sektarConnect)).toEqual(
+      connectConfigSchema.parse(sektarConnect),
+    );
+  });
+
+  it("emits the plain schema's JSON Schema, plus tokens in the token-able fields", () => {
+    const plain = z.toJSONSchema(connectConfigSchema, { io: "input" });
+    const declared = z.toJSONSchema(declaredConnectConfigSchema, {
+      io: "input",
+    }) as typeof plain & { $defs?: unknown };
+    const sections = (schema: typeof plain) =>
+      (schema.properties ?? {}) as Record<
+        string,
+        { properties?: Record<string, unknown> }
+      >;
+    // descriptions and defaults survive the rebuilt fields
+    expect(declared.description).toBe(plain.description);
+    const { drives, renown, ...rest } = sections(declared);
+    const {
+      drives: plainDrives,
+      renown: plainRenown,
+      ...plainRest
+    } = sections(plain);
+    expect(rest).toEqual(plainRest);
+    const meta = (field: unknown) => {
+      const { description, default: fallback } = field as {
+        description?: string;
+        default?: unknown;
+      };
+      return { description, default: fallback };
+    };
+    for (const [section, plainSection] of [
+      [drives, plainDrives],
+      [renown, plainRenown],
+    ] as const) {
+      expect(Object.keys(section.properties ?? {})).toEqual(
+        Object.keys(plainSection.properties ?? {}),
+      );
+      for (const key of Object.keys(plainSection.properties ?? {})) {
+        expect(meta(section.properties?.[key])).toEqual(
+          meta(plainSection.properties?.[key]),
+        );
+      }
+    }
+    // the token shapes (in $defs: $concat is recursive) only in the declared
+    expect(JSON.stringify(declared)).toContain('"$output"');
+    expect(JSON.stringify(plain)).not.toContain('"$output"');
+  });
+
+  it("is the plain schema when the field wrapper adds no token branch", () => {
+    const resolved = connectConfigSchemaWith((schema) => z.union([schema]));
+    expect(
+      resolved.safeParse({ drives: { defaultDrives: [{ url: driveUrl }] } })
+        .success,
+    ).toBe(false);
+    expect(
+      resolved.safeParse({ drives: { defaultDrives: [{ url: "u" }] } }).success,
+    ).toBe(true);
   });
 });
 

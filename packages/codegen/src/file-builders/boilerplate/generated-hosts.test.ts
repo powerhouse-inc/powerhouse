@@ -384,7 +384,9 @@ export default {
     // (outputs.d.ts), independent of how ref() fields type tokens.
     // ...and a connect host taking the workflows drive as that token: the
     // plugin's `drive` is ref(z.url()), so the token checks clean while the
-    // drive entry itself (an object, not a token) fails.
+    // drive entry itself (an object, not a token) fails. Its own config's
+    // token-able Connect fields (defaultDrives[].url, renown.switchboardUrl)
+    // take tokens too; a plain Connect field (renown.url) does not.
     writeFixture(
       dir,
       "labconnect",
@@ -403,6 +405,46 @@ export default {
       },
     ],
   },
+  config: {
+    drives: {
+      defaultDrives: [
+        { url: switchboard.drives.workflows.url, name: "Workflows" },
+        { url: { $output: { host: "switchboard", path: ["drives", "powerhouse", "url"] } } },
+        { local: true, id: "scratch" },
+      ],
+    },
+    renown: { switchboardUrl: switchboard.endpoints.graphql },
+  },
+};
+`,
+    );
+    writeFixture(
+      dir,
+      "badconfig",
+      `// @ts-check
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "badconfig",
+  runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+  config: {
+    drives: { defaultDrives: [{ url: switchboard.drives.workflows }] },
+  },
+};
+`,
+    );
+    writeFixture(
+      dir,
+      "badrenown",
+      `// @ts-check
+import { outputs as switchboard } from "../switchboard/outputs.js";
+
+/** @satisfies {PHHost} */
+export default {
+  name: "badrenown",
+  runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+  config: { renown: { url: switchboard.endpoints.graphql } },
 };
 `,
     );
@@ -530,6 +572,12 @@ export default {
       errors.filter((line) => line.startsWith(`hosts/${host}/host.js`));
     expect(byFile("lab")).toEqual([]);
     expect(byFile("labconnect")).toEqual([]);
+    expect(byFile("badconfig").join("\n")).toMatch(
+      /error TS2322: Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| [^']*OutputToken<string>[^']*'/,
+    );
+    expect(byFile("badrenown").join("\n")).toMatch(
+      /error TS2322: Type 'OutputToken<string>' is not assignable to type 'string'/,
+    );
     expect(byFile("baddrive").join("\n")).toMatch(
       // the target union lists the tokens that fit a string field
       /error TS2322: Type '\{ id: OutputToken<string>; url: OutputToken<string>; \}' is not assignable to type 'string \| [^']*OutputToken<string>[^']*'/,
@@ -546,7 +594,9 @@ export default {
     expect(
       errors.filter(
         (line) =>
-          !/^hosts\/(typo|badpath|badplugin|baddrive|mapbad)\//.test(line),
+          !/^hosts\/(typo|badpath|badplugin|baddrive|badconfig|badrenown|mapbad)\//.test(
+            line,
+          ),
       ),
     ).toEqual([]);
   }, 240_000);

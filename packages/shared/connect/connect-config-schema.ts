@@ -7,6 +7,7 @@
 // is embedded in another schema root.
 
 import { z } from "zod";
+import { tokenable, type TokenField } from "../host-tokens/index.js";
 
 // ---------------------------------------------------------------------------
 // Images, colours, lengths and backgrounds
@@ -776,6 +777,76 @@ export const connectConfigSchema = z
 
 export type ConnectConfig = z.output<typeof connectConfigSchema>;
 export type ConnectConfigInput = z.input<typeof connectConfigSchema>;
+
+// ---------------------------------------------------------------------------
+// The declared form: a connect host's `config`
+// ---------------------------------------------------------------------------
+
+/** `schema` carrying `source`'s description and meta (zod keeps them per
+ * instance, so `.extend()` and a rebuilt field drop them). */
+function withMetaOf<S extends z.ZodType>(schema: S, source: z.ZodType): S {
+  const meta = source.meta();
+  return meta ? schema.meta(meta) : schema;
+}
+
+/**
+ * The `connect` block with its token-able fields wrapped by `field`: the
+ * fields that name another host's outputs, which a connect host's `config`
+ * may write as output tokens (`ph run` resolves them before the verb).
+ *
+ * - `drives.defaultDrives[].url` (a remote entry): e.g. a switchboard's
+ *   `drives.<slug>.url` output.
+ * - `renown.switchboardUrl`: a switchboard's `endpoints.graphql` output.
+ *
+ * The connect runner builds it with host-core's `s.tokenable` (declared:
+ * tokens in; resolved: plain values only). The output type is
+ * {@link ConnectConfig} either way. powerhouse.config.json's `connect` block,
+ * the served config and their JSON Schemas stay {@link connectConfigSchema},
+ * which takes no tokens.
+ */
+export function connectConfigSchemaWith(field: TokenField) {
+  const remoteDrive = connectDefaultDriveRemoteSchema.extend({
+    url: field(z.string()),
+  });
+  const shape = connectDrivesSchema.shape;
+  const drives = withMetaOf(
+    connectDrivesSchema.extend({
+      defaultDrives: withMetaOf(
+        z
+          .array(z.union([remoteDrive, connectDefaultDriveLocalSchema]))
+          .optional(),
+        shape.defaultDrives,
+      ),
+    }),
+    connectDrivesSchema,
+  );
+  const renown = withMetaOf(
+    connectRenownSchema.extend({
+      switchboardUrl: withMetaOf(
+        field(z.string()).optional(),
+        connectRenownSchema.shape.switchboardUrl,
+      ),
+    }),
+    connectRenownSchema,
+  );
+  return withMetaOf(
+    connectConfigSchema.extend({
+      drives: drives.optional(),
+      renown: renown.optional(),
+    }),
+    connectConfigSchema,
+  );
+}
+
+/** The declared `connect` block: {@link connectConfigSchemaWith} with every
+ * token accepted in its token-able fields. */
+export const declaredConnectConfigSchema =
+  /* @__PURE__ */ connectConfigSchemaWith(tokenable);
+
+/** What a connect host's `config` may hold (tokens in token-able fields). */
+export type DeclaredConnectConfigInput = z.input<
+  typeof declaredConnectConfigSchema
+>;
 
 // ---------------------------------------------------------------------------
 // The served runtime config: authored fields plus what is derived or
