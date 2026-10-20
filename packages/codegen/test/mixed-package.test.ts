@@ -14,6 +14,7 @@ import {
 import { loadDocumentModel } from "../src/codegen/utils.js";
 import { buildTsMorphProject } from "../src/utils/index.mts";
 import { createCodeFirstPackage } from "./code-first-package.js";
+import { hostGuard } from "./subgraph-host-guard.js";
 
 const TEST_DOC_JSON = fileURLToPath(
   new URL(
@@ -255,6 +256,7 @@ export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [
 import { BillingSubgraph } from "./billing/index.js";
 import { OrdersSubgraph } from "./orders/index.js";
 
+${hostGuard("BillingSubgraph")}
 export { BillingSubgraph };
 const checkBillingSubgraph: SubgraphCheck<typeof BillingSubgraph> = true;
 void checkBillingSubgraph;

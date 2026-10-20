@@ -25,6 +25,7 @@ import {
   runSubgraphInspect,
 } from "../src/services/model-inspect.js";
 import { recordStreams } from "./helpers/streams.js";
+import { hostGuard } from "./helpers/subgraph-host-guard.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(HERE, "..", "..", "..");
@@ -555,6 +556,7 @@ describe("a scaffolded subgraph beside a code-first model", () => {
       .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
 import { WidgetsSubgraph } from "./widgets/index.js";
 
+${hostGuard("WidgetsSubgraph")}
 export { WidgetsSubgraph };
 const checkWidgetsSubgraph: SubgraphCheck<typeof WidgetsSubgraph> = true;
 void checkWidgetsSubgraph;

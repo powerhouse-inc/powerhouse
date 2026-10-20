@@ -13,6 +13,7 @@ import { dirname, join, relative } from "node:path";
 import { subgraphIndexFileTemplate, subgraphSchemaTemplate } from "templates";
 import { Node, Project } from "ts-morph";
 import { afterEach, describe, expect, it } from "vitest";
+import { hostGuard } from "../../test/subgraph-host-guard.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import {
   makeSubgraphsIndexFile,
@@ -73,7 +74,7 @@ describe("makeSubgraphsIndexFile", () => {
     async (_, source, exportedName, declarationName) => {
       const root = makeProject([]);
       writeFiles(root, {
-        "subgraphs/example/index.ts": `class BaseSubgraph {}\n${source}\n`,
+        "subgraphs/example/index.ts": `${protocolBase}\n${source}\n`,
       });
       const first = await regenerate(root);
       const tsc = compile(
@@ -124,6 +125,7 @@ describe("makeSubgraphsIndexFile", () => {
       .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
 import { StatementsSubgraph } from "./statements/index.js";
 
+${hostGuard("StatementsSubgraph")}
 export { StatementsSubgraph };
 const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> = true;
 void checkStatementsSubgraph;
@@ -250,6 +252,97 @@ export class ExtraSubgraph extends SharedBase { static readonly subgraphName = "
   });
 });
 
+describe("makeSubgraphsIndexFile on a host older than the subgraph protocol", () => {
+  function importBarrel(root: string) {
+    const tsc = compile(root, "--outDir", join(root, "out"), "--rootDir", root);
+    expect(tsc.status, tsc.stdout + tsc.stderr).toBe(0);
+    return spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "const exports = await import(process.argv[1]); console.log(Object.keys(exports).join());",
+        pathToFileURL(join(root, "out/subgraphs/index.js")).href,
+      ],
+      { encoding: "utf8" },
+    );
+  }
+
+  it("refuses to load its classes on a base without the protocol", async () => {
+    const root = makeProject([{ dir: "ledger", className: "LedgerSubgraph" }]);
+    await regenerate(root);
+
+    const loaded = importBarrel(root);
+
+    expect(loaded.status).not.toBe(0);
+    expect(loaded.stderr).toContain(
+      "This package's subgraphs need a newer host.",
+    );
+  });
+
+  it("loads its classes on a base with the protocol", async () => {
+    const root = makeProject([]);
+    writeFiles(root, {
+      "subgraphs/ledger/index.ts": `${protocolBase}\nexport class LedgerSubgraph extends BaseSubgraph { static readonly subgraphName = "ledger"; }\n`,
+    });
+    await regenerate(root);
+
+    const loaded = importBarrel(root);
+
+    expect(loaded.status, loaded.stderr).toBe(0);
+    expect(loaded.stdout.trim()).toBe("LedgerSubgraph");
+  });
+
+  it("moves the check to a remaining class when its class is removed", async () => {
+    const root = makeProject([
+      { dir: "a", className: "ASubgraph" },
+      { dir: "b", className: "BSubgraph" },
+    ]);
+    expect(await regenerate(root)).toContain("in ASubgraph");
+
+    rmSync(join(root, "subgraphs/a"), { recursive: true });
+    const second = await regenerate(root);
+
+    expect(second).not.toContain("ASubgraph");
+    expect(second.match(/powerhouse\.subgraph/g)).toHaveLength(1);
+    expect(second).toContain("in BSubgraph");
+    expect(await regenerate(root)).toBe(second);
+  });
+
+  it("keeps a comment above the check", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, {
+      "subgraphs/index.ts": first.replace(
+        "if (",
+        "// Hosts before 6.0 lack the protocol.\nif (",
+      ),
+    });
+
+    const second = await regenerate(root);
+
+    expect(second).toContain(
+      `// Hosts before 6.0 lack the protocol.\n${hostGuard("ASubgraph")}`,
+    );
+    expect(await regenerate(root)).toBe(second);
+  });
+
+  it("drops the check with the last class and keeps an authored statement", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, {
+      "subgraphs/index.ts": `${first}\nexport const version = 1;\n`,
+    });
+
+    rmSync(join(root, "subgraphs/a"), { recursive: true });
+
+    expect(await regenerate(root)).toBe("export const version = 1;\n");
+  });
+});
+
+const protocolBase =
+  'class BaseSubgraph { static [Symbol.for("powerhouse.subgraph")]() { return { version: 1 }; } }';
+
 function writeFiles(root: string, files: Record<string, string>) {
   for (const [file, text] of Object.entries(files)) {
     mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -323,6 +416,7 @@ import type { SubgraphCheck } from "@powerhousedao/reactor-api";
     const expected = `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
 import { ASubgraph } from "./a/index.js";
 
+${hostGuard("ASubgraph")}
 export { ASubgraph };
 const checkASubgraph: SubgraphCheck<typeof ASubgraph> = true;
 void checkASubgraph;
@@ -345,6 +439,7 @@ import { UpperSubgraph } from "./B-upper/index.js";
 import { StatementsSubgraph } from "./statements/index.js";
 import { TransactionLedgerSubgraph } from "./transaction-ledger/index.js";
 
+${hostGuard("UpperSubgraph")}
 export { UpperSubgraph };
 const checkUpperSubgraph: SubgraphCheck<typeof UpperSubgraph> = true;
 void checkUpperSubgraph;
@@ -407,6 +502,7 @@ export class RootSubgraph extends BaseSubgraph {
   static readonly subgraphName = "root";
 }
 
+${hostGuard("StatementsSubgraph")}
 export { StatementsSubgraph };
 const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> = true;
 void checkStatementsSubgraph;
@@ -456,6 +552,7 @@ export { Two };
 import { SharedSubgraph as One } from "./one/index.js";
 import { SharedSubgraph as Two } from "./two/index.js";
 
+${hostGuard("One")}
 export { One };
 const checkOne: SubgraphCheck<typeof One> = true;
 void checkOne;
@@ -485,6 +582,7 @@ void checkTwo;
 import { SharedSubgraph } from "./one/index.js";
 import { SharedSubgraph as TwoSharedSubgraph } from "./two/index.js";
 
+${hostGuard("SharedSubgraph")}
 export { SharedSubgraph };
 const checkSharedSubgraph: SubgraphCheck<typeof SharedSubgraph> = true;
 void checkSharedSubgraph;
@@ -518,6 +616,7 @@ const StatementsSubgraph = "taken";
 const checkStatementsSubgraph = StatementsSubgraph;
 export { checkStatementsSubgraph as label };
 
+${hostGuard("StatementsSubgraph2")}
 export { StatementsSubgraph2 as StatementsSubgraph };
 const checkStatementsSubgraph2: SubgraphCheck<typeof StatementsSubgraph2> =
   true;

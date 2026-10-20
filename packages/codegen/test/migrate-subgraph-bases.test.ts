@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { migrateSubgraphs } from "../src/codegen/migrate-subgraphs.js";
+import { hostGuard } from "./subgraph-host-guard.js";
 
 const workspace = join(import.meta.dirname, "../../..");
 const roots: string[] = [];
@@ -75,6 +76,7 @@ import { FooSubgraph as FooFooSubgraph } from "./foo/index.js";
 
 export * as FooSubgraph from "./foo/index.js";
 
+${hostGuard("FooFooSubgraph")}
 export { FooFooSubgraph };
 const checkFooFooSubgraph: SubgraphCheck<typeof FooFooSubgraph> = true;
 void checkFooFooSubgraph;

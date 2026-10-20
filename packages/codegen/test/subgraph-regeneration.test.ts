@@ -18,6 +18,7 @@ import {
 } from "../src/codegen/generate.js";
 import { buildTsMorphProject } from "../src/utils/index.mts";
 import { createCodeFirstPackage } from "./code-first-package.js";
+import { hostGuard } from "./subgraph-host-guard.js";
 
 let projectDir: string;
 
@@ -98,6 +99,7 @@ import { BillingSubgraph } from "./billing/index.js";
 
 export { ExternalSubgraph } from "../src/external.js";
 
+${hostGuard("BillingSubgraph")}
 export { BillingSubgraph };
 const checkBillingSubgraph: SubgraphCheck<typeof BillingSubgraph> = true;
 void checkBillingSubgraph;
@@ -156,6 +158,7 @@ import { PaymentsSubgraph } from "./payments/index.js";
 
 export * as Billing from "./billing/index.js";
 
+${hostGuard("PaymentsSubgraph")}
 export { PaymentsSubgraph };
 const checkPaymentsSubgraph: SubgraphCheck<typeof PaymentsSubgraph> = true;
 void checkPaymentsSubgraph;
@@ -203,6 +206,7 @@ void checkBillingSubgraph;
 import { BillingSubgraph } from "./billing/index.js";
 import { PaymentsSubgraph } from "./payments/index.js";
 
+${hostGuard("BillingSubgraph")}
 /** The billing API. */
 export { BillingSubgraph };
 const checkBillingSubgraph: SubgraphCheck<typeof BillingSubgraph> = true;

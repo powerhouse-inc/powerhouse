@@ -362,9 +362,18 @@ const CHECK_STATEMENT = /^const ([\w$]+): ([\w$]+)<typeof ([\w$]+)> = true;$/;
 
 const CHECK_TYPE_IMPORT = `import type { SubgraphCheck } from "@powerhousedao/reactor-api";`;
 
+// A host older than the subgraph protocol would serve these classes under the
+// placeholder name of its own base class instead of refusing them.
+const hostGuard = (local: string) =>
+  `if (!(Symbol.for("powerhouse.subgraph") in ${local})) { throw new Error("This package's subgraphs need a newer host. Its @powerhousedao/reactor-api predates class-based subgraphs and would serve them under a placeholder name. Upgrade the host, or install a release of this package built for it."); }`;
+
+const HOST_GUARD_STATEMENT =
+  /^if \(!\(Symbol\.for\("powerhouse\.subgraph"\) in ([\w$]+)\)\)/;
+
 const statementCommentAnchor = {
   checkType: "check-type",
   empty: "empty",
+  hostGuard: "host-guard",
   import: (key: string) => `import:${key}`,
   export: (key: string) => `export:${key}`,
   check: (key: string) => `check:${key}`,
@@ -372,7 +381,7 @@ const statementCommentAnchor = {
 };
 
 type Candidate = { readonly statement: Statement; readonly text: string } & (
-  | { readonly kind: "check-type" | "empty" }
+  | { readonly kind: "check-type" | "empty" | "host-guard" }
   | {
       readonly kind: "import";
       readonly elements: readonly { key: string; local: string }[];
@@ -445,7 +454,9 @@ function claimStandaloneStatements(generated: readonly Candidate[]): Claim[] {
       ? [[candidate.statement, statementCommentAnchor.checkType]]
       : candidate.kind === "empty"
         ? [[candidate.statement, statementCommentAnchor.empty]]
-        : [],
+        : candidate.kind === "host-guard"
+          ? [[candidate.statement, statementCommentAnchor.hostGuard]]
+          : [],
   );
 }
 
@@ -669,6 +680,14 @@ async function readRootLayout(
           text: `void ${check};`,
         });
       }
+    } else if (Node.isIfStatement(statement)) {
+      const guarded = HOST_GUARD_STATEMENT.exec(text)?.[1];
+      if (guarded !== undefined)
+        candidates.push({
+          statement,
+          kind: "host-guard",
+          text: hostGuard(guarded),
+        });
     }
   }
 
@@ -881,6 +900,10 @@ async function renderBarrel(
         `const ${check}: ${helper}<typeof ${local}> = true;\nvoid ${check};`,
       );
     }
+    scratch.insertStatements(
+      scratch.getImportDeclarations().length,
+      `\n${hostGuard(entries[0].local)}\n`,
+    );
   }
   await formatSourceFileWithPrettier(scratch);
   attachComments(scratch, entries, layout.comments);
@@ -929,6 +952,7 @@ function attachComments(
       const key = byCheck.get(statement.getDeclarations()[0].getName());
       return key && statementCommentAnchor.check(key);
     }
+    if (Node.isIfStatement(statement)) return statementCommentAnchor.hostGuard;
     if (Node.isExpressionStatement(statement)) {
       const expression = statement.getExpression();
       const key =

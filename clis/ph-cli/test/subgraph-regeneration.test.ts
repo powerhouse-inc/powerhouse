@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { getDocument } from "@powerhousedao/vetra/codegen";
 import { assertIsSubgraphModuleDocument } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { materializeFixturePackage } from "../../../packages/document-model/test/tooling/loader-contract.js";
+import { hostGuard } from "./helpers/subgraph-host-guard.js";
 
 const REPOSITORY = resolve(import.meta.dirname, "..", "..", "..");
 const REACTOR_API = join(REPOSITORY, "packages", "reactor-api");
@@ -201,6 +202,7 @@ import { BillingSubgraph } from "./billing/index.js";
 
 export { ExternalSubgraph } from "../src/external.js";
 
+${hostGuard("BillingSubgraph")}
 export { BillingSubgraph };
 const checkBillingSubgraph: SubgraphCheck<typeof BillingSubgraph> = true;
 void checkBillingSubgraph;
