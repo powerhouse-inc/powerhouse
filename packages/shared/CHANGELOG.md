@@ -1,3 +1,22 @@
+## 6.2.3-dev.67 (2026-10-20)
+
+### 🚀 Features
+
+- **connect-core,connect,builder-tools,ph-cli:** plugins provide their UI; the generic plugin's UI moves to apps/connect/src/generic, and dev renders a routed project's loading shell ([e6ce70abce](https://github.com/powerhouse-inc/powerhouse/commit/e6ce70abce))
+- **shared,builder-tools,ph-cli:** branding.favicon, runner.routes, and a host's build bakes in its config ([d6d2fd17a0](https://github.com/powerhouse-inc/powerhouse/commit/d6d2fd17a0))
+- **connect,builder-tools,shared:** a package's routes join the Connects that load it ([f22c436ad8](https://github.com/powerhouse-inc/powerhouse/commit/f22c436ad8))
+
+### 🩹 Fixes
+
+- **design-system,connect:** tailwind-scrollbar is a dependency, since a project's Tailwind build loads tailwind.css's plugin; the stylesheet test builds a fixture project's stylesheet ([8abc9b0476](https://github.com/powerhouse-inc/powerhouse/commit/8abc9b0476))
+- **ph-cli,connect-core,connect,reactor-browser,builder-tools:** one browser build for a package's routes, and review fixes ([63e9fd3473](https://github.com/powerhouse-inc/powerhouse/commit/63e9fd3473))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude
+- Claude Opus 5.5
+
 ## 6.2.3-dev.66 (2026-10-20)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

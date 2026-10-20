@@ -1,3 +1,19 @@
+## 6.2.3-dev.67 (2026-10-20)
+
+### 🚀 Features
+
+- **connect-core,connect,builder-tools,ph-cli:** plugins provide their UI; the generic plugin's UI moves to apps/connect/src/generic, and dev renders a routed project's loading shell ([e6ce70abce](https://github.com/powerhouse-inc/powerhouse/commit/e6ce70abce))
+- **connect,design-system,workflow,codegen:** one Tailwind build per page; ph migrate moves style.css onto Connect's Tailwind source ([3b7d052bcd](https://github.com/powerhouse-inc/powerhouse/commit/3b7d052bcd))
+- **reactor-browser,design-system:** modals and revision history as search params ([496a92af99](https://github.com/powerhouse-inc/powerhouse/commit/496a92af99))
+
+### 🩹 Fixes
+
+- **design-system,connect:** tailwind-scrollbar is a dependency, since a project's Tailwind build loads tailwind.css's plugin; the stylesheet test builds a fixture project's stylesheet ([8abc9b0476](https://github.com/powerhouse-inc/powerhouse/commit/8abc9b0476))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.66 (2026-10-20)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

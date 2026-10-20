@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/connect-core",
-  "version": "6.2.3-dev.66",
+  "version": "6.2.3-dev.67",
   "publishConfig": {
     "access": "public"
   },
