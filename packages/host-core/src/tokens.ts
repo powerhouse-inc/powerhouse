@@ -87,27 +87,50 @@ export const TOKEN_ESCAPE_KEY = "$$";
  * token in that position must produce. */
 type Untokened<T> = Exclude<T, Token>;
 
-/** A collection a `$map` may iterate. */
-type MapCollection = readonly unknown[] | Readonly<Record<string, unknown>>;
+/** What `{ $key: true }` reads inside a `$map` template: the innermost
+ * map's key, a number over an array and a string over a record. */
+type MapKey = string | number;
 
-/** `$map` producing an array of `E` (no `into`). */
-export interface ArrayMapToken<E> {
-  $map: {
-    over: OutputToken<MapCollection> | ItemToken<MapCollection>;
-    as?: string;
-    to: Template<E>;
-    into?: never;
-  };
-}
+/** A branded array `over` (an `ItemToken<X[]>` from outputs.d.ts). */
+type ArrayOver =
+  | OutputToken<readonly unknown[]>
+  | ItemToken<readonly unknown[]>;
+/** A branded record `over`. An array does not fit it (no string index). */
+type RecordOver =
+  | OutputToken<Readonly<Record<string, unknown>>>
+  | ItemToken<Readonly<Record<string, unknown>>>;
+
+/**
+ * `$map` producing an array of `E` (no `into`). `$key: true` in `to` reads
+ * a number over an array and a string over a record, so its slot is typed
+ * by the `over`: a branded array `over` keeps `$key` out of string slots.
+ * A hand-written `$output` literal carries no brand and fits both forms;
+ * there, a misplaced `$key` fails at resolved validation instead.
+ */
+export type ArrayMapToken<E> =
+  | {
+      $map: {
+        over: ArrayOver;
+        as?: string;
+        to: Template<E, number>;
+        into?: never;
+      };
+    }
+  | {
+      $map: {
+        over: RecordOver;
+        as?: string;
+        to: Template<E, string>;
+        into?: never;
+      };
+    };
 
 /** `$map` producing a record of `V` (`into: "record"`, record `over`). */
 export interface RecordMapToken<V> {
   $map: {
-    over:
-      | OutputToken<Readonly<Record<string, unknown>>>
-      | ItemToken<Readonly<Record<string, unknown>>>;
+    over: RecordOver;
     as?: string;
-    to: Template<V>;
+    to: Template<V, string>;
     into: "record";
   };
 }
@@ -120,35 +143,59 @@ type MapTokenFor<T> = T extends readonly unknown[]
       : never
     : never;
 
+/** `true` when some member of `K` fits `T` (else `never`). */
+type SomeFits<K, T> = K extends T ? true : never;
+
+/** The `$key` tokens that fit `T`: `{ $key: true }` (the innermost map's
+ * key, typed `K`) and `{ $key: "<as>" }` (a named outer map's key, whose
+ * type is not tracked: a string or a number). */
+type KeyTokenFor<T, K extends MapKey> =
+  | ([SomeFits<K, T>] extends [never] ? never : { $key: true })
+  | ([SomeFits<MapKey, T>] extends [never] ? never : { $key: string });
+
 /**
  * The tokens that may stand where a value of type `T` is expected:
  * `$output`/`$item` whose (branded) value fits `T` (a hand-written literal
  * carries no brand and fits anywhere; the loader checks its path),
- * `$concat`/`$env` where a string fits, `$key` where a string or number
- * fits, and `$map` where `T` is an array (or, `into: "record"`, a record).
+ * `$concat`/`$env` where a string fits, `$key` where the key fits (`K`: the
+ * innermost `$map`'s key type inside a template), and `$map` where `T` is
+ * an array (or, `into: "record"`, a record).
  */
-export type TokenFor<T> = unknown extends T
+export type TokenFor<T, K extends MapKey = MapKey> = unknown extends T
   ? Token
   :
       | OutputToken<T>
       | ItemToken<T>
-      | (string extends T ? ConcatToken | EnvToken | KeyToken : never)
-      | (number extends T ? KeyToken : never)
+      | (string extends T ? ConcatToken | EnvToken : never)
+      | KeyTokenFor<T, K>
       | MapTokenFor<T>;
 
 /**
  * A `$map` template for an element of type `T`: `T`'s shape with a fitting
  * token allowed at EVERY position (the rendered element is validated
  * against the field's schema after resolution, so non-ref fields such as a
- * drive `slug` may take `$key`/`$item` here).
+ * drive `slug` may take `$key`/`$item` here). `K` is the type `$key: true`
+ * reads (see {@link ArrayMapToken}).
  */
-export type Template<T> = TokenFor<Untokened<T>> | TemplateShape<Untokened<T>>;
+export type Template<T, K extends MapKey = MapKey> =
+  | TokenFor<Untokened<T>, K>
+  | TemplateShape<Untokened<T>, K>;
 
-type TemplateShape<T> = T extends readonly unknown[]
-  ? Template<T[number]>[]
+type TemplateShape<T, K extends MapKey> = T extends readonly unknown[]
+  ? Template<T[number], K>[]
   : T extends object
-    ? { [K in keyof T]: Template<T[K]> }
+    ? { [P in keyof T]: TemplateSlot<T[P], K> }
     : T;
+
+/** One property of a template. Its tokens may produce `undefined` where
+ * the property is optional (a codegen'd `ItemToken<X | undefined>`: the
+ * rendered property is then left out), but the property is never written
+ * as a literal `undefined`: a host file is JSON, so an optional property is
+ * omitted instead (enforced by the type under exactOptionalPropertyTypes,
+ * which generated hosts/tsconfig.json enables). */
+type TemplateSlot<V, K extends MapKey> =
+  | TokenFor<Untokened<V>, K>
+  | TemplateShape<Exclude<Untokened<V>, undefined>, K>;
 
 /* ------------------------------------------------------------------ schemas */
 

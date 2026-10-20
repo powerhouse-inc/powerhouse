@@ -33,7 +33,12 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
-import type { ItemToken, OutputToken } from "../src/tokens.js";
+import type {
+  ArrayMapToken,
+  ItemToken,
+  OutputToken,
+  RecordMapToken,
+} from "../src/tokens.js";
 
 /** `$map` / `$item` / `$key` (typed-host-configs 3.3) over canned outputs. */
 
@@ -725,6 +730,96 @@ describe("$map typing (tsc -p hosts positions)", () => {
       mapInString,
       optionalOutput,
     ]).toHaveLength(5);
+  });
+});
+
+describe("$map template typing: $key and optional slots", () => {
+  type DeclaredHost = z.input<typeof declaredHostSchemas.reactorHostSchema>;
+  type Listener = { name: string; port?: number };
+  // Branded overs, as outputs.d.ts types a nested collection ($item leaf).
+  const listeners: ItemToken<{ name: string }[]> = { $item: ["listeners"] };
+  const listenerList: OutputToken<{ name: string }[]> = out("sb", ["l"]);
+  const driveRecord: OutputToken<Record<string, { url: string }>> = out("sb", [
+    "drives",
+  ]);
+
+  it("types $key: true by the over: a number over an array, a string over a record", () => {
+    const numberKey: ArrayMapToken<Listener> = {
+      $map: { over: listenerList, to: { name: "x", port: { $key: true } } },
+    };
+    const stringKey: ArrayMapToken<Listener> = {
+      $map: { over: driveRecord, to: { name: { $key: true } } },
+    };
+    const arrayKeyInString: ArrayMapToken<Listener> = {
+      // @ts-expect-error -- an array map's $key is a number; name takes a string
+      $map: { over: listenerList, to: { name: { $key: true } } },
+    };
+    const recordKeyInNumber: ArrayMapToken<Listener> = {
+      // @ts-expect-error -- a record map's $key is a string; port takes a number
+      $map: { over: driveRecord, to: { name: "x", port: { $key: true } } },
+    };
+    // A hand-written over carries no brand: either key type may be meant.
+    const unbranded: ArrayMapToken<Listener> = {
+      $map: { over: out("sb", ["l"]), to: { name: { $key: true } } },
+    };
+    // A named outer key's type is not tracked.
+    const named: ArrayMapToken<Listener> = {
+      $map: { over: listenerList, to: { name: { $key: "outer" } } },
+    };
+    const recordInto: RecordMapToken<Listener> = {
+      $map: { over: driveRecord, to: { name: { $key: true } }, into: "record" },
+    };
+    expect([
+      numberKey,
+      stringKey,
+      arrayKeyInString,
+      recordKeyInNumber,
+      unbranded,
+      named,
+      recordInto,
+    ]).toHaveLength(7);
+  });
+
+  it("rejects an array map's $key in a drive slug (reactor.drives)", () => {
+    const host: DeclaredHost = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        // @ts-expect-error -- the over is an array: $key is a number, slug a string
+        drives: { $map: { over: listenerList, to: { slug: { $key: true } } } },
+      },
+    };
+    const nested: DeclaredHost = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        drives: {
+          $map: {
+            over: driveRecord,
+            as: "drive",
+            to: { slug: { $key: true }, name: { $key: "drive" } },
+          },
+        },
+      },
+    };
+    expect([host, nested, listeners]).toHaveLength(3);
+  });
+
+  it("lets a token that may produce undefined fill an optional slot", () => {
+    const maybeName: ItemToken<string | undefined> = { $item: ["name"] };
+    const host = {
+      name: "x",
+      runner: { module: "m" },
+      reactor: {
+        drives: {
+          $map: {
+            over: driveRecord,
+            to: { slug: { $key: true }, name: maybeName },
+          },
+        },
+      },
+    } satisfies DeclaredHost;
+    expect(host.name).toBe("x");
   });
 });
 
