@@ -19,6 +19,7 @@ import {
 import type {
   DocumentModelModule,
   ISigner,
+  PeerCapabilityFlags,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import {
@@ -92,6 +93,8 @@ export type MultiReactorParams = {
   signer: ISigner;
   /** Signing models when the local module exposes no registry; the router asks the local reactor (or, remote-only, the loaded set). */
   documentModelModules: LoadedDocumentModels;
+  /** Picks the versions of documents created on the Switchboard. */
+  featureFlags?: PeerCapabilityFlags;
   onDiagnostic?: RouterDiagnostic;
 };
 
@@ -168,6 +171,7 @@ export async function buildMultiReactorClient(
   const remote = createGraphQLRoutableBackend({
     url: params.remoteGraphqlUrl,
     documentModels: () => registry?.getAllModules() ?? loadedModules(),
+    featureFlags: params.featureFlags,
   });
   const remoteBackend: RoutableBackendConfig = {
     name: REMOTE_BACKEND_NAME,

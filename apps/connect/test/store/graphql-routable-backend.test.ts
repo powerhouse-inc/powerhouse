@@ -94,10 +94,9 @@ describe("createGraphQLRoutableBackend declares what GraphQL serves", () => {
     ]);
   });
 
-  it("reads the create defaults from createDefaults", async () => {
+  it("reads the signature policy from createDefaults and picks versions itself", async () => {
     const { backend, stub } = await backendOver({}, ({ body }) =>
-      body.operationName === "GetCreateDefaults" ||
-      body.operationName === "GetCreateProtocolVersions"
+      body.operationName === "GetCreateDefaults"
         ? data({
             createDefaults: {
               signaturePolicy: "legacy",
@@ -116,9 +115,8 @@ describe("createGraphQLRoutableBackend declares what GraphQL serves", () => {
     ).toEqual({
       "base-reducer": 2,
     });
-    expect(stub.received.map((r) => r.body.variables)).toEqual([
-      {},
-      { parentIdOrSlug: "drive-1", documentType: "powerhouse/test" },
+    expect(stub.received.map((r) => r.body.operationName)).toEqual([
+      "GetCreateDefaults",
     ]);
   });
 

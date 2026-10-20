@@ -7,7 +7,10 @@ import {
   getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { ISigner } from "@powerhousedao/shared/document-model";
+import type {
+  ISigner,
+  PeerCapabilityFlags,
+} from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import type * as MultiReactor from "./multi-reactor.js";
 import type {
@@ -26,6 +29,8 @@ export type AppReactorClientParams = {
   remoteDriveUrl: string | undefined;
   signer: ISigner;
   documentModelModules: LoadedDocumentModels;
+  /** Connect's reactor flags; they pick the versions of documents it creates. */
+  featureFlags?: PeerCapabilityFlags;
   loadRouter?: () => Promise<MultiReactorModule>;
 };
 
@@ -130,6 +135,7 @@ async function buildRouter(
     remoteGraphqlUrl,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
+    featureFlags: params.featureFlags,
   });
 }
 
@@ -163,5 +169,6 @@ async function buildRemoteOnly(
     remoteGraphqlUrl,
     signer: params.signer,
     documentModelModules: params.documentModelModules,
+    featureFlags: params.featureFlags,
   });
 }

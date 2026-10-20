@@ -526,6 +526,7 @@ export async function createReactor(
     remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
     signer: renown.signer,
     documentModelModules: loadedDocumentModels,
+    featureFlags: reactorFeatureFlags,
   });
 
   const drives = await getAppDrives(
