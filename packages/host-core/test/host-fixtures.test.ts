@@ -43,7 +43,7 @@ import {
  * typed-host-configs G2 (2.2): each fixture host runs the whole pipeline
  * (load → declared validation → resolve against CANNED outputs → resolved
  * validation; nothing launches) and is pinned as a JSON `expectHost`
- * expectation. `_packages/` MIRRORS
+ * expectation; one negative fixture per 2.1 invariant. `_packages/` MIRRORS
  * the real runner/plugin contracts (host-core cannot depend on them) and is
  * type-checked against the live schema API. `scaffold/` holds oxfmt-formatted
  * copies of `buildHostsTemplates("my-project")` (codegen hosts.ts) and its
@@ -1069,4 +1069,169 @@ describe("host fixtures: the full pipeline per topology cell (2.2)", () => {
       });
     },
   );
+});
+
+/* --------------------------------------------------------------- negatives */
+
+interface Negative {
+  host: string;
+  /** The 2.1 (or 3.2/3.5) invariant this fixture breaks. */
+  invariant: string;
+  /** The error, including the host path it names. */
+  error: RegExp;
+}
+
+const NEGATIVES: Negative[] = [
+  {
+    host: "xor-reactor-with-children",
+    invariant: "reactor XOR children (reactor runner)",
+    error:
+      /hosts\/xor-reactor-with-children\/host\.js: "@powerhousedao\/ph-cli\/runners\/switchboard" is a reactor runner, so the host must not declare `children`/,
+  },
+  {
+    host: "xor-compound-with-reactor",
+    invariant: "reactor XOR children (compound runner)",
+    error:
+      /hosts\/xor-compound-with-reactor\/host\.js: "@powerhousedao\/host-core\/runners\/compound" is a compound runner, so the host must not declare `reactor`/,
+  },
+  {
+    host: "unknown-top-key",
+    invariant: "unknown top-level keys",
+    error:
+      /hosts\/unknown-top-key\/host\.js failed validation[\s\S]*- <root>: Unrecognized key: "reactr"/,
+  },
+  {
+    host: "unknown-runner-key",
+    invariant: "unknown runner keys",
+    error:
+      /hosts\/unknown-runner-key\/host\.js failed validation[\s\S]*- runner: Unrecognized key: "strictPortt"/,
+  },
+  {
+    host: "start-order-unknown",
+    invariant: "startOrder ⊆ children",
+    error:
+      /- config\.startOrder\.1: startOrder names "nope", which is not a member\. Members: sb\./,
+  },
+  {
+    host: "start-order-contradicts",
+    invariant: "startOrder consistent with the output dependencies",
+    error:
+      /config\.startOrder starts "ui" before "sb", but ui\.reactor\.backends\.sb\.remote\.url consumes "sb"'s outputs/,
+  },
+  {
+    host: "default-verb-unknown",
+    invariant: "defaultVerb ⊆ runner verbs",
+    error:
+      /hosts\/default-verb-unknown\/host\.js: runner\.defaultVerb "start" is not a verb of "@powerhousedao\/ph-cli\/runners\/switchboard"\. Supported verbs: build, dev, run, serve\./,
+  },
+  {
+    host: "plugin-verb-unknown",
+    invariant: "plugin verbs[] ⊆ runner verbs",
+    error:
+      /hosts\/plugin-verb-unknown\/host\.js: plugin "fixture-plugin" is scoped to verb "promptFromMessages", which "@powerhousedao\/clint\/mastra-runner" does not export\. Supported verbs: build, run, serve\./,
+  },
+  {
+    host: "remote-without-url",
+    invariant: "a remote backend needs remote.url",
+    error:
+      /hosts\/remote-without-url\/host\.js failed validation[\s\S]*- reactor\.backends\.sb\.remote\.url: /,
+  },
+  {
+    host: "undefined-value",
+    invariant: "no undefined values (JSON gate)",
+    error:
+      /hosts\/undefined-value\/host\.js exports a non-static value at `runner\.port \(undefined\)`/,
+  },
+  {
+    host: "token-bad-path",
+    invariant: "a token's path is valid against its producer's outputsSchema",
+    error:
+      /hosts\/token-bad-path\/host\.js: invalid output token:\n {2}- reactor\.drives\[0\]\.remote\.url: \$output switchboard › drives\.workflows\.uri: outputs\.drives\.workflows has no key "uri" \(keys: id, url\)/,
+  },
+  {
+    host: "token-unknown-producer",
+    invariant: "a token's producer exists",
+    error:
+      /hosts\/token-unknown-producer\/host\.js: invalid output token:\n {2}- reactor\.backends\.sb\.remote\.url: names host "switchbaord", which cannot be loaded: Unknown host "switchbaord"/,
+  },
+  {
+    host: "token-cycle",
+    invariant: "no token cycle",
+    error:
+      /output tokens form a cycle between "ping", "pong": ping \(reactor\.drives\[0\]\.remote\.url\) needs pong; pong \(reactor\.drives\[0\]\.remote\.url\) needs ping\./,
+  },
+  {
+    host: "stale-outputs",
+    invariant: "a generated outputs.js matches its producer",
+    error:
+      /hosts\/switchboard\/outputs\.js is stale \(its producer's outputsSchema or declared drives changed since it was generated\); run `ph generate hosts`\./,
+  },
+  {
+    host: "process-env",
+    invariant: "no process.env in host files",
+    error:
+      /hosts\/process-env\/host\.js:5 reads `process\.`[\s\S]*Use an \$env token instead/,
+  },
+  {
+    host: "removed-from-slug",
+    invariant: "no old cross-host forms ({ from, slug })",
+    error:
+      /hosts\/removed-from-slug\/host\.js: removed form:\n {2}- runner\.plugins\[0\]\.config\.drive: drive: \{ from, slug \} was removed; use switchboard\.drives\.workflows\.url/,
+  },
+  {
+    host: "removed-remote-host",
+    invariant: "no old cross-host forms (remote.host)",
+    error:
+      /hosts\/removed-remote-host\/host\.js: removed form:\n {2}- reactor\.backends\.switchboard\.remote\.host: remote: \{ host \} was removed; use remote: \{ url: switchboard\.endpoints\.graphql \}/,
+  },
+  {
+    host: "backend-kind-missing",
+    invariant: "backend kind present",
+    error:
+      /hosts\/backend-kind-missing\/host\.js failed validation[\s\S]*- reactor\.backends\.main\.kind: Invalid option: expected one of "in-process"\|"worker"\|"remote"/,
+  },
+  {
+    host: "member-role-by-folder",
+    invariant: "member roles: no folder-keyed wiring",
+    error:
+      /hosts\/member-role-by-folder\/host\.js: removed form:\n {2}- config\.projectDrivesIntoConnect: config\.projectDrivesIntoConnect was removed; declare the drives on the member that consumes them, by output token/,
+  },
+  {
+    host: "env-unset",
+    invariant: "3.2 an unset $env fails, naming it",
+    error:
+      /hosts\/env-unset\/host\.js: `config\.apiKey` reads \$env FIXTURE_NEVER_SET, which is not set\./,
+  },
+  {
+    host: "env-optional-misplaced",
+    invariant: "3.2 optional $env only as a property value",
+    error:
+      /hosts\/env-optional-misplaced\/host\.js: invalid output token:\n {2}- config\.apiKey\.\$concat\[1\]: \{ \$env: \{ name, optional: true \} \} is legal only as the direct value of an object property/,
+  },
+  {
+    host: "token-in-plain-field",
+    invariant: "3.5 tokens only in token-able fields",
+    error:
+      /hosts\/token-in-plain-field\/host\.js failed validation[\s\S]*- runner\.host: this field does not take an output token/,
+  },
+];
+
+describe("host fixtures: one negative per invariant (2.1)", () => {
+  it.each(NEGATIVES.map((n) => [n.invariant, n] as const))(
+    "%s",
+    async (_label, negative) => {
+      await expect(pipeline("invariants", negative.host)).rejects.toThrow(
+        negative.error,
+      );
+    },
+  );
+
+  it("lists every negative fixture (the producers aside)", () => {
+    const producers = ["switchboard", "connect", "ping", "pong"];
+    expect(NEGATIVES.map((n) => n.host).sort()).toEqual(
+      readdirSync(path.join(FIXTURES, "invariants", "hosts"))
+        .filter((name) => !producers.includes(name))
+        .sort(),
+    );
+  });
 });
