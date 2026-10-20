@@ -35,8 +35,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
           ...(config.renown
             ? {
                 publicUrl: config.renown.publicUrl,
-                ...(config.renown.renownUrl
-                  ? { renownUrl: config.renown.renownUrl }
+                ...(config.renown.renownUrls?.length
+                  ? { renownUrls: config.renown.renownUrls }
                   : {}),
               }
             : {}),

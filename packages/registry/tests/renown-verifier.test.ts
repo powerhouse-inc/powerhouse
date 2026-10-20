@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRenownVerifier,
+  parseRenownUrls,
   renownApiJwtMiddleware,
   type JwtMiddlewareHelpers,
 } from "../src/auth/renown-verifier.js";
@@ -45,6 +46,82 @@ describe("createRenownVerifier", () => {
     await verify("t");
     await verify("t");
     expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("renown issuer list", () => {
+  beforeEach(() => vi.resetAllMocks());
+  const A = "https://renown-staging.test";
+  const B = "https://www.renown.test";
+  const make = (renownUrls?: string[]) =>
+    createRenownVerifier({ publicUrl: "https://reg.test", renownUrls });
+
+  it("a token from the second issuer is accepted", async () => {
+    mockVerifyAuthCredential.mockImplementation(
+      (_t: string, o: { renownUrl?: string }) =>
+        Promise.resolve(o.renownUrl === B ? { did: DID } : undefined),
+    );
+    expect(await make([A, B])("t")).toBe(DID);
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(2);
+  });
+
+  it("an unreachable issuer does not block the next one", async () => {
+    mockVerifyAuthCredential
+      .mockRejectedValueOnce(new Error("fetch failed"))
+      .mockResolvedValueOnce({ did: DID });
+    const verify = createRenownVerifier({
+      publicUrl: "https://reg.test",
+      renownUrls: ["https://a.test", "https://b.test"],
+    });
+    expect(await verify("t")).toBe(DID);
+  });
+
+  it("a token no issuer accepts is refused", async () => {
+    mockVerifyAuthCredential.mockResolvedValue(undefined);
+    expect(await make([A, B])("t")).toBeUndefined();
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(2);
+  });
+
+  it("the first issuer that accepts wins and is called first", async () => {
+    mockVerifyAuthCredential.mockResolvedValue({ did: DID });
+    await make([A, B])("t");
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(1);
+    expect(mockVerifyAuthCredential.mock.calls[0][1]).toMatchObject({
+      renownUrl: A,
+      audience: "https://reg.test",
+    });
+  });
+
+  it("no list keeps the SDK default", async () => {
+    mockVerifyAuthCredential.mockResolvedValue({ did: DID });
+    await make(undefined)("t");
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(1);
+    expect(mockVerifyAuthCredential.mock.calls[0][1]).toMatchObject({
+      renownUrl: undefined,
+    });
+  });
+
+  it("parseRenownUrls trims, drops empties and dedupes", () => {
+    expect(
+      parseRenownUrls(" https://a.test/ , ,https://b.test,https://a.test "),
+    ).toEqual(["https://a.test", "https://b.test"]);
+    expect(parseRenownUrls("https://a.test")).toEqual(["https://a.test"]);
+    expect(parseRenownUrls("")).toBeUndefined();
+    expect(parseRenownUrls(" , ")).toBeUndefined();
+    expect(parseRenownUrls(undefined)).toBeUndefined();
+  });
+
+  it("a positive result is cached and a negative is not", async () => {
+    mockVerifyAuthCredential.mockResolvedValue(undefined);
+    const verify = make([A]);
+    await verify("neg");
+    await verify("neg");
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(2);
+    mockVerifyAuthCredential.mockClear();
+    mockVerifyAuthCredential.mockResolvedValue({ did: DID });
+    await verify("pos");
+    await verify("pos");
+    expect(mockVerifyAuthCredential).toHaveBeenCalledTimes(1);
   });
 });
 
