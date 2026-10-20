@@ -6,6 +6,7 @@ import {
   type HostDefinition,
   type RunnerKind,
 } from "./host-schemas.js";
+import { substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost } from "./host-loader.js";
 import { outputSitesOf } from "./resolve/declared.js";
 import { processResolveEnv, runnerOutputsSchema } from "./resolve/node.js";
@@ -233,10 +234,12 @@ export async function runCompound(
       const memberVerb = memberVerbOf(verb, m.draft.runner);
       const oneShot = ONE_SHOT_VERBS.has(memberVerb);
       // A one-shot member (build) needs no other member's outputs: it gets
-      // its declared host. Everything else resolves against the members
-      // started before it and is validated in resolved form.
+      // its declared host with only the "${userData}"/"${projectRoot}"
+      // string sugar substituted (tokens stay; its verb reads paths, never
+      // outputs). Everything else resolves against the members started
+      // before it and is validated in resolved form.
       const resolved = oneShot
-        ? { ...m.draft }
+        ? substituteBuiltinEnv(m.draft, resolveEnv.builtins ?? {})
         : resolveHostOutputs(m.draft, {
             outputs,
             ...resolveEnv,

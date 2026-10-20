@@ -39,6 +39,8 @@ function makeProject(opts?: {
   connectPlugins?: unknown[];
   /** The connect member wrapper's `reactor` section. */
   connectReactor?: unknown;
+  /** Extra keys for the connect member wrapper's `runner`. */
+  connectRunner?: Record<string, unknown>;
 }): {
   dir: string;
   sink: string;
@@ -98,7 +100,7 @@ export async function dev(host, ctx) {
 }
 export const run = dev;
 export async function build(host) {
-  log({ event: "build", name: host.name, plugins: host.runner.plugins ?? null });
+  log({ event: "build", name: host.name, plugins: host.runner.plugins ?? null, runner: host.runner });
 }
 `,
   );
@@ -123,8 +125,13 @@ export async function build(host) {
   };
   const connectMember = {
     host: "connect",
-    ...(opts?.connectPlugins
-      ? { runner: { plugins: opts.connectPlugins } }
+    ...(opts?.connectPlugins || opts?.connectRunner
+      ? {
+          runner: {
+            ...opts.connectRunner,
+            ...(opts.connectPlugins ? { plugins: opts.connectPlugins } : {}),
+          },
+        }
       : {}),
     ...(opts?.connectReactor ? { reactor: opts.connectReactor } : {}),
   };
@@ -373,6 +380,27 @@ describe("runCompound", () => {
       { module: WF, config: { drive: workflowsUrl } },
     ]);
     await result.shutdown();
+  });
+
+  it("build: members still get the ${userData}/${projectRoot} string sugar", async () => {
+    const { dir, sink } = makeProject({
+      connectRunner: {
+        outDir: "${projectRoot}/dist",
+        cacheDir: "${userData}/.ph/cache",
+      },
+    });
+    await runCompound(
+      await appHost(dir),
+      { ...ctx(dir, { PH_USER_DATA_DIR: "/profile" }), verb: "build" },
+      { projectName: "lab", installSignalHandlers: false },
+    );
+    const connect = calls(sink).find(
+      (c) => (c.event as string) === "build" && c.name === "lab-connect",
+    );
+    expect(connect?.runner).toMatchObject({
+      outDir: `${path.resolve(dir)}/dist`,
+      cacheDir: "/profile/.ph/cache",
+    });
   });
 
   it("build: takes no lock and leaves a live instance's record alone", async () => {
