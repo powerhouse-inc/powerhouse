@@ -486,68 +486,75 @@
                 "additionalProperties": false
               },
               "drives": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "slug": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "projectHash": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "string",
-                          "const": "id"
-                        }
-                      ]
-                    },
-                    "name": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "icon": {
-                      "type": "string"
-                    },
-                    "preferredEditor": {
-                      "type": "string"
-                    },
-                    "sharingType": {
-                      "type": "string",
-                      "enum": ["public", "private", "shared"]
-                    },
-                    "availableOffline": {
-                      "type": "boolean"
-                    },
-                    "remote": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
                       "type": "object",
                       "properties": {
-                        "url": {
+                        "slug": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "projectHash": {
                           "anyOf": [
                             {
-                              "type": "string",
-                              "minLength": 1
+                              "type": "boolean"
                             },
                             {
-                              "$ref": "#/$defs/__schema0"
+                              "type": "string",
+                              "const": "id"
                             }
                           ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "icon": {
+                          "type": "string"
+                        },
+                        "preferredEditor": {
+                          "type": "string"
+                        },
+                        "sharingType": {
+                          "type": "string",
+                          "enum": ["public", "private", "shared"]
+                        },
+                        "availableOffline": {
+                          "type": "boolean"
+                        },
+                        "remote": {
+                          "type": "object",
+                          "properties": {
+                            "url": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                {
+                                  "$ref": "#/$defs/__schema0"
+                                }
+                              ]
+                            }
+                          },
+                          "required": ["url"],
+                          "additionalProperties": false
                         }
                       },
-                      "required": ["url"],
+                      "required": ["slug"],
                       "additionalProperties": false
                     }
                   },
-                  "required": ["slug"],
-                  "additionalProperties": false
-                }
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
               }
             },
             "additionalProperties": false
