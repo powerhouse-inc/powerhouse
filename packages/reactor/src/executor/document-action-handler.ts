@@ -432,6 +432,14 @@ export class DocumentActionHandler {
     }
 
     const input = action.input as CreateDocumentActionInput;
+    const unsupported = this.unsupportedProtocol(
+      input.documentId,
+      input.protocolVersions,
+      input.model,
+    );
+    if (unsupported) {
+      return buildErrorResult(job, unsupported, startTime);
+    }
     // The queue's gate loaded the model on the host; a worker may still lack it.
     if (
       input.protocolVersions?.["base-reducer"] === 3 &&
@@ -442,14 +450,6 @@ export class DocumentActionHandler {
         new ModuleNotFoundError(input.model),
         startTime,
       );
-    }
-    const unsupported = this.unsupportedProtocol(
-      input.documentId,
-      input.protocolVersions,
-      input.model,
-    );
-    if (unsupported) {
-      return buildErrorResult(job, unsupported, startTime);
     }
 
     const document = createDocumentFromAction(action as CreateDocumentAction);

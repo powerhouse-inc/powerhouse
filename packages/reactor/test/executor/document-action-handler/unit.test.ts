@@ -20,6 +20,7 @@ import {
 } from "../../../src/executor/util.js";
 import type { Job } from "../../../src/queue/types.js";
 import { DocumentPurgedError } from "../../../src/shared/errors.js";
+import { ModuleNotFoundError } from "../../../src/registry/errors.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -66,6 +67,7 @@ function createSourceDoc(
 
 function createHarness(
   sourceDoc: PHDocument = createSourceDoc(),
+  { undoV3 = false }: { undoV3?: boolean } = {},
 ): HandlerHarness {
   const writeCache: WriteCacheMock = {
     getState: vi.fn().mockResolvedValue(sourceDoc),
@@ -99,7 +101,7 @@ function createHarness(
     authEnforcement: false,
     authGroups: false,
     authConditions: false,
-    undoV3: false,
+    undoV3,
   };
   const registry = createTestRegistry();
   const handler = new DocumentActionHandler(
@@ -625,6 +627,50 @@ describe("DocumentActionHandler", () => {
         expect(call[0]).toBe("victim-doc");
       }
     });
+  });
+});
+
+describe("executeCreate at base-reducer 3 of a model the reactor lacks", () => {
+  function createAction(): Action {
+    return {
+      id: "action-create",
+      type: "CREATE_DOCUMENT",
+      scope: "document",
+      timestampUtcMs: "2024-01-01T00:00:00.000Z",
+      input: {
+        documentId: "absent-doc",
+        model: "test/absent",
+        protocolVersions: { "base-reducer": 3 },
+      },
+    } as unknown as Action;
+  }
+
+  it("refuses the version before looking for the model when the reactor does not run 3", async () => {
+    const harness = createHarness(undefined, { undoV3: false });
+    const action = createAction();
+
+    const result = await execute(
+      harness,
+      buildJob({ documentId: "absent-doc", actions: [action] }),
+      action,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.name).toBe("UnsupportedProtocolVersionError");
+  });
+
+  it("reports the missing model when the reactor runs 3", async () => {
+    const harness = createHarness(undefined, { undoV3: true });
+    const action = createAction();
+
+    const result = await execute(
+      harness,
+      buildJob({ documentId: "absent-doc", actions: [action] }),
+      action,
+    );
+
+    expect(result.success).toBe(false);
+    expect(ModuleNotFoundError.isError(result.error)).toBe(true);
   });
 });
 
