@@ -10,6 +10,10 @@
   },
   "files": [
     "dist",
+    "skills",
+    "docs",
+    "CUSTOMIZING.md",
+    "RUNTIME-CONFIG.md",
     "src/routes",
     "src/router",
     "src/route-tree.ts",
