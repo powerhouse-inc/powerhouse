@@ -8,11 +8,7 @@ import {
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import {
-  makeHostSchemas,
-  ref,
-  type HostSchemas,
-} from "@powerhousedao/host-core/schema";
+import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
   attachRemoteReactor,
@@ -46,10 +42,9 @@ const REMOTE_URL_HINT =
   'remote: { url: switchboard.endpoints.graphql } (from ../switchboard/outputs.js), or literally { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }';
 
 /**
- * The agent host, built once per form: DECLARED (`apiKey` may be an output
- * or `$env` token; what host.js authors write) and RESOLVED (tokens
- * substituted; what the verbs receive). Host-core's base blocks come from
- * `makeHostSchemas` in the same form.
+ * The agent host, from one definition in two forms: DECLARED (`apiKey` may
+ * be a token, e.g. `{ $env: "OPENROUTER_API_KEY" }`; what host.js authors
+ * write) and RESOLVED (what the verbs receive).
  *
  * `config` holds OPERATOR SETTINGS only (rewire R5): `model` selects the
  * LLM, `apiKey` authenticates it, `instructions`/`prompts` shape the agent.
@@ -57,7 +52,7 @@ const REMOTE_URL_HINT =
  * allowlists) stay in code, and the agent CARD (description/image) comes
  * from the host's `profile`, not here.
  */
-function buildHostSchema<K extends z.ZodType>(base: HostSchemas, apiKey: K) {
+const schemas = defineHostSchemas((s) => {
   const agentHostConfigSchema = z.strictObject({
     /** Mastra model router id (e.g. "openrouter/<vendor>/<model>"). Absent:
      * the runner answers as the demo agent. */
@@ -67,7 +62,7 @@ function buildHostSchema<K extends z.ZodType>(base: HostSchemas, apiKey: K) {
      * resolve time and never sits in the host file. Passed to the provider
      * as given; the runner does not read `process.env` itself. Absent, the
      * Mastra model router falls back to its own provider env lookup. */
-    apiKey: apiKey.optional(),
+    apiKey: s.tokenable(z.string().min(1)).optional(),
     instructions: z.string().optional(),
     /** `build`: skill + agent-profile compilation inputs and output. */
     prompts: z
@@ -78,26 +73,17 @@ function buildHostSchema<K extends z.ZodType>(base: HostSchemas, apiKey: K) {
       })
       .optional(),
   });
-  /** The agent host. `reactor` is the base block: a lone `remote` backend
-   * naming the switchboard to attach to. `runner` takes no options beyond
-   * the common base. */
-  return base.reactorHostSchema.extend({
-    runner: base.runnerBaseSchema.strict(),
+  /** `reactor` is the base block: a lone `remote` backend naming the
+   * switchboard to attach to. `runner` takes no options beyond the base. */
+  return s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema.strict(),
     config: agentHostConfigSchema.optional(),
   });
-}
-
-/** Resolved form: what the verbs receive (and `validateHost` checks). */
-export const hostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "forbid" }),
-  z.string().min(1),
-);
-
+});
 /** Declared form: what a host file may contain before resolution. */
-export const declaredHostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "allow" }),
-  ref(z.string().min(1)),
-);
+export const declaredHostSchema = schemas.declaredHostSchema;
+/** Resolved form: what the verbs receive (and `validateHost` checks). */
+export const hostSchema = schemas.hostSchema;
 
 /** What an agent host.js author writes. */
 export type MastraHostInput = z.input<typeof declaredHostSchema>;

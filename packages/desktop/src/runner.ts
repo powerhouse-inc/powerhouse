@@ -11,10 +11,7 @@ import {
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import {
-  makeHostSchemas,
-  type HostSchemas,
-} from "@powerhousedao/host-core/schema";
+import { defineHostSchemas } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import { APP_JSON_FILE, loadAppJson } from "./app-json.js";
 import { bundleStack } from "./bundle-stack.js";
@@ -73,13 +70,12 @@ export const shellOptionsSchema = z.strictObject({
 });
 
 /**
- * The desktop host, built once per form from one definition: DECLARED
- * (`tokens: "allow"`; what host.js authors write) and RESOLVED
- * (`tokens: "forbid"`; what the verbs receive). The runner adds no
+ * The desktop host, from one definition in two forms: DECLARED (what host.js
+ * authors write) and RESOLVED (what the verbs receive). The runner adds no
  * token-able fields of its own; the forms differ in host-core's base blocks
  * (member wrappers' reactor URLs and the like).
  */
-function buildHostSchema(base: HostSchemas) {
+const schemas = defineHostSchemas((base) => {
   /** The desktop runner's own `runner` options, on top of the common base. */
   const desktopRunnerOptionsSchema = base.runnerBaseSchema
     .extend({
@@ -103,17 +99,12 @@ function buildHostSchema(base: HostSchemas) {
       config: compoundWiringSchema.optional(),
     })
     .superRefine(refineStartOrder);
-}
-
-/** Resolved form: what the verbs receive (and `validateHost` checks). */
-export const hostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "forbid" }),
-);
+});
 
 /** Declared form: what a host file may contain before resolution. */
-export const declaredHostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "allow" }),
-);
+export const declaredHostSchema = schemas.declaredHostSchema;
+/** Resolved form: what the verbs receive (and `validateHost` checks). */
+export const hostSchema = schemas.hostSchema;
 
 /** What a desktop host.js author writes. */
 export type DesktopHostInput = z.input<typeof declaredHostSchema>;

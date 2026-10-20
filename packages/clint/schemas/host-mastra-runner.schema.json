@@ -164,7 +164,41 @@
                     "enum": ["idb", "memory", "path", "postgres"]
                   },
                   "dataDir": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "$env": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "optional": {
+                                    "type": "boolean",
+                                    "const": true
+                                  }
+                                },
+                                "required": ["name", "optional"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["$env"],
+                        "additionalProperties": false
+                      }
+                    ]
                   },
                   "url": {
                     "type": "string"
@@ -203,13 +237,19 @@
               "remote": {
                 "type": "object",
                 "properties": {
-                  "host": {
-                    "type": "string"
-                  },
                   "url": {
-                    "type": "string"
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    ]
                   }
                 },
+                "required": ["url"],
                 "additionalProperties": false
               },
               "projection": {
@@ -394,8 +434,15 @@
                 "type": "object",
                 "properties": {
                   "url": {
-                    "type": "string",
-                    "minLength": 1
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    ]
                   }
                 },
                 "required": ["url"],
