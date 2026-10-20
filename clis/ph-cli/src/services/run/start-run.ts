@@ -1,6 +1,7 @@
 import {
   clearRunRecord,
   getVerb,
+  isSchemaLike,
   loadHost,
   loadProducers,
   ONE_SHOT_VERBS,
@@ -17,7 +18,6 @@ import {
   validateDeclaredHost,
   validateHost,
   writeRunRecord,
-  type HostSchemaLike,
   type RunnerModule,
 } from "@powerhousedao/host-core";
 
@@ -132,15 +132,6 @@ interface PublishTarget {
   hostName: string;
   specifier: string;
   verb: string;
-}
-
-function isSchemaLike(value: unknown): value is HostSchemaLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "safeParse" in value &&
-    typeof value.safeParse === "function"
-  );
 }
 
 /** Await `ready`, validate the outputs, write the v2 record and clear it on

@@ -1,6 +1,7 @@
 import {
   collectTokenSites,
   compoundOutputSource,
+  CONNECT_RUNNER,
   declaredHostSchemas,
   describeToken,
   drivesSchema,
@@ -55,7 +56,6 @@ interface ExplainOptions {
 }
 
 const TOPICS = ["drives", "outputs"];
-const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
 /** A reactor host as explained: a standalone host, or a compound member
  * with its wrapper applied (declared form). */

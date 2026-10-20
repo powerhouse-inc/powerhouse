@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   entryActiveForVerb,
+  isSchemaLike,
   normalizePluginEntries,
   PluginError,
   type PluginEntryData,
@@ -11,18 +12,6 @@ import {
 /** The zod-only entry Connect publishes with every built-in plugin's entry
  * config schema, keyed by plugin specifier. */
 const PLUGIN_CONFIGS_ENTRY = "@powerhousedao/connect/plugin-configs";
-
-interface SchemaIssue {
-  path: readonly PropertyKey[];
-  message: string;
-  keys?: readonly string[];
-}
-
-interface SchemaLike {
-  safeParse(
-    value: unknown,
-  ): { success: true } | { success: false; error: { issues: SchemaIssue[] } };
-}
 
 /**
  * Validate the entry configs of the Connect plugins composed for `verb`
@@ -76,13 +65,4 @@ async function loadPluginConfigSchemas(
   return typeof schemas === "object" && schemas !== null
     ? (schemas as Record<string, unknown>)
     : undefined;
-}
-
-function isSchemaLike(value: unknown): value is SchemaLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "safeParse" in value &&
-    typeof value.safeParse === "function"
-  );
 }

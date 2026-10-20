@@ -21,13 +21,14 @@ import {
 } from "./run-record.js";
 import { toStartedHandle, type StartedHandle } from "./runner-handle.js";
 import {
+  CONNECT_RUNNER,
   getVerb,
+  isSchemaLike,
   ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
   validateDeclaredHost,
   validateHost,
-  type HostSchemaLike,
   type RunnerContext,
   type RunnerModule,
 } from "./runner-resolver.js";
@@ -75,10 +76,6 @@ interface PreparedMember {
   file: string;
 }
 
-/** The runner a compound's `cspRegistrySync` wiring is forwarded to (as
- * `runner.cspRegistrySync`): a member's role is its runner, not its folder. */
-const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
-
 /** Build the member host object the member runner sees: the member's own
  * host.js with the wrapper applied. A wrapper SECTION is a FULL STATEMENT —
  * `reactor` and `config`, when present on the wrapper, replace the member's
@@ -96,15 +93,6 @@ async function memberDraft(
     ...(config !== undefined ? { config } : {}),
     ...(reactor !== undefined ? { reactor } : {}),
   };
-}
-
-function isSchemaLike(value: unknown): value is HostSchemaLike {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "safeParse" in value &&
-    typeof value.safeParse === "function"
-  );
 }
 
 export interface RunCompoundOptions {

@@ -59,6 +59,21 @@ export interface HostSchemaLike<O = unknown> {
     | { success: false; error: { issues: readonly HostSchemaIssue[] } };
 }
 
+/** Whether a value is zod-shaped (has a `safeParse` function): a runner's
+ * `outputsSchema`, a plugin's config schema. */
+export function isSchemaLike(value: unknown): value is HostSchemaLike {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "safeParse" in value &&
+    typeof value.safeParse === "function"
+  );
+}
+
+/** The Connect runner's specifier: compounds forward `cspRegistrySync` to
+ * it, and `--explain` prints its dead-config warnings. */
+export const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
+
 export interface RunnerModule<O = unknown> {
   run: RunnerVerb<O>;
   /** The RESOLVED host schema: no tokens; checked right before the verb. */
