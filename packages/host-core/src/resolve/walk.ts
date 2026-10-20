@@ -141,3 +141,18 @@ function render(value: unknown): unknown {
   for (const [key, child] of Object.entries(value)) out[key] = render(child);
   return out;
 }
+
+/** A copy of `value` with every `$$` escape replaced by its operand (the
+ * literal it protects). Run after the no-token walk. */
+export function unwrapEscapes<T>(value: T): T {
+  return unwrap(value) as T;
+}
+
+function unwrap(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(unwrap);
+  if (!isPlainObject(value)) return value;
+  if (isEscape(value)) return structuredClone(value[TOKEN_ESCAPE_KEY]);
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) out[key] = unwrap(child);
+  return out;
+}

@@ -1,5 +1,5 @@
 import { substituteBuiltinEnv, type BuiltinEnv } from "../env-substitution.js";
-import { tokenKeyOf, tokenSchema, TOKEN_ESCAPE_KEY } from "../tokens.js";
+import { tokenKeyOf, tokenSchema } from "../tokens.js";
 import type { OutputRef } from "./declared.js";
 import { memberForRef } from "./plan.js";
 import {
@@ -143,7 +143,9 @@ class Resolver {
       });
     }
     if (!isPlainObject(value)) return value;
-    if (isEscape(value)) return structuredClone(value[TOKEN_ESCAPE_KEY]);
+    // A `$$` escape stays wrapped: validateHost unwraps it after its
+    // no-token walk, so an escaped literal is never mistaken for a token.
+    if (isEscape(value)) return structuredClone(value);
     if (tokenKeyOf(value)) {
       const members = this.selfRefs(value, trail);
       if (members.length > 0) {
@@ -302,8 +304,8 @@ export interface ResolveOptions {
 /**
  * Resolve every token in a declared host (or any JSON-shaped value): the
  * result has the same shape with tokens replaced by values, optional unset
- * `$env` properties omitted, `$$` escapes unwrapped and the built-in string
- * sugar substituted. Throws `TokenResolutionError` naming the host path;
+ * `$env` properties omitted and the built-in string sugar substituted (`$$`
+ * escapes are kept; validateHost unwraps them). Throws `TokenResolutionError` naming the host path;
  * an `$output` whose producer is not running fails with the source's
  * message (no fallback, no waiting).
  *

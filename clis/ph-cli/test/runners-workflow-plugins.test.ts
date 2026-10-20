@@ -18,8 +18,8 @@ import {
  *    reports them on the handle (a compound hands them to connect), while the
  *    host's own declarations still decide whether the implicit default drive
  *    is replaced;
- *  - the connect runner refuses an unresolved drive reference (nothing
- *    outside a compound can resolve `{ from, slug }`).
+ *  - a compound member (connect, switchboard) leaves SIGINT/SIGTERM to the
+ *    compound.
  */
 
 vi.mock("../src/services/connect-studio.js", () => ({
@@ -296,6 +296,33 @@ describe("switchboard runner — signal ownership", () => {
         .signalHandlers,
     ).toBe(false);
     expect("signalHandlers" in (await argsOf(ctx))).toBe(false);
+  });
+});
+
+describe("connect runner — signal ownership", () => {
+  it("drops the exit-on-SIGTERM listener vite installs, only under a compound", async () => {
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    const runner = await import("../src/runners/connect.js");
+    const host = connect({
+      name: "lab-connect",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+    });
+    const viteExit = () => undefined;
+    const started = vi.mocked(runConnectStudio).getMockImplementation();
+    if (!started) throw new Error("runConnectStudio mock has no default");
+    const startAddingListener: typeof started = (...args) => {
+      process.once("SIGTERM", viteExit);
+      return started(...args);
+    };
+    vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);
+    await runner.dev(host, { ...ctx, parent: { host: "desktop", verb: "run" } });
+    expect(process.listeners("SIGTERM")).not.toContain(viteExit);
+
+    vi.mocked(runConnectStudio).mockImplementationOnce(startAddingListener);
+    await runner.dev(host, ctx);
+    expect(process.listeners("SIGTERM")).toContain(viteExit);
+    process.off("SIGTERM", viteExit);
   });
 });
 

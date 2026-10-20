@@ -10,6 +10,7 @@ import {
   type OutputsSchemaLookup,
 } from "./resolve/declared.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
+import { unwrapEscapes } from "./resolve/walk.js";
 import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 
 /**
@@ -317,7 +318,9 @@ function parseHost<O>(
     }
     assertKnownVerbs(runner, specifier, host, file);
   }
-  const result = schema.safeParse(host);
+  // `$$` escapes protect literal `$`-keyed objects through the token walk;
+  // the schema (and the verb) see the literal.
+  const result = schema.safeParse(unwrapEscapes(host));
   if (!result.success) {
     const issues = result.error.issues
       .map((issue) => {

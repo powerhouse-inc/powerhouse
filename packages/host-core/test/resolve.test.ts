@@ -80,11 +80,28 @@ describe("resolveHostOutputs", () => {
       c: "k-1",
       d: "/u",
       e: ["/p/data", "7"],
-      f: { $env: "LITERAL" },
+      f: { $$: { $env: "LITERAL" } },
       whole: { graphql: "http://localhost:4801/graphql" },
     });
     // the declared host is not mutated
     expect(host.a).toEqual(out("switchboard", ["drives", "workflows", "url"]));
+  });
+
+  it("keeps a $$ escape through resolution; validateHost hands the verb the literal", () => {
+    const runner: RunnerModule = {
+      kind: "reactor",
+      run: () => Promise.resolve(undefined),
+      hostSchema: { safeParse: (v: unknown) => ({ success: true, data: v }) },
+    };
+    const resolved = resolveHostOutputs(
+      { name: "x", runner: { module: "m" }, config: { f: { $$: { $env: "X" } } } },
+      sources,
+    );
+    expect(validateHost(runner, "m", resolved, "f")).toEqual({
+      name: "x",
+      runner: { module: "m" },
+      config: { f: { $env: "X" } },
+    });
   });
 
   it("omits the enclosing property of an unset optional $env", () => {

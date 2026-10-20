@@ -272,6 +272,34 @@ function callerOverride(
   };
 }
 
+/**
+ * Start a server; under a supervising compound (`ctx.parent`), drop the
+ * process-exiting signal listeners it installed (vite's dev and preview
+ * servers exit on SIGTERM): the compound owns the exit and stops members in
+ * reverse dependency order through their handles.
+ */
+async function startUnderSupervisor<T>(
+  ctx: RunnerContext,
+  start: () => Promise<T>,
+): Promise<T> {
+  if (!ctx.parent) return start();
+  const signals = ["SIGINT", "SIGTERM"] as const;
+  const before = new Map(
+    signals.map((signal) => [signal, new Set(process.listeners(signal))]),
+  );
+  try {
+    return await start();
+  } finally {
+    for (const signal of signals) {
+      for (const listener of process.listeners(signal)) {
+        if (!before.get(signal)?.has(listener)) {
+          process.off(signal, listener);
+        }
+      }
+    }
+  }
+}
+
 /** Fail at `ph run`, naming the plugin and key, when a composed Connect
  * plugin's entry config does not match its schema. */
 async function validateComposition(
@@ -295,10 +323,8 @@ export async function dev(
   await validateComposition(host, ctx);
   const { runConnectStudio } = await import("../services/connect-studio.js");
   const args = toStudioArgs(host);
-  const server = await runConnectStudio(
-    args,
-    undefined,
-    callerOverride(host, ctx, ctx.verb),
+  const server = await startUnderSupervisor(ctx, () =>
+    runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb)),
   );
   // vite's dev server binds its default host ("localhost") here.
   return connectHandle(server, { host: "localhost", port: args.port });
@@ -351,9 +377,11 @@ export async function serve(
     host: bind,
   };
   const override = callerOverride(host, ctx, ctx.verb);
-  const server = await runConnectPreview(args as ConnectPreviewArgs, {
-    connect: override,
-    cspRegistrySync: runner.cspRegistrySync === true,
-  });
+  const server = await startUnderSupervisor(ctx, () =>
+    runConnectPreview(args as ConnectPreviewArgs, {
+      connect: override,
+      cspRegistrySync: runner.cspRegistrySync === true,
+    }),
+  );
   return connectHandle(server, { host: bind, port });
 }

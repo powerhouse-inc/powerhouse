@@ -44,6 +44,7 @@ export {
   describeToken,
   formatPath,
   renderTokens,
+  unwrapEscapes,
   type TokenPosition,
   type TokenSite,
 } from "./walk.js";
