@@ -881,4 +881,7 @@ export const ManifestSchema = z.object({
   externalDependencies: z.record(z.string(), z.string()).optional(),
   config: z.array(ConfigEntrySchema).optional(),
   pwa: PwaConfigSchema.optional(),
+  // Set by `ph build` when the package offers routes (`./connect-routes`) to
+  // the Connects that load it.
+  connectRoutes: z.boolean().optional(),
 });

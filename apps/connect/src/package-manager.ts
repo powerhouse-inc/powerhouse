@@ -1,3 +1,8 @@
+import type { PackageRoute } from "@powerhousedao/connect-core/router";
+import {
+  holdConnectRoutes,
+  registerPackageRoutes,
+} from "@powerhousedao/connect-core/router";
 import * as common from "@powerhousedao/powerhouse-vetra-packages";
 import commonPkg from "@powerhousedao/powerhouse-vetra-packages/package.json" with { type: "json" };
 import type {
@@ -57,9 +62,15 @@ function parseBareName(spec: string): string {
   return at > 0 ? trimmed.slice(0, at) : trimmed;
 }
 
+/** Loads the routes a package offers (its `./connect-routes`). */
+export type PackageRoutesLoader = () => Promise<{
+  connectRoutes: readonly PackageRoute[];
+}>;
+
 type PackageWithMeta = PackageMeta & {
   loadedPackage: DocumentModelLib<any>;
   spec?: string;
+  loadRoutes?: PackageRoutesLoader;
 };
 
 type FetchedPackageJson = {
@@ -136,6 +147,8 @@ export class BrowserPackageManager implements IPackageManager {
   #subscribers = new Set<IPackagesListener>();
   #packagesMemo: DocumentModelLib<any>[] = [];
   #stylesheets: Map<string, HTMLStyleElement> = new Map();
+  /** Takes each package's offered routes out of the router. */
+  #routes: Map<string, () => void> = new Map();
   #localPackage: DocumentModelLib<any> | undefined;
 
   #cdnUrl: string | null;
@@ -159,8 +172,15 @@ export class BrowserPackageManager implements IPackageManager {
     localPackageVersion?: string,
     studioMode?: boolean,
     workflowsEnabled?: boolean,
+    genericChrome = true,
   ) {
-    this.addLocalPackage(common.manifest.name, common, commonPkg.version);
+    // Common's editors (drive explorer, document model editor) are the generic
+    // chrome's; without it, core gets only common's document models.
+    this.addLocalPackage(
+      common.manifest.name,
+      genericChrome ? common : { ...common, editors: [] },
+      commonPkg.version,
+    );
     // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
     // chunk, never fetched in production) only in studio mode.
     if (studioMode) {
@@ -204,6 +224,7 @@ export class BrowserPackageManager implements IPackageManager {
     name: string,
     loadedPackage: DocumentModelLib<any>,
     version?: string,
+    loadRoutes?: PackageRoutesLoader,
   ) {
     this.#localPackageNames.add(name);
     this.#registerPackage({
@@ -212,6 +233,7 @@ export class BrowserPackageManager implements IPackageManager {
       stylesheetUrl: null,
       loadedPackage,
       version,
+      loadRoutes,
     });
   }
 
@@ -382,6 +404,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   removePackage(name: string) {
+    this.#syncRoutes(name, undefined);
     this.#packages.delete(name);
     this.#storage.delete(name);
     this.#unmountStylesheet(name);
@@ -460,12 +483,15 @@ export class BrowserPackageManager implements IPackageManager {
     const loadedPackage = (await import(
       /* @vite-ignore */ importUrl
     )) as DocumentModelLib<any>;
+    // Beside the package's entry: browser/connect-routes.js.
+    const routesUrl = importUrl.replace(/index\.js$/, "connect-routes.js");
 
     return {
       name,
       loadedPackage,
       importUrl,
       stylesheetUrl,
+      loadRoutes: () => import(/* @vite-ignore */ routesUrl),
     };
   }
 
@@ -497,6 +523,39 @@ export class BrowserPackageManager implements IPackageManager {
     return await this.#loadPackageFromRegistry(packageName);
   }
 
+  /** Replaces `name`'s offered routes with `pkg`'s; the project's own package
+   * is left out, as its host build already has its routes. */
+  #syncRoutes(
+    name: string,
+    pkg: DocumentModelLib<any> | undefined,
+    loadRoutes?: PackageRoutesLoader,
+  ) {
+    this.#routes.get(name)?.();
+    this.#routes.delete(name);
+    const offers = pkg?.manifest.connectRoutes && loadRoutes;
+    if (!offers || name === LOCAL_PACKAGE_NAME) return;
+    // A replacement before the routes load cancels them.
+    let cancelled = false;
+    this.#routes.set(name, () => {
+      cancelled = true;
+    });
+    // Unknown paths wait for these routes before showing not found.
+    const release = holdConnectRoutes();
+    loadRoutes()
+      .then(({ connectRoutes }) => {
+        if (!cancelled) {
+          this.#routes.set(name, registerPackageRoutes(connectRoutes));
+        }
+      })
+      .catch((error: unknown) => {
+        console.error(
+          `[package-manager] ${name}'s routes failed to load:`,
+          error,
+        );
+      })
+      .finally(release);
+  }
+
   #registerPackage(packageWithMeta: PackageWithMeta) {
     const { name, loadedPackage, importUrl, stylesheetUrl, version, spec } =
       packageWithMeta;
@@ -504,6 +563,7 @@ export class BrowserPackageManager implements IPackageManager {
     if (stylesheetUrl !== null) {
       this.#mountStylesheet(name, stylesheetUrl);
     }
+    this.#syncRoutes(name, loadedPackage, packageWithMeta.loadRoutes);
     this.#packages.set(name, loadedPackage);
     this.#storage.set(name, {
       name,
