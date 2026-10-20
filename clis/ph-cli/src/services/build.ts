@@ -16,6 +16,7 @@ import {
 } from "./definitions/generation.js";
 import { readRetainedApproval } from "./definitions/release-approval.js";
 import { renderHuman } from "./render-report.js";
+import { HOST_ROUTES_DIR, OFFERED_ROUTES_MODULE } from "./offered-routes.js";
 import {
   canonicalConfigFile,
   resolvePackagePaths,
@@ -26,6 +27,12 @@ import {
   selectedPackageRoot,
   selectedSourceSetDigest,
 } from "./definitions/selection.js";
+
+export {
+  markOfferedRoutes,
+  noConnectImports,
+  offeredRoutesManifest,
+} from "./offered-routes.js";
 
 /**
  * A Powerhouse package's `powerhouse.manifest.json` "name" must match its
@@ -115,7 +122,11 @@ export async function runBuild(
 
   // Project routes type-check against the tree generated from them. The
   // probes mirror resolveConnectRoutesDir, so builder-tools loads only when needed.
-  const routeProbes = ["hosts/connect/routes", ".ph/connect-routes.gen.ts"];
+  const routeProbes = [
+    HOST_ROUTES_DIR,
+    ".ph/connect-routes.gen.ts",
+    OFFERED_ROUTES_MODULE,
+  ];
   if (routeProbes.some((p) => existsSync(join(packageRoot, p)))) {
     const { resolveConnectRoutesDir, syncConnectRoutes } =
       await import("@powerhousedao/builder-tools");

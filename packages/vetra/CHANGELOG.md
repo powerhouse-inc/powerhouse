@@ -1,3 +1,50 @@
+## 6.2.3-dev.68 (2026-10-20)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.67 (2026-10-20)
+
+### 🚀 Features
+
+- **connect-core,connect,builder-tools,ph-cli:** plugins provide their UI; the generic plugin's UI moves to apps/connect/src/generic, and dev renders a routed project's loading shell ([e6ce70abce](https://github.com/powerhouse-inc/powerhouse/commit/e6ce70abce))
+- **connect,design-system,workflow,codegen:** one Tailwind build per page; ph migrate moves style.css onto Connect's Tailwind source ([3b7d052bcd](https://github.com/powerhouse-inc/powerhouse/commit/3b7d052bcd))
+
+### 🩹 Fixes
+
+- **design-system,connect:** tailwind-scrollbar is a dependency, since a project's Tailwind build loads tailwind.css's plugin; the stylesheet test builds a fixture project's stylesheet ([8abc9b0476](https://github.com/powerhouse-inc/powerhouse/commit/8abc9b0476))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.66 (2026-10-20)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.65 (2026-10-20)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🩹 Fixes
+
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **reactor-api:** run the subgraph lint through the server's admission rules ([96b11aa864](https://github.com/powerhouse-inc/powerhouse/commit/96b11aa864))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+
+### 🔥 Performance
+
+- **reactor-api:** load the subgraph lint's check only when it runs ([a1cb005113](https://github.com/powerhouse-inc/powerhouse/commit/a1cb005113))
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features

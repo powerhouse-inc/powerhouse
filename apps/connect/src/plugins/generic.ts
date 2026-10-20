@@ -1,7 +1,10 @@
 import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import { z } from "zod";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import type {
+  ConnectPlugin,
+  ConnectPluginFactory,
+} from "@powerhousedao/connect-core/plugins";
 
 /**
  * The generic Connect shell plugin (`@powerhousedao/connect/plugins/generic`).

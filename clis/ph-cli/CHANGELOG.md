@@ -1,3 +1,63 @@
+## 6.2.3-dev.68 (2026-10-20)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.67 (2026-10-20)
+
+### 🚀 Features
+
+- **connect-core,connect,builder-tools,ph-cli:** plugins provide their UI; the generic plugin's UI moves to apps/connect/src/generic, and dev renders a routed project's loading shell ([e6ce70abce](https://github.com/powerhouse-inc/powerhouse/commit/e6ce70abce))
+- **shared,builder-tools,ph-cli:** branding.favicon, runner.routes, and a host's build bakes in its config ([d6d2fd17a0](https://github.com/powerhouse-inc/powerhouse/commit/d6d2fd17a0))
+- **builder-tools,ph-cli:** a project's hosts/connect/routes mount beside Connect's routes and override them by path ([2319cd1dc5](https://github.com/powerhouse-inc/powerhouse/commit/2319cd1dc5))
+- **connect,builder-tools,ph-cli:** the loading screen is prerendered from the routes and follows the host's composition and name ([a011d75f3b](https://github.com/powerhouse-inc/powerhouse/commit/a011d75f3b))
+
+### 🩹 Fixes
+
+- **ph-cli:** ph build leaves the manifest byte for byte when its connectRoutes flag is already right, and matches its module id on Windows ([33217fea95](https://github.com/powerhouse-inc/powerhouse/commit/33217fea95))
+- **design-system,connect:** tailwind-scrollbar is a dependency, since a project's Tailwind build loads tailwind.css's plugin; the stylesheet test builds a fixture project's stylesheet ([8abc9b0476](https://github.com/powerhouse-inc/powerhouse/commit/8abc9b0476))
+- **ph-cli,connect-core,connect,reactor-browser,builder-tools:** one browser build for a package's routes, and review fixes ([63e9fd3473](https://github.com/powerhouse-inc/powerhouse/commit/63e9fd3473))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude
+- Claude Opus 5.5
+
+## 6.2.3-dev.66 (2026-10-20)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.65 (2026-10-20)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🚀 Features
+
+- **shared,switchboard,ph-cli,host-core,reactor-api:** one .ph root, user data under PH_USER_DATA_DIR (A3, A4b) ([19d53aeb36](https://github.com/powerhouse-inc/powerhouse/commit/19d53aeb36))
+
+### 🩹 Fixes
+
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+- **ph-cli:** switchboard runner passes the classic args shape (A1, A2) ([01298f72ae](https://github.com/powerhouse-inc/powerhouse/commit/01298f72ae))
+
+### 🔥 Performance
+
+- **reactor-api:** load the subgraph lint's check only when it runs ([a1cb005113](https://github.com/powerhouse-inc/powerhouse/commit/a1cb005113))
+- **ph-cli:** start connect preview without the build's vite plugin stack ([720e598118](https://github.com/powerhouse-inc/powerhouse/commit/720e598118))
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+- **ph-cli:** precompress wasm and data with gzip in connect build ([06e30ea689](https://github.com/powerhouse-inc/powerhouse/commit/06e30ea689))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features

@@ -6,7 +6,7 @@ import {
   adoptPrerenderedShell,
   hasPrerenderedShell,
 } from "./components/prerendered-shell.js";
-import { loadRuntimeConfig } from "./runtime-config.js";
+import { loadRuntimeConfig } from "./load-runtime-config.js";
 import { initPerformanceObserver } from "./utils/performance-observer.js";
 import { warmModules } from "./warm-modules.js";
 

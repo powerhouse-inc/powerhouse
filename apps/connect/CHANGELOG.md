@@ -1,3 +1,63 @@
+## 6.2.3-dev.68 (2026-10-20)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.67 (2026-10-20)
+
+### 🚀 Features
+
+- **connect-core,connect,builder-tools,ph-cli:** plugins provide their UI; the generic plugin's UI moves to apps/connect/src/generic, and dev renders a routed project's loading shell ([e6ce70abce](https://github.com/powerhouse-inc/powerhouse/commit/e6ce70abce))
+- **shared,builder-tools,ph-cli:** branding.favicon, runner.routes, and a host's build bakes in its config ([d6d2fd17a0](https://github.com/powerhouse-inc/powerhouse/commit/d6d2fd17a0))
+- **connect,builder-tools,shared:** a package's routes join the Connects that load it ([f22c436ad8](https://github.com/powerhouse-inc/powerhouse/commit/f22c436ad8))
+- **connect,design-system,workflow,codegen:** one Tailwind build per page; ph migrate moves style.css onto Connect's Tailwind source ([3b7d052bcd](https://github.com/powerhouse-inc/powerhouse/commit/3b7d052bcd))
+- **connect,builder-tools,ph-cli:** the loading screen is prerendered from the routes and follows the host's composition and name ([a011d75f3b](https://github.com/powerhouse-inc/powerhouse/commit/a011d75f3b))
+- **connect:** Connect's modals open from the route; the missingPackage modal is removed ([61dfd86905](https://github.com/powerhouse-inc/powerhouse/commit/61dfd86905))
+- **connect:** settings tabs as file routes ([f312f79f5c](https://github.com/powerhouse-inc/powerhouse/commit/f312f79f5c))
+- **connect:** Connect's routes take core's options and render core's or the generic plugin's view ([58ed3091e8](https://github.com/powerhouse-inc/powerhouse/commit/58ed3091e8))
+
+### 🩹 Fixes
+
+- **design-system,connect:** tailwind-scrollbar is a dependency, since a project's Tailwind build loads tailwind.css's plugin; the stylesheet test builds a fixture project's stylesheet ([8abc9b0476](https://github.com/powerhouse-inc/powerhouse/commit/8abc9b0476))
+- **ph-cli,connect-core,connect,reactor-browser,builder-tools:** one browser build for a package's routes, and review fixes ([63e9fd3473](https://github.com/powerhouse-inc/powerhouse/commit/63e9fd3473))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude
+- Claude Opus 5.5
+
+## 6.2.3-dev.66 (2026-10-20)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.65 (2026-10-20)
+
+### 🩹 Fixes
+
+- **connect:** register bundled local packages in production builds ([#3251](https://github.com/powerhouse-inc/powerhouse/pull/3251))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
+## 6.2.3-dev.64 (2026-10-20)
+
+### 🩹 Fixes
+
+- **reactor-api:** complete a removed subgraph's supergraph SSE streams ([9eac161e3c](https://github.com/powerhouse-inc/powerhouse/commit/9eac161e3c))
+- **reactor-api:** complete a replaced or removed subgraph's SSE streams ([2cacef8d1d](https://github.com/powerhouse-inc/powerhouse/commit/2cacef8d1d))
+- **releases:** parse pnpm publish output when packed paths contain braces ([a30562aeca](https://github.com/powerhouse-inc/powerhouse/commit/a30562aeca))
+
+### 🔥 Performance
+
+- **ph-cli,docker:** serve precompressed wasm and data in connect preview and nginx ([85db6ff307](https://github.com/powerhouse-inc/powerhouse/commit/85db6ff307))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.63 (2026-10-18)
 
 ### 🚀 Features

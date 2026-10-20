@@ -390,6 +390,13 @@ function str(v: unknown): string {
 
 For an editor that accepts dropped files, or that uses shadcn or Vercel AI Elements, read [Editor recipes](docs/agent-guides/editor-recipes.md).
 
+## Customizing Connect
+
+To change what Connect shows around documents and editors, **read \`node_modules/@powerhousedao/connect/skills/customize-connect/SKILL.md\` first**. That covers pages, sidebar links, settings tabs, the layout, overrides of Connect's own pages (home, drive view, settings, 404), modals, theming, and branding per host. The skill links to in-depth guides in the same package; read the one for your task before writing code.
+
+- Project routes live in \`hosts/connect/routes/\` as TanStack Router file routes. Vetra Studio and \`ph connect studio\` mount them.
+- App-wide settings (app name, drives, registry, feature flags) live in the \`connect\` block of \`powerhouse.config.json\`, not in code.
+
 ## Subgraphs
 
 Run \`ph generate subgraph --name <name>\`. The command creates \`subgraphs/<name>/index.ts\` and \`schema.ts\`, writes a checked barrel export, and refreshes the manifest. Regeneration preserves files inside existing subgraph directories. Export concrete classes through \`subgraphs/index.ts\` and \`subgraphs/*/index.ts\`. Subgraphs do not use \`definitionSources\`. The document-model \`--code-first\` option stays.

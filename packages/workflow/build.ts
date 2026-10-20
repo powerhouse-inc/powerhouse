@@ -8,7 +8,7 @@ import {
   syncDistManifest,
 } from "@powerhousedao/shared/build-pieces";
 import { execSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "tsdown";
 
@@ -59,3 +59,5 @@ appendFileSync(
   join("dist", "style.css"),
   "\n" + readFileSync(join("dist", "browser", "style.css"), "utf8"),
 );
+// The editors' own styles, for a host's Tailwind build: Connect's imports them.
+copyFileSync("workflow.css", join("dist", "workflow.css"));

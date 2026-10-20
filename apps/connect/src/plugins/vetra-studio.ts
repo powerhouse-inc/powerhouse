@@ -1,5 +1,8 @@
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
-import type { ConnectPlugin, ConnectPluginFactory } from "./types.js";
+import type {
+  ConnectPlugin,
+  ConnectPluginFactory,
+} from "@powerhousedao/connect-core/plugins";
 
 /**
  * Vetra Studio, browser side (`@powerhousedao/vetra-studio/connect`). Its

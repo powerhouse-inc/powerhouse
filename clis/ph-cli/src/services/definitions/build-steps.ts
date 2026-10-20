@@ -59,6 +59,13 @@ import {
   runLocal,
 } from "./compiler.js";
 import { emitLoaderModules } from "./loader-modules.js";
+import {
+  HOST_ROUTES_DIR,
+  markOfferedRoutes,
+  noConnectImports,
+  OFFERED_ROUTES_MODULE,
+  offeredRoutesManifest,
+} from "../offered-routes.js";
 import { canonicalPath, scratchDirectory } from "./paths.js";
 
 // nft reports paths relative to its base; from "/" that is every path minus its root.
@@ -267,6 +274,9 @@ function createCandidateStep(
       // Shared by the browser, node and piece builds: nothing is traced twice.
       const detection = createDetectionCache();
       const trace = createTraceFiles();
+      // Connect reads the manifest's flag to load the package's routes.
+      const routesEntry = join(packageRoot, OFFERED_ROUTES_MODULE);
+      const offersRoutes = existsSync(routesEntry);
       // Everything in the browser build is code Connect can load: native fails it.
       await build({
         ...buildBrowserBuildConfig({
@@ -277,8 +287,16 @@ function createCandidateStep(
               browser: true,
               cache: detection,
             }),
+            offeredRoutesManifest(packageRoot, offersRoutes),
+            noConnectImports(routesEntry, join(packageRoot, HOST_ROUTES_DIR)),
           ],
         }),
+        // The offered routes in the package's build: a module both import is
+        // one chunk, which other Connects evaluate once. Absolute: a relative
+        // entry is a glob, and globs skip `.ph`.
+        ...(offersRoutes
+          ? { entry: [...browserEntry, { "connect-routes": routesEntry }] }
+          : {}),
         cwd: packageRoot,
         copy,
         outDir: join(candidateRoot, "browser"),
@@ -372,6 +390,7 @@ function createCandidateStep(
         externalDependencies: externalDependencyVersions(external.values()),
         subgraphNames,
       });
+      markOfferedRoutes(candidateRoot, offersRoutes);
     } catch (error) {
       return {
         ok: false,

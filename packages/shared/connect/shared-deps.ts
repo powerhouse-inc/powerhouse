@@ -4,8 +4,9 @@ export type SharedDep = { specifier: string; package: string };
 
 /**
  * The dependency set Connect and loaded packages share via the import map.
- * `@powerhousedao/connect` is deliberately absent: it is the Connect app
- * itself (no importable exports), so there is nothing to share.
+ * `@powerhousedao/connect` is deliberately absent: it is the Connect app, not
+ * vendored (a host with routes compiles its files), so its exports are for a
+ * host's own routes and layout. Packages share `@powerhousedao/connect-core`.
  */
 export const SHARED_DEPS: readonly SharedDep[] = [
   { specifier: "document-model", package: "document-model" },
@@ -32,6 +33,12 @@ export const SHARED_DEPS: readonly SharedDep[] = [
   // each package inlined a private copy anyway. It is the single biggest
   // dependency left in a minimal package.
   { specifier: "zod", package: "zod" },
+  // One core and one router: slots, routes and router context reach every package.
+  {
+    specifier: "@powerhousedao/connect-core",
+    package: "@powerhousedao/connect-core",
+  },
+  { specifier: "@tanstack/react-router", package: "@tanstack/react-router" },
 ];
 
 export const SHARED_DEP_SPECIFIERS: readonly string[] = SHARED_DEPS.map(

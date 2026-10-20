@@ -4,6 +4,8 @@ import {
   phGlobalConfig,
 } from "@powerhousedao/connect/config";
 import { toast } from "@powerhousedao/connect/services";
+import { getConnectPluginUi } from "@powerhousedao/connect-core/plugins";
+import { holdConnectRoutes } from "@powerhousedao/connect-core/router";
 import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
@@ -65,10 +67,15 @@ import { closeDeletedSelection } from "../utils/deleted-selection.js";
 import { closeWithin } from "../utils/close-within.js";
 import { reloadForWorker } from "../utils/poisoned-store-budget.js";
 import { startupOwningStores } from "../utils/worker-startup.js";
-import { getRuntimeConfig } from "../runtime-config.js";
+import {
+  createAppReactorClient,
+  getAppDrives,
+  getRuntimeConfig,
+  planReactorClient,
+  refreshAppDrives,
+  type ReactorClientPlan,
+} from "@powerhousedao/connect-core/runtime";
 import { getSharedDeps } from "../shared-deps.js";
-import { isReactorWorkerEnabled } from "../utils/reactor-worker-flag.js";
-import { resolveReactorClientMode } from "./reactor-client-mode.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
   resolvePackagedReactorWorker,
@@ -83,11 +90,6 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
-import {
-  getAppDrives,
-  refreshAppDrives,
-  selectAppReactorClient,
-} from "./app-reactor-client.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -288,29 +290,31 @@ export async function createReactor(
     runtimeConfig.packageRegistryUrl ?? null,
   );
   setVetraPackageManager(packageManager);
+  // Until the packages below are in: their routes may serve a deep link.
+  const releaseRoutes = holdConnectRoutes();
   await packageManager.init(
     localPackage,
     runtimeConfig.localPackage?.version,
     phGlobalConfig.studioMode,
     connectConfig.workflowsEnabled,
+    getConnectPluginUi().commonEditors,
   );
-  // Register provider:"local" packages the vite plugin bundled in. The virtual
-  // module only exists under phBundledPackagesPlugin (ph-cli), so a resolution
-  // failure under plain vite dev is expected; the indirection + @vite-ignore
-  // also stops Vite's dep scanner from pre-bundling the specifier.
-  try {
-    const bundledPackagesModule = "ph-bundled-packages-virtual";
-    const { default: registerBundledPackages } = (await import(
-      /* @vite-ignore */ bundledPackagesModule
-    )) as { default: (pm: IPackageManager) => void };
-    registerBundledPackages(packageManager);
-  } catch {
-    // no bundled packages in this build
-  }
+  // Register provider:"local" packages the vite plugin bundled in. The
+  // specifier must stay a static string so the bundler resolves it through
+  // phBundledPackagesPlugin (builder-tools), which always provides the module:
+  // a register function for the bundled packages, or a no-op when there are
+  // none. Connect's own vite config provides the no-op as well.
+  const { default: registerBundledPackages } =
+    (await import("ph-bundled-packages-virtual")) as {
+      default: (pm: IPackageManager) => void;
+    };
+  registerBundledPackages(packageManager);
   const remotePackages = runtimeConfig.packages
     .filter((p) => p.provider !== "local")
     .map((p) => (p.version ? `${p.packageName}@${p.version}` : p.packageName));
-  const packagesResult = await packageManager.addPackages(remotePackages);
+  const packagesResult = await packageManager
+    .addPackages(remotePackages)
+    .finally(releaseRoutes);
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);
   });
@@ -380,24 +384,30 @@ export async function createReactor(
     renownUrl: phGlobalConfig.renownUrl,
     switchboardUrl: phGlobalConfig.switchboardUrl,
   };
-  // The single 4-way selector. `remote` builds NO local reactor (no PGlite);
-  // `router` keeps the local reactor and adds remote backends; `worker` /
-  // `in-process` are the local reactor alone. (multiReactor is kept as the
-  // flag the local build + worker fingerprint already understand.)
-  const mode = resolveReactorClientMode();
-  const multiReactor = mode === "router";
-  const needsLocalReactor = mode !== "remote";
-  const localAsWorker =
-    needsLocalReactor &&
-    (mode === "worker" || (mode === "router" && isReactorWorkerEnabled()));
+  // Core's 4-way selector: `remote` builds no local reactor (no PGlite), so
+  // core never calls localReactor for it.
+  const plan = planReactorClient();
+  const { multiReactor } = plan;
 
-  // create reactor v2 with all versions and upgrade manifests. Undefined in
-  // `remote` mode: the tab has no local reactor, so PGlite is never imported.
-  let reactorClientModule:
-    | BrowserReactorClientModule
-    | WorkerReactorClientModule
-    | undefined;
-  if (localAsWorker) {
+  // The tab's reactor v2, with all versions and upgrade manifests.
+  const localReactor = async ({
+    localAsWorker,
+  }: ReactorClientPlan): Promise<
+    BrowserReactorClientModule | WorkerReactorClientModule
+  > => {
+    if (!localAsWorker) {
+      return createBrowserReactor(
+        documentModelModules,
+        upgradeManifests,
+        renown,
+        reactorFeatureFlags,
+        discoveryService,
+        createSignaturePolicy,
+        renownEndpoints,
+        unsupportedStoredDocuments,
+        multiReactor,
+      );
+    }
     const packageSpecs = packageManager
       .getRegistryPackages()
       .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
@@ -474,7 +484,6 @@ export async function createReactor(
         reloadForWorker(reason, () => window.location.reload());
       },
     });
-    reactorClientModule = workerClient.reactorClientModule;
     // A watch rebuild replaces the local package (updateLocalPackage); in
     // worker mode the reactor lives in the worker, so forward only that.
     const { registerPackages } = workerClient.reactorClientModule;
@@ -505,28 +514,17 @@ export async function createReactor(
       logger.error("Reactor worker failed to start: @error", error);
       throw error;
     }
-  } else if (needsLocalReactor) {
-    reactorClientModule = await createBrowserReactor(
-      documentModelModules,
-      upgradeManifests,
-      renown,
-      reactorFeatureFlags,
-      discoveryService,
-      createSignaturePolicy,
-      renownEndpoints,
-      unsupportedStoredDocuments,
-      multiReactor,
-    );
-  }
-  // mode === "remote": reactorClientModule stays undefined — no local reactor.
+    return workerClient.reactorClientModule;
+  };
 
-  const appReactorClient = await selectAppReactorClient({
-    mode,
-    module: reactorClientModule,
-    remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
-    signer: renown.signer,
-    documentModelModules: loadedDocumentModels,
-  });
+  const { module: reactorClientModule, client: appReactorClient } =
+    await createAppReactorClient({
+      plan,
+      localReactor,
+      remoteDriveUrl: phGlobalConfig.defaultDrivesUrl,
+      signer: renown.signer,
+      documentModelModules: loadedDocumentModels,
+    });
 
   const drives = await getAppDrives(
     appReactorClient,
@@ -582,7 +580,7 @@ export async function createReactor(
   // Add default/remote drives in the background so the app renders immediately.
   // They are tracked before the drives are set, so a waiting route sees them pending.
   // The remote client lists the Switchboard's own drives; it has no sync to add drives to.
-  const addsDrives = mode !== "remote";
+  const addsDrives = plan.mode !== "remote";
   const defaultDrivesConfig = getDefaultDrives(runtimeConfig);
   if (addsDrives && defaultDrivesConfig.length > 0) {
     void trackDriveArrival(

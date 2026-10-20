@@ -1,6 +1,6 @@
+@layer theme, base, components, external-packages, utilities;
 @import "tailwindcss";
-@import "@powerhousedao/design-system/theme.css";
-@import "@powerhousedao/connect/style.css";
+@import "@powerhousedao/connect/tailwind.css";
 
 @theme {
   /* You can customize the theme by overriding the theme variables here */

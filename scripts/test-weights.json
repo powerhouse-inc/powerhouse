@@ -4,6 +4,7 @@
   "@powerhousedao/analytics-engine-knex": 0,
   "@powerhousedao/codegen": 2,
   "@powerhousedao/connect": 3,
+  "@powerhousedao/connect-core": 1,
   "@powerhousedao/design-system": 4,
   "@powerhousedao/e2e-utils": 0,
   "@powerhousedao/load-test-connect": 1,

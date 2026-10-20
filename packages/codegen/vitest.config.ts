@@ -23,6 +23,7 @@ export default defineConfig({
       "test/**/*.test.ts",
       "src/file-builders/boilerplate/generated-project-files.test.ts",
       "src/file-builders/boilerplate/generated-hosts.test.ts",
+      "src/file-builders/boilerplate/migrate-style.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
     // The code-first scaffold tests generate and type-check whole projects;

@@ -10,6 +10,10 @@ export interface UsePaginationOptions {
   pageRange?: number;
   initialPage?: number;
   itemsPerPage?: number;
+  /** Controlled: the current page index, kept by the caller (e.g. in the URL). */
+  page?: number;
+  /** Controlled: called with the page index to show; required with `page`. */
+  onPageChange?: (page: number) => void;
 }
 
 export interface UsePaginationBaseResult {
@@ -54,11 +58,30 @@ export function usePagination<T>(
   items: T[],
   options?: UsePaginationOptions,
 ): UsePaginationResult<T> {
-  const { itemsPerPage = 20, initialPage = 0, pageRange = 3 } = options || {};
+  const {
+    itemsPerPage = 20,
+    initialPage = 0,
+    pageRange = 3,
+    page,
+    onPageChange,
+  } = options || {};
 
-  const [currentPage, setCurrentPage] = useState(initialPage);
-
+  const [ownPage, setOwnPage] = useState(initialPage);
   const pageCount = Math.ceil(items.length / itemsPerPage);
+  // A controlled page past the end shows the last one.
+  const currentPage =
+    page === undefined
+      ? ownPage
+      : Math.max(0, Math.min(page, Math.max(pageCount - 1, 0)));
+  const setCurrentPage = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      const value = typeof next === "function" ? next(currentPage) : next;
+      if (page === undefined) setOwnPage(value);
+      else onPageChange?.(value);
+    },
+    [currentPage, page, onPageChange],
+  );
+
   const isNextPageAvailable = currentPage < pageCount - 1;
   const isPreviousPageAvailable = currentPage > 0;
 
@@ -76,11 +99,11 @@ export function usePagination<T>(
 
   const goToLastPage = useCallback(() => {
     setCurrentPage(pageCount - 1);
-  }, [pageCount]);
+  }, [pageCount, setCurrentPage]);
 
   const goToFirstPage = useCallback(() => {
     setCurrentPage(0);
-  }, []);
+  }, [setCurrentPage]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -88,7 +111,7 @@ export function usePagination<T>(
         setCurrentPage(page);
       }
     },
-    [pageCount],
+    [pageCount, setCurrentPage],
   );
 
   const pageOffset = Math.floor((pageRange - 1) / 2);
