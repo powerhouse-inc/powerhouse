@@ -20,7 +20,7 @@ const count = (css: string, text: string) => css.split(text).length - 1;
 // A second build re-emits utilities in source order, so `px-3` would override an earlier `pl-7`.
 describe.each([
   ["Connect's", join(root, "style.css")],
-  ["a project's", join(root, "../../test/versioned-documents/style.css")],
+  ["a project's", join(root, "test/fixtures/project/style.css")],
 ])("%s stylesheet", (_name, entry) => {
   it("is one Tailwind build", async () => {
     const css = await build(entry, ["px-3", "pl-7"]);

@@ -1796,6 +1796,9 @@ importers:
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.4.0
+      tailwind-scrollbar:
+        specifier: ^4.0.1
+        version: 4.0.2(react@19.2.6)(tailwindcss@4.2.2)
       type-fest:
         specifier: 'catalog:'
         version: 5.6.0
@@ -1914,9 +1917,6 @@ importers:
       storybook-addon-pseudo-states:
         specifier: ^4.0.4
         version: 4.0.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(storybook@8.6.18(bufferutil@4.1.0)(prettier@3.8.1)(supports-color@8.1.1)(utf-8-validate@5.0.10))
-      tailwind-scrollbar:
-        specifier: ^4.0.1
-        version: 4.0.2(react@19.2.6)(tailwindcss@4.2.2)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2

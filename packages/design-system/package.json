@@ -120,7 +120,6 @@
     "react-dom": "catalog:",
     "storybook": "^8.6.18",
     "storybook-addon-pseudo-states": "^4.0.4",
-    "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
@@ -159,6 +158,7 @@
     "react-virtualized": "^9.22.6",
     "remeda": "catalog:",
     "tailwind-merge": "catalog:",
+    "tailwind-scrollbar": "^4.0.1",
     "type-fest": "catalog:",
     "usehooks-ts": "^3.1.1"
   },
