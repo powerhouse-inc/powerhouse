@@ -496,4 +496,60 @@ describe("LocalChannel", () => {
       }
     });
   });
+
+  describe("release backfill", () => {
+    it("keeps a release backfill through an ack past it until it is posted", async () => {
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport });
+      try {
+        await channel.init();
+
+        const released = syncOp("a->b", 3);
+        released.awaitingPush = true;
+        const ordinary = syncOp("a->b", 4);
+        transport.throwOnPost = new Error("port temporarily unusable");
+        channel.outbox.add(released, ordinary);
+
+        transport.deliver({ kind: "ack", channelId: "peer", ackOrdinal: 10 });
+        expect(channel.outbox.items).toEqual([released]);
+
+        transport.throwOnPost = undefined;
+        transport.deliver({
+          kind: "resend",
+          channelId: "channel-peer",
+          sinceOrdinal: 10,
+        });
+        expect(transport.sentOfKind("push")).toHaveLength(1);
+        expect(released.awaitingPush).toBe(false);
+        expect(channel.outbox.items).toEqual([released]);
+
+        transport.deliver({ kind: "ack", channelId: "peer", ackOrdinal: 10 });
+        expect(channel.outbox.items).toEqual([]);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+
+    // BUG: a receiver drops a push at or below its inbox ack, and a release
+    // backfill carries the sender's original ordinals, so a document released
+    // toward a local peer never loads there.
+    it.fails("loads a release backfill below its inbox ack", async () => {
+      const cursors = new MemoryCursorStorage();
+      await cursors.upsert({
+        remoteName: "a->b",
+        cursorType: "inbox",
+        cursorOrdinal: 10,
+        lastSyncedAtUtcMs: Date.now(),
+      });
+      const transport = new FakeTransport();
+      const channel = makeChannel({ transport, cursors });
+      try {
+        await channel.init();
+        transport.deliver(pushFrame("channel-peer", [syncOp("a->b", 3)]));
+        expect(channel.inbox.items).toHaveLength(1);
+      } finally {
+        await channel.shutdown();
+      }
+    });
+  });
 });

@@ -186,6 +186,8 @@ type InboxBatchEnqueued = {
 enum OutboxMode {
   Backfill = "backfill",
   BatchTriggered = "batch-triggered",
+  /** A held document's whole history, below the peer's ack. */
+  Release = "release",
 }
 
 const defaultSyncManagerConfig: SyncManagerConfig = {
@@ -1119,7 +1121,7 @@ export class SyncManager
       }
       return a.context.ordinal - b.context.ordinal;
     });
-    this.emitBatches(remote, operations, OutboxMode.Backfill, {
+    this.emitBatches(remote, operations, OutboxMode.Release, {
       lastJobByDoc: new Map(),
     });
   }
@@ -3482,6 +3484,7 @@ export class SyncManager
         batch.branch,
         batch.operations,
       );
+      syncOp.awaitingPush = mode === OutboxMode.Release;
 
       syncOps.push(syncOp);
       chain.lastJobByDoc.set(batch.documentId, jobId);
