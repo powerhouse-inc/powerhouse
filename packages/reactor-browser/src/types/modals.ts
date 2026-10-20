@@ -31,7 +31,6 @@ export type PHModal =
   | { type: "cookiesPolicy" }
   | { type: "downloadDocumentWithErrors"; documentId: string }
   | { type: "inspector" }
-  | { type: "missingPackage"; documentType: string }
   | {
       type: "documentVersionUnsupported";
       documentType: string;

@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -15,8 +16,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CONNECT_ROUTES_GEN,
   connectRouterChunkGroups,
+  connectRoutes,
   connectRoutesGeneratorConfig,
+  connectRoutesTreeOf,
   generateConnectRoutes,
+  PACKAGE_ROUTES_MODULE,
   resolveConnectRoutesDir,
 } from "./connect-routes.js";
 
@@ -51,7 +55,7 @@ afterEach(() => {
 });
 
 describe("generateConnectRoutes", () => {
-  it("mounts the project's routes beside Connect's core routes", async () => {
+  it("mounts the project's routes beside Connect's routes", async () => {
     addRoute("hello.tsx", "/hello");
     await generate();
     const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
@@ -69,23 +73,23 @@ describe("generateConnectRoutes", () => {
     const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
     expect(tree).toContain('"/_app/reports": typeof');
     expect(tree).toMatch(
-      /ReportsRoute = [\s\S]*?getParentRoute: \(\) => coreAppRoute,/,
+      /ReportsRoute = [\s\S]*?getParentRoute: \(\) => appRoute,/,
     );
     // A route group only organises: /hello, outside the layout.
     expect(tree).toMatch(
       /HelloRoute = [\s\S]*?path: "\/hello",\s*getParentRoute: \(\) => rootRouteImport,/,
     );
-    expect(tree).toContain('from "@powerhousedao/connect/routes/core/_app"');
+    expect(tree).toContain('from "@powerhousedao/connect/routes/_app"');
   });
 
-  it("replaces Connect's layout with a project's _app.tsx, keeping the core routes in it", async () => {
+  it("replaces Connect's layout with a project's _app.tsx, keeping Connect's routes in it", async () => {
     addRoute("_app.tsx", "/_app");
     addRoute("_app/reports.tsx", "/_app/reports");
     await generate();
     const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
-    expect(tree).not.toContain('"@powerhousedao/connect/routes/core/_app"');
+    expect(tree).not.toContain('"@powerhousedao/connect/routes/_app"');
     expect(tree).toMatch(/from "\.\/\.\.\/hosts\/connect\/routes\/_app\.js"/);
-    expect(tree).toContain('"/_app/_content/d/$driveSlug/{-$nodeSlug}"');
+    expect(tree).toContain('"/_app/d/$driveSlug/{-$nodeSlug}"');
     expect(tree).toContain('"/_app/reports": typeof');
     // Mounted once, as the layout, not again as a root route.
     expect(tree.match(/routes\/_app\.js"/g)).toHaveLength(1);
@@ -101,18 +105,108 @@ describe("generateConnectRoutes", () => {
     expect(tree).toContain('"/settings/reports": typeof SettingsReportsRoute');
   });
 
-  it("fails on a project settings layout, which Connect owns", async () => {
+  it("replaces Connect's node route with a project file at its path", async () => {
+    addRoute(
+      "_app/d/$driveSlug/{-$nodeSlug}.tsx",
+      "/_app/d/$driveSlug/{-$nodeSlug}",
+    );
+    await generate();
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    const imports = tree.match(/^import .*\{-\$nodeSlug\}.*$/gm) ?? [];
+    expect(imports).toHaveLength(1);
+    expect(imports[0]).toContain("hosts/connect/routes/_app/d/");
+    expect(tree).toMatch(
+      /NodeSlugChar125Route =\s[\s\S]*?getParentRoute: \(\) => appDDriveSlugRoute,/,
+    );
+    // Connect's other routes stay.
+    expect(tree).toContain('from "@powerhousedao/connect/routes/_app/index"');
+    expect(tree).toContain(
+      'from "@powerhousedao/connect/routes/_app/settings"',
+    );
+  });
+
+  it("nests Connect's settings tabs in a project's settings override", async () => {
     addRoute("_app/settings.tsx", "/_app/settings");
+    await generate();
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).not.toContain('"@powerhousedao/connect/routes/_app/settings"');
+    expect(tree).toContain("routes/_app/settings.js");
+    expect(tree).toMatch(
+      /SettingsAppearanceRoute = [\s\S]*?getParentRoute: \(\) => SettingsRoute,/,
+    );
+  });
+
+  // To hide a Connect route, an override's beforeLoad throws notFound() or redirect().
+  it("mounts an override of a Connect route once", async () => {
+    addRoute("_app/settings/packages.tsx", "/_app/settings/packages");
+    await generate();
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).not.toContain(
+      "@powerhousedao/connect/routes/_app/settings/packages",
+    );
+    expect(tree.match(/^import .*settings\/packages.*$/gm)).toHaveLength(1);
+  });
+
+  it("fails on two project files for one path", async () => {
+    addRoute("_app/reports.tsx", "/_app/reports");
+    addRoute("_app/(group)/reports.tsx", "/_app/reports");
     await expect(generate()).rejects.toThrow(
       /could not mount the routes in hosts\/connect\/routes\/[\s\S]*Conflicting/,
     );
   });
 
-  it("fails on a project route that collides with a core route", async () => {
+  it("fails on a project route that collides with a Connect route", async () => {
     addRoute("index.tsx", "/");
     await expect(generate()).rejects.toThrow(
       /could not mount the routes in hosts\/connect\/routes\/[\s\S]*Conflicting/,
     );
+  });
+});
+
+describe("the package's offered routes", () => {
+  it("lists its routes by id and parent, without its layout and overrides", async () => {
+    addRoute("_app.tsx", "/_app");
+    addRoute("_app/index.tsx", "/_app/");
+    addRoute("_app/reports.tsx", "/_app/reports");
+    addRoute("_app/reports/$driveSlug.tsx", "/_app/reports/$driveSlug");
+    addRoute("_app/settings/inventory.tsx", "/_app/settings/inventory");
+    addRoute("_app/d/$driveSlug/stats.tsx", "/_app/d/$driveSlug/stats");
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    const module = readFileSync(join(project, PACKAGE_ROUTES_MODULE), "utf8");
+    const entries = [...module.matchAll(/\{ route: (r\d+), (.*) \},/g)].map(
+      ([, ref, fields]) => {
+        const file = new RegExp(
+          `import \\{ Route as ${ref} \\} from "(.*)";`,
+        ).exec(module)?.[1];
+        return { file, fields };
+      },
+    );
+    expect(entries).toEqual([
+      {
+        file: "../hosts/connect/routes/hello.js",
+        fields: 'id: "/hello", path: "/hello", parentId: "__root__"',
+      },
+      {
+        file: "../hosts/connect/routes/_app/reports.js",
+        fields: 'id: "/_app/reports", path: "/reports", parentId: "/_app"',
+      },
+      {
+        file: "../hosts/connect/routes/_app/reports/$driveSlug.js",
+        fields:
+          'id: "/_app/reports/$driveSlug", path: "/$driveSlug", parentId: "/_app/reports"',
+      },
+      {
+        file: "../hosts/connect/routes/_app/settings/inventory.js",
+        fields:
+          'id: "/_app/settings/inventory", path: "/inventory", parentId: "/_app/settings"',
+      },
+      {
+        file: "../hosts/connect/routes/_app/d/$driveSlug/stats.js",
+        fields:
+          'id: "/_app/d/$driveSlug/stats", path: "/stats", parentId: "/_app/d/$driveSlug"',
+      },
+    ]);
   });
 });
 
@@ -125,6 +219,79 @@ describe("resolveConnectRoutesDir", () => {
   it("ignores a routes folder at the project root", () => {
     addRoute("hello.tsx", "/hello", "routes");
     expect(resolveConnectRoutesDir(project)).toBeUndefined();
+  });
+
+  it("takes a host's routes folder, or none for false", () => {
+    addRoute("hello.tsx", "/hello");
+    addRoute("lab.tsx", "/lab", "hosts/lab/routes");
+    expect(resolveConnectRoutesDir(project, "hosts/lab/routes")).toBe(
+      join(project, "hosts/lab/routes"),
+    );
+    expect(resolveConnectRoutesDir(project, false)).toBeUndefined();
+    expect(() => resolveConnectRoutesDir(project, "hosts/none")).toThrow(
+      "The routes folder hosts/none does not exist.",
+    );
+  });
+});
+
+describe("a host's own routes folder", () => {
+  it("generates its own tree and offers nothing to other Connects", async () => {
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    expect(existsSync(join(project, PACKAGE_ROUTES_MODULE))).toBe(true);
+    rmSync(join(project, PACKAGE_ROUTES_MODULE));
+
+    addRoute("lab.tsx", "/lab", "hosts/lab/routes");
+    const labDir = join(project, "hosts/lab/routes");
+    await generate(labDir);
+    const labTree = connectRoutesTreeOf(project, labDir);
+    expect(labTree).toBe(join(project, ".ph/hosts/lab/routes.gen.ts"));
+    expect(readFileSync(labTree, "utf8")).toContain('"/lab"');
+    expect(readFileSync(labTree, "utf8")).not.toContain('"/hello"');
+    // The project's tree and offered routes stay hosts/connect/routes'.
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).toContain('"/hello"');
+    expect(tree).not.toContain('"/lab"');
+    expect(existsSync(join(project, PACKAGE_ROUTES_MODULE))).toBe(false);
+  });
+
+  it("keeps the project's tree for a host without routes", async () => {
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    const { plugins, aliases } = connectRoutes(project, false);
+    expect(plugins).toEqual([]);
+    expect(aliases[0].replacement).toMatch(
+      /connect[\\/]dist[\\/]route-tree\.js$/,
+    );
+    expect(existsSync(join(project, CONNECT_ROUTES_GEN))).toBe(true);
+  });
+});
+
+describe("connectRoutes", () => {
+  it("points Connect's and core's route tree specifiers at the project tree", () => {
+    const fixture = join(repoRoot, "test/versioned-documents");
+    const [tree, views] = connectRoutes(fixture).aliases;
+    const find = tree.find as RegExp;
+    expect(find.test("@powerhousedao/connect/route-tree")).toBe(true);
+    expect(find.test("@powerhousedao/connect-core/route-tree")).toBe(true);
+    expect(find.test("@powerhousedao/connect-core/router")).toBe(false);
+    expect(tree.replacement).toBe(join(fixture, CONNECT_ROUTES_GEN));
+    // Connect's route files render its dist's views, never its sources.
+    expect(
+      (views.find as RegExp).test("@powerhousedao/connect/route-views"),
+    ).toBe(true);
+    expect(views.replacement).toMatch(/connect[\\/]dist[\\/]route-views\.js$/);
+  });
+
+  it("points both specifiers at Connect's prebuilt tree when the project has no routes", () => {
+    const fixture = join(repoRoot, "test/test-consumer-project");
+    const { aliases, plugins } = connectRoutes(fixture);
+    const { replacement } = aliases[0];
+    expect(plugins).toEqual([]);
+    expect(replacement).toMatch(/connect[\\/]dist[\\/]route-tree\.js$/);
+    expect(replacement).not.toMatch(/connect-core[\\/]dist/);
+    // Not imported: Connect's views read the runtime config as they load.
+    expect(existsSync(replacement)).toBe(true);
   });
 });
 

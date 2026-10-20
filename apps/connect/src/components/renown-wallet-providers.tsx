@@ -1,7 +1,7 @@
 import { RenownWalletProvider, useTheme } from "@powerhousedao/reactor-browser";
 import type { WalletTheme } from "@renown/sdk/wallet";
 import { useMemo, type ReactNode } from "react";
-import { getRuntimeConfig } from "../runtime-config.js";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import {
   configToDescriptors,
   type ConnectRenownAdapters,

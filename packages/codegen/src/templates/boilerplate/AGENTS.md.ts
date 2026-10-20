@@ -351,6 +351,13 @@ editors/<name>/
     <wrappers bridging document-model types to AI Elements primitives>
 ~~~
 
+## Customizing Connect
+
+To change what Connect shows around documents and editors, **read \`node_modules/@powerhousedao/connect/skills/customize-connect/SKILL.md\` first**. That covers pages, sidebar links, settings tabs, the layout, overrides of Connect's own pages (home, drive view, settings, 404), modals, theming, and branding per host. The skill links to in-depth guides in the same package; read the one for your task before writing code.
+
+- Project routes live in \`hosts/connect/routes/\` as TanStack Router file routes. Vetra Studio and \`ph connect studio\` mount them.
+- App-wide settings (app name, drives, registry, feature flags) live in the \`connect\` block of \`powerhouse.config.json\`, not in code.
+
 ## ⚠️ CRITICAL: Generated Files & Modification Rules
 
 ### Generated Files Rule

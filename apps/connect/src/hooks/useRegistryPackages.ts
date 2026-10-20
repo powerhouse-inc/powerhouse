@@ -19,7 +19,7 @@ import type { PackageDeps } from "@powerhousedao/shared/connect";
 import { slimManifest } from "@powerhousedao/shared/registry/manifest-slim";
 import type { DocumentModelLib } from "document-model";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getRuntimeConfig } from "../runtime-config.js";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import { sharedDepMismatchWarnings } from "../package-manager.js";
 import { getSharedDeps } from "../shared-deps.js";
 
@@ -207,8 +207,8 @@ export function useRegistryPackages() {
   }
 
   /**
-   * Fetch full package info for a document type and merge into the map. Lets
-   * MissingPackageModal offer installs without loading the whole listing.
+   * Fetch full package info for a document type and merge into the map, to
+   * offer installs without loading the whole listing.
    */
   const fetchPackagesByDocumentType = useCallback(
     async (documentType: string): Promise<RegistryPackage[]> => {

@@ -35,6 +35,18 @@ function readBundledPackageVersion(
   }
 }
 
+// A package that offers routes ships browser/connect-routes.js (`ph build`);
+// by path, as a package not yet migrated has no `./connect-routes` export.
+function offeredRoutesFile(projectRoot: string, name: string) {
+  const file = path.join(
+    projectRoot,
+    "node_modules",
+    name,
+    "dist/browser/connect-routes.js",
+  );
+  return fs.existsSync(file) ? file : undefined;
+}
+
 function makeRegisterModule(packages: string[], projectRoot: string): string {
   if (packages.length === 0) {
     return "export default () => {};\n";
@@ -47,8 +59,12 @@ function makeRegisterModule(packages: string[], projectRoot: string): string {
     const version = readBundledPackageVersion(projectRoot, name);
     imports.push(`import * as ${moduleName} from ${JSON.stringify(name)};`);
     imports.push(`import ${JSON.stringify(`${name}/style.css`)};`);
+    const routesFile = offeredRoutesFile(projectRoot, name);
+    const routes = routesFile
+      ? `, () => import(${JSON.stringify(routesFile)})`
+      : "";
     calls.push(
-      `  pm.addLocalPackage(${JSON.stringify(name)}, ${moduleName}, ${JSON.stringify(version)});`,
+      `  pm.addLocalPackage(${JSON.stringify(name)}, ${moduleName}, ${JSON.stringify(version)}${routes});`,
     );
   });
 

@@ -6,7 +6,12 @@ toc_max_heading_level: 3
 
 Sync makes one reactor mirror operations with a remote drive. The local reactor pushes operations it produces and pulls operations the remote produces, so two reactors converge on the same document history. You need it whenever a reactor must share state with another reactor: a Connect tab syncing to a Switchboard server, or two services replicating a drive.
 
-The sync subsystem lives in `@powerhousedao/reactor`. The orchestrator is `ISyncManager`; each remote drive is a `Remote` backed by an `IChannel`. Today the only shipped transport is GraphQL over HTTP: `GqlRequestChannel` (the client/poller side, used by Connect) and `GqlResponseChannel` (the server/push side, used by Switchboard). The channel config `type` string is `"gql"`.
+The sync subsystem lives in `@powerhousedao/reactor`. The orchestrator is `ISyncManager`; each remote drive is a `Remote` backed by an `IChannel`. Two transports ship:
+
+- GraphQL over HTTP, channel config `type` `"gql"`: `GqlRequestChannel` (the client/poller side, used by Connect) and `GqlResponseChannel` (the server/push side, used by Switchboard).
+- In-process over a `MessagePort`, channel config `type` `"local"`: `LocalChannel`, built by `LocalChannelFactory`. Both sides push, and there is no server. Connect uses it in multi-reactor mode to sync reactors that run in the same browser. Register it next to a scheme with `withAdditionalChannelFactory("local", factory)`.
+
+![Reactor sync: outbox derived from the operation index, inbox applied through IReactor, mailboxes per remote channel](./images/reactor-sync-light.png)
 
 For the reactor itself and the builder, see [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor) and [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage). For sync error categories and auth failures, see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 

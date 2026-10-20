@@ -52,7 +52,7 @@ const VENDOR_EXTRA = (process.env.PH_CONNECT_VENDOR_EXTRA ?? "")
   .filter(Boolean);
 const HEAVY_LIBS = [...DEFAULT_VENDOR_INCLUDE, ...VENDOR_EXTRA];
 // A project with routes compiles Connect's route tree, so Connect is not vendored.
-const heavyLibsFor = (routesDir: string | undefined) =>
+const heavyLibsFor = (routesDir: string | false | undefined) =>
   routesDir
     ? HEAVY_LIBS.filter((lib) => lib !== "@powerhousedao/connect")
     : HEAVY_LIBS;
@@ -111,7 +111,7 @@ function externalizePlugin(externals: Externals): Plugin | undefined {
 // import map nor the externalizer touch them.
 export async function devReactImportmapPlugin(
   projectRoot: string = process.cwd(),
-  routesDir = resolveConnectRoutesDir(projectRoot),
+  routesDir: string | false | undefined = resolveConnectRoutesDir(projectRoot),
 ): Promise<Plugin | Plugin[]> {
   let namedExports = new Map<string, string[]>();
   let base = "/";

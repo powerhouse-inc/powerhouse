@@ -56,6 +56,7 @@ const reactExternals = [
 const nodeNeverBundle = [
   // we know that we don't want connect inside connect
   "@powerhousedao/connect",
+  "@powerhousedao/connect-core",
   // published code would never need the cli
   "@powerhousedao/ph-cli",
   // the reactor-api host must provide a single class identity for

@@ -220,6 +220,88 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
       outDir: "dist",
     });
+    // No plugins list: a classic build, no composition passed.
+    expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toBeUndefined();
+  });
+
+  it("build passes the host's composition for the build verb", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      {
+        name: "lab-connect",
+        runner: {
+          module: "m",
+          plugins: [
+            "@powerhousedao/connect/plugins/core-only",
+            { module: "./dev-tools.js", verbs: ["dev"] },
+          ],
+        },
+      },
+      { ...ctx, verb: "build" },
+    );
+    expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toEqual({
+      composition: [
+        { module: "@powerhousedao/connect/plugins/core-only", config: {} },
+      ],
+    });
+  });
+
+  it("build bakes in the host's config, favicon included", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectBuild } =
+      await import("../src/services/connect-build.js");
+    vi.mocked(runConnectBuild).mockClear();
+    await runner.build(
+      {
+        name: "lab-connect",
+        runner: { module: "m", routes: "hosts/lab/routes" },
+        config: {
+          branding: { appName: "Lab", favicon: "hosts/lab/icon.svg" },
+          app: { basePath: "/lab" },
+        },
+      },
+      { ...ctx, verb: "build" },
+    );
+    const [, override, options] = vi.mocked(runConnectBuild).mock.calls[0];
+    expect(options).toEqual({ routes: "hosts/lab/routes" });
+    expect(override).toMatchObject({
+      branding: { appName: "Lab", favicon: "hosts/lab/icon.svg" },
+      app: { basePath: "/lab" },
+    });
+  });
+
+  it("serve leaves the built favicon's path out of the served config", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectPreview } =
+      await import("../src/services/connect-preview.js");
+    vi.mocked(runConnectPreview).mockClear();
+    await runner.serve(
+      {
+        name: "lab-connect",
+        runner: { module: "m" },
+        config: { branding: { appName: "Lab", favicon: "icon.svg" } },
+      },
+      ctx,
+    );
+    const { connect } = vi.mocked(runConnectPreview).mock.calls[0][1]!;
+    expect(connect?.branding).toEqual({ appName: "Lab" });
+  });
+
+  it("dev mounts the host's routes", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      { name: "lab-connect", runner: { module: "m", routes: false } },
+      ctx,
+    );
+    expect(vi.mocked(runConnectStudio).mock.calls[0][3]).toEqual({
+      routes: false,
+    });
   });
 });
 

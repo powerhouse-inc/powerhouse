@@ -1,0 +1,389 @@
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+function stubFetch(body: unknown) {
+  // @ts-expect-error partial mock is fine for tests
+  globalThis.fetch = vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve(body),
+    }),
+  );
+}
+
+describe("runtime-config loader", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    // A hard refresh is a new realm, so a new registry with no loaded config.
+    Reflect.deleteProperty(
+      globalThis,
+      Symbol.for("@powerhousedao/connect-core/registry"),
+    );
+    // The adapter branches on `typeof window`. Vitest runs under Node, so we
+    // need to stub it for JsonConfigAdapter to take the fetch path.
+    vi.stubGlobal("window", {});
+  });
+
+  afterEach(() => {
+    // @ts-expect-error reset
+    delete globalThis.fetch;
+    vi.unstubAllGlobals();
+  });
+
+  it("loads a config with structured packages and merges user connect overrides on top of defaults", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [
+        { packageName: "@scope/pkg-a", version: "1.0.0", provider: "registry" },
+        { packageName: "@scope/pkg-b", provider: "registry" },
+      ],
+      localPackage: { name: "test-project", version: "0.1.0" },
+      connect: {
+        branding: { appName: "Test" },
+        drives: { allowAddDrive: false },
+      },
+    });
+
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.schemaVersion).toBe(2);
+    expect(config.packages).toHaveLength(2);
+    expect(config.packages[0].packageName).toBe("@scope/pkg-a");
+    expect(config.localPackage).toEqual({
+      name: "test-project",
+      version: "0.1.0",
+    });
+    // User overrides win
+    expect(config.connect.branding?.appName).toBe("Test");
+    expect(config.connect.drives?.allowAddDrive).toBe(false);
+    // Untouched fields fall back to DEFAULT_CONNECT_CONFIG
+    expect(config.connect.app?.logLevel).toBe(
+      DEFAULT_CONNECT_CONFIG.app?.logLevel,
+    );
+    expect(config.connect.renown?.url).toBe(DEFAULT_CONNECT_CONFIG.renown?.url);
+    expect(config.connect.drives?.sections?.remote?.enabled).toBe(true);
+  });
+
+  it("fills every connect.* leaf from DEFAULT_CONNECT_CONFIG when the file has no connect block", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+    });
+
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect).toEqual(DEFAULT_CONNECT_CONFIG);
+  });
+
+  it("tolerates unknown extra fields under connect (forward-compat)", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        branding: { appName: "Test" },
+        futureField: { a: 1 },
+        anotherFuture: "string",
+      },
+      unrelatedFuture: true,
+    });
+
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.branding?.appName).toBe("Test");
+    expect(
+      (config.connect as unknown as Record<string, unknown>).futureField,
+    ).toEqual({ a: 1 });
+  });
+
+  it("leaves connect.app.workflowsEnabled unset by default, which Connect reads as off", async () => {
+    // Connect's workflows flag is file-only, like every other runtime field:
+    // off unless the emitted config turns it on, and orthogonal to studio mode.
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { basePath: "/" } },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.workflowsEnabled).toBeUndefined();
+    expect(DEFAULT_CONNECT_CONFIG.app).not.toHaveProperty("workflowsEnabled");
+  });
+
+  it("lets the file turn workflows on without turning studio mode on", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { workflowsEnabled: true } },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.workflowsEnabled).toBe(true);
+    expect(config.connect.app?.studioMode).toBe(false);
+  });
+
+  it("lets the file turn studio mode on without turning workflows on", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: { app: { studioMode: true } },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.studioMode).toBe(true);
+    expect(config.connect.app?.workflowsEnabled).toBeUndefined();
+  });
+
+  it("caches the loaded config across calls (single fetch)", async () => {
+    stubFetch({ schemaVersion: 2, packages: [], localPackage: null });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    await loadRuntimeConfig();
+    await loadRuntimeConfig();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("getRuntimeConfig throws before loadRuntimeConfig has resolved", async () => {
+    stubFetch({ schemaVersion: 2, packages: [], localPackage: null });
+    const { getRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    expect(() => getRuntimeConfig()).toThrow(/cache empty/);
+  });
+
+  it("exposes the top-level packageRegistryUrl read by the SPA Package Manager", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [
+        { packageName: "@scope/pkg", version: "1.0.0", provider: "registry" },
+      ],
+      localPackage: null,
+      packageRegistryUrl: "https://reg.example",
+      connect: {},
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.packageRegistryUrl).toBe("https://reg.example");
+    expect(config.packages).toHaveLength(1);
+    expect(config.packages[0].packageName).toBe("@scope/pkg");
+  });
+
+  it("removed PH_CONNECT_* env vars do NOT override the file values (scenario 34, runtime side)", async () => {
+    // Hostile env: every PH_CONNECT_* key that used to drive the SPA's
+    // runtime config is set to a sentinel that, if it leaked through any
+    // code path, would be visible in the loaded config. None should.
+    const HOSTILE = "ENV_SHOULD_NOT_LEAK";
+    const originalEnv = { ...process.env };
+    try {
+      process.env.PH_CONNECT_LOG_LEVEL = HOSTILE;
+      process.env.PH_CONNECT_BASE_PATH = HOSTILE;
+      process.env.PH_CONNECT_RENOWN_URL = HOSTILE;
+      process.env.PH_CONNECT_RENOWN_NETWORK_ID = HOSTILE;
+      process.env.PH_CONNECT_RENOWN_CHAIN_ID = HOSTILE;
+      process.env.PH_CONNECT_DEFAULT_DRIVES_URL = HOSTILE;
+      process.env.PH_CONNECT_DRIVES_PRESERVE_STRATEGY = HOSTILE;
+      process.env.PH_CONNECT_PUBLIC_DRIVES_ENABLED = HOSTILE;
+      process.env.PH_CONNECT_LOCAL_DRIVES_ENABLED = HOSTILE;
+      process.env.PH_CONNECT_DISABLE_ADD_DRIVE = HOSTILE;
+      process.env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED = HOSTILE;
+      process.env.PH_CONNECT_PACKAGES = HOSTILE;
+      process.env.PH_CONNECT_PACKAGES_REGISTRY = HOSTILE;
+      process.env.PH_DISABLE_LOCAL_PACKAGE = HOSTILE;
+
+      // File payload is the ONLY source the SPA reads from.
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        localPackage: null,
+        packageRegistryUrl: "https://reg.from-file",
+        connect: {
+          renown: { url: "https://renown.from-file" },
+          app: { logLevel: "trace", basePath: "/from-file" },
+        },
+      });
+
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const config = await loadRuntimeConfig();
+
+      expect(config.packageRegistryUrl).toBe("https://reg.from-file");
+      expect(config.connect.renown?.url).toBe("https://renown.from-file");
+      expect(config.connect.app?.logLevel).toBe("trace");
+      expect(config.connect.app?.basePath).toBe("/from-file");
+
+      // Stringify the entire loaded config and assert the hostile sentinel
+      // is nowhere — catches env leaks at any nested path we didn't enumerate.
+      expect(JSON.stringify(config)).not.toContain(HOSTILE);
+    } finally {
+      process.env = originalEnv;
+    }
+  });
+
+  it("a fresh module evaluation (= browser hard-refresh) sees newly-written values (scenarios 30-33)", async () => {
+    // First load — Connect reads the initial dist payload.
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      packageRegistryUrl: "https://before.example",
+      connect: { renown: { url: "https://before.renown" } },
+    });
+    const first = await import("../src/runtime/runtime-config.js");
+    const before = await first.loadRuntimeConfig();
+    expect(before.packageRegistryUrl).toBe("https://before.example");
+    expect(before.connect.renown?.url).toBe("https://before.renown");
+
+    // Equivalent of `ph connect config --renown-url …` writing to the dist
+    // file, followed by the user hard-refreshing the page (browser tears
+    // down + re-evaluates every module in a new realm).
+    vi.resetModules();
+    Reflect.deleteProperty(
+      globalThis,
+      Symbol.for("@powerhousedao/connect-core/registry"),
+    );
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      packageRegistryUrl: "https://after.example",
+      connect: {
+        renown: { url: "https://after.renown" },
+        app: { basePath: "/refreshed" },
+      },
+    });
+    const second = await import("../src/runtime/runtime-config.js");
+    const after = await second.loadRuntimeConfig();
+    expect(after.packageRegistryUrl).toBe("https://after.example");
+    expect(after.connect.renown?.url).toBe("https://after.renown");
+    expect(after.connect.app?.basePath).toBe("/refreshed");
+  });
+
+  it("carries reactor enforcement flags from the file, defaulting the rest", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        reactor: {
+          featureFlags: { documentDecisions: true, authEnforcement: true },
+        },
+      },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+
+    expect(config.connect.reactor?.featureFlags).toEqual({
+      documentDecisions: true,
+      authEnforcement: true,
+      authGroups: false,
+      authConditions: false,
+      undoV3: true,
+    });
+  });
+
+  it("returns source values for connect.app and connect.drives when set in the file", async () => {
+    stubFetch({
+      schemaVersion: 2,
+      packages: [],
+      localPackage: null,
+      connect: {
+        app: { logLevel: "debug", basePath: "/sub" },
+        drives: {
+          defaultDrives: [
+            { url: "https://drive.example", name: null, icon: null },
+          ],
+          preserveStrategy: "preserve-all",
+        },
+      },
+    });
+    const { loadRuntimeConfig } =
+      await import("../src/runtime/runtime-config.js");
+    const config = await loadRuntimeConfig();
+    expect(config.connect.app?.logLevel).toBe("debug");
+    expect(config.connect.app?.basePath).toBe("/sub");
+    expect(config.connect.drives?.defaultDrives).toEqual([
+      { url: "https://drive.example", name: null, icon: null },
+    ]);
+    expect(config.connect.drives?.preserveStrategy).toBe("preserve-all");
+  });
+
+  describe("the plugins' UI", () => {
+    const plugins = () =>
+      Promise.resolve({
+        "@acme/chrome": {
+          create: () => ({ name: "chrome" }) as never,
+          ui: () => Promise.resolve({ commonEditors: true }),
+        },
+      });
+
+    it("loads every plugin's UI without a composition", async () => {
+      stubFetch({ schemaVersion: 2, packages: [], connect: {} });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { getConnectPluginUi } =
+        await import("../src/plugins/plugin-ui.js");
+      await loadRuntimeConfig({ plugins });
+      expect(getConnectPluginUi().commonEditors).toBe(true);
+    });
+
+    it("loads only the composition's plugins' UI", async () => {
+      // The composition's runtime flag reads the URL.
+      vi.stubGlobal("window", { location: { search: "" } });
+      stubFetch({
+        schemaVersion: 2,
+        packages: [],
+        connect: { composition: [] },
+      });
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const { getConnectPluginUi } =
+        await import("../src/plugins/plugin-ui.js");
+      await loadRuntimeConfig({ plugins });
+      expect(getConnectPluginUi().commonEditors).toBe(false);
+    });
+
+    it("loads the plugin modules while the config is fetched", async () => {
+      let respond!: () => void;
+      // @ts-expect-error partial mock is fine for tests
+      globalThis.fetch = vi.fn(
+        () =>
+          new Promise((resolve) => {
+            respond = () =>
+              resolve({
+                ok: true,
+                status: 200,
+                statusText: "OK",
+                json: () =>
+                  Promise.resolve({
+                    schemaVersion: 2,
+                    packages: [],
+                    connect: {},
+                  }),
+              });
+          }),
+      );
+      const loadPlugins = vi.fn(plugins);
+      const { loadRuntimeConfig } =
+        await import("../src/runtime/runtime-config.js");
+      const loaded = loadRuntimeConfig({ plugins: loadPlugins });
+      await vi.waitFor(() => expect(loadPlugins).toHaveBeenCalled());
+      expect(globalThis.fetch).toHaveBeenCalled();
+      respond();
+      await loaded;
+    });
+  });
+});

@@ -16,6 +16,7 @@ import {
 import { getConfig } from "@powerhousedao/shared/clis";
 import type { PHConnectRuntimeConfig } from "@powerhousedao/shared/clis";
 import {
+  deepMerge,
   normalizeBasePath,
   SHARED_DEP_SPECIFIERS,
   SHARED_SUBPATHS,
@@ -32,7 +33,11 @@ import {
 } from "../utils/precompress.js";
 import { runBuild } from "./build.js";
 
-export async function runConnectBuild(args: ConnectBuildArgs) {
+export async function runConnectBuild(
+  args: ConnectBuildArgs,
+  callerOverride?: PHConnectRuntimeConfig,
+  { routes }: { routes?: string | false } = {},
+) {
   const { outDir, debug, dynamicBase, favicon } = args;
 
   const mode = "production";
@@ -56,7 +61,12 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   // `--packages-registry` lands at the top-level `packageRegistryUrl`
   // (mirrors source-config shape); every other flag feeds the connect-block
   // precedence ladder.
-  const { connectOverride, packageRegistryUrl } = buildCliConnectOverride(args);
+  const cli = buildCliConnectOverride(args);
+  const { packageRegistryUrl } = cli;
+  // A runner's host config sits under the CLI's flags.
+  const connectOverride = callerOverride
+    ? deepMerge(callerOverride, cli.connectOverride ?? {})
+    : cli.connectOverride;
 
   await runBuild({
     outDir: "dist",
@@ -153,6 +163,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     cliPackageRegistryUrl: packageRegistryUrl,
     dynamicBase,
     favicon,
+    routes,
     // Vendor import-map entries are relative (leading slash stripped) so
     // they resolve against the page URL under any deploy base — root or
     // subpath, dynamic or concrete.
@@ -257,6 +268,14 @@ export const CONNECT_OWN_VENDOR_DEPS = [
   "@renown/sdk/crypto",
   "@renown/sdk/trust",
   "@powerhousedao/reactor-attachments/client",
+  // One core and router for Connect and packages; the route tree, config and
+  // embedded subpaths stay with the app.
+  "@powerhousedao/connect-core",
+  "@powerhousedao/connect-core/router",
+  "@powerhousedao/connect-core/plugins",
+  "@powerhousedao/connect-core/runtime",
+  "@powerhousedao/connect-core/views",
+  "@tanstack/react-router",
 ];
 
 export function connectOwnVendorDeps(dirname: string): {

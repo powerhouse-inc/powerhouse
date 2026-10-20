@@ -106,6 +106,10 @@ export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
 
 The `IReactorClient` is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
 
+How the client and the reactor's components fit together:
+
+![Reactor components: ReactorClient over IReactor, with the write side, event bus, read side, sync and storage](./images/reactor-components-light.png)
+
 ```typescript
 import type { IReactorClient } from "@powerhousedao/reactor-browser";
 ```
@@ -217,6 +221,10 @@ PENDING → RUNNING → WRITE_READY → READ_READY
 | `FAILED`      | Job encountered an unrecoverable error                                |
 
 Only `READ_READY` and `FAILED` are terminal statuses. The `execute()` method on `IReactorClient` waits until `READ_READY` before resolving; `executeAsync()` returns immediately with a `JobInfo` at `PENDING`.
+
+The path a job takes from the queue to `READ_READY`:
+
+![Reactor write path: queue, job executor (signatures, authorization, reduce, commit), JOB_WRITE_READY, read models, JOB_READ_READY](./images/reactor-write-path-light.png)
 
 ## Reactor event system
 

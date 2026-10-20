@@ -85,6 +85,10 @@
             "homeBackground": {
               "type": ["string", "null"],
               "description": "Hero image on the empty home screen. URL or path to override; null or omitted uses the bundled default image."
+            },
+            "favicon": {
+              "type": ["string", "null"],
+              "description": "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it."
             }
           }
         },
