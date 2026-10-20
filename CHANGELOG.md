@@ -1,3 +1,13 @@
+## 6.2.3-dev.65 (2026-10-20)
+
+### 🩹 Fixes
+
+- **connect:** register bundled local packages in production builds ([#3251](https://github.com/powerhouse-inc/powerhouse/pull/3251))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.3-dev.64 (2026-10-20)
 
 ### 🚀 Features
