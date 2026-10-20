@@ -2,9 +2,11 @@ import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { canonicalPath } from "./paths.js";
 
+// tsc ends its lines with \r\n on Windows.
+const lines = (stdout: string) => stdout.split(/\r?\n/);
+
 export function listedFiles(stdout = "", directory = "."): string[] {
-  return stdout
-    .split("\n")
+  return lines(stdout)
     .map((line) => line.trim())
     .map((line) => resolve(directory, line))
     .filter((line) => existsSync(line) && statSync(line).isFile());
@@ -13,7 +15,7 @@ export function listedFiles(stdout = "", directory = "."): string[] {
 export function explainedRoots(stdout: string, directory: string): string[] {
   const roots: string[] = [];
   let file: string | undefined;
-  for (const line of stdout.split("\n")) {
+  for (const line of lines(stdout)) {
     if (
       line !== "" &&
       line === line.trim() &&
@@ -40,7 +42,7 @@ export function tracedResolutions(
 ): ReadonlyMap<string, ReadonlyMap<string, string>> {
   const resolutions = new Map<string, Map<string, string>>();
   let source: string | undefined;
-  for (const line of stdout.split("\n")) {
+  for (const line of lines(stdout)) {
     const from = /^======== Resolving module '(.+)' from '(.+)'\./.exec(line);
     if (from?.[2] !== undefined) source = canonicalPath(from[2]);
     const resolved =

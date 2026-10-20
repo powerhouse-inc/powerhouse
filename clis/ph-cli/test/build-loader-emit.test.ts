@@ -93,7 +93,8 @@ describe.each<Flow>(["code-first", "schema-first"])(
           layout === "src rootDir"
             ? "sourceMappingURL=../src/maps/shape.d.ts.map"
             : layout === "absolute mapRoot"
-              ? `sourceMappingURL=${join(root, "maps", "src", "shape.d.ts.map")}`
+              ? // tsc writes this path with forward slashes on Windows too.
+                `sourceMappingURL=${join(root, "maps", "src", "shape.d.ts.map").replaceAll("\\", "/")}`
               : "sourceMappingURL=../../maps/src/shape.d.ts.map",
         );
       },

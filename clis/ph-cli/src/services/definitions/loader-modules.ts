@@ -326,7 +326,7 @@ async function emitLoaderPrograms({
       "--pretty",
       "false",
     ]);
-    for (const line of emitted.output.split("\n")) {
+    for (const line of emitted.output.split(/\r?\n/)) {
       if (!line.startsWith("TSFILE: ")) continue;
       const file = canonicalPath(resolve(packageRoot, line.slice(8).trim()));
       if (pathWithin(emittedRoot, file) === null)
@@ -337,7 +337,7 @@ async function emitLoaderPrograms({
     if (!emitted.ok)
       diagnostics.push(
         emitted.output
-          .split("\n")
+          .split(/\r?\n/)
           .filter((line) => !line.startsWith("TSFILE: "))
           .join("\n"),
       );
