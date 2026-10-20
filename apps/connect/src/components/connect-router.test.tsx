@@ -933,10 +933,11 @@ describe("Connect router", () => {
     try {
       mount("/d/protected-drive");
       await vi.waitFor(() =>
-        expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+        expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
           "Log in to access this drive",
         ),
       );
+      expect(screen.getByRole("button", { name: "Log in" })).toBeTruthy();
       expect(screen.queryByText("Drive protected-drive not found")).toBeNull();
     } finally {
       clearDriveAuthRefusal("http://switchboard.test/d/protected-drive");
