@@ -17,7 +17,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, logger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { selectAppReactorClient } from "../../src/store/app-reactor-client.js";
+import { selectAppReactorClient } from "../src/runtime/app-reactor-client.js";
 import {
   data,
   DRIVE_TYPE,
@@ -33,11 +33,6 @@ vi.hoisted(() => {
     { ph: {} },
   );
 });
-
-vi.mock("../../src/pglite.db.js", () => ({
-  getReactorPGlite: vi.fn(),
-  discardReactorPGlite: () => Promise.resolve(),
-}));
 
 addFullReactorClientEventHandler();
 addReactorClientEventHandler();
