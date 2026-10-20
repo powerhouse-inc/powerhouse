@@ -78,6 +78,58 @@ describe("lintHostImports — process. is banned", () => {
   });
 });
 
+describe("process. ban — template literals", () => {
+  // The bypass: an apostrophe in template TEXT paired with a later quote on
+  // the same line, so quote-pairing blanked the hole in between.
+  it.each([
+    ["an apostrophe in template text", "`it's ${process.env.X}`, b: 'y'"],
+    ["a quote in template text", '`say "${process.env.X}"`, b: "y"'],
+    ["a nested template in a hole", "`a ${`b ${process.env.X}`} c`"],
+    ["a hole after a string with a brace", '`x ${"it\'s }"} ${process.env.Y}`'],
+    ["a hole holding an object literal", "`${{ a: 1 }.a}${process.env.Z}`"],
+    ["an escaped backtick before the hole", "`\\`${process.env.X}`, b: 'y'"],
+  ])("rejects a hole reading process. after %s", (_label, expression) => {
+    const source = `export default { v: ${expression} };`;
+    expect(() => lintHostImports(source, "host.js")).toThrow(
+      /host\.js:1 reads `process\.`/,
+    );
+    expect(() =>
+      lintOutputsFile(`export const outputs = { v: ${expression} };`, "o.js"),
+    ).toThrow(/o\.js:1 reads `process\.`/);
+  });
+
+  it("names the line of an access inside a multi-line template", () => {
+    expect(() =>
+      lintHostImports(
+        [
+          "export default {",
+          "  note: `it's",
+          "    ${process.env.NOTE}`,",
+          "};",
+        ].join("\n"),
+        "hosts/a/host.js",
+      ),
+    ).toThrow(/hosts\/a\/host\.js:3 reads `process\.`/);
+  });
+
+  it("allows process. in template text, in a string inside a hole, and after a closed template", () => {
+    expect(
+      lintHostImports(
+        [
+          "export default {",
+          "  a: `it's process.env.X in the text`,",
+          '  b: `${"process.env.X"} and ${`process.argv`}`,',
+          "  c: `multi",
+          "    line process.exit() ${'it\\'s'} text`, d: 'x',",
+          "  e: `${{ k: `}` }.k} process.cwd()`,",
+          "};",
+        ].join("\n"),
+        "host.js",
+      ),
+    ).toEqual([]);
+  });
+});
+
 /* ------------------------------------------------- outputs.js imports */
 
 describe("scanHostImports — sibling outputs.js", () => {
