@@ -124,7 +124,8 @@ function blankQuotedStrings(source: string): string {
   );
 }
 
-const PROCESS_ACCESS = /\bprocess\s*(?:\?\.|\.|\[)/;
+// Not after `.`/identifier chars: `base.runner.process.args` is a property.
+const PROCESS_ACCESS = /(?<![.\w$])process\s*(?:\?\.|\.|\[)/;
 
 /** Host files and generated outputs.js are data: reading the environment
  * through `process.` is banned (typed-host-configs decision 9). Environment
@@ -428,8 +429,11 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** sha256 over the canonical JSON of the generator's inputs. */
+/** sha256 over the canonical JSON of the generator's inputs. The host name
+ * is one: every token in the file carries it, so a copied or renamed host
+ * folder makes its outputs.js stale. */
 export function computeOutputsHash(input: {
+  host: string;
   runnerModule: string;
   outputsSchema: Record<string, unknown>;
   drives: readonly string[];
@@ -438,6 +442,7 @@ export function computeOutputsHash(input: {
     .update(
       canonicalJson({
         v: 1,
+        host: input.host,
         runnerModule: input.runnerModule,
         outputsSchema: input.outputsSchema,
         drives: [...new Set(input.drives)].sort(),
@@ -517,6 +522,7 @@ export async function describeHostOutputs(
     outputsSchema,
     drives: sortedDrives,
     hash: computeOutputsHash({
+      host: hostName,
       runnerModule,
       outputsSchema,
       drives: sortedDrives,

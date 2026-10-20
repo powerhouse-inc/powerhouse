@@ -52,6 +52,15 @@ describe("lintHostImports — process. is banned", () => {
     ).toThrow(/reads `process\.`/);
   });
 
+  it("allows a `process` property of another object", () => {
+    expect(
+      lintHostImports(
+        "export default { args: base.runner.process.args, b: x?.process[0] };",
+        "host.js",
+      ),
+    ).toEqual([]);
+  });
+
   it("allows `process` in a comment, a string literal, or as part of a word", () => {
     expect(
       lintHostImports(
@@ -237,6 +246,7 @@ describe("describeHostOutputs", () => {
     expect(description?.outputsSchema).not.toHaveProperty("$schema");
     expect(description?.hash).toBe(
       computeOutputsHash({
+        host: "switchboard",
         runnerModule: "fake-runner",
         outputsSchema: description?.outputsSchema ?? {},
         drives: ["workflows", "lab"],
@@ -296,6 +306,7 @@ describe("loadHost — generated outputs.js", () => {
     const current = (await describeHostOutputs(dir, "switchboard"))!;
     expect(current.drives).toEqual(["lab", "workflows"]);
     const before = computeOutputsHash({
+      host: "switchboard",
       runnerModule: current.runnerModule,
       outputsSchema: current.outputsSchema,
       drives: ["workflows"],
@@ -344,6 +355,23 @@ describe("loadHost — generated outputs.js", () => {
     writeHostFile(dir, "connect", "host.js", CONSUMER);
     await expect(loadHost(dir, "connect")).rejects.toThrow(
       /hosts\/switchboard\/outputs\.js", which does not exist[\s\S]*ph generate hosts/,
+    );
+  });
+
+  it("fails an outputs.js copied from another host folder (the host name is hashed)", async () => {
+    const dir = makeProject();
+    writeHostFile(dir, "switchboard", "host.js", producerHost(""));
+    const original = (await describeHostOutputs(dir, "switchboard"))!;
+    writeHostFile(dir, "sb2", "host.js", producerHost(""));
+    writeHostFile(dir, "sb2", "outputs.js", outputsFile(original.hash));
+    writeHostFile(
+      dir,
+      "connect",
+      "host.js",
+      CONSUMER.replace("../switchboard/outputs.js", "../sb2/outputs.js"),
+    );
+    await expect(loadHost(dir, "connect")).rejects.toThrow(
+      /hosts\/sb2\/outputs\.js is stale/,
     );
   });
 
