@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-19T20:42:00.425Z
+> Generated: 2026-10-20T13:41:44.332Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -17013,10 +17013,10 @@ plugins: [
   that no installed package provides, and Workflow Studio warns when its
   drive has no switchboard behind it.
 
-**Inside a compound, derive the link instead of spelling the URL.** A plugin
-config value of the shape `{ from: "<member>", slug: "<drive>" }` is a drive
-reference: the compound runner replaces it with the URL that member reported
-for the drive, before the member host is validated:
+**Read the link from the switchboard's outputs instead of spelling the
+URL.** `drive` takes an output token: `switchboard.drives.workflows.url` from
+the generated `../switchboard/outputs.js` (`ph generate hosts`), or the literal
+form below:
 
 ```js
 "vetra-studio": {
@@ -17026,17 +17026,20 @@ for the drive, before the member host is validated:
       ...connect.runner.plugins,
       {
         module: "@powerhousedao/connect/plugins/workflows",
-        config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+        config: {
+          drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+        },
       },
     ],
   },
 },
 ```
 
-The referenced member must start first (`config.startOrder`) and must serve
-that slug; otherwise the compound fails boot naming the members and drives it
-knows. A reference reaching standalone `ph run connect` is a boot error with
-the same hint — there is no sibling to point at. (The classic switches,
+Inside a compound the token reads the switchboard member's live outputs, so
+the compound starts that member first. Standalone `ph run connect` reads the
+running switchboard's run record, and fails naming `ph run switchboard` when
+none is running. The removed `{ from, slug }` form fails validation, naming
+the token form. (The classic switches,
 `workflows.enabled` / `connect.app.workflowsEnabled` / the host's
 `reactor.workflows`, still parse; with the plugins listed they are redundant.)
 
