@@ -1,8 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { emitHostJsonSchema, validateHost } from "@powerhousedao/host-core";
-import type { PHHost, PHHostOutputs } from "@powerhousedao/host-core";
+import {
+  emitHostJsonSchema,
+  validateDeclaredHost,
+  validateHost,
+} from "@powerhousedao/host-core";
+import type {
+  HostSchemaLike,
+  PHHost,
+  PHHostOutputs,
+} from "@powerhousedao/host-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import * as clintRunner from "../src/runners/clint-runner.js";
 import * as mastraRunner from "../src/runners/mastra-runner.js";
@@ -13,11 +21,21 @@ const MASTRA = "@powerhousedao/clint/mastra-runner";
 const CLINT = "@powerhousedao/clint/clint-runner";
 const mastra = { ...mastraRunner };
 const clint = { ...clintRunner };
+/** validateDeclaredHost takes an untyped RunnerModule; its verbs are unused. */
+const untyped = (module: {
+  kind: "reactor" | "compound";
+  hostSchema: HostSchemaLike;
+  declaredHostSchema: HostSchemaLike;
+}) => ({
+  kind: module.kind,
+  hostSchema: module.hostSchema,
+  declaredHostSchema: module.declaredHostSchema,
+  run: () => Promise.resolve(undefined),
+});
 
-/** The scaffold/Sektar assistant host as DECLARED: a literal model and the
- * key as an `$env` token. The `satisfies PHHost` is the type-level half of
- * the contract. (`remote.url` takes the switchboard endpoint token once
- * host-core makes it a ref() field; spelled literally here.) */
+/** The scaffold/Sektar assistant host as DECLARED: a literal model, the key
+ * as an `$env` token and the switchboard endpoint as an `$output` token. The
+ * `satisfies PHHost` is the type-level half of the contract. */
 const declaredAssistantHost = () =>
   ({
     name: "assistant",
@@ -27,7 +45,11 @@ const declaredAssistantHost = () =>
       backends: {
         switchboard: {
           kind: "remote",
-          remote: { url: "http://127.0.0.1:4001/graphql" },
+          remote: {
+            url: {
+              $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+            },
+          },
         },
       },
       protocol: {},
@@ -43,7 +65,19 @@ const declaredAssistantHost = () =>
 /** The same host RESOLVED: what the verbs receive. */
 const assistantHost = () => {
   const host = declaredAssistantHost();
-  return { ...host, config: { ...host.config, apiKey: "sk-or-test" } };
+  return {
+    ...host,
+    reactor: {
+      ...host.reactor,
+      backends: {
+        switchboard: {
+          kind: "remote",
+          remote: { url: "http://127.0.0.1:4001/graphql" },
+        },
+      },
+    },
+    config: { ...host.config, apiKey: "sk-or-test" },
+  };
 };
 
 /** A clint shell host using every option the runner reads, as DECLARED:
@@ -145,7 +179,23 @@ describe("mastra-runner host contract", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues.map((issue) => issue.path)).toEqual([
       ["config", "apiKey"],
+      ["reactor", "backends", "switchboard", "remote", "url"],
     ]);
+  });
+
+  it("ph run's pipeline: the declared host passes declared validation, a leftover token fails the resolved one", () => {
+    const file = "hosts/assistant/host.js";
+    expect(() =>
+      validateDeclaredHost(
+        untyped(mastra),
+        MASTRA,
+        declaredAssistantHost(),
+        file,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateHost(mastra, MASTRA, declaredAssistantHost(), file),
+    ).toThrow(/is an unresolved output token/);
   });
 
   it("rejects an unknown runner key, including the retired workdir", () => {
@@ -220,9 +270,20 @@ describe("clint-runner host contract", () => {
     );
   });
 
+  it("ph run's compound path lets the deferred self tokens through to the verb", () => {
+    const file = "hosts/cli/host.js";
+    validateDeclaredHost(untyped(clint), CLINT, declaredCliHost(), file);
+    const host = validateHost(clint, CLINT, declaredCliHost(), file, {
+      tokens: "allow",
+    });
+    expect(host.config?.agents?.main?.url).toEqual({
+      $output: { host: "assistant", path: ["endpoints", "openai"] },
+    });
+  });
+
   it("resolved form: agents and proxy upstreams are deferred self fields that keep their tokens", () => {
     // They name the compound's own members' outputs, which exist only after
-    // the verb starts them; clint resolves them then (resolveOwnFields).
+    // the verb starts them; clint resolves them then (deferSelf).
     const parsed = clintRunner.hostSchema.parse(declaredCliHost());
     expect(parsed.config?.agents?.main?.url).toEqual({
       $output: { host: "assistant", path: ["endpoints", "openai"] },

@@ -23,8 +23,13 @@ afterEach(() => {
   }
 });
 
-/** A hosts project with a fake ph-cli entry and fake member runners. */
-function makeProject(): { dir: string; sink: string } {
+/** A hosts project with a fake ph-cli entry and fake member runners. With
+ * `publish`, the fake member writes its v2 run record (as `ph run` does once
+ * the member is ready) before printing its readiness line. */
+function makeProject(options: { publish?: boolean } = {}): {
+  dir: string;
+  sink: string;
+} {
   const dir = mkdtempSync(path.join(tmpdir(), "ph-clint-runner-"));
   temporary.push(dir);
   writeFileSync(path.join(dir, "powerhouse.config.json"), "{}");
@@ -41,9 +46,28 @@ function makeProject(): { dir: string; sink: string } {
     path.join(phCliDir, "package.json"),
     JSON.stringify({ name: "@powerhousedao/ph-cli", type: "module" }),
   );
+  const record = {
+    version: 2,
+    host: "cli-assistant",
+    projectName: "cli-lab",
+    kind: "reactor",
+    verb: "run",
+    startedAt: "2026-10-20T00:00:00.000Z",
+    outputs: {
+      origin: "http://127.0.0.1:4919",
+      endpoints: { openai: "http://127.0.0.1:4919/v1/" },
+    },
+  };
+  const publish = options.publish
+    ? `
+import { mkdirSync, writeFileSync } from "node:fs";
+mkdirSync(".ph/run", { recursive: true });
+writeFileSync(".ph/run/cli-assistant.json", JSON.stringify({ ...${JSON.stringify(record)}, pid: process.pid }));
+`
+    : "";
   writeFileSync(
     path.join(phCliDir, "dist", "cli.mjs"),
-    `
+    `${publish}
 console.log("fake ph run", process.argv.slice(2).join(" "), "listening");
 setTimeout(() => {}, 30_000);
 `,
@@ -130,11 +154,11 @@ describe("clint-runner (P5.4)", () => {
     expect(JSON.parse(built)).toEqual({ built: "cli-assistant" });
   }, 30_000);
 
-  it("resolves its deferred self fields only after starting members; a token still unresolved then fails naming its path", async () => {
-    const { dir } = makeProject();
+  /** The cli host as declared: its agent url reads the member's output. */
+  async function declaredCli(dir: string) {
     const { loadHost } = await import("@powerhousedao/host-core");
     const declared = (await loadHost(dir, "cli")).host;
-    const host = runner.hostSchema.parse({
+    return runner.declaredHostSchema.parse({
       ...declared,
       config: {
         agents: {
@@ -146,8 +170,50 @@ describe("clint-runner (P5.4)", () => {
         },
       },
     });
-    await expect(runner.run(host, ctx(dir))).rejects.toThrow(
-      /`agents\.main\.url` is an output token \(\$output\) that clint resolves after starting its members \(assistant\)/,
+  }
+
+  it("resolves a deferred agent url from the member's live run record once the member is up", async () => {
+    const { dir } = makeProject({ publish: true });
+    const handle = await runner.run(await declaredCli(dir), ctx(dir));
+    try {
+      expect(handle.outputs).toEqual({
+        agents: { main: "http://127.0.0.1:4919/v1" },
+      });
+    } finally {
+      await handle.shutdown();
+    }
+  }, 60_000);
+
+  it("fails naming the path and the member when the member publishes no outputs", async () => {
+    const { dir } = makeProject();
+    await expect(runner.run(await declaredCli(dir), ctx(dir))).rejects.toThrow(
+      /hosts\/cli\/host\.js: config\.agents\.main\.url read the outputs of member "assistant", which is up but published no live run record/,
     );
+  }, 60_000);
+
+  it("resolves its own $env tokens before any member starts", async () => {
+    const { dir } = makeProject();
+    const host = await declaredCli(dir);
+    const withEnv = runner.declaredHostSchema.parse({
+      ...host,
+      config: { agents: { main: { url: { $env: "CLI_AGENT_URL" } } } },
+    });
+    await expect(runner.run(withEnv, ctx(dir))).rejects.toThrow(
+      /CLI_AGENT_URL/,
+    );
+    expect(existsSync(path.join(dir, ".ph", "services", "assistant"))).toBe(
+      false,
+    );
+    const handle = await runner.run(withEnv, {
+      ...ctx(dir),
+      env: { CLI_AGENT_URL: "https://agents.example.com/v1" },
+    });
+    try {
+      expect(handle.outputs).toEqual({
+        agents: { main: "https://agents.example.com/v1" },
+      });
+    } finally {
+      await handle.shutdown();
+    }
   }, 60_000);
 });

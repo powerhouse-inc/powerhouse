@@ -3,23 +3,25 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  compoundOutputSource,
   defaultUserDataDir,
   loadHost,
+  loadProducers,
+  outputRefsOf,
   probeRun,
+  processResolveEnv,
   refineStartOrder,
+  resolveHostOutputs,
   resolveUserDataPlaceholders,
   runObserveHook,
   runObserveHookSequential,
   resolveHostPlugins,
+  runRecordOutputSource,
+  type DeferredResolution,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import {
-  findToken,
-  makeHostSchemas,
-  ref,
-  type HostSchemas,
-} from "@powerhousedao/host-core/schema";
+import { defineHostSchemas, ref } from "@powerhousedao/host-core/schema";
 import { z } from "zod";
 import {
   createProxyPlugin,
@@ -36,20 +38,13 @@ import { formatStatus } from "../core/service-command.js";
 import type { ServiceDefinition, ServiceManager } from "../core/types.js";
 
 /**
- * clint-runner (P5.4): the clint framework shell as a compound-kind runner.
- * Children declared in hosts/cli/host.js are SCHEDULED as clint services —
- * each member runs as `ph-cli run <member>` in its own (hidden) process with
- * state files, logs, readiness patterns and restart policies from the ported
- * services manager; `lifecycle: "detached"` (the default, clint's own
- * posture) leaves children running when the shell exits and re-attaches on
- * the next run, `"attached"` tears them down vetra-style.
- *
- * The agents manager (config.agents) maps names to OpenAI-compatible
- * endpoints — each `url` a literal or an output token (an agent host's
- * `endpoints.openai`), resolved before the runner sees it. `dev` adds a line chat
- * loop against the first agent; the full ink REPL remains the library path
- * (defineCli) for implementation projects, as scaffolded clint CLIs use it
- * natively — noted in the phase-5 WBS.
+ * clint-runner (P5.4): the clint shell as a compound runner. Each member
+ * runs as `ph-cli run <member>` in its own process, scheduled by the ported
+ * services manager; `lifecycle: "detached"` (default) leaves members running
+ * and re-attaches next run, `"attached"` tears them down. `config.agents`
+ * maps names to OpenAI-compatible endpoints (a literal, or a member's
+ * `endpoints.openai` token resolved once it is up). `dev` adds a line chat
+ * loop against the first agent; the ink REPL stays the library path.
  */
 
 export const kind = "compound";
@@ -70,18 +65,16 @@ function agentRefSchema<U extends z.ZodType>(url: U) {
 }
 
 /**
- * The clint compound host, built once per form from one definition:
- * DECLARED (`tokens: "allow"`; what host.js authors write) and RESOLVED
- * (`tokens: "forbid"`; what `validateHost` checks before the verb).
- * Host-core's base blocks come from `makeHostSchemas` in the same form.
+ * The clint compound host, from one definition in two forms: DECLARED (what
+ * host.js authors write) and RESOLVED (what `validateHost` checks).
  *
  * `config.agents.*.url` and `runner.proxy.routes.*.upstream` are DEFERRED
  * self fields: they typically name outputs of this compound's own members,
  * which exist only once clint has started them inside the verb. They take
- * tokens in BOTH forms, and the runner resolves them after its members are
- * up (`resolveOwnFields`), then parses them with `ownFieldsSchema`.
+ * tokens in BOTH forms (`ref`, not `s.tokenable`), and the runner resolves
+ * them after its members are up, then parses them with `ownFieldsSchema`.
  */
-function buildHostSchema(base: HostSchemas) {
+const schemas = defineHostSchemas((base) => {
   /** clint-runner's own `runner` options, on top of the common base. */
   const clintRunnerOptionsSchema = base.runnerBaseSchema
     .extend({
@@ -129,18 +122,13 @@ function buildHostSchema(base: HostSchemas) {
       config: cliHostConfigSchema.optional(),
     })
     .superRefine(refineStartOrder);
-}
-
-/** Resolved form: what `validateHost` checks and the verbs receive (the
- * deferred self fields may still carry tokens; see buildHostSchema). */
-export const hostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "forbid" }),
-);
+});
 
 /** Declared form: what a host file may contain before resolution. */
-export const declaredHostSchema = buildHostSchema(
-  makeHostSchemas({ tokens: "allow" }),
-);
+export const declaredHostSchema = schemas.declaredHostSchema;
+/** Resolved form: what `validateHost` checks and the verbs receive (the
+ * deferred self fields may still carry tokens; see above). */
+export const hostSchema = schemas.hostSchema;
 
 /** The deferred self fields once resolved (after member start). */
 const ownFieldsSchema = z.strictObject({
@@ -165,27 +153,62 @@ export type LiveMemberOutputs = Record<
 >;
 
 /**
- * Resolve the deferred self fields against the members' live outputs.
- *
- * TODO(typed-host-configs T3-A): delegate to host-core's deferred
- * self-resolution — expected as `resolveHostOutputs(host, sources,
- * { deferSelf: true })` with a source over `members` — once it merges. The
- * integrator wires it; until then a field that still carries a token after
- * the pre-verb resolve fails here, naming its path. Literal values (and
- * tokens the pre-verb resolve already substituted) pass through.
+ * Resolve the shell's own tokens before any member starts: `$env`, the
+ * built-ins and other hosts' outputs now (an unset variable or a producer
+ * that is not running fails with nothing started); tokens naming its own
+ * members' outputs are deferred until those members are up (`finish`).
+ * `children` stay as declared: each member resolves its own.
  */
-function resolveOwnFields(
-  fields: { agents?: unknown; proxy?: unknown },
-  members: LiveMemberOutputs,
-  file: string,
-): unknown {
-  const token = findToken(fields);
-  if (token) {
+async function resolveOwnTokens(
+  host: ClintHost,
+  ctx: RunnerContext,
+  projectName: string,
+): Promise<DeferredResolution<ClintHost>> {
+  const members = Object.entries(host.children).map(([key, wrapper]) => ({
+    key,
+    host: wrapper.host,
+  }));
+  const foreign = outputRefsOf({ ...host, children: {} }).filter(
+    (ref) => !members.some((member) => member.host === ref.host),
+  );
+  return resolveHostOutputs(
+    host,
+    {
+      outputs: runRecordOutputSource(ctx.projectRoot, {
+        consumer: host.name,
+        producers: await loadProducers(ctx.projectRoot, foreign),
+        projectName,
+      }),
+      ...processResolveEnv(ctx.projectRoot, ctx.env),
+      where: `hosts/${host.name}/host.js`,
+    },
+    { deferSelf: { members } },
+  );
+}
+
+/** Finish the deferred self tokens from the members' live run records. */
+function finishOwnTokens(
+  pending: DeferredResolution<ClintHost>,
+  live: LiveMemberOutputs,
+  name: string,
+): ClintHost {
+  const started = new Map<string, unknown>();
+  for (const [key, member] of Object.entries(live)) {
+    if (member.outputs !== undefined) started.set(key, member.outputs);
+  }
+  const silent = pending.needs.filter((key) => !started.has(key));
+  if (silent.length > 0) {
+    const paths = pending.deferred
+      .filter((d) => d.members.some((key) => silent.includes(key)))
+      .map((d) => d.path);
     throw new Error(
-      `${file}: \`${token.path}\` is an output token (${token.key}) that clint resolves after starting its members (${Object.keys(members).join(", ") || "none"}); deferred self-resolution is not wired to host-core yet. Spell the value literally for now.`,
+      `hosts/${name}/host.js: ${paths.join(", ")} read the outputs of member ${silent.map((key) => `"${key}"`).join(", ")}, which is up but published no live run record (.ph/run/<host>.json) to read them from.`,
     );
   }
-  return fields;
+  const members = Object.entries(pending.host.children).map(
+    ([key, wrapper]) => ({ key, host: wrapper.host }),
+  );
+  return pending.finish(compoundOutputSource(members, started, name));
 }
 
 /** Started members' outputs, read from their own run records (members run
@@ -306,14 +329,15 @@ async function startShell(
   host: ClintHost,
   ctx: RunnerContext,
 ): Promise<CliRunHandle> {
+  const projectName = readProjectName(ctx.projectRoot, host.name);
+  const pending = await resolveOwnTokens(host, ctx, projectName);
   const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
-  const resolved = resolveUserDataPlaceholders(host, userData);
+  const resolved = resolveUserDataPlaceholders(pending.host, userData);
   const config = resolved.config ?? {};
   const lifecycle = resolved.runner.lifecycle ?? "detached";
 
   const phCliEntry = resolvePhCliEntry(ctx.projectRoot);
   const children = resolved.children;
-  const projectName = readProjectName(ctx.projectRoot, resolved.name);
   const definitions = childServices(resolved, ctx, phCliEntry);
   const eventBus = createEventBus();
   // R5: compound plugins (appliesTo "compound" — e.g. the proxy) run over the
@@ -381,13 +405,15 @@ async function startShell(
   // members' outputs, which exist now.
   let own: OwnFields;
   try {
-    const parsedOwn = ownFieldsSchema.safeParse(
-      resolveOwnFields(
-        { agents: config.agents, proxy: resolved.runner.proxy },
-        liveMemberOutputs(ctx.projectRoot, projectName, memberHosts),
-        `hosts/${host.name}/host.js`,
-      ),
+    const finished = finishOwnTokens(
+      pending,
+      liveMemberOutputs(ctx.projectRoot, projectName, memberHosts),
+      host.name,
     );
+    const parsedOwn = ownFieldsSchema.safeParse({
+      agents: finished.config?.agents,
+      proxy: finished.runner.proxy,
+    });
     if (!parsedOwn.success) {
       throw new Error(
         `hosts/${host.name}: agents/proxy resolved to invalid values:\n${z.prettifyError(parsedOwn.error)}`,
