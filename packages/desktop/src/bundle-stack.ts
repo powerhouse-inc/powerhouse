@@ -116,6 +116,12 @@ export function readLocalPackages(dir: string): Record<string, string> {
       );
     }
     const { name } = JSON.parse(manifest.stdout) as { name: string };
+    if (specs[name]) {
+      throw new Error(
+        `bundle-stack: two tarballs for ${name} in ${root} (a stale pack?): ` +
+          `${specs[name].slice("file:".length)} and ${tarball}`,
+      );
+    }
     specs[name] = `file:${tarball}`;
   }
   return specs;

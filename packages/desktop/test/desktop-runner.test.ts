@@ -283,6 +283,10 @@ describe("bundle-stack local packages", () => {
     expect(() => readLocalPackages(tempDir("ph-desktop-empty-"))).toThrow(
       /no package tarballs/,
     );
+    packTarball(dir, "powerhousedao-ph-cli-0.tgz", "@powerhousedao/ph-cli");
+    expect(() => readLocalPackages(dir)).toThrow(
+      /two tarballs for @powerhousedao\/ph-cli/,
+    );
   });
 
   it("overrides every local package and names the same spec directly", () => {
