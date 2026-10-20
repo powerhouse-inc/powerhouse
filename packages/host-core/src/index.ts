@@ -256,3 +256,16 @@ export type {
   Template,
   TokenFor,
 } from "./tokens.js";
+
+// typed-host-configs T4 lane B: per-host expectations (fixtures, monitor).
+export {
+  expectHost,
+  type ConsumedOutput,
+  type ContributedDriveInput,
+  type ExpectedBackend,
+  type ExpectedDrive,
+  type ExpectHostInput,
+  type HostExpectation,
+  type MemberExpectation,
+  type MemberInput,
+} from "./expect-host.js";
