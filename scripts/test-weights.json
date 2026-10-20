@@ -7,7 +7,10 @@
   "@powerhousedao/design-system": 4,
   "@powerhousedao/e2e-utils": 0,
   "@powerhousedao/load-test-connect": 1,
-  "@powerhousedao/ph-cli": 5,
+  "@powerhousedao/ph-cli": {
+    "weight": 55,
+    "parts": 3
+  },
   "@powerhousedao/pieces-framework": 1,
   "@powerhousedao/powerhouse-vetra-packages": 1,
   "@powerhousedao/reactor-api": 18,
