@@ -3,13 +3,13 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { builtinModules, createRequire } from "node:module";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -217,6 +217,14 @@ const LINKED_PACKAGES: [string, string, string][] = [
   ["@powerhousedao/shared", "packages/shared", "package.json"],
 ];
 
+/** Every .d.ts / .d.mts under `dir` (none when it does not exist). */
+function declarationFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true, encoding: "utf-8" })
+    .filter((file) => /\.d\.m?ts$/.test(file))
+    .map((file) => join(dir, file));
+}
+
 /** A scaffolded project whose node_modules link the workspace packages (as
  * an installed project would resolve them), plus the root tsconfig. */
 async function makeLinkedScaffold(): Promise<string> {
@@ -227,6 +235,20 @@ async function makeLinkedScaffold(): Promise<string> {
     throw new Error(
       `generated-hosts typing test needs built dists of: ${missing.join(", ")}. ` +
         `Build them first (pnpm --filter <pkg> build; connect: build:bundle).`,
+    );
+  }
+  // A dist built without the referenced projects' .tsbuild outputs declares
+  // its inferred schemas as `any` (scripts/build-declarations.mjs), which
+  // tsc -p hosts reports only as `Omit<unknown, …>` on every runner key.
+  const anySchemas = LINKED_PACKAGES.flatMap(([, pkgDir]) =>
+    declarationFiles(join(REPO, pkgDir, "dist")).filter((file) =>
+      /declare const \w*[sS]chema: any;/.test(readFileSync(file, "utf-8")),
+    ),
+  );
+  if (anySchemas.length > 0) {
+    throw new Error(
+      `dists declare a schema as \`any\` (built without .tsbuild): ${anySchemas.join(", ")}. ` +
+        `Rebuild with \`pnpm build\`, or run scripts/build-declarations.mjs before a filtered build.`,
     );
   }
   const dir = makeTempProject();
@@ -279,40 +301,6 @@ function tscHosts(dir: string): { status: number | null; errors: string[] } {
     .split("\n")
     .filter((line) => /error TS\d+/.test(line));
   return { status: run.status, errors };
-}
-
-/** Why a scaffold that should type-check did not: a host's runner type
- * collapsing (`Omit<unknown, …>`) means a linked package's types resolved to
- * `any`, so report where tsc looked. Only computed on failure. */
-function resolutionDiagnostics(dir: string): string {
-  const run = spawnSync(
-    process.execPath,
-    [TSC, "-p", "hosts", "--traceResolution"],
-    {
-      cwd: dir,
-      encoding: "utf8",
-      maxBuffer: 512 * 1024 * 1024,
-    },
-  );
-  const unresolved = new Set<string>();
-  const resolved = new Set<string>();
-  for (const line of `${run.stdout}${run.stderr}`.split("\n")) {
-    const miss = /Module name '([^']+)' was not resolved/.exec(line);
-    const name = miss?.[1].replace(/^node:/, "");
-    if (name && !builtinModules.includes(name.split("/")[0]))
-      unresolved.add(name);
-    const hit =
-      /Module name '((?:zod|@powerhousedao\/)[^']*)' was successfully resolved to '([^']+)'/.exec(
-        line,
-      );
-    if (hit) resolved.add(`${hit[1]} -> ${hit[2]}`);
-  }
-  return [
-    `tsc -p hosts in ${dir} (realpath ${realpathSync.native(dir)}) failed;`,
-    `unresolved: ${[...unresolved].join(", ") || "(none)"}`,
-    "resolved:",
-    ...[...resolved].sort(),
-  ].join("\n");
 }
 
 function writeFixture(dir: string, host: string, source: string): void {
@@ -372,11 +360,7 @@ describe("typed hosts: ph generate hosts + tsc -p hosts", () => {
     ).toMatchSnapshot("switchboard outputs.d.ts");
 
     // the scaffold as generated type-checks
-    const scaffoldCheck = tscHosts(dir);
-    expect(
-      scaffoldCheck,
-      scaffoldCheck.status === 0 ? undefined : resolutionDiagnostics(dir),
-    ).toEqual({ status: 0, errors: [] });
+    expect(tscHosts(dir)).toEqual({ status: 0, errors: [] });
     expect(
       readFileSync(join(dir, "powerhouse.config.d.json.ts"), "utf-8"),
     ).toContain("PowerhouseConfig");
