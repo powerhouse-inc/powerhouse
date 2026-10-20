@@ -840,7 +840,8 @@ export function connectConfigSchemaWith(field: TokenField) {
 
 /** The declared `connect` block: {@link connectConfigSchemaWith} with every
  * token accepted in its token-able fields. */
-export const declaredConnectConfigSchema = connectConfigSchemaWith(tokenable);
+export const declaredConnectConfigSchema =
+  /* @__PURE__ */ connectConfigSchemaWith(tokenable);
 
 /** What a connect host's `config` may hold (tokens in token-able fields). */
 export type DeclaredConnectConfigInput = z.input<
