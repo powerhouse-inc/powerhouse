@@ -187,7 +187,8 @@ export { PaymentsSubgraph };
   });
 });
 
-describe("generateSubgraph", () => {
+// Regenerating through ts-morph takes several times longer on Windows.
+describe("generateSubgraph", { timeout: 120_000 }, () => {
   it("keeps the comments above the generated statements it writes again", async () => {
     writeFiles({
       "subgraphs/billing/index.ts": subgraphClass("BillingSubgraph", "billing"),

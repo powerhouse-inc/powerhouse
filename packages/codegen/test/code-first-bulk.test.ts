@@ -122,6 +122,10 @@ function selectDefinitionSources(definitionSources: unknown) {
   );
 }
 
+// Each case generates a whole package: a few seconds here, up to 30s on a
+// Windows runner, where every file write and spawned process is slower.
+vi.setConfig({ testTimeout: 120_000 });
+
 beforeEach(() => {
   projectDir = createCodeFirstPackage();
 });

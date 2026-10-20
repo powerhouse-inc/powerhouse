@@ -51,7 +51,7 @@ for (const [name, target] of Object.entries(JSON.parse(process.env.PH_FAKE_INSTA
   const link = join(modules, name);
   if (existsSync(link)) continue;
   mkdirSync(dirname(link), { recursive: true });
-  symlinkSync(target, link);
+  symlinkSync(target, link, "junction");
 }
 if (process.env.PH_FAKE_INSTALL_SUCCESS) appendFileSync(process.env.PH_FAKE_INSTALL_SUCCESS, "complete\\n");
 `;
@@ -67,6 +67,11 @@ export function useFakePackageManager(
   for (const command of ["npm", "pnpm"]) {
     writeFileSync(join(bin, command), SCRIPT);
     chmodSync(join(bin, command), 0o755);
+    // Windows resolves a bare command through PATHEXT and ignores the shebang.
+    writeFileSync(
+      join(bin, `${command}.cmd`),
+      `@node "%~dp0${command}" %*\r\n`,
+    );
   }
   const log = join(bin, "calls.jsonl");
   writeFileSync(log, "");
