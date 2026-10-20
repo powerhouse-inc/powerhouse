@@ -34,6 +34,9 @@ await build({
     // Zod-only Connect config schema: host-core's neutral entries and the
     // connect runner import it without the connect barrel.
     "connect/connect-config-schema.ts",
+    // Output tokens (zod only): host-core re-exports them, and the Connect
+    // config schema's declared form makes its URL fields token-able.
+    "host-tokens/index.ts",
   ],
   outDir: "dist",
   platform: "neutral",

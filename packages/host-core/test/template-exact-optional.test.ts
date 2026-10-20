@@ -84,6 +84,10 @@ describe("$map templates under exactOptionalPropertyTypes", () => {
         "nodenext",
         "--target",
         "es2022",
+        // Workspace packages (the tokens live in @powerhousedao/shared)
+        // resolve to their sources, as in this repo's own typecheck.
+        "--customConditions",
+        "source",
         file,
       ],
       { cwd: dir, encoding: "utf8" },
