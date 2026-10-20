@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import type { ConnectRouteRegistration } from "../registry.js";
 import { getConnectRegistry } from "../registry.js";
 import type { ConnectModals } from "../router/modals.js";
-import { isCoreView } from "../router/route-components.js";
+import { isCoreView } from "../router/core-views.js";
 import {
   addConnectRoutes,
   removeConnectRoutes,

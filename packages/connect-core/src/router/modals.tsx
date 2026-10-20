@@ -3,9 +3,9 @@ import { usePHModal } from "@powerhousedao/reactor-browser";
 import { useMatches } from "@tanstack/react-router";
 import type { ComponentType, ErrorInfo, ReactNode } from "react";
 import { Component, createElement, Suspense } from "react";
+import type * as ModalViews from "../views/modals.js";
 import type { ModalFrameProps } from "./modal-frame.js";
 import { ModalFrameContext } from "./modal-frame.js";
-import { coreView } from "./route-components.js";
 
 /** Modal views by modal type. Each reads the open modal with `usePHModal()`. */
 export type ConnectModals = Partial<Record<PHModal["type"], ComponentType>>;
@@ -18,16 +18,16 @@ declare module "@tanstack/react-router" {
 }
 
 /** Core's modals: the ones editors, drive apps and the reactor open, so every
- * host has them. Loaded when one opens. */
-export const coreModals: ConnectModals = {
-  createDocument: coreView("CreateDocumentModal"),
-  login: coreView("LoginModal"),
-  deleteItem: coreView("DeleteItemModal"),
-  confirmDocumentUpgrade: coreView("ConfirmDocumentUpgradeModal"),
-  downloadDocumentWithErrors: coreView("DownloadDocumentWithErrorsModal"),
-  documentVersionUnsupported: coreView("DocumentVersionUnsupportedModal"),
-  driveAuthRequired: coreView("DriveAuthRequiredModal"),
-};
+ * host has them. Each names its view in `@powerhousedao/connect-core/views`. */
+export const CORE_MODAL_VIEWS = {
+  createDocument: "CreateDocumentModal",
+  login: "LoginModal",
+  deleteItem: "DeleteItemModal",
+  confirmDocumentUpgrade: "ConfirmDocumentUpgradeModal",
+  downloadDocumentWithErrors: "DownloadDocumentWithErrorsModal",
+  documentVersionUnsupported: "DocumentVersionUnsupportedModal",
+  driveAuthRequired: "DriveAuthRequiredModal",
+} as const satisfies Partial<Record<PHModal["type"], keyof typeof ModalViews>>;
 
 type BoundaryProps = { modal: string; children: ReactNode };
 

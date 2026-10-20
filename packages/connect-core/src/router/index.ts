@@ -54,14 +54,18 @@ export type {
 export {
   CONTENT_VIEW_ID,
   ContentOutlet,
-  CoreNotFound,
-  CoreError,
-  coreView,
-  isCoreView,
   DrivePending,
 } from "./route-components.js";
+export {
+  CoreNotFound,
+  CoreError,
+  coreModals,
+  coreView,
+  isCoreView,
+} from "./core-views.js";
+export { ConnectCoreApp } from "./core-app.js";
 export type { DocumentViewProps, DriveViewProps } from "./route-components.js";
-export { coreModals, ModalOutlet } from "./modals.js";
+export { CORE_MODAL_VIEWS, ModalOutlet } from "./modals.js";
 export { ModalDialog, useModalFrame } from "./modal-frame.js";
 export type { ModalFrameProps } from "./modal-frame.js";
 export type { ConnectModals } from "./modals.js";
