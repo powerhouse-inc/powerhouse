@@ -651,7 +651,9 @@ export class DefinitionSourceLoader {
     ].sort(compareDefinitionDiagnostics);
     return {
       ...selectedSources(resolution),
-      status: diagnostics.length === 0 ? "ready" : "failed",
+      status: diagnostics.some(({ severity }) => severity === "error")
+        ? "failed"
+        : "ready",
       diagnostics,
       documentModels: sortBySource(collected.documentModels),
       upgradeManifests: sortBySource(collected.upgradeManifests),
