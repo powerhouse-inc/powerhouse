@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join, resolve, dirname } from "node:path";
+import { basename, join, resolve, dirname } from "node:path";
 import {
   declarationFiles,
   disposals,
@@ -50,6 +50,11 @@ export function siblingPackage(flow: Flow): { root: string; shared: string } {
   return { root, shared };
 }
 
+/** Windows runs node_modules/.bin/<name>.cmd and ignores a shebang script. */
+export function writeCmdShim(bin: string): void {
+  writeFileSync(`${bin}.cmd`, `@node "%~dp0${basename(bin)}" %*\r\n`);
+}
+
 export function recordTsc(root: string): () => string[][] {
   const bin = join(root, "node_modules/.bin/tsc");
   const compiler = join(root, "node_modules/typescript/bin/tsc");
@@ -66,6 +71,7 @@ export function recordTsc(root: string): () => string[][] {
     ].join("\n"),
   );
   chmodSync(bin, 0o755);
+  writeCmdShim(bin);
   return () =>
     readFileSync(commandsFile, "utf8")
       .trim()

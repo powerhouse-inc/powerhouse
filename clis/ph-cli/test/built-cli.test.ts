@@ -30,7 +30,11 @@ import {
   packageWith,
   writeTsconfig,
 } from "./helpers/declarations.js";
-import { duplicatePackages, noInputProbe } from "./helpers/workspace.js";
+import {
+  duplicatePackages,
+  noInputProbe,
+  writeCmdShim,
+} from "./helpers/workspace.js";
 import { incrementalDeclarations } from "./helpers/incremental-declarations.js";
 
 afterEach(cleanUp);
@@ -338,6 +342,7 @@ it("reports compiler stderr through the built CLI", () => {
     '#!/usr/bin/env node\nif (process.argv.includes("--version")) { console.log("Version 7.0.2"); } else { process.stderr.write("compiler stderr diagnostic\\n"); process.exit(1); }\n',
   );
   chmodSync(bin, 0o755);
+  writeCmdShim(bin);
   const result = spawnSync(
     process.execPath,
     [resolve(import.meta.dirname, "../dist/cli.mjs"), "build"],

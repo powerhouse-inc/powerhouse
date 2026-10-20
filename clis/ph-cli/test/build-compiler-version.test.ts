@@ -1,3 +1,4 @@
+import { writeCmdShim } from "./helpers/workspace.js";
 import {
   chmodSync,
   existsSync,
@@ -36,6 +37,7 @@ function advertisedVersion(root: string, version: string): void {
     ].join("\n"),
   );
   chmodSync(bin, 0o755);
+  writeCmdShim(bin);
 }
 
 itWithSymlinks.each([

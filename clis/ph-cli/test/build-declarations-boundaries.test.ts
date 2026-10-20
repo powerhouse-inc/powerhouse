@@ -12,7 +12,11 @@ import {
 import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { declarationSnapshot, plainCompile } from "./helpers/workspace.js";
+import {
+  declarationSnapshot,
+  plainCompile,
+  writeCmdShim,
+} from "./helpers/workspace.js";
 import { runPrepack } from "../src/services/build.js";
 import { createGenerationSteps } from "../src/services/definitions/build-steps.js";
 import {
@@ -440,6 +444,7 @@ describe("where a declaration may be written", () => {
         ].join("\n"),
       );
       chmodSync(bin, 0o755);
+      writeCmdShim(bin);
 
       const result = await build(root, "schema-first");
       expect(result.exitCode).toBe(2);

@@ -27,6 +27,7 @@ import {
   plainCompile,
   siblingPackage,
   addReference,
+  writeCmdShim,
 } from "./helpers/workspace.js";
 import {
   importRuntime,
@@ -894,6 +895,7 @@ describe("runtime loading", () => {
         ].join("\n"),
       );
       chmodSync(bin, 0o755);
+      writeCmdShim(bin);
       const result = await build(root, "code-first");
       expect(result.exitCode).toBe(2);
       expect(

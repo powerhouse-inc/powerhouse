@@ -26,6 +26,7 @@ import {
   addReference,
   recordTsc,
   siblingPackage,
+  writeCmdShim,
 } from "./helpers/workspace.js";
 import { walkFiles } from "../src/services/definitions/file-walk.js";
 import { createGenerationSteps } from "../src/services/definitions/build-steps.js";
@@ -276,6 +277,7 @@ describe("compiler diagnostics", () => {
       '#!/usr/bin/env node\nif (process.argv.includes("--version")) { console.log("Version 7.0.2"); } else { process.stderr.write("compiler stderr diagnostic\\n"); process.exit(1); }\n',
     );
     chmodSync(bin, 0o755);
+    writeCmdShim(bin);
     const result = await build(root, "code-first");
     expect(result.exitCode).toBe(2);
     expect(result.log).toContain("compiler stderr diagnostic");

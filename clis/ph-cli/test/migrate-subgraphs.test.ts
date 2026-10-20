@@ -567,7 +567,7 @@ describe("ph migrate subgraphs", () => {
       expect(outcome.changed).toBe(false);
       expect(outcome.diagnostics).toHaveLength(1);
       const diagnostic = outcome.diagnostics.at(0);
-      expect(diagnostic?.file).toBe("/subgraphs/example/index.ts");
+      expect(diagnostic?.file).toBe(normalize("/subgraphs/example/index.ts"));
       expect(diagnostic?.message).toContain(message);
       expect(diagnostic?.line).toBeGreaterThan(0);
       expect(file.getFullText()).toBe(original);
@@ -1579,7 +1579,7 @@ void checkExampleExampleSubgraph;
           changed: false,
           diagnostics: [
             {
-              file: "/src/consumer.ts",
+              file: normalize("/src/consumer.ts"),
               line,
               message: packageReference("B"),
             },
@@ -1954,7 +1954,11 @@ export class CalendarSubgraph extends BaseSubgraph {
         outcome: {
           changed: false,
           diagnostics: [
-            { file: "/src/consumer.ts", line, message: namespaceUse("B") },
+            {
+              file: normalize("/src/consumer.ts"),
+              line,
+              message: namespaceUse("B"),
+            },
           ],
         },
         texts: files,
