@@ -11,13 +11,18 @@ import { z } from "zod";
 
 export type OutputPath = (string | number)[];
 
-declare const tokenValue: unique symbol;
+/* The phantom brand key `"~value"` of `OutputToken<T>` / `ItemToken<T>` (type level
+ * only; no runtime object has it). A STRING key, not a `unique symbol`: the
+ * dts bundler copies this file into more than one chunk (`./schema` and
+ * `.`), and two `unique symbol`s would make two unrelated brands, so an
+ * `ItemToken<string>` from `outputs.d.ts` (`./schema`) would fit a boolean
+ * field typed through `.`. */
 
 /** `{ $output: { host, member?, path } }` — the value at `path` in that
  * host's outputs. `T` is a phantom brand for generated `outputs.d.ts`. */
 export interface OutputToken<T = unknown> {
   $output: { host: string; member?: string; path: OutputPath };
-  readonly [tokenValue]?: T;
+  readonly "~value"?: T;
 }
 
 /** `{ $concat: [...] }` — a string; every part resolves to string|number. */
@@ -29,7 +34,7 @@ export interface ConcatToken {
  * the named outer binding). */
 export interface ItemToken<T = unknown> {
   $item: OutputPath | { as: string; path: OutputPath };
-  readonly [tokenValue]?: T;
+  readonly "~value"?: T;
 }
 
 /** `$key` inside a `$map` template: the current key (`true` = innermost). */
@@ -107,8 +112,8 @@ export interface RecordMapToken<V> {
   };
 }
 
-type MapTokenFor<T> = T extends readonly (infer E)[]
-  ? ArrayMapToken<E>
+type MapTokenFor<T> = T extends readonly unknown[]
+  ? ArrayMapToken<T[number]>
   : T extends object
     ? string extends keyof T
       ? RecordMapToken<T[string & keyof T]>
@@ -139,8 +144,8 @@ export type TokenFor<T> = unknown extends T
  */
 export type Template<T> = TokenFor<Untokened<T>> | TemplateShape<Untokened<T>>;
 
-type TemplateShape<T> = T extends readonly (infer E)[]
-  ? Template<E>[]
+type TemplateShape<T> = T extends readonly unknown[]
+  ? Template<T[number]>[]
   : T extends object
     ? { [K in keyof T]: Template<T[K]> }
     : T;

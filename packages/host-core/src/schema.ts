@@ -97,3 +97,11 @@ export {
   type PluginEntryData,
 } from "./plugins.js";
 export type { PHHost, PHHostOutputs, PluginEntry } from "./host-types.js";
+
+// typed-host-configs T4: $map field typing.
+export type {
+  ArrayMapToken,
+  RecordMapToken,
+  Template,
+  TokenFor,
+} from "./tokens.js";
