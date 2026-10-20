@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 
+import type * as RouteTreeModule from "@powerhousedao/connect/route-tree";
+import { primeRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import type { PHStore } from "@powerhousedao/reactor-browser";
+import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import type { AnyRoute } from "@tanstack/react-router";
+import { setRouteComponents } from "../../../test/route-components.js";
 import {
   addPHEventHandlers,
   bindPHStoreToWindow,
@@ -14,6 +19,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import {
   createMemoryHistory,
   createRoute,
+  HeadContent,
   Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -27,27 +33,64 @@ import {
   vi,
 } from "vitest";
 import {
+  addConnectRoutes,
   bindConnectRouter,
+  connectRoutes,
   createConnectRouter,
-} from "../../router/connect-router.js";
-import type { ConnectRouteComponents } from "../../router/route-components.js";
-import { addConnectRoutes, connectRoutes } from "../../router/route-tree.js";
-import { useForgetSettingsOpenedFrom } from "../../router/settings.js";
+  useForgetSettingsOpenedFrom,
+} from "@powerhousedao/connect-core/router";
+import type { ComponentType } from "react";
 import { SettingsPage } from "./settings-page.js";
 
 let store: PHStore;
 let unbind: (() => void) | undefined;
+let routeTree: typeof RouteTreeModule.routeTree;
 
-// A project's tab, added under the settings layout as its route folder would.
-const projectTab = createRoute({
-  getParentRoute: () => connectRoutes().settingsRoute,
-  path: "reports",
-  staticData: { settings: { label: "Reports", order: 50 } },
-  component: () => <p data-testid="tab">reports</p>,
-});
-addConnectRoutes([projectTab]);
+// Each mount picks the views of Connect's tab routes; a tab without one is hidden.
+let tabViews: Record<string, ComponentType> = {};
+const CONNECT_TABS = [
+  "ai-assistant",
+  "package-manager",
+  "default-editors",
+  "danger-zone",
+  "about",
+];
 
-beforeAll(() => {
+function stubConnectTabs() {
+  const { settingsRoute } = connectRoutes(routeTree);
+  for (const route of settingsRoute.children as unknown as AnyRoute[]) {
+    const path = ((route.options as { path?: string }).path ?? "").replace(
+      /^\//,
+      "",
+    );
+    if (!CONNECT_TABS.includes(path)) continue;
+    const options = route.options as {
+      component?: unknown;
+      staticData: { settings: { enabled?: () => boolean } };
+    };
+    options.staticData.settings.enabled = () => path in tabViews;
+    options.component = () => {
+      const View = tabViews[path];
+      return View ? <View /> : null;
+    };
+  }
+  addConnectRoutes([
+    // A project's tab, added under the settings layout as its route folder would.
+    createRoute({
+      getParentRoute: () => settingsRoute,
+      path: "reports",
+      staticData: { settings: { label: "Reports", order: 50 } },
+      component: () => <p data-testid="tab">reports</p>,
+    }),
+  ]);
+}
+
+beforeAll(async () => {
+  primeRuntimeConfig({ connect: DEFAULT_CONNECT_CONFIG } as never);
+  // Connect's route views read the config, and a build-time define, as they evaluate.
+  vi.stubGlobal("PH_CONNECT_SENTRY_RELEASE", "test");
+  ({ routeTree } = await import("@powerhousedao/connect/route-tree"));
+  stubConnectTabs();
   store = createPHStore();
   bindPHStoreToWindow(store);
   addPHEventHandlers();
@@ -63,7 +106,11 @@ afterEach(() => {
   cleanup();
   unbind?.();
   unbind = undefined;
+  restore?.();
+  restore = undefined;
 });
+
+let restore: (() => void) | undefined;
 
 const tab = (name: string) => () => <p data-testid="tab">{name}</p>;
 
@@ -79,6 +126,7 @@ function SettingsLink() {
 function Root() {
   return (
     <>
+      <HeadContent />
       <SettingsLink />
       <Outlet />
     </>
@@ -87,23 +135,28 @@ function Root() {
 
 function mount(
   path: string,
-  settingsTabs: ConnectRouteComponents["settingsTabs"] = {
+  views: Record<string, ComponentType> = {
     "package-manager": tab("packages"),
     "default-editors": tab("editors"),
     "danger-zone": tab("danger"),
     about: tab("about"),
   },
 ) {
+  tabViews = views;
+  const home = () => <p data-testid="home">home</p>;
+  restore = setRouteComponents(routeTree, {
+    root: Root,
+    layout: Outlet,
+    home,
+    drive: home,
+    node: () => null,
+    settings: SettingsPage,
+  });
   const history = createMemoryHistory({ initialEntries: [path] });
   const connectRouter = createConnectRouter({
+    routeTree,
     store,
     history,
-    components: {
-      root: Root,
-      content: () => <p data-testid="home">home</p>,
-      settings: SettingsPage,
-      settingsTabs,
-    },
   });
   unbind = bindConnectRouter(connectRouter, store);
   render(

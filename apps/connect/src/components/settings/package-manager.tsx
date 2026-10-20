@@ -110,7 +110,7 @@ export const ConnectPackageManager: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex min-h-0 w-full max-w-3xl flex-1 flex-col">
       <PackageManager
         mutable={true}
         installedPackages={installedPackages}
