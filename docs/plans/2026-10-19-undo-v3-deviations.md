@@ -208,7 +208,13 @@ Decisions:
   a version 3 CREATE, and writes to a stored version 3 document, when the
   model's registered reducer is untagged or the model cannot be loaded. It
   uses the existing `UnsupportedProtocolVersionError`, which is terminal and
-  does not quarantine in sync.
+  does not quarantine in sync. A version 3 CREATE whose model executor
+  workers cannot import fails the same way; writes keep
+  `ModelNotWorkerImportableError`.
+- A reactor drops its stored Inbox `UNSUPPORTED_PROTOCOL` dead letters when
+  it loads dead letters (start and remote reset). The manifest revision
+  changes on every start and senders release their holds on it; a reloaded
+  refusal was reported again and re-held the document for good.
 - The light client's header now carries `protocolVersions` from a current
   Switchboard. The `CREATE_DOCUMENT` fallbacks stay for older Switchboards.
 - Workflow's `creation()` reads the client through `getPHStore()`.
@@ -260,12 +266,16 @@ timestamps, which the user rejected):
   without undo v3 refuses those creates (`UnsupportedProtocolVersionError`);
   such a Connect needs `undoV3: false` to create there.
 - A reactor that stored version 3 documents while a model was tagged and
-  then boots an untagged build of it refuses every write and load for those
-  documents. The startup stored-protocol check compares versions only and
-  does not catch it.
-- A version 3 CREATE in a worker that cannot import a host-only model now
-  fails at the CREATE (`ModelNotWorkerImportableError`), which quarantines
-  the document in sync, as later writes already did.
+  then boots an untagged build of it refuses every write, load and delete
+  for those documents. The startup stored-protocol check compares versions
+  only and does not catch it.
+- A release toward a polled server does not re-send the document: the touch
+  that delivers the new manifest releases the hold, then trims the outbox by
+  the server's ackOrdinal, which is past the released history. Pinned
+  `it.fails` in reactor-api `sync-server-refusal-restart.test.ts`.
+- A refusal is still reported on every poll within one incarnation, with a
+  `logger.error` on the sender each time. A model reloaded at run time
+  changes no revision, so its holds release only on the next restart.
 - Pieces and workflow refuse `undo`, `redo` and `undoRedoAvailability`.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
