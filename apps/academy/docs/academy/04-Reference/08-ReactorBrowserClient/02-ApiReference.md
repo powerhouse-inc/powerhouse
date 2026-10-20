@@ -124,6 +124,7 @@ those pages with no realtime at all and nothing logged.
 | `realtime`          | `boolean`                            | `true`                    | Whether server-pushed changes reach subscribers.                                          |
 | `attachmentService` | `PHGlobal["attachmentService"]`      | none                      | Published into the slot the editors read.                                                 |
 | `documentModels`    | `readonly DocumentModelModule[]`     | none                      | The app's generated modules, published so the document-model hooks work.                  |
+| `featureFlags`      | `PeerCapabilityFlags`                | `undoV3` on               | Picks the protocol versions of documents this client creates.                             |
 | `children`          | `ReactNode`                          | required                  |                                                                                           |
 
 On mount the provider registers the `window.ph` event handlers once per page,

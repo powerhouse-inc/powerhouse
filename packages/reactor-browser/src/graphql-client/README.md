@@ -46,6 +46,7 @@ uses the same document hooks Connect uses.
 | `realtime`          | `true`                    | Whether server-pushed changes reach subscribers.                                          |
 | `attachmentService` | none                      | The attachment service, published into the slot the editors read.                         |
 | `documentModels`    | none                      | The app's document model modules, published so the model hooks work (below).              |
+| `featureFlags`      | `undoV3` on               | Picks the protocol versions of documents this client creates.                             |
 
 The props are read once, when the client is built. Changing `url` afterwards
 does not rebuild the client; remount the provider (or key it on the URL) if the
@@ -189,7 +190,8 @@ interface:
 | `getJob(jobId, signal?)`                                | One `jobStatus` read, no polling; `undefined` when the server answers none.                                                                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
-| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. One without its `documentType` argument answers versions unfitted to the type. |
+| `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
+| `getCreateProtocolVersions`                             | Picked by this client from its `featureFlags` and `documentModels`; the Switchboard is not asked. |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
 module getters are not implemented here.

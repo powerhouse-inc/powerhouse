@@ -30,7 +30,7 @@ Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor 
 
 ## Which version a document takes
 
-A document's version is fixed when it is created. A create through a reactor with `undoV3` on takes version 3, and with it off version 2, unless the call names a version:
+A document's version is fixed when it is created, and its creator chooses it. A reactor or client building a create picks from its own `undoV3` flag and its own models: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. A reactor that does not run the chosen version cannot accept the document. A call can name a version:
 
 ```typescript
 const document = await client.createEmpty("powerhouse/todo-list", {
@@ -39,6 +39,8 @@ const document = await client.createEmpty("powerhouse/todo-list", {
 ```
 
 A document headed outside a reactor, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is added to a drive.
+
+The GraphQL light client picks from its `featureFlags` and `documentModels` options and does not ask the Switchboard.
 
 An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
 
