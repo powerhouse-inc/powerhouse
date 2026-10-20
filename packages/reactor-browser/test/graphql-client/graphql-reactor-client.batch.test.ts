@@ -725,7 +725,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
   it("caps create protocol versions at the Switchboard's reactor-wide selection", async () => {
     const signal = new AbortController().signal;
     const sdk = createMockSdk({
-      GetCreateDefaults: defaults("v2-required", { "base-reducer": 3 }),
+      GetCreateDefaults: defaults("v2-required", { "base-reducer": 2 }),
     });
 
     const versions = await createClientWith(sdk).getCreateProtocolVersions(
@@ -733,7 +733,7 @@ describe("GraphQLReactorClient create defaults and preferred editor", () => {
       signal,
     );
 
-    expect(versions).toEqual({ "base-reducer": 3 });
+    expect(versions).toEqual({ "base-reducer": 2 });
     expect(sdk.GetCreateDefaults).toHaveBeenCalledWith({}, undefined, signal);
     expect(sdk.GetCreateProtocolVersions).not.toHaveBeenCalled();
     expect(sdk.GetDocument).not.toHaveBeenCalled();

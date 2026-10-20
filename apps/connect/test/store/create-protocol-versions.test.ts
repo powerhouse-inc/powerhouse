@@ -70,7 +70,7 @@ const drive = driveDocumentModelModule as unknown as DocumentModelModule;
 /** A Switchboard whose reactor-wide createDefaults selects `hostVersions`. */
 async function remoteConnect(
   models: DocumentModelModule[],
-  hostVersions: Record<string, number>,
+  hostVersions: Record<string, number> | "no-create-defaults",
   featureFlags?: PeerCapabilityFlags,
 ) {
   const documents: Record<string, string> = { "drive-1": DRIVE_TYPE };
@@ -79,8 +79,23 @@ async function remoteConnect(
       for (const input of createInputs([{ body } as Received])) {
         documents[input.documentId] = input.model;
       }
-      return body.operationName === "GetCreateDefaults" ||
-        body.operationName === "GetCreateProtocolVersions"
+      const asksDefaults =
+        body.operationName === "GetCreateDefaults" ||
+        body.operationName === "GetCreateProtocolVersions";
+      if (asksDefaults && hostVersions === "no-create-defaults") {
+        return {
+          status: 400,
+          body: JSON.stringify({
+            errors: [
+              {
+                message: 'Cannot query field "createDefaults" on type "Query".',
+                extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+              },
+            ],
+          }),
+        };
+      }
+      return asksDefaults
         ? data({
             createDefaults: {
               signaturePolicy: "v2-required",
@@ -249,3 +264,18 @@ describe.each([
     });
   },
 );
+
+describe("remote Connect against a Switchboard without createDefaults", () => {
+  it("refuses to create, as it cannot read the signature policy", async () => {
+    const { received } = await remoteConnect([tagged], "no-create-defaults");
+
+    await expect(
+      addDocument("drive-1", "Doc", MODEL_TYPE),
+    ).rejects.toMatchObject({ name: "GraphQLOperationNotSupportedError" });
+    await expect(addDrive({ global: { name: "Drive" } })).rejects.toMatchObject(
+      { name: "GraphQLOperationNotSupportedError" },
+    );
+    expect(createInputs(received)).toEqual([]);
+    expect(operationNames(received)).not.toContain("CreateDocument");
+  });
+});
