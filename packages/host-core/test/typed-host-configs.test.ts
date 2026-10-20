@@ -114,11 +114,14 @@ describe("host schemas: invariants owned by the schema", () => {
     expect(withRemote({ url: "http://127.0.0.1:4001/graphql" })).toBe(true);
     // the exported base is the resolved form; the declared one takes tokens
     expect(withRemote(graphql)).toBe(false);
+    expect(withRemote(graphql, declaredHostSchemas.reactorHostSchema)).toBe(
+      true,
+    );
     expect(
-      withRemote(graphql, declaredHostSchemas.reactorHostSchema),
-    ).toBe(true);
-    expect(
-      withRemote({ host: "switchboard" }, declaredHostSchemas.reactorHostSchema),
+      withRemote(
+        { host: "switchboard" },
+        declaredHostSchemas.reactorHostSchema,
+      ),
     ).toBe(false);
   });
 
@@ -175,7 +178,9 @@ describe("host schemas: invariants owned by the schema", () => {
   it("builds a runner's declared and resolved schemas from one definition", () => {
     const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
       s.reactorHostSchema.extend({
-        runner: s.runnerBaseSchema.extend({ extra: z.boolean().optional() }).strict(),
+        runner: s.runnerBaseSchema
+          .extend({ extra: z.boolean().optional() })
+          .strict(),
       }),
     );
     const host = {
@@ -221,6 +226,34 @@ describe("host schemas: invariants owned by the schema", () => {
     const host = { name: "x", runner: { module: "m" } };
     expect(declared.reactorHostSchema.safeParse(host).success).toBe(true);
     expect(resolved.reactorHostSchema.safeParse(host).success).toBe(true);
+  });
+
+  it("gives a runner's own field tokens in the declared schema only (s.tokenable)", () => {
+    const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
+      s.reactorHostSchema.extend({
+        config: z.strictObject({
+          apiKey: s.tokenable(z.string().min(1)).optional(),
+          dir: s.envTokenable(z.string()).optional(),
+        }),
+      }),
+    );
+    const env = { $env: "OPENROUTER_API_KEY" };
+    const host = (config: object) => ({
+      name: "x",
+      runner: { module: "m" },
+      config,
+    });
+    expect(declaredHostSchema.safeParse(host({ apiKey: env })).success).toBe(
+      true,
+    );
+    expect(hostSchema.safeParse(host({ apiKey: env })).success).toBe(false);
+    expect(hostSchema.safeParse(host({ apiKey: "k" })).success).toBe(true);
+    expect(
+      declaredHostSchema.safeParse(host({ dir: workflowsToken })).success,
+    ).toBe(false);
+    expectTypeOf<
+      z.output<typeof hostSchema>["config"]["apiKey"]
+    >().toEqualTypeOf<string | undefined>();
   });
 });
 

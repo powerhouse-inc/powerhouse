@@ -267,6 +267,12 @@ function buildHostSchemas(tokenField: FieldWrappers) {
     childrenSchema,
     reactorHostSchema,
     compoundHostSchema,
+    /** This set's field wrapper, for a runner's OWN token-able fields inside
+     * `defineHostSchemas`: declared, `T | Token` in and `T` out; resolved,
+     * `T` only. Both modes share one static type. */
+    tokenable: tokenField.any,
+    /** As `tokenable`, but the only token accepted is `$env`. */
+    envTokenable: tokenField.env,
   };
 }
 
@@ -281,19 +287,12 @@ export function makeHostSchemas(options: { tokens: TokenMode }): HostSchemas {
 }
 
 /**
- * One runner schema definition, two schemas (typed-host-configs 3.5): the
- * builder runs once over the DECLARED base set (token-able fields accept
- * tokens; pipeline step 3, and `z.input` of it types host files) and once
- * over the RESOLVED set (no tokens; `validateHost` checks it right before
- * the verb, step 6). A runner module exports both:
- *
- *   const { declaredHostSchema, hostSchema } = defineHostSchemas((s) =>
- *     s.reactorHostSchema.extend({ runner: s.runnerBaseSchema.extend({…}).strict() }));
- *   export { declaredHostSchema, hostSchema };
- *   export type MyHost = z.input<typeof declaredHostSchema>;
- *
- * Apply refinements inside the builder, last (zod refuses `.extend()` on a
- * refined object).
+ * One runner definition, two schemas (3.5): `build` runs over the DECLARED
+ * set (tokens allowed; its z.input types host files) and the RESOLVED set
+ * (no tokens; `validateHost` checks it before the verb). Export both, type
+ * the host as `z.input<typeof declaredHostSchema>`, refine last inside the
+ * builder (zod can't extend a refined object), and wrap the runner's own
+ * token-able fields with `s.tokenable` / `s.envTokenable`.
  */
 export function defineHostSchemas<T>(build: (schemas: HostSchemas) => T): {
   declaredHostSchema: T;
