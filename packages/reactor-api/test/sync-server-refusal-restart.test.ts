@@ -78,10 +78,12 @@ describe("a refusal by the polled server, after the server can run the document"
   async function server(
     db: Kysely<Database>,
     model: DocumentModelModule<any>,
+    undoV3 = true,
   ): Promise<InProcessReactorModule> {
     const module = await new ReactorBuilder()
       .withKysely(db)
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
+      .withExecutorConfig({ featureFlags: { undoV3 } })
       .withDocumentModelSources([
         driveDocumentModelModule as never,
         model as never,
@@ -92,10 +94,12 @@ describe("a refusal by the polled server, after the server can run the document"
   }
 
   /**
-   * Connect pushes a v3 child to a server whose model is untagged, holds it on
-   * the refusal, and the server restarts on a tagged build of the same store.
+   * Connect holds a v3 child from a server that cannot run it, and the server
+   * restarts on a build of the same store that can. `refused`: the server
+   * announces 3 but its model is untagged, so the hold follows its refusal;
+   * otherwise it does not announce 3 and Connect holds before pushing.
    */
-  async function refusedThenRestarted() {
+  async function heldThenRestarted(refused: boolean) {
     const registry = new Map<string, ISyncManager>();
     const bridge = createResolverBridge(registry, {
       log: false,
@@ -105,7 +109,9 @@ describe("a refusal by the polled server, after the server can run the document"
       dialect: new HardenedPGliteDialect(new PGlite()),
     });
 
-    const before = await server(db, untagged(documentModelDocumentModelModule));
+    const before = refused
+      ? await server(db, untagged(documentModelDocumentModelModule))
+      : await server(db, documentModelDocumentModelModule, false);
     registry.set("switchboard", before.syncModule!.syncManager);
 
     const built = await new ReactorClientBuilder()
@@ -165,16 +171,31 @@ describe("a refusal by the polled server, after the server can run the document"
       { timeout: 10_000 },
     );
     const remoteName = before.syncModule!.syncManager.list()[0].meta.name;
+    // The server applied the drive past m3's ordinals, so its ack is past them.
+    const pushedThrough =
+      connectSync.getByName("switchboard-shared").channel.outbox.latestOrdinal;
     await vi.waitFor(
       async () => {
-        const page = await before.syncModule!.deadLetterStorage.list(
-          remoteName,
-          { cursor: "0", limit: 10 },
-        );
-        expect(page.results.map((record) => record.documentId)).toContain("m3");
+        const cursors = await before.syncModule!.cursorStorage.list(remoteName);
+        const inbox = cursors.find((cursor) => cursor.cursorType === "inbox");
+        expect(inbox?.cursorOrdinal ?? 0).toBeGreaterThanOrEqual(pushedThrough);
       },
       { timeout: 10_000 },
     );
+    if (refused) {
+      await vi.waitFor(
+        async () => {
+          const page = await before.syncModule!.deadLetterStorage.list(
+            remoteName,
+            { cursor: "0", limit: 10 },
+          );
+          expect(page.results.map((record) => record.documentId)).toContain(
+            "m3",
+          );
+        },
+        { timeout: 10_000 },
+      );
+    }
     await expect(before.reactor.get("m3")).rejects.toThrow();
 
     await before.reactor.kill().completed;
@@ -186,7 +207,7 @@ describe("a refusal by the polled server, after the server can run the document"
   }
 
   it("does not re-hold the document after the server restarts", async () => {
-    const { connectSync, events } = await refusedThenRestarted();
+    const { connectSync, events } = await heldThenRestarted(true);
 
     // The new revision releases the hold.
     await vi.waitFor(() => expect(events).toEqual(["held", "released"]), {
@@ -199,26 +220,27 @@ describe("a refusal by the polled server, after the server can run the document"
     expect(await connectSync.listHolds({ documentId: "m3" })).toEqual([]);
   });
 
-  // BUG: the released document is never sent again. The touch that delivers
-  // the server's new manifest releases the hold, which queues m3's history in
-  // the outbox, and then trims the outbox by the server's ackOrdinal. That
-  // ordinal is past m3's ordinals, since the server applied the drive's
-  // operations, so the queued history is dropped unsent (pollOnce trims the
-  // same way). Any release toward a polled server takes this path.
-  it.fails("sends the released document to the server again", async () => {
-    const { after, client } = await refusedThenRestarted();
+  it.each([
+    ["after its refusal", true],
+    ["held before the push from a server not announcing 3", false],
+  ])(
+    "sends the released document to the server %s",
+    async (_label, refused) => {
+      const { after, client, events } = await heldThenRestarted(refused);
 
-    await vi.waitFor(
-      async () => expect(await after.reactor.get("m3")).toBeDefined(),
-      { timeout: 3_000 },
-    );
-    await client.execute("m3", "main", [
-      setModelName({ name: "after-restart" }),
-    ]);
-    await vi.waitFor(
-      async () =>
-        expect(nameOf(await after.reactor.get("m3"))).toBe("after-restart"),
-      { timeout: 3_000 },
-    );
-  });
+      await vi.waitFor(
+        async () => expect(await after.reactor.get("m3")).toBeDefined(),
+        { timeout: 3_000 },
+      );
+      await client.execute("m3", "main", [
+        setModelName({ name: "after-restart" }),
+      ]);
+      await vi.waitFor(
+        async () =>
+          expect(nameOf(await after.reactor.get("m3"))).toBe("after-restart"),
+        { timeout: 3_000 },
+      );
+      expect(events).toEqual(["held", "released"]);
+    },
+  );
 });
