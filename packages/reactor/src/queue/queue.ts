@@ -2,6 +2,7 @@ import type { CreateDocumentActionInput } from "@powerhousedao/shared/document-m
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
@@ -137,18 +138,42 @@ export class InMemoryQueue implements IQueue {
     return this.areDependenciesMet(head) ? head : null;
   }
 
-  private getCreateDocumentType(job: Job): string | undefined {
+  private getCreateInput(job: Job): CreateDocumentActionInput | undefined {
     for (const action of job.actions) {
       if (action.type === "CREATE_DOCUMENT") {
-        return (action.input as CreateDocumentActionInput).model;
+        return action.input as CreateDocumentActionInput;
       }
     }
     for (const operation of job.operations) {
       if (operation.action.type === "CREATE_DOCUMENT") {
-        return (operation.action.input as CreateDocumentActionInput).model;
+        return operation.action.input as CreateDocumentActionInput;
       }
     }
     return undefined;
+  }
+
+  /** A base-reducer 3 create of a model that cannot load is a protocol refusal. */
+  private modelLoadFailure(input: CreateDocumentActionInput): ErrorInfo {
+    if (input.protocolVersions?.["base-reducer"] === 3) {
+      const error = new UnsupportedProtocolVersionError(
+        input.documentId,
+        "base-reducer",
+        3,
+        input.model,
+      );
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack ?? "",
+        documentId: input.documentId,
+        source: error,
+      };
+    }
+    return {
+      name: "Error",
+      message: `Failed to load document model for type: ${input.model}`,
+      stack: new Error().stack || "",
+    };
   }
 
   async enqueue(job: Job): Promise<void> {
@@ -177,16 +202,12 @@ export class InMemoryQueue implements IQueue {
     this.jobIndex.set(job.id, job);
 
     // Gate CREATE_DOCUMENT jobs on model availability
-    const documentType = this.getCreateDocumentType(job);
-    if (documentType) {
+    const createInput = this.getCreateInput(job);
+    if (createInput?.model) {
       try {
-        await this.resolver.ensureModelLoaded(documentType);
+        await this.resolver.ensureModelLoaded(createInput.model);
       } catch {
-        await this.failJob(job.id, {
-          name: "Error",
-          message: `Failed to load document model for type: ${documentType}`,
-          stack: new Error().stack || "",
-        });
+        await this.failJob(job.id, this.modelLoadFailure(createInput));
         return;
       }
     }

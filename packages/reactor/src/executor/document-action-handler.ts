@@ -2,6 +2,7 @@ import type {
   CreateDocumentAction,
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
+  DocumentModelModule,
   Operation,
   PHDocument,
   UpgradeDocumentAction,
@@ -45,11 +46,13 @@ interface RelationshipPostWriteArgs {
 import {
   hashDocumentStateForScope,
   normalizeDocumentModelVersion,
+  runsBaseReducer3,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
+import { ModuleNotFoundError } from "../registry/errors.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
@@ -98,10 +101,15 @@ export class DocumentActionHandler {
     private protocolSupport: ProtocolSupport,
   ) {}
 
-  /** Keys this reactor does not register are admitted: it cannot judge them. */
+  /**
+   * Keys this reactor does not register are admitted: it cannot judge them.
+   * Base-reducer 3 also needs `documentType` to run it, when one is given and
+   * registered.
+   */
   unsupportedProtocol(
     documentId: string,
     protocolVersions: { readonly [protocol: string]: number } | undefined,
+    documentType?: string,
   ): UnsupportedProtocolVersionError | undefined {
     for (const [protocol, version] of Object.entries(protocolVersions ?? {})) {
       const supported = this.protocolSupport[protocol] as
@@ -127,7 +135,31 @@ export class DocumentActionHandler {
         );
       }
     }
+    if (
+      documentType !== undefined &&
+      protocolVersions?.["base-reducer"] === 3 &&
+      runsBaseReducer3(documentType, this.registeredModules(documentType)) ===
+        false
+    ) {
+      return new UnsupportedProtocolVersionError(
+        documentId,
+        "base-reducer",
+        3,
+        documentType,
+      );
+    }
     return undefined;
+  }
+
+  private registeredModules(documentType: string): DocumentModelModule[] {
+    try {
+      return this.registry
+        .getSupportedVersions(documentType)
+        .map((version) => this.registry.getModule(documentType, version));
+    } catch (error) {
+      if (ModuleNotFoundError.isError(error)) return [];
+      throw error;
+    }
   }
 
   /** Whether the write arrives with its evaluation already decided. */
@@ -400,9 +432,21 @@ export class DocumentActionHandler {
     }
 
     const input = action.input as CreateDocumentActionInput;
+    // The queue's gate loaded the model on the host; a worker may still lack it.
+    if (
+      input.protocolVersions?.["base-reducer"] === 3 &&
+      this.registeredModules(input.model).length === 0
+    ) {
+      return buildErrorResult(
+        job,
+        new ModuleNotFoundError(input.model),
+        startTime,
+      );
+    }
     const unsupported = this.unsupportedProtocol(
       input.documentId,
       input.protocolVersions,
+      input.model,
     );
     if (unsupported) {
       return buildErrorResult(job, unsupported, startTime);

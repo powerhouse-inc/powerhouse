@@ -1407,10 +1407,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<Error | undefined> {
-    let versions;
+    let stored: {
+      documentType: string;
+      protocolVersions?: { readonly [protocol: string]: number };
+    };
     try {
       // Read the way admission reads: with decisions on, execution bypasses the meta cache.
-      versions =
+      stored =
         this.featureFlags.documentDecisions && job.kind !== "load"
           ? (
               await stores.writeCache.getState(
@@ -1420,14 +1423,12 @@ export class SimpleJobExecutor implements IJobExecutor {
                 undefined,
                 signal,
               )
-            ).header.protocolVersions
-          : (
-              await stores.documentMetaCache.getDocumentMeta(
-                job.documentId,
-                job.branch,
-                signal,
-              )
-            ).protocolVersions;
+            ).header
+          : await stores.documentMetaCache.getDocumentMeta(
+              job.documentId,
+              job.branch,
+              signal,
+            );
     } catch (error) {
       if (UnsupportedProtocolVersionError.isError(error)) return error;
       // Not stored yet, or unreadable: the job's own reads decide.
@@ -1435,7 +1436,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
     return this.documentActionHandler.unsupportedProtocol(
       job.documentId,
-      versions,
+      stored.protocolVersions,
+      stored.documentType,
     );
   }
 
