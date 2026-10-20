@@ -10,7 +10,6 @@ import {
   type OutputsSchemaLookup,
 } from "./resolve/declared.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
-import { formatPath } from "./resolve/walk.js";
 import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 
 /**
@@ -316,12 +315,8 @@ function parseHost<O>(
   if (!result.success) {
     const issues = result.error.issues
       .map((issue) => {
-        const where = formatPath(
-          issue.path.filter(
-            (p): p is string | number =>
-              typeof p === "string" || typeof p === "number",
-          ),
-        );
+        // Dotted, as before T3 (other runners' tests match on it).
+        const where = issue.path.map(String).join(".") || "<root>";
         // A token in a field that does not take one: say so, rather than
         // the field type's own "expected string".
         const message = tokenKeyOf(valueAt(host, issue.path))
