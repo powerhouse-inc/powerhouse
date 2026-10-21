@@ -1,43 +1,8 @@
-# Customizing Connect
+# Customizing Connect: contributor notes
 
-How a Powerhouse project (scaffolded by `ph init`) changes what Connect shows: its own pages, sidebar links, settings tabs, and the layout around them.
+Working on Connect's customization surface in this monorepo: the tools and the files behind it.
 
-## TL;DR
-
-Connect routes with [TanStack Router](https://tanstack.com/router) file routes. A project adds file routes to `hosts/connect/routes/`, and `ph connect build`, `ph connect studio` and `ph connect preview` mount them beside Connect's own routes in one router.
-
-```
-hosts/connect/routes/
-├── _app.tsx                 optional: replaces Connect's layout (sidebar)
-├── _app/
-│   ├── inventory.tsx        /inventory, inside the layout
-│   └── settings/
-│       └── inventory.tsx    /settings/inventory, a settings tab
-└── status.tsx               /status, a full page without the layout
-```
-
-- A file in `_app/` renders inside Connect's layout, with the sidebar.
-- Any other file renders as a full page.
-- A route lists itself in the sidebar with `staticData.nav`, and adds a settings tab with `staticData.settings`.
-- Route loaders read the app's PH store from the router context.
-
-Connect's runtime settings (app name, drives, Renown, package registry) are the other way to customize it. They live in `powerhouse.config.json`; see [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md).
-
-## Guides
-
-| Guide | Covers |
-| --- | --- |
-| [Pages, sidebar links and settings tabs](./docs/customizing/pages.md) | Add a page, list it in the sidebar, hide the sidebar on it, add a settings tab, set the page title. |
-| [Layout and the loading screen](./docs/customizing/layout.md) | Replace the sidebar or the whole layout; what the prerendered loading screen shows. |
-| [Data and navigation](./docs/customizing/data-and-navigation.md) | Route loaders, the open drive and document, editor props, typed search params, navigating from editors. |
-| [Override Connect's routes](./docs/customizing/overrides.md) | Replace home, the drive view, the open document, settings or the 404 page; slow routes, not found and errors. |
-| [Modals](./docs/customizing/modals.md) | Routed modals, replacing a modal's view, framing every modal. |
-| [Styles and branding](./docs/customizing/styles-and-branding.md) | The project's Tailwind build and theme tokens; app name and favicon per host. |
-| [Hosts and plugins](./docs/customizing/hosts-and-plugins.md) | Routes per host, host plugins, the generic plugin and a plugin's UI. |
-| [Extend Connect from a package](./docs/customizing/packages.md) | A package's routes in every Connect that loads it; registering routes from code. |
-| [Types, troubleshooting and upgrading](./docs/customizing/types-and-troubleshooting.md) | The generated route tree, common symptoms, `ph migrate`. |
-
-Coding agents start from the [customize-connect skill](./skills/customize-connect/SKILL.md), which links to these guides.
+To customize Connect from a project, start from the [customize-connect skill](./skills/customize-connect/SKILL.md): its table maps each change to a guide in [`docs/customizing/`](./docs/customizing/), for people and coding agents alike. The skill is what ships with the package; keep it, not this file, as the index of the guides.
 
 ## UI screenshots of core's views
 
@@ -78,3 +43,90 @@ pnpm --filter @powerhousedao/connect-core ui:shots --list
 | `apps/connect/src/prerender/shell-css.ts` | The loading screen's CSS, built by Tailwind's compiler. |
 | `packages/reactor-browser/src/hooks/navigation.ts`, `link-props.ts` | The navigation API for editors. |
 | `test/versioned-documents/hosts/connect/routes/` | A working example project. |
+
+## Runtime config fields
+
+The developer side of [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md).
+
+### Adding or changing a field
+
+A `connect.*` field has five artefacts that must stay in lockstep. The TS
+constants are the source of truth; the two committed `*.schema.json` files are
+generated from them. Miss a step and the schemas silently drift from the types.
+
+1. **Type** — `packages/shared/clis/types.ts`. Add the field to the relevant
+   `PHConnect*` type (e.g. `PHConnectPackages`).
+2. **Default** — `packages/shared/connect/runtime-config.ts`. Add the field's
+   default to `DEFAULT_CONNECT_CONFIG` so the SPA never sees it undefined.
+3. **Schema fragment** — `packages/shared/connect/schema-fragments.ts`. Declare
+   the field (type, description, `default`) in `phConnectRuntimeConfigSchema`.
+   Both committed schemas import this fragment, so declaring it once keeps the
+   source-config and runtime-config schemas in sync by construction.
+4. **Rebuild** the source-of-truth packages so the emit script sees the change:
+   ```bash
+   pnpm --filter=@powerhousedao/shared --filter=@powerhousedao/builder-tools build
+   ```
+5. **Regenerate** the committed JSON schemas:
+   ```bash
+   pnpm tsx scripts/emit-schemas.ts
+   ```
+   This rewrites `packages/builder-tools/connect-utils/runtime-config.schema.json`
+   and `packages/shared/clis/source-config.schema.json`. Commit both.
+
+**`connect.pwa.*` fields have a sixth artefact.** The zod `PwaConfigSchema` /
+`PwaManifestOverrideSchema` in `packages/shared/document-model/schemas.ts` is
+the validator `ph connect build` actually runs against `connect.pwa` (via
+`validateProjectPwaConfig`), and it is hand-maintained: `emit-schemas.ts` does
+not regenerate it, and the coverage test below does not cover it (there is no
+`pwa` default). The `z.ZodType<PHConnectPwa>` annotation only pins it to the TS
+type, not to the schema fragment, and does not force it to gain a newly-added
+optional field. So when you add a `connect.pwa.*` field, declare it there too —
+the objects are strict (`z.strictObject`), so a field the schema doesn't know
+fails the build as an unrecognized key rather than being silently dropped.
+
+Then consume it in the SPA via `getRuntimeConfig().connect?.<block>?.<field>`
+(or add a typed accessor in `apps/connect/src/connect.config.ts`).
+
+Optional, depending on the field:
+
+- **CLI flag** — to expose `ph connect config/build --<field>`, wire it through
+  `packages/shared/clis/args/connect.ts` and `clis/ph-cli/src/utils/cli-connect-override.ts`
+  (see `externalEnabled` → `--external-packages` for the pattern).
+- **Scaffold default** — if new projects should ship the field, add it to the
+  `ph init` template at `packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts`.
+
+The `runtime-config-schema.test.ts` coverage test asserts every key emitted from
+`DEFAULT_CONNECT_CONFIG` has a matching schema declaration — it fails loudly if
+you add a default (step 2) but skip the schema fragment (step 3).
+
+### Key files
+
+```
+packages/shared/connect/
+  ├ runtime-config.ts             DEFAULT_CONNECT_CONFIG, types, buildRuntimeConfig
+  ├ config-loader.ts              ConfigLoader, ConfigAdapter, deepMerge
+  └ json-adapter.ts               JsonConfigAdapter (browser fetch | Node fs)
+
+packages/builder-tools/connect-utils/
+  ├ runtime-config-schema.ts      JSON Schema (Ajv)
+  └ vite-plugins/ph-config.ts     Emits dist file & serves /powerhouse.config.json in dev
+
+clis/ph-cli/src/
+  ├ utils/cli-connect-override.ts  buildConnectFlagPatch, wasFlagExplicitlyPassed, buildCliConnectOverride
+  ├ utils/connect-config-validation.ts  validateConnectPatch (Ajv)
+  ├ services/connect-config.ts    `ph connect config` handler
+  ├ services/connect-studio.ts    `ph connect studio` (accepts callerOverride)
+  ├ services/vetra.ts             `ph vetra` (constructs callerOverride)
+  ├ commands/install.ts           `ph install` (writes packageRegistryUrl)
+  └ utils.ts                      updateConfigFile
+
+apps/connect/
+  ├ main.tsx                      top-level await + dynamic import (boot race fix)
+  └ src/runtime-config.ts         loadRuntimeConfig, getRuntimeConfig
+
+packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts
+  └ `ph init` boilerplate template
+
+docker/connect-entrypoint.sh
+  └ PH_CONNECT_CONFIG_JSON → dist overrides (jq deep-merge, operator-wins)
+```

@@ -207,7 +207,7 @@ Each layer can supply a partial value; missing leaves fall back to the layer bel
 
 Two fields interact with the service worker and deserve a caveat:
 
-- **`connect.branding.favicon` is build-time only.** A file relative to the project, served by `ph connect studio` and built as `icon.ico` by `ph connect build`; the dist file leaves it out.
+- **`connect.branding.favicon` is build-time only.** A file relative to the project, served by `ph connect studio` and built by `ph connect build` as `icon.ico`, `icon.svg` or `icon.png`, keeping its type; the dist file leaves it out.
 - **`connect.pwa` (the project's own block) is build-time only.** `ph connect build` merges it (together with build-time package `pwa` fragments) into the base `manifest.webmanifest` and the injectManifest `service-worker.js` — including the manifest's `icons`, `file_handlers` (the built-in `.phd`/`.phdm` OS file association plus any contributed types) and `launch_handler`. The manifest's `categories` is not authored here — it is derived from the top-level `category` field of every contributing `powerhouse.manifest.json` (project + packages), unioned. It is carried along in the dist file for transparency, but the SPA never reads the project block — editing the dist copy or injecting it via `PH_CONNECT_CONFIG_JSON` has no effect. See the Academy page "Configure the PWA" for the merge semantics.
 - **Packages installed AT RUNTIME extend the PWA config the same way build-time packages do.** The service worker serves `manifest.webmanifest` dynamically and reads its runtime-caching / navigate-fallback contributions from IndexedDB `ph-pwa` (mirrored by `BrowserPackageManager.#syncPwaFragments`), so a runtime package's manifest members, overridden scalars, `runtimeCaching` rules and `navigateFallbackDenylist` patterns all apply without a rebuild. Two guardrails vs. build-time: the manifest merge is fragment-wins **except `start_url`/`scope`** (protected, so an end-user-installed package can't re-scope the app), and `.phd`/`.phdm` stay first-registered. Timing caveats (not build-vs-runtime): `file_handlers`/`launch_handler` are captured by the OS at PWA install time (Chrome re-reads on its own periodic manifest check — never mid-session; content-based routing opens `.phd`/`.phdm` regardless), and `runtimeCaching`/`navigateFallbackDenylist` are read at worker startup (full effect on the worker's next activation). Only `globPatterns`/`globIgnores`/`maximumFileSizeToCacheInBytes` stay build-time only — they drive the workbox precache list baked at build.
 - **`connect.app.offline` is hybrid.** At build time it decides whether a precaching worker or a self-destroying one is emitted; at boot the SPA reads it to register or unregister the worker (`apps/connect/src/components/app.tsx`, default `true`). Flipping it to `false` at deploy time therefore unregisters the worker on the next load, but flipping it to `true` cannot conjure a worker the build didn't emit.
@@ -384,88 +384,7 @@ Partial sets are rejected at boot — `authConditions` requires `authGroups`, wh
 **"I want to verify what Connect will actually use without booting it."**
 `ph connect config` (no args) prints the effective `connect.*` block (defaults merged with source). `ph connect config connect.renown.url` (or the equivalent `--get connect.renown.url`) prints a single value.
 
-## Adding or changing a config field (developers)
-
-A `connect.*` field has five artefacts that must stay in lockstep. The TS
-constants are the source of truth; the two committed `*.schema.json` files are
-generated from them. Miss a step and the schemas silently drift from the types.
-
-1. **Type** — `packages/shared/clis/types.ts`. Add the field to the relevant
-   `PHConnect*` type (e.g. `PHConnectPackages`).
-2. **Default** — `packages/shared/connect/runtime-config.ts`. Add the field's
-   default to `DEFAULT_CONNECT_CONFIG` so the SPA never sees it undefined.
-3. **Schema fragment** — `packages/shared/connect/schema-fragments.ts`. Declare
-   the field (type, description, `default`) in `phConnectRuntimeConfigSchema`.
-   Both committed schemas import this fragment, so declaring it once keeps the
-   source-config and runtime-config schemas in sync by construction.
-4. **Rebuild** the source-of-truth packages so the emit script sees the change:
-   ```bash
-   pnpm --filter=@powerhousedao/shared --filter=@powerhousedao/builder-tools build
-   ```
-5. **Regenerate** the committed JSON schemas:
-   ```bash
-   pnpm tsx scripts/emit-schemas.ts
-   ```
-   This rewrites `packages/builder-tools/connect-utils/runtime-config.schema.json`
-   and `packages/shared/clis/source-config.schema.json`. Commit both.
-
-**`connect.pwa.*` fields have a sixth artefact.** The zod `PwaConfigSchema` /
-`PwaManifestOverrideSchema` in `packages/shared/document-model/schemas.ts` is
-the validator `ph connect build` actually runs against `connect.pwa` (via
-`validateProjectPwaConfig`), and it is hand-maintained: `emit-schemas.ts` does
-not regenerate it, and the coverage test below does not cover it (there is no
-`pwa` default). The `z.ZodType<PHConnectPwa>` annotation only pins it to the TS
-type, not to the schema fragment, and does not force it to gain a newly-added
-optional field. So when you add a `connect.pwa.*` field, declare it there too —
-the objects are strict (`z.strictObject`), so a field the schema doesn't know
-fails the build as an unrecognized key rather than being silently dropped.
-
-Then consume it in the SPA via `getRuntimeConfig().connect?.<block>?.<field>`
-(or add a typed accessor in `apps/connect/src/connect.config.ts`).
-
-Optional, depending on the field:
-
-- **CLI flag** — to expose `ph connect config/build --<field>`, wire it through
-  `packages/shared/clis/args/connect.ts` and `clis/ph-cli/src/utils/cli-connect-override.ts`
-  (see `externalEnabled` → `--external-packages` for the pattern).
-- **Scaffold default** — if new projects should ship the field, add it to the
-  `ph init` template at `packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts`.
-
-The `runtime-config-schema.test.ts` coverage test asserts every key emitted from
-`DEFAULT_CONNECT_CONFIG` has a matching schema declaration — it fails loudly if
-you add a default (step 2) but skip the schema fragment (step 3).
-
-## Reference: key files
-
-```
-packages/shared/connect/
-  ├ runtime-config.ts             DEFAULT_CONNECT_CONFIG, types, buildRuntimeConfig
-  ├ config-loader.ts              ConfigLoader, ConfigAdapter, deepMerge
-  └ json-adapter.ts               JsonConfigAdapter (browser fetch | Node fs)
-
-packages/builder-tools/connect-utils/
-  ├ runtime-config-schema.ts      JSON Schema (Ajv)
-  └ vite-plugins/ph-config.ts     Emits dist file & serves /powerhouse.config.json in dev
-
-clis/ph-cli/src/
-  ├ utils/cli-connect-override.ts  buildConnectFlagPatch, wasFlagExplicitlyPassed, buildCliConnectOverride
-  ├ utils/connect-config-validation.ts  validateConnectPatch (Ajv)
-  ├ services/connect-config.ts    `ph connect config` handler
-  ├ services/connect-studio.ts    `ph connect studio` (accepts callerOverride)
-  ├ services/vetra.ts             `ph vetra` (constructs callerOverride)
-  ├ commands/install.ts           `ph install` (writes packageRegistryUrl)
-  └ utils.ts                      updateConfigFile
-
-apps/connect/
-  ├ main.tsx                      top-level await + dynamic import (boot race fix)
-  └ src/runtime-config.ts         loadRuntimeConfig, getRuntimeConfig
-
-packages/codegen/src/templates/boilerplate/powerhouse.config.json.ts
-  └ `ph init` boilerplate template
-
-docker/connect-entrypoint.sh
-  └ PH_CONNECT_CONFIG_JSON → dist overrides (jq deep-merge, operator-wins)
-```
+Adding or changing a `connect.*` field is work in the Powerhouse monorepo; its steps are in `apps/connect/CUSTOMIZING.md` there.
 
 ## Design principle, in one line
 

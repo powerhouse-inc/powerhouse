@@ -8,7 +8,7 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 - The project's `tsconfig.json` includes `.ph/connect-routes.gen.ts` and maps both `"@powerhousedao/connect-core/route-tree"` and `"@powerhousedao/connect/route-tree"` to `["./.ph/connect-routes.gen.ts"]` in `paths`. New projects are scaffolded with them. In an older project, add them by hand, and drop `.ph` from `exclude`. Core's router types name the tree by `@powerhousedao/connect-core/route-tree`; without that path they use core's own routes.
 - Until the first build, both specifiers resolve to core's own tree. Project routes show type errors (unknown route ids) until `ph connect build` or `ph connect studio` has run.
 - `ph connect build` type-checks the routes and fails on errors. `--ignore-type-errors` skips the check.
-- `@tanstack/react-router` must be the version Connect uses. The routes and Connect share one router, and its types come from the project's copy.
+- `@tanstack/react-router` is the project's own copy, which Connect uses too: keep the version `ph init` or `ph migrate` set. The routes and Connect share one router, and its types come from that copy.
 
 ## Troubleshooting
 
@@ -16,6 +16,7 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 | --- | --- |
 | `Connect could not mount the routes in hosts/connect/routes/` | A route outside `_app/` collides with one of Connect's, or two project files have one path. The message names the files. |
 | A new routes folder is ignored by a running `ph connect studio` | Connect checks for the folder at startup. Restart it. |
+| `tsc` reports `TS2883: The inferred type of 'Route' cannot be named without a reference to 'ConnectRouterContext'` | The route tree hasn't been generated yet. Run `ph build` (or start Studio) once; the error goes with the unknown route ids. |
 | `createFileRoute("/_app/x")` is a type error | The tree is not generated yet, or the tsconfig lacks the `route-tree` path. See [Types](#types). |
 | A sidebar link reloads the whole app | It is a plain `href`. Navigate through the router; see [Replace the sidebar](./layout.md#replace-the-sidebar). |
 | A `staticData.nav` route is missing from the sidebar | Its path has a param, or it is not in `_app/`, or a replaced layout does not render `SidebarNavItems`/`useNavRoutes`. |
@@ -27,6 +28,7 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 | A host's token override doesn't reach a package's classes | The page emits only the tokens its own classes use. Override it in `@theme static` in the host's stylesheet; see [Styles](./styles-and-branding.md#styles). |
 | Installing a package re-themes Connect | The package's `style.css` sets Connect's tokens or global rules, which ship in its stylesheet. Move them to its `hosts/connect/style.css`; `ph migrate` warns about them. |
 | `ph build` fails: `./theme.css` is not exported from `@powerhousedao/connect` | The project's `@powerhousedao/connect` is older than `ph-cli`. Update it to the same version. |
+| You want to see the route tree, matches and loader state | Studio shows TanStack's router devtools when the page has `?devtools=1`, or after `localStorage.setItem("ph:router-devtools", "1")`. They are off by default and never in a build. |
 
 ## Upgrading
 

@@ -56,12 +56,25 @@ import {
   useVisibleDrives,
 } from "@powerhousedao/connect/generic";
 import { options } from "@powerhousedao/connect/routes/_app/index";
-import { createFileRoute } from "@tanstack/react-router";
+import { HomeScreenItem } from "@powerhousedao/design-system/connect";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/")({
   ...options,
   component: InventoryHome,
 });
+
+// A card like the drives', for a page of the project's own.
+function OpenOrdersCard() {
+  const navigate = useNavigate();
+  return (
+    <HomeScreenItem
+      title="Open orders"
+      description="Orders on the floor"
+      onClick={() => void navigate({ to: "/orders" })}
+    />
+  );
+}
 
 function InventoryHome() {
   const drives = useVisibleDrives();
@@ -80,6 +93,7 @@ function InventoryHome() {
 - `ConnectHomeScreen` is the grid on the configured `branding.homeBackground`.
 - `useVisibleDrives()` is `useDrives()` without the drives dismissed from the sign-in gate this session.
 - `HomeAddDriveItem` renders nothing where adding drives is turned off.
+- `HomeScreenItem` (`@powerhousedao/design-system/connect`) is the card the drives use: `title`, `description`, an `icon` element, and `href` or `onClick`.
 
 ## Loading, not found and errors
 
@@ -110,7 +124,7 @@ export const Route = createFileRoute("/_app/d/$driveSlug")({
 // hosts/connect/routes/_app/d/$driveSlug.tsx
 import { isDriveNotFound } from "@powerhousedao/connect/router";
 import { options } from "@powerhousedao/connect/routes/_app/d/$driveSlug";
-import type { NotFoundRouteProps } from "@tanstack/react-router";
+import { createFileRoute, type NotFoundRouteProps } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/d/$driveSlug")({
   ...options,
@@ -123,6 +137,8 @@ export const Route = createFileRoute("/_app/d/$driveSlug")({
 A project route throws `notFound()` the same way:
 
 ```tsx
+import { createFileRoute, notFound } from "@tanstack/react-router";
+
 export const Route = createFileRoute("/_app/documents/$documentId")({
   loader: async ({ context, params }) => {
     // ...
@@ -135,14 +151,14 @@ export const Route = createFileRoute("/_app/documents/$documentId")({
 
 ### Errors
 
-A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
+A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `error` is `unknown`, since anything can be thrown, and `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
 
 ```tsx
 export const Route = createFileRoute("/_app/reports")({
   loader: loadReports,
   errorComponent: ({ error, reset }) => (
     <div role="alert">
-      <p>{error.message}</p>
+      <p>{error instanceof Error ? error.message : "Something went wrong"}</p>
       <button onClick={reset}>Try again</button>
     </div>
   ),

@@ -25,7 +25,13 @@ A project's styles are in two files, which the page builds as one Tailwind build
   --color-red-700: #b42318;
 }
 
+/* A semantic token: set its light value and its dark one. */
+:root {
+  --primary: #0a5bc4;
+}
+
 :root.dark {
+  --primary: #6aa8ff;
   --background: #16181c;
 }
 ```
@@ -36,6 +42,7 @@ A project's styles are in two files, which the page builds as one Tailwind build
 - Theme Connect in the host's file: override tokens in `@theme static`, and add plain CSS below it. Tailwind emits only the tokens the page's own classes use, so without `static` an override of a token only a package uses never reaches the page, and the package's class keeps Connect's default. A fully static theme would add about 11 KB (3 KB gzipped) to the page; `static` on the host's own block adds just its overrides. Plain rules outside a `@layer` win over all of Connect's CSS, which is layered; put a rule in `@layer components` to let utilities override it.
 - The host's file sits beside its routes folder: `hosts/connect/style.css` for `hosts/connect/routes/`, `hosts/lab/style.css` for a host whose `runner.routes` is `hosts/lab/routes`. `ph connect studio`, `build` and `preview`, `ph vetra` and `ph run <host>` add it, and the loading screen's inline CSS includes it. Studio applies edits to it without a reload.
 - The design system defines the `dark` variant (`.dark` on `<html>`), so a project's `dark:` classes follow Connect's theme toggle.
+- The semantic tokens (`--background`, `--foreground`, `--primary`, `--muted`, `--border`, ... in the design system's `theme.css`) are the ones to override. Each has a light value on `:root` and a dark one on `.dark`, so set both: a `:root` override alone ties with `.dark`, comes later, and wins in the dark theme too.
 - `ph migrate` rewrites the imports at the top of an existing `style.css` to these and keeps the rest of the file. It drops the imports of local packages' builds that `ph install --local` used to add (other `node_modules` CSS stays) and the old template's empty `@theme` block, adds `properties` to an old layer order, creates `hosts/connect/style.css` when it is missing (a host with its own `runner.routes` creates its file by hand), and warns when `style.css` sets tokens or global rules (`:root`, `html`, `body`, `.dark`). It doesn't move them: only the project knows which are the package's and which are this Connect's theme.
 
 ## A package's styles
@@ -52,7 +59,7 @@ A project's styles are in two files, which the page builds as one Tailwind build
 
 ## Name and icon per host
 
-`connect.branding.appName` and `connect.branding.favicon` in `powerhouse.config.json` name the app and set its tab icon for every host. A host overrides either in its `config`:
+`connect.branding.appName` and `connect.branding.favicon` in `powerhouse.config.json` name the app and set its tab icon for every host. The app name also names the installed app (the PWA manifest), unless `connect.pwa.manifest` sets `name` or `short_name`; its icons come from `connect.pwa`. A running `ph vetra` or `ph connect studio` reads `connect.branding` at startup: restart it after changing it. A host overrides either in its `config`:
 
 ```js
 // hosts/lab/host.js
@@ -64,6 +71,6 @@ export default {
 ```
 
 - A host's `config` merges over the project's `connect` block field by field, so a host inherits what it doesn't set.
-- `branding.favicon` is a file (`.ico`, `.svg` or `.png`) relative to the project. `ph run lab dev` serves it and `ph run lab build` builds it as `icon.ico`; the built `powerhouse.config.json` leaves the path out. `ph connect build --favicon` wins over it.
+- `branding.favicon` is a file (`.ico`, `.svg` or `.png`) relative to the project. `ph run lab dev` serves it and `ph run lab build` builds it with its type, as `icon.ico`, `icon.svg` or `icon.png`, and links it from `index.html`; the built `powerhouse.config.json` leaves the path out. `ph connect build --favicon` wins over it.
 - `ph run lab build` bakes the host's `config` into the build, over `powerhouse.config.json`: the `<title>` and the loading screen take its `branding.appName`, and the build uses its `app.basePath` and `pwa`.
 

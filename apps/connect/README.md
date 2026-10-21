@@ -86,7 +86,7 @@ hosts/connect/routes/
 - The tree is generated into `.ph/connect-routes.gen.ts`, which types `createFileRoute`, `Link` and `useNavigate` with the project's routes.
 - Without a routes folder, Connect uses its prebuilt route tree.
 
-[CUSTOMIZING.md](./CUSTOMIZING.md) indexes the task-by-task guides in [`docs/customizing/`](./docs/customizing/), and coding agents start from the [customize-connect skill](./skills/customize-connect/SKILL.md).
+The [customize-connect skill](./skills/customize-connect/SKILL.md) indexes the task-by-task guides in [`docs/customizing/`](./docs/customizing/), for people and coding agents. [CUSTOMIZING.md](./CUSTOMIZING.md) holds the contributor notes: UI screenshots and the files behind the customization surface.
 
 Code that does not build with Vite adds code routes with `registerConnectRoutes` from `@powerhousedao/connect/router`: it receives Connect's routes (`appRoute` for the layout, `rootRoute` for a full page, `settingsRoute` for a tab) and returns the routes to add; see [Extend Connect from a package](./docs/customizing/packages.md#register-routes-from-code).
 
