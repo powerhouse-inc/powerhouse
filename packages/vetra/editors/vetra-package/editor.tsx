@@ -1,5 +1,6 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
+import type { EditorProps as PHEditorProps } from "@powerhousedao/shared/document-model";
 import { useCallback } from "react";
 import {
   addPackageKeyword,
@@ -12,18 +13,23 @@ import {
   setPackageName,
   setPackageNpmUrl,
 } from "../../document-models/vetra-package/index.js";
-import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
+import type {
+  VetraPackageAction,
+  VetraPackageDocument,
+} from "../../document-models/vetra-package/index.js";
 import { MetaForm } from "./components/MetaForm.js";
 import { editorConfig } from "./config.js";
 
-export type EditorProps = {
+export type EditorProps = PHEditorProps<
+  VetraPackageDocument,
+  VetraPackageAction
+> & {
   displayToolbar?: boolean;
 };
 
 export default function Editor(props: EditorProps) {
-  const { displayToolbar = true } = props;
+  const { document, dispatch, displayToolbar = true } = props;
   useSetPHDocumentEditorConfig(editorConfig);
-  const [document, dispatch] = useSelectedDriveVetraPackage();
 
   const onNameChange = useCallback(
     (name: string) => {
@@ -111,7 +117,7 @@ export default function Editor(props: EditorProps) {
 
   return (
     <div className="bg-background p-6">
-      {displayToolbar && <DocumentToolbar />}
+      {displayToolbar && <DocumentToolbar document={document} />}
       <MetaForm
         name={document.state.global.name ?? ""}
         description={document.state.global.description ?? ""}

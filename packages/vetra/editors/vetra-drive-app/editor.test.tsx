@@ -3,6 +3,7 @@ import {
   useDocumentModelModules,
 } from "@powerhousedao/reactor-browser";
 import { render } from "@testing-library/react";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DOCUMENT_TYPES } from "./document-types.js";
@@ -19,20 +20,19 @@ vi.mock("./DriveExplorer.js", () => ({
 
 vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useSelectedDrive: vi.fn(() => [
-    {
-      header: { id: "drive-1" },
-      state: {
-        global: { name: "Vetra", nodes: [] },
-        local: { triggers: [], listeners: [] },
-      },
-    },
-  ]),
   useDocumentModelModules: vi.fn(),
   useSetSelectedNode: vi.fn(() => vi.fn()),
   showCreateDocumentModal: vi.fn(),
   showDeleteNodeModal: vi.fn(),
 }));
+
+const drive = {
+  header: { id: "drive-1" },
+  state: {
+    global: { name: "Vetra", nodes: [] },
+    local: { triggers: [], listeners: [] },
+  },
+} as unknown as DocumentDriveDocument;
 
 const model = (id: string) =>
   ({ documentModel: { global: { id } } }) as DocumentModelModule;
@@ -44,12 +44,14 @@ describe("vetra drive app", () => {
     vi.mocked(useDocumentModelModules).mockReturnValue([
       model(DOCUMENT_TYPES.documentModel),
     ]);
-    const { rerender } = render(<BaseEditor document={undefined as never} />);
+    const { rerender } = render(
+      <BaseEditor document={drive} dispatch={() => {}} />,
+    );
     // Same count, different model: a length-keyed callback would miss it.
     vi.mocked(useDocumentModelModules).mockReturnValue([
       model(DOCUMENT_TYPES.documentEditor),
     ]);
-    rerender(<BaseEditor document={undefined as never} />);
+    rerender(<BaseEditor document={drive} dispatch={() => {}} />);
 
     explorer.onAddEditor();
     expect(showCreateDocumentModal).toHaveBeenCalledWith(

@@ -4,6 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSelectedAppModuleDocument } from "../../document-models/app-module/index.js";
 import Editor from "./editor.js";
 
+// What the host passes the editor: its document and dispatch.
+let hosted: [unknown, unknown] = [undefined, undefined];
+const mockHosted = (value: unknown[]) => {
+  hosted = value as [unknown, unknown];
+  vi.mocked(useSelectedAppModuleDocument).mockReturnValue(value as never);
+};
+const props = () => ({
+  document: hosted[0] as never,
+  dispatch: hosted[1] as never,
+});
+
 vi.mock(
   "../../document-models/app-module/index.js",
   async (importOriginal) => ({
@@ -48,7 +59,7 @@ describe("AppModule Editor", () => {
   beforeEach(() => {
     window.ph = {};
     mockDispatch = vi.fn();
-    vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+    mockHosted([
       {
         state: {
           global: {
@@ -69,7 +80,7 @@ describe("AppModule Editor", () => {
 
   describe("Core Rendering", () => {
     it("should render all main form sections and labels", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("App Configuration")).toBeInTheDocument();
       expect(screen.getByText("App Name")).toBeInTheDocument();
@@ -80,7 +91,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should display existing app data when document has values", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -97,7 +108,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByDisplayValue("test-app")).toBeInTheDocument();
       expect(screen.getByText("powerhouse/document-model")).toBeInTheDocument();
@@ -112,7 +123,7 @@ describe("AppModule Editor", () => {
   describe("App Name Input", () => {
     it("should dispatch setAppName when name changes (debounced)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       await user.type(nameInput, "new-app");
@@ -131,7 +142,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should dispatch when clearing a non-empty field", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -146,7 +157,7 @@ describe("AppModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       await user.clear(nameInput);
@@ -165,7 +176,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should NOT dispatch when typing identical value without clearing", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -180,7 +191,7 @@ describe("AppModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       // Simulate user selecting all text and typing the same value
@@ -194,7 +205,7 @@ describe("AppModule Editor", () => {
 
     it("should NOT dispatch when both old and new values are empty", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       await user.click(nameInput);
@@ -209,7 +220,7 @@ describe("AppModule Editor", () => {
   describe("Document Types Management", () => {
     it("should add regular document type from dropdown", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByRole("combobox");
       await user.selectOptions(select, "powerhouse/document-model");
@@ -226,7 +237,7 @@ describe("AppModule Editor", () => {
 
     it("should add all document types when selecting 'all-in-drive'", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByRole("combobox");
       await user.selectOptions(select, "all-in-drive");
@@ -246,7 +257,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should remove document type", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -264,7 +275,7 @@ describe("AppModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       // Find the remove button for the first document type
       const documentModelText = screen.getByText("powerhouse/document-model");
@@ -284,7 +295,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should NOT show duplicate document type in dropdown", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -298,7 +309,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByRole("combobox");
       // Document type should not be in the options since it's already selected
@@ -313,7 +324,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should display existing document types list", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -330,7 +341,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("powerhouse/document-model")).toBeInTheDocument();
       expect(
@@ -339,7 +350,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should show 'All documents (*)' when allowedDocumentTypes is empty", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -353,13 +364,13 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("All documents (*)")).toBeInTheDocument();
     });
 
     it("should show 'All documents (*)' when allowedDocumentTypes is null", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -373,7 +384,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("All documents (*)")).toBeInTheDocument();
     });
@@ -382,7 +393,7 @@ describe("AppModule Editor", () => {
   describe("Drag and Drop Toggle", () => {
     it("should dispatch setDragAndDropEnabled when checkbox toggled", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const checkbox = screen.getByLabelText("Enable drag and drop");
       await user.click(checkbox);
@@ -396,7 +407,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should NOT dispatch when value equals current value", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -411,7 +422,7 @@ describe("AppModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const checkbox = screen.getByLabelText("Enable drag and drop");
       // Checkbox is already checked, so clicking it would toggle to false
@@ -429,7 +440,7 @@ describe("AppModule Editor", () => {
 
   describe("Confirm Button", () => {
     it("should dispatch setAppStatus when confirm clicked", async () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -444,7 +455,7 @@ describe("AppModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       await user.click(confirmButton);
@@ -458,14 +469,14 @@ describe("AppModule Editor", () => {
     });
 
     it("should be disabled when app name is empty", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
     });
 
     it("should be hidden when status is CONFIRMED", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -479,7 +490,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.queryByText("Confirm");
       expect(confirmButton).not.toBeInTheDocument();
@@ -488,7 +499,7 @@ describe("AppModule Editor", () => {
 
   describe("Read-only Mode", () => {
     it("should disable form fields when status is CONFIRMED", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -502,7 +513,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       const checkbox = screen.getByLabelText("Enable drag and drop");
@@ -520,7 +531,7 @@ describe("AppModule Editor", () => {
     });
 
     it("should enable form fields when status is DRAFT", () => {
-      vi.mocked(useSelectedAppModuleDocument).mockReturnValue([
+      mockHosted([
         {
           state: {
             global: {
@@ -534,7 +545,7 @@ describe("AppModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("App Name");
       const checkbox = screen.getByLabelText("Enable drag and drop");
