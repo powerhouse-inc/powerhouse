@@ -3,8 +3,12 @@ import type {
   CreateDocumentAction,
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
-import { isBaseReducer3 } from "@powerhousedao/shared/document-model";
+import {
+  derivesByRule,
+  optionalBaseReducerCapabilities,
+} from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import {
   DocumentNotFoundError,
@@ -23,6 +27,26 @@ import type {
 } from "./types.js";
 import type { WalkStream } from "./walk.js";
 import { walkByPosition } from "./walk.js";
+
+/**
+ * A rule version's stream reducers. A stream the rule derives cannot be
+ * walked without them, so a model that supplies none fails closed.
+ */
+export function ruleReducers(
+  before: PHDocument,
+  scope: string,
+  reducers: ((document: PHDocument) => ReducerFor) | undefined,
+): ReducerFor | undefined {
+  const caps = optionalBaseReducerCapabilities(before.header);
+  if (!caps?.retractionRule) return undefined;
+  const reducerFor = reducers?.(before);
+  if (reducerFor === undefined && derivesByRule(caps, scope)) {
+    throw new Error(
+      `Cannot walk ${scope} of ${before.header.id}: its decision model supplies no state reducers for base-reducer ${caps.version}`,
+    );
+  }
+  return reducerFor;
+}
 
 /** The stream key for evaluated operations whose scope no projection reads. */
 const EVALUATED_ONLY = "evaluated";
@@ -264,9 +288,7 @@ export async function evaluateByPosition<M>(
       document: before,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
-      reducerFor: isBaseReducer3(before.header)
-        ? definition.evaluatedScopeReducer?.(before)
-        : undefined,
+      reducerFor: ruleReducers(before, scope, definition.evaluatedScopeReducer),
     });
   } else {
     walked.push({
@@ -311,9 +333,11 @@ export async function evaluateByPosition<M>(
       // reshuffle's skip can sit on a row no filter keeps, and without it the
       // rewound original survives as a duplicate. Elsewhere the read stays
       // narrowed, as before.
-      const reducerFor = isBaseReducer3(before.header)
-        ? projection.scopeReducer?.(before)
-        : undefined;
+      const reducerFor = ruleReducers(
+        before,
+        query.scope,
+        projection.scopeReducer,
+      );
       const filter =
         reducerFor === undefined
           ? { actionTypes: projection.decidingActions }

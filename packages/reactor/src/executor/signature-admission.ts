@@ -10,9 +10,12 @@ import type {
 import {
   actionSigningTarget,
   canonicalJson,
+  capabilitiesFor,
   deriveOperationId,
+  derivesByRule,
   positionalOperations,
   retractedActionIds,
+  RULE_EXEMPT_SCOPES,
   signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -438,7 +441,7 @@ export class SignatureAdmission {
     stores: AdmissionStores,
     signal?: AbortSignal,
   ): Promise<Set<string>> {
-    if (stream.scope === "auth" || stream.scope === "document") {
+    if (RULE_EXEMPT_SCOPES.has(stream.scope)) {
       return new Set();
     }
     const stored = await storedVersions(
@@ -448,7 +451,7 @@ export class SignatureAdmission {
       stream.branch,
       signal,
     );
-    if (stored?.versions?.["base-reducer"] !== 3) {
+    if (!derivesByRule(capabilitiesFor(stored?.versions), stream.scope)) {
       return new Set();
     }
     const { operationStore } = stores;

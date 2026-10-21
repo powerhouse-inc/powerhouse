@@ -1,5 +1,6 @@
 import type {
   Action,
+  BaseReducerCapabilities,
   BaseReducerVersion,
   DeriveScope,
   DocumentModelModule,
@@ -9,9 +10,12 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  acceptsSubmittedRetract,
   actionSignerIdentity,
+  baseReducerCapabilities,
   baseReducerVersion,
   decide,
+  derivesByRule,
   garbageCollect,
   groupDocumentType,
   isPurgeMarker,
@@ -23,10 +27,13 @@ import {
   isUndoRedo,
   mentionedGroupIds,
   localSupports,
+  optionalBaseReducerCapabilities,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
   positionalOperations,
   retractedActionIds,
+  rewritesScope,
+  RULE_EXEMPT_SCOPES,
   sortOperations,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -244,10 +251,7 @@ type ScopeOutcome = {
  */
 /** No base reducer applies a retraction in these scopes. */
 function isRetractOutsideRule(action: Action): boolean {
-  return (
-    action.type === "RETRACT" &&
-    (action.scope === "auth" || action.scope === "document")
-  );
+  return action.type === "RETRACT" && RULE_EXEMPT_SCOPES.has(action.scope);
 }
 
 /**
@@ -269,25 +273,18 @@ function retractionRefusal(
   return retractedActionIds(rows).has(target) ? "target-retracted" : undefined;
 }
 
-/** Whether base-reducer 3's retraction rule derives `scope` of `document`. */
-function derivesByRule(document: PHDocument, scope: string): boolean {
-  return (
-    document.header.protocolVersions?.["base-reducer"] === 3 &&
-    scope !== "auth" &&
-    scope !== "document"
-  );
+/** Whether the retraction rule derives `scope` of `document`. */
+function documentDerivesByRule(document: PHDocument, scope: string): boolean {
+  return derivesByRule(optionalBaseReducerCapabilities(document.header), scope);
 }
 
-/** A base-reducer 3 write whose scope the reducer re-derives from every row. */
+/** A rule write whose scope the reducer re-derives from every row; UNDO and REDO become RETRACTs. */
 function needsFullHistory(
   write: PendingWrite,
   targeted: ReadonlySet<string>,
 ): boolean {
   return (
-    write.skip > 0 ||
-    isUndoRedo(write.action) ||
-    write.action.type === "RETRACT" ||
-    targeted.has(write.action.id)
+    isUndoRedo(write.action) || rewritesScope(write, (id) => targeted.has(id))
   );
 }
 
@@ -1724,9 +1721,9 @@ export class SimpleJobExecutor implements IJobExecutor {
       return undefined;
     }
 
-    let version: BaseReducerVersion;
+    let caps: BaseReducerCapabilities;
     try {
-      version = baseReducerVersion(document.header);
+      caps = baseReducerCapabilities(document.header);
     } catch (error) {
       return buildErrorResult(
         job,
@@ -1735,39 +1732,28 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    switch (version) {
-      case 1:
-      case 2:
-        return buildErrorResult(
+    if (!acceptsSubmittedRetract(caps)) {
+      return buildErrorResult(
+        job,
+        new ReservedActionError(job.documentId, action.type),
+        startTime,
+      );
+    }
+    if (write.deniedReason !== undefined || !derivesByRule(caps, job.scope)) {
+      return undefined;
+    }
+    const target = (action.input as { target?: unknown } | null)?.target;
+    const reason = retractionRefusal(
+      target,
+      document.operations[job.scope] ?? [],
+    );
+    return reason === undefined
+      ? undefined
+      : buildErrorResult(
           job,
-          new ReservedActionError(job.documentId, action.type),
+          new RetractionRefusedError(job.documentId, String(target), reason),
           startTime,
         );
-      case 3: {
-        if (
-          write.deniedReason !== undefined ||
-          !derivesByRule(document, job.scope)
-        ) {
-          return undefined;
-        }
-        const target = (action.input as { target?: unknown } | null)?.target;
-        const reason = retractionRefusal(
-          target,
-          document.operations[job.scope] ?? [],
-        );
-        return reason === undefined
-          ? undefined
-          : buildErrorResult(
-              job,
-              new RetractionRefusedError(
-                job.documentId,
-                String(target),
-                reason,
-              ),
-              startTime,
-            );
-      }
-    }
   }
 
   /**
@@ -1929,7 +1915,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (
       carried === undefined &&
       deniedReason === undefined &&
-      derivesByRule(document, job.scope)
+      documentDerivesByRule(document, job.scope)
     ) {
       try {
         targeted = await stores.operationStore.findRetractionsOf(
@@ -2055,7 +2041,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // rebuild would: each row with its own module version's reducer.
       let deriveScope: DeriveScope | undefined;
       if (
-        derivesByRule(document, job.scope) &&
+        documentDerivesByRule(document, job.scope) &&
         needsFullHistory(write, targeted ?? new Set())
       ) {
         try {
@@ -2359,13 +2345,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     return writes.every((write) => {
       const type = write.action.type;
       return (
-        write.skip === 0 &&
+        !needsFullHistory(write, new Set()) &&
         write.deniedReason === undefined &&
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
-        !isUndoRedo(write.action) &&
-        type !== "NOOP" &&
-        type !== "RETRACT"
+        type !== "NOOP"
       );
     });
   }
@@ -2405,7 +2389,10 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       // A later write a stored RETRACT names is re-derived from every row,
       // which the carried slice does not hold.
-      if (prepared.length === 0 && derivesByRule(outcome.document, job.scope)) {
+      if (
+        prepared.length === 0 &&
+        documentDerivesByRule(outcome.document, job.scope)
+      ) {
         try {
           targeted = await executing.stores.operationStore.findRetractionsOf(
             job.documentId,

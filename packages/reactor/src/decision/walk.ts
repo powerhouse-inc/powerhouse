@@ -6,11 +6,13 @@ import type {
 import {
   compareActionIds,
   deriveScope,
+  derivesByRule,
   garbageCollect,
-  isBaseReducer3,
   isDenied,
+  optionalBaseReducerCapabilities,
   positionalOperations,
   reduceOne,
+  retractionRewrites,
   retractionTarget,
   sortOperations,
 } from "@powerhousedao/shared/document-model";
@@ -61,13 +63,14 @@ export type WalkStream = {
 /** Marks a row this pass refused, so a derivation leaves it out. */
 const DENIED_IN_WALK = "denied in walk";
 
-/** Base-reducer 3 derives every scope but auth and document by the rule. */
-function derivesByRule(stream: WalkStream): boolean {
+/** A stream carrying rule reducers whose scope the rule derives. */
+function walksByRule(stream: WalkStream): boolean {
   return (
     stream.reducerFor !== undefined &&
-    stream.scope !== "auth" &&
-    stream.scope !== "document" &&
-    isBaseReducer3(stream.document.header)
+    derivesByRule(
+      optionalBaseReducerCapabilities(stream.document.header),
+      stream.scope,
+    )
   );
 }
 
@@ -114,15 +117,17 @@ export function* walkByPosition(
   const rules = new Map<string, RuleState>();
   // A walk reaching a base-reducer 3 stream breaks ties by code unit; a walk
   // over older streams only keeps the locale order it always had.
-  const compareIds = streams.some((stream) =>
-    isBaseReducer3(stream.document.header),
+  const compareIds = streams.some(
+    (stream) =>
+      optionalBaseReducerCapabilities(stream.document.header)?.tieOrder ===
+      "canonical",
   )
     ? compareActionIds
     : undefined;
   const merged = mergeByPosition(
     streams.map((stream) => {
       let operations: Operation[];
-      if (derivesByRule(stream)) {
+      if (walksByRule(stream)) {
         operations = positionalOperations(stream.operations);
         rules.set(stream.streamKey, {
           reducerFor: stream.reducerFor!,
@@ -199,11 +204,9 @@ function applyByRule(
     throw new Error(`No state for stream ${streamKey}`);
   }
 
+  // The prefix is positional already, so a rewind never needs a derive here.
   const operation = rule.prefix.at(-1)!;
-  if (
-    operation.action.type === "RETRACT" ||
-    rule.named.has(operation.action.id)
-  ) {
+  if (retractionRewrites(operation, (id) => rule.named.has(id))) {
     return deriveScope(
       stream.document,
       rule.prefix,

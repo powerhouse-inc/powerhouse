@@ -24,13 +24,12 @@ export function positionalOperations<T extends OperationIndex>(
   return garbageCollect(sortOperations([...stream]));
 }
 
-/** A row that changes which earlier rows apply: it retracts, or a retraction names it. */
+/** A stored row that changes which earlier rows apply: a RETRACT, or one a retraction names. */
 export function retractionRewrites(
   row: { action: Action },
   named: (actionId: string) => boolean,
 ): boolean {
-  const { type, id } = row.action;
-  return type === "RETRACT" || type === "UNDO" || type === "REDO" || named(id);
+  return row.action.type === "RETRACT" || named(row.action.id);
 }
 
 /** Under the rule, appending `row` re-derives its scope from every row. */

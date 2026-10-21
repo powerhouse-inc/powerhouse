@@ -131,12 +131,19 @@ export function optionalBaseReducerCapabilities(
   return baseReducerCapabilities(header);
 }
 
+/** Undefined when `versions` names no known base-reducer version. */
+export function capabilitiesFor(
+  versions: ProtocolVersions | undefined,
+): BaseReducerCapabilities | undefined {
+  const version = versions?.["base-reducer"];
+  return isBaseReducerVersion(version) ? capabilitiesOf(version) : undefined;
+}
+
 /** From CREATE_DOCUMENT input; undefined when it names no known version. */
 export function createdCapabilities(
   input: Partial<CreateDocumentActionInput> | undefined,
 ): BaseReducerCapabilities | undefined {
-  const version = input?.protocolVersions?.["base-reducer"];
-  return isBaseReducerVersion(version) ? capabilitiesOf(version) : undefined;
+  return capabilitiesFor(input?.protocolVersions);
 }
 
 /** Whether the retraction rule derives `scope`. */

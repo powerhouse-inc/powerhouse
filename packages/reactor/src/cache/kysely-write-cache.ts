@@ -17,7 +17,9 @@ import {
   applyUpgradeDocumentAction,
   baseReducerVersion,
   deriveScopeVersioned,
-  isBaseReducer3,
+  derivesByRule,
+  optionalBaseReducerCapabilities,
+  rewritesScope,
   isDenied,
   isPurgeMarker,
   normalizeDocumentModelVersion,
@@ -143,11 +145,8 @@ function copyDocument(document: PHDocument): PHDocument {
   };
 }
 
-/** Base-reducer 3 derives every scope but auth and document by the rule. */
-function derivesByRule(document: PHDocument, scope: string): boolean {
-  return (
-    scope !== "auth" && scope !== "document" && isBaseReducer3(document.header)
-  );
+function documentDerivesByRule(document: PHDocument, scope: string): boolean {
+  return derivesByRule(optionalBaseReducerCapabilities(document.header), scope);
 }
 
 /**
@@ -1358,7 +1357,7 @@ export class KyselyWriteCache implements IWriteCache {
 
     let needsFullReplay = false;
 
-    if (derivesByRule(document, scope)) {
+    if (documentDerivesByRule(document, scope)) {
       const versions = scopeVersions(
         this.registry,
         documentType,
@@ -1631,12 +1630,7 @@ export class KyselyWriteCache implements IWriteCache {
     rows: readonly Operation[],
     signal?: AbortSignal,
   ): Promise<boolean> {
-    if (
-      rows.some(
-        (operation) =>
-          operation.skip > 0 || operation.action.type === "RETRACT",
-      )
-    ) {
+    if (rows.some((operation) => rewritesScope(operation, () => false))) {
       return true;
     }
     if (rows.length === 0) {
@@ -1725,7 +1719,7 @@ export class KyselyWriteCache implements IWriteCache {
     let needsFullReplay = false;
 
     try {
-      if (derivesByRule(document, scope)) {
+      if (documentDerivesByRule(document, scope)) {
         const stateReducer = requireStateReducer(
           module.reducer,
           documentType,
