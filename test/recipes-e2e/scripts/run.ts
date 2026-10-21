@@ -724,9 +724,11 @@ async function main(): Promise<void> {
       }
 
       step(`${label} :: ${phase}`);
+      // --fail-if-no-match: a filter that matches no project exits 0 with no
+      // output, which would report a recipe that never ran as a pass.
       const result = await run(
         "pnpm",
-        ["--filter", recipe.name, "run", phase],
+        ["--filter", recipe.name, "--fail-if-no-match", "run", phase],
         {
           cwd: options.workDir,
           timeoutMs: options.timeoutMs,
