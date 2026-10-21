@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Rolldown } from "vite";
 import { build } from "vite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONNECT_ROUTES_GEN,
   connectRouteFileDeps,
@@ -41,12 +41,23 @@ function addRoute(file: string, path: string, dir = HOST_ROUTES) {
   );
 }
 
-const generate = (routesDir = join(project, HOST_ROUTES)) =>
-  generateConnectRoutes(
+/** Generates the tree; resolves to its warnings. */
+const generate = async (routesDir = join(project, HOST_ROUTES)) => {
+  const warnings: string[] = [];
+  await generateConnectRoutes(
     project,
     routesDir,
     connectRoutesGeneratorConfig(connectDir, project, routesDir),
+    (message) => warnings.push(message),
   );
+  return warnings;
+};
+
+function writeRoute(file: string, source: string) {
+  const target = join(project, HOST_ROUTES, file);
+  mkdirSync(join(target, ".."), { recursive: true });
+  writeFileSync(target, source);
+}
 
 beforeEach(() => {
   project = mkdtempSync(join(tmpdir(), "connect-routes-"));
@@ -165,7 +176,142 @@ describe("generateConnectRoutes", () => {
   });
 });
 
+describe("silent drops", () => {
+  it("warns on staticData.nav on a route with params", async () => {
+    writeRoute(
+      "_app/orders/$id.tsx",
+      `import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/orders/$id")({
+  staticData: { nav: { label: "Order", order: 1 } },
+});
+`,
+    );
+    addRoute("_app/orders/index.tsx", "/_app/orders/");
+    expect(await generate()).toEqual([
+      "hosts/connect/routes/_app/orders/$id.tsx: staticData.nav is ignored on /_app/orders/$id, whose params the sidebar can't fill in.",
+    ]);
+  });
+
+  it("warns on an override that leaves out the options of Connect's route", async () => {
+    addRoute("_app/settings/packages.tsx", "/_app/settings/packages");
+    const [warning] = await generate();
+    expect(warning).toMatch(
+      /^hosts\/connect\/routes\/_app\/settings\/packages\.tsx replaces Connect's route without its options[\s\S]*"@powerhousedao\/connect\/routes\/_app\/settings\/packages"/,
+    );
+  });
+
+  it("warns on a settings tab override without the tab's options", async () => {
+    addRoute("_app/settings/about.tsx", "/_app/settings/about");
+    const [warning] = await generate();
+    expect(warning).toContain('spread genericSettingsTabs["about"]');
+  });
+
+  it("prints a file's warning once while it holds, and again when it comes back", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const run = () =>
+      generateConnectRoutes(
+        project,
+        join(project, HOST_ROUTES),
+        connectRoutesGeneratorConfig(
+          connectDir,
+          project,
+          join(project, HOST_ROUTES),
+        ),
+      );
+    const optionless = `import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/settings/packages")({});
+`;
+    const spread = `import { options } from "@powerhousedao/connect/routes/_app/settings/packages";
+import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/settings/packages")({ ...options });
+`;
+    try {
+      writeRoute("_app/settings/packages.tsx", optionless);
+      await run();
+      await run();
+      writeRoute("_app/settings/packages.tsx", spread);
+      await run();
+      writeRoute("_app/settings/packages.tsx", optionless);
+      await run();
+      const printed = warn.mock.calls.filter(([m]) =>
+        String(m).includes("replaces Connect's route without its options"),
+      );
+      expect(printed).toHaveLength(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("is quiet for overrides that spread the options, and nav without params", async () => {
+    writeRoute(
+      "_app/settings/packages.tsx",
+      `import { options } from "@powerhousedao/connect/routes/_app/settings/packages";
+import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/settings/packages")({ ...options });
+`,
+    );
+    writeRoute(
+      "_app/settings/about.tsx",
+      `import { genericSettingsTabs } from "@powerhousedao/connect/generic";
+import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/settings/about")({ ...genericSettingsTabs.about });
+`,
+    );
+    writeRoute(
+      "_app/inventory.tsx",
+      `import { createFileRoute } from "@tanstack/react-router";
+export const Route = createFileRoute("/_app/inventory")({
+  staticData: { nav: { label: "Inventory", order: 1 } },
+});
+`,
+    );
+    expect(await generate()).toEqual([]);
+  });
+});
+
+describe("routes at one URL", () => {
+  it("fails for a full page at a Connect URL whose layout is mounted file by file", async () => {
+    // A settings tab of the project's mounts Connect's settings routes one by one.
+    addRoute("_app.tsx", "/_app");
+    addRoute("_app/settings/inventory.tsx", "/_app/settings/inventory");
+    addRoute("settings.tsx", "/settings");
+    await expect(generate()).rejects.toThrow(
+      /More than one route serves \/settings;[\s\S]*routes\/settings\.tsx[\s\S]*_app\/settings\.tsx/,
+    );
+  });
+
+  it.each([
+    ["settings.tsx", "/settings"],
+    ["index.tsx", "/"],
+    ["$.tsx", "/$"],
+    ["d/$driveSlug.tsx", "/d/$driveSlug"],
+  ])(
+    "fails for a full page, %s, at a URL Connect serves",
+    async (file, path) => {
+      addRoute(file, path);
+      await expect(generate()).rejects.toThrow(
+        /Conflicting|More than one route/,
+      );
+    },
+  );
+
+  it("allows an override in _app/ and pages at new URLs", async () => {
+    addRoute("_app/settings.tsx", "/_app/settings");
+    addRoute("kiosk.tsx", "/kiosk");
+    await expect(generate()).resolves.toBeInstanceOf(Array);
+  });
+});
+
 describe("the package's offered routes", () => {
+  it("leaves out a project file that replaces a generic settings tab", async () => {
+    addRoute("_app/settings/about.tsx", "/_app/settings/about");
+    addRoute("_app/settings/inventory.tsx", "/_app/settings/inventory");
+    await generate();
+    const module = readFileSync(join(project, PACKAGE_ROUTES_MODULE), "utf8");
+    expect(module).toContain('id: "/_app/settings/inventory"');
+    expect(module).not.toContain("about");
+  });
+
   it("lists its routes by id and parent, without its layout and overrides", async () => {
     addRoute("_app.tsx", "/_app");
     addRoute("_app/index.tsx", "/_app/");
