@@ -1495,11 +1495,34 @@ export type EditorDispatch = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export type EditorProps = {
+/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome. */
+export type DocumentDispatch<TAction extends Action = Action> = (
+  actionOrActions:
+    | TAction
+    | TAction[]
+    | DocumentAction
+    | DocumentAction[]
+    | undefined,
+  onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
+) => void;
+
+type EditorBaseProps = {
   children?: ReactNode;
   className?: string;
-  document?: PHDocument;
 };
+
+/** `EditorProps<MyDocument, MyAction>`: the document and dispatch a host passes
+ * an editor. Bare `EditorProps` leaves them optional, as before. */
+export type EditorProps<
+  TDocument extends PHDocument = never,
+  TAction extends Action = Action,
+> = [TDocument] extends [never]
+  ? EditorBaseProps & { document?: PHDocument; dispatch?: DocumentDispatch }
+  : EditorBaseProps & {
+      document: TDocument;
+      dispatch: DocumentDispatch<TAction>;
+    };
 
 export type SubgraphModule = {
   id: string;
