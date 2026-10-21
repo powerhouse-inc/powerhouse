@@ -392,8 +392,19 @@ export async function generateConnectRoutes(
   ),
 ) {
   mkdirSync(dirname(config.generatedRouteTree), { recursive: true });
+  let routeNodes: RouteNodes = [];
+  const collect: GeneratorPlugin = {
+    name: "ph-connect-route-urls",
+    onRouteTreeChanged: (tree) => {
+      routeNodes = tree.routeNodes;
+    },
+  };
   try {
-    await new Generator({ config, root: projectRoot }).run();
+    await new Generator({
+      config: { ...config, plugins: [...(config.plugins ?? []), collect] },
+      root: projectRoot,
+    }).run();
+    assertNoSharedUrls(routeNodes);
     assertNoDuplicateRoutes(config.generatedRouteTree);
     importConnectRoutesByPackage(
       config.generatedRouteTree,
@@ -445,6 +456,34 @@ function assertNoDuplicateRoutes(treeFile: string) {
   if (conflicts.length === 0) return;
   throw new Error(
     `Conflicting configuration paths were found for a layout route.\nConflicting files: \n ${conflicts.flat().join("\n ")}\n`,
+  );
+}
+
+// The URL a route serves: its id without pathless `_layout` segments.
+const urlOf = (routePath: string) =>
+  `/${routePath
+    .split("/")
+    .filter((segment) => segment && !segment.startsWith("_"))
+    .join("/")}`;
+
+// Ids differ when one route is in a layout and the other isn't, e.g. a
+// project's settings.tsx and Connect's _app/settings.tsx; the router keeps one.
+function assertNoSharedUrls(routeNodes: RouteNodes) {
+  const byUrl = new Map<string, string[]>();
+  for (const node of routeNodes) {
+    if (node._fsRouteType === "pathless_layout" || !node.routePath) continue;
+    const url = urlOf(node.routePath);
+    byUrl.set(url, [...(byUrl.get(url) ?? []), node.fullPath]);
+  }
+  const shared = [...byUrl].filter(([, files]) => files.length > 1);
+  if (shared.length === 0) return;
+  throw new Error(
+    shared
+      .map(
+        ([url, files]) =>
+          `More than one route serves ${url}; override Connect's in _app/ instead:\n ${files.join("\n ")}`,
+      )
+      .join("\n"),
   );
 }
 

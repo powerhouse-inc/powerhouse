@@ -165,6 +165,39 @@ describe("generateConnectRoutes", () => {
   });
 });
 
+describe("routes at one URL", () => {
+  it("fails for a full page at a Connect URL whose layout is mounted file by file", async () => {
+    // A settings tab of the project's mounts Connect's settings routes one by one.
+    addRoute("_app.tsx", "/_app");
+    addRoute("_app/settings/inventory.tsx", "/_app/settings/inventory");
+    addRoute("settings.tsx", "/settings");
+    await expect(generate()).rejects.toThrow(
+      /More than one route serves \/settings;[\s\S]*routes\/settings\.tsx[\s\S]*_app\/settings\.tsx/,
+    );
+  });
+
+  it.each([
+    ["settings.tsx", "/settings"],
+    ["index.tsx", "/"],
+    ["$.tsx", "/$"],
+    ["d/$driveSlug.tsx", "/d/$driveSlug"],
+  ])(
+    "fails for a full page, %s, at a URL Connect serves",
+    async (file, path) => {
+      addRoute(file, path);
+      await expect(generate()).rejects.toThrow(
+        /Conflicting|More than one route/,
+      );
+    },
+  );
+
+  it("allows an override in _app/ and pages at new URLs", async () => {
+    addRoute("_app/settings.tsx", "/_app/settings");
+    addRoute("kiosk.tsx", "/kiosk");
+    await expect(generate()).resolves.toBeUndefined();
+  });
+});
+
 describe("the package's offered routes", () => {
   it("leaves out a project file that replaces a generic settings tab", async () => {
     addRoute("_app/settings/about.tsx", "/_app/settings/about");
