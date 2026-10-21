@@ -52,13 +52,14 @@ function Inventory() {
 
 ## Rules that break builds
 
-- **Router version.** Add `@tanstack/react-router` to the project at exactly the version in `node_modules/@powerhousedao/connect/package.json`. The project's routes and Connect share one router.
+- **Router version.** Add `@tanstack/react-router` at the version the lockfile already resolves for Connect (Connect declares a range). The project's routes and Connect share one router. A package that offers routes lists it as a `peerDependency` too.
 - **Route ids match the file.** `createFileRoute("...")` takes the file's id, `/_app/...` for files in `_app/`. A route outside `_app/` at the URL of one of Connect's fails the build.
 - **Spread `options` when overriding** (`import { options } from "@powerhousedao/connect/routes/_app/..."`). Without them the route loses its loader, search params and title. The generic settings tabs have no route files: spread `genericSettingsTabs["<tab>"]` from `@powerhousedao/connect/generic` instead.
-- **Navigate through the router.** Use `Link`, `useNavigate` or `useLinkProps`. A plain `href` reloads the whole app, so keep it for external links.
+- **Navigate through the router.** Use `Link`, `useNavigate` or `useLinkProps`. A plain `href` reloads the whole app, `modalHref()` links included (show the modal in `onClick`; see modals.md), so keep it for external links.
 - **One Tailwind build.** `style.css` imports `@powerhousedao/connect/tailwind.css`, never `@powerhousedao/connect/style.css` or a package's compiled CSS.
 - **The loading screen renders in Node.** `ph connect build` renders the layout and `_app`'s `pendingComponent` at build time, with no drives. Code on that path must not touch `window` while rendering, and must handle `useDrives()` being `undefined`.
-- **Package routes can't import `@powerhousedao/connect`.** Routes a package offers to other Connects import from `@powerhousedao/connect-core`, `@tanstack/react-router` and `@powerhousedao/reactor-browser` only.
+- **Package routes can't import `@powerhousedao/connect`.** Routes a package offers to other Connects import from `@powerhousedao/connect-core`, `@tanstack/react-router`, `@powerhousedao/reactor-browser`, the design system and the package's own code. Overrides of Connect's routes and of the generic settings tabs stay the project's, so they may.
+- **`ph run` needs a flag.** `FEATURE_UNIFORM_RUNNERS_ENABLED=1 ph run <host> dev|build|serve`; see hosts-and-plugins.md for its output folder and ports.
 - **Don't edit generated files.** `.ph/connect-routes.gen.ts` is regenerated from the routes folder.
 
 ## Check your work
