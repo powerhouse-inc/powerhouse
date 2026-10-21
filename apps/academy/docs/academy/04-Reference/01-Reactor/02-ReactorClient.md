@@ -622,6 +622,8 @@ execute<TDocument extends PHDocument>(
 
 **Returns** the updated document after all actions are applied and read models are updated.
 
+On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond.
+
 **Example:**
 
 ```typescript

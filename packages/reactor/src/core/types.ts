@@ -378,6 +378,10 @@ export interface IReactor {
    * `SubmittedUndoRefusedError`: undo there is a RETRACT of a target, which
    * `resolveUndoRedo` resolves and the author signs.
    *
+   * On base-reducer 3 the actions run in canonical order (timestamp, then
+   * action id), not array order. `generateActionId` ids keep one process's
+   * creation order; other ids tied in a millisecond run in id order.
+   *
    * @param docId - Document id
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply

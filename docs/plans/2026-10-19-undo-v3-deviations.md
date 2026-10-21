@@ -250,13 +250,15 @@ timestamps, which the user rejected):
   keep strictly increasing stamps (`nextAuthTimestamp`): auth admission
   refuses a stamp at or below the stream's last, and nothing reorders the
   auth stream. Non-auth stamps are never floored at the last auth stamp.
-  `createAction` and the workflow piece's `plainAction` share the one
-  per-process auth clock.
+  The id counter and the auth clock are per process. Workflow pieces run in
+  forked workers, each with its own bundled copy of both, and a Connect tab
+  mints apart from its SharedWorker, so neither shares the host's clock.
+  Ordering and auth monotonicity are guaranteed per process only.
 - v3 `compareCanonical` orders by timestamp, action id, operation id;
   structure-first rank is gone from it. The v2 reshuffle keeps its own rank.
 - Ids compare by code unit (`compareActionIds`), never `localeCompare`, in
-  `compareCanonical` and in any decision walk that reaches a base-reducer 3
-  stream. Walks over v1/v2 streams only, the v2 reshuffle and v2 replay keep
+  `compareCanonical` and in the decision walk of a base-reducer 3 document.
+  The walk of a v1/v2 document, the v2 reshuffle and v2 replay keep
   `localeCompare`.
 - Base-reducer 3 synthesizes nothing since the architecture fixes (its
   `synthesizedId` capability is `"none"`); the `.s` form and admission's
@@ -308,7 +310,24 @@ Who decides a document's version, and who signs its undo.
 - Base-reducer 3 refuses a submitted UNDO or REDO with
   `SubmittedUndoRefusedError` (terminal). The standing backdated-UNDO and
   live-resubmit rules apply to 1 and 2 only; on 3 a RETRACT names its target
-  and a resubmitted RETRACT is idempotent by action id.
+  and a resubmitted RETRACT is idempotent by action id. A peer's UNDO or
+  REDO row loaded into a version 3 document is refused the same way, so the
+  reducer never mints a RETRACT id a replica would not share.
+
+Order and identity.
+
+- `document-model/action-order` owns `compareCanonical`, `compareActionIds`,
+  the legacy id order, `idOrderFor(tieOrder)`, the `~ug:` undo-group grammar
+  (legacy `undo-group:` parse-only) and the v1/v2 `synthesizedActionId`.
+  The reactor, admission and the workflow editors import it.
+- The executor positions every base-reducer 3 job canonically, whatever the
+  `documentDecisions` flag; the gate is gone for 3. Array order is not
+  execution order on 3, as `IReactor.execute` and `IReactorClient.execute`
+  document. v1/v2 keep main's flag-off append, which the v2 corpus pins.
+- The decision walk takes its id order from the evaluated document's tie
+  order, not from whether any walked stream is version 3.
+- Test harnesses (test-client, test-connect, lb-loadtest) build action ids
+  with `generateActionId`.
 
 ## Known gaps
 
@@ -351,5 +370,9 @@ Who decides a document's version, and who signs its undo.
   and pinned by a test.
 - Action ids from clients that predate `generateActionId` are random, so
   their same-millisecond order is not preserved. Two processes acting for one
-  submitter (a Connect tab and its SharedWorker) are not ordered within a
-  millisecond.
+  submitter (a Connect tab and its SharedWorker, or two piece workers of one
+  run) are not ordered within a millisecond, and a burst of auth writes in
+  one worker can push a later auth write from another process below the
+  stream's last stamp, which is refused.
+- An empty or unparsable timestamp is not refused before a v3 job is
+  sorted, and `compareCanonical` ties it with every key.

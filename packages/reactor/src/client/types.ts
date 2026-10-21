@@ -697,6 +697,10 @@ export interface IReactorClient {
    * `SubmittedUndoRefusedError`; use {@link undo} and {@link redo}, which
    * submit a RETRACT of the resolved target.
    *
+   * On base-reducer 3 the actions run in canonical order (timestamp, then
+   * action id), not array order. `generateActionId` ids keep one process's
+   * creation order; other ids tied in a millisecond run in id order.
+   *
    * @param documentIdentifier - Target document id or slug
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply

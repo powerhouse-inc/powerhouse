@@ -85,7 +85,8 @@ A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`
 - A denied `RETRACT` retracts nothing.
 - An operation that throws applies nothing. Undo passes over it.
 - `skip` is only the rewind a reshuffle writes. It never undoes anything.
-- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order.
+- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order. The guarantee is per process: actions made in different processes, such as two workflow piece workers or a Connect tab and its shared worker, are ordered by id with no guarantee of creation order.
+- A job's actions run in this order, not in array order. The reactor sorts every job on a version 3 document the same way its peers sort what they receive.
 
 On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
 
@@ -97,7 +98,7 @@ The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 
 | ------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
 | `RetractionRefusedError` | `documentId`, `target`, `reason` | A submitted `RETRACT` names an absent target (`"target-missing"`) or one already retracted (`"target-retracted"`) |
 | `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to a version 1 or 2 document or to the `auth` or `document` scope |
-| `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write carries `UNDO` or `REDO` to a version 3 document                    |
+| `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write, or a peer's load, carries `UNDO` or `REDO` to a version 3 document |
 
 All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
