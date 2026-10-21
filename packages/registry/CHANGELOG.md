@@ -1,3 +1,13 @@
+## 6.2.3-dev.69 (2026-10-21)
+
+### 🩹 Fixes
+
+- **registry:** accept tokens from several Renown issuers ([#3260](https://github.com/powerhouse-inc/powerhouse/pull/3260))
+
+### ❤️ Thank You
+
+- Frank @froid1911
+
 ## 6.2.3-dev.68 (2026-10-20)
 
 ### 🩹 Fixes
