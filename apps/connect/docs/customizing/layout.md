@@ -16,10 +16,13 @@ import {
   SidebarItem,
   useSidebarMode,
 } from "@powerhousedao/connect/generic";
+import { options } from "@powerhousedao/connect/routes/_app";
 import { isPlainClick } from "@powerhousedao/reactor-browser";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app")({
+  // Empty today; spread so an option Connect adds later isn't dropped.
+  ...options,
   component: Layout,
 });
 
@@ -53,11 +56,14 @@ function Layout() {
 }
 ```
 
+- The sidebar shows only icons. `title` is the item's tooltip and its accessible name, and `description` is shown in the tooltip under it and read as its description. An item without an `icon` shows the title's first letter.
+- On a phone, `ConnectSidebar` is a bar under the page, with the items in a row: rendered by `AppLayout`, passed as `sidebar`, or rendered by a component of yours that is. Any other `sidebar` keeps the place its markup gives it.
+
 A plain `href` makes the browser load the whole app again. Use it for external links only. For a link inside Connect, navigate through the router, as the "Focus" item does, or render the router's `Link`. `isPlainClick` leaves modified clicks (new tab, new window) to the browser.
 
 ## Replace the layout
 
-`@powerhousedao/connect/layout` exports core's parts to build a different layout, and `@powerhousedao/connect/generic` the generic plugin's as well. A layout that imports only from `/layout` doesn't load the generic UI:
+`@powerhousedao/connect/layout` exports core's parts to build a different layout, and `@powerhousedao/connect/generic` the generic plugin's as well. `/generic` re-exports everything in `/layout`, so either import works for a `/layout` part. A layout that imports only from `/layout` doesn't load the generic UI:
 
 | Export | From | What it is |
 | --- | --- | --- |
@@ -65,7 +71,7 @@ A plain `href` makes the browser load the whole app again. Use it for external l
 | `ConnectSidebar` | `/generic` | Connect's sidebar; `extraItems`, `collapsed`. |
 | `SidebarDriveItems` | `/generic` | The drive items and the add-drive item. |
 | `SidebarNavItems` | `/generic` | The `staticData.nav` items. |
-| `SidebarItem` | `/layout` | One sidebar item. |
+| `SidebarItem` | `/layout` | One sidebar item: `title`, `icon` (an element, unlike `staticData.nav`'s component), `description`, `href` or `onClick`. |
 | `useNavRoutes()` | `/layout` | The `staticData.nav` routes, sorted: `{ label, icon, order, routeId, to }`. |
 | `useSidebarMode()` | `/layout` | The current route's `staticData.sidebar`. |
 | `ContentOutlet` | `/layout` | The matched route, in the container whose scroll Connect resets on new pages and restores on back and forward. |

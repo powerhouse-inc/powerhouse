@@ -70,8 +70,8 @@ Options:
   --dynamic-base              Build one bundle that serves under any subpath; base
                               resolved at serve time from a runtime global. Overrides --base.
 
-  --favicon <path>            Path to a favicon (e.g. .ico) to bundle in place of the
-                              default Connect icon. Emitted as icon.ico.
+  --favicon <path>            Path to a favicon (.ico, .svg or .png) to bundle in place
+                              of the default Connect icon, keeping its type.
 
   --renown-namespace <ns>     Renown localStorage namespace; share it across Connects
                               to share login.
