@@ -342,9 +342,10 @@ describe("connectAppShellPlugin", () => {
     }
   });
 
-  it("renders a project's shells with Connect's installed packages, whose code reads import.meta.env", async () => {
-    // As npm installs them: core in node_modules, which the renderer's server
-    // would hand to Node, where import.meta.env is undefined.
+  it("renders a project's shells with Connect's installed packages, whose code reads import.meta.env, in build and dev", async () => {
+    // As npm installs them: core in node_modules, and Connect's subpaths
+    // reached by bare specifier, which the renderer's server would hand to
+    // Node, where import.meta.env is undefined.
     const connect = join(root, "node_modules/@powerhousedao/connect");
     const core = join(root, "node_modules/@powerhousedao/connect-core");
     mkdirSync(core, { recursive: true });
@@ -358,14 +359,19 @@ describe("connectAppShellPlugin", () => {
     );
     writeFileSync(
       join(connect, "package.json"),
-      `{"name":"@powerhousedao/connect","exports":{"./prerender":"./prerender.js","./package.json":"./package.json"}}`,
+      `{"name":"@powerhousedao/connect","type":"module","exports":{"./prerender":"./prerender.js","./env":"./env.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "env.js"),
+      `export const mode = () => import.meta.env.MODE;`,
     );
     writeFileSync(
       join(connect, "prerender.js"),
       `import { configPath } from "@powerhousedao/connect-core/runtime-config";
+      import { mode } from "@powerhousedao/connect/env";
       export async function renderProjectShells() {
         const shell = (v) => ({
-          body: \`<div data-ph-shell="\${v}"><nav data-config="\${configPath()}"></nav></div>\`,
+          body: \`<div data-ph-shell="\${v}"><nav data-config="\${configPath()}" data-mode="\${mode()}"></nav></div>\`,
           head: \`<style data-ph-shell="\${v}"></style>\`,
         });
         return { generic: shell("generic"), core: shell("core") };
@@ -373,6 +379,7 @@ describe("connectAppShellPlugin", () => {
     );
     writeFileSync(join(root, "style.css"), "");
     const routeAliases = [{ find: /^never$/, replacement: "never" }];
+    const rendered = `<nav data-config="/powerhouse.config.json" data-mode="`;
     try {
       const outDir = join(root, "dist-installed");
       await build({
@@ -383,13 +390,35 @@ describe("connectAppShellPlugin", () => {
           connectAppShellPlugin(root, { composition: [], routeAliases }),
         ],
       });
-      const html = readFileSync(join(outDir, "index.html"), "utf8");
-      expect(html).toContain(`data-config="/powerhouse.config.json"`);
+      expect(readFileSync(join(outDir, "index.html"), "utf8")).toContain(
+        rendered,
+      );
+
+      // Studio renders through the same server; a failure there only warns.
+      const server = await createServer({
+        root,
+        logLevel: "silent",
+        server: { middlewareMode: true, ws: false },
+        plugins: [
+          connectAppShellPlugin(root, { composition: [], routeAliases }),
+        ],
+      });
+      try {
+        const dev = await server.transformIndexHtml(
+          "/",
+          readFileSync(join(root, "index.html"), "utf8"),
+        );
+        expect(dev).toContain(rendered);
+      } finally {
+        await server.close();
+      }
     } finally {
       writeFileSync(
         join(connect, "package.json"),
         `{"name":"@powerhousedao/connect"}`,
       );
+      rmSync(join(connect, "prerender.js"), { force: true });
+      rmSync(join(connect, "env.js"), { force: true });
       rmSync(core, { recursive: true, force: true });
       rmSync(join(root, "style.css"));
     }
