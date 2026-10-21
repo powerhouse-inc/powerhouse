@@ -339,7 +339,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     });
   });
 
-  it("build maps to the classic build service (outDir default dist)", async () => {
+  it("build maps to the classic build service, with its default outDir", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectBuild } =
       await import("../src/services/connect-build.js");
@@ -348,7 +348,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       ctx,
     );
     expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
-      outDir: "dist",
+      outDir: ".ph/connect-build/dist/",
     });
     // No plugins list: a classic build, no composition passed.
     expect(vi.mocked(runConnectBuild).mock.calls[0][1]).toBeUndefined();

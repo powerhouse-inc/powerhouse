@@ -14,11 +14,14 @@ import path from "node:path";
  *     agents/                    when present
  *     powerhouse.config.json
  *     package.json               minimal, names the project
- *     dist/                      the BUILT Connect (ph run connect build)
+ *     dist/                      the package's build (ph build)
+ *     .ph/connect-build/dist/    the BUILT Connect (ph run connect build)
  *     node_modules/              vendored @powerhousedao/ph-cli (hoisted,
  *                                real files — computed-specifier imports and
  *                                PGlite wasm forbid bundling)
  */
+const CONNECT_BUILD_DIR = path.join(".ph", "connect-build", "dist");
+
 export interface BundleStackOptions {
   projectRoot: string;
   shellProjectDir: string;
@@ -182,6 +185,7 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     "hosts",
     "agents",
     "dist",
+    ".ph",
     "powerhouse.config.json",
     "package.json",
   ]) {
@@ -197,7 +201,8 @@ export function bundleStack(options: BundleStackOptions): BundleStackResult {
     options.excludeDirs ?? [],
   );
   log(`  hosts/ ${hostsStaged ? "staged" : "absent — skipped"}`);
-  for (const dir of ["agents", "dist"]) {
+  // The built Connect at the path the stack's connect runner serves by default.
+  for (const dir of ["agents", "dist", CONNECT_BUILD_DIR]) {
     const copied = copyIfExists(
       path.join(options.projectRoot, dir),
       path.join(stackDir, dir),
