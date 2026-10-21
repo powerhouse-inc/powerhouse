@@ -51,12 +51,6 @@ const PENDING = new Map<string, string>([
   ],
   ["packages/workflow/editors/shared/editor-chrome.tsx", "W3 undo plan"],
   ["packages/workflow/editors/shared/undo-plan.ts", "W3 undo plan"],
-  [
-    "packages/reactor/src/executor/document-action-handler.ts",
-    "W2 protocol gate",
-  ],
-  ["packages/reactor/src/executor/job-result-handler.ts", "W2 protocol gate"],
-  ["packages/reactor/src/queue/queue.ts", "W2 protocol gate"],
 ]);
 
 function* sources(dir: string): Generator<string> {

@@ -25,6 +25,27 @@ export class InvalidActionInputZodError extends InvalidActionInputError {
   }
 }
 
+/** A model version a rule derivation needs, whose reducer createReducer did not build. */
+export class MissingStateReducerError extends Error {
+  public readonly documentType: string;
+  public readonly version?: number;
+
+  constructor(documentType: string, version?: number) {
+    const model =
+      version === undefined ? documentType : `${documentType} v${version}`;
+    super(
+      `Cannot replay ${model} on base-reducer 3: its reducer was not built by createReducer`,
+    );
+    this.name = "MissingStateReducerError";
+    this.documentType = documentType;
+    this.version = version;
+  }
+
+  static isError(error: unknown): error is MissingStateReducerError {
+    return error instanceof Error && error.name === "MissingStateReducerError";
+  }
+}
+
 /**
  * Error thrown when attempting to downgrade a document version.
  */

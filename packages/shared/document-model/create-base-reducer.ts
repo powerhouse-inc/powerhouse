@@ -1,5 +1,11 @@
+import {
+  BASE_REDUCER_VERSIONS,
+  capabilitiesOf,
+  isBaseReducerVersion,
+  modelRunsBaseReducer,
+  type BaseReducerVersion,
+} from "./base-reducer-protocol.js";
 import type { ProtocolVersions } from "./signature-policy.js";
-import { stateReducerOf } from "./state-reducer.js";
 import type { DocumentModelModule } from "./types.js";
 
 export type CreateBaseReducerLogger = {
@@ -11,25 +17,9 @@ export type CreateBaseReducerLogger = {
 const warnedUntaggedTypes = new Set<string>();
 
 /**
- * Whether base-reducer 3 can run `documentType`: every registered version's
- * reducer is from createReducer. Undefined when no version is registered.
- */
-export function runsBaseReducer3(
-  documentType: string,
-  modules: readonly DocumentModelModule[],
-): boolean | undefined {
-  const registered = modules.filter(
-    (module) => module.documentModel.global.id === documentType,
-  );
-  if (registered.length === 0) return undefined;
-  return registered.every(
-    (module) => stateReducerOf(module.reducer) !== undefined,
-  );
-}
-
-/**
- * Base-reducer 3 needs every registered version's reducer from createReducer.
- * An unregistered type takes 2: its reducer cannot be checked.
+ * Steps a selected base-reducer down to the highest version the model runs.
+ * An unregistered type cannot be checked, so it takes the highest version
+ * that needs no tagged reducer.
  */
 export function fitCreateBaseReducer(
   selected: ProtocolVersions,
@@ -37,27 +27,40 @@ export function fitCreateBaseReducer(
   modules: readonly DocumentModelModule[],
   logger: CreateBaseReducerLogger,
 ): ProtocolVersions {
-  if (documentType === undefined || selected["base-reducer"] !== 3) {
+  const version = selected["base-reducer"];
+  if (documentType === undefined || !isBaseReducerVersion(version)) {
     return selected;
   }
-  const runs = runsBaseReducer3(documentType, modules);
+  const runs = modelRunsBaseReducer(
+    capabilitiesOf(version),
+    documentType,
+    modules,
+  );
+  if (runs === true || (runs === undefined && !needsTag(version))) {
+    return selected;
+  }
+  const fitted = BASE_REDUCER_VERSIONS.filter(
+    (lower) => lower < version && !needsTag(lower),
+  ).at(-1);
+  if (fitted === undefined) {
+    return selected;
+  }
   if (runs === undefined) {
     // Callers supply the type, so it is not remembered.
     logger.debug(
-      "@documentType is not registered; its new documents take base-reducer 2",
+      `@documentType is not registered; its new documents take base-reducer ${fitted}`,
       documentType,
     );
-    return { ...selected, "base-reducer": 2 };
-  }
-  if (runs) {
-    return selected;
-  }
-  if (!warnedUntaggedTypes.has(documentType)) {
+  } else if (!warnedUntaggedTypes.has(documentType)) {
     warnedUntaggedTypes.add(documentType);
     logger.warn(
-      "@documentType has a reducer not built by createReducer; its new documents take base-reducer 2",
+      `@documentType has a reducer not built by createReducer; its new documents take base-reducer ${fitted}`,
       documentType,
     );
   }
-  return { ...selected, "base-reducer": 2 };
+  return { ...selected, "base-reducer": fitted };
+}
+
+function needsTag(version: BaseReducerVersion): boolean {
+  return capabilitiesOf(version).needsStateReducer;
 }

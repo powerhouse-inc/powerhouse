@@ -8,6 +8,7 @@ import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type { SignatureVerificationMode } from "../signer/types.js";
 import type { PurgeFence, TouchedStreams } from "./util.js";
+import type { ProtocolSupport } from "../protocol/support.js";
 
 /**
  * One action to write, and everything known about it before it is written.
@@ -241,8 +242,7 @@ export type JobExecutorConfig = {
   durabilityWaitMs?: number;
 };
 
-/** Cloneable, so a pooled worker refuses exactly what the host refuses. */
-export type ProtocolSupport = { [protocol: string]: readonly number[] };
+export type { ProtocolSupport };
 
 /**
  * Event types for the job executor

@@ -8,7 +8,7 @@ import {
 import { hashBrowser } from "./crypto.js";
 import { isDenied } from "./denied.js";
 import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
-import { HashMismatchError } from "./errors.js";
+import { HashMismatchError, MissingStateReducerError } from "./errors.js";
 import { createPresignedHeader } from "./header.js";
 import type { DocumentOperations, Operation } from "./operations.js";
 import {
@@ -524,11 +524,7 @@ export function requireStateReducer<TState extends PHBaseState = PHBaseState>(
 ): StateReducer<TState> {
   const stateReducer = stateReducerOf(reducer);
   if (stateReducer === undefined) {
-    const model =
-      version === undefined ? documentType : `${documentType} v${version}`;
-    throw new Error(
-      `Cannot replay ${model} on base-reducer 3: its reducer was not built by createReducer`,
-    );
+    throw new MissingStateReducerError(documentType, version);
   }
   return stateReducer;
 }

@@ -30,13 +30,21 @@ const lenient = vi.hoisted(() => ({ on: false }));
 // While on, stands in for a reactor that runs base-reducer 3 and 7.
 vi.mock("@powerhousedao/shared/document-model", async (importOriginal) => {
   const actual = await importOriginal<typeof DocumentModel>();
+  const pretends = (header: PHDocumentHeader) =>
+    lenient.on &&
+    [3, 7].includes(header.protocolVersions?.["base-reducer"] ?? 0);
   return {
     ...actual,
     baseReducerVersion: (header: PHDocumentHeader) =>
-      lenient.on &&
-      [3, 7].includes(header.protocolVersions?.["base-reducer"] ?? 0)
-        ? 2
-        : actual.baseReducerVersion(header),
+      pretends(header) ? 2 : actual.baseReducerVersion(header),
+    baseReducerCapabilities: (header: PHDocumentHeader) =>
+      pretends(header)
+        ? actual.capabilitiesOf(2)
+        : actual.baseReducerCapabilities(header),
+    optionalBaseReducerCapabilities: (header: PHDocumentHeader) =>
+      pretends(header)
+        ? actual.capabilitiesOf(2)
+        : actual.optionalBaseReducerCapabilities(header),
   };
 });
 

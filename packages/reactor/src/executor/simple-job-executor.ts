@@ -100,6 +100,7 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
+import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -380,6 +381,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private decisionModel: RegisteredDecisionModel;
   private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
+  private protocolGate: IProtocolGate;
   private executionScope: IExecutionScope;
   private signer: ISigner;
   private readonly flusher: IStorageFlusher;
@@ -449,13 +451,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         ),
       },
     );
+    this.protocolGate = createProtocolGate(
+      this.config.protocolSupport,
+      registry,
+      logger,
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
-      this.config.protocolSupport,
+      this.protocolGate,
     );
     this.executionScope =
       executionScope ??
@@ -1466,7 +1473,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               error instanceof Error ? error : new Error(String(error)),
           };
     }
-    const refusal = this.documentActionHandler.unsupportedProtocol(
+    const refusal = this.protocolGate.refusal(
       job.documentId,
       stored.protocolVersions,
       stored.documentType,

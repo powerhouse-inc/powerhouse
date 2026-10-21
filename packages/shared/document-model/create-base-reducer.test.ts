@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  fitCreateBaseReducer,
-  runsBaseReducer3,
-} from "./create-base-reducer.js";
+  capabilitiesOf,
+  modelRunsBaseReducer,
+} from "./base-reducer-protocol.js";
+import { fitCreateBaseReducer } from "./create-base-reducer.js";
 import { tagStateReducer } from "./state-reducer.js";
 import type { DocumentModelModule, Reducer, StateReducer } from "./types.js";
 
@@ -81,15 +82,15 @@ describe("fitCreateBaseReducer", () => {
   });
 });
 
-describe("runsBaseReducer3", () => {
+describe("modelRunsBaseReducer at 3", () => {
   it("needs every registered version tagged, and knows nothing of an unregistered type", () => {
     const tagged = module("test/t", true);
     const untagged = module("test/t", false);
 
-    expect(runsBaseReducer3("test/t", [tagged])).toBe(true);
-    expect(runsBaseReducer3("test/t", [tagged, untagged])).toBe(false);
-    expect(runsBaseReducer3("test/t", [module("test/other", true)])).toBe(
-      undefined,
-    );
+    const runs = (modules: DocumentModelModule[]) =>
+      modelRunsBaseReducer(capabilitiesOf(3), "test/t", modules);
+    expect(runs([tagged])).toBe(true);
+    expect(runs([tagged, untagged])).toBe(false);
+    expect(runs([module("test/other", true)])).toBe(undefined);
   });
 });

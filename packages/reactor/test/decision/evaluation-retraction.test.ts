@@ -284,7 +284,7 @@ describe("evaluateByPosition without the evaluated document's state reducer", ()
     } as unknown as DocumentModelModule);
 
     await expect(evaluate(BASE_REDUCER_3_VERSIONS, registry)).rejects.toThrow(
-      "Cannot replay t v1 on base-reducer 3",
+      "requires base-reducer 3, which this reactor cannot run for t",
     );
   });
 

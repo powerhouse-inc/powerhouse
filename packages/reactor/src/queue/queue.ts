@@ -2,7 +2,7 @@ import type { CreateDocumentActionInput } from "@powerhousedao/shared/document-m
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
-import { UnsupportedProtocolVersionError } from "../shared/errors.js";
+import { modelUnavailableRefusal } from "../protocol/gate.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
@@ -152,15 +152,10 @@ export class InMemoryQueue implements IQueue {
     return undefined;
   }
 
-  /** A base-reducer 3 create of a model that cannot load is a protocol refusal. */
+  /** A create whose versions need a model that cannot load is a protocol refusal. */
   private modelLoadFailure(input: CreateDocumentActionInput): ErrorInfo {
-    if (input.protocolVersions?.["base-reducer"] === 3) {
-      const error = new UnsupportedProtocolVersionError(
-        input.documentId,
-        "base-reducer",
-        3,
-        input.model,
-      );
+    const error = modelUnavailableRefusal(input);
+    if (error) {
       return {
         name: error.name,
         message: error.message,

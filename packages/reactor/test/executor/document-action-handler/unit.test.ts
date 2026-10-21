@@ -9,6 +9,7 @@ import { DriveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "../../../src/core/drive-container-types.js";
 import { DocumentActionHandler } from "../../../src/executor/document-action-handler.js";
+import { createProtocolGate } from "../../../src/protocol/gate.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import {
   NOOP_DOCUMENT_LOCKS,
@@ -110,7 +111,11 @@ function createHarness(
     DEFAULT_DRIVE_CONTAINER_TYPES,
     flags,
     selectDecisionModel(flags, registry),
-    localSupports(PEER_CAPABILITIES, flags).protocols,
+    createProtocolGate(
+      localSupports(PEER_CAPABILITIES, flags).protocols,
+      registry,
+      createMockLogger(),
+    ),
   );
   return {
     handler,
@@ -580,7 +585,11 @@ describe("DocumentActionHandler", () => {
           DEFAULT_DRIVE_CONTAINER_TYPES,
           flags,
           selectDecisionModel(flags, registry),
-          localSupports(PEER_CAPABILITIES, flags).protocols,
+          createProtocolGate(
+            localSupports(PEER_CAPABILITIES, flags).protocols,
+            registry,
+            createMockLogger(),
+          ),
         ),
       };
     }

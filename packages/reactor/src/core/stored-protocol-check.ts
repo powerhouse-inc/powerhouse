@@ -1,6 +1,9 @@
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
-import type { ProtocolSupport } from "../executor/types.js";
+import {
+  firstUnsupportedProtocol,
+  type ProtocolSupport,
+} from "../protocol/support.js";
 import { UnsupportedStoredProtocolError } from "../shared/errors.js";
 import {
   countDocumentsCreatedWith,
@@ -8,19 +11,6 @@ import {
 } from "../storage/kysely/stored-protocol-versions.js";
 
 export type UnsupportedStoredDocuments = "refuse" | "read-only";
-
-/** The first stored version `support` registers its protocol without. */
-export function firstUnsupportedProtocol(
-  versions: { readonly [protocol: string]: number } | undefined,
-  support: ProtocolSupport,
-): { protocol: string; version: number } | undefined {
-  for (const [protocol, version] of Object.entries(versions ?? {})) {
-    const supported = support[protocol] as readonly number[] | undefined;
-    if (supported === undefined || supported.includes(version)) continue;
-    return { protocol, version };
-  }
-  return undefined;
-}
 
 /** Refuses to run below a version the store holds, unless told read-only. */
 export async function checkStoredProtocols(

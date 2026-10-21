@@ -4,6 +4,7 @@ import type {
   DeriveScope,
   Operation,
   PHDocument,
+  PHDocumentHeader,
   PurgeDocumentAction,
   ScopeVersions,
   StateReducer,
@@ -25,12 +26,12 @@ import {
   normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
   reduceOne,
-  requireStateReducer,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { firstUnsupportedProtocol } from "../core/stored-protocol-check.js";
+import { stateReducerOrRefusal } from "../protocol/gate.js";
+import { firstUnsupportedProtocol } from "../protocol/support.js";
 import type { ProtocolSupport } from "../executor/types.js";
 import {
   DocumentNotFoundError,
@@ -143,6 +144,15 @@ function copyDocument(document: PHDocument): PHDocument {
     state: { ...document.state },
     operations: { ...document.operations },
   };
+}
+
+/** Wraps a rebuild failure with the document id; a protocol refusal stays typed. */
+function rebuildFailure(documentId: string, err: unknown): Error {
+  if (UnsupportedProtocolVersionError.isError(err)) return err;
+  return new Error(
+    `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
+    { cause: err },
+  );
 }
 
 function documentDerivesByRule(document: PHDocument, scope: string): boolean {
@@ -479,7 +489,7 @@ async function readDocumentScope(
 /** Which module version each row of `scope` takes, and the upgrades between. */
 function scopeVersions(
   registry: IDocumentModelRegistry,
-  documentType: string,
+  header: PHDocumentHeader,
   scope: string,
   validatedUpgrades: ValidatedUpgrade[],
   pendingUpgrades: PendingUpgrade[],
@@ -498,11 +508,13 @@ function scopeVersions(
     reducerOf: (version) => {
       let reducer = reducers.get(version);
       if (!reducer) {
-        reducer = requireStateReducer(
-          registry.getModule(documentType, version).reducer,
-          documentType,
+        reducer = stateReducerOrRefusal(
+          registry.getModule(header.documentType, version).reducer,
+          header.id,
+          header.documentType,
           version,
-        ) as StateReducer;
+          header.protocolVersions,
+        );
         reducers.set(version, reducer);
       }
       return reducer;
@@ -547,7 +559,7 @@ export async function scopeDerivation(
     const pending = [...read.pendingUpgrades];
     const versions = scopeVersions(
       registry,
-      read.documentType,
+      read.document.header,
       scope,
       read.validatedUpgrades,
       pending,
@@ -1360,7 +1372,7 @@ export class KyselyWriteCache implements IWriteCache {
     if (documentDerivesByRule(document, scope)) {
       const versions = scopeVersions(
         this.registry,
-        documentType,
+        document.header,
         scope,
         validatedUpgrades,
         pendingUpgrades,
@@ -1405,10 +1417,7 @@ export class KyselyWriteCache implements IWriteCache {
           );
         }
       } catch (err) {
-        throw new Error(
-          `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-          { cause: err },
-        );
+        throw rebuildFailure(documentId, err);
       }
     } else {
       let cursor: string | undefined = undefined;
@@ -1496,10 +1505,7 @@ export class KyselyWriteCache implements IWriteCache {
           }
         } catch (err) {
           // Wrap errors with context to include document ID for debugging
-          throw new Error(
-            `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-            { cause: err },
-          );
+          throw rebuildFailure(documentId, err);
         }
       } while (hasMorePages);
     }
@@ -1720,11 +1726,13 @@ export class KyselyWriteCache implements IWriteCache {
 
     try {
       if (documentDerivesByRule(document, scope)) {
-        const stateReducer = requireStateReducer(
+        const stateReducer = stateReducerOrRefusal(
           module.reducer,
+          documentId,
           documentType,
           extractModuleVersion(baseDocument),
-        ) as StateReducer;
+          document.header.protocolVersions,
+        );
         const rows = await this.readRows(
           documentId,
           scope,
@@ -1808,10 +1816,7 @@ export class KyselyWriteCache implements IWriteCache {
       }
     } catch (err) {
       // Wrap errors with context to include document ID for debugging
-      throw new Error(
-        `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
-      );
+      throw rebuildFailure(documentId, err);
     }
 
     if (needsFullReplay) {

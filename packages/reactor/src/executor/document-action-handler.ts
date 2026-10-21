@@ -2,7 +2,6 @@ import type {
   CreateDocumentAction,
   CreateDocumentActionInput,
   DeleteDocumentActionInput,
-  DocumentModelModule,
   Operation,
   PHDocument,
   UpgradeDocumentAction,
@@ -46,7 +45,6 @@ interface RelationshipPostWriteArgs {
 import {
   hashDocumentStateForScope,
   normalizeDocumentModelVersion,
-  runsBaseReducer3,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
@@ -59,7 +57,6 @@ import {
   DocumentNotFoundError,
   DocumentPurgedError,
   ReservedActionError,
-  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -68,7 +65,6 @@ import type {
   ExecutingJob,
   JobResult,
   PendingWrite,
-  ProtocolSupport,
   ReactorFeatureFlags,
 } from "./types.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
@@ -88,79 +84,17 @@ import {
   updateDocumentRevision,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
+import { createNeedsModel, type IProtocolGate } from "../protocol/gate.js";
 
 export class DocumentActionHandler {
-  private readonly loggedUnregisteredProtocols = new Set<string>();
-
   constructor(
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
     private featureFlags: ReactorFeatureFlags,
     private decisionModel: RegisteredDecisionModel,
-    private protocolSupport: ProtocolSupport,
+    private protocolGate: IProtocolGate,
   ) {}
-
-  /**
-   * Keys this reactor does not register are admitted: it cannot judge them.
-   * Base-reducer 3 also needs `documentType` to run it, when one is given and
-   * registered.
-   */
-  unsupportedProtocol(
-    documentId: string,
-    protocolVersions: { readonly [protocol: string]: number } | undefined,
-    documentType?: string,
-  ): UnsupportedProtocolVersionError | undefined {
-    for (const [protocol, version] of Object.entries(protocolVersions ?? {})) {
-      const supported = this.protocolSupport[protocol] as
-        | readonly number[]
-        | undefined;
-      if (supported === undefined) {
-        if (!this.loggedUnregisteredProtocols.has(protocol)) {
-          this.loggedUnregisteredProtocols.add(protocol);
-          this.logger.info(
-            "Admitting document @documentId with unregistered protocol @protocol @version",
-            documentId,
-            protocol,
-            version,
-          );
-        }
-        continue;
-      }
-      if (!supported.includes(version)) {
-        return new UnsupportedProtocolVersionError(
-          documentId,
-          protocol,
-          version,
-        );
-      }
-    }
-    if (
-      documentType !== undefined &&
-      protocolVersions?.["base-reducer"] === 3 &&
-      runsBaseReducer3(documentType, this.registeredModules(documentType)) ===
-        false
-    ) {
-      return new UnsupportedProtocolVersionError(
-        documentId,
-        "base-reducer",
-        3,
-        documentType,
-      );
-    }
-    return undefined;
-  }
-
-  private registeredModules(documentType: string): DocumentModelModule[] {
-    try {
-      return this.registry
-        .getSupportedVersions(documentType)
-        .map((version) => this.registry.getModule(documentType, version));
-    } catch (error) {
-      if (ModuleNotFoundError.isError(error)) return [];
-      throw error;
-    }
-  }
 
   /** Whether the write arrives with its evaluation already decided. */
   private alreadyEvaluated(executing: ExecutingJob): boolean {
@@ -432,7 +366,7 @@ export class DocumentActionHandler {
     }
 
     const input = action.input as CreateDocumentActionInput;
-    const unsupported = this.unsupportedProtocol(
+    const unsupported = this.protocolGate.refusal(
       input.documentId,
       input.protocolVersions,
       input.model,
@@ -442,8 +376,8 @@ export class DocumentActionHandler {
     }
     // The queue's gate loaded the model on the host; a worker may still lack it.
     if (
-      input.protocolVersions?.["base-reducer"] === 3 &&
-      this.registeredModules(input.model).length === 0
+      createNeedsModel(input.protocolVersions) &&
+      this.protocolGate.registeredModules(input.model).length === 0
     ) {
       return buildErrorResult(
         job,

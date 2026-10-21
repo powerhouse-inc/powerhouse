@@ -291,6 +291,44 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     expect((await reactor.get("stored-3")).header.id).toBe("stored-3");
   });
 
+  it("refuses a rebuild of a stored v3 document typed once its model is untagged", async () => {
+    const db = await createDefaultDatabase();
+    const tagged = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    const created = await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(modelAt("stored-read-3", V3))).id,
+    );
+    expect(created.error?.message ?? created.status).toBe(JobStatus.READ_READY);
+    const written = await settled(
+      tagged.reactor,
+      (
+        await tagged.reactor.execute("stored-read-3", "main", [
+          setModelName({ name: "written" }),
+        ])
+      ).id,
+    );
+    expect(written.error?.message ?? written.status).toBe(JobStatus.READ_READY);
+    await tagged.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(tagged.reactor), 1);
+
+    const { module } = await build(
+      untagged(documentModelDocumentModelModule),
+      (b) => b.withKysely(db),
+    );
+    module.writeCache.invalidate("stored-read-3");
+    const read = await module.writeCache
+      .getState("stored-read-3", "global", "main")
+      .then(
+        () => undefined,
+        (error: unknown) => error as Error,
+      );
+
+    expect(read?.name).toBe("UnsupportedProtocolVersionError");
+    expect(read?.message).toContain(`cannot run for ${MODEL}`);
+  });
+
   it("dead-letters a synced creation at 3 as UNSUPPORTED_PROTOCOL without quarantine, and keeps syncing the rest", async () => {
     const channels = new Map<string, TestChannel>();
     const peers = new Map([

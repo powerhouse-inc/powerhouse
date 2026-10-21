@@ -1,6 +1,7 @@
 import type { ILogger } from "document-model";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
+import { modelUnavailableRefusal } from "../protocol/gate.js";
 import { RetryAccounting } from "../queue/types.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
@@ -114,23 +115,18 @@ export class JobResultHandler implements IJobResultHandler {
       } catch (error) {
         // No retry can reach a model the workers cannot import.
         if (ModelNotWorkerImportableError.isError(error)) {
-          // A create at 3 is a version this reactor cannot run: the refusal.
-          const createdAt3 = this.createdAtBaseReducer3(handle.job);
-          if (createdAt3 !== undefined) {
+          // A create at a version that needs the model is refused.
+          const refusal = this.modelUnavailableCreate(
+            handle.job,
+            error.documentType,
+          );
+          if (refusal !== undefined) {
             this.logger.warn(
-              "Refusing base-reducer 3 create of @documentId: @error",
-              createdAt3,
+              "Refusing create of @documentId: @error",
+              refusal.documentId,
               error.message,
             );
-            this.failNow(
-              handle,
-              new UnsupportedProtocolVersionError(
-                createdAt3,
-                "base-reducer",
-                3,
-                error.documentType,
-              ),
-            );
+            this.failNow(handle, refusal);
             return;
           }
           this.failNow(handle, error);
@@ -282,8 +278,11 @@ export class JobResultHandler implements IJobResultHandler {
     return conflicts;
   }
 
-  /** The id a CREATE_DOCUMENT at base-reducer 3 in the job creates. */
-  private createdAtBaseReducer3(job: Job): string | undefined {
+  /** The refusal of a CREATE_DOCUMENT in the job whose versions need `model`. */
+  private modelUnavailableCreate(
+    job: Job,
+    model: string,
+  ): UnsupportedProtocolVersionError | undefined {
     const actions = [
       ...job.actions,
       ...job.operations.map((operation) => operation.action),
@@ -294,9 +293,12 @@ export class JobResultHandler implements IJobResultHandler {
         documentId?: string;
         protocolVersions?: { readonly [protocol: string]: number };
       };
-      if (input.protocolVersions?.["base-reducer"] === 3) {
-        return input.documentId ?? job.documentId;
-      }
+      const refusal = modelUnavailableRefusal({
+        documentId: input.documentId ?? job.documentId,
+        model,
+        protocolVersions: input.protocolVersions,
+      });
+      if (refusal) return refusal;
     }
     return undefined;
   }
