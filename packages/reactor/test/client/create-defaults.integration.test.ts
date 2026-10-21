@@ -10,7 +10,6 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
-import { JobStatus } from "../../src/shared/types.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
 const DOCUMENT_MODEL = "powerhouse/document-model";
@@ -109,10 +108,10 @@ describe.each<{ flags: Partial<ReactorFeatureFlags>; expected: number }>([
     const file = await client.drives.addFile(drive.header.id, unversioned());
     expect(baseReducer(await client.get(file.header.id))).toBe(expected);
 
-    const direct = unversioned();
-    const job = await client.waitForJob(await reactor.create(direct));
-    expect(job.status).toBe(JobStatus.READ_READY);
-    expect(baseReducer(await client.get(direct.header.id))).toBe(expected);
+    // The reactor core takes a header as given and selects nothing.
+    await expect(reactor.create(unversioned())).rejects.toThrow(
+      "carries no protocolVersions",
+    );
   });
 
   it("lets an explicit version win", async () => {

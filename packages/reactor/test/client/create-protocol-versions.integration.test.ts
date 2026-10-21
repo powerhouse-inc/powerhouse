@@ -17,7 +17,6 @@ import type { ReactorClient } from "../../src/client/reactor-client.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
-import { JobStatus } from "../../src/shared/types.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
 const DOCUMENT_MODEL = "powerhouse/document-model";
@@ -153,7 +152,7 @@ describe("create paths for a model whose reducer createReducer did not build", (
   }
 
   it("selects base-reducer 2 for it and 3 for a createReducer model", async () => {
-    const { client, reactor, warn } = await build();
+    const { client, warn } = await build();
 
     expect(
       await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
@@ -173,18 +172,6 @@ describe("create paths for a model whose reducer createReducer did not build", (
 
     const file = await client.drives.addFile(drive.header.id, unversioned());
     expect(file.header.protocolVersions).toEqual({ "base-reducer": 2 });
-
-    const direct = unversioned();
-    const job = await reactor.create(direct);
-    await vi.waitUntil(async () => {
-      const { status } = await reactor.getJobStatus(job.id);
-      return status === JobStatus.READ_READY || status === JobStatus.FAILED;
-    });
-    expect((await reactor.getJobStatus(job.id)).status).toBe(
-      JobStatus.READ_READY,
-    );
-    const stored = await reactor.get(direct.header.id);
-    expect(stored.header.protocolVersions).toEqual({ "base-reducer": 2 });
 
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
@@ -308,22 +295,6 @@ describe("create paths for a model the loader brings in after boot", () => {
     const drive = await client.drives.create({ global: { name: "Drive" } });
     const file = await client.drives.addFile(drive.header.id, unversioned());
     expect(file.header.protocolVersions?.["base-reducer"]).toBe(3);
-  });
-
-  it("creates a createReducer model at 3 through the reactor on its first create", async () => {
-    const { reactor } = await build(tagged);
-
-    const direct = unversioned();
-    const job = await reactor.create(direct);
-    await vi.waitUntil(async () => {
-      const { status } = await reactor.getJobStatus(job.id);
-      return status === JobStatus.READ_READY || status === JobStatus.FAILED;
-    });
-    expect((await reactor.getJobStatus(job.id)).status).toBe(
-      JobStatus.READ_READY,
-    );
-    const stored = await reactor.get(direct.header.id);
-    expect(stored.header.protocolVersions?.["base-reducer"]).toBe(3);
   });
 
   it("creates a model whose reducer createReducer did not build at 2", async () => {
