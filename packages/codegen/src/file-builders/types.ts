@@ -25,6 +25,7 @@ export type CommonGenerateEditorArgs = {
 export type DocumentModelDocumentTypeMetadata = {
   documentModelId: string;
   documentModelDocumentTypeName: string;
+  documentModelActionTypeName: string;
   documentModelDirName: string;
   documentModelImportPath: string;
 };

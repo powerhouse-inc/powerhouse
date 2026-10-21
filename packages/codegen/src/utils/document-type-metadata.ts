@@ -49,12 +49,13 @@ export function getDocumentTypeMetadata({
     );
   }
 
-  const { kebabCaseDocumentType, phDocumentTypeName } =
+  const { kebabCaseDocumentType, phDocumentTypeName, actionTypeName } =
     documentModelVariableNames;
 
   const documentTypeMetadata: DocumentModelDocumentTypeMetadata = {
     documentModelId,
     documentModelDocumentTypeName: phDocumentTypeName,
+    documentModelActionTypeName: actionTypeName,
     documentModelDirName: kebabCaseDocumentType,
     documentModelImportPath: posix.join(
       "document-models",

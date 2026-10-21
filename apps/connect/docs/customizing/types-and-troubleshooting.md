@@ -45,6 +45,15 @@ Two `@powerhousedao/reactor-browser` types lost a member, which a project that u
 - `PHModal` has no `missingPackage` modal.
 - `PHGlobal` has no `revisionHistoryVisible`. `useRevisionHistoryVisible`, `showRevisionHistory` and `hideRevisionHistory` work as before.
 
+Editors receive `document` and `dispatch` as props. For TypeScript users this is breaking:
+
+- `EditorModule`'s type parameters are now `<TDocument, TAction, TProps>`. A module typed `EditorModule<{ ...props }>` moves its props to the third parameter.
+- A host that renders an `EditorModule`'s `Component` must pass `document` and `dispatch`, and should wrap it in `EditorDocumentProvider` (see [Render an editor or a drive app yourself](./data-and-navigation.md#render-an-editor-or-a-drive-app-yourself)).
+- An editor whose component takes only its own props must share one with what hosts pass (`documentId`, `context`, `displayToolbar`), or take `EditorProps`.
+- `ph generate` writes editors that read `document` and `dispatch` from props. A package with such an editor needs a Connect with this change: older Connects pass neither prop. Editors that use the `useSelected<Model>Document()` hooks keep working in every Connect.
+
+In 6.2.3 dev prereleases only, `RouteSelection` and scoped PH stores (`createScopedPHStore`, `isScopedPHStore`) are gone. Drive apps read the route through `DriveProvider`, editors through `EditorDocumentProvider`, both from `@powerhousedao/reactor-browser`.
+
 The generic plugin's UI moved behind the plugin, which a project's routes follow by hand:
 
 - `AppLayout`, `ConnectSidebar`, `SidebarDriveItems`, `SidebarNavItems` and `OpenDocument` import from `@powerhousedao/connect/generic`, not `/layout`.

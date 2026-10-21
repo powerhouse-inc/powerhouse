@@ -5,7 +5,20 @@ export const documentEditorModuleFileTemplate = (v: {
   pascalCaseEditorName: string;
   editorId: string;
   documentTypes: string[];
+  /** Types the module for its document; drive apps and multi-type editors omit it. */
+  documentModel?: {
+    documentTypeName: string;
+    actionTypeName: string;
+    importPath: string;
+  };
 }) => {
+  const model = v.documentModel;
+  const modelTypeImport = model
+    ? `import type { ${model.actionTypeName}, ${model.documentTypeName} } from "${model.importPath}";`
+    : "";
+  const typeArguments = model
+    ? `<${model.documentTypeName}, ${model.actionTypeName}>`
+    : "";
   const documentTypesLiteral = JSON.stringify(v.documentTypes);
   const docComment =
     v.documentTypes.length === 1
@@ -17,10 +30,11 @@ export const documentEditorModuleFileTemplate = (v: {
  * This file is auto-generated and updated by codegen
  */
 import type { EditorModule } from "document-model";
+${modelTypeImport}
 import { lazy } from "react";
 
 /** ${docComment} */
-export const ${v.pascalCaseEditorName}: EditorModule = {
+export const ${v.pascalCaseEditorName}: EditorModule${typeArguments} = {
     Component: lazy(() => import("./editor.js")),
     documentTypes: ${documentTypesLiteral},
     config: {
