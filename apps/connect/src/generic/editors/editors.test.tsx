@@ -52,7 +52,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
     error: undefined,
   }),
   useDocumentVersionStatus: () => undefined,
-  useEditorModuleById: () => undefined,
+  useEditorModuleFor: () => undefined,
   useFallbackEditorModule: () => undefined,
   useRevisionHistoryVisible: () => false,
   useSelectedTimelineItem: () => undefined,
