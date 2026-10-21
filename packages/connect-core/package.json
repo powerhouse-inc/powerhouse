@@ -63,7 +63,11 @@
       "types": "./dist/route-tree.d.ts",
       "import": "./dist/route-tree.js"
     },
-    "./routes/*": "./src/routes/*.tsx",
+    "./routes/*": {
+      "source": "./src/routes/*.tsx",
+      "types": "./dist/routes/*.d.ts",
+      "import": "./dist/routes/*.js"
+    },
     "./theme.css": "./theme.css",
     "./tailwind.css": "./tailwind.css",
     "./package.json": "./package.json"

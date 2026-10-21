@@ -1,6 +1,15 @@
+import { globSync } from "node:fs";
 import type { UserConfig } from "tsdown";
 import { defineConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
+
+// The route files, at dist/routes/<path>.js: Vite pre-bundles a dependency's
+// .js but serves its .tsx unbundled, with the CommonJS it imports.
+const routes = Object.fromEntries(
+  globSync("src/routes/**/*.tsx")
+    .sort()
+    .map((file) => [file.replace(/^src\//, "").replace(/\.tsx$/, ""), file]),
+);
 
 const shared: UserConfig = {
   entry: {
@@ -12,10 +21,18 @@ const shared: UserConfig = {
     runtime: "src/runtime/index.ts",
     views: "src/views/index.ts",
     "route-tree": "src/routeTree.gen.ts",
+    ...routes,
   },
   platform: "browser",
   outDir: "dist",
   sourcemap: true,
+  // Rollup's file name sanitizing, but keeping `$`, `{` and `}`: the `./routes/*`
+  // export maps a route's path to its file, e.g. `_app/d/$driveSlug`.
+  outputOptions: {
+    sanitizeFileName: (name) =>
+      // oxlint-disable-next-line no-control-regex -- control characters are the point
+      name.replaceAll(/[\0-\x1F"#%&*+,:;<=>?[\]^`|\x7F]/g, "_"),
+  },
   deps: {
     neverBundle: [
       "react",
