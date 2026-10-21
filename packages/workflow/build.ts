@@ -7,8 +7,12 @@ import {
   planPieces,
   syncDistManifest,
 } from "@powerhousedao/shared/build-pieces";
+import {
+  packageStyleEntry,
+  packageStylesheet,
+} from "@powerhousedao/shared/clis/package-style";
 import { execSync } from "node:child_process";
-import { appendFileSync, copyFileSync, readFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "tsdown";
 
@@ -50,14 +54,25 @@ console.log("\n▶ Emitting types via tsc...");
 execSync("tsc --build", { stdio: "inherit" });
 
 console.log("\n▶ Building style.css...");
-execSync("tailwindcss -i ./style.css -o ./dist/style.css", {
-  stdio: "inherit",
+// Workflow's own classes from its browser build, against the design system's
+// theme by reference: the Connect that loads the package has the rest.
+const compiled = execSync("tailwindcss --input - --minify", {
+  input: packageStyleEntry(readFileSync("style.css", "utf8"), {
+    browserDir: "./dist/browser",
+    references: [
+      "@powerhousedao/design-system/theme.css",
+      "@powerhousedao/design-system/plugins.css",
+    ],
+  }),
+  encoding: "utf8",
+  stdio: ["pipe", "pipe", "inherit"],
+  maxBuffer: 64 * 1024 * 1024,
 });
-
-// Append the editors' xyflow/canvas CSS side-effects, invisible to Tailwind.
-appendFileSync(
+// The editors' xyflow/canvas CSS side-effects, invisible to Tailwind, in the same layer.
+const vendor = readFileSync(join("dist", "browser", "style.css"), "utf8");
+writeFileSync(
   join("dist", "style.css"),
-  "\n" + readFileSync(join("dist", "browser", "style.css"), "utf8"),
+  packageStylesheet(`${compiled}\n${vendor}`),
 );
 // The editors' own styles, for a host's Tailwind build: Connect's imports them.
 copyFileSync("workflow.css", join("dist", "workflow.css"));
