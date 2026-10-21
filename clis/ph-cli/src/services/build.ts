@@ -149,7 +149,7 @@ export function markOfferedRoutes(dir: string, offers: boolean) {
 const CONNECT_IMPORT = /^@powerhousedao\/connect(\/|$)/;
 
 const CONNECT_IMPORT_HINT =
-  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, RouteSelection, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
+  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
 
 type ModuleGraph = {
   getModuleInfo(id: string): {

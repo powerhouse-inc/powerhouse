@@ -1,6 +1,6 @@
 import type { PHGlobal, PHGlobalKey } from "@powerhousedao/reactor-browser";
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext } from "react";
 
 /** PH state of one app (or one server request); assigning a key notifies. */
 export type PHStore = PHGlobal;
@@ -49,59 +49,6 @@ export function createPHStore(initial: PHGlobal = {}): PHStore {
   return store;
 }
 
-/** The keys a scoped store owns; every other key reads and writes its parent. */
-export const SCOPED_PH_KEYS = [
-  "selectedDriveId",
-  "selectedNodeId",
-  "navigation",
-] as const satisfies readonly PHGlobalKey[];
-
-export type ScopedPHKey = (typeof SCOPED_PH_KEYS)[number];
-export type ScopedPHStoreOverrides = Pick<PHGlobal, ScopedPHKey>;
-
-const scopedKeys = new Set<PropertyKey>(SCOPED_PH_KEYS);
-const parentOfScope = new WeakMap<PHStore, PHStore>();
-
-/** A store with its own selection and navigation over `parent`, e.g. for an
- * editor shown beside others; provide it with {@link PHStoreProvider}. */
-export function createScopedPHStore(
-  parent: PHStore,
-  overrides: ScopedPHStoreOverrides = {},
-): PHStore {
-  const listeners: Listeners = new Map();
-  const own: PHGlobal = {};
-  for (const key of SCOPED_PH_KEYS) {
-    if (overrides[key] !== undefined) Reflect.set(own, key, overrides[key]);
-  }
-  const store = new Proxy<PHGlobal>(own, {
-    get: (target, key): unknown =>
-      scopedKeys.has(key) ? Reflect.get(target, key) : Reflect.get(parent, key),
-    has: (target, key) =>
-      scopedKeys.has(key) ? Reflect.has(target, key) : Reflect.has(parent, key),
-    set: (target, key, value) => {
-      if (!scopedKeys.has(key)) return Reflect.set(parent, key, value);
-      if (Reflect.get(target, key) === value) return true;
-      Reflect.set(target, key, value);
-      notifyKey(listeners, key);
-      return true;
-    },
-    deleteProperty: (target, key) => {
-      if (!scopedKeys.has(key)) return Reflect.deleteProperty(parent, key);
-      Reflect.deleteProperty(target, key);
-      notifyKey(listeners, key);
-      return true;
-    },
-  });
-  listenersByStore.set(store, listeners);
-  parentOfScope.set(store, parent);
-  return store;
-}
-
-/** Whether `store` was made by {@link createScopedPHStore}. */
-export function isScopedPHStore(store: PHStore | undefined) {
-  return !!store && parentOfScope.has(store);
-}
-
 function listenersOf(store: PHStore) {
   const listeners = listenersByStore.get(store);
   if (!listeners) throw new Error("Not a store made by createPHStore");
@@ -114,17 +61,6 @@ export function subscribePHStore(
   listener: () => void,
   key: PHGlobalKey | typeof ALL_KEYS = ALL_KEYS,
 ): () => void {
-  const parent = parentOfScope.get(store);
-  // A scope hears its parent for the keys it reads through.
-  if (parent && !scopedKeys.has(key)) {
-    const fromParent = subscribePHStore(parent, listener, key);
-    if (key !== ALL_KEYS) return fromParent;
-    const fromScope = subscribeOwn(store, listener, key);
-    return () => {
-      fromParent();
-      fromScope();
-    };
-  }
   return subscribeOwn(store, listener, key);
 }
 
@@ -140,9 +76,7 @@ function subscribeOwn(store: PHStore, listener: () => void, key: PropertyKey) {
 
 /** Notifies `key`'s listeners without a change, as re-setting a value does. */
 export function notifyPHStore(store: PHStore, key: PHGlobalKey) {
-  const parent = parentOfScope.get(store);
-  if (parent && !scopedKeys.has(key)) notifyPHStore(parent, key);
-  else notifyKey(listenersOf(store), key);
+  notifyKey(listenersOf(store), key);
 }
 
 /** A subscribe for `key`, stable per store as useSyncExternalStore expects. */
@@ -205,40 +139,11 @@ export function bindPHStoreToWindow(store: PHStore) {
 
 const PHStoreContext = createContext<PHStore | undefined>(undefined);
 
-// Scoped stores provided right now; plain setters warn while any is.
-let mountedScopes = 0;
-const warned = new Set<string>();
-
-function isProduction() {
-  // `process` need not exist in a browser bundle.
-  return (
-    typeof process !== "undefined" && process.env?.NODE_ENV === "production"
-  );
-}
-
-/** Warns once in development when a global setter runs while a scoped store
- * is mounted, since it acts on the app's store and not the scope's. */
-export function warnGlobalSetterInScope(setter: string, hook: string) {
-  if (mountedScopes === 0 || warned.has(setter) || isProduction()) return;
-  warned.add(setter);
-  console.warn(
-    `${setter} acts on the app's PH store while a scoped store is mounted; inside a scope, use ${hook}.`,
-  );
-}
-
 /** Hooks below read from `store`; without a provider they read `window.ph`. */
 export function PHStoreProvider(props: {
   store: PHStore;
   children: ReactNode;
 }) {
-  const scoped = isScopedPHStore(props.store);
-  useEffect(() => {
-    if (!scoped) return;
-    mountedScopes++;
-    return () => {
-      mountedScopes--;
-    };
-  }, [scoped]);
   return (
     <PHStoreContext.Provider value={props.store}>
       {props.children}

@@ -2,7 +2,10 @@ import type {
   PHNavigateOptions,
   PHNavigationTarget,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentDriveDocument,
+  Node,
+} from "@powerhousedao/shared/document-drive";
 import {
   extractDriveSlugFromPath,
   extractNodeIdFromSlug,
@@ -14,23 +17,25 @@ import {
   subscribeToPHValue,
 } from "./make-ph-event-functions.js";
 import { useCallback } from "react";
+import { useDriveContext } from "./drive-context.js";
 import {
   getCurrentPathname,
   hasHostNavigation,
   openTarget,
-  openTargetWith,
   preloadTarget,
 } from "./navigation.js";
 import type { PHStore } from "./ph-store.js";
-import {
-  getPHStore,
-  isScopedPHStore,
-  usePHStore,
-  warnGlobalSetterInScope,
-} from "./ph-store.js";
+import { getPHStore } from "./ph-store.js";
 
 const selectedNodeIdEventFunctions = makePHEventFunctions("selectedNodeId");
-export const useSelectedNodeId = selectedNodeIdEventFunctions.useValue;
+const useStoreSelectedNodeId = selectedNodeIdEventFunctions.useValue;
+
+/** The selected node id: the drive app's open node, else the app's selection. */
+export function useSelectedNodeId() {
+  const context = useDriveContext();
+  const selectedNodeId = useStoreSelectedNodeId();
+  return context ? context.nodeId : selectedNodeId;
+}
 /** Sets the selected node id without touching the URL. */
 export const setSelectedNodeId = selectedNodeIdEventFunctions.setValue;
 /** @deprecated `ph:setSelectedNodeId` bypasses the URL; use `setSelectedNode`. */
@@ -56,9 +61,14 @@ function openDriveSlug(store: PHStore | undefined, pathname: string) {
   return driveSlug ? decodeSlug(driveSlug) : undefined;
 }
 
-// The node in the app's open drive.
-function nodeTarget(nodeSlug: string): PHNavigationTarget | undefined {
-  const driveSlug = openDriveSlug(getPHStore(), getCurrentPathname());
+// The node in `drive`, else in the app's open drive.
+function nodeTarget(
+  nodeSlug: string,
+  drive?: DocumentDriveDocument,
+): PHNavigationTarget | undefined {
+  const driveSlug = drive
+    ? makeDriveSlug(drive)
+    : openDriveSlug(getPHStore(), getCurrentPathname());
   if (!driveSlug) return undefined;
   return { driveSlug, nodeSlug: nodeSlug || undefined };
 }
@@ -68,105 +78,88 @@ type NodeRef = Node | string | undefined;
 const toSlug = (node: NodeRef) =>
   typeof node === "string" ? node : makeNodeSlug(node);
 
-// The node in a scope's open drive.
-function scopedNodeTarget(store: PHStore, nodeSlug: string) {
-  const pathname = store.navigation?.location().pathname ?? "";
-  const driveSlug = openDriveSlug(store, pathname);
-  if (!driveSlug) return undefined;
-  return { driveSlug, nodeSlug: nodeSlug || undefined };
-}
-
-/** Selects a node in the app's store, without the scope warning. */
-export function selectNode(node: NodeRef, options?: PHNavigateOptions) {
+/** Selects a node in `drive`, else in the app's open drive. */
+export function selectNode(
+  node: NodeRef,
+  options?: PHNavigateOptions,
+  drive?: DocumentDriveDocument,
+) {
   const nodeSlug = toSlug(node);
   // A host router resolves the node and writes the selection itself.
   if (!hasHostNavigation()) {
     setSelectedNodeId(extractNodeIdFromSlug(nodeSlug));
   }
-  const target = nodeTarget(nodeSlug);
+  const target = nodeTarget(nodeSlug, drive);
   if (target) openTarget(target, options);
 }
 
-/** Selects a node in `store`: a scope's own selection, else the app's. */
-export function selectNodeIn(
-  store: PHStore | undefined,
-  node: NodeRef,
-  options?: PHNavigateOptions,
-) {
-  if (!store || !isScopedPHStore(store)) {
-    selectNode(node, options);
-    return;
-  }
-  const nodeSlug = toSlug(node);
-  const navigation = store.navigation;
-  if (!navigation) {
-    store.selectedNodeId =
-      typeof node === "object" ? node.id : extractNodeIdFromSlug(nodeSlug);
-    return;
-  }
-  const target = scopedNodeTarget(store, nodeSlug);
-  if (target) openTargetWith(navigation, target, options);
-}
-
 /** Sets the selected node (file or folder) of the app's store; `search` sets
- * the params it opens with. Inside a scoped store, use `useSetSelectedNode`. */
+ * the params it opens with. Inside a drive app, use `useSetSelectedNode`. */
 export function setSelectedNode(node: NodeRef, options?: PHNavigateOptions) {
-  warnGlobalSetterInScope("setSelectedNode", "useSetSelectedNode");
   selectNode(node, options);
 }
 
-/** `setSelectedNode` for the store in context, e.g. a scoped editor's. */
+function findNode(drive: DocumentDriveDocument, node: NodeRef) {
+  if (typeof node !== "string") return node;
+  const id = extractNodeIdFromSlug(node);
+  return drive.state.global.nodes.find((n) => n.id === id);
+}
+
+/** Opens a node: through the drive app's `open` when it has one, else the
+ * app's navigation in the drive app's drive. */
 export function useSetSelectedNode() {
-  const store = usePHStore();
+  const context = useDriveContext();
   return useCallback(
-    (node: NodeRef, options?: PHNavigateOptions) =>
-      selectNodeIn(store, node, options),
-    [store],
+    (node: NodeRef, options?: PHNavigateOptions) => {
+      if (context?.open) {
+        context.open(findNode(context.drive, node), options);
+        return;
+      }
+      selectNode(node, options, context?.drive);
+    },
+    [context],
   );
 }
 
-/** Opens a node, or with `undefined` its drive, in the store in context. */
+/** Opens a node, or with `undefined` its drive. */
 export const useOpenNode: () => (
   node: Node | undefined,
   options?: PHNavigateOptions,
 ) => void = useSetSelectedNode;
 
-/** Where a node of `store`'s open drive navigates to. */
-export function getNodeTargetIn(store: PHStore | undefined, node: Node) {
-  const nodeSlug = makeNodeSlug(node);
-  return store && isScopedPHStore(store)
-    ? scopedNodeTarget(store, nodeSlug)
-    : nodeTarget(nodeSlug);
+/** Where a node of `drive`, else of the open drive, navigates to. */
+export function getNodeTarget(
+  node: Node | undefined,
+  drive?: DocumentDriveDocument,
+) {
+  return nodeTarget(makeNodeSlug(node), drive);
 }
 
-/** Where a node of the open drive navigates to. */
-export function getNodeTarget(node: Node | undefined) {
-  return nodeTarget(makeNodeSlug(node));
-}
-
-function preloadNodeIn(store: PHStore | undefined, node: Node | undefined) {
-  if (!node) return;
-  if (!store || !isScopedPHStore(store)) {
-    const target = nodeTarget(makeNodeSlug(node));
-    if (target) preloadTarget(target);
-    return;
-  }
-  const target = scopedNodeTarget(store, makeNodeSlug(node));
-  if (target) store.navigation?.preload?.(target);
+/** Where a node navigates to: in the drive app's drive, else the open drive. */
+export function useNodeTarget(node: Node | undefined) {
+  const context = useDriveContext();
+  return getNodeTarget(node, context?.drive);
 }
 
 /** Warms a node's view before it is opened, e.g. on hover. */
-export function preloadNode(node: Node | undefined) {
-  warnGlobalSetterInScope("preloadNode", "usePreloadNode");
-  preloadNodeIn(undefined, node);
+export function preloadNode(
+  node: Node | undefined,
+  drive?: DocumentDriveDocument,
+) {
+  if (!node) return;
+  const target = nodeTarget(makeNodeSlug(node), drive);
+  if (target) preloadTarget(target);
 }
 
-/** `preloadNode` for the store in context. */
+/** `preloadNode` through the drive app's `preload`, if it has one. */
 export function usePreloadNode() {
-  const store = usePHStore();
+  const context = useDriveContext();
   return useCallback(
-    (node: Node | undefined) => preloadNodeIn(store, node),
-    [store],
+    (node: Node | undefined) => {
+      if (context?.preload) context.preload(node);
+      else if (!context?.open) preloadNode(node, context?.drive);
+    },
+    [context],
   );
 }
 

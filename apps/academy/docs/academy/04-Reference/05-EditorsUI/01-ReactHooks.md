@@ -575,13 +575,13 @@ function setSelectedDrive(
 
 - `driveOrDriveSlug` — The drive object, drive slug string, or `undefined` to deselect
 
-`setSelectedDrive` acts on the app's store. Inside a scoped store (a component under a `PHStoreProvider` whose store came from `createScopedPHStore`), use `useSetSelectedDrive` instead. In development, calling `setSelectedDrive` while a scoped store is mounted logs a warning.
+`setSelectedDrive` acts on the app's store.
 
 ---
 
 ### `useSetSelectedDrive`
 
-Returns `setSelectedDrive` bound to the store in context. In a scoped store it changes that scope's selection; otherwise it changes the app's.
+Returns `setSelectedDrive` as a hook.
 
 ```typescript
 function useSetSelectedDrive(): (
@@ -625,13 +625,13 @@ type PHNavigateOptions = {
 - `options.replace` — Replace the current history entry instead of pushing a new one
 - `options.search` — Query params the node opens with; an `undefined` value removes the param
 
-Like `setSelectedDrive`, this acts on the app's store. Inside a scoped store, use `useSetSelectedNode`.
+Like `setSelectedDrive`, this acts on the app's store. Inside a drive app, use `useSetSelectedNode`.
 
 ---
 
 ### `useSetSelectedNode`
 
-Returns `setSelectedNode` bound to the store in context.
+Returns `setSelectedNode` for the drive app in context: it calls the drive context's `open` when the host gives one, else opens the node in the drive app's drive.
 
 ```typescript
 function useSetSelectedNode(): (

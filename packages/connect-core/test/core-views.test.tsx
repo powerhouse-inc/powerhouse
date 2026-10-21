@@ -17,7 +17,9 @@ import {
   PHStoreProvider,
   showDeleteNodeModal,
   showPHModal,
+  useSelectedDocument,
   useSelectedDriveId,
+  useSelectedNode,
 } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveDocument,
@@ -26,8 +28,10 @@ import type {
 } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
+  DocumentModelDocument,
   DocumentModelLib,
   EditorModule,
+  EditorProps,
 } from "@powerhousedao/shared/document-model";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import type { AnyRoute } from "@tanstack/react-router";
@@ -301,6 +305,33 @@ describe("core's drive view", () => {
     expect(screen.getByTestId("drive-app").textContent).toBe(drive.header.id);
   });
 
+  it("gives the drive app its drive as props, and the open node to its hooks", async () => {
+    const { drive, node } = await createFile(
+      await createDrive("Propped", "test-drive-app"),
+      "Spec",
+    );
+    function DriveApp({
+      document,
+      dispatch,
+      children,
+    }: EditorProps<DocumentDriveDocument>) {
+      return (
+        <div data-testid="drive-app">
+          {document.header.id}/{typeof dispatch}/{useSelectedNode()?.id ?? "-"}
+          {children}
+        </div>
+      );
+    }
+    setPackages([{ ...driveApp(), Component: DriveApp }, documentEditor()]);
+    store.drives = [drive];
+    mount(`/d/${drive.header.slug}/spec-${node.id}`);
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("drive-app").textContent).toBe(
+        `${drive.header.id}/function/${node.id}editing ${node.id}`,
+      ),
+    );
+  });
+
   it("lists the drive when its preferredEditor names no installed app", async () => {
     const created = await createDrive("Listed", "missing-app");
     const { drive: withFolder } = await createFolder(created, "Inbox");
@@ -368,6 +399,84 @@ describe("core's document view", () => {
     await vi.waitFor(() =>
       expect(screen.getByTestId("editor").textContent).toBe(
         `editing ${node.id}`,
+      ),
+    );
+  });
+
+  it("gives the editor its document and dispatch as props, and its hooks the same document", async () => {
+    const { drive, node } = await createFile(
+      await createDrive("Propped"),
+      "Spec",
+    );
+    function Inner() {
+      const [document] = useSelectedDocument();
+      return <p data-testid="inner">{document.header.id}</p>;
+    }
+    function Editor({
+      document,
+      dispatch,
+    }: EditorProps<DocumentModelDocument>) {
+      return (
+        <>
+          <p data-testid="editor">{document.state.global.name}</p>
+          <Inner />
+          <button
+            type="button"
+            onClick={() =>
+              dispatch(
+                documentModelDocumentModelModule.actions.setModelName({
+                  name: "Renamed",
+                }),
+              )
+            }
+          >
+            rename
+          </button>
+        </>
+      );
+    }
+    setPackages([{ ...documentEditor(), Component: Editor }]);
+    store.drives = [drive];
+    mount(`/d/${drive.header.slug}/spec-${node.id}`);
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("editor").textContent).toBe("Spec"),
+    );
+    expect(screen.getByTestId("inner").textContent).toBe(node.id);
+    // Another node selected app-wide, e.g. by a widget beside the route.
+    act(() => {
+      store.selectedNodeId = "elsewhere";
+    });
+    expect(screen.getByTestId("inner").textContent).toBe(node.id);
+    click(screen.getByRole("button", { name: "rename" }));
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("editor").textContent).toBe("Renamed"),
+    );
+  });
+
+  it("opens the document's editor when its preferred editor edits another type", async () => {
+    const drive = await createDrive("Preferred");
+    const document = documentModelDocumentModelModule.utils.createDocument();
+    document.header.name = "Spec";
+    document.header.meta = { preferredEditor: "other-type-editor" };
+    const created = await module.client.createDocumentInDrive(
+      drive.header.id,
+      document,
+    );
+    setPackages([
+      {
+        Component: () => <p data-testid="editor">wrong editor</p>,
+        documentTypes: ["other/type"],
+        config: { id: "other-type-editor", name: "Other type editor" },
+      },
+      documentEditor(),
+    ]);
+    store.drives = [
+      await module.client.get<DocumentDriveDocument>(drive.header.id),
+    ];
+    mount(`/d/${drive.header.slug}/spec-${created.header.id}`);
+    await vi.waitFor(() =>
+      expect(screen.getByTestId("editor").textContent).toBe(
+        `editing ${created.header.id}`,
       ),
     );
   });

@@ -20,7 +20,9 @@ export * from "./document-version-status.js";
 export * from "./download-document.js";
 export * from "./download-folder.js";
 export * from "./drive-by-id.js";
+export * from "./drive-context.js";
 export * from "./drives.js";
+export * from "./editor-context.js";
 export * from "./editor-modules.js";
 export * from "./use-editor-preloader.js";
 export * from "./features.js";
@@ -46,7 +48,7 @@ export * from "./selected-document.js";
 export * from "./navigation.js";
 export * from "./url-state.js";
 export * from "./ph-store.js";
-// selectDrive and selectDriveIn stay internal: they skip the scope warning.
+// selectDrive stays internal.
 export {
   addSelectedDriveIdEventHandler,
   preloadDrive,

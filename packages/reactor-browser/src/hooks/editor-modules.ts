@@ -1,4 +1,5 @@
 import type { EditorModule } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { DEFAULT_DRIVE_EDITOR_ID, DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { useVetraPackages } from "./vetra-packages.js";
 
@@ -62,4 +63,20 @@ export function useEditorModulesForDocumentType(
     module.documentTypes.includes(documentType),
   );
   return modulesForType;
+}
+
+/** The editor for `document`: its preferred editor if that edits its type,
+ * else the first editor for its type. */
+export function useEditorModuleFor(
+  document: PHDocument | null | undefined,
+): EditorModule | undefined {
+  const documentType = document?.header.documentType;
+  const preferred = useEditorModuleById(document?.header.meta?.preferredEditor);
+  const fallback = useFallbackEditorModule(documentType);
+  const edits =
+    !!documentType &&
+    !!preferred &&
+    (preferred.documentTypes.includes(documentType) ||
+      preferred.documentTypes.includes("*"));
+  return edits ? preferred : fallback;
 }

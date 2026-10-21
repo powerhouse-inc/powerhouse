@@ -3,14 +3,14 @@ import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { dismissToast, toast } from "@powerhousedao/connect/services";
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import {
+  EditorDocumentProvider,
   getRevisionFromDate,
   openTarget,
   useDocumentById,
   useDocumentModelModuleById,
   useDocumentOperations,
   useDocumentVersionStatus,
-  useEditorModuleById,
-  useFallbackEditorModule,
+  useEditorModuleFor,
   useRevisionHistoryVisible,
   useSelectedTimelineItem,
   useVetraPackageManager,
@@ -76,7 +76,6 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const [document, dispatch] = useDocumentById(initialDocument.header.id);
   const documentId = document?.header.id ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
-  const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
   // The timeline read-mode feature maps a selected date range to a global
   // revision, which needs the whole global history. Fetched only while a
   // timeline item is selected; shares the cache entry with the panel when
@@ -108,9 +107,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
   const documentModelModule = useDocumentModelModuleById(documentType);
-  const preferredEditorModule = useEditorModuleById(preferredEditor);
-  const fallbackEditorModule = useFallbackEditorModule(documentType);
-  const editorModule = preferredEditorModule ?? fallbackEditorModule;
+  const editorModule = useEditorModuleFor(document);
   const versionStatus = useDocumentVersionStatus(document ?? undefined);
   const versionStatusKind = versionStatus?.kind;
   const upgradeAvailable =
@@ -264,26 +261,30 @@ export const DocumentEditor: React.FC<Props> = (props) => {
             loggerContext={["Connect", "DocumentEditor"]}
           >
             {!editorError?.error && (
-              <EditorComponent
-                key={`${editorBundleKey}:${documentId}`}
-                context={{
-                  readMode: !!selectedTimelineItem,
-                  // Until the whole global history has paged in, the date lookup
-                  // cannot be answered; undefined leaves the editor on the latest
-                  // state in read mode instead of jumping to revision 0. A failed
-                  // page ends the walk, so we answer from what loaded rather than
-                  // waiting on a page that will never arrive.
-                  selectedTimelineRevision:
-                    (isLoadingGlobal || globalHasNextPage) && !globalError
-                      ? undefined
-                      : getRevisionFromDate(
-                          selectedTimelineItem?.startDate,
-                          selectedTimelineItem?.endDate,
-                          globalOperations,
-                        ),
-                }}
-                documentId={document.header.id}
-              />
+              <EditorDocumentProvider document={document} dispatch={dispatch}>
+                <EditorComponent
+                  key={`${editorBundleKey}:${documentId}`}
+                  context={{
+                    readMode: !!selectedTimelineItem,
+                    // Until the whole global history has paged in, the date lookup
+                    // cannot be answered; undefined leaves the editor on the latest
+                    // state in read mode instead of jumping to revision 0. A failed
+                    // page ends the walk, so we answer from what loaded rather than
+                    // waiting on a page that will never arrive.
+                    selectedTimelineRevision:
+                      (isLoadingGlobal || globalHasNextPage) && !globalError
+                        ? undefined
+                        : getRevisionFromDate(
+                            selectedTimelineItem?.startDate,
+                            selectedTimelineItem?.endDate,
+                            globalOperations,
+                          ),
+                  }}
+                  documentId={document.header.id}
+                  document={document}
+                  dispatch={dispatch}
+                />
+              </EditorDocumentProvider>
             )}
           </ErrorBoundary>
         </Suspense>
