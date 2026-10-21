@@ -187,10 +187,13 @@ describe("create resolvers return the document read as the caller", () => {
         getDocumentModelModule: vi
           .fn()
           .mockResolvedValue(documentModelDocumentModelModule),
-        getCreateSignaturePolicy: vi.fn().mockResolvedValue("legacy"),
-        getCreateProtocolVersions: vi
+        newDocument: vi
           .fn()
-          .mockResolvedValue({ "base-reducer": 3 }),
+          .mockImplementation(() =>
+            Promise.resolve(
+              documentModelDocumentModelModule.utils.createDocument(),
+            ),
+          ),
       } as unknown as IReactorClient,
     };
   }
