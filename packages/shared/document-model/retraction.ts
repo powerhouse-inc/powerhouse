@@ -41,8 +41,18 @@ export function rewritesScope(
 }
 
 export function retractionTarget(operation: Operation): string | undefined {
-  if (operation.action.type !== "RETRACT") return undefined;
-  const input = operation.action.input as Partial<RetractActionInput> | null;
+  return targetOf(operation.action);
+}
+
+/** The action ids `action` names; stores index exactly these for findReferencing. */
+export function actionReferences(action: Action): string[] {
+  const target = targetOf(action);
+  return target === undefined ? [] : [target];
+}
+
+function targetOf(action: Action): string | undefined {
+  if (action.type !== "RETRACT") return undefined;
+  const input = action.input as Partial<RetractActionInput> | null;
   return typeof input?.target === "string" ? input.target : undefined;
 }
 

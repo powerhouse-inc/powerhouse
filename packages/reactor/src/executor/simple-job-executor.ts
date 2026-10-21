@@ -1963,7 +1963,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       documentDerivesByRule(document, job.scope)
     ) {
       try {
-        targeted = await stores.operationStore.findRetractionsOf(
+        targeted = await stores.operationStore.findReferencing(
           job.documentId,
           job.scope,
           job.branch,
@@ -2435,7 +2435,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         documentDerivesByRule(outcome.document, job.scope)
       ) {
         try {
-          targeted = await executing.stores.operationStore.findRetractionsOf(
+          targeted = await executing.stores.operationStore.findReferencing(
             job.documentId,
             job.scope,
             job.branch,

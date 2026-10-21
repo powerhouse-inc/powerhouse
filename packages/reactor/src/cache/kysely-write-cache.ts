@@ -1145,7 +1145,7 @@ export class KyselyWriteCache implements IWriteCache {
     if (rows.length === 0) {
       return false;
     }
-    const named = await this.operationStore.findRetractionsOf(
+    const named = await this.operationStore.findReferencing(
       documentId,
       scope,
       branch,

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
+  actionReferences,
   deriveOperationId,
   generateId,
   retract,
@@ -41,7 +42,7 @@ const backends: [string, () => Promise<Setup>][] = [
 const documentType = "powerhouse/document-model";
 const chunkSize = Math.floor((32_767 - 3) / 2);
 
-describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
+describe.each(backends)("findReferencing on %s", (_name, create) => {
   let setup: Setup;
   let store: KyselyOperationStore;
 
@@ -100,6 +101,44 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     };
   }
 
+  it("agrees with actionReferences for every action shape", async () => {
+    const documentId = generateId();
+    const a = content();
+    const at = new Date().toISOString();
+    const shaped = (type: string, input: unknown): Action => ({
+      id: generateId(),
+      type,
+      scope: "global",
+      timestampUtcMs: at,
+      input,
+    });
+    const actions: Action[] = [
+      a,
+      retract(a.id),
+      shaped("RETRACT", { target: 7 }),
+      shaped("RETRACT", null),
+      shaped("RETRACT", {}),
+      shaped("SET_TARGET", { target: a.id }),
+      shaped("UNDO", { count: 1 }),
+      shaped("REDO", { count: 1 }),
+      shaped("NOOP", {}),
+    ];
+    await append(documentId, actions);
+
+    const queried = [
+      ...actions.map((action) => action.id),
+      ...actions.flatMap(actionReferences),
+      "7",
+    ];
+    const expected = new Set(
+      actions.flatMap(actionReferences).filter((id) => queried.includes(id)),
+    );
+
+    expect(
+      await store.findReferencing(documentId, "global", "main", queried),
+    ).toEqual(expected);
+  });
+
   it("returns the ids a RETRACT in the stream names", async () => {
     const documentId = generateId();
     const a = content();
@@ -107,7 +146,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const c = content();
     await append(documentId, [a, b, c, retract(a.id), retract(c.id)]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       a.id,
       b.id,
       c.id,
@@ -122,7 +161,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const undo = retract(a.id);
     await append(documentId, [a, undo, retract(undo.id)]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       a.id,
       undo.id,
     ]);
@@ -139,7 +178,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     await append(documentId, [retract(a.id, "local")], "local");
     await append(documentId, [retract(a.id)], "global", "draft");
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       a.id,
     ]);
 
@@ -158,7 +197,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     };
     await append(documentId, [a, lookalike]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       a.id,
     ]);
 
@@ -170,7 +209,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const malformed: Action = { ...retract("5"), input: { target: 5 } };
     await append(documentId, [content(), malformed]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       "5",
     ]);
 
@@ -183,7 +222,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const long = randomBytes(8_000).toString("hex");
     await append(documentId, [content(), retract(long)]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       long,
     ]);
 
@@ -195,7 +234,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const a = content();
     await append(documentId, [a, retract(a.id), retract(a.id)]);
 
-    const found = await store.findRetractionsOf(documentId, "global", "main", [
+    const found = await store.findReferencing(documentId, "global", "main", [
       a.id,
     ]);
 
@@ -207,12 +246,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const a = content();
     await append(documentId, [a, retract(a.id)]);
 
-    const found = await store.findRetractionsOf(
-      documentId,
-      "global",
-      "main",
-      [],
-    );
+    const found = await store.findReferencing(documentId, "global", "main", []);
 
     expect(found.size).toBe(0);
   });
@@ -228,7 +262,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
       ...named.map((target) => retract(target)),
     ]);
 
-    const found = await store.findRetractionsOf(
+    const found = await store.findReferencing(
       documentId,
       "global",
       "main",
@@ -246,7 +280,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     controller.abort();
 
     await expect(
-      store.findRetractionsOf(
+      store.findReferencing(
         documentId,
         "global",
         "main",
@@ -264,7 +298,7 @@ describe.each(backends)("findRetractionsOf on %s", (_name, create) => {
     const found = await setup.db.transaction().execute(async (trx) => {
       const scoped = store.withTransaction(trx);
       await append(documentId, [retract(a.id)], "global", "main", scoped);
-      return scoped.findRetractionsOf(documentId, "global", "main", [a.id]);
+      return scoped.findReferencing(documentId, "global", "main", [a.id]);
     });
 
     expect(found).toEqual(new Set([a.id]));

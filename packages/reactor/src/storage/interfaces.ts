@@ -302,8 +302,8 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
-  /** The ids among `actionIds` that a stored RETRACT in the stream names. */
-  findRetractionsOf(
+  /** The ids among `actionIds` that some stored action in the stream references (`actionReferences`). */
+  findReferencing(
     documentId: string,
     scope: string,
     branch: string,

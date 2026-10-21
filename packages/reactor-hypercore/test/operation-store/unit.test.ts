@@ -1,5 +1,9 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
-import { generateId, retract } from "@powerhousedao/shared/document-model";
+import {
+  actionReferences,
+  generateId,
+  retract,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AppendConditionFailedError,
@@ -377,7 +381,7 @@ describe("HypercoreOperationStore", () => {
     });
   });
 
-  describe("findRetractionsOf", () => {
+  describe("findReferencing", () => {
     const documentType = "powerhouse/test-doc";
 
     async function append(
@@ -402,6 +406,30 @@ describe("HypercoreOperationStore", () => {
       );
     }
 
+    it("agrees with actionReferences for every action shape", async () => {
+      const documentId = generateId();
+      const a = makeAction("TEST_ACTION");
+      const actions: Action[] = [
+        a,
+        retract(a.id),
+        makeAction("RETRACT", { target: 7 }),
+        makeAction("RETRACT"),
+        makeAction("SET_TARGET", { target: a.id }),
+        makeAction("UNDO", { count: 1 }),
+        makeAction("NOOP"),
+      ];
+      await append(documentId, actions);
+
+      const queried = [
+        ...actions.map((action) => action.id),
+        ...actions.flatMap(actionReferences),
+        "7",
+      ];
+      expect(
+        await store.findReferencing(documentId, "global", "main", queried),
+      ).toEqual(new Set(actions.flatMap(actionReferences)));
+    });
+
     it("returns the ids a RETRACT in the stream names", async () => {
       const documentId = generateId();
       const a = makeAction("TEST_ACTION");
@@ -409,12 +437,11 @@ describe("HypercoreOperationStore", () => {
       const c = makeAction("TEST_ACTION");
       await append(documentId, [a, b, c, retract(a.id), retract(c.id)]);
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        [a.id, b.id, c.id],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+        b.id,
+        c.id,
+      ]);
 
       expect(found).toEqual(new Set([a.id, c.id]));
     });
@@ -425,12 +452,10 @@ describe("HypercoreOperationStore", () => {
       const undo = retract(a.id);
       await append(documentId, [a, undo, retract(undo.id)]);
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        [a.id, undo.id],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+        undo.id,
+      ]);
 
       expect(found).toEqual(new Set([a.id, undo.id]));
     });
@@ -443,12 +468,9 @@ describe("HypercoreOperationStore", () => {
       await append(documentId, [retract(a.id, "local")], "local");
       await append(documentId, [retract(a.id)], "global", "draft");
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        [a.id],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
 
       expect(found.size).toBe(0);
     });
@@ -458,12 +480,9 @@ describe("HypercoreOperationStore", () => {
       const a = makeAction("TEST_ACTION");
       await append(documentId, [a, makeAction("SET_TARGET", { target: a.id })]);
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        [a.id],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
 
       expect(found.size).toBe(0);
     });
@@ -475,12 +494,9 @@ describe("HypercoreOperationStore", () => {
         makeAction("RETRACT", { target: 5 }),
       ]);
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        ["5"],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        "5",
+      ]);
 
       expect(found.size).toBe(0);
     });
@@ -490,12 +506,9 @@ describe("HypercoreOperationStore", () => {
       const a = makeAction("TEST_ACTION");
       await append(documentId, [a, retract(a.id), retract(a.id)]);
 
-      const found = await store.findRetractionsOf(
-        documentId,
-        "global",
-        "main",
-        [a.id],
-      );
+      const found = await store.findReferencing(documentId, "global", "main", [
+        a.id,
+      ]);
 
       expect([...found]).toEqual([a.id]);
     });
@@ -505,7 +518,7 @@ describe("HypercoreOperationStore", () => {
       const a = makeAction("TEST_ACTION");
       await append(documentId, [a, retract(a.id)]);
 
-      const found = await store.findRetractionsOf(
+      const found = await store.findReferencing(
         documentId,
         "global",
         "main",
@@ -524,7 +537,7 @@ describe("HypercoreOperationStore", () => {
         ...named.map((target) => retract(target)),
       ]);
 
-      const found = await store.findRetractionsOf(
+      const found = await store.findReferencing(
         documentId,
         "global",
         "main",
@@ -542,7 +555,7 @@ describe("HypercoreOperationStore", () => {
       controller.abort();
 
       await expect(
-        store.findRetractionsOf(
+        store.findReferencing(
           documentId,
           "global",
           "main",

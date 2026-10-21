@@ -767,7 +767,7 @@ export class KyselyOperationStore implements IOperationStore {
       : undefined;
   }
 
-  async findRetractionsOf(
+  async findReferencing(
     documentId: string,
     scope: string,
     branch: string,
@@ -787,8 +787,9 @@ export class KyselyOperationStore implements IOperationStore {
     for (let i = 0; i < actionIds.length; i += chunkSize) {
       throwIfAborted(signal);
       const chunk = actionIds.slice(i, i + chunkSize);
-      // Matches idx_operation_retracts. The type stays a literal so a generic
-      // plan can use the partial index; the exact match guards md5 collisions.
+      // actionReferences, as SQL over idx_operation_retracts; a conformance test
+      // holds the two equal. The type stays a literal so a generic plan can use
+      // the partial index; the exact match guards md5 collisions.
       const rows = await this.queryExecutor
         .selectFrom("Operation")
         .select(target.as("target"))

@@ -213,7 +213,7 @@ describe("base-reducer 3: RETRACT admission", () => {
     await executeOk([first]);
     await executeOk([retract(first.id)]);
     expect(await moduleIds()).toEqual(["a"]);
-    const named = await module!.operationStore.findRetractionsOf(
+    const named = await module!.operationStore.findReferencing(
       docId,
       "global",
       "main",
@@ -347,7 +347,7 @@ describe("base-reducer 3: RETRACT admission", () => {
 describe.each([1, 2] as const)("base-reducer %i", (version) => {
   it("never asks which rows a RETRACT names, and batches and undoes as before", async () => {
     await build({ version });
-    const named = vi.spyOn(KyselyOperationStore.prototype, "findRetractionsOf");
+    const named = vi.spyOn(KyselyOperationStore.prototype, "findReferencing");
     const applies = globalApplies();
 
     await executeOk([add("a"), add("b")]);

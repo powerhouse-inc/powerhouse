@@ -455,7 +455,7 @@ export class SignatureAdmission {
       return new Set();
     }
     const { operationStore } = stores;
-    const named = await operationStore.findRetractionsOf(
+    const named = await operationStore.findReferencing(
       stream.documentId,
       stream.scope,
       stream.branch,
