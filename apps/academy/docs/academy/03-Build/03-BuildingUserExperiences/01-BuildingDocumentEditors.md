@@ -130,33 +130,47 @@ In any package the styles are being generated through the styles.css file with t
 - When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
   :::
 
-## State management in editors: Hooks vs Props
+## State management in editors: props at the top, hooks below
 
-When you build an editor in Powerhouse, there are **two ways** to access and modify document state. Understanding the difference is important for choosing the right approach for your component.
-
-### Understanding the two approaches
+Connect renders your editor's component with two props: the open `document` and a `dispatch` bound to it. `EditorProps<TDocument, TAction>` from `document-model` types both for your document model. Connect also renders the editor inside an `EditorDocumentProvider` with the same pair, so the generated `useSelected<Model>Document()` hook returns that document in any component inside the editor.
 
 <details>
 <summary>ℹ️ For Non-Technical Readers</summary>
 
-Think of it like ordering food at a restaurant:
-
-**Hooks Approach** 🪝: Like having a direct line to the kitchen. Any component can call the kitchen directly to get the current menu (state) or place an order (dispatch an action). It's independent and self-sufficient.
-
-**Props Approach** 📦: Like a waiter passing you a menu and taking your order. The main component receives everything and passes it down to child components. Children can only work with what they're given.
-
-**Which is better?** For Powerhouse editors, we recommend the **Hooks approach** because:
-
-- Components are more independent
-- Easier to move components around
-- Less "prop drilling" (passing data through many layers)
-- Matches modern React best practices
+Connect hands the editor the document it should show, like a waiter bringing a dish to a table. The editor's top component receives it directly. Components further inside the editor ask for "the document on this table" with a hook, without the editor passing it down to each of them.
 
 </details>
 
-### Method 1: Using Hooks (Recommended) 🪝
+### The editor component takes props
 
-The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook that Powerhouse generates for your document model. Any component can call this hook to get the current document state and a function to dispatch changes.
+`ph generate` writes the editor component this way:
+
+```typescript
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "document-model";
+import type {
+  TodoListAction,
+  TodoListDocument,
+} from "todo-tutorial/document-models/todo-list";
+import { AddTodo } from "./components/AddTodo.js";
+
+export default function Editor({
+  document,
+}: EditorProps<TodoListDocument, TodoListAction>) {
+  return (
+    <div>
+      <DocumentToolbar document={document} />
+      <AddTodo />
+    </div>
+  );
+}
+```
+
+Pass `document` to `DocumentToolbar`. Without it, the toolbar shows the app's selected document, which is wrong when a host renders a document by id.
+
+### Components inside it use the hooks 🪝
+
+The **hook-based approach** uses `useSelectedTodoListDocument`, a React hook that Powerhouse generates for your document model. Inside the editor it returns the document the editor was rendered with, and a function to dispatch changes to it.
 
 :::tip[Full React Hooks Reference]
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/Reference/EditorsUI/ReactHooks) for all available hooks.
@@ -167,69 +181,26 @@ import { useSelectedTodoListDocument } from "todo-tutorial/document-models/todo-
 import { addTodoItem } from "todo-tutorial/document-models/todo-list";
 
 export function AddTodo() {
-// The hook returns [document, dispatch]
-const [todoList, dispatch] = useSelectedTodoListDocument();
+  // The hook returns [document, dispatch]
+  const [todoList, dispatch] = useSelectedTodoListDocument();
 
-if (!todoList) return null;
+  const handleAdd = (text: string) => {
+    dispatch(addTodoItem({ text }));
+  };
 
-const handleAdd = (text: string) => {
-  dispatch(addTodoItem({ text }));
-};
-
-return (
-  <button onClick={() => handleAdd("New task")}>
-    Add Todo
-  </button>
-);
+  return <button onClick={() => handleAdd("New task")}>Add Todo</button>;
 }
 ```
 
-**Why hooks are recommended:**
+**Why hooks below the top:**
 
-- ✅ **Self-contained components**: Each component gets its own connection to the document
-- ✅ **Less boilerplate**: No need to pass props through multiple levels
-- ✅ **Easier refactoring**: Move components around without rewiring props
-- ✅ **Modern React pattern**: Follows React's recommended approach for state management
+- ✅ **Self-contained components**: each component reads the editor's document itself
+- ✅ **Less boilerplate**: no need to pass `document` and `dispatch` through every level
+- ✅ **Easier refactoring**: move components around without rewiring props
 
-### Method 2: Using Props 📦
+**Testing a component:** render it inside `EditorDocumentProvider` from `@powerhousedao/reactor-browser` with a test document and dispatch; its hooks read them.
 
-The **props-based approach** receives the document and dispatch function as properties passed from a parent component.
-
-```typescript
-import { EditorProps } from 'document-model';
-import { TodoListDocument } from '../../document-models/todo-list/index.js';
-
-export type IProps = EditorProps<TodoListDocument>;
-
-export default function Editor(props: IProps) {
-    const { document, dispatch } = props;
-    const state = document.state.global;
-
-    // Now you'd pass state and dispatch to child components as props
-    return (
-        <div>
-            <TodoList items={state.items} dispatch={dispatch} />
-        </div>
-    );
-}
-```
-
-**When props might be useful:**
-
-- When you need strict control over which components can access state
-- When building components that should work outside of Powerhouse context
-- For testing purposes where you want to inject mock state
-
-### Which should you use?
-
-| Scenario                                          | Recommended Approach |
-| ------------------------------------------------- | -------------------- |
-| Building a standard Powerhouse editor             | **Hooks** 🪝         |
-| Component needs document state                    | **Hooks** 🪝         |
-| Building reusable UI components (buttons, inputs) | **Props** 📦         |
-| Need to test components in isolation              | **Props** 📦         |
-
-**Bottom line**: Use hooks for most Powerhouse editor development. It's simpler, cleaner, and matches the patterns used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+**Which Connect:** an editor that reads its document from props needs a Connect that passes them. Editors that only use the hooks work in every Connect, and the hooks are not deprecated.
 
 ### Additional hooks for editors
 
@@ -283,7 +254,7 @@ For a complete list of all available hooks, see the [React Hooks API Reference](
 
 When building editors, you'll work with two types of state:
 
-- **Global Document State**: Data that is part of the document itself and should be saved. This is accessed via hooks (`useSelectedTodoListDocument`) or props (`document.state.global`). You modify it by dispatching actions.
+- **Global Document State**: Data that is part of the document itself and should be saved. The editor component gets it as the `document` prop (`document.state.global`), and components inside the editor through hooks (`useSelectedTodoListDocument`). You modify it by dispatching actions.
 
 - **Local Component State**: UI-specific state that doesn't need to be saved (e.g., "is the dropdown open?", "what's in the input field before submission?"). Use React's `useState` hook for this.
 

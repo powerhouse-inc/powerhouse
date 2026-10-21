@@ -1,4 +1,3 @@
-import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, sep } from "node:path";
 import type { Alias, Plugin, ResolvedConfig } from "vite";
@@ -272,13 +271,19 @@ async function renderProjectAppShells(
     logLevel: "error",
     appType: "custom",
     server: { middlewareMode: true, hmr: false, ws: false },
-    plugins: [react()],
+    // Vite's own JSX transform: React's plugin would pre-bundle React for a client.
+    oxc: { jsx: { runtime: "automatic" } },
     resolve: {
       alias: routeAliases,
       dedupe: config.resolve.dedupe,
       tsconfigPaths: true,
     },
     define: config.define,
+    // Its own cache and no dep optimizing: it runs beside the project's dev
+    // server, whose node_modules/.vite deps it would otherwise rewrite.
+    cacheDir: join(projectRoot, "node_modules/.vite-ph-prerender"),
+    optimizeDeps: { noDiscovery: true, include: [], entries: [] },
+    ssr: { optimizeDeps: { noDiscovery: true, include: [] } },
   });
   try {
     // What the server externalizes loads through Node: dedupe there too.

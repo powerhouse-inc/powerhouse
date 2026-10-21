@@ -1,5 +1,6 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
+import { useMemo, useRef } from "react";
 import { dispatchActions } from "../actions/dispatch.js";
 
 /**
@@ -19,20 +20,17 @@ export type UseDispatchResult<TDocument, TAction> = readonly [
   DispatchFn<TAction>,
 ];
 
-export function useDispatch<TDocument = PHDocument, TAction = Action>(
-  document: TDocument | undefined,
-): UseDispatchResult<TDocument, TAction> {
+/** A dispatch to the document `getDocument` returns when it runs. */
+export function createDispatch<TDocument = PHDocument, TAction = Action>(
+  getDocument: () => TDocument | undefined,
+): DispatchFn<TAction> {
   /**
    * Dispatches actions to the document.
    * @param actionOrActions - The action or actions to dispatch.
    * @param onErrors - Callback invoked with any errors that occurred during action execution,
    * or with the failure when the dispatch itself did not complete.
    */
-  function dispatch(
-    actionOrActions: TAction[] | TAction | undefined,
-    onErrors?: (errors: Error[]) => void,
-    onSuccess?: (result: PHDocument) => void,
-  ) {
+  return function dispatch(actionOrActions, onErrors, onSuccess) {
     // A caller waiting on a callback hears exactly once, even on a rejection.
     let answered = false;
     const reportErrors =
@@ -49,7 +47,7 @@ export function useDispatch<TDocument = PHDocument, TAction = Action>(
       });
     dispatchActions(
       actionOrActions,
-      document,
+      getDocument(),
       reportErrors,
       reportSuccess,
     ).catch((error: unknown) => {
@@ -58,6 +56,19 @@ export function useDispatch<TDocument = PHDocument, TAction = Action>(
         onErrors?.([error instanceof Error ? error : new Error(String(error))]);
       }
     });
-  }
+  };
+}
+
+export function useDispatch<TDocument = PHDocument, TAction = Action>(
+  document: TDocument | undefined,
+): UseDispatchResult<TDocument, TAction> {
+  // Stable per document id; it always dispatches against the latest document.
+  const latest = useRef(document);
+  latest.current = document;
+  const id = (document as PHDocument | undefined)?.header.id;
+  const dispatch = useMemo(
+    () => createDispatch<TDocument, TAction>(() => latest.current),
+    [id],
+  );
   return [document, dispatch] as const;
 }

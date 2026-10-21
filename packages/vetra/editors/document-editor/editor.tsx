@@ -1,7 +1,11 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentEditorAction,
+  DocumentEditorDocument,
+} from "../../document-models/document-editor/index.js";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
-import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/index.js";
 import {
   addDocumentType,
   removeDocumentType,
@@ -13,9 +17,11 @@ import {
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export default function Editor() {
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<DocumentEditorDocument, DocumentEditorAction>) {
   useSetPHDocumentEditorConfig(editorConfig);
-  const [document, dispatch] = useSelectedDocumentEditorDocument();
 
   const onEditorNameChange = useCallback(
     (name: string) => {
@@ -47,7 +53,7 @@ export default function Editor() {
 
   return (
     <div className="bg-background p-6">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
       <DocumentEditorForm
         status={document.state.global.status}
         editorName={document.state.global.name ?? ""}

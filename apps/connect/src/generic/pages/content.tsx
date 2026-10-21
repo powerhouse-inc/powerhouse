@@ -19,10 +19,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { Outlet } from "@tanstack/react-router";
-import {
-  RouteSelection,
-  useDriveRouteData,
-} from "@powerhousedao/connect-core/router";
+import { useDriveRouteData } from "@powerhousedao/connect-core/router";
 import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import { useDriveAuthGate, useVisibleDrives } from "./use-drive-auth-gate.js";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
@@ -61,12 +58,7 @@ export function DriveLayout() {
       </div>
     );
   }
-  // The drive app and its editor: their useSelected* read this route.
-  return (
-    <RouteSelection>
-      <AppContainer>{documentId ? <Outlet /> : null}</AppContainer>
-    </RouteSelection>
-  );
+  return <AppContainer>{documentId ? <Outlet /> : null}</AppContainer>;
 }
 
 /** Connect's node route: the open document's editor. */

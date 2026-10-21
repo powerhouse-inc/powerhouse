@@ -1,4 +1,9 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "@powerhousedao/shared/document-model";
+import type {
+  ProcessorModuleAction,
+  ProcessorModuleDocument,
+} from "../../document-models/processor-module/index.js";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import type {
   ProcessorApp,
@@ -14,13 +19,14 @@ import {
   setProcessorStatus,
   setProcessorType,
 } from "../../document-models/processor-module/index.js";
-import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export default function Editor() {
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<ProcessorModuleDocument, ProcessorModuleAction>) {
   useSetPHDocumentEditorConfig(editorConfig);
-  const [document, dispatch] = useSelectedProcessorModuleDocument();
 
   const onConfirm = useCallback(() => {
     // Dispatch all actions at once
@@ -73,7 +79,7 @@ export default function Editor() {
 
   return (
     <div className="bg-background p-6">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
       <ProcessorEditorForm
         onNameChange={onNameChange}
         onTypeChange={onTypeChange}

@@ -55,14 +55,20 @@ describe("generateEditor", () => {
     expect(await fileExists(editorPath)).toBe(true);
     const editorContent = await readFile(editorPath, "utf-8");
     expect(editorContent).toContain(`DocumentStateViewer`);
-    expect(editorContent).toContain(`export default function Editor()`);
-    expect(editorContent).toContain(`<DocumentToolbar />`);
+    expect(editorContent).toContain(`export default function Editor({`);
+    expect(editorContent).toContain(
+      `}: EditorProps<TestDocDocument, TestDocAction>)`,
+    );
+    expect(editorContent).not.toContain(`useSelectedTestDocDocument`);
+    expect(editorContent).toContain(`<DocumentToolbar document={document} />`);
     expect(editorContent).toContain(`dispatch(actions.setName(name));`);
 
     const modulePath = join(editorDir, "module.ts");
     expect(await fileExists(modulePath)).toBe(true);
     const moduleContent = await readFile(modulePath, "utf-8");
-    expect(moduleContent).toContain(`export const TestDocEditor: EditorModule`);
+    expect(moduleContent).toContain(
+      `export const TestDocEditor: EditorModule<TestDocDocument, TestDocAction>`,
+    );
     expect(moduleContent).toContain(`documentTypes: ["powerhouse/test-doc`);
     expect(moduleContent).toContain(`id: "test-document-model-editor"`);
     expect(moduleContent).toContain(`name: "TestDocEditor"`);

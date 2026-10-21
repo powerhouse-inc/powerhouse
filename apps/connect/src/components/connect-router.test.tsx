@@ -14,7 +14,6 @@ import {
   login,
   createDriveArrivals,
   createPHStore,
-  createScopedPHStore,
   DocumentCache,
   getPHNavigation,
   getTargetHref,
@@ -30,11 +29,13 @@ import {
   untilDriveListed,
   useDocumentById,
   useLinkProps,
-  useOpenNode,
   useSearchParams,
+  useSelectedDocument,
+  useSelectedDrive,
   useSelectedDriveId,
   useSelectedNode,
   useSetSearchParams,
+  DEFAULT_DRIVE_EDITOR_ID,
   getPHStoreSubscribe,
   PREFETCH_WAIT_MS,
 } from "@powerhousedao/reactor-browser";
@@ -57,7 +58,11 @@ import {
   HomeScreenItem,
   ToolbarCloseButton,
 } from "@powerhousedao/design-system/connect";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelDocument,
+  EditorProps,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
   act,
   cleanup,
@@ -83,14 +88,7 @@ import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import type { ComponentType, ReactNode } from "react";
-import {
-  createContext,
-  Profiler,
-  Suspense,
-  use,
-  useEffect,
-  useSyncExternalStore,
-} from "react";
+import { Profiler, Suspense, useEffect, useSyncExternalStore } from "react";
 import {
   afterAll,
   afterEach,
@@ -339,6 +337,7 @@ type Views = {
   driveNotFound?: ComponentType<{ driveSlug: string }>;
   drivePending?: RouteComponent;
   error?: ErrorRouteComponent;
+  node?: RouteComponent;
 };
 
 // Missing paths and loaders' notFound(): a missing drive's names the drive.
@@ -375,7 +374,7 @@ function routerViews(views: Views = {}) {
       layout: views.layout ?? Outlet,
       home: content,
       drive: content,
-      node: () => null,
+      node: views.node ?? (() => null),
       splat: notFound as RouteComponent,
     },
     views.drivePending ?? DrivePending,
@@ -1571,117 +1570,91 @@ describe("Connect router links", () => {
   });
 });
 
-const ScopeName = createContext("");
-
-// An editor that knows only the store in context.
-function ScopedEditor({ name, nodes }: { name: string; nodes: FileNode[] }) {
-  const driveId = useSelectedDriveId();
-  const node = useSelectedNode();
-  const openNode = useOpenNode();
-  return (
-    <section aria-label={name}>
-      <p data-testid="selection">
-        {driveId ?? "-"}/{node?.id ?? "-"}
-      </p>
-      {nodes.map((file) => (
-        <button key={file.id} type="button" onClick={() => openNode(file)}>
-          open {file.name}
-        </button>
-      ))}
-      <FileItem fileNode={nodes[0]} />
-    </section>
-  );
-}
-
-describe("Connect routers in scoped stores", () => {
-  it("keeps two side-by-side editors' selection and navigation apart", async () => {
-    const created = await createDrive("Shared");
-    const first = await createFile(created, "First");
-    const { drive, node: second } = await createFile(first.drive, "Second");
+describe("Connect's generic hosts", () => {
+  it("give the drive app its drive and the editor its document, as props and to their hooks", async () => {
+    // Connect's views read the runtime config as they evaluate.
+    const { AppContainer } =
+      await import("../generic/editors/app-container.js");
+    const { NodeView } = await import("../generic/pages/content.js");
+    const { drive, node } = await createFile(
+      await createDrive("hosted"),
+      "Spec",
+    );
     store.drives = [drive];
-    const nodes = [first.node, second];
-    const drivePath = `/d/${drive.header.slug}`;
-
-    // One tree serves both routers; each names its editor through InnerWrap.
-    function ScopedContent() {
-      return <ScopedEditor name={use(ScopeName)} nodes={nodes} />;
+    function DriveApp({
+      document,
+      children,
+    }: EditorProps<DocumentDriveDocument>) {
+      const [selected] = useSelectedDrive();
+      const same = document.header.id === selected.header.id;
+      return (
+        <section data-testid="drive-app">
+          {same ? "same drive" : "other drive"}:{useSelectedNode()?.id ?? "-"}
+          {children}
+        </section>
+      );
     }
-    const views = routerViews({ content: ScopedContent });
-    const scopes = ["left", "right"].map((name) => {
-      const scope = createScopedPHStore(store);
-      const history = createMemoryHistory({ initialEntries: [drivePath] });
-      const connectRouter = createConnectRouter({
-        routeTree,
-        store: scope,
-        history,
-        ...views,
-        InnerWrap: ({ children }) => (
-          <ScopeName value={name}>{children}</ScopeName>
-        ),
-      });
-      const unbindScope = bindConnectRouter(connectRouter, scope);
-      return { name, scope, history, ...connectRouter, unbindScope };
-    });
-    const [left, right] = scopes;
-    const appNavigation = store.navigation;
+    function Inner() {
+      const [document] = useSelectedDocument();
+      return <span data-testid="inner">{document.header.id}</span>;
+    }
+    function Editor({
+      document,
+      dispatch,
+    }: EditorProps<DocumentModelDocument>) {
+      return (
+        <p data-testid="editor">
+          {document.header.name}:{typeof dispatch}
+          <Inner />
+        </p>
+      );
+    }
+    store.vetraPackageManager = {
+      packages: [
+        {
+          manifest: { name: "test-package" },
+          documentModels: [documentModelDocumentModelModule],
+          editors: [
+            {
+              Component: DriveApp,
+              documentTypes: ["powerhouse/document-drive"],
+              config: { id: DEFAULT_DRIVE_EDITOR_ID, name: "Drive app" },
+            },
+            {
+              Component: Editor,
+              documentTypes: ["powerhouse/document-model"],
+              config: { id: "test-editor", name: "Test editor" },
+            },
+          ],
+        },
+      ],
+      subscribe: () => () => {},
+      getPackageVersion: () => "1.0.0",
+    } as never;
     try {
-      render(
-        <PHStoreProvider store={store}>
-          {scopes.map(({ name, scope, router }) => (
-            <PHStoreProvider key={name} store={scope}>
-              <RouterProvider router={router} />
-            </PHStoreProvider>
-          ))}
-        </PHStoreProvider>,
-      );
-      const editor = (name: string) => within(screen.getByLabelText(name));
-      const selectionOf = (name: string) =>
-        editor(name).getByTestId("selection").textContent;
-      await vi.waitFor(() => {
-        expect(selectionOf("left")).toBe(`${drive.header.id}/-`);
-        expect(selectionOf("right")).toBe(`${drive.header.id}/-`);
-      });
-
-      // Each scope's links come from its own router.
-      expect(editor("left").getByRole("link").getAttribute("href")).toBe(
-        `${drivePath}/first-${first.node.id}`,
-      );
-
-      act(() => {
-        fireEvent.click(editor("left").getByText("open Second"));
+      mount(`/d/${drive.header.slug}/spec-${node.id}`, undefined, undefined, {
+        content: () => (
+          <AppContainer>
+            <Outlet />
+          </AppContainer>
+        ),
+        node: NodeView,
       });
       await vi.waitFor(() =>
-        expect(selectionOf("left")).toBe(`${drive.header.id}/${second.id}`),
-      );
-      act(() => {
-        fireEvent.click(editor("right").getByRole("link"));
-      });
-      await vi.waitFor(() =>
-        expect(selectionOf("right")).toBe(
-          `${drive.header.id}/${first.node.id}`,
+        expect(screen.getByTestId("editor").textContent).toBe(
+          `Spec:function${node.id}`,
         ),
       );
-      await settle(left.router);
-      await settle(right.router);
-
-      expect(selectionOf("left")).toBe(`${drive.header.id}/${second.id}`);
-      expect(left.history.location.pathname).toBe(
-        `${drivePath}/second-${second.id}`,
+      expect(screen.getByTestId("drive-app").textContent).toContain(
+        `same drive:${node.id}`,
       );
-      expect(right.history.location.pathname).toBe(
-        `${drivePath}/first-${first.node.id}`,
-      );
-      // The app's selection and navigation are untouched.
-      expect(store.selectedDriveId).toBeUndefined();
-      expect(store.selectedNodeId).toBeUndefined();
-      expect(store.navigation).toBe(appNavigation);
-      // Each scope marks what its own router shows.
-      const firstLink = (name: string) =>
-        editor(name).getByRole("link").getAttribute("aria-current");
-      expect(firstLink("right")).toBe("page");
-      expect(firstLink("left")).toBeNull();
+      // Another node selected app-wide, e.g. by a widget beside the route.
+      act(() => {
+        store.selectedNodeId = "elsewhere";
+      });
+      expect(screen.getByTestId("inner").textContent).toBe(node.id);
     } finally {
-      for (const { unbindScope } of scopes) unbindScope();
+      store.vetraPackageManager = undefined;
     }
   });
 });

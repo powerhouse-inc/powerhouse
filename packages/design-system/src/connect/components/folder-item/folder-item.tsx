@@ -1,15 +1,14 @@
 import { Icon } from "#design-system";
 import {
-  getNodeTargetIn,
   showDeleteNodeModal,
   useDownloadFolder,
   useDragNode,
   useDropNode,
   useLinkProps,
-  usePHStore,
   usePreloadNode,
   useSetSelectedNode,
   useNodeActions,
+  useNodeTarget,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import { useConnectBranding } from "../branding/connect-branding.js";
@@ -30,10 +29,9 @@ export function FolderItem(props: {
   const { folderNode, className } = props;
   // The branding's folder icon; the built-in icon otherwise.
   const folderIconSrc = useConnectBranding().icons?.folder;
-  const store = usePHStore();
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();
-  const target = getNodeTargetIn(store, folderNode);
+  const target = useNodeTarget(folderNode);
   const link = useLinkProps(target, () => setSelectedNode(folderNode));
   const href = props.href ?? (target ? link.href : undefined);
   const { isAllowedToCreateDocuments } = useUserPermissions();

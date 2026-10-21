@@ -86,10 +86,8 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useLinkProps: () => ({ href: "/", onClick: vi.fn() }),
   useRenownAuth: () => ({ login: vi.fn(), pending: false, error: undefined }),
   useRenownLoginMethods: () => [],
-  // No store: RouteSelection renders the drive app unscoped.
   usePHStore: () => undefined,
   getPHStore: () => undefined,
-  createScopedPHStore: vi.fn(),
   PHStoreProvider: ({ children }: { children?: React.ReactNode }) => children,
   useSelectedDocumentId: () => undefined,
   useSelectedDriveSafe: () => [undefined],

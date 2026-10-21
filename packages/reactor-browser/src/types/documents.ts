@@ -1,20 +1,9 @@
 import type {
-  Action,
-  DocumentAction,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 
-export type DocumentDispatch<TAction extends Action> = (
-  actionOrActions:
-    | TAction
-    | TAction[]
-    | DocumentAction
-    | DocumentAction[]
-    | undefined,
-  onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
-) => void;
+export type { DocumentDispatch } from "@powerhousedao/shared/document-model";
 
 export type PromiseWithState<T> = Promise<T> & PromiseState<T>;
 

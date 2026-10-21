@@ -304,8 +304,12 @@ The main `editor.tsx` file connects your document model to the UI components. Re
 
 ```typescript
 import { generateId } from "document-model/core";
+import type { EditorProps } from "document-model";
 import { useUser } from "@powerhousedao/reactor-browser/connect";
-import { useSelectedChatRoomDocument } from "../../document-models/chat-room/hooks.js";
+import type {
+  ChatRoomAction,
+  ChatRoomDocument,
+} from "../../document-models/chat-room/index.js";
 import {
   addMessage,
   addEmojiReaction,
@@ -320,8 +324,11 @@ import {
 } from "./components/index.js";
 import { reactionKeyToReactionType, mapReactions } from "./utils.js";
 
-export default function Editor() {
-  const [document, dispatch] = useSelectedChatRoomDocument();
+// Connect passes the editor its document and a dispatch bound to it.
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<ChatRoomDocument, ChatRoomAction>) {
   const user = useUser();
 
   const disableChatRoom = !user;

@@ -99,8 +99,15 @@ async function mount(path: string, composition?: { module: string }[]) {
 }
 
 const settingsTabLabels = async () => {
-  const nav = await screen.findByRole("navigation", { name: "Settings" });
-  await vi.waitFor(() => expect(nav.querySelector("a")).toBeTruthy());
+  // The settings route loads lazily; a cold Windows runner takes over a second.
+  const nav = await screen.findByRole(
+    "navigation",
+    { name: "Settings" },
+    { timeout: 10_000 },
+  );
+  await vi.waitFor(() => expect(nav.querySelector("a")).toBeTruthy(), {
+    timeout: 10_000,
+  });
   return Array.from(within(nav).getAllByRole("link")).map((a) => a.textContent);
 };
 

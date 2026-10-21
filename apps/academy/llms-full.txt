@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-20T16:19:15.174Z
+> Generated: 2026-10-21T15:32:59.929Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -1405,7 +1405,7 @@ ph generate --editor todo-editor --document-type powerhouse/todo
 
 ## Implement the editor
 
-The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the current document and a `dispatch` function. No props are passed — the hook connects to whichever Todo document is open.
+The generated `editor.tsx` takes the open document and a `dispatch` function as props. Connect passes both, and `EditorProps<TodoDocument, TodoAction>` types them for the Todo model.
 
 ```tsx title="editors/todo-editor/editor.tsx"
 
@@ -1415,8 +1415,10 @@ The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the 
   removeTodo,
 } from "todo-app/document-models/todo";
 
-export default function Editor() {
-  const [document, dispatch] = useSelectedTodoDocument();
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<TodoDocument, TodoAction>) {
   const [title, setTitle] = useState("");
 
   return (
@@ -1562,9 +1564,13 @@ That's already enough to run offline, with replay, undo, and audit available. Th
 
 You've written an editor shell. Now you need to actually _read_ the document and _change_ it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
 
+## The editor's own document
+
+Connect renders your editor component with the open `document` and a `dispatch` bound to it as props, typed by `EditorProps<TodoListDocument, TodoListAction>` from `document-model`. The component at the top of your editor reads them there.
+
 ## The hook you'll use 90% of the time
 
-Codegen produces a typed hook for your document model. For a TodoList model, that's `useSelectedTodoListDocument`. Call it at the top of your editor:
+Components inside the editor don't need those props passed down. Codegen produces a typed hook for your document model. For a TodoList model, that's `useSelectedTodoListDocument`. Inside the editor it returns the document the editor was rendered with:
 
 ```tsx
 const [doc, dispatch] = useSelectedTodoListDocument();
@@ -1640,6 +1646,8 @@ dispatch(
 ```
 
 Pass a single action or an array to batch. Use `onErrors` to surface validation failures in your UI. Use `onSuccess` if you need the updated document immediately after the operation lands.
+
+`dispatch` stays the same function while the document's id does, and it always dispatches against the latest document, so it is safe in effect and callback dependencies.
 
 ---
 
@@ -1760,6 +1768,8 @@ export function DriveExplorer({ children }: EditorProps) {
 ```
 
 When a document is open, `children` is truthy and the editor appears. Otherwise, your custom `DriveContents` fills the space — a Kanban board, a document grid, whatever fits your product.
+
+Connect also passes the drive app the drive as `document`, with a `dispatch` bound to it, and renders it inside a `DriveProvider`. So `useSelectedDrive`, `useSelectedFolder` and `useSelectedNode` in any of its components read the drive and node the drive app is showing.
 
 <Quiz
   question="Pick the right tool for each scenario."
@@ -10568,6 +10578,32 @@ It's important to note that a function should only be named and treated as a hoo
 
 All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents. Learn more about the [Reactor](/academy/Reference/Reactor/WorkingWithTheReactor).
 
+### Editors get their document as props
+
+A host such as Connect renders an editor's component with the open `document` and a `dispatch` bound to it as props. `EditorProps<TDocument, TAction>` from `document-model` types both for the editor's document model:
+
+```tsx
+
+
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<TodoDocument, TodoAction>) {
+  // ...
+}
+```
+
+Bare `EditorProps` leaves `document` and `dispatch` optional. A drive app gets the drive as `document`.
+
+### What the selection hooks read
+
+The host also renders the editor inside an [`EditorDocumentProvider`](#editordocumentprovider), and a drive app inside a [`DriveProvider`](#driveprovider). The `useSelected*` hooks read the nearest provider first, and the app-wide selection only without one:
+
+- `useSelectedDocument`, `useSelectedDocumentId`, `useSelectedDocumentOfType` and the generated `useSelected<Model>Document` read the editor's document.
+- `useSelectedDrive`, `useSelectedDriveId`, `useSelectedNode`, `useSelectedFolder` and the hooks built on them (items in the selected drive or folder, node actions) read the drive app's drive, node and folder.
+
+So components inside an editor call the generated hook instead of receiving the document as props.
+
 ### Dispatch Function
 
 Many hooks return a `dispatch` function for modifying documents. The dispatch function has this signature:
@@ -10576,13 +10612,17 @@ Many hooks return a `dispatch` function for modifying documents. The dispatch fu
 function dispatch(
   actionOrActions: Action | Action[] | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ): void;
 ```
 
 **Parameters:**
 
 - `actionOrActions` — The action or array of actions to dispatch to the document
-- `onErrors` — Optional callback invoked with any errors that occurred during action execution
+- `onErrors` — Optional callback invoked with any errors that occurred during action execution, or with why nothing was dispatched
+- `onSuccess` — Optional callback invoked with the updated document
+
+`dispatch` stays the same function while the document's id does, and it always dispatches against the latest document, so it is safe in effect and callback dependencies. See [`useDispatch`](#usedispatch).
 
 ---
 
@@ -10590,6 +10630,8 @@ function dispatch(
 
 | Category              | Hooks                                                                                                                        |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Editor & Drive**    | `EditorDocumentProvider`, `DriveProvider`, `useEditorDocumentContext`, `useDriveContext`, `useEditorModuleFor`, `useNodeTarget` |
+| **Dispatch**          | `useDispatch`, `createDispatch`                                                                                              |
 | **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType`                       |
 | **Document by ID**    | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType`                                                                  |
 | **Document Cache**    | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync`                |
@@ -10611,7 +10653,7 @@ function dispatch(
 
 ### `useSelectedDocumentId`
 
-Returns the ID of the currently selected document.
+Returns the ID of the selected document: the editor's document inside an `EditorDocumentProvider`, else the drive app's open document inside a `DriveProvider`, else the app's selection.
 
 ```typescript check
 function useSelectedDocumentId(): string | undefined;
@@ -10623,7 +10665,7 @@ function useSelectedDocumentId(): string | undefined;
 
 ### `useSelectedDocument`
 
-Returns the selected document along with a dispatch function. Throws error if no document selected.
+Returns the selected document along with a dispatch function: the editor's document and dispatch inside an `EditorDocumentProvider`, else the app's selection. Throws error if no document selected.
 
 ```typescript
 function useSelectedDocument(): readonly [
@@ -10756,6 +10798,152 @@ function BudgetEditor() {
 
   return <div>{/* editor UI */}</div>;
 }
+```
+
+---
+
+## Editor & Drive Contexts
+
+Hosts provide these around the editors and drive apps they render. Inside them, the `useSelected*` hooks read the provider first (see [What the selection hooks read](#what-the-selection-hooks-read)).
+
+### `EditorDocumentProvider`
+
+Gives the components below an editor's document and dispatch. A host renders the editor inside it with the same pair it passes as props. An editor inside another editor gets its own provider; hooks read the nearest one.
+
+```typescript
+function EditorDocumentProvider(props: {
+  document: PHDocument;
+  dispatch: DocumentDispatch;
+  children: ReactNode;
+}): JSX.Element;
+```
+
+---
+
+### `useEditorDocumentContext`
+
+Returns the nearest editor's `[document, dispatch]`, or `undefined` outside one.
+
+```typescript
+function useEditorDocumentContext():
+  | readonly [PHDocument, DocumentDispatch]
+  | undefined;
+```
+
+---
+
+### `DriveProvider`
+
+Gives the components below a drive app's drive. Without `open`, opening a node navigates the app's router in that drive. With it, the host decides, for example by keeping the open node in local state; `preload` warms a node the same way.
+
+```typescript
+function DriveProvider(props: {
+  value: DriveContextValue;
+  children: ReactNode;
+}): JSX.Element;
+
+type DriveContextValue = {
+  drive: DocumentDriveDocument;
+  dispatch: DocumentDispatch<DocumentDriveAction>;
+  /** The open folder; undefined at the drive's root or on a document. */
+  folder?: FolderNode;
+  /** The open node, a folder or a document. */
+  nodeId?: string;
+  open?: (node: Node | undefined, options?: PHNavigateOptions) => void;
+  preload?: (node: Node | undefined) => void;
+};
+```
+
+---
+
+### `useDriveContext`
+
+Returns the nearest drive app's `DriveContextValue`, or `undefined` outside one.
+
+```typescript
+function useDriveContext(): DriveContextValue | undefined;
+```
+
+---
+
+### `useNodeTarget`
+
+Returns where a node navigates to: in the drive app's drive inside a `DriveProvider`, else in the open drive. Use it for a link's target, e.g. with [`useLinkProps`](#uselinkprops).
+
+```typescript
+function useNodeTarget(node: Node | undefined): PHNavigationTarget | undefined;
+```
+
+---
+
+### `useEditorModuleFor`
+
+Returns the editor for a document: its `preferredEditor` if that editor edits the document's type, else the first editor installed for the type.
+
+```typescript
+function useEditorModuleFor(
+  document: PHDocument | null | undefined,
+): EditorModule | undefined;
+```
+
+---
+
+### Rendering an editor or drive app yourself
+
+A host, or a project route, that renders an editor passes it `document` and `dispatch` and wraps it in `EditorDocumentProvider` with the same pair:
+
+```tsx
+
+  EditorDocumentProvider,
+  useDocumentById,
+  useEditorModuleFor,
+} from "@powerhousedao/reactor-browser";
+
+function HostedEditor({ documentId }: { documentId: string }) {
+  const [document, dispatch] = useDocumentById(documentId);
+  const editor = useEditorModuleFor(document);
+  if (!document || !editor) return null;
+  const Editor = editor.Component;
+  return (
+    <EditorDocumentProvider document={document} dispatch={dispatch}>
+      <Editor document={document} dispatch={dispatch} />
+    </EditorDocumentProvider>
+  );
+}
+```
+
+A drive app goes inside `DriveProvider` the same way, with the drive as `document`:
+
+```tsx
+<DriveProvider value={{ drive, dispatch, folder, nodeId }}>
+  <DriveApp document={drive} dispatch={dispatch} />
+</DriveProvider>
+```
+
+---
+
+## Dispatch
+
+### `useDispatch`
+
+Returns `[document, dispatch]` for a document. `dispatch` is the same function while the document's id stays the same, and it always dispatches against the latest `document` passed in.
+
+```typescript
+function useDispatch<TDocument = PHDocument, TAction = Action>(
+  document: TDocument | undefined,
+): readonly [TDocument | undefined, DispatchFn<TAction>];
+```
+
+---
+
+### `createDispatch`
+
+The dispatch `useDispatch` returns, outside React: it dispatches to the document `getDocument` returns when it runs.
+
+```typescript
+function createDispatch<TDocument = PHDocument, TAction = Action>(
+  getDocument: () => TDocument | undefined,
+): DispatchFn<TAction>;
 ```
 
 ---
@@ -11018,7 +11206,7 @@ function DriveList() {
 
 ### `useSelectedDriveId`
 
-Returns the ID of the currently selected drive.
+Returns the ID of the selected drive: the drive app's drive inside a `DriveProvider`, else the app's selection.
 
 ```typescript
 function useSelectedDriveId(): string | undefined;
@@ -11028,7 +11216,7 @@ function useSelectedDriveId(): string | undefined;
 
 ### `useSelectedDrive`
 
-Returns the selected drive along with a dispatch function. **Throws an error if no drive is selected.**
+Returns the selected drive along with a dispatch function: the drive app's inside a `DriveProvider`, else the app's selection. **Throws an error if no drive is selected.**
 
 ```typescript
 function useSelectedDrive(): [
@@ -11089,13 +11277,13 @@ function setSelectedDrive(
 
 - `driveOrDriveSlug` — The drive object, drive slug string, or `undefined` to deselect
 
-`setSelectedDrive` acts on the app's store. Inside a scoped store (a component under a `PHStoreProvider` whose store came from `createScopedPHStore`), use `useSetSelectedDrive` instead. In development, calling `setSelectedDrive` while a scoped store is mounted logs a warning.
+`setSelectedDrive` acts on the app's store.
 
 ---
 
 ### `useSetSelectedDrive`
 
-Returns `setSelectedDrive` bound to the store in context. In a scoped store it changes that scope's selection; otherwise it changes the app's.
+Returns `setSelectedDrive` as a hook.
 
 ```typescript
 function useSetSelectedDrive(): (
@@ -11109,7 +11297,7 @@ function useSetSelectedDrive(): (
 
 ### `useSelectedNode`
 
-Returns the currently selected node (file or folder).
+Returns the selected node (file or folder): the drive app's open node inside a `DriveProvider`, else the app's selection.
 
 ```typescript
 function useSelectedNode(): Node | undefined;
@@ -11139,13 +11327,13 @@ type PHNavigateOptions = {
 - `options.replace` — Replace the current history entry instead of pushing a new one
 - `options.search` — Query params the node opens with; an `undefined` value removes the param
 
-Like `setSelectedDrive`, this acts on the app's store. Inside a scoped store, use `useSetSelectedNode`.
+Like `setSelectedDrive`, this acts on the app's store. Inside a drive app, use `useSetSelectedNode`.
 
 ---
 
 ### `useSetSelectedNode`
 
-Returns `setSelectedNode` bound to the store in context.
+Returns `setSelectedNode` for the drive app in context: it calls the drive context's `open` when the host gives one, else opens the node in the drive app's drive.
 
 ```typescript
 function useSetSelectedNode(): (
@@ -11168,7 +11356,7 @@ function useCloseNode(nodeId: string | null | undefined): () => void;
 
 ### `useSelectedFolder`
 
-Returns the selected folder. Returns `undefined` if the selected node is not a folder.
+Returns the selected folder: the drive app's open folder inside a `DriveProvider`, else the app's selection. Returns `undefined` if the selected node is not a folder.
 
 ```typescript
 function useSelectedFolder(): FolderNode | undefined;
@@ -20717,22 +20905,30 @@ The tutorial repository (step-6) includes additional components like `TodoListNa
 
 ## Adding the Document Toolbar
 
-The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation](../docs/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
+The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, import it from the design system, place it at the top of your editor component and pass it the editor's `document`. Without the prop, it falls back to the app's selected document. For more details, see the [DocumentToolbar documentation](../docs/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
 
 ### Step 1: Update the main editor file
 
-First, update `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component:
+First, update `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component. Connect passes the editor its `document` and `dispatch` as props:
 
 ```tsx
+
+
+  TodoListAction,
+  TodoListDocument,
+} from "todo-tutorial/document-models/todo-list";
 // removed-line
 
 // added-line
 
 
 /** Editor component for the Todo List document type */
-export function Editor() {
+export default function Editor({
+  document,
+}: EditorProps<TodoListDocument, TodoListAction>) {
   return (
     <div className="px-8 py-4">
+      <DocumentToolbar document={document} />
       // removed-line
       <EditTodoListName />
       // added-line
@@ -20741,6 +20937,8 @@ export function Editor() {
   );
 }
 ```
+
+The components below don't take the document as props: `useSelectedTodoListDocument()` returns the document the editor was rendered with.
 
 ### Step 2: Create the TodoList container component
 
@@ -23404,33 +23602,46 @@ In any package the styles are being generated through the styles.css file with t
 - When installing a package with `ph install` on any instance, package styles are automatically added to styles.css. This ensures production builds always include the required package styles.
   :::
 
-## State management in editors: Hooks vs Props
+## State management in editors: props at the top, hooks below
 
-When you build an editor in Powerhouse, there are **two ways** to access and modify document state. Understanding the difference is important for choosing the right approach for your component.
-
-### Understanding the two approaches
+Connect renders your editor's component with two props: the open `document` and a `dispatch` bound to it. `EditorProps<TDocument, TAction>` from `document-model` types both for your document model. Connect also renders the editor inside an `EditorDocumentProvider` with the same pair, so the generated `useSelected<Model>Document()` hook returns that document in any component inside the editor.
 
 <details>
 <summary>ℹ️ For Non-Technical Readers</summary>
 
-Think of it like ordering food at a restaurant:
-
-**Hooks Approach** 🪝: Like having a direct line to the kitchen. Any component can call the kitchen directly to get the current menu (state) or place an order (dispatch an action). It's independent and self-sufficient.
-
-**Props Approach** 📦: Like a waiter passing you a menu and taking your order. The main component receives everything and passes it down to child components. Children can only work with what they're given.
-
-**Which is better?** For Powerhouse editors, we recommend the **Hooks approach** because:
-
-- Components are more independent
-- Easier to move components around
-- Less "prop drilling" (passing data through many layers)
-- Matches modern React best practices
+Connect hands the editor the document it should show, like a waiter bringing a dish to a table. The editor's top component receives it directly. Components further inside the editor ask for "the document on this table" with a hook, without the editor passing it down to each of them.
 
 </details>
 
-### Method 1: Using Hooks (Recommended) 🪝
+### The editor component takes props
 
-The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook that Powerhouse generates for your document model. Any component can call this hook to get the current document state and a function to dispatch changes.
+`ph generate` writes the editor component this way:
+
+```typescript
+
+
+  TodoListAction,
+  TodoListDocument,
+} from "todo-tutorial/document-models/todo-list";
+
+
+export default function Editor({
+  document,
+}: EditorProps<TodoListDocument, TodoListAction>) {
+  return (
+    <div>
+      <DocumentToolbar document={document} />
+      <AddTodo />
+    </div>
+  );
+}
+```
+
+Pass `document` to `DocumentToolbar`. Without it, the toolbar shows the app's selected document, which is wrong when a host renders a document by id.
+
+### Components inside it use the hooks 🪝
+
+The **hook-based approach** uses `useSelectedTodoListDocument`, a React hook that Powerhouse generates for your document model. Inside the editor it returns the document the editor was rendered with, and a function to dispatch changes to it.
 
 **TIP:**
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/Reference/EditorsUI/ReactHooks) for all available hooks.
@@ -23440,68 +23651,26 @@ Powerhouse provides many more hooks beyond the document-specific ones. See the c
 
 
 export function AddTodo() {
-// The hook returns [document, dispatch]
-const [todoList, dispatch] = useSelectedTodoListDocument();
+  // The hook returns [document, dispatch]
+  const [todoList, dispatch] = useSelectedTodoListDocument();
 
-if (!todoList) return null;
+  const handleAdd = (text: string) => {
+    dispatch(addTodoItem({ text }));
+  };
 
-const handleAdd = (text: string) => {
-  dispatch(addTodoItem({ text }));
-};
-
-return (
-  <button onClick={() => handleAdd("New task")}>
-    Add Todo
-  </button>
-);
+  return <button onClick={() => handleAdd("New task")}>Add Todo</button>;
 }
 ```
 
-**Why hooks are recommended:**
+**Why hooks below the top:**
 
-- ✅ **Self-contained components**: Each component gets its own connection to the document
-- ✅ **Less boilerplate**: No need to pass props through multiple levels
-- ✅ **Easier refactoring**: Move components around without rewiring props
-- ✅ **Modern React pattern**: Follows React's recommended approach for state management
+- ✅ **Self-contained components**: each component reads the editor's document itself
+- ✅ **Less boilerplate**: no need to pass `document` and `dispatch` through every level
+- ✅ **Easier refactoring**: move components around without rewiring props
 
-### Method 2: Using Props 📦
+**Testing a component:** render it inside `EditorDocumentProvider` from `@powerhousedao/reactor-browser` with a test document and dispatch; its hooks read them.
 
-The **props-based approach** receives the document and dispatch function as properties passed from a parent component.
-
-```typescript
-
-
-export type IProps = EditorProps<TodoListDocument>;
-
-export default function Editor(props: IProps) {
-    const { document, dispatch } = props;
-    const state = document.state.global;
-
-    // Now you'd pass state and dispatch to child components as props
-    return (
-        <div>
-            <TodoList items={state.items} dispatch={dispatch} />
-        </div>
-    );
-}
-```
-
-**When props might be useful:**
-
-- When you need strict control over which components can access state
-- When building components that should work outside of Powerhouse context
-- For testing purposes where you want to inject mock state
-
-### Which should you use?
-
-| Scenario                                          | Recommended Approach |
-| ------------------------------------------------- | -------------------- |
-| Building a standard Powerhouse editor             | **Hooks** 🪝         |
-| Component needs document state                    | **Hooks** 🪝         |
-| Building reusable UI components (buttons, inputs) | **Props** 📦         |
-| Need to test components in isolation              | **Props** 📦         |
-
-**Bottom line**: Use hooks for most Powerhouse editor development. It's simpler, cleaner, and matches the patterns used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
+**Which Connect:** an editor that reads its document from props needs a Connect that passes them. Editors that only use the hooks work in every Connect, and the hooks are not deprecated.
 
 ### Additional hooks for editors
 
@@ -23555,7 +23724,7 @@ For a complete list of all available hooks, see the [React Hooks API Reference](
 
 When building editors, you'll work with two types of state:
 
-- **Global Document State**: Data that is part of the document itself and should be saved. This is accessed via hooks (`useSelectedTodoListDocument`) or props (`document.state.global`). You modify it by dispatching actions.
+- **Global Document State**: Data that is part of the document itself and should be saved. The editor component gets it as the `document` prop (`document.state.global`), and components inside the editor through hooks (`useSelectedTodoListDocument`). You modify it by dispatching actions.
 
 - **Local Component State**: UI-specific state that doesn't need to be saved (e.g., "is the dropdown open?", "what's in the input field before submission?"). Use React's `useState` hook for this.
 
@@ -24341,17 +24510,9 @@ return (
       <div className="flex-1 p-4 overflow-y-auto">
       {activeDocument && documentModelModule && editorModule ? (
             <EditorContainer
-            context={{
-               ...context,
-               getDocumentRevision: onGetDocumentRevision,
-            }}
             documentId={activeDocumentId!}
-            documentType={activeDocument.documentType}
-            driveId={driveId}
             onClose={handleEditorClose}
             title={activeDocument.name}
-            documentModelModule={documentModelModule}
-            editorModule={editorModule}
             />
       ) : (
          <>
@@ -24426,61 +24587,31 @@ return (
    <details>
    <summary>Update `editors/todo-list-drive-explorer/components/EditorContainer.tsx`</summary>
 
-This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the document's editor (`todo-list-editor` in this case, picked by `useEditorModuleFor`), passes it the document and a `dispatch` as props, and wraps it in `EditorDocumentProvider` so the hooks inside the editor read the same document. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
 
 ```typescript
 
-useDriveContext,
-type User,
-type DriveEditorContext,
+
+EditorDocumentProvider,
+useDocumentById,
+useDocumentOperations,
+useEditorModuleFor,
 } from "@powerhousedao/reactor-browser";
-
-documentModelDocumentModelModule,
-type DocumentModelModule,
-type EditorContext,
-type EditorProps,
-type PHDocument,
-type EditorModule,
-type Operation,
-} from "document-model";
-
-
-DocumentToolbar,
-RevisionHistory,
-DefaultEditorLoader,
-generateLargeTimeline,
-type TimelineItem,
-} from "@powerhousedao/design-system";
 
 
 export interface EditorContainerProps {
-driveId: string;
 documentId: string;
-documentType: string;
 onClose: () => void;
 title: string;
-context: Omit<DriveEditorContext, "getDocumentRevision"> &
-   Pick<EditorContext, "getDocumentRevision">;
-documentModelModule: DocumentModelModule<PHDocument>;
-editorModule: EditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-const { driveId, documentId, documentType, onClose, title, context, documentModelModule, editorModule } = props;
+const { documentId, onClose, title } = props;
 
-const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
 const [showRevisionHistory, setShowRevisionHistory] = useState(false);
-const { useDocumentEditorProps } = useDriveContext();
-const user = context.user as User | undefined;
-const timelineItems = useTimelineItems(documentId);
-
-const { dispatch, error, document } = useDocumentEditorProps({
-   documentId,
-   documentType,
-   driveId,
-   documentModelModule,
-   user,
-});
+const [document, dispatch] = useDocumentById(documentId);
+// The document's preferred editor if it edits this type, else the first that does.
+const editorModule = useEditorModuleFor(document);
 
 // `scopes` mirrors the document's own header; a document always carries
 // "global", so it's the fallback while `document` is still loading.
@@ -24501,10 +24632,9 @@ const loadingContent = (
    </div>
 );
 
-if (!document) return loadingContent;
+if (!document || !editorModule) return loadingContent;
 
-const moduleWithComponent = editorModule as EditorModule<PHDocument>;
-const EditorComponent = moduleWithComponent.Component;
+const EditorComponent = editorModule.Component;
 
 return showRevisionHistory ? (
    <RevisionHistory
@@ -24522,24 +24652,11 @@ return showRevisionHistory ? (
    />
 ) : (
    <Suspense fallback={loadingContent}>
-      <DocumentToolbar
-      onClose={onClose}
-      onSwitchboardLinkClick={() => {}}
-      />
-      <EditorComponent
-      context={{
-         ...context,
-         readMode: !!selectedTimelineItem,
-         selectedTimelineRevision: getRevisionFromDate(
-            selectedTimelineItem?.startDate,
-            selectedTimelineItem?.endDate,
-            document.operations.global,
-         ),
-      }}
-      dispatch={dispatch}
-      document={document}
-      error={error}
-      />
+      <DocumentToolbar document={document} onClose={onClose} />
+      {/* The editor gets the document as props; the hooks inside it read the provider. */}
+      <EditorDocumentProvider document={document} dispatch={dispatch}>
+         <EditorComponent document={document} dispatch={dispatch} />
+      </EditorDocumentProvider>
    </Suspense>
 );
 };
@@ -25288,10 +25405,8 @@ To enable the timeline feature in your document editor, you need to set `timelin
 
 ```typescript
 // editors/to-do-list/index.ts
-export const module: EditorModule<ToDoDocument> = {
-  Component: Editor as unknown as FC<
-    EditorProps<ToDoDocument> & Record<string, unknown>
-  >,
+export const module: EditorModule<ToDoDocument, ToDoAction> = {
+  Component: Editor,
   documentTypes: ["powerhouse/todo-list"],
 };
 ```
@@ -35727,6 +35842,10 @@ The main `editor.tsx` file connects your document model to the UI components. Re
 ```typescript
 
 
+  ChatRoomAction,
+  ChatRoomDocument,
+} from "../../document-models/chat-room/index.js";
+
   addMessage,
   addEmojiReaction,
   removeEmojiReaction,
@@ -35740,8 +35859,11 @@ The main `editor.tsx` file connects your document model to the UI components. Re
 } from "./components/index.js";
 
 
-export default function Editor() {
-  const [document, dispatch] = useSelectedChatRoomDocument();
+// Connect passes the editor its document and a dispatch bound to it.
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<ChatRoomDocument, ChatRoomAction>) {
   const user = useUser();
 
   const disableChatRoom = !user;

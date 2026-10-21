@@ -1,7 +1,4 @@
-import {
-  RouteSelection,
-  useDriveRouteData,
-} from "@powerhousedao/connect-core/router";
+import { useDriveRouteData } from "@powerhousedao/connect-core/router";
 import { lazy, Suspense } from "react";
 import { EditorLoader } from "./editor-loader.js";
 import { ErrorBoundary } from "@powerhousedao/connect/components/shared";
@@ -24,9 +21,7 @@ export function OpenDocument() {
       loggerContext={["Connect", "OpenDocument"]}
     >
       <Suspense fallback={<EditorLoader />}>
-        <RouteSelection>
-          <DocumentEditorContainer documentId={documentId} />
-        </RouteSelection>
+        <DocumentEditorContainer documentId={documentId} />
       </Suspense>
     </ErrorBoundary>
   );

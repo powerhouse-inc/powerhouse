@@ -5,6 +5,11 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
 import { generateId } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelAction,
+  DocumentModelDocument,
+  EditorProps,
+} from "@powerhousedao/shared/document-model";
 import {
   addModule,
   addOperation,
@@ -38,7 +43,6 @@ import {
 import { VersionAdvisoryModal } from "./components/version-advisory-modal.js";
 import { editorConfig } from "./config.js";
 import { SchemaContextProvider } from "./context/schema-context.js";
-import { useSelectedDocumentModelDocument } from "./hooks/useDocumentModelDocument.js";
 import { useVersionAdvisory } from "./hooks/useVersionAdvisory.js";
 import type { Scope } from "./types/documents.js";
 import {
@@ -59,10 +63,12 @@ const noopSetStateSchema: (schema: string, scope: Scope) => void = () =>
 const noopSetInitialState: (initialValue: string, scope: Scope) => void = () =>
   undefined;
 
-export default function Editor() {
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<DocumentModelDocument, DocumentModelAction>) {
   useSetPHDocumentEditorConfig(editorConfig);
   const toast = usePHToast();
-  const [document, dispatch] = useSelectedDocumentModelDocument();
   const [scope, setScope] = useState<Scope>("global");
   const documentNodeName = document.header.name;
   const {
@@ -408,7 +414,7 @@ export default function Editor() {
 
   return (
     <main className="min-h-dvh bg-background p-6">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
       <SchemaContextProvider
         globalStateSchemaSdl={globalStateSchema}
         localStateSchemaSdl={localStateSchema}

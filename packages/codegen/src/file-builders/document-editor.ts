@@ -69,6 +69,11 @@ export async function tsMorphGenerateDocumentEditor({
     editorId,
     documentModelId,
     editorDirPath,
+    documentModel: {
+      documentTypeName: documentTypeMetadata.documentModelDocumentTypeName,
+      actionTypeName: editorVariableNames.actionTypeName,
+      importPath: documentTypeMetadata.documentModelImportPath,
+    },
   });
 
   await makeEditorsFile({ project, editorsDirPath });

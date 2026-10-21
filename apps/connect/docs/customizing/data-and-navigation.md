@@ -56,9 +56,64 @@ const { drive, folder, documentId } = useDriveRouteData();
 ```
 
 - `useDriveRouteIds()` gives the ids alone, from the matched route's loader.
-- Drive apps and editors keep using `useSelectedDrive`, `useSelectedNode` and the generated `useSelected<Model>Document()`. The drive layout renders them inside `RouteSelection`, so those hooks read the route they are shown in, not the app-wide selection.
-- `OpenDocument` (from `@powerhousedao/connect/generic`), for a project's drive route override, scopes its editor the same way. A project route that renders a drive app or an editor itself wraps it in `RouteSelection` (from `@powerhousedao/connect/layout`).
+- A drive app gets the drive and a `dispatch` bound to it as props, and its `useSelectedDrive`, `useSelectedFolder` and `useSelectedNode` read the route it is shown in, through a drive context (below).
+- An editor gets the route's document and a `dispatch` bound to it as props, and the `useSelected*Document` hooks inside it read that document. See [Editors read their document from props](#editors-read-their-document-from-props).
 - Connect still writes the route's ids to the app-wide selection (`store.selectedDriveId`, `store.selectedNodeId`) for code outside a route, such as a sidebar widget.
+
+### Editors read their document from props
+
+Connect passes an editor the route's `document` and a `dispatch` bound to it. `EditorProps<TDocument, TAction>` from `document-model` types both for the editor's document:
+
+```tsx
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "document-model";
+import type { TodoAction, TodoDocument } from "document-models/todo";
+import { TodoList } from "./components/TodoList.js";
+
+export default function Editor({
+  document,
+}: EditorProps<TodoDocument, TodoAction>) {
+  return (
+    <>
+      <DocumentToolbar document={document} />
+      {/* TodoList calls useSelectedTodoDocument(), which reads this document. */}
+      <TodoList />
+    </>
+  );
+}
+```
+
+- `ph generate` writes editors this way, and types the editor's module as `EditorModule<TodoDocument, TodoAction>`.
+- Pass `document` to `DocumentToolbar`. Without it, the toolbar shows the app's selected document, which is wrong when a host renders a document by id.
+- Components inside the editor call the generated `useSelected<Model>Document()`. It reads the document the editor was rendered with, from an `EditorDocumentProvider` the host renders around the editor; without one it reads the app's selection.
+- An editor that reads its document from props needs a Connect that passes them (see [Upgrading](./types-and-troubleshooting.md#upgrading)). Editors that only use the hooks work in every Connect.
+
+### Render an editor or a drive app yourself
+
+A project route that renders an editor passes it `document` and `dispatch`, and wraps it in `EditorDocumentProvider` from `@powerhousedao/reactor-browser` with the same pair. `useEditorModuleFor(document)` picks the document's editor:
+
+```tsx
+import {
+  EditorDocumentProvider,
+  useDocumentById,
+  useEditorModuleFor,
+} from "@powerhousedao/reactor-browser";
+
+function HostedEditor({ documentId }: { documentId: string }) {
+  const [document, dispatch] = useDocumentById(documentId);
+  const editor = useEditorModuleFor(document);
+  if (!document || !editor) return null;
+  const Editor = editor.Component;
+  return (
+    <EditorDocumentProvider document={document} dispatch={dispatch}>
+      <Editor document={document} dispatch={dispatch} />
+    </EditorDocumentProvider>
+  );
+}
+```
+
+- A drive app goes inside `DriveProvider`, whose value is `{ drive, dispatch, folder?, nodeId?, open?, preload? }`. Without `open`, opening a node navigates the app's router in that drive. With it, the host decides, e.g. it keeps the open node in local state; `preload` warms a node the same way.
+- An editor inside another editor gets its own `EditorDocumentProvider`; hooks read the nearest one.
 
 ## Read and write search params
 

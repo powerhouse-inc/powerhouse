@@ -37,6 +37,8 @@ export function DriveExplorer({ children }: EditorProps) {
 
 When a document is open, `children` is truthy and the editor appears. Otherwise, your custom `DriveContents` fills the space — a Kanban board, a document grid, whatever fits your product.
 
+Connect also passes the drive app the drive as `document`, with a `dispatch` bound to it, and renders it inside a `DriveProvider`. So `useSelectedDrive`, `useSelectedFolder` and `useSelectedNode` in any of its components read the drive and node the drive app is showing.
+
 <Quiz
   question="Pick the right tool for each scenario."
   choices={[

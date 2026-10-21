@@ -149,7 +149,7 @@ export function markOfferedRoutes(dir: string, offers: boolean) {
 const CONNECT_IMPORT = /^@powerhousedao\/connect(\/|$)/;
 
 const CONNECT_IMPORT_HINT =
-  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, RouteSelection, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
+  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
 
 type ModuleGraph = {
   getModuleInfo(id: string): {
@@ -252,7 +252,7 @@ export async function runBuild(args: BuildArgs) {
   const offersRoutes = existsSync(join(projectRoot, OFFERED_ROUTES_MODULE));
 
   // Before any bundler runs, so declining leaves nothing half built.
-  const typesOk = emitTypes(agent, outDir);
+  const typesOk = emitTypes(agent, outDir, projectRoot);
   if (!typesOk && !args.ignoreTypeErrors) {
     await confirmBuildDespiteTypeErrors();
   }
@@ -370,10 +370,50 @@ export function assertExternalDependenciesDeclared(
   );
 }
 
+// tsc's build info outlives a deleted dist; with the declarations gone, tsc
+// would call the project up to date and emit nothing.
+function declarationsMissing(agent: Agent, projectRoot: string): boolean {
+  const showConfig = resolveCommand(agent, "execute-local", [
+    "tsc",
+    "--showConfig",
+  ]);
+  if (showConfig === null) return false;
+  let options: {
+    declaration?: boolean;
+    composite?: boolean;
+    declarationDir?: string;
+    outDir?: string;
+  };
+  try {
+    const output = execSync(
+      `${showConfig.command} ${showConfig.args.join(" ")}`,
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
+    options =
+      (JSON.parse(output) as { compilerOptions?: typeof options })
+        .compilerOptions ?? {};
+  } catch {
+    return false;
+  }
+  const dir = options.declarationDir ?? options.outDir;
+  if (!dir || !(options.declaration || options.composite)) return false;
+  const path = resolve(projectRoot, dir);
+  return !existsSync(path) || readdirSync(path).length === 0;
+}
+
 // Runs tsc, which checks the project and writes its declarations either way.
 // Returns whether it reported no type errors.
-function emitTypes(agent: Agent, outDir: string): boolean {
-  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
+function emitTypes(agent: Agent, outDir: string, projectRoot: string): boolean {
+  const force = declarationsMissing(agent, projectRoot);
+  const tscCommand = resolveCommand(agent, "execute-local", [
+    "tsc",
+    "--build",
+    ...(force ? ["--force"] : []),
+  ]);
   if (tscCommand === null) {
     console.error(
       "You need to have typescript installed to use the `build` command.",
