@@ -1,15 +1,14 @@
 import { Icon } from "#design-system";
 import {
-  getNodeTargetIn,
   showDeleteNodeModal,
   useDownloadFolder,
   useDragNode,
   useDropNode,
   useLinkProps,
-  usePHStore,
   usePreloadNode,
   useSetSelectedNode,
   useNodeActions,
+  useNodeTarget,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
@@ -27,10 +26,9 @@ export function FolderItem(props: {
   href?: string;
 }) {
   const { folderNode, className } = props;
-  const store = usePHStore();
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();
-  const target = getNodeTargetIn(store, folderNode);
+  const target = useNodeTarget(folderNode);
   const link = useLinkProps(target, () => setSelectedNode(folderNode));
   const href = props.href ?? (target ? link.href : undefined);
   const { isAllowedToCreateDocuments } = useUserPermissions();

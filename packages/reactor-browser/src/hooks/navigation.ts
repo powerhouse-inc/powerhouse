@@ -8,8 +8,7 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import { useMemo, useSyncExternalStore } from "react";
 import { resolveUrlPathname } from "../utils/url.js";
-import type { PHStore } from "./ph-store.js";
-import { getPHStore, isScopedPHStore } from "./ph-store.js";
+import { getPHStore } from "./ph-store.js";
 
 const isServer = typeof window === "undefined";
 
@@ -244,26 +243,6 @@ export const browserNavigation: PHNavigation = {
   },
   useSetSearchParams: () => setBrowserSearchParams,
 };
-
-const NO_PARAMS: Record<string, string> = {};
-const noop = () => {};
-
-// A scope without a navigation of its own: no URL, so opening only selects.
-const detachedNavigation: PHNavigation = {
-  location: () => ({ pathname: "", search: "" }),
-  open: noop,
-  setSearch: noop,
-  useSearchParams: () => NO_PARAMS,
-  useSetSearchParams: () => noop,
-};
-
-/** The navigation `store` acts through: a scope's own, else the app's. */
-export function getNavigationOf(store: PHStore | undefined): PHNavigation {
-  if (store && isScopedPHStore(store)) {
-    return store.navigation ?? detachedNavigation;
-  }
-  return store?.navigation ?? getPHNavigation();
-}
 
 /** True when the store has a host navigation, not the browser fallback. */
 export function hasHostNavigation() {

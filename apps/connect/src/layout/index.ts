@@ -4,7 +4,6 @@ export { SidebarItem } from "@powerhousedao/design-system/connect";
 export {
   ContentOutlet,
   ModalDialog,
-  RouteSelection,
   useDriveRouteData,
   useNavRoutes,
   useSidebarMode,

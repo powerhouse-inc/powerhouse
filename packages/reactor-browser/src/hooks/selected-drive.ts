@@ -1,10 +1,4 @@
-import type { PHStore } from "./ph-store.js";
-import {
-  getPHStore,
-  isScopedPHStore,
-  usePHStore,
-  warnGlobalSetterInScope,
-} from "./ph-store.js";
+import { getPHStore } from "./ph-store.js";
 import { useCallback } from "react";
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import type {
@@ -19,6 +13,7 @@ import {
 } from "../utils/url.js";
 import { isInitialSyncInFlight } from "../routing/initial-sync.js";
 import { useDispatch } from "./dispatch.js";
+import { useDriveContext } from "./drive-context.js";
 import { useDrives } from "./drives.js";
 import {
   makePHEventFunctions,
@@ -28,15 +23,19 @@ import {
   getCurrentPathname,
   hasHostNavigation,
   openTarget,
-  openTargetWith,
   preloadTarget,
 } from "./navigation.js";
 import { selectNode } from "./set-selected-node.js";
 
 const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
+const useStoreSelectedDriveId = selectedDriveIdEventFunctions.useValue;
 
-/** Returns the selected drive id */
-export const useSelectedDriveId = selectedDriveIdEventFunctions.useValue;
+/** Returns the selected drive id: the drive app's drive, else the app's selection. */
+export function useSelectedDriveId() {
+  const context = useDriveContext();
+  const selectedDriveId = useStoreSelectedDriveId();
+  return context ? context.drive.header.id : selectedDriveId;
+}
 
 /** Sets the selected drive id */
 export const setSelectedDriveId = selectedDriveIdEventFunctions.setValue;
@@ -60,13 +59,20 @@ export function useSelectedDrive() {
 
 /** Returns the selected drive, or undefined if no drive is selected */
 export function useSelectedDriveSafe() {
-  const selectedDriveId = useSelectedDriveId();
+  const context = useDriveContext();
+  const selectedDriveId = useStoreSelectedDriveId();
   const drives = useDrives();
-  const selectedDrive = drives?.find(
-    (drive) => drive.header.id === selectedDriveId,
-  );
+  const selectedDrive = context
+    ? undefined
+    : drives?.find((drive) => drive.header.id === selectedDriveId);
 
   const [drive, dispatch] = useDispatch(selectedDrive);
+  if (context) {
+    return [context.drive, context.dispatch] as [
+      DocumentDriveDocument,
+      DocumentDispatch<DocumentDriveAction>,
+    ];
+  }
   if (!selectedDrive) {
     return [undefined, undefined] as const;
   }
@@ -78,45 +84,17 @@ export function useSelectedDriveSafe() {
 
 type DriveRef = string | DocumentDriveDocument | undefined;
 
-/** Selects a drive in the app's store; inside a scoped store, use
- * `useSetSelectedDrive`. */
+/** Selects a drive in the app's store. */
 export function setSelectedDrive(driveOrDriveSlug: DriveRef) {
-  warnGlobalSetterInScope("setSelectedDrive", "useSetSelectedDrive");
   selectDrive(driveOrDriveSlug);
 }
 
-/** Selects a drive in `store`: a scope's own selection, else the app's. */
-export function selectDriveIn(
-  store: PHStore | undefined,
-  driveOrDriveSlug: DriveRef,
-) {
-  if (!store || !isScopedPHStore(store)) {
-    selectDrive(driveOrDriveSlug);
-    return;
-  }
-  const driveSlug =
-    typeof driveOrDriveSlug === "string"
-      ? driveOrDriveSlug
-      : driveOrDriveSlug && makeDriveSlug(driveOrDriveSlug);
-  if (store.navigation) {
-    openTargetWith(store.navigation, driveSlug ? { driveSlug } : undefined);
-    return;
-  }
-  const drive =
-    typeof driveOrDriveSlug === "object"
-      ? driveOrDriveSlug
-      : findDriveBySlug(store.drives, driveSlug);
-  store.selectedDriveId = drive?.header.id;
-  store.selectedNodeId = undefined;
-}
-
-/** `setSelectedDrive` for the store in context, e.g. a scoped editor's. */
+/** `setSelectedDrive`, as a hook. */
 export function useSetSelectedDrive() {
-  const store = usePHStore();
-  return useCallback((drive: DriveRef) => selectDriveIn(store, drive), [store]);
+  return useCallback((drive: DriveRef) => selectDrive(drive), []);
 }
 
-/** Selects a drive in the app's store, without the scope warning. */
+/** Selects a drive in the app's store. */
 export function selectDrive(driveOrDriveSlug: DriveRef) {
   const driveSlug =
     typeof driveOrDriveSlug === "string"
@@ -164,23 +142,14 @@ export function selectDrive(driveOrDriveSlug: DriveRef) {
 
 /** Warms a drive's view before it is opened, e.g. on hover. */
 export function preloadDrive(drive: DocumentDriveDocument | undefined) {
-  warnGlobalSetterInScope("preloadDrive", "usePreloadDrive");
   if (drive) preloadTarget({ driveSlug: makeDriveSlug(drive) });
 }
 
-/** `preloadDrive` for the store in context. */
+/** `preloadDrive`, as a hook. */
 export function usePreloadDrive() {
-  const store = usePHStore();
   return useCallback(
-    (drive: DocumentDriveDocument | undefined) => {
-      if (!drive) return;
-      if (!isScopedPHStore(store)) {
-        preloadTarget({ driveSlug: makeDriveSlug(drive) });
-        return;
-      }
-      store?.navigation?.preload?.({ driveSlug: makeDriveSlug(drive) });
-    },
-    [store],
+    (drive: DocumentDriveDocument | undefined) => preloadDrive(drive),
+    [],
   );
 }
 

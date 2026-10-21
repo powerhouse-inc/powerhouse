@@ -1,26 +1,27 @@
 import {
+  DriveProvider,
+  EditorDocumentProvider,
   useAppModuleById,
+  useDispatch,
   useDocument,
-  useEditorModuleById,
-  useFallbackEditorModule,
+  useEditorModuleFor,
   useRevisionHistoryVisible,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { Outlet } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { useDriveRouteData } from "../router/route-data.js";
-import { RouteSelection } from "../router/route-selection.js";
 import { DirectoryListing } from "./directory-listing.js";
 import { DocumentHistory } from "./document-history.js";
 import { DocumentJson } from "./document-json.js";
 import { EditorHost } from "./editor-host.js";
 
 /** `document`: its revision history while `?history` is set, else its
- * registered editor, else its JSON. */
+ * editor (given `document` and `dispatch`), else its JSON. */
 export function DocumentView({ document }: { document: PHDocument }) {
-  const preferred = useEditorModuleById(document.header.meta?.preferredEditor);
-  const fallback = useFallbackEditorModule(document.header.documentType);
+  const [, dispatch] = useDispatch(document);
+  const editor = useEditorModuleFor(document);
   const historyVisible = useRevisionHistoryVisible();
-  const editor = preferred ?? fallback;
   if (historyVisible) return <DocumentHistory document={document} />;
   if (!editor) return <DocumentJson document={document} />;
   const Editor = editor.Component;
@@ -30,7 +31,14 @@ export function DocumentView({ document }: { document: PHDocument }) {
       data-editor={editor.config.id}
       data-document-type={document.header.documentType}
     >
-      <Editor documentId={document.header.id} context={{ readMode: false }} />
+      <EditorDocumentProvider document={document} dispatch={dispatch}>
+        <Editor
+          documentId={document.header.id}
+          document={document}
+          dispatch={dispatch}
+          context={{ readMode: false }}
+        />
+      </EditorDocumentProvider>
     </div>
   );
 }
@@ -40,30 +48,38 @@ function OpenDocument({ documentId }: { documentId: string }) {
   return document ? <DocumentView document={document} /> : null;
 }
 
-/** The drive layout: the drive app its `preferredEditor` names, else the
- * directory listing, around the node route. */
+/** The drive layout: the drive app its `preferredEditor` names (given the
+ * drive as `document`), else the directory listing, around the node route. */
 export function DriveLayout() {
   const { drive, folder, documentId } = useDriveRouteData();
   const app = useAppModuleById(drive?.header.meta?.preferredEditor);
-  if (!drive) return null;
+  const [, dispatch] = useDispatch(drive);
+  const nodeId = documentId ?? folder?.id;
+  const context = useMemo(
+    () => drive && { drive, dispatch, folder, nodeId },
+    [drive, dispatch, folder, nodeId],
+  );
+  if (!drive || !context) return null;
   const App = app?.Component;
   // Drive apps show their own view until they get a document to show.
   const document = documentId ? <Outlet /> : null;
   return (
-    <RouteSelection>
+    <DriveProvider value={context}>
       <EditorHost
         resetKeys={[drive.header.id]}
         label={App ? "drive app" : "drive view"}
       >
         {App ? (
-          <App>{document}</App>
+          <App document={drive} dispatch={dispatch}>
+            {document}
+          </App>
         ) : (
           <DirectoryListing drive={drive} folder={folder}>
             {document}
           </DirectoryListing>
         )}
       </EditorHost>
-    </RouteSelection>
+    </DriveProvider>
   );
 }
 

@@ -1,12 +1,12 @@
 import { Icon } from "#design-system";
 import {
   addFolder,
-  getNodeTargetIn,
+  getNodeTarget,
   isPlainClick,
   useDragNode,
   useDropNode,
   usePHNavigation,
-  usePHStore,
+  useDriveContext,
   useSelectedDriveId,
   useSelectedDriveSafe,
   useSelectedNodePath,
@@ -27,7 +27,7 @@ export function Breadcrumbs() {
   const selectedDriveId = useSelectedDriveId();
   const selectedNodePath = useSelectedNodePath();
   const [isCreating, setIsCreating] = useState(false);
-  const store = usePHStore();
+  const driveContext = useDriveContext();
   const setSelectedDrive = useSetSelectedDrive();
   const setSelectedNode = useSetSelectedNode();
   function onAddNew() {
@@ -90,7 +90,7 @@ export function Breadcrumbs() {
               id={node.id}
               parentId={node.parentFolder}
               name={node.name}
-              target={getNodeTargetIn(store, node)}
+              target={getNodeTarget(node, driveContext?.drive)}
               onClick={() => setSelectedNode(node)}
             />
             <span>/</span>

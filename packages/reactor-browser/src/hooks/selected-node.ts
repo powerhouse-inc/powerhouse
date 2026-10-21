@@ -6,7 +6,7 @@ export {
   addResetSelectedNodeEventHandler,
   addSelectedNodeIdEventHandler,
   getNodeTarget,
-  getNodeTargetIn,
+  useNodeTarget,
   preloadNode,
   setSelectedNode,
   setSelectedNodeId,
