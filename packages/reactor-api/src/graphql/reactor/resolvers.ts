@@ -36,10 +36,7 @@ import type {
   PHDocument,
   ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import {
-  readPeerManifest,
-  withSignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import { readPeerManifest } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 import {
@@ -836,22 +833,10 @@ export async function createEmptyDocument(
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        const module = await reactorClient.getDocumentModelModule(
-          args.documentType,
-        );
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await reactorClient.getCreateSignaturePolicy(),
-          {
-            protocolVersions: await reactorClient.getCreateProtocolVersions({
-              documentType: args.documentType,
-              parentIdentifier: parent.header.id,
-            }),
-          },
-        );
-        if (name) {
-          document.header.name = name;
-        }
+        const document = await reactorClient.newDocument(args.documentType, {
+          parentIdentifier: parent.header.id,
+          name: name || undefined,
+        });
         const driveClient = pickDriveClient(
           reactorClient,
           parent.header.documentType,
@@ -910,16 +895,9 @@ export async function createDocumentWithInitialState(
     );
   }
 
-  const document = withSignaturePolicy(
-    module.utils.createDocument(),
-    await reactorClient.getCreateSignaturePolicy(),
-    {
-      protocolVersions: await reactorClient.getCreateProtocolVersions({
-        documentType: args.documentType,
-        parentIdentifier: parentIdOrSlug ?? undefined,
-      }),
-    },
-  );
+  const document = await reactorClient.newDocument(args.documentType, {
+    parentIdentifier: parentIdOrSlug ?? undefined,
+  });
 
   // Only merge specification-defined scopes (e.g., global, local).
   // Protected scopes like "auth" and "document" are excluded.

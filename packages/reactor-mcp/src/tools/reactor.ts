@@ -12,10 +12,7 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import {
-  createAction,
-  withSignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import { createAction } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -379,25 +376,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
       if (params.driveId) {
-        const module = await getDocumentModelModule(params.documentType);
-        if (!module) {
-          throw new Error(
-            `Document model for type '${params.documentType}' not found`,
-          );
-        }
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await client.getCreateSignaturePolicy(),
-          {
-            protocolVersions: await client.getCreateProtocolVersions({
-              documentType: params.documentType,
-              parentIdentifier: params.driveId,
-            }),
-          },
-        );
-        if (params.name) {
-          document.header.name = params.name;
-        }
+        const document = await client.newDocument(params.documentType, {
+          parentIdentifier: params.driveId,
+          name: params.name || undefined,
+        });
         const created = await client.drives.addFile(
           params.driveId,
           document,

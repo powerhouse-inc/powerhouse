@@ -1,5 +1,10 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  headNewDocument,
+  type DocumentModelModule,
+  type NewDocumentHeaderOptions,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
@@ -12,9 +17,17 @@ function client() {
   const drive = {
     header: { id: DRIVE_ID, documentType: "powerhouse/document-drive" },
   };
-  const getCreateProtocolVersions = vi
-    .fn()
-    .mockResolvedValue({ "base-reducer": 3 });
+  const newDocument = vi.fn(
+    (_type: string, options?: NewDocumentHeaderOptions) =>
+      Promise.resolve(
+        headNewDocument(
+          documentModelDocumentModelModule as unknown as DocumentModelModule,
+          options,
+          "v2-required",
+          { "base-reducer": 3 },
+        ),
+      ),
+  );
   const reactorClient = {
     get: vi.fn((id: string) =>
       Promise.resolve(id === DRIVE_ID ? drive : added.at(-1)),
@@ -22,8 +35,7 @@ function client() {
     getDocumentModelModule: vi
       .fn()
       .mockResolvedValue(documentModelDocumentModelModule),
-    getCreateSignaturePolicy: vi.fn().mockResolvedValue("v2-required"),
-    getCreateProtocolVersions,
+    newDocument,
     drives: {
       addFile: vi.fn((_driveId: string, document: PHDocument) => {
         added.push(document);
@@ -31,10 +43,10 @@ function client() {
       }),
     },
   } as unknown as IReactorClient;
-  return { reactorClient, added, getCreateProtocolVersions };
+  return { reactorClient, added, newDocument };
 }
 
-describe("create resolvers head a new document at the client's create versions", () => {
+describe("create resolvers head a new document with the client's newDocument", () => {
   it.each([
     [
       "createEmptyDocument",
@@ -54,14 +66,14 @@ describe("create resolvers head a new document at the client's create versions",
         }),
     ],
   ])("%s", async (_name, run) => {
-    const { reactorClient, added, getCreateProtocolVersions } = client();
+    const { reactorClient, added, newDocument } = client();
 
     await run(reactorClient);
 
-    expect(getCreateProtocolVersions).toHaveBeenCalledWith({
-      documentType: DOCUMENT_TYPE,
-      parentIdentifier: DRIVE_ID,
-    });
+    expect(newDocument).toHaveBeenCalledWith(
+      DOCUMENT_TYPE,
+      expect.objectContaining({ parentIdentifier: DRIVE_ID }),
+    );
     expect(added[0].header.protocolVersions).toEqual({
       "base-reducer": 3,
       signature: 2,

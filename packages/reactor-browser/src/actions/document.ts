@@ -48,7 +48,6 @@ import {
   setPreferredEditor,
   signaturePolicyOf,
   UnsupportedDocumentModelVersionError,
-  withSignaturePolicy,
   type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -464,43 +463,13 @@ export async function addDocument(
     throw new Error("ReactorClient not initialized");
   }
 
-  // get the module
-  let documentModelModule: DocumentModelModule;
-  if (documentModelVersion !== undefined) {
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
-    const module = documentModelModules.find(
-      (m) =>
-        m.documentModel.global.id === documentType &&
-        (m.version ?? 1) === documentModelVersion,
-    );
-    if (!module) {
-      throw new Error(
-        `Document model not found for type: ${documentType} with version: ${documentModelVersion}`,
-      );
-    }
-    documentModelModule = module;
-  } else {
-    documentModelModule =
-      await reactorClient.getDocumentModelModule(documentType);
-  }
-
   // create - use passed document's state if available
   const newDocument =
     document ??
-    withSignaturePolicy(
-      documentModelModule.utils.createDocument(),
-      await reactorClient.getCreateSignaturePolicy(),
-      {
-        protocolVersions: await reactorClient.getCreateProtocolVersions({
-          documentType,
-          parentIdentifier: driveId,
-        }),
-      },
-    );
-  if (!document) {
-    newDocument.state.document.version = documentModelModule.version ?? 1;
-  }
+    (await reactorClient.newDocument(documentType, {
+      parentIdentifier: driveId,
+      documentModelVersion,
+    }));
   newDocument.header.name = name;
   if (preferredEditor) {
     newDocument.header.meta = {
