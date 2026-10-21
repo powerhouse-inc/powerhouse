@@ -18,6 +18,7 @@
     "src/router",
     "src/route-tree.ts",
     "src/routeTree.gen.ts",
+    "generic-routes.json",
     "style.css",
     "tailwind.css",
     "theme.css",

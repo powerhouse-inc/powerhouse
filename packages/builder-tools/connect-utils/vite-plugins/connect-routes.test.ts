@@ -166,6 +166,15 @@ describe("generateConnectRoutes", () => {
 });
 
 describe("the package's offered routes", () => {
+  it("leaves out a project file that replaces a generic settings tab", async () => {
+    addRoute("_app/settings/about.tsx", "/_app/settings/about");
+    addRoute("_app/settings/inventory.tsx", "/_app/settings/inventory");
+    await generate();
+    const module = readFileSync(join(project, PACKAGE_ROUTES_MODULE), "utf8");
+    expect(module).toContain('id: "/_app/settings/inventory"');
+    expect(module).not.toContain("about");
+  });
+
   it("lists its routes by id and parent, without its layout and overrides", async () => {
     addRoute("_app.tsx", "/_app");
     addRoute("_app/index.tsx", "/_app/");

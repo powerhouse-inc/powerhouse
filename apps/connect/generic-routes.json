@@ -1,0 +1,9 @@
+{
+  "appRoutes": [
+    "settings/ai-assistant",
+    "settings/package-manager",
+    "settings/default-editors",
+    "settings/danger-zone",
+    "settings/about"
+  ]
+}

@@ -282,6 +282,17 @@ function writePackageRoutesModule(
   }
 }
 
+/** The `_app/` paths of the generic plugin's code routes, e.g. its settings
+ * tabs: a project file at one is an override, never offered. */
+function genericAppRouteIds(connectDir: string): string[] {
+  const file = join(connectDir, "generic-routes.json");
+  if (!existsSync(file)) return [];
+  return (
+    (JSON.parse(readFileSync(file, "utf8")) as { appRoutes?: string[] })
+      .appRoutes ?? []
+  );
+}
+
 /** The router plugin's config: Connect's root and routes, and the project's. */
 export function connectRoutesGeneratorConfig(
   connectDir: string,
@@ -335,9 +346,10 @@ export function connectRoutesGeneratorConfig(
     onRouteTreeChanged: ({ routeNodes }) => {
       writePackageRoutesModule(projectRoot, projectRoutes, routeNodes, {
         routesDirectory,
-        connectAppIds: new Set(
-          routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
-        ),
+        connectAppIds: new Set([
+          ...routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
+          ...genericAppRouteIds(connectDir),
+        ]),
       });
     },
   };
