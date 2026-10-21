@@ -81,6 +81,21 @@ function clientFor(
   return new GraphQLReactorClient({ url, realtime: false, driveIdFor });
 }
 
+/** Apollo's answer to a query passing an argument its schema lacks. */
+function unknownArgument(argument: string, field: string): Reply {
+  return {
+    status: 400,
+    body: JSON.stringify({
+      errors: [
+        {
+          message: `Unknown argument "${argument}" on field "${field}".`,
+          extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+        },
+      ],
+    }),
+  };
+}
+
 /** Apollo's answer to a query naming a root field its schema lacks. */
 function unknownField(field: string): Reply {
   return {
@@ -132,32 +147,48 @@ describe("GraphQLReactorClient create protocol versions", () => {
     reducer: ((...args) => (tagged.reducer as Reducer)(...args)) as Reducer,
   };
 
-  /** A Switchboard whose reactor-wide createDefaults selects `hostVersions`. */
+  /**
+   * A Switchboard whose createDefaults selects `hostVersions` for a type, or
+   * reactor-wide; `"before-document-type"` is one that predates the argument.
+   */
   async function clientKnowing(
     documentModels: DocumentModelModule[],
-    hostVersions: Record<string, unknown> | "unknown-field",
-    featureFlags?: { undoV3?: boolean },
+    hostVersions:
+      | Record<string, unknown>
+      | ((documentType: string | undefined) => Record<string, unknown>)
+      | "unknown-field",
+    host: "per-type" | "before-document-type" = "per-type",
   ) {
-    const { url, received } = await serve(() =>
-      hostVersions === "unknown-field"
-        ? unknownField("createDefaults")
-        : {
-            status: 200,
-            body: JSON.stringify({
-              data: {
-                createDefaults: {
-                  signaturePolicy: "v2-required",
-                  protocolVersions: hostVersions,
-                },
-              },
-            }),
+    const { url, received } = await serve(({ body }) => {
+      if (hostVersions === "unknown-field")
+        return unknownField("createDefaults");
+      const variables = body.variables as { documentType?: string } | undefined;
+      if (
+        host === "before-document-type" &&
+        body.operationName === "GetCreateProtocolVersions"
+      ) {
+        return unknownArgument("documentType", "Query.createDefaults");
+      }
+      const versions =
+        typeof hostVersions === "function"
+          ? hostVersions(variables?.documentType)
+          : hostVersions;
+      return {
+        status: 200,
+        body: JSON.stringify({
+          data: {
+            createDefaults: {
+              signaturePolicy: "v2-required",
+              protocolVersions: versions,
+            },
           },
-    );
+        }),
+      };
+    });
     const client = new GraphQLReactorClient({
       url,
       realtime: false,
       documentModels,
-      featureFlags,
     });
     return { client, received };
   }
@@ -171,7 +202,7 @@ describe("GraphQLReactorClient create protocol versions", () => {
     }
   };
 
-  it("gives a model whose reducer createReducer built base-reducer 3 on a host that selects 3", async () => {
+  it("asks the host to select for the type and parent", async () => {
     const { client, received } = await clientKnowing([tagged], {
       "base-reducer": 3,
     });
@@ -183,12 +214,27 @@ describe("GraphQLReactorClient create protocol versions", () => {
       }),
     ).toEqual({ "base-reducer": 3 });
     expect(received.map((entry) => entry.body.operationName)).toEqual([
-      "GetCreateDefaults",
+      "GetCreateProtocolVersions",
     ]);
-    expect(received[0].body.variables).toEqual({});
+    expect(received[0].body.variables).toEqual({
+      documentType: DOCUMENT_MODEL,
+      parentIdOrSlug: "parent-1",
+    });
   });
 
-  it("gives a model whose reducer createReducer did not build base-reducer 2 on a host that selects 3", async () => {
+  it("takes the host's per-type answer, which caps a type the host cannot run at 3", async () => {
+    const { client } = await clientKnowing([tagged], (documentType) =>
+      documentType === DOCUMENT_MODEL
+        ? { "base-reducer": 2 }
+        : { "base-reducer": 3 },
+    );
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+  });
+
+  it("fits down a model whose reducer createReducer did not build on this client", async () => {
     const { client } = await clientKnowing([untagged], { "base-reducer": 3 });
 
     expect(
@@ -211,24 +257,20 @@ describe("GraphQLReactorClient create protocol versions", () => {
     ).toEqual({ "base-reducer": 3 });
   });
 
-  it("gives base-reducer 2 with undoV3 off on a host that selects 3", async () => {
-    const { client } = await clientKnowing(
+  it("falls back to the reactor-wide answer on a host that predates per-type selection", async () => {
+    const { client, received } = await clientKnowing(
       [tagged],
-      { "base-reducer": 3 },
-      { undoV3: false },
+      { "base-reducer": 2 },
+      "before-document-type",
     );
 
     expect(
       await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
     ).toEqual({ "base-reducer": 2 });
-  });
-
-  it("caps a model whose reducer createReducer built at a host that selects 2", async () => {
-    const { client } = await clientKnowing([tagged], { "base-reducer": 2 });
-
-    expect(
-      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
-    ).toEqual({ "base-reducer": 2 });
+    expect(received.map((entry) => entry.body.operationName)).toEqual([
+      "GetCreateProtocolVersions",
+      "GetCreateDefaults",
+    ]);
   });
 
   it("caps at the baseline when the host selects no base-reducer", async () => {
@@ -246,6 +288,21 @@ describe("GraphQLReactorClient create protocol versions", () => {
       await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
     ).toEqual({ "base-reducer": 2 });
     expect(received).toHaveLength(1);
+  });
+
+  it("heads a new document with the host's selection and its signature policy", async () => {
+    const { client } = await clientKnowing([tagged], { "base-reducer": 3 });
+
+    const document = await client.newDocument(DOCUMENT_MODEL, {
+      name: "New",
+    });
+
+    expect(document.header.documentType).toBe(DOCUMENT_MODEL);
+    expect(document.header.name).toBe("New");
+    expect(document.header.protocolVersions).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
   });
 
   it("passes on any other createDefaults failure", async () => {

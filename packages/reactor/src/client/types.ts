@@ -11,7 +11,7 @@ import type {
   Operation,
   PeerCapability,
   PeerCapabilityFlags,
-  PHBaseState,
+  NewDocumentHeaderOptions,
   PHDocument,
   ProtocolVersions,
   SignaturePolicy,
@@ -91,13 +91,8 @@ export type CreateDocumentOptions = {
 };
 
 /** What `newDocument` builds the header and state from. */
-export type NewDocumentOptions = CreateDocumentOptions & {
-  /** Passed to the model's createDocument, which fills what it leaves out. */
-  initialState?: Partial<PHBaseState>;
-  name?: string;
-  /** Kept only under the legacy policy; any other policy derives the id. */
-  id?: string;
-};
+export type NewDocumentOptions = CreateDocumentOptions &
+  NewDocumentHeaderOptions;
 
 /** Retries taken when an upgrade conflicts with concurrent edits. */
 export const DEFAULT_UPGRADE_CONFLICT_RETRIES = 3;

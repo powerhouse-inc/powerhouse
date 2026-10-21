@@ -1,9 +1,11 @@
 import { getPHStore } from "../hooks/ph-store.js";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   CreateProtocolVersionsOptions,
   DocumentChangeEvent,
+  NewDocumentOptions,
   DocumentChangeType,
   DocumentRelationship,
   ExecutionJobPlan,
@@ -32,10 +34,12 @@ import {
   isSignaturePolicy,
   appliedOperations,
   fitCreateBaseReducer,
+  headNewDocument,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
   redo,
   redoTarget,
+  selectDocumentModelModule,
   selectionSupports,
   selectProtocolVersions,
   toTransportAction,
@@ -180,12 +184,6 @@ export type GraphQLReactorClientOptions = {
     | (() => readonly DocumentModelModule<any>[]);
 
   /**
-   * This client's reactor feature flags, which pick the protocol versions of
-   * the documents it creates. `undoV3` defaults to on, as in the reactor.
-   */
-  featureFlags?: PeerCapabilityFlags;
-
-  /**
    * Signs the actions this client pushes, instead of the logged-in Renown user.
    *
    * Left out - the normal case - the signer is resolved per push from
@@ -203,6 +201,14 @@ export type GraphQLReactorClientOptions = {
    */
   driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
+
+// The cap is the host's selection; this build itself runs every version it knows.
+const EVERY_VERSION_THIS_BUILD_RUNS: PeerCapabilityFlags = { undoV3: true };
+
+// Always known here, so a light client can head a drive without registering it.
+const BUILT_IN_MODELS = [
+  driveDocumentModelModule as unknown as DocumentModelModule,
+];
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
@@ -242,7 +248,6 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private readonly tokenProvider: BearerTokenProvider;
   private readonly subscriptionsUrl: string | undefined;
   private readonly documentModels: () => readonly DocumentModelModule<any>[];
-  private readonly featureFlags: PeerCapabilityFlags;
   private readonly signer: ISigner | undefined;
   private readonly driveIdFor: GraphQLReactorClientOptions["driveIdFor"];
   private stopRealtime: (() => void) | undefined;
@@ -263,10 +268,6 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const copied = [...(models ?? [])];
       this.documentModels = () => copied;
     }
-    this.featureFlags = {
-      ...options.featureFlags,
-      undoV3: options.featureFlags?.undoV3 ?? true,
-    };
     this.signer = options.signer;
     this.driveIdFor = options.driveIdFor;
     this.subscriptionsUrl =
@@ -897,21 +898,24 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   /**
    * The protocol versions this client gives a new document of `documentType`:
-   * its own `featureFlags` and `documentModels`, capped at what the
-   * Switchboard's reactor-wide `createDefaults` selects. A Switchboard without
-   * that query is capped at the baseline.
+   * what the Switchboard selects for the type and parent, within what this
+   * build runs, fitted down to what this client's own reducer for the type
+   * can predict. A Switchboard that predates per-type selection answers
+   * reactor-wide; one without `createDefaults` caps at the baseline.
    */
   async getCreateProtocolVersions(
-    { documentType }: CreateProtocolVersionsOptions,
+    { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const defaults = await this.createDefaults(signal);
+    const host = await this.hostCreateProtocolVersions(
+      documentType,
+      parentIdentifier,
+      signal,
+    );
     const selected = selectProtocolVersions({
       capabilities: PEER_CAPABILITIES,
-      flags: this.featureFlags,
-      members: [
-        selectionSupports(defaults?.protocolVersions, PEER_CAPABILITIES),
-      ],
+      flags: EVERY_VERSION_THIS_BUILD_RUNS,
+      members: [selectionSupports(host, PEER_CAPABILITIES)],
     });
     return fitCreateBaseReducer(
       selected,
@@ -921,12 +925,61 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
+  /** See {@link IReactorClient.newDocument}; the module comes from `documentModels`. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const module = selectDocumentModelModule(
+      [...this.documentModels(), ...BUILT_IN_MODELS],
+      documentType,
+      options?.documentModelVersion,
+    );
+    const [policy, versions] = await Promise.all([
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
+      this.getCreateProtocolVersions(
+        { documentType, parentIdentifier: options?.parentIdentifier },
+        signal,
+      ),
+    ]);
+    return headNewDocument(module, options, policy, versions) as TDocument;
+  }
+
+  /** The Switchboard's selection; undefined from a host without `createDefaults`. */
+  private async hostCreateProtocolVersions(
+    documentType: string | undefined,
+    parentIdentifier: string | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<ProtocolVersions | undefined> {
+    if (documentType !== undefined) {
+      try {
+        const result = await this.sdk.GetCreateProtocolVersions(
+          { documentType, parentIdOrSlug: parentIdentifier },
+          undefined,
+          signal,
+        );
+        return result.createDefaults.protocolVersions as ProtocolVersions;
+      } catch (error) {
+        if (queriesUnknownField(error, "createDefaults")) return undefined;
+        if (!queriesUnknownArgument(error, "documentType")) throw error;
+      }
+    }
+    return (await this.createDefaults(parentIdentifier, signal))
+      ?.protocolVersions as ProtocolVersions | undefined;
+  }
+
   /** The reactor-wide `createDefaults`; undefined from a host without the query. */
   private async createDefaults(
+    parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<GetCreateDefaultsQuery["createDefaults"] | undefined> {
     try {
-      const result = await this.sdk.GetCreateDefaults({}, undefined, signal);
+      const result = await this.sdk.GetCreateDefaults(
+        { parentIdOrSlug: parentIdentifier },
+        undefined,
+        signal,
+      );
       return result.createDefaults;
     } catch (error) {
       if (queriesUnknownField(error, "createDefaults")) {
@@ -1787,6 +1840,21 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
  * a Switchboard older than the field. graphql-js validation words this the same
  * under every gateway the Switchboard can run.
  */
+/** A validation error naming `argument` unknown: a host from before it. */
+function queriesUnknownArgument(error: unknown, argument: string): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  const prefix = `Unknown argument "${argument}" on field "`;
+  return errors.some(
+    (entry) =>
+      typeof (entry as { message?: unknown } | null)?.message === "string" &&
+      (entry as { message: string }).message.startsWith(prefix),
+  );
+}
+
 function queriesUnknownField(error: unknown, field: string): boolean {
   const errors = (error as { response?: { errors?: unknown } } | null)?.response
     ?.errors;

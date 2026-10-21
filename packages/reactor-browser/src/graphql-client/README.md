@@ -46,7 +46,6 @@ uses the same document hooks Connect uses.
 | `realtime`          | `true`                    | Whether server-pushed changes reach subscribers.                                          |
 | `attachmentService` | none                      | The attachment service, published into the slot the editors read.                         |
 | `documentModels`    | none                      | The app's document model modules, published so the model hooks work (below).              |
-| `featureFlags`      | `undoV3` on               | Picks the protocol versions of documents this client creates.                             |
 
 The props are read once, when the client is built. Changing `url` afterwards
 does not rebuild the client; remount the provider (or key it on the URL) if the
@@ -191,7 +190,8 @@ interface:
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
 | `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
-| `getCreateProtocolVersions`                             | Picked by this client from its `featureFlags` and `documentModels`, capped at what `createDefaults` selects. A Switchboard without that query caps base-reducer at 2, though `getCreateSignaturePolicy` refuses there. |
+| `getCreateProtocolVersions`                             | What the Switchboard's `createDefaults` selects for the type and parent, fitted down to what this client's `documentModels` can predict. A Switchboard from before per-type selection answers reactor-wide; one without the query caps base-reducer at 2, though `getCreateSignaturePolicy` refuses there. |
+| `newDocument`                                           | Heads a model's new document with `getCreateProtocolVersions` and `getCreateSignaturePolicy`; the module comes from `documentModels`, or the built-in drive model. |
 
 `drives`, `resolveIdOrSlug`, `rename`, `createEmpty` and the document-model
 module getters are not implemented here.

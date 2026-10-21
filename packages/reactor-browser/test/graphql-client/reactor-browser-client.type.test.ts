@@ -14,6 +14,7 @@ describe("IReactorBrowserClient", () => {
       | "subscribe"
       | "execute"
       | "getOperations"
+      | "newDocument"
       | "create"
       | "deleteDocument"
       | "undo"

@@ -19,6 +19,7 @@ export interface IReactorBrowserClient extends Pick<
   | "subscribe"
   | "execute"
   | "getOperations"
+  | "newDocument"
   | "create"
   | "deleteDocument"
   | "undo"

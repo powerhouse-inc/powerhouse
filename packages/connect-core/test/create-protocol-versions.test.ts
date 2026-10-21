@@ -12,7 +12,6 @@ import {
   type PHDocumentHeader,
   type DocumentModelModule,
   type ISigner,
-  type PeerCapabilityFlags,
   type Reducer,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, logger } from "document-model";
@@ -62,11 +61,13 @@ afterEach(async () => {
 
 const drive = driveDocumentModelModule as unknown as DocumentModelModule;
 
-/** A Switchboard whose reactor-wide createDefaults selects `hostVersions`. */
+/** A Switchboard whose createDefaults selects `hostVersions`, per type when a function. */
 async function remoteConnect(
   models: DocumentModelModule[],
-  hostVersions: Record<string, number> | "no-create-defaults",
-  featureFlags?: PeerCapabilityFlags,
+  hostVersions:
+    | Record<string, number>
+    | ((documentType: string | undefined) => Record<string, number>)
+    | "no-create-defaults",
 ) {
   const documents: Record<string, string> = { "drive-1": DRIVE_TYPE };
   stub = await serve(
@@ -90,11 +91,16 @@ async function remoteConnect(
           }),
         };
       }
+      const documentType = (body.variables as { documentType?: string })
+        ?.documentType;
       return asksDefaults
         ? data({
             createDefaults: {
               signaturePolicy: "v2-required",
-              protocolVersions: hostVersions,
+              protocolVersions:
+                typeof hostVersions === "function"
+                  ? hostVersions(documentType)
+                  : hostVersions,
             },
           })
         : undefined;
@@ -106,7 +112,6 @@ async function remoteConnect(
     remoteDriveUrl: stub.url.replace(/\/graphql$/, "/d/drive-1"),
     signer,
     documentModelModules: [...models, drive],
-    featureFlags,
   });
   setReactorClient(client);
   return stub;
@@ -193,7 +198,7 @@ describe("remote Connect against a Switchboard that runs base-reducer 3", () => 
       signature: 2,
     });
     expect(createInputs(received)[0].documentId).toBe(node.id);
-    expect(operationNames(received)).not.toContain("GetCreateProtocolVersions");
+    expect(operationNames(received)).toContain("GetCreateProtocolVersions");
   });
 
   it("creates a model whose reducer createReducer did not build at base-reducer 2", async () => {
@@ -218,8 +223,10 @@ describe("remote Connect against a Switchboard that runs base-reducer 3", () => 
     });
   });
 
-  it("creates at base-reducer 2 with Connect's undoV3 off", async () => {
-    const { received } = await remoteConnect([tagged], v3, { undoV3: false });
+  it("creates at what the Switchboard selects for the type", async () => {
+    const { received } = await remoteConnect([tagged], (documentType) =>
+      documentType === MODEL_TYPE ? { "base-reducer": 2 } : v3,
+    );
 
     await addDocument("drive-1", "Doc", MODEL_TYPE);
 
