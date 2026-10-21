@@ -43,7 +43,13 @@ describe("a package's stylesheet against Connect's theme", () => {
 
   it("scans the package's browser build, none of Connect's sources", async () => {
     const { sources } = await compiler();
-    expect(sources.map((source) => source.pattern)).toEqual(["./dist/browser"]);
+    expect(sources).toEqual([
+      expect.objectContaining({ pattern: "./dist/browser", negated: false }),
+      expect.objectContaining({
+        pattern: "./dist/browser/**/*.map",
+        negated: true,
+      }),
+    ]);
   });
 
   it("has the package's classes, with Connect's tokens but not its reset", async () => {
