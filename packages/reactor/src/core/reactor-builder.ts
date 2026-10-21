@@ -1454,6 +1454,8 @@ export class ReactorBuilder {
         queue,
         operationIndex,
         database as unknown as Kysely<DocumentViewDatabase>,
+        operationStore,
+        documentMetaCache,
       );
       groupReevaluationTrigger.attachCatchUp(
         settledWatermark,

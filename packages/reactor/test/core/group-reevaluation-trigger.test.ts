@@ -1,5 +1,13 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import { groupDocumentType } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  groupDocumentType,
+} from "@powerhousedao/shared/document-model";
+import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
+import type { IOperationStore } from "../../src/storage/interfaces.js";
 import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -80,12 +88,33 @@ async function harness(referencers: Record<string, string[]>) {
     createMockLogger(),
   );
 
+  // Stored rows by operation id, and created versions by document.
+  const stored = new Map<string, Operation>();
+  const versions = new Map<string, Record<string, number>>();
+  const operationStore = {
+    getOperationsByIds: (
+      _documentId: string,
+      _scope: string,
+      _branch: string,
+      ids: string[],
+    ) => Promise.resolve(ids.flatMap((id) => stored.get(id) ?? [])),
+  } as unknown as IOperationStore;
+  const documentMetaCache = {
+    getDocumentMeta: (documentId: string) => {
+      const protocolVersions = versions.get(documentId);
+      return protocolVersions === undefined
+        ? Promise.reject(new Error(`${documentId} not found`))
+        : Promise.resolve({ protocolVersions });
+    },
+  } as unknown as IDocumentMetaCache;
   const trigger = new GroupReevaluationTrigger(
     createMockLogger(),
     eventBus,
     queue,
     operationIndex,
     db,
+    operationStore,
+    documentMetaCache,
   );
   trigger.attachCatchUp(watermark, 100_000);
 
@@ -138,6 +167,8 @@ async function harness(referencers: Record<string, string[]>) {
     )?.lastOrdinal;
 
   return {
+    stored,
+    versions,
     trigger,
     emit,
     commit,
@@ -269,7 +300,7 @@ describe("GroupReevaluationTrigger", () => {
 
     /** Indexes a group's creation and its global actions, by id and type. */
     async function seed(
-      operationIndex: KyselyOperationIndex,
+      { operationIndex, stored, versions }: Awaited<ReturnType<typeof harness>>,
       groupId: string,
       baseReducer: number,
       actions: Array<[id: string, type: string, input?: unknown]>,
@@ -291,6 +322,18 @@ describe("GroupReevaluationTrigger", () => {
         skip: 0,
         action: { ...action, scope, timestampUtcMs: at },
       });
+      versions.set(groupId, { "base-reducer": baseReducer });
+      for (const [index, [id, type, input]] of actions.entries()) {
+        const operation = row("global", index, {
+          id,
+          type,
+          input: input ?? {},
+        });
+        stored.set(
+          deriveOperationId(groupId, "global", "main", id),
+          operation as unknown as Operation,
+        );
+      }
       const txn = operationIndex.start();
       txn.write([
         row("document", 0, {
@@ -326,10 +369,9 @@ describe("GroupReevaluationTrigger", () => {
       actions: Array<[id: string, type: string, input?: unknown]>,
       target: string,
     ): Promise<string[]> {
-      const { trigger, emit, enqueued, operationIndex } = await harness({
-        "g-1": ["doc-a"],
-      });
-      await seed(operationIndex, "g-1", baseReducer, actions);
+      const setup = await harness({ "g-1": ["doc-a"] });
+      const { trigger, emit, enqueued } = setup;
+      await seed(setup, "g-1", baseReducer, actions);
       await trigger.startup();
       await emit([retractOf("g-1", target)]);
       return enqueued.map((job) => job.documentId);
@@ -362,6 +404,15 @@ describe("GroupReevaluationTrigger", () => {
       expect(
         await enqueuedFor(3, [["name", "SET_GROUP_NAME"]], "name"),
       ).toEqual([]);
+    });
+
+    it("enqueues when the group's version cannot be read", async () => {
+      const setup = await harness({ "g-1": ["doc-a"] });
+      await seed(setup, "g-1", 2, [["add", "ADD_MEMBER"]]);
+      setup.versions.clear();
+      await setup.trigger.startup();
+      await setup.emit([retractOf("g-1", "add")]);
+      expect(setup.enqueued.map((job) => job.documentId)).toEqual(["doc-a"]);
     });
 
     it("skips a RETRACT on a base-reducer 2 group, where it is inert", async () => {
