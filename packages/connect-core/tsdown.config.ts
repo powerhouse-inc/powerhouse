@@ -1,15 +1,6 @@
-import { globSync } from "node:fs";
 import type { UserConfig } from "tsdown";
 import { defineConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
-
-// The route files, at dist/routes/<path>.js: Vite pre-bundles a dependency's
-// .js but serves its .tsx unbundled, with the CommonJS it imports.
-const routes = Object.fromEntries(
-  globSync("src/routes/**/*.tsx")
-    .sort()
-    .map((file) => [file.replace(/^src\//, "").replace(/\.tsx$/, ""), file]),
-);
 
 const shared: UserConfig = {
   entry: {
@@ -21,7 +12,10 @@ const shared: UserConfig = {
     runtime: "src/runtime/index.ts",
     views: "src/views/index.ts",
     "route-tree": "src/routeTree.gen.ts",
-    ...routes,
+    // The route files, at dist/routes/<path>.js: Vite pre-bundles a
+    // dependency's .js but serves its .tsx unbundled, with the CommonJS it
+    // imports.
+    "routes/*": "src/routes/**/*.tsx",
   },
   platform: "browser",
   outDir: "dist",
