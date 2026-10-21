@@ -2,7 +2,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CONNECT_ROUTE_FILE_DEPS } from "./vite-plugins/connect-routes.js";
+import { connectOptimizeDeps } from "./dev-deps.js";
+import {
+  CONNECT_ROUTE_FILE_DEPS,
+  CORE_ROUTE_TREE_SPECIFIER,
+  ROUTE_TREE_SPECIFIER,
+} from "./vite-plugins/connect-routes.js";
 
 const require = createRequire(import.meta.url);
 const packageDir = (name: string) =>
@@ -39,5 +44,12 @@ describe("CONNECT_ROUTE_FILE_DEPS", () => {
     expect(CONNECT_ROUTE_FILE_DEPS).toEqual(
       expect.arrayContaining([...imported]),
     );
+  });
+
+  it("keeps the route tree out of pre-bundled deps, as live project modules", () => {
+    expect(connectOptimizeDeps([]).rolldownOptions?.external).toEqual([
+      ROUTE_TREE_SPECIFIER,
+      CORE_ROUTE_TREE_SPECIFIER,
+    ]);
   });
 });
