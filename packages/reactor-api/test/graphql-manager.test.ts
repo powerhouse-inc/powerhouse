@@ -17,12 +17,12 @@ import {
   type JobInfo,
   JobStatus,
 } from "@powerhousedao/reactor";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
 import {
   createReactorDriveResolvers,
   REACTOR_DRIVE_SUBGRAPH_NAME,
-  reactorDriveDocumentModelModule,
   reactorDriveSubgraphTypeDefs,
-} from "@powerhousedao/reactor-drive";
+} from "@powerhousedao/reactor-drive/subgraph";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
