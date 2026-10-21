@@ -9,7 +9,8 @@ import { getConnectRegistry } from "../registry.js";
 const loader = () =>
   (getConnectRegistry().runtimeConfig ??= new ConfigLoader(
     new JsonConfigAdapter({
-      path: `${import.meta.env.BASE_URL}powerhouse.config.json`,
+      // Optional: Node runs this file untransformed when it prerenders the shell.
+      path: `${import.meta.env?.BASE_URL ?? "/"}powerhouse.config.json`,
     }),
   ));
 
