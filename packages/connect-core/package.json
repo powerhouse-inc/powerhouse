@@ -15,10 +15,12 @@
   "files": [
     "dist",
     "src",
-    "theme.css"
+    "theme.css",
+    "tailwind.css"
   ],
   "sideEffects": [
-    "./theme.css"
+    "./theme.css",
+    "./tailwind.css"
   ],
   "exports": {
     ".": {
@@ -63,6 +65,7 @@
     },
     "./routes/*": "./src/routes/*.tsx",
     "./theme.css": "./theme.css",
+    "./tailwind.css": "./tailwind.css",
     "./package.json": "./package.json"
   },
   "scripts": {

@@ -16,6 +16,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import {
   checkSharedDeps,
+  CONNECT_LAYER_ORDER,
   formatSharedDepWarnings,
   mergePwaConfig,
   type PHConnectPwa,
@@ -125,8 +126,7 @@ const LOCAL_PACKAGE_NAME = "Local" as const;
 
 // Package CSS goes in external-packages: above Connect's reset so it can style
 // its editors, below Connect's utilities so it can't override them.
-export const LAYER_ORDER =
-  "@layer theme, base, components, external-packages, utilities;";
+export const LAYER_ORDER = CONNECT_LAYER_ORDER;
 const LAYER_ORDER_ATTR = "data-ph-layer-order";
 
 // Layer order is set by the first declaration in the document, and a project's
