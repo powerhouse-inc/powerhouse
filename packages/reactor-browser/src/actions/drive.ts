@@ -25,6 +25,10 @@ import {
   type ProtocolVersions,
   type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import {
+  clearDriveAuthRefusal,
+  recordDriveAuthRefusal,
+} from "./drive-auth-refusals.js";
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
@@ -209,10 +213,14 @@ export async function addRemoteDrive(
     driveInfo = await fetchDriveInfo(url);
   } catch (error) {
     if (isDriveAuthError(error)) {
+      // Remembered so the route that asked for this drive shows a sign-in
+      // view rather than "drive not found" under the modal.
+      recordDriveAuthRefusal(url);
       showPHModal({ type: "driveAuthRequired" });
     }
     throw error;
   }
+  clearDriveAuthRefusal(url);
 
   const resolvedDriveId = driveId ?? driveInfo.id;
   const collectionId = DriveCollectionId.forDrive(resolvedDriveId);

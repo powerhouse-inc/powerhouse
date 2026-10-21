@@ -279,6 +279,55 @@ describe("drive info endpoint authorization (e2e over real HTTP)", () => {
     await expect(refused.json()).resolves.toEqual(await missing.json());
   });
 
+  it("challenges every 404 on a protected switchboard, refused or missing alike", async () => {
+    // A 404 alone cannot tell a client "log in" from "no such drive", so an
+    // anonymous visitor of a protected drive saw "Drive not found" and was
+    // never offered a login. The challenge says that credentials could change
+    // the answer. It is sent for a missing drive too, so it reveals nothing a
+    // slug probe could use.
+    const { port } = await startServer(adminOnly());
+
+    const refused = await get(port, "/d/my-drive");
+    const missing = await get(port, "/d/no-such-drive");
+
+    expect(refused.status).toBe(404);
+    expect(refused.headers.get("www-authenticate")).toBe(
+      'Bearer realm="switchboard"',
+    );
+    expect(missing.headers.get("www-authenticate")).toBe(
+      refused.headers.get("www-authenticate"),
+    );
+    // Readable by a cross-origin Connect.
+    expect(refused.headers.get("access-control-expose-headers")).toContain(
+      "WWW-Authenticate",
+    );
+  });
+
+  it("challenges an authenticated caller it refuses with insufficient_scope", async () => {
+    const { port } = await startServer(adminOnly());
+
+    const refused = await get(port, "/d/my-drive", OUTSIDER);
+    const missing = await get(port, "/d/no-such-drive", OUTSIDER);
+
+    expect(refused.status).toBe(404);
+    expect(refused.headers.get("www-authenticate")).toBe(
+      'Bearer realm="switchboard", error="insufficient_scope"',
+    );
+    expect(missing.headers.get("www-authenticate")).toBe(
+      refused.headers.get("www-authenticate"),
+    );
+  });
+
+  it("does not challenge a missing drive under the OPEN policy", async () => {
+    // Credentials change nothing there, so a 404 really means "no such drive".
+    const { port } = await startServer(open(), { withAuth: false });
+
+    const res = await get(port, "/d/no-such-drive");
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("www-authenticate")).toBeNull();
+  });
+
   it("stays open to anonymous drive discovery under the OPEN policy", async () => {
     // Drive discovery is the one read a client makes before it can
     // authenticate: Connect reads graphqlEndpoint from here to register the

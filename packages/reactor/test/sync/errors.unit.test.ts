@@ -66,6 +66,17 @@ describe("isDriveAuthError", () => {
     }
   });
 
+  it("is true for a 404 the switchboard sent with an auth challenge", () => {
+    // A protected switchboard answers a drive the caller may not read with a
+    // challenged 404 (WWW-Authenticate): credentials could change the answer,
+    // so the client prompts a login instead of reporting "drive not found".
+    expect(
+      isDriveAuthError(
+        new DriveRequestError("nope", 404, { authChallenge: true }),
+      ),
+    ).toBe(true);
+  });
+
   it("is false for a DriveRequestError with no status (network failure)", () => {
     expect(isDriveAuthError(new DriveRequestError("offline"))).toBe(false);
   });

@@ -35,6 +35,7 @@ describe("fetchDriveInfo", () => {
     return Promise.resolve({
       ok: false,
       status: code,
+      headers: new Headers(),
       json: () => Promise.resolve({ error: "nope" }),
     });
   }
@@ -141,5 +142,29 @@ describe("fetchDriveInfo", () => {
 
     expect(error).toBeInstanceOf(DriveRequestError);
     expect(isDriveAuthError(error)).toBe(false);
+  });
+
+  it("reads a challenged 404 as an auth error, so Connect offers a login", async () => {
+    // A protected switchboard sends WWW-Authenticate with the 404: logging in
+    // could change the answer. Without this an anonymous visitor of their own
+    // protected drive was told "Drive not found" and never offered a login.
+    signedOut();
+    fetchMock.mockReturnValue(
+      Promise.resolve({
+        ok: false,
+        status: 404,
+        headers: new Headers({
+          "WWW-Authenticate": 'Bearer realm="switchboard"',
+        }),
+        json: () => Promise.resolve({ error: "Drive not found" }),
+      }),
+    );
+
+    const error = await fetchDriveInfo(
+      "http://switchboard.test/d/my-drive",
+    ).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(DriveRequestError);
+    expect(isDriveAuthError(error)).toBe(true);
   });
 });

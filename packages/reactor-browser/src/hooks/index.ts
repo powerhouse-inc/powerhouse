@@ -2,6 +2,7 @@ export * from "../renown/use-renown-auth.js";
 export * from "./add-ph-event-handlers.js";
 export * from "./allowed-document-model-modules.js";
 export * from "./child-nodes.js";
+export * from "./drive-auth-refused.js";
 export * from "./config/connect.js";
 export * from "./config/editor.js";
 export * from "./config/set-config-by-key.js";
