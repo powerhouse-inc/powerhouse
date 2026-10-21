@@ -21,6 +21,7 @@ import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import {
   createBaseReducer3Document,
+  createCreateDocumentOperation,
   createDocModelDocument,
   createUndoV3ReactorBuilder,
 } from "../factories.js";
@@ -328,6 +329,49 @@ describe("base-reducer 3: RETRACT admission", () => {
       "ADD_MODULE",
     ]);
     expect(await moduleIds()).toEqual(["a", "b"]);
+  });
+
+  it("refuses a loaded UNDO and REDO row, typed, and stores nothing", async () => {
+    await build();
+    await executeOk([add("a")]);
+    await executeOk([add("b")]);
+
+    for (const loaded of [undo(), redo()]) {
+      const refused = await load([asOperation(loaded, 2)]);
+      expect(refused.status).toBe(JobStatus.FAILED);
+      expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
+      expect(refused.errorHistory?.length ?? 0).toBeLessThanOrEqual(1);
+    }
+    expect((await stream()).map((operation) => operation.action.type)).toEqual([
+      "ADD_MODULE",
+      "ADD_MODULE",
+    ]);
+    expect(await moduleIds()).toEqual(["a", "b"]);
+  });
+
+  it("refuses an UNDO row in the load that creates a version 3 document", async () => {
+    await build();
+    const fresh = "fresh-v3-document";
+    const create = createCreateDocumentOperation(
+      fresh,
+      created.header.documentType,
+    );
+    const undone = { ...undo(), scope: "document" };
+    const refused = await settle(
+      await module!.reactor.load(fresh, "main", [
+        create,
+        {
+          id: deriveOperationId(fresh, "document", "main", undone.id),
+          index: 1,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: undone.timestampUtcMs,
+          action: undone,
+        },
+      ]),
+    );
+    expect(refused.status).toBe(JobStatus.FAILED);
+    expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
   });
 });
 

@@ -453,9 +453,9 @@ export class ReservedActionError extends Error {
 }
 
 /**
- * A submitted UNDO or REDO into a document whose base reducer undoes by
- * retraction. Its client resolves the target and submits a RETRACT of it,
- * signed by the author, as IReactorClient.undo does.
+ * An UNDO or REDO, submitted or loaded from a peer, into a document whose base
+ * reducer undoes by retraction. Its client resolves the target and submits a
+ * RETRACT of it, signed by the author, as IReactorClient.undo does.
  */
 export class SubmittedUndoRefusedError extends Error {
   public readonly documentId: string;

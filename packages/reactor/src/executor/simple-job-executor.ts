@@ -1,6 +1,7 @@
 import type {
   Action,
   BaseReducerCapabilities,
+  CreateDocumentAction,
   DeriveScope,
   DocumentModelModule,
   ISigner,
@@ -16,6 +17,7 @@ import {
   baseReducerCapabilities,
   capabilitiesFor,
   compareCanonical,
+  createdCapabilities,
   decide,
   derivesByRule,
   garbageCollect,
@@ -272,17 +274,35 @@ type StoredProtocol = {
   unreadable?: Error;
 };
 
-/** A submitted UNDO or REDO where the stored version undoes by RETRACT. */
-function submittedUndoRefusal(
+/**
+ * An UNDO or REDO, submitted or loaded from a peer, where the version undoes by
+ * RETRACT. A loaded one would make each replica mint its own RETRACT id.
+ */
+function undoRedoRefusal(
   job: Job,
-  caps: BaseReducerCapabilities | undefined,
+  stored: BaseReducerCapabilities | undefined,
 ): SubmittedUndoRefusedError | undefined {
-  if (job.kind !== "mutation" || !caps || acceptsSubmittedUndoRedo(caps)) {
+  let actions: readonly Action[];
+  let caps = stored;
+  if (job.kind === "mutation") {
+    actions = job.actions;
+  } else if (job.kind === "load") {
+    actions = job.operations.map((operation) => operation.action);
+    caps ??= createdCapabilities(
+      actions.find(
+        (action): action is CreateDocumentAction =>
+          action.type === "CREATE_DOCUMENT",
+      )?.input,
+    );
+  } else {
     return undefined;
   }
-  const submitted = job.actions.find(isUndoRedo);
-  return submitted
-    ? new SubmittedUndoRefusedError(job.documentId, submitted.type)
+  if (!caps || acceptsSubmittedUndoRedo(caps)) {
+    return undefined;
+  }
+  const refused = actions.find(isUndoRedo);
+  return refused
+    ? new SubmittedUndoRefusedError(job.documentId, refused.type)
     : undefined;
 }
 
@@ -759,7 +779,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.refusal) {
       return { result: buildErrorResult(job, stored.refusal, startTime) };
     }
-    const undoRefusal = submittedUndoRefusal(job, stored.caps);
+    const undoRefusal = undoRedoRefusal(job, stored.caps);
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
     }
