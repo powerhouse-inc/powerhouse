@@ -9,14 +9,16 @@ How a document stores an undo depends on its base-reducer version, `header.proto
 | Version | `UNDO` is stored as                                   | `REDO`                                                                          |
 | ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
 | 1, 2    | a `NOOP` whose `skip` removes the operation before it | replays the undone action from the document's clipboard; version 2 refuses it once the stream holds an undo |
-| 3       | `RETRACT { target }`, naming the undone action by id  | a `RETRACT` of the retraction                                                   |
+| 3       | refused; undo is a `RETRACT { target }` the author signs, naming the undone action by id | refused; redo is a `RETRACT` of the retraction                       |
 
 On version 3 a retraction names its target, so where it lands in the stream does not change what it undoes. Replicas that hold the same operations derive the same state, whatever order the operations arrived in.
 
 :::info[Feature flag]
 Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor with it off refuses to create a version 3 document and never receives one from a peer.
 
-A reactor with it on still refuses a version 3 document whose model it cannot run as version 3: the model's reducer is not built by `createReducer`, or the model cannot be loaded. The refusal is an `UnsupportedProtocolVersionError`.
+A reactor with it on still refuses a version 3 document whose model it cannot run as version 3: the model's reducer is not built by `createReducer`, or the model cannot be loaded. The refusal is an `UnsupportedProtocolVersionError`, on writes, on reads, and on receipt from a peer before any load.
+
+A reactor that stores version 3 documents of a model it cannot run refuses to start and names the types, as one without `undoV3` does; `withUnsupportedStoredDocuments("read-only")` starts it with those documents read-only. A model loaded after start is checked when it loads, and a refusal is logged and emitted as `STORED_MODEL_REFUSED`.
 :::
 
 ## Turning it off
@@ -32,17 +34,19 @@ A reactor with it on still refuses a version 3 document whose model it cannot ru
 
 ## Which version a document takes
 
-A document's version is fixed when it is created, and its creator chooses it. A reactor or client building a create picks from its own `undoV3` flag and its own models: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. A reactor that does not run the chosen version cannot accept the document. A call can name a version:
+A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `IReactorClient.newDocument`, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. A reactor that does not run the chosen version refuses the document. A call can name a version:
 
 ```typescript
-const document = await client.createEmpty("powerhouse/todo-list", {
+const document = await client.newDocument("powerhouse/todo-list", {
+  parentIdentifier: driveId,
   protocolVersions: { "base-reducer": 2 },
 });
+await client.drives.addFile(driveId, document);
 ```
 
-A document headed outside a reactor, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is added to a drive.
+A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` refuses a header without protocol versions.
 
-The GraphQL light client picks from its `featureFlags` and `documentModels` options, capped at the version the Switchboard's `createDefaults` query selects. Against a Switchboard without that query it picks version 2, but it cannot create there: it also reads the signature policy from that query.
+The GraphQL light client asks the Switchboard's `createDefaults` query to select for the document's type and parent, and fits the answer down to what its own `documentModels` can run, so a remote document's version follows the Switchboard's `undoV3`. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
 
 An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
 
@@ -58,9 +62,9 @@ The copy starts from the source's current state, so the source's history cannot 
 
 Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
 
-On version 3 the client asks the reactor for the target, through `IReactor.resolveUndoRedo`, and submits a `RETRACT` signed by the client's signer. On versions 1 and 2 it submits `UNDO` or `REDO`.
+On version 3 the client resolves the target with `undoRedoTargets` and submits a `RETRACT` of it signed by the client's own signer. On versions 1 and 2 it submits `UNDO` or `REDO`. The GraphQL light client does the same, resolving the target through the Switchboard's `undoRedoTargets` query; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods). Either way the author signs, so a policy must grant the author `RETRACT` for undo on version 3.
 
-The GraphQL light client always submits `UNDO` or `REDO`, so on version 3 the Switchboard signs the `RETRACT`; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods).
+The `RETRACT` names the row the call saw as the latest, so an edit that lands in between is not undone. If the target is retracted or gone by the time the `RETRACT` runs, the write fails with `RetractionRefusedError`; the client does not resolve again or retry.
 
 To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
 
@@ -70,18 +74,18 @@ import { retract } from "document-model";
 await client.execute(documentId, "main", [retract(actionId, "global")]);
 ```
 
-A submitted `UNDO` or `REDO` still works on version 3. The reactor resolves it to a `RETRACT` and signs that with its own signer, as it signs the `NOOP` on versions 1 and 2. Both take a `count` of 1 on version 3.
+A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`. On versions 1 and 2 the reactor still resolves one and signs the `NOOP` it stores with its own signer.
 
 ## Rules on version 3
 
 - An action is live if no live `RETRACT` names it. Liveness depends on which operations are present, not on their order.
-- `UNDO` retracts the last applied content operation in the scope, by any author.
-- `REDO` retracts the last live retraction of content. Content applied after the undo leaves nothing to redo.
-- `SET_NAME` and `SET_PREFERRED_EDITOR` cannot be undone. `UNDO` passes over them, and a `RETRACT` naming one is stored but retracts nothing.
+- Undo targets the last applied content operation in the scope, by any author.
+- Redo targets the last live retraction of content. Content applied after the undo leaves nothing to redo.
+- `SET_NAME` and `SET_PREFERRED_EDITOR` cannot be undone. Undo passes over them, and a `RETRACT` naming one is stored but retracts nothing.
 - A denied `RETRACT` retracts nothing.
-- An operation that throws applies nothing. `UNDO` passes over it.
+- An operation that throws applies nothing. Undo passes over it.
 - `skip` is only the rewind a reshuffle writes. It never undoes anything.
-- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order. A `RETRACT` the reactor makes from an `UNDO` or `REDO` sorts where the submitted action would.
+- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order.
 
 On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
 
@@ -93,7 +97,8 @@ The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 
 | ------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
 | `RetractionRefusedError` | `documentId`, `target`, `reason` | A submitted `RETRACT` names an absent target (`"target-missing"`) or one already retracted (`"target-retracted"`) |
 | `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to a version 1 or 2 document or to the `auth` or `document` scope |
+| `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write carries `UNDO` or `REDO` to a version 3 document                    |
 
-Both are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
+All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
 `undo` and `redo` on version 3 throw `Cannot undo: nothing to undo in scope history` (or `redo`) before submitting anything when there is no target.

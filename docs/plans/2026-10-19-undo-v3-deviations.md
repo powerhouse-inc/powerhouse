@@ -49,10 +49,10 @@ change, the entry gives the final behaviour.
 - `stateReducerOf` reads the state reducer from a `Symbol.for` tag that
   `createReducer` sets, so every existing module carries it without
   regeneration.
-- The RETRACT an UNDO or REDO resolves to carries a fresh id. The reactor
-  re-signs a stored action only when its id differs from the submitted one,
-  then keys it under `synthesizedActionId(submitted.id)`; carrying the UNDO's
-  id would store the RETRACT unsigned.
+- Superseded by the architecture fixes: base-reducer 3 refuses a submitted
+  UNDO or REDO, so the reactor resolves and signs nothing on 3. Below 3 the
+  NOOP an UNDO resolves to is re-signed under `synthesizedActionId`'s sha1
+  form, as released.
 - Replay keeps the existing `checkHashes` contract: `false` compares each
   scope's last positional row with the derived state; `true` checks nothing.
   Checking under `true` would make `.phd` load, duplicate and copy throw on
@@ -100,18 +100,16 @@ change, the entry gives the final behaviour.
 
 - Rows a re-evaluation re-appends inline now reach the read models. Before,
   `reactor.get` served a stale state on 2 and 3 alike.
-- A resolved RETRACT carries the UNDO or REDO's timestamp, not the reactor's
-  clock, so a backdated UNDO's row stays where it was positioned through
-  later reshuffles.
-- A backdated UNDO retracts the latest applied content of the scope, not the
-  latest before its timestamp. Pinned by test.
+- Superseded by the architecture fixes: on 3 an undo is a RETRACT the
+  author submits, so it carries its own timestamp and names its target. The
+  backdated-UNDO and live-resubmit rules apply to 1 and 2 only.
 - On 3 the group stream is read whole and derived by the rule. The
   membership-only read dropped a rewind skip carried by a `SET_NAME` row and
   left a member whose ADD was retracted with access.
 - The group trigger re-evaluates only for a RETRACT on a 3 group whose
   target, through any RETRACTs it names, is `ADD_MEMBER` or `REMOVE_MEMBER`.
-- A tied UNDO in the decision walk compares by its synthesized id; the walk
-  throws when no reducer is available.
+- The walk throws when no reducer is available. (A tied UNDO compared by its
+  synthesized id; with UNDO refused on 3 that case is gone.)
 
 ## Stage 6: client
 
@@ -121,9 +119,9 @@ change, the entry gives the final behaviour.
   `applied` client side: a cached document's `initialState` equals its
   current state, so a client-side derivation is wrong, and it ignored model
   upgrades.
-- On the GraphQL light client, the client sends UNDO or REDO and the
-  Switchboard resolves it and signs the RETRACT. The plan had the author sign
-  on every client.
+- The GraphQL light client first sent UNDO or REDO for the Switchboard to
+  resolve and sign. The architecture fixes restore the plan: every client
+  signs its own RETRACT.
 - On 3 the workflow editor undoes by retracting the live rows of the last
   edit by id, in one batch signed by the author; redo retracts those
   RETRACTs. This replaced a positional plan over "applied minus stored-error
@@ -197,6 +195,8 @@ Decisions:
   before fitting, so a lazily loaded tagged model lands at 3.
 - `fitCreateBaseReducer` moved to `@powerhousedao/shared/document-model` so
   the light client can use it without the reactor.
+- Superseded by the architecture fixes: headerless creates no longer reach
+  `Reactor.create`, which refuses a header without versions.
 - The creator chooses a new document's protocol versions, capped at what
   the receiving peer agrees to: base-reducer is the lower of the creator's
   own support (tagged reducer with `undoV3` on: 3; otherwise 2) and the
@@ -210,8 +210,8 @@ Decisions:
   refused. Connect's remote and
   router modes reach the host through this one client, so this is the one
   cap; the receiver's refusal stays as the backstop. Drive members still do
-  not narrow base-reducer. GraphQL `createDefaults` keeps its `documentType`
-  argument for other callers and older clients.
+  not narrow base-reducer. The architecture fixes make the host's answer
+  per type and drop the client's flags; see there.
 - A receiver refuses what it cannot run. Peer agreement already covered a
   reactor without base-reducer 3 (refused on submit and load, refused on
   receipt in sync, held by senders). New: a reactor that announces 3 refuses
@@ -258,15 +258,57 @@ timestamps, which the user rejected):
   `compareCanonical` and in any decision walk that reaches a base-reducer 3
   stream. Walks over v1/v2 streams only, the v2 reshuffle and v2 replay keep
   `localeCompare`.
-- Synthesized ids are `${submittedId}.s` on base-reducer 3 only, so a
-  synthesized RETRACT sorts where its UNDO did. Below 3 the released sha1
-  form stays. Admission looks up both forms.
+- Base-reducer 3 synthesizes nothing since the architecture fixes (its
+  `synthesizedId` capability is `"none"`); the `.s` form and admission's
+  second lookup are gone. Below 3 the released sha1 form stays.
 - All builders switched: `createAction`, reactor and reactor-drive builders,
   workflow undo plans and piece actions, document genesis. The generator and
   the auth clock are their own deep entry (`document-model/action-id`) so the
   piece bundle stays small.
 - Workflow undo-group ids are `<v7 id>~ug:<group>`, so they sort by creation
   against plain ids. Stored `undo-group:<group>:<id>` ids still parse.
+
+## Architecture fixes (2026-10-21)
+
+Who decides a document's version, and who signs its undo.
+
+- Per-model capability stays a refusal backstop under the per-reactor
+  manifest. One predicate, `refusalFor`, judges a type at its versions
+  against the registered models. Reads of an unrunnable type throw
+  `UnsupportedProtocolVersionError`, so read models skip them.
+- The startup check reads distinct (model, protocolVersions) pairs through
+  migration 029's index and judges each with `refusalFor`: `refuse` fails
+  boot naming the types, `read-only` boots. A type not registered at boot is
+  judged when it loads, logged and emitted as `STORED_MODEL_REFUSED`.
+- Sync refuses a document whose type this reactor cannot run at receipt,
+  before a load job (`LocalPeer.modelRefusal`). The sender still learns of
+  it from the refusal, so each receiver restart resends the history of every
+  document held from it once; a mixed-fleet test pins the count.
+- A client chooses a new document's versions in one place,
+  `IReactorClient.newDocument`; `createEmpty` is `newDocument` then
+  `create`, and `create` takes a header as given. `buildCreateActions` is the
+  one CREATE + UPGRADE builder and `createVersionsOf` the one fallback for a
+  versionless legacy header. `Reactor.create` refuses a header without
+  versions. First-party creates (Connect's actions, the reactor-api
+  resolvers, Switchboard's default drives, MCP, clint, the reactor piece)
+  build headers with `newDocument`. Fixed drift: the piece and Connect's
+  `addDrive` in light mode created at the flagless 2, and the
+  `ReactorDriveClient` copy of a versionless source hardcoded 2.
+- `module.utils.createDocument()` stays flagless at base-reducer 2.
+- The light client asks `createDefaults` for the type and parent, caps at
+  what its build runs and fits down to its own models; its `featureFlags`
+  option is gone, so a remote document's version follows the host's
+  `undoV3`. A host from before the `documentType` argument answers
+  reactor-wide.
+- Undo on 3 is signed by its author on every client. Both clients run the
+  shared plan (`undoRedoActions`); the light client resolves the target
+  through the host's `undoRedoTargets` query, which asks
+  `IReactorClient.undoRedoTargets` as the caller. A stale target is refused
+  with `RetractionRefusedError` and not resolved again.
+- Base-reducer 3 refuses a submitted UNDO or REDO with
+  `SubmittedUndoRefusedError` (terminal). The standing backdated-UNDO and
+  live-resubmit rules apply to 1 and 2 only; on 3 a RETRACT names its target
+  and a resubmitted RETRACT is idempotent by action id.
 
 ## Known gaps
 
@@ -277,23 +319,18 @@ timestamps, which the user rejected):
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
 - A create through the light client asks `createDefaults` twice, once for
-  the signature policy and once for the cap.
+  the signature policy and once for the type's versions.
 - A copy keeps its source's versions, so a version 3 document copied into a
   host that runs only 2 is refused there.
 - A Switchboard from before `createDefaults` (the 6.2.3 release) caps
   creates at 2, but `getCreateSignaturePolicy` still refuses against it, as
   on main, so the light client cannot create there at all. Pinned in
   Connect's `create-protocol-versions` test.
-- The cap is reactor-wide, so it ignores whether the host's own build of a
-  model can run 3. A client with a tagged build of a model the host has
-  untagged sends 3 and is refused.
 - A host that selects a version above the client's highest (say 4) is read
   as running the baseline and that version only, so the client creates at
   2 until it is upgraded.
-- A reactor that stored version 3 documents while a model was tagged and
-  then boots an untagged build of it refuses every write, load and delete
-  for those documents. The startup stored-protocol check compares versions
-  only and does not catch it.
+- A hold a peer's refusal of one type causes records the protocol only, so
+  `listHolds` reports the peer's reactor-wide support for it.
 - A local-channel receiver drops a push at or below its inbox ack, so a
   release toward a local peer still never loads there. Pinned `it.fails` in
   reactor `local-channel/unit.test.ts`.
@@ -303,7 +340,8 @@ timestamps, which the user rejected):
 - A refusal is still reported on every poll within one incarnation, with a
   `logger.error` on the sender each time. A model reloaded at run time
   changes no revision, so its holds release only on the next restart.
-- Pieces and workflow refuse `undo`, `redo` and `undoRedoAvailability`.
+- Pieces and workflow refuse `undo`, `redo`, `undoRedoTargets` and
+  `undoRedoAvailability`.
 - Plan text is stale on the migration number (027, now 028) and on the
   DriveClient copy.
 - Academy `tsc --build` tooling issue, pre-existing.
