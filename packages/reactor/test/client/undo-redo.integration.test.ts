@@ -176,8 +176,33 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     await expect(client.undo(id)).rejects.toThrow(
       "Cannot undo: nothing to undo in scope history",
     );
+    expect(await client.undoRedoTargets(id)).toEqual({});
     expect(resolved).toBe(0);
     expect(await stream(id)).toHaveLength(1);
+  });
+
+  it("resolves targets for the subject the view names, through the read gate", async () => {
+    const gate: IReadGate = {
+      scopePredicate: (_document, subject) =>
+        Promise.resolve(
+          (scope) => scope !== "global" || subject.address === "0xreader",
+        ),
+    };
+    await build([], [], gate);
+    const id = await createDocument(createBaseReducer3Document());
+    await add(id, "a");
+    const [row] = await stream(id);
+
+    expect(
+      await client.undoRedoTargets(id, "global", {
+        subject: { address: "0xreader" },
+      }),
+    ).toEqual({ undoTarget: row.action.id });
+    expect(
+      await client.undoRedoTargets(id, "global", {
+        subject: { address: "0xother" },
+      }),
+    ).toEqual({});
   });
 
   it("runs an undo and a redo issued together in call order", async () => {

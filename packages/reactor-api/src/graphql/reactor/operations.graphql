@@ -290,6 +290,21 @@ query GetCreateProtocolVersions(
   }
 }
 
+query GetUndoRedoTargets(
+  $documentIdOrSlug: String!
+  $scope: String
+  $branch: String
+) {
+  undoRedoTargets(
+    documentIdOrSlug: $documentIdOrSlug
+    scope: $scope
+    branch: $branch
+  ) {
+    undoTarget
+    redoTarget
+  }
+}
+
 query EvaluateActions(
   $documentIdentifier: String!
   $branch: String

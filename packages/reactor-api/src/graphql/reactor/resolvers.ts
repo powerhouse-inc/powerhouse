@@ -140,6 +140,27 @@ export async function createDefaults(
   return { signaturePolicy, protocolVersions };
 }
 
+/** Read-gated by the client: a scope the subject may not read has none. */
+export async function undoRedoTargets(
+  reactorClient: IReactorClient,
+  args: {
+    documentIdOrSlug: string;
+    scope?: string | null;
+    branch?: string | null;
+  },
+  subject?: AuthSubject,
+): Promise<{ undoTarget: string | null; redoTarget: string | null }> {
+  const targets = await reactorClient.undoRedoTargets(
+    args.documentIdOrSlug,
+    fromInputMaybe(args.scope) ?? undefined,
+    { branch: fromInputMaybe(args.branch) ?? undefined, subject },
+  );
+  return {
+    undoTarget: targets.undoTarget ?? null,
+    redoTarget: targets.redoTarget ?? null,
+  };
+}
+
 export async function documentModels(
   reactorClient: IReactorClient,
   args: {

@@ -677,6 +677,7 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+  readonly undoRedoTargets: UndoRedoTargets;
 };
 
 export type QueryCreateDefaultsArgs = {
@@ -769,6 +770,12 @@ export type QueryPollSyncEnvelopesArgs = {
 export type QuerySyncHoldsArgs = {
   documentId?: InputMaybe<Scalars["String"]["input"]>;
   remoteName?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type QueryUndoRedoTargetsArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -923,6 +930,11 @@ export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
+};
+
+export type UndoRedoTargets = {
+  readonly redoTarget?: Maybe<Scalars["String"]["output"]>;
+  readonly undoTarget?: Maybe<Scalars["String"]["output"]>;
 };
 
 export type ViewFilterInput = {
@@ -1356,6 +1368,19 @@ export type GetCreateProtocolVersionsQueryVariables = Exact<{
 
 export type GetCreateProtocolVersionsQuery = {
   readonly createDefaults: { readonly protocolVersions: NonNullable<unknown> };
+};
+
+export type GetUndoRedoTargetsQueryVariables = Exact<{
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetUndoRedoTargetsQuery = {
+  readonly undoRedoTargets: {
+    readonly undoTarget?: string | null | undefined;
+    readonly redoTarget?: string | null | undefined;
+  };
 };
 
 export type EvaluateActionsQueryVariables = Exact<{
@@ -2044,6 +2069,7 @@ export type ResolversTypes = ResolversObject<{
   SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
+  UndoRedoTargets: ResolverTypeWrapper<UndoRedoTargets>;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -2118,6 +2144,7 @@ export type ResolversParentTypes = ResolversObject<{
   SyncRefusalInput: SyncRefusalInput;
   TouchChannelInput: TouchChannelInput;
   TouchChannelResult: TouchChannelResult;
+  UndoRedoTargets: UndoRedoTargets;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -2845,6 +2872,12 @@ export type QueryResolvers<
     ContextType,
     Partial<QuerySyncHoldsArgs>
   >;
+  undoRedoTargets?: Resolver<
+    ResolversTypes["UndoRedoTargets"],
+    ParentType,
+    ContextType,
+    RequireFields<QueryUndoRedoTargetsArgs, "documentIdOrSlug">
+  >;
 }>;
 
 export type ReactorOperationResolvers<
@@ -3039,6 +3072,23 @@ export type TouchChannelResultResolvers<
   success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
 }>;
 
+export type UndoRedoTargetsResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["UndoRedoTargets"] =
+    ResolversParentTypes["UndoRedoTargets"],
+> = ResolversObject<{
+  redoTarget?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+  undoTarget?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
@@ -3086,6 +3136,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   SyncHold?: SyncHoldResolvers<ContextType>;
   SyncHoldReason?: SyncHoldReasonResolvers<ContextType>;
   TouchChannelResult?: TouchChannelResultResolvers<ContextType>;
+  UndoRedoTargets?: UndoRedoTargetsResolvers<ContextType>;
 }>;
 
 type Properties<T> = Required<{
@@ -3656,6 +3707,22 @@ export const GetCreateProtocolVersionsDocument = gql`
     }
   }
 `;
+export const GetUndoRedoTargetsDocument = gql`
+  query GetUndoRedoTargets(
+    $documentIdOrSlug: String!
+    $scope: String
+    $branch: String
+  ) {
+    undoRedoTargets(
+      documentIdOrSlug: $documentIdOrSlug
+      scope: $scope
+      branch: $branch
+    ) {
+      undoTarget
+      redoTarget
+    }
+  }
+`;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
     $documentIdentifier: String!
@@ -4156,6 +4223,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetCreateProtocolVersionsQuery>;
+    },
+    GetUndoRedoTargets(
+      variables: GetUndoRedoTargetsQueryVariables,
+      options?: C,
+    ): Promise<GetUndoRedoTargetsQuery> {
+      return requester<
+        GetUndoRedoTargetsQuery,
+        GetUndoRedoTargetsQueryVariables
+      >(
+        GetUndoRedoTargetsDocument,
+        variables,
+        options,
+      ) as Promise<GetUndoRedoTargetsQuery>;
     },
     EvaluateActions(
       variables: EvaluateActionsQueryVariables,
