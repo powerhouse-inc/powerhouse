@@ -96,14 +96,14 @@ export const Route = createFileRoute("/_app/documents/$documentId")({
 
 ### Errors
 
-A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
+A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `error` is `unknown`, since anything can be thrown, and `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
 
 ```tsx
 export const Route = createFileRoute("/_app/reports")({
   loader: loadReports,
   errorComponent: ({ error, reset }) => (
     <div role="alert">
-      <p>{error.message}</p>
+      <p>{error instanceof Error ? error.message : "Something went wrong"}</p>
       <button onClick={reset}>Try again</button>
     </div>
   ),
