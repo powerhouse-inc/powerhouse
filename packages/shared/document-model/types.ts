@@ -1531,8 +1531,20 @@ export type SubgraphModule = {
   endpoint: string;
 };
 
-export type EditorModule<TProps = any> = {
-  Component: FC<EditorProps & TProps>;
+/** What hosts pass an editor besides `document` and `dispatch`. */
+export type HostedEditorProps = {
+  documentId?: string;
+  context?: { readMode?: boolean; selectedTimelineRevision?: number };
+  displayToolbar?: boolean;
+};
+
+/** Hosts render `Component` with `document` and `dispatch`. */
+export type EditorModule<
+  TDocument extends PHDocument = any,
+  TAction extends Action = any,
+  TProps = HostedEditorProps,
+> = {
+  Component: FC<EditorProps<TDocument, TAction> & TProps>;
   documentTypes: string[];
   config: {
     id: string;
