@@ -1,6 +1,7 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
+  DocumentModelModule,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
@@ -54,10 +55,15 @@ const HELD_V3 = { protocol: "base-reducer", version: 3, peerSupports: [1, 2] };
 let nextFlags: Partial<ReactorFeatureFlags> = {};
 const withPeerCapabilities = ReactorBuilder.prototype.withPeerCapabilities;
 
-async function node(fleet: Fleet, name: string, v3: boolean): Promise<Node> {
+async function node(
+  fleet: Fleet,
+  name: string,
+  v3: boolean,
+  models?: DocumentModelModule[],
+): Promise<Node> {
   nextFlags = v3 ? undoV3Flags() : { undoV3: false };
   try {
-    return await fleet.node(name, WIDE);
+    return await fleet.node(name, WIDE, models);
   } finally {
     nextFlags = {};
   }
@@ -283,6 +289,102 @@ describe("base-reducer 3 across a mixed fleet", () => {
     expect(
       await a.module.syncModule!.deadLetterStorage.listQuarantinedDocumentIds(),
     ).not.toContain("doc");
+  });
+
+  it("refuses before load a base-reducer 3 document whose model the receiver cannot run as 3, and resends it once per receiver restart", async () => {
+    const a = await node(fleet, "a", true);
+    const reducer = driveDocumentModelModule.reducer as (
+      ...args: unknown[]
+    ) => unknown;
+    const untaggedDrive = {
+      ...driveDocumentModelModule,
+      reducer: (...args: unknown[]) => reducer(...args),
+    } as unknown as DocumentModelModule;
+    const b = await node(fleet, "b", true, [untaggedDrive]);
+    const load = vi.spyOn(b.reactor, "load");
+    const loadBatch = vi.spyOn(b.reactor, "loadBatch");
+    // Rows without the creation reach load; b has no versions for them yet.
+    const loadedCreations = () =>
+      [
+        ...load.mock.calls.map(([, , operations]) => operations),
+        ...loadBatch.mock.calls.flatMap(([request]) =>
+          request.jobs.map((job) => job.operations),
+        ),
+      ]
+        .flat()
+        .filter((operation) => operation.action.type === "CREATE_DOCUMENT");
+    await fleet.link(a, b, "doc");
+
+    await created(a, "doc", V3);
+    await addFolder(a, "doc", "f1");
+
+    const deadLetters = fleet.channels.get("b->a")!.deadLetter;
+    await vi.waitFor(() => expect(deadLetters.items.length).toBeGreaterThan(0));
+    // Refused at receipt with the type named, not by a load job.
+    expect(syncOperationErrorType(deadLetters.items[0].error)).toBe(
+      "UNSUPPORTED_PROTOCOL",
+    );
+    expect(deadLetters.items[0].error?.message).toContain(
+      "cannot run for powerhouse/document-drive",
+    );
+    expect(await has(b, "doc")).toBe(false);
+    expect(loadedCreations()).toEqual([]);
+
+    // What GqlRequestChannel makes of the receiver's dead letter.
+    const report = (id: string) => {
+      const reported = new SyncOperation(
+        id,
+        "job-1",
+        [],
+        "a->b",
+        "doc",
+        ["document"],
+        "main",
+        [],
+      );
+      reported.failed(
+        new ChannelError(
+          ChannelErrorSource.Outbox,
+          new Error("refused"),
+          "UNSUPPORTED_PROTOCOL",
+        ),
+      );
+      fleet.channels.get("a->b")!.deadLetter.add(reported);
+    };
+    const held = async () =>
+      expect(await a.sync.listHolds({ remoteName: "a->b" })).toEqual([
+        expect.objectContaining({ documentId: "doc" }),
+      ]);
+    report("dl-1");
+    await vi.waitFor(held);
+    await quiesce();
+    const sent = () =>
+      (fleet.delivered.get("b->a") ?? []).filter(
+        ({ context }) => context.documentId === "doc",
+      ).length;
+    // CREATE_DOCUMENT, UPGRADE_DOCUMENT and ADD_FOLDER, each sent once.
+    const history = sent();
+    expect(history).toBe(3);
+
+    // A restart announces the same support under a new sequence.
+    const channel = fleet.channels.get("b->a")!;
+    channel.options.announce = () =>
+      localPeerManifest(
+        mergePeerCapabilities(PEER_CAPABILITIES, [testProtocol(WIDE)]),
+        { undoV3: true },
+        undefined,
+        Date.now(),
+      );
+    channel.reannounce();
+
+    // The sender releases, resends the whole history once, and holds again.
+    await vi.waitFor(() => expect(sent()).toBe(2 * history));
+    report("dl-2");
+    await vi.waitFor(held);
+    await quiesce();
+    expect(sent()).toBe(2 * history);
+    expect(await has(b, "doc")).toBe(false);
+    expect(loadedCreations()).toEqual([]);
   });
 
   it("stores a RETRACT loaded into a base-reducer 2 document inert on every replica", async () => {

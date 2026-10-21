@@ -8,6 +8,7 @@ import {
   localSupports,
   mergePeerCapabilities,
   PEER_CAPABILITIES,
+  refusalFor,
   selectProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -1438,6 +1439,13 @@ export class ReactorBuilder {
       forgetDocument: (documentId) => {
         documentMetaCache.invalidate(documentId);
       },
+      modelRefusal: (documentType, versions) =>
+        refusalFor(
+          documentType,
+          versions,
+          protocolGate.support,
+          protocolGate.registeredModules(documentType),
+        ),
     };
     let syncModule: InProcessSyncModule | undefined = undefined;
     if (this.channelScheme) {
