@@ -38,6 +38,10 @@ import {
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
+import {
+  hostStylesheetPath,
+  hostStylesheetPlugin,
+} from "./vite-plugins/host-stylesheet.js";
 import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phConfigPlugin } from "./vite-plugins/ph-config.js";
 import {
@@ -425,6 +429,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const routesDir =
     resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
   const routes = connectRoutes(options.dirname, routesDir);
+  const hostStylesheet = hostStylesheetPath(options.dirname, routesDir);
 
   const config: InlineConfig = {
     configFile: false,
@@ -491,6 +496,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // hook runs first and can suppress HMR updates for codegen-generated
       // files, preventing tailwind from triggering full page reloads.
       configPlugin,
+      // The host's theme joins the project's style.css in the page's one build.
+      hostStylesheetPlugin(options.dirname, hostStylesheet),
       phBundledPackagesPlugin({
         packages: localPackagesFromConfig,
         projectRoot: options.dirname,
@@ -550,6 +557,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         // With routes, the shell is the project's layout, rendered from its tree.
         routeAliases: routesDir ? routes.aliases : undefined,
         routesDir: routesDir || undefined,
+        hostStylesheet,
       }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).

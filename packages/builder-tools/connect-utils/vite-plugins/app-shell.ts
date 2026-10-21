@@ -4,6 +4,7 @@ import { dirname, join, sep } from "node:path";
 import type { Alias, Plugin, ResolvedConfig } from "vite";
 import { createServer } from "vite";
 import { resolvePackage } from "../helpers.js";
+import { withHostStylesheet } from "./host-stylesheet.js";
 
 /** On the prerendered shell's elements; marks an index.html that has it. */
 export const APP_SHELL_MARKER = "data-ph-shell";
@@ -242,13 +243,15 @@ export type ConnectAppShellOptions = {
   routeAliases?: Alias[];
   /** The project's routes folder; dev renders the shell again when it changes. */
   routesDir?: string;
+  /** The host's stylesheet, which the page's build adds to the project's. */
+  hostStylesheet?: string;
 };
 
 // The first page waits this long for the project's shell; later ones have it.
 const DEV_SHELL_WAIT_MS = 10_000;
 
 type ShellRenderer = {
-  renderProjectShells: (stylesheet: string) => Promise<AppShells>;
+  renderProjectShells: (stylesheet: string, css?: string) => Promise<AppShells>;
 };
 
 // Connect's renderer, loaded through Vite with the project's aliases, so it
@@ -257,6 +260,7 @@ async function renderProjectAppShells(
   projectRoot: string,
   config: ResolvedConfig,
   routeAliases: Alias[],
+  hostStylesheet: string | undefined,
 ): Promise<AppShells> {
   const server = await createServer({
     configFile: false,
@@ -277,7 +281,13 @@ async function renderProjectAppShells(
       "@powerhousedao/connect/prerender",
     )) as ShellRenderer;
     // The stylesheet index.html links, which Tailwind builds for the shell's classes.
-    return await renderer.renderProjectShells(join(projectRoot, "style.css"));
+    const stylesheet = join(projectRoot, "style.css");
+    const css = withHostStylesheet(
+      readFileSync(stylesheet, "utf8"),
+      stylesheet,
+      hostStylesheet,
+    );
+    return await renderer.renderProjectShells(stylesheet, css);
   } finally {
     await server.close();
   }
@@ -296,6 +306,7 @@ export function connectAppShellPlugin(
     appName,
     routeAliases,
     routesDir,
+    hostStylesheet,
   }: ConnectAppShellOptions = {},
 ): Plugin {
   let variant: AppShellVariant = "generic";
@@ -316,14 +327,17 @@ export function connectAppShellPlugin(
   const renderDevShells = () => {
     if (!config || !routeAliases) return;
     const logger = config.logger;
-    devShells = renderProjectAppShells(projectRoot, config, routeAliases).catch(
-      (error: unknown) => {
-        logger.warn(
-          `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
-        );
-        return {};
-      },
-    );
+    devShells = renderProjectAppShells(
+      projectRoot,
+      config,
+      routeAliases,
+      hostStylesheet,
+    ).catch((error: unknown) => {
+      logger.warn(
+        `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
+      );
+      return {};
+    });
   };
   const devShell = async () => {
     if (!devShells) return undefined;
@@ -346,6 +360,7 @@ export function connectAppShellPlugin(
       const rerender = (file: string) => {
         const changed =
           file === stylesheet ||
+          file === hostStylesheet ||
           (!!routesDir && file.startsWith(`${routesDir}${sep}`));
         if (!changed) return;
         clearTimeout(devRender);
@@ -388,6 +403,7 @@ export function connectAppShellPlugin(
             projectRoot,
             config,
             routeAliases,
+            hostStylesheet,
           );
           const index = bundle["index.html"];
           const current = shells[variant];
