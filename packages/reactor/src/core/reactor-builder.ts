@@ -1029,24 +1029,26 @@ export class ReactorBuilder {
     if (resolver instanceof DocumentModelResolver) {
       const logger = this.logger;
       resolver.setModelLoadedHook(async (documentType) => {
-        await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
+        // Reported first, so a failing MODEL_LOADED subscriber cannot hide it.
         const refusals = storedModelRefusals(
           documentType,
           deferredStoredModels,
           protocolGate.support,
           protocolGate.registeredModules(documentType),
         );
-        if (refusals.length === 0) return;
-        // Writes are refused per job; this only tells the operator.
-        logger.error(
-          "Loaded model @documentType cannot run its stored documents (@refusals); they stay read-only",
-          documentType,
-          refusals.map(storedRefusalName).join(", "),
-        );
-        await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
-          documentType,
-          refusals,
-        } satisfies StoredModelRefusedEvent);
+        if (refusals.length > 0) {
+          // Writes are refused per job; this only tells the operator.
+          logger.error(
+            "Loaded model @documentType cannot run its stored documents (@refusals); they stay read-only",
+            documentType,
+            refusals.map(storedRefusalName).join(", "),
+          );
+          await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
+            documentType,
+            refusals,
+          } satisfies StoredModelRefusedEvent);
+        }
+        await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
       });
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
