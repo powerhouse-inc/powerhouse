@@ -217,7 +217,7 @@ export const connectBuildArgs = {
     type: optional(string),
     long: "favicon",
     description:
-      "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.",
+      "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd.",
   }),
   ...commonArgs,
 };
