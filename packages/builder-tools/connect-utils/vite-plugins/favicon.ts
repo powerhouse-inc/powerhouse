@@ -11,8 +11,9 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
 /**
  * Vite plugin to serve the Connect favicon (icon.ico) from the connect package,
  * or from a caller-supplied file when `faviconPath` is set (e.g. `ph connect
- * build --favicon`). The served/emitted name is always `icon.ico` so the static
- * `<link rel="icon" href="%BASE_URL%icon.ico">` in index.html stays valid.
+ * build --favicon`). An .svg or .png keeps its type as icon.svg or icon.png,
+ * and index.html's `<link rel="icon">` is rewritten to it; browsers decode a
+ * file named icon.ico as an ICO.
  */
 export function connectFaviconPlugin(
   opts: { faviconPath?: string } = {},
@@ -24,9 +25,9 @@ export function connectFaviconPlugin(
       ? opts.faviconPath
       : resolve(process.cwd(), opts.faviconPath)
     : undefined;
-  const customContentType = customPath
-    ? (CONTENT_TYPE_BY_EXT[extname(customPath).toLowerCase()] ?? "image/x-icon")
-    : "image/x-icon";
+  const ext = customPath ? extname(customPath).toLowerCase() : ".ico";
+  const customContentType = CONTENT_TYPE_BY_EXT[ext] ?? "image/x-icon";
+  const fileName = ext === ".svg" || ext === ".png" ? `icon${ext}` : "icon.ico";
 
   return {
     name: "copy-connect-favicon",
@@ -34,7 +35,7 @@ export function connectFaviconPlugin(
       // Vite rewrites the favicon link against `base`, so serve the
       // base-prefixed path. Keep the bare path for robustness.
       const base = server.config.base;
-      const faviconRoute = `${base}icon.ico`.replace(/\/{2,}/g, "/");
+      const route = (name: string) => `${base}${name}`.replace(/\/{2,}/g, "/");
       const handler: Connect.NextHandleFunction = (_req, res, next) => {
         if (customPath) {
           try {
@@ -54,17 +55,29 @@ export function connectFaviconPlugin(
           })
           .catch(() => next());
       };
-      // Mount on the exact route(s) so the handler only runs for icon.ico.
+      // Mount on the exact route(s) so the handler only runs for the icon.
       // Connect strips the mount prefix before matching, so mounting on
       // "/icon.ico" matches that path exactly.
-      const paths = new Set([faviconRoute, "/icon.ico"]);
+      const paths = new Set([
+        route(fileName),
+        `/${fileName}`,
+        route("icon.ico"),
+        "/icon.ico",
+      ]);
       for (const path of paths) {
         server.middlewares.use(path, handler);
       }
     },
+    transformIndexHtml(html) {
+      if (fileName === "icon.ico") return html;
+      return html.replace(
+        /<link rel="icon" href="([^"]*)icon\.ico"\s*\/?>/,
+        `<link rel="icon" type="${customContentType}" href="$1${fileName}" />`,
+      );
+    },
     async generateBundle(_options, bundle) {
       try {
-        if ("icon.ico" in bundle) return;
+        if (fileName in bundle) return;
         let source: Uint8Array | undefined;
         if (customPath) {
           source = readFileSync(customPath);
@@ -77,7 +90,7 @@ export function connectFaviconPlugin(
         if (!source) return;
         this.emitFile({
           type: "asset",
-          fileName: "icon.ico",
+          fileName,
           source,
         });
       } catch {
