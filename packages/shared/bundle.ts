@@ -74,6 +74,7 @@ await build({
     "clis/services/telemetry.ts",
     "clis/build-config.mts",
     "clis/build-pieces.mts",
+    "clis/package-style.ts",
   ],
   outDir: "dist/clis",
   platform: "node",

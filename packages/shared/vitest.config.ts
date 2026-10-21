@@ -28,6 +28,7 @@ export default defineConfig({
       "constants.test.ts",
       "clis/build-config.test.ts",
       "clis/build-pieces.test.ts",
+      "clis/package-style.test.ts",
       "clis/services/use-local.test.ts",
       "clis/source-config-schema.test.ts",
       "clis/project-ports.test.ts",

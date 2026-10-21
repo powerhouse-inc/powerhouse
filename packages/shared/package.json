@@ -123,6 +123,10 @@
       "source": "./clis/build-config.mts",
       "import": "./dist/clis/build-config.mjs"
     },
+    "./clis/package-style": {
+      "source": "./clis/package-style.ts",
+      "import": "./dist/clis/package-style.mjs"
+    },
     "./build-pieces": {
       "source": "./clis/build-pieces.mts",
       "import": "./dist/clis/build-pieces.mjs"
