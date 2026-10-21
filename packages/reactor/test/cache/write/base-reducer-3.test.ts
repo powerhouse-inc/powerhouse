@@ -12,6 +12,7 @@ import {
   deriveOperationId,
   deriveScope,
   documentModelStateReducer,
+  generateActionId,
   generateId,
   retract,
 } from "@powerhousedao/shared/document-model";
@@ -409,7 +410,7 @@ describe("write cache on base-reducer 3", () => {
 
     function logAction(entry: string): Action {
       return {
-        id: generateId(),
+        id: generateActionId(),
         type: "LOG",
         scope: "global",
         timestampUtcMs: "",

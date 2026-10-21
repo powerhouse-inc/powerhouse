@@ -12,6 +12,7 @@ import {
   addModule,
   createPresignedHeader,
   createReducer,
+  generateActionId,
   generateId,
   retract,
   synthesizedActionId,
@@ -519,7 +520,7 @@ const migratingManifest = {
 
 function addItem(id: string): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_ITEM",
     scope: "global",
     timestampUtcMs: new Date().toISOString(),

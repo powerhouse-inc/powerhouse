@@ -15,6 +15,7 @@ import {
   createReducer,
   defaultBaseState,
   garbageCollect,
+  generateActionId,
   generateId,
   groupDocumentType,
   initializeAuth,
@@ -89,7 +90,7 @@ const ADMIN = "0xAdmin";
 
 function memberAction(type: string): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type,
     scope: "global",
     timestampUtcMs: new Date().toISOString(),
