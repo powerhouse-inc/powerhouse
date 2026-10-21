@@ -5,6 +5,7 @@
     "target": "esnext",
     "declaration": true,
     "emitDeclarationOnly": true,
+    "incremental": true,
     "declarationDir": "./dist/types",
     "strict": true,
     "skipLibCheck": true,

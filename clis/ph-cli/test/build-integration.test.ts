@@ -370,6 +370,18 @@ describe("runBuild on a package with no pieces", () => {
     ).not.toHaveProperty("pieces");
     expect(warnings).toEqual([]);
   }, 120_000);
+
+  it("emits the types again after dist is deleted", async () => {
+    clean(fixture);
+    process.chdir(fixture);
+    await runBuild(args);
+    // Like the ph init tsconfig, the fixture is incremental; its build info stays.
+    rmSync(dist, { recursive: true, force: true });
+
+    await runBuild(args);
+
+    expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
+  }, 240_000);
 });
 
 // `ph build` reads project routes only from hosts/connect/routes/.
