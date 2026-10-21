@@ -14,6 +14,7 @@ import {
   actionSignerIdentity,
   baseReducerCapabilities,
   baseReducerVersion,
+  capabilitiesFor,
   decide,
   derivesByRule,
   garbageCollect,
@@ -249,6 +250,16 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** The stored document's protocol, read once per job before it runs. */
+type StoredProtocol = {
+  /** Why this reactor cannot run the stored document. */
+  refusal?: Error;
+  /** Undefined when nothing is stored yet. */
+  caps?: BaseReducerCapabilities;
+  /** The header read failed for a reason other than absence. */
+  unreadable?: Error;
+};
+
 /** No base reducer applies a retraction in these scopes. */
 function isRetractOutsideRule(action: Action): boolean {
   return action.type === "RETRACT" && RULE_EXEMPT_SCOPES.has(action.scope);
@@ -712,19 +723,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       ),
     };
 
-    const unsupported = await this.unsupportedStoredProtocol(
-      job,
-      stores,
-      signal,
-    );
-    if (unsupported) {
-      return { result: buildErrorResult(job, unsupported, startTime) };
+    const stored = await this.readStoredProtocol(job, stores, signal);
+    if (stored.refusal) {
+      return { result: buildErrorResult(job, stored.refusal, startTime) };
     }
 
     const indexTxn = stores.operationIndex.start();
 
     if (job.kind === "load") {
-      const loadResult = await this.executeLoadJob({
+      const loadResult = await this.executeLoadJob(stored, {
         job,
         startTime,
         indexTxn,
@@ -855,7 +862,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       return this.committedOutcome(job, committed, [], [], stores, startTime);
     }
 
-    const positioned = await this.positionByTimestamp(fresh, stores, signal);
+    const positioned = await this.positionByTimestamp(
+      fresh,
+      stored,
+      stores,
+      signal,
+    );
     if (positioned.error) {
       return { result: buildErrorResult(job, positioned.error, startTime) };
     }
@@ -1398,12 +1410,15 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
   }
 
-  /** A stored document at a version this reactor does not run is read-only here. */
-  private async unsupportedStoredProtocol(
+  /**
+   * The stored header's base-reducer capabilities, read once per job. A
+   * stored document at a version this reactor does not run is read-only here.
+   */
+  private async readStoredProtocol(
     job: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
-  ): Promise<Error | undefined> {
+  ): Promise<StoredProtocol> {
     let stored: {
       documentType: string;
       protocolVersions?: { readonly [protocol: string]: number };
@@ -1427,15 +1442,25 @@ export class SimpleJobExecutor implements IJobExecutor {
               signal,
             );
     } catch (error) {
-      if (UnsupportedProtocolVersionError.isError(error)) return error;
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return { refusal: error };
+      }
       // Not stored yet, or unreadable: the job's own reads decide.
-      return undefined;
+      return DocumentNotFoundError.isError(error)
+        ? {}
+        : {
+            unreadable:
+              error instanceof Error ? error : new Error(String(error)),
+          };
     }
-    return this.documentActionHandler.unsupportedProtocol(
+    const refusal = this.documentActionHandler.unsupportedProtocol(
       job.documentId,
       stored.protocolVersions,
       stored.documentType,
     );
+    return refusal
+      ? { refusal }
+      : { caps: capabilitiesFor(stored.protocolVersions) };
   }
 
   /**
@@ -2527,6 +2552,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    */
   private async positionByTimestamp(
     submitted: Job,
+    storedProtocol: StoredProtocol,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
@@ -2544,24 +2570,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       return plain();
     }
 
-    // Read the way admission reads: with decisions on, execution bypasses the
-    // meta cache. A create has nothing stored to order against.
-    let baseReducer3 = false;
-    try {
-      const documentScope = await stores.writeCache.getState(
-        job.documentId,
-        "document",
-        job.branch,
-        undefined,
-        signal,
-      );
-      baseReducer3 =
-        documentScope.header.protocolVersions?.["base-reducer"] === 3;
-    } catch (error) {
-      if (!DocumentNotFoundError.isError(error)) {
-        throw error;
-      }
+    // A create has nothing stored to order against.
+    if (storedProtocol.unreadable) {
+      throw storedProtocol.unreadable;
     }
+    const baseReducer3 = storedProtocol.caps?.version === 3;
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
@@ -3137,7 +3150,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {
+  private async executeLoadJob(
+    stored: StoredProtocol,
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
     const { job, startTime, indexTxn, stores, signal } = executing;
 
     if (job.operations.length === 0) {
@@ -3169,7 +3185,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
-    const baseReducer3 = docMeta?.protocolVersions?.["base-reducer"] === 3;
+    const baseReducer3 = stored.caps?.version === 3;
 
     // Without DCB, we reject entire load jobs. With DCB we are able to
     // accept/deny individual operations.
