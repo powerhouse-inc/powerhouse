@@ -441,35 +441,6 @@ export function mapSkippedOperationsV2(
  * Uses the V2 model where consecutive NOOPs form chains.
  * Unlike V1 garbageCollect, this preserves ALL operations but marks which to apply.
  */
-/**
- * The base-reducer protocol version a document is written against. Every
- * document carries one, set from the CREATE_DOCUMENT input. A header without
- * one was built outside that path, and choosing a version on its behalf would
- * replay the document through a reducer it was not written for, so it is an
- * error rather than a default.
- */
-export function baseReducerVersion(
-  header: PHDocumentHeader,
-): BaseReducerVersion {
-  const version = header.protocolVersions?.["base-reducer"];
-
-  if (typeof version !== "number") {
-    throw new Error(
-      `Document ${header.id} carries no base-reducer protocol version`,
-    );
-  }
-
-  if (version !== 1 && version !== 2 && version !== 3) {
-    throw new Error(
-      `Document ${header.id} carries unknown base-reducer protocol version ${version}`,
-    );
-  }
-
-  return version;
-}
-
-export type BaseReducerVersion = 1 | 2 | 3;
-
 export function garbageCollectV2<TOpIndex extends OperationIndex>(
   sortedOperations: TOpIndex[],
 ): TOpIndex[] {

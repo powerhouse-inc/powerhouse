@@ -1,9 +1,9 @@
+import { baseReducerVersion } from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import {
   appendRows,
   appendWithoutApplying,
   assertReplayIndices,
-  baseReducerVersion,
   hashDocumentStateForScope,
   replayDocument,
   requireStateReducer,

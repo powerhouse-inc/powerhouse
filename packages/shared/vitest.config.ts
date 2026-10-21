@@ -47,6 +47,7 @@ export default defineConfig({
       "document-model/action-signature.test.ts",
       "document-model/action-timestamp.test.ts",
       "document-model/action-transport.test.ts",
+      "document-model/base-reducer-protocol.test.ts",
       "document-model/base-reducer-version.test.ts",
       "document-model/create-base-reducer.test.ts",
       "document-model/files.test.ts",

@@ -4,6 +4,7 @@ export * from "./actions.js";
 export * from "./auth.js";
 export * from "./auth-v1.js";
 export * from "./base-action-reducer.js";
+export * from "./base-reducer-protocol.js";
 export * from "./constants.js";
 export * from "./create-base-reducer.js";
 export * from "./crypto.js";

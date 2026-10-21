@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { baseReducerVersion, type PHDocumentHeader } from "./documents.js";
+import { baseReducerVersion } from "./base-reducer-protocol.js";
+import type { PHDocumentHeader } from "./documents.js";
 
 function header(
   protocolVersions: Record<string, number> | undefined,

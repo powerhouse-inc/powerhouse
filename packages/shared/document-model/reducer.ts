@@ -12,6 +12,9 @@ import { tagStateReducer } from "./state-reducer.js";
 import { isDenied } from "./denied.js";
 import {
   baseReducerVersion,
+  type BaseReducerVersion,
+} from "./base-reducer-protocol.js";
+import {
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -25,7 +28,6 @@ import {
   skipHeaderOperations,
   sortOperations,
   updateHeaderRevision,
-  type BaseReducerVersion,
   type PHDocument,
   type PHDocumentHeader,
 } from "./documents.js";

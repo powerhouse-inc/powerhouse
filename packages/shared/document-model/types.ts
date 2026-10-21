@@ -5,7 +5,8 @@ import type { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
-import type { BaseReducerVersion, PHDocument } from "./documents.js";
+import type { BaseReducerVersion } from "./base-reducer-protocol.js";
+import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
   ConfigEntrySchema,
