@@ -46,6 +46,8 @@ function DocumentSummary() {
 - Connect starts the reactor before it renders the router, so `reactorClient` is set in Connect. The check satisfies the type.
 - Loader data is a snapshot. It does not update when the document changes. For live data, read it in the component with the `@powerhousedao/reactor-browser` hooks (`useDrives`, `useDocument`, `useDocumentById`).
 - `store.drives` holds the drives that have arrived. On a deep link to a remote drive, it can be incomplete while `arrivals.isPending()` is true.
+- `useDocument`, `useDocumentById` and `useDocumentsByIds` suspend until their documents load. Put a `<Suspense>` boundary around the component that calls them, or the nearest boundary above it shows its fallback, which can be the whole layout.
+- Documents across drives: collect the file nodes of `useDrives()` (filter with `isFileNodeKind`), then read them with `useDocumentsByIds(ids)`.
 
 ### The open drive and document
 
