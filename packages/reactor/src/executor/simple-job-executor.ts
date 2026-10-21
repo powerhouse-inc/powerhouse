@@ -1,7 +1,6 @@
 import type {
   Action,
   BaseReducerCapabilities,
-  BaseReducerVersion,
   DeriveScope,
   DocumentModelModule,
   ISigner,
@@ -12,8 +11,8 @@ import type {
 import {
   acceptsSubmittedRetract,
   actionSignerIdentity,
+  assertNever,
   baseReducerCapabilities,
-  baseReducerVersion,
   capabilitiesFor,
   decide,
   derivesByRule,
@@ -24,7 +23,6 @@ import {
   purgeMarkerOperation,
   type PurgeMarkerOperation,
   hashDocumentStateForScope,
-  isBaseReducer3,
   isUndoRedo,
   mentionedGroupIds,
   localSupports,
@@ -250,6 +248,21 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** The received row the reducer replays: whose hash and skip it keeps. */
+function replayedOperation(
+  operation: Operation,
+  caps: BaseReducerCapabilities,
+): Operation {
+  switch (caps.replayHash) {
+    case "sender":
+      return operation;
+    case "receiver":
+      return { ...operation, hash: "", skip: 0 };
+    default:
+      return assertNever(caps.replayHash, "replay hash");
+  }
+}
+
 /** The stored document's protocol, read once per job before it runs. */
 type StoredProtocol = {
   /** Why this reactor cannot run the stored document. */
@@ -2086,9 +2099,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         }
       }
       try {
-        const protocolVersion: BaseReducerVersion = baseReducerVersion(
-          document.header,
-        );
+        const caps = baseReducerCapabilities(document.header);
+        const protocolVersion = caps.version;
         const ruleOptions = {
           ...(targeted === undefined ? {} : { targeted }),
           ...(deriveScope === undefined ? {} : { deriveScope }),
@@ -2097,12 +2109,8 @@ export class SimpleJobExecutor implements IJobExecutor {
           ? {
               skip,
               branch: job.branch,
-              // Base-reducer 3 hashes the receiver's own derived state.
               replayOptions: {
-                operation:
-                  protocolVersion === 3
-                    ? { ...sourceOperation, hash: "", skip: 0 }
-                    : sourceOperation,
+                operation: replayedOperation(sourceOperation, caps),
               },
               protocolVersion,
               ...ruleOptions,
@@ -2157,7 +2165,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
-          isBaseReducer3(document.header),
+          baseReducerCapabilities(document.header).synthesizedId,
           signal,
         );
       } catch (error) {
@@ -2574,7 +2582,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (storedProtocol.unreadable) {
       throw storedProtocol.unreadable;
     }
-    const baseReducer3 = storedProtocol.caps?.version === 3;
+    const caps = storedProtocol.caps;
+    const canonical = caps?.tieOrder === "canonical";
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
@@ -2629,26 +2638,29 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // An UNDO or REDO is stored under its synthesized id, so on base-reducer 3
-    // it is positioned by that id; the submitted one would sort it elsewhere
-    // than every receiver does.
+    // An UNDO or REDO is stored under its synthesized id, so where that id
+    // sorts as the submitted one does it is positioned by it; the submitted
+    // one would sort it elsewhere than every receiver does.
     const positioned = new Map<Action, Action>();
     const positionedAs = (action: Action): Action => {
-      if (!baseReducer3 || !SYNTHESIZING_TYPES.has(action.type)) {
+      if (
+        caps?.synthesizedId !== "suffixed" ||
+        !SYNTHESIZING_TYPES.has(action.type)
+      ) {
         return action;
       }
       let stand = positioned.get(action);
       if (stand === undefined) {
-        stand = { ...action, id: synthesizedActionId(action.id, true) };
+        stand = { ...action, id: synthesizedActionId(action.id, "suffixed") };
         positioned.set(action, stand);
       }
       return stand;
     };
 
-    // Base-reducer 3 stores a job in the order every receiver sorts it into,
+    // Canonical order stores a job in the order every receiver sorts it into,
     // and a tie with a stored row is broken by action id, not arrival.
     let first: Operation | undefined;
-    if (baseReducer3) {
+    if (canonical) {
       const asRow = (action: Action) =>
         ({
           id: action.id,
@@ -2667,7 +2679,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       first = asRow(job.actions[0]);
     }
     const tied =
-      baseReducer3 && earliestAt === Date.parse(revisions.latestTimestamp);
+      canonical && earliestAt === Date.parse(revisions.latestTimestamp);
 
     if (!backdated && !tied) {
       return plain();
@@ -2776,7 +2788,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
-      { canonical: baseReducer3 },
+      { canonical },
     ).map((operation) => {
       const action = submittedFor.get(operation.action);
       return action === undefined ? operation : { ...operation, action };
@@ -3185,7 +3197,9 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
-    const baseReducer3 = stored.caps?.version === 3;
+    const caps = stored.caps;
+    const canonical = caps?.tieOrder === "canonical";
+    const skipMayUndo = caps?.skip !== "rewind";
 
     // Without DCB, we reject entire load jobs. With DCB we are able to
     // accept/deny individual operations.
@@ -3241,7 +3255,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let selection = await this.selectLoadWrites(
       job,
       job.operations,
-      baseReducer3,
+      caps,
       stores,
       signal,
     );
@@ -3295,7 +3309,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       selection = await this.selectLoadWrites(
         job,
         remaining,
-        baseReducer3,
+        caps,
         stores,
         signal,
       );
@@ -3396,14 +3410,14 @@ export class SimpleJobExecutor implements IJobExecutor {
             .slice()
             .sort((a, b) =>
               // A sender's reshuffle puts its rows out of timestamp order,
-              // and base-reducer 3 does not read the skip that orders them.
-              baseReducer3 ? compareCanonical(a, b) : a.index - b.index,
+              // and canonical order does not read the skip that orders them.
+              canonical ? compareCanonical(a, b) : a.index - b.index,
             )
             .map((operation, i) => ({
               ...operation,
               index: latestRevision + i,
               // A trivial append rewinds nothing.
-              skip: baseReducer3 ? 0 : operation.skip,
+              skip: skipMayUndo ? operation.skip : 0,
             }))
         : reshuffleByTimestamp(
             {
@@ -3415,7 +3429,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               id: operation.id,
             })),
-            { canonical: baseReducer3 },
+            { canonical },
           );
 
     // A NOOP is the v2 undo marker, and it is only a marker while its skip is
@@ -3437,7 +3451,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const operation of reshuffledOperations) {
       // A local NOOP's target stays behind; a skip would undo another operation.
       if (
-        !baseReducer3 &&
+        skipMayUndo &&
         operation.action.type === "NOOP" &&
         operation.skip === 0 &&
         incomingIds.has(operation.action.id)
@@ -3531,7 +3545,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async selectLoadWrites(
     job: Job,
     operations: Operation[],
-    baseReducer3: boolean,
+    caps: BaseReducerCapabilities | undefined,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<{
@@ -3629,7 +3643,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
       if (
-        !baseReducer3 &&
+        caps?.skip !== "rewind" &&
         rows.some((row) => supersededBy(row)?.action.type === "NOOP")
       ) {
         undoneActionIds.add(actionId);
@@ -3650,11 +3664,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       // an incoming op are kept so dedup + reshuffle can remap them correctly
       // (e.g. cross-reactor reshuffle rebroadcast).
       //
-      // On base-reducer 3 every conflicting row moves, whatever the sender's
+      // In canonical order every conflicting row moves, whatever the sender's
       // indexes, so order follows the row set and a tie with an incoming row
       // is broken by action id.
       if (
-        !baseReducer3 &&
+        caps?.tieOrder !== "canonical" &&
         op.index < predecessorBound &&
         !incomingActionIds.has(op.action.id)
       ) {

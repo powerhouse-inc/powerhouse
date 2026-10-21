@@ -57,11 +57,6 @@ const PENDING = new Map<string, string>([
   ],
   ["packages/reactor/src/executor/job-result-handler.ts", "W2 protocol gate"],
   ["packages/reactor/src/queue/queue.ts", "W2 protocol gate"],
-  [
-    "packages/reactor/src/executor/simple-job-executor.ts",
-    "W2 job capabilities",
-  ],
-  ["packages/shared/document-model/documents.ts", "W2 isBaseReducer3 removal"],
 ]);
 
 function* sources(dir: string): Generator<string> {

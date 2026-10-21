@@ -206,7 +206,9 @@ describe("positionByTimestamp on base-reducer 3", () => {
     const retraction = rows.find(
       (operation) => operation.action.type === "RETRACT",
     )!;
-    expect(retraction.action.id).toBe(synthesizedActionId(backdated.id, true));
+    expect(retraction.action.id).toBe(
+      synthesizedActionId(backdated.id, "suffixed"),
+    );
     expect(retraction.action.timestampUtcMs).toBe(backdated.timestampUtcMs);
     expect(retraction.timestampUtcMs).toBe(backdated.timestampUtcMs);
     expect(firstOutOfOrderPair(rows)).toBeUndefined();

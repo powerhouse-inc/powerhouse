@@ -516,11 +516,6 @@ export function appendWithoutApplying<TState extends PHBaseState>(
   };
 }
 
-/** Unlike `baseReducerVersion`, never throws on a header without a version. */
-export function isBaseReducer3(header: PHDocumentHeader): boolean {
-  return header.protocolVersions?.["base-reducer"] === 3;
-}
-
 /** The state reducer base-reducer 3 derives with; throws when `reducer` wraps none. */
 export function requireStateReducer<TState extends PHBaseState = PHBaseState>(
   reducer: Reducer<TState>,

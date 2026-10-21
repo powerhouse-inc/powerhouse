@@ -3,9 +3,11 @@ import type {
   ActionSigningTarget,
   ISigner,
   Operation,
+  SynthesizedIdForm,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
+  assertNever,
   deriveOperationId,
   hashBrowser,
 } from "@powerhousedao/shared/document-model";
@@ -18,24 +20,32 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
 
 /**
  * The id of the action synthesized from `submittedId`. Derived, so the stored
- * operation answers for the submitted id at the live-id check. On base-reducer
- * 3 it sorts against every other id as the submitted id does; below it keeps
- * the hashed form released stores hold.
+ * operation answers for the submitted id at the live-id check. The suffixed
+ * form sorts against every other id as the submitted id does; the hashed form
+ * is what released stores hold.
  */
 export function synthesizedActionId(
   submittedId: string,
-  baseReducer3: boolean,
+  form: SynthesizedIdForm,
 ): string {
-  return baseReducer3
-    ? `${submittedId}.s`
-    : hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(0, 32);
+  switch (form) {
+    case "suffixed":
+      return `${submittedId}.s`;
+    case "hashed":
+      return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(
+        0,
+        32,
+      );
+    default:
+      return assertNever(form, "synthesized id form");
+  }
 }
 
-/** Both forms, for a lookup that does not know the document's version. */
+/** Every form, for a lookup that does not know the document's version. */
 export function synthesizedActionIds(submittedId: string): string[] {
   return [
-    synthesizedActionId(submittedId, true),
-    synthesizedActionId(submittedId, false),
+    synthesizedActionId(submittedId, "suffixed"),
+    synthesizedActionId(submittedId, "hashed"),
   ];
 }
 
@@ -73,11 +83,11 @@ export async function signSynthesized(
   submitted: Action,
   target: ActionSigningTarget & { scope: string },
   signer: ISigner,
-  baseReducer3: boolean,
+  form: SynthesizedIdForm,
   signal?: AbortSignal,
 ): Promise<void> {
   const synthesized = operation.action;
-  const id = synthesizedActionId(submitted.id, baseReducer3);
+  const id = synthesizedActionId(submitted.id, form);
   const timestampUtcMs =
     (operation.timestampUtcMs as string | undefined) ||
     (synthesized.timestampUtcMs as string | undefined) ||

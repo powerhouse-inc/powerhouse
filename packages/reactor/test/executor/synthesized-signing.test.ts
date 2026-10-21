@@ -344,7 +344,9 @@ describe("synthesized operations", () => {
         expect(operation.action.id).toBe(
           hashBrowser(`synthesized:${undone.id}`, "sha1", "hex").slice(0, 32),
         );
-        expect(operation.action.id).toBe(synthesizedActionId(undone.id, false));
+        expect(operation.action.id).toBe(
+          synthesizedActionId(undone.id, "hashed"),
+        );
       });
 
       it("is refused as DUPLICATE_ACTION when resubmitted", async () => {
@@ -450,7 +452,9 @@ describe("synthesized operations", () => {
 
         const operation = await storedRetract(module.reactor, documentId);
         expect(operation.action.id).toBe(`${undone.id}.s`);
-        expect(operation.action.id).toBe(synthesizedActionId(undone.id, true));
+        expect(operation.action.id).toBe(
+          synthesizedActionId(undone.id, "suffixed"),
+        );
         expect(operation.action.id).not.toBe(undone.id);
       });
 

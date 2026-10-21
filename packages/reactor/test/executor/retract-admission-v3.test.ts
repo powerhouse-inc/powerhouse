@@ -318,7 +318,9 @@ describe("base-reducer 3: RETRACT admission", () => {
     const operation = (await stream()).at(-1)!;
     expect(operation.action.type).toBe("RETRACT");
     expect(operation.action.input).toEqual({ target: b.action.id });
-    expect(operation.action.id).toBe(synthesizedActionId(submitted.id, true));
+    expect(operation.action.id).toBe(
+      synthesizedActionId(submitted.id, "suffixed"),
+    );
     expect(operation.id).toBe(
       deriveOperationId(docId, "global", "main", operation.action.id),
     );
