@@ -23,12 +23,23 @@ import {
   undeclaredExternalDependencies,
 } from "@powerhousedao/shared/build-pieces";
 import {
+  localPackageNames,
+  packageStyleEntry,
+  packageStylesheet,
+} from "@powerhousedao/shared/clis/package-style";
+import {
   findSharedImports,
   EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { nodeFileTrace } from "@vercel/nft";
 import { detect, resolveCommand, type Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
@@ -328,22 +339,7 @@ export async function runBuild(args: BuildArgs) {
   );
   markOfferedRoutes(outDir, offersRoutes);
 
-  const executeLocalCommand = resolveCommand(agent, "execute-local", [
-    "tailwindcss",
-    "-i",
-    "./style.css",
-    "-o",
-    "./dist/style.css",
-  ]);
-  if (executeLocalCommand === null) {
-    console.error(
-      "You need to have tailwindcss installed to use the `build` command.",
-    );
-    process.exit(1);
-  }
-  execSync(
-    `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
-  );
+  buildPackageStylesheet(agent, projectRoot, join(outDir, "browser"));
 
   // Last, so it is the line a finished build leaves on screen.
   if (!typesOk) console.warn(`\n${UNSAFE_BUILD_WARNING}`);
@@ -394,6 +390,53 @@ function emitTypes(agent: Agent, outDir: string): boolean {
   } catch {
     return false;
   }
+}
+
+// The classes the browser build uses, and the package's tokens and rules, against
+// Connect's theme: the Connect that loads it has Tailwind's reset and Connect's classes.
+function buildPackageStylesheet(
+  agent: Agent,
+  projectRoot: string,
+  browserDir: string,
+) {
+  const command = resolveCommand(agent, "execute-local", [
+    "tailwindcss",
+    "--input",
+    "-",
+    "--minify",
+  ]);
+  if (command === null) {
+    console.error(
+      "You need to have tailwindcss installed to use the `build` command.",
+    );
+    process.exit(1);
+  }
+  const stylePath = join(projectRoot, "style.css");
+  const style = existsSync(stylePath)
+    ? readFileSync(stylePath, "utf-8")
+    : undefined;
+  const compiled = execSync(`${command.command} ${command.args.join(" ")}`, {
+    cwd: projectRoot,
+    input: packageStyleEntry(style, {
+      browserDir: sourcePath(projectRoot, browserDir),
+      localPackages: localPackageNames(projectRoot),
+    }),
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "inherit"],
+    // A package that imports large vendor CSS outgrows the 1 MB default.
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  // `ph build` with another out-dir (the switchboard runner's) leaves no dist/.
+  mkdirSync(join(projectRoot, "dist"), { recursive: true });
+  writeFileSync(
+    join(projectRoot, "dist/style.css"),
+    packageStylesheet(compiled),
+  );
+}
+
+// A path for `@source`, relative to the project, with forward slashes.
+function sourcePath(projectRoot: string, path: string) {
+  return `./${relative(projectRoot, resolve(projectRoot, path)).replaceAll("\\", "/")}`;
 }
 
 function isInteractive(): boolean {

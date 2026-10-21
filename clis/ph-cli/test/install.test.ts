@@ -24,7 +24,6 @@ vi.mock("../src/utils.js", async (importOriginal) => {
   return {
     ...actual,
     updateConfigFile: vi.fn(),
-    updateStylesFile: vi.fn(),
   };
 });
 
