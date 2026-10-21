@@ -11,7 +11,10 @@ import { baseActionReducer } from "./base-action-reducer.js";
 import { tagStateReducer } from "./state-reducer.js";
 import { isDenied } from "./denied.js";
 import {
+  appliesRewind,
   baseReducerVersion,
+  capabilitiesOf,
+  derivesByRule,
   type BaseReducerVersion,
 } from "./base-reducer-protocol.js";
 import {
@@ -38,6 +41,7 @@ import {
   reduceOne,
   redoTarget,
   retractedActionIds,
+  rewritesScope,
   undoTarget,
   type ReducerFor,
 } from "./retraction.js";
@@ -477,11 +481,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   const protocolVersion: BaseReducerVersion =
     options.protocolVersion ?? baseReducerVersion(document.header);
-  // Base-reducer 3 derives every scope but auth and document by the rule.
-  const derivesByRule =
-    protocolVersion === 3 &&
-    _action.scope !== "auth" &&
-    _action.scope !== "document";
+  const caps = capabilitiesOf(protocolVersion);
+  const byRule = derivesByRule(caps, _action.scope);
 
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
@@ -489,9 +490,10 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   };
   let reuseLastOperationIndex = false;
 
-  // A skip in a scope no rule derives is a rewind the reducer applies.
   const shouldProcessSkipOperation =
-    !derivesByRule && !ignoreSkipOperations && skipValue > 0;
+    appliesRewind(caps, _action.scope) &&
+    !ignoreSkipOperations &&
+    skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
@@ -521,7 +523,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   // if the action is one the base document actions (SET_NAME, UNDO, REDO)
   // then runs the base reducer first
-  if (!derivesByRule && isDocumentAction(_action)) {
+  if (!byRule && isDocumentAction(_action)) {
     newDocument = baseActionReducer(newDocument, _action);
   }
 
@@ -602,7 +604,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       }
       break;
     case 3:
-      if (derivesByRule) {
+      if (byRule) {
         return applyByRule(
           newDocument,
           _action.scope,
@@ -772,8 +774,9 @@ function applyByRule<TState extends PHBaseState>(
 
   const targeted =
     options.targeted ?? retractedActionIds(positionalOperations(operations));
-  const rebuild =
-    skip > 0 || appended.action.type === "RETRACT" || targeted.has(appendedId);
+  const rebuild = rewritesScope({ skip, action: appended.action }, (id) =>
+    targeted.has(id),
+  );
 
   let next = document;
   let error: string | undefined;

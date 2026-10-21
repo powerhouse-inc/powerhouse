@@ -1,4 +1,7 @@
-import { baseReducerVersion } from "./base-reducer-protocol.js";
+import {
+  baseReducerCapabilities,
+  derivesByRule,
+} from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import {
   appendRows,
@@ -78,7 +81,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 ): PHDocument<TState> {
   const { checkHashes = true, skipIndexValidation } = options || {};
 
-  const protocolVersion = baseReducerVersion(header);
+  const caps = baseReducerCapabilities(header);
 
   const spine = (operations["document"] ?? [])
     .slice()
@@ -225,9 +228,9 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
   // Base-reducer 3: each scope is derived across the segments.
   const derivers = new Map<string, ReturnType<typeof scopeDeriver>>();
-  if (protocolVersion === 3) {
+  if (caps.retractionRule) {
     for (const s of replayScopes) {
-      if (s === "auth") continue;
+      if (!derivesByRule(caps, s)) continue;
       const ops = scopeOps[s] ?? [];
       if (!skipIndexValidation) {
         assertReplayIndices(ops);
@@ -295,7 +298,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
             checkHashes,
             skipIndexValidation,
             replayOptions: { operation: op },
-            protocolVersion,
+            protocolVersion: caps.version,
           }) as PHDocument<TState>;
         }
         segmentEndHashPerScope.set(s, hashDocumentStateForScope(document, s));
@@ -337,7 +340,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
           checkHashes,
           skipIndexValidation,
           replayOptions: { operation: spineOp },
-          protocolVersion,
+          protocolVersion: caps.version,
         }) as PHDocument<TState>;
       }
     }

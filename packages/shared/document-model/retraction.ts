@@ -1,5 +1,7 @@
 import { castDraft, create, unsafe } from "mutative";
+import type { Action } from "./actions.js";
 import { baseActionReducer } from "./base-action-reducer.js";
+import { RULE_EXEMPT_SCOPES } from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import type { PHDocument } from "./documents.js";
 import {
@@ -20,6 +22,23 @@ export function positionalOperations<T extends OperationIndex>(
   stream: readonly T[],
 ): T[] {
   return garbageCollect(sortOperations([...stream]));
+}
+
+/** A row that changes which earlier rows apply: it retracts, or a retraction names it. */
+export function retractionRewrites(
+  row: { action: Action },
+  named: (actionId: string) => boolean,
+): boolean {
+  const { type, id } = row.action;
+  return type === "RETRACT" || type === "UNDO" || type === "REDO" || named(id);
+}
+
+/** Under the rule, appending `row` re-derives its scope from every row. */
+export function rewritesScope(
+  row: { skip: number; action: Action },
+  named: (actionId: string) => boolean,
+): boolean {
+  return row.skip > 0 || retractionRewrites(row, named);
 }
 
 export function retractionTarget(operation: Operation): string | undefined {
@@ -248,7 +267,7 @@ export function deriveScopeVersioned<TState extends PHBaseState = PHBaseState>(
 }
 
 function assertDerivedScope(scope: string): void {
-  if (scope === "auth" || scope === "document") {
+  if (RULE_EXEMPT_SCOPES.has(scope)) {
     throw new Error(`Base-reducer 3 does not derive the ${scope} scope`);
   }
 }

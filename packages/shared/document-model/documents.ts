@@ -1,5 +1,10 @@
 import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
+import {
+  derivesByRule,
+  optionalBaseReducerCapabilities,
+  type BaseReducerCapabilities,
+} from "./base-reducer-protocol.js";
 import { hashBrowser } from "./crypto.js";
 import { isDenied } from "./denied.js";
 import { FLAGLESS_BASE_REDUCER_VERSION } from "./peer-agreement.js";
@@ -575,6 +580,7 @@ export function assertReplayIndices(operations: readonly Operation[]): void {
 
 /** Base-reducer 3: rows stored as given, one derivation per ruled scope. */
 function replayRetractionScopes<TState extends PHBaseState>(
+  caps: BaseReducerCapabilities,
   document: PHDocument<TState>,
   operations: DocumentOperations,
   reducer: Reducer<TState>,
@@ -588,7 +594,7 @@ function replayRetractionScopes<TState extends PHBaseState>(
     if (rows.length === 0) {
       continue;
     }
-    if (scope === "auth" || scope === "document") {
+    if (!derivesByRule(caps, scope)) {
       for (const operation of rows) {
         result = replayOperation(
           result,
@@ -653,7 +659,8 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     operationResultingStateParser = parseResultingState,
     skipIndexValidation,
   } = options || {};
-  const retraction = isBaseReducer3(header);
+  const caps = optionalBaseReducerCapabilities(header);
+  const retraction = caps?.retractionRule === true;
 
   const backfilledInitialState = backfillAuthState(initialState);
   let documentState = backfilledInitialState;
@@ -719,8 +726,9 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if there are operations left without resulting state
   // then replays them
-  if (operationsToReplay.length && retraction) {
+  if (operationsToReplay.length && caps?.retractionRule) {
     result = replayRetractionScopes(
+      caps,
       document,
       operations,
       reducer,
