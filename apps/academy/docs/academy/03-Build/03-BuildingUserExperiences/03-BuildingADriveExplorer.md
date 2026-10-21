@@ -396,17 +396,9 @@ return (
       <div className="flex-1 p-4 overflow-y-auto">
       {activeDocument && documentModelModule && editorModule ? (
             <EditorContainer
-            context={{
-               ...context,
-               getDocumentRevision: onGetDocumentRevision,
-            }}
             documentId={activeDocumentId!}
-            documentType={activeDocument.documentType}
-            driveId={driveId}
             onClose={handleEditorClose}
             title={activeDocument.name}
-            documentModelModule={documentModelModule}
-            editorModule={editorModule}
             />
       ) : (
          <>
@@ -481,62 +473,31 @@ return (
    <details>
    <summary>Update `editors/todo-list-drive-explorer/components/EditorContainer.tsx`</summary>
 
-This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the document's editor (`todo-list-editor` in this case, picked by `useEditorModuleFor`), passes it the document and a `dispatch` as props, and wraps it in `EditorDocumentProvider` so the hooks inside the editor read the same document. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history. The revision history panel gets its operations from `useDocumentOperations`, which fetches one scope lazily while the panel is open; the panel itself asks for further pages as the viewer scrolls.
 
 ```typescript
+import { DocumentToolbar, RevisionHistory, DefaultEditorLoader } from "@powerhousedao/design-system/connect";
 import {
-useDriveContext,
-type User,
-type DriveEditorContext,
+EditorDocumentProvider,
+useDocumentById,
+useDocumentOperations,
+useEditorModuleFor,
 } from "@powerhousedao/reactor-browser";
-import {
-documentModelDocumentModelModule,
-type DocumentModelModule,
-type EditorContext,
-type EditorProps,
-type PHDocument,
-type EditorModule,
-type Operation,
-} from "document-model";
-import { useTimelineItems } from "@powerhousedao/reactor-browser/analytics";
-import { getRevisionFromDate, useDocumentOperations } from "@powerhousedao/reactor-browser";
-import {
-DocumentToolbar,
-RevisionHistory,
-DefaultEditorLoader,
-generateLargeTimeline,
-type TimelineItem,
-} from "@powerhousedao/design-system";
-import { useState, Suspense, type FC, useCallback } from "react";
+import { Suspense, useState } from "react";
 
 export interface EditorContainerProps {
-driveId: string;
 documentId: string;
-documentType: string;
 onClose: () => void;
 title: string;
-context: Omit<DriveEditorContext, "getDocumentRevision"> &
-   Pick<EditorContext, "getDocumentRevision">;
-documentModelModule: DocumentModelModule<PHDocument>;
-editorModule: EditorModule;
 }
 
 export const EditorContainer: React.FC<EditorContainerProps> = (props) => {
-const { driveId, documentId, documentType, onClose, title, context, documentModelModule, editorModule } = props;
+const { documentId, onClose, title } = props;
 
-const [selectedTimelineItem, setSelectedTimelineItem] = useState<TimelineItem | null>(null);
 const [showRevisionHistory, setShowRevisionHistory] = useState(false);
-const { useDocumentEditorProps } = useDriveContext();
-const user = context.user as User | undefined;
-const timelineItems = useTimelineItems(documentId);
-
-const { dispatch, error, document } = useDocumentEditorProps({
-   documentId,
-   documentType,
-   driveId,
-   documentModelModule,
-   user,
-});
+const [document, dispatch] = useDocumentById(documentId);
+// The document's preferred editor if it edits this type, else the first that does.
+const editorModule = useEditorModuleFor(document);
 
 // `scopes` mirrors the document's own header; a document always carries
 // "global", so it's the fallback while `document` is still loading.
@@ -557,10 +518,9 @@ const loadingContent = (
    </div>
 );
 
-if (!document) return loadingContent;
+if (!document || !editorModule) return loadingContent;
 
-const moduleWithComponent = editorModule as EditorModule<PHDocument>;
-const EditorComponent = moduleWithComponent.Component;
+const EditorComponent = editorModule.Component;
 
 return showRevisionHistory ? (
    <RevisionHistory
@@ -578,24 +538,11 @@ return showRevisionHistory ? (
    />
 ) : (
    <Suspense fallback={loadingContent}>
-      <DocumentToolbar
-      onClose={onClose}
-      onSwitchboardLinkClick={() => {}}
-      />
-      <EditorComponent
-      context={{
-         ...context,
-         readMode: !!selectedTimelineItem,
-         selectedTimelineRevision: getRevisionFromDate(
-            selectedTimelineItem?.startDate,
-            selectedTimelineItem?.endDate,
-            document.operations.global,
-         ),
-      }}
-      dispatch={dispatch}
-      document={document}
-      error={error}
-      />
+      <DocumentToolbar document={document} onClose={onClose} />
+      {/* The editor gets the document as props; the hooks inside it read the provider. */}
+      <EditorDocumentProvider document={document} dispatch={dispatch}>
+         <EditorComponent document={document} dispatch={dispatch} />
+      </EditorDocumentProvider>
    </Suspense>
 );
 };

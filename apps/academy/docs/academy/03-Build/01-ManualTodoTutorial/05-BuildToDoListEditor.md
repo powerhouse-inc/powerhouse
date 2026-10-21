@@ -106,22 +106,31 @@ The tutorial repository (step-6) includes additional components like `TodoListNa
 
 ## Adding the Document Toolbar
 
-The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation](../03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
+The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, import it from the design system, place it at the top of your editor component and pass it the editor's `document`. Without the prop, it falls back to the app's selected document. For more details, see the [DocumentToolbar documentation](../03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
 
 ### Step 1: Update the main editor file
 
-First, update `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component:
+First, update `editors/todo-list-editor/editor.tsx` to import and render the main `TodoList` component. Connect passes the editor its `document` and `dispatch` as props:
 
 ```tsx
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "document-model";
+import type {
+  TodoListAction,
+  TodoListDocument,
+} from "todo-tutorial/document-models/todo-list";
 // removed-line
 import { EditTodoListName } from "./components/EditName.js";
 // added-line
 import { TodoList } from "./components/TodoList.js";
 
 /** Editor component for the Todo List document type */
-export function Editor() {
+export default function Editor({
+  document,
+}: EditorProps<TodoListDocument, TodoListAction>) {
   return (
     <div className="px-8 py-4">
+      <DocumentToolbar document={document} />
       // removed-line
       <EditTodoListName />
       // added-line
@@ -130,6 +139,8 @@ export function Editor() {
   );
 }
 ```
+
+The components below don't take the document as props: `useSelectedTodoListDocument()` returns the document the editor was rendered with.
 
 ### Step 2: Create the TodoList container component
 

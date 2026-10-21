@@ -32,19 +32,22 @@ ph generate --editor todo-editor --document-type powerhouse/todo
 
 ## Implement the editor
 
-The generated `editor.tsx` uses the `useSelectedTodoDocument()` hook to get the current document and a `dispatch` function. No props are passed — the hook connects to whichever Todo document is open.
+The generated `editor.tsx` takes the open document and a `dispatch` function as props. Connect passes both, and `EditorProps<TodoDocument, TodoAction>` types them for the Todo model.
 
 ```tsx title="editors/todo-editor/editor.tsx"
 import { useState } from "react";
-import { useSelectedTodoDocument } from "todo-app/document-models/todo";
+import type { EditorProps } from "document-model";
+import type { TodoAction, TodoDocument } from "todo-app/document-models/todo";
 import {
   addTodo,
   completeTodo,
   removeTodo,
 } from "todo-app/document-models/todo";
 
-export default function Editor() {
-  const [document, dispatch] = useSelectedTodoDocument();
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<TodoDocument, TodoAction>) {
   const [title, setTitle] = useState("");
 
   return (

@@ -5,9 +5,13 @@ description: The React hooks Powerhouse gives you for reading the current docume
 
 You've written an editor shell. Now you need to actually _read_ the document and _change_ it. Powerhouse gives you a small set of hooks from `@powerhousedao/reactor-browser` to do exactly that — no manual subscriptions, no wiring.
 
+## The editor's own document
+
+Connect renders your editor component with the open `document` and a `dispatch` bound to it as props, typed by `EditorProps<TodoListDocument, TodoListAction>` from `document-model`. The component at the top of your editor reads them there.
+
 ## The hook you'll use 90% of the time
 
-Codegen produces a typed hook for your document model. For a TodoList model, that's `useSelectedTodoListDocument`. Call it at the top of your editor:
+Components inside the editor don't need those props passed down. Codegen produces a typed hook for your document model. For a TodoList model, that's `useSelectedTodoListDocument`. Inside the editor it returns the document the editor was rendered with:
 
 ```tsx
 const [doc, dispatch] = useSelectedTodoListDocument();
@@ -83,3 +87,5 @@ dispatch(
 ```
 
 Pass a single action or an array to batch. Use `onErrors` to surface validation failures in your UI. Use `onSuccess` if you need the updated document immediately after the operation lands.
+
+`dispatch` stays the same function while the document's id does, and it always dispatches against the latest document, so it is safe in effect and callback dependencies.
