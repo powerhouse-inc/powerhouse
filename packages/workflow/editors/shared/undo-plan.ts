@@ -6,6 +6,7 @@ import {
   garbageCollect,
   garbageCollectV2,
   generateActionId,
+  groupedActionId,
   isDenied,
   isDocumentAction,
   optionalBaseReducerCapabilities,
@@ -13,6 +14,7 @@ import {
   retract,
   retractedActionIds,
   sortOperations,
+  undoGroupOfId,
   type Action,
   type BaseReducerCapabilities,
   type CreateDocumentActionInput,
@@ -39,31 +41,16 @@ export interface UndoPlan {
 }
 
 // Actions of one edit share an id suffix, so undo takes them back together.
-// The id leads, so a grouped action sorts by creation against plain ones.
-const GROUP_SUFFIX = "~ug:";
-// Ids stored before the suffix: `undo-group:<group>:<id>`.
-const LEGACY_GROUP_PREFIX = "undo-group:";
-
 export function newUndoGroup(): string {
   return generateActionId();
 }
 
 export function groupedAction<A extends Action>(action: A, group: string): A {
-  return { ...action, id: `${generateActionId()}${GROUP_SUFFIX}${group}` };
+  return { ...action, id: groupedActionId(generateActionId(), group) };
 }
 
 export function undoGroupOf(action: Action): string | undefined {
-  const id = action.id;
-  if (id.startsWith(LEGACY_GROUP_PREFIX)) {
-    const end = id.indexOf(":", LEGACY_GROUP_PREFIX.length);
-    return end > LEGACY_GROUP_PREFIX.length
-      ? id.slice(LEGACY_GROUP_PREFIX.length, end)
-      : undefined;
-  }
-  const at = id.indexOf(GROUP_SUFFIX);
-  return at > 0 && at + GROUP_SUFFIX.length < id.length
-    ? id.slice(at + GROUP_SUFFIX.length)
-    : undefined;
+  return undoGroupOfId(action.id);
 }
 
 // The header's capabilities; a header without a version, as the GraphQL light

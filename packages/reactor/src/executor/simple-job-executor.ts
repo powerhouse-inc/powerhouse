@@ -15,6 +15,7 @@ import {
   assertNever,
   baseReducerCapabilities,
   capabilitiesFor,
+  compareCanonical,
   decide,
   derivesByRule,
   garbageCollect,
@@ -92,7 +93,7 @@ import {
   type AppendCondition,
   type IOperationStore,
 } from "../storage/interfaces.js";
-import { compareCanonical, reshuffleByTimestamp } from "../utils/reshuffle.js";
+import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
 import {
   decideAtHead,

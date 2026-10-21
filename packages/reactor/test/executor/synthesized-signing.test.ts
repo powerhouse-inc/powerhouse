@@ -12,6 +12,7 @@ import {
   noop,
   redo,
   setModelName,
+  synthesizedActionId,
   undo,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -27,7 +28,6 @@ import {
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -549,17 +549,6 @@ describe("synthesized operations", () => {
     clientModule.reactor.kill();
 
     expect(withSigner).toHaveBeenCalledWith(signer, workerSigner);
-  });
-});
-
-describe("synthesizedActionId", () => {
-  it("derives the hashed form released stores hold, and refuses where nothing synthesizes", () => {
-    expect(synthesizedActionId("u", "hashed")).toBe(
-      hashBrowser("synthesized:u", "sha1", "hex").slice(0, 32),
-    );
-    expect(() => synthesizedActionId("u", "none")).toThrow(
-      "Action u cannot synthesize",
-    );
   });
 });
 

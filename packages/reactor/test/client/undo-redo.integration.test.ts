@@ -14,6 +14,7 @@ import {
   createReducer,
   generateId,
   retract,
+  synthesizedActionId,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { upgradeDocumentAction } from "../../src/actions/index.js";
@@ -21,7 +22,6 @@ import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import type { IReadGate } from "../../src/decision/read-gate.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import {
   createBaseReducer3Document,

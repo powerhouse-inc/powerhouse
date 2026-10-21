@@ -17,6 +17,7 @@ import {
   retractedActionIds,
   RULE_EXEMPT_SCOPES,
   signaturePolicyOf,
+  synthesizedActionId,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
@@ -40,10 +41,7 @@ import type {
   SignatureVerificationMode,
 } from "../signer/types.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
-import {
-  SYNTHESIZING_TYPES,
-  synthesizedActionId,
-} from "./synthesized-signing.js";
+import { SYNTHESIZING_TYPES } from "./synthesized-signing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
 type Stream = { documentId: string; scope: string; branch: string };
@@ -52,10 +50,7 @@ type Candidate = {
   action: Action;
   stream: Stream;
   opId: string;
-  /**
-   * The ids the reducer's operation in place of a submitted UNDO or REDO may
-   * be stored under: base-reducer 3's and the older hashed form.
-   */
+  /** Where a v1/v2 UNDO or REDO's synthesized operation is stored. */
   synthesizedOpIds: string[];
   operation?: Operation;
   policy?: SignaturePolicy;

@@ -7,9 +7,8 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
-  assertNever,
   deriveOperationId,
-  hashBrowser,
+  synthesizedActionId,
 } from "@powerhousedao/shared/document-model";
 
 /** Submitted types whose stored action the reducer writes in their place. */
@@ -17,31 +16,6 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
 ]);
-
-/**
- * The id of the action synthesized from `submittedId`, which released stores
- * hold. Derived, so the stored operation answers for the submitted id at the
- * live-id check. Base-reducer 3 refuses a submitted UNDO or REDO, so it
- * synthesizes nothing.
- */
-export function synthesizedActionId(
-  submittedId: string,
-  form: SynthesizedIdForm,
-): string {
-  switch (form) {
-    case "hashed":
-      return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(
-        0,
-        32,
-      );
-    case "none":
-      throw new Error(
-        `Action ${submittedId} cannot synthesize: its base reducer refuses a submitted UNDO or REDO`,
-      );
-    default:
-      return assertNever(form, "synthesized id form");
-  }
-}
 
 /**
  * Whether `operation` stores an action the reducer made from `submitted`

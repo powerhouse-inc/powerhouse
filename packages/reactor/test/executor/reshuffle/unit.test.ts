@@ -1,9 +1,11 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import { deriveOperationId } from "@powerhousedao/shared/document-model";
-import { createActionIdGenerator } from "@powerhousedao/shared/document-model";
-import { describe, expect, it } from "vitest";
 import {
   compareCanonical,
+  createActionIdGenerator,
+} from "@powerhousedao/shared/document-model";
+import { describe, expect, it } from "vitest";
+import {
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
   sortOperations,
