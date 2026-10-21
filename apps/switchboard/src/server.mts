@@ -51,11 +51,13 @@ import {
   DriveNodeView,
   NodeProcessor,
   ReactorDriveClient,
+  type ReactorDriveDatabase,
+} from "@powerhousedao/reactor-drive";
+import {
   createReactorDriveResolvers,
   REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
-  type ReactorDriveDatabase,
-} from "@powerhousedao/reactor-drive";
+} from "@powerhousedao/reactor-drive/subgraph";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   createLocalCredentialVerifier,
