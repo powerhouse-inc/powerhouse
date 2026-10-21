@@ -47,7 +47,7 @@ const tested = (id: string) =>
 // Plans the next undo and applies it the way the editor dispatches it.
 function undoOnce(document: WorkflowDocument) {
   const plan = planUndo(
-    effectiveOperations(document.operations.global, 1),
+    effectiveOperations(document.operations.global, "skip"),
     WORKFLOW_UNDO,
   );
   if (!plan) throw new Error("nothing to undo");

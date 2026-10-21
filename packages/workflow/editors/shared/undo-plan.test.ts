@@ -21,7 +21,7 @@ import {
   redoActions,
   retractions,
   undoGroupOf,
-  undoProtocolVersion,
+  undoCapabilities,
   type UndoPolicy,
 } from "./undo-plan.js";
 
@@ -200,10 +200,12 @@ describe("effectiveOperations", () => {
       op(4, "NOOP"),
     ];
     expect(
-      effectiveOperations(ops, 2).map((entry) => entry.action.type),
+      effectiveOperations(ops, "noop-chain").map((entry) => entry.action.type),
     ).toEqual(["ADD_STEP"]);
     // So the next undo reaches the step itself.
-    expect(planUndo(effectiveOperations(ops, 2), policy)?.undos).toBe(1);
+    expect(
+      planUndo(effectiveOperations(ops, "noop-chain"), policy)?.undos,
+    ).toBe(1);
   });
 });
 
@@ -385,24 +387,24 @@ describe("redo", () => {
   });
 });
 
-describe("undoProtocolVersion", () => {
+describe("undoCapabilities", () => {
   const header = (protocolVersions?: Record<string, number>) =>
     ({ id: "doc", protocolVersions }) as PHDocumentHeader;
 
   it("reads a header without a base-reducer version as 1", () => {
-    expect(undoProtocolVersion(header())).toBe(1);
-    expect(undoProtocolVersion(header({}))).toBe(1);
+    expect(undoCapabilities(header()).version).toBe(1);
+    expect(undoCapabilities(header({})).version).toBe(1);
   });
 
   it("reads a known version", () => {
-    expect(undoProtocolVersion(header({ "base-reducer": 2 }))).toBe(2);
-    expect(undoProtocolVersion(header({ "base-reducer": 3 }))).toBe(3);
+    expect(undoCapabilities(header({ "base-reducer": 2 })).version).toBe(2);
+    expect(undoCapabilities(header({ "base-reducer": 3 })).version).toBe(3);
   });
 
   it("refuses an unknown version", () => {
-    expect(() => undoProtocolVersion(header({ "base-reducer": 7 }))).toThrow(
-      "unknown base-reducer protocol version 7",
-    );
+    expect(
+      () => undoCapabilities(header({ "base-reducer": 7 })).version,
+    ).toThrow("unknown base-reducer protocol version 7");
   });
 
   it("reads a header without a version from CREATE_DOCUMENT", () => {
@@ -411,18 +413,18 @@ describe("undoProtocolVersion", () => {
       return { ...base, action: { ...base.action, input } };
     };
     expect(
-      undoProtocolVersion(
+      undoCapabilities(
         header(),
         create({ protocolVersions: { "base-reducer": 3 } }),
-      ),
+      ).version,
     ).toBe(3);
-    expect(undoProtocolVersion(header(), create({}))).toBe(1);
+    expect(undoCapabilities(header(), create({})).version).toBe(1);
     expect(
-      undoProtocolVersion(
+      undoCapabilities(
         header({ "base-reducer": 2 }),
         create({ protocolVersions: { "base-reducer": 3 } }),
-      ),
+      ).version,
     ).toBe(2);
-    expect(undoProtocolVersion(header(), op(0, "ADD_STEP"))).toBe(1);
+    expect(undoCapabilities(header(), op(0, "ADD_STEP")).version).toBe(1);
   });
 });

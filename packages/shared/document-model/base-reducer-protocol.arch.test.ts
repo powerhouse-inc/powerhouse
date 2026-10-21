@@ -36,22 +36,7 @@ const OWNERS = new Set([
 ]);
 
 /** Not yet on capabilities, with who converts each; the list only shrinks. */
-const PENDING = new Map<string, string>([
-  [
-    "packages/reactor-browser/src/graphql-client/graphql-reactor-client.ts",
-    "W3 undo plan",
-  ],
-  [
-    "packages/reactor-browser/src/graphql-client/signing.ts",
-    "W3 light-client signing",
-  ],
-  [
-    "packages/design-system/src/connect/components/document-toolbar/use-document-undo-redo.ts",
-    "W3 undo plan",
-  ],
-  ["packages/workflow/editors/shared/editor-chrome.tsx", "W3 undo plan"],
-  ["packages/workflow/editors/shared/undo-plan.ts", "W3 undo plan"],
-]);
+const PENDING = new Map<string, string>([]);
 
 function* sources(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

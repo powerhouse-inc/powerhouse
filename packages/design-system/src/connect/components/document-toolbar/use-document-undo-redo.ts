@@ -4,8 +4,10 @@ import {
   type IReactorBrowserClient,
 } from "@powerhousedao/reactor-browser";
 import {
+  optionalBaseReducerCapabilities,
   redo,
   undo,
+  undoNeedsTargets,
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -28,24 +30,21 @@ const UNAVAILABLE: UndoRedoAvailability = { canUndo: false, canRedo: false };
 const UNDO_SCOPE = "global";
 
 /**
- * Whether undo and redo go through the reactor client: on base-reducer 3, and
- * on a header without protocol versions (a light client of an older
- * Switchboard), whose client resolves every version.
+ * Whether undo and redo go through the reactor client: when they resolve a
+ * target, and on a header without protocol versions (a light client of an
+ * older Switchboard), whose client reads the version itself.
  */
 function undoesThroughClient(
   client: IReactorBrowserClient | undefined,
   document: PHDocument | undefined,
 ): boolean {
   if (!client || !document) return false;
-  const version = document.header.protocolVersions?.["base-reducer"];
-  if (version === 3) return true;
-  return (
-    version === undefined && typeof client.undoRedoAvailability === "function"
-  );
+  const caps = optionalBaseReducerCapabilities(document.header);
+  return caps === undefined || undoNeedsTargets(caps);
 }
 
 // The latest availability read per document, shared by every hook asking at
-// the same revision: on base-reducer 3 a read loads the whole scope stream.
+// the same revision: on base-reducer 3 a read derives the scope to resolve targets.
 const availabilityReads = new WeakMap<
   IReactorBrowserClient,
   Map<string, { revision: string; read: Promise<UndoRedoAvailability> }>

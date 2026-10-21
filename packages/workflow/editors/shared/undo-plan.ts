@@ -1,21 +1,24 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
-  baseReducerVersion,
+  assertNever,
+  capabilitiesOf,
   garbageCollect,
   garbageCollectV2,
   generateActionId,
   isDenied,
   isDocumentAction,
+  optionalBaseReducerCapabilities,
   positionalOperations,
   retract,
   retractedActionIds,
   sortOperations,
   type Action,
-  type BaseReducerVersion,
+  type BaseReducerCapabilities,
   type CreateDocumentActionInput,
   type Operation,
   type PHDocumentHeader,
+  type UndoModel,
 } from "@powerhousedao/shared/document-model";
 
 export interface UndoPolicy {
@@ -63,53 +66,50 @@ export function undoGroupOf(action: Action): string | undefined {
     : undefined;
 }
 
-// The header's version; a header without one, as the GraphQL light client
-// builds it, takes the version from the document's CREATE_DOCUMENT, else 1.
+// The header's capabilities; a header without a version, as the GraphQL light
+// client builds it, takes them from the document's CREATE_DOCUMENT, else 1.
 // An unknown version throws.
-export function undoProtocolVersion(
+export function undoCapabilities(
   header: PHDocumentHeader,
   create?: Operation,
-): BaseReducerVersion {
-  if (header.protocolVersions?.["base-reducer"] !== undefined) {
-    return baseReducerVersion(header);
-  }
+): BaseReducerCapabilities {
   const input =
     create?.action.type === "CREATE_DOCUMENT"
       ? (create.action.input as Partial<CreateDocumentActionInput> | undefined)
       : undefined;
-  const version = input?.protocolVersions?.["base-reducer"];
-  if (version === undefined) return 1;
-  return baseReducerVersion({
-    ...header,
-    protocolVersions: { "base-reducer": version },
-  });
+  return (
+    optionalBaseReducerCapabilities(header) ??
+    optionalBaseReducerCapabilities({
+      ...header,
+      protocolVersions: input?.protocolVersions,
+    }) ??
+    capabilitiesOf(1)
+  );
 }
 
-// Base-reducer 1 and 2: the operations still in effect, undone ones and the
-// NOOPs removed.
+// Below the retraction model: the operations still in effect, undone ones and
+// the NOOPs removed.
 export function effectiveOperations(
   operations: readonly Operation[],
-  protocolVersion: 1 | 2,
+  model: Exclude<UndoModel, "retraction">,
 ): Operation[] {
   const sorted = sortOperations([...operations]);
-  return keptOperations(sorted, protocolVersion).filter(
+  return keptOperations(sorted, model).filter(
     (operation) => operation.action.type !== "NOOP",
   );
 }
 
 function keptOperations(
   sorted: Operation[],
-  protocolVersion: 1 | 2,
+  model: Exclude<UndoModel, "retraction">,
 ): Operation[] {
-  switch (protocolVersion) {
-    case 1:
+  switch (model) {
+    case "skip":
       return garbageCollect(sorted);
-    case 2:
+    case "noop-chain":
       return garbageCollectV2(sorted);
-    default: {
-      const unknown: never = protocolVersion;
-      throw new Error(`Unknown base-reducer version ${String(unknown)}`);
-    }
+    default:
+      return assertNever(model, "undo model");
   }
 }
 
