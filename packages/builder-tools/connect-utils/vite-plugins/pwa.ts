@@ -175,6 +175,24 @@ function phSwConfigPlugin(data: Record<string, unknown>): Plugin {
   };
 }
 
+/** The built manifest and precache: Connect's, named after the app, under the
+ * merged `pwa` overrides, whose manifest name wins. */
+export function connectPwaManifest(options: {
+  pwa?: PHConnectPwa;
+  appName?: string;
+}) {
+  const { pwa, appName } = options;
+  return applyPwaOverrides(
+    {
+      manifest: appName
+        ? { ...BASE_MANIFEST, name: appName, short_name: appName }
+        : BASE_MANIFEST,
+      precache: BASE_PRECACHE,
+    },
+    pwa ?? {},
+  );
+}
+
 /**
  * Service-worker / PWA support for Connect, gated by `connect.app.offline`.
  *
@@ -198,8 +216,10 @@ export function connectPwaPlugins(options: {
   offlineEnabled: boolean;
   /** Effective PWA overrides (packages + project), already merged. */
   pwa?: PHConnectPwa;
+  /** `connect.branding.appName`: the installed app's name, unless `pwa` sets one. */
+  appName?: string;
 }): PluginOption[] {
-  const { offlineEnabled, pwa } = options;
+  const { offlineEnabled, pwa, appName } = options;
 
   if (!offlineEnabled) {
     return [
@@ -213,10 +233,7 @@ export function connectPwaPlugins(options: {
     ];
   }
 
-  const { manifest, precache } = applyPwaOverrides(
-    { manifest: BASE_MANIFEST, precache: BASE_PRECACHE },
-    pwa ?? {},
-  );
+  const { manifest, precache } = connectPwaManifest({ pwa, appName });
 
   // Build-time data handed to the SW via the virtual module. EMBEDDED_BASE_
   // MANIFEST is the base the runtime manifest route merges dynamically-

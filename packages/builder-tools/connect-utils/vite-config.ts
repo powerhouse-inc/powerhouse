@@ -395,7 +395,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     });
     if (projectContribution) contributions.push(projectContribution);
     const mergedPwa = mergePwaConfig(contributions, projectPwa, pwaWarn);
-    return connectPwaPlugins({ offlineEnabled, pwa: mergedPwa });
+    return connectPwaPlugins({
+      offlineEnabled,
+      pwa: mergedPwa,
+      appName: servedConnect.branding?.appName || undefined,
+    });
   })();
 
   const reactExternal = [

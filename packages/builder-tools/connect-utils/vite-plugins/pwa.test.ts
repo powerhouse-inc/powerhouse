@@ -7,9 +7,25 @@ import {
   collectProjectPwaContribution,
   validateProjectPwaConfig,
 } from "./pwa-packages.js";
-import { BASE_PRECACHE, connectPwaPlugins } from "./pwa.js";
+import { BASE_PRECACHE, connectPwaManifest, connectPwaPlugins } from "./pwa.js";
 
 describe("connectPwaPlugins", () => {
+  it("names the installed app after connect.branding.appName, unless connect.pwa names it", () => {
+    expect(connectPwaManifest({}).manifest).toMatchObject({
+      name: "Powerhouse Connect",
+      short_name: "Connect",
+    });
+    expect(
+      connectPwaManifest({ appName: "Acme Inventory" }).manifest,
+    ).toMatchObject({ name: "Acme Inventory", short_name: "Acme Inventory" });
+    expect(
+      connectPwaManifest({
+        appName: "Acme Inventory",
+        pwa: { manifest: { short_name: "Acme" } },
+      }).manifest,
+    ).toMatchObject({ name: "Acme Inventory", short_name: "Acme" });
+  });
+
   it("emits a single self-destroying worker when offline is disabled", () => {
     const plugins = connectPwaPlugins({ offlineEnabled: false });
     expect(Array.isArray(plugins)).toBe(true);
