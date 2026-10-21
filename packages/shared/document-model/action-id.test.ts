@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAction } from "./actions.js";
-import {
-  compareActionIds,
-  createActionIdGenerator,
-  generateActionId,
-} from "./action-id.js";
+import { createActionIdGenerator, generateActionId } from "./action-id.js";
+import { compareActionIds } from "./action-order.js";
 
 const UUID_V7 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -70,21 +67,5 @@ describe("generateActionId", () => {
     for (const action of actions) {
       expect(action.timestampUtcMs).toBe("2026-03-01T00:00:00.000Z");
     }
-  });
-});
-
-describe("compareActionIds", () => {
-  it("orders by code unit where a locale would not", () => {
-    // Danish collation reads "aa" as å, after z.
-    expect("aa".localeCompare("ab", "da")).toBe(1);
-    expect(compareActionIds("aa", "ab")).toBe(-1);
-    expect(compareActionIds("ab", "aa")).toBe(1);
-    expect(compareActionIds("aa", "aa")).toBe(0);
-  });
-
-  it("keeps a frozen clock's ids in creation order", () => {
-    const next = createActionIdGenerator({ now: () => 7 });
-    const ids = Array.from({ length: 2_000 }, () => next());
-    expect([...ids].reverse().sort(compareActionIds)).toEqual(ids);
   });
 });

@@ -44,6 +44,7 @@ export default defineConfig({
       "connect/shared-deps.test.ts",
       "document-drive/**/*.test.ts",
       "document-model/action-id.test.ts",
+      "document-model/action-order.test.ts",
       "document-model/action-signature.test.ts",
       "document-model/action-timestamp.test.ts",
       "document-model/action-transport.test.ts",

@@ -58,11 +58,6 @@ export function createActionIdGenerator(
 /** Ids from one process sort in creation order, so same-ms actions keep it. */
 export const generateActionId: () => string = createActionIdGenerator();
 
-/** Code-unit order, the same in every locale; ids from one process sort in creation order under it. */
-export function compareActionIds(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-
 let lastClockMs = 0;
 let lastStampMs = 0;
 
