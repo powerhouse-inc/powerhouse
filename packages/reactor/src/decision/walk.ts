@@ -105,12 +105,12 @@ export function walkIdOrder(
   streams: readonly WalkStream[],
   documentId: string,
 ): IdOrder {
-  const evaluated =
+  const header = (
     streams.find((stream) => stream.document.header.id === documentId) ??
-    streams[0];
+    streams.at(0)
+  )?.document.header;
   return idOrderFor(
-    evaluated &&
-      optionalBaseReducerCapabilities(evaluated.document.header)?.tieOrder,
+    header && optionalBaseReducerCapabilities(header)?.tieOrder,
   );
 }
 
