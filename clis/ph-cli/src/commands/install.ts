@@ -182,7 +182,7 @@ Resolution order for the registry URL:
       }
     }
 
-    const { updateConfigFile, updateStylesFile } = await import("../utils.js");
+    const { updateConfigFile } = await import("../utils.js");
 
     try {
       console.log("⚙️ Updating powerhouse config file...");
@@ -205,17 +205,6 @@ Resolution order for the registry URL:
         registryUrl,
         dependenciesWithVersions,
       );
-    }
-
-    if (args.local) {
-      try {
-        console.log("⚙️ Updating styles.css file...");
-        updateStylesFile(dependenciesWithVersions, projectPath);
-        console.log("Styles file updated successfully 🎉");
-      } catch (error) {
-        console.error("❌ Failed to update styles file");
-        throw error;
-      }
     }
 
     process.exit(0);

@@ -29,7 +29,7 @@ Connect's runtime settings (app name, drives, Renown, package registry) are the 
 | --- | --- |
 | [Pages, sidebar links and settings tabs](./docs/customizing/pages.md) | Add a page, list it in the sidebar, hide the sidebar on it, add a settings tab, set the page title. |
 | [Layout and the loading screen](./docs/customizing/layout.md) | Replace the sidebar or the whole layout; what the prerendered loading screen shows. |
-| [Data and navigation](./docs/customizing/data-and-navigation.md) | Route loaders, the open drive and document, typed search params, navigating from editors. |
+| [Data and navigation](./docs/customizing/data-and-navigation.md) | Route loaders, the open drive and document, editor props, typed search params, navigating from editors. |
 | [Override Connect's routes](./docs/customizing/overrides.md) | Replace home, the drive view, the open document, settings or the 404 page; slow routes, not found and errors. |
 | [Modals](./docs/customizing/modals.md) | Routed modals, replacing a modal's view, framing every modal. |
 | [Styles and branding](./docs/customizing/styles-and-branding.md) | The project's Tailwind build and theme tokens; app name and favicon per host. |
@@ -72,6 +72,9 @@ pnpm --filter @powerhousedao/connect-core ui:shots --list
 | `packages/connect-core/src/router/titles.ts` | Connect's titles. |
 | `packages/builder-tools/connect-utils/vite-plugins/connect-routes.ts` | Routes folder lookup and tree generation. |
 | `apps/connect/tailwind.css` | Connect's Tailwind source, which a project's `style.css` imports. |
+| `apps/connect/theme.css` | Connect's tokens without its classes, which a package's stylesheet references. |
+| `packages/codegen/src/file-builders/boilerplate/migrate-style.ts` | `style.css` on `ph migrate`, and the package stylesheet `ph build` compiles. |
+| `packages/builder-tools/connect-utils/vite-plugins/host-stylesheet.ts` | The host's `style.css`, added to the project's in the page's build. |
 | `apps/connect/src/prerender/shell-css.ts` | The loading screen's CSS, built by Tailwind's compiler. |
 | `packages/reactor-browser/src/hooks/navigation.ts`, `link-props.ts` | The navigation API for editors. |
 | `test/versioned-documents/hosts/connect/routes/` | A working example project. |

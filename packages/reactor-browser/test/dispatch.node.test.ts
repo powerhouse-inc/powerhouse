@@ -20,11 +20,11 @@ vi.mock("../src/actions/dispatch.js", () => ({
 
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { dispatchActions } from "../src/actions/dispatch.js";
-import { useDispatch } from "../src/hooks/dispatch.js";
+import { createDispatch } from "../src/hooks/dispatch.js";
 
 type ConsoleFn = (...args: unknown[]) => void;
 
-describe("useDispatch error handling", () => {
+describe("createDispatch error handling", () => {
   let errorSpy: MockInstance<ConsoleFn>;
   let unhandled: unknown[];
   const onUnhandled = (reason: unknown) => unhandled.push(reason);
@@ -48,7 +48,7 @@ describe("useDispatch error handling", () => {
     vi.mocked(dispatchActions).mockRejectedValue(boom);
 
     const document = { id: "doc-1" } as unknown as PHDocument;
-    const [, dispatch] = useDispatch(document);
+    const dispatch = createDispatch(() => document);
 
     dispatch({ type: "SET_NAME", input: { name: "x" } } as unknown as Action);
 
@@ -67,7 +67,7 @@ describe("useDispatch error handling", () => {
     vi.mocked(dispatchActions).mockResolvedValue(undefined);
 
     const document = { id: "doc-1" } as unknown as PHDocument;
-    const [, dispatch] = useDispatch(document);
+    const dispatch = createDispatch(() => document);
 
     dispatch({ type: "SET_NAME", input: { name: "x" } } as unknown as Action);
 

@@ -2,12 +2,17 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { utils } from "../../document-models/processor-module/index.js";
-import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
-  useSelectedProcessorModuleDocument: vi.fn(),
-}));
+// What the host passes the editor: its document and dispatch.
+let hosted: [unknown, unknown] = [undefined, undefined];
+const setHosted = (value: unknown[]) => {
+  hosted = value as [unknown, unknown];
+};
+const props = () => ({
+  document: hosted[0] as never,
+  dispatch: hosted[1] as never,
+});
 
 vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   useAvailableDocumentTypes: vi.fn(() => [
@@ -31,15 +36,12 @@ describe("ProcessorModule Editor", () => {
 
   beforeEach(() => {
     mockDispatch = vi.fn();
-    vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-      document,
-      mockDispatch,
-    ]);
+    setHosted([document, mockDispatch]);
   });
 
   describe("Core Rendering", () => {
     it("should render all main form sections and labels", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("Processor Configuration")).toBeInTheDocument();
       expect(screen.getByText("Processor Name")).toBeInTheDocument();
@@ -62,12 +64,9 @@ describe("ProcessorModule Editor", () => {
         },
       });
 
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByDisplayValue("test-processor")).toBeInTheDocument();
 
@@ -85,7 +84,7 @@ describe("ProcessorModule Editor", () => {
   describe("Processor Name Input", () => {
     it("should dispatch setProcessorName when name changes (debounced)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       await user.type(nameInput, "new-processor");
@@ -113,13 +112,10 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       await user.clear(nameInput);
@@ -147,13 +143,10 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       await user.tripleClick(nameInput);
@@ -166,7 +159,7 @@ describe("ProcessorModule Editor", () => {
 
     it("should NOT dispatch when both old and new values are empty", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       await user.click(nameInput);
@@ -181,7 +174,7 @@ describe("ProcessorModule Editor", () => {
   describe("Processor Type Dropdown", () => {
     it("should dispatch setProcessorType when type changes (debounced)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const typeSelect = screen.getByLabelText("Type");
       await user.selectOptions(typeSelect, "analytics");
@@ -209,13 +202,10 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const typeSelect = screen.getByLabelText("Type");
       // Select the same type that's already set
@@ -229,7 +219,7 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should show correct type options", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const typeSelect = screen.getByLabelText("Type");
       const options = Array.from(typeSelect.querySelectorAll("option")).map(
@@ -244,7 +234,7 @@ describe("ProcessorModule Editor", () => {
   describe("Document Types Management", () => {
     it("should add document type from dropdown", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Document Types");
       await user.selectOptions(select, "powerhouse/document-model");
@@ -273,13 +263,10 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const documentModelText = screen.getByText("powerhouse/document-model");
       const removeButton =
@@ -309,12 +296,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Document Types");
       const options = Array.from(select.querySelectorAll("option")).map(
@@ -328,7 +312,7 @@ describe("ProcessorModule Editor", () => {
 
     it("should add multiple document types", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Document Types");
 
@@ -367,12 +351,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("powerhouse/document-model")).toBeInTheDocument();
       expect(
@@ -394,13 +375,10 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       await user.click(confirmButton);
@@ -425,12 +403,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
@@ -448,12 +423,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
@@ -469,12 +441,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
@@ -492,12 +461,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.queryByText("Confirm");
       expect(confirmButton).not.toBeInTheDocument();
@@ -517,12 +483,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: ["connect"],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       const typeSelect = screen.getByLabelText("Type");
@@ -551,12 +514,9 @@ describe("ProcessorModule Editor", () => {
           processorApps: [],
         },
       });
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        document,
-        mockDispatch,
-      ]);
+      setHosted([document, mockDispatch]);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Processor Name");
       const typeSelect = screen.getByLabelText("Type");

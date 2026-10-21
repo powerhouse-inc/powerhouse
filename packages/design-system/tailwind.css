@@ -1,13 +1,8 @@
 /* The design system for a Tailwind host: its tokens, its components' rules and
    the classes its code uses. Third-party CSS is in vendor.css. */
 @import "./theme.css";
+@import "./plugins.css";
 @source "./dist";
-@plugin "tailwind-scrollbar";
-
-@plugin 'tailwind-scrollbar' {
-  nocompatible: true;
-  preferredstrategy: "pseudoelements";
-}
 
 @custom-variant dark (&:where(.dark, .dark *));
 

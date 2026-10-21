@@ -2,7 +2,7 @@
 // the actions' errors, or why nothing was dispatched.
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useDispatch } from "../src/hooks/dispatch.js";
+import { createDispatch } from "../src/hooks/dispatch.js";
 
 const action = {
   id: "a1",
@@ -26,7 +26,7 @@ function withReactor(execute: Execute) {
 // Resolves with whichever callback the dispatch answered through.
 function outcome(target: PHDocument | undefined) {
   return new Promise<{ errors?: Error[]; result?: PHDocument }>((resolve) => {
-    const [, dispatch] = useDispatch(target);
+    const dispatch = createDispatch(() => target);
     dispatch(
       action,
       (errors) => resolve({ errors }),
@@ -35,7 +35,7 @@ function outcome(target: PHDocument | undefined) {
   });
 }
 
-describe("useDispatch", () => {
+describe("createDispatch", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -76,7 +76,7 @@ describe("useDispatch", () => {
     } as unknown as PHDocument;
     withReactor(() => Promise.resolve(failed));
     const calls: Error[][] = [];
-    const [, dispatch] = useDispatch(document);
+    const dispatch = createDispatch(() => document);
     dispatch(action, (errors) => {
       calls.push(errors);
       throw new Error("handler failed");

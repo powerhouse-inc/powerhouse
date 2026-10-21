@@ -31,9 +31,9 @@ export interface RenownAuthConfig {
   /** Public URL of this registry. Used as the expected `aud` claim on
    *  Renown-signed bearer tokens. Required when renown auth is enabled. */
   publicUrl: string;
-  /** Renown service base URL for credential verification (defaults to the
-   *  SDK default, https://www.renown.id). */
-  renownUrl?: string;
+  /** Renown issuer base URLs accepted for credential verification, tried in
+   *  order (defaults to the SDK default, https://www.renown.id). */
+  renownUrls?: string[];
 }
 
 export interface RegistryConfig {
@@ -102,7 +102,7 @@ export interface RegistryCommandArgs {
   webhooks?: string;
   publicUrl?: string;
   authRenown?: boolean;
-  /** Renown service base URL (defaults to the SDK default). */
+  /** Renown service base URL(s), comma-separated (defaults to the SDK default). */
   renownUrl?: string;
   verdaccioSecret?: string;
   /** Comma-separated globs (e.g. "@powerhousedao/*,document-model,ph-cmd")

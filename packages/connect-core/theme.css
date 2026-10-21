@@ -1,8 +1,6 @@
 /* Core's light and dark tokens. `.dark` on <html> picks dark; reactor-browser's
    useTheme sets it from the stored choice or prefers-color-scheme. */
 
-/* A Tailwind host that imports this file generates core's utility classes. */
-@source "./src/**/*.{ts,tsx}";
 @theme inline {
   --color-core-bg: var(--ph-core-bg);
   --color-core-fg: var(--ph-core-fg);

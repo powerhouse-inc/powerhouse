@@ -1527,11 +1527,34 @@ export type EditorDispatch = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-export type EditorProps = {
+/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome. */
+export type DocumentDispatch<TAction extends Action = Action> = (
+  actionOrActions:
+    | TAction
+    | TAction[]
+    | DocumentAction
+    | DocumentAction[]
+    | undefined,
+  onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
+) => void;
+
+type EditorBaseProps = {
   children?: ReactNode;
   className?: string;
-  document?: PHDocument;
 };
+
+/** `EditorProps<MyDocument, MyAction>`: the document and dispatch a host passes
+ * an editor. Bare `EditorProps` leaves them optional, as before. */
+export type EditorProps<
+  TDocument extends PHDocument = never,
+  TAction extends Action = Action,
+> = [TDocument] extends [never]
+  ? EditorBaseProps & { document?: PHDocument; dispatch?: DocumentDispatch }
+  : EditorBaseProps & {
+      document: TDocument;
+      dispatch: DocumentDispatch<TAction>;
+    };
 
 export type SubgraphModule = {
   id: string;
@@ -1540,8 +1563,20 @@ export type SubgraphModule = {
   endpoint: string;
 };
 
-export type EditorModule<TProps = any> = {
-  Component: FC<EditorProps & TProps>;
+/** What hosts pass an editor besides `document` and `dispatch`. */
+export type HostedEditorProps = {
+  documentId?: string;
+  context?: { readMode?: boolean; selectedTimelineRevision?: number };
+  displayToolbar?: boolean;
+};
+
+/** Hosts render `Component` with `document` and `dispatch`. */
+export type EditorModule<
+  TDocument extends PHDocument = any,
+  TAction extends Action = any,
+  TProps = HostedEditorProps,
+> = {
+  Component: FC<EditorProps<TDocument, TAction> & TProps>;
   documentTypes: string[];
   config: {
     id: string;

@@ -1,0 +1,3 @@
+/* Core for a Tailwind host: its tokens, and the classes its sources use. */
+@import "./theme.css";
+@source "./src/**/*.{ts,tsx}";

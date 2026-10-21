@@ -1,6 +1,5 @@
 import { Icon } from "#design-system";
 import {
-  getNodeTargetIn,
   getSyncStatusSync,
   preloadEditorModule,
   showDeleteNodeModal,
@@ -8,10 +7,10 @@ import {
   useDragNode,
   useEditorModulesForDocumentType,
   useLinkProps,
-  usePHStore,
   usePreloadNode,
   useSetSelectedNode,
   useNodeActions,
+  useNodeTarget,
   useSelectedDriveSafe,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
@@ -53,10 +52,9 @@ type Props = {
 
 export function FileItem(props: Props) {
   const { fileNode, className, customDocumentIconSrc } = props;
-  const store = usePHStore();
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();
-  const target = getNodeTargetIn(store, fileNode);
+  const target = useNodeTarget(fileNode);
   const link = useLinkProps(target, () => setSelectedNode(fileNode));
   const href = props.href ?? (target ? link.href : undefined);
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");

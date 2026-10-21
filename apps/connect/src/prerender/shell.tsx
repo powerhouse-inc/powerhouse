@@ -119,14 +119,14 @@ export async function renderShell(
 }
 
 /** A project's shells, one per variant: its route tree rendered at `/`, with
- * CSS that `stylesheet`, its Tailwind entry, builds for the markup's classes. */
-export async function renderProjectShells(stylesheet: string) {
+ * CSS that `stylesheet`, its Tailwind entry (text `css`), builds for the markup's classes. */
+export async function renderProjectShells(stylesheet: string, css?: string) {
   const shells: Partial<Record<ShellVariant, { body: string; head: string }>> =
     {};
   for (const variant of ["generic", "core"] as const) {
     const markup = shellMarkup(await renderShell(variant, "project"));
-    const css = await shellCss(stylesheet, markup);
-    shells[variant] = appShell("project", variant, markup, css);
+    const shellStyles = await shellCss(stylesheet, markup, css);
+    shells[variant] = appShell("project", variant, markup, shellStyles);
   }
   return shells;
 }

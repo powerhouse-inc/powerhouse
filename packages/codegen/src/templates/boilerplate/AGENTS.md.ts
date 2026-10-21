@@ -127,7 +127,7 @@ Only **after** the codegen has produced the boilerplate files, proceed with the 
 - Inspect the generated files in the \`editors/\` folder — do NOT create new files for the main editor component; edit the generated one
 - Hooks for each document model are auto-generated at \`document-models/<name>/v<n>/hooks.ts\` and re-exported through the top-level barrel \`document-models/<name>\` (which always points at the latest version). Import them from the barrel — there is **no** \`editors/hooks/\` folder.
 - Read the schema of the document model that the editor is for to know how to interact with it
-- Every editor **MUST** include \`<DocumentToolbar />\` imported from \`@powerhousedao/design-system/connect/index\`. Place it at the top of the editor component — do not put anything next to it.
+- Every editor **MUST** include \`<DocumentToolbar document={document} />\` imported from \`@powerhousedao/design-system/connect\`. Place it at the top of the editor component — do not put anything next to it.
 - Style the editor using tailwind classes or a style tag. If using a style tag, make sure to make the selectors specific to only apply to the editor component.
 - Create modular components for the UI elements and place them on separate files to make it easier to maintain and update
 - Consider using the React Components exported by \`@powerhousedao/design-system\` and \`@powerhousedao/document-engineering\`
@@ -145,7 +145,7 @@ Only **after** the codegen has produced the boilerplate files, proceed with the 
 
 ### Document Editor Implementation Pattern
 
-**CRITICAL**: When implementing document editors, use the modern React hooks pattern from \`@powerhousedao/reactor-browser\`.
+**CRITICAL**: The editor component takes its document and \`dispatch\` as props. Connect passes both, typed for the editor's document by \`EditorProps<TDocument, TAction>\` from \`document-model\`.
 
 The following section is valid for editors that edit a single document type.
 
@@ -154,10 +154,29 @@ The following section is valid for editors that edit a single document type.
 Using a "Todo" document model as example:
 
 ~~~typescript
+// editors/todo-editor/editor.tsx
+import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "document-model";
+import type { TodoAction, TodoDocument } from "document-models/todo";
+import { TodoList } from "./components/TodoList.js";
+
+export default function Editor({
+  document,
+}: EditorProps<TodoDocument, TodoAction>) {
+  return (
+    <div>
+      <DocumentToolbar document={document} />
+      <TodoList />
+    </div>
+  );
+}
+
+// editors/todo-editor/components/TodoList.tsx
 import { generateId } from "document-model";
 import { actions, useSelectedTodoDocument } from "document-models/todo";
 
-export default function Editor() {
+export function TodoList() {
+  // Reads the document the editor was rendered with.
   const [document, dispatch] = useSelectedTodoDocument();
 
   function handleAddTodo(values: { title: string }) {
@@ -169,14 +188,13 @@ export default function Editor() {
   // ...
 }
 
-// Note: The \`useSelectedTodoDocument\` hook is auto-generated at
-// \`document-models/todo/v<n>/hooks.ts\` and re-exported via the top-level
-// barrel \`document-models/todo\` (which always points at the latest version).
-// Action creators are exposed as \`actions.<actionName>\` from the same barrel
-// (e.g. \`actions.addTodo(...)\`) — never import from a deep \`gen/creators.js\` path.
+// Action creators are exposed as \`actions.<actionName>\` from the
+// \`document-models/todo\` barrel (e.g. \`actions.addTodo(...)\`) — never import
+// from a deep \`gen/creators.js\` path.
 ~~~
 
-The \`useSelectedTodoDocument\` (and every other document hook) is auto-generated and re-exported from the \`document-models/<name>\` top-level barrel, so you don't need to implement it yourself. See the "Editor code conventions" section below for the full import-path rules.
+- Always pass \`document\` to \`<DocumentToolbar />\`.
+- Components inside the editor call \`useSelected<Name>Document()\` (auto-generated, re-exported from \`document-models/<name>\`). It reads the document the editor was rendered with, so there is no need to pass \`document\` and \`dispatch\` down as props.
 
 ### Editor code conventions (TypeScript & module resolution)
 
@@ -310,7 +328,7 @@ Use this **only** when your editor needs UI primitives not covered by \`@powerho
 
 3. **Create \`editors/<name>/lib/utils.ts\`** exporting the standard \`cn\` helper (\`twMerge(clsx(inputs))\`).
 
-4. **Extend \`style.css\`** (append, do not replace): \`@import "tw-animate-css";\`, \`@custom-variant dark (&:is(.dark *));\`, a \`@theme inline { ... }\` block mapping \`--color-*\`/\`--radius-*\`, \`:root\` and \`.dark\` blocks with \`oklch(...)\` values, and a \`@layer base\` block. ⚠️ The design-system theme already declares its own tokens — verify both the editor and Connect still render correctly in light/dark mode after this step. If they break, fall back to design-system primitives.
+4. **Extend the stylesheets** (append, do not replace). \`style.css\` ships in the package's stylesheet, so it gets only what the components need everywhere: \`@import "tw-animate-css";\`. The theme goes in \`hosts/connect/style.css\`, which this Connect alone loads: \`@custom-variant dark (&:is(.dark *));\`, a \`@theme inline { ... }\` block mapping \`--color-*\`/\`--radius-*\`, \`:root\` and \`.dark\` blocks with \`oklch(...)\` values, and a \`@layer base\` block. In \`style.css\` they would re-theme every Connect that loads the package; move them if the shadcn CLI wrote them there. ⚠️ The design-system theme already declares its own tokens — verify both the editor and Connect still render correctly in light/dark mode after this step. If they break, fall back to design-system primitives.
 
 5. **Install AI Elements** using Vercel's CLI (not shadcn's). Verify each name exists at https://ai-sdk.dev/elements first — unknown names abort the install:
 

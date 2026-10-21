@@ -3,9 +3,13 @@ import "./ui/canvas.css";
 import {
   useDocumentModelModules,
   useFileNodesInSelectedDrive,
-  useSelectedDocumentId,
   useSelectedDriveId,
 } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
+import type {
+  WorkflowAction,
+  WorkflowDocument,
+} from "document-models/workflow";
 import { useSelectedWorkflowDocument } from "document-models/workflow";
 import { WORKFLOW_UNDO } from "./undo-policy.js";
 import { useMemo } from "react";
@@ -251,10 +255,11 @@ function WorkflowEditor() {
 
 // A drive node can point at a document the reactor cannot serve; the document
 // hooks throw for it. The boundary keeps that failure inside the editor pane.
-export default function Editor() {
-  const documentId = useSelectedDocumentId();
+export default function Editor({
+  document,
+}: EditorProps<WorkflowDocument, WorkflowAction>) {
   return (
-    <DocumentErrorBoundary documentId={documentId}>
+    <DocumentErrorBoundary documentId={document.header.id}>
       <WorkflowRuntimeProvider>
         <WorkflowEditor />
       </WorkflowRuntimeProvider>

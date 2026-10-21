@@ -1,16 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/index.js";
 import Editor from "./editor.js";
 
-vi.mock(
-  "../../document-models/document-editor/index.js",
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    useSelectedDocumentEditorDocument: vi.fn(),
-  }),
-);
+// What the host passes the editor: its document and dispatch.
+let hosted: [unknown, unknown] = [undefined, undefined];
+const setHosted = (value: unknown[]) => {
+  hosted = value as [unknown, unknown];
+};
+const props = () => ({
+  document: hosted[0] as never,
+  dispatch: hosted[1] as never,
+});
 
 vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   useAvailableDocumentTypes: vi.fn(() => [
@@ -33,7 +34,7 @@ describe("DocumentEditor Editor", () => {
 
   beforeEach(() => {
     mockDispatch = vi.fn();
-    vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+    setHosted([
       {
         state: {
           global: {
@@ -49,7 +50,7 @@ describe("DocumentEditor Editor", () => {
 
   describe("Core Rendering", () => {
     it("should render all main form sections and labels", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("Editor Configuration")).toBeInTheDocument();
       expect(screen.getByText("Editor Name")).toBeInTheDocument();
@@ -58,7 +59,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should display existing editor data when document has values", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -73,7 +74,7 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByDisplayValue("test-editor")).toBeInTheDocument();
       // Check that the document type appears in the list (not just in dropdown)
@@ -87,7 +88,7 @@ describe("DocumentEditor Editor", () => {
   describe("Editor Name Input", () => {
     it("should dispatch setEditorName when name changes (debounced)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       await user.type(nameInput, "new-editor");
@@ -106,7 +107,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should dispatch when clearing a non-empty field", async () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -120,7 +121,7 @@ describe("DocumentEditor Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       await user.clear(nameInput);
@@ -139,7 +140,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should NOT dispatch when typing identical value without clearing", async () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -153,7 +154,7 @@ describe("DocumentEditor Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       // Simulate user selecting all text and typing the same value
@@ -167,7 +168,7 @@ describe("DocumentEditor Editor", () => {
 
     it("should NOT dispatch when both old and new values are empty", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       await user.click(nameInput);
@@ -182,7 +183,7 @@ describe("DocumentEditor Editor", () => {
   describe("Document Types Management", () => {
     it("should add document type from dropdown", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Supported Document Types");
       await user.selectOptions(select, "powerhouse/document-model");
@@ -199,7 +200,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should replace existing document type when adding new one", async () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -215,7 +216,7 @@ describe("DocumentEditor Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Supported Document Types");
       await user.selectOptions(select, "powerhouse/budget-statement");
@@ -241,7 +242,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should remove document type", async () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -257,7 +258,7 @@ describe("DocumentEditor Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       // Get all instances of the document type text (dropdown + list)
       const documentModelElements = screen.getAllByText(
@@ -280,7 +281,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should display existing document type", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -295,7 +296,7 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       // Check that the document type appears (it will be in both dropdown and list)
       const documentTypeElements = screen.getAllByText(
@@ -305,7 +306,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should show available document types in dropdown", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const select = screen.getByLabelText("Supported Document Types");
       const options = Array.from(select.querySelectorAll("option")).map(
@@ -320,7 +321,7 @@ describe("DocumentEditor Editor", () => {
 
   describe("Confirm Button", () => {
     it("should dispatch setEditorStatus when confirm clicked", async () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -336,7 +337,7 @@ describe("DocumentEditor Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       await user.click(confirmButton);
@@ -350,7 +351,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should be disabled when editor name is empty", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -365,14 +366,14 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
     });
 
     it("should be disabled when no document types selected", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -385,14 +386,14 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
     });
 
     it("should be hidden when status is CONFIRMED", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -407,7 +408,7 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.queryByText("Confirm");
       expect(confirmButton).not.toBeInTheDocument();
@@ -416,7 +417,7 @@ describe("DocumentEditor Editor", () => {
 
   describe("Read-only Mode", () => {
     it("should disable form fields when status is CONFIRMED", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -431,7 +432,7 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       expect(nameInput).toBeDisabled();
@@ -446,7 +447,7 @@ describe("DocumentEditor Editor", () => {
     });
 
     it("should enable form fields when status is DRAFT", () => {
-      vi.mocked(useSelectedDocumentEditorDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -461,7 +462,7 @@ describe("DocumentEditor Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Editor Name");
       expect(nameInput).not.toBeDisabled();

@@ -23,12 +23,23 @@ import {
   undeclaredExternalDependencies,
 } from "@powerhousedao/shared/build-pieces";
 import {
+  localPackageNames,
+  packageStyleEntry,
+  packageStylesheet,
+} from "@powerhousedao/shared/clis/package-style";
+import {
   findSharedImports,
   EXTERNALIZABLE_SHARED_SPECIFIERS,
 } from "@powerhousedao/shared/connect";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { nodeFileTrace } from "@vercel/nft";
 import { detect, resolveCommand, type Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
@@ -138,7 +149,7 @@ export function markOfferedRoutes(dir: string, offers: boolean) {
 const CONNECT_IMPORT = /^@powerhousedao\/connect(\/|$)/;
 
 const CONNECT_IMPORT_HINT =
-  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, RouteSelection, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
+  "Routes a package offers other Connects import @powerhousedao/connect-core instead (ContentOutlet, ModalDialog, useDriveRouteData, useNavRoutes and useSidebarMode from @powerhousedao/connect-core/router, SidebarItem from @powerhousedao/design-system/connect); only its own host's _app.tsx and overrides may use @powerhousedao/connect.";
 
 type ModuleGraph = {
   getModuleInfo(id: string): {
@@ -241,7 +252,7 @@ export async function runBuild(args: BuildArgs) {
   const offersRoutes = existsSync(join(projectRoot, OFFERED_ROUTES_MODULE));
 
   // Before any bundler runs, so declining leaves nothing half built.
-  const typesOk = emitTypes(agent, outDir);
+  const typesOk = emitTypes(agent, outDir, projectRoot);
   if (!typesOk && !args.ignoreTypeErrors) {
     await confirmBuildDespiteTypeErrors();
   }
@@ -328,22 +339,7 @@ export async function runBuild(args: BuildArgs) {
   );
   markOfferedRoutes(outDir, offersRoutes);
 
-  const executeLocalCommand = resolveCommand(agent, "execute-local", [
-    "tailwindcss",
-    "-i",
-    "./style.css",
-    "-o",
-    "./dist/style.css",
-  ]);
-  if (executeLocalCommand === null) {
-    console.error(
-      "You need to have tailwindcss installed to use the `build` command.",
-    );
-    process.exit(1);
-  }
-  execSync(
-    `${executeLocalCommand.command} ${executeLocalCommand.args.join(" ")}`,
-  );
+  buildPackageStylesheet(agent, projectRoot, join(outDir, "browser"));
 
   // Last, so it is the line a finished build leaves on screen.
   if (!typesOk) console.warn(`\n${UNSAFE_BUILD_WARNING}`);
@@ -374,10 +370,50 @@ export function assertExternalDependenciesDeclared(
   );
 }
 
+// tsc's build info outlives a deleted dist; with the declarations gone, tsc
+// would call the project up to date and emit nothing.
+function declarationsMissing(agent: Agent, projectRoot: string): boolean {
+  const showConfig = resolveCommand(agent, "execute-local", [
+    "tsc",
+    "--showConfig",
+  ]);
+  if (showConfig === null) return false;
+  let options: {
+    declaration?: boolean;
+    composite?: boolean;
+    declarationDir?: string;
+    outDir?: string;
+  };
+  try {
+    const output = execSync(
+      `${showConfig.command} ${showConfig.args.join(" ")}`,
+      {
+        cwd: projectRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
+    options =
+      (JSON.parse(output) as { compilerOptions?: typeof options })
+        .compilerOptions ?? {};
+  } catch {
+    return false;
+  }
+  const dir = options.declarationDir ?? options.outDir;
+  if (!dir || !(options.declaration || options.composite)) return false;
+  const path = resolve(projectRoot, dir);
+  return !existsSync(path) || readdirSync(path).length === 0;
+}
+
 // Runs tsc, which checks the project and writes its declarations either way.
 // Returns whether it reported no type errors.
-function emitTypes(agent: Agent, outDir: string): boolean {
-  const tscCommand = resolveCommand(agent, "execute-local", ["tsc", "--build"]);
+function emitTypes(agent: Agent, outDir: string, projectRoot: string): boolean {
+  const force = declarationsMissing(agent, projectRoot);
+  const tscCommand = resolveCommand(agent, "execute-local", [
+    "tsc",
+    "--build",
+    ...(force ? ["--force"] : []),
+  ]);
   if (tscCommand === null) {
     console.error(
       "You need to have typescript installed to use the `build` command.",
@@ -394,6 +430,53 @@ function emitTypes(agent: Agent, outDir: string): boolean {
   } catch {
     return false;
   }
+}
+
+// The classes the browser build uses, and the package's tokens and rules, against
+// Connect's theme: the Connect that loads it has Tailwind's reset and Connect's classes.
+function buildPackageStylesheet(
+  agent: Agent,
+  projectRoot: string,
+  browserDir: string,
+) {
+  const command = resolveCommand(agent, "execute-local", [
+    "tailwindcss",
+    "--input",
+    "-",
+    "--minify",
+  ]);
+  if (command === null) {
+    console.error(
+      "You need to have tailwindcss installed to use the `build` command.",
+    );
+    process.exit(1);
+  }
+  const stylePath = join(projectRoot, "style.css");
+  const style = existsSync(stylePath)
+    ? readFileSync(stylePath, "utf-8")
+    : undefined;
+  const compiled = execSync(`${command.command} ${command.args.join(" ")}`, {
+    cwd: projectRoot,
+    input: packageStyleEntry(style, {
+      browserDir: sourcePath(projectRoot, browserDir),
+      localPackages: localPackageNames(projectRoot),
+    }),
+    encoding: "utf-8",
+    stdio: ["pipe", "pipe", "inherit"],
+    // A package that imports large vendor CSS outgrows the 1 MB default.
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  // `ph build` with another out-dir (the switchboard runner's) leaves no dist/.
+  mkdirSync(join(projectRoot, "dist"), { recursive: true });
+  writeFileSync(
+    join(projectRoot, "dist/style.css"),
+    packageStylesheet(compiled),
+  );
+}
+
+// A path for `@source`, relative to the project, with forward slashes.
+function sourcePath(projectRoot: string, path: string) {
+  return `./${relative(projectRoot, resolve(projectRoot, path)).replaceAll("\\", "/")}`;
 }
 
 function isInteractive(): boolean {

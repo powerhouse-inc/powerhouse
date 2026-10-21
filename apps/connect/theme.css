@@ -1,0 +1,5 @@
+/* Connect's tokens, variants and custom utilities, with none of its classes:
+   a package's stylesheet builds against it with `@reference` (ph build). */
+@import "@powerhousedao/design-system/theme.css";
+@import "@powerhousedao/design-system/plugins.css";
+@import "@powerhousedao/connect-core/theme.css";

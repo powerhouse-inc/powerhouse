@@ -79,7 +79,7 @@ let warnings: string[];
 // step finds no `tailwindcss` binary to run.
 
 // Standing one on PATH keeps the run whole and still proves what ph-cli owns
-// here: that the step is invoked with the right input and output paths.
+// here: the entry it feeds Tailwind, and where it writes the result.
 //
 // The stub's work lives in a .mjs file that both entry points hand to node:
 // a lone `#!/bin/sh` script is unreachable on Windows, which resolves a bare
@@ -92,14 +92,9 @@ beforeAll(() => {
   writeFileSync(
     join(stubDir, "tailwindcss.mjs"),
     [
-      'import { mkdirSync, writeFileSync } from "node:fs";',
-      'import { dirname } from "node:path";',
-      "const argv = process.argv.slice(2);",
-      'const out = argv[argv.indexOf("-o") + 1];',
-      'if (argv.includes("-o") && out) {',
-      "  mkdirSync(dirname(out), { recursive: true });",
-      '  writeFileSync(out, "/* stub */\\n");',
-      "}",
+      'import { readFileSync } from "node:fs";',
+      "// Echoes the entry from stdin, as Tailwind would its build.",
+      'process.stdout.write(readFileSync(0, "utf8"));',
       "",
     ].join("\n"),
   );
@@ -271,9 +266,11 @@ describe("runBuild on a piece-only package", () => {
     expect(
       existsSync(join(dist, "browser", "document-models", "index.js")),
     ).toBe(true);
-    // The stylesheet lands where the step was told to write it. What Tailwind
-    // itself emits is Tailwind's business, and the fixture stands in for it.
-    expect(existsSync(join(dist, "style.css"))).toBe(true);
+    // The stylesheet is the package entry, in the external-packages layer.
+    // What Tailwind itself emits is Tailwind's business; the stub echoes it.
+    const style = readFileSync(join(dist, "style.css"), "utf8");
+    expect(style).toContain("@layer external-packages{");
+    expect(style).toContain('@reference "@powerhousedao/connect/theme.css";');
     expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
     expect(
       existsSync(join(dist, "types", "pieces", "hello", "index.d.ts")),
@@ -308,8 +305,6 @@ describe("runBuild on a mixed package", () => {
     expect(
       existsSync(join(dist, "types", "document-models", "index.d.ts")),
     ).toBe(true);
-    // The stylesheet lands where the step was told to write it. What Tailwind
-    // itself emits is Tailwind's business, and the fixture stands in for it.
     expect(existsSync(join(dist, "style.css"))).toBe(true);
 
     const pieceDir = join(dist, "node", "pieces", "wave");
@@ -361,8 +356,6 @@ describe("runBuild on a package with no pieces", () => {
     expect(existsSync(join(dist, "browser", "editors", "index.js"))).toBe(true);
     expect(existsSync(join(dist, "node", "index.mjs"))).toBe(true);
     expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
-    // The stylesheet lands where the step was told to write it. What Tailwind
-    // itself emits is Tailwind's business, and the fixture stands in for it.
     expect(existsSync(join(dist, "style.css"))).toBe(true);
 
     // No piece directory, and the manifest copy is the source byte for byte.
@@ -377,6 +370,18 @@ describe("runBuild on a package with no pieces", () => {
     ).not.toHaveProperty("pieces");
     expect(warnings).toEqual([]);
   }, 120_000);
+
+  it("emits the types again after dist is deleted", async () => {
+    clean(fixture);
+    process.chdir(fixture);
+    await runBuild(args);
+    // Like the ph init tsconfig, the fixture is incremental; its build info stays.
+    rmSync(dist, { recursive: true, force: true });
+
+    await runBuild(args);
+
+    expect(existsSync(join(dist, "types", "index.d.ts"))).toBe(true);
+  }, 240_000);
 });
 
 // `ph build` reads project routes only from hosts/connect/routes/.

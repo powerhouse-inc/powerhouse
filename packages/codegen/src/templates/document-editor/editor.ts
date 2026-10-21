@@ -8,11 +8,17 @@ export const documentEditorEditorFileTemplate = (
 ) =>
   tsx`
 import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { ${v.useSelectedDocumentHookName}, actions } from "${v.documentModelImportPath}";
+import type { EditorProps } from "document-model";
+import type {
+  ${v.actionTypeName},
+  ${v.documentModelDocumentTypeName},
+} from "${v.documentModelImportPath}";
+import { actions } from "${v.documentModelImportPath}";
 
-export default function Editor() {
-  const [document, dispatch] = ${v.useSelectedDocumentHookName}();
-
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<${v.documentModelDocumentTypeName}, ${v.actionTypeName}>) {
   const handleSetName = (name: string) => {
     // 'actions' contains all available actions for this document type
     dispatch(actions.setName(name));
@@ -20,7 +26,7 @@ export default function Editor() {
 
   return (
     <div className="mx-auto max-w-4xl bg-background p-6">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
 
       {/* "ph-default-styles" sets default styles for basic UI elements */}
       <div className="ph-default-styles">
