@@ -24,6 +24,7 @@ export type ReadMethods =
 // Pieces build actions with the model's action creators and pass them to
 // `execute`; `deleteDocument` refuses a cascade.
 export type WriteMethods =
+  | "newDocument"
   | "create"
   | "createEmpty"
   | "execute"

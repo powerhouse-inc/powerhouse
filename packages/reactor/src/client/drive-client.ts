@@ -2,7 +2,7 @@ import {
   addFolder as addFolderAction,
   copyNode as copyNodeAction,
   deleteNode as deleteNodeAction,
-  driveCreateDocument,
+  driveDocumentModelModule,
   driveDocumentType,
   generateNodesCopy,
   getDescendants,
@@ -21,12 +21,10 @@ import {
   actions,
   createCopyHeader,
   generateId,
-  normalizeDocumentModelVersion,
-  requestedSignaturePolicy,
-  withSignaturePolicy,
   type Action,
-  type CreateDocumentActionInput,
+  type DocumentModelModule,
   type ISigner,
+  type PHBaseState,
   type PHDocument,
   type PHDocumentHeader,
   type ProtocolVersions,
@@ -34,11 +32,11 @@ import {
 import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
+import { createVersionsOf } from "./create-protocol.js";
+import { buildCreateActions, createEmptyDocument } from "./derivations.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
@@ -118,28 +116,25 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = withSignaturePolicy(
-      driveCreateDocument({
-        global: {
-          name: input.global.name || "",
-          icon: input.global.icon ?? null,
-          nodes: [],
-        },
-      }),
-      requestedSignaturePolicy(
-        input,
-        await this.client.getCreateSignaturePolicy(),
-      ),
+    const driveDoc = createEmptyDocument(
+      driveDocumentModelModule as unknown as DocumentModelModule,
       {
-        protocolVersions: {
-          ...(await this.client.getCreateProtocolVersions(
-            { documentType: driveDocumentType },
-            signal,
-          )),
-          ...input.protocolVersions,
-        },
+        initialState: {
+          global: {
+            name: input.global.name || "",
+            icon: input.global.icon ?? null,
+            nodes: [],
+          },
+        } as Partial<PHBaseState>,
+        signaturePolicy: input.signaturePolicy,
+        protocolVersions: input.protocolVersions,
       },
-    );
+      await this.client.getCreateSignaturePolicy(),
+      await this.client.getCreateProtocolVersions(
+        { documentType: driveDocumentType },
+        signal,
+      ),
+    ) as DocumentDriveDocument;
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -169,46 +164,14 @@ export class DriveClient implements IDriveClient {
     const documentId = document.header.id;
     const driveId = await this.resolveReference(driveIdentifier, signal);
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions:
-        document.header.protocolVersions ??
-        (await this.createProtocolVersions(
-          {
-            documentType: document.header.documentType,
-            parentIdentifier: driveId,
-          },
-          signal,
-        )),
-    };
-
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.createProtocolVersions(options, signal),
+      driveId,
+    );
     const documentActions: Action[] = await signActions(
       [
-        createDocumentAction(createInput),
-        upgradeDocumentAction({
-          documentId: document.header.id,
-          model: document.header.documentType,
-          fromVersion: 0,
-          // imported files may predate the document scope entirely
-          toVersion: normalizeDocumentModelVersion(
-            (document.state as Partial<typeof document.state>).document
-              ?.version,
-          ),
-          initialState: document.state,
-        }),
+        ...buildCreateActions(document, protocolVersions),
         addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,

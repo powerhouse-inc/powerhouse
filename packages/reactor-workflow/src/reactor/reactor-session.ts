@@ -43,6 +43,7 @@ const SERVED: Record<
   getIncomingRelationships: true,
   getOutgoingRelationshipEdges: true,
   getIncomingRelationshipEdges: true,
+  newDocument: true,
   create: true,
   createEmpty: true,
   execute: true,

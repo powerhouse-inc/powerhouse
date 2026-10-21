@@ -10,6 +10,7 @@ import {
   type IReactorClient,
   type IWriteCache,
   type InProcessReactorModule,
+  type NewDocumentOptions,
 } from "@powerhousedao/reactor";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type {
@@ -121,10 +122,27 @@ describe("ReactorDriveClient Integration", () => {
   /** This suite's client, over a reactor client with another creation default. */
   function clientCreating(policy: SignaturePolicy): ReactorDriveClient {
     const reactor = new Proxy(reactorClient, {
-      get: (target, prop): unknown =>
-        prop === "getCreateSignaturePolicy"
-          ? () => Promise.resolve(policy)
-          : Reflect.get(target, prop, target),
+      get: (target, prop): unknown => {
+        if (prop === "getCreateSignaturePolicy") {
+          return () => Promise.resolve(policy);
+        }
+        if (prop === "newDocument") {
+          return (
+            type: string,
+            options: NewDocumentOptions | undefined,
+            signal?: AbortSignal,
+          ) =>
+            target.newDocument(
+              type,
+              {
+                ...options,
+                signaturePolicy: options?.signaturePolicy ?? policy,
+              },
+              signal,
+            );
+        }
+        return Reflect.get(target, prop, target);
+      },
     });
     return new ReactorDriveClient({
       reactor,

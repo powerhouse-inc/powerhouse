@@ -1,8 +1,8 @@
 import {
   addRelationshipAction,
-  createDocumentAction,
+  buildCreateActions,
+  createVersionsOf,
   removeRelationshipAction,
-  upgradeDocumentAction,
   type BatchExecutionRequest,
   type ExecutionJobPlan,
   type CopyNodeOptions,
@@ -24,12 +24,10 @@ import {
   createCopyHeader,
   generateId,
   replayDocumentVersioned,
-  requestedSignaturePolicy,
-  withSignaturePolicy,
   type Action,
-  type CreateDocumentActionInput,
   type PHBaseState,
   type PHDocument,
+  type ProtocolVersions,
   type Reducer,
   type VersionedReplayConfig,
 } from "@powerhousedao/shared/document-model";
@@ -46,7 +44,6 @@ import {
   setSharingTypeAction,
   updateFolderAction,
 } from "../actions.js";
-import { reactorDriveCreateDocument } from "../module.js";
 import type { IDriveReadModel } from "../read-model/interfaces.js";
 import type {
   DriveChildFileMetadata,
@@ -80,26 +77,19 @@ export class ReactorDriveClient implements IDriveClient {
     input: DriveInput,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    const driveDoc = withSignaturePolicy(
-      reactorDriveCreateDocument({
-        global: {
-          name: input.global.name,
-          icon: input.global.icon ?? null,
-        },
-      }),
-      requestedSignaturePolicy(
-        input,
-        await this.reactor.getCreateSignaturePolicy(),
-      ),
+    const driveDoc = await this.reactor.newDocument<DocumentDriveDocument>(
+      REACTOR_DRIVE_DOCUMENT_TYPE,
       {
-        protocolVersions: {
-          ...(await this.reactor.getCreateProtocolVersions(
-            { documentType: REACTOR_DRIVE_DOCUMENT_TYPE },
-            signal,
-          )),
-          ...input.protocolVersions,
-        },
+        initialState: {
+          global: {
+            name: input.global.name,
+            icon: input.global.icon ?? null,
+          },
+        } as Partial<PHBaseState>,
+        signaturePolicy: input.signaturePolicy,
+        protocolVersions: input.protocolVersions,
       },
+      signal,
     );
     if (input.local) {
       if (typeof input.local.sharingType === "string") {
@@ -127,31 +117,11 @@ export class ReactorDriveClient implements IDriveClient {
   ): Promise<TDocument> {
     const documentId = document.header.id;
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId,
-      signing: {
-        signature: documentId,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions:
-        document.header.protocolVersions ??
-        (await this.reactor.getCreateProtocolVersions(
-          {
-            documentType: document.header.documentType,
-            parentIdentifier: driveIdentifier,
-          },
-          signal,
-        )),
-    };
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.reactor.getCreateProtocolVersions(options, signal),
+      driveIdentifier,
+    );
 
     const metadata: DriveChildFileMetadata = {
       kind: "file",
@@ -166,16 +136,7 @@ export class ReactorDriveClient implements IDriveClient {
           documentId,
           scope: "document",
           branch: "main",
-          actions: [
-            createDocumentAction(createInput),
-            upgradeDocumentAction({
-              documentId,
-              model: document.header.documentType,
-              fromVersion: 0,
-              toVersion: document.state.document.version,
-              initialState: document.state,
-            }),
-          ],
+          actions: buildCreateActions(document, protocolVersions),
           dependsOn: [],
         },
         {
@@ -444,6 +405,7 @@ export class ReactorDriveClient implements IDriveClient {
       idMap.set(node.id, generateId());
     }
     const policy = await this.reactor.getCreateSignaturePolicy();
+    const selectedByType = new Map<string, ProtocolVersions>();
 
     const jobs: ExecutionJobPlan[] = [];
     const driveActions: Action[] = [];
@@ -501,7 +463,23 @@ export class ReactorDriveClient implements IDriveClient {
         reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
       }
       const config: VersionedReplayConfig = { reducers };
-      const replayHeader = createCopyHeader(srcDoc.header, newId, policy);
+      // A copy keeps its source's versions; selection fills the keys it lacks.
+      let selected = selectedByType.get(documentType);
+      if (selected === undefined) {
+        selected = await this.reactor.getCreateProtocolVersions(
+          { documentType, parentIdentifier: driveIdentifier },
+          signal,
+        );
+        selectedByType.set(documentType, selected);
+      }
+      const replayHeader = createCopyHeader(
+        {
+          documentType,
+          protocolVersions: { ...selected, ...srcDoc.header.protocolVersions },
+        },
+        newId,
+        policy,
+      );
       // A v2-required copy takes a derived id; files head no subtree.
       newId = replayHeader.id;
       const duplicated: PHDocument = replayDocumentVersioned(
@@ -517,42 +495,16 @@ export class ReactorDriveClient implements IDriveClient {
       );
       duplicated.header.name = node.name;
 
-      const createInput: CreateDocumentActionInput = {
-        model: duplicated.header.documentType,
-        version: 0,
-        documentId: newId,
-        signing: {
-          signature: newId,
-          publicKey: duplicated.header.sig.publicKey,
-          nonce: duplicated.header.sig.nonce,
-          createdAtUtcIso: duplicated.header.createdAtUtcIso,
-          documentType: duplicated.header.documentType,
-        },
-        slug: duplicated.header.slug,
-        name: duplicated.header.name,
-        branch: duplicated.header.branch,
-        meta: duplicated.header.meta,
-        protocolVersions: duplicated.header.protocolVersions ?? {
-          "base-reducer": 2,
-        },
-      };
-
       const createKey = `create:${newId}`;
       jobs.push({
         key: createKey,
         documentId: newId,
         scope: "document",
         branch: "main",
-        actions: [
-          createDocumentAction(createInput),
-          upgradeDocumentAction({
-            documentId: newId,
-            model: duplicated.header.documentType,
-            fromVersion: 0,
-            toVersion: duplicated.state.document.version,
-            initialState: duplicated.state,
-          }),
-        ],
+        actions: buildCreateActions(
+          duplicated,
+          duplicated.header.protocolVersions ?? selected,
+        ),
         dependsOn: [],
       });
       fileCreateKeys.push(createKey);

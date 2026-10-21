@@ -1,6 +1,7 @@
 import {
   buildCreateJobs,
   createEmptyDocument,
+  createVersionsOf,
   JOB_NOT_FOUND_ERROR_NAME,
   JobStatus,
   selectDocumentModelModule,
@@ -11,7 +12,7 @@ import {
   type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
-  type CreateDocumentOptions,
+  type NewDocumentOptions,
   type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
@@ -692,17 +693,14 @@ export class RoutingReactorClient implements IReactorClient {
             : await beforeSubmit(() =>
                 resolveOn(target, parentIdentifier, signal),
               );
-        const protocolVersions =
-          document.header.protocolVersions ??
-          (await beforeSubmit(() =>
-            target.api.getCreateProtocolVersions(
-              {
-                documentType: document.header.documentType,
-                parentIdentifier: parentId,
-              },
-              signal,
+        const protocolVersions = await createVersionsOf(
+          document,
+          (options) =>
+            beforeSubmit(() =>
+              target.api.getCreateProtocolVersions(options, signal),
             ),
-          ));
+          parentId,
+        );
         const jobs = await buildCreateJobs(
           document,
           protocolVersions,
@@ -720,27 +718,19 @@ export class RoutingReactorClient implements IReactorClient {
 
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const document = await this.emptyDocument(
-      documentModelType,
-      options,
-      signal,
-    );
+    const document = await this.newDocument(documentModelType, options, signal);
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.emptyDocument(
-      documentModelType,
-      options,
-      signal,
-    );
+    const document = await this.newDocument(documentModelType, options, signal);
     return this.createAsync(document, options?.parentIdentifier, signal);
   }
 
@@ -1231,11 +1221,12 @@ export class RoutingReactorClient implements IReactorClient {
     return job;
   }
 
-  private async emptyDocument(
+  /** Versions from the parent's backend, the module from this client's models. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
     documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
     const module = selectDocumentModelModule(
       await this.allModules(signal),
       documentModelType,
@@ -1251,7 +1242,7 @@ export class RoutingReactorClient implements IReactorClient {
         signal,
       ),
     ]);
-    return createEmptyDocument(module, options, policy, versions);
+    return createEmptyDocument(module, options, policy, versions) as TDocument;
   }
 
   private async allModules(

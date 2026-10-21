@@ -32,11 +32,11 @@ const OWNERS = new Set([
   "packages/shared/document-model/files.ts",
   "packages/shared/document-model/peer-agreement.ts",
   "packages/shared/document-model/signature-policy.ts",
+  "packages/reactor/src/client/create-protocol.ts",
 ]);
 
 /** Not yet on capabilities, with who converts each; the list only shrinks. */
 const PENDING = new Map<string, string>([
-  ["packages/reactor/src/client/reactor-client.ts", "W3 create selection"],
   [
     "packages/reactor-browser/src/graphql-client/graphql-reactor-client.ts",
     "W3 undo plan",

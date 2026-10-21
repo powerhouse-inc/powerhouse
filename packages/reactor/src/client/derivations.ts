@@ -24,15 +24,49 @@ import type { ConsistencyToken, JobInfo } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import {
   DEFAULT_UPGRADE_CONFLICT_RETRIES,
-  type CreateDocumentOptions,
+  type NewDocumentOptions,
   type UpgradeDocumentOptions,
 } from "./types.js";
 
-/**
- * The signed jobs that create `document` at `protocolVersions`, and attach it
- * to `parentId`. Resolve the versions with `getCreateProtocolVersions` when
- * the header carries none.
- */
+/** CREATE_DOCUMENT and UPGRADE_DOCUMENT for `document` at `protocolVersions`, unsigned. */
+export function buildCreateActions(
+  document: PHDocument,
+  protocolVersions: ProtocolVersions,
+): Action[] {
+  const { header } = document;
+  const createInput: CreateDocumentActionInput = {
+    model: header.documentType,
+    version: 0,
+    documentId: header.id,
+    signing: {
+      signature: header.id,
+      publicKey: header.sig.publicKey,
+      nonce: header.sig.nonce,
+      createdAtUtcIso: header.createdAtUtcIso,
+      documentType: header.documentType,
+    },
+    slug: header.slug,
+    name: header.name,
+    branch: header.branch,
+    meta: header.meta,
+    protocolVersions,
+  };
+  return [
+    createDocumentAction(createInput),
+    upgradeDocumentAction({
+      documentId: header.id,
+      model: header.documentType,
+      fromVersion: 0,
+      // imported documents may predate the document scope entirely
+      toVersion: normalizeDocumentModelVersion(
+        (document.state as Partial<typeof document.state>).document?.version,
+      ),
+      initialState: document.state,
+    }),
+  ];
+}
+
+/** The signed jobs that create `document` at `protocolVersions`, and attach it to `parentId`. */
 export async function buildCreateJobs(
   document: PHDocument,
   protocolVersions: ProtocolVersions,
@@ -42,38 +76,8 @@ export async function buildCreateJobs(
 ): Promise<ExecutionJobPlan[]> {
   const documentId = document.header.id;
   const branch = document.header.branch || "main";
-
-  const createInput: CreateDocumentActionInput = {
-    model: document.header.documentType,
-    version: 0,
-    documentId,
-    signing: {
-      signature: documentId,
-      publicKey: document.header.sig.publicKey,
-      nonce: document.header.sig.nonce,
-      createdAtUtcIso: document.header.createdAtUtcIso,
-      documentType: document.header.documentType,
-    },
-    slug: document.header.slug,
-    name: document.header.name,
-    branch: document.header.branch,
-    meta: document.header.meta,
-    protocolVersions,
-  };
-
   const createActions: Action[] = await signActions(
-    [
-      createDocumentAction(createInput),
-      upgradeDocumentAction({
-        documentId,
-        model: document.header.documentType,
-        fromVersion: 0,
-        toVersion: normalizeDocumentModelVersion(
-          (document.state as Partial<typeof document.state>).document?.version,
-        ),
-        initialState: document.state,
-      }),
-    ],
+    buildCreateActions(document, protocolVersions),
     signer,
     { documentId, branch },
     signal,
@@ -149,21 +153,27 @@ export function selectDocumentModelModule(
   return latest;
 }
 
-/** A new, empty document of `module`, under the create defaults given. */
+/** A new, uncreated document of `module`, under the create defaults given. */
 export function createEmptyDocument(
   module: DocumentModelModule,
-  options: CreateDocumentOptions | undefined,
+  options: NewDocumentOptions | undefined,
   defaultPolicy: SignaturePolicy,
   baseVersions: ProtocolVersions,
 ): PHDocument {
   const document = withSignaturePolicy(
-    module.utils.createDocument(),
+    module.utils.createDocument(options?.initialState),
     requestedSignaturePolicy(options, defaultPolicy),
-    { protocolVersions: { ...baseVersions, ...options?.protocolVersions } },
+    {
+      id: options?.id,
+      protocolVersions: { ...baseVersions, ...options?.protocolVersions },
+    },
   );
   document.state.document.version = normalizeDocumentModelVersion(
     module.version,
   );
+  if (options?.name !== undefined) {
+    document.header.name = options.name;
+  }
   return document;
 }
 
