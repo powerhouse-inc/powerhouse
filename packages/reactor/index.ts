@@ -113,6 +113,7 @@ export {
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
   storedRefusalName,
+  SubmittedUndoRefusedError,
   UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
   type StoredProtocolRefusal,

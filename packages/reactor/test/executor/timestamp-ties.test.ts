@@ -11,12 +11,11 @@ import {
   addModule,
   deriveOperationId,
   positionalOperations,
-  undo,
+  retract,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
   createBaseReducer3Document,
@@ -212,18 +211,16 @@ describe("base-reducer 3 timestamp ties", () => {
     });
   });
 
-  // Submitted ids on either side of the stored rows, with synthesized ids on
-  // the other side.
+  // Submitted ids on either side of the stored rows.
   for (const [undoId, side] of [
     ["f0000030-0000-4000-8000-000000000000", "after"],
     ["00000000-0000-4000-8000-000000000002", "before"],
   ] as const) {
-    it(`positions a tied UNDO by the id it is stored under, which sorts ${side}`, async () => {
+    it(`positions a tied RETRACT by its own id, which sorts ${side}`, async () => {
       const b = "20000000-0000-4000-8000-000000000000";
       const c = "30000000-0000-4000-8000-000000000000";
-      const synthesized = synthesizedActionId(undoId, "suffixed");
-      expect(synthesized > c).toBe(side === "after");
-      expect(synthesized < b).toBe(side === "before");
+      expect(undoId > c).toBe(side === "after");
+      expect(undoId < b).toBe(side === "before");
 
       const origin = await build();
       const replica = await build();
@@ -247,7 +244,7 @@ describe("base-reducer 3 timestamp ties", () => {
       );
 
       const tiedUndo: Action = {
-        ...undo(),
+        ...retract(c),
         id: undoId,
         timestampUtcMs: at("u", 10).timestampUtcMs,
       };
@@ -269,7 +266,7 @@ describe("base-reducer 3 timestamp ties", () => {
               : (operation.action.input as { id: string }).id,
         );
       const expected =
-        side === "after" ? ["b", "c", synthesized] : [synthesized, "b", "c"];
+        side === "after" ? ["b", "c", undoId] : [undoId, "b", "c"];
       expect({
         origin: await labels(origin),
         replica: await labels(replica),
@@ -301,14 +298,14 @@ describe("base-reducer 3 timestamp ties", () => {
     );
 
   for (const jobs of ["one job", "two jobs"] as const) {
-    it(`keeps one client's same-millisecond edit before its UNDO, in ${jobs}`, async () => {
+    it(`keeps one client's same-millisecond edit before its RETRACT, in ${jobs}`, async () => {
       const origin = await build();
       const replica = await build();
       const docId = await shared(origin, replica);
 
       vi.useFakeTimers({ toFake: ["Date"] });
       const edit = addModule({ id: "e", name: "e" });
-      const tiedUndo = undo();
+      const tiedUndo = retract(edit.id);
       expect(tiedUndo.timestampUtcMs).toBe(edit.timestampUtcMs);
       if (jobs === "one job") {
         await ok(

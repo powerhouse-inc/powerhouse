@@ -42,7 +42,7 @@ import type {
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import {
   SYNTHESIZING_TYPES,
-  synthesizedActionIds,
+  synthesizedActionId,
 } from "./synthesized-signing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
@@ -688,8 +688,9 @@ function candidate(action: Action, stream: Stream): Candidate {
     action,
     stream,
     opId: opId(action.id),
+    // Only base-reducer 1 and 2 synthesize, under the hashed id.
     synthesizedOpIds: SYNTHESIZING_TYPES.has(action.type)
-      ? synthesizedActionIds(action.id).map(opId)
+      ? [opId(synthesizedActionId(action.id, "hashed"))]
       : [],
   };
 }

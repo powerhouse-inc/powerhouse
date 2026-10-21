@@ -728,7 +728,7 @@ describe("base-reducer 3", () => {
       hold(h, toB(id));
       const a1 = await executeOn(h.a, id, "a1", new Date().toISOString());
       await new Promise((resolve) => setTimeout(resolve, 5));
-      await h.b.client.execute(id, "main", [undo()]);
+      await h.b.client.undo(id);
       await quiesce(h, id);
       release(h, toB(id));
       await quiesce(h, id);

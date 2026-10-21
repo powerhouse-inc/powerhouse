@@ -693,6 +693,10 @@ export interface IReactorClient {
    * and resolve with a husk whose `state.global` is absent — reading as a
    * rejected write when the write in fact succeeded.
    *
+   * On base-reducer 3 an UNDO or REDO among `actions` is refused with
+   * `SubmittedUndoRefusedError`; use {@link undo} and {@link redo}, which
+   * submit a RETRACT of the resolved target.
+   *
    * @param documentIdentifier - Target document id or slug
    * @param branch - Branch to apply actions to
    * @param actions - List of actions to apply

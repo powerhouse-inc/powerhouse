@@ -11,7 +11,6 @@ import {
   mergePeerCapabilities,
   PEER_CAPABILITIES,
   stateReducerOf,
-  undo,
 } from "@powerhousedao/shared/document-model";
 import {
   afterAll,
@@ -33,7 +32,7 @@ import {
   assertOneRuleAgreement,
   storedRows,
 } from "../executor/one-rule-agreement.js";
-import { undoV3Flags } from "../factories.js";
+import { authorRetraction, undoV3Flags } from "../factories.js";
 import {
   addFolder,
   driveAt,
@@ -93,7 +92,7 @@ async function execute(at: Node, id: string, action: Action): Promise<void> {
 async function retractingHistory(at: Node, id: string): Promise<void> {
   await addFolder(at, id, "f1");
   await addFolder(at, id, "f2");
-  await execute(at, id, undo());
+  await execute(at, id, await authorRetraction(at.reactor, id));
 }
 
 async function agrees(at: Node, drive: PHDocument): Promise<void> {

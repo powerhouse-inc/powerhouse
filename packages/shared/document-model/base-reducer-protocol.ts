@@ -16,8 +16,8 @@ export type UndoModel = "skip" | "noop-chain" | "retraction";
 export type SkipMeaning = "undo-or-rewind" | "rewind";
 /** How same-timestamp actions are ordered. */
 export type TieOrder = "rank-locale" | "canonical";
-/** How a synthesized row's action id derives from its source's. */
-export type SynthesizedIdForm = "hashed" | "suffixed";
+/** How a synthesized row's action id derives from its source's; "none" synthesizes nothing. */
+export type SynthesizedIdForm = "hashed" | "none";
 /** Whose state hash a received row keeps. */
 export type ReplayHash = "sender" | "receiver";
 
@@ -61,7 +61,7 @@ const CAPABILITIES = {
     retractionRule: true,
     skip: "rewind",
     tieOrder: "canonical",
-    synthesizedId: "suffixed",
+    synthesizedId: "none",
     replayHash: "receiver",
     needsStateReducer: true,
   },
@@ -171,6 +171,21 @@ export function acceptsSubmittedRetract(
       return true;
     case "skip":
     case "noop-chain":
+      return false;
+    default:
+      return assertNever(caps.undo, "undo model");
+  }
+}
+
+/** Whether a submitted UNDO or REDO is this version's undo; on retraction a client submits RETRACT. */
+export function acceptsSubmittedUndoRedo(
+  caps: BaseReducerCapabilities,
+): boolean {
+  switch (caps.undo) {
+    case "skip":
+    case "noop-chain":
+      return true;
+    case "retraction":
       return false;
     default:
       return assertNever(caps.undo, "undo model");

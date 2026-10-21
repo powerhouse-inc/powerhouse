@@ -7,6 +7,7 @@ import type {
 import {
   BASE_REDUCER_VERSIONS,
   acceptsSubmittedRetract,
+  acceptsSubmittedUndoRedo,
   appliesRewind,
   assertNever,
   capabilitiesOf,
@@ -61,7 +62,7 @@ const PINNED = {
     retractionRule: true,
     skip: "rewind",
     tieOrder: "canonical",
-    synthesizedId: "suffixed",
+    synthesizedId: "none",
     replayHash: "receiver",
     needsStateReducer: true,
   },
@@ -112,6 +113,14 @@ describe("base-reducer capabilities", () => {
         acceptsSubmittedRetract(capabilitiesOf(v)),
       ),
     ).toEqual([false, false, true]);
+  });
+
+  it("accepts a submitted UNDO or REDO only below the retraction model", () => {
+    expect(
+      BASE_REDUCER_VERSIONS.map((v) =>
+        acceptsSubmittedUndoRedo(capabilitiesOf(v)),
+      ),
+    ).toEqual([true, true, false]);
   });
 });
 

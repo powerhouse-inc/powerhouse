@@ -529,6 +529,17 @@ describe("base-reducer 3", () => {
       expect(await tryExecute(actions)).toBeUndefined();
     }
 
+    /** What IReactorClient.undo submits: a RETRACT of the resolved target. */
+    async function undoNow(): Promise<void> {
+      const { undoTarget } = await module!.reactor.resolveUndoRedo(
+        docId,
+        "global",
+        "main",
+      );
+      expect(undoTarget).toBeDefined();
+      await execute([retract(undoTarget!)]);
+    }
+
     async function add(id: string): Promise<Action> {
       const action = addModule({ id, name: id });
       await execute([action]);
@@ -560,8 +571,8 @@ describe("base-reducer 3", () => {
     async function twoUndos(): Promise<void> {
       await add("a");
       await add("b");
-      await execute([undo()]);
-      await execute([undo()]);
+      await undoNow();
+      await undoNow();
     }
 
     describe("(i) two consecutive UNDOs", () => {
@@ -595,14 +606,14 @@ describe("base-reducer 3", () => {
     describe("(iii) an UNDO after a reshuffle re-appended a local RETRACT", () => {
       async function reshuffledUndo(): Promise<void> {
         await execute([earlyModule("m0", 60_000)]);
-        await execute([undo()]);
+        await undoNow();
         await load([asOperation(earlyModule("m1"), 0)]);
       }
 
       async function reshuffledUndoOverTwo(): Promise<void> {
         await execute([earlyModule("m0", 60_000)]);
         await execute([earlyModule("mx", 60_010)]);
-        await execute([undo()]);
+        await undoNow();
         await load([asOperation(earlyModule("m1"), 0)]);
       }
 
@@ -614,7 +625,7 @@ describe("base-reducer 3", () => {
         );
         expect(await live()).toEqual(["m1"]);
 
-        await execute([undo()]);
+        await undoNow();
 
         expect(await live()).toEqual([]);
         await agree();
@@ -628,7 +639,7 @@ describe("base-reducer 3", () => {
         );
         expect(await live()).toEqual(["m1", "m0"]);
 
-        await execute([undo()]);
+        await undoNow();
 
         expect(await live()).toEqual(["m1"]);
         await agree();

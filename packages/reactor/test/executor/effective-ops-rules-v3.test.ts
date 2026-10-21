@@ -11,15 +11,14 @@ import {
   deriveScope,
   documentModelStateReducer,
   positionalOperations,
-  redo,
   retractionTarget,
-  undo,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
+  authorRetraction,
   createBaseReducer3Document,
   createUndoV3ReactorBuilder,
 } from "../factories.js";
@@ -119,8 +118,8 @@ describe("base-reducer 3", () => {
     async function twoUndos(): Promise<void> {
       await add("a");
       await add("b");
-      await execute([undo()]);
-      await execute([undo()]);
+      await execute([await authorRetraction(module!.reactor, docId)]);
+      await execute([await authorRetraction(module!.reactor, docId)]);
     }
 
     describe("(i) two consecutive UNDOs", () => {
@@ -189,11 +188,11 @@ describe("base-reducer 3", () => {
         await add("b");
 
         const steps: Record<string, string[]> = {};
-        await execute([undo()]);
+        await execute([await authorRetraction(module!.reactor, docId)]);
         steps.undo = await live();
-        await execute([redo()]);
+        await execute([await authorRetraction(module!.reactor, docId, "REDO")]);
         steps.redo = await live();
-        await execute([undo()]);
+        await execute([await authorRetraction(module!.reactor, docId)]);
         steps.undoAgain = await live();
 
         expect(steps).toEqual({

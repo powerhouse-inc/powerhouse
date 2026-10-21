@@ -302,9 +302,11 @@ export interface IReactor {
   ): Promise<Record<string, PagedResults<Operation>>>;
 
   /**
-   * Resolves what a base-reducer 3 UNDO and REDO on a scope would retract, as
-   * the reactor resolves a submitted one: from every stored row, each derived
-   * with its own model version and every upgrade applied at its boundary.
+   * Resolves what a base-reducer 3 undo and redo of a scope would retract:
+   * from every stored row, each derived with its own model version and every
+   * upgrade applied at its boundary. A client submits a RETRACT of the target
+   * under its author's signature; base-reducer 3 refuses a submitted UNDO or
+   * REDO.
    *
    * @param documentId - The document id
    * @param scope - The scope to undo or redo in
@@ -371,6 +373,10 @@ export interface IReactor {
 
   /**
    * Applies a list of actions to a document.
+   *
+   * On base-reducer 3 a submitted UNDO or REDO fails the job with
+   * `SubmittedUndoRefusedError`: undo there is a RETRACT of a target, which
+   * `resolveUndoRedo` resolves and the author signs.
    *
    * @param docId - Document id
    * @param branch - Branch to apply actions to

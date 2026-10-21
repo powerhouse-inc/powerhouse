@@ -17,6 +17,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
+  authorRetraction,
   createBaseReducer3Document,
   createDocModelDocument,
   createUndoV3ReactorBuilder,
@@ -220,7 +221,9 @@ describe("base-reducer 3", () => {
       vi.setSystemTime(new Date("2026-01-01T00:00:03.000Z"));
       await ok(
         undoing.reactor,
-        await undoing.reactor.execute(docId, "main", [undo()]),
+        await undoing.reactor.execute(docId, "main", [
+          await authorRetraction(undoing.reactor, docId),
+        ]),
       );
       const undoingLog = await globalOps(undoing.reactor);
       const retraction = undoingLog.find(

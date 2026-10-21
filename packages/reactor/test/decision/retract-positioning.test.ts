@@ -9,12 +9,10 @@ import {
   positionalOperations,
   retract,
   retractionTarget,
-  undo,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { firstOutOfOrderPair } from "../../src/decision/stream-order.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus } from "../../src/shared/types.js";
 import {
   assertOneRuleAgreement,
@@ -168,25 +166,11 @@ describe("positionByTimestamp on base-reducer 3", () => {
     });
   });
 
-  it("re-appends an UNDO's RETRACT when a backdated write moves it", async () => {
+  it("positions a backdated RETRACT with the rewind on it", async () => {
     await add("a", 1);
-    await add("b", 3);
-    await execute(at(undo(), 4));
+    const b = await add("b", 3);
 
-    await add("z", 2);
-
-    await check({
-      stream: "0:a/0 1:b/0 2:RETRACT(b)/0 3:z/2 4:b/0 5:RETRACT(b)/0",
-      positional: ["a", "z", "b", "RETRACT(b)"],
-      served: ["a", "z"],
-    });
-  });
-
-  it("positions a backdated UNDO with the rewind on its RETRACT", async () => {
-    await add("a", 1);
-    await add("b", 3);
-
-    await execute(at(undo(), 2));
+    await execute(at(retract(b.id), 2));
 
     await check({
       stream: "0:a/0 1:b/0 2:RETRACT(b)/1 3:b/0",
@@ -195,10 +179,10 @@ describe("positionByTimestamp on base-reducer 3", () => {
     });
   });
 
-  it("keeps the stream in timestamp order across a backdated UNDO", async () => {
+  it("keeps the stream in timestamp order across a backdated RETRACT", async () => {
     await add("a", 1);
-    await add("b", 4);
-    const backdated = at(undo(), 3);
+    const b = await add("b", 4);
+    const backdated = at(retract(b.id), 3);
 
     await execute(backdated);
 
@@ -206,9 +190,7 @@ describe("positionByTimestamp on base-reducer 3", () => {
     const retraction = rows.find(
       (operation) => operation.action.type === "RETRACT",
     )!;
-    expect(retraction.action.id).toBe(
-      synthesizedActionId(backdated.id, "suffixed"),
-    );
+    expect(retraction.action.id).toBe(backdated.id);
     expect(retraction.action.timestampUtcMs).toBe(backdated.timestampUtcMs);
     expect(retraction.timestampUtcMs).toBe(backdated.timestampUtcMs);
     expect(firstOutOfOrderPair(rows)).toBeUndefined();

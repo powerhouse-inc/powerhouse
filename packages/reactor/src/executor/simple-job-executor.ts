@@ -10,6 +10,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   acceptsSubmittedRetract,
+  acceptsSubmittedUndoRedo,
   actionSignerIdentity,
   assertNever,
   baseReducerCapabilities,
@@ -69,6 +70,7 @@ import {
   PurgeTooLargeError,
   ReservedActionError,
   RetractionRefusedError,
+  SubmittedUndoRefusedError,
   type RetractionRefusalReason,
   UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
@@ -110,12 +112,7 @@ import {
   type CommittedWrite,
   type MutationAdmission,
 } from "./signature-admission.js";
-import {
-  isSynthesized,
-  signSynthesized,
-  synthesizedActionId,
-  SYNTHESIZING_TYPES,
-} from "./synthesized-signing.js";
+import { isSynthesized, signSynthesized } from "./synthesized-signing.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type { SignatureTrustPolicy } from "../signer/types.js";
 import {
@@ -273,6 +270,20 @@ type StoredProtocol = {
   /** The header read failed for a reason other than absence. */
   unreadable?: Error;
 };
+
+/** A submitted UNDO or REDO where the stored version undoes by RETRACT. */
+function submittedUndoRefusal(
+  job: Job,
+  caps: BaseReducerCapabilities | undefined,
+): SubmittedUndoRefusedError | undefined {
+  if (job.kind !== "mutation" || !caps || acceptsSubmittedUndoRedo(caps)) {
+    return undefined;
+  }
+  const submitted = job.actions.find(isUndoRedo);
+  return submitted
+    ? new SubmittedUndoRefusedError(job.documentId, submitted.type)
+    : undefined;
+}
 
 /** No base reducer applies a retraction in these scopes. */
 function isRetractOutsideRule(action: Action): boolean {
@@ -746,6 +757,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     const stored = await this.readStoredProtocol(job, stores, signal);
     if (stored.refusal) {
       return { result: buildErrorResult(job, stored.refusal, startTime) };
+    }
+    const undoRefusal = submittedUndoRefusal(job, stored.caps);
+    if (undoRefusal) {
+      return { result: buildErrorResult(job, undoRefusal, startTime) };
     }
 
     const indexTxn = stores.operationIndex.start();
@@ -2646,25 +2661,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // An UNDO or REDO is stored under its synthesized id, so where that id
-    // sorts as the submitted one does it is positioned by it; the submitted
-    // one would sort it elsewhere than every receiver does.
-    const positioned = new Map<Action, Action>();
-    const positionedAs = (action: Action): Action => {
-      if (
-        caps?.synthesizedId !== "suffixed" ||
-        !SYNTHESIZING_TYPES.has(action.type)
-      ) {
-        return action;
-      }
-      let stand = positioned.get(action);
-      if (stand === undefined) {
-        stand = { ...action, id: synthesizedActionId(action.id, "suffixed") };
-        positioned.set(action, stand);
-      }
-      return stand;
-    };
-
     // Canonical order stores a job in the order every receiver sorts it into,
     // and a tie with a stored row is broken by action id, not arrival.
     let first: Operation | undefined;
@@ -2676,7 +2672,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           skip: 0,
           hash: "",
           timestampUtcMs: action.timestampUtcMs,
-          action: positionedAs(action),
+          action,
         }) as Operation;
       job = {
         ...job,
@@ -2784,23 +2780,16 @@ export class SimpleJobExecutor implements IJobExecutor {
           skip: 0,
           hash: "",
           timestampUtcMs: action.timestampUtcMs,
-          action: positionedAs(action),
+          action,
         }) as Operation,
     );
 
-    // Positioned, each submitted action goes back on its row to be executed.
-    const submittedFor = new Map(
-      [...positioned].map(([action, stand]) => [stand, action]),
-    );
     const merged = reshuffleByTimestamp(
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
       { canonical },
-    ).map((operation) => {
-      const action = submittedFor.get(operation.action);
-      return action === undefined ? operation : { ...operation, action };
-    });
+    );
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
 

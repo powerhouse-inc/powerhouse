@@ -8,18 +8,15 @@ import {
   appliedOperations,
   createActionIdGenerator,
   positionalOperations,
-  redo,
   retract,
   retractedActionIds,
   stateReducerOf,
-  undo,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DriveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -378,10 +375,7 @@ async function runCase(
       known.push(action.id);
       accepted.push({
         node: node.name,
-        id:
-          action.type === "UNDO" || action.type === "REDO"
-            ? synthesizedActionId(action.id, "suffixed")
-            : action.id,
+        id: action.id,
         at: action.timestampUtcMs,
       });
     };
@@ -407,9 +401,20 @@ async function runCase(
           action.type,
         );
       } else if (roll < 0.55) {
+        // What IReactorClient.undo and redo submit: a RETRACT of the target.
         const isUndo = random() < 0.55;
-        const action = seeded(node, isUndo ? undo() : redo());
-        await write(node, action, action.type);
+        const targets = await node.module.reactor.resolveUndoRedo(
+          id,
+          "global",
+          "main",
+        );
+        const target = isUndo ? targets.undoTarget : targets.redoTarget;
+        if (target === undefined) continue;
+        await write(
+          node,
+          seeded(node, retract(target)),
+          `${isUndo ? "UNDO" : "REDO"} RETRACT(${target.slice(0, 8)})`,
+        );
       } else if (roll < 0.65) {
         const rows = await storedRows(node.module, id);
         const present = rows.map((row) => row.action.id);

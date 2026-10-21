@@ -23,6 +23,7 @@ import {
   PurgeTooLargeError,
   ReservedActionError,
   RetractionRefusedError,
+  SubmittedUndoRefusedError,
   UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
@@ -210,6 +211,7 @@ export class JobResultHandler implements IJobResultHandler {
         GroupInUseError.isError(result.error) ||
         PurgeTooLargeError.isError(result.error) ||
         ReservedActionError.isError(result.error) ||
+        SubmittedUndoRefusedError.isError(result.error) ||
         RetractionRefusedError.isError(result.error))
     ) {
       this.failNow(handle, result.error);

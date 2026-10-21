@@ -19,34 +19,28 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The id of the action synthesized from `submittedId`. Derived, so the stored
- * operation answers for the submitted id at the live-id check. The suffixed
- * form sorts against every other id as the submitted id does; the hashed form
- * is what released stores hold.
+ * The id of the action synthesized from `submittedId`, which released stores
+ * hold. Derived, so the stored operation answers for the submitted id at the
+ * live-id check. Base-reducer 3 refuses a submitted UNDO or REDO, so it
+ * synthesizes nothing.
  */
 export function synthesizedActionId(
   submittedId: string,
   form: SynthesizedIdForm,
 ): string {
   switch (form) {
-    case "suffixed":
-      return `${submittedId}.s`;
     case "hashed":
       return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(
         0,
         32,
       );
+    case "none":
+      throw new Error(
+        `Action ${submittedId} cannot synthesize: its base reducer refuses a submitted UNDO or REDO`,
+      );
     default:
       return assertNever(form, "synthesized id form");
   }
-}
-
-/** Every form, for a lookup that does not know the document's version. */
-export function synthesizedActionIds(submittedId: string): string[] {
-  return [
-    synthesizedActionId(submittedId, "suffixed"),
-    synthesizedActionId(submittedId, "hashed"),
-  ];
 }
 
 /**

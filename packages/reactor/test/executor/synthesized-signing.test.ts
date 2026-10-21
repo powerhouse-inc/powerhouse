@@ -27,10 +27,7 @@ import {
   type SignatureRefusedEvent,
 } from "../../src/events/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
-import {
-  synthesizedActionId,
-  synthesizedActionIds,
-} from "../../src/executor/synthesized-signing.js";
+import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import type { Job } from "../../src/queue/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
@@ -172,8 +169,6 @@ describe("synthesized operations", () => {
 
   const storedNoop = (reactor: IReactor, documentId: string) =>
     storedOfType("NOOP", reactor, documentId);
-  const storedRetract = (reactor: IReactor, documentId: string) =>
-    storedOfType("RETRACT", reactor, documentId);
 
   /** A document renamed twice, with one of the renames undone by `undone`. */
   async function undoneOnce(
@@ -383,114 +378,31 @@ describe("synthesized operations", () => {
     });
   });
 
-  describe("base-reducer 3", () => {
-    it("stores the RETRACT an UNDO becomes signed v2 by the reactor's key", async () => {
-      const module = await build(reactorKey.asISigner([], REACTOR_USER));
-      const documentId = await undoRename(module, 3);
-
-      const operation = await storedRetract(module.reactor, documentId);
-      const signer = operation.action.context?.signer;
-      expect(signer?.app.key).toBe(reactorKey.did);
-      expect(signer?.user).toEqual(REACTOR_USER);
-      expect(signer?.signatures).toHaveLength(1);
-      expect(signer?.signatures[0][2]).toMatch(/^v2:/);
-      expect(
-        await verifyActionSignature(
-          operation.action,
-          { documentId, branch: "main" },
-          "load",
-          operation,
-        ),
-      ).toEqual({ ok: true, scheme: "v2" });
-      expect(await modelName(module.reactor, documentId)).toBe("");
+  it("synthesizes nothing on base-reducer 3, which refuses a submitted UNDO", async () => {
+    const module = await build(reactorKey.asISigner([], REACTOR_USER));
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: { "base-reducer": 3 },
     });
+    const documentId = document.header.id;
+    const { reactor } = module;
+    await settle(reactor, await reactor.create(document));
+    await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(setModelName({ name: "renamed" }), documentId),
+      ]),
+    );
 
-    it("lets a peer admit the signed RETRACT under enforce without re-signing it", async () => {
-      const origin = await build(reactorKey.asISigner([], REACTOR_USER));
-      const documentId = await undoRename(origin, 3);
-      const signed = await storedRetract(origin.reactor, documentId);
+    const refused = await settle(
+      reactor,
+      await reactor.execute(documentId, "main", [
+        await clientSigned(undo(), documentId),
+      ]),
+    );
 
-      const peerKey = await TestP256Signer.create();
-      const peerTargets: unknown[] = [];
-      const peer = await build(peerKey.asISigner(peerTargets as never));
-      const refusals = refusalsOf(peer);
-
-      await replicate(origin.reactor, peer.reactor, documentId);
-
-      expect(refusals).toEqual([]);
-      expect(peerTargets).toEqual([]);
-      const loaded = await storedRetract(peer.reactor, documentId);
-      expect(loaded.id).toBe(signed.id);
-      expect(loaded.action).toEqual(signed.action);
-      expect(await modelName(peer.reactor, documentId)).toBe("");
-    });
-
-    it("stores the RETRACT with an empty tuple when no signer is configured, which a peer admits", async () => {
-      const origin = await build();
-      const documentId = await undoRename(origin, 3);
-
-      const operation = await storedRetract(origin.reactor, documentId);
-      expect(operation.action.context?.signer?.app.key).toBe("");
-      expect(operation.action.context?.signer?.signatures).toEqual([
-        ["", "", "", "", ""],
-      ]);
-
-      const peer = await build();
-      const refusals = refusalsOf(peer);
-      await replicate(origin.reactor, peer.reactor, documentId);
-
-      expect(refusals).toEqual([]);
-      expect((await storedRetract(peer.reactor, documentId)).action).toEqual(
-        operation.action,
-      );
-    });
-
-    describe("a submitted UNDO", () => {
-      it("stores its RETRACT under an id derived from the submitted one", async () => {
-        const module = await build(reactorKey.asISigner([], REACTOR_USER));
-        const { documentId, undone } = await undoneOnce(module, 3);
-
-        const operation = await storedRetract(module.reactor, documentId);
-        expect(operation.action.id).toBe(`${undone.id}.s`);
-        expect(operation.action.id).toBe(
-          synthesizedActionId(undone.id, "suffixed"),
-        );
-        expect(operation.action.id).not.toBe(undone.id);
-      });
-
-      it("is refused as DUPLICATE_ACTION when resubmitted", async () => {
-        const module = await build(reactorKey.asISigner([], REACTOR_USER));
-        const refusals = refusalsOf(module);
-        const { documentId, undone } = await undoneOnce(module, 3);
-
-        const replayed = await settle(
-          module.reactor,
-          await module.reactor.execute(documentId, "main", [undone]),
-        );
-
-        expect(replayed.status).toBe(JobStatus.FAILED);
-        expect(replayed.error?.message).toContain("[DUPLICATE_ACTION]");
-        expect(refusals).toMatchObject([
-          { actionId: undone.id, code: "DUPLICATE_ACTION" },
-        ]);
-        await storedRetract(module.reactor, documentId);
-        expect(await modelName(module.reactor, documentId)).toBe("first");
-      });
-
-      it("succeeds once, idempotently, when its committed job is retried", async () => {
-        const module = await build(reactorKey.asISigner([], REACTOR_USER));
-        const refusals = refusalsOf(module);
-        const { documentId, undone } = await undoneOnce(module, 3);
-
-        const retried = await retryUndo(module, documentId, undone);
-
-        expect(retried.error).toBeUndefined();
-        expect(retried.status).toBe(JobStatus.READ_READY);
-        expect(refusals).toEqual([]);
-        await storedRetract(module.reactor, documentId);
-        expect(await modelName(module.reactor, documentId)).toBe("first");
-      });
-    });
+    expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
+    expect(await modelName(reactor, documentId)).toBe("renamed");
   });
 
   it("does not re-sign a NOOP the client submitted signed", async () => {
@@ -599,8 +511,10 @@ describe("synthesized operations", () => {
       .buildModule();
     const reactor = clientModule.reactor;
     try {
+      // Base-reducer 2: 3 refuses a submitted UNDO, so it synthesizes nothing.
       const document = await clientModule.client.createEmpty(
         "powerhouse/document-model",
+        { protocolVersions: { "base-reducer": 2 } },
       );
       const documentId = document.header.id;
       await clientModule.client.execute(documentId, "main", [
@@ -610,7 +524,7 @@ describe("synthesized operations", () => {
 
       await clientModule.client.execute(documentId, "main", [undo()]);
 
-      const operation = await storedRetract(reactor, documentId);
+      const operation = await storedNoop(reactor, documentId);
       expect(operation.action.context?.signer?.app.key).toBe(reactorKey.did);
       expect(targets).toContainEqual({ documentId, branch: "main" });
     } finally {
@@ -638,12 +552,14 @@ describe("synthesized operations", () => {
   });
 });
 
-describe("synthesizedActionIds", () => {
-  it("gives both stored forms for a lookup that does not know the version", () => {
-    expect(synthesizedActionIds("u")).toEqual([
-      "u.s",
+describe("synthesizedActionId", () => {
+  it("derives the hashed form released stores hold, and refuses where nothing synthesizes", () => {
+    expect(synthesizedActionId("u", "hashed")).toBe(
       hashBrowser("synthesized:u", "sha1", "hex").slice(0, 32),
-    ]);
+    );
+    expect(() => synthesizedActionId("u", "none")).toThrow(
+      "Action u cannot synthesize",
+    );
   });
 });
 

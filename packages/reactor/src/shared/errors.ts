@@ -453,6 +453,31 @@ export class ReservedActionError extends Error {
 }
 
 /**
+ * A submitted UNDO or REDO into a document whose base reducer undoes by
+ * retraction. Its client resolves the target and submits a RETRACT of it,
+ * signed by the author, as IReactorClient.undo does.
+ */
+export class SubmittedUndoRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly actionType: string;
+
+  constructor(documentId: string, actionType: string) {
+    super(
+      `${actionType} cannot be submitted to document ${documentId}: its base reducer undoes by RETRACT of a target, which IReactorClient.undo and redo resolve and sign`,
+    );
+    this.name = "SubmittedUndoRefusedError";
+    this.documentId = documentId;
+    this.actionType = actionType;
+
+    Error.captureStackTrace(this, SubmittedUndoRefusedError);
+  }
+
+  static isError(error: unknown): error is SubmittedUndoRefusedError {
+    return Error.isError(error) && error.name === "SubmittedUndoRefusedError";
+  }
+}
+
+/**
  * An authorization preflight was asked for while the reactor's decision model
  * is off, so there is no model to answer from.
  *

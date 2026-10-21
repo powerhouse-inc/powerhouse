@@ -12,9 +12,11 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  capabilitiesOf,
   deriveOperationId,
   generateId,
   signaturePolicyOf,
+  undoRedoActions,
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -35,7 +37,7 @@ import type {
 import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
-import type { ReactorFeatures } from "../src/core/types.js";
+import type { IReactor, ReactorFeatures } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
@@ -1229,6 +1231,22 @@ export function withBaseReducer3<TDocument extends PHDocument>(
     id: options.id,
     protocolVersions: { "base-reducer": 3 },
   });
+}
+
+/**
+ * What IReactorClient.undo or redo submits on base-reducer 3: a RETRACT of the
+ * target the reactor resolves, which the author signs. Throws when there is
+ * none.
+ */
+export async function authorRetraction(
+  reactor: Pick<IReactor, "resolveUndoRedo">,
+  documentId: string,
+  type: "UNDO" | "REDO" = "UNDO",
+  scope = "global",
+  branch = "main",
+): Promise<Action> {
+  const targets = await reactor.resolveUndoRedo(documentId, scope, branch);
+  return undoRedoActions(capabilitiesOf(3), type, scope, targets)[0];
 }
 
 /** `featureFlags` with `undoV3` on; a reactor refuses base-reducer 3 without it. */

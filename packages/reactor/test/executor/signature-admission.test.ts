@@ -13,7 +13,6 @@ import {
   positionalOperations,
   retract,
   retractedActionIds,
-  undo,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -603,7 +602,8 @@ describe("signature admission", () => {
         const action = await renownSigned(moduleAction("x", 0));
         expect((await execute([action])).status).toBe(JobStatus.READ_READY);
         expect(
-          (await execute([{ ...undo(), timestampUtcMs: at(10) }])).status,
+          (await execute([{ ...retract(action.id), timestampUtcMs: at(10) }]))
+            .status,
         ).toBe(JobStatus.READ_READY);
         expect(await moduleIds()).toEqual([]);
         return action;

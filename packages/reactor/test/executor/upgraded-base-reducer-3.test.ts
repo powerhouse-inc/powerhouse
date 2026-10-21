@@ -12,14 +12,17 @@ import {
   generateId,
   hashDocumentStateForScope,
   retract,
-  undo,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { upgradeDocumentAction } from "../../src/actions/index.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import { JobStatus } from "../../src/shared/types.js";
-import { createUndoV3ReactorBuilder, withBaseReducer3 } from "../factories.js";
+import {
+  authorRetraction,
+  createUndoV3ReactorBuilder,
+  withBaseReducer3,
+} from "../factories.js";
 import { assertOneRuleAgreement, storedRows } from "./one-rule-agreement.js";
 
 const LOG_TYPE = "test/upgraded-log";
@@ -205,11 +208,13 @@ describe("base-reducer 3 across a model upgrade", () => {
     ]);
   });
 
-  it("UNDO targets the last row its own version applied", async () => {
+  it("undo targets the last row its own version applied", async () => {
     const old = action("OLD");
     const documentId = await upgradedDocument([action("LOG", "a"), old]);
 
-    await run(documentId, [undo()]);
+    await run(documentId, [
+      await authorRetraction(module!.reactor, documentId),
+    ]);
 
     const rows = await storedRows(module!, documentId);
     expect(rows.at(-1)?.action.input).toEqual({ target: old.id });
@@ -231,7 +236,9 @@ describe("base-reducer 3 across a model upgrade", () => {
     );
     await run(documentId, [action("LOG", "c")]);
     await run(documentId, [retract(a.id)]);
-    await run(documentId, [undo()]);
+    await run(documentId, [
+      await authorRetraction(module!.reactor, documentId),
+    ]);
     await run(documentId, [action("LOG", "d")]);
 
     const registry = new DocumentModelRegistry();

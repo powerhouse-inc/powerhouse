@@ -10,22 +10,21 @@ import {
   deriveOperationId,
   deriveScope,
   documentModelStateReducer,
+  redo,
   retract,
   undo,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
-import { synthesizedActionId } from "../../src/executor/synthesized-signing.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
-import { verifyActionSignature } from "../../src/signer/verify-action-signature.js";
 import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import {
   createBaseReducer3Document,
   createDocModelDocument,
   createUndoV3ReactorBuilder,
 } from "../factories.js";
-import { TestP256Signer } from "../utils/p256-signer.js";
+import type { TestP256Signer } from "../utils/p256-signer.js";
 
 const REACTOR_USER: ActionSigner["user"] = {
   address: "0xreactor",
@@ -305,42 +304,26 @@ describe("base-reducer 3: RETRACT admission", () => {
     expect(await moduleIds()).toEqual(["a", "c"]);
   });
 
-  it("stores the RETRACT an UNDO becomes signed by the reactor under the derived id", async () => {
-    const reactorKey = await TestP256Signer.create();
-    await build({ signer: reactorKey });
+  it("refuses a submitted UNDO and REDO, typed, and stores nothing", async () => {
+    await build();
     await executeOk([add("a")]);
     await executeOk([add("b")]);
-    const [, b] = await stream();
-    const submitted = undo();
 
-    await executeOk([submitted]);
-
-    const operation = (await stream()).at(-1)!;
-    expect(operation.action.type).toBe("RETRACT");
-    expect(operation.action.input).toEqual({ target: b.action.id });
-    expect(operation.action.id).toBe(
-      synthesizedActionId(submitted.id, "suffixed"),
-    );
-    expect(operation.id).toBe(
-      deriveOperationId(docId, "global", "main", operation.action.id),
-    );
-    const signer = operation.action.context?.signer;
-    expect(signer?.app.key).toBe(reactorKey.did);
-    expect(signer?.signatures).toHaveLength(1);
-    expect(
-      await verifyActionSignature(
-        operation.action,
-        { documentId: docId, branch: "main" },
-        "load",
-        operation,
-      ),
-    ).toEqual({ ok: true, scheme: "v2" });
-    expect(await moduleIds()).toEqual(["a"]);
-
-    const replayed = await execute([submitted]);
-    expect(replayed.status).toBe(JobStatus.FAILED);
-    expect(replayed.error?.message).toContain("[DUPLICATE_ACTION]");
-    expect((await stream()).length).toBe(3);
+    for (const submitted of [undo(), redo()]) {
+      const refused = await execute([submitted]);
+      expect(refused.status).toBe(JobStatus.FAILED);
+      expect(refused.error?.name).toBe("SubmittedUndoRefusedError");
+      expect(refused.error?.message).toContain(
+        `${submitted.type} cannot be submitted`,
+      );
+      // Refused on the first attempt, never retried.
+      expect(refused.errorHistory?.length ?? 0).toBeLessThanOrEqual(1);
+    }
+    expect((await stream()).map((operation) => operation.action.type)).toEqual([
+      "ADD_MODULE",
+      "ADD_MODULE",
+    ]);
+    expect(await moduleIds()).toEqual(["a", "b"]);
   });
 });
 

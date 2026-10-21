@@ -20,6 +20,7 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
+  authorRetraction,
   createBaseReducer3Document,
   createDocModelDocument,
   createUndoV3ReactorBuilder,
@@ -231,7 +232,7 @@ describe("base-reducer 3", () => {
       await execute([at("w", -10_000)]);
       // After the RETRACT's stamp, so the RETRACT sorts first, not y.
       await execute([at("y", -50_000)]);
-      await execute([undo()]);
+      await execute([await authorRetraction(module!.reactor, docId)]);
       expect(ids(await module.reactor.get(docId))).toEqual(["x", "w"]);
 
       // The rewind reaches the live RETRACT, which sorts first and takes skip 4.
