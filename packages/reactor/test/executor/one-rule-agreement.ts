@@ -21,7 +21,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { expect, vi } from "vitest";
-import { scopeDerivation } from "../../src/cache/kysely-write-cache.js";
+import { scopeDerivation } from "../../src/derivation/index.js";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 
@@ -150,6 +150,7 @@ export async function assertOneRuleAgreement(
     (await scopeDerivation(
       module.operationStore,
       versioned.registry,
+      undefined,
       documentId,
       branch,
     ));

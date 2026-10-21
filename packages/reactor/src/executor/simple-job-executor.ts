@@ -38,7 +38,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
-import { scopeDerivation } from "../cache/kysely-write-cache.js";
+import { scopeDerivation } from "../derivation/index.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
@@ -2093,6 +2093,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           deriveScope = await scopeDerivation(
             stores.operationStore,
             this.registry,
+            this.protocolGate,
             job.documentId,
             job.branch,
             signal,

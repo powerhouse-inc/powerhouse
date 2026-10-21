@@ -26,6 +26,7 @@ import type {
   StreamOrderIssue,
   ValidationResult,
 } from "./types.js";
+import { createProtocolGate } from "../protocol/gate.js";
 
 export class DocumentIntegrityService implements IDocumentIntegrityService {
   private readonly keyframeStore: IKeyframeStore;
@@ -75,7 +76,10 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
         maxDocuments: 1,
         ringBufferSize: 1,
         keyframeInterval: Number.MAX_SAFE_INTEGER,
-        protocolSupport: this.protocolSupport,
+        gate: createProtocolGate(
+          this.protocolSupport,
+          this.documentModelRegistry,
+        ),
       },
     );
     const unsupported = (

@@ -1,13 +1,8 @@
 import type {
-  CreateDocumentAction,
   DeleteDocumentAction,
-  DeriveScope,
   Operation,
   PHDocument,
-  PHDocumentHeader,
   PurgeDocumentAction,
-  ScopeVersions,
-  StateReducer,
   UpgradeDocumentAction,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
@@ -15,29 +10,30 @@ import {
   appendRows,
   appendWithoutApplying,
   applyDeleteDocumentAction,
-  applyUpgradeDocumentAction,
   baseReducerVersion,
   deriveScopeVersioned,
   derivesByRule,
   optionalBaseReducerCapabilities,
   rewritesScope,
   isDenied,
-  isPurgeMarker,
-  normalizeDocumentModelVersion,
   PURGE_DOCUMENT,
-  reduceOne,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import { stateReducerOrRefusal } from "../protocol/gate.js";
-import { firstUnsupportedProtocol } from "../protocol/support.js";
-import type { ProtocolSupport } from "../executor/types.js";
 import {
-  DocumentNotFoundError,
-  DocumentPurgedError,
-  UnsupportedProtocolVersionError,
-} from "../shared/errors.js";
+  applyPendingUpgrades,
+  applyRowsByRule,
+  applyTailPendingUpgrades,
+  extractModuleVersion,
+  readDocumentScope,
+  resolveModuleVersionForOp,
+  scopeVersions,
+  singleVersion,
+  type PendingUpgrade,
+  type ValidatedUpgrade,
+} from "../derivation/index.js";
+import { stateReducerOrRefusal, type IProtocolGate } from "../protocol/gate.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
@@ -48,48 +44,6 @@ import type { IWriteCache } from "./write/interfaces.js";
 type DocumentStream = {
   key: string;
   ringBuffer: RingBuffer<CachedSnapshot>;
-};
-
-/**
- * An UPGRADE_DOCUMENT spine event validated as version-changing
- * (fromVersion > 0 and fromVersion < toVersion), as opposed to the
- * creation-time 0->N seed upgrade. Used to segment scope replay.
- */
-type ValidatedUpgrade = {
-  fromVersion: number;
-  toVersion: number;
-  revision: Record<string, number> | undefined;
-  timestampUtcMs: string;
-};
-
-/**
- * A validated upgrade held back by the document scope pass so its transitions
- * run against the state the requested scope has reached at the upgrade's
- * boundary, rather than the state the pass starts from.
- */
-type PendingUpgrade = {
-  action: UpgradeDocumentAction;
-  upgradePath: UpgradeTransition[] | undefined;
-  /** The upgrade operation's index in the document scope. */
-  index: number;
-  /**
-   * DELETE_DOCUMENT and PURGE_DOCUMENT actions the document scope recorded
-   * after this upgrade.
-   * The document-scope pass applies deletes inline while the upgrade is held
-   * back, inverting log order; re-applying them after the upgrade restores it
-   * — without this, an upgrade seeded from an initialState snapshot replaces
-   * the state wholesale and a rebuilt deleted document comes back live.
-   */
-  subsequentDeletes: (DeleteDocumentAction | PurgeDocumentAction)[];
-};
-
-/** The document scope, rebuilt with its version-changing upgrades held back. */
-type DocumentScopeRead = {
-  document: PHDocument;
-  documentType: string;
-  validatedUpgrades: ValidatedUpgrade[];
-  pendingUpgrades: PendingUpgrade[];
-  lastDocumentScopeOperation: Operation | undefined;
 };
 
 /**
@@ -111,12 +65,6 @@ function keyframeRevision(
   }
 
   return nextIndex - 1;
-}
-
-function extractModuleVersion(doc: PHDocument): number {
-  const v = (doc.state as Record<string, Record<string, unknown>>).document
-    .version as number | undefined;
-  return normalizeDocumentModelVersion(v);
 }
 
 /** The highest revision held, latest push winning a tie. */
@@ -157,439 +105,6 @@ function rebuildFailure(documentId: string, err: unknown): Error {
 
 function documentDerivesByRule(document: PHDocument, scope: string): boolean {
   return derivesByRule(optionalBaseReducerCapabilities(document.header), scope);
-}
-
-/**
- * Base-reducer 3: applies each row `applies` admits to the scope state, in
- * order, each with its version's reducer. A row that throws applies nothing.
- */
-function applyRowsByRule(
-  document: PHDocument,
-  rows: readonly Operation[],
-  applies: (operation: Operation) => boolean,
-  versions: ScopeVersions,
-): PHDocument {
-  for (const operation of rows) {
-    const version = versions.versionOf(operation);
-    document = versions.upgradeTo(document, version);
-    if (!applies(operation)) {
-      continue;
-    }
-    // Resolved outside the try: a model without a state reducer must fail.
-    const reducer = versions.reducerOf(version);
-    try {
-      document = reduceOne(document, operation, () => reducer);
-    } catch {
-      // A row that throws applies nothing.
-    }
-  }
-  return document;
-}
-
-/** One module version and no upgrades. */
-function singleVersion(version: number, reducer: StateReducer): ScopeVersions {
-  return {
-    versionOf: () => version,
-    reducerOf: () => reducer,
-    upgradeTo: (document) => document,
-  };
-}
-
-/**
- * Resolves which module version to use for a given operation in phase 2.
- *
- * Uses the validated-upgrade boundary rules from D7:
- * - If `input.revision` is present: op.index < revision[scope] → before the upgrade boundary
- * - Otherwise: timestamp fallback
- * - Falls back to final module version when neither is decidable
- */
-function resolveModuleVersionForOp(
-  opIndex: number,
-  opTimestamp: string,
-  scope: string,
-  validatedUpgrades: ValidatedUpgrade[],
-  finalVersion: number | undefined,
-): number | undefined {
-  if (validatedUpgrades.length === 0) {
-    return finalVersion;
-  }
-
-  let currentVersion: number | undefined = validatedUpgrades[0]?.fromVersion;
-
-  for (const upgrade of validatedUpgrades) {
-    let beforeUpgrade: boolean;
-
-    if (upgrade.revision !== undefined) {
-      const boundary = upgrade.revision[scope] ?? 0;
-      beforeUpgrade = opIndex < boundary;
-    } else {
-      beforeUpgrade = opTimestamp < upgrade.timestampUtcMs;
-    }
-
-    if (beforeUpgrade) {
-      return currentVersion;
-    }
-
-    currentVersion = upgrade.toVersion;
-  }
-
-  return currentVersion;
-}
-
-/**
- * Applies one held-back upgrade, then re-applies the deletes the document
- * scope recorded after it so the hold-back cannot invert their order.
- */
-function applyPendingUpgrade(
-  document: PHDocument,
-  pending: PendingUpgrade,
-): PHDocument {
-  document = applyUpgradeDocumentAction(
-    document,
-    pending.action,
-    pending.upgradePath,
-  );
-
-  for (const deleteAction of pending.subsequentDeletes) {
-    document = applyDeleteDocumentAction(document, deleteAction);
-  }
-
-  return document;
-}
-
-/**
- * Applies and removes every held-back upgrade whose target version is at or
- * below `throughVersion`, in the order the document scope recorded them.
- */
-function applyPendingUpgrades(
-  document: PHDocument,
-  pendingUpgrades: PendingUpgrade[],
-  throughVersion: number,
-): PHDocument {
-  while (pendingUpgrades.length > 0) {
-    const pending = pendingUpgrades[0];
-
-    if (throughVersion < pending.action.input.toVersion) {
-      break;
-    }
-
-    pendingUpgrades.shift();
-    document = applyPendingUpgrade(document, pending);
-  }
-
-  return document;
-}
-
-/**
- * Applies the remaining held-back upgrades after the requested scope's
- * replay has finished. A head read applies them all. A positional read
- * applies only those whose boundary for this scope lies at or before the
- * target position: applying a later one would label migrated state with a
- * pre-upgrade revision, and a keyframe stored from that poisons every
- * rebuild that resumes from it. Boundaries come from the upgrade's revision
- * snapshot; an upgrade without one records no position for this scope, and
- * the replay loop not having crossed it already places it past the target.
- */
-function applyTailPendingUpgrades(
-  document: PHDocument,
-  pendingUpgrades: PendingUpgrade[],
-  scope: string,
-  targetRevision: number | undefined,
-): PHDocument {
-  while (pendingUpgrades.length > 0) {
-    const pending = pendingUpgrades[0];
-
-    if (targetRevision !== undefined) {
-      const snapshot = pending.action.input.revision;
-      if (snapshot === undefined) {
-        break;
-      }
-      const boundary = snapshot[scope] ?? 0;
-      if (boundary > targetRevision) {
-        break;
-      }
-    }
-
-    pendingUpgrades.shift();
-    document = applyPendingUpgrade(document, pending);
-  }
-
-  return document;
-}
-
-/**
- * Rebuilds the document scope from its first row, holding back each
- * version-changing upgrade for the scope replay to apply at its boundary.
- */
-async function readDocumentScope(
-  operationStore: IOperationStore,
-  registry: IDocumentModelRegistry,
-  documentId: string,
-  branch: string,
-  documentScopeBound: number | undefined,
-  signal?: AbortSignal,
-  assertSupported: (document: PHDocument) => void = () => {},
-): Promise<DocumentScopeRead> {
-  let document: PHDocument;
-  let lastDocumentScopeOperation: Operation | undefined;
-  const validatedUpgrades: ValidatedUpgrade[] = [];
-  const pendingUpgrades: PendingUpgrade[] = [];
-
-  const createOpResult = await operationStore.getSince(
-    documentId,
-    "document",
-    branch,
-    -1,
-    undefined,
-    { cursor: "0", limit: 1 },
-    signal,
-  );
-
-  // Typed, so the executor defers the job until the document arrives.
-  if (createOpResult.results.length === 0) {
-    throw new DocumentNotFoundError(documentId);
-  }
-
-  const createOp = createOpResult.results[0];
-  if (isPurgeMarker(createOp)) {
-    throw new DocumentPurgedError(documentId);
-  }
-  if (createOp.action.type !== "CREATE_DOCUMENT") {
-    throw new Error(
-      `Failed to rebuild document ${documentId}: first operation in document scope must be CREATE_DOCUMENT, found ${createOp.action.type}`,
-    );
-  }
-
-  const documentCreateAction = createOp.action as CreateDocumentAction;
-  const documentType = documentCreateAction.input.model;
-  if (!documentType) {
-    throw new Error(
-      `Failed to rebuild document ${documentId}: CREATE_DOCUMENT action missing model in input`,
-    );
-  }
-
-  document = createDocumentFromAction(documentCreateAction);
-  assertSupported(document);
-  lastDocumentScopeOperation = createOp;
-
-  let docModule = registry.getModule(
-    documentType,
-    extractModuleVersion(document),
-  );
-  const docScopeOps = await operationStore.getSince(
-    documentId,
-    "document",
-    branch,
-    0,
-    undefined,
-    undefined,
-    signal,
-  );
-
-  for (const operation of docScopeOps.results) {
-    if (
-      // in the case that the document scope was requested, we can exit early
-      documentScopeBound !== undefined &&
-      operation.index > documentScopeBound
-    ) {
-      break;
-    }
-
-    lastDocumentScopeOperation = operation;
-
-    if (operation.index === 0) {
-      continue;
-    }
-
-    if (operation.error || isDenied(operation)) {
-      continue;
-    }
-
-    if (operation.action.type === "UPGRADE_DOCUMENT") {
-      const upgradeAction = operation.action as UpgradeDocumentAction;
-      const fromVersion = upgradeAction.input.fromVersion;
-      const toVersion = upgradeAction.input.toVersion;
-
-      if (fromVersion > 0 && fromVersion < toVersion) {
-        let upgradePath: UpgradeTransition[] | undefined;
-        try {
-          upgradePath = registry.computeUpgradePath(
-            documentType,
-            fromVersion,
-            toVersion,
-          );
-        } catch (err) {
-          const upgradeInput = upgradeAction.input as {
-            initialState?: unknown;
-          };
-          if (upgradeInput.initialState !== undefined) {
-            upgradePath = undefined;
-          } else {
-            throw new Error(
-              `Failed to rebuild document ${documentId}: no upgrade manifest for ${documentType} v${fromVersion}→v${toVersion} and no initialState snapshot. ${err instanceof Error ? err.message : String(err)}`,
-              { cause: err },
-            );
-          }
-        }
-        validatedUpgrades.push({
-          fromVersion,
-          toVersion,
-          revision: upgradeAction.input.revision,
-          timestampUtcMs: operation.timestampUtcMs,
-        });
-        pendingUpgrades.push({
-          action: upgradeAction,
-          upgradePath,
-          index: operation.index,
-          subsequentDeletes: [],
-        });
-      } else {
-        document = applyUpgradeDocumentAction(
-          document,
-          upgradeAction,
-          undefined,
-        );
-      }
-
-      docModule = registry.getModule(
-        documentType,
-        normalizeDocumentModelVersion(toVersion),
-      );
-    } else if (
-      operation.action.type === "DELETE_DOCUMENT" ||
-      operation.action.type === PURGE_DOCUMENT
-    ) {
-      applyDeleteDocumentAction(document, operation.action as never);
-      for (const pending of pendingUpgrades) {
-        pending.subsequentDeletes.push(
-          operation.action as DeleteDocumentAction | PurgeDocumentAction,
-        );
-      }
-    } else {
-      const protocolVersion = baseReducerVersion(document.header);
-      document = withProtocolVersions(
-        docModule.reducer(document, operation.action, undefined, {
-          skip: operation.skip,
-          protocolVersion,
-        }),
-        document.header.protocolVersions,
-      );
-    }
-  }
-
-  return {
-    document,
-    documentType,
-    validatedUpgrades,
-    pendingUpgrades,
-    lastDocumentScopeOperation,
-  };
-}
-
-/** Which module version each row of `scope` takes, and the upgrades between. */
-function scopeVersions(
-  registry: IDocumentModelRegistry,
-  header: PHDocumentHeader,
-  scope: string,
-  validatedUpgrades: ValidatedUpgrade[],
-  pendingUpgrades: PendingUpgrade[],
-  finalVersion: number,
-): ScopeVersions {
-  const reducers = new Map<number, StateReducer>();
-  return {
-    versionOf: (operation) =>
-      resolveModuleVersionForOp(
-        operation.index,
-        operation.timestampUtcMs,
-        scope,
-        validatedUpgrades,
-        finalVersion,
-      ) ?? finalVersion,
-    reducerOf: (version) => {
-      let reducer = reducers.get(version);
-      if (!reducer) {
-        reducer = stateReducerOrRefusal(
-          registry.getModule(header.documentType, version).reducer,
-          header.id,
-          header.documentType,
-          version,
-          header.protocolVersions,
-        );
-        reducers.set(version, reducer);
-      }
-      return reducer;
-    },
-    upgradeTo: (document, version) =>
-      applyPendingUpgrades(
-        document,
-        pendingUpgrades,
-        version,
-      ) as typeof document,
-  };
-}
-
-/**
- * Base-reducer 3: the derivation a cold rebuild of the head runs, for a
- * reducer to re-derive a scope with. It starts from the state the document
- * scope seeds, applies each row with its own module version's reducer and
- * each upgrade at its boundary, and splices the scope back into the
- * document it is given.
- */
-export async function scopeDerivation(
-  operationStore: IOperationStore,
-  registry: IDocumentModelRegistry,
-  documentId: string,
-  branch: string,
-  signal?: AbortSignal,
-): Promise<DeriveScope> {
-  const read = await readDocumentScope(
-    operationStore,
-    registry,
-    documentId,
-    branch,
-    undefined,
-    signal,
-  );
-  const finalVersion =
-    read.validatedUpgrades.at(-1)?.toVersion ??
-    extractModuleVersion(read.document);
-
-  return (document, operations, scope, onThrow) => {
-    // Fresh per call: applying an upgrade consumes it and writes in place.
-    const pending = [...read.pendingUpgrades];
-    const versions = scopeVersions(
-      registry,
-      read.document.header,
-      scope,
-      read.validatedUpgrades,
-      pending,
-      finalVersion,
-    );
-    const seeded = {
-      ...document,
-      state: { ...read.document.state },
-      initialState: { ...read.document.initialState },
-    } as typeof document;
-    const derived = deriveScopeVersioned(
-      seeded,
-      operations,
-      versions,
-      scope,
-      onThrow,
-    );
-    const head = versions.upgradeTo(derived.document, Number.MAX_SAFE_INTEGER);
-    return {
-      document: {
-        ...document,
-        header: head.header,
-        state: {
-          ...document.state,
-          [scope]: (head.state as Record<string, unknown>)[scope],
-        },
-      },
-      applied: derived.applied,
-    };
-  };
 }
 
 /**
@@ -636,8 +151,8 @@ export class KyselyWriteCache implements IWriteCache {
   private keyframeStore: IKeyframeStore;
   private operationStore: IOperationStore;
   private registry: IDocumentModelRegistry;
-  private config: Required<Omit<WriteCacheConfig, "protocolSupport">>;
-  private protocolSupport: ProtocolSupport | undefined;
+  private config: Required<Omit<WriteCacheConfig, "gate">>;
+  private gate: IProtocolGate | undefined;
   private reads = new Map<string, Set<PendingRead>>();
 
   constructor(
@@ -654,30 +169,18 @@ export class KyselyWriteCache implements IWriteCache {
       ringBufferSize: config.ringBufferSize,
       keyframeInterval: config.keyframeInterval,
     };
-    this.protocolSupport = config.protocolSupport;
+    this.gate = config.gate;
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
   }
 
   /**
-   * Refuses a document stored at a protocol version outside `protocolSupport`
-   * by name, so read paths can tell it from a rebuild that failed. Runs before
-   * any reducer or cached state, since neither checks support.
+   * Refuses a document stored outside the supported versions by name, so read
+   * paths can tell it from a failed rebuild. Protocol-only: the hot path does
+   * no registry work, and derivation refuses an unrunnable model typed.
    */
   private assertSupported(documentId: string, document: PHDocument): void {
-    const unsupported =
-      this.protocolSupport &&
-      firstUnsupportedProtocol(
-        document.header.protocolVersions,
-        this.protocolSupport,
-      );
-    if (unsupported) {
-      throw new UnsupportedProtocolVersionError(
-        documentId,
-        unsupported.protocol,
-        unsupported.version,
-      );
-    }
+    this.gate?.assertRunnable(documentId, document.header.protocolVersions);
   }
 
   withScopedStores(
@@ -688,7 +191,7 @@ export class KyselyWriteCache implements IWriteCache {
       keyframeStore,
       operationStore,
       this.registry,
-      { ...this.config, protocolSupport: this.protocolSupport },
+      { ...this.config, gate: this.gate },
     );
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
@@ -1284,11 +787,11 @@ export class KyselyWriteCache implements IWriteCache {
       const read = await readDocumentScope(
         this.operationStore,
         this.registry,
+        this.gate,
         documentId,
         branch,
         documentScopeBound,
         signal,
-        (rebuilt) => this.assertSupported(documentId, rebuilt),
       );
       document = read.document;
       documentType = read.documentType;

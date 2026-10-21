@@ -75,6 +75,7 @@ import type {
   BuiltInReadModelKind,
   ProjectionInitMessage,
 } from "../protocol.js";
+import { createProtocolGate } from "../../protocol/gate.js";
 
 export type ProjectionStackEvents = {
   onReadReady: (event: JobReadReadyEvent) => void;
@@ -259,7 +260,9 @@ export async function buildProjectionStack(
     maxDocuments: 100,
     ringBufferSize: 10,
     keyframeInterval: 10,
-    protocolSupport: init.protocolSupport,
+    gate:
+      init.protocolSupport &&
+      createProtocolGate(init.protocolSupport, registry, logger),
   };
   const writeCache = new KyselyWriteCache(
     keyframeStore,

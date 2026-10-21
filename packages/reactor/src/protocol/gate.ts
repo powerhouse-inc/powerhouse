@@ -79,10 +79,11 @@ export function stateReducerOrRefusal(
   }
 }
 
+/** Without a logger, an admitted unregistered protocol goes unreported. */
 export function createProtocolGate(
   support: ProtocolSupport,
   registry: IDocumentModelRegistry,
-  logger: ILogger,
+  logger?: Pick<ILogger, "info">,
 ): IProtocolGate {
   const loggedUnregistered = new Set<string>();
 
@@ -107,7 +108,7 @@ export function createProtocolGate(
         continue;
       }
       loggedUnregistered.add(protocol);
-      logger.info(
+      logger?.info(
         "Admitting document @documentId with unregistered protocol @protocol @version",
         documentId,
         protocol,

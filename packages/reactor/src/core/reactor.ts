@@ -16,7 +16,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import { scopeDerivation } from "../cache/kysely-write-cache.js";
+import { scopeDerivation } from "../derivation/index.js";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
@@ -129,6 +130,8 @@ export class Reactor implements IReactor {
     },
     // The CREATE gate's resolver, so a headerless create fits a loaded model.
     private readonly modelResolver?: IDocumentModelResolver,
+    // Undo resolution derives the scope; the gate refuses an unrunnable document.
+    private readonly protocolGate?: IProtocolGate,
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -465,6 +468,7 @@ export class Reactor implements IReactor {
       scopeDerivation(
         this.operationStore,
         this.documentModelRegistry,
+        this.protocolGate,
         documentId,
         branch,
         signal,
