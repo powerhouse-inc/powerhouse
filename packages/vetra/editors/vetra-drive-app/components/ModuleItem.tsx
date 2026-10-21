@@ -1,9 +1,9 @@
-import { Icon } from "@powerhousedao/design-system";
-import { twMerge } from "tailwind-merge";
 import {
   ConnectDropdownMenu,
   fileNodeDropdownOptions,
+  Icon,
 } from "@powerhousedao/design-system/connect";
+import { twMerge } from "tailwind-merge";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React, { useState } from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";
