@@ -209,7 +209,10 @@ describe("bundle-stack staging", () => {
   it("stages hosts, config, dist and the manifest (vendor off)", () => {
     const dir = makeProject();
     mkdirSync(path.join(dir, "dist"), { recursive: true });
-    writeFileSync(path.join(dir, "dist", "index.html"), "<html></html>");
+    writeFileSync(path.join(dir, "dist", "index.js"), "export {};");
+    const connectBuild = path.join(".ph", "connect-build", "dist");
+    mkdirSync(path.join(dir, connectBuild), { recursive: true });
+    writeFileSync(path.join(dir, connectBuild, "index.html"), "<html></html>");
     const shell = makeShellProject();
 
     const result = bundleStack({
@@ -241,9 +244,12 @@ describe("bundle-stack staging", () => {
     expect(
       existsSync(path.join(result.stackDir, "powerhouse.config.json")),
     ).toBe(true);
-    expect(existsSync(path.join(result.stackDir, "dist", "index.html"))).toBe(
+    expect(existsSync(path.join(result.stackDir, "dist", "index.js"))).toBe(
       true,
     );
+    expect(
+      existsSync(path.join(result.stackDir, connectBuild, "index.html")),
+    ).toBe(true);
     const manifest = JSON.parse(
       readFileSync(path.join(result.stackDir, "package.json"), "utf8"),
     ) as { name: string; dependencies: Record<string, string> };
