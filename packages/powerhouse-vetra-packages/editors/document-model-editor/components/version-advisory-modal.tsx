@@ -1,5 +1,4 @@
-import { Modal } from "@powerhousedao/design-system";
-import { ModalButton } from "@powerhousedao/design-system/connect";
+import { Modal, ModalButton } from "@powerhousedao/design-system/connect";
 import type { VersionAdvisoryPrompt } from "../hooks/useVersionAdvisory.js";
 
 const compactButtonStyle =

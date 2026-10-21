@@ -98,6 +98,17 @@ describe("buildBrowserBuildConfig", () => {
     expect(experimental?.resolveNewUrlToAsset).toBe(true);
   });
 
+  it("bundleDependencies: false bundles only stylesheets, keeping the externals", () => {
+    const cfg = buildBrowserBuildConfig({ bundleDependencies: false });
+    const alwaysBundle = cfg.deps!.alwaysBundle as RegExp[];
+    expect(
+      alwaysBundle.some((e) => e.test("@xyflow/react/dist/style.css")),
+    ).toBe(true);
+    expect(alwaysBundle.some((e) => e.test("@xyflow/react"))).toBe(false);
+    expect(sharedMatchers(cfg).length).toBeGreaterThan(0);
+    expect(buildBrowserBuildConfig().deps!.alwaysBundle).toEqual(["**"]);
+  });
+
   it("the exported default matches the factory default's shape", () => {
     expect(sharedMatchers(browserBuildConfig).length).toBeGreaterThan(0);
     expect(browserBuildConfig.entry).toEqual(browserEntry);

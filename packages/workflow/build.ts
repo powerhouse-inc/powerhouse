@@ -1,5 +1,5 @@
 import {
-  browserBuildConfig,
+  buildBrowserBuildConfig,
   nodeBuildConfig,
 } from "@powerhousedao/shared/build-config";
 import {
@@ -16,8 +16,9 @@ import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "tsdown";
 
+// Connect bundles workflow, so its dependencies stay imports Connect resolves once.
 await build({
-  ...browserBuildConfig,
+  ...buildBrowserBuildConfig({ bundleDependencies: false }),
   outDir: join("dist", "browser"),
 });
 
