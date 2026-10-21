@@ -8,10 +8,8 @@ To enable the timeline feature in your document editor, you need to set `timelin
 
 ```typescript
 // editors/to-do-list/index.ts
-export const module: EditorModule<ToDoDocument> = {
-  Component: Editor as unknown as FC<
-    EditorProps<ToDoDocument> & Record<string, unknown>
-  >,
+export const module: EditorModule<ToDoDocument, ToDoAction> = {
+  Component: Editor,
   documentTypes: ["powerhouse/todo-list"],
 };
 ```

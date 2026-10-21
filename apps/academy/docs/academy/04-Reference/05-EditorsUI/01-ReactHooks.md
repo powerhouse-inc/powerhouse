@@ -53,6 +53,33 @@ It's important to note that a function should only be named and treated as a hoo
 
 All of the data used by these hooks is ultimately derived from the `Reactor`, which manages the asynchronous eventually consistent state of drives and documents. Learn more about the [Reactor](/academy/Reference/Reactor/WorkingWithTheReactor).
 
+### Editors get their document as props
+
+A host such as Connect renders an editor's component with the open `document` and a `dispatch` bound to it as props. `EditorProps<TDocument, TAction>` from `document-model` types both for the editor's document model:
+
+```tsx
+import type { EditorProps } from "document-model";
+import type { TodoAction, TodoDocument } from "document-models/todo";
+
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<TodoDocument, TodoAction>) {
+  // ...
+}
+```
+
+Bare `EditorProps` leaves `document` and `dispatch` optional. A drive app gets the drive as `document`.
+
+### What the selection hooks read
+
+The host also renders the editor inside an [`EditorDocumentProvider`](#editordocumentprovider), and a drive app inside a [`DriveProvider`](#driveprovider). The `useSelected*` hooks read the nearest provider first, and the app-wide selection only without one:
+
+- `useSelectedDocument`, `useSelectedDocumentId`, `useSelectedDocumentOfType` and the generated `useSelected<Model>Document` read the editor's document.
+- `useSelectedDrive`, `useSelectedDriveId`, `useSelectedNode`, `useSelectedFolder` and the hooks built on them (items in the selected drive or folder, node actions) read the drive app's drive, node and folder.
+
+So components inside an editor call the generated hook instead of receiving the document as props.
+
 ### Dispatch Function
 
 Many hooks return a `dispatch` function for modifying documents. The dispatch function has this signature:
@@ -61,13 +88,17 @@ Many hooks return a `dispatch` function for modifying documents. The dispatch fu
 function dispatch(
   actionOrActions: Action | Action[] | undefined,
   onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
 ): void;
 ```
 
 **Parameters:**
 
 - `actionOrActions` — The action or array of actions to dispatch to the document
-- `onErrors` — Optional callback invoked with any errors that occurred during action execution
+- `onErrors` — Optional callback invoked with any errors that occurred during action execution, or with why nothing was dispatched
+- `onSuccess` — Optional callback invoked with the updated document
+
+`dispatch` stays the same function while the document's id does, and it always dispatches against the latest document, so it is safe in effect and callback dependencies. See [`useDispatch`](#usedispatch).
 
 ---
 
@@ -75,6 +106,8 @@ function dispatch(
 
 | Category              | Hooks                                                                                                                        |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Editor & Drive**    | `EditorDocumentProvider`, `DriveProvider`, `useEditorDocumentContext`, `useDriveContext`, `useEditorModuleFor`, `useNodeTarget` |
+| **Dispatch**          | `useDispatch`, `createDispatch`                                                                                              |
 | **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType`                       |
 | **Document by ID**    | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType`                                                                  |
 | **Document Cache**    | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync`                |
@@ -96,7 +129,7 @@ function dispatch(
 
 ### `useSelectedDocumentId`
 
-Returns the ID of the currently selected document.
+Returns the ID of the selected document: the editor's document inside an `EditorDocumentProvider`, else the drive app's open document inside a `DriveProvider`, else the app's selection.
 
 ```typescript check
 function useSelectedDocumentId(): string | undefined;
@@ -108,7 +141,7 @@ function useSelectedDocumentId(): string | undefined;
 
 ### `useSelectedDocument`
 
-Returns the selected document along with a dispatch function. Throws error if no document selected.
+Returns the selected document along with a dispatch function: the editor's document and dispatch inside an `EditorDocumentProvider`, else the app's selection. Throws error if no document selected.
 
 ```typescript
 function useSelectedDocument(): readonly [
@@ -242,6 +275,152 @@ function BudgetEditor() {
 
   return <div>{/* editor UI */}</div>;
 }
+```
+
+---
+
+## Editor & Drive Contexts
+
+Hosts provide these around the editors and drive apps they render. Inside them, the `useSelected*` hooks read the provider first (see [What the selection hooks read](#what-the-selection-hooks-read)).
+
+### `EditorDocumentProvider`
+
+Gives the components below an editor's document and dispatch. A host renders the editor inside it with the same pair it passes as props. An editor inside another editor gets its own provider; hooks read the nearest one.
+
+```typescript
+function EditorDocumentProvider(props: {
+  document: PHDocument;
+  dispatch: DocumentDispatch;
+  children: ReactNode;
+}): JSX.Element;
+```
+
+---
+
+### `useEditorDocumentContext`
+
+Returns the nearest editor's `[document, dispatch]`, or `undefined` outside one.
+
+```typescript
+function useEditorDocumentContext():
+  | readonly [PHDocument, DocumentDispatch]
+  | undefined;
+```
+
+---
+
+### `DriveProvider`
+
+Gives the components below a drive app's drive. Without `open`, opening a node navigates the app's router in that drive. With it, the host decides, for example by keeping the open node in local state; `preload` warms a node the same way.
+
+```typescript
+function DriveProvider(props: {
+  value: DriveContextValue;
+  children: ReactNode;
+}): JSX.Element;
+
+type DriveContextValue = {
+  drive: DocumentDriveDocument;
+  dispatch: DocumentDispatch<DocumentDriveAction>;
+  /** The open folder; undefined at the drive's root or on a document. */
+  folder?: FolderNode;
+  /** The open node, a folder or a document. */
+  nodeId?: string;
+  open?: (node: Node | undefined, options?: PHNavigateOptions) => void;
+  preload?: (node: Node | undefined) => void;
+};
+```
+
+---
+
+### `useDriveContext`
+
+Returns the nearest drive app's `DriveContextValue`, or `undefined` outside one.
+
+```typescript
+function useDriveContext(): DriveContextValue | undefined;
+```
+
+---
+
+### `useNodeTarget`
+
+Returns where a node navigates to: in the drive app's drive inside a `DriveProvider`, else in the open drive. Use it for a link's target, e.g. with [`useLinkProps`](#uselinkprops).
+
+```typescript
+function useNodeTarget(node: Node | undefined): PHNavigationTarget | undefined;
+```
+
+---
+
+### `useEditorModuleFor`
+
+Returns the editor for a document: its `preferredEditor` if that editor edits the document's type, else the first editor installed for the type.
+
+```typescript
+function useEditorModuleFor(
+  document: PHDocument | null | undefined,
+): EditorModule | undefined;
+```
+
+---
+
+### Rendering an editor or drive app yourself
+
+A host, or a project route, that renders an editor passes it `document` and `dispatch` and wraps it in `EditorDocumentProvider` with the same pair:
+
+```tsx
+import {
+  EditorDocumentProvider,
+  useDocumentById,
+  useEditorModuleFor,
+} from "@powerhousedao/reactor-browser";
+
+function HostedEditor({ documentId }: { documentId: string }) {
+  const [document, dispatch] = useDocumentById(documentId);
+  const editor = useEditorModuleFor(document);
+  if (!document || !editor) return null;
+  const Editor = editor.Component;
+  return (
+    <EditorDocumentProvider document={document} dispatch={dispatch}>
+      <Editor document={document} dispatch={dispatch} />
+    </EditorDocumentProvider>
+  );
+}
+```
+
+A drive app goes inside `DriveProvider` the same way, with the drive as `document`:
+
+```tsx
+<DriveProvider value={{ drive, dispatch, folder, nodeId }}>
+  <DriveApp document={drive} dispatch={dispatch} />
+</DriveProvider>
+```
+
+---
+
+## Dispatch
+
+### `useDispatch`
+
+Returns `[document, dispatch]` for a document. `dispatch` is the same function while the document's id stays the same, and it always dispatches against the latest `document` passed in.
+
+```typescript
+function useDispatch<TDocument = PHDocument, TAction = Action>(
+  document: TDocument | undefined,
+): readonly [TDocument | undefined, DispatchFn<TAction>];
+```
+
+---
+
+### `createDispatch`
+
+The dispatch `useDispatch` returns, outside React: it dispatches to the document `getDocument` returns when it runs.
+
+```typescript
+function createDispatch<TDocument = PHDocument, TAction = Action>(
+  getDocument: () => TDocument | undefined,
+): DispatchFn<TAction>;
 ```
 
 ---
@@ -504,7 +683,7 @@ function DriveList() {
 
 ### `useSelectedDriveId`
 
-Returns the ID of the currently selected drive.
+Returns the ID of the selected drive: the drive app's drive inside a `DriveProvider`, else the app's selection.
 
 ```typescript
 function useSelectedDriveId(): string | undefined;
@@ -514,7 +693,7 @@ function useSelectedDriveId(): string | undefined;
 
 ### `useSelectedDrive`
 
-Returns the selected drive along with a dispatch function. **Throws an error if no drive is selected.**
+Returns the selected drive along with a dispatch function: the drive app's inside a `DriveProvider`, else the app's selection. **Throws an error if no drive is selected.**
 
 ```typescript
 function useSelectedDrive(): [
@@ -595,7 +774,7 @@ function useSetSelectedDrive(): (
 
 ### `useSelectedNode`
 
-Returns the currently selected node (file or folder).
+Returns the selected node (file or folder): the drive app's open node inside a `DriveProvider`, else the app's selection.
 
 ```typescript
 function useSelectedNode(): Node | undefined;
@@ -654,7 +833,7 @@ function useCloseNode(nodeId: string | null | undefined): () => void;
 
 ### `useSelectedFolder`
 
-Returns the selected folder. Returns `undefined` if the selected node is not a folder.
+Returns the selected folder: the drive app's open folder inside a `DriveProvider`, else the app's selection. Returns `undefined` if the selected node is not a folder.
 
 ```typescript
 function useSelectedFolder(): FolderNode | undefined;
