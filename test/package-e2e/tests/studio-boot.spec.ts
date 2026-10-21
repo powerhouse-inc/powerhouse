@@ -41,14 +41,17 @@ function collectBootErrors(page: Page): string[] {
   return errors;
 }
 
-/** Loads Connect and waits for its sidebar, or the first module error. */
-async function bootOf(page: Page, errors: string[], timeout: number) {
-  await page.goto("/");
-  const sidebar = page.locator("#sidebar");
+/** Loads Connect and polls `settled` until it holds or `timeout` passes. */
+async function load(
+  page: Page,
+  timeout: number,
+  settled: () => Promise<boolean>,
+) {
+  // "commit": a cold dev server holds module requests while it pre-bundles,
+  // so the load event can outlast the default 30s navigation timeout.
+  await page.goto("/", { waitUntil: "commit", timeout });
   await expect
-    .poll(async () => errors.length > 0 || (await sidebar.isVisible()), {
-      timeout,
-    })
+    .poll(settled, { timeout })
     .toBe(true)
     .catch(() => undefined);
 }
@@ -72,13 +75,22 @@ test("connect studio boots in a project installed from the published packages", 
 
   // The first load may find a dependency the scan missed; Vite then
   // re-bundles and reloads the page. Let that settle before asserting.
+  // Errors during the re-bundle are expected, so only the sidebar ends it.
   const warmUp = await context.newPage();
-  await bootOf(warmUp, collectBootErrors(warmUp), 120_000);
+  const warmSidebar = warmUp.locator("#sidebar");
+  await load(warmUp, 120_000, () => warmSidebar.isVisible()).catch(
+    () => undefined,
+  );
   await warmUp.close();
 
   const page = await context.newPage();
   const errors = collectBootErrors(page);
-  await bootOf(page, errors, 60_000);
+  const sidebar = page.locator("#sidebar");
+  await load(
+    page,
+    60_000,
+    async () => errors.length > 0 || (await sidebar.isVisible()),
+  );
   expect(errors, "Connect boots without module errors").toEqual([]);
   await expect(page.locator("#sidebar")).toBeVisible();
 });
