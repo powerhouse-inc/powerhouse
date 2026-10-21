@@ -11,10 +11,11 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actions,
-  baseReducerVersion,
-  redo,
-  retract,
-  undo,
+  baseReducerCapabilities,
+  serializeByKey,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoAvailabilityOf,
   DEFAULT_SIGNATURE_POLICY,
   PEER_CAPABILITIES,
   normalizeDocumentModelVersion,
@@ -1233,34 +1234,49 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
-    switch (baseReducerVersion(document.header)) {
-      case 1:
-      case 2: {
-        const readable = await this.readableScopes(
-          document,
-          { branch },
-          signal,
-        );
-        return {
-          canUndo:
-            readable(scope) && (document.header.revision[scope] ?? 0) > 0,
-          canRedo: false,
-        };
-      }
-      case 3: {
-        const targets = await this.undoRedoTargets(
-          document,
-          documentId,
-          scope,
-          branch,
-          signal,
-        );
-        return {
-          canUndo: targets.undoTarget !== undefined,
-          canRedo: targets.redoTarget !== undefined,
-        };
-      }
+    const caps = baseReducerCapabilities(document.header);
+    const readable = (await this.readableScopes(document, { branch }, signal))(
+      scope,
+    );
+    const targets =
+      readable && undoNeedsTargets(caps)
+        ? await this.reactor.resolveUndoRedo(documentId, scope, branch, signal)
+        : undefined;
+    return undoRedoAvailabilityOf(
+      caps,
+      targets,
+      document.header.revision[scope] ?? 0,
+      readable,
+    );
+  }
+
+  async undoRedoTargets(
+    documentIdentifier: string,
+    scope: string = "global",
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    const branch = view?.branch ?? "main";
+    const documentId = await this.resolveReference(
+      documentIdentifier,
+      branch,
+      signal,
+    );
+    const document = await this.undoRedoDocument(
+      documentId,
+      scope,
+      branch,
+      signal,
+    );
+    const readable = await this.readableScopes(
+      document,
+      { branch, subject: view?.subject },
+      signal,
+    );
+    if (!readable(scope)) {
+      return {};
     }
+    return this.reactor.resolveUndoRedo(documentId, scope, branch, signal);
   }
 
   /**
@@ -2203,9 +2219,9 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Resolves and submits one at a time per (identifier, scope, branch), in call
-   * order, so each resolves against the write before it. Taken before any
-   * await; a slug and its id are not serialized against each other.
+   * One at a time per (identifier, scope, branch), in call order, so each
+   * resolves against the write before it. A slug and its id are not
+   * serialized against each other.
    */
   private undoOrRedo<TDocument extends PHDocument>(
     type: "UNDO" | "REDO",
@@ -2214,10 +2230,10 @@ export class ReactorClient implements IReactorClient {
     branch: string,
     signal: AbortSignal | undefined,
   ): Promise<TDocument> {
-    const key = JSON.stringify([documentIdentifier, scope, branch]);
-    const run = (this.undoRedoChains.get(key) ?? Promise.resolve())
-      .catch(() => undefined)
-      .then(() =>
+    return serializeByKey(
+      this.undoRedoChains,
+      JSON.stringify([documentIdentifier, scope, branch]),
+      () =>
         this.resolveAndSubmitUndoOrRedo<TDocument>(
           type,
           documentIdentifier,
@@ -2225,16 +2241,7 @@ export class ReactorClient implements IReactorClient {
           branch,
           signal,
         ),
-      );
-    this.undoRedoChains.set(key, run);
-    void run
-      .catch(() => undefined)
-      .finally(() => {
-        if (this.undoRedoChains.get(key) === run) {
-          this.undoRedoChains.delete(key);
-        }
-      });
-    return run;
+    );
   }
 
   private async resolveAndSubmitUndoOrRedo<TDocument extends PHDocument>(
@@ -2262,40 +2269,16 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
-    switch (baseReducerVersion(document.header)) {
-      case 1:
-      case 2:
-        return this.execute<TDocument>(
-          documentId,
-          branch,
-          [type === "UNDO" ? undo(1, scope) : redo(1, scope)],
-          signal,
-        );
-      case 3: {
-        const targets = await this.undoRedoTargets(
-          document,
-          documentId,
-          scope,
-          branch,
-          signal,
-        );
-        const target =
-          type === "UNDO" ? targets.undoTarget : targets.redoTarget;
-        if (target === undefined) {
-          const verb = type === "UNDO" ? "undo" : "redo";
-          throw new Error(
-            `Cannot ${verb}: nothing to ${verb} in scope history`,
-          );
-        }
-        // Submitted as RETRACT so the client's signature covers the target.
-        return this.execute<TDocument>(
-          documentId,
-          branch,
-          [retract(target, scope)],
-          signal,
-        );
-      }
-    }
+    const caps = baseReducerCapabilities(document.header);
+    const targets = undoNeedsTargets(caps)
+      ? await this.undoRedoTargets(documentId, scope, { branch }, signal)
+      : undefined;
+    return this.execute<TDocument>(
+      documentId,
+      branch,
+      undoRedoActions(caps, type, scope, targets),
+      signal,
+    );
   }
 
   private async undoRedoDocument(
@@ -2310,21 +2293,6 @@ export class ReactorClient implements IReactorClient {
       undefined,
       signal,
     );
-  }
-
-  /** Resolved by the reactor; a scope the subject may not read has none. */
-  private async undoRedoTargets(
-    document: PHDocument,
-    documentId: string,
-    scope: string,
-    branch: string,
-    signal: AbortSignal | undefined,
-  ): Promise<UndoRedoTargets> {
-    const readable = await this.readableScopes(document, { branch }, signal);
-    if (!readable(scope)) {
-      return {};
-    }
-    return this.reactor.resolveUndoRedo(documentId, scope, branch, signal);
   }
 
   /**

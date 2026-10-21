@@ -57,6 +57,7 @@ export type RefusedMethods =
   // Pieces build their own undo with the model's action creators.
   | "undo"
   | "redo"
+  | "undoRedoTargets"
   | "undoRedoAvailability"
   // Drive reads take no subject; pieces read a drive with `get`.
   | "drives";

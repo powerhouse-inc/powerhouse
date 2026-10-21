@@ -1,4 +1,8 @@
 import type {
+  UndoRedoAvailability,
+  UndoRedoTargets,
+} from "@powerhousedao/shared/document-model";
+import type {
   DocumentDriveDocument,
   DriveInput,
   FolderNode,
@@ -109,11 +113,7 @@ export type UpgradeDocumentOptions = {
   maxConflictRetries?: number;
 };
 
-/** Whether an UNDO or a REDO of one scope would succeed now. */
-export type UndoRedoAvailability = {
-  canUndo: boolean;
-  canRedo: boolean;
-};
+export type { UndoRedoAvailability };
 
 /** Where and what a new document is created, to select its protocolVersions. */
 export type CreateProtocolVersionsOptions = {
@@ -776,8 +776,12 @@ export interface IReactorClient {
   /**
    * Undoes the last applied operation of a scope and waits for completion.
    *
-   * On base-reducer 3 the reactor resolves the target and the client submits
-   * a RETRACT of it signed by its own signer; on 1 and 2 it submits UNDO.
+   * On base-reducer 3 the client resolves the target with
+   * {@link undoRedoTargets} and submits a RETRACT of it signed by its own
+   * signer; on 1 and 2 it submits UNDO. The RETRACT names the row this call
+   * saw as latest, so an edit that lands in between is not undone. When the
+   * target is retracted or gone by the time the RETRACT runs, the write
+   * fails with `RetractionRefusedError` and nothing is re-resolved or retried.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"
@@ -796,10 +800,10 @@ export interface IReactorClient {
   /**
    * Redoes the last undo of a scope and waits for completion.
    *
-   * On base-reducer 3 the reactor resolves the last live retraction and the
-   * client submits a RETRACT of it signed by its own signer; on 1 and 2 it
-   * submits REDO. Applied content after the undo
-   * leaves nothing to redo.
+   * On base-reducer 3 the client resolves the last live retraction with
+   * {@link undoRedoTargets} and submits a RETRACT of it signed by its own
+   * signer, under {@link undo}'s race rules; on 1 and 2 it submits REDO.
+   * Applied content after the undo leaves nothing to redo.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"
@@ -814,6 +818,23 @@ export interface IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<TDocument>;
+
+  /**
+   * The rows a base-reducer 3 {@link undo} and {@link redo} of `scope` would
+   * retract now, resolved by the reactor. A scope the subject may not read
+   * has none. Below 3 there are none: UNDO and REDO name no target.
+   *
+   * @param documentIdentifier - Target document id or slug
+   * @param scope - Optional scope, defaults to "global"
+   * @param view - Optional branch and subject
+   * @param signal - Optional abort signal to cancel the request
+   */
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
 
   /**
    * Whether {@link undo} and {@link redo} would find a target in a scope now.

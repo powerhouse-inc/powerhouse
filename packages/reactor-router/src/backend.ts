@@ -19,6 +19,7 @@ import {
   type ReactorInfo,
   type SearchFilter,
   type UndoRedoAvailability,
+  type UndoRedoTargets,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -230,6 +231,12 @@ export interface IRoutableBackend {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<TDocument>;
+  undoRedoTargets?(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
   undoRedoAvailability?(
     documentIdentifier: string,
     scope?: string,
@@ -351,6 +358,8 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
       client.undo(identifier, scope, branch, signal),
     redo: (identifier, scope, branch, signal) =>
       client.redo(identifier, scope, branch, signal),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      client.undoRedoTargets(identifier, scope, view, signal),
     undoRedoAvailability: (identifier, scope, branch, signal) =>
       client.undoRedoAvailability(identifier, scope, branch, signal),
   };

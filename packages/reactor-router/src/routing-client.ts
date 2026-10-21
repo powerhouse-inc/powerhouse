@@ -24,6 +24,7 @@ import {
   type PropagationMode,
   type SearchFilter,
   type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
@@ -83,6 +84,7 @@ type OptionalMember =
   | "getDocumentModelModule"
   | "undo"
   | "redo"
+  | "undoRedoTargets"
   | "undoRedoAvailability";
 
 function declared<K extends OptionalMember>(
@@ -900,6 +902,26 @@ export class RoutingReactorClient implements IReactorClient {
           signal,
         ),
       ATTEMPT.write,
+    );
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.dispatcher.onDocument(
+      "undoRedoTargets",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undoRedoTargets")(
+          documentIdentifier,
+          scope,
+          view,
+          signal,
+        ),
+      ATTEMPT.read,
     );
   }
 

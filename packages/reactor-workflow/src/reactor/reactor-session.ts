@@ -76,6 +76,7 @@ const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
   getCreateProtocolVersions: true,
   undo: true,
   redo: true,
+  undoRedoTargets: true,
   undoRedoAvailability: true,
 };
 

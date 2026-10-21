@@ -1,3 +1,4 @@
+import type { UndoRedoTargets } from "@powerhousedao/shared/document-model";
 import type {
   Action,
   DocumentModelModule,
@@ -133,11 +134,7 @@ export type BatchLoadResult = {
   jobs: Record<string, JobInfo>;
 };
 
-/** The action ids a base-reducer 3 UNDO and REDO on a scope would retract. */
-export type UndoRedoTargets = {
-  undoTarget?: string;
-  redoTarget?: string;
-};
+export type { UndoRedoTargets };
 
 /**
  * The main Reactor interface that serves as a facade for document operations.
