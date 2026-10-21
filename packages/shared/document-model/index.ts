@@ -25,6 +25,7 @@ export * from "./retraction.js";
 export * from "./schemas.js";
 export * from "./signature-policy.js";
 export * from "./signatures.js";
+export * from "./undo-redo-plan.js";
 export * from "./state.js";
 export type * from "./types.js";
 export * from "./upgrades.js";
