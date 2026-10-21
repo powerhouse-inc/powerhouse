@@ -1,10 +1,10 @@
-# Subgraph Migration Guide (v6)
+# Subgraph migration guide
 
 :::tip
-This guide covers the **breaking changes** to the GraphQL subgraph API introduced in the v6 Reactor. If you were querying the old `/graphql/document-drive` or `/graphql/system` endpoints, or building custom subgraphs, **this migration is required**.
+The v5-to-v6 Reactor upgrade changed client endpoints and document arguments. Use the client guide below if you still query the v5 `/graphql/document-drive` or `/graphql/system` APIs. The later [class-authoring migration](#migrate-a-subgraph-class) preserves existing v6 endpoints.
 :::
 
-## Overview
+## v5-to-v6 client migration
 
 The v6 Reactor replaced the legacy hardcoded subgraphs (`document-drive`, `system`) with a new architecture:
 
@@ -502,97 +502,67 @@ subscription {
 | N/A (new)                       | `<ModelName> { createDocument(...) }`                                          | document-model         |
 | N/A (new)                       | `<ModelName> { <operationName>(documentIdOrSlug, input) }`                     | document-model         |
 
-## Migrating custom subgraphs
+## Migrate a subgraph class
 
-### Legacy pattern
+Upgrade your subgraph authoring code before its next build. A converted subgraph keeps its route name, so the host serves it at the same HTTP and GraphQL endpoints and WebSocket and SSE mounts. `ph migrate` converts only the class shapes listed in this section and refuses every other class. It also refuses a class that package code can reach through a module namespace used other than to read a named member. Review and test each converted subgraph.
 
-Custom subgraphs exported a `resolvers` object and a `typeDefs` string, using `ctx.driveServer` for data access:
+### Convert the package
 
-```typescript
-// Legacy custom subgraph
-import { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper";
-import { Context } from "../types";
+1. Upgrade the CLI and `@powerhousedao/reactor-api` together. Use a host that supports the new subgraph protocol.
+2. Run `ph migrate --subgraphs-only` in the package root to convert subgraphs without upgrading packages or bundling migrations. Plain `ph migrate` also converts subgraphs before its other migrations. The transform converts the released template and the hand edits listed after these steps into `schema.graphql(...)`.
+   For each converted module, migration keeps its barrel namespace export (such as `export * as BillingSubgraph from "./billing/index.js"`), so its other exports remain reachable. It adds a direct class export and `SubgraphCheck` alongside the namespace, using an alias when the namespace already takes the class name. Namespace exports for modules that were not converted stay unchanged.
+3. Review each converted class. Preserve the route name as `static override readonly subgraphName = "existing-name"`. Put SDL, resolver coordinates, and the resolver factory in `getSchema(schema: SchemaBuilder<YourClass>)`.
+4. Move instance access into the factory's `subgraph` parameter. Remove instance schema fields, custom path configuration, and the subscription flag. The host derives subscriptions from the schema's operation roots.
+5. Make lifecycle methods overrides that call `super`. Make teardown safe after partial setup. `onDisconnect` runs when the subgraph is unregistered while the process continues. It is not a process-exit hook.
+6. Export concrete classes through the package's `subgraphs/index.ts` and `subgraphs/*/index.ts` entries. Remove subgraph entries from `definitionSources`, which now covers document models only.
+7. Run `ph model check`, `ph build`, and your resolver tests. Compare your schema and resolver coordinates with the previous package before publishing.
 
-export const typeDefs = `
-  type Query {
-    myCustomQuery(driveId: String!): [String!]!
-  }
-`;
+The codemod generates resolver coordinates and removes the released resolver factory's `Record<string, unknown>` return annotation so TypeScript can infer its map. It keeps the constructor and lifecycle code. It marks `onSetup` and `onDisconnect` as `override`, and inserts `await super.onSetup()` or `await super.onDisconnect()` at the start of a hook that does not call it. It converts a class only when the class has the shape of the released template or of these hand edits:
 
-export const resolvers: GraphQLResolverMap<Context> = {
-  Query: {
-    myCustomQuery: async (_parent, args, ctx: Context) => {
-      const drive = await ctx.driveServer.getDrive(args.driveId);
-      // ... process drive data
-      return results;
-    },
-  },
-};
-```
+- `name` is a lowercase kebab-case string literal. `typeDefs` is a `gql` literal from `graphql-tag`, written inline or held in an imported or module `const`. `hasSubscriptions`, `path`, and `additionalContextFields` hold literals or imported or module `const` values.
+- `resolvers` is an inline resolver map, or a call such as `getResolvers(this)` to a factory declared as a named function or `const`. The factory can come through an import, a re-export alias, a star barrel, or a default export. Classes can share one factory.
+- The factory takes no parameter, or one `subgraph` parameter without a type or typed as `BaseSubgraph`, the subgraph class, `any`, or `unknown`. Its body can declare `const reactor = subgraph.reactorClient` for any service that the `BaseSubgraph` constructor sets. Then it returns a resolver map.
+- A resolver map is an object literal that can contain other object literals. Each value in it is a function, a method, a literal, or an identifier that names an import or a module `const`, written as `example: example` or as the shorthand `{ example }`. An identifier value must be callable, such as an imported `function` declaration or a `const` arrow function. The exception is the value for a scalar type, such as `Date: DateScalar`.
+- Resolver functions can read the request context, `this.member`, `subgraph.member`, and `subgraphName`. An inline resolver map does not use the class's `super`. Elsewhere, instance code uses `this` only as `this.member` or as the factory argument. It never assigns a `BaseSubgraph` service such as `reactorClient`. That rules out `=`, compound assignment, `++` and `--`, `delete`, destructuring targets, and `for...of` and `for...in` heads. Other fields, the constructor, and lifecycle method bodies stay as written apart from the inserted `super` call, so `onSetup` can await `this.reactorClient`.
 
-### v6 pattern
+Migrate refuses every other class before it edits any file, and reports each refusal with its file and line. Migration removes the `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, `path`, and `additionalContextFields` fields, so it also refuses a matching class that package code, including the class body, references outside its declaration, an import or export, or its factory's parameter type. For example, `new`, `instanceof`, a type annotation, or passing the class as a value refuses it. It also refuses a matching class that a namespace exposes through `import * as`, a named import of an `export * as` namespace, `import()`, or `require` when package code uses that namespace other than in an export or to read a named member such as `ns.schema` or `ns["schema"]`, for example in `Object.values(ns)`, a spread, an argument, a loop, or a dynamic key such as `ns[key]`. An `import()` or `require` whose path is neither a string literal nor a template literal without substitutions, anywhere in the package, refuses every matching migration candidate, because migrate can't tell which module it loads. It also refuses a matching class when other package code uses its factory, and when its factory needs an edit in a file that contains a refused class. A file that contains a refused class stays unchanged. Read `subgraphName` where code read `name`.
 
-Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through `subgraph.reactorClient`:
+Fix the reported cause and run the migration again, or migrate the class by hand.
 
-```typescript
-// v6 custom subgraph — subgraphs/my-custom/resolvers.ts
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+Use [Subgraph classes](./08-SubgraphClasses.md) for typed entries, the SDL wrapper, and inheritance examples. A former config-function declaration also becomes a `BaseSubgraph<Ctx>` subclass. The subgraph generation command has no style flag. The document-model `--code-first` option stays.
 
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
+### Fix authoring errors
 
-  return {
-    Query: {
-      myCustomQuery: async (_parent: unknown, args: { driveId: string }) => {
-        const children = await reactorClient.getOutgoingRelationships(
-          args.driveId,
-          "child",
-        );
-        // ... process documents
-        return results;
-      },
-    },
-  };
-};
-```
+`ph build` checks TypeScript before definition validation. These errors can appear before the coded migration diagnostic.
 
-```typescript
-// v6 custom subgraph — subgraphs/my-custom/schema.ts
-import { gql } from "graphql-tag";
-import type { DocumentNode } from "graphql";
+| Error                                                                                | Fix                                                                       |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| TS2416 on `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, or `path`             | Old-style subgraph. Run `ph migrate`, review the conversion, and rebuild. |
+| TS2540 when assigning `name`, `typeDefs`, `resolvers`, `hasSubscriptions`, or `path` | Old-style subgraph. Run `ph migrate`, review the conversion, and rebuild. |
 
-export const schema: DocumentNode = gql`
-  type Query {
-    myCustomQuery(driveId: String!): [String!]!
-  }
-`;
-```
+### Reuse code
 
-Generate the scaffolding with:
+Move shared state and hooks into one abstract base without a name. Use plain schema fragments with public capability interfaces. Do not use mixin factories. Preserve a typed parent's entries with `...super.getSchema(schema)`. Call `schema.replaceParentSchema()` when replacing the parent schema intentionally. Typed entries and SDL cannot be mixed, including across inheritance.
 
-```bash
-ph generate --subgraph my-custom
-```
+A concrete literal-name parent cannot be renamed by a subclass (TS2417). Use an abstract base, or declare the extensible parent's name with `: string` and accept runtime-only name validation. A `SubgraphCheck` wrong-class assertion means `SchemaBuilder<X>` names the wrong instance type.
 
-### Key differences
+### Host and package compatibility
 
-| Aspect               | Legacy                          | v6                                              |
-| -------------------- | ------------------------------- | ----------------------------------------------- |
-| Data access          | `ctx.driveServer`               | `subgraph.reactorClient`                        |
-| Schema format        | Template literal string         | `gql` tagged template (`DocumentNode`)          |
-| Resolver export      | `export const resolvers`        | `export const getResolvers = (subgraph) => ...` |
-| Relational DB access | Not available                   | `subgraph.relationalDb`                         |
-| Attachments          | Not available                   | `subgraph.attachmentsFor(ctx)`                  |
-| File structure       | `resolvers.ts` + `type-defs.ts` | `resolvers.ts` + `schema.ts` + `index.ts`       |
-| Registration         | Manual                          | Automatic via `ph generate`                     |
+| Host     | Package                     | Result                                                                                                                                                                                   |
+| -------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New host | Published old-style package | Served through the legacy adapter. One development-only notice per class points to `ph migrate`. No production console notice.                                                           |
+| New host | New class-based package     | Served through protocol version 1.                                                                                                                                                       |
+| Old host | New class-based package     | Refused. The generated `subgraphs/index.ts` throws on import and asks for a newer host, so the host serves none of the package's subgraphs and logs why. Its document models still load. |
+
+Compatibility for published packages does not permit old authoring code in developer tooling. Build, check, generate, publish, prepack, and Vetra reject it with migration guidance. Nameless classes are refused unless they are shared ancestors of exported concrete classes in the same entry.
+
+SDL that declares a subscription root now gets WebSocket and SSE support even if the old package omitted its subscription flag. Existing mounts keep their paths.
 
 ## Migration checklist
 
-- [ ] Update all GraphQL client queries that target `/graphql/document-drive` to use `/graphql/r` or the appropriate document-model subgraph
-- [ ] Replace `drive` queries with `document(idOrSlug)` or `findDocuments`
-- [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
-- [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
-- [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
-- [ ] Replace `ctx.driveServer` calls with `subgraph.reactorClient` methods
-- [ ] Update schema files from plain strings to `gql` tagged templates
-- [ ] Regenerate custom subgraph scaffolding with `ph generate --subgraph <name>`
+- [ ] Point v5 clients at `/graphql/r` or the appropriate document-model subgraph.
+- [ ] Use `idOrSlug`, `sourceIdOrSlug`, `targetIdOrSlug`, and `documentIdOrSlug` for v6 document arguments.
+- [ ] Replace strand-based sync with `touchChannel` and `pollSyncEnvelopes`.
+- [ ] Use `documentChanges` for real-time updates.
+- [ ] Convert custom subgraphs to `BaseSubgraph` classes with static `getSchema`.
+- [ ] Run `ph model check`, `ph build`, and resolver tests before publishing.

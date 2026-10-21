@@ -14,6 +14,7 @@ import {
 import {
   AuthorizationPolicy,
   getDbClient,
+  SUBGRAPH_PROTOCOL,
   type Context,
   type IAuthorizationService,
 } from "@powerhousedao/reactor-api";
@@ -328,10 +329,8 @@ async function harness(authEnforcement: boolean): Promise<Harness> {
     authorizationService: OPEN,
     relationalDb,
   } as never);
-  const resolvers = subgraph.resolvers as Record<
-    string,
-    Record<string, Resolver>
-  >;
+  const resolvers = runtime.subgraph[SUBGRAPH_PROTOCOL]().bind(subgraph)
+    .resolvers as Record<string, Record<string, Resolver>>;
   return {
     module: built,
     publisher: client,

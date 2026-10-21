@@ -86,17 +86,10 @@ export async function minimalBackupDocument(
   }
 }
 
-export async function warnSubgraphTypeConflicts(
-  workingDir: string,
-): Promise<void> {
-  let warnings: string[];
-  try {
-    warnings = await lintSubgraphTypes(workingDir);
-  } catch (error) {
-    logger.warn(
-      `Failed to check subgraph type names: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    return;
+export async function checkSubgraphs(workingDir: string): Promise<void> {
+  const lint = await lintSubgraphTypes(workingDir);
+  for (const warning of lint.warnings) logger.warn(`⚠️ ${warning}`);
+  if (lint.errors.length > 0) {
+    throw new Error(lint.errors.join("\n"));
   }
-  for (const warning of warnings) logger.warn(`⚠️ ${warning}`);
 }

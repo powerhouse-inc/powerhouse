@@ -10,8 +10,8 @@ repeat them.
 | Tool | Version / note |
 |---|---|
 | Node | `>=24` (`engines.node`) |
-| pnpm | 11.x locally; CI installs `latest` via `pnpm/action-setup` |
-| **bun** | 1.3.x — **required to build.** `ph-cli`, `ph-cmd` and `registry` have `postbuild` steps that shell out to it, so `pnpm build` cannot finish without it. `test/codegen` also runs on `bun test` |
+| pnpm | Match the target workflow; consult the current [prerequisites](../CONTRIBUTING.md#prerequisites) |
+| **bun** | Required by CLI and registry postbuild steps and `test/codegen`. Match the target workflow's version. |
 | Nx | 22.7.1 — used for release versioning/changelogs and task graph |
 | TypeScript | 6.0.3 (pinned in the `catalog:`) |
 | Playwright | `playwright install chromium` is needed before `pnpm --filter=@powerhousedao/reactor-browser run test`, otherwise most of that package's test files are **silently skipped** |
@@ -42,8 +42,10 @@ entry:
 "allowImportingTsExtensions": true,
 ```
 
-**Consequence:** `tsc --build` and the test suites work against workspace *source*,
-not `dist/`. Nothing has to be built before you can typecheck or test.
+TypeScript can resolve workspace source through this condition. Test and Node
+runtime resolution depends on each runner's configuration. Consumer and packed
+package tests can require rebuilt `dist` output. Follow the current
+[package prerequisites](../CONTRIBUTING.md#package-prerequisites).
 
 Vite and Vitest configs mirror it where needed, e.g. `apps/connect`:
 
@@ -178,11 +180,11 @@ behaviour is verified instead.
 
 | Command | Does |
 |---|---|
-| `pnpm lint` | `pnpm -r --workspace-concurrency=1 lint` — ESLint 10 (flat config, 25 KB `eslint.config.js`) |
+| `pnpm lint` | Root Oxlint and Oxfmt checks; see `.oxlintrc.json` and `.oxfmtrc.json` |
 | `pnpm check-circular-imports` | `dpdm` with `--exit-code circular:1` |
 | `pnpm knip` | Unused exports/dependencies (`knip.json`) |
 | `static-x.json` | Comment linting on **changed lines only** — `ts/comments/long` (max 1 line / 83 chars) and `ts/comments/llm-tells`, enabled in `reactor`, `reactor-drive`, `reactor-group` with `static-x-baseline.json` files |
-| Prettier | `.prettierrc.json`; `lint-staged` runs `eslint --fix` on staged JS/TS |
+| `pnpm lint:fix` | Oxlint fixes followed by Oxfmt; `lint-staged` uses the same tools for staged JS/TS |
 | commitlint | Conventional commits; header max 200 chars; subject case restricted |
 
 `LINT-WARNINGS.md` (54 KB) is the tracked backlog of existing warnings.
@@ -253,7 +255,6 @@ The repo is developed on Windows as well as Linux, and this shows up in conventi
 |---|---|
 | `docs/adr/` | `0001-lazy-drive-sync.md`, `0002-reactor-browser-client-interface.md`. The `/adr` skill writes new ones |
 | `docs/specs/` | `auth-scope.md` (the auth-scope design — long and authoritative), `gql-gen.md`, `relational-db-processor.md`, `migrate-codegen-fixes.md`, `template.md` |
-| `docs/plans/`, `docs/superpowers/` | Design plans and captured evidence |
 | `packages/reactor/CLAUDE.md`, `docs/ARCHITECTURE.md`, `src/sync/design.md` | The reactor, from short to long |
 | `packages/reactor-api/ARCHITECTURE.md` | The HTTP/gateway adapter split |
 | `apps/connect/RUNTIME-CONFIG.md` | The Connect config precedence ladder — read before changing a config field |

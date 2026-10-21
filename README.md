@@ -26,8 +26,8 @@ The Powerhouse monorepo has the following branching strategy: - Ongoing developm
 | Tool | Version | Why |
 |---|---|---|
 | Node.js | `>=24` (see `engines.node`) | |
-| pnpm | 11.x | CI installs `latest` via `pnpm/action-setup` |
-| bun | 1.3.x | **Required to build.** The `postbuild` steps of `ph-cli`, `ph-cmd` and `registry` shell out to it, so `pnpm build` cannot finish without it. |
+| pnpm | Match the target CI workflow | See [CONTRIBUTING.md](CONTRIBUTING.md#prerequisites) for the workflow-specific versions. |
+| bun | Match the target CI workflow | **Required to build.** The `postbuild` steps of `ph-cli`, `ph-cmd` and `registry` shell out to it. |
 
 `playwright install chromium` is additionally needed before
 `pnpm --filter=@powerhousedao/reactor-browser run test`; without it most of that

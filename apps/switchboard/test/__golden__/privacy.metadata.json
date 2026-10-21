@@ -1,0 +1,28 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Mutation",
+      "fieldName": "requestErasure",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "disclose",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "erasurePlan",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "erasureRequest",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": "undefined",
+    "normalized": false
+  }
+}

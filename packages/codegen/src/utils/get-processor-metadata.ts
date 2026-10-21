@@ -17,16 +17,18 @@ import {
   getAllImportNames,
   getOrCreateDirectory,
   getStringArrayPropertyElements,
+  projectDirOf,
 } from "utils";
 
 export function getProcessorMetadata(project: Project, dirName: string) {
+  const processorsDirPath = join(projectDirOf(project), "processors");
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
-    "processors",
+    processorsDirPath,
   );
   const { directory: processorDir } = getOrCreateDirectory(
     project,
-    join("processors", dirName),
+    join(processorsDirPath, dirName),
   );
 
   const connectProcessorNames = getProcessorNames(

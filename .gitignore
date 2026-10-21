@@ -19,7 +19,8 @@ vite.*.config.*.timestamp-*.mjs
 storybook-static
 .gitignore.local
 .ph
-CLAUDE.md
+AGENTS.local.md
+CLAUDE.local.md
 .claude/*
 !.claude/commands/
 !.claude/commands/**
@@ -38,6 +39,8 @@ __pycache__/
 hotseat.json
 .hotseat
 # Local agent-workflow scratch (plans' ledgers, briefs, review packages)
+/.audit/
+/.tasks/
 .superpowers/
 .mcp.json
 HOTSEAT.md

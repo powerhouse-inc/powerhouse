@@ -37,7 +37,6 @@ import {
   reportFailure,
   resolveRenownConfig,
   runDetached,
-  type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
   type IPackageLoader,
@@ -51,9 +50,6 @@ import {
   DriveNodeView,
   NodeProcessor,
   ReactorDriveClient,
-  createReactorDriveResolvers,
-  REACTOR_DRIVE_SUBGRAPH_NAME,
-  reactorDriveSubgraphTypeDefs,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
@@ -73,6 +69,7 @@ import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
 import type { ViteDevServer } from "vite";
+import { ReactorDriveSubgraph } from "./drive-subgraph.js";
 import { registerAttachmentRoutes } from "./attachments/index.js";
 import {
   registerAttachmentReferenceReadModel,
@@ -1226,7 +1223,6 @@ async function initServer(
       graphqlManager,
       syncManager: api.syncManager,
       authorizationService: graphqlManager.getAuthorizationService(),
-      path: graphqlManager.getBasePath(),
       attachments: api.attachmentClientProvider,
     });
     return graphqlManager
@@ -1341,10 +1337,19 @@ async function initServer(
         config: privacyConfig,
         reactorModule: (options.reactor ?? ownedReactorModule)?.reactorModule,
         signer,
-        authorizationService: api.authorizationService,
-        documentPermissionService: api.documentPermissionService,
-        graphqlManager,
-        reactorClient: client,
+        subgraphArgs: {
+          authorizationService: api.authorizationService,
+          documentPermissionService: api.documentPermissionService,
+          graphqlManager,
+          reactorClient: client,
+          relationalDb: api.relationalDb,
+          analyticsStore: undefined as never,
+          syncManager: api.syncManager,
+          http: graphqlManager.scopeForPackage(
+            "@powerhousedao/reactor-privacy",
+          ),
+          attachments: api.attachmentClientProvider,
+        },
         logger: logger.child(["privacy"]),
       });
     } catch (error) {
@@ -1393,7 +1398,6 @@ async function initServer(
       reactorClient: client,
       graphqlManager,
       syncManager: api.syncManager,
-      path: graphqlManager.getBasePath(),
       authorizationService: graphqlManager.getAuthorizationService(),
       packageManagementService,
       http: graphqlManager.scopeForPackage("@powerhousedao/switchboard"),
@@ -1418,23 +1422,19 @@ async function initServer(
       readModel: driveNodeView,
     });
 
-    const authorizationService = graphqlManager.getAuthorizationService();
-    const reactorDriveSubgraph = {
-      name: REACTOR_DRIVE_SUBGRAPH_NAME,
-      path: graphqlManager.getBasePath(),
-      resolvers: createReactorDriveResolvers({
+    const reactorDriveSubgraph = new ReactorDriveSubgraph(
+      {
         reactorClient: client,
-        readModel: driveNodeView,
-        hostCanRead: (documentId, address) =>
-          authorizationService.canRead(
-            documentId as CanonicalDocumentId,
-            address,
-          ),
-      }),
-      typeDefs: reactorDriveSubgraphTypeDefs,
-      reactorClient: client,
-      relationalDb: undefined as never,
-    };
+        graphqlManager,
+        http: graphqlManager.scopeForPackage("@powerhousedao/switchboard"),
+        relationalDb: api.relationalDb,
+        analyticsStore: undefined as never,
+        syncManager: api.syncManager,
+        authorizationService: graphqlManager.getAuthorizationService(),
+        attachments: api.attachmentClientProvider,
+      },
+      driveNodeView,
+    );
 
     lateSubgraphs.push(
       graphqlManager

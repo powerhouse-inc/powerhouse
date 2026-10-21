@@ -17,7 +17,9 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import { findPackageJSON, isBuiltin } from "node:module";
+// A default import: a runtime whose node:module lacks findPackageJSON, such
+// as Bun, still links this module, and the lookup below then finds nothing.
+import nodeModule, { isBuiltin } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -642,7 +644,7 @@ function packageRoot(
 ): string | null {
   let found: string | undefined;
   try {
-    found = findPackageJSON(specifier, base);
+    found = nodeModule.findPackageJSON(specifier, base);
   } catch {
     return null;
   }

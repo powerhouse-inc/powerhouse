@@ -65,6 +65,7 @@ export {
 export {
   createReactorDriveResolvers,
   REACTOR_DRIVE_SUBGRAPH_NAME,
+  reactorDriveResolverCoordinates,
   reactorDriveSubgraphTypeDefs,
   type ReactorDriveResolverContext,
 } from "./subgraph/index.js";

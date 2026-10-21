@@ -35,6 +35,7 @@ const EXPECTED_PROPERTIES = [
   "workflows",
   "packageRegistryUrl",
   "connect",
+  "definitionSources",
 ] as const;
 
 describe("source-config schema", () => {
@@ -181,5 +182,31 @@ describe("source-config schema", () => {
     expect(props.vetra.properties?.connectPort.type).toBe("integer");
     expect(props.vetra.properties?.driveId.type).toBe("string");
     expect(props.vetra.properties?.driveUrl.type).toBe("string");
+  });
+
+  it("definitionSources documents both modes for editor autocomplete", () => {
+    const props = sourceConfigSchema.properties as unknown as Record<
+      string,
+      {
+        oneOf?: Array<{
+          required?: readonly string[];
+          properties?: Record<
+            string,
+            { const?: unknown; description?: string }
+          >;
+        }>;
+      }
+    >;
+    const variants = props.definitionSources.oneOf ?? [];
+    expect(variants.map((v) => v.properties?.mode.const)).toEqual([
+      "code-first",
+      "schema-first",
+    ]);
+    for (const variant of variants) {
+      expect(variant.properties?.mode.description).toBeTruthy();
+      expect(variant.properties?.formatVersion.const).toBe(1);
+    }
+    expect(variants[1].properties).not.toHaveProperty("entries");
+    expect(variants[1].required).toEqual(["formatVersion", "mode"]);
   });
 });

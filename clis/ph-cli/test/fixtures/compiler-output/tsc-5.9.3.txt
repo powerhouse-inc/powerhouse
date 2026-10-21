@@ -1,0 +1,34 @@
+======== Resolving module '#value' from '__ROOT__/index.ts'. ========
+Explicitly specified module resolution kind: 'Bundler'.
+Resolving in CJS mode with conditions 'import', 'types'.
+'paths' option is specified, looking for a pattern to match module name '#value'.
+Module name '#value', matched pattern '#value'.
+Trying substitution './value.ts', candidate module location: './value.ts'.
+File '__ROOT__/value.ts' exists - use it as a name resolution result.
+======== Module name '#value' was successfully resolved to '__ROOT__/value.ts'. ========
+======== Resolving module 'dep' from '__ROOT__/index.ts'. ========
+Explicitly specified module resolution kind: 'Bundler'.
+Resolving in CJS mode with conditions 'import', 'types'.
+'paths' option is specified, looking for a pattern to match module name 'dep'.
+Found 'package.json' at '__ROOT__/package.json'.
+Loading module 'dep' from 'node_modules' folder, target file types: TypeScript, JavaScript, Declaration, JSON.
+Searching all ancestor node_modules directories for preferred extensions: TypeScript, Declaration.
+Found 'package.json' at '__ROOT__/node_modules/dep/package.json'.
+File '__ROOT__/node_modules/dep.ts' does not exist.
+File '__ROOT__/node_modules/dep.tsx' does not exist.
+File '__ROOT__/node_modules/dep.d.ts' does not exist.
+'package.json' does not have a 'typesVersions' field.
+'package.json' does not have a 'typings' field.
+'package.json' has 'types' field 'index.d.ts' that references '__ROOT__/node_modules/dep/index.d.ts'.
+File '__ROOT__/node_modules/dep/index.d.ts' exists - use it as a name resolution result.
+'package.json' does not have a 'peerDependencies' field.
+Resolving real path for '__ROOT__/node_modules/dep/index.d.ts', result '__ROOT__/node_modules/dep/index.d.ts'.
+======== Module name 'dep' was successfully resolved to '__ROOT__/node_modules/dep/index.d.ts' with Package ID 'dep/index.d.ts@1.0.0'. ========
+Found 'package.json' at '__ROOT__/node_modules/dep/package.json'.
+../../../../../../..__ROOT__/value.ts
+  Imported via "#value" from file '../../../../../../..__ROOT__/index.ts'
+  Matched by default include pattern '**/*'
+node_modules/dep/index.d.ts
+  Imported via "dep" from file '../../../../../../..__ROOT__/index.ts' with packageId 'dep/index.d.ts@1.0.0'
+../../../../../../..__ROOT__/index.ts
+  Matched by default include pattern '**/*'

@@ -238,7 +238,10 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     const loaded = await this.#load(identifier, "subgraphs");
     if (!loaded) return [];
 
-    const subgraphs = extractSubgraphs(loaded.namespace);
+    const subgraphs = extractSubgraphs(loaded.namespace, {
+      packageName: identifier,
+      logger: this.logger,
+    });
 
     this.logger.debug(
       `  ➜  Loaded ${subgraphs.length} Subgraphs from: ${identifier}`,

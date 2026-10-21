@@ -114,7 +114,7 @@ pnpm audit:load [--package <name>] [--from-report] [--filter <substr>] [--limit 
 
 - Each package is loaded in its **own subprocess** (`load-worker.ts`), so a
   hang or hard crash is isolated; a per-package `--timeout` (default 120s) guards hangs.
-- Only packages that export `./document-models` are loaded; others are skipped.
+- Packages exporting `./document-models` or `./subgraphs` are loaded; others are skipped.
 - The loaded package's runtime `import "document-model"` resolves (via node's
   module walk-up to the repo's `node_modules`) to the **local** build — so this tests
   the published model against the _current_ core, not the version it was built with.
@@ -176,4 +176,49 @@ pnpm audit:typecheck --from-report --limit 5
 pnpm audit:load
 # deepest proof: create + query a document per model via its generated endpoint:
 pnpm audit:create-query
+```
+
+### Published class subgraph rule
+
+`pnpm audit:load` also loads each package's `./subgraphs` export, including packages
+without `./document-models`. To run just this census without a Switchboard build:
+
+```
+pnpm audit:load --subgraphs-only
+pnpm audit:load --subgraphs-only --skip-install --package @example/package
+```
+
+The runtime rule in `subgraph-rule.ts` writes per-export findings and counts to
+`load-report.json`. It flattens namespaces and deduplicates aliases by identity.
+It classifies constructors as follows:
+
+- `new-style`: an own static string `subgraphName` and a callable static
+  `[Symbol.for("powerhouse.subgraph")]`, including an inherited protocol.
+- `old-style`: a prototype chain reaching a class named `BaseSubgraph` without
+  the protocol, inherited `name`/`typeDefs`/`resolvers` prototype descriptors, or
+  those three fields present on a constructed instance.
+- `nameless/other`: neither shape, or construction failed. These findings retain
+  the evidence and must be reviewed before deciding the legacy adapter is unused.
+
+Static inspection does not invoke getters, the protocol, or lifecycle hooks.
+When only construction can reveal instance fields, the worker attempts `new C({})`
+with empty host arguments and records `constructionRequired`, `constructed` and
+any error. Imports and constructors execute published code in the same isolated,
+timeout-bounded worker as the load phase. Constructors requiring real host
+services can remain unresolved. A nameless class is reported even if it is an
+ancestor of another export; this census does not enforce host admission rules.
+The protocol's presence is classified, not its version or schema validity.
+
+Run download/extract first. Installs may require the registry; `--skip-install`
+reuses populated load scaffolds. Results cover only the versions selected by the
+manifest (download defaults to `dist-tags.latest`) and any requested filters or
+limit. Missing imports, install failures, timeouts, unresolved constructors and
+excluded versions are not evidence that no published old-style subgraphs exist.
+The existing JSON pattern rules remain independent of this runtime rule.
+
+Offline tests and type checking:
+
+```
+pnpm exec vitest run --config tools/registry-audit/vitest.config.ts
+pnpm exec tsc -p tools/registry-audit/tsconfig.json
 ```

@@ -1,9 +1,13 @@
 import {
+  admitDocumentModel,
+  type DocumentModelAdmission,
   type DocumentModelSchema,
   type DocumentModelSource,
+  documentModelVersion,
+  globalStateOf,
+  latestDocumentModelVersions,
   type ReservedTypeNames,
   type ResolvedDocumentModelSchema,
-  reservedTypeNamesTaken,
 } from "../utils/create-schema.js";
 import {
   type OwnershipConflict,
@@ -38,16 +42,17 @@ function rank(origin: SubgraphOrigin): number {
 export type DocumentModelRefusal<T> = {
   model: T;
   key: string;
+  kind:
+    | Extract<DocumentModelAdmission, { admitted: false }>["refusal"]
+    | "unusable subgraph";
   /** Specification version of the refused model. */
   version: number;
   /** The latest version is refused, so no version of the model is served. */
   everyVersion: boolean;
-  /** Only the model's own subgraph is refused; its generated types stay. */
-  subgraphOnly: boolean;
   reason: string;
 };
 
-export type DocumentModelAdmission<T> = {
+export type DocumentModelAdmissions<T> = {
   admitted: T[];
   schemas: Map<T, DocumentModelSchema>;
   refusals: DocumentModelRefusal<T>[];
@@ -57,89 +62,61 @@ export type DocumentModelAdmission<T> = {
 export function admitDocumentModels<T extends DocumentModelSource>(
   resolved: readonly ResolvedDocumentModelSchema<T>[],
   reserved: ReservedTypeNames,
-): DocumentModelAdmission<T> {
+): DocumentModelAdmissions<T> {
   const latest = new Set(
-    filterLatestDocumentModelVersions(resolved.map(({ model }) => model)),
+    latestDocumentModelVersions(resolved.map(({ model }) => model)),
   );
-  const candidates: {
-    model: T;
-    key: string;
-    schema?: DocumentModelSchema;
-    refusal?: { reason: string; subgraphOnly: boolean };
-  }[] = [];
-  for (const { model, key, schema, error } of resolved) {
-    if (!schema) {
-      const reason = `has an unusable schema: ${error.message}`;
-      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
-      continue;
-    }
-    const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
-    if (taken.length > 0) {
-      const reason = `generates reserved type names: ${taken.join(", ")}`;
-      candidates.push({ model, key, refusal: { reason, subgraphOnly: false } });
-      continue;
-    }
-    const refusal = schema.subgraphError && {
-      reason: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
-      subgraphOnly: true,
+  const candidates = resolved.map((entry) => {
+    const admission = admitDocumentModel(entry, reserved);
+    const refusal = !admission.admitted
+      ? { kind: admission.refusal, reason: admission.reason }
+      : admission.subgraphRefusal !== undefined
+        ? {
+            kind: "unusable subgraph" as const,
+            reason: admission.subgraphRefusal,
+          }
+        : undefined;
+    return {
+      model: entry.model,
+      key: entry.key,
+      schema: admission.admitted ? admission.schema : undefined,
+      refusal,
     };
-    candidates.push({ model, key, schema, refusal });
-  }
+  });
 
   const refusedModels = new Set(
     candidates
       .filter(({ model, refusal }) => refusal && latest.has(model))
-      .map(({ model }) => model.documentModel.global.name),
+      .map(({ model }) => globalStateOf(model).name),
   );
-  const admission: DocumentModelAdmission<T> = {
+  const admissions: DocumentModelAdmissions<T> = {
     admitted: [],
     schemas: new Map(),
     refusals: [],
   };
   for (const { model, key, schema, refusal } of candidates) {
     const everyVersion = latest.has(model);
-    if (!everyVersion && refusedModels.has(model.documentModel.global.name)) {
+    if (!everyVersion && refusedModels.has(globalStateOf(model).name)) {
       continue;
     }
     if (refusal) {
-      admission.refusals.push({
+      admissions.refusals.push({
         model,
         key,
-        version: specVersion(model),
+        version: documentModelVersion(model),
         everyVersion,
         ...refusal,
       });
     }
     if (schema) {
-      admission.schemas.set(model, schema);
-      admission.admitted.push(model);
+      admissions.schemas.set(model, schema);
+      admissions.admitted.push(model);
     }
   }
-  return admission;
+  return admissions;
 }
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
-
-const specVersion = (model: DocumentModelSource) =>
-  model.documentModel.global.specifications.at(-1)?.version ?? 0;
-
-/** The latest version of each document model. */
-function filterLatestDocumentModelVersions<T extends DocumentModelSource>(
-  documentModels: readonly T[],
-): T[] {
-  const latestByName = new Map<string, T>();
-
-  for (const documentModel of documentModels) {
-    const name = documentModel.documentModel.global.name;
-    const existing = latestByName.get(name);
-
-    if (!existing || specVersion(documentModel) > specVersion(existing)) {
-      latestByName.set(name, documentModel);
-    }
-  }
-
-  return Array.from(latestByName.values());
-}
 
 /** The admitted models that serve a subgraph of their own, with its types. */
 export function documentModelSubgraphSources<T extends DocumentModelSource>(
@@ -150,8 +127,8 @@ export function documentModelSubgraphSources<T extends DocumentModelSource>(
     model: T;
     types: NonNullable<DocumentModelSchema["subgraph"]>;
   }[] = [];
-  for (const model of filterLatestDocumentModelVersions(admitted)) {
-    if (DOCUMENT_MODELS_TO_EXCLUDE.includes(model.documentModel.global.id)) {
+  for (const model of latestDocumentModelVersions(admitted)) {
+    if (DOCUMENT_MODELS_TO_EXCLUDE.includes(globalStateOf(model).id)) {
       continue;
     }
     const types = schemas.get(model)?.subgraph;

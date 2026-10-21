@@ -1,0 +1,269 @@
+{
+  "graphqlProfile": "legacy-graphql-default-v1",
+  "documentValidationProfile": "document-engineering-1.40",
+  "declared": [
+    "Address",
+    "Amount",
+    "Amount_Crypto",
+    "Amount_Currency",
+    "Amount_Fiat",
+    "Amount_Money",
+    "Amount_Percentage",
+    "Amount_Tokens",
+    "AttachmentRef",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "JSONObject",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Unknown",
+    "Upload"
+  ],
+  "bound": [
+    "JSONObject",
+    "Unknown"
+  ],
+  "unbound": [
+    "Address",
+    "Amount",
+    "Amount_Crypto",
+    "Amount_Currency",
+    "Amount_Fiat",
+    "Amount_Money",
+    "Amount_Percentage",
+    "Amount_Tokens",
+    "AttachmentRef",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Upload"
+  ],
+  "unregistered": [],
+  "catalogNames": [
+    "Address",
+    "Amount",
+    "Amount_Crypto",
+    "Amount_Currency",
+    "Amount_Fiat",
+    "Amount_Money",
+    "Amount_Percentage",
+    "Amount_Tokens",
+    "AttachmentRef",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "JSONObject",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Unknown",
+    "Upload"
+  ],
+  "packageDeclarations": [
+    "Amount",
+    "Amount_Crypto",
+    "Amount_Currency",
+    "Amount_Fiat",
+    "Amount_Money",
+    "Amount_Percentage",
+    "Amount_Tokens",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Upload"
+  ],
+  "packageResolverKeys": [
+    "Amount",
+    "AmountCrypto",
+    "AmountCurrency",
+    "AmountFiat",
+    "AmountMoney",
+    "AmountPercentage",
+    "AmountTokens",
+    "Currency",
+    "Date",
+    "DateTime",
+    "EmailAddress",
+    "EthereumAddress",
+    "OID",
+    "OLabel",
+    "PHID",
+    "URL",
+    "Upload"
+  ],
+  "caseOutcomes": {
+    "PHID": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "OID": {
+      "accepts/empty-string": "accepted/accepted",
+      "accepts/opaque-string": "accepted/accepted",
+      "accepts/ulid-like-string": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "OLabel": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "Currency": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "EmailAddress": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "EthereumAddress": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "URL": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "Date": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "DateTime": {
+      "accepts/valid": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "Amount_Money": {
+      "accepts/fractional": "accepted/accepted",
+      "accepts/integer": "accepted/accepted",
+      "rejects/string": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount_Percentage": {
+      "accepts/fractional": "accepted/accepted",
+      "accepts/integer": "accepted/accepted",
+      "rejects/string": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount_Tokens": {
+      "accepts/fractional": "accepted/accepted",
+      "accepts/integer": "accepted/accepted",
+      "rejects/string": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount": {
+      "accepts/fractional": "accepted/accepted",
+      "accepts/integer": "accepted/accepted",
+      "accepts/unknown-key-normalization": "accepted/accepted",
+      "rejects/missing-value": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount_Fiat": {
+      "accepts/fractional": "accepted/accepted",
+      "accepts/integer": "accepted/accepted",
+      "accepts/unknown-key-normalization": "accepted/accepted",
+      "rejects/missing-unit": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount_Crypto": {
+      "accepts/fractional-numeric-string": "accepted/accepted",
+      "accepts/zero-numeric-string": "accepted/accepted",
+      "accepts/arbitrary-string-value": "accepted/accepted",
+      "accepts/unknown-key-normalization": "accepted/accepted",
+      "rejects/numeric-value": "rejected/rejected",
+      "rejects/missing-unit": "rejected/rejected",
+      "rejects/plain-string": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Amount_Currency": {
+      "accepts/fractional-numeric-string": "accepted/accepted",
+      "accepts/arbitrary-string-value": "accepted/accepted",
+      "accepts/unknown-key-normalization": "accepted/accepted",
+      "rejects/numeric-value": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    },
+    "Upload": {
+      "rejects/literal-null": "rejected/rejected"
+    },
+    "Address": {
+      "accepts/valid": "accepted/accepted",
+      "accepts/coercible-singleton-array": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "AttachmentRef": {
+      "accepts/valid": "accepted/accepted",
+      "accepts/coercible-singleton-array": "accepted/accepted",
+      "rejects/number": "rejected/rejected",
+      "rejects/boolean": "rejected/rejected",
+      "rejects/null": "rejected/rejected",
+      "rejects/object": "rejected/rejected",
+      "rejects/array": "rejected/rejected"
+    },
+    "Unknown": {
+      "accepts/json-object": "accepted/accepted"
+    },
+    "JSONObject": {
+      "accepts/empty-object": "accepted/accepted",
+      "accepts/nested-object": "accepted/accepted",
+      "rejects/array": "rejected/rejected",
+      "rejects/null": "rejected/rejected"
+    }
+  }
+}

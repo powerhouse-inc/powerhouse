@@ -42,7 +42,7 @@ const builtPieces = await buildPieces(
   { name: pkg.name, version: pkg.version, license: pkg.license },
   { bundle: build },
 );
-syncDistManifest(target, builtPieces);
+syncDistManifest(target, { built: builtPieces });
 
 // `--build` so referenced projects emit first; otherwise every cross-package
 // import reports TS6305 and the cascade hides real type errors.

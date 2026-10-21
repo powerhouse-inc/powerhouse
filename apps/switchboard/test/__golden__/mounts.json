@@ -1,0 +1,23 @@
+{
+  "graphql": [
+    "/graphql",
+    "/graphql/analytics",
+    "/graphql/auth",
+    "/graphql/document-drive",
+    "/graphql/document-model",
+    "/graphql/inspection",
+    "/graphql/packages",
+    "/graphql/privacy",
+    "/graphql/r",
+    "/graphql/reactor-drive-nodes",
+    "/graphql/system",
+    "/graphql/workflow-runtime"
+  ],
+  "websocket": [
+    "/graphql/r"
+  ],
+  "sse": [
+    "/graphql/r/stream",
+    "/graphql/stream"
+  ]
+}

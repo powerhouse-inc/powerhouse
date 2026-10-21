@@ -1,21 +1,10 @@
 import type { EditorVariableNames } from "@powerhousedao/codegen";
 import { tsx } from "@tmpl/core";
 
-export const documentEditorEditorFileTemplate = (
-  v: EditorVariableNames & {
-    documentModelImportPath: string;
-  },
-) =>
-  tsx`
-import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { ${v.useSelectedDocumentHookName}, actions } from "${v.documentModelImportPath}";
-
-export default function Editor() {
-  const [document, dispatch] = ${v.useSelectedDocumentHookName}();
-
+const editorBody = (actionsVariableName: string) => `
   const handleSetName = (name: string) => {
     // 'actions' contains all available actions for this document type
-    dispatch(actions.setName(name));
+    dispatch(${actionsVariableName}.setName(name));
   };
 
   return (
@@ -88,4 +77,36 @@ export default function Editor() {
     </div>
   );
 }
-`.raw;
+`;
+
+export const documentEditorEditorFileTemplate = (
+  v: EditorVariableNames & {
+    documentModelImportPath: string;
+  },
+) =>
+  tsx`
+import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";
+import { ${v.useSelectedDocumentHookName}, actions } from "${v.documentModelImportPath}";
+
+export default function Editor() {
+  const [document, dispatch] = ${v.useSelectedDocumentHookName}();
+${editorBody("actions")}`.raw;
+
+export const codeFirstDocumentEditorEditorFileTemplate = (v: {
+  exportName: string;
+  importPath: string;
+  documentTypeName: string;
+  actionTypeName: string;
+}) =>
+  tsx`
+import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";
+import { useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
+import type { ActionOf, DocumentOf } from "document-model";
+import { ${v.exportName} } from "${v.importPath}";
+
+type ${v.documentTypeName} = DocumentOf<typeof ${v.exportName}>;
+type ${v.actionTypeName} = ActionOf<typeof ${v.exportName}>;
+
+export default function Editor() {
+  const [document, dispatch] = useSelectedDocumentOfType<${v.documentTypeName}, ${v.actionTypeName}>(${v.exportName}.documentModel.global.id);
+${editorBody(`${v.exportName}.actions`)}`.raw;

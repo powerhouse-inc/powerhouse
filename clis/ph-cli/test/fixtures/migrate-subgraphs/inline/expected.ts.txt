@@ -1,0 +1,99 @@
+import {
+  BaseSubgraph as Base,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { gql } from "graphql-tag";
+
+export class InlineSubgraph extends Base {
+  static override readonly subgraphName = "inline";
+  static override getSchema(schemaBuilder: SchemaBuilder<InlineSubgraph>) {
+    return schemaBuilder.graphql({
+      typeDefs: gql`
+        scalar Date
+        enum Choice {
+          YES
+          NO
+        }
+        interface Node {
+          id: ID!
+        }
+        type Item implements Node {
+          id: ID!
+        }
+        type Query {
+          item: Node
+          date: Date
+        }
+        type Updates {
+          item: Item
+        }
+        schema {
+          query: Query
+          subscription: Updates
+        }
+      `,
+      resolverCoordinates: [
+        {
+          typeName: "Date",
+          fieldName: null,
+          resolverKind: "scalar",
+        },
+        {
+          typeName: "Choice",
+          fieldName: null,
+          resolverKind: "enum",
+        },
+        {
+          typeName: "Node",
+          fieldName: null,
+          resolverKind: "resolveType",
+        },
+        {
+          typeName: "Item",
+          fieldName: null,
+          resolverKind: "isTypeOf",
+        },
+        {
+          typeName: "Query",
+          fieldName: "item",
+          resolverKind: "field",
+        },
+        {
+          typeName: "Query",
+          fieldName: "date",
+          resolverKind: "field",
+        },
+        {
+          typeName: "Updates",
+          fieldName: "item",
+          resolverKind: "subscribe",
+        },
+        {
+          typeName: "Updates",
+          fieldName: "item",
+          resolverKind: "resolve",
+        },
+      ],
+      resolvers: (s) => ({
+        Date: { serialize: (value: unknown) => value },
+        Choice: { YES: "yes", NO: "no" },
+        Node: { __resolveType: () => "Item" },
+        Item: {
+          __isTypeOf: function (this: { valid: boolean }) {
+            return this.valid;
+          },
+        },
+        Query: { item: () => ({ id: "1" }), date: () => s.label },
+        Updates: {
+          item: {
+            subscribe: async function* () {
+              yield { id: "1" };
+            },
+            resolve: (value: unknown) => value,
+          },
+        },
+      }),
+    });
+  }
+  readonly label = "today";
+}

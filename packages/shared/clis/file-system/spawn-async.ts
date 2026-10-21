@@ -1,5 +1,16 @@
 import spawn from "cross-spawn";
 
+// A command that exited non-zero, keeping what it printed to stdout.
+export class SpawnError extends Error {
+  constructor(
+    message: string,
+    readonly stdout: string,
+  ) {
+    super(message);
+    this.name = "SpawnError";
+  }
+}
+
 export function spawnAsync(
   command: string,
   args: string[],
@@ -27,12 +38,14 @@ export function spawnAsync(
     let stdout = "";
     let stderr = "";
 
-    child.stdout?.on("data", (d: Buffer) => {
-      stdout += d.toString();
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (d: string) => {
+      stdout += d;
     });
 
-    child.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString();
+    child.stderr?.on("data", (d: string) => {
+      stderr += d;
     });
 
     child.on("error", reject);
@@ -42,7 +55,12 @@ export function spawnAsync(
         resolve(stdout.trim());
       } else {
         reject(
-          new Error(stderr.trim() || `${command} exited with code ${code}`),
+          new SpawnError(
+            stderr.trim() ||
+              stdout.trim() ||
+              `${command} exited with code ${code}`,
+            stdout.trim(),
+          ),
         );
       }
     });

@@ -4,8 +4,10 @@ import {
   Kind,
   parse,
   type DefinitionNode,
+  type InterfaceTypeDefinitionNode,
   type ObjectTypeDefinitionNode,
   type TypeNode,
+  type UnionTypeDefinitionNode,
 } from "graphql";
 import lzString from "lz-string";
 import { GQL_CHANNEL_SUFFIX } from "../ai/switchboard.js";
@@ -92,10 +94,19 @@ function getDocumentModelSchemaName(model: DocumentModelModule): string {
   return pascalCase(model.documentModel.global.name.replaceAll("/", " "));
 }
 
+type StateType =
+  | ObjectTypeDefinitionNode
+  | InterfaceTypeDefinitionNode
+  | UnionTypeDefinitionNode;
+
 function buildStateTypeMap(definitions: ReadonlyArray<DefinitionNode>) {
-  const typeMap = new Map<string, ObjectTypeDefinitionNode>();
+  const typeMap = new Map<string, StateType>();
   for (const def of definitions) {
-    if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
+    if (
+      def.kind === Kind.OBJECT_TYPE_DEFINITION ||
+      def.kind === Kind.INTERFACE_TYPE_DEFINITION ||
+      def.kind === Kind.UNION_TYPE_DEFINITION
+    ) {
       typeMap.set(def.name.value, def);
     }
   }
@@ -108,9 +119,14 @@ function buildStateTypeMap(definitions: ReadonlyArray<DefinitionNode>) {
  * type); enums, scalars, and built-ins are leaves.
  */
 function expandStateFields(
-  typeDef: ObjectTypeDefinitionNode,
-  typeMap: Map<string, ObjectTypeDefinitionNode>,
+  typeDef: StateType,
+  typeMap: Map<string, StateType>,
 ): string {
+  if (typeDef.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+    throw new Error(
+      `Abstract state type requires the generic document query: ${typeDef.name.value}`,
+    );
+  }
   return (typeDef.fields ?? [])
     .map((field) => {
       const fieldName = field.name.value;

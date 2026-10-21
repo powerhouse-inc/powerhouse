@@ -10,6 +10,7 @@ import type {
 import {
   GraphQLError,
   Kind,
+  type GraphQLFieldResolver,
   type GraphQLResolveInfo,
   type SelectionSetNode,
 } from "graphql";
@@ -302,7 +303,7 @@ export const getResolvers = (
   access: ReactorAccessInfo = UNKNOWN_ACCESS,
   // The subgraph's own read gate; fields that need it refuse without one.
   assertCanRead?: ReadAssertion,
-): Record<string, unknown> => {
+): Record<string, Record<string, GraphQLFieldResolver<unknown, Context>>> => {
   return {
     Query: {
       workflowRuntime: () => ({}),

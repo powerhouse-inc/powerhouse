@@ -26,6 +26,7 @@ import {
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { createTestSigner } from "./utils/test-signer.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 
@@ -64,7 +65,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
       },
     } as unknown as SubgraphArgs);
     mutation = (name) =>
-      (subgraph.resolvers.Mutation as Record<string, Resolver>)[name];
+      (resolversOf(subgraph).Mutation as Record<string, Resolver>)[name];
   });
 
   afterEach(() => {

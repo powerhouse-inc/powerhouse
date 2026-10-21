@@ -19,15 +19,14 @@ running the apps, testing, and the commit/PR/release flow.
 | `test/` | Integration and e2e test projects (not published) |
 | `scripts/` | Utility scripts and helpers (including `new-worktree.sh`) |
 | `docs/adr/` | Architecture decision records |
-| `docs/superpowers/` | The spec → plan → evidence workflow used for agent-driven work |
 
 ## Prerequisites
 
 | Tool | Version | Why |
 | --- | --- | --- |
 | Node.js | `>=24` | see `engines.node` |
-| pnpm | `latest` (11.x or 12.x) | CI installs `latest` via `pnpm/action-setup` |
-| bun | 1.3.x | **Required to build.** The `postbuild` steps of `ph-cli`, `ph-cmd` and `registry` shell out to it, so `pnpm build` cannot finish without it |
+| pnpm | Match the workflow being reproduced | `.github/workflows/e2e-tests.yml` pins 12.10.1; other jobs may select a different version |
+| bun | Match the workflow being reproduced | E2E CI pins 1.4.2. The `postbuild` steps of `ph-cli`, `ph-cmd` and `registry` require Bun |
 | playwright chromium | — | only needed for `packages/reactor-browser` tests (see Testing) |
 
 ## Setup
@@ -47,12 +46,19 @@ pnpm tsc
 - `pnpm build` builds the curated set of workspace packages in dependency
   order — the same list CI builds.
 - `pnpm tsc` (`tsc --build`) produces the `.tsbuild` project-reference outputs
-  that dependent packages' type checking and test suites resolve against.
-  Without it, most test runs fail to find sibling packages.
+  used by project references. Runtime resolution depends on the package's runner
+  configuration and export conditions; some suites require built sibling packages.
 
 `scripts/new-worktree.sh` automates all of the above for isolated git
 worktrees: `./scripts/new-worktree.sh <name>` creates a prepared worktree
 under `~/.worktrees/powerhouse/` (branch `fix/<name>` from `main` by default).
+For work based on another branch, pass an explicit base:
+`./scripts/new-worktree.sh <name> <branch> <base-commit>`. This helper runs setup
+immediately. When source validation must precede setup, create an unprepared
+checkout with `git worktree add --no-track -b <branch> <path> <base-commit>`.
+Verify its `git rev-parse HEAD` and transferred inputs with the
+[context checker](docs/development/verification.md#capture-and-transfer)
+before installing or building.
 
 ## Running the apps
 
@@ -76,7 +82,7 @@ See the README for the other compose files (`test`, `staging`, `pglite`).
 
 ```bash
 pnpm --filter=@powerhousedao/<pkg> test   # a single package
-pnpm test                                  # the curated CI set (~20 packages)
+pnpm test                                  # the curated CI set in package.json
 pnpm simulate-ci-workflow                  # full local CI: clean, build, typecheck, lint, every test suite
 ```
 
@@ -90,6 +96,30 @@ Notes:
 - CI runs the test suites related to the changed files (vitest related mode),
   so the fastest local check for a small change is the owning package's
   suite.
+
+### Package prerequisites
+
+The TypeScript `source` export condition does not control every Node subprocess
+or Vitest project. Inspect the owning runner configuration before skipping builds.
+
+| Check                                           | Resolution and prerequisites                                                                                                                                                                              |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/document-model` definition unit tests | Its Vitest configuration selects source conditions and aliases the local compiler. Packed-consumer tests additionally check rebuilt package output.                                                       |
+| `clis/ph-cli` loader and built-CLI tests        | Node imports externalized `document-model` and emitted modules. Build `ph-cli` and its workspace dependencies before runtime checks. Start with `loader-node.test.ts` and `built-cli.test.ts`.      |
+| `packages/reactor-api` tests                    | Its Vitest configuration does not select the workspace `source` condition. Rebuild changed producers such as `document-model` before testing consumers of their `dist` exports.                           |
+| Reactor PostgreSQL tests                        | Provide a reachable database using `REACTOR_TEST_PG_URL`. The default is `postgres://postgres:postgres@localhost:5433/reactor`. Tests create and drop databases, so the test role needs those privileges. |
+| `packages/reactor-browser` browser tests        | Install Chromium as described above. A missing browser is not a successful browser verification.                                                                                                          |
+| Registry-backed E2E tests                       | Use their existing harness and services. `test/e2e-utils` workspace publishing changes local registry state and is reserved for these explicit scenarios.                                                 |
+
+Finish producer builds before consumer tests against the same outputs. Run heavy
+suites sequentially within a verification task. Keep source reviews parallel on a
+stable checkout. A timeout that passes alone warrants investigating concurrent
+work; it does not establish that a product failure is harmless.
+
+Use [the verification guide](docs/development/verification.md) for portable
+deadlines, source snapshots and retained rerun evidence. Store evidence outside
+checkouts that will be deleted or cleaned. `pnpm simulate-ci-workflow` begins with
+`pnpm clean`, which deletes ignored files.
 
 ## Lint and formatting
 
@@ -144,8 +174,6 @@ pnpm lint:fix   # oxlint --fix, then oxfmt
 
 ## Working with agents
 
-Agent-driven work in this repo follows the `docs/superpowers` workflow: a
-design spec in `docs/superpowers/specs/`, a step-by-step plan in
-`docs/superpowers/plans/`, and evidence of execution in
-`docs/superpowers/evidence/`. Land the spec and the plan before making code
-changes.
+Read [AGENTS.md](AGENTS.md) for source ownership and task-specific reference
+routing. Local preferences may live in ignored `AGENTS.local.md` and
+`CLAUDE.local.md`; a fresh clone does not require those files.

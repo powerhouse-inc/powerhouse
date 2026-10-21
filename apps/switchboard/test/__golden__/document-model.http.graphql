@@ -1,0 +1,779 @@
+directive @extends on INTERFACE | OBJECT
+
+directive @external on FIELD_DEFINITION
+
+directive @key(fields: _FieldSet!) on INTERFACE | OBJECT
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+scalar AttachmentRef
+
+scalar Currency
+
+scalar Date
+
+scalar DateTime
+
+type DocumentDrive implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  initialState: DocumentDrive_DocumentDriveState!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  availableOffline: Boolean!
+  listeners: [DocumentDrive_Listener!]!
+  sharingType: String
+  triggers: [DocumentDrive_Trigger!]!
+}
+
+type DocumentDrive_DocumentDriveState {
+  icon: String
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+}
+
+type DocumentDrive_FileNode {
+  documentType: String!
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_Listener {
+  block: Boolean!
+  callInfo: DocumentDrive_ListenerCallInfo
+  filter: DocumentDrive_ListenerFilter!
+  label: String
+  listenerId: ID!
+  system: Boolean!
+}
+
+type DocumentDrive_ListenerCallInfo {
+  data: String
+  name: String
+  transmitterType: DocumentDrive_TransmitterType
+}
+
+type DocumentDrive_ListenerFilter {
+  branch: [String!]
+  documentId: [ID!]
+  documentType: [String!]!
+  scope: [String!]
+}
+
+union DocumentDrive_Node = DocumentDrive_FileNode | DocumentDrive_FolderNode
+
+type DocumentDrive_PullResponderTriggerData {
+  interval: String!
+  listenerId: ID!
+  url: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  MatrixConnect
+  PullResponder
+  RESTWebhook
+  SecureConnect
+  SwitchboardPush
+}
+
+type DocumentDrive_Trigger {
+  data: DocumentDrive_TriggerData
+  id: ID!
+  type: DocumentDrive_TriggerType!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentModel implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+"""
+Mutation result type for DocumentModel operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentModelMutationResult {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  preferredEditor: String
+  revisionsList: [Revision!]!
+  slug: String
+  state: DocumentModel_FullState!
+}
+
+"""Mutations: DocumentModel"""
+type DocumentModelMutations {
+  addChangeLogItem(documentIdOrSlug: String, input: DocumentModel_AddChangeLogItemInput!): DocumentModelMutationResult!
+  addChangeLogItemAsync(documentIdOrSlug: String, input: DocumentModel_AddChangeLogItemInput!): String!
+  addModule(documentIdOrSlug: String, input: DocumentModel_AddModuleInput!): DocumentModelMutationResult!
+  addModuleAsync(documentIdOrSlug: String, input: DocumentModel_AddModuleInput!): String!
+  addOperation(documentIdOrSlug: String, input: DocumentModel_AddOperationInput!): DocumentModelMutationResult!
+  addOperationAsync(documentIdOrSlug: String, input: DocumentModel_AddOperationInput!): String!
+  addOperationError(documentIdOrSlug: String, input: DocumentModel_AddOperationErrorInput!): DocumentModelMutationResult!
+  addOperationErrorAsync(documentIdOrSlug: String, input: DocumentModel_AddOperationErrorInput!): String!
+  addOperationExample(documentIdOrSlug: String, input: DocumentModel_AddOperationExampleInput!): DocumentModelMutationResult!
+  addOperationExampleAsync(documentIdOrSlug: String, input: DocumentModel_AddOperationExampleInput!): String!
+  addStateExample(documentIdOrSlug: String, input: DocumentModel_AddStateExampleInput!): DocumentModelMutationResult!
+  addStateExampleAsync(documentIdOrSlug: String, input: DocumentModel_AddStateExampleInput!): String!
+  createDocument(initialState: DocumentModel_InitialStateInput, name: String!, parentIdOrSlug: String, preferredEditor: String, slug: String): DocumentModelMutationResult!
+  createEmptyDocument(parentIdOrSlug: String): DocumentModelMutationResult!
+  deleteChangeLogItem(documentIdOrSlug: String, input: DocumentModel_DeleteChangeLogItemInput!): DocumentModelMutationResult!
+  deleteChangeLogItemAsync(documentIdOrSlug: String, input: DocumentModel_DeleteChangeLogItemInput!): String!
+  deleteModule(documentIdOrSlug: String, input: DocumentModel_DeleteModuleInput!): DocumentModelMutationResult!
+  deleteModuleAsync(documentIdOrSlug: String, input: DocumentModel_DeleteModuleInput!): String!
+  deleteOperation(documentIdOrSlug: String, input: DocumentModel_DeleteOperationInput!): DocumentModelMutationResult!
+  deleteOperationAsync(documentIdOrSlug: String, input: DocumentModel_DeleteOperationInput!): String!
+  deleteOperationError(documentIdOrSlug: String, input: DocumentModel_DeleteOperationErrorInput!): DocumentModelMutationResult!
+  deleteOperationErrorAsync(documentIdOrSlug: String, input: DocumentModel_DeleteOperationErrorInput!): String!
+  deleteOperationExample(documentIdOrSlug: String, input: DocumentModel_DeleteOperationExampleInput!): DocumentModelMutationResult!
+  deleteOperationExampleAsync(documentIdOrSlug: String, input: DocumentModel_DeleteOperationExampleInput!): String!
+  deleteStateExample(documentIdOrSlug: String, input: DocumentModel_DeleteStateExampleInput!): DocumentModelMutationResult!
+  deleteStateExampleAsync(documentIdOrSlug: String, input: DocumentModel_DeleteStateExampleInput!): String!
+  moveOperation(documentIdOrSlug: String, input: DocumentModel_MoveOperationInput!): DocumentModelMutationResult!
+  moveOperationAsync(documentIdOrSlug: String, input: DocumentModel_MoveOperationInput!): String!
+  reorderChangeLogItems(documentIdOrSlug: String, input: DocumentModel_ReorderChangeLogItemsInput!): DocumentModelMutationResult!
+  reorderChangeLogItemsAsync(documentIdOrSlug: String, input: DocumentModel_ReorderChangeLogItemsInput!): String!
+  reorderModuleOperations(documentIdOrSlug: String, input: DocumentModel_ReorderModuleOperationsInput!): DocumentModelMutationResult!
+  reorderModuleOperationsAsync(documentIdOrSlug: String, input: DocumentModel_ReorderModuleOperationsInput!): String!
+  reorderModules(documentIdOrSlug: String, input: DocumentModel_ReorderModulesInput!): DocumentModelMutationResult!
+  reorderModulesAsync(documentIdOrSlug: String, input: DocumentModel_ReorderModulesInput!): String!
+  reorderOperationErrors(documentIdOrSlug: String, input: DocumentModel_ReorderOperationErrorsInput!): DocumentModelMutationResult!
+  reorderOperationErrorsAsync(documentIdOrSlug: String, input: DocumentModel_ReorderOperationErrorsInput!): String!
+  reorderOperationExamples(documentIdOrSlug: String, input: DocumentModel_ReorderOperationExamplesInput!): DocumentModelMutationResult!
+  reorderOperationExamplesAsync(documentIdOrSlug: String, input: DocumentModel_ReorderOperationExamplesInput!): String!
+  reorderStateExamples(documentIdOrSlug: String, input: DocumentModel_ReorderStateExamplesInput!): DocumentModelMutationResult!
+  reorderStateExamplesAsync(documentIdOrSlug: String, input: DocumentModel_ReorderStateExamplesInput!): String!
+  setAuthorName(documentIdOrSlug: String, input: DocumentModel_SetAuthorNameInput!): DocumentModelMutationResult!
+  setAuthorNameAsync(documentIdOrSlug: String, input: DocumentModel_SetAuthorNameInput!): String!
+  setAuthorWebsite(documentIdOrSlug: String, input: DocumentModel_SetAuthorWebsiteInput!): DocumentModelMutationResult!
+  setAuthorWebsiteAsync(documentIdOrSlug: String, input: DocumentModel_SetAuthorWebsiteInput!): String!
+  setInitialState(documentIdOrSlug: String, input: DocumentModel_SetInitialStateInput!): DocumentModelMutationResult!
+  setInitialStateAsync(documentIdOrSlug: String, input: DocumentModel_SetInitialStateInput!): String!
+  setModelDescription(documentIdOrSlug: String, input: DocumentModel_SetModelDescriptionInput!): DocumentModelMutationResult!
+  setModelDescriptionAsync(documentIdOrSlug: String, input: DocumentModel_SetModelDescriptionInput!): String!
+  setModelExtension(documentIdOrSlug: String, input: DocumentModel_SetModelExtensionInput!): DocumentModelMutationResult!
+  setModelExtensionAsync(documentIdOrSlug: String, input: DocumentModel_SetModelExtensionInput!): String!
+  setModelId(documentIdOrSlug: String, input: DocumentModel_SetModelIdInput!): DocumentModelMutationResult!
+  setModelIdAsync(documentIdOrSlug: String, input: DocumentModel_SetModelIdInput!): String!
+  setModelName(documentIdOrSlug: String, input: DocumentModel_SetModelNameInput!): DocumentModelMutationResult!
+  setModelNameAsync(documentIdOrSlug: String, input: DocumentModel_SetModelNameInput!): String!
+  setModuleDescription(documentIdOrSlug: String, input: DocumentModel_SetModuleDescriptionInput!): DocumentModelMutationResult!
+  setModuleDescriptionAsync(documentIdOrSlug: String, input: DocumentModel_SetModuleDescriptionInput!): String!
+  setModuleName(documentIdOrSlug: String, input: DocumentModel_SetModuleNameInput!): DocumentModelMutationResult!
+  setModuleNameAsync(documentIdOrSlug: String, input: DocumentModel_SetModuleNameInput!): String!
+  setOperationDescription(documentIdOrSlug: String, input: DocumentModel_SetOperationDescriptionInput!): DocumentModelMutationResult!
+  setOperationDescriptionAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationDescriptionInput!): String!
+  setOperationErrorCode(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorCodeInput!): DocumentModelMutationResult!
+  setOperationErrorCodeAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorCodeInput!): String!
+  setOperationErrorDescription(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorDescriptionInput!): DocumentModelMutationResult!
+  setOperationErrorDescriptionAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorDescriptionInput!): String!
+  setOperationErrorName(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorNameInput!): DocumentModelMutationResult!
+  setOperationErrorNameAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorNameInput!): String!
+  setOperationErrorTemplate(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorTemplateInput!): DocumentModelMutationResult!
+  setOperationErrorTemplateAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationErrorTemplateInput!): String!
+  setOperationName(documentIdOrSlug: String, input: DocumentModel_SetOperationNameInput!): DocumentModelMutationResult!
+  setOperationNameAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationNameInput!): String!
+  setOperationReducer(documentIdOrSlug: String, input: DocumentModel_SetOperationReducerInput!): DocumentModelMutationResult!
+  setOperationReducerAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationReducerInput!): String!
+  setOperationSchema(documentIdOrSlug: String, input: DocumentModel_SetOperationSchemaInput!): DocumentModelMutationResult!
+  setOperationSchemaAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationSchemaInput!): String!
+  setOperationScope(documentIdOrSlug: String, input: DocumentModel_SetOperationScopeInput!): DocumentModelMutationResult!
+  setOperationScopeAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationScopeInput!): String!
+  setOperationTemplate(documentIdOrSlug: String, input: DocumentModel_SetOperationTemplateInput!): DocumentModelMutationResult!
+  setOperationTemplateAsync(documentIdOrSlug: String, input: DocumentModel_SetOperationTemplateInput!): String!
+  setStateSchema(documentIdOrSlug: String, input: DocumentModel_SetStateSchemaInput!): DocumentModelMutationResult!
+  setStateSchemaAsync(documentIdOrSlug: String, input: DocumentModel_SetStateSchemaInput!): String!
+  updateChangeLogItem(documentIdOrSlug: String, input: DocumentModel_UpdateChangeLogItemInput!): DocumentModelMutationResult!
+  updateChangeLogItemAsync(documentIdOrSlug: String, input: DocumentModel_UpdateChangeLogItemInput!): String!
+  updateOperationExample(documentIdOrSlug: String, input: DocumentModel_UpdateOperationExampleInput!): DocumentModelMutationResult!
+  updateOperationExampleAsync(documentIdOrSlug: String, input: DocumentModel_UpdateOperationExampleInput!): String!
+  updateStateExample(documentIdOrSlug: String, input: DocumentModel_UpdateStateExampleInput!): DocumentModelMutationResult!
+  updateStateExampleAsync(documentIdOrSlug: String, input: DocumentModel_UpdateStateExampleInput!): String!
+}
+
+"""Queries: DocumentModel Document"""
+type DocumentModelQueries {
+  """Get a specific DocumentModel document by identifier"""
+  document(idOrSlug: String, view: DocumentModel_ViewFilterInput): DocumentModel_DocumentWithChildren
+
+  """Get incoming relationships to a DocumentModel document"""
+  documentIncomingRelationships(paging: DocumentModel_PagingInput, relationshipType: String!, targetIdOrSlug: String, view: DocumentModel_ViewFilterInput): DocumentModel_DocumentResultPage!
+
+  """Get outgoing relationships of a DocumentModel document"""
+  documentOutgoingRelationships(paging: DocumentModel_PagingInput, relationshipType: String!, sourceIdOrSlug: String, view: DocumentModel_ViewFilterInput): DocumentModel_DocumentResultPage!
+
+  """Get all DocumentModel documents (paged)"""
+  documents(paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+
+  """Find DocumentModel documents by search criteria"""
+  findDocuments(paging: DocumentModel_PagingInput, search: DocumentModel_SearchFilterInput, view: DocumentModel_ViewFilterInput): DocumentModel_DocumentResultPage!
+}
+
+"""Module: Versioning"""
+input DocumentModel_AddChangeLogItemInput {
+  content: String!
+  id: ID!
+  insertBefore: ID
+}
+
+"""Module: Module"""
+input DocumentModel_AddModuleInput {
+  description: String
+  id: ID!
+  name: String!
+}
+
+"""Module: OperationError"""
+input DocumentModel_AddOperationErrorInput {
+  errorCode: String
+  errorDescription: String
+  errorName: String
+  errorTemplate: String
+  id: ID!
+  operationId: ID!
+}
+
+"""Module: OperationExample"""
+input DocumentModel_AddOperationExampleInput {
+  example: String!
+  id: ID!
+  operationId: ID!
+}
+
+"""Module: Operation"""
+input DocumentModel_AddOperationInput {
+  description: String
+  id: ID!
+  moduleId: ID!
+  name: String!
+  reducer: String
+  schema: String
+  scope: String
+  template: String
+}
+
+input DocumentModel_AddStateExampleInput {
+  example: String!
+  id: ID!
+  insertBefore: ID
+  scope: String!
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+input DocumentModel_AuthorInput {
+  name: String
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+"""Input Types for Initial State"""
+input DocumentModel_CodeExampleInput {
+  id: ID
+  value: String
+}
+
+input DocumentModel_DeleteChangeLogItemInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteModuleInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationErrorInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationExampleInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteOperationInput {
+  id: ID!
+}
+
+input DocumentModel_DeleteStateExampleInput {
+  id: ID!
+  scope: String!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  author: DocumentModel_Author!
+  description: String!
+  extension: String!
+  id: String!
+  name: String!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+input DocumentModel_DocumentModelGlobalStateInput {
+  author: DocumentModel_AuthorInput
+  description: String
+  extension: String
+  id: String
+  name: String
+  specifications: [DocumentModel_DocumentSpecificationInput]
+}
+
+"""Paginated result type for DocumentModel documents"""
+type DocumentModel_DocumentResultPage {
+  cursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  items: [DocumentModelMutationResult!]!
+}
+
+type DocumentModel_DocumentSpecification {
+  changeLog: [String!]!
+  modules: [DocumentModel_Module!]!
+  state: DocumentModel_ScopeState!
+  version: Int!
+}
+
+input DocumentModel_DocumentSpecificationInput {
+  changeLog: [String]
+  modules: [DocumentModel_ModuleInput]
+  state: DocumentModel_ScopeStateInput
+  version: Int
+}
+
+"""Document with children for DocumentModel"""
+type DocumentModel_DocumentWithChildren {
+  childIds: [String!]!
+  document: DocumentModelMutationResult!
+}
+
+"""Full state with all scopes for DocumentModel"""
+type DocumentModel_FullState {
+  auth: JSONObject!
+  document: DocumentModel_PHDocumentScopeState!
+  global: DocumentModel_DocumentModelGlobalState!
+  local: JSONObject!
+}
+
+input DocumentModel_InitialStateInput {
+  global: DocumentModel_DocumentModelGlobalStateInput
+  local: JSONObject
+}
+
+type DocumentModel_Module {
+  description: String
+  id: ID!
+  name: String!
+  operations: [DocumentModel_Operation!]!
+}
+
+input DocumentModel_ModuleInput {
+  description: String
+  id: ID
+  name: String
+  operations: [DocumentModel_OperationInput]
+}
+
+input DocumentModel_MoveOperationInput {
+  newModuleId: ID!
+  operationId: ID!
+}
+
+type DocumentModel_Operation {
+  description: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  id: ID!
+  name: String
+  reducer: String
+  schema: String
+  scope: String
+  template: String
+}
+
+type DocumentModel_OperationError {
+  code: String
+  description: String
+  id: ID!
+  name: String
+  template: String
+}
+
+input DocumentModel_OperationErrorInput {
+  code: String
+  description: String
+  id: ID
+  name: String
+  template: String
+}
+
+input DocumentModel_OperationInput {
+  description: String
+  errors: [DocumentModel_OperationErrorInput]
+  examples: [DocumentModel_CodeExampleInput]
+  id: ID
+  name: String
+  reducer: String
+  schema: String
+  scope: String
+  template: String
+}
+
+"""Document scope state (same for all document types)"""
+type DocumentModel_PHDocumentScopeState {
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+  hash: DocumentModel_PHHashConfig!
+  isDeleted: Boolean
+  version: Int!
+}
+
+"""Hash configuration for document state"""
+type DocumentModel_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+input DocumentModel_PagingInput {
+  cursor: String
+  limit: Int
+  offset: Int
+}
+
+input DocumentModel_ReorderChangeLogItemsInput {
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModuleOperationsInput {
+  moduleId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderModulesInput {
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationErrorsInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderOperationExamplesInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+input DocumentModel_ReorderStateExamplesInput {
+  order: [ID!]!
+  scope: String!
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+input DocumentModel_ScopeStateInput {
+  global: DocumentModel_StateInput
+  local: DocumentModel_StateInput
+}
+
+input DocumentModel_SearchFilterInput {
+  parentId: String
+}
+
+input DocumentModel_SetAuthorNameInput {
+  authorName: String!
+}
+
+input DocumentModel_SetAuthorWebsiteInput {
+  authorWebsite: String!
+}
+
+input DocumentModel_SetInitialStateInput {
+  initialValue: String!
+  scope: String!
+}
+
+input DocumentModel_SetModelDescriptionInput {
+  description: String!
+}
+
+input DocumentModel_SetModelExtensionInput {
+  extension: String!
+}
+
+input DocumentModel_SetModelIdInput {
+  id: String!
+}
+
+"""Module: Header"""
+input DocumentModel_SetModelNameInput {
+  name: String!
+}
+
+input DocumentModel_SetModuleDescriptionInput {
+  description: String
+  id: ID!
+}
+
+input DocumentModel_SetModuleNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationDescriptionInput {
+  description: String
+  id: ID!
+}
+
+input DocumentModel_SetOperationErrorCodeInput {
+  errorCode: String
+  id: ID!
+}
+
+input DocumentModel_SetOperationErrorDescriptionInput {
+  errorDescription: String
+  id: ID!
+}
+
+input DocumentModel_SetOperationErrorNameInput {
+  errorName: String
+  id: ID!
+}
+
+input DocumentModel_SetOperationErrorTemplateInput {
+  errorTemplate: String
+  id: ID!
+}
+
+input DocumentModel_SetOperationNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationReducerInput {
+  id: ID!
+  reducer: String
+}
+
+input DocumentModel_SetOperationSchemaInput {
+  id: ID!
+  schema: String
+}
+
+input DocumentModel_SetOperationScopeInput {
+  id: ID!
+  scope: String
+}
+
+input DocumentModel_SetOperationTemplateInput {
+  id: ID!
+  template: String
+}
+
+"""Module: State"""
+input DocumentModel_SetStateSchemaInput {
+  schema: String!
+  scope: String!
+}
+
+type DocumentModel_State {
+  examples: [DocumentModel_CodeExample!]!
+  initialValue: String!
+  schema: String!
+}
+
+input DocumentModel_StateInput {
+  examples: [DocumentModel_CodeExampleInput]
+  initialValue: String
+  schema: String
+}
+
+input DocumentModel_UpdateChangeLogItemInput {
+  id: ID!
+  newContent: String!
+}
+
+input DocumentModel_UpdateOperationExampleInput {
+  example: String!
+  id: ID!
+}
+
+input DocumentModel_UpdateStateExampleInput {
+  id: ID!
+  newExample: String!
+  scope: String!
+}
+
+input DocumentModel_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+type DriveDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+type GqlDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type Mutation {
+  DocumentModel: DocumentModelMutations!
+}
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  context: PHOperationContext
+  error: String
+  hash: String!
+  id: String!
+  index: Int!
+  inputText: String
+  skip: Int
+  timestampUtcMs: DateTime!
+  type: String!
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Query {
+  DocumentModel: DocumentModelQueries!
+  _service: _Service!
+}
+
+type Revision {
+  revision: Int!
+  scope: String!
+}
+
+type Signer {
+  app: SignerApp
+  signatures: [String!]!
+  user: SignerUser
+}
+
+type SignerApp {
+  key: String!
+  name: String!
+}
+
+type SignerUser {
+  address: String!
+  chainId: Int!
+  networkId: String!
+}
+
+scalar URL
+
+scalar Upload
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}

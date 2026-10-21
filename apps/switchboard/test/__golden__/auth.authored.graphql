@@ -1,0 +1,58 @@
+scalar DateTime
+
+enum DocumentPermissionLevel {
+  READ
+  WRITE
+  ADMIN
+}
+
+type DocumentPermissionEntry {
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type OperationUserPermission {
+  documentId: String!
+  operationType: String!
+  userAddress: String!
+  grantedBy: String!
+  createdAt: DateTime!
+}
+
+type DocumentAccessInfo {
+  documentId: String!
+  permissions: [DocumentPermissionEntry!]!
+}
+
+type OperationPermissionsInfo {
+  documentId: String!
+  operationType: String!
+  userPermissions: [OperationUserPermission!]!
+}
+
+type DocumentProtectionInfo {
+  documentId: String!
+  protected: Boolean!
+  ownerAddress: String
+}
+
+type Query {
+  documentAccess(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentAccessInfo!
+  documentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentProtectionInfo!
+  userDocumentPermissions: [DocumentPermissionEntry!]!
+  operationPermissions(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): OperationPermissionsInfo!
+  canExecuteOperation(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): Boolean!
+}
+
+type Mutation {
+  setDocumentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), protected: Boolean!): DocumentProtectionInfo!
+  transferDocumentOwnership(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), newOwnerAddress: String!): DocumentProtectionInfo!
+  grantDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!, permission: DocumentPermissionLevel!): DocumentPermissionEntry!
+  revokeDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!): Boolean!
+  grantOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): OperationUserPermission!
+  revokeOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): Boolean!
+}

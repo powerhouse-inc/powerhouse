@@ -1,0 +1,32 @@
+import { BaseSubgraph, type SchemaBuilder } from "@powerhousedao/reactor-api";
+import { schema } from "./schema.js";
+import { getResolvers } from "./resolvers.js";
+
+export class ExampleSubgraph extends BaseSubgraph {
+  static override readonly subgraphName = "example";
+  static override getSchema(schemaBuilder: SchemaBuilder<ExampleSubgraph>) {
+    return schemaBuilder.graphql({
+      typeDefs: schema,
+      resolverCoordinates: [
+        {
+          typeName: "Query",
+          fieldName: "example",
+          resolverKind: "field",
+        },
+        {
+          typeName: "ExampleQueries",
+          fieldName: "example",
+          resolverKind: "field",
+        },
+      ],
+      resolvers: (s) => getResolvers(s),
+    });
+  }
+
+  override async onSetup() {
+    await super.onSetup();
+  }
+  override async onDisconnect() {
+    await super.onDisconnect();
+  }
+}

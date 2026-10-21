@@ -48,11 +48,11 @@ function HomeLink(props: { children: ReactNode }) {
 
 // A row's date is a nicety: it shows "-" when the document can't load.
 class Quiet extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+  override state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
   }
-  render() {
+  override render() {
     return this.state.failed ? "-" : this.props.children;
   }
 }

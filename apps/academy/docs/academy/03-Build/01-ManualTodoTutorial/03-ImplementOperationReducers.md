@@ -43,6 +43,10 @@ git reset --hard tutorial/step-3-implement-reducer-operation-handlers
 
 </details>
 
+:::note
+This tutorial uses the schema-first flow, where Vetra generates the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 Now implement the operation reducers for the **todo-list** document model. In the previous step, Vetra imported the document specification and scaffolded the code and directory through live code generation.
 
 :::info

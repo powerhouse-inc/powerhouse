@@ -8,7 +8,6 @@ import type {
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import type { DocumentNode } from "graphql";
 import type { IHttpScope } from "../http/index.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { IncomingHttpHeaders } from "http";
@@ -17,8 +16,14 @@ import type { ICredentialInvalidator } from "../services/auth.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
+import type { SUBGRAPH_PROTOCOL } from "./subgraph-protocol.js";
 
-export type SubgraphClass = typeof BaseSubgraph;
+/** A subgraph class the host constructs. */
+export type SubgraphClass = (new (args: SubgraphArgs) => BaseSubgraph) &
+  Pick<
+    typeof BaseSubgraph,
+    "subgraphName" | "getSchema" | typeof SUBGRAPH_PROTOCOL
+  >;
 
 export type Context = {
   driveId?: string;
@@ -33,25 +38,6 @@ export type Context = {
     /** The did:key of the app instance that issued this request's token. */
     appKey: string;
   };
-};
-
-export type ISubgraph = {
-  name: string;
-  /**
-   * @deprecated The GraphQL manager mounts every subgraph under its own base
-   * path and does not consult this field for routing, so the value a
-   * subgraph holds (including one overwritten by a field initializer after
-   * `super()`) has no effect on where it is mounted. Retained for source
-   * compatibility.
-   */
-  path?: string;
-  resolvers: Record<string, any>;
-  typeDefs: DocumentNode;
-  reactorClient: IReactorClient;
-  relationalDb: IRelationalDb;
-  hasSubscriptions?: boolean;
-  onSetup?: () => Promise<void>;
-  onDisconnect?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
@@ -88,12 +74,6 @@ export type SubgraphArgs = {
    * `BaseSubgraph.credentials`, which is a no-op when the host passes none.
    */
   credentials?: ICredentialInvalidator;
-  /**
-   * The host's base path, injected by the GraphQL manager when it constructs
-   * a subgraph. Subgraph code may read it, but routing ignores it: every
-   * subgraph is mounted under the manager's own base path.
-   */
-  path?: string;
 };
 
 export type GqlSigner = {

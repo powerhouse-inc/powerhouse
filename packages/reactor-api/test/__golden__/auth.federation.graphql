@@ -1,0 +1,331 @@
+scalar JSONObject
+
+scalar AttachmentRef
+
+scalar Unknown
+
+scalar Address
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar Amount_Percentage
+
+scalar EmailAddress
+
+scalar Date
+
+scalar DateTime
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+enum DocumentPermissionLevel {
+  READ
+  WRITE
+  ADMIN
+}
+
+type DocumentPermissionEntry {
+  documentId: String!
+  userAddress: String!
+  permission: DocumentPermissionLevel!
+  grantedBy: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type OperationUserPermission {
+  documentId: String!
+  operationType: String!
+  userAddress: String!
+  grantedBy: String!
+  createdAt: DateTime!
+}
+
+type DocumentAccessInfo {
+  documentId: String!
+  permissions: [DocumentPermissionEntry!]!
+}
+
+type OperationPermissionsInfo {
+  documentId: String!
+  operationType: String!
+  userPermissions: [OperationUserPermission!]!
+}
+
+type DocumentProtectionInfo {
+  documentId: String!
+  protected: Boolean!
+  ownerAddress: String
+}
+
+type Query {
+  documentAccess(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentAccessInfo!
+  documentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug.")): DocumentProtectionInfo!
+  userDocumentPermissions: [DocumentPermissionEntry!]!
+  operationPermissions(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): OperationPermissionsInfo!
+  canExecuteOperation(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!): Boolean!
+}
+
+type Mutation {
+  setDocumentProtection(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), protected: Boolean!): DocumentProtectionInfo!
+  transferDocumentOwnership(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), newOwnerAddress: String!): DocumentProtectionInfo!
+  grantDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!, permission: DocumentPermissionLevel!): DocumentPermissionEntry!
+  revokeDocumentPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), userAddress: String!): Boolean!
+  grantOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): OperationUserPermission!
+  revokeOperationPermission(documentIdOrSlug: String, documentId: String @deprecated(reason: "Use documentIdOrSlug."), operationType: String!, userAddress: String!): Boolean!
+}

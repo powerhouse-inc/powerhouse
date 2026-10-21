@@ -21,6 +21,10 @@ It summarizes the flow from initial setup to a built, tested package.
 Please start with the [**Manual Todo tutorial**](/academy/Build/ManualTodoTutorial/CreateNewPowerhouseProject) or the [**Document Model Creation**](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 :::
 
+:::note
+This guide uses the schema-first flow, where Vetra Studio generates the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 <details>
 <summary>Key commands that you'll use in this flow</summary>
 

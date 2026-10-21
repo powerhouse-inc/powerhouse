@@ -300,6 +300,8 @@ existing precedent — it mounts three node routes for the streamable-HTTP MCP t
 Existing routes: `/health`, `/ready`, `/explorer/:endpoint?`, per-drive GraphQL, per-subgraph
 GraphQL, the composed supergraph, and an SSE channel (`graphql-manager.ts:858`).
 
+> Historical snapshot. The subgraph fields and path behavior described below are superseded by [ADR 0006](../../../../docs/adr/0006-class-based-subgraphs.md). Current classes use static `subgraphName` and `getSchema`; authors cannot set an instance `path`.
+
 **GraphQL subgraphs** — `packages/reactor-api/src/graphql/base-subgraph.ts`. A subgraph is a class
 with `name`, `typeDefs`, `resolvers`, `onSetup()`, constructed with `SubgraphArgs`:
 `{reactorClient, relationalDb, analyticsStore, graphqlManager, syncManager,

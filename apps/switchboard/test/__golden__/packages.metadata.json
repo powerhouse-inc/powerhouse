@@ -1,0 +1,38 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Mutation",
+      "fieldName": "Packages",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "PackagesMutations",
+      "fieldName": "installPackage",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "PackagesMutations",
+      "fieldName": "uninstallPackage",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "PackagesQueries",
+      "fieldName": "installedPackage",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "PackagesQueries",
+      "fieldName": "installedPackages",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "Packages",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": false,
+    "normalized": false
+  }
+}

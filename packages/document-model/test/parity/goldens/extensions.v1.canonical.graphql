@@ -1,0 +1,16 @@
+type ExtensionsState {
+  title: String!
+  status: ExtensionsStatus!
+  note: String
+  flagged: Boolean
+}
+
+enum ExtensionsStatus {
+  OPEN
+  CLOSED
+}
+
+input SetStatusInput {
+  status: ExtensionsStatus!
+  reason: String
+}

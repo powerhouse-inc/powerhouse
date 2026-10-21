@@ -3,43 +3,64 @@ import {
   type GraphQLResolverMap,
   type GraphQLSchemaModule,
 } from "@apollo/subgraph";
-import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import type {
   DocumentModelGlobalState,
   DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import { childLogger } from "document-model";
 import {
-  type ASTNode,
-  type DefinitionNode,
+  canonicalDigest,
+  childLogger,
+  formatDefinitionDiagnostic,
+  packageScalarsOf,
+  type ScalarBinding,
+} from "document-model";
+import { orderedScalarNames, scalarCatalog } from "document-model/scalars";
+import {
   type DocumentNode,
+  type GraphQLScalarType,
   Kind,
-  Lexer,
-  type NameNode,
   parse,
   print,
+  type ASTNode,
+  type DefinitionNode,
+  Lexer,
+  type NameNode,
   Source,
+  type StringValueNode,
   TokenKind,
   visit,
 } from "graphql";
 import { gql } from "graphql-tag";
-import { GraphQLJSON, GraphQLJSONObject } from "graphql-type-json";
+import {
+  type DocumentModelSchemaOptions,
+  generateModelSchema,
+  getDocumentModelSchemaName,
+  hasValidSchema,
+  type ModelProjection,
+} from "../graphql/model-schema-templates.js";
+import {
+  HOST_SCALAR_RESOLVERS,
+  packageScalarResolvers,
+  unreportedScalarBindings,
+} from "../graphql/scalar-bindings.js";
+import { structuredModelProjection } from "../graphql/structured-model-schema.js";
+import {
+  printCompatibilityDocument,
+  printNamespacedTypes,
+  structuredModelOf,
+  type StructuredModel,
+  withHostDescriptions,
+} from "../graphql/structured-projection.js";
+
+export {
+  type DocumentModelSchemaOptions,
+  getDocumentModelSchemaName,
+} from "../graphql/model-schema-templates.js";
 import { createHash } from "node:crypto";
 
 const logger = childLogger(["reactor-api", "create-schema"]);
-
-/**
- * Revision type - matches the definition in reactor/schema.graphql.
- * Used by PHDocument and document mutation results.
- */
-const RevisionType = `
-  type Revision {
-    scope: String!
-    revision: Int!
-  }
-`;
 
 /**
  * A subgraph defines a type whose name the generated document-model schema
@@ -55,6 +76,74 @@ export class SubgraphTypeCollisionError extends Error {
     this.name = "SubgraphTypeCollisionError";
     this.typeNames = typeNames;
   }
+}
+
+/** A model's package scalar, under the name the host serves it by. */
+type HostPackageScalar = {
+  readonly name: string;
+  readonly description: string;
+  /**
+   * Absent when the module's compiler recorded no binding. The host then
+   * serves the scalar with GraphQL's default pass-through.
+   */
+  readonly binding: ScalarBinding | undefined;
+};
+
+/**
+ * Collects the package scalars this host's code-first models declare, each
+ * named with its model's prefix. Every subgraph carries every model's state
+ * types, so each subgraph declares all of them. As in
+ * `getDocumentModelTypeDefs`, only the first module with a given schema name
+ * is projected. A binding is matched to its scalar by definition digest.
+ */
+function modelPackageScalars(
+  documentModels: readonly DocumentModelModule[],
+): readonly HostPackageScalar[] {
+  const scalars: HostPackageScalar[] = [];
+  const projected = new Set<string>();
+  for (const module of documentModels) {
+    const schemaName = getDocumentModelSchemaName(module.documentModel.global);
+    if (projected.has(schemaName)) continue;
+    projected.add(schemaName);
+    const structured = structuredModelOf(module);
+    if (structured === null) continue;
+    const bindings = new Map(
+      packageScalarsOf(module).map((binding) => [
+        canonicalDigest(binding.definition),
+        binding,
+      ]),
+    );
+    for (const scalar of structured.specification.scalars) {
+      if (!("definition" in scalar)) continue;
+      scalars.push({
+        name: `${schemaName}_${scalar.name}`,
+        description: scalar.definition.description,
+        binding: bindings.get(canonicalDigest(scalar.definition)),
+      });
+    }
+  }
+  return scalars;
+}
+
+/**
+ * The check reads the object's shape because a scalar built by another
+ * graphql copy fails `instanceof`.
+ */
+function authoredScalarNames(
+  resolvers: Readonly<Record<string, unknown>>,
+): ReadonlySet<string> {
+  return new Set(
+    Object.entries(resolvers).flatMap(([name, resolver]) => {
+      const scalar = resolver as Partial<GraphQLScalarType> | null;
+      return scalar !== null &&
+        typeof scalar === "object" &&
+        scalar.name === name &&
+        typeof scalar.parseValue === "function" &&
+        typeof scalar.serialize === "function"
+        ? [name]
+        : [];
+    }),
+  );
 }
 
 /**
@@ -200,61 +289,21 @@ function stateTypeDefinitions(
   );
 }
 
-/**
- * Prefixed operation schemas per module. The first definition of each module
- * carries a "Module: <Name>" description unless it has its own.
- */
-function buildModuleSchemas(
-  specification: DocumentModelGlobalState["specifications"][0] | undefined,
-  documentName: string,
-  allTypeNames: string[],
-  hasValidSchema: (schema: string | null | undefined) => boolean,
-): string {
-  const names = new Set(allTypeNames);
-  return (
-    specification?.modules
-      .map((module) => {
-        const definitions = module.operations
-          .filter((op) => hasValidSchema(op.schema))
-          .flatMap((op) => {
-            const doc = parseSdl(op.schema ?? "");
-            const opNames = new Set([
-              ...names,
-              ...definedTypeNames(doc, ALL_PREFIX_KINDS),
-            ]);
-            return prefixTypeNames(doc, documentName, opNames).definitions;
-          });
-        if (definitions.length === 0) return "";
-        const [first, ...rest] = definitions;
-        const header =
-          "description" in first && !first.description
-            ? {
-                ...first,
-                description: {
-                  kind: Kind.STRING,
-                  value: `Module: ${pascalCase(module.name)}`,
-                  block: true,
-                },
-              }
-            : first;
-        return print({
-          kind: Kind.DOCUMENT,
-          definitions: [header as DefinitionNode, ...rest],
-        });
-      })
-      .filter(Boolean)
-      .join("\n") ?? ""
-  );
-}
-
 export type SubgraphSchemaOptions = {
   /**
    * Types the subgraph's own schema generator emits, as a document model's
    * subgraph has. These may repeat a generated definition, which is kept.
    */
   ownTypeNames?: ReadonlySet<string>;
+  /** Descriptions the subgraph's own model adds to its generated types. */
+  ownDescriptions?: TemplateDescriptions;
   /** Generated types already built for `documentModels`. */
   generated?: GeneratedDocumentModelTypes;
+  /**
+   * Whether to log the scalar findings this process has not reported yet.
+   * A build that only checks passes `false`, so the host still logs them.
+   */
+  reportScalars?: boolean;
 };
 
 export const buildSubgraphSchemaModule = (
@@ -263,18 +312,46 @@ export const buildSubgraphSchemaModule = (
   typeDefs: DocumentNode,
   options: SubgraphSchemaOptions = {},
 ): GraphQLSchemaModule => {
+  // Later spreads win. A model's package scalars override an authored
+  // resolver of the same name, and the host's two coercers override both.
+  // Existing clients depend on the host coercers winning.
+  const packageScalars = modelPackageScalars(documentModels).flatMap(
+    ({ name, binding }) => (binding === undefined ? [] : [{ name, binding }]),
+  );
   const newResolvers = {
     ...resolvers,
-    JSONObject: GraphQLJSONObject,
-    Unknown: GraphQLJSON,
+    ...packageScalarResolvers(packageScalars),
+    ...HOST_SCALAR_RESOLVERS,
   };
+  const moduleTypeDefs = assembleSubgraphTypeDefs(
+    options.generated ?? getGeneratedDocumentModelTypes(documentModels),
+    typeDefs,
+    options.ownTypeNames,
+    options.ownDescriptions,
+  );
+  const boundPackageScalars = new Set([
+    ...packageScalars.map(({ name }) => name),
+    ...authoredScalarNames(resolvers),
+  ]);
+
+  // The scalar report only logs. A throw from it must not stop the subgraph
+  // from composing, so it is caught.
+  if (options.reportScalars !== false) {
+    try {
+      for (const diagnostic of unreportedScalarBindings(
+        moduleTypeDefs,
+        resolvers,
+        boundPackageScalars,
+      )) {
+        logger.warn(formatDefinitionDiagnostic(diagnostic));
+      }
+    } catch (error) {
+      logger.debug("scalar binding report failed: @error", error);
+    }
+  }
 
   return {
-    typeDefs: assembleSubgraphTypeDefs(
-      options.generated ?? getGeneratedDocumentModelTypes(documentModels),
-      typeDefs,
-      options.ownTypeNames,
-    ),
+    typeDefs: moduleTypeDefs,
     resolvers: newResolvers,
   };
 };
@@ -299,10 +376,72 @@ export const createMergedSchema = (modules: GraphQLSchemaModule[]) => {
   return buildSubgraphSchema(modules);
 };
 
-export function getDocumentModelSchemaName(
-  documentModel: DocumentModelGlobalState,
-) {
-  return pascalCase(documentModel.name.replaceAll("/", " "));
+/**
+ * The `IDocument` type each model contributes to the composed host schema.
+ * Both projections use it, and only the state type it references differs.
+ */
+function documentWrapperType(
+  schemaName: string,
+  stateRootName: string,
+): string {
+  const typedState = schemaName !== "DocumentModel";
+  return `
+    type ${schemaName} implements IDocument {
+              id: String!
+              name: String!
+              documentType: String!
+              operations(skip: Int, first: Int): [Operation!]!
+              revision: Int!
+              createdAtUtcIso: DateTime!
+              lastModifiedAtUtcIso: DateTime!
+              ${typedState ? `initialState: ${schemaName}_${stateRootName}!` : ""}
+              ${typedState ? `state: ${schemaName}_${stateRootName}!` : ""}
+              stateJSON: JSONObject
+          }\n`;
+}
+
+/**
+ * A model as a module, or as the global state a schema-first model's JSON
+ * holds. Only a module carries a code-first model's structured definition.
+ */
+export type DocumentModelSource =
+  | DocumentModelModule
+  | DocumentModelGlobalState;
+
+export const isDocumentModelModule = (
+  source: DocumentModelSource,
+): source is DocumentModelModule => "documentModel" in source;
+
+export const globalStateOf = (
+  source: DocumentModelSource,
+): DocumentModelGlobalState =>
+  isDocumentModelModule(source) ? source.documentModel.global : source;
+
+/** The version of a model: its module's, else its latest specification's. */
+export const documentModelVersion = (source: DocumentModelSource): number =>
+  (isDocumentModelModule(source) ? source.version : undefined) ??
+  globalStateOf(source).specifications.at(-1)?.version ??
+  0;
+
+/**
+ * The latest version of each model, by name: the only one whose own subgraph
+ * the server registers.
+ */
+export function latestDocumentModelVersions<M extends DocumentModelSource>(
+  documentModels: readonly M[],
+): M[] {
+  const latestByName = new Map<string, M>();
+  for (const documentModel of documentModels) {
+    const { name } = globalStateOf(documentModel);
+    const existing = latestByName.get(name);
+    if (
+      !existing ||
+      documentModelVersion(documentModel) > documentModelVersion(existing)
+    ) {
+      latestByName.set(name, documentModel);
+    }
+  }
+  return Array.from(latestByName.values());
 }
 
 /** The name the model's own subgraph registers under. */
@@ -311,6 +450,103 @@ export function getDocumentModelSubgraphName(
 ): string {
   return kebabCase(documentModel.name);
 }
+
+/**
+ * The state types a code-first model contributes, namespaced from the
+ * structured definition. Inputs declared beside the state are dropped, as the
+ * stored-SDL path strips `input` blocks. `generateModelSchema` prints the
+ * global ones as state input types.
+ */
+function structuredModelStateTypes(
+  model: StructuredModel,
+  schemaName: string,
+  hostDescriptions: ReadonlyMap<string, string>,
+): string {
+  const { specification, segments, packageScalars } = model;
+  const wrapper = documentWrapperType(
+    schemaName,
+    specification.state.global.root.name,
+  );
+  if (specification.graphQLCompatibility !== null) {
+    // A retained GraphQL AST is projected whole, including its type extensions.
+    return (
+      printCompatibilityDocument(
+        withHostDescriptions(
+          specification.graphQLCompatibility.document,
+          hostDescriptions,
+        ),
+        schemaName,
+        packageScalars,
+      ) + wrapper
+    );
+  }
+  const stateTypes = [...segments.global, ...segments.local].flatMap((type) =>
+    type.kind === "input"
+      ? []
+      : [
+          {
+            ...type,
+            description:
+              type.description ?? hostDescriptions.get(type.name) ?? null,
+          },
+        ],
+  );
+  return printNamespacedTypes(model, stateTypes, schemaName) + wrapper;
+}
+
+function storedModelStateTypes(
+  documentModel: DocumentModelGlobalState,
+  dmSchemaName: string,
+): string {
+  const latestSpec = documentModel.specifications.at(-1);
+  const definitions = [
+    ...stateTypeDefinitions(latestSpec?.state.global.schema ?? ""),
+    ...stateTypeDefinitions(
+      latestSpec?.state.local.schema ?? "",
+      LOCAL_STATE_STUBS,
+    ),
+  ];
+  const stateDoc: DocumentNode = { kind: Kind.DOCUMENT, definitions };
+  const prefixed = prefixTypeNames(
+    stateDoc,
+    dmSchemaName,
+    new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
+  );
+  return (
+    (definitions.length > 0 ? `${print(prefixed)}\n` : "") +
+    documentWrapperType(dmSchemaName, `${dmSchemaName}State`)
+  );
+}
+
+/**
+ * The scalars every document-model subgraph declares, in the order the host
+ * has always printed them. A scalar added to the catalog later is appended.
+ */
+const SUBGRAPH_SCALAR_TYPE_DEFS = orderedScalarNames(scalarCatalog.names, [
+  "JSONObject",
+  "AttachmentRef",
+  "Unknown",
+  "Address",
+  "Amount_Tokens",
+  "EthereumAddress",
+  "Amount_Percentage",
+  "EmailAddress",
+  "Date",
+  "DateTime",
+  "URL",
+  "Amount_Money",
+  "OLabel",
+  "Currency",
+  "PHID",
+  "OID",
+  "Amount_Fiat",
+  "Amount_Currency",
+  "Amount_Crypto",
+  "Amount",
+  "Upload",
+])
+  .map((name) => `scalar ${name}`)
+  .join("\n");
 
 /**
  * The generated document-model types followed by the subgraph's own. Throws
@@ -343,46 +579,34 @@ export type GeneratedDocumentModelTypes = {
   names: ReadonlySet<string>;
 };
 
-/** The definitions `documentModel` adds to the generated schema. */
-function documentModelDefinitions(
+function storedModelDefinitions(
   documentModel: DocumentModelGlobalState,
-): DefinitionNode[] {
-  const dmSchemaName = getDocumentModelSchemaName(documentModel);
-  // Use only the latest specification to avoid duplicate type definitions
-  // when a document model has multiple versions (e.g. v1, v2).
-  const latestSpec = documentModel.specifications.at(-1);
-  const globalSchema = latestSpec?.state.global.schema ?? "";
-  const localSchema = latestSpec?.state.local.schema ?? "";
-  const definitions = [
-    ...stateTypeDefinitions(globalSchema),
-    ...stateTypeDefinitions(localSchema, LOCAL_STATE_STUBS),
-  ];
-  const stateDoc: DocumentNode = { kind: Kind.DOCUMENT, definitions };
-  const prefixed = prefixTypeNames(
-    stateDoc,
-    dmSchemaName,
-    new Set(definedTypeNames(stateDoc, STATE_PREFIX_KINDS)),
-  );
-  const documentType = parseSdl(`
-    type ${dmSchemaName} implements IDocument {
-              id: String!
-              name: String!
-              documentType: String!
-              operations(skip: Int, first: Int): [Operation!]!
-              revision: Int!
-              createdAtUtcIso: DateTime!
-              lastModifiedAtUtcIso: DateTime!
-              ${dmSchemaName !== "DocumentModel" ? `initialState: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              ${dmSchemaName !== "DocumentModel" ? `state: ${dmSchemaName}_${dmSchemaName}State!` : ""}
-              stateJSON: JSONObject
-          }`);
-  return [...prefixed.definitions, ...documentType.definitions];
+): readonly DefinitionNode[] {
+  return parseSdl(
+    storedModelStateTypes(
+      documentModel,
+      getDocumentModelSchemaName(documentModel),
+    ),
+  ).definitions;
 }
 
-/** The part of a document model module its schema is built from. */
-export type DocumentModelSource = {
-  documentModel: { global: DocumentModelGlobalState };
-};
+/** The definitions `documentModel` adds to the generated schema. */
+function documentModelDefinitions(
+  documentModel: DocumentModelSource,
+): readonly DefinitionNode[] {
+  if (!isDocumentModelModule(documentModel))
+    return storedModelDefinitions(documentModel);
+  const global = documentModel.documentModel.global;
+  const structured = structuredModelOf(documentModel);
+  if (structured === null) return storedModelDefinitions(global);
+  return parseSdl(
+    structuredModelStateTypes(
+      structured,
+      getDocumentModelSchemaName(global),
+      new Map(),
+    ),
+  ).definitions;
+}
 
 /** Type name → whether every definition of that name is a scalar. */
 export type ReservedTypeNames = ReadonlyMap<string, boolean>;
@@ -433,7 +657,7 @@ export function reservedTypeNamesTaken(
   documentModel: DocumentModelSource,
   reserved: ReservedTypeNames,
   definitions: readonly DefinitionNode[] = documentModelDefinitions(
-    documentModel.documentModel.global,
+    documentModel,
   ),
 ): string[] {
   const generated = addScalarFlags(definitions, new Map());
@@ -444,15 +668,11 @@ export function reservedTypeNamesTaken(
     .map(([name]) => name);
 }
 
-// The generated schema around the document models' definitions.
-const GENERATED_HEAD = gql`
-  scalar JSONObject
-  scalar AttachmentRef
-  # Codegen scalars not in the document-engineering set.
-  scalar Unknown
-  scalar Address
-  ${scalarsTypeDefs.join("\n").replaceAll(";", "")}
+const GENERATED_SCALARS = gql`
+  ${SUBGRAPH_SCALAR_TYPE_DEFS}
+`.definitions;
 
+const GENERATED_HEAD = gql`
   type PHOperationContext {
     signer: Signer
   }
@@ -522,38 +742,56 @@ const GENERATED_TAIL = gql`
   }
 `.definitions;
 
-/**
- * The generated schema for `documentModels`. `schemas` supplies models'
- * definitions already built; the others are built here.
- */
+/** {@link generatedTypesOf} for modules. */
 export function getGeneratedDocumentModelTypes(
   documentModels: readonly DocumentModelSource[],
   schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
 ): GeneratedDocumentModelTypes {
+  return generatedTypesOf(documentModels, schemas);
+}
+
+/**
+ * The generated schema for `documentModels`, modules or stored global states.
+ * `schemas` supplies models' definitions already built; the others are built
+ * here.
+ */
+export function generatedTypesOf(
+  documentModels: readonly DocumentModelSource[],
+  schemas?: ReadonlyMap<DocumentModelSource, DocumentModelSchema>,
+): GeneratedDocumentModelTypes {
   return generatedTypesFrom(
-    documentModels.map((model) => ({
-      global: model.documentModel.global,
-      generated: schemas?.get(model)?.generated,
+    documentModels.map((source) => ({
+      global: globalStateOf(source),
+      definitions: () =>
+        schemas?.get(source)?.generated ?? documentModelDefinitions(source),
     })),
+    modelPackageScalars(documentModels.filter(isDocumentModelModule)),
   );
 }
 
-/** {@link getGeneratedDocumentModelTypes} from the models' global states. */
-export function generatedTypesOf(
-  documentModels: readonly DocumentModelGlobalState[],
-): GeneratedDocumentModelTypes {
-  return generatedTypesFrom(documentModels.map((global) => ({ global })));
+function packageScalarDefinitions(
+  packageScalars: readonly HostPackageScalar[],
+): readonly DefinitionNode[] {
+  return parseSdl(
+    packageScalars
+      .map(
+        ({ name, description }) =>
+          `${JSON.stringify(description)}\nscalar ${name}`,
+      )
+      .join("\n"),
+  ).definitions;
 }
 
 function generatedTypesFrom(
   documentModels: readonly {
     global: DocumentModelGlobalState;
-    generated?: readonly DefinitionNode[];
+    definitions: () => readonly DefinitionNode[];
   }[],
+  packageScalars: readonly HostPackageScalar[],
 ): GeneratedDocumentModelTypes {
   const modelDefinitions: DefinitionNode[] = [];
   const addedDocumentModels = new Set<string>();
-  documentModels.forEach(({ global, generated }) => {
+  documentModels.forEach(({ global, definitions }) => {
     const dmSchemaName = getDocumentModelSchemaName(global);
     if (addedDocumentModels.has(dmSchemaName)) {
       logger.debug(
@@ -562,17 +800,17 @@ function generatedTypesFrom(
       return;
     }
     addedDocumentModels.add(dmSchemaName);
-    modelDefinitions.push(...(generated ?? documentModelDefinitions(global)));
+    modelDefinitions.push(...definitions());
   });
 
   const definitions = dedupeTypeDefinitions([
+    ...GENERATED_SCALARS,
+    ...packageScalarDefinitions(packageScalars),
     ...GENERATED_HEAD,
     ...modelDefinitions,
     ...GENERATED_TAIL,
   ]);
-  const names = new Set(
-    definitions.map(typeDefinitionName).filter((name) => name !== undefined),
-  );
+  const names = typeDefinitionNames({ kind: Kind.DOCUMENT, definitions });
   return { definitions, names };
 }
 
@@ -581,13 +819,10 @@ export type DocumentModelSchema = {
   /** Its definitions in the generated schema every subgraph carries. */
   generated: readonly DefinitionNode[];
   /** Its own subgraph's types, when it has operations to serve. */
-  subgraph?: { typeDefs: DocumentNode; typeNames: ReadonlySet<string> };
+  subgraph?: DocumentModelSubgraphTypes;
   /** Why its own subgraph cannot be served; its generated types still can. */
   subgraphError?: Error;
 };
-
-const hasValidSchema = (schema: string | null | undefined): boolean =>
-  !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
 
 /** Whether any operation of the latest specification has a schema. */
 export function hasOperationSchemas(documentModel: DocumentModelGlobalState) {
@@ -598,14 +833,27 @@ export function hasOperationSchemas(documentModel: DocumentModelGlobalState) {
   );
 }
 
-/** The types of a document model's own subgraph. */
+/** Host descriptions keyed by definition kind and name. */
+export type TemplateDescriptions = ReadonlyMap<string, StringValueNode>;
+
+export type DocumentModelSubgraphTypes = {
+  readonly typeDefs: DocumentNode;
+  readonly typeNames: ReadonlySet<string>;
+  /** Descriptions its generated types carry in this subgraph only. */
+  readonly descriptions: TemplateDescriptions;
+};
+
+/**
+ * The types of a document model's own subgraph. Pass the module so a
+ * code-first model is projected from its structured definition.
+ */
 export function documentModelSubgraphTypes(
-  documentModel: DocumentModelGlobalState,
-): { typeDefs: DocumentNode; typeNames: ReadonlySet<string> } {
-  const typeDefs = generateDocumentModelSchema(documentModel, {
+  documentModel: DocumentModelSource,
+): DocumentModelSubgraphTypes {
+  const { typeDefs, descriptions } = modelTemplate(documentModel, {
     useNewApi: true,
   });
-  return { typeDefs, typeNames: typeDefinitionNames(typeDefs) };
+  return { typeDefs, typeNames: typeDefinitionNames(typeDefs), descriptions };
 }
 
 const toError = (error: unknown): Error =>
@@ -620,12 +868,13 @@ function checkBuilds(
   buildSubgraphSchema([
     {
       typeDefs: assembleSubgraphTypeDefs(
-        getGeneratedDocumentModelTypes(
+        generatedTypesOf(
           [documentModel],
           new Map([[documentModel, { generated }]]),
         ),
         subgraph?.typeDefs ?? EMPTY_DOCUMENT,
         subgraph?.typeNames,
+        subgraph?.descriptions,
       ),
     },
   ]);
@@ -636,20 +885,16 @@ export function buildDocumentModelSchema(
   documentModel: DocumentModelSource,
   options: { subgraph?: boolean } = {},
 ): DocumentModelSchema {
-  const generated = documentModelDefinitions(
-    documentModel.documentModel.global,
-  );
+  const generated = documentModelDefinitions(documentModel);
   if (
     options.subgraph === false ||
-    !hasOperationSchemas(documentModel.documentModel.global)
+    !hasOperationSchemas(globalStateOf(documentModel))
   ) {
     checkBuilds(documentModel, generated);
     return { generated };
   }
   try {
-    const subgraph = documentModelSubgraphTypes(
-      documentModel.documentModel.global,
-    );
+    const subgraph = documentModelSubgraphTypes(documentModel);
     checkBuilds(documentModel, generated, subgraph);
     return { generated, subgraph };
   } catch (error) {
@@ -670,30 +915,31 @@ export type ResolvedDocumentModelSchema<
 );
 
 /** Hash of everything {@link buildDocumentModelSchema} reads. */
-function schemaSourceKey(documentModel: DocumentModelSource): string {
+function schemaSourceKey(documentModel: DocumentModelModule): string {
   const { name, specifications } = documentModel.documentModel.global;
+  const structured = structuredModelOf(documentModel);
   return createHash("sha256")
-    .update(JSON.stringify([name, specifications.at(-1)]))
+    .update(
+      JSON.stringify([name, specifications.at(-1), structured?.digest ?? null]),
+    )
     .digest("base64");
 }
 
 /** Schemas and failures by source hash, for the last resolve's models only. */
-export class DocumentModelSchemaCache<
-  T extends DocumentModelSource = DocumentModelModule,
-> {
+export class DocumentModelSchemaCache {
   #entries = new Map<string, DocumentModelSchema | Error>();
-  readonly #build: (documentModel: T) => DocumentModelSchema;
+  readonly #build: (documentModel: DocumentModelModule) => DocumentModelSchema;
 
-  constructor(
-    build: (documentModel: T) => DocumentModelSchema = buildDocumentModelSchema,
-  ) {
+  constructor(build = buildDocumentModelSchema) {
     this.#build = build;
   }
 
-  resolve(documentModels: readonly T[]): ResolvedDocumentModelSchema<T>[] {
+  resolve(
+    documentModels: readonly DocumentModelModule[],
+  ): ResolvedDocumentModelSchema[] {
     const entries = new Map<string, DocumentModelSchema | Error>();
     const resolved = documentModels.map(
-      (model): ResolvedDocumentModelSchema<T> => {
+      (model): ResolvedDocumentModelSchema => {
         let key: string;
         let entry: DocumentModelSchema | Error | undefined;
         try {
@@ -719,6 +965,56 @@ export class DocumentModelSchemaCache<
     this.#entries = entries;
     return resolved;
   }
+}
+
+/** Whether the server admits a model, and why not when it refuses one. */
+export type DocumentModelAdmission =
+  | {
+      admitted: true;
+      schema: DocumentModelSchema;
+      /** Why its own subgraph is refused; its generated types still serve. */
+      subgraphRefusal?: string;
+    }
+  | {
+      admitted: false;
+      refusal: "unusable schema" | "reserved names";
+      reason: string;
+    };
+
+/**
+ * The server's decision on one built model: it refuses a model whose schema
+ * does not build or that generates a reserved type name.
+ */
+export function admitDocumentModel(
+  resolved: { model: DocumentModelSource } & (
+    | { schema: DocumentModelSchema; error?: undefined }
+    | { schema?: undefined; error: Error }
+  ),
+  reserved: ReservedTypeNames,
+): DocumentModelAdmission {
+  if (resolved.schema === undefined) {
+    return {
+      admitted: false,
+      refusal: "unusable schema",
+      reason: `has an unusable schema: ${resolved.error.message}`,
+    };
+  }
+  const { model, schema } = resolved;
+  const taken = reservedTypeNamesTaken(model, reserved, schema.generated);
+  if (taken.length > 0) {
+    return {
+      admitted: false,
+      refusal: "reserved names",
+      reason: `generates reserved type names: ${taken.join(", ")}`,
+    };
+  }
+  return {
+    admitted: true,
+    schema,
+    ...(schema.subgraphError !== undefined && {
+      subgraphRefusal: `has an unusable subgraph schema: ${schema.subgraphError.message}`,
+    }),
+  };
 }
 
 /**
@@ -747,6 +1043,7 @@ export function assembleSubgraphTypeDefs(
   generated: GeneratedDocumentModelTypes,
   typeDefs: DocumentNode,
   ownTypeNames?: ReadonlySet<string>,
+  ownDescriptions?: TemplateDescriptions,
 ): DocumentNode {
   const collisions = findSubgraphTypeCollisions(
     generated,
@@ -757,13 +1054,28 @@ export function assembleSubgraphTypeDefs(
     throw new SubgraphTypeCollisionError(collisions);
   }
   const subgraphDefinitions = typeDefs.definitions.filter(
-    (def) => def.kind !== Kind.SCALAR_TYPE_DEFINITION,
+    (def) =>
+      def.kind !== Kind.SCALAR_TYPE_DEFINITION ||
+      !generated.names.has(def.name.value),
   );
+
+  const definitions = generated.definitions.map((def) => {
+    if (
+      !("name" in def) ||
+      def.name === undefined ||
+      !("description" in def) ||
+      def.description
+    ) {
+      return def;
+    }
+    const description = ownDescriptions?.get(`${def.kind}:${def.name.value}`);
+    return description === undefined ? def : { ...def, description };
+  });
 
   return {
     kind: Kind.DOCUMENT,
     definitions: [
-      ...generated.definitions,
+      ...definitions,
       ...dedupeTypeDefinitions(subgraphDefinitions, new Set(generated.names)),
     ],
   };
@@ -988,427 +1300,178 @@ function applyGraphQLTypePrefixes(
   return print(prefixTypeNames(doc, prefix, names));
 }
 
-/**
- * Options for generating document model GraphQL schemas.
- */
-export interface DocumentModelSchemaOptions {
-  /**
-   * When true, generates new API patterns:
-   * - Mutations return full document objects (MutationResult type)
-   * - Adds createEmptyDocument mutation
-   * - Makes docId and input parameters required
-   * @default false
-   */
-  useNewApi?: boolean;
-}
-
-/**
- * Generate a GraphQL schema for a document model.
- *
- * @param documentModel - The document model global state
- * @param options - Schema generation options
- * @returns GraphQL DocumentNode
- */
-export function generateDocumentModelSchema(
+/** Reads the template inputs out of a schema-first model's stored SDL by regex. */
+function storedModelProjection(
   documentModel: DocumentModelGlobalState,
-  options: DocumentModelSchemaOptions = {},
-): DocumentNode {
-  const { useNewApi = false } = options;
-
+  documentName: string,
+): ModelProjection {
   const specification = documentModel.specifications.at(-1);
-  const documentName = getDocumentModelSchemaName(documentModel);
   const globalStateSchema = specification?.state.global.schema;
   const localStateSchema = specification?.state.local.schema;
-  const globalStateTypeNames = extractTypeNames(globalStateSchema ?? "");
-  const localStateTypeNames = extractTypeNames(localStateSchema ?? "");
-  const stateTypeNames = [...globalStateTypeNames, ...localStateTypeNames];
-
-  // Collect ALL type names from all operations' schemas
+  const stateTypeNames = [
+    ...extractTypeNames(globalStateSchema ?? ""),
+    ...extractTypeNames(localStateSchema ?? ""),
+  ];
   const allOperationTypeNames =
     specification?.modules.flatMap((module) =>
       module.operations.flatMap((op) => extractTypeNames(op.schema ?? "")),
     ) ?? [];
-
-  // Combine state types and all operation types for prefixing
   const allTypeNames = [
     ...new Set([...stateTypeNames, ...allOperationTypeNames]),
   ];
 
-  // Extract input type definitions from state schema, excluding operation-specific inputs
-  // (those are already defined in op.schema)
-  const operationInputTypeNames = new Set(allOperationTypeNames);
-  const stateInputTypes = extractInputTypeDefinitions(
-    globalStateSchema ?? "",
-    operationInputTypeNames,
-  );
   const prefixedStateInputTypes = applyGraphQLTypePrefixes(
-    stateInputTypes,
+    extractInputTypeDefinitions(
+      globalStateSchema ?? "",
+      new Set(allOperationTypeNames),
+    ),
     documentName,
     allTypeNames,
   );
 
-  if (useNewApi) {
-    // New API: flat queries, typed state, async mutations
-    return generateNewApiSchema(
-      documentName,
-      specification,
-      prefixedStateInputTypes,
-      allTypeNames,
-      hasValidSchema,
+  const operations =
+    specification?.modules.flatMap((module) =>
+      module.operations
+        .filter((op) => op.name && hasValidSchema(op.schema))
+        .map((op) => ({
+          camelName: camelCase(op.name!),
+          inputTypeName: `${documentName}_${pascalCase(op.name!)}Input`,
+        })),
+    ) ?? [];
+
+  const modules =
+    specification?.modules
+      .filter((module) =>
+        module.operations.some((op) => hasValidSchema(op.schema)),
+      )
+      .map((module) => ({
+        name: module.name,
+        sdl: module.operations
+          .filter((op) => hasValidSchema(op.schema))
+          .map((op) =>
+            applyGraphQLTypePrefixes(
+              op.schema ?? "",
+              documentName,
+              allTypeNames,
+            ),
+          )
+          .join("\n  "),
+      })) ?? [];
+
+  // DocumentModel names its root `DocumentModelGlobalState`.
+  const globalStateTypeName =
+    documentName === "DocumentModel"
+      ? `${documentName}_${documentName}GlobalState`
+      : `${documentName}_${documentName}State`;
+  const localStateTypeName = (localStateSchema ?? "").includes(
+    `type ${documentName}LocalState`,
+  )
+    ? `${documentName}_${documentName}LocalState`
+    : null;
+
+  return {
+    documentName,
+    operations,
+    modules,
+    stateInputTypes: prefixedStateInputTypes,
+    globalStateTypeName,
+    localStateTypeName,
+    initialState: storedInitialState(specification, documentName, allTypeNames),
+  };
+}
+
+/** The new API's initial-state argument, read out of the stored scope SDL. */
+function storedInitialState(
+  specification: DocumentModelGlobalState["specifications"][0] | undefined,
+  documentName: string,
+  allTypeNames: string[],
+): ModelProjection["initialState"] {
+  const scopes: { name: string; type: string }[] = [];
+  const generatedInputTypeParts: string[] = [];
+  if (!specification) return { inputTypes: "", scopes };
+
+  for (const [scopeName, scopeState] of Object.entries(specification.state)) {
+    const schema = (scopeState as { schema?: string }).schema ?? "";
+    if (!hasValidSchema(schema)) {
+      scopes.push({ name: scopeName, type: "JSONObject" });
+      continue;
+    }
+    const rootTypeName = extractRootTypeName(schema, documentName, scopeName);
+    if (!rootTypeName) {
+      scopes.push({ name: scopeName, type: "JSONObject" });
+      continue;
+    }
+    const scopeInputTypes = generateStateInputTypes(
+      schema,
+      new Set(allTypeNames),
+    );
+    if (!scopeInputTypes) {
+      scopes.push({ name: scopeName, type: "JSONObject" });
+      continue;
+    }
+    scopes.push({
+      name: scopeName,
+      type: `${documentName}_${rootTypeName}Input`,
+    });
+    generatedInputTypeParts.push(
+      applyGraphQLTypePrefixes(scopeInputTypes, documentName, allTypeNames),
     );
   }
 
-  // Legacy API
-  return generateLegacyApiSchema(
-    documentName,
-    specification,
-    prefixedStateInputTypes,
-    allTypeNames,
-    hasValidSchema,
-  );
+  return { inputTypes: generatedInputTypeParts.join("\n\n"), scopes };
 }
 
 /**
- * Generate legacy API schema with nested queries
+ * Generates a document model's subgraph schema. Pass the module so a
+ * code-first model is projected from its structured definition. A
+ * schema-first caller may pass the stored global state instead. To build it
+ * beside the generated types, use {@link documentModelSubgraphTypes}, whose
+ * type names and descriptions the schema options take.
  */
-function generateLegacyApiSchema(
-  documentName: string,
-  specification: DocumentModelGlobalState["specifications"][0] | undefined,
-  prefixedStateInputTypes: string,
-  allTypeNames: string[],
-  hasValidSchema: (schema: string | null | undefined) => boolean,
+export function generateDocumentModelSchema(
+  source: DocumentModelSource,
+  options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
-  const createDocumentMutation = `${documentName}_createDocument(name:String!, driveId:String): String`;
-
-  const operationMutations =
-    specification?.modules
-      .flatMap((module) =>
-        module.operations
-          .filter((op) => op.name && hasValidSchema(op.schema))
-          .map(
-            (op) =>
-              `${documentName}_${camelCase(op.name!)}(
-            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`,
-          ),
-      )
-      .join("\n        ") ?? "";
-
-  const moduleSchemas = buildModuleSchemas(
-    specification,
-    documentName,
-    allTypeNames,
-    hasValidSchema,
-  );
-
-  return gql`
-    """
-    Queries: ${documentName} Document
-    """
-
-    type ${documentName}Queries {
-        getDocument(docId: PHID!, driveId: PHID): ${documentName}
-        getDocuments(driveId: String!): [${documentName}!]
-    }
-
-    type Query {
-        ${documentName}: ${documentName}Queries
-    }
-
-    """
-    Mutations: ${documentName}
-    """
-    type Mutation {
-        ${createDocumentMutation}
-
-        ${operationMutations}
-    }
-
-    ${
-      prefixedStateInputTypes
-        ? `"""
-    Input Types from State Schema
-    """
-    ${prefixedStateInputTypes}`
-        : ""
-    }
-
-    ${moduleSchemas}`;
+  return modelTemplate(source, options).typeDefs;
 }
 
-/**
- * Generate new API schema with flat queries, typed state, and async mutations.
- * Note: State schema types are NOT included here because they are already defined
- * in getDocumentModelTypeDefs() which is used during schema composition.
- * Including them here would cause duplicate type definitions.
- */
-function generateNewApiSchema(
-  documentName: string,
-  specification: DocumentModelGlobalState["specifications"][0] | undefined,
-  prefixedStateInputTypes: string,
-  allTypeNames: string[],
-  hasValidSchema: (schema: string | null | undefined) => boolean,
-): DocumentNode {
-  // Use full state type for all document models
-  const stateType = `${documentName}_FullState!`;
-
-  // Shared base types for document state structure (same for all document types)
-  const sharedBaseTypes = `
-    """Hash configuration for document state"""
-    type ${documentName}_PHHashConfig {
-      algorithm: String!
-      encoding: String!
-    }
-
-    """Document scope state (same for all document types)"""
-    type ${documentName}_PHDocumentScopeState {
-      version: Int!
-      hash: ${documentName}_PHHashConfig!
-      isDeleted: Boolean
-      deletedAtUtcIso: String
-      deletedBy: String
-      deletionReason: String
-    }
-  `;
-
-  // Full state type with all scopes (auth, document, global, local)
-  // Note: DocumentModel uses different naming convention (GlobalState suffix instead of State)
-  // For local state, check if the specification defines a local state type
-  const localSchema = specification?.state.local.schema ?? "";
-  const hasLocalStateType = localSchema.includes(
-    `type ${documentName}LocalState`,
+function modelTemplate(
+  source: DocumentModelSource,
+  options: DocumentModelSchemaOptions,
+): { typeDefs: DocumentNode; descriptions: TemplateDescriptions } {
+  const documentModel = globalStateOf(source);
+  const documentName = getDocumentModelSchemaName(documentModel);
+  const structured = isDocumentModelModule(source)
+    ? structuredModelOf(source)
+    : null;
+  const document = generateModelSchema(
+    structured === null
+      ? storedModelProjection(documentModel, documentName)
+      : structuredModelProjection(structured, documentName),
+    options,
   );
-
-  const globalStateType =
-    documentName === "DocumentModel"
-      ? `${documentName}_${documentName}GlobalState!`
-      : `${documentName}_${documentName}State!`;
-  const localStateType = !hasLocalStateType
-    ? "JSONObject!"
-    : `${documentName}_${documentName}LocalState!`;
-
-  const fullStateType = `
-    """Full state with all scopes for ${documentName}"""
-    type ${documentName}_FullState {
-      auth: JSONObject!
-      document: ${documentName}_PHDocumentScopeState!
-      global: ${globalStateType}
-      local: ${localStateType}
-    }
-  `;
-
-  // Common input types - use extend to avoid conflicts with other subgraphs
-  const commonInputTypes = `
-    input ${documentName}_ViewFilterInput {
-      branch: String
-      scopes: [String!]
-    }
-
-    input ${documentName}_PagingInput {
-      limit: Int
-      offset: Int
-      cursor: String
-    }
-
-    input ${documentName}_SearchFilterInput {
-      parentId: String
-      identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
-    }
-  `;
-
-  // Revision type - imported from shared-schema.ts for consistency with ReactorSubgraph
-  // Must be defined in each subgraph for Apollo Federation
-  const revisionType = RevisionType;
-
-  // Result types with typed state (or JSONObject for DocumentModel)
-  // The state type (${documentName}_${documentName}State) is defined in getDocumentModelTypeDefs()
-  // Uses revisionsList with shared Revision type to match ReactorSubgraph pattern
-  const resultTypes = `
-    """
-    Mutation result type for ${documentName} operations with typed state.
-    Matches ReactorSubgraph PHDocument pattern with revisionsList.
-    """
-    type ${documentName}MutationResult {
-      id: String!
-      slug: String
-      preferredEditor: String
-      name: String!
-      documentType: String!
-      state: ${stateType}
-      revisionsList: [Revision!]!
-      createdAtUtcIso: DateTime!
-      lastModifiedAtUtcIso: DateTime!
-    }
-
-    """
-    Document with children for ${documentName}
-    """
-    type ${documentName}_DocumentWithChildren {
-      document: ${documentName}MutationResult!
-      childIds: [String!]!
-    }
-
-    """
-    Paginated result type for ${documentName} documents
-    """
-    type ${documentName}_DocumentResultPage {
-      items: [${documentName}MutationResult!]!
-      hasNextPage: Boolean!
-      hasPreviousPage: Boolean!
-      cursor: String
-    }
-  `;
-
-  // Queries nested under ${documentName} namespace
-  const queries = `
-    type ${documentName}Queries {
-      """Get a specific ${documentName} document by identifier"""
-      document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
-
-      """Get all ${documentName} documents (paged)"""
-      documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
-
-      """Find ${documentName} documents by search criteria"""
-      findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
-
-      """Get outgoing relationships of a ${documentName} document"""
-      documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
-
-      """Get incoming relationships to a ${documentName} document"""
-      documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
-    }
-  `;
-
-  // Generate initial state input types for each scope
-  let initialStateInputSchema = "";
-  if (specification) {
-    const scopeFields: string[] = [];
-    const generatedInputTypeParts: string[] = [];
-
-    for (const [scopeName, scopeState] of Object.entries(specification.state)) {
-      const schema = (scopeState as { schema?: string }).schema ?? "";
-      if (hasValidSchema(schema)) {
-        const rootTypeName = extractRootTypeName(
-          schema,
-          documentName,
-          scopeName,
-        );
-        if (!rootTypeName) {
-          scopeFields.push(`  ${scopeName}: JSONObject`);
-          continue;
-        }
-        const scopeInputTypes = generateStateInputTypes(
-          schema,
-          new Set(allTypeNames),
-        );
-        if (!scopeInputTypes) {
-          scopeFields.push(`  ${scopeName}: JSONObject`);
-          continue;
-        }
-        const prefixedScopeInputTypes = applyGraphQLTypePrefixes(
-          scopeInputTypes,
-          documentName,
-          allTypeNames,
-        );
-        scopeFields.push(
-          `  ${scopeName}: ${documentName}_${rootTypeName}Input`,
-        );
-        generatedInputTypeParts.push(prefixedScopeInputTypes);
-      } else {
-        scopeFields.push(`  ${scopeName}: JSONObject`);
+  const descriptions = new Map<string, StringValueNode>();
+  if (structured !== null) {
+    const stateTypes = parseSdl(
+      structuredModelStateTypes(
+        structured,
+        documentName,
+        structured.hostDescriptions,
+      ),
+    );
+    for (const def of stateTypes.definitions) {
+      if (
+        !("name" in def) ||
+        def.name === undefined ||
+        !("description" in def)
+      ) {
+        continue;
+      }
+      const key = `${def.kind}:${def.name.value}`;
+      if (!descriptions.has(key) && def.description) {
+        descriptions.set(key, def.description);
       }
     }
-
-    if (scopeFields.length > 0) {
-      const inputTypeDefs = generatedInputTypeParts.join("\n\n");
-      const wrapper = `input ${documentName}_InitialStateInput {\n${scopeFields.join("\n")}\n}`;
-      initialStateInputSchema = inputTypeDefs
-        ? `${inputTypeDefs}\n\n${wrapper}`
-        : wrapper;
-    }
   }
-
-  // Mutations nested under ${documentName} namespace
-  const createDocumentMutation = initialStateInputSchema
-    ? `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), preferredEditor: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): ${documentName}MutationResult!`;
-
-  const operationMutations =
-    specification?.modules
-      .flatMap((module) =>
-        module.operations
-          .filter((op) => op.name && hasValidSchema(op.schema))
-          .flatMap((op) => [
-            // Sync mutation
-            `${camelCase(op.name!)}(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
-            // Async mutation
-            `${camelCase(op.name!)}Async(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
-          ]),
-      )
-      .join("\n        ") ?? "";
-
-  const moduleSchemas = buildModuleSchemas(
-    specification,
-    documentName,
-    allTypeNames,
-    hasValidSchema,
-  );
-
-  return gql`
-    scalar DateTime
-    scalar JSONObject
-    scalar AttachmentRef
-
-    ${revisionType}
-
-    ${sharedBaseTypes}
-
-    ${fullStateType}
-
-    ${commonInputTypes}
-
-    ${resultTypes}
-
-    """
-    Queries: ${documentName} Document
-    """
-    ${queries}
-
-    """
-    Mutations: ${documentName}
-    """
-    type ${documentName}Mutations {
-        ${createDocumentMutation}
-        ${createEmptyDocumentMutation}
-
-        ${operationMutations}
-    }
-
-    type Query {
-      ${documentName}: ${documentName}Queries!
-    }
-
-    type Mutation {
-      ${documentName}: ${documentName}Mutations!
-    }
-
-    ${
-      prefixedStateInputTypes
-        ? `"""
-    Input Types from State Schema
-    """
-    ${prefixedStateInputTypes}`
-        : ""
-    }
-
-    ${
-      initialStateInputSchema
-        ? `"""
-    Input Types for Initial State
-    """
-    ${initialStateInputSchema}`
-        : ""
-    }
-
-    ${moduleSchemas}`;
+  return { typeDefs: document, descriptions };
 }

@@ -31,7 +31,7 @@ export class AppGenerator extends BaseDocumentGen {
   /**
    * Validate if this app strand should be processed
    */
-  shouldProcess(input: CodegenInput): boolean {
+  override shouldProcess(input: CodegenInput): boolean {
     // First run base validation
     if (!super.shouldProcess(input)) {
       return false;

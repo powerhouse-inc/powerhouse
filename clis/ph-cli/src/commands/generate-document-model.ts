@@ -1,5 +1,5 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
-import { command, flag, option, optional } from "cmd-ts";
+import { command, flag, option, optional, string } from "cmd-ts";
 import { Directory, File } from "../utils/fs-args.js";
 export const generateDocumentModelCmd = command({
   name: "document-model",
@@ -31,12 +31,18 @@ export const generateDocumentModelCmd = command({
       description:
         "Write a powerhouse/document-model spec for each existing document model into specs/document-models/",
     }),
+    codeFirst: option({
+      type: optional(string),
+      long: "code-first",
+      description:
+        "Create a new code-first document model with this name, declared in TypeScript and registered in definitionSources and powerhouse.manifest.json",
+    }),
     ...debugArgs,
   },
   handler: async (args) => {
     const { startGenerateDocumentModel } =
       await import("../services/generate-document-model.js");
     await startGenerateDocumentModel(args, process.cwd());
-    process.exit(0);
+    process.exit();
   },
 });

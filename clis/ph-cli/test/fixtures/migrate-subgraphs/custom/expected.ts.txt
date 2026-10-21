@@ -1,0 +1,52 @@
+import {
+  BaseSubgraph,
+  type SubgraphArgs,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { schema } from "./schema.js";
+import { extraExample } from "./extra-resolvers.js";
+
+export class ExampleSubgraph extends BaseSubgraph {
+  static override readonly subgraphName = "example-custom";
+  static override getSchema(schemaBuilder: SchemaBuilder<ExampleSubgraph>) {
+    return schemaBuilder.graphql({
+      typeDefs: schema,
+      resolverCoordinates: [
+        {
+          typeName: "Query",
+          fieldName: "example",
+          resolverKind: "field",
+        },
+        {
+          typeName: "ExampleQueries",
+          fieldName: "example",
+          resolverKind: "field",
+        },
+      ],
+      resolvers: (s) => ({
+        Query: { example: () => ({}) },
+        ExampleQueries: { example: extraExample },
+      }),
+    });
+  }
+  readonly cache = new Map<string, string>();
+
+  constructor(args: SubgraphArgs) {
+    super(args);
+    this.cache.set("ready", "yes");
+  }
+
+  override async onSetup() {
+    await super.onSetup();
+    this.cache.set("setup", "yes");
+  }
+
+  override async onDisconnect() {
+    await super.onDisconnect();
+    this.cache.clear();
+  }
+
+  example() {
+    return this.cache.get("ready");
+  }
+}

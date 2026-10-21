@@ -9,7 +9,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
+import { checkSubgraphs, minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for document model documents
@@ -33,7 +33,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
   /**
    * Validate if this document model strand should be processed
    */
-  shouldProcess(input: CodegenInput): boolean {
+  override shouldProcess(input: CodegenInput): boolean {
     // First run base validation
     if (!super.shouldProcess(input)) {
       return false;
@@ -81,14 +81,10 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     try {
       await generateDocumentModel(globalState, this.project);
       await this.project.save();
-      logger.info(
-        `✅ Code generation completed successfully for: ${globalState.name}`,
-      );
-      await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
       // Backup the document
       const fullState = input.state as DocumentModelPHState;
-      const extension = globalState.extension?.replace(/^\.+|\.+$/g, "") || "";
+      const extension = globalState.extension.replace(/^\.+|\.+$/g, "") || "";
       await minimalBackupDocument(
         {
           documentId: input.documentId,
@@ -105,8 +101,17 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         `❌ Error during code generation for ${globalState.name}:`,
         error,
       );
-      // Don't throw - let codegen continue with other documents
-      return;
+      throw error;
+    }
+    logger.info(
+      `✅ Code generation completed successfully for: ${globalState.name}`,
+    );
+    try {
+      await checkSubgraphs(this.config.CURRENT_WORKING_DIR);
+    } catch (error) {
+      logger.error(
+        `❌ Subgraph validation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

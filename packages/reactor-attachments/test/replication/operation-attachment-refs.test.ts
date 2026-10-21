@@ -6,7 +6,7 @@ import type {
   DocumentModelModule,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AttachmentSchemaCompiler } from "../../src/reference-index/attachment-schema-compiler.js";
 import { SchemaCompiledOperationRefs } from "../../src/replication/operation-attachment-refs.js";
 
@@ -135,6 +135,46 @@ describe("SchemaCompiledOperationRefs", () => {
     expect(refs.refsOf(item({ ref: "not-a-ref" }))).toEqual([]);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toContain("ATTACH_FILE");
+  });
+
+  it("returns no refs and no diagnostic for an action the model does not declare", () => {
+    const diagnostics: string[] = [];
+    const refs = new SchemaCompiledOperationRefs(
+      registry(module),
+      new AttachmentSchemaCompiler(),
+      (message) => diagnostics.push(message),
+    );
+    expect(
+      refs.refsOf(item({ ref: REF_A }, { actionType: "ARCHIVE_ITEM" })),
+    ).toEqual([]);
+    expect(diagnostics).toEqual([]);
+  });
+
+  it("logs an extraction failure when no diagnostic callback is supplied", () => {
+    const messages: unknown[] = [];
+    const errorLog = vi
+      .spyOn(console, "error")
+      .mockImplementation((message) => {
+        messages.push(message);
+      });
+    try {
+      const refs = new SchemaCompiledOperationRefs(
+        registry(module),
+        new AttachmentSchemaCompiler(),
+      );
+      expect(
+        refs.refsOf(item({ ref: REF_A }, { actionType: "ARCHIVE_ITEM" })),
+      ).toEqual([]);
+      expect(messages).toEqual([]);
+      expect(refs.refsOf(item({ ref: "not-a-ref" }))).toEqual([]);
+      expect(messages).toEqual([
+        expect.stringContaining(
+          'Attachment extraction failed for document type "example/attachment-document", version 1, action "ATTACH_FILE" at input.ref: the AttachmentRef is malformed',
+        ),
+      ]);
+    } finally {
+      errorLog.mockRestore();
+    }
   });
 
   it("reports and swallows an unregistered document type", () => {

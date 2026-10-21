@@ -9,11 +9,9 @@
  * via the Fetch API without any network I/O.
  */
 
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import {
   type IReactorClient,
   type IRelationalDb,
-  type ISyncManager,
   type JobInfo,
   JobStatus,
 } from "@powerhousedao/reactor";
@@ -26,11 +24,9 @@ import {
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule, type ILogger } from "document-model";
-import { type DocumentNode, type GraphQLSchema, Kind, parse } from "graphql";
+import { type DocumentNode, type GraphQLSchema, Kind } from "graphql";
 import { gql } from "graphql-tag";
-import type http from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { WebSocketServer } from "ws";
 import { DocumentModelRegistry } from "@powerhousedao/reactor";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
@@ -38,7 +34,10 @@ import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
 import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "../src/graphql/system/subgraph.js";
-import { getGeneratedDocumentModelTypes } from "../src/utils/create-schema.js";
+import {
+  getDocumentModelSubgraphName,
+  getGeneratedDocumentModelTypes,
+} from "../src/utils/create-schema.js";
 
 import {
   createAuthFetchMiddleware,
@@ -48,23 +47,18 @@ import type { IAuthorizationService } from "../src/services/authorization.servic
 import type { IAttachmentClientProvider } from "../src/services/authorized-attachment.service.js";
 import type { IAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import type {
-  AdapterRouteHandle,
   FetchHandler,
   IGatewayAdapter,
-  IHttpAdapter,
 } from "../src/graphql/gateway/types.js";
-import {
-  createRequireAuthFetchMiddleware,
-  type RequireAuthFetchMiddleware,
-} from "../src/graphql/gateway/require-auth-middleware.js";
-import { GraphQLManager } from "../src/graphql/graphql-manager.js";
+import { createRequireAuthFetchMiddleware } from "../src/graphql/gateway/require-auth-middleware.js";
+import type { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import type { HostedSubgraph } from "../src/graphql/hosted-subgraph.js";
 import type {
   Context,
-  ISubgraph,
   SubgraphArgs,
   SubgraphClass,
 } from "../src/graphql/types.js";
@@ -100,44 +94,54 @@ const silentLogger: ILogger = {
   child: () => silentLogger,
 };
 
-/** An ILogger whose methods are spies, for asserting on log calls. */
-function makeHarnessLogger(): ILogger {
-  const logger: ILogger = {
-    level: "error" as const,
-    verbose: vi.fn(),
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    errorHandler: vi.fn(),
-    child: () => logger,
+import {
+  type HarnessOptions,
+  initAndFlush,
+  makeDriveModule,
+  makeHarness,
+  makeHarnessLogger,
+  makeMockReactorClient,
+} from "./utils/graphql-manager-harness.js";
+import { PublishedBaseSubgraph } from "./utils/published-base-subgraph.js";
+import { sdlBase } from "./utils/sdl-base.js";
+
+const instanceArgs = {
+  reactorClient: {} as IReactorClient,
+  relationalDb: {} as IRelationalDb,
+} as SubgraphArgs;
+
+type SubgraphHooks = Partial<Pick<BaseSubgraph, "onSetup" | "onDisconnect">>;
+
+function sdlSubgraph(
+  name: string,
+  typeDefs: DocumentNode | string,
+  resolvers: Record<string, unknown> = {},
+): SubgraphClass {
+  return class extends sdlBase(typeDefs, resolvers) {
+    static override readonly subgraphName = name;
   };
-  return logger;
 }
 
-/** Minimal DocumentModelModule with a DocumentDrive model - required by init(). */
-function makeDriveModule(): DocumentModelModule {
-  return {
-    documentModel: {
-      global: {
-        name: "DocumentDrive",
-        id: "powerhouse/document-drive",
-        specifications: [
-          {
-            version: 1,
-            modules: [],
-            // Provide a minimal state schema so buildSubgraphSchemaModule can
-            // generate the DocumentDrive_DocumentDriveState type that is
-            // referenced by the DocumentDrive type definition.
-            state: {
-              global: { schema: "type DocumentDriveState { name: String }" },
-              local: { schema: "" },
-            },
-          },
-        ],
-      },
-    },
-  } as unknown as DocumentModelModule;
+function sdlInstance(
+  name: string,
+  typeDefs: DocumentNode | string,
+  resolvers: Record<string, unknown> = {},
+  hooks: SubgraphHooks = {},
+): BaseSubgraph {
+  const SdlSubgraph = sdlSubgraph(name, typeDefs, resolvers);
+  return Object.assign(new SdlSubgraph(instanceArgs), hooks);
+}
+
+function bucketInstances(manager: GraphQLManager) {
+  const { subgraphs } = manager as unknown as {
+    subgraphs: Map<string, HostedSubgraph[]>;
+  };
+  return new Map(
+    Array.from(subgraphs, ([bucket, hosted]) => [
+      bucket,
+      hosted.map((record) => record.instance),
+    ]),
+  );
 }
 
 /** A minimal second document model, shaped like makeDriveModule. */
@@ -173,156 +177,6 @@ function makeModelModule(name: string, id: string): DocumentModelModule {
       },
     },
   } as unknown as DocumentModelModule;
-}
-
-function makeMockReactorClient(
-  overrides: Partial<IReactorClient> = {},
-): IReactorClient {
-  return {
-    getDocumentModelModules: vi
-      .fn()
-      .mockResolvedValue({ results: [makeDriveModule()] }),
-    get: vi.fn().mockResolvedValue({
-      header: { id: "drive-1", slug: "my-drive", meta: {} },
-      state: { global: { name: "Test Drive", icon: null } },
-    }),
-    find: vi.fn().mockResolvedValue({
-      results: [],
-      options: { cursor: "", limit: 100 },
-    }),
-    ...overrides,
-  } as unknown as IReactorClient;
-}
-
-function makeMockGatewayAdapter(): IGatewayAdapter<Context> & {
-  start: ReturnType<typeof vi.fn>;
-  createHandler: ReturnType<typeof vi.fn>;
-  createSupergraphHandler: ReturnType<typeof vi.fn>;
-  updateSupergraph: ReturnType<typeof vi.fn>;
-  stop: ReturnType<typeof vi.fn>;
-} {
-  return {
-    start: vi.fn().mockResolvedValue(undefined),
-    createHandler: vi
-      .fn()
-      .mockResolvedValue(() => Promise.resolve(new Response("handler ok"))),
-    createSupergraphHandler: vi
-      .fn()
-      .mockResolvedValue(() => Promise.resolve(new Response("supergraph ok"))),
-    updateSupergraph: vi.fn().mockResolvedValue(undefined),
-    stop: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-function makeMockHttpAdapter() {
-  const mounts = new Map<string, FetchHandler>();
-  const handles = new Map<string, AdapterRouteHandle>();
-  const disposed: AdapterRouteHandle[] = [];
-  const newHandle = (): AdapterRouteHandle => {
-    const handle: AdapterRouteHandle = {
-      dispose: vi.fn(() => {
-        disposed.push(handle);
-      }),
-    };
-    return handle;
-  };
-  const adapter: IHttpAdapter = {
-    setupMiddleware: vi.fn(),
-    mount: vi.fn((p: string, h: FetchHandler) => {
-      mounts.set(p, h);
-      const handle = newHandle();
-      handles.set(p, handle);
-      return handle;
-    }),
-    getRoute: vi.fn(() => newHandle()),
-    mountRawMiddleware: vi.fn(),
-    mountNodeRoute: vi.fn(() => newHandle()),
-    listen: vi.fn().mockResolvedValue({}),
-    setupSentryErrorHandler: vi.fn(),
-    handle: {},
-  };
-  return { adapter, mounts, handles, disposed };
-}
-
-type HarnessOptions = {
-  path?: string;
-  enableDocumentModelSubgraphs?: boolean;
-  reactorClient?: IReactorClient;
-  logger?: ILogger;
-  authorizationService?: IAuthorizationService;
-  attachments?: IAttachmentClientProvider;
-  reportError?: (error: unknown) => void;
-};
-
-function makeHarness(options: HarnessOptions = {}) {
-  const {
-    adapter: httpAdapter,
-    mounts,
-    handles,
-    disposed,
-  } = makeMockHttpAdapter();
-  const gatewayAdapter = makeMockGatewayAdapter();
-  const reactorClient = options.reactorClient ?? makeMockReactorClient();
-  const httpServer = {} as http.Server;
-  const wsServer = {
-    close: vi.fn((cb?: () => void) => cb?.()),
-    setMaxListeners: vi.fn(),
-  } as unknown as WebSocketServer;
-
-  const manager = new GraphQLManager({
-    path: options.path ?? "/",
-    httpServer,
-    wsServer,
-    reactorClient,
-    relationalDb: {} as IRelationalDb,
-    analyticsStore: {} as IAnalyticsStore,
-    syncManager: {} as ISyncManager,
-    logger: options.logger ?? silentLogger,
-    httpAdapter,
-    gatewayAdapter,
-    featureFlags: {
-      enableDocumentModelSubgraphs:
-        options.enableDocumentModelSubgraphs ?? false,
-    },
-    port: 4001,
-    authorizationService:
-      options.authorizationService ??
-      createAuthorizationService({
-        admins: [],
-        defaultProtection: false,
-        policy: AuthorizationPolicy.OPEN,
-      }),
-    attachments: options.attachments,
-    reportError: options.reportError,
-  });
-
-  return {
-    manager,
-    httpAdapter,
-    mounts,
-    handles,
-    disposed,
-    gatewayAdapter,
-    reactorClient,
-    httpServer,
-    wsServer,
-  };
-}
-
-/** Run init() to completion, flushing the debounced updateRouter() call. */
-async function initAndFlush(
-  manager: GraphQLManager,
-  coreSubgraphs: SubgraphClass[] = [],
-  authMiddleware?: AuthFetchMiddleware,
-  requireAuthMiddleware?: RequireAuthFetchMiddleware,
-) {
-  const initPromise = manager.init(
-    coreSubgraphs,
-    authMiddleware,
-    requireAuthMiddleware,
-  );
-  await vi.runAllTimersAsync();
-  await initPromise;
 }
 
 // ── tests ────────────────────────────────────────────────────────────────────
@@ -781,18 +635,11 @@ describe("GraphQLManager", () => {
 
   // ── SSE handler ────────────────────────────────────────────────────────────
 
-  /**
-   * Register a minimal subscription-enabled subgraph on the manager.
-   * Required because #setupSupergraphSSE only mounts the SSE handler when
-   * at least one subgraph declares hasSubscriptions = true.
-   */
   async function registerSubscriptionSubgraph(manager: GraphQLManager) {
-    const { gql } = await import("graphql-tag");
     await manager.registerSubgraphInstance(
-      {
-        name: "test-subscription-sub",
-        hasSubscriptions: true,
-        typeDefs: gql`
+      sdlInstance(
+        "test-subscription-sub",
+        gql`
           type Query {
             _placeholder: Boolean
           }
@@ -800,7 +647,7 @@ describe("GraphQLManager", () => {
             ping: String
           }
         `,
-        resolvers: {
+        {
           Subscription: {
             ping: {
               subscribe: async function* () {
@@ -811,9 +658,7 @@ describe("GraphQLManager", () => {
             },
           },
         },
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-      },
+      ),
       "graphql",
     );
   }
@@ -826,18 +671,17 @@ describe("GraphQLManager", () => {
     value: string,
   ) {
     await manager.registerSubgraphInstance(
-      {
+      sdlInstance(
         name,
-        hasSubscriptions: true,
-        typeDefs: gql(`
+        `
           type Query {
             ${field}Info: String
           }
           type Subscription {
             ${field}: String
           }
-        `),
-        resolvers: {
+        `,
+        {
           Query: { [`${field}Info`]: () => value },
           Subscription: {
             [field]: {
@@ -848,9 +692,7 @@ describe("GraphQLManager", () => {
             },
           },
         },
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-      },
+      ),
       "graphql",
     );
   }
@@ -966,19 +808,16 @@ describe("GraphQLManager", () => {
 
     it("unmounts a removed subgraph's SSE route", async () => {
       const { manager, handles, disposed } = makeHarness();
-      const { gql } = await import("graphql-tag");
-      class PackagedSubscriptions {
-        name = "packaged-subs";
-        hasSubscriptions = true;
-        typeDefs = gql`
+      class PackagedSubscriptions extends sdlBase(
+        gql`
           type Query {
             _placeholder: Boolean
           }
           type Subscription {
             ping: String
           }
-        `;
-        resolvers = {
+        `,
+        {
           Subscription: {
             ping: {
               subscribe: async function* () {
@@ -987,12 +826,12 @@ describe("GraphQLManager", () => {
               },
             },
           },
-        };
-        relationalDb = {} as IRelationalDb;
-        reactorClient = {} as IReactorClient;
+        },
+      ) {
+        static override readonly subgraphName = "packaged-subs";
       }
       await manager.registerSubgraph(
-        PackagedSubscriptions as unknown as SubgraphClass,
+        PackagedSubscriptions,
         "graphql",
         false,
         "pkg",
@@ -1033,18 +872,14 @@ describe("GraphQLManager", () => {
       const { manager, mounts } = makeHarness({ logger });
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
       await manager.registerSubgraphInstance(
-        {
-          name: "stream-broken",
-          hasSubscriptions: true,
-          typeDefs: gql`
+        sdlInstance(
+          "stream-broken",
+          gql`
             type Subscription {
               broken: NoSuchType
             }
           `,
-          resolvers: {},
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       await registerStreamSubgraph(manager, "stream-b", "beta", "from-b");
@@ -1066,6 +901,67 @@ describe("GraphQLManager", () => {
       expect(sseExclusions).toHaveLength(1);
       expect(sseExclusions[0]).toContain('"stream-broken"');
       expect(sseExclusions[0]).toContain("NoSuchType");
+    });
+
+    it("keeps a subgraph with custom operation roots out of the stream, so it cannot take the stream's roots", async () => {
+      const logger = makeHarnessLogger();
+      const { manager, mounts } = makeHarness({ logger });
+      await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
+      await manager.registerSubgraphInstance(
+        sdlInstance(
+          "stream-custom",
+          gql`
+            schema {
+              query: Q
+              subscription: S
+            }
+            type Q {
+              gammaInfo: String
+            }
+            type S {
+              gamma: String
+            }
+          `,
+          {
+            Q: { gammaInfo: () => "from-custom" },
+            S: {
+              gamma: {
+                subscribe: async function* () {
+                  await Promise.resolve();
+                  yield { gamma: "from-custom" };
+                },
+              },
+            },
+          },
+        ),
+        "graphql",
+      );
+      await initAndFlush(manager);
+      vi.useRealTimers();
+
+      expect(
+        await streamOver(
+          mounts.get("/graphql/stream")!,
+          "subscription { alpha }",
+        ),
+      ).toContain('{"data":{"alpha":"from-a"}}');
+      expect(
+        await streamOver(
+          mounts.get("/graphql/stream-custom/stream")!,
+          "subscription { gamma }",
+        ),
+      ).toContain('{"data":{"gamma":"from-custom"}}');
+      expect(
+        vi
+          .mocked(logger.error)
+          .mock.calls.filter(([message]) =>
+            String(message).startsWith("Supergraph SSE:"),
+          ),
+      ).toEqual([
+        [
+          'Supergraph SSE: excluding subgraph "stream-custom": its schema names the operation roots query: Q, subscription: S. Subscribe to it at /graphql/stream-custom/stream.',
+        ],
+      ]);
     });
 
     it("merges the reactor subgraph's subscriptions with another subgraph's", async () => {
@@ -1124,10 +1020,9 @@ describe("GraphQLManager", () => {
       const { manager, mounts } = makeHarness();
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
       await manager.registerSubgraphInstance(
-        {
-          name: "stream-federated",
-          hasSubscriptions: true,
-          typeDefs: gql`
+        sdlInstance(
+          "stream-federated",
+          gql`
             extend schema
               @link(
                 url: "https://specs.apollo.dev/federation/v2.3"
@@ -1143,7 +1038,7 @@ describe("GraphQLManager", () => {
               thingAdded: StreamThing
             }
           `,
-          resolvers: {
+          {
             Query: { streamThing: () => ({ id: "t-1" }) },
             Subscription: {
               thingAdded: {
@@ -1154,9 +1049,7 @@ describe("GraphQLManager", () => {
               },
             },
           },
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       await initAndFlush(manager);
@@ -1176,10 +1069,9 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager, mounts } = makeHarness({ logger });
       await manager.registerSubgraphInstance(
-        {
-          name: "stream-extends",
-          hasSubscriptions: true,
-          typeDefs: gql`
+        sdlInstance(
+          "stream-extends",
+          gql`
             extend type Query {
               extInfo: String
             }
@@ -1187,7 +1079,7 @@ describe("GraphQLManager", () => {
               extTick: String
             }
           `,
-          resolvers: {
+          {
             Query: { extInfo: () => "info" },
             Subscription: {
               extTick: {
@@ -1198,9 +1090,7 @@ describe("GraphQLManager", () => {
               },
             },
           },
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       await initAndFlush(manager);
@@ -1221,15 +1111,14 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager, mounts } = makeHarness({ logger });
       await manager.registerSubgraphInstance(
-        {
-          name: "stream-no-query",
-          hasSubscriptions: true,
-          typeDefs: gql`
+        sdlInstance(
+          "stream-no-query",
+          gql`
             type Subscription {
               lonely: String
             }
           `,
-          resolvers: {
+          {
             Subscription: {
               lonely: {
                 subscribe: async function* () {
@@ -1239,9 +1128,7 @@ describe("GraphQLManager", () => {
               },
             },
           },
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       await initAndFlush(manager);
@@ -1268,14 +1155,7 @@ describe("GraphQLManager", () => {
       `;
       const register = (typeDefs: DocumentNode) =>
         manager.registerSubgraphInstance(
-          {
-            name: "stream-flaky",
-            hasSubscriptions: true,
-            typeDefs,
-            resolvers: {},
-            relationalDb: {} as IRelationalDb,
-            reactorClient: {} as IReactorClient,
-          },
+          sdlInstance("stream-flaky", typeDefs),
           "graphql",
         );
       const sseExclusions = () =>
@@ -1311,10 +1191,9 @@ describe("GraphQLManager", () => {
       const { manager, mounts } = makeHarness();
       await registerStreamSubgraph(manager, "stream-a", "alpha", "from-a");
       await manager.registerSubgraphInstance(
-        {
-          name: "stream-nodes",
-          hasSubscriptions: true,
-          typeDefs: gql`
+        sdlInstance(
+          "stream-nodes",
+          gql`
             interface StreamNode {
               id: ID!
             }
@@ -1328,7 +1207,7 @@ describe("GraphQLManager", () => {
               nodeAdded: StreamNode
             }
           `,
-          resolvers: {
+          {
             Query: { streamNode: () => ({ id: "n-1" }) },
             Subscription: {
               nodeAdded: {
@@ -1340,9 +1219,7 @@ describe("GraphQLManager", () => {
             },
             StreamNode: { __resolveType: () => "StreamItem" },
           },
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       await initAndFlush(manager);
@@ -1595,15 +1472,15 @@ describe("GraphQLManager", () => {
   // ── subgraph deduplication / replacement ───────────────────────────────────
 
   describe("subgraph deduplication and replacement", () => {
-    async function makeSub(name: string, overrides: object = {}) {
-      return {
+    function makeSub(name: string, hooks: SubgraphHooks = {}) {
+      return sdlInstance(name, "type Query { hi: String }", {}, hooks);
+    }
+
+    function makeSubscriptionSub(name: string) {
+      return sdlInstance(
         name,
-        typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
-        resolvers: {},
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-        ...overrides,
-      };
+        "type Query { hi: String } type Subscription { tick: String }",
+      );
     }
 
     it("re-registering the identical instance is a no-op (no onDisconnect, one onSetup)", async () => {
@@ -1611,7 +1488,7 @@ describe("GraphQLManager", () => {
       const onSetup = vi.fn().mockResolvedValue(undefined);
       const onDisconnect = vi.fn().mockResolvedValue(undefined);
 
-      const sub = await makeSub("unique-sub", { onSetup, onDisconnect });
+      const sub = makeSub("unique-sub", { onSetup, onDisconnect });
 
       const first = await manager.registerSubgraphInstance(sub, "graphql");
       const second = await manager.registerSubgraphInstance(sub, "graphql");
@@ -1627,8 +1504,8 @@ describe("GraphQLManager", () => {
       const oldOnDisconnect = vi.fn().mockResolvedValue(undefined);
       const newOnSetup = vi.fn().mockResolvedValue(undefined);
 
-      const oldSub = await makeSub("my-sub", { onDisconnect: oldOnDisconnect });
-      const newSub = await makeSub("my-sub", { onSetup: newOnSetup });
+      const oldSub = makeSub("my-sub", { onDisconnect: oldOnDisconnect });
+      const newSub = makeSub("my-sub", { onSetup: newOnSetup });
 
       await manager.registerSubgraphInstance(oldSub, "graphql");
       const result = await manager.registerSubgraphInstance(newSub, "graphql");
@@ -1641,10 +1518,10 @@ describe("GraphQLManager", () => {
 
     it("a throwing onDisconnect does not abort the replacement", async () => {
       const { manager } = makeHarness();
-      const oldSub = await makeSub("my-sub", {
+      const oldSub = makeSub("my-sub", {
         onDisconnect: vi.fn().mockRejectedValue(new Error("boom")),
       });
-      const newSub = await makeSub("my-sub");
+      const newSub = makeSub("my-sub");
 
       await manager.registerSubgraphInstance(oldSub, "graphql");
       const result = await manager.registerSubgraphInstance(newSub, "graphql");
@@ -1656,12 +1533,12 @@ describe("GraphQLManager", () => {
     it("replacement keeps the one WebSocket server", async () => {
       const { manager } = makeHarness();
 
-      const oldSub = await makeSub("ws-sub", { hasSubscriptions: true });
+      const oldSub = makeSubscriptionSub("ws-sub");
       await manager.registerSubgraphInstance(oldSub, "graphql");
       await initAndFlush(manager);
       expect(useServer).toHaveBeenCalledTimes(1);
 
-      const newSub = await makeSub("ws-sub", { hasSubscriptions: true });
+      const newSub = makeSubscriptionSub("ws-sub");
       const result = await manager.registerSubgraphInstance(newSub, "graphql");
       const update = manager.updateRouter();
       await vi.runAllTimersAsync();
@@ -1679,7 +1556,7 @@ describe("GraphQLManager", () => {
     it("replacement invalidates the handler cache so the handler is rebuilt", async () => {
       const { manager, gatewayAdapter } = makeHarness();
 
-      const oldSub = await makeSub("my-sub");
+      const oldSub = makeSub("my-sub");
       await manager.registerSubgraphInstance(oldSub, "graphql");
       await initAndFlush(manager);
 
@@ -1692,7 +1569,7 @@ describe("GraphQLManager", () => {
       await noopUpdate;
       expect(gatewayAdapter.createHandler).toHaveBeenCalledTimes(1);
 
-      const newSub = await makeSub("my-sub");
+      const newSub = makeSub("my-sub");
       await manager.registerSubgraphInstance(newSub, "graphql");
       const update = manager.updateRouter();
       await vi.runAllTimersAsync();
@@ -1716,19 +1593,15 @@ describe("GraphQLManager", () => {
       }) => Response,
     ) {
       const harness = makeHarness();
-      const { gql } = await import("graphql-tag");
       await harness.manager.registerSubgraphInstance(
-        {
-          name: "echo",
-          typeDefs: gql`
+        sdlInstance(
+          "echo",
+          gql`
             type Query {
               echo(input: String!): String
             }
           `,
-          resolvers: {},
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
+        ),
         "graphql",
       );
       const requests: Request[] = [];
@@ -1811,7 +1684,9 @@ describe("GraphQLManager", () => {
       const { manager } = await makeSubgraphHarness(() => jsonOk({}));
       await initAndFlush(manager);
 
-      expect(manager.getSubgraphByName("echo")?.name).toBe("echo");
+      expect(manager.getSubgraphByName("echo")).toMatchObject({
+        subgraphName: "echo",
+      });
       expect(manager.getSubgraphByName("nope")).toBeUndefined();
     });
 
@@ -1872,7 +1747,9 @@ describe("GraphQLManager", () => {
       gatewayAdapter.createHandler.mockRejectedValue(new Error("bad schema"));
       await initAndFlush(manager);
 
-      expect(manager.getSubgraphByName("echo")?.name).toBe("echo");
+      expect(manager.getSubgraphByName("echo")).toMatchObject({
+        subgraphName: "echo",
+      });
       expect(manager.hasSubgraphHandler("echo")).toBe(false);
       await expect(
         manager.executeSubgraphQuery("echo", ECHO_QUERY, { input: "hi" }),
@@ -1894,13 +1771,7 @@ describe("GraphQLManager", () => {
     it("does not recreate handlers for the same subgraph on repeated _updateRouter calls", async () => {
       const { manager, gatewayAdapter } = makeHarness();
 
-      const sub = {
-        name: "cached-sub",
-        typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
-        resolvers: {},
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-      };
+      const sub = sdlInstance("cached-sub", "type Query { hi: String }");
 
       await manager.registerSubgraphInstance(sub, "graphql");
 
@@ -1981,11 +1852,7 @@ describe("GraphQLManager", () => {
     }
 
     function racer(field: string) {
-      return class extends BaseSubgraph {
-        name = "racer";
-        typeDefs = parse(`type Query { ${field}: String }`);
-        resolvers = {};
-      };
+      return sdlSubgraph("racer", `type Query { ${field}: String }`);
     }
 
     function alphaWith(field: string): DocumentModelModule {
@@ -2075,15 +1942,11 @@ describe("GraphQLManager", () => {
       });
       serveSdl(harness.gatewayAdapter);
       await initAndFlush(harness.manager);
-      class AlphaTools extends BaseSubgraph {
-        name = "alpha-tools";
-        typeDefs = parse(typeDefs);
-        resolvers = {};
+      class AlphaTools extends sdlBase(typeDefs) {
+        static override readonly subgraphName = "alpha-tools";
       }
-      class Plain extends BaseSubgraph {
-        name = "plain";
-        typeDefs = parse("type Query { ping: String }");
-        resolvers = {};
+      class Plain extends sdlBase("type Query { ping: String }") {
+        static override readonly subgraphName = "plain";
       }
       await harness.manager.applyPackageSubgraphs(
         new Map([["pkg", [AlphaTools, Plain]]]),
@@ -2268,10 +2131,8 @@ describe("GraphQLManager", () => {
         registeredTypes,
       } = setup([alpha, beta]);
       await initAndFlush(manager);
-      class BetaStandIn extends BaseSubgraph {
-        name = "beta";
-        typeDefs = parse("type Query { betaStandIn: String }");
-        resolvers = {};
+      class BetaStandIn extends sdlBase("type Query { betaStandIn: String }") {
+        static override readonly subgraphName = "beta";
       }
       await manager.applyPackageSubgraphs(new Map([["other", [BetaStandIn]]]));
       await vi.runAllTimersAsync();
@@ -2331,10 +2192,8 @@ describe("GraphQLManager", () => {
     });
 
     describe("through the package manager", () => {
-      class BetaStandIn extends BaseSubgraph {
-        name = "beta";
-        typeDefs = parse("type Query { betaStandIn: String }");
-        resolvers = {};
+      class BetaStandIn extends sdlBase("type Query { betaStandIn: String }") {
+        static override readonly subgraphName = "beta";
       }
 
       const missing = Object.assign(
@@ -2546,8 +2405,8 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
       const failure = new Error("router update failed");
       manager.updateRouter = vi.fn(() => Promise.reject(failure));
-      class Widget extends BaseSubgraph {
-        name = "widget";
+      class Widget extends sdlBase("type Query { widget: String }") {
+        static override readonly subgraphName = "widget";
       }
 
       await manager.applyPackageSubgraphs(new Map([["pkg", [Widget]]]));
@@ -2567,23 +2426,21 @@ describe("GraphQLManager", () => {
     function makeSubgraphClass(
       name: string,
       opts: { subscriptions?: boolean } = {},
-    ): [typeof BaseSubgraph, string[]] {
+    ): [SubgraphClass, string[]] {
       const disconnected: string[] = [];
-      const SubgraphClass = class extends BaseSubgraph {
-        name = name;
-        hasSubscriptions = opts.subscriptions ?? false;
-        typeDefs = gql`
-          type Query {
-            ping: Boolean
-          }
-        `;
-        resolvers = { Query: { ping: () => true } };
-        onDisconnect = (): Promise<void> => {
+      const typeDefs = opts.subscriptions
+        ? "type Query { ping: Boolean } type Subscription { pinged: Boolean }"
+        : "type Query { ping: Boolean }";
+      const Subgraph = class extends sdlBase(typeDefs, {
+        Query: { ping: () => true },
+      }) {
+        static override readonly subgraphName = name;
+        override onDisconnect = (): Promise<void> => {
           disconnected.push(name);
           return Promise.resolve();
         };
       };
-      return [SubgraphClass, disconnected];
+      return [Subgraph, disconnected];
     }
 
     async function flushRouter(manager: GraphQLManager): Promise<void> {
@@ -2593,8 +2450,7 @@ describe("GraphQLManager", () => {
     }
 
     it("unregisterPackage unmounts routes and removes all subgraph state", async () => {
-      const { manager, mounts, handles, disposed, gatewayAdapter } =
-        makeHarness();
+      const { manager, mounts, handles, gatewayAdapter } = makeHarness();
       await initAndFlush(manager);
 
       const [Sub, disconnected] = makeSubgraphClass("alpha");
@@ -2659,7 +2515,7 @@ describe("GraphQLManager", () => {
     });
 
     it("unmounts the previous route when a subgraph is replaced", async () => {
-      const { manager, httpAdapter, handles } = makeHarness();
+      const { manager, handles } = makeHarness();
       await initAndFlush(manager);
 
       const [V1] = makeSubgraphClass("alpha");
@@ -2681,7 +2537,7 @@ describe("GraphQLManager", () => {
     });
 
     it("replaces the SSE route on each update and removes it when no subgraph subscribes", async () => {
-      const { manager, mounts, handles, disposed } = makeHarness();
+      const { manager, mounts, handles } = makeHarness();
       await initAndFlush(manager);
 
       // No subscription-capable subgraphs: no SSE route after init.
@@ -2820,8 +2676,10 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
 
       let received: SubgraphArgs | undefined;
-      class CapturingSubgraph extends BaseSubgraph {
-        name = "capturing";
+      class CapturingSubgraph extends sdlBase(
+        "type Query { captured: String }",
+      ) {
+        static override readonly subgraphName = "capturing";
         constructor(args: SubgraphArgs) {
           super(args);
           received = args;
@@ -2862,18 +2720,25 @@ describe("GraphQLManager", () => {
   // ── mount path & name ownership (issue #2972) ─────────────────────────────
 
   describe("mount path & name ownership (issue #2972)", () => {
-    // A package subgraph trying to choose its own mount point: the field
-    // initializers run after super() and overwrite the host-injected `path`.
-    class EvilSubgraph extends BaseSubgraph {
-      name = "evil";
-      path = "/";
+    class EvilSubgraph extends PublishedBaseSubgraph {
+      override name = "evil";
+      override path = "/";
+      override typeDefs = gql`
+        type Query {
+          evil: String
+        }
+      `;
+      override resolvers = {};
     }
 
-    it("mounts under the manager's base path even when the subgraph's `path` initializer overwrote the injected value", async () => {
+    it("mounts an old-style subgraph under the manager's base path even when its `path` initializer overwrote the injected value", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/ph" });
       await initAndFlush(manager);
 
-      const instance = await manager.registerSubgraph(EvilSubgraph, "graphql");
+      const instance = (await manager.registerSubgraph(
+        EvilSubgraph as unknown as SubgraphClass,
+        "graphql",
+      )) as PublishedBaseSubgraph | undefined;
       const update = manager.updateRouter();
       await vi.runAllTimersAsync();
       await update;
@@ -2892,25 +2757,23 @@ describe("GraphQLManager", () => {
       );
     });
 
-    it("ignores a plain-object subgraph's `path` for routing", async () => {
+    it("ignores an old-style plain-object subgraph's `path` for routing", async () => {
       const { manager, httpAdapter } = makeHarness({ path: "/ph" });
       await initAndFlush(manager);
 
-      await manager.registerSubgraphInstance(
-        {
-          name: "mcp-sub",
-          path: "/mcp",
-          typeDefs: gql`
-            type Query {
-              hi: String
-            }
-          `,
-          resolvers: {},
-          relationalDb: {} as IRelationalDb,
-          reactorClient: {} as IReactorClient,
-        },
-        "graphql",
-      );
+      const oldStyle = {
+        name: "mcp-sub",
+        path: "/mcp",
+        typeDefs: gql`
+          type Query {
+            hi: String
+          }
+        `,
+        resolvers: {},
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+      };
+      await manager.registerSubgraphInstance(oldStyle as never, "graphql");
       const update = manager.updateRouter();
       await vi.runAllTimersAsync();
       await update;
@@ -2925,25 +2788,12 @@ describe("GraphQLManager", () => {
       );
     });
 
-    function makePlainSub(name: string, overrides: object = {}) {
-      return {
-        name,
-        typeDefs: gql`
-          type Query {
-            hi: String
-          }
-        `,
-        resolvers: {},
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-        ...overrides,
-      };
+    function makePlainSub(name: string) {
+      return sdlInstance(name, "type Query { hi: String }");
     }
 
-    // A core subgraph named "system" - the default BaseSubgraph name is
-    // "example", so a subgraph named "system" is a deliberate collision.
-    class SystemSubgraph extends BaseSubgraph {
-      name = "system";
+    class SystemSubgraph extends sdlBase("type Query { systemInfo: String }") {
+      static override readonly subgraphName = "system";
     }
 
     it("rejects a non-core subgraph that takes a registered core subgraph's name", async () => {
@@ -2995,12 +2845,7 @@ describe("GraphQLManager", () => {
       expect(manager.getSubgraphByName("system")).toBe(core);
       expect(manager.getSubgraphByName("good")).toBe(good);
 
-      // Whitebox: `subgraphs` is the manager's private bucket map; reach it
-      // to assert the rejected instance was never written into one.
-      const managerWithBuckets = manager as unknown as {
-        subgraphs: Map<string, ISubgraph[]>;
-      };
-      const buckets = managerWithBuckets.subgraphs;
+      const buckets = bucketInstances(manager);
       for (const subgraphs of buckets.values()) {
         expect(subgraphs).not.toContain(evil);
       }
@@ -3040,16 +2885,13 @@ describe("GraphQLManager", () => {
       const plain = makePlainSub("early");
       await manager.registerSubgraphInstance(plain, "graphql");
 
-      class CoreSubgraph extends BaseSubgraph {
-        name = "early";
+      class CoreSubgraph extends sdlBase("type Query { hello: String }") {
+        static override readonly subgraphName = "early";
       }
       await initAndFlush(manager, [CoreSubgraph]);
 
       expect(manager.getSubgraphByName("early")).toBeInstanceOf(CoreSubgraph);
-      const { subgraphs } = manager as unknown as {
-        subgraphs: Map<string, ISubgraph[]>;
-      };
-      for (const bucket of subgraphs.values()) {
+      for (const bucket of bucketInstances(manager).values()) {
         expect(bucket).not.toContain(plain);
       }
       expect(manager.hasSubgraphHandler("early")).toBe(true);
@@ -3074,8 +2916,8 @@ describe("GraphQLManager", () => {
       );
     });
 
-    class LateCore extends BaseSubgraph {
-      name = "late";
+    class LateCore extends sdlBase("type Query { lateCore: String }") {
+      static override readonly subgraphName = "late";
     }
 
     async function registerLateCore(manager: GraphQLManager) {
@@ -3106,10 +2948,7 @@ describe("GraphQLManager", () => {
       const core = await registerLateCore(manager);
 
       expect(manager.getSubgraphByName("late")).toBe(core);
-      const { subgraphs } = manager as unknown as {
-        subgraphs: Map<string, ISubgraph[]>;
-      };
-      for (const bucket of subgraphs.values()) {
+      for (const bucket of bucketInstances(manager).values()) {
         expect(bucket).not.toContain(plain);
       }
       expect(logger.error).toHaveBeenCalledWith(
@@ -3128,42 +2967,36 @@ describe("GraphQLManager", () => {
       reactorDriveDocumentModelModule as unknown as DocumentModelModule;
 
     /** The name the generated subgraph for the ReactorDrive model takes. */
-    const reactorDriveModelSubgraphName = new DocumentModelSubgraph(
-      reactorDriveModel,
-      { reactorClient: {} as IReactorClient } as SubgraphArgs,
-    ).name;
+    const reactorDriveModelSubgraphName = getDocumentModelSubgraphName(
+      reactorDriveModel.documentModel.global,
+    );
 
-    /** The reactor-drive listing subgraph as switchboard registers it. */
     function makeHostReactorDriveSubgraph(
       name = REACTOR_DRIVE_SUBGRAPH_NAME,
-    ): ISubgraph {
-      return {
+    ): BaseSubgraph {
+      return sdlInstance(
         name,
-        path: "/",
-        resolvers: createReactorDriveResolvers({
+        reactorDriveSubgraphTypeDefs,
+        createReactorDriveResolvers({
           hostCanRead: () => Promise.resolve(true),
         }),
-        typeDefs: reactorDriveSubgraphTypeDefs,
-        reactorClient: {} as IReactorClient,
-        relationalDb: undefined as never,
-      };
+      );
     }
 
-    function makeWidgetSubgraph(name = "widget-stock"): ISubgraph {
-      return {
-        name,
-        typeDefs: gql`
-          type Widget {
-            inventory: Int!
-          }
-          type Query {
-            widgetStock: Widget
-          }
-        `,
-        resolvers: {},
-        relationalDb: {} as IRelationalDb,
-        reactorClient: {} as IReactorClient,
-      };
+    const widgetStockTypeDefs = gql`
+      type Widget {
+        inventory: Int!
+      }
+      type Query {
+        widgetStock: Widget
+      }
+    `;
+
+    function makeWidgetSubgraph(
+      name = "widget-stock",
+      hooks: SubgraphHooks = {},
+    ): BaseSubgraph {
+      return sdlInstance(name, widgetStockTypeDefs, {}, hooks);
     }
 
     async function flush<T>(pending: Promise<T>): Promise<T> {
@@ -3345,8 +3178,8 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
-      class Privacy extends BaseSubgraph {
-        name = "privacy";
+      class Privacy extends sdlBase("type Query { privacy: String }") {
+        static override readonly subgraphName = "privacy";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Privacy]]]));
 
@@ -3373,8 +3206,8 @@ describe("GraphQLManager", () => {
     it("serves a package subgraph a host evicted once the host subgraph goes", async () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
-      class Shared extends BaseSubgraph {
-        name = "shared";
+      class Shared extends sdlBase("type Query { shared: String }") {
+        static override readonly subgraphName = "shared";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
       const host = makeWidgetSubgraph("shared");
@@ -3390,11 +3223,11 @@ describe("GraphQLManager", () => {
     it("serves a package's refused subgraph once the package holding its name is unregistered", async () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
-      class FooA extends BaseSubgraph {
-        name = "foo";
+      class FooA extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
-      class FooB extends BaseSubgraph {
-        name = "foo";
+      class FooB extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
       await manager.registerSubgraph(FooA, "graphql", false, "a");
       expect(
@@ -3410,11 +3243,11 @@ describe("GraphQLManager", () => {
     it("serves a package's refused subgraph once the package holding its name drops it", async () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
-      class FooA extends BaseSubgraph {
-        name = "foo";
+      class FooA extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
-      class FooB extends BaseSubgraph {
-        name = "foo";
+      class FooB extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
       await manager.registerSubgraph(FooA, "graphql", false, "a");
       await manager.registerSubgraph(FooB, "graphql", false, "b");
@@ -3461,11 +3294,11 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
 
-      class V1 extends BaseSubgraph {
-        name = "shared-name";
+      class V1 extends sdlBase("type Query { sharedName: String }") {
+        static override readonly subgraphName = "shared-name";
       }
-      class V2 extends BaseSubgraph {
-        name = "shared-name";
+      class V2 extends sdlBase("type Query { sharedName: String }") {
+        static override readonly subgraphName = "shared-name";
       }
       const first = await manager.registerSubgraph(V1, "graphql", false, "a");
       const second = await manager.registerSubgraph(V2, "graphql", false, "a");
@@ -3496,8 +3329,8 @@ describe("GraphQLManager", () => {
         reactorDriveModelSubgraphName,
       );
 
-      class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+      class Squatter extends sdlBase("type Query { squatter: String }") {
+        static override readonly subgraphName = reactorDriveModelSubgraphName;
       }
       const result = await manager.registerSubgraph(
         Squatter,
@@ -3629,22 +3462,21 @@ describe("GraphQLManager", () => {
       });
       await initAndFlush(manager);
       const created = vi.fn();
-      class Collider extends BaseSubgraph {
-        name = "collider";
-        typeDefs = makeWidgetSubgraph().typeDefs;
+      class Collider extends sdlBase(widgetStockTypeDefs) {
+        static override readonly subgraphName = "collider";
         constructor(...args: ConstructorParameters<typeof BaseSubgraph>) {
           super(...args);
           created();
         }
       }
-      class Foo extends BaseSubgraph {
-        name = "foo";
+      class Foo extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
-      class Bar extends BaseSubgraph {
-        name = "bar";
+      class Bar extends sdlBase("type Query { bar: String }") {
+        static override readonly subgraphName = "bar";
       }
       await manager.applyPackageSubgraphs(
-        new Map<string, (typeof BaseSubgraph)[]>([
+        new Map<string, SubgraphClass[]>([
           ["pkg", [Collider]],
           ["other", [Foo, Bar]],
         ]),
@@ -3706,17 +3538,17 @@ describe("GraphQLManager", () => {
       expect(prefixed).toBeDefined();
 
       const result = await manager.registerSubgraphInstance(
-        {
-          ...makeWidgetSubgraph("prefixed-squatter"),
-          typeDefs: gql(`
+        sdlInstance(
+          "prefixed-squatter",
+          `
             type ${prefixed} {
               squatted: String
             }
             type Query {
               squat: ${prefixed}
             }
-          `),
-        },
+          `,
+        ),
         "graphql",
       );
 
@@ -3732,11 +3564,11 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
-      class FooA extends BaseSubgraph {
-        name = "foo";
+      class FooA extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
-      class FooB extends BaseSubgraph {
-        name = "foo";
+      class FooB extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
 
       await manager.applyPackageSubgraphs(new Map([["a", [FooA]]]));
@@ -3754,19 +3586,19 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
-      class FooA extends BaseSubgraph {
-        name = "foo";
+      class FooA extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
-      class BarA extends BaseSubgraph {
-        name = "bar";
+      class BarA extends sdlBase("type Query { bar: String }") {
+        static override readonly subgraphName = "bar";
       }
-      class FooB extends BaseSubgraph {
-        name = "foo";
+      class FooB extends sdlBase("type Query { foo: String }") {
+        static override readonly subgraphName = "foo";
       }
 
       await manager.applyPackageSubgraphs(new Map([["a", [FooA, BarA]]]));
       await manager.applyPackageSubgraphs(
-        new Map<string, (typeof BaseSubgraph)[]>([
+        new Map<string, SubgraphClass[]>([
           ["b", [FooB]],
           ["a", [BarA]],
         ]),
@@ -3786,8 +3618,8 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+      class Squatter extends sdlBase("type Query { squatter: String }") {
+        static override readonly subgraphName = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
       expect(
@@ -3828,8 +3660,8 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      class Owned extends BaseSubgraph {
-        name = "owned";
+      class Owned extends sdlBase("type Query { owned: String }") {
+        static override readonly subgraphName = "owned";
       }
       const owned = await manager.registerSubgraph(
         Owned,
@@ -3858,10 +3690,7 @@ describe("GraphQLManager", () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
       const rootDisconnect = vi.fn().mockResolvedValue(undefined);
-      const root = {
-        ...makeWidgetSubgraph("twin"),
-        onDisconnect: rootDisconnect,
-      };
+      const root = makeWidgetSubgraph("twin", { onDisconnect: rootDisconnect });
       const replacement = makeWidgetSubgraph("twin");
 
       expect(await manager.registerSubgraphInstance(root, "")).toBe(root);
@@ -3881,8 +3710,8 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
       const root = makeWidgetSubgraph("twin");
       await manager.registerSubgraphInstance(root, "");
-      class Twin extends BaseSubgraph {
-        name = "twin";
+      class Twin extends sdlBase("type Query { twin: String }") {
+        static override readonly subgraphName = "twin";
       }
 
       await manager.applyPackageSubgraphs(new Map([["pkg", [Twin]]]));
@@ -3900,12 +3729,13 @@ describe("GraphQLManager", () => {
     /** Registered instances named `name`, across every non-core bucket. */
     function registeredNamed(manager: GraphQLManager, name: string) {
       const { subgraphs } = manager as unknown as {
-        subgraphs: Map<string, ISubgraph[]>;
+        subgraphs: Map<string, HostedSubgraph[]>;
       };
       return new Set(
         Array.from(subgraphs.values())
           .flat()
-          .filter((it) => it.name === name),
+          .filter((record) => record.name === name)
+          .map((record) => record.instance),
       );
     }
 
@@ -3914,17 +3744,17 @@ describe("GraphQLManager", () => {
       await initAndFlush(manager);
       const [AlphaA, alphaDisconnected] = (() => {
         const disconnected: string[] = [];
-        class Alpha extends BaseSubgraph {
-          name = "alpha";
-          onDisconnect = () => {
+        class Alpha extends sdlBase("type Query { alpha: String }") {
+          static override readonly subgraphName = "alpha";
+          override onDisconnect = () => {
             disconnected.push("alpha");
             return Promise.resolve();
           };
         }
         return [Alpha, disconnected] as const;
       })();
-      class BetaB extends BaseSubgraph {
-        name = "beta";
+      class BetaB extends sdlBase("type Query { beta: String }") {
+        static override readonly subgraphName = "beta";
       }
       await manager.registerSubgraph(AlphaA, "graphql", false, "a");
       await manager.registerSubgraph(BetaB, "graphql", false, "b");
@@ -3943,9 +3773,10 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
-        onSetup = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+      class Squatter extends sdlBase("type Query { squatter: String }") {
+        static override readonly subgraphName = reactorDriveModelSubgraphName;
+        override onSetup = () =>
+          new Promise<void>((resolve) => setTimeout(resolve, 5));
       }
       vi.mocked(reactorClient.getDocumentModelModules).mockResolvedValue({
         results: [makeDriveModule(), reactorDriveModel],
@@ -3993,8 +3824,8 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+      class Squatter extends sdlBase("type Query { squatter: String }") {
+        static override readonly subgraphName = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
 
@@ -4032,8 +3863,8 @@ describe("GraphQLManager", () => {
         enableDocumentModelSubgraphs: true,
       });
       await initAndFlush(manager);
-      class Squatter extends BaseSubgraph {
-        name = reactorDriveModelSubgraphName;
+      class Squatter extends sdlBase("type Query { squatter: String }") {
+        static override readonly subgraphName = reactorDriveModelSubgraphName;
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Squatter]]]));
       expect(
@@ -4054,12 +3885,12 @@ describe("GraphQLManager", () => {
     it("runs a registration a subgraph's onSetup makes inline", async () => {
       const { manager } = makeHarness();
       await initAndFlush(manager);
-      class Inner extends BaseSubgraph {
-        name = "inner";
+      class Inner extends sdlBase("type Query { inner: String }") {
+        static override readonly subgraphName = "inner";
       }
-      class Outer extends BaseSubgraph {
-        name = "outer";
-        onSetup = async () => {
+      class Outer extends sdlBase("type Query { outer: String }") {
+        static override readonly subgraphName = "outer";
+        override onSetup = async () => {
           await this.graphqlManager.registerSubgraph(
             Inner,
             "graphql",
@@ -4087,14 +3918,14 @@ describe("GraphQLManager", () => {
       vi.useRealTimers();
 
       const late = makeWidgetSubgraph("late");
-      let detached: Promise<ISubgraph | undefined> | undefined;
+      let detached: Promise<BaseSubgraph | undefined> | undefined;
       let timerFired!: () => void;
       const fired = new Promise<void>((resolve) => {
         timerFired = resolve;
       });
-      class Starter extends BaseSubgraph {
-        name = "starter";
-        onSetup = () => {
+      class Starter extends sdlBase("type Query { starter: String }") {
+        static override readonly subgraphName = "starter";
+        override onSetup = () => {
           setTimeout(() => {
             detached = this.graphqlManager.registerSubgraphInstance(
               late,
@@ -4111,9 +3942,9 @@ describe("GraphQLManager", () => {
       const gate = new Promise<void>((resolve) => {
         release = resolve;
       });
-      class Blocker extends BaseSubgraph {
-        name = "blocker";
-        onSetup = () => gate;
+      class Blocker extends sdlBase("type Query { blocker: String }") {
+        static override readonly subgraphName = "blocker";
+        override onSetup = () => gate;
       }
       const blocking = manager.registerSubgraph(
         Blocker,
@@ -4140,14 +3971,14 @@ describe("GraphQLManager", () => {
       vi.useRealTimers();
 
       const detachedSubgraph = makeWidgetSubgraph("detached");
-      let detached: Promise<ISubgraph | undefined> | undefined;
+      let detached: Promise<BaseSubgraph | undefined> | undefined;
       let timerFired!: () => void;
       const fired = new Promise<void>((resolve) => {
         timerFired = resolve;
       });
-      class Starter extends BaseSubgraph {
-        name = "starter";
-        onSetup = () => {
+      class Starter extends sdlBase("type Query { starter: String }") {
+        static override readonly subgraphName = "starter";
+        override onSetup = () => {
           setTimeout(() => {
             detached = this.graphqlManager.registerSubgraphInstance(
               detachedSubgraph,
@@ -4162,13 +3993,13 @@ describe("GraphQLManager", () => {
       const gate = new Promise<void>((resolve) => {
         release = resolve;
       });
-      class Blocker extends BaseSubgraph {
-        name = "blocker";
-        onSetup = () => gate;
+      class Blocker extends sdlBase("type Query { blocker: String }") {
+        static override readonly subgraphName = "blocker";
+        override onSetup = () => gate;
       }
 
       const change = manager.applyPackageSubgraphs(
-        new Map<string, (typeof BaseSubgraph)[]>([
+        new Map<string, SubgraphClass[]>([
           ["a", [Starter]],
           ["b", [Blocker]],
         ]),
@@ -4188,15 +4019,14 @@ describe("GraphQLManager", () => {
       const logger = makeHarnessLogger();
       const { manager } = makeHarness({ logger });
       await initAndFlush(manager);
-      class Shared extends BaseSubgraph {
-        name = "shared";
+      class Shared extends sdlBase("type Query { shared: String }") {
+        static override readonly subgraphName = "shared";
       }
       await manager.applyPackageSubgraphs(new Map([["pkg", [Shared]]]));
       const held = manager.getSubgraphByName("shared");
-      const failing = {
-        ...makeWidgetSubgraph("shared"),
+      const failing = makeWidgetSubgraph("shared", {
         onSetup: () => Promise.reject(new Error("setup failed")),
-      };
+      });
 
       await expect(
         manager.registerSubgraphInstance(failing, "graphql"),
@@ -4243,11 +4073,9 @@ describe("GraphQLManager", () => {
 
       await flush(manager.setSupergraph("extra", [sub]));
 
-      const { subgraphs } = manager as unknown as {
-        subgraphs: Map<string, ISubgraph[]>;
-      };
-      expect(subgraphs.get("extra")).toEqual([sub]);
-      expect(subgraphs.get("graphql")).toEqual([sub]);
+      const buckets = bucketInstances(manager);
+      expect(buckets.get("extra")).toEqual([sub]);
+      expect(buckets.get("graphql")).toEqual([sub]);
     });
   });
 
@@ -4270,9 +4098,7 @@ describe("GraphQLManager", () => {
     }
 
     function modelSubgraphName(model: DocumentModelModule): string {
-      return new DocumentModelSubgraph(model, {
-        reactorClient: {} as IReactorClient,
-      } as SubgraphArgs).name;
+      return getDocumentModelSubgraphName(model.documentModel.global);
     }
 
     function makeModelsHarness(
@@ -4484,17 +4310,6 @@ describe("GraphQLManager", () => {
         .map(([, name]) => String(name));
     }
 
-    function subgraphClass(
-      subgraphName: string,
-      subgraphTypeDefs: DocumentNode,
-    ): SubgraphClass {
-      return class extends BaseSubgraph {
-        name = subgraphName;
-        typeDefs = subgraphTypeDefs;
-        resolvers = {};
-      };
-    }
-
     const widget = gql`
       type Widget {
         id: ID!
@@ -4567,8 +4382,8 @@ describe("GraphQLManager", () => {
       const harness = makeOwnershipHarness();
       await initAndFlush(harness.manager);
       await applyPackages(harness.manager, [
-        ["pkg-a", [subgraphClass("widget-a", widget)]],
-        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+        ["pkg-a", [sdlSubgraph("widget-a", widget)]],
+        ["pkg-b", [sdlSubgraph("widget-b", widgetSubset)]],
       ]);
       await flush(harness.manager.updateRouter());
 
@@ -4591,7 +4406,7 @@ describe("GraphQLManager", () => {
         [
           "pkg-a",
           [
-            subgraphClass(
+            sdlSubgraph(
               "docs-a",
               gql`
                 type Query {
@@ -4604,7 +4419,7 @@ describe("GraphQLManager", () => {
         [
           "pkg-b",
           [
-            subgraphClass(
+            sdlSubgraph(
               "docs-b",
               gql`
                 type Query {
@@ -4630,11 +4445,11 @@ describe("GraphQLManager", () => {
       const harness = makeOwnershipHarness();
       await initAndFlush(harness.manager);
       await applyPackages(harness.manager, [
-        ["pkg-a", [subgraphClass("widget-a", widget)]],
+        ["pkg-a", [sdlSubgraph("widget-a", widget)]],
         [
           "pkg-b",
           [
-            subgraphClass(
+            sdlSubgraph(
               "widget-extra",
               gql`
                 extend type Widget {
@@ -4658,7 +4473,7 @@ describe("GraphQLManager", () => {
         [
           "pkg",
           [
-            subgraphClass(
+            sdlSubgraph(
               "paging",
               gql`
                 input PagingInput {
@@ -4689,10 +4504,10 @@ describe("GraphQLManager", () => {
       const harness = makeOwnershipHarness();
       await initAndFlush(harness.manager);
       await applyPackages(harness.manager, [
-        ["pkg", [subgraphClass("widget-pkg", widgetSubset)]],
+        ["pkg", [sdlSubgraph("widget-pkg", widgetSubset)]],
       ]);
       await harness.manager.registerSubgraph(
-        subgraphClass("widget-host", widget),
+        sdlSubgraph("widget-host", widget),
         "graphql",
       );
       await flush(harness.manager.updateRouter());
@@ -4707,11 +4522,11 @@ describe("GraphQLManager", () => {
       await initAndFlush(harness.manager);
       const packageA: [string, SubgraphClass[]] = [
         "pkg-a",
-        [subgraphClass("widget-a", widget)],
+        [sdlSubgraph("widget-a", widget)],
       ];
       const packageB: [string, SubgraphClass[]] = [
         "pkg-b",
-        [subgraphClass("widget-b", widgetSubset)],
+        [sdlSubgraph("widget-b", widgetSubset)],
       ];
       await applyPackages(harness.manager, [packageA, packageB]);
 
@@ -4730,8 +4545,8 @@ describe("GraphQLManager", () => {
       const harness = makeOwnershipHarness();
       await initAndFlush(harness.manager);
       await applyPackages(harness.manager, [
-        ["pkg-a", [subgraphClass("widget-a", widget)]],
-        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+        ["pkg-a", [sdlSubgraph("widget-a", widget)]],
+        ["pkg-b", [sdlSubgraph("widget-b", widgetSubset)]],
       ]);
       expect(supergraphNames(harness.gatewayAdapter)).not.toContain("widget-b");
 
@@ -4750,13 +4565,12 @@ describe("GraphQLManager", () => {
         field: string,
         widgetSdl: string,
       ): SubgraphClass =>
-        class extends BaseSubgraph {
-          name = subgraphName;
-          hasSubscriptions = true;
-          typeDefs = gql(`${widgetSdl}
+        sdlSubgraph(
+          subgraphName,
+          `${widgetSdl}
             type Query { ${field}Info: String }
-            type Subscription { ${field}: Widget }`);
-          resolvers = {
+            type Subscription { ${field}: Widget }`,
+          {
             Subscription: {
               [field]: {
                 subscribe: async function* () {
@@ -4765,8 +4579,8 @@ describe("GraphQLManager", () => {
                 },
               },
             },
-          };
-        };
+          },
+        );
       await applyPackages(harness.manager, [
         [
           "pkg-a",
@@ -4813,7 +4627,7 @@ describe("GraphQLManager", () => {
         [
           "pkg",
           [
-            subgraphClass(
+            sdlSubgraph(
               "todo-list-custom",
               gql`
                 """
@@ -4855,22 +4669,21 @@ describe("GraphQLManager", () => {
       const harness = makeOwnershipHarness();
       await initAndFlush(harness.manager);
       const documentSubgraph = (subgraphName: string): SubgraphClass =>
-        class extends BaseSubgraph {
-          name = subgraphName;
-          hasSubscriptions = true;
-          typeDefs = gql`
+        sdlSubgraph(
+          subgraphName,
+          `
             type Query {
               document(id: String!): String
             }
             type Subscription {
               ${subgraphName.replace("-", "")}: String
             }
-          `;
-          resolvers = {
+          `,
+          {
             Query: { document: () => subgraphName },
             Subscription: {},
-          };
-        };
+          },
+        );
       await harness.manager.registerSubgraph(
         documentSubgraph("doc-host"),
         "graphql",
@@ -4907,7 +4720,7 @@ describe("GraphQLManager", () => {
         [
           "pkg-a",
           [
-            subgraphClass(
+            sdlSubgraph(
               "widget-broken",
               gql`
                 type Widget {
@@ -4921,7 +4734,7 @@ describe("GraphQLManager", () => {
             ),
           ],
         ],
-        ["pkg-b", [subgraphClass("widget-b", widgetSubset)]],
+        ["pkg-b", [sdlSubgraph("widget-b", widgetSubset)]],
       ]);
 
       expect(harness.manager.hasSubgraphHandler("widget-broken")).toBe(false);
@@ -4939,7 +4752,7 @@ describe("GraphQLManager", () => {
         [
           "pkg",
           [
-            subgraphClass(
+            sdlSubgraph(
               "revision-custom",
               gql`
                 type RevisionQueries {

@@ -1,6 +1,8 @@
 import {
   ANALYTICS_ENGINE_CORE_PACKAGE,
   FEATURE_DEPENDENCIES,
+  installAddedDependencies,
+  type InstallOptions,
 } from "@powerhousedao/shared/clis";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
@@ -38,8 +40,23 @@ function hasPiece(piecesDir: string): boolean {
   return false;
 }
 
+function hasSubgraph(subgraphsDir: string): boolean {
+  return readdirSync(subgraphsDir, { withFileTypes: true }).some(
+    (entry) =>
+      entry.isDirectory() ||
+      (entry.isFile() &&
+        entry.name.endsWith(".ts") &&
+        entry.name !== "index.ts"),
+  );
+}
+
 export function detectFeatures(projectDir: string): Feature[] {
   const features: Feature[] = [];
+  const subgraphsDir = join(projectDir, "subgraphs");
+  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
+  if (subgraphsStat?.isDirectory() && hasSubgraph(subgraphsDir)) {
+    features.push("subgraph");
+  }
   const processorsDir = join(projectDir, "processors");
   const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
   if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {
@@ -130,4 +147,15 @@ export async function syncFeatureDependencies(
   await writePackage(projectDir, updated);
   console.log(`Added peer/dev dependencies: ${added.join(", ")}`);
   return added;
+}
+
+export async function installFeatureDependencies(
+  projectDir: string,
+  options: InstallOptions = {},
+): Promise<void> {
+  const added = await syncFeatureDependencies(
+    detectFeatures(projectDir),
+    projectDir,
+  );
+  await installAddedDependencies(added, projectDir, options);
 }

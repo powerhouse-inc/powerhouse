@@ -1,0 +1,63 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Mutation",
+      "fieldName": "grantDocumentPermission",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "grantOperationPermission",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "revokeDocumentPermission",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "revokeOperationPermission",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "setDocumentProtection",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "transferDocumentOwnership",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "canExecuteOperation",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "documentAccess",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "documentProtection",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "operationPermissions",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "userDocumentPermissions",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": false,
+    "normalized": false
+  }
+}

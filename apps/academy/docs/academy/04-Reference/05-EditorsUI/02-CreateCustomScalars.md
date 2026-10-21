@@ -373,7 +373,7 @@ export const schema = z.number().positive();
 
 ```typescript
 export const type = "string";
-export const schema = z.string().datetime();
+export const schema = z.iso.datetime();
 ```
 
 :::info
@@ -392,3 +392,53 @@ export const schema = z.string().datetime();
 - Keep the `stringSchema` in sync with your `schema` definition
 - Test edge cases in your validation function
 - Update all required sections in `scalars.ts`
+
+## Use a package scalar in a subgraph
+
+The steps above add a scalar to the Powerhouse catalog. To use a scalar only in your own package, declare a package scalar instead. It needs no change to `scalars.ts`.
+
+Declare a package scalar with `defineScalar` from `document-model`. Use its builder in a document model or a subgraph field.
+
+### Declare and use the scalar
+
+```typescript
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { defineScalar } from "document-model";
+import { z } from "zod";
+
+export const PhoneNumber = defineScalar({
+  name: "PhoneNumber",
+  description: "An international phone number.",
+  representation: "string",
+  validator: z.string().regex(/^\+?[1-9]\d{1,14}$/),
+  zodSource: "z.string().regex(/^\\+?[1-9]\\d{1,14}$/)",
+});
+
+export class SupportSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "support";
+  #phone = "+1234567890";
+
+  static override getSchema(schema: SchemaBuilder<SupportSubgraph>) {
+    return [
+      schema.query("supportPhone", {
+        returns: PhoneNumber({ required: true }),
+        resolve: ({ subgraph }) => subgraph.#phone,
+      }),
+    ];
+  }
+}
+```
+
+`validator` checks runtime values. `zodSource` contains the same validation rule for generated source. Keep them in sync. The compiler derives GraphQL coercion from the validator and representation unless you supply explicit coercion.
+
+In a subgraph, `PhoneNumber` keeps its name. In a document model, the host adds the model prefix. Catalog scalars keep their host bindings. A package scalar cannot reuse a catalog scalar name, a GraphQL built-in name, or another named type in the same schema.
+
+### Check the scalar
+
+Run your package type check and `ph model check`. Test a valid value, an invalid string, and a value with the wrong JavaScript type. Execute the subgraph with variables and literals to check input coercion, and query its output to check serialization. See [Test a subgraph without a host](../03-GraphQLData/09-TestingSubgraphs.md).
+
+For existing SDL, put the scalar implementation in the resolver map returned by `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })`. Resolvers access instance state through `subgraph`. See [Subgraph classes](../03-GraphQLData/08-SubgraphClasses.md).

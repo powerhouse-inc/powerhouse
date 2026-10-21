@@ -47,6 +47,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
+    "document-model": "workspace:*",
     "graphql": "catalog:",
     "kysely": "catalog:"
   },

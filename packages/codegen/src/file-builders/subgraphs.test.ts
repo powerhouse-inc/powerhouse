@@ -1,49 +1,33 @@
-/**
- * The generator half of the subgraphs contract (testing policy R6):
- * `makeSubgraphsIndexFile` emits the aggregate `subgraphs/index.ts` that the
- * reactor-api package loaders consume. These tests pin the emitted shape —
- * one namespace re-export per subgraph, aliased to the class's own name:
- *
- *   export * as StatementsSubgraph from "./statements/index.js";
- *
- * The consumer half lives in
- * packages/reactor-api/test/subgraph-module-contract.test.ts, whose fixture
- * table contains exactly this shape (and runs it through all three package
- * loaders). If the emitted shape changes, that fixture changes in the same
- * commit — the two files cite each other so neither drifts alone.
- */
 import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { Kind, parse } from "graphql";
-import {
-  customSubgraphResolversTemplate,
-  customSubgraphSchemaTemplate,
-} from "templates";
+import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+import { dirname, join, relative } from "node:path";
+import { subgraphIndexFileTemplate, subgraphSchemaTemplate } from "templates";
+import { Node, Project } from "ts-morph";
 import { afterEach, describe, expect, it } from "vitest";
+import { hostGuard } from "../../test/subgraph-host-guard.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
-import { makeSubgraphsIndexFile } from "./subgraphs.js";
+import {
+  makeSubgraphsIndexFile,
+  tsMorphGenerateSubgraph,
+} from "./subgraphs.js";
 
-const originalCwd = process.cwd();
 const temporary: string[] = [];
 
 afterEach(() => {
-  process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-// The minimal project buildTsMorphProject accepts, plus subgraph scaffolds.
-// The base class is declared locally so ts-morph can resolve `getBaseClass`
-// without a node_modules tree; the generator only inspects the base class
-// text for "BaseSubgraph".
 function makeProject(subgraphs: { dir: string; className: string }[]) {
   const root = mkdtempSync(join(tmpdir(), "ph-subgraphs-index-"));
   temporary.push(root);
@@ -59,14 +43,101 @@ function makeProject(subgraphs: { dir: string; className: string }[]) {
     mkdirSync(join(root, "subgraphs", dir), { recursive: true });
     writeFileSync(
       join(root, "subgraphs", dir, "index.ts"),
-      `class BaseSubgraph {}\nexport class ${className} extends BaseSubgraph {}\n`,
+      `class BaseSubgraph {}\nexport class ${className} extends BaseSubgraph { static readonly subgraphName = "${dir}"; }\n`,
     );
   }
   return root;
 }
 
 describe("makeSubgraphsIndexFile", () => {
-  it("re-exports every subgraph as a namespace aliased to its class name", async () => {
+  it.each([
+    [
+      "aliased",
+      'class Original extends BaseSubgraph { static readonly subgraphName = "example"; }\nexport { Original as PublicSubgraph };',
+      "PublicSubgraph",
+      "Original",
+    ],
+    [
+      "default",
+      'export default class Original extends BaseSubgraph { static readonly subgraphName = "example"; }',
+      "Original",
+      "Original",
+    ],
+    [
+      "anonymous default",
+      'export default class extends BaseSubgraph { static readonly subgraphName = "example"; }',
+      "DefaultSubgraph",
+      "undefined",
+    ],
+  ])(
+    "recovers an %s leaf using its actual module export",
+    async (_, source, exportedName, declarationName) => {
+      const root = makeProject([]);
+      writeFiles(root, {
+        "subgraphs/example/index.ts": `${protocolBase}\n${source}\n`,
+      });
+      const first = await regenerate(root);
+      const tsc = compile(
+        root,
+        "--outDir",
+        join(root, "out"),
+        "--rootDir",
+        root,
+      );
+      expect(tsc.status, tsc.stdout + tsc.stderr).toBe(0);
+      const loaded = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          "const exports = await import(process.argv[1]); const klass = exports[process.argv[2]]; console.log(JSON.stringify({ exports: Object.keys(exports), name: klass.subgraphName, base: Object.getPrototypeOf(klass).name }));",
+          pathToFileURL(join(root, "out/subgraphs/index.js")).href,
+          exportedName,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(loaded.status, loaded.stdout + loaded.stderr).toBe(0);
+      expect(JSON.parse(loaded.stdout)).toStrictEqual({
+        exports: [exportedName],
+        name: "example",
+        base: "BaseSubgraph",
+      });
+      expect(exportedClasses(root)).toStrictEqual([
+        `${exportedName}=${declarationName}@subgraphs/example/index.ts`,
+      ]);
+      expect(await regenerate(root)).toBe(first);
+    },
+  );
+
+  it("registers only the runtime class beside a type-only leaf export", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+    ]);
+    writeFiles(root, {
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: { module: "nodenext", verbatimModuleSyntax: true },
+      }),
+      "subgraphs/billing/index.ts":
+        'class BaseSubgraph {}\nclass Internal extends BaseSubgraph { static readonly subgraphName = "billing"; }\nexport type { Internal as BillingSubgraph };\nexport { type Internal as LedgerSubgraph };\n',
+    });
+
+    expect(await regenerate(root))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { StatementsSubgraph } from "./statements/index.js";
+
+${hostGuard("StatementsSubgraph")}
+export { StatementsSubgraph };
+const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> = true;
+void checkStatementsSubgraph;
+`);
+    const tsc = compile(root, "--noEmit");
+    expect(tsc.status, tsc.stdout + tsc.stderr).toBe(0);
+    expect(exportedClasses(root)).toStrictEqual([
+      "StatementsSubgraph=StatementsSubgraph@subgraphs/statements/index.ts",
+    ]);
+  });
+
+  it("exports every class with a type assertion", async () => {
     const root = makeProject([
       { dir: "statements", className: "StatementsSubgraph" },
       { dir: "transaction-ledger", className: "TransactionLedgerSubgraph" },
@@ -80,13 +151,15 @@ describe("makeSubgraphsIndexFile", () => {
     await project.save();
 
     const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
-    // The exact line shape the loaders' fixture table encodes: alias === the
-    // class name, specifier with the ESM .js extension.
     expect(index).toContain(
-      'export * as StatementsSubgraph from "./statements/index.js";',
+      'import { StatementsSubgraph } from "./statements/index.js";',
     );
     expect(index).toContain(
-      'export * as TransactionLedgerSubgraph from "./transaction-ledger/index.js";',
+      "const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> =",
+    );
+    expect(index).toContain("export { StatementsSubgraph };");
+    expect(index).toContain(
+      'import { TransactionLedgerSubgraph } from "./transaction-ledger/index.js";',
     );
   });
 
@@ -102,8 +175,8 @@ describe("makeSubgraphsIndexFile", () => {
     await project.save();
 
     const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
-    const occurrences = index.match(/StatementsSubgraph/g) ?? [];
-    expect(occurrences).toHaveLength(1);
+    expect(index).toContain("export { StatementsSubgraph };");
+    expect(index.match(/const checkStatementsSubgraph:/g)).toHaveLength(1);
   });
 
   it("keeps an existing export while adding the missing one", async () => {
@@ -113,7 +186,7 @@ describe("makeSubgraphsIndexFile", () => {
     ]);
     writeFileSync(
       join(root, "subgraphs", "index.ts"),
-      'export * as LedgerSubgraph from "./ledger/index.js";\n',
+      'import { LedgerSubgraph } from "./ledger/index.js";\n',
     );
     const project = buildTsMorphProject(root);
 
@@ -125,42 +198,616 @@ describe("makeSubgraphsIndexFile", () => {
 
     const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
     expect(index).toContain(
-      'export * as LedgerSubgraph from "./ledger/index.js";',
+      'import { LedgerSubgraph } from "./ledger/index.js";',
     );
     expect(index).toContain(
-      'export * as StatementsSubgraph from "./statements/index.js";',
+      'import { StatementsSubgraph } from "./statements/index.js";',
     );
-    expect(index.match(/LedgerSubgraph/g)).toHaveLength(1);
+    expect(index.match(/const checkLedgerSubgraph:/g)).toHaveLength(1);
+  });
+
+  it("drops the generated statements of a removed subgraph and checks every exported concrete class in a file", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+    ]);
+    writeFileSync(
+      join(root, "subgraphs/statements/index.ts"),
+      `
+export abstract class SharedBase {}
+export class StatementsSubgraph extends SharedBase { static readonly subgraphName = "statements"; }
+export class ExtraSubgraph extends SharedBase { static readonly subgraphName = "extra"; }
+`,
+    );
+    writeFileSync(
+      join(root, "subgraphs/index.ts"),
+      'import { Missing } from "./missing/index.js";\n\nexport { Missing };\nconst checkMissing: SubgraphCheck<typeof Missing> = true;\nvoid checkMissing;\n',
+    );
+    const project = buildTsMorphProject(root);
+    await makeSubgraphsIndexFile({
+      project,
+      subgraphsDir: join(root, "subgraphs"),
+    });
+    await project.save();
+    const barrel = readFileSync(join(root, "subgraphs/index.ts"), "utf8");
+    expect(barrel).toContain("export { StatementsSubgraph };");
+    expect(barrel).toContain("export { ExtraSubgraph };");
+    expect(barrel).toContain(
+      "const checkExtraSubgraph: SubgraphCheck<typeof ExtraSubgraph> = true;",
+    );
+    expect(barrel).not.toContain("Missing");
+    expect(barrel).not.toContain("SharedBase");
+  });
+
+  it("exports a subgraph it just generated before reactor-api is installed", async () => {
+    const root = makeProject([]);
+    const project = buildTsMorphProject(root);
+
+    await tsMorphGenerateSubgraph({ subgraphName: "greeter", project });
+    await project.save();
+
+    const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
+    expect(index).toContain(
+      'import { GreeterSubgraph } from "./greeter/index.js";',
+    );
   });
 });
 
-describe("custom subgraph templates", () => {
-  const names = { pascalCaseName: "TodoList", camelCaseName: "todoList" };
-
-  it("names the query type apart from the model subgraph's <Model>Queries", () => {
-    const source = customSubgraphSchemaTemplate(names);
-    const sdl = source.slice(
-      source.indexOf("gql`") + 4,
-      source.lastIndexOf("`"),
+describe("makeSubgraphsIndexFile on a host older than the subgraph protocol", () => {
+  function importBarrel(root: string) {
+    const tsc = compile(root, "--outDir", join(root, "out"), "--rootDir", root);
+    expect(tsc.status, tsc.stdout + tsc.stderr).toBe(0);
+    return spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        "const exports = await import(process.argv[1]); console.log(Object.keys(exports).join());",
+        pathToFileURL(join(root, "out/subgraphs/index.js")).href,
+      ],
+      { encoding: "utf8" },
     );
-    const definitions = parse(sdl).definitions.flatMap((def) =>
-      def.kind === Kind.OBJECT_TYPE_DEFINITION ? [def] : [],
-    );
+  }
 
-    expect(definitions.map((def) => def.name.value)).toEqual([
-      "TodoListSubgraphQueries",
-      "Query",
+  it("refuses to load its classes on a base without the protocol", async () => {
+    const root = makeProject([{ dir: "ledger", className: "LedgerSubgraph" }]);
+    await regenerate(root);
+
+    const loaded = importBarrel(root);
+
+    expect(loaded.status).not.toBe(0);
+    expect(loaded.stderr).toContain(
+      "This package's subgraphs need a newer host.",
+    );
+  });
+
+  it("loads its classes on a base with the protocol", async () => {
+    const root = makeProject([]);
+    writeFiles(root, {
+      "subgraphs/ledger/index.ts": `${protocolBase}\nexport class LedgerSubgraph extends BaseSubgraph { static readonly subgraphName = "ledger"; }\n`,
+    });
+    await regenerate(root);
+
+    const loaded = importBarrel(root);
+
+    expect(loaded.status, loaded.stderr).toBe(0);
+    expect(loaded.stdout.trim()).toBe("LedgerSubgraph");
+  });
+
+  it("moves the check to a remaining class when its class is removed", async () => {
+    const root = makeProject([
+      { dir: "a", className: "ASubgraph" },
+      { dir: "b", className: "BSubgraph" },
     ]);
-    const query = definitions.find((def) => def.name.value === "Query");
-    expect(query?.fields?.map((field) => field.name.value)).toEqual([
-      "todoList",
+    expect(await regenerate(root)).toContain("in ASubgraph");
+
+    rmSync(join(root, "subgraphs/a"), { recursive: true });
+    const second = await regenerate(root);
+
+    expect(second).not.toContain("ASubgraph");
+    expect(second.match(/powerhouse\.subgraph/g)).toHaveLength(1);
+    expect(second).toContain("in BSubgraph");
+    expect(await regenerate(root)).toBe(second);
+  });
+
+  it("keeps a comment above the check", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, {
+      "subgraphs/index.ts": first.replace(
+        "if (",
+        "// Hosts before 6.0 lack the protocol.\nif (",
+      ),
+    });
+
+    const second = await regenerate(root);
+
+    expect(second).toContain(
+      `// Hosts before 6.0 lack the protocol.\n${hostGuard("ASubgraph")}`,
+    );
+    expect(await regenerate(root)).toBe(second);
+  });
+
+  it("drops the check with the last class and keeps an authored statement", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, {
+      "subgraphs/index.ts": `${first}\nexport const version = 1;\n`,
+    });
+
+    rmSync(join(root, "subgraphs/a"), { recursive: true });
+
+    expect(await regenerate(root)).toBe("export const version = 1;\n");
+  });
+});
+
+const protocolBase =
+  'class BaseSubgraph { static [Symbol.for("powerhouse.subgraph")]() { return { version: 1 }; } }';
+
+function writeFiles(root: string, files: Record<string, string>) {
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, file)), { recursive: true });
+    writeFileSync(join(root, file), text);
+  }
+}
+
+const subgraphClass = (className: string, subgraphName: string) =>
+  `class BaseSubgraph {}\nexport class ${className} extends BaseSubgraph { static readonly subgraphName = "${subgraphName}"; }\n`;
+
+function compile(root: string, ...options: string[]) {
+  writeFiles(root, {
+    "node_modules/@powerhousedao/reactor-api/package.json":
+      '{"name":"@powerhousedao/reactor-api","types":"index.d.ts"}',
+    "node_modules/@powerhousedao/reactor-api/index.d.ts":
+      "export type SubgraphCheck<T> = true;\n",
+  });
+  return spawnSync(
+    process.execPath,
+    [
+      join(import.meta.dirname, "../../../../node_modules/typescript/bin/tsc"),
+      "-p",
+      join(root, "tsconfig.json"),
+      "--skipLibCheck",
+      "--types",
+      "node",
+      "--typeRoots",
+      join(import.meta.dirname, "../../../../node_modules/@types"),
+      ...options,
+    ],
+    { encoding: "utf8" },
+  );
+}
+
+async function regenerate(root: string) {
+  const project = buildTsMorphProject(root);
+  await makeSubgraphsIndexFile({
+    project,
+    subgraphsDir: join(root, "subgraphs"),
+  });
+  await project.save();
+  return readFileSync(join(root, "subgraphs/index.ts"), "utf8");
+}
+
+function exportedClasses(root: string) {
+  const project = buildTsMorphProject(root);
+  const barrel = project.addSourceFileAtPath(join(root, "subgraphs/index.ts"));
+  return [...barrel.getExportedDeclarations()]
+    .flatMap(([name, declarations]) =>
+      declarations
+        .filter(Node.isClassDeclaration)
+        .map(
+          (declaration) =>
+            `${name}=${declaration.getName()}@${relative(root, declaration.getSourceFile().getFilePath()).replaceAll("\\", "/")}`,
+        ),
+    )
+    .sort();
+}
+
+describe("makeSubgraphsIndexFile with an authored root entry", () => {
+  it("orders owned imports, exports, checks and void statements independently of source order", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    writeFiles(root, {
+      "subgraphs/index.ts": `void checkASubgraph;
+const checkASubgraph: SubgraphCheck<typeof ASubgraph> = true;
+export { ASubgraph };
+import { ASubgraph } from "./a/index.js";
+import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+`,
+    });
+    const expected = `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { ASubgraph } from "./a/index.js";
+
+${hostGuard("ASubgraph")}
+export { ASubgraph };
+const checkASubgraph: SubgraphCheck<typeof ASubgraph> = true;
+void checkASubgraph;
+`;
+
+    expect(await regenerate(root)).toBe(expected);
+    expect(await regenerate(root)).toBe(expected);
+  });
+
+  it("writes the generated barrel byte for byte", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+      { dir: "transaction-ledger", className: "TransactionLedgerSubgraph" },
+      { dir: "B-upper", className: "UpperSubgraph" },
+    ]);
+
+    expect(await regenerate(root))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { UpperSubgraph } from "./B-upper/index.js";
+import { StatementsSubgraph } from "./statements/index.js";
+import { TransactionLedgerSubgraph } from "./transaction-ledger/index.js";
+
+${hostGuard("UpperSubgraph")}
+export { UpperSubgraph };
+const checkUpperSubgraph: SubgraphCheck<typeof UpperSubgraph> = true;
+void checkUpperSubgraph;
+
+export { StatementsSubgraph };
+const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> = true;
+void checkStatementsSubgraph;
+
+export { TransactionLedgerSubgraph };
+const checkTransactionLedgerSubgraph: SubgraphCheck<
+  typeof TransactionLedgerSubgraph
+> = true;
+void checkTransactionLedgerSubgraph;
+`);
+  });
+
+  it("leaves a root that only declares its own class untouched", async () => {
+    const root = makeProject([]);
+    const barrel = `import { BaseSubgraph } from "../src/base.js";
+
+export class RootSubgraph extends BaseSubgraph {
+  static readonly subgraphName = "root";
+}
+`;
+    writeFiles(root, {
+      "src/base.ts": "export class BaseSubgraph {}\n",
+      "subgraphs/index.ts": barrel,
+    });
+    const written = statSync(join(root, "subgraphs/index.ts")).mtimeMs;
+
+    expect(await regenerate(root)).toBe(barrel);
+    expect(statSync(join(root, "subgraphs/index.ts")).mtimeMs).toBe(written);
+    expect(exportedClasses(root)).toStrictEqual([
+      "RootSubgraph=RootSubgraph@subgraphs/index.ts",
     ]);
   });
 
-  it("resolves the renamed query type", () => {
-    const source = customSubgraphResolversTemplate(names);
+  it("keeps a root class and a re-export from outside subgraphs/ while adding a subgraph", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+    ]);
+    writeFiles(root, {
+      "src/base.ts": "export class BaseSubgraph {}\n",
+      "src/external.ts": subgraphClass("ExternalSubgraph", "external"),
+      "subgraphs/index.ts": `import { BaseSubgraph } from "../src/base.js";
+export { ExternalSubgraph } from "../src/external.js";
 
-    expect(source).toContain("TodoListSubgraphQueries: {");
-    expect(source).not.toMatch(/\bTodoListQueries\b/);
+export class RootSubgraph extends BaseSubgraph {
+  static readonly subgraphName = "root";
+}
+`,
+    });
+    const expected = `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { StatementsSubgraph } from "./statements/index.js";
+
+import { BaseSubgraph } from "../src/base.js";
+export { ExternalSubgraph } from "../src/external.js";
+
+export class RootSubgraph extends BaseSubgraph {
+  static readonly subgraphName = "root";
+}
+
+${hostGuard("StatementsSubgraph")}
+export { StatementsSubgraph };
+const checkStatementsSubgraph: SubgraphCheck<typeof StatementsSubgraph> = true;
+void checkStatementsSubgraph;
+`;
+
+    expect(await regenerate(root)).toBe(expected);
+    expect(await regenerate(root)).toBe(expected);
+    expect(exportedClasses(root)).toStrictEqual([
+      "ExternalSubgraph=ExternalSubgraph@src/external.ts",
+      "RootSubgraph=RootSubgraph@subgraphs/index.ts",
+      "StatementsSubgraph=StatementsSubgraph@subgraphs/statements/index.ts",
+    ]);
+  });
+
+  it("leaves a root that nests a class in a container untouched", async () => {
+    const root = makeProject([]);
+    const barrel = `import { DeepSubgraph } from "../src/deep.js";
+export const nested = { child: { DeepSubgraph } };
+`;
+    writeFiles(root, {
+      "src/deep.ts": subgraphClass("DeepSubgraph", "deep"),
+      "subgraphs/index.ts": barrel,
+    });
+    const written = statSync(join(root, "subgraphs/index.ts")).mtimeMs;
+
+    expect(await regenerate(root)).toBe(barrel);
+    expect(statSync(join(root, "subgraphs/index.ts")).mtimeMs).toBe(written);
+  });
+
+  it("keeps the export aliases of two classes with the same name", async () => {
+    const root = makeProject([]);
+    writeFiles(root, {
+      "subgraphs/one/index.ts": subgraphClass("SharedSubgraph", "one"),
+      "subgraphs/two/index.ts": subgraphClass("SharedSubgraph", "two"),
+      "subgraphs/index.ts": `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { SharedSubgraph as One } from "./one/index.js";
+import { SharedSubgraph as Two } from "./two/index.js";
+
+export { One };
+const checkOne: SubgraphCheck<typeof One> = true;
+void checkOne;
+
+export { Two };
+`,
+    });
+    const expected = `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { SharedSubgraph as One } from "./one/index.js";
+import { SharedSubgraph as Two } from "./two/index.js";
+
+${hostGuard("One")}
+export { One };
+const checkOne: SubgraphCheck<typeof One> = true;
+void checkOne;
+
+export { Two };
+const checkTwo: SubgraphCheck<typeof Two> = true;
+void checkTwo;
+`;
+
+    expect(await regenerate(root)).toBe(expected);
+    expect(await regenerate(root)).toBe(expected);
+    expect(exportedClasses(root)).toStrictEqual([
+      "One=SharedSubgraph@subgraphs/one/index.ts",
+      "Two=SharedSubgraph@subgraphs/two/index.ts",
+    ]);
+  });
+
+  it("derives a distinct export for a second class with the same name", async () => {
+    const root = makeProject([]);
+    writeFiles(root, {
+      "subgraphs/one/index.ts": subgraphClass("SharedSubgraph", "one"),
+      "subgraphs/two/index.ts": subgraphClass("SharedSubgraph", "two"),
+    });
+
+    expect(await regenerate(root))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { SharedSubgraph } from "./one/index.js";
+import { SharedSubgraph as TwoSharedSubgraph } from "./two/index.js";
+
+${hostGuard("SharedSubgraph")}
+export { SharedSubgraph };
+const checkSharedSubgraph: SubgraphCheck<typeof SharedSubgraph> = true;
+void checkSharedSubgraph;
+
+export { TwoSharedSubgraph };
+const checkTwoSharedSubgraph: SubgraphCheck<typeof TwoSharedSubgraph> = true;
+void checkTwoSharedSubgraph;
+`);
+    expect(exportedClasses(root)).toStrictEqual([
+      "SharedSubgraph=SharedSubgraph@subgraphs/one/index.ts",
+      "TwoSharedSubgraph=SharedSubgraph@subgraphs/two/index.ts",
+    ]);
+  });
+
+  it("names the generated bindings around the root's own", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+    ]);
+    writeFiles(root, {
+      "subgraphs/index.ts": `const StatementsSubgraph = "taken";
+const checkStatementsSubgraph = StatementsSubgraph;
+export { checkStatementsSubgraph as label };
+`,
+    });
+
+    expect(await regenerate(root))
+      .toBe(`import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { StatementsSubgraph as StatementsSubgraph2 } from "./statements/index.js";
+
+const StatementsSubgraph = "taken";
+const checkStatementsSubgraph = StatementsSubgraph;
+export { checkStatementsSubgraph as label };
+
+${hostGuard("StatementsSubgraph2")}
+export { StatementsSubgraph2 as StatementsSubgraph };
+const checkStatementsSubgraph2: SubgraphCheck<typeof StatementsSubgraph2> =
+  true;
+void checkStatementsSubgraph2;
+`);
+    expect(exportedClasses(root)).toStrictEqual([
+      "StatementsSubgraph=StatementsSubgraph@subgraphs/statements/index.ts",
+    ]);
+  });
+
+  it("refuses a root that does not parse and leaves it unchanged", async () => {
+    const root = makeProject([
+      { dir: "statements", className: "StatementsSubgraph" },
+    ]);
+    const barrel = "export class Broken {\n";
+    writeFiles(root, { "subgraphs/index.ts": barrel });
+    const project = buildTsMorphProject(root);
+
+    await expect(
+      makeSubgraphsIndexFile({
+        project,
+        subgraphsDir: join(root, "subgraphs"),
+      }),
+    ).rejects.toThrow(
+      "PH-IMPORT-FAILED [error/import] ./subgraphs/index.ts (root): subgraphs/index.ts does not parse, so its own statements cannot be told apart from generated ones. Received: '}' expected. Repair: Fix the syntax error in subgraphs/index.ts, then run the generator again.",
+    );
+    await project.save();
+    expect(readFileSync(join(root, "subgraphs/index.ts"), "utf8")).toBe(barrel);
+  });
+});
+
+describe("class subgraph templates", () => {
+  const names = {
+    pascalCaseName: "TodoList",
+    camelCaseName: "todoList",
+    kebabCaseName: "todo-list",
+    itemTypeName: "TodoListSubgraphItem",
+  };
+
+  it("separates typed ph types from the class schema", () => {
+    expect(subgraphSchemaTemplate(names)).toContain(
+      'export const TodoListSubgraphItem = ph.object("TodoListSubgraphItem",',
+    );
+    const source = subgraphIndexFileTemplate(names);
+    expect(source).toContain(
+      'static override readonly subgraphName = "todo-list";',
+    );
+    expect(source).toContain(
+      "static override getSchema(schema: SchemaBuilder<TodoListSubgraph>)",
+    );
+    expect(source).toContain('schema.query("todoListItem",');
+    expect(source).toContain(
+      "returns: ph.ref(TodoListSubgraphItem, { required: true })",
+    );
+  });
+});
+
+function expectCompiles(root: string) {
+  writeFiles(root, {
+    "node_modules/@powerhousedao/reactor-api/package.json":
+      '{"name":"@powerhousedao/reactor-api","types":"index.d.ts"}',
+    "node_modules/@powerhousedao/reactor-api/index.d.ts":
+      "export type SubgraphCheck<T> = true;\n",
+  });
+  const project = new Project({
+    tsConfigFilePath: join(root, "tsconfig.json"),
+    compilerOptions: { types: [], noEmit: true, skipLibCheck: true },
+  });
+  expect(
+    project
+      .getPreEmitDiagnostics()
+      .map((diagnostic) => diagnostic.getMessageText()),
+  ).toEqual([]);
+}
+
+describe("barrel ownership regressions", () => {
+  it("keeps authored check names and every reference", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    writeFiles(root, {
+      "subgraphs/index.ts": `import type { SubgraphCheck } from "@powerhousedao/reactor-api";
+import { ASubgraph } from "./a/index.js";
+const validation: SubgraphCheck<typeof ASubgraph> = true;
+export { ASubgraph };
+export { validation };
+`,
+    });
+    const text = await regenerate(root);
+    expect(text).toContain(
+      "const validation: SubgraphCheck<typeof ASubgraph> = true;",
+    );
+    expect(text).toContain("export { validation };");
+    expect(text).toContain("import type { SubgraphCheck }");
+    expectCompiles(root);
+    expect(await regenerate(root)).toBe(text);
+  });
+
+  it("aliases the helper type around authored bindings", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    writeFiles(root, {
+      "subgraphs/index.ts":
+        'type SubgraphCheck = string;\nexport const info: SubgraphCheck = "ok";\n',
+    });
+    const text = await regenerate(root);
+    expect(text).toContain("SubgraphCheck as SubgraphCheck2");
+    expect(text).toContain("checkASubgraph: SubgraphCheck2<typeof ASubgraph>");
+    expect(text).toContain("type SubgraphCheck = string;");
+    expectCompiles(root);
+    expect(await regenerate(root)).toBe(text);
+    expect(await regenerate(root)).toBe(text);
+  });
+
+  it("adds a runtime export beside an individual type-only export", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    writeFiles(root, {
+      "subgraphs/index.ts": 'export { type ASubgraph } from "./a/index.js";\n',
+    });
+    const text = await regenerate(root);
+    expect(text).toContain('export { type ASubgraph } from "./a/index.js";');
+    expect(text).toContain("export { AASubgraph };");
+    expect(text).toContain("checkAASubgraph:");
+    expectCompiles(root);
+    expect(exportedClasses(root)).toContain(
+      "AASubgraph=ASubgraph@subgraphs/a/index.ts",
+    );
+    expect(await regenerate(root)).toBe(text);
+  });
+
+  it("ignores property names, declarations and labels when a generated binding disappears", async () => {
+    const root = makeProject([]);
+    writeFiles(root, {
+      "subgraphs/index.ts": `import { GoneSubgraph } from "./gone/index.js";
+export { GoneSubgraph };
+export const config = { GoneSubgraph: "description" };
+export const label = config.GoneSubgraph;
+export function describe(GoneSubgraph: string) { return GoneSubgraph; }
+`,
+    });
+    const text = await regenerate(root);
+    expect(text).not.toContain('from "./gone/index.js"');
+    expect(text).toContain(
+      'export const config = { GoneSubgraph: "description" };',
+    );
+    expect(text).toContain("config.GoneSubgraph");
+  });
+
+  it.each(["GoneSubgraph", "checkGoneSubgraph"])(
+    "refuses an authored reference to removed %s before writing",
+    async (name) => {
+      const root = makeProject([]);
+      const before = `import { GoneSubgraph } from "./gone/index.js";
+export { GoneSubgraph };
+const checkGoneSubgraph: SubgraphCheck<typeof GoneSubgraph> = true;
+void checkGoneSubgraph;
+export const kept = ${name};
+`;
+      writeFiles(root, { "subgraphs/index.ts": before });
+      await expect(regenerate(root)).rejects.toThrow(
+        `authored reference to ${name}`,
+      );
+      expect(readFileSync(join(root, "subgraphs/index.ts"), "utf8")).toBe(
+        before,
+      );
+    },
+  );
+
+  it("keeps every leading import comment when imports merge", async () => {
+    const root = makeProject([{ dir: "a", className: "ZSubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, {
+      "subgraphs/index.ts": first.replace(
+        "import { ZSubgraph }",
+        "// Keep the API import documented.\nimport { ZSubgraph }",
+      ),
+      "subgraphs/a/index.ts":
+        subgraphClass("ZSubgraph", "z") +
+        subgraphClass("ASubgraph", "a").replace("class BaseSubgraph {}\n", ""),
+    });
+    const text = await regenerate(root);
+    expect(text).toContain(
+      "// Keep the API import documented.\nimport { ASubgraph, ZSubgraph }",
+    );
+    expect(await regenerate(root)).toBe(text);
+  });
+
+  it("keeps trailing file text last across three regenerations", async () => {
+    const root = makeProject([{ dir: "a", className: "ASubgraph" }]);
+    const first = await regenerate(root);
+    writeFiles(root, { "subgraphs/index.ts": first + "// keep me last\n" });
+    const text = await regenerate(root);
+    expect(text.endsWith("// keep me last\n")).toBe(true);
+    expect(await regenerate(root)).toBe(text);
+    expect(await regenerate(root)).toBe(text);
   });
 });

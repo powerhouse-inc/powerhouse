@@ -1,8 +1,7 @@
 import {
-  detectFeatures,
   generateAllSubgraphs,
   generateSubgraph,
-  syncFeatureDependencies,
+  installFeatureDependencies,
 } from "@powerhousedao/codegen";
 import {
   buildTsMorphProject,
@@ -15,10 +14,9 @@ import {
   saveSpec,
 } from "@powerhousedao/vetra/codegen";
 import type { SubgraphModuleDocument } from "@powerhousedao/vetra/document-models/subgraph-module";
-import { dirname } from "node:path";
+import { basename } from "node:path";
 import type { GenerateSubgraphArgs } from "../types.js";
-import { installAddedDependencies } from "../utils/install-added-dependencies.js";
-import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
+import { checkSubgraphTypes } from "../utils/check-subgraph-types.js";
 
 export async function startGenerateSubgraph(
   args: GenerateSubgraphArgs,
@@ -28,6 +26,7 @@ export async function startGenerateSubgraph(
   if (debug) {
     console.log({ args });
   }
+
   const project = buildTsMorphProject(projectDir);
   if (extract) {
     const docs = extractSubgraphDocuments(project);
@@ -37,19 +36,23 @@ export async function startGenerateSubgraph(
     }
     return;
   }
+  const beforeCheck = async () => {
+    await project.save();
+    await installFeatureDependencies(projectDir, {
+      skipInstall: args.skipInstall,
+    });
+  };
   if (all) {
-    await generateAllSubgraphs(project);
+    await generateAllSubgraphs(project, { beforeCheck });
   } else if (document) {
     const doc = (await getDocument(document)) as SubgraphModuleDocument;
-    await generateSubgraphFromDocument(doc, project);
-  } else if (name) {
-    await generateSubgraph(name, project);
+    await generateSubgraphFromDocument(doc, project, { beforeCheck });
+  } else if (name?.trim()) {
+    await generateSubgraph(name.trim(), project, { beforeCheck });
   } else if (dir) {
-    const { subgraphName } = getSubgraphMetadata(project, dirname(dir));
-    if (!subgraphName) {
-      throw new Error(`Failed to get data for subgraph in dir "${dir}"`);
-    }
-    await generateSubgraph(subgraphName, project);
+    const { problem } = getSubgraphMetadata(project, basename(dir));
+    if (problem !== undefined) throw new Error(problem);
+    await generateAllSubgraphs(project, { beforeCheck });
   } else {
     console.log(
       "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
@@ -57,10 +60,5 @@ export async function startGenerateSubgraph(
     return;
   }
   await project.save();
-  await warnSubgraphTypeConflicts(projectDir);
-  const added = await syncFeatureDependencies(
-    detectFeatures(projectDir),
-    projectDir,
-  );
-  await installAddedDependencies(added, projectDir, args.skipInstall);
+  await checkSubgraphTypes(projectDir);
 }

@@ -1,4 +1,7 @@
-import { generateSubgraph } from "@powerhousedao/codegen";
+import {
+  generateSubgraph,
+  installFeatureDependencies,
+} from "@powerhousedao/codegen";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,
@@ -6,7 +9,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
+import { checkSubgraphs, minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -30,7 +33,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
   /**
    * Validate if this subgraph strand should be processed
    */
-  shouldProcess(input: CodegenInput): boolean {
+  override shouldProcess(input: CodegenInput): boolean {
     // First run base validation
     if (!super.shouldProcess(input)) {
       return false;
@@ -69,12 +72,16 @@ export class SubgraphGenerator extends BaseDocumentGen {
     if (state.name && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
-        await generateSubgraph(state.name, this.project);
+        const projectDir = this.config.CURRENT_WORKING_DIR;
+        await generateSubgraph(state.name, this.project, {
+          beforeCheck: async () => {
+            await this.project.save();
+            await installFeatureDependencies(projectDir, {
+              interactive: false,
+            });
+          },
+        });
         await this.project.save();
-        logger.info(
-          `✅ Subgraph generation completed successfully for: ${state.name}`,
-        );
-        await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
 
         // Backup the document
         const fullState = input.state as SubgraphModulePHState;
@@ -93,7 +100,19 @@ export class SubgraphGenerator extends BaseDocumentGen {
           `❌ Error during subgraph generation for ${state.name}:`,
           error,
         );
+        throw error;
       }
+      try {
+        await checkSubgraphs(this.config.CURRENT_WORKING_DIR);
+      } catch (error) {
+        logger.error(
+          `❌ Subgraph validation failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw error;
+      }
+      logger.info(
+        `✅ Subgraph generation completed successfully for: ${state.name}`,
+      );
     } else {
       if (!state.name) {
         logger.error(

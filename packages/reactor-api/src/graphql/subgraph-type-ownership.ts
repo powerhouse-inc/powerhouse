@@ -143,8 +143,22 @@ function mergeTypeNodes(
   return merged as unknown as ASTNode;
 }
 
-function isRootFieldClaim(claim: string): boolean {
+/** Whether a claim is a root field, as `Query.field`, rather than a type. */
+export function isRootFieldClaim(claim: string): boolean {
   return claim.includes(".");
+}
+
+/**
+ * Whether two subgraphs that make the same claim cannot both keep it. A root
+ * field has one resolver, so it always conflicts; a type conflicts when its
+ * normalized definitions differ.
+ */
+export function claimsConflict(
+  claim: string,
+  definition: string,
+  other: string,
+): boolean {
+  return isRootFieldClaim(claim) || definition !== other;
 }
 
 export type OwnershipConflict = { claim: string; owner: string };
@@ -159,11 +173,7 @@ export function resolveClaimOwnership<T>(
     const conflicts: OwnershipConflict[] = [];
     for (const [claim, definition] of claims) {
       const owned = owners.get(claim);
-      // A root field has one resolver, so only its owner may serve it.
-      if (
-        owned &&
-        (isRootFieldClaim(claim) || owned.definition !== definition)
-      ) {
+      if (owned && claimsConflict(claim, owned.definition, definition)) {
         conflicts.push({ claim, owner: owned.owner });
       }
     }

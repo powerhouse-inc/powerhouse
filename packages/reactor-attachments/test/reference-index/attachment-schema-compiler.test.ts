@@ -4,12 +4,21 @@ import type {
   DocumentSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared/document-model";
+import {
+  defineDocumentModel,
+  defineScalar,
+  ph,
+  schemaFirstSpecification,
+} from "document-model";
+import { scalarCatalog } from "document-model/scalars";
 import { describe, expect, it } from "vitest";
 import { AttachmentSchemaCompiler } from "../../index.js";
 
 const REF_A = `attachment://v1:${"a".repeat(64)}` as const;
 const REF_B = `attachment://v1:${"b".repeat(64)}` as const;
 const REF_C = `attachment://v2:${"c".repeat(64)}` as const;
+
+const INTERNAL_SCALARS = scalarCatalog.internalNames;
 
 function operation(
   name: string | null,
@@ -77,7 +86,112 @@ function action(type: string, input: unknown): Action {
   };
 }
 
+function codeFirstModule(
+  compatibility: ReturnType<typeof schemaFirstSpecification>,
+) {
+  const model = defineDocumentModel({
+    id: "example/attachment-title",
+    name: "AttachmentTitle",
+    description: "",
+    extension: "title",
+    version: 1,
+    author: { name: "Powerhouse" },
+    specifications: {
+      global: {
+        schema: ph.object("AttachmentTitleState", {
+          fields: { title: ph.AttachmentRef({ required: true }) },
+        }),
+        initialValue: { title: REF_A },
+      },
+      local: { schema: null, initialValue: {} },
+    },
+  });
+  const editing = model.module("editing", {
+    operations: ({ global }) => ({
+      setTitle: global({
+        input: ph.input({
+          fields: { title: ph.AttachmentRef({ required: true }) },
+        }),
+        reduce(state, input) {
+          state.title = input.title;
+        },
+      }),
+    }),
+  });
+  return model.finalize({ modules: [editing], compatibility });
+}
+
 describe("AttachmentSchemaCompiler", () => {
+  it.each([
+    { storedName: "RenameTitle", actionType: "SET_TITLE" },
+    { storedName: "UPDATE_TITLE", actionType: "UPDATE_TITLE" },
+    { storedName: "SetTitle", actionType: "UPDATE_TITLE_V2" },
+    { storedName: "SetTitle", actionType: "NOOP" },
+  ])(
+    "extracts code-first references with stored name $storedName and action type $actionType",
+    ({ storedName, actionType }) => {
+      const module = codeFirstModule(
+        schemaFirstSpecification({
+          names: {
+            "operation/editing/setTitle": { storedName, actionType },
+          },
+        }),
+      );
+      const setTitle = module.actions.setTitle({ title: REF_B });
+      expect(setTitle.type).toBe(actionType);
+      expect(
+        new AttachmentSchemaCompiler()
+          .forModuleAction(module, setTitle.type)
+          .extract(setTitle),
+      ).toEqual([REF_B]);
+    },
+  );
+
+  it("extracts references from the declared input type override", () => {
+    const module = codeFirstModule(
+      schemaFirstSpecification({
+        names: {
+          "operation/editing/setTitle": { inputTypeName: "TitlePayload" },
+        },
+      }),
+    );
+    const setTitle = module.actions.setTitle({ title: REF_B });
+    expect(
+      new AttachmentSchemaCompiler()
+        .forModuleAction(module, setTitle.type)
+        .extract(setTitle),
+    ).toEqual([REF_B]);
+  });
+
+  it("extracts schema-first references without name overrides", () => {
+    const module = documentModule([
+      specification(1, [
+        operation("SET_TITLE", "input SetTitleInput { title: AttachmentRef! }"),
+      ]),
+    ]);
+    expect(
+      new AttachmentSchemaCompiler()
+        .forModuleAction(module, "SET_TITLE")
+        .extract(action("SET_TITLE", { title: REF_B })),
+    ).toEqual([REF_B]);
+  });
+
+  it("compiles an action the model does not declare to the no-reference path", () => {
+    const codeFirst = codeFirstModule(schemaFirstSpecification({}));
+    const schemaFirst = documentModule([
+      specification(1, [
+        operation("SET_TITLE", "input SetTitleInput { title: AttachmentRef! }"),
+      ]),
+    ]);
+    for (const module of [codeFirst, schemaFirst]) {
+      expect(
+        new AttachmentSchemaCompiler()
+          .forModuleAction(module, "ARCHIVE_ITEM")
+          .extract(action("ARCHIVE_ITEM", { title: REF_A })),
+      ).toEqual([]);
+    }
+  });
+
   it("extracts direct, optional, and null AttachmentRef fields", () => {
     const module = documentModule([
       specification(1, [
@@ -445,25 +559,32 @@ describe("AttachmentSchemaCompiler", () => {
     ]);
   });
 
-  it("treats undeclared (base/system) actions as the no-reference fast path", () => {
-    const module = documentModule([
-      specification(1, [
-        operation(
-          "ATTACH_FILE",
-          "input AttachFileInput { ref: AttachmentRef }",
-        ),
-      ]),
-    ]);
-    const compiler = new AttachmentSchemaCompiler();
+  it.each([
+    "CREATE_DOCUMENT",
+    "SET_NAME",
+    "UNDO",
+    "NOOP",
+    "INITIALIZE_AUTH",
+    "PURGE_DOCUMENT",
+    "LOAD_STATE",
+    "PRUNE",
+  ])(
+    "treats the known system action %s as the no-reference fast path",
+    (type) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            "input AttachFileInput { ref: AttachmentRef }",
+          ),
+        ]),
+      ]);
+      const compiler = new AttachmentSchemaCompiler();
 
-    // Base document actions (e.g. CREATE_DOCUMENT, SET_NAME) are not part of
-    // any module specification; they cannot carry schema-declared refs and
-    // must not wedge the projection stream.
-    const extractor = compiler.forModuleAction(module, "CREATE_DOCUMENT");
-    expect(
-      extractor.extract(action("CREATE_DOCUMENT", { ref: REF_A })),
-    ).toEqual([]);
-  });
+      const extractor = compiler.forModuleAction(module, type);
+      expect(extractor.extract(action(type, { ref: REF_A }))).toEqual([]);
+    },
+  );
 
   it("rejects mismatched extractor actions", () => {
     const module = documentModule([
@@ -510,6 +631,157 @@ describe("AttachmentSchemaCompiler", () => {
         action("ATTACH_FILE", { legacyRef: REF_A, currentRef: REF_C }),
       ),
     ).toEqual([REF_C]);
+  });
+
+  it("treats JSONObject as the only internal scalar", () => {
+    expect(INTERNAL_SCALARS).toEqual(["JSONObject"]);
+  });
+
+  it.each(INTERNAL_SCALARS)(
+    "keeps an explicit %s declaration in stored schema-first SDL",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `scalar ${name}\ninput AttachFileInput { ref: AttachmentRef metadata: ${name} }`,
+          ),
+        ]),
+      ]);
+      const extractor = new AttachmentSchemaCompiler().forModuleAction(
+        module,
+        "ATTACH_FILE",
+      );
+      expect(
+        extractor.extract(
+          action("ATTACH_FILE", {
+            ref: REF_A,
+            metadata: { label: "attachment" },
+          }),
+        ),
+      ).toEqual([REF_A]);
+    },
+  );
+
+  it.each(INTERNAL_SCALARS)(
+    "rejects an undeclared reference to the internal scalar %s",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `input AttachFileInput { ref: AttachmentRef metadata: ${name} }`,
+          ),
+        ]),
+      ]);
+      expect(() =>
+        new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+      ).toThrow("the effective GraphQL schema is invalid");
+    },
+  );
+
+  it.each(scalarCatalog.authorNames)(
+    "rejects operation SDL that declares the catalog scalar %s again",
+    (name) => {
+      const module = documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            `scalar ${name}\ninput AttachFileInput { ref: AttachmentRef value: ${name} }`,
+          ),
+        ]),
+      ]);
+      expect(() =>
+        new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+      ).toThrow("the effective GraphQL schema is invalid");
+    },
+  );
+
+  it("declares package and catalog scalars referenced by code-first SDL", () => {
+    const { validator, zodSource } = ph.EmailAddress.binding;
+    const ContactEmail = defineScalar({
+      name: "ContactEmail",
+      description: "An email address the package owns.",
+      representation: "string",
+      validator,
+      zodSource,
+    });
+    const contacts = defineDocumentModel({
+      id: "test/contacts",
+      name: "Contacts",
+      description: "",
+      extension: "contacts",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("ContactsState", {
+            fields: {
+              email: ContactEmail(),
+              card: ph.AttachmentRef(),
+              metadata: ph.Unknown(),
+            },
+          }),
+          initialValue: { email: null, card: null, metadata: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    const edits = contacts.module("edits", {
+      operations: ({ global }) => ({
+        setContact: global({
+          input: ph.input({
+            fields: {
+              email: ContactEmail({ required: true }),
+              card: ph.AttachmentRef(),
+              metadata: ph.Unknown(),
+            },
+          }),
+          reduce(state, input) {
+            state.email = input.email;
+            state.card = input.card ?? null;
+            state.metadata = input.metadata ?? null;
+          },
+        }),
+      }),
+    });
+    const module = contacts.finalize({
+      modules: [edits],
+    }) as unknown as DocumentModelModule;
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "SET_CONTACT",
+    );
+    expect(
+      extractor.extract(
+        action("SET_CONTACT", {
+          email: "ada@example.com",
+          card: REF_A,
+          metadata: { source: "consumer" },
+        }),
+      ),
+    ).toEqual([REF_A]);
+  });
+
+  it("reads no package scalars from a definition that fails the wire shape", () => {
+    const module = {
+      ...documentModule([
+        specification(1, [
+          operation(
+            "ATTACH_FILE",
+            "input AttachFileInput { ref: AttachmentRef }",
+          ),
+        ]),
+      ]),
+      definition: { foo: 1 },
+    } as unknown as DocumentModelModule;
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "ATTACH_FILE",
+    );
+    expect(extractor.extract(action("ATTACH_FILE", { ref: REF_A }))).toEqual([
+      REF_A,
+    ]);
   });
 
   it("caches by module identity and action type", () => {

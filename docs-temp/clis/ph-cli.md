@@ -71,10 +71,10 @@ regenerate the academy docs.
 
 ## Test infrastructure
 
-- **Runner:** Vitest, `vitest --run`. Note there is no `test` script in
-  `package.json` — but there *is* a `vitest.config.ts`, and the package participates
-  via the root `vitest.config.ts` `projects` glob (`clis/*/vitest.config.ts`).
-- **Scale:** 13 test files in `test/`.
+- **Runner:** Vitest through the package's `test` script. Use
+  `pnpm --filter @powerhousedao/ph-cli test` or select a file with its package runner.
+- The file list below describes the original documentation snapshot. Find current
+  suites with `rg --files clis/ph-cli/test -g '*.test.ts'`.
 
 | File | Covers |
 |---|---|

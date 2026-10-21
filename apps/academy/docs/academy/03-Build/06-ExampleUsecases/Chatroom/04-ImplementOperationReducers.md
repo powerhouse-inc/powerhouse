@@ -64,6 +64,10 @@ git reset --hard tutorial/main
 
 </details>
 
+:::note
+This tutorial uses the schema-first flow, where `ph generate` writes the reducer stubs in `v<n>/src/reducers/` from your specification. To write the model in TypeScript instead, see [Choose an approach](../../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
 Now implement and test the operation reducers for the **ChatRoom** document model. Vetra Studio has been generating your document model code as you defined the specification.
 
 If you need to review the document model specification steps, see [Define ChatRoom Document Model](/academy/Build/ExampleUsecases/Chatroom/DefineChatroomDocumentModel).

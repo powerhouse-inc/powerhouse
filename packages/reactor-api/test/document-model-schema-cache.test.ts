@@ -1,7 +1,14 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  defineDocumentModel,
+  defineDocumentModelFamily,
+  ph,
+} from "document-model";
+import { Kind, print } from "graphql";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildDocumentModelSchema,
+  type DocumentModelSchema,
   DocumentModelSchemaCache,
 } from "../src/utils/create-schema.js";
 
@@ -133,5 +140,80 @@ describe("DocumentModelSchemaCache", () => {
     cache.resolve([alpha]);
 
     expect(build).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("DocumentModelSchemaCache with code-first models", () => {
+  function notesModel(): DocumentModelModule {
+    const context = defineDocumentModel({
+      id: "test/notes",
+      name: "Notes",
+      description: "",
+      extension: "notes",
+      version: 1,
+      author: { name: "Powerhouse", website: null },
+      specifications: {
+        global: {
+          schema: ph.object("NotesState", { fields: { title: ph.String() } }),
+          initialValue: { title: null },
+        },
+        local: { schema: null, initialValue: {} },
+      },
+    });
+    return defineDocumentModelFamily({
+      versions: [context.version({ modules: [] })],
+      upgradeManifest: {
+        documentType: "test/notes",
+        latestVersion: 1,
+        supportedVersions: [1],
+        upgrades: {},
+      },
+    }).at(1) as unknown as DocumentModelModule;
+  }
+
+  /** The same stored specification, with a definition that describes the state type. */
+  function withStateDescription(
+    model: DocumentModelModule,
+    description: string,
+  ): DocumentModelModule {
+    const definition = JSON.parse(
+      JSON.stringify((model as { definition?: unknown }).definition),
+    ) as {
+      specifications: { types: { name: string; description: unknown }[] }[];
+    };
+    const state = definition.specifications
+      .at(-1)!
+      .types.find((type) => type.name === "NotesState")!;
+    state.description = description;
+    return { ...model, definition } as DocumentModelModule;
+  }
+
+  const printed = (schema: DocumentModelSchema | undefined) =>
+    print({ kind: Kind.DOCUMENT, definitions: schema?.generated ?? [] });
+
+  it("reuses the schema of a code-first model declared again with the same definition", () => {
+    const { cache, build } = countingCache();
+
+    const [first] = cache.resolve([notesModel()]);
+    const [again] = cache.resolve([notesModel()]);
+
+    expect(build).toHaveBeenCalledTimes(1);
+    expect(again.schema).toBe(first.schema);
+  });
+
+  it("rebuilds a code-first model whose definition changed under the same stored specification", () => {
+    const { cache, build } = countingCache();
+    const model = notesModel();
+    const described = withStateDescription(model, "Notes, described.");
+
+    const [first] = cache.resolve([model]);
+    const [changed] = cache.resolve([described]);
+
+    expect(described.documentModel).toBe(model.documentModel);
+    expect(build).toHaveBeenCalledTimes(2);
+    expect(printed(first.schema)).not.toContain("Notes, described.");
+    expect(printed(changed.schema)).toContain(
+      '"Notes, described."\ntype Notes_NotesState',
+    );
   });
 });

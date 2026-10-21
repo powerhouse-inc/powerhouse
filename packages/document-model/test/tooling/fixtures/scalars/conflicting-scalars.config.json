@@ -1,0 +1,10 @@
+{
+  "definitionSources": {
+    "formatVersion": 1,
+    "mode": "code-first",
+    "entries": [
+      { "specifier": "./src/contacts.ts" },
+      { "specifier": "./src/directory.ts" }
+    ]
+  }
+}

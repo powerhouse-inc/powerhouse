@@ -1,0 +1,379 @@
+directive @extends on INTERFACE | OBJECT
+
+directive @external on FIELD_DEFINITION
+
+directive @key(fields: _FieldSet!) on INTERFACE | OBJECT
+
+directive @provides(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @requires(fields: _FieldSet!) on FIELD_DEFINITION
+
+directive @tag(name: String!) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+scalar Address
+
+scalar Amount
+
+scalar Amount_Crypto
+
+scalar Amount_Currency
+
+scalar Amount_Fiat
+
+scalar Amount_Money
+
+scalar Amount_Percentage
+
+scalar Amount_Tokens
+
+scalar AttachmentRef
+
+scalar Currency
+
+scalar Date
+
+scalar DateTime
+
+type DocumentDrive implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  initialState: DocumentDrive_DocumentDriveState!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  availableOffline: Boolean!
+  listeners: [DocumentDrive_Listener!]!
+  sharingType: String
+  triggers: [DocumentDrive_Trigger!]!
+}
+
+type DocumentDrive_DocumentDriveState {
+  icon: String
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+}
+
+type DocumentDrive_FileNode {
+  documentType: String!
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  kind: String!
+  name: String!
+  parentFolder: String
+}
+
+type DocumentDrive_Listener {
+  block: Boolean!
+  callInfo: DocumentDrive_ListenerCallInfo
+  filter: DocumentDrive_ListenerFilter!
+  label: String
+  listenerId: ID!
+  system: Boolean!
+}
+
+type DocumentDrive_ListenerCallInfo {
+  data: String
+  name: String
+  transmitterType: DocumentDrive_TransmitterType
+}
+
+type DocumentDrive_ListenerFilter {
+  branch: [String!]
+  documentId: [ID!]
+  documentType: [String!]!
+  scope: [String!]
+}
+
+union DocumentDrive_Node = DocumentDrive_FileNode | DocumentDrive_FolderNode
+
+type DocumentDrive_PullResponderTriggerData {
+  interval: String!
+  listenerId: ID!
+  url: String!
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  MatrixConnect
+  PullResponder
+  RESTWebhook
+  SecureConnect
+  SwitchboardPush
+}
+
+type DocumentDrive_Trigger {
+  data: DocumentDrive_TriggerData
+  id: ID!
+  type: DocumentDrive_TriggerType!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentModel implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  author: DocumentModel_Author!
+  description: String!
+  extension: String!
+  id: String!
+  name: String!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel_DocumentSpecification {
+  changeLog: [String!]!
+  modules: [DocumentModel_Module!]!
+  state: DocumentModel_ScopeState!
+  version: Int!
+}
+
+type DocumentModel_Module {
+  description: String
+  id: ID!
+  name: String!
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_Operation {
+  description: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  id: ID!
+  name: String
+  reducer: String
+  schema: String
+  scope: String
+  template: String
+}
+
+type DocumentModel_OperationError {
+  code: String
+  description: String
+  id: ID!
+  name: String
+  template: String
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_State {
+  examples: [DocumentModel_CodeExample!]!
+  initialValue: String!
+  schema: String!
+}
+
+type DriveDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+scalar EmailAddress
+
+scalar EthereumAddress
+
+type GqlDocument implements IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+interface IDocument {
+  createdAtUtcIso: DateTime!
+  documentType: String!
+  id: String!
+  lastModifiedAtUtcIso: DateTime!
+  name: String!
+  operations(first: Int, skip: Int): [Operation!]!
+  revision: Int!
+  stateJSON: JSONObject
+}
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
+"""
+The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSONObject
+
+type Mutation {
+  """deadline is an ISO 8601 timestamp"""
+  requestErasure(allowLarge: [ID!], deadline: String, ids: [ID!]!): PrivacyErasureRequest!
+}
+
+scalar OID
+
+scalar OLabel
+
+type Operation {
+  context: PHOperationContext
+  error: String
+  hash: String!
+  id: String!
+  index: Int!
+  inputText: String
+  skip: Int
+  timestampUtcMs: DateTime!
+  type: String!
+}
+
+scalar PHID
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type PrivacyBoundSyncRemote {
+  channelType: String!
+  collectionId: String!
+  name: String!
+}
+
+type PrivacyDisclosure {
+  boundSyncRemotes: [PrivacyBoundSyncRemote!]!
+  documents: [PrivacySubjectDocument!]!
+  notCovered: [String!]!
+  peerManifests: [PrivacyPeerManifestAppKey!]!
+  permissions: [PrivacyPermissionRow!]!
+  subjectHash: String!
+}
+
+type PrivacyErasureItem {
+  allowLarge: Boolean!
+  documentId: ID!
+  lastError: String
+  markerOrdinal: Int
+  status: String!
+  updatedAt: String!
+}
+
+type PrivacyErasurePlan {
+  items: [PrivacyErasurePlanItem!]!
+  maxPurgeOperations: Int!
+}
+
+type PrivacyErasurePlanItem {
+  documentId: ID!
+  expandedFrom: ID
+  groupReferencers: [ID!]!
+  live: Boolean!
+  operationCount: Int!
+}
+
+type PrivacyErasureRequest {
+  deadline: String!
+  items: [PrivacyErasureItem!]!
+  requestId: ID!
+  requestedAt: String!
+  requestedBy: String!
+  status: String!
+  subjectHash: String
+}
+
+type PrivacyPeerManifestAppKey {
+  appKey: String!
+  heardAtUtcMs: Float
+  remoteName: String!
+}
+
+type PrivacyPermissionRow {
+  column: String!
+
+  """JSON-encoded"""
+  detail: String
+  documentId: ID
+  table: String!
+}
+
+type PrivacySubjectDocument {
+  documentId: ID!
+  firstOrdinal: Int!
+  lastOrdinal: Int!
+  role: String!
+}
+
+type Query {
+  _service: _Service!
+  disclose(identifier: String!): PrivacyDisclosure!
+  erasurePlan(ids: [ID!]!): PrivacyErasurePlan!
+  erasureRequest(requestId: ID!): PrivacyErasureRequest!
+}
+
+type Signer {
+  app: SignerApp
+  signatures: [String!]!
+  user: SignerUser
+}
+
+type SignerApp {
+  key: String!
+  name: String!
+}
+
+type SignerUser {
+  address: String!
+  chainId: Int!
+  networkId: String!
+}
+
+scalar URL
+
+scalar Upload
+
+scalar _FieldSet
+
+type _Service {
+  sdl: String
+}

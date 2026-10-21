@@ -9,7 +9,7 @@ import type * as GraphQL from "graphql";
 import type { GraphQLError, GraphQLSchema } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
-import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { documentModelSubgraphClass } from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -19,6 +19,7 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../src/utils/create-schema.js";
+import { servedSubgraph } from "./utils/served-subgraph.js";
 
 // The CommonJS build @apollo/subgraph uses; vite would hand this file the ESM one.
 const { graphql, isInputObjectType, isObjectType } = createRequire(
@@ -149,7 +150,7 @@ function recorder<T extends object>(calls: Call[]): T {
 }
 
 function buildSubgraph(calls: Call[]): BaseSubgraph {
-  return new DocumentModelSubgraph(MODULE, {
+  return new (documentModelSubgraphClass(MODULE))({
     reactorClient: recorder<IReactorClient>(calls),
     syncManager: recorder<ISyncManager>(calls),
     authorizationService: createAuthorizationService({
@@ -175,7 +176,7 @@ describe("document model subgraph argument names", () => {
 
   beforeEach(() => {
     calls = [];
-    const subgraph = buildSubgraph(calls);
+    const subgraph = servedSubgraph(buildSubgraph(calls));
     schema = createSchema([MODULE], subgraph.resolvers, subgraph.typeDefs);
   });
 
@@ -239,7 +240,7 @@ describe("document model subgraph argument names", () => {
   });
 
   it("keeps deprecations in the composed API schema", async () => {
-    const subgraph = buildSubgraph([]);
+    const subgraph = servedSubgraph(buildSubgraph([]));
     const gateway = new ApolloGateway({
       supergraphSdl: new LocalCompose({
         localServiceList: [

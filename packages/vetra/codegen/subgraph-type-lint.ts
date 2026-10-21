@@ -1,18 +1,28 @@
-import { loadDocumentModelInDir } from "@powerhousedao/codegen/utils";
 import {
-  findPackageSubgraphConflicts,
-  type PackageSubgraph,
-  type PackageSubgraphConflicts,
-  type RefusedDocumentModel,
+  loadDocumentModelInDir,
+  uncachedDefinitionSourceRevision,
+  ViteTypeScriptSourceImportAdapter,
+} from "@powerhousedao/codegen/utils";
+import type {
+  PackageSubgraph,
+  SubgraphWarning,
 } from "@powerhousedao/reactor-api/subgraph-types";
-import { type DocumentNode, parse } from "graphql";
-import { type Dirent, readdirSync, readFileSync } from "node:fs";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import {
+  DefinitionSourceLoader,
+  formatDefinitionDiagnostic,
+  subgraphEntrySpecifiers,
+} from "document-model/tooling";
+import type { DocumentNode } from "graphql";
+import { type Dirent, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-// Templates with substitutions are skipped: their SDL is only known at runtime.
-const GQL_TEMPLATE = /\bgql\s*`([^`]*)`/g;
-const SUBGRAPH_NAME = /\bname\s*=\s*["'`]([^"'`]+)["'`]/;
-const SUBGRAPH_EXPORT = /from\s+["']\.\/([^/"']+)\/index\.js["']/g;
+export type SubgraphLint = {
+  /** Subgraphs the package cannot ship, such as old-style classes. */
+  readonly errors: string[];
+  /** Models and subgraphs the server would refuse or leave out. */
+  readonly warnings: string[];
+};
 
 function directories(path: string): Dirent[] {
   try {
@@ -24,89 +34,83 @@ function directories(path: string): Dirent[] {
   }
 }
 
-function read(path: string): string | undefined {
-  try {
-    return readFileSync(path, "utf-8");
-  } catch {
-    return undefined;
-  }
+const line = ({ message, repair }: SubgraphWarning) => `${message} ${repair}`;
+
+/**
+ * The schema-first models under `document-models/`. A model file that is not
+ * JSON throws, unless `skipUnreadable` leaves that model out.
+ */
+export function readSchemaFirstModels(
+  projectDir: string,
+  { skipUnreadable = false }: { readonly skipUnreadable?: boolean } = {},
+): DocumentModelGlobalState[] {
+  return directories(join(projectDir, "document-models")).flatMap((dir) => {
+    try {
+      return loadDocumentModelInDir(dir) ?? [];
+    } catch (error) {
+      if (skipUnreadable) return [];
+      throw error;
+    }
+  });
 }
 
-function readSchema(path: string): DocumentNode | undefined {
-  const source = read(path);
-  if (source === undefined) return undefined;
-  const blocks = Array.from(source.matchAll(GQL_TEMPLATE), ([, sdl]) => sdl);
-  if (blocks.length === 0 || blocks.some((sdl) => sdl.includes("${"))) {
-    return undefined;
-  }
-  try {
-    return parse(blocks.join("\n"));
-  } catch {
-    // Invalid SDL fails where the subgraph loads, and is reported there.
-    return undefined;
-  }
-}
-
-/** Subgraph directories in the order `subgraphs/index.ts` registers them. */
-function subgraphDirs(subgraphsDir: string): string[] {
-  const exported = Array.from(
-    (read(join(subgraphsDir, "index.ts")) ?? "").matchAll(SUBGRAPH_EXPORT),
-    ([, dir]) => dir,
-  );
-  const position = (dir: string) => {
-    const index = exported.indexOf(dir);
-    return index === -1 ? exported.length : index;
-  };
-  return directories(subgraphsDir)
-    .map((entry) => entry.name)
-    .sort((a, b) => position(a) - position(b));
-}
-
-function describeRefusal({
-  name,
-  reason,
-  subgraphOnly,
-}: RefusedDocumentModel): string {
-  const detail = reason.split("\n")[0].replace(/\.$/, "");
-  return subgraphOnly
-    ? `The subgraph of document model "${name}" is refused by the server: ${detail}.`
-    : `Document model "${name}" is refused by the server: ${detail}.`;
-}
-
-function describe(name: string, conflict: PackageSubgraphConflicts): string {
-  if (conflict.nameHeldBy === "package") {
-    return `Subgraph "${name}" is defined more than once, so the server serves only the last. Rename the others.`;
-  }
-  if (conflict.nameHeldBy) {
-    return `Subgraph "${name}" has the name of a ${conflict.nameHeldBy} subgraph, so the server refuses it. Rename the subgraph.`;
-  }
-  const claims = conflict.claims
-    .map(({ claim, owner }) => `${claim} (owned by "${owner}")`)
-    .join(", ");
-  return `Subgraph "${name}" defines ${claims}, so the supergraph leaves it out. Rename them in its schema.ts.`;
-}
-
-/** A warning per model or subgraph the server would refuse or leave out. */
-export async function lintSubgraphTypes(projectDir: string): Promise<string[]> {
-  const models = directories(join(projectDir, "document-models"))
-    .map(loadDocumentModelInDir)
-    .filter((model) => model !== undefined);
-  const subgraphsDir = join(projectDir, "subgraphs");
+/**
+ * Reads the package's subgraphs through the subgraph protocol, without
+ * constructing them, and reports what the server would refuse or leave out.
+ */
+export async function lintSubgraphTypes(
+  projectDir: string,
+): Promise<SubgraphLint> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
   const subgraphs: PackageSubgraph[] = [];
-  for (const dir of subgraphDirs(subgraphsDir)) {
-    const typeDefs = readSchema(join(subgraphsDir, dir, "schema.ts"));
-    if (!typeDefs) continue;
-    const index = read(join(subgraphsDir, dir, "index.ts")) ?? "";
-    subgraphs.push({ name: SUBGRAPH_NAME.exec(index)?.[1] ?? dir, typeDefs });
+  if (subgraphEntrySpecifiers(projectDir).length > 0) {
+    const loader = new DefinitionSourceLoader(
+      new ViteTypeScriptSourceImportAdapter(),
+    );
+    let read: Awaited<ReturnType<DefinitionSourceLoader["readSubgraphs"]>>;
+    try {
+      read = await loader.readSubgraphs({
+        packageRoot: projectDir,
+        packageRevision: uncachedDefinitionSourceRevision(),
+      });
+    } finally {
+      await loader.dispose();
+    }
+    for (const diagnostic of read.diagnostics) {
+      (diagnostic.severity === "error" ? errors : warnings).push(
+        formatDefinitionDiagnostic(diagnostic),
+      );
+    }
+    for (const { description } of read.subgraphs) {
+      subgraphs.push({
+        name: description.subgraphName,
+        typeDefs: description.typeDefs as DocumentNode,
+      });
+    }
   }
-  if (subgraphs.length === 0 && models.length === 0) return [];
+  // A refused model warns even when the package has no subgraphs.
+  const models = readSchemaFirstModels(projectDir);
+  if (subgraphs.length === 0 && models.length === 0) {
+    return { errors, warnings };
+  }
 
-  const { conflicts, refusedModels } = await findPackageSubgraphConflicts(
-    subgraphs,
-    models,
+  // Loaded on call: the check pulls in the base models and core schemas.
+  const {
+    describeClaimContest,
+    describeRefusedDocumentModel,
+    describeSubgraphConflict,
+    findPackageSubgraphConflicts,
+    hostDocumentModels,
+  } = await import("@powerhousedao/reactor-api/subgraph-types");
+  const host = hostDocumentModels(models);
+  const { conflicts, contests } = findPackageSubgraphConflicts(subgraphs, host);
+  warnings.push(
+    ...host.refused.map((model) => line(describeRefusedDocumentModel(model))),
+    ...Array.from(conflicts).flatMap(([{ name }, conflict]) =>
+      describeSubgraphConflict(name, conflict).map(line),
+    ),
+    ...contests.map((contest) => line(describeClaimContest(contest))),
   );
-  return [
-    ...refusedModels.map(describeRefusal),
-    ...Array.from(conflicts, ([name, conflict]) => describe(name, conflict)),
-  ];
+  return { errors, warnings };
 }

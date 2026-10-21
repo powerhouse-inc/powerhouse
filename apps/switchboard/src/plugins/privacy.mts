@@ -59,6 +59,12 @@ export const privacyPlugin: HostPlugin<{
       const api = ctx.api as {
         authorizationService: never;
         documentPermissionService: never;
+        relationalDb: never;
+        syncManager: never;
+        attachmentClientProvider: never;
+      };
+      const graphqlManager = ctx.graphqlManager as {
+        scopeForPackage(packageName: string): never;
       };
       ctx.privacy = await startPrivacy({
         config,
@@ -66,10 +72,19 @@ export const privacyPlugin: HostPlugin<{
           ctx.reactorClientModule as { reactorModule?: never } | undefined
         )?.reactorModule,
         signer: signer as never,
-        authorizationService: api.authorizationService,
-        documentPermissionService: api.documentPermissionService,
-        graphqlManager: ctx.graphqlManager as never,
-        reactorClient: ctx.client as never,
+        subgraphArgs: {
+          authorizationService: api.authorizationService,
+          documentPermissionService: api.documentPermissionService,
+          graphqlManager: graphqlManager as never,
+          reactorClient: ctx.client as never,
+          relationalDb: api.relationalDb,
+          analyticsStore: undefined as never,
+          syncManager: api.syncManager,
+          http: graphqlManager.scopeForPackage(
+            "@powerhousedao/reactor-privacy",
+          ),
+          attachments: api.attachmentClientProvider,
+        },
         logger: (ctx.logger as ILogger).child(["privacy"]),
       });
     },

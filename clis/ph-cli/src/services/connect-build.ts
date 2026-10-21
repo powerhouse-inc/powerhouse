@@ -31,7 +31,7 @@ import {
   isPrecompressEnabled,
   precompressAssets,
 } from "../utils/precompress.js";
-import { runBuild } from "./build.js";
+import { logBuildReport, runBuild } from "./build.js";
 
 export async function runConnectBuild(
   args: ConnectBuildArgs,
@@ -68,14 +68,19 @@ export async function runConnectBuild(
     ? deepMerge(callerOverride, cli.connectOverride ?? {})
     : cli.connectOverride;
 
-  await runBuild({
+  const result = await runBuild({
     outDir: "dist",
     debug,
-    // Local packages built for Connect share deps with the app vendor, same
-    // as a plain `ph build`.
+    configFile: undefined,
+    source: [],
+    warningsAsErrors: false,
     noSharedDeps: false,
     ignoreTypeErrors: false,
   });
+  logBuildReport(result);
+  if (result.exitCode !== 0) {
+    throw new Error("The package build failed, so Connect was not built.");
+  }
 
   // Production shared-dependency vendor: prebuilt into <outDir>/__vendor__
   // before the app build. On by default; PH_CONNECT_VENDOR=0|false disables

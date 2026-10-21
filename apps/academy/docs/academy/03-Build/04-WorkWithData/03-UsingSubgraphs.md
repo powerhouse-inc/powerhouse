@@ -1,419 +1,103 @@
 # Using subgraphs
 
-Create and customize a subgraph, using the to-do list project as an example. This starts with the basics and adds more complex features as it goes.
+Create a subgraph that searches to-do document names within a drive. It returns only document ids that the caller may list.
 
-:::tip[A subgraph is not limited to GraphQL]
-The same subgraph can serve plain HTTP endpoints under your package's own
-namespace through `this.http`, and inbound provider webhooks through
-`this.http.webhooks`. See [Hosting HTTP routes](./07-HostingHttpRoutes.md) and
-[Receiving webhooks](./08-ReceivingWebhooks.md).
-:::
+Run these steps in the to-do list package from the previous chapters. The example depends on its `powerhouse/todo-list` document type.
 
-## What is a subgraph?
+## Generate the subgraph
 
-A subgraph in Powerhouse is a **GraphQL-based modular data component** that extends the functionality of your document models. While document models handle the core state and operations, subgraphs can:
+Run this command in your package:
 
-1. Connect to external APIs or databases
-2. Add custom queries and mutations
-3. Automate interactions between different document models
-4. Provide additional backend functionality
-
-### Subgraphs can retrieve data from
-
-- **The Reactor** – The core Powerhouse data system or network node.
-- **Relational Data Stores** – Structured data storage for operational processes, offering real-time updates, for querying structured data.
-- **Analytics Stores** – Aggregated historical data, useful for insights, reporting and business intelligence.
-
-### Subgraphs consist of
-
-- **A schema** — Which defines the GraphQL Queries and Mutations.
-- **Resolvers** — Which handle data fetching and logic.
-- **Context Fields** — Additional metadata that helps in resolving data efficiently.
-
-#### Additionally, context fields allow resolvers to access extra information, such as:
-
-- **User authentication** (e.g., checking if a user is an admin).
-- **External data sources** (e.g., analytics).
-
-## Example: Implement a search subgraph based on data from the reactor
-
-In this example we implement a subgraph which allows to search through todo-list documents in a specific document drive.
-
-First we will generate the subgraph with the help of the Powerhouse CLI, then we will define the GraphQL schema and implement the resolvers and finally we will start the reactor and execute a query through the GraphQL Gateway.
-
-### 1. Generate the subgraph
-
-Generate a new subgraph within the to-do list project you created in the previous chapters. Open your project and start your terminal.
-The Powerhouse Vetra toolkit has a command-line utility to create new subgraphs.
-
-```bash title="Run the following command to generate a new subgraph"
+```bash
 ph generate subgraph --name search-todos
 ```
 
-```bash title="Expected Output"
-       FORCED: ./subgraphs/search-todos/index.ts
-       FORCED: ./subgraphs/search-todos/resolvers.ts
-       FORCED: ./subgraphs/search-todos/schema.ts
-```
 
-After generating the subgraph, build your project with a build step.
+The command creates `subgraphs/search-todos/index.ts` and `schema.ts`, adds the class to `subgraphs/index.ts` with a `SubgraphCheck` assertion, and adds the subgraph to `powerhouse.manifest.json` once the subgraph check passes. Keep the class exported through these entries. The host and tooling discover subgraphs through these entries.
 
-```bash title="Build your project"
-pnpm build
-```
+## Declare the schema and resolvers
 
-### What happened?
-
-1. A new subgraph was created in `./subgraphs/search-todos/`
-2. The subgraph was automatically registered in your project's registry
-3. Basic boilerplate code was generated with an example query
-
-If we now run `ph reactor` we will see the new subgraph being registered during the startup of the Reactor.
-
-> Registered /graphql/search-todos subgraph.
-
-```
-Initializing Subgraph Manager...
-> Registered /graphql/auth subgraph.
-> Registered /graphql/r subgraph.
-> Registered /graphql/analytics subgraph.
-> Registered /d/:drive subgraph.
-> Updating router
-> Registered /graphql supergraph
-> Registered /graphql/document-drive subgraph.
-> Registered /graphql/to-do-list subgraph.
-> **Registered /graphql/search-todos subgraph.**
-> Updating router
-> Registered /graphql supergraph
-  ➜  Reactor:   http://localhost:4001/d/powerhouse
-```
-
-## 2. Building a search subgraph
-
-Now that we've generated our subgraph its time to define the GraphQL schema and implement the resolvers.
-
-**Step 1: Define the schema in `subgraphs/search-todos/schema.ts` by creating the file:**
+Replace the generated class in `subgraphs/search-todos/index.ts` with this one. This example does not use the generated `schema.ts`, so you can delete it. Keep it if you want a place for shared `ph` types.
 
 ```typescript
-import { gql } from "graphql-tag";
-import type { DocumentNode } from "graphql";
+import {
+  BaseSubgraph,
+  type Context,
+  type SchemaBuilder,
+} from "@powerhousedao/reactor-api";
+import { ph } from "document-model";
 
-export const schema: DocumentNode = gql`
-  """
-  Subgraph definition
-  """
-  type Query {
-    searchTodos(driveId: String!, searchTerm: String!): [String!]!
+export class SearchTodosSubgraph extends BaseSubgraph<Context> {
+  static override readonly subgraphName = "search-todos";
+
+  static override getSchema(schema: SchemaBuilder<SearchTodosSubgraph>) {
+    return [
+      schema.query("searchTodos", {
+        args: {
+          driveId: ph.String({ required: true }),
+          searchTerm: ph.String({ required: true }),
+        },
+        returns: ph.list(ph.String({ required: true }), { required: true }),
+        resolve: ({ args, subgraph, request }) =>
+          subgraph.search(args.driveId, args.searchTerm, request),
+      }),
+    ];
   }
-`;
+
+  async search(
+    driveId: string,
+    searchTerm: string,
+    request: Context,
+  ): Promise<string[]> {
+    if (!(await this.listsDocument(driveId, request))) return [];
+    const children = await this.reactorClient.getOutgoingRelationships(
+      driveId,
+      "child",
+    );
+    const matches: string[] = [];
+    for (const document of children.results) {
+      if (document.header.documentType !== "powerhouse/todo-list") continue;
+      if (!(await this.listsDocument(document.header.id, request))) continue;
+      if (document.header.name.includes(searchTerm))
+        matches.push(document.header.id);
+    }
+    return matches;
+  }
+}
 ```
 
-**Step 2: Create resolvers in `subgraphs/search-todos/resolvers.ts`:**
+`SchemaBuilder<SearchTodosSubgraph>` gives each resolver the concrete instance as `subgraph` and the request context as `request`. The host provides `reactorClient`, `relationalDb`, and the authorization services on that instance. The request context does not carry a reactor client.
 
-```typescript
-// subgraphs/search-todos/resolvers.ts
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
-import { type TodoListDocument } from "todo-tutorial/document-models/todo-list";
+The static `subgraphName` is a lowercase kebab-case route segment and the manifest id. Keep it stable to preserve the URL. Resolvers access instance state through `subgraph`. Inside `getSchema`, `this` refers to the class, so state captured through it is shared across instances.
 
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
+`getSchema` returns typed entries or one `schema.graphql({ typeDefs, resolverCoordinates, resolvers: (subgraph) => ... })` result. It must be deterministic and have no side effects. See [Subgraph classes](../../04-Reference/03-GraphQLData/08-SubgraphClasses.md) for SDL, inheritance, and fragments.
 
-  return {
-    Query: {
-      searchTodos: async (
-        parent: unknown,
-        args: { driveId: string; searchTerm: string },
-      ) => {
-        const children = await reactorClient.getOutgoingRelationships(
-          args.driveId,
-          "child",
-        );
-        const todoItems: string[] = [];
-        for (const doc of children.results) {
-          if (doc.header.documentType !== "powerhouse/todo-list") {
-            continue;
-          }
-          const todoDoc = doc as TodoListDocument;
-          const amountEntries = todoDoc.state.global.items.filter((e) =>
-            e.text.includes(args.searchTerm),
-          ).length;
-          if (amountEntries > 0) {
-            todoItems.push(doc.header.id);
-          }
-        }
-        return todoItems;
-      },
-    },
-  };
-};
-```
+## Build and query
 
-:::warning[Enforce authorization in your resolvers]
-The resolver above returns data with no permission check. Custom subgraphs run
-with full access to the Reactor, so guarding reads, writes, and document
-creation is **your** responsibility. See
-[Enforcing Authorization in Subgraphs](../03-BuildingUserExperiences/07-Authorization/05-EnforcingAuthorizationInSubgraphs.md)
-for the `assertCanRead` / `assertCanWrite` / `canReadDocument` patterns.
-
-To read or upload attachments, call `subgraph.attachmentsFor(ctx)`. It returns
-a client authorized as the request's caller. See
-[Attachment service](../../04-Reference/01-Reactor/09-AttachmentService.md#inside-the-switchboard).
-:::
-
-## 3. Testing the to-do list subgraph
-
-### 3.1. Start the reactor
-
-To activate the subgraph, run:
+Run the package checks, then start the Reactor:
 
 ```bash
+ph model check
+ph build
 ph reactor
 ```
 
-You should see the subgraph being registered in the console output:
-
-```
-> Registered /graphql/search-todos subgraph.
-```
-
-### 3.2. Create some test data
-
-Before testing queries, create some to-do list documents with test data:
-
-1. Start Connect
-
-```bash
-ph connect
-```
-
-1. Open Connect at `http://localhost:3000` in the browser
-2. Add the 'remote' drive that is running locally via the (+) 'Add Drive' button. Add 'http://localhost:4001/d/powerhouse'
-3. Create a new to-do list document
-4. Add some test items:
-   - "Learn about subgraphs" (leave unchecked)
-   - "Build a to-do list subgraph" (mark as checked)
-   - "Test the subgraph" (leave unchecked)
-
-### 3.3. Access GraphQL playground
-
-Open your browser and go to:
-
-```bash
-http://localhost:4001/graphql
-```
-
-### 3.4. Test the queries
-
-**Query 1: Search for Todos**
+In another terminal, run `ph connect` and open `http://localhost:3000`. Use **Add Drive** to add `http://localhost:4001/d/powerhouse`. Create a to-do list document named `Test tasks` in it. At `http://localhost:4001/graphql`, run this query with `powerhouse` as `driveId`:
 
 ```graphql
-query {
-  searchTodos(driveId: "powerhouse", searchTerm: "test")
+query SearchTodos($driveId: String!, $searchTerm: String!) {
+  searchTodos(driveId: $driveId, searchTerm: $searchTerm)
 }
 ```
 
-You should get a list of the document Ids which contain the search term "Test".
+Use `"Test"` for `searchTerm`. The response contains the matching document's id when the caller can list it. The custom subgraph is also available at `/graphql/search-todos`.
 
-If you want to see the full state of your document use this query.
+The supergraph at `/graphql` combines registered subgraphs. A root field belongs to one subgraph, so give reusable [fragments](../../04-Reference/03-GraphQLData/08-SubgraphClasses.md#inheritance-and-fragments) a field-name or namespace parameter.
 
-```graphql
-query GetDocument($idOrSlug: String!) {
-  ToDoList {
-    document(idOrSlug: $idOrSlug) {
-      document {
-        state {
-          global {
-            items {
-              checked
-              id
-              text
-            }
-          }
-        }
-      }
-    }
-  }
-}
-```
+## Add host resources
 
-### 3.5. Test real-time updates
+Register HTTP routes and webhook families in `override async onSetup()`, after `await super.onSetup()`. Release resources in `override async onDisconnect()` and call `super.onDisconnect()`. Teardown must tolerate partial setup because the host calls it after failed setup. It also runs for package replacement or removal, or when another package takes over the same subgraph name. It is not a process-exit hook.
 
-To verify that your subgraph stays synchronized with document changes:
+See [Hosting HTTP routes](./07-HostingHttpRoutes.md), [Receiving webhooks](./08-ReceivingWebhooks.md), and [Enforcing authorization in subgraphs](../03-BuildingUserExperiences/07-Authorization/05-EnforcingAuthorizationInSubgraphs.md). For attachments, use `subgraph.attachmentsFor(request)`.
 
-1. Keep the GraphQL playground open
-2. In another tab, open your to-do list document in Connect
-3. Add a new item or check/uncheck an existing item
-4. Return to the GraphQL playground and re-run your queries
-5. You should see the updated data immediately
-
-This demonstrates the real-time synchronization between the document model and the subgraph through event processing.
-
-:::tip
-Since you've gotten this far we'll explain a bit more in depth how the GraphQL API or Gateway works!
-:::
-
-## 4. Working with the GraphQL Gateway
-
-The GraphQL Gateway is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
-
-### 4.1 Key concepts
-
-- **Subgraph:** An independent GraphQL service with its own schema. Each subgraph typically represents a specific domain or microservice within a larger system.
-- **Gateway/Router:** A server that sits in front of the subgraphs. It receives client queries, consults the supergraph schema, and routes parts of the query to the relevant subgraphs. It then stitches the results back together before sending the final response to the client.
-
-### 4.2 Benefits of using a supergraph
-
-- **Federated Architecture:** Enables a microservices-based approach where different teams can own and operate their services independently.
-- **Scalability:** Individual subgraphs can be scaled independently based on their specific needs.
-- **Improved Developer Experience:** Clients interact with a single, consistent GraphQL API, simplifying data fetching and reducing the need to manage multiple endpoints.
-- **Schema Evolution:** Subgraphs can evolve their schemas independently, and the supergraph can be updated without breaking existing clients, as long as breaking changes are managed carefully.
-- **Clear Separation of Concerns:** Each subgraph focuses on a specific domain, leading to more maintainable and understandable codebases.
-
-### 4.3 Use the Powerhouse supergraph
-
-The Powerhouse supergraph for any given remote drive or reactor can be found under `http://localhost:4001/graphql`. The gateway / supergraph available on `/graphql` combines all the subgraphs, except for the drive subgraph (which is accessible via `/d/:driveId`). To access the endpoint, start the reactor and navigate to the URL with `graphql` appended. The following commands explain how you can test & try the supergraph.
-
-- Start the reactor:
-
-  ```bash
-  ph reactor
-  ```
-
-- Open the GraphQL editor in your browser:
-
-  ```
-  http://localhost:4001/graphql
-  ```
-
-The supergraph allows you to both query & mutate data from the same endpoint.
-
-**Example: Using the supergraph with to-do list documents**
-
-1. Create a todo document in the `powerhouse` drive using the `ToDoList` `createDocument` mutation:
-
-   ```graphql
-   mutation CreateTodoList($name: String!, $parentIdOrSlug: String) {
-     ToDoList {
-       createDocument(name: $name, parentIdOrSlug: $parentIdOrSlug) {
-         id
-         name
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "name": "My Test To-do List",
-     "parentIdOrSlug": "powerhouse"
-   }
-   ```
-
-   This returns the document with its ID (e.g., `"abc123"`). Save this ID for the next steps.
-
-2. Add some items to your to-do list using the `addTodoItem` mutation:
-
-   ```graphql
-   mutation AddTodoItem($documentIdOrSlug: String!, $input: ToDoList_AddTodoItemInput!) {
-     ToDoList {
-       addTodoItem(documentIdOrSlug: $documentIdOrSlug, input: $input) {
-         id
-         name
-         revisionsList {
-           scope
-           revision
-         }
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "documentIdOrSlug": "abc123",
-     "input": {
-       "text": "Learn about supergraphs"
-     }
-   }
-   ```
-
-   This returns the updated document with its new revision.
-
-3. Query the document state using the `document` query:
-
-   ```graphql
-   query GetTodoList($idOrSlug: String!) {
-     ToDoList {
-       document(idOrSlug: $idOrSlug) {
-         document {
-           id
-           name
-           state {
-             global {
-               items {
-                 id
-                 text
-                 checked
-               }
-             }
-           }
-         }
-       }
-     }
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "idOrSlug": "abc123"
-   }
-   ```
-
-4. Use the `searchTodos` subgraph query to search for items across your to-do lists:
-
-   ```graphql
-   query SearchTodos($driveId: String!, $searchTerm: String!) {
-     searchTodos(driveId: $driveId, searchTerm: $searchTerm)
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "driveId": "powerhouse",
-     "searchTerm": "supergraph"
-   }
-   ```
-
-This demonstrates how the supergraph provides a unified interface to both your document models and your custom subgraphs, allowing you to query and mutate data from the same endpoint.
-
-## 5. What you built
-
-You now have a to-do list subgraph: an operational data store, event processing that keeps it in sync with the document model, and a supergraph that exposes it through a single GraphQL endpoint.
-
-## Subgraphs are particularly useful for
-
-1. **Cross-Document Interactions**: For example, connecting a to-do list with an Invoice document model:
-   - When an invoice-related task is marked complete, update the invoice status
-   - When an invoice is paid, automatically check off related tasks
-
-2. **External Integrations**:
-   - Sync tasks with external project management tools
-   - Connect with notification systems
-   - Integrate with analytics platforms
-
-3. **Custom Business Logic**:
-   - Implement complex task prioritization
-   - Add automated task assignments
-   - Create custom reporting functionality
-
-### Future enhancements
-
-Bridge Processors and Subgraphs — Currently, there's a gap in how processors and subgraphs interact. Powerhouse might improve this in future updates.
+To upgrade an existing package, run `ph migrate` and follow the [migration guide](../../04-Reference/03-GraphQLData/07-SubgraphMigrationGuide.md).

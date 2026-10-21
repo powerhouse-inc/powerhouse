@@ -549,7 +549,7 @@ export class PieceNotInstallableError extends Error {
     readonly packageName: string,
     readonly version: string,
     readonly dependencies: Record<string, string>,
-    readonly cause: unknown,
+    override readonly cause: unknown,
   ) {
     const declared = Object.keys(dependencies);
     const listed = declared

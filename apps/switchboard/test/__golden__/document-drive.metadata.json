@@ -1,0 +1,213 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "DocumentDrive_Node",
+      "fieldName": null,
+      "resolverKind": "resolveType"
+    },
+    {
+      "typeName": "DocumentDrive_TriggerData",
+      "fieldName": null,
+      "resolverKind": "resolveType"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addFile",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addFileAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addFolder",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addFolderAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addListener",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addListenerAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addTrigger",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "addTriggerAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "copyNode",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "copyNodeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "createDocument",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "createEmptyDocument",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "deleteNode",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "deleteNodeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "moveNode",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "moveNodeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "removeListener",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "removeListenerAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "removeTrigger",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "removeTriggerAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setAvailableOffline",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setAvailableOfflineAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setDriveIcon",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setDriveIconAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setDriveName",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setDriveNameAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setSharingType",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "setSharingTypeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "updateFile",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "updateFileAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "updateNode",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveMutations",
+      "fieldName": "updateNodeAsync",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveQueries",
+      "fieldName": "document",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveQueries",
+      "fieldName": "documentIncomingRelationships",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveQueries",
+      "fieldName": "documentOutgoingRelationships",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveQueries",
+      "fieldName": "documents",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "DocumentDriveQueries",
+      "fieldName": "findDocuments",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Mutation",
+      "fieldName": "DocumentDrive",
+      "resolverKind": "field"
+    },
+    {
+      "typeName": "Query",
+      "fieldName": "DocumentDrive",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": "undefined",
+    "normalized": false
+  }
+}

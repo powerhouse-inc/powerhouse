@@ -44,6 +44,6 @@ export const generateSubgraphCmd = command({
     const { startGenerateSubgraph } =
       await import("../services/generate-subgraph.js");
     await startGenerateSubgraph(args, process.cwd());
-    process.exit(0);
+    process.exit();
   },
 });

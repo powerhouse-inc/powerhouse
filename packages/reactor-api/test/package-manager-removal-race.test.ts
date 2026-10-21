@@ -7,7 +7,7 @@ import type { ISubscribablePackageLoader } from "../src/packages/types.js";
 
 function makeSubgraphClass(name: string): SubgraphClass {
   return class extends BaseSubgraph {
-    name = name;
+    static override readonly subgraphName: string = name;
   };
 }
 

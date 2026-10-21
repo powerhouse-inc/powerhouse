@@ -1,0 +1,482 @@
+scalar DateTime
+
+scalar JSONObject
+
+scalar AttachmentRef
+
+type Revision {
+  scope: String!
+  revision: Int!
+}
+
+"""Hash configuration for document state"""
+type DocumentModel_PHHashConfig {
+  algorithm: String!
+  encoding: String!
+}
+
+"""Document scope state (same for all document types)"""
+type DocumentModel_PHDocumentScopeState {
+  version: Int!
+  hash: DocumentModel_PHHashConfig!
+  isDeleted: Boolean
+  deletedAtUtcIso: String
+  deletedBy: String
+  deletionReason: String
+}
+
+"""Full state with all scopes for DocumentModel"""
+type DocumentModel_FullState {
+  auth: JSONObject!
+  document: DocumentModel_PHDocumentScopeState!
+  global: DocumentModel_DocumentModelGlobalState!
+  local: JSONObject!
+}
+
+input DocumentModel_ViewFilterInput {
+  branch: String
+  scopes: [String!]
+}
+
+input DocumentModel_PagingInput {
+  limit: Int
+  offset: Int
+  cursor: String
+}
+
+input DocumentModel_SearchFilterInput {
+  parentId: String
+  identifiers: [String!] @deprecated(reason: "Ignored. Filter by parentId.")
+}
+
+"""
+Mutation result type for DocumentModel operations with typed state.
+Matches ReactorSubgraph PHDocument pattern with revisionsList.
+"""
+type DocumentModelMutationResult {
+  id: String!
+  slug: String
+  preferredEditor: String
+  name: String!
+  documentType: String!
+  state: DocumentModel_FullState!
+  revisionsList: [Revision!]!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+}
+
+"""Document with children for DocumentModel"""
+type DocumentModel_DocumentWithChildren {
+  document: DocumentModelMutationResult!
+  childIds: [String!]!
+}
+
+"""Paginated result type for DocumentModel documents"""
+type DocumentModel_DocumentResultPage {
+  items: [DocumentModelMutationResult!]!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  cursor: String
+}
+
+"""Queries: DocumentModel Document"""
+type DocumentModelQueries {
+  """Get a specific DocumentModel document by identifier"""
+  document(idOrSlug: String, identifier: String @deprecated(reason: "Use idOrSlug."), view: DocumentModel_ViewFilterInput): DocumentModel_DocumentWithChildren
+  """Get all DocumentModel documents (paged)"""
+  documents(paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+  """Find DocumentModel documents by search criteria"""
+  findDocuments(search: DocumentModel_SearchFilterInput, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+  """Get outgoing relationships of a DocumentModel document"""
+  documentOutgoingRelationships(sourceIdOrSlug: String, sourceIdentifier: String @deprecated(reason: "Use sourceIdOrSlug."), relationshipType: String!, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+  """Get incoming relationships to a DocumentModel document"""
+  documentIncomingRelationships(targetIdOrSlug: String, targetIdentifier: String @deprecated(reason: "Use targetIdOrSlug."), relationshipType: String!, view: DocumentModel_ViewFilterInput, paging: DocumentModel_PagingInput): DocumentModel_DocumentResultPage!
+}
+
+"""Mutations: DocumentModel"""
+type DocumentModelMutations {
+  createDocument(name: String!, parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug."), slug: String, preferredEditor: String, initialState: DocumentModel_InitialStateInput): DocumentModelMutationResult!
+  createEmptyDocument(parentIdOrSlug: String, parentIdentifier: String @deprecated(reason: "Use parentIdOrSlug.")): DocumentModelMutationResult!
+  setModelName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelNameInput!): DocumentModelMutationResult!
+  setModelNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelNameInput!): String!
+  setModelId(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelIdInput!): DocumentModelMutationResult!
+  setModelIdAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelIdInput!): String!
+  setModelExtension(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelExtensionInput!): DocumentModelMutationResult!
+  setModelExtensionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelExtensionInput!): String!
+  setModelDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelDescriptionInput!): DocumentModelMutationResult!
+  setModelDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModelDescriptionInput!): String!
+  setAuthorName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorNameInput!): DocumentModelMutationResult!
+  setAuthorNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorNameInput!): String!
+  setAuthorWebsite(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorWebsiteInput!): DocumentModelMutationResult!
+  setAuthorWebsiteAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetAuthorWebsiteInput!): String!
+  addChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddChangeLogItemInput!): DocumentModelMutationResult!
+  addChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddChangeLogItemInput!): String!
+  updateChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateChangeLogItemInput!): DocumentModelMutationResult!
+  updateChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateChangeLogItemInput!): String!
+  deleteChangeLogItem(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteChangeLogItemInput!): DocumentModelMutationResult!
+  deleteChangeLogItemAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteChangeLogItemInput!): String!
+  reorderChangeLogItems(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderChangeLogItemsInput!): DocumentModelMutationResult!
+  reorderChangeLogItemsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderChangeLogItemsInput!): String!
+  addModule(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddModuleInput!): DocumentModelMutationResult!
+  addModuleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddModuleInput!): String!
+  setModuleName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleNameInput!): DocumentModelMutationResult!
+  setModuleNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleNameInput!): String!
+  setModuleDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleDescriptionInput!): DocumentModelMutationResult!
+  setModuleDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetModuleDescriptionInput!): String!
+  deleteModule(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteModuleInput!): DocumentModelMutationResult!
+  deleteModuleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteModuleInput!): String!
+  reorderModules(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModulesInput!): DocumentModelMutationResult!
+  reorderModulesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModulesInput!): String!
+  addOperationError(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationErrorInput!): DocumentModelMutationResult!
+  addOperationErrorAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationErrorInput!): String!
+  setOperationErrorCode(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorCodeInput!): DocumentModelMutationResult!
+  setOperationErrorCodeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorCodeInput!): String!
+  setOperationErrorName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorNameInput!): DocumentModelMutationResult!
+  setOperationErrorNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorNameInput!): String!
+  setOperationErrorDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorDescriptionInput!): DocumentModelMutationResult!
+  setOperationErrorDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorDescriptionInput!): String!
+  setOperationErrorTemplate(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorTemplateInput!): DocumentModelMutationResult!
+  setOperationErrorTemplateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationErrorTemplateInput!): String!
+  deleteOperationError(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationErrorInput!): DocumentModelMutationResult!
+  deleteOperationErrorAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationErrorInput!): String!
+  reorderOperationErrors(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationErrorsInput!): DocumentModelMutationResult!
+  reorderOperationErrorsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationErrorsInput!): String!
+  addOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationExampleInput!): DocumentModelMutationResult!
+  addOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationExampleInput!): String!
+  updateOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateOperationExampleInput!): DocumentModelMutationResult!
+  updateOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateOperationExampleInput!): String!
+  deleteOperationExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationExampleInput!): DocumentModelMutationResult!
+  deleteOperationExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationExampleInput!): String!
+  reorderOperationExamples(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationExamplesInput!): DocumentModelMutationResult!
+  reorderOperationExamplesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderOperationExamplesInput!): String!
+  addOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationInput!): DocumentModelMutationResult!
+  addOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddOperationInput!): String!
+  setOperationName(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationNameInput!): DocumentModelMutationResult!
+  setOperationNameAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationNameInput!): String!
+  setOperationSchema(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationSchemaInput!): DocumentModelMutationResult!
+  setOperationSchemaAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationSchemaInput!): String!
+  setOperationDescription(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationDescriptionInput!): DocumentModelMutationResult!
+  setOperationDescriptionAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationDescriptionInput!): String!
+  setOperationTemplate(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationTemplateInput!): DocumentModelMutationResult!
+  setOperationTemplateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationTemplateInput!): String!
+  setOperationReducer(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationReducerInput!): DocumentModelMutationResult!
+  setOperationReducerAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationReducerInput!): String!
+  setOperationScope(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationScopeInput!): DocumentModelMutationResult!
+  setOperationScopeAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetOperationScopeInput!): String!
+  moveOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_MoveOperationInput!): DocumentModelMutationResult!
+  moveOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_MoveOperationInput!): String!
+  deleteOperation(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationInput!): DocumentModelMutationResult!
+  deleteOperationAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteOperationInput!): String!
+  reorderModuleOperations(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModuleOperationsInput!): DocumentModelMutationResult!
+  reorderModuleOperationsAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderModuleOperationsInput!): String!
+  setStateSchema(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetStateSchemaInput!): DocumentModelMutationResult!
+  setStateSchemaAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetStateSchemaInput!): String!
+  setInitialState(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetInitialStateInput!): DocumentModelMutationResult!
+  setInitialStateAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_SetInitialStateInput!): String!
+  addStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddStateExampleInput!): DocumentModelMutationResult!
+  addStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_AddStateExampleInput!): String!
+  updateStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateStateExampleInput!): DocumentModelMutationResult!
+  updateStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_UpdateStateExampleInput!): String!
+  deleteStateExample(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteStateExampleInput!): DocumentModelMutationResult!
+  deleteStateExampleAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_DeleteStateExampleInput!): String!
+  reorderStateExamples(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderStateExamplesInput!): DocumentModelMutationResult!
+  reorderStateExamplesAsync(documentIdOrSlug: String, docId: PHID @deprecated(reason: "Use documentIdOrSlug."), input: DocumentModel_ReorderStateExamplesInput!): String!
+}
+
+type Query {
+  DocumentModel: DocumentModelQueries!
+}
+
+type Mutation {
+  DocumentModel: DocumentModelMutations!
+}
+
+"""Input Types for Initial State"""
+input DocumentModel_CodeExampleInput {
+  id: ID
+  value: String
+}
+
+input DocumentModel_OperationErrorInput {
+  id: ID
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+input DocumentModel_OperationInput {
+  id: ID
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationErrorInput]
+  examples: [DocumentModel_CodeExampleInput]
+  reducer: String
+  scope: String
+}
+
+input DocumentModel_ModuleInput {
+  id: ID
+  name: String
+  description: String
+  operations: [DocumentModel_OperationInput]
+}
+
+input DocumentModel_StateInput {
+  schema: String
+  initialValue: String
+  examples: [DocumentModel_CodeExampleInput]
+}
+
+input DocumentModel_ScopeStateInput {
+  global: DocumentModel_StateInput
+  local: DocumentModel_StateInput
+}
+
+input DocumentModel_AuthorInput {
+  name: String
+  website: String
+}
+
+input DocumentModel_DocumentSpecificationInput {
+  version: Int
+  state: DocumentModel_ScopeStateInput
+  modules: [DocumentModel_ModuleInput]
+  changeLog: [String]
+}
+
+input DocumentModel_DocumentModelGlobalStateInput {
+  name: String
+  id: String
+  extension: String
+  description: String
+  author: DocumentModel_AuthorInput
+  specifications: [DocumentModel_DocumentSpecificationInput]
+}
+
+input DocumentModel_InitialStateInput {
+  global: DocumentModel_DocumentModelGlobalStateInput
+  local: JSONObject
+}
+
+"""Module: Header"""
+input DocumentModel_SetModelNameInput {
+  name: String!
+}
+
+input DocumentModel_SetModelIdInput {
+  id: String!
+}
+
+input DocumentModel_SetModelExtensionInput {
+  extension: String!
+}
+
+input DocumentModel_SetModelDescriptionInput {
+  description: String!
+}
+
+input DocumentModel_SetAuthorNameInput {
+  authorName: String!
+}
+
+input DocumentModel_SetAuthorWebsiteInput {
+  authorWebsite: String!
+}
+
+"""Module: Versioning"""
+input DocumentModel_AddChangeLogItemInput {
+  id: ID!
+  insertBefore: ID
+  content: String!
+}
+
+input DocumentModel_UpdateChangeLogItemInput {
+  id: ID!
+  newContent: String!
+}
+
+input DocumentModel_DeleteChangeLogItemInput {
+  id: ID!
+}
+
+input DocumentModel_ReorderChangeLogItemsInput {
+  order: [ID!]!
+}
+
+"""Module: Module"""
+input DocumentModel_AddModuleInput {
+  id: ID!
+  name: String!
+  description: String
+}
+
+input DocumentModel_SetModuleNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetModuleDescriptionInput {
+  id: ID!
+  description: String
+}
+
+input DocumentModel_DeleteModuleInput {
+  id: ID!
+}
+
+input DocumentModel_ReorderModulesInput {
+  order: [ID!]!
+}
+
+"""Module: OperationError"""
+input DocumentModel_AddOperationErrorInput {
+  operationId: ID!
+  id: ID!
+  errorCode: String
+  errorName: String
+  errorDescription: String
+  errorTemplate: String
+}
+
+input DocumentModel_SetOperationErrorCodeInput {
+  id: ID!
+  errorCode: String
+}
+
+input DocumentModel_SetOperationErrorNameInput {
+  id: ID!
+  errorName: String
+}
+
+input DocumentModel_SetOperationErrorDescriptionInput {
+  id: ID!
+  errorDescription: String
+}
+
+input DocumentModel_SetOperationErrorTemplateInput {
+  id: ID!
+  errorTemplate: String
+}
+
+input DocumentModel_DeleteOperationErrorInput {
+  id: ID!
+}
+
+input DocumentModel_ReorderOperationErrorsInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+"""Module: OperationExample"""
+input DocumentModel_AddOperationExampleInput {
+  operationId: ID!
+  id: ID!
+  example: String!
+}
+
+input DocumentModel_UpdateOperationExampleInput {
+  id: ID!
+  example: String!
+}
+
+input DocumentModel_DeleteOperationExampleInput {
+  id: ID!
+}
+
+input DocumentModel_ReorderOperationExamplesInput {
+  operationId: ID!
+  order: [ID!]!
+}
+
+"""Module: Operation"""
+input DocumentModel_AddOperationInput {
+  moduleId: ID!
+  id: ID!
+  name: String!
+  schema: String
+  description: String
+  template: String
+  reducer: String
+  scope: String
+}
+
+input DocumentModel_SetOperationNameInput {
+  id: ID!
+  name: String
+}
+
+input DocumentModel_SetOperationSchemaInput {
+  id: ID!
+  schema: String
+}
+
+input DocumentModel_SetOperationDescriptionInput {
+  id: ID!
+  description: String
+}
+
+input DocumentModel_SetOperationTemplateInput {
+  id: ID!
+  template: String
+}
+
+input DocumentModel_SetOperationReducerInput {
+  id: ID!
+  reducer: String
+}
+
+input DocumentModel_SetOperationScopeInput {
+  id: ID!
+  scope: String
+}
+
+input DocumentModel_MoveOperationInput {
+  operationId: ID!
+  newModuleId: ID!
+}
+
+input DocumentModel_DeleteOperationInput {
+  id: ID!
+}
+
+input DocumentModel_ReorderModuleOperationsInput {
+  moduleId: ID!
+  order: [ID!]!
+}
+
+"""Module: State"""
+input DocumentModel_SetStateSchemaInput {
+  scope: String!
+  schema: String!
+}
+
+input DocumentModel_SetInitialStateInput {
+  scope: String!
+  initialValue: String!
+}
+
+input DocumentModel_AddStateExampleInput {
+  scope: String!
+  id: ID!
+  insertBefore: ID
+  example: String!
+}
+
+input DocumentModel_UpdateStateExampleInput {
+  scope: String!
+  id: ID!
+  newExample: String!
+}
+
+input DocumentModel_DeleteStateExampleInput {
+  scope: String!
+  id: ID!
+}
+
+input DocumentModel_ReorderStateExamplesInput {
+  scope: String!
+  order: [ID!]!
+}

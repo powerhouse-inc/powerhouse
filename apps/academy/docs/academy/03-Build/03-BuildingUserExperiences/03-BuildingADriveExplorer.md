@@ -73,7 +73,7 @@ Now, let's implement a specific example for the to-do list we've been working on
 This example demonstrates how to create a todo-list Drive-app application using the Powerhouse platform.
 The application allows users to create and manage to-do lists with a visual progress indicator.
 
-:::warning[Heads-up!]
+::::warning[Heads-up!]
 If you've been following the Mastery Track, you can continue with the to-do list document model and Powerhouse project you've created. For more details, you can refer to the [Document Model Creation guide](/academy/Build/DocumentModelCreation/SpecifyTheStateSchema).
 
 If not, you can follow the shortened guide below to prepare your project for this tutorial.
@@ -91,6 +91,10 @@ If not, you can follow the shortened guide below to prepare your project for thi
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
+
+:::note
+These steps use a schema-first model, where the reducers live in `v<n>/src/reducers/`. To write the model in TypeScript instead, see [Choose an approach](../../04-Reference/02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../../04-Reference/02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
 
 - Copy the code from [`todos.ts`](https://github.com/powerhouse-inc/todo-tutorial/blob/step-3-complete-implement-todo-list-document-model-reducer-operation-handlers/document-models/todo-list/src/reducers/todos.ts)
 - Paste it into `document-models/todo-list/src/reducers/todos.ts`
@@ -125,7 +129,7 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 
 </details>
-:::
+::::
 
 ## Generate the Drive-app
 

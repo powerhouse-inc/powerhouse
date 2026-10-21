@@ -22,6 +22,7 @@ import {
   police,
   READER,
 } from "./utils/read-gate-fixture.js";
+import { resolversOf } from "./utils/served-subgraph.js";
 
 type Served = { id: string; state: unknown };
 type Mutation = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
@@ -57,7 +58,7 @@ describe("reactor subgraph mutations return documents read as the caller", () =>
       graphqlManager: { driveOwnershipCache: { add: () => undefined } },
     } as unknown as SubgraphArgs);
     const mutation = (name: string) =>
-      (subgraph.resolvers.Mutation as Record<string, Mutation>)[name];
+      (resolversOf(subgraph).Mutation as Record<string, Mutation>)[name];
     return { client, secret, open, mutation };
   }
 

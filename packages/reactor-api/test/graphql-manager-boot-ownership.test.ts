@@ -23,9 +23,11 @@ import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type {
   Context,
-  ISubgraph,
+  SubgraphArgs,
   SubgraphClass,
 } from "../src/graphql/types.js";
+import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
+import { sdlBase } from "./utils/sdl-base.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
@@ -150,14 +152,14 @@ async function init(manager: GraphQLManager, core: SubgraphClass[]) {
   await pending;
 }
 
-function hostSubgraph(name: string, typeDefs: DocumentNode): ISubgraph {
-  return {
-    name,
-    typeDefs,
-    resolvers: {},
+function hostSubgraph(name: string, typeDefs: DocumentNode): BaseSubgraph {
+  class HostSubgraph extends sdlBase(typeDefs) {
+    static override readonly subgraphName = name;
+  }
+  return new HostSubgraph({
     relationalDb: {} as IRelationalDb,
     reactorClient: {} as IReactorClient,
-  } as unknown as ISubgraph;
+  } as SubgraphArgs);
 }
 
 const drive = makeModel("DocumentDrive", "powerhouse/document-drive");

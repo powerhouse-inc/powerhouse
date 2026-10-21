@@ -1,6 +1,7 @@
 import {
   FEATURE_DEPENDENCIES,
   PIECES_FRAMEWORK_PACKAGE,
+  REACTOR_API_PACKAGE,
   VERSIONED_DEV_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
 import {
@@ -64,6 +65,45 @@ function writePiece(dir: string, name: string): void {
 
 const readManifest = (dir: string) =>
   JSON.parse(readFileSync(join(dir, "package.json"), "utf-8")) as Manifest;
+
+function writeSubgraphsIndex(dir: string): void {
+  mkdirSync(join(dir, "subgraphs"), { recursive: true });
+  writeFileSync(join(dir, "subgraphs", "index.ts"), "export {};\n");
+}
+
+describe("subgraph feature", () => {
+  it("is not detected from the bare subgraphs/index.ts every project has", () => {
+    const dir = makeProject();
+    writeSubgraphsIndex(dir);
+    expect(detectFeatures(dir)).not.toContain("subgraph");
+  });
+
+  it("is detected from a subgraphs/<name>/ directory", () => {
+    const dir = makeProject();
+    writeSubgraphsIndex(dir);
+    mkdirSync(join(dir, "subgraphs", "greeter"));
+    expect(detectFeatures(dir)).toContain("subgraph");
+  });
+
+  it("is detected from a subgraphs/<name>.ts file", () => {
+    const dir = makeProject();
+    writeSubgraphsIndex(dir);
+    writeFileSync(join(dir, "subgraphs", "tasks.ts"), "export {};\n");
+    expect(detectFeatures(dir)).toContain("subgraph");
+  });
+
+  it("declares reactor-api, which subgraph source imports, at the document-model pin", async () => {
+    const dir = makeProject();
+    writeSubgraphsIndex(dir);
+    writeFileSync(join(dir, "subgraphs", "tasks.ts"), "export {};\n");
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([
+      REACTOR_API_PACKAGE,
+    ]);
+    const manifest = readManifest(dir);
+    expect(manifest.peerDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
+    expect(manifest.devDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
+  });
+});
 
 describe("piece feature detection", () => {
   it("does not detect the feature in a project with no pieces", () => {
@@ -183,5 +223,23 @@ describe("migrate and the piece feature", () => {
       workspacePackageNames,
     });
     expect(devDependencies[PIECES_FRAMEWORK_PACKAGE]).toBe("6.0.0");
+  });
+});
+
+describe("migrate and the subgraph feature", () => {
+  it("moves a reactor-api peer pinned to an older major to the release it migrates to", () => {
+    const { peerDependencies, devDependencies } = resolveManagedDependencies({
+      packageJson: {
+        peerDependencies: { [REACTOR_API_PACKAGE]: "6.2.3" },
+        devDependencies: { [REACTOR_API_PACKAGE]: "6.2.3" },
+      },
+      features: ["subgraph"],
+      fullyQualifiedVersion: "7.0.0-dev.1",
+      workspacePackageNames: [],
+    });
+    expect([
+      peerDependencies[REACTOR_API_PACKAGE],
+      devDependencies[REACTOR_API_PACKAGE],
+    ]).toEqual(["7.0.0-dev.1", "7.0.0-dev.1"]);
   });
 });

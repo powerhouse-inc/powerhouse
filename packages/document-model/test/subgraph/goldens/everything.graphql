@@ -1,0 +1,49 @@
+scalar OID
+
+input Filter {
+  visibility: Visibility = PUBLIC
+  limit: Int = 10
+  cursor: String = null
+}
+
+"""Who can see it."""
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+type Folder implements Node {
+  id: OID!
+  """Its name."""
+  name: String!
+  visibility: Visibility!
+  tags: [Tag!]
+  legacyName: String @deprecated(reason: "Use name.")
+  """How many children match."""
+  childCount(filter: Filter): Int!
+}
+
+interface Node {
+  id: OID!
+}
+
+type Tag {
+  label: String!
+}
+
+"""Anything a drive holds."""
+union Entry = Folder | Tag
+
+type Query {
+  """One folder."""
+  folder(id: OID!, filter: Filter): Folder
+  entries: [Entry!]!
+}
+
+type Mutation {
+  rename(id: OID!, name: String!): Folder!
+}
+
+type Subscription {
+  folderChanged(id: OID!): Folder!
+}

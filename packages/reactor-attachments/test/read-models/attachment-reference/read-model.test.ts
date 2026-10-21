@@ -400,6 +400,34 @@ describe("AttachmentReferenceReadModel", () => {
     expect(db.cursor).toBeUndefined();
   });
 
+  it("advances the reference cursor past an action the latest model no longer declares", async () => {
+    const { addReferences, db, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [op(1, "ARCHIVE_ITEM", { ref: REF_A }), op(2)],
+    });
+    await sweep();
+    expect(db.cursor).toBe(2);
+    expect(addReferences).toHaveBeenCalledExactlyOnceWith([
+      {
+        documentId: "document-2",
+        ref: REF_A,
+        operationId: "operation-2",
+        branch: "main",
+        scope: "global",
+        ordinal: 2,
+      },
+    ]);
+  });
+
+  it("advances the reference cursor past legacy system operations", async () => {
+    const { db, sweep } = dependencies({
+      cursor: 0,
+      indexOperations: [op(1, "LOAD_STATE", {}), op(2, "PRUNE", {})],
+    });
+    await sweep();
+    expect(db.cursor).toBe(2);
+  });
+
   it("initializes from a persisted cursor and backfills later operations", async () => {
     const { addReferences, db, index, model } = dependencies({
       cursor: 1,

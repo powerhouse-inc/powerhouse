@@ -2,7 +2,7 @@ import { command } from "cmd-ts";
 import { isUniformRunnersEnabled } from "../feature-flags.js";
 import type { phCliCommandNames } from "../command-names.js";
 import { accessTokenArgs } from "./access-token.js";
-import { debugArgs } from "./common.js";
+import { buildArgs, debugArgs } from "./common.js";
 import { connectArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
 import { inspectArgs } from "./inspect.js";
@@ -65,7 +65,7 @@ const allPhCliHelpCommands = {
   }),
   build: helpCommand({
     name: "build",
-    args: debugArgs,
+    args: buildArgs,
     description: "Build your project for publishing to the registry",
     handler: () => {},
   }),
@@ -106,6 +106,25 @@ const allPhCliHelpCommands = {
     name: "migrate",
     args: migrateArgs,
     description: "Run migrations",
+    handler: () => {},
+  }),
+  model: helpCommand({
+    name: "model",
+    args: debugArgs,
+    description:
+      "Check, inspect, and gate this package's document-model definitions",
+    handler: () => {},
+  }),
+  subgraph: helpCommand({
+    name: "subgraph",
+    args: debugArgs,
+    description: "Inspect this package's compiled subgraph definitions",
+    handler: () => {},
+  }),
+  scalar: helpCommand({
+    name: "scalar",
+    args: debugArgs,
+    description: "Inspect the compiler-owned scalar catalog",
     handler: () => {},
   }),
   switchboard: helpCommand({
@@ -172,7 +191,6 @@ type _Equal<A, B> =
     ? true
     : false;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _phCliCommandNamesInSync: _Equal<_DerivedNames, _Names> extends true
   ? true
   : never = true;

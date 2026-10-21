@@ -8,16 +8,15 @@ import type {
 } from "@powerhousedao/reactor";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import { parse } from "graphql";
 import { type Client, createClient } from "graphql-ws";
 import type http from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
-import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { ApolloGatewayAdapter } from "../src/graphql/gateway/adapter-gateway-apollo.js";
 import { ExpressHttpAdapter } from "../src/graphql/gateway/adapter-http-express.js";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import type { SubgraphClass } from "../src/graphql/types.js";
+import { sdlBase } from "./utils/sdl-base.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
@@ -68,15 +67,13 @@ function feed(
   from = 0,
   typeDefs = "",
 ): SubgraphClass {
-  return class extends BaseSubgraph {
-    name = name;
-    hasSubscriptions = true;
-    typeDefs = parse(`
+  return class extends sdlBase(
+    `
       type Query { ${field}Ping: String }
       type Subscription { ${field}: Int }
       ${typeDefs}
-    `);
-    resolvers = {
+    `,
+    {
       Query: { [`${field}Ping`]: () => "pong" },
       Subscription: {
         [field]: {
@@ -88,7 +85,9 @@ function feed(
           },
         },
       },
-    };
+    },
+  ) {
+    static override readonly subgraphName: string = name;
   };
 }
 
@@ -97,10 +96,8 @@ const ALPHA_TYPES = "extend type Query { alphaDoc: Alpha }";
 const AlphaTools = feed("alpha-tools", "alphaTick", 0, ALPHA_TYPES);
 const AlphaToolsV2 = feed("alpha-tools", "alphaTick", 1000, ALPHA_TYPES);
 const CoreFeed = feed("core-feed", "coreTick");
-class CorePlain extends BaseSubgraph {
-  name = "core-plain";
-  typeDefs = parse("type Query { plainPing: String }");
-  resolvers = {};
+class CorePlain extends sdlBase("type Query { plainPing: String }") {
+  static override readonly subgraphName = "core-plain";
 }
 
 type Subscription = {

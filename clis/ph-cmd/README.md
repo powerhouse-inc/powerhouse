@@ -17,7 +17,7 @@ A powerful command-line interface tool for Powerhouse DAO that streamlines proje
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
+- Node.js 24 or higher, matching `engines.node` in `package.json`
 - npm, yarn, or pnpm installed
 - Git (for version control)
 

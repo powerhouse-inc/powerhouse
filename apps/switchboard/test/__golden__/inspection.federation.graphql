@@ -1,0 +1,484 @@
+scalar JSONObject
+
+scalar AttachmentRef
+
+scalar Unknown
+
+scalar Address
+
+scalar Amount_Tokens
+
+scalar EthereumAddress
+
+scalar Amount_Percentage
+
+scalar EmailAddress
+
+scalar Date
+
+scalar DateTime
+
+scalar URL
+
+scalar Amount_Money
+
+scalar OLabel
+
+scalar Currency
+
+scalar PHID
+
+scalar OID
+
+scalar Amount_Fiat
+
+scalar Amount_Currency
+
+scalar Amount_Crypto
+
+scalar Amount
+
+scalar Upload
+
+type PHOperationContext {
+  signer: Signer
+}
+
+type Signer {
+  user: SignerUser
+  app: SignerApp
+  signatures: [String!]!
+}
+
+type SignerUser {
+  address: String!
+  networkId: String!
+  chainId: Int!
+}
+
+type SignerApp {
+  name: String!
+  key: String!
+}
+
+type Operation {
+  id: String!
+  type: String!
+  index: Int!
+  timestampUtcMs: DateTime!
+  hash: String!
+  skip: Int
+  inputText: String
+  error: String
+  context: PHOperationContext
+}
+
+interface IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DocumentDrive_FolderNode {
+  id: String!
+  name: String!
+  kind: String!
+  parentFolder: String
+}
+
+type DocumentDrive_FileNode {
+  id: String!
+  name: String!
+  kind: String!
+  documentType: String!
+  parentFolder: String
+}
+
+union DocumentDrive_Node = DocumentDrive_FolderNode | DocumentDrive_FileNode
+
+type DocumentDrive_DocumentDriveState {
+  name: String!
+  nodes: [DocumentDrive_Node!]!
+  icon: String
+}
+
+type DocumentDrive_ListenerFilter {
+  documentType: [String!]!
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
+enum DocumentDrive_TransmitterType {
+  Internal
+  SwitchboardPush
+  PullResponder
+  SecureConnect
+  MatrixConnect
+  RESTWebhook
+}
+
+type DocumentDrive_ListenerCallInfo {
+  transmitterType: DocumentDrive_TransmitterType
+  name: String
+  data: String
+}
+
+type DocumentDrive_Listener {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: DocumentDrive_ListenerFilter!
+  callInfo: DocumentDrive_ListenerCallInfo
+}
+
+enum DocumentDrive_TriggerType {
+  PullResponder
+}
+
+type DocumentDrive_PullResponderTriggerData {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
+union DocumentDrive_TriggerData = DocumentDrive_PullResponderTriggerData
+
+type DocumentDrive_Trigger {
+  id: ID!
+  type: DocumentDrive_TriggerType!
+  data: DocumentDrive_TriggerData
+}
+
+type DocumentDrive_DocumentDriveLocalState {
+  sharingType: String
+  listeners: [DocumentDrive_Listener!]!
+  triggers: [DocumentDrive_Trigger!]!
+  availableOffline: Boolean!
+}
+
+type DocumentDrive implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: DocumentDrive_DocumentDriveState!
+  state: DocumentDrive_DocumentDriveState!
+  stateJSON: JSONObject
+}
+
+type DocumentModel_CodeExample {
+  id: ID!
+  value: String!
+}
+
+type DocumentModel_OperationError {
+  id: ID!
+  code: String
+  name: String
+  description: String
+  template: String
+}
+
+type DocumentModel_Operation {
+  id: ID!
+  name: String
+  schema: String
+  description: String
+  template: String
+  errors: [DocumentModel_OperationError!]!
+  examples: [DocumentModel_CodeExample!]!
+  reducer: String
+  scope: String
+}
+
+type DocumentModel_Module {
+  id: ID!
+  name: String!
+  description: String
+  operations: [DocumentModel_Operation!]!
+}
+
+type DocumentModel_State {
+  schema: String!
+  initialValue: String!
+  examples: [DocumentModel_CodeExample!]!
+}
+
+type DocumentModel_ScopeState {
+  global: DocumentModel_State!
+  local: DocumentModel_State!
+}
+
+type DocumentModel_Author {
+  name: String!
+  website: String
+}
+
+type DocumentModel_DocumentSpecification {
+  version: Int!
+  state: DocumentModel_ScopeState!
+  modules: [DocumentModel_Module!]!
+  changeLog: [String!]!
+}
+
+type DocumentModel_DocumentModelGlobalState {
+  name: String!
+  id: String!
+  extension: String!
+  description: String!
+  author: DocumentModel_Author!
+  specifications: [DocumentModel_DocumentSpecification!]!
+}
+
+type DocumentModel implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  stateJSON: JSONObject
+}
+
+type GqlDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type DriveDocument implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  operations(first: Int, skip: Int): [Operation!]!
+  stateJSON: JSONObject
+}
+
+type ReactorStorageFacts {
+  engine: String!
+  persistence: String!
+  durable: Boolean!
+  selfHeal: Boolean!
+}
+
+type InspectorAccess {
+  admin: Boolean!
+  sql: Boolean!
+}
+
+"""
+What this reactor reports about itself. access is null unless the caller is
+one of the host's admins.
+"""
+type ReactorInfo {
+  storage: ReactorStorageFacts!
+  workflows: Boolean!
+  syncChannels: [String!]!
+  access: InspectorAccess
+}
+
+type InspectionDocumentModel {
+  documentType: String!
+  name: String!
+  version: Int!
+  supportedVersions: [Int!]!
+}
+
+type InspectionDrive {
+  driveId: String!
+  name: String!
+  branch: String!
+  collectionId: String!
+  documentType: String!
+  nodeCount: Int!
+  fileCount: Int!
+  folderCount: Int!
+  otherNodeCount: Int!
+  unreadableNodeCount: Int!
+  icon: String
+}
+
+type InspectionDrivePage {
+  results: [InspectionDrive!]!
+  nextCursor: String
+}
+
+type InspectionDriveIntegrityRef {
+  id: String!
+  documentType: String!
+}
+
+type InspectionDriveIntegrity {
+  driveId: String!
+  checkedNodeCount: Int!
+  totalFileNodeCount: Int!
+  """
+  File nodes whose document is missing or not served to you; the two are
+  reported alike so a withheld document's existence does not leak.
+  """
+  missingDocuments: [InspectionDriveIntegrityRef!]!
+  unsupportedTypes: [InspectionDriveIntegrityRef!]!
+}
+
+type InspectionAttachmentInfo {
+  present: Boolean!
+  storeKind: String!
+  hasReplicator: Boolean!
+  replicatorRunning: Boolean!
+  backlogScanned: Boolean!
+  refsSeen: Int!
+  held: Int!
+  bytesHeld: Float!
+  queued: Int!
+  fetching: Int!
+  pendingFetches: Int!
+  waiting: Int!
+  notFound: Int!
+  failed: Int!
+  lastError: String
+}
+
+"""A queued job without its actions or operations."""
+type InspectionQueueJob {
+  id: String!
+  kind: String!
+  documentId: String!
+  scope: String!
+  branch: String!
+  status: String!
+  actionCount: Int!
+  operationCount: Int!
+  retryCount: Int!
+}
+
+type InspectionQueueState {
+  isPaused: Boolean!
+  totalPending: Int!
+  totalExecuting: Int!
+  pendingJobs: [InspectionQueueJob!]!
+  executingJobs: [InspectionQueueJob!]!
+}
+
+type InspectionProcessor {
+  processorId: String!
+  factoryId: String!
+  driveId: String!
+  processorIndex: Int!
+  lastOrdinal: Float!
+  status: String!
+  lastError: String
+  lastErrorTimestampUtcMs: Float
+}
+
+"""
+healthy means something only when tracked; an untracked store reports false.
+"""
+type InspectionStorageHealth {
+  tracked: Boolean!
+  healthy: Boolean!
+  everRecreated: Boolean!
+  recreateCount: Int!
+}
+
+"""Issues in scopes the caller may not read are left out."""
+type InspectionValidation {
+  documentId: String!
+  isConsistent: Boolean!
+  keyframeIssues: [JSONObject!]!
+  snapshotIssues: [JSONObject!]!
+  streamOrderIssues: [JSONObject!]!
+}
+
+type InspectionCursor {
+  cursorType: String!
+  cursorOrdinal: Float!
+  lastSyncedAtUtcMs: Float
+  liveAckOrdinal: Float!
+  liveLatestOrdinal: Float!
+}
+
+type InspectionMailboxDepths {
+  inbox: Int!
+  outbox: Int!
+  deadLetter: Int!
+}
+
+type InspectionConnectionHealth {
+  snapshot: JSONObject!
+  neverSucceeded: Boolean!
+  stalenessMs: Float
+}
+
+type InspectionRemote {
+  remoteName: String!
+  remoteId: String!
+  inboxCursor: InspectionCursor!
+  outboxCursor: InspectionCursor!
+  mailboxDepths: InspectionMailboxDepths!
+  connection: InspectionConnectionHealth!
+  meta: JSONObject!
+}
+
+"""A dead letter without its operations."""
+type InspectionDeadLetter {
+  id: String!
+  jobId: String!
+  documentId: String!
+  branch: String!
+  scopes: [String!]!
+  errorType: String!
+  errorMessage: String!
+  operationCount: Int!
+}
+
+type InspectionDeadLetterPage {
+  remoteName: String!
+  results: [InspectionDeadLetter!]!
+  nextCursor: String
+}
+
+"""
+Reads only. info and documentModels serve every caller; drive and document
+reads are made as the caller through the reactor read gate; the rest need
+one of the host's admins.
+"""
+type ReactorInspection {
+  info: ReactorInfo!
+  documentModels: [InspectionDocumentModel!]!
+  drives(cursor: String, limit: Int): InspectionDrivePage!
+  """Reads every file node's document. Throttled per caller."""
+  driveIntegrity(driveId: String!, branch: String!): InspectionDriveIntegrity!
+  attachmentInfo: InspectionAttachmentInfo!
+  queueState: InspectionQueueState!
+  processors: [InspectionProcessor!]!
+  catchUpStatus: JSONObject!
+  storageHealth: InspectionStorageHealth!
+  """Replays the whole document; expensive. Throttled per caller."""
+  validateDocument(documentId: String!, branch: String): InspectionValidation!
+  remotes: [InspectionRemote!]!
+  remote(remoteName: String!): InspectionRemote!
+  deadLetters(remoteName: String!, cursor: String, limit: Int): InspectionDeadLetterPage!
+}
+
+type Query {
+  inspection: ReactorInspection!
+}

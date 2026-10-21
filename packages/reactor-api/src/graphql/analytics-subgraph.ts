@@ -4,12 +4,12 @@ import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsModel,
   AnalyticsResolvers,
-  typedefs,
 } from "@powerhousedao/analytics-engine-graphql";
 import type { Context, SubgraphArgs } from "@powerhousedao/reactor-api";
-import { gql } from "graphql-tag";
+import { analyticsSchema } from "./analytics-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { AuthenticationRequiredError, ForbiddenError } from "./errors.js";
+import type { SchemaBuilder } from "./subgraph-schema.js";
 
 type AnalyticsResolver = (
   parent: unknown,
@@ -25,10 +25,15 @@ export class AnalyticsSubgraph extends BaseSubgraph {
   analyticsStore: IAnalyticsStore;
   analyticsModel: AnalyticsModel;
 
-  name = "analytics";
-  typeDefs = gql`
-    ${typedefs}
-  `;
+  static override readonly subgraphName = analyticsSchema.subgraphName;
+
+  static override getSchema(schema: SchemaBuilder<AnalyticsSubgraph>) {
+    return schema.graphql({
+      typeDefs: analyticsSchema.typeDefs,
+      resolverCoordinates: analyticsSchema.resolverCoordinates,
+      resolvers: (subgraph) => subgraph.#resolvers(),
+    });
+  }
 
   /**
    * Every analytics field hangs off `Query.analytics`, so gating it gates them
@@ -36,16 +41,18 @@ export class AnalyticsSubgraph extends BaseSubgraph {
    * no document to decide on, so only a caller with policy-wide read (anyone
    * under OPEN, an admin otherwise) may read them.
    */
-  resolvers = {
-    ...analyticsResolvers,
-    Query: {
-      ...analyticsResolvers.Query,
-      analytics: (parent: unknown, args: unknown, ctx: Context) => {
-        this.#assertCanReadAnalytics(ctx);
-        return analyticsResolvers.Query.analytics(parent, args, ctx);
+  #resolvers(): GraphQLResolverMap<Context> {
+    return {
+      ...analyticsResolvers,
+      Query: {
+        ...analyticsResolvers.Query,
+        analytics: (parent: unknown, args: unknown, ctx: Context) => {
+          this.#assertCanReadAnalytics(ctx);
+          return analyticsResolvers.Query.analytics(parent, args, ctx);
+        },
       },
-    },
-  } as GraphQLResolverMap<Context>;
+    } as GraphQLResolverMap<Context>;
+  }
 
   constructor(args: SubgraphArgs) {
     super(args);

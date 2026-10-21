@@ -12,6 +12,18 @@ This page is a map. For each recipe it gives the core idea, the Reactor primitiv
 Recipes are reference implementations, not published libraries. Clone the repo, read the recipe, and adapt the code — don't depend on the `@powerhousedao/example-*` packages in production.
 :::
 
+:::note
+The document models in these recipes are schema-first, so their reducers live in `v<n>/src/reducers/`. To write a model in TypeScript instead, see [Choose an approach](../02-DocumentModels/01-CodeFirst/00-ChooseYourApproach.md) and the [code-first quickstart](../02-DocumentModels/01-CodeFirst/01-Quickstart.md).
+:::
+
+## Package subgraphs
+
+The standalone recipe servers below use their own GraphQL setup. Inside a Powerhouse package, export a `BaseSubgraph<Ctx>` subclass with `static override readonly subgraphName = "kebab-case"` and `static override getSchema(schema: SchemaBuilder<YourClass>)`. Return typed entries or one `schema.graphql` wrapper. Resolvers access state through `subgraph`.
+
+Reuse one abstract base and public schema fragments. Lifecycle overrides call `super`, and teardown tolerates partial setup. `onDisconnect` is not a process-exit hook. See [Subgraph classes](../03-GraphQLData/08-SubgraphClasses.md) and [testing without a host](../03-GraphQLData/09-TestingSubgraphs.md).
+
+Existing endpoint paths, schemas, and WebSocket and SSE mounts are unchanged. Run `ph migrate` before rebuilding an old-style package. Running hosts continue to serve published old-style packages with a notice only in development.
+
 ## Running a recipe
 
 Every recipe is a workspace package with a runnable demo. From the repo root:
@@ -58,7 +70,7 @@ A processor that reads `ActionSigner` context off every operation and writes an 
 Implements `IReadModel` directly and registers it with `ReactorBuilder.withReadModel()` to maintain a document-count-per-type materialized view.
 
 - Implements the `IReadModel` contract directly (just `indexOperations` plus query getters) instead of extending `BaseReadModel` — the right choice when you don't need catch-up/rewind plumbing.
-- Registered read models index **pre-ready**: their work completes *before* `JOB_READ_READY` fires, so the view is consistent the instant downstream subscribers see the event. This is the key contrast with post-ready processors.
+- Registered read models index **pre-ready**: their work completes _before_ `JOB_READ_READY` fires, so the view is consistent the instant downstream subscribers see the event. This is the key contrast with post-ready processors.
 
 **Source** · [`src/document-count-read-model.ts`](https://github.com/powerhouse-inc/recipes/blob/main/custom-read-model/src/document-count-read-model.ts) · [`src/index.ts`](https://github.com/powerhouse-inc/recipes/blob/main/custom-read-model/src/index.ts)
 **Concepts** · `IReadModel.indexOperations` · `ReactorBuilder.withReadModel` · pre-ready vs post-ready · `JOB_READ_READY` — see [Processors](/academy/Reference/Reactor/Processors), [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor)
@@ -126,7 +138,7 @@ Drives event-driven automation by subscribing to all document changes through an
 
 A processor implements the saga pattern: operations on one document dispatch follow-up actions to others, all correlated by a shared `saga_id`.
 
-- Declarative step definitions (trigger match, target resolver, action builder) drive which incoming operation fires which follow-up; the processor calls `IReactor.execute` on a *different* document.
+- Declarative step definitions (trigger match, target resolver, action builder) drive which incoming operation fires which follow-up; the processor calls `IReactor.execute` on a _different_ document.
 - A re-entrancy flag prevents the processor from reacting to the operations it itself dispatched, so the saga can't loop forever.
 - Correlation lives entirely in the processor's own `saga_log` table keyed by `saga_id` — no changes to any document model or interface.
 
@@ -152,7 +164,7 @@ A standalone `node:http` endpoint that HMAC-verifies signed external webhooks ag
 
 A long-running polling worker that idempotently ingests an external feed into an event-sourced ledger document, seeding its dedup set and watermark from document state so a restart never double-ingests.
 
-- The document *is* the checkpoint store: `seedFromState()` rebuilds the in-memory dedup set and high-watermark from `reactor.get().state`, so a crashed poller resumes with no side database.
+- The document _is_ the checkpoint store: `seedFromState()` rebuilds the in-memory dedup set and high-watermark from `reactor.get().state`, so a crashed poller resumes with no side database.
 - Dedupes on the stable `externalId` checked against state, **not** the delivery cursor — at-least-once feeds redeliver the same id past any watermark; the watermark is only a fetch optimization.
 - Corrections are explicit append-only operations: a restatement marks the old entry `SUPERSEDED` and appends a new `RECORDED` entry — the original payload is never mutated.
 
@@ -179,7 +191,7 @@ Where identity comes from (`action.context.signer`), how it's verified, and how 
 A custom document model that embeds RBAC in document state and enforces it inside reducer operations by reading the caller from `action.context.signer.user.address`.
 
 - Authorization lives in the reducer, not a server gate — so access control replicates with the document; each operation throws if the caller is missing or lacks the required role.
-- Roles are *state*, not config: `creator` / `admins` / `members` are fields, and the first `bootstrap` caller auto-promotes to permanent root admin, protected by `CannotRevokeCreator` / `LastAdmin` invariants.
+- Roles are _state_, not config: `creator` / `admins` / `members` are fields, and the first `bootstrap` caller auto-promotes to permanent root admin, protected by `CannotRevokeCreator` / `LastAdmin` invariants.
 - Rejections surface as a typed error taxonomy (`NotAuthorized`, `NotAdmin`, …) captured onto `operation.error` in the document's log.
 
 **Source** · [`document-models/role-based-auth/v1/src/reducers/access.ts`](https://github.com/powerhouse-inc/recipes/blob/main/role-based-auth/document-models/role-based-auth/v1/src/reducers/access.ts) · [`src/demo.ts`](https://github.com/powerhouse-inc/recipes/blob/main/role-based-auth/src/demo.ts)
@@ -251,7 +263,7 @@ A CLI that exports document state and operation history to JSON using `IReactor`
 
 A Node CLI that connects to a Reactor's GraphQL subscriptions endpoint over WebSocket and prints `documentChanges` (and optional `jobChanges`) events live.
 
-- Consumes real-time subscriptions from *outside* the reactor process via the `graphql-ws` protocol, rather than from an in-process processor.
+- Consumes real-time subscriptions from _outside_ the reactor process via the `graphql-ws` protocol, rather than from an in-process processor.
 - Server-side filters the change stream with a `SearchFilterInput` (by document type and/or parent drive); passes bearer-token auth through `connectionParams`.
 - Optionally watches a single job's lifecycle via `jobChanges(jobId)`, and cleans up per-stream subscriptions on `SIGINT` / `SIGTERM`.
 

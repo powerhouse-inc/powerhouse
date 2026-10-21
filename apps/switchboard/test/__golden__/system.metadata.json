@@ -1,0 +1,13 @@
+{
+  "resolverCoordinates": [
+    {
+      "typeName": "Query",
+      "fieldName": "system",
+      "resolverKind": "field"
+    }
+  ],
+  "hasSubscriptions": {
+    "raw": false,
+    "normalized": false
+  }
+}

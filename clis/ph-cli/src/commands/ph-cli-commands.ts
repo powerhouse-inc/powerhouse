@@ -9,9 +9,12 @@ import { list } from "./list.js";
 import { login } from "./login.js";
 import { logout } from "./logout.js";
 import { migrate } from "./migrate.js";
+import { model } from "./model.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
 import { runHost } from "./run.js";
+import { scalar } from "./scalar.js";
+import { subgraph } from "./subgraph.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { unpublish } from "./unpublish.js";
@@ -31,6 +34,9 @@ const baseCommands = {
   inspect,
   list,
   migrate,
+  model,
+  subgraph,
+  scalar,
   switchboard,
   login,
   logout,

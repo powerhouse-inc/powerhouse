@@ -57,6 +57,7 @@ export const tsConfigTemplate = json`
     "emitDeclarationOnly": true,
     "incremental": true,
     "strict": true,
+    "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,

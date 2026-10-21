@@ -25,11 +25,14 @@ export default defineConfig({
     // their own runners / environment requirements; folding them in is a
     // separate effort.
     include: [
+      "clis/definition-sources.test.ts",
       "constants.test.ts",
       "clis/build-config.test.ts",
       "clis/build-pieces.test.ts",
       "clis/services/use-local.test.ts",
       "clis/source-config-schema.test.ts",
+      "clis/file-system/get-config-strict.test.ts",
+      "clis/file-system/spawn-async.test.ts",
       "clis/project-ports.test.ts",
       "clis/project-env.test.ts",
       "clis/ph-dir.test.ts",
@@ -44,6 +47,8 @@ export default defineConfig({
       "document-drive/**/*.test.ts",
       "document-model/action-signature.test.ts",
       "document-model/action-transport.test.ts",
+      "document-model/definition-types.test.ts",
+      "document-model/subgraph-definition-types.test.ts",
       "document-model/files.test.ts",
       "document-model/mock.test.ts",
       "document-model/peer-agreement.test.ts",

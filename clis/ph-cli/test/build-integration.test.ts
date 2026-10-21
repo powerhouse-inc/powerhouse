@@ -43,6 +43,10 @@ const originalCwd = process.cwd();
 const args = {
   outDir: "dist",
   noSharedDeps: false,
+  ignoreTypeErrors: false,
+  configFile: undefined,
+  source: [],
+  warningsAsErrors: false,
   debug: undefined,
 } as BuildArgs;
 
@@ -496,7 +500,13 @@ describe("runBuild on a package that offers routes", () => {
       'import "@powerhousedao/connect/layout";\n',
     );
 
-    await expect(runBuild({ ...args, ignoreTypeErrors: true })).rejects.toThrow(
+    // runBuild reports a failed candidate bundle rather than throwing.
+    const result = await runBuild(
+      { ...args, ignoreTypeErrors: true },
+      { log: () => undefined },
+    );
+    expect([result.status, result.exitCode]).toEqual(["failed", 2]);
+    expect(result.summary).toMatch(
       /bad\.tsx imports "@powerhousedao\/connect\/layout"/,
     );
   }, 120_000);
@@ -511,9 +521,13 @@ describe("runBuild on a package that only lists a piece", () => {
     clean(fixture);
     process.chdir(fixture);
 
-    await expect(runBuild(args)).rejects.toThrow(
+    const messages: string[] = [];
+    const result = await runBuild(args, { log: (text) => messages.push(text) });
+    expect(result.exitCode).toBe(2);
+    expect(messages.join("")).toContain(
       'pieces: "@fixture/piece-gone" declares dist/node/pieces/gone/index.mjs, which is missing',
     );
+    expect(existsSync(join(fixture, "dist"))).toBe(false);
   }, 120_000);
 });
 
@@ -614,7 +628,6 @@ describe("runBuild on a generated piece", () => {
       project,
     );
     await project.save();
-    process.chdir(originalCwd);
   }, 120_000);
 
   afterAll(() => {
@@ -1213,7 +1226,10 @@ describe("runBuild on a package whose node code has a native dependency", () => 
     );
     process.chdir(fixture);
 
-    await expect(runBuild(args)).rejects.toThrow(
+    const messages: string[] = [];
+    const result = await runBuild(args, { log: (text) => messages.push(text) });
+    expect(result.exitCode).toBe(2);
+    expect(messages.join("")).toMatch(
       /document-models\/index\.ts imports wasm-a, which needs the WebAssembly module \S*wasm_a_bg\.wasm\. Document models run in Connect and on every host/,
     );
   }, 120_000);
@@ -1222,7 +1238,10 @@ describe("runBuild on a package whose node code has a native dependency", () => 
     setUp({ devDependencies: NATIVE_A });
     process.chdir(fixture);
 
-    await expect(runBuild(args)).rejects.toThrow(
+    const messages: string[] = [];
+    const result = await runBuild(args, { log: (text) => messages.push(text) });
+    expect(result.exitCode).toBe(2);
+    expect(messages.join("")).toMatch(
       /must be listed in package\.json "dependencies"[\s\S]*native-a \(imported by (subgraphs\/native\/index|processors\/switchboard)\.ts\)/,
     );
   }, 120_000);
@@ -1235,7 +1254,10 @@ describe("runBuild on a package whose node code has a native dependency", () => 
     );
     process.chdir(fixture);
 
-    await expect(runBuild(args)).rejects.toThrow(
+    const messages: string[] = [];
+    const result = await runBuild(args, { log: (text) => messages.push(text) });
+    expect(result.exitCode).toBe(2);
+    expect(messages.join("")).toMatch(
       /editors\/index\.ts imports native-a, which needs the native addon node_modules\/\S*native_a\.node\. Native code cannot run in the browser/,
     );
     expect(existsSync(join(dist, "node"))).toBe(false);

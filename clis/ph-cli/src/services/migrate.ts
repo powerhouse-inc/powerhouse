@@ -61,7 +61,12 @@ export async function startMigrate({
   version,
   force,
   debug,
+  subgraphsOnly,
 }: MigrateArgs) {
+  if (subgraphsOnly) {
+    await migrateProjectSubgraphs();
+    return;
+  }
   const requested = versionPositional ?? version;
   if (debug) console.log(`[migrate] requested version: ${requested}`);
 
@@ -109,6 +114,7 @@ export async function startMigrate({
     console.log(
       `Running migrate with @powerhousedao/codegen@${codegenVersion ?? "unknown"}`,
     );
+    await migrateProjectSubgraphs();
     await codegenMod.migrate(targetVersion ?? requested);
     return;
   }
@@ -135,4 +141,21 @@ export async function startMigrate({
     console.log(`[migrate] re-executing: ${command}`);
   }
   execSync(command, { stdio: "inherit" });
+}
+
+async function migrateProjectSubgraphs() {
+  const { migrateSubgraphs } = await import("@powerhousedao/codegen");
+  const result = await migrateSubgraphs();
+  for (const file of result.changedFiles)
+    console.log(`Migrated subgraph ${file}`);
+  for (const diagnostic of result.diagnostics) {
+    console.error(
+      `${diagnostic.file}:${diagnostic.line}: ${diagnostic.message}`,
+    );
+  }
+  if (result.diagnostics.length > 0) {
+    throw new Error(
+      "Some subgraphs could not be migrated. Resolve the diagnostics and run ph migrate again.",
+    );
+  }
 }

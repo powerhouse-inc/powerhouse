@@ -190,6 +190,15 @@ export const supportedVersions = [1, 2] as const;
 export const latestVersion = supportedVersions[1];
 ```
 
+A code-first model owns its `versions.ts`. Its scaffold derives `latestVersion` from the tuple with `latestVersionOf` from `document-model`, so adding a version changes only `supportedVersions`:
+
+```typescript
+import { latestVersionOf } from "document-model";
+
+export const supportedVersions = [1, 2] as const;
+export const latestVersion = latestVersionOf(supportedVersions); // 2
+```
+
 A transition file (`v2.ts`) holds the reducer for one step:
 
 ```typescript
