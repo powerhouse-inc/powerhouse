@@ -1175,49 +1175,56 @@ describe("mutable runtime checking", () => {
     120_000,
   );
 
-  it("reports an edited unlisted JavaScript helper during release watch", async () => {
-    const { root, edit } = mutableRuntime("local JavaScript");
-    const reportSchema = z.object({
-      status: z.string(),
-      definitions: z.array(z.object({ key: z.string() })),
-    });
-    const reports: z.infer<typeof reportSchema>[] = [];
-    const watching = runModelCheckWatch(
-      {
-        configFile: join(root, "powerhouse.config.json"),
-        source: [],
-        outDir: "dist",
-        json: false,
-        jsonLines: true,
-        release: true,
-        watch: true,
-        warningsAsErrors: false,
-        debug: false,
-      },
-      {
-        streams: {
-          out: (text) => reports.push(reportSchema.parse(JSON.parse(text))),
-          err: () => undefined,
-        },
-      },
-    );
-    try {
-      await vi.waitFor(() => expect(reports[0]?.status).toBe("ok"), {
-        timeout: 30_000,
+  // On Windows, bundling the candidate while fs.watch runs ends a vitest fork
+  // worker without an exit event; the thread pool and the built CLI's own
+  // watch both report this edit there.
+  it.skipIf(process.platform === "win32")(
+    "reports an edited unlisted JavaScript helper during release watch",
+    async () => {
+      const { root, edit } = mutableRuntime("local JavaScript");
+      const reportSchema = z.object({
+        status: z.string(),
+        definitions: z.array(z.object({ key: z.string() })),
       });
-      await delay(150);
-      edit();
-      await vi.waitFor(
-        () =>
-          expect(
-            reports[1]?.definitions.map((definition) => definition.key),
-          ).toEqual(["test/invoice-next", "test/invoice-next"]),
-        { timeout: 30_000 },
+      const reports: z.infer<typeof reportSchema>[] = [];
+      const watching = runModelCheckWatch(
+        {
+          configFile: join(root, "powerhouse.config.json"),
+          source: [],
+          outDir: "dist",
+          json: false,
+          jsonLines: true,
+          release: true,
+          watch: true,
+          warningsAsErrors: false,
+          debug: false,
+        },
+        {
+          streams: {
+            out: (text) => reports.push(reportSchema.parse(JSON.parse(text))),
+            err: () => undefined,
+          },
+        },
       );
-      expect(reports[1]?.status).toBe("ok");
-    } finally {
-      process.emit("SIGINT");
-      expect(await watching).toBe(0);
-    }
-  }, 120_000);
+      try {
+        await vi.waitFor(() => expect(reports[0]?.status).toBe("ok"), {
+          timeout: 30_000,
+        });
+        await delay(150);
+        edit();
+        await vi.waitFor(
+          () =>
+            expect(
+              reports[1]?.definitions.map((definition) => definition.key),
+            ).toEqual(["test/invoice-next", "test/invoice-next"]),
+          { timeout: 30_000 },
+        );
+        expect(reports[1]?.status).toBe("ok");
+      } finally {
+        process.emit("SIGINT");
+        expect(await watching).toBe(0);
+      }
+    },
+    120_000,
+  );
 });
