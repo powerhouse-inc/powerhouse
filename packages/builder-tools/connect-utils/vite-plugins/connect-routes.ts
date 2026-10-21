@@ -19,6 +19,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Alias, Plugin, PluginOption } from "vite";
+import { normalizePath } from "vite";
 import { resolvePackage } from "../helpers.js";
 
 /** A project's routes for its Connect deployment, beside Connect's own. */
@@ -63,6 +64,22 @@ export function connectRoutesTreeOf(projectRoot: string, routesDir: string) {
     return join(projectRoot, CONNECT_ROUTES_GEN);
   }
   return join(projectRoot, ".ph", `${relative(projectRoot, routesDir)}.gen.ts`);
+}
+
+/** The dev watcher's filter for `.ph/`, which holds build output: ignored but
+ * for the host's route tree, rewritten as route files come and go. */
+export function ignoreDotPhButRouteTree(
+  projectRoot: string,
+  routesDir?: string | false,
+) {
+  const tree =
+    routesDir && normalizePath(connectRoutesTreeOf(projectRoot, routesDir));
+  return (file: string) => {
+    const path = normalizePath(resolve(projectRoot, file));
+    if (!path.includes("/.ph/")) return false;
+    // The tree and the folders that lead to it stay watched.
+    return !tree || (path !== tree && !tree.startsWith(`${path}/`));
+  };
 }
 
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */

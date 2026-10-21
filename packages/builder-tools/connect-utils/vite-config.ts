@@ -36,6 +36,7 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  ignoreDotPhButRouteTree,
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
@@ -450,7 +451,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         : undefined,
     server: {
       watch: {
-        ignored: ["**/backup-documents/**", "**/.ph/**"],
+        ignored: [
+          "**/backup-documents/**",
+          ignoreDotPhButRouteTree(options.dirname, routesDir),
+        ],
       },
       fs: {
         allow: [searchForWorkspaceRoot(options.dirname), ...linkedRoots],
