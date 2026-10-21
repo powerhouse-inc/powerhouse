@@ -4,6 +4,9 @@ import type { IKeyframeStore } from "../interfaces.js";
 import { acquirePurgeLocks, findPurged } from "./document-purges.js";
 import type { Database } from "./types.js";
 
+/** The `revision` column is a 32-bit integer; a bound above it means no bound. */
+const MAX_REVISION_COLUMN_VALUE = 2_147_483_647;
+
 export class KyselyKeyframeStore implements IKeyframeStore {
   private trx?: Transaction<Database>;
 
@@ -80,7 +83,9 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       .where("documentId", "=", documentId)
       .where("scope", "=", scope)
       .where("branch", "=", branch)
-      .where("revision", "<=", targetRevision)
+      .$if(targetRevision < MAX_REVISION_COLUMN_VALUE, (qb) =>
+        qb.where("revision", "<=", targetRevision),
+      )
       .orderBy("revision", "desc")
       .limit(1)
       .executeTakeFirst();
