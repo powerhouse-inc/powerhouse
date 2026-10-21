@@ -1,3 +1,3 @@
-@layer theme, base, components, external-packages, utilities;
+@layer properties, theme, base, components, external-packages, utilities;
 @import "tailwindcss";
 @import "@powerhousedao/connect/tailwind.css";

@@ -1,6 +1,6 @@
 /* Package CSS goes in external-packages: above the reset, below Connect's
    utilities. Keep in sync with LAYER_ORDER in src/package-manager.ts. */
-@layer theme, base, components, external-packages, utilities;
+@layer properties, theme, base, components, external-packages, utilities;
 @import "tailwindcss";
 @import "./tailwind.css";
 
