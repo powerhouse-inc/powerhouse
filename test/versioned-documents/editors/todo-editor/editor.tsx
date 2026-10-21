@@ -1,16 +1,18 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "document-model";
 import { generateId } from "document-model/core";
 import { useState } from "react";
-import { actions, useSelectedTodoDocument } from "document-models/todo";
+import type { TodoAction, TodoDocument } from "document-models/todo";
+import { actions } from "document-models/todo";
 
-export default function Editor() {
-  const [document, dispatch] = useSelectedTodoDocument();
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<TodoDocument, TodoAction>) {
   const [newTodoTitle, setNewTodoTitle] = useState("");
   const [titleInput, setTitleInput] = useState(
     document.state.global.title ?? "",
   );
-
-  if (!document) return null;
 
   const state = document.state.global;
   const version = document.state.document.version;
@@ -28,7 +30,7 @@ export default function Editor() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
       <div className="flex justify-center px-4 py-8">
         <div className="w-full max-w-md">
           <div className="mb-6">
