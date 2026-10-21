@@ -36,6 +36,9 @@ export type IConnectOptions = {
   /** The routes folder, relative to the project (a host's `runner.routes`);
    * `false` for none. Default: `hosts/connect/routes/` when it exists. */
   routes?: string | false;
+  /** Vite's cache folder. Default: Vite's, `node_modules/.vite`; a host's own
+   * keeps dev servers running side by side from rewriting each other's deps. */
+  cacheDir?: string;
   /**
    * Production vendor: the prebuilt shared-dependency bundle's import map and
    * version table (from `prebuildConnectVendor`). When set on a production

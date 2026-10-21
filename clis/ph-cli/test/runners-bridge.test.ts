@@ -44,6 +44,10 @@ describe("connect bridge runner", () => {
     expect(args).toMatchObject({ port: 6599, open: false, printUrls: true });
     expect(logger).toBeUndefined();
     expect(callerOverride).toEqual({ branding: { appName: "Lab" } });
+    // Its own Vite cache: Studio and other hosts' dev servers run side by side.
+    expect(vi.mocked(runConnectStudio).mock.calls[0][3]?.cacheDir).toBe(
+      join(ctx.projectRoot, "node_modules", ".vite-lab-connect"),
+    );
   });
 
   it("run is dev-studio in phase 0; defaults apply without runner.port", async () => {
@@ -299,7 +303,7 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
       { name: "lab-connect", runner: { module: "m", routes: false } },
       ctx,
     );
-    expect(vi.mocked(runConnectStudio).mock.calls[0][3]).toEqual({
+    expect(vi.mocked(runConnectStudio).mock.calls[0][3]).toMatchObject({
       routes: false,
     });
   });

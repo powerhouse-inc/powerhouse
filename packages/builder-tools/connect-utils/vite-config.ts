@@ -436,6 +436,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    cacheDir: options.cacheDir,
     // Prefix served/built asset URLs so Connect can run under a path prefix
     // (reverse proxy). Mirrors the client router basename; normalize so a bare
     // `app` or `/app` becomes `/app/` and matches the router.
