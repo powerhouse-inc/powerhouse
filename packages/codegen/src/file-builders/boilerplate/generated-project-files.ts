@@ -30,6 +30,7 @@ import {
   editorsTemplate,
   factoryBuildersTemplate,
   geminiSettingsTemplate,
+  hostStyleTemplate,
   indexHtmlTemplate,
   indexTsTemplate,
   licenseTemplate,
@@ -51,8 +52,12 @@ import {
   upgradeManifestsTemplate,
   vitestConfigTemplate,
 } from "templates";
+import {
+  HOST_STYLESHEET,
+  localPackageNames,
+} from "@powerhousedao/shared/clis/package-style";
 import { formatSafe } from "utils";
-import { migratedStyle, readStyle } from "./migrate-style.js";
+import { migratedStyle, pageThemeWarning, readStyle } from "./migrate-style.js";
 
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
   await writeFileEnsuringDir(
@@ -84,9 +89,19 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     await formatSafe(reactorTsTemplate),
   );
   // An existing style.css keeps the project's rules; only Connect's imports change.
+  const style = readStyle(projectDir);
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
-    await formatSafe(migratedStyle(readStyle(projectDir)), "css"),
+    await formatSafe(
+      migratedStyle(style, localPackageNames(projectDir)),
+      "css",
+    ),
+  );
+  const warning = pageThemeWarning(style);
+  if (warning) console.warn(`⚠ ${warning}`);
+  await seedUserOwnedFile(
+    join(projectDir, HOST_STYLESHEET),
+    await formatSafe(hostStyleTemplate, "css"),
   );
   await writeFileEnsuringDir(
     join(projectDir, "vitest.config.ts"),

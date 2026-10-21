@@ -3,6 +3,7 @@ export * from "./config-loader.js";
 export * from "./dynamic-base.js";
 export * from "./env-config.js";
 export * from "./json-adapter.js";
+export * from "./layers.js";
 export * from "./pwa-config.js";
 export * from "./pwa-manifest.js";
 export * from "./runtime-config.js";

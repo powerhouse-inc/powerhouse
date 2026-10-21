@@ -25,10 +25,14 @@ const isVendor = (id: string) =>
 
 const CLASS_ATTRIBUTE = /\sclass="([^"]*)"/g;
 
-/** `entry`, a Tailwind stylesheet, built for the classes in `markup` only:
- * its tokens, reset and rules, without third-party CSS. */
-export async function shellCss(entry: string, markup: string) {
-  const compiler = await compile(readFileSync(entry, "utf8"), {
+/** `entry`, a Tailwind stylesheet (its text `css` when given), built for the
+ * classes in `markup` only: its tokens, reset and rules, without third-party CSS. */
+export async function shellCss(
+  entry: string,
+  markup: string,
+  css = readFileSync(entry, "utf8"),
+) {
+  const compiler = await compile(css, {
     base: dirname(entry),
     from: entry,
     onDependency: () => {},
@@ -38,6 +42,6 @@ export async function shellCss(entry: string, markup: string) {
   const classes = new Set(
     [...markup.matchAll(CLASS_ATTRIBUTE)].flatMap((m) => m[1].split(/\s+/)),
   );
-  const css = compiler.build([...classes].filter(Boolean));
-  return optimize(css, { file: entry, minify: true }).code;
+  const built = compiler.build([...classes].filter(Boolean));
+  return optimize(built, { file: entry, minify: true }).code;
 }

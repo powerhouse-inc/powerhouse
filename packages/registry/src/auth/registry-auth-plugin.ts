@@ -27,8 +27,8 @@ export interface RegistryAuthPluginConfig {
   storeToken?: string;
   /** Renown audience (this registry's public URL). Enables renown auth. */
   publicUrl?: string;
-  /** Renown service base URL (defaults to the SDK default). */
-  renownUrl?: string;
+  /** Renown issuer base URLs, tried in order (defaults to the SDK default). */
+  renownUrls?: string[];
 }
 
 const BCRYPT_ROUNDS = 10;
@@ -178,7 +178,7 @@ export default function registryAuthPlugin(config: RegistryAuthPluginConfig) {
   const renownVerifier = config.publicUrl
     ? createRenownVerifier({
         publicUrl: config.publicUrl,
-        renownUrl: config.renownUrl,
+        renownUrls: config.renownUrls,
       })
     : undefined;
   const plugin = createRegistryAuthPlugin(store, renownVerifier);

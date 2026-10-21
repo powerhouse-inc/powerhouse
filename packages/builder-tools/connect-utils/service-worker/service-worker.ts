@@ -187,6 +187,14 @@ precacheAndRoute(self.__WB_MANIFEST, {
 // for the content-hashed (immutable) assets. statuses [0, 200] on both — the
 // editor JS is a CORS import (200) but its stylesheet/assets are no-cors
 // (opaque/0); [200] alone silently dropped those and broke styles offline.
+// A no-cors request (a stylesheet's @import) caches an opaque copy; a CORS one
+// (a module import, fetch) fails on it, so it goes to the network instead.
+const noOpaqueForCors: WorkboxPlugin = {
+  cachedResponseWillBeUsed: async ({ request, cachedResponse }) =>
+    request.mode === "cors" && cachedResponse?.type === "opaque"
+      ? null
+      : (cachedResponse ?? null),
+};
 registerRoute(
   ({ url }) =>
     url.pathname.includes("/-/cdn/") &&
@@ -201,6 +209,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 30,
       }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),
+      noOpaqueForCors,
     ],
   }),
 );
@@ -214,6 +223,7 @@ registerRoute(
         maxAgeSeconds: 60 * 60 * 24 * 30,
       }),
       new CacheableResponsePlugin({ statuses: [0, 200] }),
+      noOpaqueForCors,
     ],
   }),
 );

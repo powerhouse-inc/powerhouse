@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.3-dev.67",
+  "version": "6.2.3-dev.69",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -20,6 +20,7 @@
     "src/routeTree.gen.ts",
     "style.css",
     "tailwind.css",
+    "theme.css",
     "fonts.css",
     "nginx.conf",
     "nginx.sh",
@@ -80,6 +81,7 @@
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css",
     "./tailwind.css": "./tailwind.css",
+    "./theme.css": "./theme.css",
     "./fonts.css": "./fonts.css",
     "./package.json": "./package.json"
   },

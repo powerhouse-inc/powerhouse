@@ -310,7 +310,7 @@ Use this **only** when your editor needs UI primitives not covered by \`@powerho
 
 3. **Create \`editors/<name>/lib/utils.ts\`** exporting the standard \`cn\` helper (\`twMerge(clsx(inputs))\`).
 
-4. **Extend \`style.css\`** (append, do not replace): \`@import "tw-animate-css";\`, \`@custom-variant dark (&:is(.dark *));\`, a \`@theme inline { ... }\` block mapping \`--color-*\`/\`--radius-*\`, \`:root\` and \`.dark\` blocks with \`oklch(...)\` values, and a \`@layer base\` block. ⚠️ The design-system theme already declares its own tokens — verify both the editor and Connect still render correctly in light/dark mode after this step. If they break, fall back to design-system primitives.
+4. **Extend the stylesheets** (append, do not replace). \`style.css\` ships in the package's stylesheet, so it gets only what the components need everywhere: \`@import "tw-animate-css";\`. The theme goes in \`hosts/connect/style.css\`, which this Connect alone loads: \`@custom-variant dark (&:is(.dark *));\`, a \`@theme inline { ... }\` block mapping \`--color-*\`/\`--radius-*\`, \`:root\` and \`.dark\` blocks with \`oklch(...)\` values, and a \`@layer base\` block. In \`style.css\` they would re-theme every Connect that loads the package; move them if the shadcn CLI wrote them there. ⚠️ The design-system theme already declares its own tokens — verify both the editor and Connect still render correctly in light/dark mode after this step. If they break, fall back to design-system primitives.
 
 5. **Install AI Elements** using Vercel's CLI (not shadcn's). Verify each name exists at https://ai-sdk.dev/elements first — unknown names abort the install:
 

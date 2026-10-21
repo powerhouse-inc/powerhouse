@@ -72,6 +72,9 @@ pnpm --filter @powerhousedao/connect-core ui:shots --list
 | `packages/connect-core/src/router/titles.ts` | Connect's titles. |
 | `packages/builder-tools/connect-utils/vite-plugins/connect-routes.ts` | Routes folder lookup and tree generation. |
 | `apps/connect/tailwind.css` | Connect's Tailwind source, which a project's `style.css` imports. |
+| `apps/connect/theme.css` | Connect's tokens without its classes, which a package's stylesheet references. |
+| `packages/codegen/src/file-builders/boilerplate/migrate-style.ts` | `style.css` on `ph migrate`, and the package stylesheet `ph build` compiles. |
+| `packages/builder-tools/connect-utils/vite-plugins/host-stylesheet.ts` | The host's `style.css`, added to the project's in the page's build. |
 | `apps/connect/src/prerender/shell-css.ts` | The loading screen's CSS, built by Tailwind's compiler. |
 | `packages/reactor-browser/src/hooks/navigation.ts`, `link-props.ts` | The navigation API for editors. |
 | `test/versioned-documents/hosts/connect/routes/` | A working example project. |
