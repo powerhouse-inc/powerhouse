@@ -475,11 +475,17 @@ jobs:
       # Runs from runner.temp so npx fetches the requested version instead of
       # this repo's own playwright bin. After this, the recipe's own
       # `playwright install chromium` finds the browser in place and does nothing.
+      # Each install deletes every cached browser that no installed Playwright
+      # package still references. On a fresh runner, the npx copies for the
+      # later versions don't exist yet, so with two versions the first install
+      # would delete the second version's restored Chromium and the second
+      # install would download it again. The env var below turns that cleanup off.
       - name: Install Playwright Browsers
         if: steps.recipes-playwright.outputs.versions != ''
         working-directory: ${{ runner.temp }}
         env:
           VERSIONS: ${{ steps.recipes-playwright.outputs.versions }}
+          PLAYWRIGHT_SKIP_BROWSER_GC: "1"
         run: |
           for v in ${VERSIONS//+/ }; do
             npx -y "playwright@$v" install --with-deps chromium
