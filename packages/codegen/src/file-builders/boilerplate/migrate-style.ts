@@ -1,42 +1,43 @@
+import {
+  HOST_STYLESHEET,
+  projectStyle,
+  STYLE_IMPORT_LINES,
+  TAILWIND_IMPORT,
+} from "@powerhousedao/shared/clis/package-style";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
-import { styleImportsTemplate, styleTemplate } from "templates";
-
-const lines = (text: string) => text.split("\n").map((line) => line.trim());
-
-// Connect's stylesheet imports, current and past; the template's own lines too.
-const MANAGED_LINES = [
-  /^@layer theme, base, components\b.*;$/,
-  /^@import ["']@powerhousedao\/design-system\/(theme|style)\.css["'];$/,
-  /^@import ["']@powerhousedao\/connect\/(style|tailwind)\.css["'];$/,
-  /^@custom-variant dark \(&:where\(\.dark, \.dark \*\)\);$/,
-];
-const TAILWIND_IMPORT = /^@import ["']tailwindcss["'].*;$/;
-const IMPORTS = lines(styleImportsTemplate).filter(Boolean);
-const TEMPLATE_LINES = new Set(IMPORTS);
+import { styleTemplate } from "templates";
 
 /** style.css with Connect's imports replaced by the template's, keeping the
  * project's own rules; the template when there's no style.css. */
-export function migratedStyle(current: string | undefined): string {
+export function migratedStyle(
+  current: string | undefined,
+  localPackages: readonly string[] = [],
+): string {
   if (current === undefined) return styleTemplate;
-  let tailwind: string | undefined;
-  const kept = current.split("\n").filter((line) => {
-    const trimmed = line.trim();
-    if (TAILWIND_IMPORT.test(trimmed)) {
-      // A project's `source(...)` or `prefix(...)` options stay.
-      tailwind ??= trimmed;
-      return false;
-    }
-    return (
-      !TEMPLATE_LINES.has(trimmed) &&
-      !MANAGED_LINES.some((pattern) => pattern.test(trimmed))
-    );
-  });
-  const imports = IMPORTS.map((line) =>
+  const { tailwind, rest } = projectStyle(current, localPackages);
+  const imports = STYLE_IMPORT_LINES.map((line) =>
     TAILWIND_IMPORT.test(line) && tailwind ? tailwind : line,
   ).join("\n");
-  const rest = kept.join("\n").trim();
   return rest ? `${imports}\n\n${rest}\n` : `${imports}\n`;
+}
+
+const COMMENTS = /\/\*[\s\S]*?\*\//g;
+const PAGE_THEME = [
+  /^\s*--[\w-]+\s*:/m,
+  /^\s*(:root|html|body|\.dark)\b[^{]*\{/m,
+];
+
+/** A warning when style.css sets custom properties or global rules: `ph build`
+ * ships them to every Connect that loads the package. */
+export function pageThemeWarning(current: string | undefined) {
+  const rules = projectStyle(current ?? "").rest.replace(COMMENTS, "");
+  if (!PAGE_THEME.some((pattern) => pattern.test(rules))) return undefined;
+  return (
+    "style.css sets tokens or global rules (:root, html, body, .dark). ph build ships them " +
+    "in the package's stylesheet, to every Connect that loads the package. Move this " +
+    `Connect's theme to ${HOST_STYLESHEET}, and keep only the package's own tokens.`
+  );
 }
 
 export function readStyle(projectDir: string): string | undefined {
