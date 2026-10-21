@@ -11,6 +11,8 @@ A package's `hosts/connect/routes/` also adds routes to every Connect that loads
 - Removing a package while one of its pages is open takes the app home first.
 - Bundled packages (`ph install --local`, `provider: "local"`) register in a production build through the page's import map, as on the dev server.
 - An offered route imports `@powerhousedao/connect-core` (`ContentOutlet`, `useDriveRouteData`, `ModalDialog`), `@tanstack/react-router` and `@powerhousedao/reactor-browser`, which Connect shares with packages. `@powerhousedao/connect` is not shared, so `ph build` fails, naming the file, if an offered route imports it, or reaches a module that does. The rest of the package gets a warning: its build would bundle a copy of the Connect modules it uses, apart from the app's state.
+- An offered route also imports its own package's code, such as `document-models/*` and editor components, which the same build bundles. Another package's runtime import, e.g. `@powerhousedao/shared` (usually only a devDependency), is bundled as a copy; take the same helper from `@powerhousedao/reactor-browser` where it has one, e.g. `isFileNodeKind`.
+- `@powerhousedao/connect/layout` re-exports `@powerhousedao/connect-core/router` and design-system parts. An offered route imports those directly: `useNavRoutes`, `useSidebarMode` and `ContentOutlet` from `@powerhousedao/connect-core/router`, `SidebarItem` from `@powerhousedao/design-system/connect`.
 - The project's own package is the exception: its host build already has its routes.
 - The package's stylesheet styles its routes, as it does its editors; see [A package's styles](./styles-and-branding.md#a-packages-styles).
 
