@@ -18,13 +18,15 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
   const content = (
     <div
       className={twMerge(
-        "relative container mx-auto flex h-full flex-col",
+        "relative isolate container mx-auto flex h-full flex-col",
         containerClassName,
       )}
     >
+      {!background && <HomeBackgroundImage />}
+      {/* Above the background, but isolated so a portalled modal paints over it. */}
       <div
         className={twMerge(
-          "m-8 flex flex-wrap justify-center gap-4 pt-12",
+          "relative z-10 m-8 flex flex-wrap justify-center gap-4 pt-12",
           // the default gradient sits behind an opaque tile band; over a
           // project background the tiles sit on a translucent panel so their
           // labels stay readable on any art
@@ -33,7 +35,6 @@ export const HomeScreen = function HomeScreen(props: HomeScreenProps) {
             : "bg-background",
         )}
       >
-        {!background && <HomeBackgroundImage />}
         {children}
       </div>
     </div>

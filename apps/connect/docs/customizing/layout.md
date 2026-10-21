@@ -143,6 +143,7 @@ export const Route = createFileRoute("/_app")({
 
 - Without a `pendingComponent` on `_app`, the loading screen shows core's spinner.
 - The render runs at build time, in Node, with no drives: components on the path to `/` must not touch `window` while rendering, and should show nothing for data that isn't there yet (e.g. `useDrives()` is `undefined`).
+- Studio renders the screen too, at start and on route edits. If it fails, Studio shows the error over the page and in its log, since `ph connect build` fails on it.
 - On a deep link the screen is the same, with no tab marked current; the page appears once the app routes.
 - The screen's CSS is inlined: Tailwind builds the project's `style.css` for just the classes in the screen's markup, with its tokens and rules and without third-party CSS. The full stylesheet loads without blocking the first paint.
 - `staticData.nav` items are links the layout renders, so they appear on the loading screen; drives arrive later, so put them after the static items to avoid a shift.
