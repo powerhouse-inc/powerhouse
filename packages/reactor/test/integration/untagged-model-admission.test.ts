@@ -14,6 +14,11 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { InProcessReactorModule, IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
+import {
+  ReactorEventTypes,
+  type StoredModelRefusedEvent,
+} from "../../src/events/types.js";
+import { UnsupportedStoredProtocolError } from "../../src/shared/errors.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import type { ISyncCursorStorage } from "../../src/storage/interfaces.js";
 import type { IChannelFactory } from "../../src/sync/interfaces.js";
@@ -255,7 +260,7 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
 
     const { reactor } = await build(
       untagged(documentModelDocumentModelModule),
-      (b) => b.withKysely(db),
+      (b) => b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
     );
 
     const write = await settled(
@@ -291,6 +296,111 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
     expect((await reactor.get("stored-3")).header.id).toBe("stored-3");
   });
 
+  it("refuses to boot over a stored v3 document of an untagged model, naming the type, unless read-only", async () => {
+    const db = await createDefaultDatabase();
+    const tagged = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(modelAt("boot-3", V3))).id,
+    );
+    await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(driveAt("boot-drive-3", V3))).id,
+    );
+    await tagged.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(tagged.reactor), 1);
+
+    const refused = await build(
+      untagged(documentModelDocumentModelModule),
+      (b) => b.withKysely(db),
+    ).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(UnsupportedStoredProtocolError.isError(refused)).toBe(true);
+    expect(refused).toMatchObject({
+      documents: 1,
+      versions: [{ protocol: "base-reducer", version: 3, documentType: MODEL }],
+    });
+    expect((refused as Error).message).toContain(
+      `require base-reducer 3 for ${MODEL}`,
+    );
+
+    const readOnly = await build(
+      untagged(documentModelDocumentModelModule),
+      (b) => b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
+    );
+    expect((await readOnly.reactor.get("boot-3")).header.id).toBe("boot-3");
+    await readOnly.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(readOnly.reactor), 1);
+
+    const rebuilt = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    const write = await settled(
+      rebuilt.reactor,
+      (
+        await rebuilt.reactor.execute("boot-3", "main", [
+          setModelName({ name: "written" }),
+        ])
+      ).id,
+    );
+    expect(write.error?.message ?? write.status).toBe(JobStatus.READ_READY);
+  });
+
+  it("boots over a stored v3 document of a lazily loaded model and reports an untagged one on load", async () => {
+    const db = await createDefaultDatabase();
+    const tagged = await build(documentModelDocumentModelModule, (b) =>
+      b.withKysely(db),
+    );
+    await settled(
+      tagged.reactor,
+      (await tagged.reactor.create(modelAt("lazy-3", V3))).id,
+    );
+    await tagged.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(tagged.reactor), 1);
+
+    const eventBus = new EventBus();
+    const reported: StoredModelRefusedEvent[] = [];
+    eventBus.subscribe<StoredModelRefusedEvent>(
+      ReactorEventTypes.STORED_MODEL_REFUSED,
+      (_type, event) => {
+        reported.push(event);
+      },
+    );
+    const load = vi.fn(() =>
+      Promise.resolve(untagged(documentModelDocumentModelModule)),
+    );
+    const { reactor } = await build(undefined, (b) =>
+      b
+        .withKysely(db)
+        .withEventBus(eventBus)
+        .withDocumentModelLoader({ load: load as never }),
+    );
+
+    const write = await settled(
+      reactor,
+      (
+        await reactor.execute("lazy-3", "main", [
+          setModelName({ name: "written" }),
+        ])
+      ).id,
+    );
+    expect(load).toHaveBeenCalledWith(MODEL);
+    expectRefused(write, MODEL);
+    await vi.waitUntil(() => reported.length > 0, { timeout: 5_000 });
+    expect(reported).toEqual([
+      {
+        documentType: MODEL,
+        refusals: [
+          { protocol: "base-reducer", version: 3, documentType: MODEL },
+        ],
+      },
+    ]);
+  });
+
   it("refuses a rebuild of a stored v3 document typed once its model is untagged", async () => {
     const db = await createDefaultDatabase();
     const tagged = await build(documentModelDocumentModelModule, (b) =>
@@ -315,7 +425,7 @@ describe("base-reducer 3 admission of a model the reactor cannot run as 3", () =
 
     const { module } = await build(
       untagged(documentModelDocumentModelModule),
-      (b) => b.withKysely(db),
+      (b) => b.withKysely(db).withUnsupportedStoredDocuments("read-only"),
     );
     module.writeCache.invalidate("stored-read-3");
     const read = await module.writeCache

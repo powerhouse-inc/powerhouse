@@ -109,8 +109,10 @@ export {
   InvalidSignatureError,
   JOB_NOT_FOUND_ERROR_NAME,
   RelationshipNotFoundError,
+  storedRefusalName,
   UnsupportedProtocolVersionError,
   UnsupportedStoredProtocolError,
+  type StoredProtocolRefusal,
 } from "./src/shared/errors.js";
 export type { UnsupportedStoredDocuments } from "./src/core/stored-protocol-check.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
@@ -163,6 +165,7 @@ export {
   EventBusAggregateError,
   ReactorEventTypes,
   type ModelLoadedEvent,
+  type StoredModelRefusedEvent,
   type JobPendingEvent,
   type JobReadReadyEvent,
   type JobRunningEvent,

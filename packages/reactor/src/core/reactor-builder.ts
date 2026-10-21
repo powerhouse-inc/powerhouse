@@ -45,10 +45,16 @@ import { EventBus } from "../events/event-bus.js";
 import { resolveFeatureFlags } from "./feature-flags.js";
 import {
   checkStoredProtocols,
+  storedModelRefusals,
   type UnsupportedStoredDocuments,
 } from "./stored-protocol-check.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+  type StoredModelRefusedEvent,
+} from "../events/types.js";
+import { storedRefusalName } from "../shared/errors.js";
 import {
   KyselyExecutionScope,
   type IExecutionScope,
@@ -995,12 +1001,13 @@ export class ReactorBuilder {
     // The schema is no acknowledgment, but nothing would re-pull it.
     await groupCommit?.flusher.flush();
 
-    await checkStoredProtocols(
+    const deferredStoredModels = await checkStoredProtocols(
       baseDatabase,
       REACTOR_SCHEMA,
       this.executorConfig.protocolSupport ?? {},
       this.unsupportedStoredDocuments,
       this.logger,
+      (documentType) => protocolGate.registeredModules(documentType),
     );
 
     const database = baseDatabase.withSchema(REACTOR_SCHEMA);
@@ -1020,9 +1027,27 @@ export class ReactorBuilder {
         )
       : new NullDocumentModelResolver(documentModelRegistry);
     if (resolver instanceof DocumentModelResolver) {
-      resolver.setModelLoadedHook((documentType) =>
-        eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType }),
-      );
+      const logger = this.logger;
+      resolver.setModelLoadedHook(async (documentType) => {
+        await eventBus.emit(ReactorEventTypes.MODEL_LOADED, { documentType });
+        const refusals = storedModelRefusals(
+          documentType,
+          deferredStoredModels,
+          protocolGate.support,
+          protocolGate.registeredModules(documentType),
+        );
+        if (refusals.length === 0) return;
+        // Writes are refused per job; this only tells the operator.
+        logger.error(
+          "Loaded model @documentType cannot run its stored documents (@refusals); they stay read-only",
+          documentType,
+          refusals.map(storedRefusalName).join(", "),
+        );
+        await eventBus.emit(ReactorEventTypes.STORED_MODEL_REFUSED, {
+          documentType,
+          refusals,
+        } satisfies StoredModelRefusedEvent);
+      });
       resolver.rememberManifest(this.resolvedModelManifest ?? []);
       this.modelResolver = resolver;
     }
