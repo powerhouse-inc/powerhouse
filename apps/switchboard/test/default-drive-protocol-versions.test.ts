@@ -1,5 +1,18 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { reactorDriveDocumentModelModule } from "@powerhousedao/reactor-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  headNewDocument,
+  selectDocumentModelModule,
+  type DocumentModelModule,
+  type NewDocumentHeaderOptions,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
+
+const modules = [
+  driveDocumentModelModule,
+  reactorDriveDocumentModelModule,
+] as unknown as DocumentModelModule[];
 import { describe, expect, it } from "vitest";
 import { addDefaultDrive, addDefaultReactorDrive } from "../src/utils.mjs";
 
@@ -9,8 +22,15 @@ function client(): { client: IReactorClient; created: PHDocument[] } {
     created,
     client: {
       get: () => Promise.reject(new Error("not found")),
-      getCreateSignaturePolicy: () => Promise.resolve("v2-required"),
-      getCreateProtocolVersions: () => Promise.resolve({ "base-reducer": 3 }),
+      newDocument: (type: string, options?: NewDocumentHeaderOptions) =>
+        Promise.resolve(
+          headNewDocument(
+            selectDocumentModelModule(modules, type),
+            options,
+            "v2-required",
+            { "base-reducer": 3 },
+          ),
+        ),
       create: (document: PHDocument) => {
         created.push(document);
         return Promise.resolve(document);
@@ -23,7 +43,7 @@ describe.each([
   ["addDefaultDrive", addDefaultDrive],
   ["addDefaultReactorDrive", addDefaultReactorDrive],
 ])("%s", (_name, add) => {
-  it("heads the drive at the client's create versions", async () => {
+  it("heads the drive with the client's newDocument", async () => {
     const { client: reactor, created } = client();
 
     await add(reactor, { slug: "main", global: { name: "Main" } } as never, 1);
