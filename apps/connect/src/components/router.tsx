@@ -32,14 +32,27 @@ export function getConnectRouter() {
   return getConnectAppRouter(ensurePHStore(), connectRouterOptions).router;
 }
 
+/** Off unless asked for, with `?devtools=1` or `ph:router-devtools` set to "1". */
+function routerDevtoolsEnabled() {
+  try {
+    return (
+      new URLSearchParams(location.search).get("devtools") === "1" ||
+      localStorage.getItem("ph:router-devtools") === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 // Dev only: production builds drop the import with this branch.
-const RouterDevtools = import.meta.env.DEV
-  ? lazy(() =>
-      import("@tanstack/react-router-devtools").then((m) => ({
-        default: m.TanStackRouterDevtools,
-      })),
-    )
-  : undefined;
+const RouterDevtools =
+  import.meta.env.DEV && routerDevtoolsEnabled()
+    ? lazy(() =>
+        import("@tanstack/react-router-devtools").then((m) => ({
+          default: m.TanStackRouterDevtools,
+        })),
+      )
+    : undefined;
 
 export const Router = () => {
   const store = usePHStore() ?? ensurePHStore();

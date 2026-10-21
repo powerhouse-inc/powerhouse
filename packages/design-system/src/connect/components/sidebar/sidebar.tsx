@@ -39,10 +39,23 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
   ...props
 }) => {
   return (
-    <Sidebar {...props} maxWidth={maxWidth} minWidth={minWidth}>
-      <SidebarPanel>
-        <ConnectSidebarHeader>{headerContent}</ConnectSidebarHeader>
-        <div className="flex flex-col">{props.children}</div>
+    // AppLayout makes it a bar under the page on a phone, however it's wrapped.
+    <Sidebar
+      {...props}
+      data-connect-sidebar=""
+      maxWidth={maxWidth}
+      minWidth={minWidth}
+    >
+      <SidebarPanel className="max-sm:flex max-sm:overflow-x-auto max-sm:overflow-y-hidden">
+        <ConnectSidebarHeader className="max-sm:hidden">
+          {headerContent}
+        </ConnectSidebarHeader>
+        <nav
+          aria-label="Drives and pages"
+          className="flex flex-col max-sm:flex-row"
+        >
+          {props.children}
+        </nav>
       </SidebarPanel>
       <ConnectSidebarFooter
         address={address}

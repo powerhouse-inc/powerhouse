@@ -51,7 +51,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col items-center gap-3 border-t border-sidebar-border px-2 py-4 dark:border-none",
+        "flex flex-col items-center gap-3 border-t border-sidebar-border px-2 py-4 max-sm:flex-row max-sm:border-t-0 max-sm:border-l max-sm:py-2 dark:border-none",
         className,
       )}
     >
@@ -80,7 +80,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           <Icon className="text-foreground" name="Tube" />
         </button>
       )}
-      <div className={onHomeClick ? "mt-3" : ""}>
+      <div className={onHomeClick ? "mt-3 max-sm:mt-0" : ""}>
         {address ? (
           <SidebarUser
             address={address}
