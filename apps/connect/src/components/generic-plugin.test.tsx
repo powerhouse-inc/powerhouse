@@ -92,7 +92,12 @@ async function mount(path: string, composition?: { module: string }[]) {
 }
 
 const settingsTabLabels = async () => {
-  const nav = await screen.findByRole("navigation", { name: "Settings" });
+  // The settings route loads lazily, which takes over a second on Windows CI.
+  const nav = await screen.findByRole(
+    "navigation",
+    { name: "Settings" },
+    { timeout: 10_000 },
+  );
   await vi.waitFor(() => expect(nav.querySelector("a")).toBeTruthy());
   return Array.from(within(nav).getAllByRole("link")).map((a) => a.textContent);
 };
