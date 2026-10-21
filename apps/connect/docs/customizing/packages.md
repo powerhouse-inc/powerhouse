@@ -12,6 +12,7 @@ A package's `hosts/connect/routes/` also adds routes to every Connect that loads
 - Bundled packages (`ph install --local`, `provider: "local"`) register in a production build through the page's import map, as on the dev server.
 - An offered route imports `@powerhousedao/connect-core` (`ContentOutlet`, `useDriveRouteData`, `RouteSelection`, `ModalDialog`), `@tanstack/react-router` and `@powerhousedao/reactor-browser`, which Connect shares with packages. `@powerhousedao/connect` is not shared, so `ph build` fails, naming the file, if an offered route imports it, or reaches a module that does. The rest of the package gets a warning: its build would bundle a copy of the Connect modules it uses, apart from the app's state.
 - The project's own package is the exception: its host build already has its routes.
+- The package's stylesheet styles its routes, as it does its editors; see [A package's styles](./styles-and-branding.md#a-packages-styles).
 
 ## Register routes from code
 
@@ -34,5 +35,5 @@ registerConnectRoutes(({ settingsRoute }) => [
 
 - It returns the unregister.
 - A route at a path a route already serves is skipped with a warning.
-- Core's views are styled with Tailwind classes and `theme.css` tokens (`bg-core-bg`, `text-core-fg`, ...). Core ships no compiled CSS: its host builds with Tailwind 4 and imports `@powerhousedao/connect-core/theme.css`, which defines the tokens and makes Tailwind scan core's sources. `@powerhousedao/connect/tailwind.css` does this; see [Styles](./styles-and-branding.md#styles).
+- Core's views are styled with Tailwind classes and `theme.css` tokens (`bg-core-bg`, `text-core-fg`, ...). Core ships no compiled CSS: its host builds with Tailwind 4 and imports `@powerhousedao/connect-core/tailwind.css`, which imports the tokens (`theme.css`) and makes Tailwind scan core's sources. `@powerhousedao/connect/tailwind.css` does this; see [Styles](./styles-and-branding.md#styles).
 
