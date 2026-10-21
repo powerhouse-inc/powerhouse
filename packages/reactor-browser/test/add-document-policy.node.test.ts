@@ -4,10 +4,12 @@ import type {
   PHDocument,
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import type { NewDocumentOptions } from "@powerhousedao/reactor";
 import {
   baseCreateDocument,
   createBaseState,
   hasDerivedDocumentId,
+  headNewDocument,
   isDerivedDocumentId,
   signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
@@ -35,16 +37,12 @@ function install(
     },
   } as unknown as DocumentModelModule;
   const client = {
-    getCreateSignaturePolicy: () => Promise.resolve(policy),
-    getCreateProtocolVersions: ({
-      parentIdentifier,
-    }: {
-      parentIdentifier?: string;
-    }) => {
-      selectedFor.push(parentIdentifier);
-      return Promise.resolve({ "base-reducer": 3 });
+    newDocument: (_type: string, options?: NewDocumentOptions) => {
+      selectedFor.push(options?.parentIdentifier);
+      return Promise.resolve(
+        headNewDocument(module, options, policy, { "base-reducer": 3 }),
+      );
     },
-    getDocumentModelModule: () => Promise.resolve(module),
     drives: {
       addFile: (_driveId: string, document: PHDocument) => {
         added.push(document);

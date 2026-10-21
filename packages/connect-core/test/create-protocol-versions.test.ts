@@ -91,8 +91,9 @@ async function remoteConnect(
           }),
         };
       }
-      const documentType = (body.variables as { documentType?: string })
-        ?.documentType;
+      const documentType = (
+        body.variables as { documentType?: string } | undefined
+      )?.documentType;
       return asksDefaults
         ? data({
             createDefaults: {
