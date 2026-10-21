@@ -9,6 +9,7 @@ import type {
 import {
   createPresignedHeader,
   createReducer,
+  generateActionId,
   generateId,
   hashDocumentStateForScope,
   retract,
@@ -112,7 +113,7 @@ const upgradeManifest: UpgradeManifest<readonly [1, 2]> = {
 
 function action(type: string, entry?: string): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type,
     input: entry === undefined ? {} : { entry },
     scope: "global",
@@ -209,8 +210,9 @@ describe("base-reducer 3 across a model upgrade", () => {
   });
 
   it("undo targets the last row its own version applied", async () => {
+    const a = action("LOG", "a");
     const old = action("OLD");
-    const documentId = await upgradedDocument([action("LOG", "a"), old]);
+    const documentId = await upgradedDocument([a, old]);
 
     await run(documentId, [
       await authorRetraction(module!.reactor, documentId),
@@ -269,8 +271,8 @@ describe("base-reducer 3 across a model upgrade", () => {
   });
 
   it("a write after the upgrade re-derives on both sides of it", async () => {
-    const c = action("LOG", "c");
     const documentId = await upgradedDocument([action("LOG", "a")]);
+    const c = action("LOG", "c");
     await run(documentId, [c, action("LOG", "d")]);
 
     await run(documentId, [retract(c.id)]);

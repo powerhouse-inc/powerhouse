@@ -280,9 +280,9 @@ describe("base-reducer 3: RETRACT admission", () => {
   it("never batches a RETRACT", async () => {
     await build();
     const applies = globalApplies();
-    const a = add("a");
 
     await executeOk([add("b"), add("c")]);
+    const a = add("a");
     await executeOk([a, retract(a.id)]);
 
     expect(applies.map((ids) => ids.length)).toEqual([2, 1, 1]);
@@ -292,7 +292,11 @@ describe("base-reducer 3: RETRACT admission", () => {
   it("applies a batch one write at a time when a stored RETRACT names a later write", async () => {
     await build();
     await executeOk([add("a")]);
-    const x = add("x");
+    // After the loaded RETRACT and c, so the job appends rather than reshuffles.
+    const x = {
+      ...add("x"),
+      timestampUtcMs: new Date(Date.now() + 60_000).toISOString(),
+    };
     expect((await load([asOperation(retract(x.id), 1)])).status).toBe(
       JobStatus.READ_READY,
     );

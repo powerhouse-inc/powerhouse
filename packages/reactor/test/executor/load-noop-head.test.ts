@@ -230,12 +230,11 @@ describe("base-reducer 3", () => {
 
       await execute([at("x", -20_000)]);
       await execute([at("w", -10_000)]);
-      // After the RETRACT's stamp, so the RETRACT sorts first, not y.
+      // Backdated, so the executor positions it ahead of x and w.
       await execute([at("y", -50_000)]);
+      // Stamped before every row, so the local RETRACT heads its reshuffle.
       await execute([await authorRetraction(module!.reactor, docId)]);
-      expect(ids(await module.reactor.get(docId))).toEqual(["x", "w"]);
-
-      // The rewind reaches the live RETRACT, which sorts first and takes skip 4.
+      expect(ids(await module.reactor.get(docId))).toEqual(["y", "x"]);
 
       const z = at("z", -30_000);
       const loaded = await settle(
@@ -254,12 +253,12 @@ describe("base-reducer 3", () => {
 
       const stored = await storedRows(module, docId);
       expect(shape(stored)).toBe(
-        "0:x/0 1:w/0 2:y/0 3:RETRACT(y)/0 4:RETRACT(y)/4 5:y/0 6:z/0 7:x/0 8:w/0",
+        "0:x/0 1:w/0 2:y/2 3:x/0 4:w/0 5:RETRACT(w)/5 6:y/0 7:x/0 8:w/0 9:z/2 10:x/0 11:w/0",
       );
       const intended = appliedOperations(stored).map(
         (operation) => (operation.action.input as { id: string }).id,
       );
-      expect(intended).toEqual(["z", "x", "w"]);
+      expect(intended).toEqual(["y", "z", "x"]);
       await assertOneRuleAgreement({ module, document: created });
     });
   });

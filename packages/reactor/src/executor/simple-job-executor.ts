@@ -2598,16 +2598,20 @@ export class SimpleJobExecutor implements IJobExecutor {
       evaluatedByPosition: false,
     });
 
-    if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
+    if (job.actions.length === 0) {
       return plain();
     }
 
+    const caps = storedProtocol.caps;
+    const canonical = caps?.tieOrder === "canonical";
+    // v1/v2 keep main's flag-off append; v3 is positioned whatever the flag.
+    if (!canonical && !this.featureFlags.documentDecisions) {
+      return plain();
+    }
     // A create has nothing stored to order against.
     if (storedProtocol.unreadable) {
       throw storedProtocol.unreadable;
     }
-    const caps = storedProtocol.caps;
-    const canonical = caps?.tieOrder === "canonical";
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"

@@ -19,6 +19,7 @@ import type { InProcessReactorModule } from "../../src/core/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
   createBaseReducer3Document,
+  createDocModelDocument,
   createUndoV3ReactorBuilder,
   undoV3Flags,
 } from "../factories.js";
@@ -36,12 +37,12 @@ describe("base-reducer 3 timestamp ties", () => {
     for (const module of live.splice(0)) module.reactor.kill();
   });
 
-  async function build(maxSkipThreshold?: number) {
+  async function build(maxSkipThreshold?: number, documentDecisions = true) {
     const module = await createUndoV3ReactorBuilder({
       modules: [driveDocumentModelModule],
     })
       .withExecutorConfig({
-        featureFlags: undoV3Flags({ documentDecisions: true }),
+        featureFlags: undoV3Flags({ documentDecisions }),
         ...(maxSkipThreshold === undefined ? {} : { maxSkipThreshold }),
       })
       .withWriteCacheConfig({ keyframeInterval: 2 })
@@ -209,6 +210,64 @@ describe("base-reducer 3 timestamp ties", () => {
       a: expected,
       b: expected,
     });
+  });
+
+  for (const [origin, replica] of [
+    [false, true],
+    [true, false],
+  ]) {
+    it(`stores a job canonically at an origin with documentDecisions ${origin}, as a replica with ${replica} does`, async () => {
+      const a = await build(undefined, origin);
+      const b = await build(undefined, replica);
+      const docId = await shared(a, b);
+
+      await ok(a, await a.reactor.execute(docId, "main", [at("p", 10)]));
+      // Backdated, and tied within the job with the higher id first.
+      await ok(
+        a,
+        await a.reactor.execute(docId, "main", [
+          at("a1", 5, HIGH_ID),
+          at("a2", 5, LOW_ID),
+        ]),
+      );
+      await ok(
+        b,
+        await b.reactor.load(docId, "main", await storedRows(a, docId)),
+      );
+
+      const order = ["a2", "a1", "p"];
+      const expected = { positional: order, modules: order };
+      expect({ a: await view(a, docId), b: await view(b, docId) }).toEqual({
+        a: expected,
+        b: expected,
+      });
+    });
+  }
+
+  it("keeps a v2 backdated job at the tail at a documentDecisions-off origin, as main does", async () => {
+    const orders: string[][] = [];
+    for (const documentDecisions of [false, true]) {
+      const module = await build(undefined, documentDecisions);
+      const document = createDocModelDocument({
+        signaturePolicy: "legacy",
+        protocolVersions: { "base-reducer": 2 },
+      });
+      await ok(module, await module.reactor.create(document));
+      const docId = document.header.id;
+      await ok(
+        module,
+        await module.reactor.execute(docId, "main", [at("p", 10)]),
+      );
+      await ok(
+        module,
+        await module.reactor.execute(docId, "main", [at("b", 5)]),
+      );
+      orders.push((await view(module, docId)).positional);
+    }
+    expect(orders).toEqual([
+      ["p", "b"],
+      ["b", "p"],
+    ]);
   });
 
   // Submitted ids on either side of the stored rows.
