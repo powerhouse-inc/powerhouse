@@ -54,6 +54,7 @@ export default defineConfig({
       "document-model/peer-agreement.test.ts",
       "document-model/purge.test.ts",
       "document-model/purge-replay.test.ts",
+      "document-model/reducer-rewind.test.ts",
       "document-model/retraction.test.ts",
       "document-model/retraction.property.test.ts",
       "document-model/retraction-replay.test.ts",

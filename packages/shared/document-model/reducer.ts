@@ -487,8 +487,9 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   };
   let reuseLastOperationIndex = false;
 
+  // A skip in a scope no rule derives is a rewind the reducer applies.
   const shouldProcessSkipOperation =
-    protocolVersion !== 3 && !ignoreSkipOperations && skipValue > 0;
+    !derivesByRule && !ignoreSkipOperations && skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
