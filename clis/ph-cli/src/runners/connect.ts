@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_STUDIO_PORT,
   type PHConnectCompositionEntry,
   type PHConnectDefaultDrive,
@@ -258,7 +259,11 @@ export async function build(
   const { runConnectBuild } = await import("../services/connect-build.js");
   const runner = host.runner;
   const args: Partial<ConnectBuildArgs> = {
-    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+    // Classic `ph connect`'s default: `dist/` is the package `ph build` writes.
+    outDir:
+      typeof runner.outDir === "string"
+        ? runner.outDir
+        : DEFAULT_CONNECT_OUTDIR,
   };
   // The host's config bakes in: its title, favicon, manifest, base path and loading shell.
   await runConnectBuild(
@@ -287,7 +292,10 @@ export async function serve(
       typeof runner.port === "number"
         ? runner.port
         : DEFAULT_CONNECT_STUDIO_PORT,
-    outDir: typeof runner.outDir === "string" ? runner.outDir : "dist",
+    outDir:
+      typeof runner.outDir === "string"
+        ? runner.outDir
+        : DEFAULT_CONNECT_OUTDIR,
     open: runner.openBrowser === true,
     strictPort: runner.strictPort === true,
     cors: true,
