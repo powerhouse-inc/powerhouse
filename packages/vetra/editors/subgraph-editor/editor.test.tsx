@@ -1,12 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
-  useSelectedSubgraphModuleDocument: vi.fn(),
-}));
+// What the host passes the editor: its document and dispatch.
+let hosted: [unknown, unknown] = [undefined, undefined];
+const setHosted = (value: unknown[]) => {
+  hosted = value as [unknown, unknown];
+};
+const props = () => ({
+  document: hosted[0] as never,
+  dispatch: hosted[1] as never,
+});
 
 vi.mock("@powerhousedao/design-system/connect", () => ({
   DocumentToolbar: () => null,
@@ -21,7 +26,7 @@ describe("SubgraphModule Editor", () => {
 
   beforeEach(() => {
     mockDispatch = vi.fn();
-    vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+    setHosted([
       {
         state: {
           global: {
@@ -36,7 +41,7 @@ describe("SubgraphModule Editor", () => {
 
   describe("Core Rendering", () => {
     it("should render all main form sections and labels", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("Subgraph Configuration")).toBeInTheDocument();
       expect(screen.getByText("Subgraph Name")).toBeInTheDocument();
@@ -44,7 +49,7 @@ describe("SubgraphModule Editor", () => {
     });
 
     it("should display existing subgraph data when document has values", () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -56,7 +61,7 @@ describe("SubgraphModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByDisplayValue("test-subgraph")).toBeInTheDocument();
     });
@@ -65,7 +70,7 @@ describe("SubgraphModule Editor", () => {
   describe("Subgraph Name Input", () => {
     it("should dispatch setSubgraphName when name changes (debounced)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       await user.type(nameInput, "new-subgraph");
@@ -84,7 +89,7 @@ describe("SubgraphModule Editor", () => {
     });
 
     it("should dispatch when clearing a non-empty field", async () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -97,7 +102,7 @@ describe("SubgraphModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       await user.clear(nameInput);
@@ -116,7 +121,7 @@ describe("SubgraphModule Editor", () => {
     });
 
     it("should NOT dispatch when typing identical value without clearing", async () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -129,7 +134,7 @@ describe("SubgraphModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       await user.tripleClick(nameInput);
@@ -142,7 +147,7 @@ describe("SubgraphModule Editor", () => {
 
     it("should NOT dispatch when both old and new values are empty", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       await user.click(nameInput);
@@ -156,7 +161,7 @@ describe("SubgraphModule Editor", () => {
 
   describe("Confirm Button", () => {
     it("should dispatch setSubgraphStatus when confirm clicked", async () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -169,7 +174,7 @@ describe("SubgraphModule Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       await user.click(confirmButton);
@@ -183,14 +188,14 @@ describe("SubgraphModule Editor", () => {
     });
 
     it("should be disabled when subgraph name is empty", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.getByText("Confirm");
       expect(confirmButton).toBeDisabled();
     });
 
     it("should be hidden when status is CONFIRMED", () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -202,7 +207,7 @@ describe("SubgraphModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const confirmButton = screen.queryByText("Confirm");
       expect(confirmButton).not.toBeInTheDocument();
@@ -211,7 +216,7 @@ describe("SubgraphModule Editor", () => {
 
   describe("Read-only Mode", () => {
     it("should disable form field when status is CONFIRMED", () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -223,7 +228,7 @@ describe("SubgraphModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       expect(nameInput).toBeDisabled();
@@ -234,7 +239,7 @@ describe("SubgraphModule Editor", () => {
     });
 
     it("should enable form field when status is DRAFT", () => {
-      vi.mocked(useSelectedSubgraphModuleDocument).mockReturnValue([
+      setHosted([
         {
           state: {
             global: {
@@ -246,7 +251,7 @@ describe("SubgraphModule Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Subgraph Name");
       expect(nameInput).not.toBeDisabled();

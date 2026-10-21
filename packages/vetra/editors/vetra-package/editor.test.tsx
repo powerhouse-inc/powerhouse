@@ -1,12 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
-vi.mock("../hooks/useVetraDocument.js", () => ({
-  useSelectedDriveVetraPackage: vi.fn(),
-}));
+// What the host passes the editor: the package document and its dispatch.
+let hosted: [unknown, unknown] = [undefined, undefined];
+const setPackage = (value: unknown[]) => {
+  hosted = value as [unknown, unknown];
+};
+const props = () => ({
+  document: hosted[0] as never,
+  dispatch: hosted[1] as never,
+});
 
 vi.mock("@powerhousedao/design-system/connect", () => ({
   DocumentToolbar: () => null,
@@ -21,7 +26,7 @@ describe("VetraPackage Editor", () => {
 
   beforeEach(() => {
     mockDispatch = vi.fn();
-    vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+    setPackage([
       {
         state: {
           global: {
@@ -44,7 +49,7 @@ describe("VetraPackage Editor", () => {
 
   describe("Core Rendering", () => {
     it("should render all main form sections and labels", () => {
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("Name")).toBeInTheDocument();
       expect(screen.getByText("Description")).toBeInTheDocument();
@@ -59,7 +64,7 @@ describe("VetraPackage Editor", () => {
 
   describe("Initial Data Display", () => {
     it("should display existing package data when document has values", () => {
-      vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+      setPackage([
         {
           state: {
             global: {
@@ -82,7 +87,7 @@ describe("VetraPackage Editor", () => {
         mockDispatch,
       ] as any);
 
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByDisplayValue("test-package")).toBeInTheDocument();
       expect(screen.getByDisplayValue("A test package")).toBeInTheDocument();
@@ -105,7 +110,7 @@ describe("VetraPackage Editor", () => {
   describe("Text Input Fields - Dispatch Verification", () => {
     it("should dispatch setPackageName when name changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Name");
       await user.type(nameInput, "new-package");
@@ -125,7 +130,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch setPackageDescription when description changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const descriptionInput = screen.getByLabelText("Description");
       await user.type(descriptionInput, "New description");
@@ -145,7 +150,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch setPackageAuthorName when publisher changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const publisherInput = screen.getByLabelText("Publisher");
       await user.type(publisherInput, "Acme Corp");
@@ -165,7 +170,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch setPackageAuthorWebsite when publisher URL changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const publisherUrlInput = screen.getByLabelText("Publisher URL");
       await user.type(publisherUrlInput, "https://acme.com");
@@ -185,7 +190,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch setPackageGithubUrl when Github repository changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const githubInput = screen.getByLabelText("Github Repository");
       await user.type(githubInput, "https://github.com/acme/test");
@@ -205,7 +210,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch setPackageNpmUrl when NPM package changes", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const npmInput = screen.getByLabelText("NPM-package");
       await user.type(npmInput, "https://npmjs.com/package/acme");
@@ -226,7 +231,7 @@ describe("VetraPackage Editor", () => {
 
   describe("Conditional Dispatch Logic", () => {
     it("should dispatch when clearing a non-empty field", async () => {
-      vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+      setPackage([
         {
           state: {
             global: {
@@ -244,7 +249,7 @@ describe("VetraPackage Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Name");
       await user.clear(nameInput);
@@ -263,7 +268,7 @@ describe("VetraPackage Editor", () => {
     });
 
     it("should NOT dispatch when typing identical value without clearing", async () => {
-      vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+      setPackage([
         {
           state: {
             global: {
@@ -281,7 +286,7 @@ describe("VetraPackage Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Name");
       // Simulate user selecting all text and typing the same value
@@ -295,7 +300,7 @@ describe("VetraPackage Editor", () => {
 
     it("should NOT dispatch when both old and new values are empty", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Name");
       await user.click(nameInput);
@@ -310,7 +315,7 @@ describe("VetraPackage Editor", () => {
   describe("Category Selection", () => {
     it("should dispatch category change immediately (no debounce)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const categorySelect = screen.getByLabelText("Category");
       await user.selectOptions(categorySelect, "Productivity");
@@ -328,7 +333,7 @@ describe("VetraPackage Editor", () => {
   describe("Debounce Behavior", () => {
     it("should debounce text input changes (300ms delay)", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const nameInput = screen.getByLabelText("Name");
 
@@ -356,7 +361,7 @@ describe("VetraPackage Editor", () => {
   describe("Keywords Management", () => {
     it("should add keyword on Enter with valid input", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const keywordInput = screen.getByPlaceholderText(
         "Type a keyword and press Enter",
@@ -376,7 +381,7 @@ describe("VetraPackage Editor", () => {
 
     it("should NOT add empty or whitespace-only keyword", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       const keywordInput = screen.getByPlaceholderText(
         "Type a keyword and press Enter",
@@ -392,7 +397,7 @@ describe("VetraPackage Editor", () => {
     });
 
     it("should display keywords and allow removal", async () => {
-      vi.mocked(useSelectedDriveVetraPackage).mockReturnValue([
+      setPackage([
         {
           state: {
             global: {
@@ -413,7 +418,7 @@ describe("VetraPackage Editor", () => {
       ] as any);
 
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       expect(screen.getByText("react")).toBeInTheDocument();
       expect(screen.getByText("typescript")).toBeInTheDocument();
@@ -435,7 +440,7 @@ describe("VetraPackage Editor", () => {
 
     it("should dispatch addKeyword action with correct payload", async () => {
       const user = userEvent.setup();
-      render(<Editor />);
+      render(<Editor {...props()} />);
 
       // Add keyword
       const keywordInput = screen.getByPlaceholderText(

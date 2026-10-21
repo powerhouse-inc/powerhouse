@@ -1,7 +1,9 @@
-import {
-  showDeleteNodeModal,
-  useSelectedDocumentId,
-} from "@powerhousedao/reactor-browser";
+import { showDeleteNodeModal } from "@powerhousedao/reactor-browser";
+import type { EditorProps } from "document-model";
+import type {
+  ConnectionAction,
+  ConnectionDocument,
+} from "document-models/connection";
 import {
   isReactorConnectorId,
   useSelectedConnectionDocument,
@@ -78,10 +80,11 @@ function ConnectionEditor() {
 
 // A drive node can point at a document the reactor cannot serve; the document
 // hooks throw for it. The boundary keeps that failure inside the editor pane.
-export default function Editor() {
-  const documentId = useSelectedDocumentId();
+export default function Editor({
+  document,
+}: EditorProps<ConnectionDocument, ConnectionAction>) {
   return (
-    <DocumentErrorBoundary documentId={documentId}>
+    <DocumentErrorBoundary documentId={document.header.id}>
       <WorkflowRuntimeProvider>
         <ConnectionEditor />
       </WorkflowRuntimeProvider>

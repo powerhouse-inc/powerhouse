@@ -1,17 +1,23 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
+import type { EditorProps } from "@powerhousedao/shared/document-model";
+import type {
+  SubgraphModuleAction,
+  SubgraphModuleDocument,
+} from "../../document-models/subgraph-module/index.js";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import {
   setSubgraphName,
   setSubgraphStatus,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { useCallback } from "react";
-import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 import { editorConfig } from "./config.js";
 
-export default function Editor() {
+export default function Editor({
+  document,
+  dispatch,
+}: EditorProps<SubgraphModuleDocument, SubgraphModuleAction>) {
   useSetPHDocumentEditorConfig(editorConfig);
-  const [document, dispatch] = useSelectedSubgraphModuleDocument();
 
   const onNameChange = useCallback(
     (name: string) => {
@@ -27,7 +33,7 @@ export default function Editor() {
 
   return (
     <div className="bg-background p-6">
-      <DocumentToolbar />
+      <DocumentToolbar document={document} />
       <SubgraphEditorForm
         subgraphName={document.state.global.name ?? ""}
         status={document.state.global.status}

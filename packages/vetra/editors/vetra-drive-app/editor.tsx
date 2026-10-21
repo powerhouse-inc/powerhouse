@@ -3,22 +3,25 @@ import {
   showCreateDocumentModal,
   showDeleteNodeModal,
   useDocumentModelModules,
-  useSelectedDrive,
   useSetPHAppConfig,
   useSetSelectedNode,
 } from "@powerhousedao/reactor-browser";
-import type { FileNode } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentDriveAction,
+  DocumentDriveDocument,
+  FileNode,
+} from "@powerhousedao/shared/document-drive";
 import type { EditorProps } from "@powerhousedao/shared/document-model";
 import { useCallback } from "react";
 import { editorConfig } from "./config.js";
 import { DOCUMENT_TYPES } from "./document-types.js";
 import { DriveExplorer } from "./DriveExplorer.js";
 
-export function BaseEditor(props: EditorProps) {
-  const { children } = props;
-  const setSelectedNode = useSetSelectedNode();
+type DriveAppProps = EditorProps<DocumentDriveDocument, DocumentDriveAction>;
 
-  const [document] = useSelectedDrive();
+export function BaseEditor(props: DriveAppProps) {
+  const { children, document } = props;
+  const setSelectedNode = useSetSelectedNode();
 
   const driveId = document.header.id;
   const driveName = document.state.global.name ?? "";
@@ -118,7 +121,7 @@ export function BaseEditor(props: EditorProps) {
   );
 }
 
-export default function Editor(props: EditorProps) {
+export default function Editor(props: DriveAppProps) {
   useSetPHAppConfig(editorConfig);
   return <BaseEditor {...props} />;
 }
