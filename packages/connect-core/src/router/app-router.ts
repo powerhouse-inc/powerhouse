@@ -23,7 +23,7 @@ export function getConnectAppRouter(
   const registry = getConnectRegistry();
   const current = registry.app;
   if (current) {
-    if (import.meta.env.DEV && current.store !== store) {
+    if (import.meta.env?.DEV && current.store !== store) {
       throw new Error("Connect's router is already bound to another PH store");
     }
     return current.bundle;
