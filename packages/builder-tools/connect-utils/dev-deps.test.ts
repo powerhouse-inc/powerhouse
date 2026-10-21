@@ -47,9 +47,15 @@ describe("CONNECT_ROUTE_FILE_DEPS", () => {
   });
 
   it("keeps the route tree out of pre-bundled deps, as live project modules", () => {
-    expect(connectOptimizeDeps([]).rolldownOptions?.external).toEqual([
-      ROUTE_TREE_SPECIFIER,
-      CORE_ROUTE_TREE_SPECIFIER,
-    ]);
+    expect(
+      connectOptimizeDeps("/p", false, []).rolldownOptions?.external,
+    ).toEqual([ROUTE_TREE_SPECIFIER, CORE_ROUTE_TREE_SPECIFIER]);
+  });
+
+  it("scans the project's route files beside index.html", () => {
+    expect(
+      connectOptimizeDeps("/p", "/p/hosts/lab/routes", []).entries,
+    ).toEqual(["index.html", "hosts/lab/routes/**/*.{js,jsx,ts,tsx}"]);
+    expect(connectOptimizeDeps("/p", false, []).entries).toBeUndefined();
   });
 });

@@ -482,7 +482,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
-    optimizeDeps: connectOptimizeDeps(routes.include),
+    optimizeDeps: connectOptimizeDeps(
+      options.dirname,
+      routesDir,
+      routes.include,
+    ),
     plugins: [
       // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
