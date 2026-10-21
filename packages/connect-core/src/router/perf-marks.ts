@@ -24,7 +24,7 @@ let marking = 0;
 let clickedAt: number | undefined;
 
 /** On in dev builds; elsewhere only with the runtime flag. */
-export function routerPerfEnabled(dev: boolean = import.meta.env.DEV) {
+export function routerPerfEnabled(dev = !!import.meta.env?.DEV) {
   if (dev) return true;
   try {
     return (
