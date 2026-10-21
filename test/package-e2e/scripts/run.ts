@@ -161,7 +161,9 @@ async function main(): Promise<void> {
     const workspaceCachebust = workspaceDigest();
     console.log(`workspace digest: ${workspaceCachebust}`);
 
-    step("3/6 Publish todo package + pre-build scaffold image (parallel)");
+    step(
+      "3/6 Publish todo package, boot its Connect studio + pre-build scaffold image (parallel)",
+    );
     // Once workspace packages are in the local registry, the Dockerfile's
     // `scaffold` stage (toolchain + `ph init` with workspace deps) can build
     // in parallel with publish-package.ts (which ph init's, lints, tscs,
@@ -169,6 +171,12 @@ async function main(): Promise<void> {
     // time, so overlapping saves ~80-90s vs the previous sequential flow.
     // Buildkit tags the cached scaffold image so the final docker compose
     // build below reuses it.
+    //
+    // The todo project installs the workspace from the registry's tarballs,
+    // so its `ph connect studio` serves Connect from node_modules, as in every
+    // installed project (the workspace links it, which Vite treats as
+    // source). Booting it in a browser catches a dev server that only works
+    // linked; it overlaps the scaffold build.
     await Promise.all([
       runAsync(
         path.join(ROOT, "node_modules/.bin/tsx"),
@@ -176,6 +184,14 @@ async function main(): Promise<void> {
         ROOT,
         process.env,
         "publish-package",
+      ).then(() =>
+        runAsync(
+          path.join(ROOT, "node_modules/.bin/playwright"),
+          ["test", "-c", "playwright.studio.config.ts", "--reporter=list"],
+          ROOT,
+          process.env,
+          "studio-boot",
+        ),
       ),
       runAsync(
         "docker",
