@@ -26,7 +26,7 @@ import type {
   StreamQuery,
 } from "./types.js";
 import type { WalkStream } from "./walk.js";
-import { walkByPosition } from "./walk.js";
+import { walkByPosition, walkIdOrder } from "./walk.js";
 
 /**
  * A rule version's stream reducers. A stream the rule derives cannot be
@@ -371,7 +371,7 @@ export async function evaluateByPosition<M>(
   const reasons = new Map<string, string | undefined>();
 
   // By hand, because for...of cannot send the verdict back into the generator.
-  const walk = walkByPosition(walked);
+  const walk = walkByPosition(walked, walkIdOrder(walked, target.documentId));
   let step = walk.next(false);
   while (!step.done) {
     const position = step.value;

@@ -7,7 +7,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import type { WalkPosition, WalkStream } from "../../src/decision/walk.js";
-import { walkByPosition } from "../../src/decision/walk.js";
+import { walkByPosition, walkIdOrder } from "../../src/decision/walk.js";
 import { BASE_REDUCER_3_VERSIONS } from "../factories.js";
 
 type Applied = { global: { applied: string[] } };
@@ -102,7 +102,10 @@ function statesBefore(
   deny: (operation: Operation) => boolean = () => false,
 ): Map<string, string[]> {
   const positions: WalkPosition[] = [];
-  const walk = walkByPosition([walked]);
+  const walk = walkByPosition(
+    [walked],
+    walkIdOrder([walked], walked.document.header.id),
+  );
   let step = walk.next(false);
   while (!step.done) {
     positions.push(step.value);

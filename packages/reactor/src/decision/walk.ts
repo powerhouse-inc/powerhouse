@@ -1,13 +1,14 @@
 import type {
+  IdOrder,
   Operation,
   PHDocument,
   ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import {
-  compareActionIds,
   deriveScope,
   derivesByRule,
   garbageCollect,
+  idOrderFor,
   isDenied,
   optionalBaseReducerCapabilities,
   positionalOperations,
@@ -26,6 +27,7 @@ function assertPositionOrder(
   streamKey: string,
   scope: string,
   operations: Operation[],
+  compareIds: IdOrder,
 ): void {
   for (let i = 1; i < operations.length; i++) {
     const previous = operations[i - 1];
@@ -35,6 +37,7 @@ function assertPositionOrder(
       comparePositions(
         { streamKey, scope, operation: previous },
         { streamKey, scope, operation: current },
+        compareIds,
       ) > 0
     ) {
       throw new Error(
@@ -95,6 +98,23 @@ export type WalkPosition = {
 };
 
 /**
+ * The evaluated document's id order, so a v2 document's ties never depend on
+ * whether a v3 stream joined its read set.
+ */
+export function walkIdOrder(
+  streams: readonly WalkStream[],
+  documentId: string,
+): IdOrder {
+  const evaluated =
+    streams.find((stream) => stream.document.header.id === documentId) ??
+    streams[0];
+  return idOrderFor(
+    evaluated &&
+      optionalBaseReducerCapabilities(evaluated.document.header)?.tieOrder,
+  );
+}
+
+/**
  * Visits every operation in the read-set once, in the order their positions
  * fall, and hands back the state each stream held just before it. That state is
  * what a decision at that operation reads.
@@ -108,22 +128,16 @@ export type WalkPosition = {
  * On base-reducer 3 a rule scope ignores stored errors, and a RETRACT or a row
  * an earlier RETRACT names re-derives the stream from the rows walked so far.
  *
+ * `compareIds` breaks a cross-stream tie; see {@link walkIdOrder}.
+ *
  * The consumer sends back whether it refused the operation it was handed: a
  * refusal this pass produced must suppress it the same way a stored one does.
  */
 export function* walkByPosition(
   streams: WalkStream[],
+  compareIds: IdOrder,
 ): Generator<WalkPosition, void, boolean> {
   const rules = new Map<string, RuleState>();
-  // A walk reaching a base-reducer 3 stream breaks ties by code unit; a walk
-  // over older streams only keeps the locale order it always had.
-  const compareIds = streams.some(
-    (stream) =>
-      optionalBaseReducerCapabilities(stream.document.header)?.tieOrder ===
-      "canonical",
-  )
-    ? compareActionIds
-    : undefined;
   const merged = mergeByPosition(
     streams.map((stream) => {
       let operations: Operation[];
@@ -137,7 +151,12 @@ export function* walkByPosition(
       } else {
         operations = garbageCollect(sortOperations([...stream.operations]));
       }
-      assertPositionOrder(stream.streamKey, stream.scope, operations);
+      assertPositionOrder(
+        stream.streamKey,
+        stream.scope,
+        operations,
+        compareIds,
+      );
       return {
         streamKey: stream.streamKey,
         scope: stream.scope,

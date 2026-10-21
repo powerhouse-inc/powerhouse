@@ -1,4 +1,4 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import type { IdOrder, Operation } from "@powerhousedao/shared/document-model";
 import type { StreamQuery } from "./types.js";
 
 /** Identifies a stream within a walk. */
@@ -20,12 +20,6 @@ export type StreamOperations = {
   operations: Operation[];
 };
 
-/** Compares two ids: action ids, then operation ids. */
-export type IdOrder = (a: string, b: string) => number;
-
-/** The base-reducer 1 and 2 id order, which depends on the default locale. */
-export const localeIdOrder: IdOrder = (a, b) => a.localeCompare(b);
-
 /**
  * Orders two operations from different streams by position. Timestamp decides;
  * an equal timestamp puts an auth operation first, and otherwise falls to the
@@ -35,7 +29,7 @@ export const localeIdOrder: IdOrder = (a, b) => a.localeCompare(b);
 export function comparePositions(
   a: PositionedOperation,
   b: PositionedOperation,
-  compareIds: IdOrder = localeIdOrder,
+  compareIds: IdOrder,
 ): number {
   const aTime = Date.parse(a.operation.timestampUtcMs);
   const bTime = Date.parse(b.operation.timestampUtcMs);
@@ -76,7 +70,7 @@ export function comparePositions(
  */
 export function mergeByPosition(
   streams: StreamOperations[],
-  compareIds: IdOrder = localeIdOrder,
+  compareIds: IdOrder,
 ): PositionedOperation[] {
   const merged: PositionedOperation[] = [];
 
