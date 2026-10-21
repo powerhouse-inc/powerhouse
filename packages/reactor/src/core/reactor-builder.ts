@@ -9,7 +9,6 @@ import {
   mergePeerCapabilities,
   PEER_CAPABILITIES,
   refusalFor,
-  selectProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
@@ -1412,12 +1411,6 @@ export class ReactorBuilder {
       catchUp,
       [unsubscribeMarkerEviction],
       [() => processorManager.shutdown()],
-      selectProtocolVersions({
-        capabilities: this.getPeerCapabilities(),
-        flags: featureFlags,
-        members: [],
-      }),
-      this.modelResolver,
       protocolGate,
     );
 

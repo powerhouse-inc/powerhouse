@@ -1,31 +1,22 @@
 import type {
   Action,
-  CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
   Operation,
   PHDocument,
-  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import {
-  FLAGLESS_BASE_REDUCER_VERSION,
-  fitCreateBaseReducer,
-  normalizeDocumentModelVersion,
-  redoTarget,
-  undoTarget,
-} from "@powerhousedao/shared/document-model";
+import { redoTarget, undoTarget } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import { buildCreateActions } from "../client/derivations.js";
 import { scopeDerivation } from "../derivation/index.js";
 import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
   updateRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -54,7 +45,6 @@ import type {
 } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { matchesScope, throwIfAborted } from "../shared/utils.js";
-import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import type {
   DocumentRelationship,
   IDocumentIndexer,
@@ -124,12 +114,6 @@ export class Reactor implements IReactor {
     private readonly disposers: Unsubscribe[] = [],
     // Run last on kill(), once nothing routes to what they close.
     private readonly closers: Array<() => Promise<void>> = [],
-    // A header without versions takes these; the builder passes the flags' choice.
-    private readonly createProtocolVersions: ProtocolVersions = {
-      "base-reducer": FLAGLESS_BASE_REDUCER_VERSION,
-    },
-    // The CREATE gate's resolver, so a headerless create fits a loaded model.
-    private readonly modelResolver?: IDocumentModelResolver,
     // Undo resolution derives the scope; the gate refuses an unrunnable document.
     private readonly protocolGate?: IProtocolGate,
   ) {
@@ -599,55 +583,18 @@ export class Reactor implements IReactor {
 
     throwIfAborted(signal, () => new AbortError());
 
-    if (!document.header.protocolVersions && this.modelResolver) {
-      try {
-        await this.modelResolver.ensureModelLoaded(
-          document.header.documentType,
-        );
-      } catch {
-        // The CREATE gate fails the job.
-      }
+    // Choosing versions is the creating client's job, not the reactor's.
+    if (!document.header.protocolVersions) {
+      throw new Error(
+        `Document ${document.header.id} carries no protocolVersions: build it with IReactorClient.newDocument, or create it through IReactorClient`,
+      );
     }
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions:
-        document.header.protocolVersions ??
-        fitCreateBaseReducer(
-          this.createProtocolVersions,
-          document.header.documentType,
-          this.documentModelRegistry.getAllModules(),
-          this.logger,
-        ),
-    };
-
-    const createAction = createDocumentAction(createInput);
-    const upgradeAction = upgradeDocumentAction({
-      documentId: document.header.id,
-      model: document.header.documentType,
-      fromVersion: 0,
-      // imported documents may predate the document scope entirely
-      toVersion: normalizeDocumentModelVersion(
-        (document.state as Partial<typeof document.state>).document?.version,
-      ),
-      initialState: document.state,
-    });
-
     const branch = document.header.branch || "main";
-    let actions: Action[] = [createAction, upgradeAction];
+    let actions: Action[] = buildCreateActions(
+      document,
+      document.header.protocolVersions,
+    );
     if (signer) {
       actions = await signActions(
         actions,
