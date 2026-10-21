@@ -4,11 +4,13 @@ A project adds pages to Connect with file routes in `hosts/connect/routes/`. A r
 
 ## Add a page
 
-1. Add the router to the project, in the version Connect uses (the `@tanstack/react-router` entry in `@powerhousedao/connect`'s `package.json`):
+1. Add the router to the project, in the version Connect resolves to, so the project and Connect share one router. `@powerhousedao/connect` declares a range (`^1.170.41`); pin the version your lockfile already has, with your package manager:
 
    ```bash
-   pnpm add @tanstack/react-router@1.170.41
+   pnpm add @tanstack/react-router@<version>   # or npm install, bun add
    ```
+
+   A package that offers routes (see [Offer a package's routes](./packages.md#offer-a-packages-routes)) lists it as a `peerDependency`, and as a `devDependency` to build.
 
 2. Create a route file. A file in `_app/` renders inside Connect's layout; its route id starts with `/_app`, and the URL does not:
 
@@ -54,11 +56,12 @@ function Status() {
 Rules:
 
 - Connect reads routes only from `hosts/connect/routes/`.
-- Core routes are `/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings` with its Appearance and Packages tabs, and the catch-all `$`. They live in `@powerhousedao/connect-core`. A file in `_app/` at a core route's path overrides it; see [Override a Connect route](./overrides.md#override-a-connect-route). Any other route at a core route's URL fails the build.
+- Core routes are `/`, `/d/$driveSlug/{-$nodeSlug}`, `/settings` with its Appearance and Packages tabs, and the catch-all `$`. They live in `@powerhousedao/connect-core`. A file in `_app/` at a core route's path overrides it; see [Override a Connect route](./overrides.md#override-a-connect-route). Any other route at a URL Connect serves, e.g. a full page `settings.tsx` outside `_app/`, fails the build and names both files.
 - Files and folders starting with `-` are not routes. Use them for shared components.
 - Route groups, `(name)/`, only organize files.
 - Each route is code-split into its own chunk.
 - Inside a route, navigate with the router's `Link` and `useNavigate`. They are typed with the project's routes and Connect's.
+- A route file's `createFileRoute("…")` id must match its path. While Studio runs, the router's watcher rewrites a mismatched id in the file itself, under your editor; without Studio, `tsc` reports it.
 
 ## Add a sidebar link
 
@@ -115,7 +118,7 @@ export const Route = createFileRoute("/_app/settings/inventory")({
 
 - `icon` and `destructive` are optional.
 - The page title becomes `Settings · Inventory · <app>`. The tab needs no `head`.
-- The generic plugin adds its tabs (Package Manager, Default Editors, Danger Zone, About, AI Assistant) as code routes and hides core's (Appearance, Packages); without it, core's are listed. A project file at a tab's path, e.g. `_app/settings/about.tsx`, replaces that tab; it spreads the tab's options from `genericSettingsTabs` (`@powerhousedao/connect/generic`), e.g. `...genericSettingsTabs.about`, to keep its label, icon and order.
+- The generic plugin adds its tabs (Package Manager, Default Editors, Danger Zone, About, AI Assistant) as code routes and hides core's (Appearance, Packages); without it, core's are listed. A project file at a tab's path, e.g. `_app/settings/about.tsx`, replaces that tab; it spreads the tab's options from `genericSettingsTabs` (`@powerhousedao/connect/generic`), e.g. `...genericSettingsTabs.about`, to keep its label, icon and order. Like an override of Connect's routes, it stays this project's: `ph build` doesn't offer it to other Connects, so it may import `@powerhousedao/connect`.
 
 ## Set the page title
 
