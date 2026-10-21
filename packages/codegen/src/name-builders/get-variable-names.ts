@@ -9,11 +9,12 @@ import { camelCase, kebabCase, pascalCase } from "change-case";
 
 export function getEditorVariableNames({
   documentModelDocumentTypeName,
+  documentModelActionTypeName,
 }: DocumentModelDocumentTypeMetadata) {
   return {
     documentModelDocumentTypeName,
     documentVariableName: camelCase(documentModelDocumentTypeName),
-    useSelectedDocumentHookName: `useSelected${documentModelDocumentTypeName}`,
+    actionTypeName: documentModelActionTypeName,
     documentNameVariableName: `${documentModelDocumentTypeName}Name`,
     dispatchFunctionName: "dispatch",
     onClickEditHandlerName: `onClickEdit${documentModelDocumentTypeName}Name`,
