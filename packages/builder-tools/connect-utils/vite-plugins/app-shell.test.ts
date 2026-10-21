@@ -341,6 +341,59 @@ describe("connectAppShellPlugin", () => {
       rmSync(join(root, "style.css"));
     }
   });
+
+  it("renders a project's shells with Connect's installed packages, whose code reads import.meta.env", async () => {
+    // As npm installs them: core in node_modules, which the renderer's server
+    // would hand to Node, where import.meta.env is undefined.
+    const connect = join(root, "node_modules/@powerhousedao/connect");
+    const core = join(root, "node_modules/@powerhousedao/connect-core");
+    mkdirSync(core, { recursive: true });
+    writeFileSync(
+      join(core, "package.json"),
+      `{"name":"@powerhousedao/connect-core","type":"module","exports":{"./runtime-config":"./runtime-config.js"}}`,
+    );
+    writeFileSync(
+      join(core, "runtime-config.js"),
+      `export const configPath = () => \`\${import.meta.env.BASE_URL}powerhouse.config.json\`;`,
+    );
+    writeFileSync(
+      join(connect, "package.json"),
+      `{"name":"@powerhousedao/connect","exports":{"./prerender":"./prerender.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "prerender.js"),
+      `import { configPath } from "@powerhousedao/connect-core/runtime-config";
+      export async function renderProjectShells() {
+        const shell = (v) => ({
+          body: \`<div data-ph-shell="\${v}"><nav data-config="\${configPath()}"></nav></div>\`,
+          head: \`<style data-ph-shell="\${v}"></style>\`,
+        });
+        return { generic: shell("generic"), core: shell("core") };
+      }`,
+    );
+    writeFileSync(join(root, "style.css"), "");
+    const routeAliases = [{ find: /^never$/, replacement: "never" }];
+    try {
+      const outDir = join(root, "dist-installed");
+      await build({
+        root,
+        logLevel: "silent",
+        build: { outDir, emptyOutDir: true },
+        plugins: [
+          connectAppShellPlugin(root, { composition: [], routeAliases }),
+        ],
+      });
+      const html = readFileSync(join(outDir, "index.html"), "utf8");
+      expect(html).toContain(`data-config="/powerhouse.config.json"`);
+    } finally {
+      writeFileSync(
+        join(connect, "package.json"),
+        `{"name":"@powerhousedao/connect"}`,
+      );
+      rmSync(core, { recursive: true, force: true });
+      rmSync(join(root, "style.css"));
+    }
+  });
 });
 
 describe("the shell's app name", () => {
