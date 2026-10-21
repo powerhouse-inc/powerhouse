@@ -41,6 +41,45 @@ function InventoryDrive() {
 - Without the generic plugin, each of Connect's files shows core's view instead (a header, an index of drives, a directory listing, a JSON view). An override shows the same view either way.
 - `_app.tsx` and `__root.tsx` are not overridden here: a project's `_app.tsx` replaces the layout ([layout.md](./layout.md)), and the root route is Connect's.
 - To hide a route, override it with a `beforeLoad` that throws `notFound()` or `redirect()`.
+- `ph build` and Studio warn about an override that doesn't import its route's `options`: what Connect sets on the route is dropped.
+
+### Build on the home page
+
+`Home` is made of parts that `/generic` exports, so a custom home keeps Connect's drive cards and adds its own:
+
+```tsx
+// hosts/connect/routes/_app/index.tsx
+import {
+  ConnectHomeScreen,
+  HomeAddDriveItem,
+  HomeDriveItem,
+  useVisibleDrives,
+} from "@powerhousedao/connect/generic";
+import { options } from "@powerhousedao/connect/routes/_app/index";
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/")({
+  ...options,
+  component: InventoryHome,
+});
+
+function InventoryHome() {
+  const drives = useVisibleDrives();
+  return (
+    <ConnectHomeScreen>
+      <OpenOrdersCard />
+      {drives?.map((drive) => (
+        <HomeDriveItem key={drive.header.id} drive={drive} />
+      ))}
+      <HomeAddDriveItem />
+    </ConnectHomeScreen>
+  );
+}
+```
+
+- `ConnectHomeScreen` is the grid on the configured `branding.homeBackground`.
+- `useVisibleDrives()` is `useDrives()` without the drives dismissed from the sign-in gate this session.
+- `HomeAddDriveItem` renders nothing where adding drives is turned off.
 
 ## Loading, not found and errors
 

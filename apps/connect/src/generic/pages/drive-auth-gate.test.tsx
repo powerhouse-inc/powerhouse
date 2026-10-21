@@ -94,17 +94,38 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useSelectedFolder: () => undefined,
 }));
 
-import { DriveLayout, Home } from "./content.js";
+import {
+  ConnectHomeScreen,
+  DriveLayout,
+  Home,
+  HomeAddDriveItem,
+  HomeDriveItem,
+} from "./content.js";
+import { useVisibleDrives } from "./use-drive-auth-gate.js";
+
+// A project's own home, from the parts /generic exports.
+function CustomHome() {
+  const drives = useVisibleDrives();
+  return (
+    <ConnectHomeScreen>
+      <div>Today's orders</div>
+      {drives?.map((drive) => (
+        <HomeDriveItem key={drive.header.id} drive={drive} />
+      ))}
+      <HomeAddDriveItem />
+    </ConnectHomeScreen>
+  );
+}
 
 // Home at `/` and the drive layout at `/d`, as Connect's routes render them.
-async function renderContent(path = "/") {
+async function renderContent(path = "/", home = Home) {
   const rootRoute = createRootRoute();
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       createRoute({
         getParentRoute: () => rootRoute,
         path: "/",
-        component: Home,
+        component: home,
       }),
       createRoute({
         getParentRoute: () => rootRoute,
@@ -172,5 +193,23 @@ describe("Drive auth gate wiring", () => {
     expect(screen.queryByText("Refused drive")).toBeNull();
     expect(screen.getByText("Healthy drive")).toBeDefined();
     expect(screen.getByTestId("home-screen")).toBeDefined();
+  });
+
+  it("builds a custom home from Home's parts, which drop a dismissed drive too", async () => {
+    mockDrives.drives = [
+      {
+        header: { id: "drive-refused", name: "Refused drive" },
+        state: { global: { name: "Refused drive" } },
+      },
+      {
+        header: { id: "drive-healthy", name: "Healthy drive" },
+        state: { global: { name: "Healthy drive" } },
+      },
+    ];
+    hideDriveForSession("drive-refused");
+    await renderContent("/", CustomHome);
+    expect(screen.getByTestId("home-screen").textContent).toBe(
+      "Today's ordersHealthy drive",
+    );
   });
 });

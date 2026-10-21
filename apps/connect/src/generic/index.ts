@@ -11,7 +11,15 @@ export {
 } from "./layout/sidebar.js";
 export type { SidebarProps as ConnectSidebarProps } from "./layout/sidebar.js";
 export { OpenDocument } from "./editors/open-document.js";
-export { DriveLayout, Home, NodeView } from "./pages/content.js";
+export {
+  ConnectHomeScreen,
+  DriveLayout,
+  Home,
+  HomeAddDriveItem,
+  HomeDriveItem,
+  NodeView,
+} from "./pages/content.js";
+export { useVisibleDrives } from "./pages/use-drive-auth-gate.js";
 export {
   aiAssistantEnabled,
   SettingsPage,

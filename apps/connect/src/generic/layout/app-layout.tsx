@@ -19,7 +19,8 @@ export function AppLayout({ sidebar }: AppLayoutProps = {}) {
   const showSidebar = !isEmbedded && mode !== "hidden";
   return (
     <div
-      className="flex h-full items-stretch overflow-auto"
+      // On a phone Connect's sidebar, wrapped or not, is a bar under the page; a project's keeps its place.
+      className="flex h-full items-stretch overflow-auto max-sm:has-[>[data-connect-sidebar]]:flex-col-reverse"
       role="presentation"
       tabIndex={0}
     >
