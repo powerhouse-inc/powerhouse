@@ -170,8 +170,9 @@ the full reactor client implement:
 | `execute(identifier, branch, actions, signal?)`   | Fetches the document, stamps and signs a single action, pushes, emits `Updated`.  |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
 | `subscribe(search, callback, view?)`              | Local emissions plus, lazily, the server's.                                       |
-| `undo` / `redo(identifier, scope?, branch?, ...)` | Submits UNDO or REDO; on base-reducer 3 the Switchboard signs the RETRACT.        |
-| `undoRedoAvailability(identifier, scope?, ...)`   | Base-reducer 3 treats a row stored with an error as one that threw.               |
+| `undo` / `redo(identifier, scope?, branch?, ...)` | Submits UNDO or REDO, signed by this client; on base-reducer 3 a RETRACT of the target `undoRedoTargets` resolves. |
+| `undoRedoTargets(identifier, scope?, view?, ...)` | The base-reducer 3 targets, resolved by the Switchboard as the caller.            |
+| `undoRedoAvailability(identifier, scope?, ...)`   | On base-reducer 3, read from `undoRedoTargets`.                                   |
 
 The interface is declared as a `Pick` of the reactor's own `IReactorClient`, so
 the signatures cannot drift.

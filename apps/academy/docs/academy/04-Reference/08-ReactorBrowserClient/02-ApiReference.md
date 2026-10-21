@@ -38,6 +38,7 @@ export interface IReactorBrowserClient extends Pick<
   | "deleteDocument"
   | "undo"
   | "redo"
+  | "undoRedoTargets"
   | "undoRedoAvailability"
 > {}
 ```
@@ -63,9 +64,10 @@ full-reactor versions of those, see
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
-| `undo(identifier, scope?, branch?, signal?)`                  | Submits `UNDO`. On base-reducer 3 the Switchboard resolves it and signs the `RETRACT`, not this client. |
-| `redo(identifier, scope?, branch?, signal?)`                  | Submits `REDO`, resolved and signed the same way.                                                   |
-| `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | Reads the scope's operations. On base-reducer 3 an operation stored with an `error` counts as one that threw. |
+| `undo(identifier, scope?, branch?, signal?)`                  | Submits `UNDO` signed by this client. On base-reducer 3 it asks the Switchboard for the target and submits a `RETRACT` of it, signed by this client. A stale target is refused, not re-resolved. |
+| `redo(identifier, scope?, branch?, signal?)`                  | Submits `REDO`, or on base-reducer 3 a `RETRACT` of the last live retraction, the same way.         |
+| `undoRedoTargets(identifier, scope?, view?, signal?)`         | The rows a base-reducer 3 undo and redo would retract, resolved by the Switchboard as the caller.   |
+| `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | On base-reducer 3, read from `undoRedoTargets`; below it, from the scope's revision.               |
 
 `execute` returns the updated document with the operations this call appended,
 which is how `useDispatch` reports per-action errors: `dispatchActions` scans the

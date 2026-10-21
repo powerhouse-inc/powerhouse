@@ -65,23 +65,52 @@ function page(items: Item[]) {
   };
 }
 
-function clientWith(version: number, global: Item[]) {
+/** A Switchboard serving a document created at `version` whose undo targets are `targets`. */
+function clientWith(
+  version: number,
+  targets: { undoTarget?: string; redoTarget?: string } = {},
+  options: { headerVersions?: boolean; withoutTargetsQuery?: boolean } = {},
+) {
   const create = row(
     0,
     "CREATE_DOCUMENT",
     { protocolVersions: { "base-reducer": version } },
     "document",
   );
+  const served = options.headerVersions
+    ? { ...document, protocolVersions: { "base-reducer": version } }
+    : document;
   const mutated: MutateDocumentWithOperationsResult = {
-    mutateDocument: { ...document, operations: { items: [] } },
+    mutateDocument: { ...served, operations: { items: [] } },
   };
   const sdk = {
-    GetDocument: vi.fn().mockResolvedValue({ document: { document } }),
+    GetDocument: vi.fn().mockResolvedValue({ document: { document: served } }),
     GetDocumentOperations: vi.fn(
       (variables: { filter: { scopes?: string[] } }) =>
         Promise.resolve(
-          page(variables.filter.scopes?.[0] === "document" ? [create] : global),
+          page(variables.filter.scopes?.[0] === "document" ? [create] : []),
         ),
+    ),
+    GetUndoRedoTargets: vi.fn((_variables: unknown) =>
+      options.withoutTargetsQuery
+        ? Promise.reject(
+            Object.assign(new Error("validation"), {
+              response: {
+                errors: [
+                  {
+                    message:
+                      'Cannot query field "undoRedoTargets" on type "Query".',
+                  },
+                ],
+              },
+            }),
+          )
+        : Promise.resolve({
+            undoRedoTargets: {
+              undoTarget: targets.undoTarget ?? null,
+              redoTarget: targets.redoTarget ?? null,
+            },
+          }),
     ),
     RunDocument: vi.fn().mockResolvedValue(mutated),
   };
@@ -93,56 +122,120 @@ function clientWith(version: number, global: Item[]) {
   return { client, sdk };
 }
 
+function sentActions(sdk: ReturnType<typeof clientWith>["sdk"]) {
+  return sdk.RunDocument.mock.calls.map(([options]) => {
+    const variables = (options as RunDocumentOptions)
+      .variables as MutateDocumentWithOperationsVariables;
+    const [action] = variables.actions;
+    return {
+      branch: variables.branch,
+      type: action.type,
+      scope: action.scope,
+      input: action.input,
+    };
+  });
+}
+
 describe("GraphQLReactorClient undo and redo", () => {
-  it("submits UNDO and REDO for the Switchboard to resolve", async () => {
-    const { client, sdk } = clientWith(3, []);
+  it("submits UNDO and REDO below base-reducer 3", async () => {
+    const { client, sdk } = clientWith(2);
 
     await client.undo("doc-1", "local", "draft");
     await client.redo("doc-1");
 
-    const sent = sdk.RunDocument.mock.calls.map(
-      ([options]) =>
-        (options as RunDocumentOptions)
-          .variables as MutateDocumentWithOperationsVariables,
-    );
-    expect(sent.map((variables) => variables.branch)).toEqual([
-      "draft",
-      "main",
-    ]);
-    expect(
-      sent.map((variables) => {
-        const [action] = variables.actions;
-        return [action.type, action.scope];
+    expect(sentActions(sdk)).toEqual([
+      expect.objectContaining({
+        branch: "draft",
+        type: "UNDO",
+        scope: "local",
       }),
+      expect.objectContaining({
+        branch: "main",
+        type: "REDO",
+        scope: "global",
+      }),
+    ]);
+    expect(sdk.GetUndoRedoTargets).not.toHaveBeenCalled();
+  });
+
+  it("signs a RETRACT of the target the Switchboard resolves on base-reducer 3", async () => {
+    const { client, sdk } = clientWith(3, {
+      undoTarget: "global-1",
+      redoTarget: "retract-2",
+    });
+
+    await client.undo("doc-1", "local", "draft");
+    await client.redo("doc-1");
+
+    expect(
+      sdk.GetUndoRedoTargets.mock.calls.map(([variables]) => variables),
     ).toEqual([
-      ["UNDO", "local"],
-      ["REDO", "global"],
+      { documentIdOrSlug: "doc-1", scope: "local", branch: "draft" },
+      { documentIdOrSlug: "doc-1", scope: "global", branch: "main" },
+    ]);
+    expect(sentActions(sdk)).toEqual([
+      {
+        branch: "draft",
+        type: "RETRACT",
+        scope: "local",
+        input: { target: "global-1" },
+      },
+      {
+        branch: "main",
+        type: "RETRACT",
+        scope: "global",
+        input: { target: "retract-2" },
+      },
     ]);
   });
 
-  it("reads base-reducer 3 availability from the stream", async () => {
-    const a = row(0, "ADD", {});
-    const retracted = row(1, "RETRACT", { target: "global-0" });
+  it("reads the version from the header when the Switchboard serves it", async () => {
+    const { client, sdk } = clientWith(
+      3,
+      { undoTarget: "global-1" },
+      { headerVersions: true },
+    );
 
+    await client.undo("doc-1");
+
+    expect(sdk.GetDocumentOperations).not.toHaveBeenCalled();
+    expect(sentActions(sdk)[0].type).toBe("RETRACT");
+  });
+
+  it("refuses an undo with nothing to undo, submitting nothing", async () => {
+    const { client, sdk } = clientWith(3);
+
+    await expect(client.undo("doc-1")).rejects.toThrow(
+      "Cannot undo: nothing to undo in scope history",
+    );
+    expect(sdk.RunDocument).not.toHaveBeenCalled();
+  });
+
+  it("refuses a base-reducer 3 undo on a Switchboard without undoRedoTargets", async () => {
+    const { client } = clientWith(3, {}, { withoutTargetsQuery: true });
+
+    await expect(client.undo("doc-1")).rejects.toMatchObject({
+      name: "GraphQLOperationNotSupportedError",
+    });
+  });
+
+  it("reads base-reducer 3 availability from the resolved targets", async () => {
     expect(
-      await clientWith(3, [a]).client.undoRedoAvailability("doc-1"),
+      await clientWith(3, {
+        undoTarget: "global-0",
+      }).client.undoRedoAvailability("doc-1"),
     ).toEqual({ canUndo: true, canRedo: false });
     expect(
-      await clientWith(3, [a, retracted]).client.undoRedoAvailability("doc-1"),
+      await clientWith(3, {
+        redoTarget: "global-1",
+      }).client.undoRedoAvailability("doc-1"),
     ).toEqual({ canUndo: false, canRedo: true });
   });
 
-  it("treats a row stored with an error as one that threw", async () => {
-    const threw = row(0, "ADD", {}, "global", "already exists");
-
-    expect(
-      await clientWith(3, [threw]).client.undoRedoAvailability("doc-1"),
-    ).toEqual({ canUndo: false, canRedo: false });
-  });
-
   it("reads base-reducer 2 availability from the revision", async () => {
-    expect(
-      await clientWith(2, []).client.undoRedoAvailability("doc-1"),
-    ).toEqual({ canUndo: true, canRedo: false });
+    expect(await clientWith(2).client.undoRedoAvailability("doc-1")).toEqual({
+      canUndo: true,
+      canRedo: false,
+    });
   });
 });

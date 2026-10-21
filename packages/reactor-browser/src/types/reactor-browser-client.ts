@@ -24,5 +24,6 @@ export interface IReactorBrowserClient extends Pick<
   | "deleteDocument"
   | "undo"
   | "redo"
+  | "undoRedoTargets"
   | "undoRedoAvailability"
 > {}

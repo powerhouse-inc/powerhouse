@@ -19,6 +19,7 @@ describe("IReactorBrowserClient", () => {
       | "deleteDocument"
       | "undo"
       | "redo"
+      | "undoRedoTargets"
       | "undoRedoAvailability"
     >();
     expect(true).toBe(true);

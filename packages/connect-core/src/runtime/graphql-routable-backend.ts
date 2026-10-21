@@ -176,6 +176,8 @@ export function createGraphQLRoutableBackend(
       drives.learn(
         await gql.redo<TDocument>(identifier, scope, branch, signal),
       ),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      gql.undoRedoTargets(identifier, scope, view, signal),
     undoRedoAvailability: (identifier, scope, branch, signal) =>
       gql.undoRedoAvailability(identifier, scope, branch, signal),
   };
