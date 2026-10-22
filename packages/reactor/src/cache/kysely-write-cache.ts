@@ -1440,6 +1440,13 @@ export class KyselyWriteCache implements IWriteCache {
     // The base holds one operation per scope; a skip needs them all.
     let needsFullReplay = false;
 
+    // A positional rebuild reads only up to its target: a caller walking a
+    // stream revision by revision would otherwise reload the rest of it each time.
+    const paging =
+      targetRevision !== undefined
+        ? { cursor: "0", limit: Math.max(targetRevision - baseRevision, 1) }
+        : undefined;
+
     try {
       const pagedResults = await this.operationStore.getSince(
         documentId,
@@ -1447,7 +1454,7 @@ export class KyselyWriteCache implements IWriteCache {
         branch,
         baseRevision,
         undefined,
-        undefined,
+        paging,
         signal,
       );
 
