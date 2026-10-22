@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { build, createServer } from "vite";
+import { build, createLogger, createServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   APP_SHELLS_FILE,
@@ -338,6 +338,58 @@ describe("connectAppShellPlugin", () => {
         join(connect, "package.json"),
         `{"name":"@powerhousedao/connect"}`,
       );
+      rmSync(join(root, "style.css"));
+    }
+  });
+
+  it("shows a shell that fails to render on the dev page and logs it as an error, as the build fails on it", async () => {
+    const connect = join(root, "node_modules/@powerhousedao/connect");
+    writeFileSync(
+      join(connect, "package.json"),
+      `{"name":"@powerhousedao/connect","exports":{"./prerender":"./prerender.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "prerender.js"),
+      `export async function renderProjectShells() {
+        throw new Error("window is not defined </script>");
+      }`,
+    );
+    writeFileSync(join(root, "style.css"), "");
+    const errors: string[] = [];
+    const logger = createLogger("silent");
+    logger.error = (message) => void errors.push(message);
+    const server = await createServer({
+      root,
+      customLogger: logger,
+      server: { middlewareMode: true, ws: false },
+      plugins: [
+        connectAppShellPlugin(root, {
+          composition: [],
+          routeAliases: [{ find: /^never$/, replacement: "never" }],
+        }),
+      ],
+    });
+    try {
+      const dev = await server.transformIndexHtml(
+        "/",
+        readFileSync(join(root, "index.html"), "utf8"),
+      );
+      expect(dev).toContain(`import { ErrorOverlay } from "/@vite/client"`);
+      expect(dev).toContain("the build will fail on it");
+      // The message can't close the script it's in.
+      expect(dev).toContain("window is not defined \\u003c/script>");
+      expect(errors).toEqual([
+        expect.stringContaining(
+          "[connect] The loading shell failed to render from the project's routes",
+        ),
+      ]);
+    } finally {
+      await server.close();
+      writeFileSync(
+        join(connect, "package.json"),
+        `{"name":"@powerhousedao/connect"}`,
+      );
+      rmSync(join(connect, "prerender.js"), { force: true });
       rmSync(join(root, "style.css"));
     }
   });
