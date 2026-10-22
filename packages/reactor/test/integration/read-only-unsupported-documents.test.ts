@@ -45,6 +45,11 @@ vi.mock("@powerhousedao/shared/document-model", async (importOriginal) => {
       pretends(header)
         ? actual.capabilitiesOf(2)
         : actual.optionalBaseReducerCapabilities(header),
+    // Reads the version inside shared, past the stubs above.
+    documentDerivesByRule: (header: PHDocumentHeader, scope: string) =>
+      pretends(header)
+        ? actual.derivesByRule(actual.capabilitiesOf(2), scope)
+        : actual.documentDerivesByRule(header, scope),
   };
 });
 
