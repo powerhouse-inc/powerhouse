@@ -53,6 +53,9 @@ function Layout() {
 }
 ```
 
+- The sidebar shows only icons. `title` is the item's tooltip and its accessible name, and `description` is shown in the tooltip under it and read as its description. An item without an `icon` shows the title's first letter.
+- On a phone, `ConnectSidebar` is a bar under the page, with the items in a row. A project's own `sidebar` keeps the place its markup gives it.
+
 A plain `href` makes the browser load the whole app again. Use it for external links only. For a link inside Connect, navigate through the router, as the "Focus" item does, or render the router's `Link`. `isPlainClick` leaves modified clicks (new tab, new window) to the browser.
 
 ## Replace the layout
@@ -65,7 +68,7 @@ A plain `href` makes the browser load the whole app again. Use it for external l
 | `ConnectSidebar` | `/generic` | Connect's sidebar; `extraItems`, `collapsed`. |
 | `SidebarDriveItems` | `/generic` | The drive items and the add-drive item. |
 | `SidebarNavItems` | `/generic` | The `staticData.nav` items. |
-| `SidebarItem` | `/layout` | One sidebar item. |
+| `SidebarItem` | `/layout` | One sidebar item: `title`, `icon`, `description`, `href` or `onClick`. |
 | `useNavRoutes()` | `/layout` | The `staticData.nav` routes, sorted: `{ label, icon, order, routeId, to }`. |
 | `useSidebarMode()` | `/layout` | The current route's `staticData.sidebar`. |
 | `ContentOutlet` | `/layout` | The matched route, in the container whose scroll Connect resets on new pages and restores on back and forward. |
