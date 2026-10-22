@@ -52,6 +52,9 @@ const backends: [string, () => Promise<Setup>][] = [
 ];
 
 const DOC_TYPE = "powerhouse/document-model";
+
+const globalOf = (document: PHDocument): unknown =>
+  (document.state as unknown as { global: unknown }).global;
 const BRANCH = "main";
 
 type Row = { action: Action; skip?: number; deniedReason?: string };
@@ -261,9 +264,7 @@ describe.each(backends)("tail predicate agreement on %s", (_name, create) => {
       const undoRederived = undoDerives === 2;
 
       const expected = await cold(docId);
-      expect(head.state).toMatchObject({
-        global: expected.document.state.global,
-      });
+      expect(globalOf(head)).toEqual(globalOf(expected.document));
       expect(targets).toEqual({
         undoTarget: undoTarget(expected.rows, expected.applied),
         redoTarget: redoTarget(expected.rows, expected.applied),
