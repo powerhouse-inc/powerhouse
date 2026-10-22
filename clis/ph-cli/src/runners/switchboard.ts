@@ -233,7 +233,8 @@ async function start(
   // supervising compound projects it into the connect member's drives.
   if (switchboard?.workflowsEnabled) {
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
-    driveUrls.push(await seedWorkflowsDrive(switchboard.reactor, port));
+    const workflowsUrl = await seedWorkflowsDrive(switchboard.reactor, port);
+    if (workflowsUrl) driveUrls.push(workflowsUrl);
   }
 
   const ready = waitForDrive(driveUrl, 180_000);

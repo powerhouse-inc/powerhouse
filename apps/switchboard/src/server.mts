@@ -1481,12 +1481,14 @@ async function initServer(
         client,
         options.drive,
         serverPort,
+        logger,
       );
     } else {
       defaultDriveUrl = await addDefaultDrive(
         client,
         options.drive,
         serverPort,
+        logger,
       );
     }
   }
