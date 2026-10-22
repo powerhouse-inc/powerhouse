@@ -566,6 +566,62 @@ describe("HypercoreOperationStore", () => {
     });
   });
 
+  describe("findRepeatedOperationIds", () => {
+    const documentType = "powerhouse/test-doc";
+
+    async function append(
+      documentId: string,
+      operations: Operation[],
+      scope = "global",
+      branch = "main",
+    ): Promise<void> {
+      const { revision } = await store.getRevisions(documentId, branch);
+      const from = revision[scope] ?? 0;
+      await store.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        from,
+        (txn) => {
+          txn.addOperations(
+            ...operations.map((operation, i) => ({
+              ...operation,
+              index: from + i,
+            })),
+          );
+        },
+      );
+    }
+
+    it("returns the op ids stored at more than one row of the stream", async () => {
+      const documentId = generateId();
+      const once = makeOp(0);
+      const twice = makeOp(1);
+      await append(documentId, [once, twice]);
+      await append(documentId, [{ ...twice, skip: 1 }]);
+
+      expect(
+        await store.findRepeatedOperationIds(documentId, "global", "main", [
+          once.id,
+          twice.id,
+          "absent",
+        ]),
+      ).toEqual(new Set([twice.id]));
+    });
+
+    it("returns nothing for no ids", async () => {
+      expect(
+        await store.findRepeatedOperationIds(
+          generateId(),
+          "global",
+          "main",
+          [],
+        ),
+      ).toEqual(new Set());
+    });
+  });
+
   describe("getSince", () => {
     it("should get operations since a given revision", async () => {
       const documentId = generateId();
