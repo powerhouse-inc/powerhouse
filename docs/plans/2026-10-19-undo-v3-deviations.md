@@ -486,14 +486,47 @@ The reactor layer test pins every import edge between top-level `src`
 directories (146 today): a new edge fails, and a removed one must leave the
 list.
 
+## Architecture fixes, round 3b (2026-10-22)
+
+The executor's repeated-id gap under `signatureVerification: "log"`.
+
+- A repeated action id changes what applies only when it repeats a stored
+  RETRACT's id: the RETRACT turns inert. A repeat of a named target is
+  caught by `named`, and a content row repeating content derives the same
+  either way. Proved by a seeded property test in shared
+  `retraction-repeat.property.test.ts`.
+- The executor's single-row path, `canBatch` and the batched prefetch decide
+  through `tailAppliesIncrementally`, as the two caches do. `holds` is the
+  set of ids that stored RETRACT rows carry. `applyByRule` takes the same
+  set as `ReducerOptions.retractIds`. Without that option, it reads the set
+  from the document's own rows. The cost is one more indexed query per
+  base-reducer 3 write, issued in parallel with `findReferencing`. A
+  reshuffle's re-appended content rows keep their op ids but are not
+  RETRACTs, so a plain reshuffle still derives the whole scope once.
+- Deviation from the decided mechanism: `holds` does not come from
+  `getOperationsByIds` filtered to RETRACT, because that member keeps only
+  each op id's latest row. Suppose a reshuffle rewinds a content row that
+  repeats a RETRACT's id. That RETRACT is then live again, and the rewound
+  copy is the latest row for the op id. Re-appending the copy would make
+  the RETRACT inert, but a latest-row filter would miss it. The new
+  required `IOperationStore` member, `getAllOperationsByIds`, returns
+  every stored row of the given op ids, rewound rows included, in index
+  order. It stays protocol-free: the executor filters for RETRACT with
+  shared `retractIds`. Kysely chunks it past the bind limit. Hypercore
+  scans the stream.
+- `canBatch` passes empty lookups, so its decision is unchanged. A batch
+  falls back to sequential execution when a later write repeats a stored
+  RETRACT's id. It also falls back when two later writes share an id.
+- The write cache still asks `findRepeatedOperationIds`, a superset that
+  re-derives after a reshuffle. That cost was recorded in round 3 and is
+  not changed here.
+
 ## Known gaps
 
 - A new document has no remote header until the remote controller's first
   push creates it, so an undo before that runs under the local flagless
   header (base-reducer 2) and pushes a NOOP even to a host that creates the
   document at 3.
-- The executor's single-row append does not see a repeated action id under
-  `signatureVerification: "log"` (see round 3).
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
 - The decision walk uses a single reducer on upgraded models.
