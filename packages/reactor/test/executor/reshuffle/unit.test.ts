@@ -223,9 +223,9 @@ describe("Reshuffle Functions", () => {
         [[late], [early]],
       ]) {
         expect(
-          reshuffleByTimestamp({ index: 10, skip: 0 }, a, b, {
-            canonical: true,
-          }).map((op) => op.action.id),
+          reshuffleByTimestamp({ index: 10, skip: 0 }, a, b, "canonical").map(
+            (op) => op.action.id,
+          ),
         ).toEqual(["action-A", "action-B"]);
       }
       expect(
@@ -254,7 +254,7 @@ describe("Reshuffle Functions", () => {
           { index: 10, skip: 0 },
           [other],
           [folder("action-Z", 5, 0)],
-          { canonical: true },
+          "canonical",
         ).map((op) => op.action.id),
       ).toEqual(["action-0", "action-Z"]);
       expect(

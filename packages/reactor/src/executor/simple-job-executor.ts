@@ -17,9 +17,11 @@ import {
   baseReducerCapabilities,
   capabilitiesFor,
   compareCanonical,
+  conflictWindowMovesEveryRow,
   createdCapabilities,
   decide,
   derivesByRule,
+  documentDerivesByRule,
   garbageCollect,
   groupDocumentType,
   isPurgeMarker,
@@ -30,14 +32,16 @@ import {
   isUndoRedo,
   mentionedGroupIds,
   localSupports,
-  optionalBaseReducerCapabilities,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
   positionalOperations,
   retractedActionIds,
   rewritesScope,
   RULE_EXEMPT_SCOPES,
+  skipMayUndo,
   sortOperations,
+  sortsJobsCanonically,
+  tieOrderOf,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -328,11 +332,6 @@ function retractionRefusal(
     return "target-missing";
   }
   return retractedActionIds(rows).has(target) ? "target-retracted" : undefined;
-}
-
-/** Whether the retraction rule derives `scope` of `document`. */
-function documentDerivesByRule(document: PHDocument, scope: string): boolean {
-  return derivesByRule(optionalBaseReducerCapabilities(document.header), scope);
 }
 
 /** A rule write whose scope the reducer re-derives from every row; UNDO and REDO become RETRACTs. */
@@ -1996,7 +1995,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (
       carried === undefined &&
       deniedReason === undefined &&
-      documentDerivesByRule(document, job.scope)
+      documentDerivesByRule(document.header, job.scope)
     ) {
       try {
         targeted = await stores.operationStore.findReferencing(
@@ -2122,7 +2121,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // rebuild would: each row with its own module version's reducer.
       let deriveScope: DeriveScope | undefined;
       if (
-        documentDerivesByRule(document, job.scope) &&
+        documentDerivesByRule(document.header, job.scope) &&
         needsFullHistory(write, targeted ?? new Set())
       ) {
         try {
@@ -2468,7 +2467,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // which the carried slice does not hold.
       if (
         prepared.length === 0 &&
-        documentDerivesByRule(outcome.document, job.scope)
+        documentDerivesByRule(outcome.document.header, job.scope)
       ) {
         try {
           targeted = await executing.stores.operationStore.findReferencing(
@@ -2623,7 +2622,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const caps = storedProtocol.caps;
-    const canonical = caps?.tieOrder === "canonical";
+    const canonical = sortsJobsCanonically(caps);
     // v1/v2 keep main's flag-off append; v3 is positioned whatever the flag.
     if (!canonical && !this.featureFlags.documentDecisions) {
       return plain();
@@ -2813,7 +2812,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
-      { canonical },
+      tieOrderOf(caps),
     );
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
@@ -3220,8 +3219,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
     // its conflict window is the receiver's.
     const caps = stored.caps;
-    const canonical = caps?.tieOrder === "canonical";
-    const skipMayUndo = caps?.skip !== "rewind";
+    const canonical = sortsJobsCanonically(caps);
+    const skipsMayUndo = skipMayUndo(caps);
 
     // Without DCB, we reject entire load jobs. With DCB we are able to
     // accept/deny individual operations.
@@ -3439,7 +3438,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               index: latestRevision + i,
               // A trivial append rewinds nothing.
-              skip: skipMayUndo ? operation.skip : 0,
+              skip: skipsMayUndo ? operation.skip : 0,
             }))
         : reshuffleByTimestamp(
             {
@@ -3451,7 +3450,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               id: operation.id,
             })),
-            { canonical },
+            tieOrderOf(caps),
           );
 
     // A NOOP is the v2 undo marker, and it is only a marker while its skip is
@@ -3473,7 +3472,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const operation of reshuffledOperations) {
       // A local NOOP's target stays behind; a skip would undo another operation.
       if (
-        skipMayUndo &&
+        skipsMayUndo &&
         operation.action.type === "NOOP" &&
         operation.skip === 0 &&
         incomingIds.has(operation.action.id)
@@ -3665,7 +3664,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         continue;
       }
       if (
-        caps?.skip !== "rewind" &&
+        skipMayUndo(caps) &&
         rows.some((row) => supersededBy(row)?.action.type === "NOOP")
       ) {
         undoneActionIds.add(actionId);
@@ -3690,7 +3689,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       // indexes, so order follows the row set and a tie with an incoming row
       // is broken by action id.
       if (
-        caps?.tieOrder !== "canonical" &&
+        !conflictWindowMovesEveryRow(caps) &&
         op.index < predecessorBound &&
         !incomingActionIds.has(op.action.id)
       ) {

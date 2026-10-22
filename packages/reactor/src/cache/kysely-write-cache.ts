@@ -12,8 +12,7 @@ import {
   applyDeleteDocumentAction,
   baseReducerVersion,
   deriveScopeVersioned,
-  derivesByRule,
-  optionalBaseReducerCapabilities,
+  documentDerivesByRule,
   rewritesScope,
   isDenied,
   PURGE_DOCUMENT,
@@ -101,10 +100,6 @@ function rebuildFailure(documentId: string, err: unknown): Error {
     `Failed to rebuild document ${documentId}: ${err instanceof Error ? err.message : String(err)}`,
     { cause: err },
   );
-}
-
-function documentDerivesByRule(document: PHDocument, scope: string): boolean {
-  return derivesByRule(optionalBaseReducerCapabilities(document.header), scope);
 }
 
 /**
@@ -872,7 +867,7 @@ export class KyselyWriteCache implements IWriteCache {
 
     let needsFullReplay = false;
 
-    if (documentDerivesByRule(document, scope)) {
+    if (documentDerivesByRule(document.header, scope)) {
       const versions = scopeVersions(
         this.registry,
         document.header,
@@ -1228,7 +1223,7 @@ export class KyselyWriteCache implements IWriteCache {
     let needsFullReplay = false;
 
     try {
-      if (documentDerivesByRule(document, scope)) {
+      if (documentDerivesByRule(document.header, scope)) {
         const stateReducer = stateReducerOrRefusal(
           module.reducer,
           documentId,

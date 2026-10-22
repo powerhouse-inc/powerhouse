@@ -1,4 +1,8 @@
-import { compareCanonical } from "@powerhousedao/shared/document-model";
+import type { TieOrder } from "@powerhousedao/shared/document-model";
+import {
+  assertNever,
+  compareCanonical,
+} from "@powerhousedao/shared/document-model";
 
 type OperationIndex = {
   index: number;
@@ -48,8 +52,9 @@ export function sortOperations<TOpIndex extends OperationIndex>(
  * for concurrent operations that may have diverged local indices due to prior reshuffles.
  * Logical index and operation ID are then used as deterministic tie-breakers.
  *
- * `canonical` sorts by {@link compareCanonical} instead, which leaves out the
- * logical index: it is replica-local, so two replicas can disagree on its sign.
+ * The `"canonical"` tie order sorts by {@link compareCanonical} instead, which
+ * leaves out the logical index: it is replica-local, so two replicas can
+ * disagree on its sign.
  *
  * Example:
  * [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, 2:0, B3:0, B4:2, B5:0]
@@ -62,58 +67,64 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
   startIndex: { index: number; skip: number },
   opsA: TOp[],
   opsB: TOp[],
-  options: { canonical?: boolean } = {},
+  tieOrder: TieOrder = "rank-locale",
 ): TOp[] {
-  return [...opsA, ...opsB]
-    .sort((a, b) => {
-      if (options.canonical) {
-        return compareCanonical(a, b);
-      }
+  return [...opsA, ...opsB].sort(comparatorFor(tieOrder)).map((op, i) => ({
+    ...op,
+    index: startIndex.index + i,
+    skip: i === 0 ? startIndex.skip : 0,
+  }));
+}
 
-      const timestampDiff =
-        new Date(a.timestampUtcMs).getTime() -
-        new Date(b.timestampUtcMs).getTime();
-      if (timestampDiff !== 0) {
-        return timestampDiff;
-      }
+function comparatorFor(
+  tieOrder: TieOrder,
+): (a: OperationIndex, b: OperationIndex) => number {
+  switch (tieOrder) {
+    case "canonical":
+      return compareCanonical;
+    case "rank-locale":
+      return compareRankLocale;
+    default:
+      return assertNever(tieOrder, "tie order");
+  }
+}
 
-      // Structure actions sort ahead of the rest. This is a per-operation
-      // rank, not a property of the pair: deciding a criterion from
-      // `a.type || b.type` made the comparator non-transitive, so sorting the
-      // same set could yield different orders from different input orders.
-      const rank = (op: TOp) =>
-        STRICT_ORDER_ACTION_TYPES.has(op.action?.type ?? "") ? 0 : 1;
-      const rankDiff = rank(a) - rank(b);
-      if (rankDiff !== 0) {
-        return rankDiff;
-      }
+function compareRankLocale(a: OperationIndex, b: OperationIndex): number {
+  const timestampDiff =
+    new Date(a.timestampUtcMs).getTime() - new Date(b.timestampUtcMs).getTime();
+  if (timestampDiff !== 0) {
+    return timestampDiff;
+  }
 
-      // Logical index is a replica-local coordinate, so it can only be used
-      // where both sides are certain to agree on the sign: structure actions,
-      // whose causal order (create before upgrade, parent before child) has to
-      // survive the merge. Everything else orders by keys both replicas
-      // compute identically, or the two logs never converge.
-      if (rank(a) === 0) {
-        const logicalIndexDiff = a.index - a.skip - (b.index - b.skip);
-        if (logicalIndexDiff !== 0) {
-          return logicalIndexDiff;
-        }
-      }
+  // Structure actions sort ahead of the rest. This is a per-operation
+  // rank, not a property of the pair: deciding a criterion from
+  // `a.type || b.type` made the comparator non-transitive, so sorting the
+  // same set could yield different orders from different input orders.
+  const rank = (op: OperationIndex) =>
+    STRICT_ORDER_ACTION_TYPES.has(op.action?.type ?? "") ? 0 : 1;
+  const rankDiff = rank(a) - rank(b);
+  if (rankDiff !== 0) {
+    return rankDiff;
+  }
 
-      const actionIdDiff = (a.action?.id ?? "").localeCompare(
-        b.action?.id ?? "",
-      );
-      if (actionIdDiff !== 0) {
-        return actionIdDiff;
-      }
+  // Logical index is a replica-local coordinate, so it can only be used
+  // where both sides are certain to agree on the sign: structure actions,
+  // whose causal order (create before upgrade, parent before child) has to
+  // survive the merge. Everything else orders by keys both replicas
+  // compute identically, or the two logs never converge.
+  if (rank(a) === 0) {
+    const logicalIndexDiff = a.index - a.skip - (b.index - b.skip);
+    if (logicalIndexDiff !== 0) {
+      return logicalIndexDiff;
+    }
+  }
 
-      return a.id.localeCompare(b.id);
-    })
-    .map((op, i) => ({
-      ...op,
-      index: startIndex.index + i,
-      skip: i === 0 ? startIndex.skip : 0,
-    }));
+  const actionIdDiff = (a.action?.id ?? "").localeCompare(b.action?.id ?? "");
+  if (actionIdDiff !== 0) {
+    return actionIdDiff;
+  }
+
+  return a.id.localeCompare(b.id);
 }
 
 /**
