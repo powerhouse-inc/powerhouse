@@ -235,7 +235,33 @@ const PGLITE_IN_MEMORY = process.env.PH_PGLITE_IN_MEMORY === "1";
  * the port is free, false if the OS reports it in use. Any other error is
  * surfaced so we don't silently mask real issues (permissions, bad host, …).
  */
-export function isPortAvailable(port: number): Promise<boolean> {
+export async function isPortAvailable(port: number): Promise<boolean> {
+  try {
+    // `::` is dual-stack on most systems, so it sees IPv6 and IPv4 listeners.
+    return await probePort(port, "::");
+  } catch (error) {
+    // A host without IPv6, e.g. a container, can only probe IPv4.
+    if (!isNoIpv6Error(error)) throw portProbeError(port, error);
+    try {
+      return await probePort(port, "0.0.0.0");
+    } catch (ipv4Error) {
+      throw portProbeError(port, ipv4Error);
+    }
+  }
+}
+
+const isNoIpv6Error = (error: unknown) =>
+  ["EAFNOSUPPORT", "EADDRNOTAVAIL"].includes(
+    (error as NodeJS.ErrnoException).code ?? "",
+  );
+
+const portProbeError = (port: number, error: unknown) =>
+  new Error(
+    `Could not check whether port ${port} is free: ${error instanceof Error ? error.message : String(error)}`,
+    { cause: error },
+  );
+
+function probePort(port: number, host: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const tester = net.createServer();
     tester.once("error", (err: NodeJS.ErrnoException) => {
@@ -248,9 +274,7 @@ export function isPortAvailable(port: number): Promise<boolean> {
     tester.once("listening", () => {
       tester.close(() => resolve(true));
     });
-    // Bind on the unspecified IPv6 address so we detect collisions with both
-    // IPv6 and IPv4 listeners (Node maps `::` to dual-stack on most systems).
-    tester.listen({ port, host: "::" });
+    tester.listen({ port, host });
   });
 }
 
