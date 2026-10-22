@@ -1,3 +1,18 @@
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **shared,workflow:** the package stylesheet entry takes the theme to reference and skips source maps; workflow's stylesheet holds its own classes and vendor CSS against the design system's theme ([f3bfe645e9](https://github.com/powerhouse-inc/powerhouse/commit/f3bfe645e9))
+- **shared:** an editor module's component is typed for its document and the props hosts pass ([9a2f6c386e](https://github.com/powerhouse-inc/powerhouse/commit/9a2f6c386e))
+- **shared:** a shared DocumentDispatch type, and EditorProps<TDocument, TAction> typing an editor's document and dispatch ([399e9335e3](https://github.com/powerhouse-inc/powerhouse/commit/399e9335e3))
+- **shared,ph-cli,connect:** a package's stylesheet holds only its own classes and rules, against Connect's theme by reference, in external-packages; ph install --local leaves style.css alone ([d0b0e9d463](https://github.com/powerhouse-inc/powerhouse/commit/d0b0e9d463))
+- **design-system,connect-core,connect,shared:** theme.css holds Connect's tokens without its classes, plugins in plugins.css, one layer order with Tailwind's properties layer first ([f7ffdd1a27](https://github.com/powerhouse-inc/powerhouse/commit/f7ffdd1a27))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
