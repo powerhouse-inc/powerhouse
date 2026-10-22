@@ -4,6 +4,7 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
 import type { PowerhouseConfig } from "@powerhousedao/shared";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { Project } from "ts-morph";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
@@ -29,6 +30,7 @@ export class CodegenProcessor implements IProcessor {
       project,
       interactiveMode,
     );
+    this.manager.setScope((documentId) => this.isInDrive(documentId));
 
     if (interactiveMode) {
       logger.info(`CodegenProcessor initialized with interactive mode enabled`);
@@ -53,13 +55,6 @@ export class CodegenProcessor implements IProcessor {
       if (!generator) {
         logger.debug(
           `No generator found for document type: ${context.documentType}`,
-        );
-        continue;
-      }
-
-      if (!(await this.isInDrive(context.documentId))) {
-        logger.debug(
-          `Document ${context.documentId} is not in the Vetra drive, skipping codegen`,
         );
         continue;
       }
@@ -93,8 +88,21 @@ export class CodegenProcessor implements IProcessor {
     return this.manager.isProcessingInteractive();
   }
 
-  /** The reactor delivers every drive's operations, so membership is checked here. */
+  /**
+   * The reactor delivers every drive's operations, so membership is checked
+   * here: a node of the drive (in any folder, and in drives older than
+   * relationship edges), or a child edge from it (a document attached by
+   * relationship alone).
+   */
   private async isInDrive(documentId: string): Promise<boolean> {
+    try {
+      const drive = await this.client.get<DocumentDriveDocument>(this.driveId);
+      if (drive.state.global.nodes.some((node) => node.id === documentId)) {
+        return true;
+      }
+    } catch (error) {
+      logger.debug(`Could not read the Vetra drive ${this.driveId}:`, error);
+    }
     try {
       const parents = await this.client.getIncomingRelationshipEdges(
         documentId,

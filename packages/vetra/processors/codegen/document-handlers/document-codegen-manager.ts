@@ -7,6 +7,9 @@ import type { CodegenInput, Config } from "./types.js";
 
 const DEFAULT_DEBOUNCE_TIME = 1000; // wait 1 second between codegen calls
 
+/** Whether a document belongs to what this manager generates from. */
+export type DocumentScope = (documentId: string) => Promise<boolean>;
+
 /**
  * Manager class responsible for routing documents to the correct generator
  * and managing generator registration and instantiation
@@ -17,6 +20,7 @@ export class DocumentCodegenManager {
   private debounceTimers = new Map<string, NodeJS.Timeout>();
   private processingQueue: Promise<void> = Promise.resolve();
   private interactiveManager: InteractiveManager;
+  private isInScope: DocumentScope = () => Promise.resolve(true);
 
   constructor(
     private config: Config,
@@ -25,6 +29,14 @@ export class DocumentCodegenManager {
   ) {
     this.project = project;
     this.interactiveManager = new InteractiveManager(interactiveMode);
+  }
+
+  /**
+   * Limit generation to the documents `isInScope` accepts, checked when the
+   * debounce fires
+   */
+  setScope(isInScope: DocumentScope): void {
+    this.isInScope = isInScope;
   }
 
   /**
@@ -114,7 +126,8 @@ export class DocumentCodegenManager {
       throw new Error(`Unsupported document type: ${documentType}`);
     }
 
-    // Validation runs when the debounce fires, on the document's final state.
+    // Scope and validation are checked when the debounce fires, on the
+    // document's final state.
     // Different flow for interactive vs non-interactive mode
     if (this.interactiveManager.isInteractive()) {
       // Interactive mode: queue strands and use debounce timer to trigger batch processing
@@ -135,8 +148,12 @@ export class DocumentCodegenManager {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
-          this.interactiveManager.discardWhere(
-            (queued) => !this.shouldProcess(queued),
+          const rejected = new Set<CodegenInput>();
+          for (const { strand } of this.interactiveManager.getQueuedStrands()) {
+            if (!(await this.accepts(strand))) rejected.add(strand);
+          }
+          this.interactiveManager.discardWhere((queued) =>
+            rejected.has(queued),
           );
           await this.interactiveManager.processQueueWithConfirmation(
             async (queuedStrands: QueuedStrand[]) => {
@@ -171,7 +188,7 @@ export class DocumentCodegenManager {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
-          if (!generator.shouldProcess(strand)) return;
+          if (!(await this.accepts(strand))) return;
           logger.debug(
             `🔄 Routing document type "${documentType}" to generator (debounced)`,
           );
@@ -199,9 +216,17 @@ export class DocumentCodegenManager {
     return Promise.resolve();
   }
 
-  private shouldProcess(strand: CodegenInput): boolean {
+  /** In scope first, so documents out of scope are never validated or logged. */
+  private async accepts(strand: CodegenInput): Promise<boolean> {
     const generator = this.getGenerator(strand.documentType);
-    return generator !== undefined && generator.shouldProcess(strand);
+    if (!generator) return false;
+    if (!(await this.isInScope(strand.documentId))) {
+      logger.debug(
+        `Document ${strand.documentId} is not in the Vetra drive, skipping codegen`,
+      );
+      return false;
+    }
+    return generator.shouldProcess(strand);
   }
 
   /**
