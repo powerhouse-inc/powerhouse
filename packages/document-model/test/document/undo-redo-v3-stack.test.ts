@@ -6,6 +6,7 @@ import {
   appliedOperations,
   baseCreateDocument,
   redo,
+  SubmittedUndoRefusedError,
   undo,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
@@ -15,6 +16,7 @@ import {
   createCountDocumentState,
   error,
   increment,
+  pressOn3,
   testCreateBaseState,
 } from "../helpers.js";
 
@@ -43,14 +45,14 @@ function expectRetractOf(document: CountDocument, target: string): string {
   return row.action.id;
 }
 
-describe("base-reducer 3 undo and redo stack", () => {
+describe("base-reducer 3 undo and redo stack, as a client plans it", () => {
   it("a b: UNDO retracts b", () => {
     const a = increment();
     const b = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
 
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
 
     expectRetractOf(document, b.id);
     expect(appliedIds(document)).toEqual([a.id]);
@@ -62,9 +64,9 @@ describe("base-reducer 3 undo and redo stack", () => {
     const b = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
 
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
 
     expectRetractOf(document, a.id);
     expect(appliedIds(document)).toEqual([]);
@@ -76,11 +78,11 @@ describe("base-reducer 3 undo and redo stack", () => {
     const b = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
-    document = countReducer(document, undo());
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
+    document = pressOn3(document, "UNDO");
     const retractA = lastRow(document).action.id;
 
-    document = countReducer(document, redo());
+    document = pressOn3(document, "REDO");
 
     expectRetractOf(document, retractA);
     expect(appliedIds(document)).toEqual([a.id]);
@@ -92,12 +94,12 @@ describe("base-reducer 3 undo and redo stack", () => {
     const b = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
     const retractB = lastRow(document).action.id;
-    document = countReducer(document, undo());
-    document = countReducer(document, redo());
+    document = pressOn3(document, "UNDO");
+    document = pressOn3(document, "REDO");
 
-    document = countReducer(document, redo());
+    document = pressOn3(document, "REDO");
 
     expectRetractOf(document, retractB);
     expect(appliedIds(document)).toEqual([a.id, b.id]);
@@ -110,11 +112,11 @@ describe("base-reducer 3 undo and redo stack", () => {
     const c = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
     document = countReducer(document, c);
     const before = document;
 
-    expect(() => countReducer(before, redo())).toThrow(
+    expect(() => pressOn3(before, "REDO")).toThrow(
       /Cannot redo: nothing to redo/,
     );
     expect(appliedIds(before)).toEqual([a.id, c.id]);
@@ -127,18 +129,22 @@ describe("base-reducer 3 undo and redo stack", () => {
     document = countReducer(document, error());
     expect(document.operations.global).toHaveLength(2);
 
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
 
     expectRetractOf(document, a.id);
     expect(document.state.global.count).toBe(0);
   });
 
-  it("UNDO with count 2 is refused", () => {
+  it("a dispatched UNDO or REDO is refused, whatever its count", () => {
     let document = countReducer(v3Document(), increment());
     document = countReducer(document, increment());
     const before = document;
 
-    expect(() => countReducer(before, undo(2))).toThrow(/takes count 1/);
+    for (const action of [undo(), undo(2), redo()]) {
+      expect(() => countReducer(before, action)).toThrow(
+        SubmittedUndoRefusedError,
+      );
+    }
     expect(before.operations.global).toHaveLength(2);
   });
 
@@ -147,14 +153,14 @@ describe("base-reducer 3 undo and redo stack", () => {
     const b = increment();
     let document = countReducer(v3Document(), a);
     document = countReducer(document, b);
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
     const retractB = expectRetractOf(document, b.id);
 
-    document = countReducer(document, redo());
+    document = pressOn3(document, "REDO");
     expectRetractOf(document, retractB);
     expect(document.state.global.count).toBe(2);
 
-    document = countReducer(document, undo());
+    document = pressOn3(document, "UNDO");
     expectRetractOf(document, b.id);
     expect(appliedIds(document)).toEqual([a.id]);
     expect(document.state.global.count).toBe(1);

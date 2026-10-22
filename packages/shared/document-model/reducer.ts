@@ -4,14 +4,15 @@ import {
   actionFromAction,
   operationFromAction,
   operationFromOperation,
-  retract,
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
 import { baseActionReducer } from "./base-action-reducer.js";
 import { tagStateReducer } from "./state-reducer.js";
 import { isDenied } from "./denied.js";
+import { SubmittedUndoRefusedError } from "./errors.js";
 import {
   appliesRewind,
+  assertNever,
   baseReducerVersion,
   capabilitiesOf,
   derivesByRule,
@@ -39,10 +40,8 @@ import {
   deriveScope,
   positionalOperations,
   reduceOne,
-  redoTarget,
   retractedActionIds,
   rewritesScope,
-  undoTarget,
   type ReducerFor,
 } from "./retraction.js";
 import {
@@ -227,8 +226,6 @@ export function updateDocument<TDocument extends PHDocument>(
  * @param action The action being applied to the document.
  * @param skip The number of operations to skip before applying the action.
  * @param protocolVersion The document's base-reducer version.
- * @param customReducer The model's state reducer; required on base-reducer 3.
- * @param derive Base-reducer 3: the version-aware derivation, when the caller has one.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
 export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
@@ -236,95 +233,31 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   action: Action,
   skip: number,
   protocolVersion: BaseReducerVersion = 1,
-  customReducer?: StateReducer<TState>,
-  derive?: DeriveScope,
 ): {
   document: PHDocument<TState>;
   action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
-  switch (action.type) {
-    case "UNDO":
-      switch (protocolVersion) {
-        case 1:
-          return undoOperation(document, action, skip);
-        case 2:
-          return undoOperationV2(document, action, skip);
-        case 3:
-          return resolveRetraction(
-            document,
-            action,
-            skip,
-            customReducer,
-            derive,
-          );
-        default:
-          return unknownBaseReducer(protocolVersion);
-      }
-    case "REDO":
-      switch (protocolVersion) {
-        case 1:
-        case 2:
-          return redoOperation(document, action, skip);
-        case 3:
-          return resolveRetraction(
-            document,
-            action,
-            skip,
-            customReducer,
-            derive,
-          );
-        default:
-          return unknownBaseReducer(protocolVersion);
-      }
+  if (action.type !== "UNDO" && action.type !== "REDO") {
+    return { document, action, skip, reuseLastOperationIndex: false };
+  }
+  const { undo: model } = capabilitiesOf(protocolVersion);
+  switch (model) {
+    case "skip":
+      return action.type === "UNDO"
+        ? undoOperation(document, action, skip)
+        : redoOperation(document, action, skip);
+    case "noop-chain":
+      return action.type === "UNDO"
+        ? undoOperationV2(document, action, skip)
+        : redoOperation(document, action, skip);
+    case "retraction":
+      // The reactor refuses the same input; a client submits RETRACT.
+      throw new SubmittedUndoRefusedError(document.header.id, action.type);
     default:
-      return { document, action, skip, reuseLastOperationIndex: false };
+      return assertNever(model, "undo model");
   }
-}
-
-function resolveRetraction<TState extends PHBaseState>(
-  document: PHDocument<TState>,
-  action: Action,
-  skip: number,
-  customReducer: StateReducer<TState> | undefined,
-  derive: DeriveScope | undefined,
-): {
-  document: PHDocument<TState>;
-  action: Action;
-  skip: number;
-  reuseLastOperationIndex: boolean;
-} {
-  const count = (action.input as { count?: unknown } | undefined)?.count;
-  if (count !== 1) {
-    throw new Error(`${action.type} on base-reducer 3 takes count 1`);
-  }
-  if (!customReducer) {
-    throw new Error(`${action.type} on base-reducer 3 needs the state reducer`);
-  }
-  const operations = document.operations[action.scope] ?? [];
-  const { applied } = derive
-    ? derive(document, operations, action.scope)
-    : deriveScope(document, operations, () => customReducer, action.scope);
-  const target =
-    action.type === "UNDO"
-      ? undoTarget(operations, applied)
-      : redoTarget(operations, applied);
-  if (target === undefined) {
-    const verb = action.type === "UNDO" ? "undo" : "redo";
-    throw new Error(`Cannot ${verb}: nothing to ${verb} in scope history`);
-  }
-  return {
-    document,
-    // A fresh id, but the submitted action's place in the stream's time order.
-    action: {
-      ...retract(target, action.scope),
-      timestampUtcMs: action.timestampUtcMs,
-    },
-    // A reshuffle's rewind, carried over; never an undo.
-    skip,
-    reuseLastOperationIndex: false,
-  };
 }
 
 function unknownBaseReducer(version: never): never {
@@ -501,14 +434,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       action: transformedAction,
       document: processedDocument,
       reuseLastOperationIndex: reuseIndex,
-    } = processUndoRedo(
-      document,
-      _action,
-      skipValue,
-      protocolVersion,
-      customReducer,
-      options.deriveScope,
-    );
+    } = processUndoRedo(document, _action, skipValue, protocolVersion);
 
     _action = transformedAction;
     skipValue = calculatedSkip;

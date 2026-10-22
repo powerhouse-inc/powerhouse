@@ -14,6 +14,7 @@ import {
   redo,
   retract,
   setName,
+  SubmittedUndoRefusedError,
   undo,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
@@ -24,6 +25,7 @@ import {
   createCountDocumentState,
   error,
   increment,
+  pressOn3,
   testCreateBaseState,
 } from "../helpers.js";
 
@@ -67,13 +69,44 @@ function targetOf(operation: Operation): string {
 }
 
 describe("base-reducer 3", () => {
-  describe("UNDO", () => {
+  describe("a dispatched UNDO or REDO", () => {
+    it("is refused with the reactor's error, whatever its count", () => {
+      const document = dispatch(createV3Document(), increment(), increment());
+
+      for (const action of [undo(), undo(2), redo(), redo(2)]) {
+        expect(() => countReducer(document, action)).toThrow(
+          SubmittedUndoRefusedError,
+        );
+      }
+      expect(globalOps(document)).toHaveLength(2);
+    });
+
+    it("is refused by processUndoRedo, which mints no RETRACT", () => {
+      const document = dispatch(createV3Document(), increment());
+
+      for (const action of [undo(), redo()]) {
+        let thrown: unknown;
+        try {
+          processUndoRedo(document, action, 0, 3);
+        } catch (error) {
+          thrown = error;
+        }
+        expect(SubmittedUndoRefusedError.isError(thrown)).toBe(true);
+        expect(thrown).toMatchObject({
+          documentId: document.header.id,
+          actionType: action.type,
+        });
+      }
+    });
+  });
+
+  describe("a client's UNDO", () => {
     it("is stored as a RETRACT of the last applied content", () => {
       const a = increment();
       const b = increment();
       let document = dispatch(createV3Document(), a, b);
 
-      document = countReducer(document, undo());
+      document = pressOn3(document, "UNDO");
 
       const row = last(document);
       expect(targetOf(row)).toBe(b.id);
@@ -84,82 +117,38 @@ describe("base-reducer 3", () => {
       expect(document.clipboard).toEqual([]);
     });
 
-    it("carries a reshuffle's rewind onto the RETRACT", () => {
-      const a = increment();
-      const document = dispatch(createV3Document(), a);
-
-      const result = processUndoRedo(document, undo(), 2, 3, baseCountReducer);
-
-      expect(result.action.type).toBe("RETRACT");
-      expect(result.skip).toBe(2);
-    });
-
-    it("resolves through processUndoRedo given the state reducer", () => {
-      const a = increment();
-      const document = dispatch(createV3Document(), a);
-
-      const result = processUndoRedo(document, undo(), 0, 3, baseCountReducer);
-
-      expect(result.action.type).toBe("RETRACT");
-      expect(result.action.input).toEqual({ target: a.id });
-      expect(result.skip).toBe(0);
-      expect(result.reuseLastOperationIndex).toBe(false);
-      expect(() => processUndoRedo(document, undo(), 0, 3)).toThrow(
-        "UNDO on base-reducer 3 needs the state reducer",
-      );
-    });
-
-    it("stamps the RETRACT with the submitted timestamp under a fresh id", () => {
-      const document = dispatch(createV3Document(), increment());
-      const submitted = {
-        ...undo(),
-        timestampUtcMs: "2020-01-01T00:00:00.000Z",
-      };
-      const redone = { ...redo(), timestampUtcMs: "2020-01-02T00:00:00.000Z" };
-
-      const undone = countReducer(document, submitted);
-      const row = last(undone);
-      const redoRow = last(countReducer(undone, redone));
-
-      expect(row.action.id).not.toBe(submitted.id);
-      expect(row.action.timestampUtcMs).toBe(submitted.timestampUtcMs);
-      expect(row.timestampUtcMs).toBe(submitted.timestampUtcMs);
-      expect(redoRow.action.id).not.toBe(redone.id);
-      expect(redoRow.timestampUtcMs).toBe(redone.timestampUtcMs);
-    });
-
     it("skips an action that threw", () => {
       const a = increment();
       const document = dispatch(createV3Document(), a, error());
 
-      const undone = countReducer(document, undo());
+      const undone = pressOn3(document, "UNDO");
 
       expect(targetOf(last(undone))).toBe(a.id);
       expect(undone.state.global.count).toBe(0);
     });
 
     it("is refused when nothing is applied", () => {
-      expect(() => countReducer(createV3Document(), undo())).toThrow(
+      expect(() => pressOn3(createV3Document(), "UNDO")).toThrow(
         "Cannot undo: nothing to undo in scope history",
       );
     });
   });
 
-  describe("REDO", () => {
+  describe("a client's REDO", () => {
     it("UNDO, REDO, UNDO succeeds", () => {
       const a = increment();
       const b = increment();
       let document = dispatch(createV3Document(), a, b);
 
-      document = countReducer(document, undo());
+      document = pressOn3(document, "UNDO");
       const undoRow = last(document);
       expect(document.state.global.count).toBe(1);
 
-      document = countReducer(document, redo());
+      document = pressOn3(document, "REDO");
       expect(targetOf(last(document))).toBe(undoRow.action.id);
       expect(document.state.global.count).toBe(2);
 
-      document = countReducer(document, undo());
+      document = pressOn3(document, "UNDO");
       expect(targetOf(last(document))).toBe(b.id);
       expect(document.state.global.count).toBe(1);
       expect(globalOps(document).every((op) => op.error === undefined)).toBe(
@@ -170,47 +159,32 @@ describe("base-reducer 3", () => {
     it("redoes the undo stack in reverse", () => {
       const a = increment();
       const b = increment();
-      let document = dispatch(createV3Document(), a, b, undo(), undo());
+      let document = dispatch(createV3Document(), a, b);
+      document = pressOn3(pressOn3(document, "UNDO"), "UNDO");
       const [undoB, undoA] = globalOps(document).slice(2);
       expect(document.state.global.count).toBe(0);
 
-      document = countReducer(document, redo());
+      document = pressOn3(document, "REDO");
       expect(targetOf(last(document))).toBe(undoA.action.id);
       expect(document.state.global.count).toBe(1);
 
-      document = countReducer(document, redo());
+      document = pressOn3(document, "REDO");
       expect(targetOf(last(document))).toBe(undoB.action.id);
       expect(document.state.global.count).toBe(2);
 
-      expect(() => countReducer(document, redo())).toThrow(
+      expect(() => pressOn3(document, "REDO")).toThrow(
         "Cannot redo: nothing to redo in scope history",
       );
     });
 
     it("is refused after new content", () => {
-      const document = dispatch(
-        createV3Document(),
-        increment(),
-        increment(),
-        undo(),
-        increment(),
-      );
+      let document = dispatch(createV3Document(), increment(), increment());
+      document = countReducer(pressOn3(document, "UNDO"), increment());
 
-      expect(() => countReducer(document, redo())).toThrow(
+      expect(() => pressOn3(document, "REDO")).toThrow(
         "Cannot redo: nothing to redo in scope history",
       );
     });
-  });
-
-  it("refuses a count other than 1", () => {
-    const document = dispatch(createV3Document(), increment(), increment());
-
-    expect(() => countReducer(document, undo(2))).toThrow(
-      "UNDO on base-reducer 3 takes count 1",
-    );
-    expect(() => countReducer(document, redo(2))).toThrow(
-      "REDO on base-reducer 3 takes count 1",
-    );
   });
 
   describe("RETRACT", () => {
@@ -281,14 +255,11 @@ describe("base-reducer 3", () => {
 
   it("hashes the derived state of the scope", () => {
     const a = increment();
-    let document = dispatch(
-      createV3Document(),
-      a,
-      increment(),
-      undo(),
-      retract(a.id),
-      increment(),
+    let document = pressOn3(
+      dispatch(createV3Document(), a, increment()),
+      "UNDO",
     );
+    document = dispatch(document, retract(a.id), increment());
     document = countReducer(document, increment(), undefined, { skip: 1 });
 
     const derived = deriveScope(
@@ -362,7 +333,7 @@ describe("base-reducer 3", () => {
       );
     });
 
-    it("resolves UNDO from the rows it applied", () => {
+    it("resolves a client's UNDO from the rows it applied", () => {
       const a = increment();
       const derive: DeriveScope = (document, operations, scope, onThrow) =>
         deriveScope(
@@ -380,9 +351,7 @@ describe("base-reducer 3", () => {
         );
       const document = dispatch(createV3Document(), a, increment());
 
-      const undone = countReducer(document, undo(), undefined, {
-        deriveScope: derive,
-      });
+      const undone = pressOn3(document, "UNDO", derive);
 
       expect(targetOf(last(undone))).toBe(a.id);
       expect(undone.state.global.count).toBe(0);

@@ -47,6 +47,29 @@ export class MissingStateReducerError extends Error {
 }
 
 /**
+ * An UNDO or REDO, submitted or loaded from a peer, into a document whose base
+ * reducer undoes by retraction. Its client resolves the target and submits a
+ * RETRACT of it, signed by the author, as IReactorClient.undo does.
+ */
+export class SubmittedUndoRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly actionType: string;
+
+  constructor(documentId: string, actionType: string) {
+    super(
+      `${actionType} cannot be submitted to document ${documentId}: its base reducer undoes by RETRACT of a target, which IReactorClient.undo and redo resolve and sign`,
+    );
+    this.name = "SubmittedUndoRefusedError";
+    this.documentId = documentId;
+    this.actionType = actionType;
+  }
+
+  static isError(error: unknown): error is SubmittedUndoRefusedError {
+    return error instanceof Error && error.name === "SubmittedUndoRefusedError";
+  }
+}
+
+/**
  * Error thrown when attempting to downgrade a document version.
  */
 export class DowngradeNotSupportedError extends Error {
