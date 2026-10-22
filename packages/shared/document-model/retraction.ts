@@ -11,6 +11,7 @@ import {
 } from "./operation-order.js";
 import type { Operation } from "./operations.js";
 import type { PHBaseState } from "./state.js";
+import type { UndoRedoTargets } from "./undo-redo-plan.js";
 import type {
   OperationIndex,
   RetractActionInput,
@@ -366,4 +367,61 @@ export function redoTarget(
     if (isContent(byId.get(target))) return operation.action.id;
   }
   return undefined;
+}
+
+/** What a stream's targets advance from: the targets, and the ids that make a row rewrite. */
+export type UndoTargetsBase = {
+  targets: UndoRedoTargets;
+  /** Every id a RETRACT in the stream names, present or not. */
+  named: ReadonlySet<string>;
+  /** Every action id in the stream. */
+  ids: ReadonlySet<string>;
+};
+
+/** The targets of a fully derived stream, with what advancing them needs. */
+export function undoTargetsBase(
+  stream: readonly Operation[],
+  applied: ReadonlySet<string>,
+): UndoTargetsBase {
+  const named = new Set<string>();
+  const ids = new Set<string>();
+  for (const operation of stream) {
+    ids.add(operation.action.id);
+    const target = retractionTarget(operation);
+    if (target !== undefined) named.add(target);
+  }
+  return {
+    targets: {
+      undoTarget: undoTarget(stream, applied),
+      redoTarget: redoTarget(stream, applied),
+    },
+    named,
+    ids,
+  };
+}
+
+/**
+ * The targets after `appended`, rows past the end of `base`'s stream in index
+ * order. "rederive" when a row can change which earlier rows apply or repeats
+ * an id; otherwise a row's stored `error` says whether it applied.
+ */
+export function advanceUndoTargets(
+  base: Pick<UndoTargetsBase, "targets" | "named" | "ids">,
+  appended: readonly Operation[],
+): UndoRedoTargets | "rederive" {
+  let { undoTarget: undo, redoTarget: redo } = base.targets;
+  const batch = new Set<string>();
+  for (const operation of appended) {
+    const id = operation.action.id;
+    if (base.ids.has(id) || batch.has(id)) return "rederive";
+    if (rewritesScope(operation, (named) => base.named.has(named))) {
+      return "rederive";
+    }
+    batch.add(id);
+    if (isContent(operation) && operation.error === undefined) {
+      undo = id;
+      redo = undefined;
+    }
+  }
+  return { undoTarget: undo, redoTarget: redo };
 }
