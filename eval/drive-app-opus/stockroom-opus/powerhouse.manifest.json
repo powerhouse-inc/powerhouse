@@ -1,0 +1,36 @@
+{
+  "name": "stockroom-opus",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "stockroom/inventory-item",
+      "name": "Inventory Item"
+    }
+  ],
+  "apps": [
+    {
+      "name": "Stockroom App",
+      "id": "stockroom-app",
+      "documentTypes": [
+        "powerhouse/document-drive"
+      ]
+    }
+  ],
+  "editors": [
+    {
+      "id": "inventory-item-editor",
+      "name": "Inventory Item Editor",
+      "documentTypes": [
+        "stockroom/inventory-item"
+      ]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}

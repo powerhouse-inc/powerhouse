@@ -1,0 +1,94 @@
+{
+  "id": "stockroom/inventory-item",
+  "name": "Inventory Item",
+  "author": {
+    "name": "Stockroom",
+    "website": "https://example.com"
+  },
+  "extension": ".inv",
+  "description": "One stock-keeping item: its name, quantity on hand and storage location.",
+  "specifications": [
+    {
+      "state": {
+        "local": {
+          "schema": "",
+          "examples": [],
+          "initialValue": ""
+        },
+        "global": {
+          "schema": "type InventoryItemState {\n  name: String\n  quantity: Int!\n  location: String\n}",
+          "examples": [],
+          "initialValue": "{\"name\":null,\"quantity\":0,\"location\":null}"
+        }
+      },
+      "modules": [
+        {
+          "id": "mod-item",
+          "name": "item",
+          "description": "Item operations",
+          "operations": [
+            {
+              "id": "op-add",
+              "name": "ADD_ITEM",
+              "description": "Registers the item with its name, starting quantity and location",
+              "schema": "input AddItemInput {\n  name: String!\n  quantity: Int!\n  location: String!\n}",
+              "template": "Registers the item with its name, starting quantity and location",
+              "reducer": "if (action.input.quantity < 0) {\n  throw new InvalidQuantityError(\"Quantity cannot be negative\");\n}\nstate.name = action.input.name;\nstate.quantity = action.input.quantity;\nstate.location = action.input.location;",
+              "errors": [
+                {
+                  "id": "err-add-qty",
+                  "name": "InvalidQuantityError",
+                  "code": "INVALID_QUANTITY",
+                  "description": "The starting quantity is negative",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-adjust",
+              "name": "ADJUST_QUANTITY",
+              "description": "Adds (positive delta) or removes (negative delta) stock",
+              "schema": "input AdjustQuantityInput {\n  delta: Int!\n}",
+              "template": "Adds (positive delta) or removes (negative delta) stock",
+              "reducer": "const next = state.quantity + action.input.delta;\nif (next < 0) {\n  throw new InsufficientStockError(`Cannot remove ${-action.input.delta}; only ${state.quantity} on hand`);\n}\nstate.quantity = next;",
+              "errors": [
+                {
+                  "id": "err-adj-stock",
+                  "name": "InsufficientStockError",
+                  "code": "INSUFFICIENT_STOCK",
+                  "description": "The adjustment would make the quantity negative",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "op-move",
+              "name": "MOVE_ITEM",
+              "description": "Moves the item to a new storage location",
+              "schema": "input MoveItemInput {\n  location: String!\n}",
+              "template": "Moves the item to a new storage location",
+              "reducer": "if (!action.input.location.trim()) {\n  throw new EmptyLocationError(\"Location cannot be empty\");\n}\nstate.location = action.input.location;",
+              "errors": [
+                {
+                  "id": "err-move-empty",
+                  "name": "EmptyLocationError",
+                  "code": "EMPTY_LOCATION",
+                  "description": "The new location is blank",
+                  "template": ""
+                }
+              ],
+              "examples": [],
+              "scope": "global"
+            }
+          ]
+        }
+      ],
+      "version": 1,
+      "changeLog": []
+    }
+  ]
+}
