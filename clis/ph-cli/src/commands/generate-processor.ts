@@ -10,7 +10,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory, File } from "../utils/fs-args.js";
+import { File, ModuleDir } from "../utils/fs-args.js";
 import {
   CommaSeparatedStrings,
   splitCommaSeparated,
@@ -83,10 +83,10 @@ export const generateProcessorCmd = command({
         "Path to a powerhouse/processor spec file (.phd or .json) to drive codegen",
     }),
     dir: option({
-      type: optional(Directory),
+      type: optional(ModuleDir),
       long: "dir",
       description:
-        "Name of the directory of an existing processor to re-generate",
+        "Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor)",
     }),
     all: flag({
       long: "all",

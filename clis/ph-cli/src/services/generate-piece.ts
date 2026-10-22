@@ -11,11 +11,13 @@ import {
 } from "@powerhousedao/codegen/utils";
 import { kebabCase } from "change-case";
 import enquirer from "enquirer";
-import { basename } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { readPackage } from "read-pkg";
 import type { Project } from "ts-morph";
 import type { GeneratePieceArgs } from "../types.js";
 import { installAddedDependencies } from "../utils/install-added-dependencies.js";
+import { resolveModuleDirName } from "../utils/module-dir.js";
 
 // The id a block type will name, asked for only where deriving one would claim
 // a namespace nobody owns; CI, with no TTY, takes the derived value.
@@ -66,10 +68,16 @@ export async function startGeneratePiece(
   }
   const project = buildTsMorphProject(projectDir);
   const name = namePositional ?? nameOption;
+  const report: string[] = [];
   if (all) {
     await generateAllPieces(project);
   } else if (dir) {
-    await generateAllPieces(project, basename(dir.replace(/\/+$/, "")));
+    const dirName = resolveModuleDirName(projectDir, "pieces", dir, "my-piece");
+    if (!existsSync(join(projectDir, "pieces", dirName, "index.ts"))) {
+      throw new Error(`pieces/${dirName} has no index.ts.`);
+    }
+    await generateAllPieces(project, dirName);
+    report.push(`Re-registered the piece in pieces/${dirName}`);
   } else if (name) {
     const pieceId = await resolvePieceId({
       project,
@@ -86,6 +94,9 @@ export async function startGeneratePiece(
     return;
   }
   await project.save();
+  for (const line of report) {
+    console.log(line);
+  }
   const added = await syncFeatureDependencies(
     detectFeatures(projectDir),
     projectDir,

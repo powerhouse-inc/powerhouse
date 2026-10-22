@@ -15,9 +15,11 @@ import {
   saveSpec,
 } from "@powerhousedao/vetra/codegen";
 import type { ProcessorModuleDocument } from "@powerhousedao/vetra/document-models/processor-module";
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { GenerateProcessorArgs } from "../types.js";
 import { installAddedDependencies } from "../utils/install-added-dependencies.js";
+import { resolveModuleDirName } from "../utils/module-dir.js";
 
 export async function startGenerateProcessor(
   args: GenerateProcessorArgs,
@@ -40,14 +42,24 @@ export async function startGenerateProcessor(
   const project = buildTsMorphProject(projectDir);
   if (extract) {
     const docs = extractProcessorDocuments(project);
+    if (docs.length === 0) {
+      console.log("No processors found in processors/.");
+    }
     for (const doc of docs) {
       const path = await saveSpec(doc, projectDir);
       console.log(`Wrote ${path}`);
     }
     return;
   }
+  const report: string[] = [];
   if (all) {
-    await generateAllProcessors(project);
+    const processors = await generateAllProcessors(project);
+    if (processors.length === 0) {
+      report.push("No processors found in processors/.");
+    }
+    for (const { processorName } of processors) {
+      report.push(`Regenerated processor in processors/${processorName}`);
+    }
   } else if (document) {
     const doc = (await getDocument(document)) as ProcessorModuleDocument;
     await generateProcessorFromDocument(doc, project);
@@ -62,9 +74,25 @@ export async function startGenerateProcessor(
       project,
     );
   } else if (dir) {
-    const processorDirName = dirname(dir);
+    const processorDirName = resolveModuleDirName(
+      projectDir,
+      "processors",
+      dir,
+      "my-processor",
+    );
+    const processorDir = join(projectDir, "processors", processorDirName);
+    if (
+      !["processor.ts", "index.ts"].some((file) =>
+        existsSync(join(processorDir, file)),
+      )
+    ) {
+      throw new Error(
+        `processors/${processorDirName} has no processor.ts or index.ts.`,
+      );
+    }
     const processorArgs = getProcessorMetadata(project, processorDirName);
     await generateProcessor(processorArgs, project);
+    report.push(`Regenerated processor in processors/${processorDirName}`);
   } else {
     console.log(
       "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
@@ -72,6 +100,9 @@ export async function startGenerateProcessor(
     return;
   }
   await project.save();
+  for (const line of report) {
+    console.log(line);
+  }
   const added = await syncFeatureDependencies(
     detectFeatures(projectDir),
     projectDir,

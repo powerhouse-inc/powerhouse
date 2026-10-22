@@ -38,3 +38,10 @@ export const File: Type<string, string> = extendType(ExistingPath, {
     return Promise.resolve(resolved);
   },
 });
+
+/** A module's directory name or path, resolved by the command against the project. */
+export const ModuleDir: Type<string, string> = extendType(string, {
+  displayName: "dir",
+  description: "A module's directory name or path",
+  from: (dir) => Promise.resolve(dir),
+});

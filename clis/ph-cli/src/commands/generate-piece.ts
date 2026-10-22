@@ -8,7 +8,7 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import { Directory } from "../utils/fs-args.js";
+import { ModuleDir } from "../utils/fs-args.js";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generatePieceCmd = command({
@@ -47,9 +47,10 @@ export const generatePieceCmd = command({
       description: "One line describing what the piece connects to",
     }),
     dir: option({
-      type: optional(Directory),
+      type: optional(ModuleDir),
       long: "dir",
-      description: "Name of the directory of an existing piece to re-register",
+      description:
+        "Name of the directory of an existing piece to re-register (my-piece or pieces/my-piece)",
     }),
     all: flag({
       long: "all",
