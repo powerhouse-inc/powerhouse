@@ -1256,6 +1256,7 @@ describe("InMemoryQueue", () => {
       expect(failedEvents).toHaveLength(1);
       expect(failedEvents[0].jobId).toBe("job-1");
       expect(failedEvents[0].error.message).toContain("unknown/type");
+      expect(failedEvents[0].error.message).toContain("Model not available");
     });
 
     it("should not emit JOB_FAILED for a job a deferral already dropped", async () => {
