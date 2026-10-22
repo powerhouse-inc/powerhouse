@@ -72,6 +72,7 @@ describe("profileSchema", () => {
 describe("reactorBackendSchema — one data dir per PGlite store", () => {
   it("refuses readModel.url equal to the reactor's path storage dir", () => {
     const result = reactorBackendSchema.safeParse({
+      kind: "in-process",
       storage: { kind: "path", dataDir: "${userData}/pglite" },
       readModel: { url: "${userData}/pglite/" },
     });
@@ -84,18 +85,21 @@ describe("reactorBackendSchema — one data dir per PGlite store", () => {
   it("accepts distinct dirs, an omitted readModel, and a postgres url for both", () => {
     expect(
       reactorBackendSchema.safeParse({
+        kind: "in-process",
         storage: { kind: "path", dataDir: "${userData}/.ph/reactor-storage" },
         readModel: { url: "${userData}/.ph/read-storage" },
       }).success,
     ).toBe(true);
     expect(
       reactorBackendSchema.safeParse({
+        kind: "in-process",
         storage: { kind: "path", dataDir: "${userData}/.ph/reactor-storage" },
       }).success,
     ).toBe(true);
     // one Postgres database serving both stores is legitimate (two pools)
     expect(
       reactorBackendSchema.safeParse({
+        kind: "in-process",
         storage: { kind: "postgres", url: "postgres://db/ph" },
         readModel: { url: "postgres://db/ph" },
       }).success,

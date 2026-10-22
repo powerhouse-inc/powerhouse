@@ -55,6 +55,10 @@
       "source": "./connect/*.ts",
       "import": "./dist/connect/*.js"
     },
+    "./host-tokens": {
+      "source": "./host-tokens/index.ts",
+      "import": "./dist/host-tokens/index.js"
+    },
     "./analytics": {
       "source": "./analytics/index.ts",
       "import": "./dist/analytics/index.js"

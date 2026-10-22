@@ -95,6 +95,26 @@ const browserNeverBundle = nodeNeverBundle.filter(
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
+// Images a module imports (a route's hero, an editor's SVG) become data URLs,
+// as Vite's import of an asset is a URL string. Inline, not emitted: Connect
+// loads a package's chunks through its import map, so an emitted file's
+// relative URL would resolve against the page, not the chunk.
+export const IMAGE_EXTENSIONS = [
+  ".apng",
+  ".avif",
+  ".bmp",
+  ".gif",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".png",
+  ".svg",
+  ".webp",
+] as const;
+const loader: NonNullable<InlineConfig["loader"]> = Object.fromEntries(
+  IMAGE_EXTENSIONS.map((ext) => [ext, "dataurl"]),
+);
+
 const config = false;
 const clean = true;
 // types are emitted via a separate tsc command
@@ -146,6 +166,7 @@ const baseBrowserConfig = {
   entry: browserEntry,
   platform: "browser" as const,
   copy,
+  loader,
   config,
   clean,
   dts,
@@ -246,6 +267,7 @@ export function buildNodeBuildConfig(
     },
     platform: "node",
     ...(options.plugins ? { plugins: options.plugins } : {}),
+    loader,
     config,
     clean,
     dts,

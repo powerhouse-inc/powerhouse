@@ -11,6 +11,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import * as compound from "../src/runners/compound.js";
 import { loadHost } from "../src/host-loader.js";
+import { readProjectName, readRunRecord } from "../src/run-record.js";
 import type { RunnerContext } from "../src/runner-resolver.js";
 
 const temporary: string[] = [];
@@ -47,7 +48,7 @@ import { appendFileSync } from "node:fs";
 const sink = ${JSON.stringify(sink)};
 const log = (verb, host) => appendFileSync(sink, JSON.stringify({ verb, name: host.name }) + "\\n");
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run(host) { log("run", host); return {}; }
 export async function dev(host) { log("dev", host); return {}; }
 export async function serve(host) { log("serve", host); return {}; }
@@ -121,6 +122,34 @@ describe("host-core compound runner module (P3.1/P3.2)", () => {
     await expect(
       compound.build(await appHost(dir), ctx(dir, "build")),
     ).rejects.toThrow(/build.*(run, dev, serve|verbs)/is);
+  });
+
+  it("records the project name start-run and the output sources use (unnamed package, unresolved root)", async () => {
+    const { dir } = makeProject();
+    writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ type: "module" }),
+    );
+    writeFileSync(
+      path.join(dir, "hosts", "app", "host.js"),
+      `export default {
+        name: "app",
+        runner: { module: "@powerhousedao/host-core/runners/compound" },
+        children: { "app-web": { host: "web" } },
+        config: { runtimeRecord: true },
+      };`,
+    );
+    // an unnormalized root: its basename is "..", the project folder's is not
+    const root = `${dir}${path.sep}hosts${path.sep}..`;
+    const result = await compound.run(await appHost(dir), ctx(root, "run"));
+    try {
+      expect(readRunRecord(dir, "app")?.projectName).toBe(
+        readProjectName(root),
+      );
+      expect(readProjectName(root)).toBe(path.basename(dir));
+    } finally {
+      await result.shutdown();
+    }
   });
 
   it("at compound run, a member wrapper's defaultVerb picks that member's mode (desktop shape)", async () => {

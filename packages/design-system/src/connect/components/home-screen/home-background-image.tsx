@@ -2,11 +2,14 @@ type HomeBackgroundImageProps = {
   src?: string;
 };
 
+/** The default home-screen gradient. A custom `src` is kept for callers that
+ * still pass one, sized to its box; HomeScreen itself renders custom images
+ * as a hero below the drive tiles instead. */
 export const HomeBackgroundImage = ({ src }: HomeBackgroundImageProps = {}) => {
   if (src) {
     return (
-      <picture className="pointer-events-none absolute inset-8 z-0 size-[calc(100%-32px)] object-contain">
-        <img src={src} alt="background" className="object-contain" />
+      <picture className="pointer-events-none absolute inset-8 z-0">
+        <img src={src} alt="" className="size-full object-contain" />
       </picture>
     );
   }

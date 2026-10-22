@@ -39,4 +39,5 @@ export async function runConnectStudio(
 
   if (printUrls) server.printUrls();
   if (bindCLIShortcuts) server.bindCLIShortcuts({ print: true });
+  return server;
 }

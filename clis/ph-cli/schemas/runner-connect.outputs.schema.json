@@ -1,0 +1,24 @@
+{
+  "$id": "https://powerhouse.inc/schemas/ph-cli/runner-connect.outputs.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "origin": {
+      "type": "string",
+      "format": "uri"
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "connect": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": ["connect"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["origin", "endpoints"],
+  "additionalProperties": false
+}

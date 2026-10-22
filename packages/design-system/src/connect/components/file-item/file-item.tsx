@@ -14,6 +14,10 @@ import {
   useSelectedDriveSafe,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
+import {
+  brandedDocumentIcon,
+  useConnectBranding,
+} from "../branding/connect-branding.js";
 import type {
   DocumentDriveDocument,
   FileNode,
@@ -122,12 +126,19 @@ export function FileItem(props: Props) {
     setIsDropdownMenuOpen(false);
   }
 
-  const icon = customDocumentIconSrc ? (
+  // The branding's icon for this document type, else its default document
+  // icon, else the built-in one. An explicit prop wins.
+  const branding = useConnectBranding();
+  const documentIconSrc =
+    customDocumentIconSrc ??
+    brandedDocumentIcon(branding, fileNode.documentType);
+
+  const icon = documentIconSrc ? (
     <img
       alt="file icon"
-      className="max-w-none"
+      className="max-w-none object-contain"
       height={34}
-      src={customDocumentIconSrc}
+      src={documentIconSrc}
       width={32}
       /* HTML img elements are draggable by default, so we
        * must disable it here so that only the container
