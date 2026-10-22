@@ -22,6 +22,7 @@ import {
   type ReactorConfig,
   type RunnerContext,
 } from "@powerhousedao/host-core";
+import { join } from "node:path";
 import { z } from "zod";
 import type {
   ConnectBuildArgs,
@@ -219,6 +220,14 @@ function withoutFavicon(config: PHConnectRuntimeConfig | undefined) {
   return { ...config, branding };
 }
 
+// Per host: Studio and other hosts' dev servers run side by side in one project.
+const viteCacheOf = (host: HostDefinition, ctx: RunnerContext) =>
+  join(
+    ctx.projectRoot,
+    "node_modules",
+    `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
+  );
+
 const routesOf = (host: HostDefinition) => {
   const routes = host.runner.routes;
   return typeof routes === "string" || routes === false ? routes : undefined;
@@ -233,7 +242,7 @@ export async function dev(
     toStudioArgs(host),
     undefined,
     callerOverride(host, ctx, ctx.verb ?? "dev"),
-    { routes: routesOf(host) },
+    { routes: routesOf(host), cacheDir: viteCacheOf(host, ctx) },
   );
 }
 

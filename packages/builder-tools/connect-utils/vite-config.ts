@@ -21,6 +21,7 @@ import {
   type PluginOption,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { connectOptimizeDeps } from "./dev-deps.js";
 import type { IConnectOptions } from "./types.js";
 import {
   buildHashFromBuildOptions,
@@ -35,6 +36,7 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  ignoreDotPhButRouteTree,
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
@@ -434,6 +436,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    cacheDir: options.cacheDir,
     // Prefix served/built asset URLs so Connect can run under a path prefix
     // (reverse proxy). Mirrors the client router basename; normalize so a bare
     // `app` or `/app` becomes `/app/` and matches the router.
@@ -449,7 +452,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         : undefined,
     server: {
       watch: {
-        ignored: ["**/backup-documents/**", "**/.ph/**"],
+        ignored: [
+          "**/backup-documents/**",
+          // Test coverage reports: rewritten by every test run.
+          "**/coverage/**",
+          ignoreDotPhButRouteTree(options.dirname, routesDir),
+        ],
       },
       fs: {
         allow: [searchForWorkspaceRoot(options.dirname), ...linkedRoots],
@@ -481,17 +489,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
-    optimizeDeps: {
-      include: [
-        "document-model",
-        "zod",
-        "@powerhousedao/design-system/connect",
-        "@powerhousedao/reactor-browser",
-        "@powerhousedao/document-engineering",
-        ...routes.include,
-      ],
-      exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
-    },
+    optimizeDeps: connectOptimizeDeps(
+      options.dirname,
+      routesDir,
+      routes.include,
+    ),
     plugins: [
       // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated

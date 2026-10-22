@@ -1,3 +1,4 @@
+import { EXTERNALIZABLE_SHARED_SPECIFIERS } from "@powerhousedao/shared/connect";
 import { createRequire } from "node:module";
 import { createReadStream } from "node:fs";
 import path from "node:path";
@@ -20,7 +21,25 @@ const REACT_DEPS = [
 ];
 
 const SHIM_PATH = "__ph/dev-react-shim/";
-const VITE_DEPS_PATH = "node_modules/.vite/deps";
+
+// A package's build leaves these to the host; dev serves each as a module
+// that re-exports Connect's own copy, so a registry package shares it.
+const SHARED_SHIM = "ph-shared:";
+const SHARED_DEPS = EXTERNALIZABLE_SHARED_SPECIFIERS.filter(
+  (spec) => !REACT_DEPS.includes(spec),
+);
+
+/** The page's import map entries for the shared deps: each root and its subpaths. */
+export function sharedDepImports(base: string): Record<string, string> {
+  const url = (spec: string) =>
+    withBase(base, `@id/__x00__${SHARED_SHIM}${spec}`);
+  return Object.fromEntries(
+    SHARED_DEPS.flatMap((spec) => [
+      [spec, url(spec)],
+      [`${spec}/`, `${url(spec)}/`],
+    ]),
+  );
+}
 
 // Content-Type for the asset extensions the vendor build emits; JS is the default.
 const VENDOR_MIME: Record<string, string> = {
@@ -56,6 +75,25 @@ const heavyLibsFor = (routesDir: string | false | undefined) =>
   routesDir
     ? HEAVY_LIBS.filter((lib) => lib !== "@powerhousedao/connect")
     : HEAVY_LIBS;
+
+/** The dev server's URL for a file: under the root, else through `/@fs/`. */
+export function devUrlOf(root: string, file: string) {
+  const relativePath = path.relative(root, file);
+  return relativePath.startsWith("..") || path.isAbsolute(relativePath)
+    ? `/@fs/${file.split(path.sep).join("/").replace(/^\/+/, "")}`
+    : relativePath.split(path.sep).join("/");
+}
+
+/** A file of Connect's package, else the root: where Connect's own imports resolve from. */
+function connectImporter(root: string) {
+  try {
+    return createRequire(path.join(root, "package.json")).resolve(
+      "@powerhousedao/connect/package.json",
+    );
+  } catch {
+    return path.join(root, "index.html");
+  }
+}
 
 // Vite serves dev module URLs under the resolved `base`. Join base + path
 // while collapsing the double slash so `base: "/"` stays byte-identical.
@@ -115,6 +153,7 @@ export async function devReactImportmapPlugin(
 ): Promise<Plugin | Plugin[]> {
   let namedExports = new Map<string, string[]>();
   let base = "/";
+  let root = projectRoot;
   let vendor: PrebuiltVendor | null = null;
   const heavyLibs = heavyLibsFor(routesDir);
 
@@ -148,6 +187,20 @@ export async function devReactImportmapPlugin(
   const main: Plugin = {
     name: "ph-dev-react-importmap",
     apply: "serve",
+    async resolveId(source, importer) {
+      if (source.startsWith(SHARED_SHIM)) return `\0${source}`;
+      if (source.startsWith(`\0${SHARED_SHIM}`)) return source;
+      // A shim's import resolves as Connect's own does, to the same module.
+      if (importer?.startsWith(`\0${SHARED_SHIM}`)) {
+        return this.resolve(source, connectImporter(root), { skipSelf: true });
+      }
+      return undefined;
+    },
+    load(id) {
+      if (!id.startsWith(`\0${SHARED_SHIM}`)) return undefined;
+      const spec = JSON.stringify(id.slice(SHARED_SHIM.length + 1));
+      return `export * from ${spec};\nimport * as M from ${spec};\nexport default M.default;\n`;
+    },
     config(cfg) {
       cfg.optimizeDeps ??= {};
       const include = new Set(cfg.optimizeDeps.include ?? []);
@@ -166,6 +219,7 @@ export async function devReactImportmapPlugin(
     },
     configResolved(config) {
       base = config.base;
+      root = config.root;
     },
     configureServer(server) {
       // Resolve React's named exports from the consumer project so we don't
@@ -246,7 +300,8 @@ export async function devReactImportmapPlugin(
         }
 
         const browserHash = info.browserHash ?? optimizer.metadata.browserHash;
-        const depUrl = `${withBase(base, VITE_DEPS_PATH)}/${path.basename(info.file)}?v=${browserHash}`;
+        // Wherever this server keeps its cache: a host's is node_modules/.vite-<host>.
+        const depUrl = `${withBase(base, devUrlOf(root, info.file))}?v=${browserHash}`;
         const names = namedExports.get(id) ?? [];
 
         res.setHeader("Content-Type", "application/javascript");
@@ -273,6 +328,7 @@ export async function devReactImportmapPlugin(
             `${shimPrefix}${id}.js?v=${browserHash}`,
           ]),
         );
+        Object.assign(imports, sharedDepImports(base));
         // Heavy libs resolve to the prebuilt vendor (base-prefixed); their bare
         // React imports fall through to the React shim entries above.
         let dynamicBaseScript = "";

@@ -21,6 +21,7 @@ import {
   connectRoutesGeneratorConfig,
   connectRoutesTreeOf,
   generateConnectRoutes,
+  ignoreDotPhButRouteTree,
   PACKAGE_ROUTES_MODULE,
   resolveConnectRoutesDir,
 } from "./connect-routes.js";
@@ -297,18 +298,19 @@ describe("connectRoutes", () => {
 });
 
 describe("connectRouteFileDeps", () => {
-  it("pre-bundles the router and core's router by Connect's name for an installed Connect", () => {
+  it("pre-bundles the router, core's router and route-views by Connect's name for an installed Connect", () => {
     const installed =
       "/project/node_modules/.pnpm/@powerhousedao+connect@6.2.3/node_modules/@powerhousedao/connect";
     expect(connectRouteFileDeps(installed)).toEqual([
       "@powerhousedao/connect > @tanstack/react-router",
       "@powerhousedao/connect > @powerhousedao/connect-core/router",
+      "@powerhousedao/connect > @powerhousedao/connect/route-views",
     ]);
     expect(
       connectRouteFileDeps(
         "C:\\project\\node_modules\\@powerhousedao\\connect",
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("adds nothing for a Connect outside node_modules", () => {
@@ -407,5 +409,34 @@ describe("connectRouterChunkGroups", () => {
     const routerChunk = chunks.find((chunk) => chunk.name === "router")!;
     const walletChunk = chunks.find((chunk) => wallet in chunk.modules)!;
     expect(walletChunk.imports).not.toContain(routerChunk.fileName);
+  });
+});
+
+describe("the dev watcher's .ph filter", () => {
+  const root = join(tmpdir(), "ph-watch");
+  const at = (path: string) => join(root, path);
+
+  it("ignores .ph but the default host's tree", () => {
+    const ignored = ignoreDotPhButRouteTree(root, at(HOST_ROUTES));
+    expect(ignored(at(".ph"))).toBe(false);
+    expect(ignored(at(CONNECT_ROUTES_GEN))).toBe(false);
+    expect(ignored(at(".ph/connect-build/dist/index.js"))).toBe(true);
+    expect(ignored(at(".ph/hosts/lab/routes.gen.ts"))).toBe(true);
+    expect(ignored(at("hosts/connect/routes/index.tsx"))).toBe(false);
+  });
+
+  it("keeps the folders that lead to another host's tree", () => {
+    const ignored = ignoreDotPhButRouteTree(root, at("hosts/lab/web/routes"));
+    expect(ignored(at(".ph/hosts"))).toBe(false);
+    expect(ignored(at(".ph/hosts/lab/web"))).toBe(false);
+    expect(ignored(at(".ph/hosts/lab/web/routes.gen.ts"))).toBe(false);
+    expect(ignored(at(".ph/hosts/other.gen.ts"))).toBe(true);
+    expect(ignored(at(CONNECT_ROUTES_GEN))).toBe(true);
+  });
+
+  it("ignores all of .ph without routes", () => {
+    expect(ignoreDotPhButRouteTree(root, false)(at(CONNECT_ROUTES_GEN))).toBe(
+      true,
+    );
   });
 });

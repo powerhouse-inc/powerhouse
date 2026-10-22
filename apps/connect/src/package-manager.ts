@@ -434,8 +434,10 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
-    const importUrl = `/node_modules/${name}/browser/index.js`;
-    const stylesheetUrl = `/node_modules/${name}/style.css`;
+    // Installed under its bare name; the spec may carry a version or tag.
+    const dir = `/node_modules/${parseBareName(name)}`;
+    const importUrl = `${dir}/browser/index.js`;
+    const stylesheetUrl = `${dir}/style.css`;
 
     const packageWithMeta = await this.#importPackage({
       name,
@@ -443,7 +445,7 @@ export class BrowserPackageManager implements IPackageManager {
       stylesheetUrl,
     });
     packageWithMeta.version = await fetchPackageJsonVersion(
-      `/node_modules/${name}/package.json`,
+      `${dir}/package.json`,
     );
 
     return packageWithMeta;
@@ -515,8 +517,9 @@ export class BrowserPackageManager implements IPackageManager {
           await this.#loadPackageFromNodeModules(packageName);
         return packageWithMeta;
       } catch (error) {
-        console.warn(
-          `Failed to load package "${packageName}" from node_modules:`,
+        // Expected for a package installed only in Connect, not the project.
+        console.debug(
+          `"${packageName}" isn't in node_modules; loading it from the registry.`,
           error,
         );
       }
