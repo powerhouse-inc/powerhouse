@@ -1,0 +1,10 @@
+
+dist
+coverage
+node_modules
+.env.local
+*.tsbuildinfo
+
+.ph
+backup-documents
+projects-import.js

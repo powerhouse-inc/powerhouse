@@ -10,3 +10,4 @@ Evals of `fix/connect-field-test`, each run from packages published to a local r
 - `changes-e51daa8/`: a diff review (not a test) of the force-push to `e51daa8`, and which findings are still open.
 - `drive-app-opus/`: a blind drive-app eval by an Opus subagent at `e51daa8` (model, editor, drive app, attaching it to drives), with the main session's verification at the end. `drive-app-haiku/` is its Haiku twin.
 - `drive-app-haiku/`: the same drive-app eval by a Haiku subagent at `e51daa8`, with the main session's verification and a comparison with the Opus run at the end.
+- `runtime-drive-app/`: Opus's drive-app package loaded at runtime through the hosts of a project scaffolded with the runner flag, at `97c5300`. It re-checks N1 and the wrapped sidebar, and covers the worker-reactor and shared-drive-id findings and the `cli` compound.
