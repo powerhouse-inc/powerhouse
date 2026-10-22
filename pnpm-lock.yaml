@@ -1361,6 +1361,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.3.2
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21

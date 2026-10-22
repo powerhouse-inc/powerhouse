@@ -89,6 +89,21 @@ describe("findDisallowedSpecifiers", () => {
     const code = `const s = "kysely"; log("import from nowhere"); map.import("x")`;
     expect(findDisallowedSpecifiers(code)).toEqual([]);
   });
+
+  it("ignores import-like text in string literals and comments", () => {
+    const code = [
+      `function oe(){throw Error('generateMock is no longer exported from "document-model". Import it from "document-model/mock".')}`,
+      'const t = `import x from "viem"`;',
+      `/** @example import { db } from "kysely"; */`,
+      `// export * from "node:fs"`,
+      `export { oe };`,
+    ].join("\n");
+    expect(findDisallowedSpecifiers(code)).toEqual([]);
+  });
+
+  it("leaves a dynamic import with a computed specifier out", () => {
+    expect(findDisallowedSpecifiers(`const m = (s) => import(s);`)).toEqual([]);
+  });
 });
 
 describe("workerSafeVendorImports", () => {
@@ -130,6 +145,24 @@ describe("workerSafeVendorImports", () => {
       join(vendorDir, "lazy.js"),
       `import { p } from "./chunks/preload-helper.js";\nexport const load = () => p(() => import("./chunks/zod-impl.js"));\n`,
     );
+    // document-model's purge chunk: its error message reads like an import.
+    writeFileSync(
+      join(vendorDir, "document_model.js"),
+      `export * from "./chunks/purge.js";\n`,
+    );
+    writeFileSync(
+      join(vendorDir, "chunks/purge.js"),
+      `function oe(){throw Error('generateMock is no longer exported from "document-model" or "@powerhousedao/shared/document-model". Import it from "document-model/mock".')}export{oe as generateMock};\n`,
+    );
+    // The same entry shape with a real bare import.
+    writeFileSync(
+      join(vendorDir, "document_model_mock.js"),
+      `export * from "./chunks/mock.js";\n`,
+    );
+    writeFileSync(
+      join(vendorDir, "chunks/mock.js"),
+      `import{generateMock as g}from"document-model";export{g};\n`,
+    );
     writeFileSync(
       join(vendorDir, "chunks/preload-helper.js"),
       `export const p = (f) => f().catch((err) => { const e = new Event("vite:preloadError"); e.payload = err; window.dispatchEvent(e); });\n`,
@@ -148,6 +181,15 @@ describe("workerSafeVendorImports", () => {
         missing: "/__vendor__/missing.js",
       }),
     ).toEqual({ zod: "/__vendor__/zod.js" });
+  });
+
+  it("keeps an entry whose only import-like text is in a string, and demotes a real bare import", () => {
+    expect(
+      workerSafeVendorImports(vendorDir, {
+        "document-model": "/__vendor__/document_model.js",
+        "document-model/mock": "/__vendor__/document_model_mock.js",
+      }),
+    ).toEqual({ "document-model": "/__vendor__/document_model.js" });
   });
 
   it("demotes entries whose closure reaches page-only code", () => {
