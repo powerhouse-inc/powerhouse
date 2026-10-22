@@ -516,11 +516,12 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       );
       const driveId = drive.header.id;
 
-      if (driveInput.global.name) {
-        await client.rename(driveId, driveInput.global.name);
-      }
+      // Before the rename: a header-scope op after SET_NAME echoes a stale name.
       if (driveInput.preferredEditor) {
         await client.setPreferredEditor(driveId, driveInput.preferredEditor);
+      }
+      if (driveInput.global.name) {
+        await client.rename(driveId, driveInput.global.name);
       }
 
       const actions: Action[] = [];
