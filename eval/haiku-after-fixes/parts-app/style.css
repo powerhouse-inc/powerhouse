@@ -1,0 +1,8 @@
+/* Package CSS goes in external-packages, between Connect's components and utilities. */
+@layer properties, theme, base, components, external-packages, utilities;
+@import "tailwindcss";
+/* Connect's tokens, rules and classes, generated in this one build. */
+@import "@powerhousedao/connect/tailwind.css";
+
+/* The package's own tokens and rules, for its editors and routes: ph build
+     ships them in the package's stylesheet. Theme Connect in hosts/connect/style.css. */

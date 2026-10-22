@@ -1,0 +1,13 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+await page.goto("http://localhost:2867/inventory", { waitUntil: "domcontentloaded", timeout: 60000 });
+await page.waitForTimeout(12000);
+const rej = page.getByRole("button", { name: "Reject all cookies" });
+if (await rej.isVisible().catch(() => false)) await rej.click();
+await page.waitForSelector("table tbody tr", { timeout: 60000 });
+await page.waitForTimeout(2000);
+const rows = await page.$$eval("table tbody tr", (trs) => trs.map((tr) => { const a = tr.querySelector("a"); return { text: tr.innerText.split("\n")[0], href: a ? a.getAttribute("href") : null }; }));
+console.log(JSON.stringify(rows.slice(0, 13)));
+console.log("url", page.url());
+await browser.close();

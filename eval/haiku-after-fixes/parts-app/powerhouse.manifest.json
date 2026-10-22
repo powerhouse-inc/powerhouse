@@ -1,0 +1,28 @@
+{
+  "name": "parts-app",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "parts/inventory-item",
+      "name": "InventoryItem"
+    }
+  ],
+  "apps": [],
+  "editors": [
+    {
+      "name": "Inventory Item Editor",
+      "id": "inventory-item-editor",
+      "documentTypes": [
+        "parts/inventory-item"
+      ]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}
