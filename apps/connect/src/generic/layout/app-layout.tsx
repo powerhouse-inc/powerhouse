@@ -1,5 +1,6 @@
 import { useIsEmbedded } from "@powerhousedao/connect-core/embedded";
 import type { ReactNode } from "react";
+import { twMerge } from "tailwind-merge";
 import {
   ContentOutlet,
   useSidebarMode,
@@ -19,7 +20,11 @@ export function AppLayout({ sidebar }: AppLayoutProps = {}) {
   const showSidebar = !isEmbedded && mode !== "hidden";
   return (
     <div
-      className="flex h-full items-stretch overflow-auto"
+      // On a phone Connect's sidebar is a bar under the page; a project's keeps its place.
+      className={twMerge(
+        "flex h-full items-stretch overflow-auto",
+        !sidebar && "max-sm:flex-col-reverse",
+      )}
       role="presentation"
       tabIndex={0}
     >

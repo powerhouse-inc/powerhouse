@@ -3,8 +3,8 @@
 exports[`Sidebar Component > should match snapshot 1`] = `
 <DocumentFragment>
   <div
-    class="group z-1 flex h-full flex-col bg-sidebar text-sidebar-foreground"
-    style="width: 100px;"
+    class="group z-1 flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground max-sm:h-auto max-sm:w-full max-sm:flex-row max-sm:pb-[env(safe-area-inset-bottom)]"
+    style="--sidebar-width: 100px;"
   >
     <div
       class="scrollbar-none flex-1 overflow-auto text-foreground transition-shadow"
