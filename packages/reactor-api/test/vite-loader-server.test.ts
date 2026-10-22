@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { normalizePath } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import { startViteServer } from "../src/packages/vite-loader.mjs";
 
@@ -18,8 +19,9 @@ describe("the package loader's Vite server", () => {
     writeFileSync(join(root, "package.json"), `{"name":"loader-fixture"}`);
     const server = await startViteServer(root);
     try {
+      // Vite keeps the cache path with forward slashes, Windows included.
       expect(server.config.cacheDir).toBe(
-        join(root, "node_modules", ".vite-reactor"),
+        normalizePath(join(root, "node_modules", ".vite-reactor")),
       );
       expect(server.config.server.hmr).toBe(false);
       expect(server.config.optimizeDeps.noDiscovery).toBe(true);
