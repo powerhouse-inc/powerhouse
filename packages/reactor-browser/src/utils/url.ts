@@ -37,7 +37,7 @@ export function makeDriveUrlComponent(
 
 /** A drive's URL component: its slug, else its id, prefixed with the slugged
  * name as `<name>-<id>` when the id is opaque (a UUID or derived id). */
-export function makeDriveSlug(drive: DocumentDriveDocument) {
+export function makeDriveSlug(drive: DocumentDriveDocument): string {
   const { id, slug: driveSlug } = drive.header;
   if (driveSlug && driveSlug !== id) return driveSlug;
   return isOpaqueId(id) ? namedDriveSlug(drive) : id;
@@ -47,7 +47,7 @@ function isOpaqueId(id: string) {
   return findUuid(id) !== undefined || isDerivedDocumentId(id);
 }
 
-function namedDriveSlug(drive: DocumentDriveDocument) {
+function namedDriveSlug(drive: DocumentDriveDocument): string {
   const name = drive.state.global.name || drive.header.name;
   return namedSlug(drive, name, drive.header.id);
 }
@@ -58,7 +58,7 @@ const namedSlugs = new WeakMap<
 >();
 
 // `<slugged name>-<id>`, cached per drive or node; inputs are rechecked.
-function namedSlug(owner: object, name: string, id: string) {
+function namedSlug(owner: object, name: string, id: string): string {
   const cached = namedSlugs.get(owner);
   if (cached?.name === name && cached.id === id) return cached.value;
   const nameSlug = name ? slug(name) : "";
@@ -71,7 +71,7 @@ function namedSlug(owner: object, name: string, id: string) {
 export function findDriveBySlug(
   drives: readonly DocumentDriveDocument[] | undefined,
   ref: string | undefined,
-) {
+): DocumentDriveDocument | undefined {
   if (!drives || !ref) return undefined;
   const exact = drives.find(
     (d) => d.header.slug === ref || d.header.id === ref,
@@ -95,7 +95,7 @@ export function findDriveBySlug(
  * Makes a URL component for a node: `<slugged name>-<id>`. The id is kept
  * verbatim, since a v2-required id is case-sensitive base64url.
  */
-export function makeNodeSlug(node: Node | undefined) {
+export function makeNodeSlug(node: Node | undefined): string {
   if (!node) return "";
   return namedSlug(node, node.name, node.id);
 }
