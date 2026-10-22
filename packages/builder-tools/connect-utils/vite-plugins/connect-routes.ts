@@ -74,6 +74,11 @@ function findRouteFile(dir: string, name: string) {
     .find((file) => existsSync(file));
 }
 
+/** Whether the project's `_app` replaces Connect's layout (and its chrome). */
+export function hasProjectAppLayout(routesDir: string | undefined): boolean {
+  return !!routesDir && !!findRouteFile(routesDir, APP_LAYOUT);
+}
+
 export type ConnectRoutes = {
   /** Points Connect at the tree to route with, then at what its route files render. */
   aliases: Alias[];

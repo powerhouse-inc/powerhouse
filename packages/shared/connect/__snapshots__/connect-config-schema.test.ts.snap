@@ -1,0 +1,1160 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`emitted JSON Schema fragment > matches the pinned fragment 1`] = `
+{
+  "additionalProperties": false,
+  "description": "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour.",
+  "properties": {
+    "ai": {
+      "additionalProperties": false,
+      "description": "AI assistant (chat) behaviour.",
+      "properties": {
+        "assistantEnabled": {
+          "default": false,
+          "description": "When true, Connect mounts the in-browser AI assistant (bottom-right chat FAB that talks to a user-configured OpenAI-compatible endpoint and acts on the reactor). Disabled by default.",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "app": {
+      "additionalProperties": false,
+      "description": "Top-level Connect application behaviour.",
+      "properties": {
+        "basePath": {
+          "default": "/",
+          "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
+          "type": "string",
+        },
+        "logLevel": {
+          "default": "info",
+          "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error",
+          ],
+          "type": "string",
+        },
+        "offline": {
+          "default": true,
+          "description": "When true (default), the build emits a precaching service worker so Connect's app shell works offline, and the SPA registers it at boot. Set false to opt this deployment out: no service worker is built, the SPA skips registration, and any previously-installed worker is unregistered.",
+          "type": "boolean",
+        },
+        "studioMode": {
+          "default": false,
+          "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by \`ph vetra\` / \`ph connect studio\`; false by default.",
+          "type": "boolean",
+        },
+        "workflowsEnabled": {
+          "description": "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Falls back to the top-level \`workflows.enabled\`; set it to override that for Connect. Independent of studioMode. False when neither is set.",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "branding": {
+      "additionalProperties": false,
+      "description": "App identity and visual branding. Every field is optional; null means the default.",
+      "properties": {
+        "appName": {
+          "description": "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "favicon": {
+          "description": "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. \`ph connect build --favicon\` wins over it.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+              "type": "string",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon.",
+        },
+        "loader": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                  "type": "string",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "animation": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "pulse",
+                            "spin",
+                            "none",
+                          ],
+                          "type": "string",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Motion applied to the image (default pulse).",
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "maximum": 512,
+                          "minimum": 16,
+                          "type": "number",
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "Rendered width in CSS pixels (default 96); the height follows the image.",
+                    },
+                    "src": {
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                      "type": "string",
+                    },
+                  },
+                  "required": [
+                    "src",
+                  ],
+                  "type": "object",
+                },
+              ],
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "The loading image (first paint, app start, drive and editor loading). A path gets a gentle pulse; { src, animation, size } says otherwise, with animation "none" for an image that animates itself (animated SVG, GIF or WebP). null or omitted: Connect's animated logo.",
+        },
+      },
+      "type": "object",
+    },
+    "drives": {
+      "additionalProperties": false,
+      "description": "Default-drive and add-drive UI behaviour.",
+      "properties": {
+        "allowAddDrive": {
+          "default": true,
+          "description": "When false, the SPA hides the 'add drive' affordance entirely (top-level). Per-section overrides live in \`sections.{remote,local}.allowAdd\`.",
+          "type": "boolean",
+        },
+        "defaultDrives": {
+          "default": [],
+          "description": "Drives the SPA auto-connects to on first load. Each entry is either a remote drive (a URL, with optional name/icon overrides) or a local drive (created locally on first boot, with a stable id and optional name/icon/app).",
+          "items": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "icon": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "url": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "url",
+                ],
+                "type": "object",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "app": {
+                    "description": "Drive app (preferred editor) to open on the drive.",
+                    "type": "string",
+                  },
+                  "icon": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                  "id": {
+                    "description": "Stable drive id. The drive is created with this id on first boot and is not re-created on later boots.",
+                    "type": "string",
+                  },
+                  "local": {
+                    "const": true,
+                    "description": "Discriminator: this entry is a local drive created on first boot.",
+                    "type": "boolean",
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null",
+                    ],
+                  },
+                },
+                "required": [
+                  "local",
+                  "id",
+                ],
+                "type": "object",
+              },
+            ],
+          },
+          "type": "array",
+        },
+        "icons": {
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "description": "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon.",
+              "properties": {
+                "document": {
+                  "anyOf": [
+                    {
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                  "description": "Documents whose type has no icon in \`documents\`.",
+                },
+                "documents": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": {
+                        "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                        "type": "string",
+                      },
+                      "propertyNames": {
+                        "type": "string",
+                      },
+                      "type": "object",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                  "description": "Per document type, e.g. "acme/invoice".",
+                },
+                "folder": {
+                  "anyOf": [
+                    {
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                  "description": "Folders.",
+                },
+                "localDrive": {
+                  "anyOf": [
+                    {
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                  "description": "Local drives without an icon of their own.",
+                },
+                "remoteDrive": {
+                  "anyOf": [
+                    {
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                      "type": "string",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
+                  "description": "Remote drives without an icon of their own.",
+                },
+              },
+              "type": "object",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon.",
+        },
+        "preserveStrategy": {
+          "description": "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only.",
+          "enum": [
+            "preserve-all",
+            "preserve-by-url-and-detach",
+          ],
+          "type": "string",
+        },
+        "sections": {
+          "additionalProperties": false,
+          "description": "Per-section visibility and affordance toggles. \`remote\` covers what was historically split into 'public' + 'cloud'; \`local\` is browser-local drives.",
+          "properties": {
+            "local": {
+              "additionalProperties": false,
+              "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+              "properties": {
+                "allowAdd": {
+                  "default": true,
+                  "description": "When false, the section's 'add drive' affordance is hidden.",
+                  "type": "boolean",
+                },
+                "allowDelete": {
+                  "default": true,
+                  "description": "When false, drives in this section cannot be deleted from the UI.",
+                  "type": "boolean",
+                },
+                "enabled": {
+                  "default": true,
+                  "description": "When false, the section is hidden in the sidebar.",
+                  "type": "boolean",
+                },
+              },
+              "type": "object",
+            },
+            "remote": {
+              "additionalProperties": false,
+              "description": "Visibility and add/delete affordances for a drive section in the sidebar.",
+              "properties": {
+                "allowAdd": {
+                  "default": true,
+                  "description": "When false, the section's 'add drive' affordance is hidden.",
+                  "type": "boolean",
+                },
+                "allowDelete": {
+                  "default": true,
+                  "description": "When false, drives in this section cannot be deleted from the UI.",
+                  "type": "boolean",
+                },
+                "enabled": {
+                  "default": true,
+                  "description": "When false, the section is hidden in the sidebar.",
+                  "type": "boolean",
+                },
+              },
+              "type": "object",
+            },
+          },
+          "type": "object",
+        },
+      },
+      "type": "object",
+    },
+    "home": {
+      "additionalProperties": false,
+      "description": "The home screen (the generic chrome's landing page).",
+      "properties": {
+        "background": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                  "type": "string",
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "color": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dark": {
+                                  "type": [
+                                    "string",
+                                    "null",
+                                  ],
+                                },
+                                "light": {
+                                  "type": "string",
+                                },
+                              },
+                              "required": [
+                                "light",
+                              ],
+                              "type": "object",
+                            },
+                          ],
+                        },
+                        {
+                          "type": "null",
+                        },
+                      ],
+                      "description": "The page colour, or { light, dark }. Omitted or null: the theme's page background.",
+                    },
+                    "layers": {
+                      "description": "Painted in order; the first is at the back.",
+                      "items": {
+                        "additionalProperties": false,
+                        "description": "An image laid over the page, absolutely positioned: the edges set in \`position\` pin it, an axis with neither edge set is centred.",
+                        "properties": {
+                          "fade": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "bottom": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "left": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "right": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "top": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                },
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Feather depth per edge, fading the layer into the page colour.",
+                          },
+                          "height": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                          "maxHeight": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                          "maxWidth": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                          "minHeight": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                          "minWidth": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                          "opacity": {
+                            "anyOf": [
+                              {
+                                "maximum": 1,
+                                "minimum": 0,
+                                "type": "number",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "0 to 1 (default 1).",
+                          },
+                          "position": {
+                            "anyOf": [
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "bottom": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "left": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "right": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                  "top": {
+                                    "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                                    "type": [
+                                      "number",
+                                      "string",
+                                      "null",
+                                    ],
+                                  },
+                                },
+                                "type": "object",
+                              },
+                              {
+                                "type": "null",
+                              },
+                            ],
+                            "description": "Distances to the pane's edges; at most one per axis. Omitted: centred both ways.",
+                          },
+                          "src": {
+                            "anyOf": [
+                              {
+                                "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                                "type": "string",
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "dark": {
+                                    "anyOf": [
+                                      {
+                                        "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                                        "type": "string",
+                                      },
+                                      {
+                                        "type": "null",
+                                      },
+                                    ],
+                                  },
+                                  "light": {
+                                    "description": "Image reference: a project-relative file path, a URL, or a data URI.",
+                                    "type": "string",
+                                  },
+                                },
+                                "required": [
+                                  "light",
+                                ],
+                                "type": "object",
+                              },
+                            ],
+                            "description": "One image for both colour schemes, or { light, dark } (dark falls back to light).",
+                          },
+                          "width": {
+                            "description": "A CSS length: a number is px; a string is used as written ("40%", "min(55%, 880px)", "calc(50% - 120px)").",
+                            "type": [
+                              "number",
+                              "string",
+                              "null",
+                            ],
+                          },
+                        },
+                        "required": [
+                          "src",
+                        ],
+                        "type": "object",
+                      },
+                      "type": "array",
+                    },
+                  },
+                  "required": [
+                    "layers",
+                  ],
+                  "type": "object",
+                },
+              ],
+              "description": "Layered images over a page colour, or a single image pinned to the bottom-right corner. null keeps the default.",
+            },
+            {
+              "type": "null",
+            },
+          ],
+          "description": "The home screen's background: { color, layers } with each image positioned and sized, or one image pinned bottom-right. null or omitted: the bundled gradient.",
+        },
+      },
+      "type": "object",
+    },
+    "instance": {
+      "additionalProperties": false,
+      "description": "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace.",
+      "properties": {
+        "multiReactor": {
+          "default": false,
+          "description": "Opt-in multi-reactor routing. When on, Connect routes through the in-browser reactor plus remote backends instead of the single in-browser reactor. Off by default; the single-reactor path is unchanged.",
+          "type": "boolean",
+        },
+        "namespace": {
+          "default": null,
+          "description": "Explicit storage/SharedWorker namespace for this instance. \`null\` derives it from the base path (and, later, the configured endpoint), so root deployments stay byte-identical.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "reactorWorker": {
+          "default": false,
+          "description": "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified. Packaged deployments load the worker from the prebuilt bundle \`ph connect build\` emits under __reactor_worker__/ (the dev server builds it lazily at the same path); when that bundle is absent the feature reports itself unavailable instead of starting a worker that cannot load.",
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "namespace",
+        "reactorWorker",
+      ],
+      "type": "object",
+    },
+    "openPanel": {
+      "additionalProperties": false,
+      "description": "OpenPanel product analytics. Set \`clientId\` to enable; an empty \`clientId\` disables it. Events are only sent after the user accepts analytics cookies. Takes precedence over the build-time PH_CONNECT_OPENPANEL_* env vars.",
+      "properties": {
+        "apiUrl": {
+          "description": "OpenPanel API URL for self-hosted instances (e.g. 'https://openpanel.example/api'). Omit to use OpenPanel's hosted API.",
+          "type": "string",
+        },
+        "clientId": {
+          "default": "",
+          "description": "OpenPanel client id. Empty string disables OpenPanel entirely.",
+          "type": "string",
+        },
+        "trackOperations": {
+          "default": true,
+          "description": "Track document operations.",
+          "type": "boolean",
+        },
+        "trackUiEvents": {
+          "default": true,
+          "description": "Track UI events.",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "packages": {
+      "additionalProperties": false,
+      "description": "Runtime behaviour for the Connect package manager (separate from top-level \`packages[]\`, which lists which packages to load).",
+      "properties": {
+        "externalEnabled": {
+          "default": true,
+          "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
+          "type": "boolean",
+        },
+        "liveReload": {
+          "default": false,
+          "description": "When true, Connect subscribes to the static-mode \`/__packages\` SSE channel so live publishes flow into the running tab without a page reload. Only works under hosting that serves this channel (e.g. ph-clint static mode).",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "pwa": {
+      "additionalProperties": false,
+      "description": "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Scalar fields deep-merge (this layer wins); the array members (icons, file_handlers, globs, runtimeCaching and denylist patterns) are additive; maximumFileSizeToCacheInBytes takes the max across contributors. (categories is not set here — it is derived from the manifest's category field.) Only applied when connect.app.offline is true.",
+      "properties": {
+        "globIgnores": {
+          "description": "Extra precache ignore globs, unioned with the built-ins.",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "globPatterns": {
+          "description": "Extra Workbox precache globs, unioned with the built-ins.",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "manifest": {
+          "additionalProperties": false,
+          "description": "Web-app-manifest field overrides.",
+          "properties": {
+            "background_color": {
+              "type": "string",
+            },
+            "description": {
+              "type": "string",
+            },
+            "display": {
+              "enum": [
+                "fullscreen",
+                "standalone",
+                "minimal-ui",
+                "browser",
+              ],
+              "type": "string",
+            },
+            "file_handlers": {
+              "description": "File associations appended after Connect's built-in .phd/.phdm handler and de-duplicated on the whole entry. Entries only declare accepted types; there is no action field, because opening the files requires Connect's own runtime handling, so every handler opens at the app root.",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "accept": {
+                    "additionalProperties": {
+                      "items": {
+                        "pattern": "^\\.",
+                        "type": "string",
+                      },
+                      "type": "array",
+                    },
+                    "description": "MIME type → file extensions. Each extension must start with '.'; browsers ignore entries without it.",
+                    "propertyNames": {
+                      "type": "string",
+                    },
+                    "type": "object",
+                  },
+                  "icons": {
+                    "description": "OS-level file-type icons.",
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "purpose": {
+                          "type": "string",
+                        },
+                        "sizes": {
+                          "type": "string",
+                        },
+                        "src": {
+                          "type": "string",
+                        },
+                        "type": {
+                          "type": "string",
+                        },
+                      },
+                      "required": [
+                        "src",
+                      ],
+                      "type": "object",
+                    },
+                    "type": "array",
+                  },
+                  "launch_type": {
+                    "enum": [
+                      "single-client",
+                      "multiple-clients",
+                    ],
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "accept",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "icons": {
+              "description": "Icons appended to the built-in set and de-duplicated by (src, sizes, purpose).",
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "purpose": {
+                    "type": "string",
+                  },
+                  "sizes": {
+                    "type": "string",
+                  },
+                  "src": {
+                    "type": "string",
+                  },
+                  "type": {
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "src",
+                ],
+                "type": "object",
+              },
+              "type": "array",
+            },
+            "launch_handler": {
+              "additionalProperties": false,
+              "description": "How the OS launches the app for handled files/links. Connect defaults to focus-existing.",
+              "properties": {
+                "client_mode": {
+                  "enum": [
+                    "auto",
+                    "focus-existing",
+                    "navigate-existing",
+                    "navigate-new",
+                  ],
+                  "type": "string",
+                },
+              },
+              "required": [
+                "client_mode",
+              ],
+              "type": "object",
+            },
+            "name": {
+              "type": "string",
+            },
+            "scope": {
+              "type": "string",
+            },
+            "short_name": {
+              "type": "string",
+            },
+            "start_url": {
+              "type": "string",
+            },
+            "theme_color": {
+              "type": "string",
+            },
+          },
+          "type": "object",
+        },
+        "maximumFileSizeToCacheInBytes": {
+          "description": "Raise the precache file-size ceiling. The max across all contributors wins, so no contributor can shrink another's limit.",
+          "type": "number",
+        },
+        "navigateFallbackDenylist": {
+          "description": "Extra SPA navigate-fallback denylist patterns, unioned with the built-ins.",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "flags": {
+                    "description": "RegExp flags (e.g. 'i').",
+                    "type": "string",
+                  },
+                  "source": {
+                    "description": "RegExp source.",
+                    "type": "string",
+                  },
+                },
+                "required": [
+                  "source",
+                ],
+                "type": "object",
+              },
+            ],
+            "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
+          },
+          "type": "array",
+        },
+        "runtimeCaching": {
+          "description": "Runtime-caching rules appended after the built-in rules. Workbox is first-match-wins, so these cannot override a built-in rule matching the same URL.",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "handler": {
+                "enum": [
+                  "CacheFirst",
+                  "CacheOnly",
+                  "NetworkFirst",
+                  "NetworkOnly",
+                  "StaleWhileRevalidate",
+                ],
+                "type": "string",
+              },
+              "method": {
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "DELETE",
+                  "HEAD",
+                  "PATCH",
+                ],
+                "type": "string",
+              },
+              "options": {
+                "additionalProperties": false,
+                "properties": {
+                  "cacheName": {
+                    "type": "string",
+                  },
+                  "cacheableResponse": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "headers": {
+                        "additionalProperties": {
+                          "type": "string",
+                        },
+                        "propertyNames": {
+                          "type": "string",
+                        },
+                        "type": "object",
+                      },
+                      "statuses": {
+                        "items": {
+                          "type": "number",
+                        },
+                        "type": "array",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "expiration": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "maxAgeSeconds": {
+                        "type": "number",
+                      },
+                      "maxEntries": {
+                        "type": "number",
+                      },
+                    },
+                    "type": "object",
+                  },
+                  "networkTimeoutSeconds": {
+                    "description": "Seconds a NetworkFirst rule waits for the network before falling back to the cache.",
+                    "type": "number",
+                  },
+                },
+                "type": "object",
+              },
+              "urlPattern": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "flags": {
+                        "description": "RegExp flags (e.g. 'i').",
+                        "type": "string",
+                      },
+                      "source": {
+                        "description": "RegExp source.",
+                        "type": "string",
+                      },
+                    },
+                    "required": [
+                      "source",
+                    ],
+                    "type": "object",
+                  },
+                ],
+                "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time.",
+              },
+            },
+            "required": [
+              "urlPattern",
+              "handler",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "type": "object",
+    },
+    "reactor": {
+      "additionalProperties": false,
+      "description": "Settings for the reactor Connect runs in the browser, on the main thread or in the shared worker alike.",
+      "properties": {
+        "createSignaturePolicy": {
+          "default": "v2-required",
+          "description": "What new documents are created as. \`v2-required\` documents accept only v2 action signatures and take content-addressed ids; set \`legacy\` while any peer Connect syncs with predates them. Existing documents keep their policy.",
+          "enum": [
+            "legacy",
+            "v2-required",
+          ],
+          "type": "string",
+        },
+        "featureFlags": {
+          "additionalProperties": false,
+          "description": "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge.",
+          "properties": {
+            "authConditions": {
+              "default": false,
+              "description": "Evaluate \`where\` and \`match\` conditions on grants. Requires authGroups. Do not enable on a fleet \`preflight:auth\` reports as crossing a reducer version.",
+              "type": "boolean",
+            },
+            "authEnforcement": {
+              "default": false,
+              "description": "Enforce the auth scope's policy at admission, replay, and read. Requires documentDecisions.",
+              "type": "boolean",
+            },
+            "authGroups": {
+              "default": false,
+              "description": "Let \`{ group }\` principals match against the rosters of the group documents a policy names. Requires authEnforcement.",
+              "type": "boolean",
+            },
+            "documentDecisions": {
+              "default": false,
+              "description": "Decide writes from the document stream rather than the document meta cache, so a backdated deletion denies the operations that sort after it.",
+              "type": "boolean",
+            },
+          },
+          "type": "object",
+        },
+        "unsupportedStoredDocuments": {
+          "default": "refuse",
+          "description": "What the reactor does when this browser's store holds documents at protocol versions this build does not run. \`refuse\` fails the boot and names the versions; \`read-only\` boots and keeps those documents read-only.",
+          "enum": [
+            "refuse",
+            "read-only",
+          ],
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "renown": {
+      "additionalProperties": false,
+      "description": "Renown identity / authentication coordinates.",
+      "properties": {
+        "adapters": {
+          "additionalProperties": false,
+          "description": "Per-adapter wallet config for in-page auth. Presence of an adapter key enables it; omit or leave empty for redirect-only behaviour.",
+          "properties": {
+            "privy": {
+              "additionalProperties": false,
+              "description": "Privy embedded/social adapter config.",
+              "properties": {
+                "appId": {
+                  "description": "Privy application id; required for this adapter to function.",
+                  "type": "string",
+                },
+                "clientId": {
+                  "description": "Optional Privy client id.",
+                  "type": "string",
+                },
+                "methods": {
+                  "description": "Login methods this adapter offers; default per adapter when omitted.",
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
+              },
+              "type": "object",
+            },
+            "rainbow": {
+              "additionalProperties": false,
+              "description": "wagmi + RainbowKit external-wallet adapter config.",
+              "properties": {
+                "infuraProjectId": {
+                  "description": "Optional Infura project id used to build RPC transports.",
+                  "type": "string",
+                },
+                "walletConnectProjectId": {
+                  "description": "WalletConnect project id; required for this adapter to function.",
+                  "type": "string",
+                },
+              },
+              "type": "object",
+            },
+          },
+          "type": "object",
+        },
+        "chainId": {
+          "default": 1,
+          "description": "CAIP-2 chain reference within the network namespace.",
+          "type": "number",
+        },
+        "namespace": {
+          "description": "Renown localStorage namespace; share it across Connects to share login.",
+          "type": "string",
+        },
+        "networkId": {
+          "default": "eip155",
+          "description": "CAIP-2 network namespace (e.g. 'eip155').",
+          "type": "string",
+        },
+        "switchboardUrl": {
+          "description": "Switchboard GraphQL URL. When set, Connect enables in-page (no-redirect) Renown sign-in; otherwise it falls back to the redirect flow via \`url\`.",
+          "type": "string",
+        },
+        "url": {
+          "default": "https://www.renown.id",
+          "description": "Renown auth service URL.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "sentry": {
+      "additionalProperties": false,
+      "description": "Sentry error-tracking coordinates. Set \`dsn\` to enable Sentry; leave \`dsn\` null to disable. The Sentry release tag stays build-time (stamped via Vite's \`define\` from WORKSPACE_VERSION) so it always matches the sourcemaps uploaded by CI.",
+      "properties": {
+        "dsn": {
+          "default": null,
+          "description": "Sentry DSN URL. \`null\` disables Sentry entirely; the SPA never loads the Sentry SDK chunk.",
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "env": {
+          "default": "dev",
+          "description": "Sentry environment label, surfaced as the \`environment\` tag on every event.",
+          "type": "string",
+        },
+        "tracing": {
+          "default": false,
+          "description": "Enable Sentry performance tracing.",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+  },
+  "type": "object",
+}
+`;

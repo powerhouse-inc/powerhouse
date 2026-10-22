@@ -122,19 +122,17 @@ describe("buildCliConnectOverride", () => {
     );
     expect(result).toEqual({
       connectOverride: {
-        branding: {
-          appName: "Custom App",
-          homeBackground: "https://bg.example/img.png",
-        },
+        branding: { appName: "Custom App" },
+        home: { background: "https://bg.example/img.png" },
       },
       packageRegistryUrl: "https://registry.example",
     });
   });
 
-  it("home-background empty string sets branding.homeBackground to null", () => {
+  it("home-background empty string sets home.background to null", () => {
     const result = buildCliConnectOverride(mk({ homeBackground: "" }));
     expect(result).toEqual({
-      connectOverride: { branding: { homeBackground: null } },
+      connectOverride: { home: { background: null } },
       packageRegistryUrl: undefined,
     });
   });

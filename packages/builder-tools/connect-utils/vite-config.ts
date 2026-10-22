@@ -35,8 +35,18 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  hasProjectAppLayout,
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
+import {
+  connectProjectBrandPlugin,
+  effectiveBranding,
+  resolveProjectFavicons,
+  resolveProjectLoader,
+  resolveProjectPwaBrand,
+  resolveRuntimeBranding,
+  withResolvedGenericImages,
+} from "./vite-plugins/project-brand.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import {
   hostStylesheetPath,
@@ -247,17 +257,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     options.cliConnectOverride?.app?.basePath ??
     phConfig.connect?.app?.basePath;
 
-  const configPlugin = phConfigPlugin({
-    packages: phPackages,
-    projectRoot: options.dirname,
-    connect: phConfig.connect,
-    workflows: phConfig.workflows,
-    packageRegistryUrl: phPackageRegistryUrl ?? undefined,
-    cliConnectOverride: options.cliConnectOverride,
-  });
-  // The loading shell renders ahead of the app: the served composition and name pick it.
-  const servedConnect = configPlugin.api.connect;
-
   const offlineEnabled =
     options.cliConnectOverride?.app?.offline ??
     phConfig.connect?.app?.offline ??
@@ -380,6 +379,64 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     mode === "production"
       ? phPackages
       : phPackages.filter((p) => p.provider === "local");
+  // connect.branding, a core Connect setting (null = default): defaults <
+  // source powerhouse.config.json < CLI / host override, like the rest of the
+  // connect block. Resolved once here, for what the page carries before any
+  // JavaScript runs (loader, favicons, web manifest) and for the runtime
+  // config's branding block (images as data URIs).
+  const brandWarn = (msg: string) => (customLogger ?? console).warn(msg);
+  const branding = effectiveBranding(
+    phConfig.connect?.branding,
+    options.cliConnectOverride?.branding,
+  );
+  const projectLoader = resolveProjectLoader(
+    options.dirname,
+    branding,
+    brandWarn,
+  );
+  const projectBrand = resolveProjectPwaBrand(
+    options.dirname,
+    branding,
+    brandWarn,
+  );
+  const runtimeBranding = resolveRuntimeBranding(
+    options.dirname,
+    branding,
+    brandWarn,
+  );
+  // The explorer's icons are the generic plugin's: `drives.icons` in the
+  // source block and the generic entry's `icons` in a served composition.
+  // Paths become data URIs here as well; URLs and data URIs pass through.
+  const sourceConnect = withResolvedGenericImages(
+    options.dirname,
+    phConfig.connect,
+    brandWarn,
+  );
+  const connectOverride = withResolvedGenericImages(
+    options.dirname,
+    options.cliConnectOverride,
+    brandWarn,
+  );
+  const configPlugin = phConfigPlugin({
+    packages: phPackages,
+    projectRoot: options.dirname,
+    connect: sourceConnect,
+    workflows: phConfig.workflows,
+    packageRegistryUrl: phPackageRegistryUrl ?? undefined,
+    cliConnectOverride: connectOverride,
+    branding: runtimeBranding,
+  });
+  // The loading shell renders ahead of the app: the served composition and name pick it.
+  const servedConnect = configPlugin.api.connect;
+  // The tab icon: a favicon named outright (--favicon over branding.favicon),
+  // else branding.icon's sized siblings, else Connect's.
+  const faviconPath = options.favicon ?? configPlugin.api.favicon;
+  const projectFavicons = resolveProjectFavicons(
+    options.dirname,
+    branding,
+    brandWarn,
+    faviconPath,
+  );
   const pwaPlugins: PluginOption = (async () => {
     if (!offlineEnabled) return connectPwaPlugins({ offlineEnabled });
     const contributions = await collectPackagePwaContributions({
@@ -393,7 +450,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     });
     if (projectContribution) contributions.push(projectContribution);
     const mergedPwa = mergePwaConfig(contributions, projectPwa, pwaWarn);
-    return connectPwaPlugins({ offlineEnabled, pwa: mergedPwa });
+    return connectPwaPlugins({
+      offlineEnabled,
+      pwa: mergedPwa,
+      brand: projectBrand,
+    });
   })();
 
   const reactExternal = [
@@ -429,6 +490,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const routesDir =
     resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
   const routes = connectRoutes(options.dirname, routesDir);
+  const customShell = hasProjectAppLayout(routesDir || undefined);
   const hostStylesheet = hostStylesheetPath(options.dirname, routesDir);
 
   const config: InlineConfig = {
@@ -546,7 +608,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         ? [vendorImportMapPlugin({ imports: options.vendor.imports })]
         : []),
       connectFaviconPlugin({
-        faviconPath: options.favicon ?? configPlugin.api.favicon,
+        faviconPath,
       }),
       // Pre-paint theme boot in every emitted index.html (marker-idempotent
       // with the serve-time injection in the ph-clint connect proxy).
@@ -554,11 +616,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // Connect's prerendered app shell for the composition in #root, critical CSS inline.
       connectAppShellPlugin(options.dirname, {
         composition: servedConnect.composition,
-        appName: servedConnect.branding?.appName,
+        appName: servedConnect.branding?.appName ?? undefined,
         // With routes, the shell is the project's layout, rendered from its tree.
         routeAliases: routesDir ? routes.aliases : undefined,
         routesDir: routesDir || undefined,
+        loader: projectLoader,
         hostStylesheet,
+      }),
+      // The project's loading image, installed-app icons and the meta tags
+      // Connect's loaders read; ahead of the PWA plugins, which precache them.
+      connectProjectBrandPlugin({
+        loader: projectLoader,
+        pwaIcons: offlineEnabled ? projectBrand.icons : undefined,
+        favicons: projectFavicons,
+        customShell,
       }),
       // Emits build-hash.json (the SPA's same-origin "is my build current?"
       // probe; must be served no-cache — see docker/nginx.conf.template).

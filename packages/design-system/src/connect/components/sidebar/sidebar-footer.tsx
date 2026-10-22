@@ -1,4 +1,5 @@
 import { Icon, SidebarFooter } from "#design-system";
+import { useConnectBranding } from "../branding/connect-branding.js";
 import { Settings } from "lucide-react";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
@@ -39,6 +40,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
+  // The branding's app icon (its 64 px variant); the Connect mark otherwise.
+  const appLogoSrc = useConnectBranding().icon;
   const settingsIcon = (
     <>
       <Settings className="text-foreground" size={24} strokeWidth={2} />
@@ -62,11 +65,21 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="cursor-pointer"
           onClick={onHomeClick}
         >
-          <Icon
-            className="text-muted-foreground"
-            name="ConnectSmall"
-            size={24}
-          />
+          {appLogoSrc ? (
+            <img
+              alt=""
+              className="object-contain"
+              src={appLogoSrc}
+              width={24}
+              height={24}
+            />
+          ) : (
+            <Icon
+              className="text-muted-foreground"
+              name="ConnectSmall"
+              size={24}
+            />
+          )}
         </button>
       )}
       {showDebug && onDebugClick && (

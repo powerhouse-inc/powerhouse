@@ -820,7 +820,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+**Home Background** - Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient. - Usage: `--home-background <str>`
 
 **Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 

@@ -1,4 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
+import { useConnectBranding } from "@powerhousedao/design-system/connect";
 import {
   DriveCollectionId,
   useSyncList,
@@ -14,6 +15,7 @@ export function DriveIcon({
 }) {
   const remotes = useSyncList();
   const { theme } = useTheme();
+  const branding = useConnectBranding();
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
 
@@ -50,6 +52,24 @@ export function DriveIcon({
         width={32}
         style={{ colorScheme: theme }}
         onError={() => setFailedSrc(driveIconSrc)}
+      />
+    );
+  }
+
+  // A drive without an icon of its own takes the explorer's local/remote
+  // drive icon (the generic plugin's `icons`), else the built-in one.
+  const fallbackSrc = isRemoteDrive
+    ? branding.icons?.remoteDrive
+    : branding.icons?.localDrive;
+  if (fallbackSrc && fallbackSrc !== failedSrc) {
+    return (
+      <img
+        src={fallbackSrc}
+        alt={drive?.header.name ?? ""}
+        height={32}
+        width={32}
+        className="object-contain"
+        onError={() => setFailedSrc(fallbackSrc)}
       />
     );
   }

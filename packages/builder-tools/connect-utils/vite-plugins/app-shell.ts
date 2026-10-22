@@ -4,6 +4,8 @@ import type { Alias, Plugin, ResolvedConfig } from "vite";
 import { createServer } from "vite";
 import { resolvePackage } from "../helpers.js";
 import { withHostStylesheet } from "./host-stylesheet.js";
+import { withNodeDedupe } from "./node-dedupe.js";
+import { replaceShellLoader, type ProjectLoader } from "./project-brand.js";
 
 /** On the prerendered shell's elements; marks an index.html that has it. */
 export const APP_SHELL_MARKER = "data-ph-shell";
@@ -242,6 +244,8 @@ export type ConnectAppShellOptions = {
   routeAliases?: Alias[];
   /** The project's routes folder; dev renders the shell again when it changes. */
   routesDir?: string;
+  /** The project's loading image, in place of the shell's logo. */
+  loader?: ProjectLoader;
   /** The host's stylesheet, which the page's build adds to the project's. */
   hostStylesheet?: string;
 };
@@ -282,17 +286,24 @@ async function renderProjectAppShells(
     ssr: { optimizeDeps: { noDiscovery: true, include: [] } },
   });
   try {
-    const renderer = (await server.ssrLoadModule(
-      "@powerhousedao/connect/prerender",
-    )) as ShellRenderer;
-    // The stylesheet index.html links, which Tailwind builds for the shell's classes.
-    const stylesheet = join(projectRoot, "style.css");
-    const css = withHostStylesheet(
-      readFileSync(stylesheet, "utf8"),
-      stylesheet,
-      hostStylesheet,
+    // What the server externalizes loads through Node: dedupe there too.
+    return await withNodeDedupe(
+      projectRoot,
+      config.resolve.dedupe,
+      async () => {
+        const renderer = (await server.ssrLoadModule(
+          "@powerhousedao/connect/prerender",
+        )) as ShellRenderer;
+        // The stylesheet index.html links, which Tailwind builds for the shell's classes.
+        const stylesheet = join(projectRoot, "style.css");
+        const css = withHostStylesheet(
+          readFileSync(stylesheet, "utf8"),
+          stylesheet,
+          hostStylesheet,
+        );
+        return renderer.renderProjectShells(stylesheet, css);
+      },
     );
-    return await renderer.renderProjectShells(stylesheet, css);
   } finally {
     await server.close();
   }
@@ -311,6 +322,7 @@ export function connectAppShellPlugin(
     appName,
     routeAliases,
     routesDir,
+    loader,
     hostStylesheet,
   }: ConnectAppShellOptions = {},
 ): Plugin {
@@ -320,6 +332,21 @@ export function connectAppShellPlugin(
   let base = "/";
   let isBuild = true;
   let config: ResolvedConfig | undefined;
+  // The project's loader in each shell's logo slot, under the deploy base.
+  const withLoader = (from: AppShells): AppShells => {
+    if (!loader) return from;
+    const out: AppShells = {};
+    for (const [name, shell] of Object.entries(from) as [
+      AppShellVariant,
+      AppShell,
+    ][]) {
+      out[name] = {
+        ...shell,
+        body: replaceShellLoader(shell.body, loader, base),
+      };
+    }
+    return out;
+  };
   // A project's shells go in the built index.html, so they're rendered after bundling.
   const fromRoutes = () => isBuild && !!routeAliases;
   const shell = () => {
@@ -337,12 +364,14 @@ export function connectAppShellPlugin(
       config,
       routeAliases,
       hostStylesheet,
-    ).catch((error: unknown) => {
-      logger.warn(
-        `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
-      );
-      return {};
-    });
+    )
+      .then(withLoader)
+      .catch((error: unknown) => {
+        logger.warn(
+          `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
+        );
+        return {};
+      });
   };
   const devShell = async () => {
     if (!devShells) return undefined;
@@ -379,7 +408,7 @@ export function connectAppShellPlugin(
       config = resolved;
       base = resolved.base;
       isBuild = resolved.command === "build";
-      shells = readAppShells(projectRoot);
+      shells = withLoader(readAppShells(projectRoot));
       shellPlugins = readShellPlugins(projectRoot);
       variant = appShellVariant(composition, shellPlugins);
     },
@@ -404,11 +433,13 @@ export function connectAppShellPlugin(
       async handler(_options, bundle) {
         if (!isBuild) return;
         if (fromRoutes() && config && routeAliases) {
-          shells = await renderProjectAppShells(
-            projectRoot,
-            config,
-            routeAliases,
-            hostStylesheet,
+          shells = withLoader(
+            await renderProjectAppShells(
+              projectRoot,
+              config,
+              routeAliases,
+              hostStylesheet,
+            ),
           );
           const index = bundle["index.html"];
           const current = shells[variant];

@@ -64,6 +64,6 @@ export default {
 ```
 
 - A host's `config` merges over the project's `connect` block field by field, so a host inherits what it doesn't set.
-- `branding.favicon` is a file (`.ico`, `.svg` or `.png`) relative to the project. `ph run lab dev` serves it and `ph run lab build` builds it as `icon.ico`; the built `powerhouse.config.json` leaves the path out. `ph connect build --favicon` wins over it.
+- `branding.favicon` is a file (`.ico`, `.svg` or `.png`) relative to the project. `ph run lab dev` serves it and `ph run lab build` builds it as `icon.ico`; the built `powerhouse.config.json` leaves the path out. `ph connect build --favicon` wins over it, and either wins over the `_16x16`…`_64x64` favicons taken from `branding.icon` (whose app icons still apply).
 - `ph run lab build` bakes the host's `config` into the build, over `powerhouse.config.json`: the `<title>` and the loading screen take its `branding.appName`, and the build uses its `app.basePath` and `pwa`.
 

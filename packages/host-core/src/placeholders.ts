@@ -1,4 +1,5 @@
 import path from "node:path";
+import { substituteBuiltinEnv } from "./env-substitution.js";
 
 /**
  * `${userData}` resolution for host files (desktop shape): storage paths in a
@@ -18,25 +19,8 @@ export function defaultUserDataDir(
   return env.PH_USER_DATA_DIR ?? path.resolve(projectRoot);
 }
 
-const PLACEHOLDER = /\$\{userData\}/g;
-
 /** Deep-substitute `${userData}` in every string of a JSON-shaped value.
  * Non-strings pass through; the input is never mutated. */
 export function resolveUserDataPlaceholders<T>(value: T, userData: string): T {
-  if (typeof value === "string") {
-    return value.replace(PLACEHOLDER, userData) as unknown as T;
-  }
-  if (Array.isArray(value)) {
-    return value.map((v) =>
-      resolveUserDataPlaceholders<unknown>(v, userData),
-    ) as T;
-  }
-  if (value !== null && typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = resolveUserDataPlaceholders(v, userData);
-    }
-    return out as T;
-  }
-  return value;
+  return substituteBuiltinEnv(value, { userData });
 }

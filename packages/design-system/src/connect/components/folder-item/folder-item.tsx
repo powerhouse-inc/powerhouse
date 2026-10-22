@@ -11,6 +11,7 @@ import {
   useNodeTarget,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
+import { useConnectBranding } from "../branding/connect-branding.js";
 import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
 import { addProp, entries, map, pipe } from "remeda";
@@ -26,6 +27,8 @@ export function FolderItem(props: {
   href?: string;
 }) {
   const { folderNode, className } = props;
+  // The branding's folder icon; the built-in icon otherwise.
+  const folderIconSrc = useConnectBranding().icons?.folder;
   const setSelectedNode = useSetSelectedNode();
   const preloadNode = usePreloadNode();
   const target = useNodeTarget(folderNode);
@@ -129,7 +132,18 @@ export function FolderItem(props: {
         <div className="flex items-center overflow-hidden">
           <div className="p-1">
             <div className="relative text-foreground">
-              <Icon name="FolderClose" size={24} />
+              {folderIconSrc ? (
+                <img
+                  alt="folder icon"
+                  className="object-contain"
+                  src={folderIconSrc}
+                  width={24}
+                  height={24}
+                  draggable={false}
+                />
+              ) : (
+                <Icon name="FolderClose" size={24} />
+              )}
             </div>
           </div>
           {content}

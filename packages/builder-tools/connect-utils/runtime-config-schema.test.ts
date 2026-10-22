@@ -29,6 +29,7 @@ type SchemaNode = Record<string, unknown> & {
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
   oneOf?: SchemaNode[];
+  anyOf?: SchemaNode[];
   additionalProperties?: boolean | SchemaNode;
 };
 
@@ -40,11 +41,9 @@ function findInSchema(schema: SchemaNode, key: string): SchemaNode | null {
   if (typeof schema.additionalProperties === "object") {
     return schema.additionalProperties;
   }
-  if (schema.oneOf) {
-    for (const variant of schema.oneOf) {
-      const found = findInSchema(variant, key);
-      if (found) return found;
-    }
+  for (const variant of [...(schema.oneOf ?? []), ...(schema.anyOf ?? [])]) {
+    const found = findInSchema(variant, key);
+    if (found) return found;
   }
   return null;
 }
@@ -116,7 +115,23 @@ describe("runtime-config schema", () => {
       connect: {
         branding: {
           appName: "Test",
-          homeBackground: "/a.png",
+          icon: "/a.png",
+        },
+        home: {
+          background: {
+            color: { light: "#fff", dark: "#000" },
+            layers: [
+              {
+                src: { light: "/l.svg", dark: "/d.svg" },
+                position: { bottom: 0, right: "4%" },
+                width: "min(55%, 880px)",
+                minWidth: 200,
+                maxHeight: 720,
+                opacity: 0.9,
+                fade: { top: 160, left: 160 },
+              },
+            ],
+          },
         },
         app: {
           logLevel: "debug",

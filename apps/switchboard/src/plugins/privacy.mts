@@ -9,6 +9,19 @@ import {
   type RunningPrivacy,
 } from "../privacy.mjs";
 import type { SwitchboardHostContext } from "../plugin-host.mjs";
+import { z } from "zod";
+
+/** No entry config: presence is the whole activation. A typo'd config key
+ * fails at resolution instead of being silently ignored. */
+export const privacyPluginConfigSchema = z.strictObject({});
+
+export type PrivacyPluginConfig = z.input<typeof privacyPluginConfigSchema>;
+
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/switchboard/plugins/privacy": PrivacyPluginConfig;
+  }
+}
 
 /**
  * R2.4 — the privacy subsystem as a built-in plugin. Presence is activation
@@ -39,6 +52,7 @@ export const privacyPlugin: HostPlugin<{
 }> = {
   name: "switchboard-privacy",
   appliesTo: "switchboard",
+  configSchema: privacyPluginConfigSchema,
   hooks: {
     transformServerOptions: (options, ctx) => {
       // Fail-fast resolve, before the reactor is built.

@@ -1,6 +1,6 @@
 // The "…" menu for one workflow: archive or restore it, and delete it behind
 // a confirmation that asks for its exact name.
-import { Modal } from "@powerhousedao/design-system";
+import { Modal } from "@powerhousedao/design-system/connect";
 import {
   deleteNode,
   getPHStore,

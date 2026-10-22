@@ -1,5 +1,4 @@
-import { useWindowSize } from "@powerhousedao/design-system";
-import { FileItem } from "@powerhousedao/design-system/connect";
+import { FileItem, useWindowSize } from "@powerhousedao/design-system/connect";
 import {
   isFileNodeKind,
   useNodesInSelectedDriveOrFolder,

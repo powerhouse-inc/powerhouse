@@ -1,5 +1,18 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
 import type { SwitchboardHostContext } from "../plugin-host.mjs";
+import { z } from "zod";
+
+/** No entry config: presence is the whole activation. A typo'd config key
+ * fails at resolution instead of being silently ignored. */
+export const mcpPluginConfigSchema = z.strictObject({});
+
+export type McpPluginConfig = z.input<typeof mcpPluginConfigSchema>;
+
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/switchboard/plugins/mcp": McpPluginConfig;
+  }
+}
 
 /**
  * R2.2 — the MCP subsystem as a built-in plugin. Flag-on semantics: PRESENCE
@@ -20,6 +33,7 @@ export const mcpPlugin: HostPlugin<{
 }> = {
   name: "switchboard-mcp",
   appliesTo: "switchboard",
+  configSchema: mcpPluginConfigSchema,
   hooks: {
     // An explicit caller/host `mcp: false` option keeps winning (the same
     // short-circuit resolveMcpEnabled has); only the ENV flag loses its

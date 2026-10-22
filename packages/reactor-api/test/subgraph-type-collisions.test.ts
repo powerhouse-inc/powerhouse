@@ -1,11 +1,13 @@
 import { createRequire } from "node:module";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
-  createReactorDriveResolvers,
   REACTOR_DRIVE_DOCUMENT_TYPE,
   reactorDriveDocumentModelModule,
-  reactorDriveSubgraphTypeDefs,
 } from "@powerhousedao/reactor-drive";
+import {
+  createReactorDriveResolvers,
+  reactorDriveSubgraphTypeDefs,
+} from "@powerhousedao/reactor-drive/subgraph";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type * as GraphQL from "graphql";

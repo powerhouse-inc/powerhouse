@@ -7,7 +7,7 @@ import path from "node:path";
  * path ignores them; each present key warns ONCE per run, naming its new home.
  *
  * Keys the scaffolded host files REFERENCE (studio.port, reactor.port,
- * vetra.connectPort, and the WHOLE connect.* block — handed to the runtime
+ * vetra.connectPort, assistant.port, and the WHOLE connect.* block — handed to the runtime
  * unchanged, connect.instance.* included) are expected to remain and are
  * deliberately absent from this table.
  */
