@@ -19,14 +19,12 @@ export {
   type DriveClientDeps,
 } from "./src/client/drive-client.js";
 export {
-  buildCreateActions,
   buildCreateJobs,
   createEmptyDocument,
   selectDocumentModelModule,
   upgradeDocumentWith,
   type UpgradeDocumentDeps,
 } from "./src/client/derivations.js";
-export { createVersionsOf } from "./src/client/create-protocol.js";
 export {
   ReactorClient,
   type ActionEvaluationConfig,

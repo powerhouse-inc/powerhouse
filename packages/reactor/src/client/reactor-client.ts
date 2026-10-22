@@ -10,6 +10,7 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  createVersionsOf,
   actions,
   baseReducerCapabilities,
   serializeByKey,
@@ -73,7 +74,7 @@ import {
   upgradeDocumentWith,
 } from "./derivations.js";
 import { DriveClient } from "./drive-client.js";
-import { CreateProtocolSelector, createVersionsOf } from "./create-protocol.js";
+import { CreateProtocolSelector } from "./create-protocol.js";
 import {
   DocumentChangeType,
   type ActionCandidate,

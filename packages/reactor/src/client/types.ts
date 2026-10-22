@@ -11,6 +11,7 @@ import type {
 import type {
   Action,
   AuthSubject,
+  CreateProtocolVersionsOptions,
   DocumentModelModule,
   Operation,
   PeerCapability,
@@ -116,14 +117,7 @@ export type UpgradeDocumentOptions = {
 export type { UndoRedoAvailability };
 
 /** Where and what a new document is created, to select its protocolVersions. */
-export type CreateProtocolVersionsOptions = {
-  /**
-   * The new document's type, which fits base-reducer to its reducer.
-   * `undefined` only where the type is not known, e.g. a legacy request.
-   */
-  documentType: string | undefined;
-  parentIdentifier?: string;
-};
+export type { CreateProtocolVersionsOptions } from "@powerhousedao/shared/document-model";
 
 export type CopyNodeOptions = {
   /** Merged over each source's versions, e.g. `{ "base-reducer": 3 }` to copy to v3. */

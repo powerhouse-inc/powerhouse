@@ -8,6 +8,7 @@ import type {
   SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
+  creationActions,
   DowngradeNotSupportedError,
   headNewDocument,
   normalizeDocumentModelVersion,
@@ -16,7 +17,6 @@ import {
 export { selectDocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   addRelationshipAction,
-  createDocumentAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type { ExecutionJobPlan } from "../core/types.js";
@@ -29,44 +29,6 @@ import {
   type UpgradeDocumentOptions,
 } from "./types.js";
 
-/** CREATE_DOCUMENT and UPGRADE_DOCUMENT for `document` at `protocolVersions`, unsigned. */
-export function buildCreateActions(
-  document: PHDocument,
-  protocolVersions: ProtocolVersions,
-): Action[] {
-  const { header } = document;
-  const createInput: CreateDocumentActionInput = {
-    model: header.documentType,
-    version: 0,
-    documentId: header.id,
-    signing: {
-      signature: header.id,
-      publicKey: header.sig.publicKey,
-      nonce: header.sig.nonce,
-      createdAtUtcIso: header.createdAtUtcIso,
-      documentType: header.documentType,
-    },
-    slug: header.slug,
-    name: header.name,
-    branch: header.branch,
-    meta: header.meta,
-    protocolVersions,
-  };
-  return [
-    createDocumentAction(createInput),
-    upgradeDocumentAction({
-      documentId: header.id,
-      model: header.documentType,
-      fromVersion: 0,
-      // imported documents may predate the document scope entirely
-      toVersion: normalizeDocumentModelVersion(
-        (document.state as Partial<typeof document.state>).document?.version,
-      ),
-      initialState: document.state,
-    }),
-  ];
-}
-
 /** The signed jobs that create `document` at `protocolVersions`, and attach it to `parentId`. */
 export async function buildCreateJobs(
   document: PHDocument,
@@ -78,7 +40,7 @@ export async function buildCreateJobs(
   const documentId = document.header.id;
   const branch = document.header.branch || "main";
   const createActions: Action[] = await signActions(
-    buildCreateActions(document, protocolVersions),
+    creationActions(document, protocolVersions),
     signer,
     { documentId, branch },
     signal,

@@ -1,7 +1,5 @@
 import type {
   Action,
-  CreateDocumentAction,
-  CreateDocumentActionInput,
   Operation,
   OperationWithContext,
   PHDocument,
@@ -9,8 +7,6 @@ import type {
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
-  createPresignedHeader,
-  defaultBaseState,
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
   DOCUMENT_SCOPE_ACTION_TYPES,
@@ -61,66 +57,6 @@ export type TargetedAction = {
   type: string;
   input: unknown;
 };
-
-/**
- * Creates a PHDocument from a CREATE_DOCUMENT action input.
- * Reconstructs the document header and initializes the base state.
- *
- * @param action - The CREATE_DOCUMENT action containing the document parameters
- * @returns A newly constructed PHDocument with initialized header and base state
- */
-export function createDocumentFromAction(
-  action: CreateDocumentAction,
-): PHDocument {
-  const input = action.input as CreateDocumentActionInput;
-
-  // Reconstruct the document from CreateDocumentActionInput
-  const header = createPresignedHeader();
-  header.id = input.documentId;
-  header.documentType = input.model;
-
-  if (input.signing) {
-    header.createdAtUtcIso = input.signing.createdAtUtcIso;
-    header.lastModifiedAtUtcIso = input.signing.createdAtUtcIso;
-    header.sig = {
-      publicKey: input.signing.publicKey,
-      nonce: input.signing.nonce,
-    };
-  }
-
-  // Populate optional mutable header fields
-  if (input.slug !== undefined) {
-    header.slug = input.slug;
-  }
-  // Default slug to document ID if empty (matching legacy behavior)
-  if (!header.slug) {
-    header.slug = input.documentId;
-  }
-  if (input.name !== undefined) {
-    header.name = input.name;
-  }
-  if (input.branch !== undefined) {
-    header.branch = input.branch;
-  }
-  if (input.meta !== undefined) {
-    header.meta = input.meta;
-  }
-  if (input.protocolVersions !== undefined) {
-    header.protocolVersions = input.protocolVersions;
-  }
-
-  // A placeholder: UPGRADE_DOCUMENT writes the model's real initial values.
-  const baseState = defaultBaseState();
-  const document: PHDocument = {
-    header,
-    operations: {},
-    state: baseState,
-    initialState: baseState,
-    clipboard: [],
-  };
-
-  return document;
-}
 
 /**
  * Calculate the next operation index for a specific scope.

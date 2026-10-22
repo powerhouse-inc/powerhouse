@@ -8,6 +8,7 @@ import type {
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import {
+  documentFromCreation,
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,
   baseReducerVersion,
@@ -17,7 +18,6 @@ import {
   PURGE_DOCUMENT,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
 import type { IProtocolGate } from "../protocol/gate.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
@@ -247,7 +247,7 @@ export async function readDocumentScope(
     );
   }
 
-  document = createDocumentFromAction(documentCreateAction);
+  document = documentFromCreation(documentCreateAction);
   gate?.assertRunnable(documentId, document.header.protocolVersions);
   lastDocumentScopeOperation = createOp;
 

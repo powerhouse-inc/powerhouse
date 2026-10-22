@@ -18,6 +18,8 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
+  creationActions,
+  createVersionsOf,
   actions,
   createCopyHeader,
   generateId,
@@ -35,8 +37,7 @@ import {
   deleteDocumentAction,
   removeRelationshipAction,
 } from "../actions/index.js";
-import { createVersionsOf } from "./create-protocol.js";
-import { buildCreateActions, createEmptyDocument } from "./derivations.js";
+import { createEmptyDocument } from "./derivations.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
@@ -171,7 +172,7 @@ export class DriveClient implements IDriveClient {
     );
     const documentActions: Action[] = await signActions(
       [
-        ...buildCreateActions(document, protocolVersions),
+        ...creationActions(document, protocolVersions),
         addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,

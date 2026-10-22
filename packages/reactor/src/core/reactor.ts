@@ -5,9 +5,9 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { creationActions } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
-import { buildCreateActions } from "../client/derivations.js";
 import {
   scopeDerivation,
   UndoTargetsCache,
@@ -606,7 +606,7 @@ export class Reactor implements IReactor {
     }
 
     const branch = document.header.branch || "main";
-    let actions: Action[] = buildCreateActions(
+    let actions: Action[] = creationActions(
       document,
       document.header.protocolVersions,
     );

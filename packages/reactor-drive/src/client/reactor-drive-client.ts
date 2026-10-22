@@ -1,7 +1,5 @@
 import {
   addRelationshipAction,
-  buildCreateActions,
-  createVersionsOf,
   removeRelationshipAction,
   type BatchExecutionRequest,
   type ExecutionJobPlan,
@@ -22,6 +20,8 @@ import type {
 import {
   assertAuthPreservedOnDuplicate,
   createCopyHeader,
+  createVersionsOf,
+  creationActions,
   generateId,
   replayDocumentVersioned,
   type Action,
@@ -136,7 +136,7 @@ export class ReactorDriveClient implements IDriveClient {
           documentId,
           scope: "document",
           branch: "main",
-          actions: buildCreateActions(document, protocolVersions),
+          actions: creationActions(document, protocolVersions),
           dependsOn: [],
         },
         {
@@ -501,7 +501,7 @@ export class ReactorDriveClient implements IDriveClient {
         documentId: newId,
         scope: "document",
         branch: "main",
-        actions: buildCreateActions(
+        actions: creationActions(
           duplicated,
           duplicated.header.protocolVersions ?? selected,
         ),

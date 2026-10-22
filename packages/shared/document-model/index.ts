@@ -7,6 +7,7 @@ export * from "./base-action-reducer.js";
 export * from "./base-reducer-protocol.js";
 export * from "./constants.js";
 export * from "./create-base-reducer.js";
+export * from "./create-document.js";
 export * from "./crypto.js";
 export * from "./denied.js";
 export * from "./document-schema.js";

@@ -6,11 +6,11 @@ import type {
   ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import {
+  documentFromCreation,
   derivesByRule,
   optionalBaseReducerCapabilities,
   usesRetractionRule,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
 import {
   DocumentNotFoundError,
   DocumentPurgedError,
@@ -176,9 +176,7 @@ export async function evaluateByPosition<M>(
         error instanceof DocumentNotFoundError &&
         !(error instanceof DocumentPurgedError)
       ) {
-        return createDocumentFromAction(
-          creation.action as CreateDocumentAction,
-        );
+        return documentFromCreation(creation.action as CreateDocumentAction);
       }
       throw error;
     }

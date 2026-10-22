@@ -19,6 +19,30 @@ export type NewDocumentHeaderOptions = {
   id?: string;
 };
 
+export type CreateProtocolVersionsOptions = {
+  /**
+   * The new document's type, which fits base-reducer to its reducer.
+   * `undefined` only where the type is not known, e.g. a legacy request.
+   */
+  documentType: string | undefined;
+  parentIdentifier?: string;
+};
+
+/** A header's versions are its creator's choice; only a versionless legacy header is selected for. */
+export async function createVersionsOf(
+  document: PHDocument,
+  select: (options: CreateProtocolVersionsOptions) => Promise<ProtocolVersions>,
+  parentIdentifier?: string,
+): Promise<ProtocolVersions> {
+  return (
+    document.header.protocolVersions ??
+    (await select({
+      documentType: document.header.documentType,
+      parentIdentifier,
+    }))
+  );
+}
+
 /** A new, uncreated document of `module`, headed with `baseVersions` under `options`. */
 export function headNewDocument(
   module: DocumentModelModule,

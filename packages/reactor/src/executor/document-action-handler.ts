@@ -43,6 +43,7 @@ interface RelationshipPostWriteArgs {
   job: Job;
 }
 import {
+  documentFromCreation,
   hashDocumentStateForScope,
   normalizeDocumentModelVersion,
 } from "@powerhousedao/shared/document-model";
@@ -74,7 +75,6 @@ import {
   applyUpgradeDocumentAction,
   buildErrorResult,
   buildSuccessResult,
-  createDocumentFromAction,
   createOperation,
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
@@ -386,7 +386,7 @@ export class DocumentActionHandler {
       );
     }
 
-    const document = createDocumentFromAction(action as CreateDocumentAction);
+    const document = documentFromCreation(action as CreateDocumentAction);
 
     let operation = createOperation(action, 0, skip, {
       documentId: document.header.id,

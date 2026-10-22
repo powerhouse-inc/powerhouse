@@ -87,18 +87,3 @@ export class CreateProtocolSelector {
     return [...agreement().members(collectionIds).values()];
   }
 }
-
-/** A header's versions are its creator's choice; only a versionless legacy header is selected for. */
-export async function createVersionsOf(
-  document: PHDocument,
-  select: (options: CreateProtocolVersionsOptions) => Promise<ProtocolVersions>,
-  parentIdentifier?: string,
-): Promise<ProtocolVersions> {
-  return (
-    document.header.protocolVersions ??
-    (await select({
-      documentType: document.header.documentType,
-      parentIdentifier,
-    }))
-  );
-}

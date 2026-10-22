@@ -62,6 +62,7 @@ export default defineConfig({
       "document-model/retraction.property.test.ts",
       "document-model/retraction-replay.test.ts",
       "document-model/retraction-advance.test.ts",
+      "document-model/create-document.test.ts",
       "document-model/signature-policy.test.ts",
       "document-model/undo-redo-plan.test.ts",
       "document-model/signature-transport.test.ts",
