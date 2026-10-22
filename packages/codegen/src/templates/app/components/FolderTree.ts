@@ -7,6 +7,7 @@ export const folderTreeFileTemplate = tsx`
   type SidebarNode,
 } from "@powerhousedao/document-engineering";
 import {
+  getDriveName,
   setSelectedNode,
   useNodesInSelectedDrive,
   useSelectedDrive,
@@ -66,7 +67,7 @@ export function FolderTree() {
   const [selectedDrive] = useSelectedDrive();
   const nodes = useNodesInSelectedDrive();
   const selectedNode = useSelectedNode();
-  const driveName = selectedDrive?.header.name ?? "";
+  const driveName = selectedDrive ? getDriveName(selectedDrive) : "";
   // Transform Node[] to hierarchical SidebarNode structure
   const sidebarNodes = useMemo(
     () => transformNodesToSidebarNodes(nodes || [], driveName),
