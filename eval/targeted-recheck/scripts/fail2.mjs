@@ -1,0 +1,11 @@
+import { open, BASE } from "./lib.mjs";
+const { browser, page, logs, requests } = await open();
+const bad = [];
+page.on("response", (r) => { if (r.status() >= 400) bad.push(`${r.status()} ${r.url()}`); });
+page.on("console", (m) => { if (/stock-app|PackageManager|node_modules/.test(m.text())) logs.push(`[${m.type()}] ${m.text().slice(0, 250)}`); });
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(20000);
+console.log("4xx:\n  " + bad.join("\n  "));
+console.log("stock-app requests:\n  " + requests.join("\n  "));
+console.log("console:\n  " + [...new Set(logs)].join("\n  "));
+await browser.close();
