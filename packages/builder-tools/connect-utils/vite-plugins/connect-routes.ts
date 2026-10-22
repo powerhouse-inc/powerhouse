@@ -380,6 +380,14 @@ export function connectRoutesGeneratorConfig(
   );
 }
 
+// ph connect build generates the tree twice: through ph build, then Vite's.
+const warned = new Set<string>();
+const warnOnce = (message: string) => {
+  if (warned.has(message)) return;
+  warned.add(message);
+  console.warn(`[connect] ${message}`);
+};
+
 /** Writes the route tree of Connect's and the project's routes; throws on a
  * collision that is not an override, which the router plugin would only log. */
 export async function generateConnectRoutes(
@@ -390,6 +398,7 @@ export async function generateConnectRoutes(
     projectRoot,
     routesDir,
   ),
+  warn: (message: string) => void = warnOnce,
 ) {
   mkdirSync(dirname(config.generatedRouteTree), { recursive: true });
   let routeNodes: RouteNodes = [];
@@ -410,6 +419,15 @@ export async function generateConnectRoutes(
       config.generatedRouteTree,
       config.routesDirectory,
     );
+    const connectDir = dirname(dirname(config.routesDirectory));
+    for (const message of silentDrops(routeNodes, {
+      projectRoot,
+      routesDir,
+      routesDirectory: config.routesDirectory,
+      genericAppIds: genericAppRouteIds(connectDir),
+    })) {
+      warn(message);
+    }
   } catch (error) {
     const errors: unknown[] = Array.isArray(error) ? error : [error];
     const message = errors
@@ -485,6 +503,67 @@ function assertNoSharedUrls(routeNodes: RouteNodes) {
       )
       .join("\n"),
   );
+}
+
+/** The object literal after `key:` in `source`, braces balanced; strings aren't parsed. */
+function objectAfter(source: string, key: string) {
+  const start = source.search(new RegExp(`\\b${key}\\s*:\\s*\\{`));
+  if (start < 0) return undefined;
+  const open = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}" && --depth === 0) {
+      return source.slice(open, i + 1);
+    }
+  }
+  return undefined;
+}
+
+/** What the router drops without a word: a nav item it can't link, and an
+ * override that leaves out the options of the route it replaces. */
+function silentDrops(
+  routeNodes: RouteNodes,
+  options: {
+    projectRoot: string;
+    routesDir: string;
+    routesDirectory: string;
+    genericAppIds: readonly string[];
+  },
+): string[] {
+  const appDir = join(options.routesDir, APP_LAYOUT);
+  const connectAppIds = new Set(
+    routeFilesIn(join(options.routesDirectory, APP_LAYOUT)).map(routeIdOf),
+  );
+  const genericAppIds = new Set(options.genericAppIds);
+  const messages: string[] = [];
+  for (const node of routeNodes) {
+    const file = join(options.routesDirectory, node.filePath);
+    if (!file.startsWith(`${options.routesDir}${sep}`)) continue;
+    const shown = relative(options.projectRoot, file).split(sep).join("/");
+    const source = readFileSync(file, "utf8");
+    const staticData = objectAfter(source, "staticData");
+    if (node.routePath?.includes("$") && staticData?.match(/\bnav\s*:/)) {
+      messages.push(
+        `${shown}: staticData.nav is ignored on ${node.routePath}, whose params the sidebar can't fill in.`,
+      );
+    }
+    if (!file.startsWith(`${appDir}${sep}`)) continue;
+    const id = routeIdOf(relative(appDir, file).split(sep).join("/"));
+    const connectFile = `@powerhousedao/connect/routes/${APP_LAYOUT}/${id}`;
+    if (connectAppIds.has(id) && !source.includes(`"${connectFile}"`)) {
+      messages.push(
+        `${shown} replaces Connect's route without its options, so what Connect sets on it (loader, search params, pending view, title) is dropped; spread them: import { options } from "${connectFile}".`,
+      );
+    }
+    if (genericAppIds.has(id) && !source.includes("genericSettingsTabs")) {
+      const tab = id.split("/").at(-1);
+      messages.push(
+        `${shown} replaces a settings tab without its options, so the tab isn't listed; spread genericSettingsTabs["${tab}"] from "@powerhousedao/connect/generic".`,
+      );
+    }
+  }
+  return messages;
 }
 
 function escapeRegExp(text: string) {
