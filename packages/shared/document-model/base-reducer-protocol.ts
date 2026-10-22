@@ -10,22 +10,64 @@ import type {
 export const BASE_REDUCER_VERSIONS = [1, 2, 3] as const;
 export type BaseReducerVersion = (typeof BASE_REDUCER_VERSIONS)[number];
 
+// Each axis is the keys of an interface so the v4 cascade check
+// (shared/v4-cascade) can add a value by augmentation.
+
+export interface UndoModelValues {
+  skip: true;
+  "noop-chain": true;
+  retraction: true;
+}
 /** What UNDO and REDO become. */
-export type UndoModel = "skip" | "noop-chain" | "retraction";
+export type UndoModel = keyof UndoModelValues;
+
+export interface SkipMeaningValues {
+  "undo-or-rewind": true;
+  rewind: true;
+}
 /** Whether a stored skip can be an undo, or is only a replica's rewind. */
-export type SkipMeaning = "undo-or-rewind" | "rewind";
+export type SkipMeaning = keyof SkipMeaningValues;
+
+export interface TieOrderValues {
+  "rank-locale": true;
+  canonical: true;
+}
 /** How same-timestamp actions are ordered. */
-export type TieOrder = "rank-locale" | "canonical";
+export type TieOrder = keyof TieOrderValues;
+
+export interface SynthesizedIdFormValues {
+  hashed: true;
+  none: true;
+}
 /** How a synthesized row's action id derives from its source's; "none" synthesizes nothing. */
-export type SynthesizedIdForm = "hashed" | "none";
+export type SynthesizedIdForm = keyof SynthesizedIdFormValues;
+
+export interface ReplayHashValues {
+  sender: true;
+  receiver: true;
+}
 /** Whose state hash a received row keeps. */
-export type ReplayHash = "sender" | "receiver";
+export type ReplayHash = keyof ReplayHashValues;
+
+export interface DerivationModelValues {
+  replay: true;
+  "retraction-rule": true;
+}
 /** How a scope's state derives from its rows. */
-export type DerivationModel = "replay" | "retraction-rule";
+export type DerivationModel = keyof DerivationModelValues;
+
+export interface ReducerContractValues {
+  any: true;
+  "state-reducer": true;
+}
 /** Which registered reducers a version runs. */
-export type ReducerContract = "any" | "state-reducer";
+export type ReducerContract = keyof ReducerContractValues;
+
+export interface GatingFlagValues {
+  undoV3: true;
+}
 /** A reactor feature flag a version runs only under. */
-export type GatingFlag = "undoV3";
+export type GatingFlag = keyof GatingFlagValues;
 
 export type BaseReducerCapabilities = {
   readonly version: BaseReducerVersion;

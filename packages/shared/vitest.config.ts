@@ -54,6 +54,7 @@ export default defineConfig({
       "document-model/action-transport.test.ts",
       "document-model/base-reducer-protocol.arch.test.ts",
       "document-model/base-reducer-protocol.test.ts",
+      "document-model/base-reducer-protocol.v4-cascade.test.ts",
       "document-model/base-reducer-version.test.ts",
       "document-model/create-base-reducer.test.ts",
       "document-model/files.test.ts",
