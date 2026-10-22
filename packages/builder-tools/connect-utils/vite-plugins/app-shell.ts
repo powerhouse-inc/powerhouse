@@ -249,6 +249,13 @@ export type ConnectAppShellOptions = {
 // The first page waits this long for the project's shell; later ones have it.
 const DEV_SHELL_WAIT_MS = 10_000;
 
+// The packages whose code the shell renders; a workspace links them, so only
+// an installed Connect needs them named.
+const CONNECT_PACKAGES = [
+  "@powerhousedao/connect",
+  "@powerhousedao/connect-core",
+];
+
 type ShellRenderer = {
   renderProjectShells: (stylesheet: string, css?: string) => Promise<AppShells>;
 };
@@ -279,7 +286,12 @@ async function renderProjectAppShells(
     // server, whose node_modules/.vite deps it would otherwise rewrite.
     cacheDir: join(projectRoot, "node_modules/.vite-ph-prerender"),
     optimizeDeps: { noDiscovery: true, include: [], entries: [] },
-    ssr: { optimizeDeps: { noDiscovery: true, include: [] } },
+    ssr: {
+      optimizeDeps: { noDiscovery: true, include: [] },
+      // Through Vite, not Node: their code reads import.meta.env, which only
+      // Vite defines. Installed from npm they'd be external, and Node's is undefined.
+      noExternal: CONNECT_PACKAGES,
+    },
   });
   try {
     const renderer = (await server.ssrLoadModule(
