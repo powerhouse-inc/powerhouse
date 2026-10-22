@@ -18,7 +18,11 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
-import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
+import {
+  createBaseAction,
+  toolWithCallback,
+  validateDocumentModelAction,
+} from "./utils.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
@@ -100,7 +104,7 @@ export const deleteDocumentTool = {
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP.",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
     actions: z
@@ -449,6 +453,19 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         );
       }
       const actions: Action[] = params.actions.map((paramAction) => {
+        const baseAction = createBaseAction(
+          paramAction.type,
+          paramAction.input,
+          paramAction.scope,
+        );
+        if (baseAction) {
+          if (!baseAction.action) {
+            throw new Error(
+              `Invalid action ${JSON.stringify(paramAction)}: ${baseAction.errors.join(", ")}`,
+            );
+          }
+          return baseAction.action;
+        }
         const action: Action = createAction(
           paramAction.type,
           paramAction.input ?? {},

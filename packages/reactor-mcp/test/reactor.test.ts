@@ -398,6 +398,65 @@ describe("ReactorMcpProvider", () => {
       expect(getTextContent(result)).toContain("Input validation error");
     });
 
+    it("renames a document with SET_NAME", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: document.header.id,
+        actions: [{ type: "SET_NAME", input: "Renamed", scope: "global" }],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const updated = await client.get(document.header.id);
+      expect(updated.header.name).toBe("Renamed");
+    });
+
+    it("sets the preferred editor with SET_PREFERRED_EDITOR", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [
+          {
+            type: "SET_PREFERRED_EDITOR",
+            input: { preferredEditor: "some-app" },
+            scope: "header",
+          },
+        ],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const updated = await client.get(drive.header.id);
+      expect(updated.header.meta?.preferredEditor).toBe("some-app");
+    });
+
+    it("rejects a base action in the wrong scope", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: document.header.id,
+        actions: [
+          {
+            type: "SET_PREFERRED_EDITOR",
+            input: { preferredEditor: "some-app" },
+            scope: "global",
+          },
+        ],
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain(
+        `Action scope "global" does not match operation scope "header"`,
+      );
+    });
+
     it("should throw error on action on non-existent document", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addActions.callback({
