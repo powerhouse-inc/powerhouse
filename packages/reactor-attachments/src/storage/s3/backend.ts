@@ -56,13 +56,14 @@ function requireHashFirstReservation(
     throw new Error("S3 attachment reservations require a client hash");
   }
   deriveS3AttachmentKey(reservation.clientHash, "validation");
+  // A zero-byte object is a valid S3 object; an empty file is stored as one.
   if (
     reservation.sizeBytes === null ||
     !Number.isSafeInteger(reservation.sizeBytes) ||
-    reservation.sizeBytes <= 0
+    reservation.sizeBytes < 0
   ) {
     throw new Error(
-      "S3 attachment reservation sizeBytes must be a positive safe integer",
+      "S3 attachment reservation sizeBytes must be a non-negative safe integer",
     );
   }
 }

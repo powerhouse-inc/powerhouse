@@ -303,13 +303,13 @@ describe("S3AttachmentBackend", () => {
       ),
     ).rejects.toThrow(/client hash/);
     await expect(
-      ctx.backend.prepareUploadTarget(makeReservation({ sizeBytes: 0 })),
-    ).rejects.toThrow(/positive safe integer/);
+      ctx.backend.prepareUploadTarget(makeReservation({ sizeBytes: -1 })),
+    ).rejects.toThrow(/non-negative safe integer/);
     await expect(
       ctx.backend.prepareUploadTarget(
         makeReservation({ sizeBytes: Number.MAX_SAFE_INTEGER + 1 }),
       ),
-    ).rejects.toThrow(/positive safe integer/);
+    ).rejects.toThrow(/non-negative safe integer/);
   });
 
   it("presigns GET facts and treats a missing readiness probe as ready", async () => {

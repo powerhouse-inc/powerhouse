@@ -111,11 +111,13 @@ export function parseReserveOptions(
     ) {
       return null;
     }
+    // Zero is accepted: an empty file is a real upload. The hash-first check
+    // still binds the bytes received to the declared hash and size, so a
+    // drained body cannot pass as an empty file unless one was declared.
     if (
       typeof obj.sizeBytes !== "number" ||
-      !Number.isInteger(obj.sizeBytes) ||
-      obj.sizeBytes <= 0 ||
-      !Number.isSafeInteger(obj.sizeBytes)
+      !Number.isSafeInteger(obj.sizeBytes) ||
+      obj.sizeBytes < 0
     ) {
       return null;
     }
