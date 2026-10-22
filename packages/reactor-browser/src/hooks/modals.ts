@@ -37,17 +37,19 @@ type ModalRoute<T extends PHModal["type"]> = {
 const MODAL_ROUTES: { [T in PHModal["type"]]?: ModalRoute<T> } = {
   createDocument: {
     id: "create-document",
-    toSearch: ({ documentType, documentModelVersion }) => ({
+    toSearch: ({ documentType, documentModelVersion, driveId }) => ({
       documentType,
       ...(documentModelVersion !== undefined && {
         documentModelVersion: String(documentModelVersion),
       }),
+      ...(driveId && { driveId }),
     }),
     fromSearch: (search) => ({
       documentType: search.documentType ?? "",
       ...(search.documentModelVersion && {
         documentModelVersion: Number(search.documentModelVersion),
       }),
+      ...(search.driveId && { driveId: search.driveId }),
     }),
   },
   login: { id: "login" },
