@@ -288,6 +288,22 @@ describe("write cache on base-reducer 3", () => {
       expect(readsWholeLog(getSince)).toBe(true);
     });
 
+    it("rebuilds the whole log for a row after it that repeats a stored RETRACT's id", async () => {
+      // Stored under signatureVerification "log"; the repeat makes the RETRACT inert.
+      const a = await add("a");
+      const undoA = await append(retract(a));
+      for (const id of ["b", "c", "d"]) await add(id);
+      await persistKeyframeAt(4);
+      await append({ ...addModule({ id: "x", name: "x" }), id: undoA });
+      const getSince = vi.spyOn(store, "getSince");
+
+      const document = await cache.getState(docId, "global", BRANCH, 5);
+
+      expect(globalOf(document)).toEqual(derived());
+      expect(moduleIds(document)).toEqual(["a", "b", "c", "d", "x"]);
+      expect(readsWholeLog(getSince)).toBe(true);
+    });
+
     it("rebuilds the whole log for a rewind after it", async () => {
       for (const id of ["a", "b", "c", "d", "e"]) await add(id);
       await persistKeyframeAt(4);
@@ -359,6 +375,20 @@ describe("write cache on base-reducer 3", () => {
         hash: "h4",
       });
       expect(readsWholeLog(getSince)).toBe(false);
+    });
+
+    it("rebuilds the whole log for a row after a cached snapshot that repeats a RETRACT's id", async () => {
+      const a = await add("a");
+      const undoA = await append(retract(a));
+      await cache.getState(docId, "global", BRANCH, 1);
+      await append({ ...addModule({ id: "x", name: "x" }), id: undoA });
+      const getSince = vi.spyOn(store, "getSince");
+
+      const document = await cache.getState(docId, "global", BRANCH);
+
+      expect(globalOf(document)).toEqual(derived());
+      expect(moduleIds(document)).toEqual(["a", "x"]);
+      expect(readsWholeLog(getSince)).toBe(true);
     });
 
     it("rebuilds the whole log for a RETRACT after a cached snapshot", async () => {

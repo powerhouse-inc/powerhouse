@@ -13,7 +13,7 @@ import {
   baseReducerVersion,
   deriveScopeVersioned,
   documentDerivesByRule,
-  rewritesScope,
+  tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
   withProtocolVersions,
@@ -1123,10 +1123,7 @@ export class KyselyWriteCache implements IWriteCache {
     }
   }
 
-  /**
-   * Base-reducer 3: rows after a base derive from it unless one rewinds,
-   * retracts, or is named by a retraction, which may reach below the base.
-   */
+  /** Base-reducer 3: whether rows after a base need the whole log (tailAppliesIncrementally). */
   private async tailNeedsWholeLog(
     documentId: string,
     scope: string,
@@ -1134,20 +1131,35 @@ export class KyselyWriteCache implements IWriteCache {
     rows: readonly Operation[],
     signal?: AbortSignal,
   ): Promise<boolean> {
-    if (rows.some((operation) => rewritesScope(operation, () => false))) {
-      return true;
-    }
     if (rows.length === 0) {
       return false;
     }
-    const named = await this.operationStore.findReferencing(
-      documentId,
-      scope,
-      branch,
-      rows.map((operation) => operation.action.id),
-      signal,
+    // A v3 op id derives from the action id, so a repeated op id is a repeated action id.
+    const [named, repeated] = await Promise.all([
+      this.operationStore.findReferencing(
+        documentId,
+        scope,
+        branch,
+        rows.map((operation) => operation.action.id),
+        signal,
+      ),
+      this.operationStore.findRepeatedOperationIds(
+        documentId,
+        scope,
+        branch,
+        rows.map((operation) => operation.id),
+        signal,
+      ),
+    ]);
+    const held = new Set(
+      rows
+        .filter((operation) => repeated.has(operation.id))
+        .map((operation) => operation.action.id),
     );
-    return named.size > 0;
+    return !tailAppliesIncrementally(rows, {
+      named: (id) => named.has(id),
+      holds: (id) => held.has(id),
+    });
   }
 
   /** The stored operation at `index`, or undefined if it is no longer there. */

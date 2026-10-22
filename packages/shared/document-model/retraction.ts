@@ -400,26 +400,51 @@ export function undoTargetsBase(
   };
 }
 
+/** What a stream holds before a tail appended to it. */
+export type TailBase = {
+  /** Whether a stored RETRACT names `actionId`, present or not. */
+  readonly named: (actionId: string) => boolean;
+  /** Whether a row before the tail carries `actionId`; a superset only costs a re-derive. */
+  readonly holds: (actionId: string) => boolean;
+};
+
+/**
+ * Whether `tail`, rows appended in index order after a derived base, applies
+ * row by row. Not when a row rewinds, retracts, is named by a retraction, or
+ * repeats an action id: a RETRACT whose id repeats retracts nothing.
+ */
+export function tailAppliesIncrementally(
+  tail: readonly { skip: number; action: Action }[],
+  base: TailBase,
+): boolean {
+  const seen = new Set<string>();
+  for (const row of tail) {
+    const id = row.action.id;
+    if (base.holds(id) || seen.has(id)) return false;
+    if (rewritesScope(row, base.named)) return false;
+    seen.add(id);
+  }
+  return true;
+}
+
 /**
  * The targets after `appended`, rows past the end of `base`'s stream in index
- * order. "rederive" when a row can change which earlier rows apply or repeats
- * an id; otherwise a row's stored `error` says whether it applied.
+ * order; "rederive" unless the tail applies incrementally. A row's stored
+ * `error` says whether it applied.
  */
 export function advanceUndoTargets(
   base: Pick<UndoTargetsBase, "targets" | "named" | "ids">,
   appended: readonly Operation[],
 ): UndoRedoTargets | "rederive" {
+  const applies = tailAppliesIncrementally(appended, {
+    named: (id) => base.named.has(id),
+    holds: (id) => base.ids.has(id),
+  });
+  if (!applies) return "rederive";
   let { undoTarget: undo, redoTarget: redo } = base.targets;
-  const batch = new Set<string>();
   for (const operation of appended) {
-    const id = operation.action.id;
-    if (base.ids.has(id) || batch.has(id)) return "rederive";
-    if (rewritesScope(operation, (named) => base.named.has(named))) {
-      return "rederive";
-    }
-    batch.add(id);
     if (isContent(operation) && operation.error === undefined) {
-      undo = id;
+      undo = operation.action.id;
       redo = undefined;
     }
   }

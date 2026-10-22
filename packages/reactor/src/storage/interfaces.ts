@@ -302,6 +302,18 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
+  /**
+   * The subset of `opIds` stored at more than one row of one stream, rewound
+   * copies included.
+   */
+  findRepeatedOperationIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Set<string>>;
+
   /** The ids among `actionIds` that some stored action in the stream references (`actionReferences`). */
   findReferencing(
     documentId: string,
