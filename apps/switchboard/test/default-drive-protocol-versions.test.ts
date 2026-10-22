@@ -22,6 +22,12 @@ function client(): { client: IReactorClient; created: PHDocument[] } {
     created,
     client: {
       get: () => Promise.reject(new Error("not found")),
+      resolveIdOrSlug: () =>
+        Promise.reject(
+          Object.assign(new Error("not found"), {
+            name: "DocumentNotFoundError",
+          }),
+        ),
       newDocument: (type: string, options?: NewDocumentHeaderOptions) =>
         Promise.resolve(
           headNewDocument(
