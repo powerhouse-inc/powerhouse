@@ -82,9 +82,7 @@ describe('signatureVerification "log" admits an action id that repeats a RETRACT
     });
   });
 
-  // The executor's single-row append still decides on findReferencing alone
-  // (needsFullHistory, applyByRule), so it applies the repeat incrementally.
-  it.fails("writes the state a cold derivation gives", async () => {
+  it("writes the state a cold derivation gives", async () => {
     const { id, cold } = await repeatRetractId();
 
     expect(modules(cold.document)).toEqual(["a", "x"]);

@@ -20,6 +20,7 @@ import {
   conflictWindowMovesEveryRow,
   createdCapabilities,
   decide,
+  deriveOperationId,
   derivesByRule,
   documentDerivesByRule,
   garbageCollect,
@@ -36,11 +37,12 @@ import {
   PEER_CAPABILITIES,
   positionalOperations,
   retractedActionIds,
-  rewritesScope,
+  retractIds,
   RULE_EXEMPT_SCOPES,
   skipMayUndo,
   sortOperations,
   sortsJobsCanonically,
+  tailAppliesIncrementally,
   tieOrderOf,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
@@ -222,9 +224,60 @@ type EvaluationCriteria = {
 /** The previous write's result a batch reduces the next write against. */
 type CarriedState = {
   document: PHDocument;
-  /** The write's id when a stored RETRACT names it; undefined outside the rule. */
-  targeted?: ReadonlySet<string>;
+  /** What the rule read about the write's id; undefined outside the rule. */
+  lookups?: RuleLookups;
 };
+
+/** What base-reducer 3 reads about write ids before deciding to re-derive. */
+type RuleLookups = {
+  /** The ids a stored RETRACT names. */
+  targeted: ReadonlySet<string>;
+  /** The ids a stored RETRACT row carries, rewound rows included. */
+  retractIds: ReadonlySet<string>;
+};
+
+const NO_RULE_LOOKUPS: RuleLookups = {
+  targeted: new Set(),
+  retractIds: new Set(),
+};
+
+async function readRuleLookups(
+  operationStore: IOperationStore,
+  documentId: string,
+  scope: string,
+  branch: string,
+  actionIds: string[],
+  signal?: AbortSignal,
+): Promise<RuleLookups> {
+  const [targeted, rows] = await Promise.all([
+    operationStore.findReferencing(
+      documentId,
+      scope,
+      branch,
+      actionIds,
+      signal,
+    ),
+    operationStore.getAllOperationsByIds(
+      documentId,
+      scope,
+      branch,
+      actionIds.map((id) => deriveOperationId(documentId, scope, branch, id)),
+      signal,
+    ),
+  ]);
+  return { targeted, retractIds: retractIds(rows) };
+}
+
+/** Whether `writes`, appended after what `lookups` read, apply row by row. */
+function appliesIncrementally(
+  writes: readonly PendingWrite[],
+  lookups: RuleLookups,
+): boolean {
+  return tailAppliesIncrementally(writes, {
+    named: (id) => lookups.targeted.has(id),
+    holds: (id) => lookups.retractIds.has(id),
+  });
+}
 
 type PreparedWrite = {
   action: Action;
@@ -335,13 +388,8 @@ function retractionRefusal(
 }
 
 /** A rule write whose scope the reducer re-derives from every row; UNDO and REDO become RETRACTs. */
-function needsFullHistory(
-  write: PendingWrite,
-  targeted: ReadonlySet<string>,
-): boolean {
-  return (
-    isUndoRedo(write.action) || rewritesScope(write, (id) => targeted.has(id))
-  );
+function needsFullHistory(write: PendingWrite, lookups: RuleLookups): boolean {
+  return isUndoRedo(write.action) || !appliesIncrementally([write], lookups);
 }
 
 /** The ids of a purge job's request, which a drive purge may precede. */
@@ -1989,16 +2037,18 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Base-reducer 3 re-derives the scope from every row for a write that
-    // retracts or that a stored RETRACT names. Only the version says whether
-    // the rule runs, so such a write reads again once the slice is dropped.
-    let targeted = carried?.targeted;
+    // retracts, that a stored RETRACT names, or that repeats a stored
+    // RETRACT's id. Only the version says whether the rule runs, so such a
+    // write reads again once the slice is dropped.
+    let lookups = carried?.lookups;
     if (
       carried === undefined &&
       deniedReason === undefined &&
       documentDerivesByRule(document.header, job.scope)
     ) {
       try {
-        targeted = await stores.operationStore.findReferencing(
+        lookups = await readRuleLookups(
+          stores.operationStore,
           job.documentId,
           job.scope,
           job.branch,
@@ -2012,7 +2062,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           startTime,
         );
       }
-      if (!invalidated && needsFullHistory(write, targeted)) {
+      if (!invalidated && needsFullHistory(write, lookups)) {
         stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
         const head = await readHead();
         if ("success" in head) {
@@ -2122,7 +2172,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       let deriveScope: DeriveScope | undefined;
       if (
         documentDerivesByRule(document.header, job.scope) &&
-        needsFullHistory(write, targeted ?? new Set())
+        needsFullHistory(write, lookups ?? NO_RULE_LOOKUPS)
       ) {
         try {
           deriveScope = await scopeDerivation(
@@ -2145,7 +2195,9 @@ export class SimpleJobExecutor implements IJobExecutor {
         const caps = baseReducerCapabilities(document.header);
         const protocolVersion = caps.version;
         const ruleOptions = {
-          ...(targeted === undefined ? {} : { targeted }),
+          ...(lookups === undefined
+            ? {}
+            : { targeted: lookups.targeted, retractIds: lookups.retractIds }),
           ...(deriveScope === undefined ? {} : { deriveScope }),
         };
         const reducerOptions = sourceOperation
@@ -2421,7 +2473,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     return writes.every((write) => {
       const type = write.action.type;
       return (
-        !needsFullHistory(write, new Set()) &&
+        !needsFullHistory(write, NO_RULE_LOOKUPS) &&
         write.deniedReason === undefined &&
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
@@ -2451,7 +2503,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const { job } = executing;
     const prepared: PreparedWrite[] = [];
     let carried: CarriedState | undefined;
-    let targeted: ReadonlySet<string> | undefined;
+    let lookups: RuleLookups | undefined;
     let lastYield = performance.now();
 
     for (const write of writes) {
@@ -2463,18 +2515,20 @@ export class SimpleJobExecutor implements IJobExecutor {
         return this.executeRegularActionsSequentially(writes, executing);
       }
 
-      // A later write a stored RETRACT names is re-derived from every row,
-      // which the carried slice does not hold.
+      // A later write that would re-derive from every row needs rows the
+      // carried slice does not hold.
       if (
         prepared.length === 0 &&
         documentDerivesByRule(outcome.document.header, job.scope)
       ) {
+        const later = writes.slice(1);
         try {
-          targeted = await executing.stores.operationStore.findReferencing(
+          lookups = await readRuleLookups(
+            executing.stores.operationStore,
             job.documentId,
             job.scope,
             job.branch,
-            writes.slice(1).map((later) => later.action.id),
+            later.map((write) => write.action.id),
             executing.signal,
           );
         } catch (error) {
@@ -2484,13 +2538,13 @@ export class SimpleJobExecutor implements IJobExecutor {
             executing.startTime,
           );
         }
-        if (targeted.size > 0) {
+        if (!appliesIncrementally(later, lookups)) {
           return this.executeRegularActionsSequentially(writes, executing);
         }
       }
 
       prepared.push(outcome);
-      carried = { document: outcome.updatedDocument, targeted };
+      carried = { document: outcome.updatedDocument, lookups };
 
       if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
         await yieldToMain();
