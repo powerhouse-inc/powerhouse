@@ -2562,6 +2562,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.3.2
       graphql-request:
         specifier: 'catalog:'
         version: 7.4.0(graphql@16.12.0)

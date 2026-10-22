@@ -15,6 +15,8 @@ export default defineConfig({
     projects: [
       {
         plugins: [react()],
+        // Served as-is, like a registry CDN: the worker package test loads a built package from it.
+        publicDir: "test/fixtures",
         test: {
           name: "browser",
           include: ["test/**/*.test.ts", "test/**/*.test.tsx"],

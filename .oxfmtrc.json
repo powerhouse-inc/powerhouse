@@ -20,6 +20,7 @@
     "packages/reactor-workflow/test/upstream/",
     "tools/doc-harness/prompts/schemas/",
     "test/registry-e2e/fixture/package/build/",
+    "packages/reactor-browser/test/fixtures/registry/",
     "test/registry-e2e/results/",
     "**/routeTree.gen.ts"
   ]

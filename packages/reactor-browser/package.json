@@ -83,6 +83,7 @@
     "ai": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
+    "es-module-lexer": "^2.0.0",
     "graphql-request": "catalog:",
     "graphql-ws": "catalog:",
     "kysely": "catalog:",

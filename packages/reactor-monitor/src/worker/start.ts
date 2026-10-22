@@ -42,12 +42,6 @@ export function startMonitorWorker(
     importers: {
       importPackage: (url) =>
         import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
-      importSource: (source) =>
-        import(
-          /* @vite-ignore */ URL.createObjectURL(
-            new Blob([source], { type: "text/javascript" }),
-          )
-        ) as Promise<Record<string, unknown>>,
     },
   });
 
