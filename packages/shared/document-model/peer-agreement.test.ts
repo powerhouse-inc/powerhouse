@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BASE_REDUCER_VERSIONS } from "./base-reducer-protocol.js";
 import {
   coversLocal,
   holdReason,
@@ -14,6 +15,7 @@ import {
   selectProtocolVersions,
   type PeerCapability,
   type PeerCapabilityFlags,
+  type ProtocolCapability,
   type Supports,
 } from "./peer-agreement.js";
 
@@ -56,6 +58,18 @@ describe("peer capabilities", () => {
       expect(
         legacySupports(PEER_CAPABILITIES).protocols["base-reducer"],
       ).toEqual([1, 2]);
+    });
+
+    it("prefers 3 with the flag on and 2 otherwise, from the capability table", () => {
+      const baseReducer = PEER_CAPABILITIES.find(
+        (capability) => capability.name === "base-reducer",
+      ) as ProtocolCapability;
+      expect(baseReducer.preferred!({})).toBe(2);
+      expect(baseReducer.preferred!({ undoV3: false })).toBe(2);
+      expect(baseReducer.preferred!(undoV3)).toBe(3);
+      for (const version of baseReducer.baseline) {
+        expect(BASE_REDUCER_VERSIONS).toContain(version);
+      }
     });
 
     it("selects 3 alone and 2 beside a silent or flag-off member", () => {

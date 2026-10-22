@@ -1,4 +1,9 @@
+import type { GatingFlag } from "@powerhousedao/shared/document-model";
 import type { ReactorFeatureFlags } from "../executor/types.js";
+
+type KnownFlag<F extends keyof ReactorFeatureFlags> = F;
+/** Fails to compile when a base-reducer version is gated by a flag this reactor does not know. */
+export type BaseReducerGatingFlag = KnownFlag<GatingFlag>;
 
 /** A flag name mapped to the flags it requires. */
 export type FeatureFlagPrerequisites = Record<string, readonly string[]>;

@@ -6,10 +6,12 @@ import type {
 } from "./base-reducer-protocol.js";
 import {
   BASE_REDUCER_VERSIONS,
+  FLAGS_FOR_EVERY_VERSION,
   acceptsSubmittedRetract,
   acceptsSubmittedUndoRedo,
   appliesRewind,
   assertNever,
+  baseReducerVersionsFor,
   capabilitiesOf,
   createdCapabilities,
   derivesByRule,
@@ -45,6 +47,7 @@ const PINNED = {
     synthesizedId: "hashed",
     replayHash: "sender",
     needsStateReducer: false,
+    gatedBy: null,
   },
   2: {
     version: 2,
@@ -55,6 +58,7 @@ const PINNED = {
     synthesizedId: "hashed",
     replayHash: "sender",
     needsStateReducer: false,
+    gatedBy: null,
   },
   3: {
     version: 3,
@@ -65,6 +69,7 @@ const PINNED = {
     synthesizedId: "none",
     replayHash: "receiver",
     needsStateReducer: true,
+    gatedBy: "undoV3",
   },
 } satisfies { [V in BaseReducerVersion]: BaseReducerCapabilities };
 
@@ -74,6 +79,16 @@ describe("base-reducer capabilities", () => {
     for (const version of BASE_REDUCER_VERSIONS) {
       expect(capabilitiesOf(version)).toEqual(PINNED[version]);
     }
+  });
+
+  it("gates each version by its flag", () => {
+    expect(baseReducerVersionsFor({})).toEqual([1, 2]);
+    expect(baseReducerVersionsFor({ undoV3: false })).toEqual([1, 2]);
+    expect(baseReducerVersionsFor({ undoV3: true })).toEqual([1, 2, 3]);
+    expect(FLAGS_FOR_EVERY_VERSION).toEqual({ undoV3: true });
+    expect(baseReducerVersionsFor(FLAGS_FOR_EVERY_VERSION)).toEqual([
+      ...BASE_REDUCER_VERSIONS,
+    ]);
   });
 
   it("reads a header's version, missing as undefined and unknown as an error", () => {

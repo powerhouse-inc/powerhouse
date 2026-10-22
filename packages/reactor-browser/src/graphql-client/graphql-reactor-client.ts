@@ -25,7 +25,6 @@ import type {
   BaseReducerCapabilities,
   CreateDocumentActionInput,
   ISigner,
-  PeerCapabilityFlags,
   PHDocumentState,
   ProtocolVersions,
   SignaturePolicy,
@@ -35,6 +34,7 @@ import {
   actionSigningTarget,
   isSignaturePolicy,
   fitCreateBaseReducer,
+  FLAGS_FOR_EVERY_VERSION,
   headNewDocument,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
@@ -205,9 +205,6 @@ export type GraphQLReactorClientOptions = {
    */
   driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
-
-// The cap is the host's selection; this build itself runs every version it knows.
-const EVERY_VERSION_THIS_BUILD_RUNS: PeerCapabilityFlags = { undoV3: true };
 
 // Always known here, so a light client can head a drive without registering it.
 const BUILT_IN_MODELS = [
@@ -987,7 +984,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
     const selected = selectProtocolVersions({
       capabilities: PEER_CAPABILITIES,
-      flags: EVERY_VERSION_THIS_BUILD_RUNS,
+      // The cap is the host's selection; this build runs every version it knows.
+      flags: FLAGS_FOR_EVERY_VERSION,
       members: [selectionSupports(host, PEER_CAPABILITIES)],
     });
     return fitCreateBaseReducer(

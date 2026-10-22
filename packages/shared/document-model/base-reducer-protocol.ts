@@ -1,5 +1,5 @@
 import type { PHDocumentHeader } from "./documents.js";
-import type { Supports } from "./peer-agreement.js";
+import type { PeerCapabilityFlags, Supports } from "./peer-agreement.js";
 import type { ProtocolVersions } from "./signature-policy.js";
 import { stateReducerOf } from "./state-reducer.js";
 import type {
@@ -20,6 +20,8 @@ export type TieOrder = "rank-locale" | "canonical";
 export type SynthesizedIdForm = "hashed" | "none";
 /** Whose state hash a received row keeps. */
 export type ReplayHash = "sender" | "receiver";
+/** A reactor feature flag a version runs only under. */
+export type GatingFlag = "undoV3";
 
 export type BaseReducerCapabilities = {
   readonly version: BaseReducerVersion;
@@ -32,6 +34,8 @@ export type BaseReducerCapabilities = {
   readonly replayHash: ReplayHash;
   /** Runs only models whose every registered reducer createReducer tagged. */
   readonly needsStateReducer: boolean;
+  /** The flag this version runs only under; null runs always. */
+  readonly gatedBy: GatingFlag | null;
 };
 
 const CAPABILITIES = {
@@ -44,6 +48,7 @@ const CAPABILITIES = {
     synthesizedId: "hashed",
     replayHash: "sender",
     needsStateReducer: false,
+    gatedBy: null,
   },
   2: {
     version: 2,
@@ -54,6 +59,7 @@ const CAPABILITIES = {
     synthesizedId: "hashed",
     replayHash: "sender",
     needsStateReducer: false,
+    gatedBy: null,
   },
   3: {
     version: 3,
@@ -64,12 +70,32 @@ const CAPABILITIES = {
     synthesizedId: "none",
     replayHash: "receiver",
     needsStateReducer: true,
+    gatedBy: "undoV3",
   },
 } as const satisfies {
   readonly [V in BaseReducerVersion]: BaseReducerCapabilities & {
     readonly version: V;
   };
 };
+
+/** The versions a reactor running `flags` supports. */
+export function baseReducerVersionsFor(
+  flags: PeerCapabilityFlags,
+): BaseReducerVersion[] {
+  return BASE_REDUCER_VERSIONS.filter((version) => {
+    const gate = CAPABILITIES[version].gatedBy;
+    return gate === null || flags[gate] === true;
+  });
+}
+
+/** Flags under which this build runs every version it knows. */
+export const FLAGS_FOR_EVERY_VERSION: { readonly [F in GatingFlag]: true } =
+  Object.fromEntries(
+    BASE_REDUCER_VERSIONS.flatMap((version) => {
+      const gate = CAPABILITIES[version].gatedBy;
+      return gate === null ? [] : [[gate, true]];
+    }),
+  ) as { readonly [F in GatingFlag]: true };
 
 /** Scopes the retraction rule never derives. */
 export const RULE_EXEMPT_SCOPES: ReadonlySet<string> = new Set([
