@@ -4,6 +4,21 @@ import type { HostPlugin } from "@powerhousedao/host-core";
 import { registerAttachmentRoutes } from "../attachments/index.js";
 import { deriveAttachmentServiceConfig } from "../server.mjs";
 import type { SwitchboardHostContext } from "../plugin-host.mjs";
+import { z } from "zod";
+
+/** No entry config: presence is the whole activation. A typo'd config key
+ * fails at resolution instead of being silently ignored. */
+export const attachmentsPluginConfigSchema = z.strictObject({});
+
+export type AttachmentsPluginConfig = z.input<
+  typeof attachmentsPluginConfigSchema
+>;
+
+declare global {
+  interface PHPluginConfigs {
+    "@powerhousedao/switchboard/plugins/attachments": AttachmentsPluginConfig;
+  }
+}
 
 /**
  * R2.3 — the attachments subsystem as a built-in plugin: the six /attachments
@@ -23,6 +38,7 @@ export const attachmentsPlugin: HostPlugin<{
 }> = {
   name: "switchboard-attachments",
   appliesTo: "switchboard",
+  configSchema: attachmentsPluginConfigSchema,
   hooks: {
     onHttpMounting: (ctx) => {
       registerAttachmentRoutes(

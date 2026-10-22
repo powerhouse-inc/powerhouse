@@ -22,6 +22,7 @@ export const runArgs = {
   explain: option({
     type: optional(string),
     long: "explain",
-    description: "explain a resolved aspect instead of running (drives)",
+    description:
+      "explain a resolved aspect instead of running (drives, outputs)",
   }),
 };

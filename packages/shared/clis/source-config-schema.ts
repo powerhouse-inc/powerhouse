@@ -4,9 +4,10 @@
 // Mirrors the `PowerhouseConfig` TypeScript type in ./types.ts. Drift between
 // the TS type and this schema is guarded by ./source-config-schema.test.ts.
 //
-// Shared field shapes (PowerhousePackage, PHConnectRuntimeConfig) are imported
-// from `@powerhousedao/shared/connect` so the source schema and the runtime
-// schema (in builder-tools/connect-utils) stay in sync by construction.
+// Shared field shapes (PowerhousePackage, and the `connect` block emitted from
+// the zod connectConfigSchema) are imported from `../connect/` so the source
+// schema and the runtime schema (in builder-tools/connect-utils) stay in sync
+// by construction.
 
 import {
   phConnectRuntimeConfigSchema,
@@ -229,6 +230,19 @@ export const sourceConfigSchema = {
           type: "integer",
           description:
             "Port `ph vetra`'s Connect dev server listens on. Assigned per project by `ph init`. Overridden by PH_VETRA_CONNECT_PORT or --connect-port.",
+        },
+      },
+    },
+    assistant: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "The project's agent host (hosts/assistant): a headless Mastra agent API on the project switchboard.",
+      properties: {
+        port: {
+          type: "integer",
+          description:
+            "Port the assistant host's chat-completions API listens on. Read by hosts/assistant/host.js (default 4910).",
         },
       },
     },

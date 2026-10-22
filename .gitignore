@@ -19,6 +19,8 @@ vite.*.config.*.timestamp-*.mjs
 storybook-static
 .gitignore.local
 .ph
+# TanStack Router's scratch dir (route-tree generation)
+.tanstack/
 CLAUDE.md
 .claude/*
 !.claude/commands/

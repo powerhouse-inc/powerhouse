@@ -16,6 +16,7 @@ export default defineConfig({
     "route-tree": "src/route-tree.ts",
     "route-views": "src/route-views/index.ts",
     prerender: "src/prerender/shell.tsx",
+    "plugin-configs": "src/plugin-configs/index.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
     "reactor.worker": "src/reactor.worker.ts",

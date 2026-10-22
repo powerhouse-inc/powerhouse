@@ -1,5 +1,7 @@
 import "@powerhousedao/connect/i18n";
 import { getConnectPHStore } from "@powerhousedao/connect-core/runtime";
+import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
+import { ConnectBrandingProvider } from "@powerhousedao/design-system/connect";
 import { PHStoreProvider } from "@powerhousedao/reactor-browser";
 import type { DocumentModelLib } from "document-model";
 import { lazy, StrictMode, Suspense } from "react";
@@ -18,6 +20,15 @@ export const AppLoader = (props: {
   localPackage?: DocumentModelLib | Promise<DocumentModelLib>;
 }) => {
   const phStore = getConnectPHStore();
+  // connect.branding (Connect's identity) plus the explorer icons the generic
+  // plugin owns (drives.icons), both resolved by the build: one provider for
+  // the design-system components.
+  const runtime = getRuntimeConfig().connect;
+  const branding = {
+    ...runtime.branding,
+    homeBackground: runtime.home?.background,
+    icons: runtime.drives?.icons,
+  };
   const Load = lazy(() =>
     import("./load.js").then((m) =>
       m.loadComponent(props.localPackage, phStore),
@@ -25,37 +36,39 @@ export const AppLoader = (props: {
   );
   return (
     <StrictMode>
-      <PHStoreProvider store={phStore}>
-        <ErrorBoundary
-          fallbackRender={(props) => (
-            <AppSkeleton
-              children={
-                isStoredDocumentsRefused(props.error) ? (
-                  <StoredDocumentsRefusedFallback error={props.error} />
-                ) : (
-                  <DetailedFallback {...props} />
-                )
-              }
-            />
-          )}
-          resetKeys={[props.localPackage]}
-          loggerContext={["Connect"]}
-        >
-          <Suspense
-            fallback={<LoadingShell Fallback={AppSkeleton} />}
-            name="AppLoader"
+      <ConnectBrandingProvider branding={branding}>
+        <PHStoreProvider store={phStore}>
+          <ErrorBoundary
+            fallbackRender={(props) => (
+              <AppSkeleton
+                children={
+                  isStoredDocumentsRefused(props.error) ? (
+                    <StoredDocumentsRefusedFallback error={props.error} />
+                  ) : (
+                    <DetailedFallback {...props} />
+                  )
+                }
+              />
+            )}
+            resetKeys={[props.localPackage]}
+            loggerContext={["Connect"]}
           >
-            {/* eslint-disable-next-line react-hooks-extra/static-components */}
-            <Load {...props}>
-              <App />
-              <PluginRoots />
-            </Load>
-          </Suspense>
-          <MigrationBanner />
-          <ServiceWorkerUpdatePrompt />
-          <ConnectionBanner />
-        </ErrorBoundary>
-      </PHStoreProvider>
+            <Suspense
+              fallback={<LoadingShell Fallback={AppSkeleton} />}
+              name="AppLoader"
+            >
+              {/* eslint-disable-next-line react-hooks-extra/static-components */}
+              <Load {...props}>
+                <App />
+                <PluginRoots />
+              </Load>
+            </Suspense>
+            <MigrationBanner />
+            <ServiceWorkerUpdatePrompt />
+            <ConnectionBanner />
+          </ErrorBoundary>
+        </PHStoreProvider>
+      </ConnectBrandingProvider>
     </StrictMode>
   );
 };

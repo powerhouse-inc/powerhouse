@@ -27,6 +27,7 @@ export {
   type ProjectShellResult,
 } from "./shell-project.js";
 export {
+  rebaseBackground,
   scaffoldDesktopShell,
   solidPng,
   type ScaffoldDesktopShellOptions,

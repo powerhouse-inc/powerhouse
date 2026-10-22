@@ -1,0 +1,4 @@
+{
+  "reactor": { "port": 4001 },
+  "studio": { "port": 3000 }
+}

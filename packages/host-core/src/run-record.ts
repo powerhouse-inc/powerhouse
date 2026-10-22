@@ -1,28 +1,19 @@
 import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import fs from "node:fs";
 import path from "node:path";
+import { runRecordSchema, type RunRecord } from "./run-record-schema.js";
+
+export {
+  runRecordMemberSchema,
+  runRecordSchema,
+  type RunRecord,
+  type RunRecordMember,
+} from "./run-record-schema.js";
 
 /**
- * A running host's `.ph/run/<host>.json` record: what is live for this
- * project, keyed by host name so N hosts (vetra, desktop, …) coexist. This is
- * the generic form of ph-cli's vetra-runtime record; the compound writes one
- * per supervised host and (for compatibility) keeps the legacy
- * vetra-runtime.json in step while agent tooling still reads it (D1.c).
+ * Record I/O for `.ph/run/<host>.json`, keyed by host name so N hosts
+ * (vetra, desktop, …) coexist. The record shape is run-record-schema.ts (v2).
  */
-export interface RunRecordMember {
-  port?: number;
-  url?: string;
-}
-
-export interface RunRecord {
-  pid: number;
-  hostName: string;
-  projectName: string;
-  startedAt: string;
-  members: Record<string, RunRecordMember>;
-  /** Host-specific extras (e.g. mcpUrl) a runner wants in the record. */
-  extra?: Record<string, unknown>;
-}
 
 export type RunProbe =
   | { status: "none" }
@@ -40,19 +31,52 @@ export function readRunRecord(
   projectDir: string,
   hostName: string,
 ): RunRecord | undefined {
+  let raw: unknown;
   try {
-    return JSON.parse(
-      fs.readFileSync(recordPath(projectDir, hostName), "utf8"),
-    ) as RunRecord;
+    raw = JSON.parse(fs.readFileSync(recordPath(projectDir, hostName), "utf8"));
   } catch {
     return undefined;
   }
+  // v1 and foreign-shaped records read as "not running" (3.6).
+  const parsed = runRecordSchema.safeParse(raw);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** Every valid v2 record under `.ph/run/` (invalid and v1 files skipped). */
+export function listRunRecords(projectDir: string): RunRecord[] {
+  let files: string[];
+  try {
+    files = fs.readdirSync(runDir(projectDir));
+  } catch {
+    return [];
+  }
+  return files
+    .filter((file) => file.endsWith(".json"))
+    .flatMap((file) => {
+      const record = readRunRecord(projectDir, file.slice(0, -".json".length));
+      return record ? [record] : [];
+    });
+}
+
+/** The project identity the live/foreign probe compares: package.json
+ * `name`, else the folder name. */
+export function readProjectName(projectDir: string): string {
+  try {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(projectDir, "package.json"), "utf8"),
+    ) as { name?: unknown };
+    if (typeof pkg.name === "string" && pkg.name) return pkg.name;
+  } catch {
+    // fall through
+  }
+  return path.basename(path.resolve(projectDir));
 }
 
 export function writeRunRecord(projectDir: string, record: RunRecord): void {
-  const target = recordPath(projectDir, record.hostName);
+  const target = recordPath(projectDir, record.host);
+  const valid = runRecordSchema.parse(record);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(record, null, 2)}\n`);
+  fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
 }
 
 export function clearRunRecord(projectDir: string, hostName: string): void {
