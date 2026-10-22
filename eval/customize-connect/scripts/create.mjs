@@ -1,0 +1,17 @@
+import { open, shot, BASE } from "./lib.mjs";
+const { browser, page, logs } = await open();
+await page.goto(BASE + "/inventory", { waitUntil: "domcontentloaded" });
+await page.getByTestId("inventory-page").waitFor({ timeout: 90000 });
+await page.getByRole("button", { name: "Reject all cookies" }).click().catch(() => {});
+await page.waitForTimeout(1500);
+await page.getByTestId("new-item").click();
+const input = page.getByPlaceholder("Document name");
+await input.waitFor();
+await input.fill("Bolts M6");
+await page.getByRole("button", { name: "Create" }).click();
+await page.waitForTimeout(4000);
+console.log("url after create:", page.url());
+await shot(page, "10-after-create");
+console.log("body:", (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 400));
+console.log("LOGS:\n" + logs.join("\n"));
+await browser.close();

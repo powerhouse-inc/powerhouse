@@ -1,0 +1,26 @@
+{
+  "name": "inventory-app",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "acme/inventory-item",
+      "name": "InventoryItem"
+    }
+  ],
+  "apps": [],
+  "editors": [
+    {
+      "name": "inventory-item-editor",
+      "id": "inventory-item-editor",
+      "documentTypes": ["acme/inventory-item"]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}

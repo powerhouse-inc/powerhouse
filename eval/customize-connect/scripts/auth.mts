@@ -1,0 +1,10 @@
+import fs from "node:fs";
+import path from "node:path";
+import { createTestUser, REGISTRY_URL } from "/home/user/powerhouse/test/e2e-utils/src/index.ts";
+const FAKE_HOME = "/tmp/connect-eval/.fake-home";
+const token = await createTestUser();
+fs.rmSync(FAKE_HOME, { recursive: true, force: true });
+fs.mkdirSync(FAKE_HOME, { recursive: true });
+fs.writeFileSync(path.join(FAKE_HOME, ".npmrc"), `registry=${REGISTRY_URL}/\n//localhost:8080/:_authToken=${token}\n`);
+fs.writeFileSync("/tmp/connect-eval/.token", token);
+console.log("ok");

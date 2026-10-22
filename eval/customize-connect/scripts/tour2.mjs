@@ -1,0 +1,24 @@
+import { open, shot, BASE } from "./lib.mjs";
+const { browser, page, logs } = await open();
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.getByTestId("inventory-card").waitFor({ timeout: 90000 });
+await page.getByRole("button", { name: "Reject all cookies" }).click().catch(() => {});
+await page.waitForTimeout(1000);
+await shot(page, "03-home-clean");
+await page.evaluate(() => { window.__marker = 1; });
+// sidebar nav link
+await page.locator('a[href="/inventory"]').first().click();
+await page.getByTestId("inventory-page").waitFor({ timeout: 30000 });
+console.log("no full reload via sidebar nav:", await page.evaluate(() => window.__marker === 1), "title:", await page.title());
+console.log("summary:", await page.getByTestId("inventory-summary").innerText());
+await shot(page, "04-inventory-empty");
+const newLink = page.getByTestId("new-item");
+console.log("new-item href:", await newLink.getAttribute("href"));
+await newLink.click();
+await page.waitForTimeout(1500);
+console.log("still same doc (no reload):", await page.evaluate(() => window.__marker === 1), "url:", page.url());
+await shot(page, "05-create-modal");
+const dlg = page.locator('[role="dialog"], dialog').first();
+console.log("dialog text:", (await dlg.innerText().catch(() => "none")).replace(/\s+/g, " ").slice(0, 500));
+console.log("LOGS:\n" + logs.join("\n"));
+await browser.close();

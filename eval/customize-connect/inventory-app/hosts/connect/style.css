@@ -1,0 +1,17 @@
+/* This Connect's theme: token values and global rules. The page's Tailwind build
+     adds it after style.css; ph build leaves it out of the package's stylesheet. */
+/* static: the page keeps these tokens even unused, as packages' classes read them. */
+@theme static {
+  --color-brand: #0f766e;
+}
+
+/* Semantic tokens: a light value and a dark one. */
+:root {
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+}
+
+:root.dark {
+  --primary: #5eead4;
+  --primary-foreground: #042f2e;
+}

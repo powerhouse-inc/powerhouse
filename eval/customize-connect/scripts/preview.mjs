@@ -1,0 +1,18 @@
+import { open, shot } from "./lib.mjs";
+const BASE = "http://localhost:4173";
+const { browser, page, logs } = await open();
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(300);
+await shot(page, "22-preview-first-paint");
+const card = await page.getByTestId("inventory-card").waitFor({ timeout: 60000 }).then(() => true).catch(() => false);
+console.log("home card:", card, "title:", await page.title());
+await page.goto(BASE + "/inventory", { waitUntil: "domcontentloaded" });
+await page.getByTestId("inventory-page").waitFor({ timeout: 60000 });
+await page.waitForTimeout(8000);
+console.log("inventory:", await page.getByTestId("inventory-summary").innerText());
+await page.goto(BASE + "/report", { waitUntil: "domcontentloaded" });
+console.log("report:", await page.getByTestId("report-total").innerText({ timeout: 30000 }).catch(() => "n/a"));
+await page.goto(BASE + "/settings/inventory", { waitUntil: "domcontentloaded" });
+console.log("settings tab:", await page.getByTestId("inventory-settings").isVisible({ timeout: 30000 }).catch(() => false));
+console.log("LOGS:\n" + logs.slice(0, 15).join("\n"));
+await browser.close();

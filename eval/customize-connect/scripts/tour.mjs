@@ -1,0 +1,17 @@
+import { open, shot, BASE } from "./lib.mjs";
+const { browser, page, logs } = await open();
+const t0 = Date.now();
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(500);
+await shot(page, "01-first-paint");
+await page.getByTestId("inventory-card").waitFor({ timeout: 90000 }).catch((e) => console.log("no inventory card", e.message));
+console.log("home ready after", Date.now() - t0, "ms; title:", await page.title());
+await page.waitForTimeout(3000);
+await shot(page, "02-home");
+console.log("favicon:", await page.locator('link[rel="icon"]').evaluateAll((l) => l.map((x) => x.getAttribute("href"))));
+const home = await page.locator("main, body").first().innerText();
+console.log("HOME TEXT:", home.replace(/\s+/g, " ").slice(0, 600));
+const links = await page.locator("a").evaluateAll((as) => as.map((a) => `${a.getAttribute("aria-label") ?? a.textContent?.trim()}=>${a.getAttribute("href")}`));
+console.log("LINKS:", links.join(" | ").slice(0, 1500));
+console.log("LOGS:\n" + logs.join("\n"));
+await browser.close();

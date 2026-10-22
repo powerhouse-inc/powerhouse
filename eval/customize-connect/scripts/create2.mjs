@@ -1,0 +1,14 @@
+import { open, shot, BASE } from "./lib.mjs";
+const { browser, page, logs } = await open();
+const drive = process.argv[2] ?? "preview-8e909e2c";
+await page.goto(`${BASE}/d/${drive}?modal=create-document&documentType=acme%2Finventory-item`, { waitUntil: "domcontentloaded" });
+const input = page.getByPlaceholder("Document name");
+await input.waitFor({ timeout: 90000 });
+await page.getByRole("button", { name: "Reject all cookies" }).click().catch(() => {});
+await input.fill(process.argv[3] ?? "Bolts M6");
+await page.getByRole("button", { name: "Create" }).click();
+await page.waitForTimeout(4000);
+console.log("url after create:", page.url());
+await shot(page, "11-after-create-in-drive");
+console.log("LOGS:\n" + logs.join("\n"));
+await browser.close();

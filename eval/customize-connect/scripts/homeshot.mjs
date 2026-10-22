@@ -1,0 +1,13 @@
+import { open, shot, BASE } from "./lib.mjs";
+const { browser, page } = await open();
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await page.locator('main a[href^="/d/"]').first().waitFor({ timeout: 90000 }).catch(() => {});
+const reject = page.getByRole("button", { name: "Reject all cookies" });
+await reject.waitFor({ timeout: 15000 }).then(() => reject.click()).catch(() => {});
+await page.waitForTimeout(1500);
+await page.locator("body").evaluate(() => {});
+await page.screenshot({ path: "/tmp/connect-eval/shots/19-home.png", clip: { x: 0, y: 0, width: 1280, height: 260 } });
+const gear = await page.locator('a[href^="/settings"]').last().boundingBox();
+const tsr = await page.getByText("TanStack Router").boundingBox().catch(() => null);
+console.log("settings link box:", JSON.stringify(gear), "devtools badge:", JSON.stringify(tsr));
+await browser.close();

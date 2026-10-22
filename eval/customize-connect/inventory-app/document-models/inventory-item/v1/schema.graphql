@@ -1,0 +1,69 @@
+scalar Unknown
+scalar DateTime
+scalar Address
+scalar AttachmentRef
+scalar Amount_Tokens
+scalar EthereumAddress
+scalar EmailAddress
+scalar Amount_Percentage
+scalar Date
+scalar URL
+scalar Amount_Money
+scalar OLabel
+scalar Currency
+scalar PHID
+scalar OID
+scalar Amount_Fiat
+scalar Amount_Currency
+scalar Amount_Crypto
+scalar Amount
+scalar Upload
+
+type InventoryItemState {
+  name: String
+  sku: String
+  quantity: Int!
+  location: String
+  history: [StockMovement!]!
+}
+
+type StockMovement {
+  id: OID!
+  kind: StockMovementKind!
+  delta: Int!
+  location: String
+  reason: String
+  at: DateTime!
+}
+
+enum StockMovementKind {
+  ADD
+  ADJUST
+  MOVE
+}
+
+# stock
+
+input SetItemDetailsInput {
+  name: String
+  sku: String
+}
+
+input AddStockInput {
+  id: OID!
+  amount: Int!
+  at: DateTime!
+}
+
+input AdjustQuantityInput {
+  id: OID!
+  delta: Int!
+  reason: String
+  at: DateTime!
+}
+
+input MoveItemInput {
+  id: OID!
+  location: String!
+  at: DateTime!
+}
