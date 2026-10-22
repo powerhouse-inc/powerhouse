@@ -11,6 +11,7 @@ import {
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import { createDocumentWithInitialState } from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
@@ -99,6 +100,31 @@ describe("creating a document with a slug another document holds", () => {
       initialState: {},
     })) as { id: string };
     await expect(module.client.resolveIdOrSlug("orders")).resolves.toBe(
+      created.id,
+    );
+  });
+
+  // A slug with no initial state used to take the empty-document path, which drops it.
+  it("keeps the slug the model's own createDocument mutation is given", async () => {
+    const drives = new DocumentModelSubgraph(
+      driveDocumentModelModule as unknown as DocumentModelModule,
+      {
+        reactorClient: module.client,
+        authorizationService: createAuthorizationService({
+          admins: [],
+          defaultProtection: false,
+          policy: AuthorizationPolicy.OPEN,
+        }),
+        graphqlManager: {},
+      } as unknown as SubgraphArgs,
+    );
+    const created = (await drives.mutationResolvers.createDocument(
+      null,
+      { name: "Warehouse", slug: "warehouse" },
+      ctx,
+    )) as { id: string; slug: string };
+    expect(created.slug).toBe("warehouse");
+    await expect(module.client.resolveIdOrSlug("warehouse")).resolves.toBe(
       created.id,
     );
   });

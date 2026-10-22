@@ -476,8 +476,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             this.assertCanCreate(ctx);
           }
 
+          // The empty-document path takes no slug, so a slug goes the initial-state way.
+          const withHeader = !!(initialState || preferredEditor || slug);
           let createdDoc;
-          if (initialState || preferredEditor) {
+          if (withHeader) {
             createdDoc = await createDocumentWithInitialStateResolver(
               this.reactorClient,
               {
@@ -513,14 +515,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          // Name fallback via SET_NAME (only for non-initialState path,
-          // since initialState path sets name on header before creation)
-          if (
-            !initialState &&
-            !preferredEditor &&
-            name &&
-            createdDoc.name !== name
-          ) {
+          // Name fallback via SET_NAME (only for the empty-document path,
+          // since the other sets name on the header before creation)
+          if (!withHeader && name && createdDoc.name !== name) {
             const updatedDoc = await this.reactorClient.execute(
               createdDoc.id,
               "main",
