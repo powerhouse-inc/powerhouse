@@ -2,6 +2,15 @@
 
 The package is the one the blind eval built (`/tmp/connect-eval2/stock-app`). It was published to the local registry. A new project, `/tmp/connect-eval3/consumer-app` (`ph init consumer-app --pnpm --dev`), loads it at runtime through two hosts. Packages: `6.2.3-dev.69` from the local registry, branch `fix/connect-field-test` @ 190eb31.
 
+**Loading issues, in short:**
+
+| Path | Did the package load? |
+| --- | --- |
+| Connect host, `ph run connect dev` | **No.** `Failed to install package "stock-app@1.0.0": Failed to fetch dynamically imported module`. The dev React shim imports from the wrong Vite cache (R2). There is no editor and none of the package's routes. |
+| Switchboard host, `ph run switchboard` (and classic `ph switchboard`) | **Didn't start** on a machine without IPv6 (R1). With an IPv4 preload as a workaround, it loaded the package from the registry. |
+| Connect host, `ph run connect build` + `serve` | **Yes, cleanly.** No console errors. |
+| Every dev page load | Noise: a 404 and a warning for `/node_modules/stock-app@1.0.0/…` before the CDN load (R6). |
+
 **Verdict.** The production path works end to end:
 
 - Switchboard loads the package's model from the registry and serves its GraphQL mutations.
