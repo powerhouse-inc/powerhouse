@@ -75,7 +75,7 @@ import {
   refreshAppDrives,
   type ReactorClientPlan,
 } from "@powerhousedao/connect-core/runtime";
-import { getSharedDeps } from "../shared-deps.js";
+import { getSharedDeps, pageSharedImports } from "../shared-deps.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
   resolvePackagedReactorWorker,
@@ -471,7 +471,7 @@ export async function createReactor(
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports: sharedDeps?.imports,
+      sharedImports: sharedDeps?.imports ?? pageSharedImports(),
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,

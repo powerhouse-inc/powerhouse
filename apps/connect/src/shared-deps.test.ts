@@ -3,7 +3,11 @@
 // absolute URLs; concrete-base values pass through (still made absolute).
 
 import { describe, expect, it } from "vitest";
-import { normalizeVendorImports, sharedDepsModuleUrl } from "./shared-deps.js";
+import {
+  normalizeVendorImports,
+  sharedDepsModuleUrl,
+  sharedImportsFromImportMap,
+} from "./shared-deps.js";
 
 describe("sharedDepsModuleUrl", () => {
   it("falls back to the stable dev path when the build sets no hashed URL", () => {
@@ -73,5 +77,34 @@ describe("normalizeVendorImports", () => {
 
   it("handles an empty table", () => {
     expect(normalizeVendorImports({}, "/app/")).toEqual({});
+  });
+});
+
+describe("sharedImportsFromImportMap", () => {
+  const PAGE = "http://localhost:3000/app/";
+
+  it("keeps the shared deps' exact and prefix entries, made absolute", () => {
+    const importMap = JSON.stringify({
+      imports: {
+        react: "/__ph/dev-react-shim/react.js?v=1",
+        "document-model": "/app/@id/__x00__ph-shared:document-model",
+        "document-model/": "/app/@id/__x00__ph-shared:document-model/",
+        "zod/v4": "/app/@id/__x00__ph-shared:zod/v4",
+        "ph-bundled-packages-virtual": "/app/@id/virtual",
+      },
+    });
+
+    expect(sharedImportsFromImportMap(importMap, PAGE)).toEqual({
+      "document-model":
+        "http://localhost:3000/app/@id/__x00__ph-shared:document-model",
+      "document-model/":
+        "http://localhost:3000/app/@id/__x00__ph-shared:document-model/",
+      "zod/v4": "http://localhost:3000/app/@id/__x00__ph-shared:zod/v4",
+    });
+  });
+
+  it("is empty without an import map, or with one that doesn't parse", () => {
+    expect(sharedImportsFromImportMap(null, PAGE)).toEqual({});
+    expect(sharedImportsFromImportMap("{", PAGE)).toEqual({});
   });
 });
