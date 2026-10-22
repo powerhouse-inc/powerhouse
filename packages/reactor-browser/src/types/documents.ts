@@ -50,6 +50,35 @@ export type OperationsCacheEntry = {
   hasNextPage: boolean;
 };
 
+/** The documents of one type loaded so far, in `find`'s order, across loaded pages. */
+export type DocumentsOfTypeEntry = {
+  /** `idle` means nothing has been requested yet. */
+  status: "idle" | "pending" | "success" | "error";
+  /** The ids loaded so far; the documents themselves are in the document cache. */
+  ids: readonly string[];
+  /** The rejection reason of the last failed page; `undefined` otherwise. */
+  error: unknown;
+  /** Whether the last loaded page reported a further page. */
+  hasNextPage: boolean;
+};
+
+/** Documents by type, a page at a time; loaded pages reload when one of the
+ * type is created or deleted, and a changed one updates in the document cache. */
+export interface IDocumentTypeCache {
+  /** Current snapshot of `type` paged by `limit`; a shared idle entry when nothing is loaded. */
+  getDocumentsOfTypeState(type: string, limit: number): DocumentsOfTypeEntry;
+  /** Loads the first page, once; settles when it has loaded or failed. */
+  loadDocumentsOfType(type: string, limit: number): Promise<void>;
+  /** Loads the page after the last one; no-op unless loaded with a next page. */
+  loadMoreDocumentsOfType(type: string, limit: number): void;
+  /** Subscribes to changes of `type` paged by `limit`. Returns the unsubscribe function. */
+  subscribeDocumentsOfType(
+    type: string,
+    limit: number,
+    callback: () => void,
+  ): () => void;
+}
+
 /**
  * Operation history keyed by document id and scope. Pages are fetched
  * oldest first and appended. A document change event drops every scope of
