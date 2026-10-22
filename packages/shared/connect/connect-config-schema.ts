@@ -164,7 +164,7 @@ export const connectBrandingSchema = z
       .nullable()
       .optional()
       .describe(
-        "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it.",
+        "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico, or as icon.svg or icon.png for those types. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it.",
       ),
     loader: z
       .union([connectImageRefSchema, connectLoaderSchema])
