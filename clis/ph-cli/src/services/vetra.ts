@@ -65,7 +65,7 @@ async function startVetraPreviewDrive(
   reactor: IReactorClient,
   port: number,
   verbose?: boolean,
-): Promise<string> {
+): Promise<string | null> {
   const previewDriveId = generateProjectDriveId("preview");
 
   const previewDrive = {
@@ -86,10 +86,10 @@ async function startVetraPreviewDrive(
 
   const driveUrl = await addDefaultDrive(reactor, previewDrive, port);
 
-  if (verbose) {
+  if (verbose && driveUrl) {
     console.log(blue(`Vetra Switchboard: Preview drive: ${driveUrl}`));
   }
-  return driveUrl;
+  return driveUrl ?? null;
 }
 
 // Opens in Workflow Studio; only seeded when the switchboard runs workflows.
@@ -100,7 +100,7 @@ export async function seedWorkflowsDrive(
   reactor: IReactorClient,
   port: number,
   verbose?: boolean,
-): Promise<string> {
+): Promise<string | null> {
   const workflowsDrive = {
     id: generateProjectDriveId("workflows"),
     slug: "workflows",
@@ -116,10 +116,10 @@ export async function seedWorkflowsDrive(
 
   const driveUrl = await addDefaultDrive(reactor, workflowsDrive, port);
 
-  if (verbose) {
+  if (verbose && driveUrl) {
     console.log(blue(`Vetra Switchboard: Workflows drive: ${driveUrl}`));
   }
-  return driveUrl;
+  return driveUrl ?? null;
 }
 async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   const {
