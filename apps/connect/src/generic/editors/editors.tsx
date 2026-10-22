@@ -149,7 +149,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     !editorModule.documentTypes.includes("*");
 
   // Base-reducer 3, and a light-client header without versions, undo through
-  // the client, so the author signs the RETRACT and presses run in order.
+  // the client, so the author signs the RETRACT and presses run in order;
+  // base-reducer 3 without a client gets disabled controls. Undefined only on
+  // undoRoute's "dispatch" route.
   const clientUndoRedo = useBaseReducer3UndoRedo(document);
   const canUndo =
     clientUndoRedo?.canUndo ??

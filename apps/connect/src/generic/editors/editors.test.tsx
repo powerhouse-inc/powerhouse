@@ -159,5 +159,24 @@ describe("DocumentEditor undo and redo", () => {
       expect(client.redo).toHaveBeenCalledOnce();
       expect(dispatch).not.toHaveBeenCalled();
     });
+
+    // The hook's "none" route: no client, and a dispatched UNDO is refused.
+    it("never falls back to dispatching UNDO or REDO when the hook disables them", () => {
+      state.clientUndoRedo = {
+        canUndo: false,
+        canRedo: false,
+        undo: () => undefined,
+        redo: () => undefined,
+      };
+      const shortcuts = renderEditor(
+        makeDocument({ global: 3, local: 1, clipboard: 1 }),
+      );
+
+      expect(shortcuts.canUndo).toBe(false);
+      expect(shortcuts.canRedo).toBe(false);
+      shortcuts.undo();
+      shortcuts.redo();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
   });
 });

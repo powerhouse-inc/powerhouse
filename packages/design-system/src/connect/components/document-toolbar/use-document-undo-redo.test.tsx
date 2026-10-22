@@ -13,7 +13,8 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useReactorClient: () => state.client,
 }));
 
-const { useDocumentUndoRedo } = await import("./use-document-undo-redo.js");
+const { undoRoute, useDocumentUndoRedo } =
+  await import("./use-document-undo-redo.js");
 
 function makeDocument(options: {
   baseReducer?: number;
@@ -122,6 +123,22 @@ describe("useDocumentUndoRedo", () => {
   });
 
   describe("on base-reducer 3", () => {
+    it("cannot undo or redo without a client, and dispatches nothing", () => {
+      state.client = undefined;
+      state.document = makeDocument({
+        baseReducer: 3,
+        global: 2,
+        clipboard: 1,
+      });
+      const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
+
+      expect(result.current.canUndo).toBe(false);
+      expect(result.current.canRedo).toBe(false);
+      result.current.undo();
+      result.current.redo();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
     it("undoes and redoes through the client", async () => {
       state.document = makeDocument({ baseReducer: 3, global: 2 });
       const { result } = renderHook(() => useDocumentUndoRedo("doc-1"));
@@ -236,5 +253,22 @@ describe("useDocumentUndoRedo", () => {
         ),
       );
     });
+  });
+});
+
+describe("undoRoute", () => {
+  const client = makeClient() as never;
+
+  it("routes by the undo model and whether a client exists", () => {
+    const route = (baseReducer: number | undefined, withClient: boolean) =>
+      undoRoute(withClient ? client : undefined, makeDocument({ baseReducer }));
+    expect(route(1, true)).toBe("dispatch");
+    expect(route(2, true)).toBe("dispatch");
+    expect(route(2, false)).toBe("dispatch");
+    expect(route(3, true)).toBe("client");
+    expect(route(3, false)).toBe("none");
+    expect(route(undefined, true)).toBe("client");
+    expect(route(undefined, false)).toBe("dispatch");
+    expect(undoRoute(client, undefined)).toBe("dispatch");
   });
 });
