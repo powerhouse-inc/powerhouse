@@ -1,6 +1,9 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./action-signature.js";
-import { baseReducerVersionsFor } from "./base-reducer-protocol.js";
+import {
+  assertNever,
+  baseReducerVersionsFor,
+} from "./base-reducer-protocol.js";
 import { bytesToBase64Url } from "./crypto.js";
 
 /** The reactor feature flags a capability's support is a function of. */
@@ -18,9 +21,17 @@ export type ProtocolCapability = {
   supported(flags: PeerCapabilityFlags): readonly number[];
   /** The version new documents take when peers agree. Absent: not negotiated. */
   preferred?(flags: PeerCapabilityFlags): number;
+  /** Who chooses a new document's version; absent: "agreed". */
+  selection?: ProtocolSelectionRule;
   /** A header may omit the key. */
   optional: boolean;
 };
+
+/**
+ * "agreed": the creator's preference narrowed to what every member supports.
+ * "creator": the creator's preference; a member that cannot run it is held.
+ */
+export type ProtocolSelectionRule = "agreed" | "creator";
 
 /** A feature that changes what a peer sends or expects on the wire. */
 export type FeatureCapability = {
@@ -47,6 +58,7 @@ export const PEER_CAPABILITIES: readonly PeerCapability[] = [
     supported: baseReducerVersionsFor,
     preferred: (flags: PeerCapabilityFlags) =>
       Math.max(...baseReducerVersionsFor(flags)),
+    selection: "creator",
     optional: false,
   },
   {
@@ -142,30 +154,6 @@ export function legacySupports(
   capabilities: readonly PeerCapability[],
 ): Supports {
   return supportsFrom(capabilities, (capability) => capability.baseline);
-}
-
-/** What a peer runs, from what it selects for new documents; none is baseline. */
-export function selectionSupports(
-  selected: { readonly [protocol: string]: unknown } | undefined,
-  capabilities: readonly PeerCapability[],
-): Supports {
-  const supports = legacySupports(capabilities);
-  for (const capability of capabilities) {
-    if (capability.kind !== "protocol" || !capability.preferred) continue;
-    const version = selected?.[capability.name];
-    if (
-      typeof version !== "number" ||
-      !Number.isSafeInteger(version) ||
-      version < 1
-    ) {
-      continue;
-    }
-    supports.protocols[capability.name] = versionSet([
-      ...capability.baseline,
-      version,
-    ]);
-  }
-  return supports;
 }
 
 export function manifestRevision(supports: Supports, sequence = 0): string {
@@ -318,7 +306,7 @@ export function selectProtocolVersions(input: {
     const preferred = capability.preferred(input.flags);
     const supported = capability.supported(input.flags);
     let agreed = supported.filter((version) => version <= preferred);
-    for (const member of members) {
+    for (const member of narrowedBy(capability, members)) {
       const theirs = member.protocols[capability.name] ?? [];
       agreed = agreed.filter((version) => theirs.includes(version));
     }
@@ -326,4 +314,55 @@ export function selectProtocolVersions(input: {
       agreed.length > 0 ? Math.max(...agreed) : Math.min(...supported);
   }
   return { ...selected, ...input.requested };
+}
+
+function narrowedBy(
+  capability: ProtocolCapability,
+  members: readonly Supports[],
+): readonly Supports[] {
+  const rule = capability.selection ?? "agreed";
+  switch (rule) {
+    case "agreed":
+      return members;
+    case "creator":
+      return [];
+    default:
+      return assertNever(rule, "protocol selection rule");
+  }
+}
+
+/**
+ * Another reactor's selection for a new document, within `supports`: a
+ * negotiated protocol drops to the highest supported version at or below it,
+ * or takes its baseline when absent; another known protocol must be
+ * supported; an unknown one passes, as refusalFor admits it.
+ */
+export function capSelection(
+  selected: { readonly [protocol: string]: number } | undefined,
+  capabilities: readonly PeerCapability[],
+  supports: Supports,
+): { [protocol: string]: number } {
+  const capped: { [protocol: string]: number } = { ...selected };
+  for (const capability of capabilities) {
+    if (capability.kind !== "protocol") continue;
+    const runs = supports.protocols[capability.name] ?? [];
+    const version = capped[capability.name];
+    if (capability.preferred) {
+      const fits =
+        version === undefined
+          ? capability.baseline.filter((v) => runs.includes(v))
+          : runs.filter((v) => v <= version);
+      if (fits.length === 0) {
+        throw new Error(
+          `Cannot create at ${capability.name} ${version ?? "baseline"}: this client runs ${runs.join(", ") || "none"}`,
+        );
+      }
+      capped[capability.name] = Math.max(...fits);
+    } else if (version !== undefined && !runs.includes(version)) {
+      throw new Error(
+        `Cannot create at ${capability.name} ${version}: this client runs ${runs.join(", ") || "none"}`,
+      );
+    }
+  }
+  return capped;
 }

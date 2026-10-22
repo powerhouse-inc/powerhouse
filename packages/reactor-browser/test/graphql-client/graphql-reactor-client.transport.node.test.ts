@@ -273,6 +273,33 @@ describe("GraphQLReactorClient create protocol versions", () => {
     ]);
   });
 
+  it("caps a newer host's base-reducer at what this build runs", async () => {
+    const { client } = await clientKnowing([tagged], { "base-reducer": 4 });
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 3 });
+  });
+
+  it("refuses a malformed host answer, or a version of a known protocol it does not run", async () => {
+    const malformed = await clientKnowing([tagged], { "base-reducer": "3" });
+    await expect(
+      malformed.client.getCreateProtocolVersions({
+        documentType: DOCUMENT_MODEL,
+      }),
+    ).rejects.toThrow("malformed version for protocol base-reducer");
+
+    const newerSignature = await clientKnowing([tagged], {
+      "base-reducer": 3,
+      signature: 3,
+    });
+    await expect(
+      newerSignature.client.getCreateProtocolVersions({
+        documentType: DOCUMENT_MODEL,
+      }),
+    ).rejects.toThrow("Cannot create at signature 3");
+  });
+
   it("caps at the baseline when the host selects no base-reducer", async () => {
     const { client } = await clientKnowing([tagged], {});
 

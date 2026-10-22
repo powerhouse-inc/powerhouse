@@ -11,7 +11,7 @@ import {
   mergePeerCapabilities,
   peerSupports,
   readPeerManifest,
-  selectionSupports,
+  capSelection,
   selectProtocolVersions,
   type PeerCapability,
   type PeerCapabilityFlags,
@@ -72,7 +72,8 @@ describe("peer capabilities", () => {
       }
     });
 
-    it("selects 3 alone and 2 beside a silent or flag-off member", () => {
+    // The creator chooses; a member that cannot run 3 is held from it.
+    it("selects the creator's preference whatever the members support", () => {
       const select = (
         members: Supports[],
         flags: PeerCapabilityFlags = undoV3,
@@ -86,8 +87,8 @@ describe("peer capabilities", () => {
       const off = localSupports(PEER_CAPABILITIES, {});
       expect(select([])).toBe(3);
       expect(select([on])).toBe(3);
-      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(2);
-      expect(select([on, off])).toBe(2);
+      expect(select([legacySupports(PEER_CAPABILITIES)])).toBe(3);
+      expect(select([on, off])).toBe(3);
       expect(select([on], {})).toBe(2);
     });
 
@@ -372,53 +373,63 @@ describe("selectProtocolVersions", () => {
   });
 });
 
-describe("selectionSupports", () => {
-  const baseReducer = (selected: Record<string, unknown> | undefined) =>
-    selectionSupports(selected, PEER_CAPABILITIES).protocols["base-reducer"];
+describe("selection rules", () => {
+  const select = (capability: PeerCapability, members: Supports[]) =>
+    selectProtocolVersions({
+      capabilities: [capability],
+      flags: { testProtocol: true },
+      members,
+    })["test-protocol"];
+  const runsOne: Supports = {
+    protocols: { "test-protocol": [1] },
+    features: {},
+  };
 
-  it("runs the baseline and the selected version", () => {
-    expect(baseReducer({ "base-reducer": 2 })).toEqual([1, 2]);
-    expect(baseReducer({ "base-reducer": 3 })).toEqual([1, 2, 3]);
-    expect(baseReducer({ "base-reducer": 1 })).toEqual([1, 2]);
-    expect(baseReducer({ "base-reducer": 4 })).toEqual([1, 2, 4]);
+  it("narrows an agreed protocol by its members, and not a creator-chosen one", () => {
+    expect(select(TEST_PROTOCOL, [runsOne])).toBe(1);
+    expect(select({ ...TEST_PROTOCOL, selection: "agreed" }, [runsOne])).toBe(
+      1,
+    );
+    expect(select({ ...TEST_PROTOCOL, selection: "creator" }, [runsOne])).toBe(
+      2,
+    );
+  });
+});
+
+describe("capSelection", () => {
+  const runsAll = localSupports(PEER_CAPABILITIES, { undoV3: true });
+  const cap = (selected: Record<string, number> | undefined) =>
+    capSelection(selected, PEER_CAPABILITIES, runsAll);
+
+  it("takes a negotiated version this build runs as given", () => {
+    expect(cap({ "base-reducer": 3 })).toEqual({ "base-reducer": 3 });
+    expect(cap({ "base-reducer": 2 })).toEqual({ "base-reducer": 2 });
+    expect(cap({ "base-reducer": 1 })).toEqual({ "base-reducer": 1 });
   });
 
-  it("reads no selection as the baseline", () => {
-    for (const selected of [
-      undefined,
-      {},
-      { "base-reducer": "3" },
-      { "base-reducer": 2.5 },
-      { "base-reducer": 0 },
-      { "base-reducer": -1 },
-      { "base-reducer": 1e20 },
-      { "base-reducer": null },
-    ]) {
-      expect(selectionSupports(selected, PEER_CAPABILITIES)).toEqual(
-        legacySupports(PEER_CAPABILITIES),
-      );
-    }
+  it("drops a newer negotiated version to the highest it runs, and fills an absent one from the baseline", () => {
+    expect(cap({ "base-reducer": 4 })).toEqual({ "base-reducer": 3 });
+    expect(cap({})).toEqual({ "base-reducer": 2 });
+    expect(cap(undefined)).toEqual({ "base-reducer": 2 });
   });
 
-  it("caps a creator's selection at the peer's", () => {
-    const create = (selected: Record<string, unknown> | undefined) =>
-      selectProtocolVersions({
-        capabilities: PEER_CAPABILITIES,
-        flags: { undoV3: true },
-        members: [selectionSupports(selected, PEER_CAPABILITIES)],
-      })["base-reducer"];
-    expect(create({ "base-reducer": 3 })).toBe(3);
-    expect(create({ "base-reducer": 2 })).toBe(2);
-    expect(create(undefined)).toBe(2);
-    expect(create({ "base-reducer": 1 })).toBe(2);
-    // A selection past the creator's versions says nothing about those between.
-    expect(create({ "base-reducer": 4 })).toBe(2);
-    expect(
-      selectProtocolVersions({
-        capabilities: PEER_CAPABILITIES,
-        flags: {},
-        members: [selectionSupports({ "base-reducer": 3 }, PEER_CAPABILITIES)],
-      })["base-reducer"],
-    ).toBe(2);
+  it("refuses another known protocol at a version it does not run, and passes an unknown one", () => {
+    expect(cap({ "base-reducer": 3, signature: 2 })).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+    expect(() => cap({ "base-reducer": 3, signature: 3 })).toThrow(
+      "Cannot create at signature 3",
+    );
+    expect(cap({ "base-reducer": 3, "future-protocol": 7 })).toEqual({
+      "base-reducer": 3,
+      "future-protocol": 7,
+    });
+  });
+
+  it("refuses a negotiated version below everything it runs", () => {
+    expect(() => cap({ "base-reducer": 0 })).toThrow(
+      "Cannot create at base-reducer 0",
+    );
   });
 });

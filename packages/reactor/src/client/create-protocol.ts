@@ -49,12 +49,7 @@ export class CreateProtocolSelector {
       }
     }
     const members = await this.members(parentIdentifier, signal);
-    // Members narrow every protocol but base-reducer, which the creator chooses.
-    const local = selectProtocolVersions({ ...selection, members: [] });
-    const selected = {
-      ...selectProtocolVersions({ ...selection, members }),
-      "base-reducer": local["base-reducer"],
-    };
+    const selected = selectProtocolVersions({ ...selection, members });
     if (documentType === undefined) {
       return selected;
     }

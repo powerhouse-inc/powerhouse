@@ -32,7 +32,9 @@ import type {
 import {
   actions,
   actionSigningTarget,
+  capSelection,
   isSignaturePolicy,
+  localSupports,
   fitCreateBaseReducer,
   FLAGS_FOR_EVERY_VERSION,
   headNewDocument,
@@ -46,8 +48,6 @@ import {
   undoRedoActions,
   undoRedoAvailabilityOf,
   selectDocumentModelModule,
-  selectionSupports,
-  selectProtocolVersions,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import type {
@@ -968,10 +968,10 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
 
   /**
    * The protocol versions this client gives a new document of `documentType`:
-   * what the Switchboard selects for the type and parent, within what this
-   * build runs, fitted down to what this client's own reducer for the type
-   * can predict. A Switchboard that predates per-type selection answers
-   * reactor-wide; one without `createDefaults` caps at the baseline.
+   * the Switchboard's selection for the type and parent, as given, capped at
+   * what this build runs and fitted down to what this client's own reducer for
+   * the type can predict. A Switchboard that predates per-type selection
+   * answers reactor-wide; one without `createDefaults` gives the baseline.
    */
   async getCreateProtocolVersions(
     { documentType, parentIdentifier }: CreateProtocolVersionsOptions,
@@ -982,12 +982,11 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       parentIdentifier,
       signal,
     );
-    const selected = selectProtocolVersions({
-      capabilities: PEER_CAPABILITIES,
-      // The cap is the host's selection; this build runs every version it knows.
-      flags: FLAGS_FOR_EVERY_VERSION,
-      members: [selectionSupports(host, PEER_CAPABILITIES)],
-    });
+    const selected = capSelection(
+      host,
+      PEER_CAPABILITIES,
+      localSupports(PEER_CAPABILITIES, FLAGS_FOR_EVERY_VERSION),
+    );
     return fitCreateBaseReducer(
       selected,
       documentType,
@@ -1030,14 +1029,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
           undefined,
           signal,
         );
-        return result.createDefaults.protocolVersions as ProtocolVersions;
+        return protocolVersionsFrom(result.createDefaults.protocolVersions);
       } catch (error) {
         if (queriesUnknownField(error, "createDefaults")) return undefined;
         if (!queriesUnknownArgument(error, "documentType")) throw error;
       }
     }
-    return (await this.createDefaults(parentIdentifier, signal))
-      ?.protocolVersions as ProtocolVersions | undefined;
+    const defaults = await this.createDefaults(parentIdentifier, signal);
+    return defaults && protocolVersionsFrom(defaults.protocolVersions);
   }
 
   /** The reactor-wide `createDefaults`; undefined from a host without the query. */
@@ -1998,6 +1997,24 @@ function wrongBackendErrorOf(
     payload,
     { cause: error },
   );
+}
+
+function protocolVersionsFrom(value: unknown): ProtocolVersions {
+  if (!isPlainObject(value)) {
+    throw new Error(
+      "The Switchboard answered malformed create protocol versions",
+    );
+  }
+  const versions: ProtocolVersions = {};
+  for (const [protocol, version] of Object.entries(value)) {
+    if (typeof version !== "number" || !Number.isInteger(version)) {
+      throw new Error(
+        `The Switchboard answered a malformed version for protocol ${protocol}`,
+      );
+    }
+    versions[protocol] = version;
+  }
+  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {
