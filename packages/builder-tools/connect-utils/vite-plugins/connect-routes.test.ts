@@ -297,18 +297,19 @@ describe("connectRoutes", () => {
 });
 
 describe("connectRouteFileDeps", () => {
-  it("pre-bundles the router and core's router by Connect's name for an installed Connect", () => {
+  it("pre-bundles the router, core's router and route-views by Connect's name for an installed Connect", () => {
     const installed =
       "/project/node_modules/.pnpm/@powerhousedao+connect@6.2.3/node_modules/@powerhousedao/connect";
     expect(connectRouteFileDeps(installed)).toEqual([
       "@powerhousedao/connect > @tanstack/react-router",
       "@powerhousedao/connect > @powerhousedao/connect-core/router",
+      "@powerhousedao/connect > @powerhousedao/connect/route-views",
     ]);
     expect(
       connectRouteFileDeps(
         "C:\\project\\node_modules\\@powerhousedao\\connect",
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
   });
 
   it("adds nothing for a Connect outside node_modules", () => {

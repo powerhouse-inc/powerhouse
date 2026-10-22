@@ -443,9 +443,10 @@ function connectDirOf(projectRoot: string) {
 }
 
 /** What Connect's route files import, besides each other. */
-const CONNECT_ROUTE_FILE_DEPS = [
+export const CONNECT_ROUTE_FILE_DEPS = [
   "@tanstack/react-router",
   "@powerhousedao/connect-core/router",
+  "@powerhousedao/connect/route-views",
 ];
 
 const IN_NODE_MODULES = /[\\/]node_modules[\\/]/;

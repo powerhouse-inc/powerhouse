@@ -21,6 +21,7 @@ import {
   type PluginOption,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
+import { connectOptimizeDeps } from "./dev-deps.js";
 import type { IConnectOptions } from "./types.js";
 import {
   buildHashFromBuildOptions,
@@ -481,17 +482,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
-    optimizeDeps: {
-      include: [
-        "document-model",
-        "zod",
-        "@powerhousedao/design-system/connect",
-        "@powerhousedao/reactor-browser",
-        "@powerhousedao/document-engineering",
-        ...routes.include,
-      ],
-      exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
-    },
+    optimizeDeps: connectOptimizeDeps(routes.include),
     plugins: [
       // phConfigPlugin must be registered before tailwind so its hotUpdate
       // hook runs first and can suppress HMR updates for codegen-generated
