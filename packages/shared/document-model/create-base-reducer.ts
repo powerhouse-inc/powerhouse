@@ -3,6 +3,7 @@ import {
   capabilitiesOf,
   isBaseReducerVersion,
   modelRunsBaseReducer,
+  needsTaggedModel,
   type BaseReducerVersion,
 } from "./base-reducer-protocol.js";
 import type { ProtocolVersions } from "./signature-policy.js";
@@ -62,5 +63,5 @@ export function fitCreateBaseReducer(
 }
 
 function needsTag(version: BaseReducerVersion): boolean {
-  return capabilitiesOf(version).needsStateReducer;
+  return needsTaggedModel(capabilitiesOf(version));
 }

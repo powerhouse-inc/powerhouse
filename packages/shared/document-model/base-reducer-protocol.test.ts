@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import type {
   BaseReducerCapabilities,
   BaseReducerVersion,
+  DerivationModel,
+  ReducerContract,
+  SkipMeaning,
+  TieOrder,
   UndoModel,
 } from "./base-reducer-protocol.js";
 import {
   BASE_REDUCER_VERSIONS,
+  CAPABILITY_DECISIONS,
   FLAGS_FOR_EVERY_VERSION,
   acceptsSubmittedRetract,
   acceptsSubmittedUndoRedo,
@@ -13,11 +18,18 @@ import {
   assertNever,
   baseReducerVersionsFor,
   capabilitiesOf,
+  conflictWindowMovesEveryRow,
   createdCapabilities,
   derivesByRule,
+  documentDerivesByRule,
   modelRunsBaseReducer,
+  needsTaggedModel,
   optionalBaseReducerCapabilities,
   refusalFor,
+  skipMayUndo,
+  sortsJobsCanonically,
+  tieOrderOf,
+  usesRetractionRule,
 } from "./base-reducer-protocol.js";
 import type { PHDocumentHeader } from "./documents.js";
 import { createReducer } from "./reducer.js";
@@ -41,34 +53,34 @@ const PINNED = {
   1: {
     version: 1,
     undo: "skip",
-    retractionRule: false,
+    derivation: "replay",
     skip: "undo-or-rewind",
     tieOrder: "rank-locale",
     synthesizedId: "hashed",
     replayHash: "sender",
-    needsStateReducer: false,
+    reducerContract: "any",
     gatedBy: null,
   },
   2: {
     version: 2,
     undo: "noop-chain",
-    retractionRule: false,
+    derivation: "replay",
     skip: "undo-or-rewind",
     tieOrder: "rank-locale",
     synthesizedId: "hashed",
     replayHash: "sender",
-    needsStateReducer: false,
+    reducerContract: "any",
     gatedBy: null,
   },
   3: {
     version: 3,
     undo: "retraction",
-    retractionRule: true,
+    derivation: "retraction-rule",
     skip: "rewind",
     tieOrder: "canonical",
     synthesizedId: "none",
     replayHash: "receiver",
-    needsStateReducer: true,
+    reducerContract: "state-reducer",
     gatedBy: "undoV3",
   },
 } satisfies { [V in BaseReducerVersion]: BaseReducerCapabilities };
@@ -136,6 +148,89 @@ describe("base-reducer capabilities", () => {
         acceptsSubmittedUndoRedo(capabilitiesOf(v)),
       ),
     ).toEqual([true, true, false]);
+  });
+});
+
+/** Whether a decision map answers every value of axis `A`. */
+type Covers<D, A extends string> = [A] extends [keyof D] ? true : false;
+/** A fake version 4 with a new value on every axis. */
+type V4 = {
+  readonly [
+    K in Exclude<keyof BaseReducerCapabilities, "version" | "gatedBy">
+  ]: "x-v4";
+};
+type Axis<K extends keyof V4> = BaseReducerCapabilities[K] | V4[K];
+type Decisions = typeof CAPABILITY_DECISIONS;
+
+describe("capability decisions", () => {
+  it("answer every value of today's axes and fail to compile for a v4's", () => {
+    const today: true[] = [
+      true satisfies Covers<Decisions["usesRetractionRule"], DerivationModel>,
+      true satisfies Covers<Decisions["needsTaggedModel"], ReducerContract>,
+      true satisfies Covers<Decisions["sortsJobsCanonically"], TieOrder>,
+      true satisfies Covers<Decisions["conflictWindowMovesEveryRow"], TieOrder>,
+      true satisfies Covers<Decisions["skipMayUndo"], SkipMeaning>,
+    ];
+    const v4: true[] = [
+      // @ts-expect-error a v4 derivation has no answer
+      true satisfies Covers<
+        Decisions["usesRetractionRule"],
+        Axis<"derivation">
+      >,
+      // @ts-expect-error a v4 reducer contract has no answer
+      true satisfies Covers<
+        Decisions["needsTaggedModel"],
+        Axis<"reducerContract">
+      >,
+      // @ts-expect-error a v4 tie order has no answer
+      true satisfies Covers<
+        Decisions["sortsJobsCanonically"],
+        Axis<"tieOrder">
+      >,
+      // @ts-expect-error a v4 tie order has no answer
+      true satisfies Covers<
+        Decisions["conflictWindowMovesEveryRow"],
+        Axis<"tieOrder">
+      >,
+      // @ts-expect-error a v4 skip meaning has no answer
+      true satisfies Covers<Decisions["skipMayUndo"], Axis<"skip">>,
+    ];
+    expect(today).toHaveLength(Object.keys(CAPABILITY_DECISIONS).length);
+    expect(v4).toHaveLength(today.length);
+  });
+
+  it("gives today's answers, and v1/v2's to a versionless header", () => {
+    const decide = (caps: BaseReducerCapabilities | undefined) => ({
+      rule: usesRetractionRule(caps),
+      tagged: needsTaggedModel(caps),
+      tie: tieOrderOf(caps),
+      sorts: sortsJobsCanonically(caps),
+      window: conflictWindowMovesEveryRow(caps),
+      skip: skipMayUndo(caps),
+    });
+    const legacy = {
+      rule: false,
+      tagged: false,
+      tie: "rank-locale",
+      sorts: false,
+      window: false,
+      skip: true,
+    };
+    expect(decide(undefined)).toEqual(legacy);
+    expect(decide(capabilitiesOf(1))).toEqual(legacy);
+    expect(decide(capabilitiesOf(2))).toEqual(legacy);
+    expect(decide(capabilitiesOf(3))).toEqual({
+      rule: true,
+      tagged: true,
+      tie: "canonical",
+      sorts: true,
+      window: true,
+      skip: false,
+    });
+    expect(documentDerivesByRule(header({ "base-reducer": 3 }), "global")).toBe(
+      true,
+    );
+    expect(documentDerivesByRule(header(), "global")).toBe(false);
   });
 });
 

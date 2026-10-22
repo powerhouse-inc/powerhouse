@@ -3,6 +3,7 @@ import type { Action } from "./actions.js";
 import {
   derivesByRule,
   optionalBaseReducerCapabilities,
+  usesRetractionRule,
   type BaseReducerCapabilities,
 } from "./base-reducer-protocol.js";
 import { hashBrowser } from "./crypto.js";
@@ -651,7 +652,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
     skipIndexValidation,
   } = options || {};
   const caps = optionalBaseReducerCapabilities(header);
-  const retraction = caps?.retractionRule === true;
+  const retraction = usesRetractionRule(caps);
 
   const backfilledInitialState = backfillAuthState(initialState);
   let documentState = backfilledInitialState;
@@ -717,7 +718,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
 
   // if there are operations left without resulting state
   // then replays them
-  if (operationsToReplay.length && caps?.retractionRule) {
+  if (operationsToReplay.length && caps && usesRetractionRule(caps)) {
     result = replayRetractionScopes(
       caps,
       document,

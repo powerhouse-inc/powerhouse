@@ -20,20 +20,24 @@ export type TieOrder = "rank-locale" | "canonical";
 export type SynthesizedIdForm = "hashed" | "none";
 /** Whose state hash a received row keeps. */
 export type ReplayHash = "sender" | "receiver";
+/** How a scope's state derives from its rows. */
+export type DerivationModel = "replay" | "retraction-rule";
+/** Which registered reducers a version runs. */
+export type ReducerContract = "any" | "state-reducer";
 /** A reactor feature flag a version runs only under. */
 export type GatingFlag = "undoV3";
 
 export type BaseReducerCapabilities = {
   readonly version: BaseReducerVersion;
   readonly undo: UndoModel;
-  /** The retraction rule derives every scope outside RULE_EXEMPT_SCOPES. */
-  readonly retractionRule: boolean;
+  /** "retraction-rule" derives every scope outside RULE_EXEMPT_SCOPES by the rule. */
+  readonly derivation: DerivationModel;
   readonly skip: SkipMeaning;
   readonly tieOrder: TieOrder;
   readonly synthesizedId: SynthesizedIdForm;
   readonly replayHash: ReplayHash;
-  /** Runs only models whose every registered reducer createReducer tagged. */
-  readonly needsStateReducer: boolean;
+  /** "state-reducer" runs only models whose every registered reducer createReducer tagged. */
+  readonly reducerContract: ReducerContract;
   /** The flag this version runs only under; null runs always. */
   readonly gatedBy: GatingFlag | null;
 };
@@ -42,34 +46,34 @@ const CAPABILITIES = {
   1: {
     version: 1,
     undo: "skip",
-    retractionRule: false,
+    derivation: "replay",
     skip: "undo-or-rewind",
     tieOrder: "rank-locale",
     synthesizedId: "hashed",
     replayHash: "sender",
-    needsStateReducer: false,
+    reducerContract: "any",
     gatedBy: null,
   },
   2: {
     version: 2,
     undo: "noop-chain",
-    retractionRule: false,
+    derivation: "replay",
     skip: "undo-or-rewind",
     tieOrder: "rank-locale",
     synthesizedId: "hashed",
     replayHash: "sender",
-    needsStateReducer: false,
+    reducerContract: "any",
     gatedBy: null,
   },
   3: {
     version: 3,
     undo: "retraction",
-    retractionRule: true,
+    derivation: "retraction-rule",
     skip: "rewind",
     tieOrder: "canonical",
     synthesizedId: "none",
     replayHash: "receiver",
-    needsStateReducer: true,
+    reducerContract: "state-reducer",
     gatedBy: "undoV3",
   },
 } as const satisfies {
@@ -172,12 +176,100 @@ export function createdCapabilities(
   return capabilitiesFor(input?.protocolVersions);
 }
 
+/** One answer per value of a capability axis; a new value fails to compile here. */
+type Decision<A extends string, R> = { readonly [K in A]: R };
+
+/**
+ * Every decision a consumer may take on a capability axis. Outside this module
+ * and the other protocol owners, an axis is read only through these or through
+ * an exhaustive switch.
+ */
+export const CAPABILITY_DECISIONS = {
+  usesRetractionRule: {
+    replay: false,
+    "retraction-rule": true,
+  } satisfies Decision<DerivationModel, boolean>,
+  needsTaggedModel: {
+    any: false,
+    "state-reducer": true,
+  } satisfies Decision<ReducerContract, boolean>,
+  sortsJobsCanonically: {
+    "rank-locale": false,
+    canonical: true,
+  } satisfies Decision<TieOrder, boolean>,
+  conflictWindowMovesEveryRow: {
+    "rank-locale": false,
+    canonical: true,
+  } satisfies Decision<TieOrder, boolean>,
+  skipMayUndo: {
+    "undo-or-rewind": true,
+    rewind: false,
+  } satisfies Decision<SkipMeaning, boolean>,
+} as const;
+
+// A header without a version runs v1/v2's rules on every axis read here.
+const UNVERSIONED = CAPABILITIES[1];
+
+/** Whether the version derives scopes by the retraction rule; a versionless header does not. */
+export function usesRetractionRule(
+  caps: BaseReducerCapabilities | undefined,
+): boolean {
+  return CAPABILITY_DECISIONS.usesRetractionRule[
+    (caps ?? UNVERSIONED).derivation
+  ];
+}
+
 /** Whether the retraction rule derives `scope`. */
 export function derivesByRule(
   caps: BaseReducerCapabilities | undefined,
   scope: string,
 ): boolean {
-  return caps?.retractionRule === true && !RULE_EXEMPT_SCOPES.has(scope);
+  return usesRetractionRule(caps) && !RULE_EXEMPT_SCOPES.has(scope);
+}
+
+/** Whether the retraction rule derives `scope` of the document `header` heads. */
+export function documentDerivesByRule(
+  header: PHDocumentHeader,
+  scope: string,
+): boolean {
+  return derivesByRule(optionalBaseReducerCapabilities(header), scope);
+}
+
+/** Whether the version runs only models whose every reducer is tagged. */
+export function needsTaggedModel(
+  caps: BaseReducerCapabilities | undefined,
+): boolean {
+  return CAPABILITY_DECISIONS.needsTaggedModel[
+    (caps ?? UNVERSIONED).reducerContract
+  ];
+}
+
+/** How same-timestamp actions are ordered; a versionless header ranks and compares by locale. */
+export function tieOrderOf(
+  caps: BaseReducerCapabilities | undefined,
+): TieOrder {
+  return (caps ?? UNVERSIONED).tieOrder;
+}
+
+/** Whether a job's actions are stored in canonical order rather than as submitted. */
+export function sortsJobsCanonically(
+  caps: BaseReducerCapabilities | undefined,
+): boolean {
+  return CAPABILITY_DECISIONS.sortsJobsCanonically[tieOrderOf(caps)];
+}
+
+/** Whether every conflicting row of a load moves, rather than only those past the predecessor bound. */
+export function conflictWindowMovesEveryRow(
+  caps: BaseReducerCapabilities | undefined,
+): boolean {
+  return CAPABILITY_DECISIONS.conflictWindowMovesEveryRow[tieOrderOf(caps)];
+}
+
+/** Whether a stored skip may be an undo, not only a replica's rewind. */
+export function skipMayUndo(
+  caps: BaseReducerCapabilities | undefined,
+): boolean {
+  return CAPABILITY_DECISIONS.skipMayUndo[(caps ?? UNVERSIONED).skip];
 }
 
 /** Whether a stored skip in `scope` is a rewind the reducer applies. */
@@ -228,7 +320,7 @@ export function modelRunsBaseReducer(
     (module) => module.documentModel.global.id === documentType,
   );
   if (registered.length === 0) return undefined;
-  if (!caps.needsStateReducer) return true;
+  if (!needsTaggedModel(caps)) return true;
   return registered.every(
     (module) => stateReducerOf(module.reducer) !== undefined,
   );

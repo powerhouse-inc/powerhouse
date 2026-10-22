@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   capabilitiesFor,
+  needsTaggedModel,
   refusalFor,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
@@ -67,7 +68,7 @@ export async function checkStoredProtocols(
       hashes.push(hash);
     } else if (
       modules.length === 0 &&
-      capabilitiesFor(versions)?.needsStateReducer
+      needsTaggedModel(capabilitiesFor(versions))
     ) {
       deferred.set(model, [...(deferred.get(model) ?? []), versions]);
     }

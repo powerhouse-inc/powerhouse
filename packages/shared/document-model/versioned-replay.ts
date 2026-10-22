@@ -1,6 +1,7 @@
 import {
   baseReducerCapabilities,
   derivesByRule,
+  usesRetractionRule,
 } from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import {
@@ -228,7 +229,7 @@ export function replayDocumentVersioned<TState extends PHBaseState>(
 
   // Base-reducer 3: each scope is derived across the segments.
   const derivers = new Map<string, ReturnType<typeof scopeDeriver>>();
-  if (caps.retractionRule) {
+  if (usesRetractionRule(caps)) {
     for (const s of replayScopes) {
       if (!derivesByRule(caps, s)) continue;
       const ops = scopeOps[s] ?? [];

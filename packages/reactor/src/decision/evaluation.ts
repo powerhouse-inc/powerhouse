@@ -8,6 +8,7 @@ import type {
 import {
   derivesByRule,
   optionalBaseReducerCapabilities,
+  usesRetractionRule,
 } from "@powerhousedao/shared/document-model";
 import { createDocumentFromAction } from "../executor/util.js";
 import {
@@ -38,7 +39,7 @@ export function ruleReducers(
   reducers: ((document: PHDocument) => ReducerFor) | undefined,
 ): ReducerFor | undefined {
   const caps = optionalBaseReducerCapabilities(before.header);
-  if (!caps?.retractionRule) return undefined;
+  if (caps === undefined || !usesRetractionRule(caps)) return undefined;
   const reducerFor = reducers?.(before);
   if (reducerFor === undefined && derivesByRule(caps, scope)) {
     throw new Error(

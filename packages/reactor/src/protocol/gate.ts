@@ -8,6 +8,7 @@ import type {
 import {
   capabilitiesFor,
   MissingStateReducerError,
+  needsTaggedModel,
   refusalFor,
   requireStateReducer,
 } from "@powerhousedao/shared/document-model";
@@ -38,7 +39,7 @@ export interface IProtocolGate {
 export function createNeedsModel(
   versions: ProtocolVersions | undefined,
 ): boolean {
-  return capabilitiesFor(versions)?.needsStateReducer === true;
+  return needsTaggedModel(capabilitiesFor(versions));
 }
 
 /** A create whose model cannot load: refused when its versions need the model. */
@@ -49,7 +50,7 @@ export function modelUnavailableRefusal(
   documentId: string = input.documentId,
 ): UnsupportedProtocolVersionError | undefined {
   const caps = capabilitiesFor(input.protocolVersions);
-  if (!caps?.needsStateReducer) return undefined;
+  if (caps === undefined || !needsTaggedModel(caps)) return undefined;
   return new UnsupportedProtocolVersionError(
     documentId,
     "base-reducer",
@@ -120,7 +121,7 @@ export function createProtocolGate(
       versions,
       support,
       // Only a version that needs tagged reducers reads the registry.
-      documentType !== undefined && capabilitiesFor(versions)?.needsStateReducer
+      documentType !== undefined && needsTaggedModel(capabilitiesFor(versions))
         ? registeredModules(documentType)
         : [],
     );
