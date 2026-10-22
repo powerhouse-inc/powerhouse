@@ -288,20 +288,21 @@ Who decides a document's version, and who signs its undo.
   document held from it once; a mixed-fleet test pins the count.
 - A client chooses a new document's versions in one place,
   `IReactorClient.newDocument`; `createEmpty` is `newDocument` then
-  `create`, and `create` takes a header as given. `buildCreateActions` is the
-  one CREATE + UPGRADE builder and `createVersionsOf` the one fallback for a
-  versionless legacy header. `Reactor.create` refuses a header without
+  `create`, and `create` takes a header as given. Shared `creationActions` is
+  the one CREATE + UPGRADE builder and shared `createVersionsOf` the one
+  fallback for a versionless legacy header (round 2 moved both from the
+  reactor). `Reactor.create` refuses a header without
   versions. First-party creates (Connect's actions, the reactor-api
   resolvers, Switchboard's default drives, MCP, clint, the reactor piece)
   build headers with `newDocument`. Fixed drift: the piece and Connect's
   `addDrive` in light mode created at the flagless 2, and the
   `ReactorDriveClient` copy of a versionless source hardcoded 2.
 - `module.utils.createDocument()` stays flagless at base-reducer 2.
-- The light client asks `createDefaults` for the type and parent, caps at
-  what its build runs and fits down to its own models; its `featureFlags`
-  option is gone, so a remote document's version follows the host's
-  `undoV3`. A host from before the `documentType` argument answers
-  reactor-wide.
+- The light client asks `createDefaults` for the type and parent and fits
+  down to its own models; its `featureFlags` option is gone, so a remote
+  document's version follows the host's `undoV3`. A host from before the
+  `documentType` argument answers reactor-wide. Round 2 changed how it reads
+  the answer; see below.
 - Undo on 3 is signed by its author on every client. Both clients run the
   shared plan (`undoRedoActions`); the light client resolves the target
   through the host's `undoRedoTargets` query, which asks
@@ -311,8 +312,9 @@ Who decides a document's version, and who signs its undo.
   `SubmittedUndoRefusedError` (terminal). The standing backdated-UNDO and
   live-resubmit rules apply to 1 and 2 only; on 3 a RETRACT names its target
   and a resubmitted RETRACT is idempotent by action id. A peer's UNDO or
-  REDO row loaded into a version 3 document is refused the same way, so the
-  reducer never mints a RETRACT id a replica would not share.
+  REDO row loaded into a version 3 document is refused the same way. Round 2
+  made the shared reducer refuse it too, so no path mints a RETRACT id a
+  replica would not share.
 
 Order and identity.
 
@@ -328,6 +330,90 @@ Order and identity.
   order, not from whether any walked stream is version 3.
 - Test harnesses (test-client, test-connect, lb-loadtest) build action ids
   with `generateActionId`.
+
+## Architecture fixes, round 2 (2026-10-22)
+
+The version seam.
+
+- `BaseReducerCapabilities.retractionRule` (boolean) is now `derivation`
+  (`"replay" | "retraction-rule"`), `needsStateReducer` is now
+  `reducerContract` (`"any" | "state-reducer"`), and each row names the flag
+  it runs under (`gatedBy`). The shape is new on this branch; code built
+  against a dev release breaks at compile time.
+- Outside `base-reducer-protocol`, `action-order` and `undo-redo-plan`, an
+  axis is read only through a decision (`usesRetractionRule`,
+  `needsTaggedModel`, `sortsJobsCanonically`, `conflictWindowMovesEveryRow`,
+  `skipMayUndo`, `tieOrderOf`, `documentDerivesByRule`) or an exhaustive
+  switch. Each decision is a map keyed by its axis in `CAPABILITY_DECISIONS`.
+  A shared arch test rejects a direct axis comparison anywhere else, and a
+  compile-time fixture in `base-reducer-protocol.test.ts` fails if a decision
+  map stops covering a fake v4's values.
+- `reshuffleByTimestamp` takes a `TieOrder` and switches on it.
+- Peer agreement's base-reducer `supported` and `preferred` and the light
+  client's "every version this build runs" come from the table
+  (`baseReducerVersionsFor`, `FLAGS_FOR_EVERY_VERSION`). The reactor fails to
+  compile if a version is gated by a flag it does not know. The baseline
+  stays the literal `[1, 2]`, pinned as a subset of the table.
+- Adding a version is checked by hand once: add a row 4 with a new value on
+  every axis and run root `pnpm tsc --build`. On 2026-10-22 that failed at
+  every decision map and decision, every exhaustive switch (shared reducer,
+  undo plan, `idOrderFor`, `synthesizedActionId`, the executor's replay
+  hash, reshuffle, design-system `undoRoute`, the workflow editor and undo
+  plan) and the fixture, and nowhere took a default branch. A test that
+  runs `tsc` on a copy of the table was not adopted: it needs its own
+  tsconfig and path mapping.
+- `positionByTimestamp` keeps its v1/v2 `documentDecisions`-off arm (v1/v2
+  are frozen); removing the flag is a separate change.
+
+Undo on 3.
+
+- The shared reducer refuses UNDO and REDO on the retraction model with
+  `SubmittedUndoRefusedError`, now defined in shared and re-exported by the
+  reactor under the same name. `processUndoRedo` is back to main's
+  signature. The design-system hook routes undo by the undo model
+  (`undoRoute`): a version 3 document without a reactor client gets disabled
+  controls instead of a dispatched UNDO; Connect's editor follows the hook.
+- `Reactor.resolveUndoRedo` reads through an undo-targets cache
+  (`derivation/undo-targets.ts`, up to 256 scopes). It advances each scope's
+  targets over rows stored since the last read with shared
+  `advanceUndoTargets`, and derives the scope again when a row rewinds,
+  retracts, is named by a retraction or repeats an id, when the last row
+  read is no longer where it was, or when a read fails. A seeded property
+  test holds `advanceUndoTargets` equal to a full derivation over every
+  split of random streams. On PGlite in memory, at 3,000 `addModule` rows,
+  a toolbar read after an edit went from 1,116 ms to 23 ms (edit included);
+  a warm read is under 1 ms. A press resolves through the same cache.
+
+Creation.
+
+- The CREATE_DOCUMENT codec is public shared API: `creationActions`,
+  `documentFromCreation`, `createVersionsOf`, `createDocumentAction`,
+  `upgradeDocumentAction` and `CreateProtocolVersionsOptions`. The reactor
+  re-exports the two builders and the type under their names and no longer
+  exports `buildCreateActions` or `createVersionsOf`, which were new on this
+  branch. The reactor's core no longer imports its client layer and
+  derivation no longer imports the executor; a reactor layer test pins both.
+- `ProtocolCapability.selection` (`"agreed" | "creator"`, absent meaning
+  agreed) says who chooses a new document's version. Base-reducer is
+  creator-chosen, so drive members do not narrow it, as before; the by-name
+  override in `CreateProtocolSelector` is gone.
+- The light client takes the host's per-type answer as given. It validates
+  it, caps it at what its build runs with `capSelection` and fits
+  base-reducer to its own models. A negotiated protocol drops to the highest
+  version the build runs at or below the host's (a host's 4 gives 3, where
+  the earlier inference gave 2) and takes its baseline when the host names
+  none; another known protocol at a version the build does not run is
+  refused; an unknown protocol passes, as `refusalFor` admits it. A host
+  answer of 1 is now taken as 1 (the inference raised it to 2).
+  `selectionSupports` is gone.
+
+clint.
+
+- `buildDefaultReactor (real)` timed out at vitest's 5 s default in one
+  verify run. Not a regression: the test takes the `createEmpty` path the
+  branch did not change, and runs at the same speed on main and the branch
+  (about 0.8 s idle). It now has the 30 s timeout its sibling cold-boot test
+  has.
 
 ## Known gaps
 
@@ -345,9 +431,16 @@ Order and identity.
   creates at 2, but `getCreateSignaturePolicy` still refuses against it, as
   on main, so the light client cannot create there at all. Pinned in
   Connect's `create-protocol-versions` test.
-- A host that selects a version above the client's highest (say 4) is read
-  as running the baseline and that version only, so the client creates at
-  2 until it is upgraded.
+- The workflow editor still reads the whole `global` history on every
+  revision to plan its own undo; it cannot use the undo-targets cache
+  because its target choice differs (undo groups, skip types).
+- The undo-targets cache trusts that an appended row's stored `error` is
+  what a full derivation would find, which holds while reducers are
+  deterministic. A reducer that reads time or randomness already breaks
+  replay.
+- `packages/reactor/tests.json`, a generated index of test intent, still
+  lists the `createDocumentFromAction` unit tests under the reactor; they
+  now live in shared as `documentFromCreation`.
 - A hold a peer's refusal of one type causes records the protocol only, so
   `listHolds` reports the peer's reactor-wide support for it.
 - A local-channel receiver drops a push at or below its inbox ack, so a

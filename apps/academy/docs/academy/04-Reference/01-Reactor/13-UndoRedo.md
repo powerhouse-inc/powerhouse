@@ -34,7 +34,7 @@ A reactor that stores version 3 documents of a model it cannot run refuses to st
 
 ## Which version a document takes
 
-A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `IReactorClient.newDocument`, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. A reactor that does not run the chosen version refuses the document. A call can name a version:
+A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `IReactorClient.newDocument`, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. The members of the parent drive do not narrow the base-reducer version: a peer that cannot run it is held from the document until it upgrades. A reactor that does not run the chosen version refuses the document. A call can name a version:
 
 ```typescript
 const document = await client.newDocument("powerhouse/todo-list", {
@@ -46,7 +46,7 @@ await client.drives.addFile(driveId, document);
 
 A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` refuses a header without protocol versions.
 
-The GraphQL light client asks the Switchboard's `createDefaults` query to select for the document's type and parent, and fits the answer down to what its own `documentModels` can run, so a remote document's version follows the Switchboard's `undoV3`. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
+The GraphQL light client takes the Switchboard's `createDefaults` answer for the document's type and parent as given, so a remote document's version follows the Switchboard's `undoV3`. It caps the answer at the versions its own build runs, so a newer Switchboard's base-reducer 4 becomes 3, and refuses a malformed answer or a version of another known protocol it does not run. It then fits base-reducer down to what its own `documentModels` can run. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
 
 An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
 
@@ -74,7 +74,7 @@ import { retract } from "document-model";
 await client.execute(documentId, "main", [retract(actionId, "global")]);
 ```
 
-A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`. On versions 1 and 2 the reactor still resolves one and signs the `NOOP` it stores with its own signer.
+A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`. The model's reducer refuses one the same way, so `reducer(document, undo())` on a version 3 document throws `SubmittedUndoRefusedError` rather than retracting anything. On versions 1 and 2 the reactor still resolves one and signs the `NOOP` it stores with its own signer.
 
 ## Rules on version 3
 
