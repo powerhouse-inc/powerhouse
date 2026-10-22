@@ -70,6 +70,24 @@ describe("resolveDriveDeclaration", () => {
     expect(resolved.slug).toBe(expectedId);
   });
 
+  it('projectHash: "id" hashes the id only — the declared slug stays (the classic Workflows drive)', () => {
+    const resolved = resolveDriveDeclaration("/proj/root", {
+      slug: "workflows",
+      projectHash: "id",
+    });
+    expect(resolved.id).toBe(projectDriveId("/proj/root", "workflows"));
+    expect(resolved.slug).toBe("workflows");
+    // slug-keyed merge: a host declaration of "workflows" now replaces it
+    const plan = mergeDrivePlan(
+      "/proj/root",
+      [{ slug: "workflows", id: "fixed" }],
+      [{ declaration: { slug: "workflows", projectHash: "id" }, source: "wf" }],
+    );
+    expect(plan).toHaveLength(1);
+    expect(plan[0]?.drive.id).toBe("fixed");
+    expect(plan[0]?.source).toBe("host");
+  });
+
   it("applies defaults: name=slug, sharingType public, availableOffline true", () => {
     const resolved = resolveDriveDeclaration("/proj/root", { slug: "studio" });
     expect(resolved.name).toBe("studio");

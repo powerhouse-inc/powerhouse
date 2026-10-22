@@ -53,6 +53,10 @@ export async function buildPowerhouseConfigTemplate(
     vetra.driveUrl = args.remoteDrive;
   }
   config.vetra = vetra;
+  // The assistant host (hosts/assistant/host.js) reads its port from here.
+  // Fixed rather than name-derived: one agent API per machine is the norm,
+  // and the mastra runner defaults to the same port.
+  config.assistant = { port: 4910 };
 
   return `${JSON.stringify(config, null, 2)}\n`;
 }

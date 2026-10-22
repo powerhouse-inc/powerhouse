@@ -19,7 +19,7 @@ function connectRouterOptions(): ConnectAppRouterOptions {
     basepath: connectConfig.routerBasename,
     InnerWrap: RouterChrome,
     pendingComponent: ColdStartPending,
-    appName: getRuntimeConfig().connect.branding?.appName,
+    appName: getRuntimeConfig().connect.branding?.appName ?? undefined,
     onCatch: reportRouteError,
   };
 }

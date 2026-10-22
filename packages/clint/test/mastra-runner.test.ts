@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+} from "vitest";
 import * as runner from "../src/runners/mastra-runner.js";
 import { promptFromMessages } from "../src/runners/mastra-runner.js";
 
@@ -76,8 +83,19 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
+  it("publishes validated outputs in its handle and leaves the run record to start-run", async () => {
+    const { readRunRecord } = await import("@powerhousedao/host-core");
+    const outputs = runner.outputsSchema.parse(handle.outputs);
+    expect(outputs.endpoints.openai).toBe(`${outputs.origin}/v1`);
+    expect(outputs.endpoints.ready).toBe(`${outputs.origin}/ready`);
+    // start-run writes the v2 record for runners exporting outputsSchema;
+    // the runner itself must not (one writer per record).
+    expect(runner.kind).toBe("reactor");
+    expect(readRunRecord(projectDir, "assistant")).toBeUndefined();
+  });
+
   it("answers /ready and /v1/models", async () => {
-    const base = handle.endpoints.openai.replace(/\/v1$/, "");
+    const base = handle.outputs.endpoints.openai.replace(/\/v1$/, "");
     const ready = await fetch(`${base}/ready`);
     expect(ready.status).toBe(200);
     const models = (await (await fetch(`${base}/v1/models`)).json()) as {
@@ -87,14 +105,17 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("answers a non-streaming chat completion with the demo agent", async () => {
-    const res = await fetch(`${handle.endpoints.openai}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        model: "demo",
-        messages: [{ role: "user", content: "hello agent" }],
-      }),
-    });
+    const res = await fetch(
+      `${handle.outputs.endpoints.openai}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "demo",
+          messages: [{ role: "user", content: "hello agent" }],
+        }),
+      },
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       object: string;
@@ -107,14 +128,17 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("streams SSE chunks ending in [DONE]", async () => {
-    const res = await fetch(`${handle.endpoints.openai}/chat/completions`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        stream: true,
-        messages: [{ role: "user", content: "stream me" }],
-      }),
-    });
+    const res = await fetch(
+      `${handle.outputs.endpoints.openai}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          stream: true,
+          messages: [{ role: "user", content: "stream me" }],
+        }),
+      },
+    );
     expect(res.headers.get("content-type")).toContain("text/event-stream");
     const text = await res.text();
     expect(text).toContain('"object":"chat.completion.chunk"');
@@ -123,6 +147,20 @@ describe("mastra-runner serve (demo provider, real HTTP)", () => {
   });
 
   it("refuses a second instance via the run-record lock", async () => {
+    const { clearRunRecord, writeRunRecord } =
+      await import("@powerhousedao/host-core");
+    // The record start-run publishes for the first, live instance.
+    writeRunRecord(projectDir, {
+      version: 2,
+      host: "assistant",
+      projectName: "agent-lab",
+      kind: "reactor",
+      verb: "run",
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      outputs: handle.outputs,
+    });
+    onTestFinished(() => clearRunRecord(projectDir, "assistant"));
     await expect(
       runner.run(
         {
@@ -153,5 +191,22 @@ describe("mastra-runner attach failures", () => {
       ),
     ).rejects.toThrow(/declare a remote backend/);
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("fails naming the token form when the remote backend has no url", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "ph-agent-nourl-"));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+    await expect(
+      runner.run(
+        {
+          name: "assistant",
+          runner: { module: "m" },
+          reactor: { backends: { switchboard: { kind: "remote" } } },
+        },
+        { projectRoot: dir, verb: "run", env: {} },
+      ),
+    ).rejects.toThrow(
+      /needs the switchboard's GraphQL url: remote: \{ url: switchboard\.endpoints\.graphql \}.*\$output/,
+    );
   });
 });

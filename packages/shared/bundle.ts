@@ -12,6 +12,9 @@ await build({
     // browser bundle's static import graph.
     "connect/config-loader.ts",
     "connect/json-adapter.ts",
+    // Image refs (node:fs): the Connect build and host-core drives resolve
+    // project image paths with it; not part of the browser barrel.
+    "connect/image-ref.ts",
     "document-model/index.ts",
     "document-model/utils.ts",
     "document-model/mock.ts",
@@ -28,6 +31,12 @@ await build({
     "registry/manifest-slim.ts",
     "registry/urls.ts",
     "registry/updates.ts",
+    // Zod-only Connect config schema: host-core's neutral entries and the
+    // connect runner import it without the connect barrel.
+    "connect/connect-config-schema.ts",
+    // Output tokens (zod only): host-core re-exports them, and the Connect
+    // config schema's declared form makes its URL fields token-able.
+    "host-tokens/index.ts",
   ],
   outDir: "dist",
   platform: "neutral",

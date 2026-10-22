@@ -80,6 +80,13 @@ export type StartServerOptions = {
    */
   fatalErrorShutdown?: boolean;
   /**
+   * Install the owned reactor's SIGINT/SIGTERM handlers (default true).
+   * False when a supervisor owns the process exit (a `ph run` compound
+   * member): the reactor then stops only through `shutdown()`. Ignored with
+   * a caller-provided `reactor`.
+   */
+  signalHandlers?: boolean;
+  /**
    * Registry URL for the HttpPackageLoader. Enables `PackagesSubgraph`
    * (install/uninstall mutations) plus dynamic package resolution.
    * Falls back to PH_REGISTRY_URL env, then `packageRegistryUrl` in the
@@ -229,16 +236,11 @@ export type SwitchboardReactor = {
    */
   port: number;
   /**
-   * Drain switchboard-owned resources: HTTP server, GraphQL manager,
-   * attachments, MCP, packages subgraph, and the read-model DB. This does
-   * NOT kill the reactor — in owned-reactor mode the reactor lifecycle is
-   * handled by its own SIGINT signal handlers, which then drain the api via
-   * the shutdown hook switchboard registered on the builder. In
-   * caller-provided mode the caller owns the reactor lifecycle separately.
-   *
-   * Callers using a caller-provided reactor must invoke this from their own
-   * teardown / SIGINT path so api resources are released; killing the
-   * reactor alone won't release them.
+   * Idempotent. Owned reactor: runs the reactor module's memoized
+   * `shutdown()` (kill, shutdown hooks incl. the api drain, database).
+   * Caller-provided reactor: drains the api only (HTTP server, GraphQL
+   * manager, attachments, MCP, read-model DB); the caller owns the reactor
+   * and must call this from its own teardown.
    */
   shutdown: () => Promise<void>;
 };

@@ -5,6 +5,7 @@ import createOpenPanelPlugin from "./openpanel.js";
 import createSentryPlugin from "./sentry.js";
 import { GENERIC_PLUGIN } from "./ids.js";
 import createVetraStudioPlugin from "./vetra-studio.js";
+import createWorkflowsPlugin from "./workflows.js";
 
 export { GENERIC_PLUGIN };
 
@@ -20,14 +21,19 @@ export const connectPlugins: Record<string, ConnectPluginDefinition> = {
     create: createGenericPlugin,
     ui: () => import("../generic/ui.js").then((m) => m.default),
     shell: "generic",
-    // Branding is not zeroed: it is Connect-level and outlives the plugin.
+    // The drive-chrome toggles, explorer icons and home screen go: no
+    // add-drive affordance, the sections off, built-in icons, no home
+    // background. Branding is not zeroed: it is Connect-level and outlives
+    // the plugin.
     whenAbsent: (config) => ({
       ...config,
       drives: {
         ...config.drives,
         allowAddDrive: false,
         sections: { remote: driveSectionOff, local: driveSectionOff },
+        icons: null,
       } as never,
+      home: { ...config.home, background: null } as never,
     }),
   },
   "@powerhousedao/connect/plugins/sentry": {
@@ -56,6 +62,15 @@ export const connectPlugins: Record<string, ConnectPluginDefinition> = {
     whenAbsent: (config) => ({
       ...config,
       ai: { ...config.ai, assistantEnabled: false } as never,
+    }),
+  },
+  "@powerhousedao/connect/plugins/workflows": {
+    create: createWorkflowsPlugin,
+    // The workflow package (Workflow Studio) loads only when the plugin is
+    // composed in; the classic workflows.enabled value is not the switch.
+    whenAbsent: (config) => ({
+      ...config,
+      app: { ...config.app, workflowsEnabled: false } as never,
     }),
   },
   "@powerhousedao/vetra-studio/connect": {

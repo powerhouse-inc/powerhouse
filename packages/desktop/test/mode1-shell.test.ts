@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
+import type { RunnerContext } from "@powerhousedao/host-core";
 import { appJsonSchema, loadAppJson, appSlug } from "../src/app-json.js";
 import { bundleStack } from "../src/bundle-stack.js";
 import { projectShell } from "../src/shell-project.js";
@@ -18,8 +18,17 @@ import {
   preflightOrThrow,
   tauriBundlesForHost,
 } from "../src/shell-toolchain.js";
-import { scaffoldDesktopShell, solidPng } from "../src/scaffold.js";
-import { shellMode } from "../src/runner.js";
+import {
+  rebaseBackground,
+  scaffoldDesktopShell,
+  solidPng,
+} from "../src/scaffold.js";
+import {
+  hostSchema,
+  shellMode,
+  type DesktopHost,
+  type DesktopHostInput,
+} from "../src/runner.js";
 
 const temporary: string[] = [];
 afterEach(() => {
@@ -148,6 +157,147 @@ describe("shell projection", () => {
     ).toBe(true);
   });
 
+  it("shows the app.json splash on the loading page instead of the logo", () => {
+    const dir = tempDir("ph-proj-splash-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const splash = solidPng(64, [9, 9, 9, 255]);
+    mkdirSync(path.join(dir, "art"), { recursive: true });
+    writeFileSync(path.join(dir, "art", "splash.png"), splash);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: "./art/splash.png",
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain('<img class="splash" src="./splash.png"');
+    expect(html).not.toContain('class="logo"');
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/splash.png")).equals(splash),
+    ).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
+    ).toContain("/ui/splash.png");
+    // a missing splash file falls back to the logo
+    const fallback = projectShell({
+      hostDir: dir,
+      app: appJsonSchema.parse({ ...validApp, splash: "./art/none.png" }),
+      connectPort: 6494,
+    });
+    expect(
+      readFileSync(path.join(fallback.shellDir, "ui/index.html"), "utf8"),
+    ).toContain('class="logo"');
+  });
+
+  it("themes the loading page and bounds the window from app.json", () => {
+    const dir = tempDir("ph-proj-theme-");
+    const app = appJsonSchema.parse({
+      ...validApp,
+      loading: {
+        background: "#f7f1e8",
+        color: "#2b2522",
+        accent: "#c8392b",
+        message: "Opening the <kitchen>…",
+      },
+      window: { minWidth: 1280, minHeight: 760 },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain("--bg: #f7f1e8; --fg: #2b2522; --accent: #c8392b;");
+    expect(html).toContain("Opening the &lt;kitchen>…");
+    expect(html).not.toContain("#0f1115");
+    const conf = JSON.parse(
+      readFileSync(path.join(res.shellDir, "tauri.conf.json"), "utf8"),
+    ) as { app: { windows: Record<string, unknown>[] } };
+    expect(conf.app.windows[0]).toMatchObject({
+      minWidth: 1280,
+      minHeight: 760,
+    });
+    // defaults stay the dark page, and only hex colors validate
+    const plain = projectShell({
+      hostDir: tempDir("ph-proj-theme-default-"),
+      app: appJsonSchema.parse(validApp),
+      connectPort: 6494,
+    });
+    expect(
+      readFileSync(path.join(plain.shellDir, "ui/index.html"), "utf8"),
+    ).toContain("--bg: #0f1115; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(
+      appJsonSchema.safeParse({ ...validApp, loading: { background: "red" } })
+        .success,
+    ).toBe(false);
+  });
+
+  it("null branding fields (the scaffold's) mean the defaults", () => {
+    const dir = tempDir("ph-proj-null-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: null,
+      splashDark: null,
+      loading: { background: null, message: null, dark: null, art: null },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain("--bg: #0f1115; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toContain('<img class="logo" src="./logo.png"');
+    expect(html).toContain("Starting Taco Tent");
+    expect(html).not.toContain("prefers-color-scheme: dark) {");
+    expect(html).not.toContain('class="corner"');
+    expect(
+      appJsonSchema.safeParse({ ...validApp, loading: null }).success,
+    ).toBe(true);
+  });
+
+  it("swaps splash, corner art and colors for the dark color scheme", () => {
+    const dir = tempDir("ph-proj-dark-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    mkdirSync(path.join(dir, "art"), { recursive: true });
+    const light = solidPng(64, [9, 9, 9, 255]);
+    const dark = solidPng(64, [200, 200, 200, 255]);
+    const svg = Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>");
+    writeFileSync(path.join(dir, "art", "splash.png"), light);
+    writeFileSync(path.join(dir, "art", "splash-dark.png"), dark);
+    writeFileSync(path.join(dir, "art", "mark.svg"), svg);
+    writeFileSync(path.join(dir, "art", "mark-dark.svg"), svg);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      splash: "./art/splash.png",
+      splashDark: "./art/splash-dark.png",
+      loading: {
+        background: "#f7f1e8",
+        dark: { background: "#121212", accent: "#ffcc00" },
+        art: "./art/mark.svg",
+        artDark: "./art/mark-dark.svg",
+      },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    // dark overrides per field; an unset dark field keeps the light value
+    expect(html).toContain("--bg: #f7f1e8; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toMatch(
+      /prefers-color-scheme: dark\) \{\s*:root \{\s*--bg: #121212;\s*--fg: #e6e8eb;\s*--accent: #ffcc00;/,
+    );
+    // <picture> swaps the splash and the corner art by scheme
+    expect(html).toContain(
+      '<source srcset="./splash-dark.png" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain('<img class="splash" src="./splash.png"');
+    expect(html).toContain('<div class="corner" aria-hidden="true">');
+    expect(html).toContain(
+      '<source srcset="./art-dark.svg" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain('<img class="art" src="./art.svg"');
+    // the files travel beside the page under their extension, out of git
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/splash-dark.png")).equals(dark),
+    ).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/art.svg"))).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/art-dark.svg"))).toBe(true);
+    const ignore = readFileSync(path.join(res.shellDir, ".gitignore"), "utf8");
+    expect(ignore).toContain("/ui/splash-dark.png");
+    expect(ignore).toContain("/ui/art.*");
+  });
+
   it("renders the loading page without a logo when the icon file is missing", () => {
     const dir = tempDir("ph-proj-nologo-");
     const app = appJsonSchema.parse(validApp);
@@ -156,6 +306,13 @@ describe("shell projection", () => {
     expect(html).not.toContain("<img");
     expect(html).toContain("Starting Taco Tent");
     expect(existsSync(path.join(res.shellDir, "ui/logo.png"))).toBe(false);
+  });
+
+  it("reruns the build script when the icon set changes (no stale compiled icon)", () => {
+    const { read } = projectInto();
+    expect(read("build.rs")).toContain(
+      'println!("cargo:rerun-if-changed=icons");',
+    );
   });
 
   it("bakes the connect port into the remote capability", () => {
@@ -233,7 +390,153 @@ describe("toolchain", () => {
   });
 });
 
+describe("background layers on the loading page", () => {
+  const svg = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"/>',
+  );
+
+  it("places each layer by the shared style, swaps it by scheme, and drops the splash and corner art", () => {
+    const dir = tempDir("ph-proj-layers-");
+    writeFileSync(path.join(dir, "icon.png"), solidPng(16, [1, 2, 3, 255]));
+    mkdirSync(path.join(dir, "brand"), { recursive: true });
+    writeFileSync(path.join(dir, "brand", "lockup.svg"), svg);
+    writeFileSync(path.join(dir, "brand", "lockup-dark.svg"), svg);
+    const growth = solidPng(8, [7, 7, 7, 255]);
+    writeFileSync(path.join(dir, "brand", "growth.png"), growth);
+    const app = appJsonSchema.parse({
+      ...validApp,
+      // the deprecated fields are ignored once a background is set
+      splash: "./brand/growth.png",
+      loading: { background: "#ffffff", art: "./brand/growth.png" },
+      background: {
+        color: { light: "#f7f5f0", dark: "#14161a" },
+        layers: [
+          {
+            src: {
+              light: "./brand/lockup.svg",
+              dark: "./brand/lockup-dark.svg",
+            },
+            position: { top: 32, left: 40 },
+            width: 200,
+          },
+          {
+            src: "./brand/growth.png",
+            position: { bottom: 0, right: 0 },
+            width: "min(55%, 880px)",
+            fade: { top: 160, left: 160 },
+            opacity: 0.9,
+          },
+          { src: "./brand/missing.svg" },
+          { src: "https://cdn.example/x.webp", height: "40vh" },
+        ],
+      },
+    });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    // the background's colour wins over loading.background, per scheme
+    expect(html).toContain("--bg: #f7f5f0; --fg: #e6e8eb; --accent: #4ade80;");
+    expect(html).toMatch(
+      /prefers-color-scheme: dark\) \{\s*:root \{\s*--bg: #14161a;/,
+    );
+    expect(html).toContain('<div class="layers" aria-hidden="true">');
+    expect(html).toContain(
+      '<source srcset="./bg-0-dark.svg" media="(prefers-color-scheme: dark)" />',
+    );
+    expect(html).toContain(
+      '<img src="./bg-0.svg" alt="" style="position: absolute; pointer-events: none; object-fit: contain; top: 32px; left: 40px; width: 200px" />',
+    );
+    expect(html).toContain(
+      '<img src="./bg-1.png" alt="" style="position: absolute; pointer-events: none; object-fit: contain; right: 0px; bottom: 0px; width: min(55%, 880px); opacity: 0.9; mask-image: linear-gradient(to bottom, transparent, #000 160px), linear-gradient(to right, transparent, #000 160px); mask-composite: intersect" />',
+    );
+    // a URL is used as given; a missing file drops its layer
+    expect(html).toContain('<img src="https://cdn.example/x.webp" alt=""');
+    expect(html).not.toContain("missing");
+    expect(html).not.toContain('class="splash"');
+    expect(html).not.toContain('class="corner"');
+    expect(html).not.toContain('class="logo"');
+    // staged beside the page, out of git
+    expect(existsSync(path.join(res.shellDir, "ui/bg-0.svg"))).toBe(true);
+    expect(existsSync(path.join(res.shellDir, "ui/bg-0-dark.svg"))).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, "ui/bg-1.png")).equals(growth),
+    ).toBe(true);
+    expect(
+      readFileSync(path.join(res.shellDir, ".gitignore"), "utf8"),
+    ).toContain("/ui/bg-*");
+    // idempotent
+    expect(projectShell({ hostDir: dir, app, connectPort: 6494 }).changed).toBe(
+      false,
+    );
+  });
+
+  it("a single image is one layer pinned bottom-right; the schema rejects a layer pinned to both edges", () => {
+    const dir = tempDir("ph-proj-layer-one-");
+    writeFileSync(path.join(dir, "art.svg"), svg);
+    const app = appJsonSchema.parse({ ...validApp, background: "./art.svg" });
+    const res = projectShell({ hostDir: dir, app, connectPort: 6494 });
+    const html = readFileSync(path.join(res.shellDir, "ui/index.html"), "utf8");
+    expect(html).toContain(
+      '<img src="./bg-0.svg" alt="" style="position: absolute; pointer-events: none; object-fit: contain; right: 0px; bottom: 0px" />',
+    );
+    // no colour of its own: the loading colours stay
+    expect(html).toContain("--bg: #0f1115;");
+    const invalid = appJsonSchema.safeParse({
+      ...validApp,
+      background: {
+        layers: [{ src: "./art.svg", position: { top: 0, bottom: 0 } }],
+      },
+    });
+    expect(invalid.success).toBe(false);
+    expect(JSON.stringify(invalid.error?.issues)).toContain(
+      "set top or bottom, not both",
+    );
+    expect(
+      appJsonSchema.safeParse({ ...validApp, background: null }).success,
+    ).toBe(true);
+  });
+});
+
 describe("scaffold", () => {
+  it("writes the background it is given and rebases its paths to the host directory", () => {
+    const root = tempDir("ph-scaffold-bg-");
+    const host = path.join(root, "hosts", "desktop");
+    const background = rebaseBackground(
+      {
+        color: "#fff",
+        layers: [
+          {
+            src: { light: "./icons/l.svg", dark: "./icons/d.svg" },
+            width: 200,
+          },
+          { src: "https://cdn.example/x.webp" },
+        ],
+      },
+      root,
+      host,
+    );
+    expect(background).toEqual({
+      color: "#fff",
+      layers: [
+        {
+          src: { light: "../../icons/l.svg", dark: "../../icons/d.svg" },
+          width: 200,
+        },
+        { src: "https://cdn.example/x.webp" },
+      ],
+    });
+    expect(rebaseBackground("./bg.webp", root, host)).toBe("../../bg.webp");
+    scaffoldDesktopShell(host, {
+      identifier: "com.acme.app",
+      productName: "Acme App",
+      background,
+    });
+    expect(loadAppJson(host).background).toEqual(background);
+    // none given: listed as null, like the other defaults
+    const plain = path.join(tempDir("ph-scaffold-nobg-"), "hosts", "desktop");
+    scaffoldDesktopShell(plain, { identifier: "com.a.b", productName: "A" });
+    expect(loadAppJson(plain).background).toBeNull();
+  });
+
   it("writes a schema-valid app.json, a real PNG icon, and a .gitignore", () => {
     const host = path.join(tempDir("ph-scaffold-"), "hosts", "desktop");
     const res = scaffoldDesktopShell(host, {
@@ -331,19 +634,20 @@ describe("shell source order (shellMode)", () => {
   });
   let projectRoot = "";
 
-  function host(over: Partial<HostDefinition> = {}): HostDefinition {
-    return {
+  function host(over: Partial<DesktopHostInput> = {}): DesktopHost {
+    return hostSchema.parse({
       name: "desktop",
       runner: { module: "@powerhousedao/desktop/runner" },
+      children: {},
       ...over,
-    } as HostDefinition;
+    });
   }
 
   it("prefers runner.shell.project over everything", () => {
     projectRoot = tempDir("ph-mode-proj-");
     const h = host({
       runner: { module: "m", shell: { project: "../s" } },
-    } as Partial<HostDefinition>);
+    });
     expect(shellMode(h, ctx({ PH_DESKTOP_SHELL: "/x" }))).toBe(
       "external-project",
     );

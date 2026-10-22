@@ -39,7 +39,88 @@ const PATHS: Record<string, string> = {
   b10: "M25.0158 -2.51999e-05C31.418 0.265176 37.1737 3.03916 41.3227 7.36511L25.5156 7.36547C25.2395 7.36547 25.0156 7.14161 25.0156 6.86546L25.0158 -2.51999e-05Z",
 };
 
+/** A project's loading image, declared by the build as
+ * `<meta name="ph-loader" content="<file>" data-animation data-size>`
+ * (powerhouse.config.json `icons.loader`). */
+export type ProjectLoader = {
+  src: string;
+  animation: "pulse" | "spin" | "none";
+  size: number;
+};
+
+const LOADER_MOTION = {
+  pulse: "ph-loader-pulse 1.6s ease-in-out infinite",
+  spin: "ph-loader-spin 1.4s linear infinite",
+  none: "none",
+} as const;
+
+const LOADER_KEYFRAMES =
+  "@keyframes ph-loader-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.94)}}" +
+  "@keyframes ph-loader-spin{to{transform:rotate(360deg)}}" +
+  "@media (prefers-reduced-motion:reduce){[data-ph-loader-img]{animation:none!important}}";
+
+let projectLoader: ProjectLoader | null | undefined;
+
+/** The page's project loader, or null when Connect's logo stays. Read once:
+ * the meta tag is static in index.html. */
+export function getProjectLoader(): ProjectLoader | null {
+  if (projectLoader !== undefined) return projectLoader;
+  if (typeof document === "undefined") return null;
+  const meta = document.querySelector<HTMLMetaElement>(
+    'meta[name="ph-loader"]',
+  );
+  const file = meta?.content;
+  if (!meta || !file) return (projectLoader = null);
+  const animation = meta.dataset.animation;
+  const size = Number(meta.dataset.size);
+  projectLoader = {
+    src: new URL(file, document.baseURI).toString(),
+    animation:
+      animation === "spin" || animation === "none" ? animation : "pulse",
+    size: Number.isFinite(size) && size > 0 ? size : 96,
+  };
+  return projectLoader;
+}
+
+/** The project's loading image with its motion. */
+export function ProjectLoaderImage({
+  loader,
+  className = "",
+}: {
+  loader: ProjectLoader;
+  className?: string;
+}) {
+  return (
+    <>
+      <style>{LOADER_KEYFRAMES}</style>
+      <img
+        data-ph-loader-img=""
+        src={loader.src}
+        alt=""
+        aria-label="Loading"
+        width={loader.size}
+        className={className}
+        style={{
+          // The width; the height follows the image (loaders can be wide).
+          width: loader.size,
+          height: "auto",
+          animation: LOADER_MOTION[loader.animation],
+        }}
+      />
+    </>
+  );
+}
+
+/** Connect's loading animation: the project's loader when one is
+ * configured, else the animated Powerhouse logo. */
 export function LogoAnimation({ size = 48, className = "" }) {
+  const loader = getProjectLoader();
+  if (loader)
+    return <ProjectLoaderImage loader={loader} className={className} />;
+  return <PowerhouseLogoAnimation size={size} className={className} />;
+}
+
+function PowerhouseLogoAnimation({ size = 48, className = "" }) {
   const refsMap = useRef<Record<string, (SVGPathElement | null)[] | undefined>>(
     {},
   ); // id → array of path DOM nodes

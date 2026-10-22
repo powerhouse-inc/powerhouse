@@ -115,7 +115,7 @@ import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
 import { setRouteComponents } from "../../test/route-components.js";
 import { reportRouteError, setSentryModule } from "../services/sentry.js";
 import { DrivePending, RouteError } from "../generic/layout/route-views.js";
-import { RouteProgressBar } from "./route-views.js";
+import { PROGRESS_DELAY_MS, RouteProgressBar } from "./route-views.js";
 
 let module: InProcessReactorClientModule;
 let store: PHStore;
@@ -548,10 +548,17 @@ describe("Connect router", () => {
     const { drive, node: quick } = await createFile(first.drive, "Quick");
     store.drives = [drive];
     let barCommits = 0;
+    let barShownAt: number | undefined;
+    const onBarRender = () => {
+      barCommits++;
+      if (barShownAt === undefined && screen.queryByRole("progressbar")) {
+        barShownAt = performance.now();
+      }
+    };
     const root = () => (
       <>
         <Outlet />
-        <Profiler id="bar" onRender={() => barCommits++}>
+        <Profiler id="bar" onRender={onBarRender}>
           <RouteProgressBar />
         </Profiler>
       </>
@@ -568,10 +575,15 @@ describe("Connect router", () => {
     expect(barCommits).toBe(0);
 
     gate.close();
+    barShownAt = undefined;
+    const slowStarted = performance.now();
     act(() => setSelectedNode(first.node));
-    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
-    expect(screen.queryByRole("progressbar")).toBeNull();
     await vi.waitFor(() => screen.getByRole("progressbar"));
+    // When the bar committed, not a wall-clock sleep: a slow runner only widens
+    // the gap. The few ms of slack are timer granularity, far short of the delay.
+    expect(barShownAt).toBeGreaterThanOrEqual(
+      slowStarted + PROGRESS_DELAY_MS - 5,
+    );
     act(() => gate.open());
     await vi.waitFor(() => screen.getByText("document:Slow"));
     await vi.waitFor(() =>

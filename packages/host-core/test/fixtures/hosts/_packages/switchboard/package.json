@@ -1,0 +1,10 @@
+{
+  "name": "@powerhousedao/switchboard",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./plugins/mcp": "./mcp.ts",
+    "./plugins/attachments": "./attachments.ts",
+    "./plugins/workflows": "./workflows.ts"
+  }
+}

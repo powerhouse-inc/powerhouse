@@ -1,0 +1,9 @@
+{
+  "name": "@powerhousedao/vetra-studio",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./switchboard": "./switchboard.ts",
+    "./connect": "./connect.ts"
+  }
+}

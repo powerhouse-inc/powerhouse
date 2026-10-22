@@ -134,15 +134,18 @@ export function buildConnectFlagPatch(args: ConnectFlagInput): PlainObject {
   setIfDefined(packages, "externalEnabled", args.externalPackages);
   if (Object.keys(packages).length > 0) out.packages = packages;
 
-  // --home-background: empty string is the explicit "set null" form
-  // (cmd-ts can't pass `null` directly through a string option).
   const branding: PlainObject = {};
   setIfDefined(branding, "appName", args.appName);
-  if (args.homeBackground !== undefined) {
-    branding.homeBackground =
-      args.homeBackground === "" ? null : args.homeBackground;
-  }
   if (Object.keys(branding).length > 0) out.branding = branding;
+
+  // --home-background: empty string is the explicit "set null" form
+  // (cmd-ts can't pass `null` directly through a string option). The home
+  // screen is the generic plugin's, so this lands in connect.home.
+  if (args.homeBackground !== undefined) {
+    out.home = {
+      background: args.homeBackground === "" ? null : args.homeBackground,
+    };
+  }
 
   // --sentry-dsn: empty string is the explicit "set null" form (disables
   // Sentry). Same pattern as --home-background.
