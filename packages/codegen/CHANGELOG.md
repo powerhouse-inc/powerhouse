@@ -1,3 +1,15 @@
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **codegen,connect:** generated editors and modules are typed for their document; agents and Connect docs describe props at the top and hooks below ([406b754a7e](https://github.com/powerhouse-inc/powerhouse/commit/406b754a7e))
+- **codegen:** ph migrate and ph init seed hosts/connect/style.css, drop local packages' style.css imports and the old empty @theme, and warn on page theming in style.css ([3d61e279bd](https://github.com/powerhouse-inc/powerhouse/commit/3d61e279bd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

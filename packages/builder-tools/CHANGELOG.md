@@ -1,3 +1,19 @@
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **builder-tools,connect:** the host's stylesheet, hosts/<host>/style.css, joins the project's in Connect's builds and loading shell ([5c9f498355](https://github.com/powerhouse-inc/powerhouse/commit/5c9f498355))
+
+### 🩹 Fixes
+
+- **builder-tools:** the shell prerender's server keeps its own Vite cache and doesn't optimize deps ([83cf29ce51](https://github.com/powerhouse-inc/powerhouse/commit/83cf29ce51))
+- **builder-tools:** the service worker serves no opaque CDN copy to a CORS request ([1540911ccb](https://github.com/powerhouse-inc/powerhouse/commit/1540911ccb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

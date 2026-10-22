@@ -1,3 +1,14 @@
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **shared,workflow:** the package stylesheet entry takes the theme to reference and skips source maps; workflow's stylesheet holds its own classes and vendor CSS against the design system's theme ([f3bfe645e9](https://github.com/powerhouse-inc/powerhouse/commit/f3bfe645e9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/workflow to align it with other projects, there were no code changes.
