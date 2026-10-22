@@ -1,0 +1,10 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/?modal=drive-settings&driveId=NqfhsKuJ5H6Uouw_jyHOEtWqxcECjS5dFXatnb-VtF4", { waitUntil: "networkidle", timeout: 90000 });
+await page.waitForTimeout(5000);
+const txt = await page.locator("[role=dialog]").first().evaluate((el) => el.innerText).catch(() => "none");
+console.log("SETTINGS", JSON.stringify(txt.slice(0, 600)));
+console.log("COMBOS", await page.locator("[role=dialog] select, [role=dialog] [role=combobox], [role=dialog] button").count());
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/19b-drive-settings.png" });
+console.log("ERRORS", JSON.stringify(errors.slice(0, 3)));
+await context.close();

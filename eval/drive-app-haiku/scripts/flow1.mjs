@@ -1,0 +1,14 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+const DRIVE = BASE + "/d/stockroom-ui-aaY1R2GfWmknHeW2TPeaBfSkL3DkdJYXMd8VsJCu7hY";
+await page.goto(DRIVE, { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1500);
+console.log("DRIVE BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 220)));
+await page.getByRole("button", { name: "New inventory item" }).click();
+await settle(page, 1200);
+console.log("MODAL", JSON.stringify((await page.locator("[role=dialog]").first().innerText().catch(() => "none")).slice(0, 400)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/07-create-modal.png" });
+console.log("URL", page.url());
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));
+await context.close();

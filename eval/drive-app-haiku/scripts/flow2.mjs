@@ -1,0 +1,16 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+const DRIVE = BASE + "/d/stockroom-ui-aaY1R2GfWmknHeW2TPeaBfSkL3DkdJYXMd8VsJCu7hY";
+await page.goto(DRIVE, { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1200);
+await page.getByRole("button", { name: "New inventory item" }).click();
+await settle(page, 800);
+await page.getByPlaceholder("Document name").fill("Bolts");
+await page.getByRole("button", { name: "Create", exact: true }).click();
+await settle(page, 2500);
+console.log("AFTER CREATE URL", page.url());
+console.log("AFTER CREATE BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 300)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/08-after-create-item.png" });
+await context.close();
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));

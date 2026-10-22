@@ -1,0 +1,24 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+const DRIVE = BASE + "/d/stockroom-ui-aaY1R2GfWmknHeW2TPeaBfSkL3DkdJYXMd8VsJCu7hY";
+const SHELF = DRIVE + "/shelf-a-1d253460-8d97-40ca-a529-d47e8c2fa191";
+await page.goto(SHELF, { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1500);
+await page.evaluate(() => { window.__marker = "still-here"; });
+// click the name link of Bolts
+await page.getByRole("link", { name: "Bolts" }).click();
+await settle(page, 1500);
+console.log("after open doc url", page.url().slice(-60), "marker", await page.evaluate(() => window.__marker ?? "RELOADED"));
+console.log("doc body", JSON.stringify((await page.locator("body").innerText()).slice(0, 160)));
+await page.getByText("Back to Stockroom UI").click();
+await settle(page, 1200);
+console.log("after back link url", page.url().slice(-40), "marker", await page.evaluate(() => window.__marker ?? "RELOADED"));
+await page.goBack();
+await settle(page, 1200);
+console.log("after browser back url", page.url().slice(-50), "marker", await page.evaluate(() => window.__marker ?? "RELOADED"));
+await page.goForward();
+await settle(page, 1200);
+console.log("after browser forward url", page.url().slice(-50), "marker", await page.evaluate(() => window.__marker ?? "RELOADED"));
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));
+await context.close();

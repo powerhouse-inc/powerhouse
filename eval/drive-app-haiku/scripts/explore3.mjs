@@ -1,0 +1,10 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+const page = await ctx.newPage();
+await page.goto("http://localhost:2809/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await page.waitForTimeout(2000);
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/05-home-after-create.png" });
+console.log("HOME", JSON.stringify((await page.locator("body").innerText()).slice(0, 400)));
+await browser.close();

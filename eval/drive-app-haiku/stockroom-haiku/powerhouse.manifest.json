@@ -1,0 +1,36 @@
+{
+  "name": "stockroom-haiku",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "stockroom/inventory-item",
+      "name": "Inventory Item"
+    }
+  ],
+  "apps": [
+    {
+      "name": "Stockroom",
+      "id": "stockroom",
+      "documentTypes": [
+        "powerhouse/document-drive"
+      ]
+    }
+  ],
+  "editors": [
+    {
+      "id": "inventory-item-editor",
+      "name": "Inventory Item Editor",
+      "documentTypes": [
+        "stockroom/inventory-item"
+      ]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}

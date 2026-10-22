@@ -1,0 +1,15 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const errors = [];
+page.on("pageerror", (e) => errors.push("pageerror: " + e.message.slice(0, 200)));
+page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text().slice(0, 200)); });
+await page.goto("http://localhost:2809/", { waitUntil: "networkidle", timeout: 90000 });
+await page.waitForTimeout(3000);
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/01-home.png" });
+console.log("URL", page.url());
+console.log("TITLE", await page.title());
+const links = await page.locator("a, button").allInnerTexts();
+console.log("CONTROLS", JSON.stringify(links.map(s => s.trim()).filter(Boolean).slice(0, 40)));
+console.log("ERRORS", JSON.stringify(errors.slice(0, 8)));
+await browser.close();

@@ -1,0 +1,11 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/settings", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1000);
+await page.getByText("Default Editors", { exact: true }).click();
+await settle(page, 1500);
+console.log("URL", page.url());
+console.log("DEFAULT EDITORS", JSON.stringify((await page.locator("body").innerText()).slice(0, 700)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/40-default-editors.png" });
+await context.close();

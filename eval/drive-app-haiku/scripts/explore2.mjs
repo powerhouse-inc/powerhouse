@@ -1,0 +1,15 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+await page.goto("http://localhost:2809/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await page.waitForTimeout(1000);
+await page.getByText("Create New Drive").click();
+await page.waitForTimeout(1500);
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/02-add-drive-modal.png" });
+console.log("URL", page.url());
+const dlg = page.locator("[role=dialog]").first();
+console.log("DIALOG", (await dlg.count()) ? (await dlg.innerText()).slice(0, 800) : "none");
+const inputs = await page.locator("input, select, [role=combobox], [role=radio], [role=tab]").evaluateAll(els => els.map(e => `${e.tagName}|${e.type||''}|${e.getAttribute('name')||''}|${e.getAttribute('placeholder')||''}|${(e.getAttribute('aria-label')||'')}|${(e.textContent||'').trim().slice(0,40)}`));
+console.log("INPUTS", JSON.stringify(inputs.slice(0, 20)));
+await browser.close();

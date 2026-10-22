@@ -1,0 +1,18 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/inventory", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1200);
+await page.getByRole("button", { name: "New inventory item" }).click();
+await settle(page, 800);
+await page.locator("select").first().selectOption({ label: "Stockroom UI" });
+await settle(page, 400);
+await page.getByPlaceholder("Document name").fill("Step Five Item");
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/21-step5-modal-filled.png" });
+await page.getByRole("button", { name: "Create", exact: true }).click();
+await settle(page, 3000);
+console.log("AFTER URL", page.url());
+console.log("AFTER BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 300)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/22-step5-after-create.png" });
+console.log("ERRORS", JSON.stringify(errors.slice(0, 4)));
+await context.close();

@@ -1,0 +1,13 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 800);
+await page.getByText("Create New Drive").click();
+await settle(page, 600);
+await page.getByText("Add Drive", { exact: true }).first().click();
+await settle(page, 800);
+console.log("ADD TAB", JSON.stringify((await page.locator("[role=dialog]").first().innerText().catch(() => "none")).slice(0, 500)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/14-add-existing-tab.png" });
+await context.close();
+console.log("ERRORS", JSON.stringify(errors.slice(0, 3)));

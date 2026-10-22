@@ -1,0 +1,20 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 500);
+if (!(await page.getByText("Create New Drive").count())) { console.log("no create button"); }
+await page.getByText("Create New Drive").click();
+await settle(page, 500);
+await page.getByPlaceholder("Drive name").fill("Stockroom UI");
+await page.getByText("Stockroom", { exact: true }).first().click();
+await page.getByRole("button", { name: "Create new drive" }).click();
+await settle(page, 5000);
+console.log("URL", page.url());
+console.log("BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 200)));
+await page.goto(BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await settle(page, 2000);
+console.log("HOME", JSON.stringify((await page.locator("body").innerText()).slice(0, 300)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/05-home-after-create.png" });
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));
+await context.close();

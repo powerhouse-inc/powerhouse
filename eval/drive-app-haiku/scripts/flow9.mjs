@@ -1,0 +1,14 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/d/stockroom-existing-NqfhsKuJ5H6Uouw_jyHOEtWqxcECjS5dFXatnb-VtF4", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 1500);
+const html = await page.locator("body").evaluate(() => [...document.querySelectorAll("button, [role=button], a")].map(b => (b.getAttribute("aria-label") || b.textContent || "").trim().slice(0,40)).filter(Boolean).slice(0, 60));
+console.log("CONTROLS", JSON.stringify(html));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/18-existing-generic.png" });
+await page.goto(BASE + "/?modal=drive-settings&driveId=NqfhsKuJ5H6Uouw_jyHOEtWqxcECjS5dFXatnb-VtF4", { waitUntil: "networkidle", timeout: 90000 });
+await settle(page, 1500);
+console.log("SETTINGS", JSON.stringify((await page.locator("[role=dialog]").first().innerText().catch(() => "none")).slice(0, 500)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/19-drive-settings.png" });
+console.log("ERRORS", JSON.stringify(errors.slice(0, 3)));
+await context.close();

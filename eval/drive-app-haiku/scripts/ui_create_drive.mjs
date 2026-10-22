@@ -1,0 +1,17 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const errors = [];
+page.on("pageerror", (e) => errors.push("pageerror: " + e.message.slice(0, 300)));
+page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text().slice(0, 300)); });
+await page.goto("http://localhost:2809/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await page.getByText("Create New Drive").click();
+await page.waitForTimeout(800);
+await page.getByPlaceholder("Drive name").fill("Stockroom UI");
+await page.getByText("Stockroom", { exact: true }).first().click();
+await page.waitForTimeout(800);
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/03-drive-app-picker.png" });
+console.log("PICKER", JSON.stringify((await page.locator("[role=dialog]").first().innerText().catch(()=>"")).slice(0,500)));
+await browser.close();
+console.log("ERRORS", JSON.stringify(errors.slice(0,5)));

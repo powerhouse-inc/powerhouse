@@ -1,0 +1,12 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 800);
+await page.getByText("Stockroom UI", { exact: true }).first().click();
+await settle(page, 3000);
+console.log("URL", page.url());
+console.log("BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 250)));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/06-drive-reopen.png" });
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));
+await context.close();

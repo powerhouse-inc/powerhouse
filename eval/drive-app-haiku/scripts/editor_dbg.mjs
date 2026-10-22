@@ -1,0 +1,11 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+const G = BASE + "/d/JHOXJOdvW1k1VQCK_nisJxgmpi0HK6P7GK8O6-idyjo/gaskets-ScGTeEqA8AiVqliH5unRMCn50JneDTgQJ7aiGzMGjrE";
+await page.goto(G, { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 2500);
+console.log("BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 300)));
+console.log("BUTTONS", JSON.stringify(await page.locator("button").allInnerTexts()));
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/35-editor-dbg.png" });
+console.log("errors", JSON.stringify(errors.slice(0, 3)).slice(0, 600));
+await context.close();

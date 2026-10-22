@@ -1,0 +1,17 @@
+import { open, BASE, settle } from "./pwlib.mjs";
+const { context, page, errors } = await open();
+await page.goto(BASE + "/", { waitUntil: "networkidle", timeout: 90000 });
+await page.getByText("Reject all cookies").click().catch(() => {});
+await settle(page, 600);
+await page.getByText("Create New Drive").click();
+await settle(page, 500);
+await page.getByText("Add Drive", { exact: true }).first().click();
+await settle(page, 300);
+await page.getByPlaceholder("Drive URL").fill("http://localhost:7809/d/JHOXJOdvW1k1VQCK_nisJxgmpi0HK6P7GK8O6-idyjo");
+await page.getByRole("button", { name: "Add drive" }).click();
+await page.waitForTimeout(2500);
+await page.screenshot({ path: "/tmp/connect-eval-drive-haiku/shots/16-add-pref-2.png" });
+console.log("MODAL?", await page.locator("[role=dialog]").count(), "URL", page.url());
+console.log("BODY", JSON.stringify((await page.locator("body").innerText()).slice(0, 300)));
+console.log("ERRORS", JSON.stringify(errors.slice(0, 5)));
+await context.close();
