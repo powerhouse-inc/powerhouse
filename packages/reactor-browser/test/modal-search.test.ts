@@ -20,6 +20,9 @@ describe("routed modals", () => {
       documentModelVersion: "2",
     });
     expect(modalFromSearch(search!)).toEqual(modal);
+    const inDrive = { ...modal, driveId: "inventory" };
+    expect(modalSearch(inDrive)).toMatchObject({ driveId: "inventory" });
+    expect(modalFromSearch(modalSearch(inDrive)!)).toEqual(inDrive);
     expect(modalFromSearch({ modal: "drive-settings", driveId: "d1" })).toEqual(
       { type: "driveSettings", driveId: "d1" },
     );
