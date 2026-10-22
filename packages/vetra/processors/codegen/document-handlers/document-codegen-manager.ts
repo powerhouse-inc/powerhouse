@@ -114,14 +114,7 @@ export class DocumentCodegenManager {
       throw new Error(`Unsupported document type: ${documentType}`);
     }
 
-    // Validate if this strand should be processed
-    if (!generator.shouldProcess(strand)) {
-      logger.debug(
-        `>>> Generator validation failed for ${documentType}:${strand.documentId}, skipping processing`,
-      );
-      return Promise.resolve();
-    }
-
+    // Validation runs when the debounce fires, on the document's final state.
     // Different flow for interactive vs non-interactive mode
     if (this.interactiveManager.isInteractive()) {
       // Interactive mode: queue strands and use debounce timer to trigger batch processing
@@ -142,6 +135,9 @@ export class DocumentCodegenManager {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
+          this.interactiveManager.discardWhere(
+            (queued) => !this.shouldProcess(queued),
+          );
           await this.interactiveManager.processQueueWithConfirmation(
             async (queuedStrands: QueuedStrand[]) => {
               await this.processQueuedStrands(queuedStrands);
@@ -175,6 +171,7 @@ export class DocumentCodegenManager {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       const debounceTimer = setTimeout(async () => {
         try {
+          if (!generator.shouldProcess(strand)) return;
           logger.debug(
             `🔄 Routing document type "${documentType}" to generator (debounced)`,
           );
@@ -200,6 +197,11 @@ export class DocumentCodegenManager {
       this.debounceTimers.set(timerKey, debounceTimer);
     }
     return Promise.resolve();
+  }
+
+  private shouldProcess(strand: CodegenInput): boolean {
+    const generator = this.getGenerator(strand.documentType);
+    return generator !== undefined && generator.shouldProcess(strand);
   }
 
   /**
