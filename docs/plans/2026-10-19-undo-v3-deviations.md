@@ -354,8 +354,8 @@ The version seam.
   (`baseReducerVersionsFor`, `FLAGS_FOR_EVERY_VERSION`). The reactor fails to
   compile if a version is gated by a flag it does not know. The baseline
   stays the literal `[1, 2]`, pinned as a subset of the table.
-- Adding a version is checked by hand once: add a row 4 with a new value on
-  every axis and run root `pnpm tsc --build`. On 2026-10-22 that failed at
+- Adding a version was checked by hand once (round 3 automates it): add a
+  row 4 with a new value on every axis and run root `pnpm tsc --build`. On 2026-10-22 that failed at
   every decision map and decision, every exhaustive switch (shared reducer,
   undo plan, `idOrderFor`, `synthesizedActionId`, the executor's replay
   hash, reshuffle, design-system `undoRoute`, the workflow editor and undo
@@ -415,8 +415,85 @@ clint.
   (about 0.8 s idle). It now has the 30 s timeout its sibling cold-boot test
   has.
 
+## Architecture fixes, round 3 (2026-10-22)
+
+The version seam.
+
+- The shared reducer's post-append step no longer switches on the version
+  number: the rule branch reads `derivesByRule`, then it switches on the undo
+  model. v1 and v2 run the same bodies.
+- The version arch test also flags a `switch` over a version with numeric
+  case labels, `<`, `>`, `<=`, `>=` and reversed comparisons on a
+  `protocolVersion`, `baseReducerVersion` or `["base-reducer"]` read, a
+  `.get("base-reducer")`, and a one-line destructured read. It flagged the
+  old reducer switch and nothing else. It is still a text scan, so a
+  multi-line destructure or a version held under another name passes.
+- Adding a version is checked in CI instead of by hand. Each capability
+  axis is the keys of an interface (`UndoModelValues` and so on), so
+  `shared/v4-cascade/v4.ts` can add a value to every axis by augmentation.
+  shared, reactor, reactor-browser, design-system and workflow each have a
+  `tsconfig.v4-cascade.json`, and `base-reducer-protocol.v4-cascade.test.ts`
+  runs `tsc` on each and requires the errors in the package's own files to
+  equal an inventory of 26 sites: the decision maps and decisions, every
+  exhaustive switch and the reactor's gating-flag type. A consumer whose
+  switch gains a plain default drops out and fails the test. A version that
+  only reuses existing axis values compiles everywhere, by design. The
+  fixture configs drop project references, so another package's sources
+  compile under the consuming package's options; errors in them are not
+  counted.
+
+Applying a tail without re-deriving.
+
+- The write cache and the undo-targets cache share one predicate,
+  `tailAppliesIncrementally` in shared `retraction.ts`: rows after a derived
+  base apply one by one unless one rewinds, retracts, is named by a
+  retraction, or repeats an action id. A repeated id makes a RETRACT
+  carrying it inert, so its target applies again. `signatureVerification:
+  "log"` logs such a repeat and stores it; the write cache used to keep the
+  target retracted where a cold derivation brought it back.
+- `IOperationStore` has a new required member, `findRepeatedOperationIds`:
+  the op ids among those given that are stored at more than one row of a
+  stream. The write cache asks it for the tail's op ids; on base-reducer 3
+  an op id derives from the action id, so a repeated op id is a repeated
+  action id. Rewound copies count, so after a reshuffle a tail holding a
+  re-appended row re-derives once more than it must. Kysely groups by
+  `opId` on the existing unique index; Hypercore scans the stream, as its
+  `findOperationIds` does.
+- Not changed: the executor's single-row append still decides on
+  `findReferencing` alone (`needsFullHistory`, then `applyByRule`'s
+  `rewritesScope`), so under `"log"` a row repeating a RETRACT's id is
+  applied incrementally and the stored state differs from a cold
+  derivation. Pinned `it.fails` in `derivation/log-mode-repeat.test.ts`.
+
+The remote controller.
+
+- `RemoteDocumentController` takes the pulled document's protocol versions
+  from the remote header. Before, a pulled v3 document kept the local
+  flagless header, reduced as v2, and pushed the NOOP its local UNDO became,
+  which the host appended as a no-op.
+- `undo(scope)` and `redo(scope)` are methods of the controller and go
+  through `undoRedoActions`. Below base-reducer 3 they apply UNDO or REDO
+  locally as before. On 3 the controller resolves the target from its own
+  log with shared `undoRedoTargetsOf`, pending local actions included, and
+  applies a RETRACT, which the configured signer signs on push. This is the
+  controller's own log, not a host query: the host cannot see actions not
+  yet pushed. The methods take a scope; the old dynamic `undo(input)` passed
+  its input as a count.
+- A rebase replays a pending RETRACT as it is; it used to be dropped
+  because the controller has no `retract` method.
+
+The reactor layer test pins every import edge between top-level `src`
+directories (146 today): a new edge fails, and a removed one must leave the
+list.
+
 ## Known gaps
 
+- A new document has no remote header until the remote controller's first
+  push creates it, so an undo before that runs under the local flagless
+  header (base-reducer 2) and pushes a NOOP even to a host that creates the
+  document at 3.
+- The executor's single-row append does not see a repeated action id under
+  `signatureVerification: "log"` (see round 3).
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
 - The decision walk uses a single reducer on upgraded models.
