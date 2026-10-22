@@ -1,3 +1,53 @@
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **builder-tools,connect:** the host's stylesheet, hosts/<host>/style.css, joins the project's in Connect's builds and loading shell ([5c9f498355](https://github.com/powerhouse-inc/powerhouse/commit/5c9f498355))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **connect:** the generic plugin owns the drive explorer's icons ([8e6bb1d044](https://github.com/powerhouse-inc/powerhouse/commit/8e6bb1d044))
+- **connect:** project loader, branded PWA manifest and custom-shell first paint ([43465eae3b](https://github.com/powerhouse-inc/powerhouse/commit/43465eae3b))
+- splash images for the desktop loading page and Connect's home hero ([45a7e316b3](https://github.com/powerhouse-inc/powerhouse/commit/45a7e316b3))
+- project icon sets for Connect and Desktop hosts (proof of concept) ([b0fb21b1de](https://github.com/powerhouse-inc/powerhouse/commit/b0fb21b1de))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **builder-tools:** connect studio pre-bundles the router for an installed Connect's route files ([a849e1e4c2](https://github.com/powerhouse-inc/powerhouse/commit/a849e1e4c2))
+- **builder-tools:** the project shell prerender runs connect and connect-core through vite, so their import.meta.env reads work when installed from npm ([5872befd59](https://github.com/powerhouse-inc/powerhouse/commit/5872befd59))
+- **builder-tools:** the shell prerender's server keeps its own Vite cache and doesn't optimize deps ([83cf29ce51](https://github.com/powerhouse-inc/powerhouse/commit/83cf29ce51))
+- **builder-tools:** the service worker serves no opaque CDN copy to a CORS request ([1540911ccb](https://github.com/powerhouse-inc/powerhouse/commit/1540911ccb))
+- **builder-tools:** branding.favicon and --favicon win over branding.icon's favicons ([c26dcd077a](https://github.com/powerhouse-inc/powerhouse/commit/c26dcd077a))
+- **builder-tools:** the route-rendered shell uses one React under linked packages ([fecfdde141](https://github.com/powerhouse-inc/powerhouse/commit/fecfdde141))
+- **connect:** core's loading shell carries the loader slot, so a project's branding.loader shows without the generic plugin ([91bfb2a58d](https://github.com/powerhouse-inc/powerhouse/commit/91bfb2a58d))
+- the home screen uses the project background, not the splash ([83ae0e51e5](https://github.com/powerhouse-inc/powerhouse/commit/83ae0e51e5))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **builder-tools,connect:** the host's stylesheet, hosts/<host>/style.css, joins the project's in Connect's builds and loading shell ([5c9f498355](https://github.com/powerhouse-inc/powerhouse/commit/5c9f498355))
+
+### 🩹 Fixes
+
+- **builder-tools:** the shell prerender's server keeps its own Vite cache and doesn't optimize deps ([83cf29ce51](https://github.com/powerhouse-inc/powerhouse/commit/83cf29ce51))
+- **builder-tools:** the service worker serves no opaque CDN copy to a CORS request ([1540911ccb](https://github.com/powerhouse-inc/powerhouse/commit/1540911ccb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.

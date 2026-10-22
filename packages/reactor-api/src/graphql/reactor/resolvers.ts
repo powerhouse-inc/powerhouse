@@ -773,6 +773,31 @@ export async function evaluateActions(
   };
 }
 
+const isDocumentNotFound = (error: unknown) =>
+  error instanceof Error && error.name === "DocumentNotFoundError";
+
+/** Refuses a slug another document holds: the reactor would move it to the new one. */
+async function assertSlugAvailable(
+  reactorClient: IReactorClient,
+  slug: string | undefined,
+  documentId?: string,
+): Promise<void> {
+  if (!slug || slug === documentId) return;
+  let holder: string;
+  try {
+    const id = await reactorClient.resolveIdOrSlug(slug);
+    if (id === documentId) return;
+    holder = `document ${id}`;
+  } catch (error) {
+    if (isDocumentNotFound(error)) return;
+    // Ambiguous: it is one document's id and another's slug.
+    holder = "two documents";
+  }
+  throw new GraphQLError(
+    `The slug "${slug}" is taken by ${holder}; choose another.`,
+  );
+}
+
 export async function createDocument(
   reactorClient: IReactorClient,
   args: {
@@ -795,6 +820,11 @@ export async function createDocument(
   }
 
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
+  await assertSlugAvailable(
+    reactorClient,
+    document.header.slug,
+    document.header.id,
+  );
 
   let result: PHDocument;
   try {
@@ -936,6 +966,7 @@ export async function createDocumentWithInitialState(
     document.header.name = name;
   }
   if (slug) {
+    await assertSlugAvailable(reactorClient, slug);
     document.header.slug = slug;
   }
   if (preferredEditor) {

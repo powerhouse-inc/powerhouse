@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-drive",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.71",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -19,6 +19,11 @@
       "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./subgraph": {
+      "source": "./src/subgraph/index.ts",
+      "types": "./dist/subgraph.d.ts",
+      "import": "./dist/subgraph.js"
     }
   },
   "sideEffects": false,

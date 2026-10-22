@@ -9,7 +9,12 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { bundleStack } from "../src/bundle-stack.js";
+import { spawnSync } from "node:child_process";
+import {
+  bundleStack,
+  readLocalPackages,
+  stackManifest,
+} from "../src/bundle-stack.js";
 import { resolveShell, shellEnv, tauriConfigPatch } from "../src/shell.js";
 import * as runner from "../src/runner.js";
 
@@ -62,7 +67,7 @@ function makeProject(): string {
     `
 import { appendFileSync } from "node:fs";
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run() {}
 export async function build(host) {
   appendFileSync(process.env.BUILD_SINK, JSON.stringify({ built: host.name }) + "\\n");
@@ -82,7 +87,7 @@ export async function build(host) {
   writeFileSync(
     path.join(noBuildDir, "index.js"),
     `export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function run() {}
 `,
   );
@@ -189,7 +194,7 @@ describe("build verb", () => {
     const sink = path.join(dir, "build-sink.jsonl");
     process.env.BUILD_SINK = sink;
     const { loadHost } = await import("@powerhousedao/host-core");
-    const host = (await loadHost(dir, "desktop")).host;
+    const host = runner.hostSchema.parse((await loadHost(dir, "desktop")).host);
     try {
       await runner.build(host, ctx(dir, "build"));
     } finally {
@@ -204,7 +209,10 @@ describe("bundle-stack staging", () => {
   it("stages hosts, config, dist and the manifest (vendor off)", () => {
     const dir = makeProject();
     mkdirSync(path.join(dir, "dist"), { recursive: true });
-    writeFileSync(path.join(dir, "dist", "index.html"), "<html></html>");
+    writeFileSync(path.join(dir, "dist", "index.js"), "export {};");
+    const connectBuild = path.join(".ph", "connect-build", "dist");
+    mkdirSync(path.join(dir, connectBuild), { recursive: true });
+    writeFileSync(path.join(dir, connectBuild, "index.html"), "<html></html>");
     const shell = makeShellProject();
 
     const result = bundleStack({
@@ -236,13 +244,105 @@ describe("bundle-stack staging", () => {
     expect(
       existsSync(path.join(result.stackDir, "powerhouse.config.json")),
     ).toBe(true);
-    expect(existsSync(path.join(result.stackDir, "dist", "index.html"))).toBe(
+    expect(existsSync(path.join(result.stackDir, "dist", "index.js"))).toBe(
       true,
     );
+    expect(
+      existsSync(path.join(result.stackDir, connectBuild, "index.html")),
+    ).toBe(true);
     const manifest = JSON.parse(
       readFileSync(path.join(result.stackDir, "package.json"), "utf8"),
     ) as { name: string; dependencies: Record<string, string> };
     expect(manifest.name).toBe("desk-lab");
     expect(manifest.dependencies["@powerhousedao/ph-cli"]).toBe("dev");
+  });
+});
+
+/** A `pnpm pack`-shaped tarball: package/package.json inside. */
+function packTarball(dir: string, file: string, name: string): string {
+  const src = tempDir("ph-desktop-pkg-");
+  mkdirSync(path.join(src, "package"));
+  writeFileSync(
+    path.join(src, "package", "package.json"),
+    JSON.stringify({ name, version: "1.0.0-dev.1" }),
+  );
+  const tarball = path.join(dir, file);
+  const r = spawnSync("tar", ["-czf", tarball, "-C", src, "package"]);
+  expect(r.status).toBe(0);
+  return tarball;
+}
+
+describe("bundle-stack local packages", () => {
+  it("names each tarball by the package inside it", () => {
+    const dir = tempDir("ph-desktop-packs-");
+    const cli = packTarball(
+      dir,
+      "powerhousedao-ph-cli-1.tgz",
+      "@powerhousedao/ph-cli",
+    );
+    const dm = packTarball(dir, "document-model-1.tgz", "document-model");
+    writeFileSync(path.join(dir, "notes.txt"), "not a tarball");
+    expect(readLocalPackages(dir)).toEqual({
+      "@powerhousedao/ph-cli": `file:${cli}`,
+      "document-model": `file:${dm}`,
+    });
+    expect(() => readLocalPackages(tempDir("ph-desktop-empty-"))).toThrow(
+      /no package tarballs/,
+    );
+    packTarball(dir, "powerhousedao-ph-cli-0.tgz", "@powerhousedao/ph-cli");
+    expect(() => readLocalPackages(dir)).toThrow(
+      /two tarballs for @powerhousedao\/ph-cli/,
+    );
+  });
+
+  it("overrides every local package and names the same spec directly", () => {
+    const local = {
+      "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+      "@powerhousedao/host-core": "file:/p/host-core.tgz",
+      "@powerhousedao/shared": "file:/p/shared.tgz",
+    };
+    expect(stackManifest({ name: "lab", version: "dev", local })).toEqual({
+      name: "lab",
+      private: true,
+      type: "module",
+      dependencies: {
+        "@powerhousedao/ph-cli": "file:/p/ph-cli.tgz",
+        "@powerhousedao/host-core": "file:/p/host-core.tgz",
+      },
+      overrides: local,
+    });
+    // what the directory lacks comes from the registry (or phCliSpec)
+    const partial = stackManifest({
+      name: "lab",
+      version: "6.0.0",
+      phCliSpec: "/p/cli.tgz",
+      local: { "@powerhousedao/shared": "file:/p/shared.tgz" },
+    });
+    expect(partial.dependencies).toEqual({
+      "@powerhousedao/ph-cli": "/p/cli.tgz",
+      "@powerhousedao/host-core": "6.0.0",
+    });
+    expect(stackManifest({ name: "lab", version: "dev" })).not.toHaveProperty(
+      "overrides",
+    );
+  });
+
+  it("stages the local manifest even with vendoring off", () => {
+    const dir = makeProject();
+    const packs = tempDir("ph-desktop-packs-");
+    const cli = packTarball(packs, "cli.tgz", "@powerhousedao/ph-cli");
+    const result = bundleStack({
+      projectRoot: dir,
+      shellProjectDir: makeShellProject(),
+      vendor: false,
+      localPackagesDir: packs,
+      logger: () => undefined,
+    });
+    const manifest = JSON.parse(
+      readFileSync(path.join(result.stackDir, "package.json"), "utf8"),
+    ) as { overrides: Record<string, string> };
+    expect(manifest.overrides).toEqual({
+      "@powerhousedao/ph-cli": `file:${cli}`,
+    });
   });
 });

@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { build, createServer } from "vite";
+import { build, createLogger, createServer } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   APP_SHELLS_FILE,
@@ -19,6 +19,7 @@ import {
   SHELL_PLUGINS_FILE,
   swapAppShell,
   withShellAppName,
+  withSourceLocations,
   type AppShells,
   type ShellPlugins,
 } from "./app-shell.js";
@@ -341,6 +342,140 @@ describe("connectAppShellPlugin", () => {
       rmSync(join(root, "style.css"));
     }
   });
+
+  it("shows a shell that fails to render on the dev page and logs it as an error, as the build fails on it", async () => {
+    const connect = join(root, "node_modules/@powerhousedao/connect");
+    writeFileSync(
+      join(connect, "package.json"),
+      `{"name":"@powerhousedao/connect","exports":{"./prerender":"./prerender.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "prerender.js"),
+      `export async function renderProjectShells() {
+        throw new Error("window is not defined </script>");
+      }`,
+    );
+    writeFileSync(join(root, "style.css"), "");
+    const errors: string[] = [];
+    const logger = createLogger("silent");
+    logger.error = (message) => void errors.push(message);
+    const server = await createServer({
+      root,
+      customLogger: logger,
+      server: { middlewareMode: true, ws: false },
+      plugins: [
+        connectAppShellPlugin(root, {
+          composition: [],
+          routeAliases: [{ find: /^never$/, replacement: "never" }],
+        }),
+      ],
+    });
+    try {
+      const dev = await server.transformIndexHtml(
+        "/",
+        readFileSync(join(root, "index.html"), "utf8"),
+      );
+      expect(dev).toContain(`import { ErrorOverlay } from "/@vite/client"`);
+      expect(dev).toContain("the build will fail on it");
+      // The message can't close the script it's in.
+      expect(dev).toContain("window is not defined \\u003c/script>");
+      expect(errors).toEqual([
+        expect.stringContaining(
+          "[connect] The loading shell failed to render from the project's routes",
+        ),
+      ]);
+    } finally {
+      await server.close();
+      writeFileSync(
+        join(connect, "package.json"),
+        `{"name":"@powerhousedao/connect"}`,
+      );
+      rmSync(join(connect, "prerender.js"), { force: true });
+      rmSync(join(root, "style.css"));
+    }
+  });
+
+  it("renders a project's shells with Connect's installed packages, whose code reads import.meta.env, in build and dev", async () => {
+    // As npm installs them: core in node_modules, and Connect's subpaths
+    // reached by bare specifier, which the renderer's server would hand to
+    // Node, where import.meta.env is undefined.
+    const connect = join(root, "node_modules/@powerhousedao/connect");
+    const core = join(root, "node_modules/@powerhousedao/connect-core");
+    mkdirSync(core, { recursive: true });
+    writeFileSync(
+      join(core, "package.json"),
+      `{"name":"@powerhousedao/connect-core","type":"module","exports":{"./runtime-config":"./runtime-config.js"}}`,
+    );
+    writeFileSync(
+      join(core, "runtime-config.js"),
+      `export const configPath = () => \`\${import.meta.env.BASE_URL}powerhouse.config.json\`;`,
+    );
+    writeFileSync(
+      join(connect, "package.json"),
+      `{"name":"@powerhousedao/connect","type":"module","exports":{"./prerender":"./prerender.js","./env":"./env.js","./package.json":"./package.json"}}`,
+    );
+    writeFileSync(
+      join(connect, "env.js"),
+      `export const mode = () => import.meta.env.MODE;`,
+    );
+    writeFileSync(
+      join(connect, "prerender.js"),
+      `import { configPath } from "@powerhousedao/connect-core/runtime-config";
+      import { mode } from "@powerhousedao/connect/env";
+      export async function renderProjectShells() {
+        const shell = (v) => ({
+          body: \`<div data-ph-shell="\${v}"><nav data-config="\${configPath()}" data-mode="\${mode()}"></nav></div>\`,
+          head: \`<style data-ph-shell="\${v}"></style>\`,
+        });
+        return { generic: shell("generic"), core: shell("core") };
+      }`,
+    );
+    writeFileSync(join(root, "style.css"), "");
+    const routeAliases = [{ find: /^never$/, replacement: "never" }];
+    const rendered = `<nav data-config="/powerhouse.config.json" data-mode="`;
+    try {
+      const outDir = join(root, "dist-installed");
+      await build({
+        root,
+        logLevel: "silent",
+        build: { outDir, emptyOutDir: true },
+        plugins: [
+          connectAppShellPlugin(root, { composition: [], routeAliases }),
+        ],
+      });
+      expect(readFileSync(join(outDir, "index.html"), "utf8")).toContain(
+        rendered,
+      );
+
+      // Studio renders through the same server; a failure there only warns.
+      const server = await createServer({
+        root,
+        logLevel: "silent",
+        server: { middlewareMode: true, ws: false },
+        plugins: [
+          connectAppShellPlugin(root, { composition: [], routeAliases }),
+        ],
+      });
+      try {
+        const dev = await server.transformIndexHtml(
+          "/",
+          readFileSync(join(root, "index.html"), "utf8"),
+        );
+        expect(dev).toContain(rendered);
+      } finally {
+        await server.close();
+      }
+    } finally {
+      writeFileSync(
+        join(connect, "package.json"),
+        `{"name":"@powerhousedao/connect"}`,
+      );
+      rmSync(join(connect, "prerender.js"), { force: true });
+      rmSync(join(connect, "env.js"), { force: true });
+      rmSync(core, { recursive: true, force: true });
+      rmSync(join(root, "style.css"));
+    }
+  });
 });
 
 describe("the shell's app name", () => {
@@ -354,5 +489,21 @@ describe("the shell's app name", () => {
     expect(withShellAppName(unnamed, "Beta")).toContain(
       "<!--ph-shell:app-name-->Beta<!--/ph-shell:app-name-->",
     );
+  });
+});
+
+describe("withSourceLocations", () => {
+  it("maps each component location in a prerender error back to the source", () => {
+    const error = new Error(
+      "The app shell failed to prerender:\n - window is not defined (at pendingComponent (/p/_app.tsx:21:37))",
+    );
+    // As Vite's ssrRewriteStacktrace answers, from the module's source map.
+    const rewrite = (stack: string) =>
+      stack.replace("/p/_app.tsx:21:37", "/p/_app.tsx:15:22");
+    withSourceLocations(error, rewrite);
+    expect(error.message).toContain(
+      "window is not defined (at pendingComponent (/p/_app.tsx:15:22))",
+    );
+    expect(error.stack).toContain("/p/_app.tsx:15:22");
   });
 });

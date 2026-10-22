@@ -29,11 +29,59 @@ function newDrive<TDocument extends PHDocument>(
   });
 }
 
+type DefaultDriveLogger = { error: (message: string) => void };
+
+/** The document that already holds `slug`; null when two do (an id and a slug). */
+async function slugHolder(
+  client: IReactorClient,
+  slug: string,
+): Promise<PHDocument | null | undefined> {
+  let id: string;
+  try {
+    id = await client.resolveIdOrSlug(slug);
+  } catch (error) {
+    const notFound =
+      error instanceof Error && error.name === "DocumentNotFoundError";
+    return notFound ? undefined : null;
+  }
+  return client.get(id);
+}
+
+/**
+ * A default drive whose slug another document holds: a drive of the same type
+ * stands in for it (its URL); anything else keeps it uncreated (null), with an
+ * error logged so the server still starts. Undefined when the slug is free.
+ */
+async function slugTakenBy(
+  client: IReactorClient,
+  drive: DriveInput,
+  documentType: string,
+  serverPort: number,
+  logger: DefaultDriveLogger,
+): Promise<string | null | undefined> {
+  if (!drive.slug) return undefined;
+  const holder = await slugHolder(client, drive.slug);
+  if (holder === undefined) return undefined;
+  if (holder?.header.documentType === documentType) {
+    return `http://localhost:${serverPort}/d/${holder.header.id}`;
+  }
+  const owner = holder
+    ? `${holder.header.documentType} document ${holder.header.id}`
+    : "two documents";
+  logger.error(
+    `The default drive "${drive.slug}" was not created: the slug belongs to ${owner}.`,
+  );
+  return null;
+}
+
+/** Creates a configured drive unless one with its id or slug exists; the
+ * URL it is served at, or undefined when another document holds the slug. */
 export async function addDefaultDrive(
   client: IReactorClient,
   drive: DriveInput,
   serverPort: number,
-) {
+  logger: DefaultDriveLogger = console,
+): Promise<string | undefined> {
   let driveId = drive.id;
   if (!driveId || driveId.length === 0) {
     driveId = drive.slug;
@@ -57,6 +105,15 @@ export async function addDefaultDrive(
   }
 
   const { global } = driveCreateState();
+  const taken = await slugTakenBy(
+    client,
+    drive,
+    driveDocumentType,
+    serverPort,
+    logger,
+  );
+  if (taken !== undefined) return taken ?? undefined;
+
   const document = await newDrive(
     client,
     driveDocumentType,
@@ -97,11 +154,13 @@ export async function addDefaultDrive(
   return `http://localhost:${serverPort}/d/${driveId}`;
 }
 
+/** addDefaultDrive for a reactor drive. */
 export async function addDefaultReactorDrive(
   client: IReactorClient,
   drive: DriveInput,
   serverPort: number,
-) {
+  logger: DefaultDriveLogger = console,
+): Promise<string | undefined> {
   let driveId = drive.id;
   if (!driveId || driveId.length === 0) {
     driveId = drive.slug;
@@ -123,6 +182,15 @@ export async function addDefaultReactorDrive(
   }
 
   const { global, local } = reactorDriveCreateState();
+  const taken = await slugTakenBy(
+    client,
+    drive,
+    REACTOR_DRIVE_DOCUMENT_TYPE,
+    serverPort,
+    logger,
+  );
+  if (taken !== undefined) return taken ?? undefined;
+
   const document = await newDrive(
     client,
     REACTOR_DRIVE_DOCUMENT_TYPE,

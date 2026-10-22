@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.69)<br>
+# Powerhouse CLI Commands (6.2.3-dev.71)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -758,7 +758,7 @@ Override connect.branding.appName.<br><br>
 **usage:** `--app-name <str>`<br>
 
 #### Home Background <br>
-Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.<br><br>
+Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient.<br><br>
 **usage:** `--home-background <str>`<br>
 
 #### Sentry Dsn <br>

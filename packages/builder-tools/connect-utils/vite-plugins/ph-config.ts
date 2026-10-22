@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Plugin } from "vite";
 import type { PowerhousePackage } from "@powerhousedao/config";
 import type {
+  PHConnectBranding,
   PHConnectRuntimeConfig,
   PowerhouseConfig,
 } from "@powerhousedao/shared/clis";
@@ -33,6 +34,12 @@ export type PhConfigPluginOptions = {
    * See clis/ph-cli/src/utils/cli-connect-override.ts.
    */
   cliConnectOverride?: PHConnectRuntimeConfig;
+  /**
+   * The resolved `connect.branding` (images as data URIs, null = default),
+   * computed once by the Vite config from the same ladder. Replaces the
+   * merged block, so the browser never sees a project path.
+   */
+  branding?: PHConnectBranding;
 };
 
 function readProjectPackageInfo(
@@ -101,9 +108,13 @@ export function phConfigPlugin(
   const source = {
     packages: options.packages,
     packageRegistryUrl: options.packageRegistryUrl,
-    connect: mergedConnect.branding
-      ? { ...mergedConnect, branding }
-      : mergedConnect,
+    // The resolved branding (images as data URIs) replaces the merged block;
+    // without it, the merged block less the favicon.
+    connect: options.branding
+      ? { ...mergedConnect, branding: options.branding }
+      : mergedConnect.branding
+        ? { ...mergedConnect, branding }
+        : mergedConnect,
   };
 
   const runtimeConfig = buildRuntimeConfig(source, localPackage);
@@ -141,7 +152,10 @@ export function phConfigPlugin(
     },
     // The tab shows the app's name before the app sets each page's title.
     transformIndexHtml(html) {
-      return withAppTitle(html, runtimeConfig.connect.branding?.appName);
+      return withAppTitle(
+        html,
+        runtimeConfig.connect.branding?.appName ?? undefined,
+      );
     },
     generateBundle() {
       this.emitFile({

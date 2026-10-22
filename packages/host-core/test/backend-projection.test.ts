@@ -30,13 +30,16 @@ describe("backendToDescriptor (P4.1)", () => {
 
   it("rides undoV3:false onto the descriptor", () => {
     expect(
-      backendToDescriptor("local", {}, { featureFlags: { undoV3: false } })
-        .featureFlags,
+      backendToDescriptor(
+        "local",
+        { kind: "in-process" },
+        { featureFlags: { undoV3: false } },
+      ).featureFlags,
     ).toEqual({ undoV3: false });
   });
 
-  it("defaults kind to in-process", () => {
-    expect(backendToDescriptor("x", {}).kind).toBe("in-process");
+  it("carries the declared kind (kind is required by the schema)", () => {
+    expect(backendToDescriptor("x", { kind: "worker" }).kind).toBe("worker");
   });
 
   it("maps path storage with required dataDir; refuses postgres on a provisioned backend", () => {

@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
+import { bundledPackageVersions } from "./bundled-package-versions.ts";
 
 // Dev only: the package manager loads external packages from the literal URLs
 // `/node_modules/<pkg>/browser/index.js` and `/node_modules/<pkg>/style.css`,
@@ -102,6 +103,7 @@ export default defineConfig(({ command }) => ({
     // Sentry release stays build-time so it always matches the sourcemap
     // upload tag the release workflow used.
     PH_CONNECT_SENTRY_RELEASE: JSON.stringify(version),
+    ...bundledPackageVersions,
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {

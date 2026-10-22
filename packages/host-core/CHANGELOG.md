@@ -1,3 +1,72 @@
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **connect:** a connect host's config takes output tokens in its URL fields ([14846ab254](https://github.com/powerhouse-inc/powerhouse/commit/14846ab254))
+- **host-core:** reject a $map in a non-collection field at declared validation ([4867b2726b](https://github.com/powerhouse-inc/powerhouse/commit/4867b2726b))
+- **host-core:** type $key by its map's over; no literal undefined in templates ([18ece8decf](https://github.com/powerhouse-inc/powerhouse/commit/18ece8decf))
+- **codegen:** scaffold cli/desktop attach every switchboard drive via $map ([ff607adada](https://github.com/powerhouse-inc/powerhouse/commit/ff607adada))
+- **codegen:** vetra-switchboard serves the switchboard host's drives too ([8b1675b637](https://github.com/powerhouse-inc/powerhouse/commit/8b1675b637))
+- **shared,codegen:** assistant.port slot in powerhouse.config.json ([bf1cba34da](https://github.com/powerhouse-inc/powerhouse/commit/bf1cba34da))
+- **host-core:** expectHost, a pure per-host expectation ([d51a6fa7de](https://github.com/powerhouse-inc/powerhouse/commit/d51a6fa7de))
+- **host-core:** $map / $item / $key resolve, declared checks and field typing ([42a8521faa](https://github.com/powerhouse-inc/powerhouse/commit/42a8521faa))
+- **host-core:** defineHostSchemas builders get the set's field wrappers ([6430294d2d](https://github.com/powerhouse-inc/powerhouse/commit/6430294d2d))
+- **host-core:** output-token resolver, declared/resolved host schemas, token-planned compound ([c37d42c6b6](https://github.com/powerhouse-inc/powerhouse/commit/c37d42c6b6))
+- **host-core:** type-map entry for the generic compound runner ([c0338dc219](https://github.com/powerhouse-inc/powerhouse/commit/c0338dc219))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **host-core:** @satisfies PHHost checks plugin configs; known specifiers match only their typed entry ([1b8760c3a2](https://github.com/powerhouse-inc/powerhouse/commit/1b8760c3a2))
+- **host-core:** host files may import sibling outputs.js; process. is banned; stale outputs.js fails the load ([4c42a3f4ad](https://github.com/powerhouse-inc/powerhouse/commit/4c42a3f4ad))
+- **host-core:** dead-config warnings for Connect slices whose plugin is not composed ([93d18eb43d](https://github.com/powerhouse-inc/powerhouse/commit/93d18eb43d))
+- **host-core:** zod single source for host types, kind-aware validateHost, v2 run records ([66e4bcaccd](https://github.com/powerhouse-inc/powerhouse/commit/66e4bcaccd))
+- **host-core:** output token types, ref(), and the PHHost type map ([53e77de4ce](https://github.com/powerhouse-inc/powerhouse/commit/53e77de4ce))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- splash images for the desktop loading page and Connect's home hero ([45a7e316b3](https://github.com/powerhouse-inc/powerhouse/commit/45a7e316b3))
+- project icon sets for Connect and Desktop hosts (proof of concept) ([b0fb21b1de](https://github.com/powerhouse-inc/powerhouse/commit/b0fb21b1de))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **host-core:** finish() rejects an omitted deferred value in an array slot ([839fcaa10d](https://github.com/powerhouse-inc/powerhouse/commit/839fcaa10d))
+- **host-core:** an absent optional output field omits the consuming property ([c402a8a781](https://github.com/powerhouse-inc/powerhouse/commit/c402a8a781))
+- **host-core:** forward cspRegistrySync to any runner that declares it, else warn ([85637fc108](https://github.com/powerhouse-inc/powerhouse/commit/85637fc108))
+- **host-core:** the compound runner names the project like start-run does ([36268da095](https://github.com/powerhouse-inc/powerhouse/commit/36268da095))
+- **host-core:** compound members publish their schema-parsed outputs ([f958714648](https://github.com/powerhouse-inc/powerhouse/commit/f958714648))
+- **host-core:** one-shot compound members get the ${userData}/${projectRoot} sugar ([15447e243e](https://github.com/powerhouse-inc/powerhouse/commit/15447e243e))
+- **host-core:** a compound build takes no lock and writes no run record ([c4b882fc97](https://github.com/powerhouse-inc/powerhouse/commit/c4b882fc97))
+- **host-core:** re-export the tokens by name, not export * ([432263592e](https://github.com/powerhouse-inc/powerhouse/commit/432263592e))
+- **host-core:** the process. ban scans template literals properly ([26428a702d](https://github.com/powerhouse-inc/powerhouse/commit/26428a702d))
+- **host-core:** a remote backend without a remote block fails validation ([9a0c0be688](https://github.com/powerhouse-inc/powerhouse/commit/9a0c0be688))
+- **host-core,ph-cli:** review findings for $map ([9ff3e273bd](https://github.com/powerhouse-inc/powerhouse/commit/9ff3e273bd))
+- **host-core:** token brands survive dts bundling; export the $map field types ([c5125f8c6a](https://github.com/powerhouse-inc/powerhouse/commit/c5125f8c6a))
+- **host-core:** expectHost merges drives by served slug ([c00e1587c8](https://github.com/powerhouse-inc/powerhouse/commit/c00e1587c8))
+- **host-core:** type the generic compound's host by its declared schema ([e2582ecded](https://github.com/powerhouse-inc/powerhouse/commit/e2582ecded))
+- **host-core,ph-cli:** $$ escapes survive to the verb; connect members leave SIGTERM to the compound ([28b1c77ff7](https://github.com/powerhouse-inc/powerhouse/commit/28b1c77ff7))
+- **host-core,ph-cli:** review findings on the T3 resolver ([9c8fda53a4](https://github.com/powerhouse-inc/powerhouse/commit/9c8fda53a4))
+- **host-core:** keep validateHost's dotted issue paths ([59ed092313](https://github.com/powerhouse-inc/powerhouse/commit/59ed092313))
+- **host-core:** hash the producer host name; allow a 'process' property of another object (review) ([84287f2ac8](https://github.com/powerhouse-inc/powerhouse/commit/84287f2ac8))
+- **host-core:** a partial owned value Connect already serves is not dead config ([598cc8b859](https://github.com/powerhouse-inc/powerhouse/commit/598cc8b859))
+- **host-core:** type the shared tsdown options as UserConfig ([1594b753b7](https://github.com/powerhouse-inc/powerhouse/commit/1594b753b7))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/host-core to align it with other projects, there were no code changes.

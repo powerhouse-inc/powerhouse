@@ -18,6 +18,9 @@
       "path": "../document-model"
     },
     {
+      "path": "../host-core"
+    },
+    {
       "path": "../shared"
     }
   ]

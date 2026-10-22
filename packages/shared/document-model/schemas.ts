@@ -744,18 +744,14 @@ export const ConfigEntrySchema = z.object({
   default: z.string().optional(),
 });
 
-// PWA / service-worker overrides a package contributes to a Connect build.
-// The `z.ZodType<PHConnectPwa>` annotation pins the schema to the TS type in
-// packages/shared/clis/types.ts, so drift between them is a compile error;
-// the JSON-schema fragment in packages/shared/connect/schema-fragments.ts is
-// the remaining hand-kept mirror. Kept on the manifest (not a separate file)
-// so it ships in dist/powerhouse.manifest.json and the Connect build can read
-// it without executing package code.
+// PWA / service-worker overrides a package contributes to a Connect build: a
+// hand-kept mirror of `connectPwaSchema` (shared/connect/connect-config-schema.ts),
+// kept on the manifest so the Connect build reads it without running package
+// code. `z.ZodType<PHConnectPwa>` makes a changed field a compile error, but a
+// new optional field must be added here by hand.
 //
-// Every fixed-shape object below is strict (z.strictObject): an unknown key —
-// e.g. a `manifest.nam` typo — fails the build loudly instead of being
-// silently dropped, matching the JSON schema's `additionalProperties: false`.
-// Only the open MIME/header maps (z.record) accept arbitrary keys by design.
+// Objects are strict, so an unknown key (a `manifest.nam` typo) fails the build
+// instead of being dropped; only the open MIME/header maps (z.record) are not.
 const PwaUrlPatternSchema = z.union([
   z.string(),
   z

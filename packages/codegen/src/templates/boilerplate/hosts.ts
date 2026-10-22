@@ -39,9 +39,23 @@ export default {
 };
 \`\`\`
 
-Rules: the only legal import is the project's powerhouse.config.json; the
-export must survive a JSON round trip (no functions); \`ph <host-name>\` is
-sugar for \`ph run <host-name>\` (built-in commands win name collisions).
+Rules: a host.js may import the project's powerhouse.config.json and its
+sibling hosts' \`../<host>/host.js\` and generated \`../<host>/outputs.js\`,
+nothing else; \`process.\` is banned (read the environment with
+\`{ $env: "NAME" }\`); the export must survive a JSON round trip (no
+functions); \`ph <host-name>\` is sugar for \`ph run <host-name>\` (built-in
+commands win name collisions).
+
+Another host's outputs (its URLs, drive ids, …) are read with output tokens,
+e.g. \`{ $output: { host: "switchboard", path: ["endpoints", "graphql"] } }\`,
+resolved when the host starts (the producer must be running, or a member of
+the same compound). \`{ $map: { over, to } }\` renders a list from a
+collection output — e.g. one remote drive per drive the switchboard serves,
+with \`{ $key: true }\` and \`{ $item: ["url"] }\` naming each element.
+\`ph generate hosts\` writes each producer's
+\`outputs.js\` (typed shortcuts: \`switchboard.endpoints.graphql\`) and
+\`types.d.ts\`; \`/** @satisfies {PHHost} */\` plus \`tsc -p hosts\` type-check
+every host file.
 
 Scaffolded hosts: \`connect\` (studio dev server), \`switchboard\` (API/reactor
 server), \`vetra\` (compound: both, dev mode — what \`ph vetra\` runs),
@@ -58,7 +72,7 @@ runs — one field, derived from the backend topology:
 |---|---|---|---|
 | \`connect\` (standalone) | one \`worker\` | \`worker\` | the tab's own reactor in a SharedWorker (PGlite in-worker) |
 | \`cli\` → connect member | one \`remote\` | \`remote\` | NO local reactor — a pure client to the switchboard over GraphQL (no PGlite) |
-| \`desktop\` → connect member | — (serverDrives remote drive) | router/local | the tab's reactor PLUS a SYNCHRONIZED remote drive (local replica, keeps PGlite) |
+| \`desktop\` → connect member | one \`worker\` + \`$map\` remote drives | \`worker\` | the tab's reactor PLUS SYNCHRONIZED remote drives (local replica, keeps PGlite) |
 
 The lesson the \`cli\` vs \`desktop\` split teaches: a **remote client** proxies
 to the switchboard and stores nothing locally (no PGlite); a **synchronized
@@ -68,7 +82,8 @@ The \`in-process\` mode (main-thread reactor) is the fourth option — set one
 
 The single project drive (\`powerhouse\`) is OWNED by the switchboard; standalone
 Connect has its own local copy; the \`cli\`/\`desktop\` compounds re-point Connect
-at the switchboard's.
+at the switchboard's — every drive it serves, plugin-created ones (Workflows)
+included, by \`$map\` over its \`drives\` output.
 `;
 
   const connectHost = `// @ts-check
@@ -76,6 +91,7 @@ at the switchboard's.
 // runtime behavior lives in the runner module named below.
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-connect",
 
@@ -92,14 +108,20 @@ export default {
     // its \`config\` here. Removing the entry turns those toggles OFF (live
     // today — no add-drive affordance). NOTE: it does not yet unmount the
     // chrome UI itself; gating the shell on this plugin ("go headless / swap
-    // your own shell") is on the roadmap. Branding is NOT set here — it stays
-    // top-level connect.branding.
+    // your own shell") is on the roadmap. The explorer's icons (drive
+    // fallbacks, folder, document, per-type documents) and the home screen's
+    // background (its layers, from connect.home) are this plugin's too.
+    // Branding is NOT a plugin: it is the core connect.branding block (appName,
+    // icon, loader; null = default), handed to the runtime whole in
+    // \`config\`.
     plugins: [
       {
         module: "@powerhousedao/connect/plugins/generic",
         config: {
           allowAddDrive: config.connect?.drives?.allowAddDrive,
           sections: config.connect?.drives?.sections,
+          icons: config.connect?.drives?.icons,
+          homeBackground: config.connect?.home?.background,
         },
       },
     ],
@@ -132,6 +154,7 @@ export default {
   const switchboardHost = `// @ts-check
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-switchboard",
 
@@ -178,6 +201,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
+/** @satisfies {PHHost} */
 export default {
   name: "vetra",
 
@@ -195,10 +219,12 @@ export default {
           { module: "@powerhousedao/vetra-studio/switchboard", verbs: ["dev"] },
         ],
       },
-      // The studio drives, declared (projectHash keeps today's ids):
+      // The switchboard host's own drives plus the studio drives, declared
+      // (projectHash keeps today's ids):
       reactor: {
         ...switchboard.reactor,
         drives: [
+          ...(switchboard.reactor.drives ?? []),
           { slug: "vetra", name: "Vetra", projectHash: true, preferredEditor: "vetra-drive-app" },
           { slug: "vetra-preview", name: "Vetra Preview", projectHash: true },
         ],
@@ -211,6 +237,15 @@ export default {
         plugins: [
           ...connect.runner.plugins,
           { module: "@powerhousedao/vetra-studio/connect", verbs: ["dev"] },
+          // The browser half of workflows: loads Workflow Studio and attaches
+          // the Workflows drive the switchboard member serves (its output,
+          // so the compound starts that member first).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
+          },
         ],
       },
     },
@@ -222,21 +257,19 @@ export default {
 // The desktop shape: a production switchboard next to the BUILT Connect,
 // supervised by the desktop runner (@powerhousedao/desktop — run/serve are
 // the generic compound; \`dev\` opens a native shell window; \`build\` stages
-// the shippable stack). Run \`ph run connect build\` once, then
+// the shippable stack). Run \`ph run connect build\`, then \`ph build\`
+// (the server loads the project's document models from dist/, which a
+// Connect build empties), then
 // \`ph run desktop\`. At \`run\`, each member uses its own default mode below;
 // \`ph run desktop <verb>\` forwards uniformly. Members derive from the sibling
-// hosts (full inclusion); the server's drive list is hoisted once and the
-// connect member attaches it as REMOTES (one declaration, two projections).
+// hosts (full inclusion); the server member serves the switchboard host's
+// drives, and the connect member attaches every drive the server reports
+// (declared and plugin-created) as REMOTES, by \`$map\` over its outputs.
 import config from "../../powerhouse.config.json" with { type: "json" };
 import switchboard from "../switchboard/host.js";
 import connect from "../connect/host.js";
 
-// Declared once: the server member serves these locally; the connect member
-// attaches the SAME list as remote drives (a compound's Connect must not
-// duplicate-declare the local drives the server owns).
-const serverPort = switchboard.runner.port;
-const serverDrives = [{ slug: "powerhouse", name: "${projectName}" }];
-
+/** @satisfies {PHHost} */
 export default {
   name: "desktop",
 
@@ -274,11 +307,14 @@ export default {
   children: {
     "desktop-switchboard": {
       host: "switchboard",
-      runner: { plugins: [...switchboard.runner.plugins] },
+      // (runner key-merges over the switchboard host's own: its plugins are
+      // inherited.)
       reactor: {
         protocol: switchboard.reactor.protocol,
         backends: {
           main: {
+            // the switchboard's own reactor; backend kind is required
+            kind: "in-process",
             // The user's .ph tree, same names as the project's: \${userData}
             // resolves at the runner — the project root in the CLI, the OS
             // profile dir in a shell (PH_USER_DATA_DIR). The reactor store is
@@ -291,7 +327,8 @@ export default {
             packages: { dynamic: true },
           },
         },
-        drives: serverDrives,
+        // the reactor section is a full statement: keep the host's drives
+        drives: switchboard.reactor.drives,
       },
     },
     "desktop-connect": {
@@ -301,16 +338,30 @@ export default {
       runner: {
         defaultVerb: "serve",
         port: config.studio?.port ?? 3000,
-        plugins: [...connect.runner.plugins],
+        plugins: [
+          ...connect.runner.plugins,
+          // Workflow Studio over the server's Workflows drive (its output).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
+          },
+        ],
       },
-      // Attach the server's drives as remotes (replaces the old implicit
-      // projectDrivesIntoConnect flag with legible derivation):
+      // Attach every drive the server member serves as a remote, by the URL
+      // it reports (key-sorted). The Workflows drive is among them; the
+      // workflows plugin above names the same URL, and Connect attaches a
+      // URL once. (After \`ph generate hosts\`, \`{ $item: ["url"] }\` is
+      // switchboard.drives.$item.url from ../switchboard/outputs.js.)
       reactor: {
         ...connect.reactor,
-        drives: serverDrives.map((d) => ({
-          slug: d.slug,
-          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${d.slug}\` },
-        })),
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+          },
+        },
       },
     },
   },
@@ -326,13 +377,13 @@ export default {
 // Requires @powerhousedao/clint in devDependencies (the scaffold includes it).
 import config from "../../powerhouse.config.json" with { type: "json" };
 
+/** @satisfies {PHHost} */
 export default {
   name: "${projectName}-assistant",
 
   runner: {
     module: "@powerhousedao/clint/mastra-runner",
-    port: 4910,
-    workdir: "\${userData}/assistant",
+    port: config.assistant?.port ?? 4910, // referenced — single value store
   },
 
   profile: {
@@ -348,17 +399,23 @@ export default {
     backends: {
       switchboard: {
         kind: "remote",
-        remote: { host: "switchboard" }, // sibling host reference; use
-                                         // { url: "https://…/graphql" } for
-                                         // an external switchboard
+        // The running switchboard's GraphQL endpoint, read from its live
+        // outputs (after \`ph generate hosts\`: switchboard.endpoints.graphql
+        // from ../switchboard/outputs.js). A literal URL attaches to an
+        // external switchboard.
+        remote: {
+          url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+        },
       },
     },
     protocol: config.connect?.reactor ?? {},
   },
 
   config: {
-    // model: "anthropic/claude-sonnet-4-5", // enable for real LLM responses
-    //                                        (provider API key via env)
+    // Enable for real LLM responses. The key is read from the environment
+    // when the host starts (\`ph run assistant\` fails naming it when unset):
+    // model: "openrouter/anthropic/claude-sonnet-4.5",
+    // apiKey: { $env: "OPENROUTER_API_KEY" },
     prompts: { skillsDir: "agents", outDir: "dist/skills" },
   },
 };
@@ -373,13 +430,9 @@ export default {
 // a SYNCHRONIZED remote drive — a local replica, which keeps PGlite by
 // design. remote client = no local store; synchronized remote drive = local
 // store.) Standalone \`ph run connect\` is untouched — still a local reactor.
-import switchboard from "../switchboard/host.js";
+import connect from "../connect/host.js";
 
-// The drive(s) the switchboard serves, and its port — the single source
-// Connect's remote attachment derives from.
-const serverPort = switchboard.runner.port;
-const serverDrives = switchboard.reactor.drives ?? [];
-
+/** @satisfies {PHHost} */
 export default {
   name: "cli",
 
@@ -388,10 +441,8 @@ export default {
   runner: {
     module: "@powerhousedao/host-core/runners/compound",
   },
-
-  config: {
-    startOrder: ["cli-switchboard", "cli-connect"],
-  },
+  // No startOrder: the cli-connect member's output tokens start the
+  // switchboard first (\`ph run cli --explain outputs\` prints the order).
 
   children: {
     // Inherits the switchboard host wholesale — including its drive.
@@ -399,21 +450,46 @@ export default {
 
     // Connect as a remote client (full-statement reactor override; the
     // standalone connect host's own reactor is untouched). The lone remote
-    // backend selects reactorClient "remote"; the remote default drive(s)
-    // give the client the Switchboard URL to proxy to.
+    // backend selects reactorClient "remote"; the remote drives give the
+    // client the Switchboard URL to proxy to.
     "cli-connect": {
       host: "connect",
+      runner: {
+        plugins: [
+          ...connect.runner.plugins,
+          // Workflow Studio over the server's Workflows drive (its output).
+          {
+            module: "@powerhousedao/connect/plugins/workflows",
+            config: {
+              drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+            },
+          },
+        ],
+      },
+      // Every URL is the switchboard member's output (what it actually
+      // bound), so the compound starts it first.
       reactor: {
+        // the override is a full statement: keep the connect host's protocol
+        protocol: connect.reactor.protocol,
         backends: {
           sb: {
             kind: "remote",
-            remote: { url: \`http://127.0.0.1:\${serverPort}/graphql\` },
+            remote: {
+              url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } },
+            },
           },
         },
-        drives: serverDrives.map((drive) => ({
-          slug: drive.slug,
-          remote: { url: \`http://127.0.0.1:\${serverPort}/d/\${drive.slug}\` },
-        })),
+        // Every drive the switchboard member actually serves — its declared
+        // ones and the ones its plugins create (workflows) — by the URL it
+        // reports, in key-sorted order. (After \`ph generate hosts\`,
+        // \`{ $item: ["url"] }\` is switchboard.drives.$item.url from
+        // ../switchboard/outputs.js.)
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: { $item: ["url"] } } },
+          },
+        },
       },
     },
   },

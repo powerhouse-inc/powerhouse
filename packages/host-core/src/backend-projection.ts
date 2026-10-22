@@ -1,8 +1,9 @@
 import type {
   ReactorBackend,
+  ReactorBackendKind,
   ReactorConfig,
   ReactorProtocol,
-} from "./reactor-config.js";
+} from "./host-schemas.js";
 
 /**
  * Phase 4 (track R): project named host backends onto reactor-monitor's
@@ -71,7 +72,7 @@ export function backendToDescriptor(
   protocol?: ReactorProtocol,
 ): ProjectedDescriptor {
   const descriptor: ProjectedDescriptor = {
-    kind: backend.kind ?? "in-process",
+    kind: backend.kind,
     name,
   };
   if (descriptor.kind === "remote") {
@@ -112,7 +113,7 @@ export function backendsToDescriptors(
   );
 }
 
-const LOCAL_KINDS = new Set(["in-process", "worker", undefined]);
+const LOCAL_KINDS = new Set<ReactorBackendKind>(["in-process", "worker"]);
 
 /**
  * Structural multi-reactor (phase 4): true when the block names BOTH a local

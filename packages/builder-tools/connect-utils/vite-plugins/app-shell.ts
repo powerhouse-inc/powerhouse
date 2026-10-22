@@ -1,9 +1,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, sep } from "node:path";
-import type { Alias, Plugin, ResolvedConfig } from "vite";
+import type {
+  Alias,
+  ErrorPayload,
+  Plugin,
+  ResolvedConfig,
+  ViteDevServer,
+} from "vite";
 import { createServer } from "vite";
 import { resolvePackage } from "../helpers.js";
 import { withHostStylesheet } from "./host-stylesheet.js";
+import { withNodeDedupe } from "./node-dedupe.js";
+import { replaceShellLoader, type ProjectLoader } from "./project-brand.js";
 
 /** On the prerendered shell's elements; marks an index.html that has it. */
 export const APP_SHELL_MARKER = "data-ph-shell";
@@ -242,12 +250,21 @@ export type ConnectAppShellOptions = {
   routeAliases?: Alias[];
   /** The project's routes folder; dev renders the shell again when it changes. */
   routesDir?: string;
+  /** The project's loading image, in place of the shell's logo. */
+  loader?: ProjectLoader;
   /** The host's stylesheet, which the page's build adds to the project's. */
   hostStylesheet?: string;
 };
 
 // The first page waits this long for the project's shell; later ones have it.
 const DEV_SHELL_WAIT_MS = 10_000;
+
+// The packages whose code the shell renders; a workspace links them, so only
+// an installed Connect needs them named.
+const CONNECT_PACKAGES = [
+  "@powerhousedao/connect",
+  "@powerhousedao/connect-core",
+];
 
 type ShellRenderer = {
   renderProjectShells: (stylesheet: string, css?: string) => Promise<AppShells>;
@@ -279,23 +296,80 @@ async function renderProjectAppShells(
     // server, whose node_modules/.vite deps it would otherwise rewrite.
     cacheDir: join(projectRoot, "node_modules/.vite-ph-prerender"),
     optimizeDeps: { noDiscovery: true, include: [], entries: [] },
-    ssr: { optimizeDeps: { noDiscovery: true, include: [] } },
+    ssr: {
+      optimizeDeps: { noDiscovery: true, include: [] },
+      // Through Vite, not Node: their code reads import.meta.env, which only
+      // Vite defines. Installed from npm they'd be external, and Node's is undefined.
+      noExternal: CONNECT_PACKAGES,
+    },
   });
   try {
-    const renderer = (await server.ssrLoadModule(
-      "@powerhousedao/connect/prerender",
-    )) as ShellRenderer;
-    // The stylesheet index.html links, which Tailwind builds for the shell's classes.
-    const stylesheet = join(projectRoot, "style.css");
-    const css = withHostStylesheet(
-      readFileSync(stylesheet, "utf8"),
-      stylesheet,
-      hostStylesheet,
+    // What the server externalizes loads through Node: dedupe there too.
+    return await withNodeDedupe(
+      projectRoot,
+      config.resolve.dedupe,
+      async () => {
+        const renderer = (await server.ssrLoadModule(
+          "@powerhousedao/connect/prerender",
+        )) as ShellRenderer;
+        // The stylesheet index.html links, which Tailwind builds for the shell's classes.
+        const stylesheet = join(projectRoot, "style.css");
+        const css = withHostStylesheet(
+          readFileSync(stylesheet, "utf8"),
+          stylesheet,
+          hostStylesheet,
+        );
+        try {
+          return await renderer.renderProjectShells(stylesheet, css);
+        } catch (error) {
+          throw withSourceLocations(error, (stack) =>
+            server.ssrRewriteStacktrace(stack),
+          );
+        }
+      },
     );
-    return await renderer.renderProjectShells(stylesheet, css);
   } finally {
     await server.close();
   }
+}
+
+const RENDER_LOCATION = /\(at (\S+) \((.+?):(\d+):(\d+)\)\)/g;
+
+/** The prerender's error with each `(at <component> (<file>:<line>:<col>))` in
+ * its message mapped back to the source, as React reports the transformed code. */
+export function withSourceLocations(
+  error: unknown,
+  rewrite: (stack: string) => string,
+): unknown {
+  if (!(error instanceof Error)) return error;
+  const before = error.message;
+  const after = before.replace(
+    RENDER_LOCATION,
+    (found, name, file, line, column) => {
+      const frame = /^ {4}at .*?\(?(\S+?):(\d+):(\d+)\)?$/.exec(
+        rewrite(`    at ${name} (${file}:${line}:${column})`),
+      );
+      return frame
+        ? `(at ${name} (${frame[1]}:${frame[2]}:${frame[3]}))`
+        : found;
+    },
+  );
+  if (after !== before) {
+    error.message = after;
+    if (error.stack) error.stack = error.stack.replace(before, after);
+  }
+  return error;
+}
+
+/** Vite's error overlay over the page, for a failure no module request reports. */
+export function withErrorOverlay(
+  html: string,
+  err: ErrorPayload["err"],
+  base: string,
+) {
+  const payload = JSON.stringify(err).replaceAll("<", "\\u003c");
+  const script = `<script type="module">import { ErrorOverlay } from "${base}@vite/client";document.body.appendChild(new ErrorOverlay(${payload}));</script>`;
+  return html.replace("</body>", `${script}</body>`);
 }
 
 const sourceText = (source: string | Uint8Array) =>
@@ -311,6 +385,7 @@ export function connectAppShellPlugin(
     appName,
     routeAliases,
     routesDir,
+    loader,
     hostStylesheet,
   }: ConnectAppShellOptions = {},
 ): Plugin {
@@ -320,6 +395,21 @@ export function connectAppShellPlugin(
   let base = "/";
   let isBuild = true;
   let config: ResolvedConfig | undefined;
+  // The project's loader in each shell's logo slot, under the deploy base.
+  const withLoader = (from: AppShells): AppShells => {
+    if (!loader) return from;
+    const out: AppShells = {};
+    for (const [name, shell] of Object.entries(from) as [
+      AppShellVariant,
+      AppShell,
+    ][]) {
+      out[name] = {
+        ...shell,
+        body: replaceShellLoader(shell.body, loader, base),
+      };
+    }
+    return out;
+  };
   // A project's shells go in the built index.html, so they're rendered after bundling.
   const fromRoutes = () => isBuild && !!routeAliases;
   const shell = () => {
@@ -329,20 +419,38 @@ export function connectAppShellPlugin(
   // Dev with routes: the project's shells, rendered at start and on route edits.
   let devShells: Promise<AppShells> | undefined;
   let devRender: ReturnType<typeof setTimeout> | undefined;
+  // The build fails on a shell that can't render, so dev shows it on the page.
+  let devShellError: ErrorPayload["err"] | undefined;
+  let devServer: ViteDevServer | undefined;
   const renderDevShells = () => {
     if (!config || !routeAliases) return;
     const logger = config.logger;
+    // Not the last render's: a page loaded meanwhile gets a failure over the socket.
+    devShellError = undefined;
     devShells = renderProjectAppShells(
       projectRoot,
       config,
       routeAliases,
       hostStylesheet,
-    ).catch((error: unknown) => {
-      logger.warn(
-        `[connect] the loading shell failed to render from the project's routes: ${String(error)}`,
-      );
-      return {};
-    });
+    ).then(
+      (rendered) => {
+        devShellError = undefined;
+        return withLoader(rendered);
+      },
+      (error: unknown) => {
+        const cause = error instanceof Error ? error : new Error(String(error));
+        devShellError = {
+          message: `The loading shell failed to render from the project's routes, and the build will fail on it:\n${cause.message}`,
+          stack: cause.stack ?? "",
+          plugin: "ph-connect-app-shell",
+        };
+        logger.error(`[connect] ${devShellError.message}`, {
+          timestamp: true,
+        });
+        devServer?.ws.send({ type: "error", err: devShellError });
+        return {};
+      },
+    );
   };
   const devShell = async () => {
     if (!devShells) return undefined;
@@ -360,6 +468,7 @@ export function connectAppShellPlugin(
     name: "ph-connect-app-shell",
     configureServer(server) {
       if (!routeAliases) return;
+      devServer = server;
       renderDevShells();
       const stylesheet = join(projectRoot, "style.css");
       const rerender = (file: string) => {
@@ -379,7 +488,7 @@ export function connectAppShellPlugin(
       config = resolved;
       base = resolved.base;
       isBuild = resolved.command === "build";
-      shells = readAppShells(projectRoot);
+      shells = withLoader(readAppShells(projectRoot));
       shellPlugins = readShellPlugins(projectRoot);
       variant = appShellVariant(composition, shellPlugins);
     },
@@ -390,12 +499,15 @@ export function connectAppShellPlugin(
         // Never Connect's prebuilt shell for a project with its own layout.
         const current = !isBuild && routeAliases ? await devShell() : shell();
         // Dev keeps blocking CSS for HMR.
-        return current
+        const page = current
           ? injectAppShell(html, current, base, {
               deferStyles: isBuild,
               appName,
             })
           : html;
+        return devShellError
+          ? withErrorOverlay(page, devShellError, base)
+          : page;
       },
     },
     generateBundle: {
@@ -404,11 +516,13 @@ export function connectAppShellPlugin(
       async handler(_options, bundle) {
         if (!isBuild) return;
         if (fromRoutes() && config && routeAliases) {
-          shells = await renderProjectAppShells(
-            projectRoot,
-            config,
-            routeAliases,
-            hostStylesheet,
+          shells = withLoader(
+            await renderProjectAppShells(
+              projectRoot,
+              config,
+              routeAliases,
+              hostStylesheet,
+            ),
           );
           const index = bundle["index.html"];
           const current = shells[variant];

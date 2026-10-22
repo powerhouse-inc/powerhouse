@@ -1,7 +1,7 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-22T15:08:29.039Z
-> Total Documents: 121
+> Generated: 2026-10-21T15:32:59.929Z
+> Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
 
@@ -705,7 +705,7 @@ State is _derived_. If you want "the current list of done todos," you fold the l
 
 Once the log exists, a lot of hard problems become easy:
 
-- **Undo / redo** — append an operation that retracts the last one.
+- **Undo / redo** — pop (or invert) the last operation.
 - **<Term>Time Travel Debugging</Term>** — fold to any index to see the document as it was.
 - **Audit trails** — every change has an actor, a timestamp, and a hash.
 - **Derived read models** — a processor subscribes to the stream and maintains a search index, or a counter, or a cache.
@@ -3613,19 +3613,14 @@ enum PropagationMode {
 }
 ```
 
-### `NewDocumentOptions`
+### `CreateDocumentOptions`
 
-Options for `newDocument()` and `createEmpty()`.
+Options for `createEmpty()`.
 
 ```typescript
-type NewDocumentOptions = {
+type CreateDocumentOptions = {
   parentIdentifier?: string; // id or slug of parent document
   documentModelVersion?: number; // defaults to latest
-  protocolVersions?: { [protocol: string]: number }; // merged over the selection
-  signaturePolicy?: SignaturePolicy; // overrides the client's default
-  initialState?: Partial<PHBaseState>; // passed to the model's createDocument
-  name?: string;
-  id?: string; // kept only under the legacy policy
 };
 ```
 
@@ -4057,23 +4052,9 @@ In React, prefer the [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) 
 
 All write methods internally create jobs and wait for them to reach `READ_READY` before resolving (except `executeAsync` which returns immediately).
 
-### `newDocument`
-
-Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `create` or `drives.addFile`.
-
-```typescript
-newDocument<TDocument extends PHDocument = PHDocument>(
-  documentType: string,
-  options?: NewDocumentOptions,
-  signal?: AbortSignal,
-): Promise<TDocument>
-```
-
----
-
 ### `create`
 
-Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument).
+Create a document from a full `PHDocument` object.
 
 ```typescript
 create<TDocument extends PHDocument = PHDocument>(
@@ -4095,12 +4076,12 @@ create<TDocument extends PHDocument = PHDocument>(
 
 ### `createEmpty`
 
-Create the document [`newDocument`](#newdocument) builds.
+Create an empty document of a given type.
 
 ```typescript
 createEmpty<TDocument extends PHDocument>(
   documentModelType: string,
-  options?: NewDocumentOptions,
+  options?: CreateDocumentOptions,
   signal?: AbortSignal,
 ): Promise<TDocument>
 ```
@@ -4110,7 +4091,7 @@ createEmpty<TDocument extends PHDocument>(
 | Name                | Type                    | Required | Description                            |
 | ------------------- | ----------------------- | -------- | -------------------------------------- |
 | `documentModelType` | `string`                | Yes      | e.g. `"powerhouse/todo-list"`          |
-| `options`           | `NewDocumentOptions`    | No       | Parent identifier, model version and the rest of `newDocument`'s options |
+| `options`           | `CreateDocumentOptions` | No       | Parent identifier and/or model version |
 | `signal`            | `AbortSignal`           | No       | Cancel the request                     |
 
 ---
@@ -4144,8 +4125,6 @@ execute<TDocument extends PHDocument>(
 | `signal`             | `AbortSignal` | No       | Cancel the request                         |
 
 **Returns** the updated document after all actions are applied and read models are updated.
-
-On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond.
 
 **Example:**
 
@@ -4222,85 +4201,6 @@ setPreferredEditor(
 | `preferredEditor`    | `string \| null` | Yes      | Editor id, or `null` to clear it  |
 | `branch`             | `string`         | No       | Defaults to `"main"`              |
 | `signal`             | `AbortSignal`    | No       | Cancel the request                |
-
----
-
-### `undo`
-
-Undo the last applied operation of a scope and wait for completion.
-
-```typescript
-undo<TDocument extends PHDocument = PHDocument>(
-  documentIdentifier: string,
-  scope?: string,
-  branch?: string,
-  signal?: AbortSignal,
-): Promise<TDocument>
-```
-
-**Parameters:**
-
-| Name                 | Type          | Required | Description            |
-| -------------------- | ------------- | -------- | ---------------------- |
-| `documentIdentifier` | `string`      | Yes      | Document id or slug    |
-| `scope`              | `string`      | No       | Defaults to `"global"` |
-| `branch`             | `string`      | No       | Defaults to `"main"`   |
-| `signal`             | `AbortSignal` | No       | Cancel the request     |
-
-On a base-reducer 3 document the client resolves the target with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer; with nothing to undo it throws before submitting. The `RETRACT` names the row the call saw, so an edit landing in between is not undone, and a target retracted or gone by then fails the write with `RetractionRefusedError` without resolving again. On base-reducer 1 and 2 it submits `UNDO`. A submitted `UNDO` or `REDO` on base-reducer 3 is refused with `SubmittedUndoRefusedError`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
-
----
-
-### `redo`
-
-Redo the last undo of a scope and wait for completion. Same parameters as [`undo`](#undo).
-
-```typescript
-redo<TDocument extends PHDocument = PHDocument>(
-  documentIdentifier: string,
-  scope?: string,
-  branch?: string,
-  signal?: AbortSignal,
-): Promise<TDocument>
-```
-
-On base-reducer 3 the client resolves the last live retraction with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer, under `undo`'s race rule. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
-
----
-
-### `undoRedoTargets`
-
-The rows a base-reducer 3 `undo` and `redo` of a scope would retract now, resolved by the reactor through the read gate. A scope the subject may not read has none; below base-reducer 3 there are none.
-
-```typescript
-undoRedoTargets(
-  documentIdentifier: string,
-  scope?: string, // defaults to "global"
-  view?: ViewFilter, // branch and subject
-  signal?: AbortSignal,
-): Promise<UndoRedoTargets>
-
-type UndoRedoTargets = { undoTarget?: string; redoTarget?: string };
-```
-
----
-
-### `undoRedoAvailability`
-
-Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo).
-
-```typescript
-undoRedoAvailability(
-  documentIdentifier: string,
-  scope?: string,
-  branch?: string,
-  signal?: AbortSignal,
-): Promise<UndoRedoAvailability>
-
-type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
-```
-
-Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`. A scope the caller may not read reports neither.
 
 ---
 
@@ -4597,7 +4497,7 @@ moveNode(
 
 ### `copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document, which keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
+Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document.
 
 ```typescript
 copyNode(
@@ -4605,7 +4505,6 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
-  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<DocumentDriveDocument>
 ```
 
@@ -4811,7 +4710,7 @@ const reactor = await new ReactorBuilder()
 | `withDocumentModelSources(sources)` | Register document-model sources: live modules, importable `{ filePath }` files, or importable `{ packageName }` packages |
 | `withUpgradeManifests(manifests)` | Register [upgrade manifests](/academy/Reference/Reactor/DocumentModelRegistry) for document model versioning |
 | `withLogger(logger)`              | Set the logger (defaults to `ConsoleLogger`)                             |
-| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization) and [Undo and redo](/academy/Reference/Reactor/UndoRedo)) |
+| `withExecutorConfig(config)`      | Configure `maxConcurrency`, `jobTimeoutMs`, `signatureVerification` (see [Signing](/academy/Build/BuildingUserExperiences/Authorization/Signing#signature-verification)), and the reactor `featureFlags` (see [Authorization](/academy/Reference/Reactor/Authorization)) |
 | `withWriteCacheConfig(config)`    | Configure `maxDocuments` and `ringBufferSize` for the write cache        |
 | `withMigrationStrategy(strategy)` | Set to `"auto"` to run database migrations on build                      |
 | `withKysely(kysely)`              | Provide a custom Kysely database instance (defaults to in-memory PGlite) |
@@ -4888,8 +4787,6 @@ const models = await reactor.getDocumentModels(); // PagedResults<DocumentModelM
 ```
 
 `getDocumentModels(namespace?, paging?, signal?)` returns `Promise<PagedResults<DocumentModelModule>>`. `getOperations` accepts optional `view`, `OperationFilter`, and paging, and returns `Promise<Record<string, PagedResults<Operation>>>` — index it by scope.
-
-`resolveUndoRedo(documentId, scope, branch?, signal?)` returns `{ undoTarget?, redoTarget? }`: the action ids a base-reducer 3 undo and redo on that scope would retract. The reactor keeps the targets per scope and advances them over the operations stored since the last call, so a call after an edit reads the new operations, not the whole history; a `RETRACT`, a rewind or a row a retraction names makes it derive the scope again. Like the other `IReactor` reads it is not read-gated.
 
 ### Writing documents
 
@@ -6449,13 +6346,13 @@ if (!result.success && result.error) {
 
 ### Stored protocol versions
 
-After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with, per document type. If the reactor does not run one of them, for example after a rollback to an older build, or a registered model cannot run its stored version, such as a base-reducer 3 document whose model's reducer is not built by `createReducer`, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version, documentType? }` entries, with `documentType` set when only that model cannot run the version, and `documents` is how many stored documents need them. A type whose model is loaded after start is checked when it loads: a refusal is logged and emitted as the `STORED_MODEL_REFUSED` event, and its documents stay read-only.
+After migrations, `buildModule()` reads the protocol versions (`header.protocolVersions`, such as `base-reducer` or `signature`) that stored documents were created with. If the reactor does not run one of them, for example after a rollback to an older build, it throws `UnsupportedStoredProtocolError` before any executor starts. The error's `versions` lists the unsupported `{ protocol, version }` pairs, and `documents` is how many stored documents need them.
 
 ```typescript
 withUnsupportedStoredDocuments(mode: "refuse" | "read-only"): this
 ```
 
-`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct pair of document type and creation versions rather than reading every document.
+`"refuse"` is the default. `"read-only"` builds anyway and logs a warning. Every job into those documents, and every operation received for them, is then refused. The check probes an index once per distinct set of creation versions rather than reading every document.
 
 | Host        | Setting                                                                       |
 | ----------- | ----------------------------------------------------------------------------- |
@@ -6706,7 +6603,7 @@ Errors reach your code from the reactor through three channels:
 This page is the consolidated error reference for the reactor. For attachment errors see [Attachment service](/academy/Reference/Reactor/AttachmentService); for sync-channel behavior see [Synchronization](/academy/Reference/Reactor/Synchronization).
 
 **INFO:**
-Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `RetractionRefusedError`, `ReservedActionError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
+Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
 
 
 ## Job failures
@@ -6768,8 +6665,6 @@ try {
 ```
 
 Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
-
-`RetractionRefusedError` and `ReservedActionError` are exported, but reach you here the same way, as a plain `Error` carrying the message. Both are terminal, so the job fails without a retry. See [Undo and redo](/academy/Reference/Reactor/UndoRedo#errors).
 
 #### `executeBatch` throws `BatchJobFailedError`
 
@@ -6975,7 +6870,7 @@ try {
 | Mechanism | Applies to | Cross-boundary safe |
 | --- | --- | --- |
 | `err.name === "AbortError"` | aborted reactor calls (DOM-compatible name) | Yes |
-| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError`, `RetractionRefusedError`, `ReservedActionError` | Yes (name-based) |
+| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError` | Yes (name-based) |
 | `err instanceof X` | `EventBusAggregateError`, `ChannelError`, `SyncOperationAggregateError`, attachment errors | No |
 | `err.name === "X"` | any class above (all set `this.name`) | Yes |
 | `isDriveAuthError(err)` | un-rewrapped GraphQL-channel errors only | only in-channel |
@@ -7777,9 +7672,7 @@ Four actions write the `auth` scope:
 | `REMOVE_GRANT`     | Removes a grant by `id`                           |
 | `MOVE_GRANT`       | Reorders a grant, which can change the outcome    |
 
-`UNDO`, `REDO` and `RETRACT` are refused on the `auth` scope.
-
-A policy grants or refuses `RETRACT` like any other operation type. It cannot condition on who wrote the retracted operation. A denied `RETRACT` retracts nothing; see [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+`UNDO` and `REDO` are refused on the `auth` scope.
 
 The creators are exported from `document-model` (and `@powerhousedao/shared/document-model`) alongside `Grant`:
 
@@ -7837,10 +7730,6 @@ Three rules are easy to miss:
 - **An allow on `execute` confers `read` of that scope.** A grant of `{ can: "execute", scope: "*" }` therefore publishes every domain scope to whoever it names. Grant administration on `scope: "auth"` rather than `"*"`.
 - **A grant that cannot apply is skipped, not honoured.** Below `authGroups` a `{ group }` principal never matches; below `authConditions` a `where` clause never holds. Both fail closed, so a policy relying on a conditional *deny* is weaker than it reads on a reactor that cannot evaluate it.
 - **The creator keeps the auth scope.** The key that signed the document's header may always execute in `scope: "auth"`, so a policy cannot lock its own owner out. On an unsigned document there is no creator, and validation instead refuses any policy that would leave nobody able to administer it.
-
-### Timestamps in the auth scope
-
-A reactor refuses an auth operation whose timestamp does not exceed the newest one in the scope. Auth actions made in one process are stamped 1 ms apart when the clock has not moved, so a burst such as `initializeAuth` followed by two `setGrant` calls in one millisecond is admitted. Other actions keep the wall-clock time. A content action made in the same millisecond as such a burst therefore sorts before the burst's later grants, and is denied if it needs them.
 
 ## Scopes every holder reads
 
@@ -8030,113 +7919,6 @@ Erasure does not reach:
 - Connect's IndexedDB copies and browser backups.
 - attachment bytes still referenced by another document.
 - processors that ignore deletions.
-
----
-
-
-## Undo and redo
-
-> Source: https://academy.vetra.io/academy/Reference/Reactor/UndoRedo
-
-How a document stores an undo depends on its base-reducer version, `header.protocolVersions["base-reducer"]`. The version is fixed by `CREATE_DOCUMENT` and is part of the derived document id, so a document never changes version.
-
-| Version | `UNDO` is stored as                                   | `REDO`                                                                          |
-| ------- | ----------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 1, 2    | a `NOOP` whose `skip` removes the operation before it | replays the undone action from the document's clipboard; version 2 refuses it once the stream holds an undo |
-| 3       | refused; undo is a `RETRACT { target }` the author signs, naming the undone action by id | refused; redo is a `RETRACT` of the retraction                       |
-
-On version 3 a retraction names its target, so where it lands in the stream does not change what it undoes. Replicas that hold the same operations derive the same state, whatever order the operations arrived in.
-
-**INFO:**
-Base-reducer 3 needs the `undoV3` reactor flag, which defaults to on. A reactor with it off refuses to create a version 3 document and never receives one from a peer.
-
-A reactor with it on still refuses a version 3 document whose model it cannot run as version 3: the model's reducer is not built by `createReducer`, or the model cannot be loaded. The refusal is an `UnsupportedProtocolVersionError`, on writes, on reads, and on receipt from a peer before any load.
-
-A reactor that stores version 3 documents of a model it cannot run refuses to start and names the types, as one without `undoV3` does; `withUnsupportedStoredDocuments("read-only")` starts it with those documents read-only. A model loaded after start is checked when it loads, and a refusal is logged and emitted as `STORED_MODEL_REFUSED`.
-
-
-## Turning it off
-
-| Host        | Setting                                                                   |
-| ----------- | ------------------------------------------------------------------------- |
-| Switchboard | `REACTOR_UNDO_V3=false`                                                   |
-| Connect     | `connect.reactor.featureFlags.undoV3: false` in `powerhouse.config.json`  |
-| Library     | `ReactorBuilder.withExecutorConfig({ featureFlags: { undoV3: false } })` |
-| ph-cli host  | `reactor.protocol.featureFlags.undoV3: false` in the host file (projected to `REACTOR_UNDO_V3`) |
-
-`undoV3` has no prerequisites. A peer that runs without it is held from version 3 documents until it upgrades.
-
-## Which version a document takes
-
-A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `IReactorClient.newDocument`, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. The members of the parent drive do not narrow the base-reducer version: a peer that cannot run it is held from the document until it upgrades. A reactor that does not run the chosen version refuses the document. A call can name a version:
-
-```typescript
-const document = await client.newDocument("powerhouse/todo-list", {
-  parentIdentifier: driveId,
-  protocolVersions: { "base-reducer": 2 },
-});
-await client.drives.addFile(driveId, document);
-```
-
-A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` refuses a header without protocol versions.
-
-The GraphQL light client takes the Switchboard's `createDefaults` answer for the document's type and parent as given, so a remote document's version follows the Switchboard's `undoV3`. It caps the answer at the versions its own build runs, so a newer Switchboard's base-reducer 4 becomes 3, and refuses a malformed answer or a version of another known protocol it does not run. It then fits base-reducer down to what its own `documentModels` can run. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
-
-An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
-
-```typescript
-await client.drives.copyNode(driveId, nodeId, targetFolderId, undefined, {
-  protocolVersions: { "base-reducer": 3 },
-});
-```
-
-The copy starts from the source's current state, so the source's history cannot be undone in it. A copy without `protocolVersions` keeps its source's version. `ReactorDriveClient` replays the source's history into the copy and refuses `protocolVersions`.
-
-## Undoing from a client
-
-Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
-
-On version 3 the client resolves the target with `undoRedoTargets` and submits a `RETRACT` of it signed by the client's own signer. On versions 1 and 2 it submits `UNDO` or `REDO`. The GraphQL light client does the same, resolving the target through the Switchboard's `undoRedoTargets` query; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods). Either way the author signs, so a policy must grant the author `RETRACT` for undo on version 3.
-
-The `RETRACT` names the row the call saw as the latest, so an edit that lands in between is not undone. If the target is retracted or gone by the time the `RETRACT` runs, the write fails with `RetractionRefusedError`; the client does not resolve again or retry.
-
-To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
-
-```typescript
-
-
-await client.execute(documentId, "main", [retract(actionId, "global")]);
-```
-
-A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`. The model's reducer refuses one the same way, so `reducer(document, undo())` on a version 3 document throws `SubmittedUndoRefusedError` rather than retracting anything. On versions 1 and 2 the reactor still resolves one and signs the `NOOP` it stores with its own signer.
-
-## Rules on version 3
-
-- An action is live if no live `RETRACT` names it. Liveness depends on which operations are present, not on their order.
-- Undo targets the last applied content operation in the scope, by any author.
-- Redo targets the last live retraction of content. Content applied after the undo leaves nothing to redo.
-- `SET_NAME` and `SET_PREFERRED_EDITOR` cannot be undone. Undo passes over them, and a `RETRACT` naming one is stored but retracts nothing.
-- A denied `RETRACT` retracts nothing.
-- An operation that throws applies nothing. Undo passes over it.
-- `skip` is only the rewind a reshuffle writes. It never undoes anything.
-- Operations with the same timestamp are ordered by action id. Action ids made in one process sort in creation order, so one client's same-millisecond actions keep their order. The guarantee is per process: actions made in different processes, such as two workflow piece workers or a Connect tab and its shared worker, are ordered by id with no guarantee of creation order.
-- A job's actions run in this order, not in array order. The reactor sorts every job on a version 3 document the same way its peers sort what they receive.
-
-On execute, a `RETRACT` whose target is not in the scope's stream, or is already retracted, is refused. On sync it is admitted: a `RETRACT` that arrives before its target does nothing until the target arrives.
-
-The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 documents. A `RETRACT` submitted there is refused; one received from a peer is stored and does nothing.
-
-## Errors
-
-| Error                    | Fields                           | Thrown when                                                                 |
-| ------------------------ | -------------------------------- | --------------------------------------------------------------------------- |
-| `RetractionRefusedError` | `documentId`, `target`, `reason` | A submitted `RETRACT` names an absent target (`"target-missing"`) or one already retracted (`"target-retracted"`) |
-| `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to a version 1 or 2 document or to the `auth` or `document` scope |
-| `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write, or a peer's load, carries `UNDO` or `REDO` to a version 3 document |
-
-All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
-
-`undo` and `redo` on version 3 throw `Cannot undo: nothing to undo in scope history` (or `redo`) before submitting anything when there is no target.
 
 ---
 
@@ -15867,7 +15649,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+**Home Background** - Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient. - Usage: `--home-background <str>`
 
 **Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 
@@ -16785,7 +16567,7 @@ For the quickstart and how the entry stays browser-bundlable, see
 ## `IReactorBrowserClient`
 
 The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
-the reactor's own `IReactorClient`, so the member signatures cannot drift
+the reactor's own `IReactorClient`, so the six member signatures cannot drift
 from the reactor's:
 
 ```typescript
@@ -16795,20 +16577,15 @@ export interface IReactorBrowserClient extends Pick<
   | "subscribe"
   | "execute"
   | "getOperations"
-  | "newDocument"
   | "create"
   | "deleteDocument"
-  | "undo"
-  | "redo"
-  | "undoRedoTargets"
-  | "undoRedoAvailability"
 > {}
 ```
 
 Two implementations satisfy it: the full in-browser reactor client, which gets it
 for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
-Everything outside those members is deliberately excluded and not
+Everything outside those six members is deliberately excluded and not
 implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
 `executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
 `evaluateActions`, and the document-model module getters. For the
@@ -16821,15 +16598,10 @@ full-reactor versions of those, see
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
 | `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
-| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, fitted to this client's `documentModels`, and its create signature policy. |
-| `create(document, parentIdentifier?, signal?)`                | Creates the document as its header says and emits `Created`.                                        |
+| `create(document, parentIdentifier?, signal?)`                | Creates the document and emits `Created`.                                                           |
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
-| `undo(identifier, scope?, branch?, signal?)`                  | Submits `UNDO` signed by this client. On base-reducer 3 it asks the Switchboard for the target and submits a `RETRACT` of it, signed by this client. A stale target is refused, not re-resolved. |
-| `redo(identifier, scope?, branch?, signal?)`                  | Submits `REDO`, or on base-reducer 3 a `RETRACT` of the last live retraction, the same way.         |
-| `undoRedoTargets(identifier, scope?, view?, signal?)`         | The rows a base-reducer 3 undo and redo would retract, resolved by the Switchboard as the caller.   |
-| `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | On base-reducer 3, read from `undoRedoTargets`; below it, from the scope's revision.               |
 
 `execute` returns the updated document with the operations this call appended,
 which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
@@ -17386,6 +17158,13 @@ Anything expressible over arrays is expressible here —
 result is always readable in place. Import cycles between host files fail at
 load with both names.
 
+A host file may import exactly three things: the project's
+`powerhouse.config.json`, a sibling's `../<host>/host.js`, and a sibling's
+generated `../<host>/outputs.js` (`ph generate hosts`). `process.` is banned —
+read the environment with `{ $env: "NAME" }` (or
+`{ $env: { name: "NAME", optional: true } }` to omit the property when unset),
+resolved when the host starts.
+
 ## Core reactor config (not plugins)
 
 Some things every reactor has; they are **core config**, not plugins:
@@ -17501,6 +17280,76 @@ the chrome, for example into the document title, so it stays a top-level
 side behaves the same way: removing `mcp` removes `/mcp`.)
 
 
+### Workflows: one link, two plugins
+
+Workflows have a server half and a browser half, and the two are declared so
+the link between them is visible in `hosts/`:
+
+```js
+// hosts/switchboard/host.js — serves the workflow runtime AND the drive
+plugins: [
+  {
+    module: "@powerhousedao/switchboard/plugins/workflows",
+    // the Workflows drive this plugin seeds; `drive: false` = runtime only
+    config: { drive: { slug: "workflows", name: "Workflows" } },
+  },
+],
+
+// hosts/connect/host.js — loads Workflow Studio, attaches that drive
+plugins: [
+  {
+    module: "@powerhousedao/connect/plugins/workflows",
+    config: { drive: "http://localhost:4001/d/workflows" },
+  },
+],
+```
+
+- The **switchboard plugin** contributes its drive to the host's drive plan
+  (`contributions.drives`): `ph run switchboard --explain drives` lists it
+  with the plugin as the source, a host declaration with the same slug wins,
+  and the drive opens in Workflow Studio (`preferredEditor: "workflow-studio"`
+  on the drive document). Defaults: slug `workflows`, name `Workflows`, a
+  project-hashed id (the id classic `ph vetra` gave it).
+- The **Connect plugin** is presence-is-activation like the other built-ins:
+  listed, Connect loads the workflow package (Workflow Studio exists) and
+  attaches `drive` as a remote default drive; absent from a declared
+  composition, `app.workflowsEnabled` is zeroed. The drive must be the
+  switchboard's — Workflow Studio reaches the workflow runtime through the
+  selected drive's switchboard, so a local copy of the drive would point the
+  studio at the wrong endpoint. Connect warns when a drive names a drive app
+  that no installed package provides, and Workflow Studio warns when its
+  drive has no switchboard behind it.
+
+**Read the link from the switchboard's outputs instead of spelling the
+URL.** `drive` takes an output token: `switchboard.drives.workflows.url` from
+the generated `../switchboard/outputs.js` (`ph generate hosts`), or the literal
+form below:
+
+```js
+"vetra-studio": {
+  host: "connect",
+  runner: {
+    plugins: [
+      ...connect.runner.plugins,
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: {
+          drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+        },
+      },
+    ],
+  },
+},
+```
+
+Inside a compound the token reads the switchboard member's live outputs, so
+the compound starts that member first. Standalone `ph run connect` reads the
+running switchboard's run record, and fails naming `ph run switchboard` when
+none is running. The removed `{ from, slug }` form fails validation, naming
+the token form. (The classic switches,
+`workflows.enabled` / `connect.app.workflowsEnabled` / the host's
+`reactor.workflows`, still parse; with the plugins listed they are redundant.)
+
 ## Writing your own plugin
 
 A complete switchboard plugin with config, in one file:
@@ -17605,39 +17454,51 @@ replaces `reactor`; each member wraps a sibling host by folder name:
 ```js
 
 
-const serverPort = switchboard.runner.port;
-const serverDrives = [{ slug: "powerhouse", name: "Acme" }];
-
+/** @satisfies {PHHost} */
 export default {
   name: "desktop",
   runner: { module: "@powerhousedao/desktop/runner" },
-  config: { startOrder: ["server", "app"] },
   children: {
-    server: {
-      host: "switchboard",                       // the sibling folder
-      runner: { plugins: [...switchboard.runner.plugins] },
-      reactor: { ...switchboard.reactor, drives: serverDrives },
-    },
+    server: { host: "switchboard" },            // the sibling folder, as is
     app: {
       host: "connect",
-      runner: { defaultVerb: "serve", port: 3000,
-                plugins: [...connect.runner.plugins] },
-      // the SAME drive list, attached as remotes — declared once, projected twice
+      runner: { defaultVerb: "serve", port: 3000 },
+      // Every drive the server member serves (declared and plugin-created,
+      // e.g. Workflows), attached as a remote by the URL it reports.
       reactor: {
         ...connect.reactor,
-        drives: serverDrives.map((d) => ({
-          slug: d.slug,
-          remote: { url: `http://127.0.0.1:${serverPort}/d/${d.slug}` },
-        })),
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: server.drives.$item.url } },
+          },
+        },
       },
     },
   },
 };
 ```
 
-Wrapper semantics are **full-statement**: a section present on the wrapper
-replaces the member's section wholesale (spread the member's own section in,
-as above, when you mean "theirs plus mine"). Compound-level plugins
+Wrapper semantics are **full-statement** for `config` and `reactor`: a
+section present on the wrapper replaces the member's section wholesale
+(spread the member's own section in, as above, when you mean "theirs plus
+mine"). `runner` is the exception: it key-merges over the member's own, so
+`port` or `defaultVerb` alone keeps the member's plugins.
+
+**Start order comes from the tokens.** The `app` member reads the `server`
+member's outputs, so the compound starts `server` first and resolves `app`'s
+tokens from its live outputs; `config.startOrder` is optional (it must agree
+with the tokens). `ph run desktop --explain outputs` prints the order and,
+while a producer runs, each token's value.
+
+**`$map`** renders a list (or, with `into: "record"`, a record) from a
+collection output: `over` is an `$output` (or, nested, an `$item`), `to` is
+the template rendered once per element. Inside `to`, `{ $key: true }` is the
+element's key (the index for an array) and `{ $item: ["url"] }` — or the
+typed `server.drives.$item.url` from `outputs.js` — reads a path of the
+element. Records are visited in key-sorted order, so the result is
+deterministic. A nested map names outer bindings with `as` and
+`{ $item: { as, path } }` / `{ $key: "<as>" }`. Compound-level plugins
 (`appliesTo: "compound"`) act on the member set — the clint proxy is the
 reference example: one front port, routes declared per member, resolved from
 each child's `runner.{host, port}`.
@@ -17647,6 +17508,7 @@ each child's `runner.{host, port}`.
 | symptom | tool |
 | --- | --- |
 | which drives will exist, and why | `ph run <host> --explain drives` |
+| which outputs a host reads, start order, current values | `ph run <host> --explain outputs` |
 | plugin rejected on this host | the error names the plugin, its `appliesTo`, and the host type |
 | two plugins provide one hook | boot error naming both — provide hooks have one winner |
 | entry config rejected | boot error naming the entry and the schema failure |
@@ -22058,8 +21920,6 @@ Clear and consistent naming makes your operations understandable. A common conve
 - In our case: `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`.
 
 The name you provide in Vetra Studio (or Connect) (e.g., `ADD_TODO_ITEM`) directly corresponds to the operation type that will be recorded and that your reducers will handle.
-
-The base actions reserve seven names: `UNDO`, `REDO`, `SET_NAME`, `SET_PREFERRED_EDITOR`, `NOOP`, `PURGE_DOCUMENT` and `RETRACT`. The check runs on the name in `CONSTANT_CASE`, so `retract` is reserved too. The document model editor refuses a reserved name, and `ph generate` and Vetra's codegen refuse a specification that contains one.
 
 ### 3. Input types (payloads)
 
@@ -27992,7 +27852,7 @@ Under `v2-required` a given `id` is ignored and the id is derived, so code that 
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
 
-A submitted `UNDO` or `REDO` is resolved by the reactor, which signs the result with its own signer: the NOOP or rebuilt action on base-reducer 1 and 2, the `RETRACT` on base-reducer 3. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. On base-reducer 3, `IReactorClient.undo` and `redo` submit a `RETRACT` the client signs instead; see [Undo and redo](/academy/Reference/Reactor/UndoRedo). A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
+The NOOP an `UNDO` becomes and the action a `REDO` rebuilds are signed by the reactor's own signer. A reactor with no signer stores them unsigned, and every peer refuses them on a v2-required document, so a host that writes to v2-required documents must be given a signer. A client with no signer cannot create a v2-required document at all: its `CREATE_DOCUMENT` is unsigned.
 
 ### The creation default
 
@@ -33677,7 +33537,9 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
 | `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
 | `connect.branding.appName`                   | `--app-name`                   | string                                       |
-| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
+| `connect.branding.icon`                      | —                              | image ref (project path, URL or data URI); favicons and app icons are its `_16x16`…`_512x512` siblings (a `branding.favicon` wins for the favicon); null = Connect's icon |
+| `connect.branding.loader`                    | —                              | image ref or `{ src, animation, size }`; null = Connect's animated logo |
+| `connect.home.background`                    | `--home-background`            | image ref pinned bottom-right (flag), or `{ color, layers }` with positioned, sized, fading layers (config); `""` resets to the bundled gradient |
 | `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
 | `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
 | `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
@@ -33687,6 +33549,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.drives.sections.local.enabled`      | `--local-drives-enabled`       | boolean                                      |
 | `connect.drives.sections.local.allowAdd`     | `--local-drives-allow-add`     | boolean                                      |
 | `connect.drives.sections.local.allowDelete`  | `--local-drives-allow-delete`  | boolean                                      |
+| `connect.drives.icons.*`                     | —                              | the explorer's icons, owned by the generic plugin (`icons` in its entry under uniform runners): `localDrive`, `remoteDrive`, `folder`, `document`, `documents[type]` as image refs; null = built-in icon |
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |

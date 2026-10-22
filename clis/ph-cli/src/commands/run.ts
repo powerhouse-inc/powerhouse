@@ -35,7 +35,9 @@ export const runHost = command({
       long: "explain",
       description:
         "Explain a resolved aspect instead of running: `--explain drives` " +
-        "prints the merged drive plan with provenance.",
+        "prints the merged drive plan with provenance; `--explain outputs` " +
+        "prints what each host produces, the output tokens it reads and " +
+        "the start order they imply.",
     }),
   },
   handler: async (args) => {

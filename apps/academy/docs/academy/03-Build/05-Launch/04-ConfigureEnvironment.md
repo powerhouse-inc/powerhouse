@@ -138,7 +138,9 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
 | `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
 | `connect.branding.appName`                   | `--app-name`                   | string                                       |
-| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
+| `connect.branding.icon`                      | —                              | image ref (project path, URL or data URI); favicons and app icons are its `_16x16`…`_512x512` siblings (a `branding.favicon` wins for the favicon); null = Connect's icon |
+| `connect.branding.loader`                    | —                              | image ref or `{ src, animation, size }`; null = Connect's animated logo |
+| `connect.home.background`                    | `--home-background`            | image ref pinned bottom-right (flag), or `{ color, layers }` with positioned, sized, fading layers (config); `""` resets to the bundled gradient |
 | `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
 | `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
 | `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
@@ -148,6 +150,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.drives.sections.local.enabled`      | `--local-drives-enabled`       | boolean                                      |
 | `connect.drives.sections.local.allowAdd`     | `--local-drives-allow-add`     | boolean                                      |
 | `connect.drives.sections.local.allowDelete`  | `--local-drives-allow-delete`  | boolean                                      |
+| `connect.drives.icons.*`                     | —                              | the explorer's icons, owned by the generic plugin (`icons` in its entry under uniform runners): `localDrive`, `remoteDrive`, `folder`, `document`, `documents[type]` as image refs; null = built-in icon |
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |

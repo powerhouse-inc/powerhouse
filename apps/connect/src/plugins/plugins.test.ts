@@ -38,6 +38,8 @@ describe("applyComposition", () => {
         config: {
           allowAddDrive: false,
           sections: { local: { allowAdd: false } },
+          icons: { folder: "data:f", documents: { "acme/order": "data:o" } },
+          homeBackground: { color: "#fff", layers: [{ src: "data:bg" }] },
         },
       },
     ];
@@ -45,6 +47,16 @@ describe("applyComposition", () => {
     // Owned toggles take the entry value...
     expect(out.drives?.allowAddDrive).toBe(false);
     expect(out.drives?.sections?.local?.allowAdd).toBe(false);
+    // ...so do the explorer icons (resolved to data URIs by the build).
+    expect(out.drives?.icons).toEqual({
+      folder: "data:f",
+      documents: { "acme/order": "data:o" },
+    });
+    // ...and the home screen's background.
+    expect(out.home?.background).toEqual({
+      color: "#fff",
+      layers: [{ src: "data:bg" }],
+    });
     // ...unspecified section keys inherit DEFAULT_CONNECT_CONFIG, not served.
     expect(out.drives?.sections?.local?.enabled).toBe(true);
     expect(out.drives?.sections?.remote?.enabled).toBe(true);
@@ -58,6 +70,9 @@ describe("applyComposition", () => {
     const out = await applyComposition(cfg);
     expect(out.drives?.allowAddDrive).toBe(true);
     expect(out.drives?.sections?.remote?.allowAdd).toBe(true);
+    // the served drives.icons is not a fallback: single source, built-in icons
+    expect(out.drives?.icons).toBeNull();
+    expect(out.home?.background).toBeNull();
   });
 
   it("generic absent zeroes the drive-chrome toggles off", async () => {
@@ -67,6 +82,8 @@ describe("applyComposition", () => {
     expect(out.drives?.allowAddDrive).toBe(false);
     expect(out.drives?.sections?.remote?.enabled).toBe(false);
     expect(out.drives?.sections?.local?.allowDelete).toBe(false);
+    expect(out.drives?.icons).toBeNull();
+    expect(out.home?.background).toBeNull();
     // branding still untouched by the pipeline.
     expect(out.branding?.appName).toBe("Default");
   });
@@ -108,6 +125,89 @@ describe("applyComposition", () => {
     off.app = { studioMode: true } as never; // served true, but not composed
     off.composition = [];
     expect((await applyComposition(off)).app?.studioMode).toBe(false);
+  });
+
+  it("workflows: presence loads the package and attaches the drive; absence zeroes the flag", async () => {
+    const on = base();
+    on.drives = {
+      ...on.drives,
+      defaultDrives: [{ url: "http://localhost:7540/d/sektar" }],
+    } as never;
+    on.composition = [
+      { module: "@powerhousedao/connect/plugins/generic" },
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: "http://localhost:7540/d/workflows" },
+      },
+    ];
+    const out = await applyComposition(on);
+    expect(out.app?.workflowsEnabled).toBe(true);
+    expect(out.drives?.defaultDrives).toEqual([
+      { url: "http://localhost:7540/d/sektar" },
+      { url: "http://localhost:7540/d/workflows", name: null, icon: null },
+    ]);
+
+    // the same drive twice (host declaration + plugin) attaches once
+    const dup = base();
+    dup.drives = {
+      ...dup.drives,
+      defaultDrives: [{ url: "http://localhost:7540/d/workflows", name: "W" }],
+    } as never;
+    dup.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: "http://localhost:7540/d/workflows" },
+      },
+    ];
+    expect((await applyComposition(dup)).drives?.defaultDrives).toEqual([
+      { url: "http://localhost:7540/d/workflows", name: "W" },
+    ]);
+
+    // served flag on, plugin not composed in -> off (presence is activation)
+    const off = base();
+    off.app = { workflowsEnabled: true } as never;
+    off.composition = [{ module: "@powerhousedao/connect/plugins/generic" }];
+    expect((await applyComposition(off)).app?.workflowsEnabled).toBe(false);
+
+    // present without a drive: the package loads, nothing is attached
+    const bare = base();
+    bare.composition = [{ module: "@powerhousedao/connect/plugins/workflows" }];
+    const bareOut = await applyComposition(bare);
+    expect(bareOut.app?.workflowsEnabled).toBe(true);
+    expect(bareOut.drives?.defaultDrives).toBeUndefined();
+  });
+
+  it("workflows: an unresolved output token attaches nothing (ph run resolves it)", async () => {
+    const cfg = base();
+    cfg.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: {
+          drive: {
+            $output: {
+              host: "switchboard",
+              path: ["drives", "workflows", "url"],
+            },
+          },
+        },
+      },
+    ];
+    const out = await applyComposition(cfg);
+    expect(out.app?.workflowsEnabled).toBe(true);
+    expect(out.drives?.defaultDrives).toBeUndefined();
+  });
+
+  it("workflows: the removed { from, slug } reference fails naming the token form", async () => {
+    const cfg = base();
+    cfg.composition = [
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: { drive: { from: "vetra-switchboard", slug: "workflows" } },
+      },
+    ];
+    await expect(applyComposition(cfg)).rejects.toThrow(
+      /\{ from, slug \} was removed; use switchboard\.drives\.workflows\.url/,
+    );
   });
 
   it("unknown specifier warns and skips without throwing", async () => {

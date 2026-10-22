@@ -51,11 +51,13 @@ import {
   DriveNodeView,
   NodeProcessor,
   ReactorDriveClient,
+  type ReactorDriveDatabase,
+} from "@powerhousedao/reactor-drive";
+import {
   createReactorDriveResolvers,
   REACTOR_DRIVE_SUBGRAPH_NAME,
   reactorDriveSubgraphTypeDefs,
-  type ReactorDriveDatabase,
-} from "@powerhousedao/reactor-drive";
+} from "@powerhousedao/reactor-drive/subgraph";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   createLocalCredentialVerifier,
@@ -233,7 +235,33 @@ const PGLITE_IN_MEMORY = process.env.PH_PGLITE_IN_MEMORY === "1";
  * the port is free, false if the OS reports it in use. Any other error is
  * surfaced so we don't silently mask real issues (permissions, bad host, …).
  */
-export function isPortAvailable(port: number): Promise<boolean> {
+export async function isPortAvailable(port: number): Promise<boolean> {
+  try {
+    // `::` is dual-stack on most systems, so it sees IPv6 and IPv4 listeners.
+    return await probePort(port, "::");
+  } catch (error) {
+    // A host without IPv6, e.g. a container, can only probe IPv4.
+    if (!isNoIpv6Error(error)) throw portProbeError(port, error);
+    try {
+      return await probePort(port, "0.0.0.0");
+    } catch (ipv4Error) {
+      throw portProbeError(port, ipv4Error);
+    }
+  }
+}
+
+const isNoIpv6Error = (error: unknown) =>
+  ["EAFNOSUPPORT", "EADDRNOTAVAIL"].includes(
+    (error as NodeJS.ErrnoException).code ?? "",
+  );
+
+const portProbeError = (port: number, error: unknown) =>
+  new Error(
+    `Could not check whether port ${port} is free: ${error instanceof Error ? error.message : String(error)}`,
+    { cause: error },
+  );
+
+function probePort(port: number, host: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const tester = net.createServer();
     tester.once("error", (err: NodeJS.ErrnoException) => {
@@ -246,9 +274,7 @@ export function isPortAvailable(port: number): Promise<boolean> {
     tester.once("listening", () => {
       tester.close(() => resolve(true));
     });
-    // Bind on the unspecified IPv6 address so we detect collisions with both
-    // IPv6 and IPv4 listeners (Node maps `::` to dual-stack on most systems).
-    tester.listen({ port, host: "::" });
+    tester.listen({ port, host });
   });
 }
 
@@ -796,6 +822,7 @@ async function initServer(
       : [];
 
     applySwitchboardReactorDefaults(reactorBuilder, clientBuilder, {
+      signalHandlers: options.signalHandlers,
       documentModels: [...documentModels, ...vetraDocumentModels],
       upgradeManifests,
       executorConfig: {
@@ -970,27 +997,32 @@ async function initServer(
   };
 
   // Tear down a partially booted stack in the reactor's own order: reactor
-  // first, then the api's HTTP/WS/db handles, then the database pool.
+  // first, then the api's HTTP/WS/db handles, then the database pool. An
+  // owned reactor goes through its module's shutdown, so the other hooks run
+  // too and a later signal joins this teardown instead of repeating it.
   const abortBoot = async (api: { dispose: () => Promise<void> }) => {
+    let disposed: Promise<void> | undefined;
+    const disposeApi = () => (disposed ??= api.dispose());
+    apiRef.current = { dispose: disposeApi };
     const owned = ownedReactorModule;
-    if (owned) {
+    if (owned?.reactorModule) {
+      try {
+        await owned.reactorModule.shutdown();
+      } catch (error) {
+        logger.error("Aborting boot: reactor shutdown failed: @error", error);
+      }
+    } else if (owned) {
       try {
         await owned.reactor.kill().completed;
       } catch (error) {
         logger.error("Aborting boot: reactor shutdown failed: @error", error);
       }
     }
+    // Already done by the shutdown hook unless the reactor failed to stop.
     try {
-      await api.dispose();
+      await disposeApi();
     } catch (error) {
       logger.error("Aborting boot: api dispose failed: @error", error);
-    }
-    if (owned?.reactorModule) {
-      try {
-        await owned.reactorModule.database.destroy();
-      } catch (error) {
-        logger.error("Aborting boot: database destroy failed: @error", error);
-      }
     }
   };
 
@@ -1357,14 +1389,22 @@ async function initServer(
 
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
-  const shutdown = async () => {
-    if (pluginHost) await pluginHost.observe("onShutdown");
-    await privacy?.stop();
-    await workflowsRetry?.stop();
-    await workflows?.stop();
-    await api.dispose();
-  };
-  apiRef.current = { dispose: shutdown };
+  // Memoized: the reactor's shutdown hook and a caller can both reach it.
+  let apiDrained: Promise<void> | undefined;
+  const drainApi = () =>
+    (apiDrained ??= (async () => {
+      if (pluginHost) await pluginHost.observe("onShutdown");
+      await privacy?.stop();
+      await workflowsRetry?.stop();
+      await workflows?.stop();
+      await api.dispose();
+    })());
+  apiRef.current = { dispose: drainApi };
+  // An owned reactor's shutdown drains the api through the hook above, in the
+  // signal path's order: kill, hooks, database. A caller's reactor is the
+  // caller's to stop, so only the api is drained.
+  const ownedReactor = ownedReactorModule?.reactorModule;
+  const shutdown = ownedReactor ? () => ownedReactor.shutdown() : drainApi;
 
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
@@ -1479,12 +1519,14 @@ async function initServer(
         client,
         options.drive,
         serverPort,
+        logger,
       );
     } else {
       defaultDriveUrl = await addDefaultDrive(
         client,
         options.drive,
         serverPort,
+        logger,
       );
     }
   }
@@ -1579,11 +1621,12 @@ async function initServer(
  * dangling until the process exits.
  *
  * When `options.reactor` is omitted, the switchboard builds and owns the
- * reactor. `shutdown()` on the returned handle only drains the api (HTTP
- * server, GraphQL, MCP, attachments); the reactor itself is torn down by
- * its own signal handlers (`withSignalHandlers`), which call `kill()` and
- * trigger the `withShutdownHook` chain that disposes the api. Programmatic
- * full teardown isn't currently exposed — wire it via SIGINT/SIGTERM.
+ * reactor. `shutdown()` on the returned handle then runs the reactor
+ * module's `shutdown()`: `kill()`, the `withShutdownHook` chain that drains
+ * the api (HTTP server, GraphQL, MCP, attachments, read-model db), then the
+ * reactor database. It does not exit the process. It is the same memoized
+ * teardown the SIGINT/SIGTERM handlers (`withSignalHandlers`) run, so calling
+ * it twice, or receiving a signal around it, tears down once.
  */
 export const startSwitchboard = async (
   options: StartServerOptions = {},

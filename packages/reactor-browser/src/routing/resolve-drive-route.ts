@@ -41,7 +41,10 @@ export const PREFETCH_WAIT_MS = 3_000;
 export const DRIVE_ARRIVAL_MAX_WAIT_MS = 15_000;
 
 /** A listed drive by slug, id, or a `<name>-<id>` slug's trailing id. */
-export function findDriveBySlugOrId(store: PHStore, ref: string) {
+export function findDriveBySlugOrId(
+  store: PHStore,
+  ref: string,
+): DocumentDriveDocument | undefined {
   return findDriveBySlug(store.drives, ref);
 }
 

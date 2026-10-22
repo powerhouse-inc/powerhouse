@@ -15,9 +15,16 @@ export type RuntimePowerhouseConfig = {
 /** Defaults for every field Connect reads at runtime, merged into the
  * `connect.*` block at boot; also the dist emitter's and the scaffold's base. */
 export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
+  // null = the default; the scaffold lists every branding field this way.
   branding: {
     appName: "Powerhouse Connect",
-    homeBackground: null,
+    icon: null,
+    loader: null,
+  },
+  // The generic plugin's (its entry `homeBackground`); null = the bundled
+  // gradient.
+  home: {
+    background: null,
   },
   app: {
     logLevel: "info",
@@ -39,6 +46,8 @@ export const DEFAULT_CONNECT_CONFIG: PHConnectRuntimeConfig = {
       remote: { enabled: true, allowAdd: true, allowDelete: true },
       local: { enabled: true, allowAdd: true, allowDelete: true },
     },
+    // The explorer's icons: the generic plugin's; null = the built-in icons.
+    icons: null,
   },
   renown: {
     url: "https://www.renown.id",

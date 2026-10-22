@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { Plugin, PluginOption } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { connectPwaIconsPlugin } from "./pwa-icons.js";
+import type { ProjectPwaBrand } from "./project-brand.js";
 import {
   applyPwaOverrides,
   FILE_HANDLER_ACTION,
@@ -81,6 +82,34 @@ const BASE_MANIFEST: ConnectPwaManifest = {
   // delivers the file there) instead of spawning a new window per file.
   launch_handler: { client_mode: "focus-existing" },
 };
+
+/**
+ * The base manifest under the project's own name and icons (from
+ * `connect.branding.appName` / `icons.app`), so an installed app is not
+ * "Powerhouse Connect". Connect's description goes with its name; a project
+ * that wants one sets `connect.pwa.manifest.description`, which — like the
+ * rest of `connect.pwa` — is laid on top of this.
+ */
+export function brandManifest(
+  base: ConnectPwaManifest,
+  brand: ProjectPwaBrand | undefined,
+): ConnectPwaManifest {
+  if (!brand) return base;
+  const manifest: ConnectPwaManifest = { ...base };
+  if (brand.name) {
+    manifest.name = brand.name;
+    manifest.short_name = brand.name;
+    delete manifest.description;
+  }
+  if (brand.icons?.length) {
+    manifest.icons = brand.icons.map((icon) => ({
+      src: icon.fileName,
+      sizes: icon.sizes,
+      type: icon.contentType,
+    }));
+  }
+  return manifest;
+}
 
 /**
  * Connect's hardcoded precache config — the base layer for the `injectManifest`
@@ -198,8 +227,10 @@ export function connectPwaPlugins(options: {
   offlineEnabled: boolean;
   /** Effective PWA overrides (packages + project), already merged. */
   pwa?: PHConnectPwa;
+  /** The project's name and icons in place of Connect's. */
+  brand?: ProjectPwaBrand;
 }): PluginOption[] {
-  const { offlineEnabled, pwa } = options;
+  const { offlineEnabled, pwa, brand } = options;
 
   if (!offlineEnabled) {
     return [
@@ -214,7 +245,7 @@ export function connectPwaPlugins(options: {
   }
 
   const { manifest, precache } = applyPwaOverrides(
-    { manifest: BASE_MANIFEST, precache: BASE_PRECACHE },
+    { manifest: brandManifest(BASE_MANIFEST, brand), precache: BASE_PRECACHE },
     pwa ?? {},
   );
 

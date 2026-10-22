@@ -1,7 +1,3 @@
-/* The standalone stylesheet, for a host that loads the package's compiled CSS.
-   Connect imports workflow.css into its own Tailwind build instead. */
-@import "@powerhousedao/design-system/theme.css";
-@custom-variant dark (&:where(.dark, .dark *));
-@import "tailwindcss";
+/* The package stylesheet's source: build.ts compiles it as `ph build` does a
+   package's, against the design system's theme by reference. */
 @import "./workflow.css";
-@source "./editors";

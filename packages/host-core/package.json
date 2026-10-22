@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/host-core",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.71",
   "publishConfig": {
     "access": "public"
   },
@@ -34,12 +34,24 @@
       "types": "./dist/plugins.d.mts",
       "import": "./dist/plugins.mjs",
       "default": "./dist/plugins.mjs"
+    },
+    "./schema": {
+      "source": "./src/schema.ts",
+      "types": "./dist/schema.d.mts",
+      "import": "./dist/schema.mjs",
+      "default": "./dist/schema.mjs"
+    },
+    "./projection": {
+      "source": "./src/projection.ts",
+      "types": "./dist/projection.d.mts",
+      "import": "./dist/projection.mjs",
+      "default": "./dist/projection.mjs"
     }
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "cd ../.. && oxlint packages/host-core",
-    "build": "tsdown",
+    "build": "tsdown && node scripts/assert-neutral.mjs",
     "test": "vitest --run",
     "emit-schemas": "tsx scripts/emit-schemas.ts"
   },

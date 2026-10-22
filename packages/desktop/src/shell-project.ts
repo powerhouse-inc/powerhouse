@@ -1,3 +1,10 @@
+import {
+  colorVariants,
+  imageVariants,
+  layerStyleText,
+  normalizeBackground,
+} from "@powerhousedao/shared/connect";
+import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -105,6 +112,11 @@ const BUILD_RS = `// GENERATED — mirrors the reference shell. Connect is serve
 // need an explicit ACL; declaring the command manifest here generates the
 // allow-<command> permissions that capabilities/*.json grant.
 fn main() {
+    // The icon set is a COMPILE-TIME input (the Windows resource icon here,
+    // and the tray/window icon tauri::generate_context! embeds), but
+    // tauri-build registers no rerun trigger for it: without this line a
+    // regenerated icon set leaves the old icon compiled into the binary.
+    println!("cargo:rerun-if-changed=icons");
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
         tauri_build::AppManifest::new().commands(&[
             "take_launch_files",
@@ -121,16 +133,113 @@ fn main() {
  * it stays sharp on HiDPI screens. Generated, like the rest of ui/. */
 export const LOADING_LOGO = "logo.png";
 
+/** The loading page's splash (app.json `splash`), copied beside it; shown
+ * instead of the square logo when set. Generated, like the rest of ui/. */
+export const LOADING_SPLASH = "splash.png";
+/** Dark-scheme splash (app.json `splashDark`), beside the light one. */
+export const LOADING_SPLASH_DARK = "splash-dark.png";
+/** Corner decoration (app.json `loading.art` / `loading.artDark`). */
+export const LOADING_ART = "art";
+/** The background's layers (app.json `background`): `bg-<n>.<ext>` and
+ * `bg-<n>-dark.<ext>` beside the page. */
+export const LOADING_BG = "bg";
+
 /** CSS size of the logo; the 1024² source keeps it crisp up to 8x DPR. */
 const LOGO_CSS_PX = 128;
 
-function loadingHtml(productName: string, logo: string | null): string {
-  const name = productName.replace(/[<&]/g, (c) =>
-    c === "<" ? "&lt;" : "&amp;",
-  );
-  const logoTag = logo
-    ? `<img class="logo" src="./${logo}" width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}" alt="" />
+/** One layer of the page's background, staged beside the page (or a URL /
+ * data URI as given) with the style that places it. */
+type LoadingLayer = { light: string; dark?: string; style: string };
+
+/** The art the loading page shows: a layered background (app.json
+ * `background`) under the centred status line; or, without one, the wide
+ * splash (with an optional dark counterpart) else the square logo above the
+ * status line, plus an optional corner decoration. */
+type LoadingArt = {
+  main: { kind: "logo" | "splash"; file: string; dark?: string } | null;
+  corner: { file: string; dark?: string } | null;
+  background: {
+    color: { light: string; dark?: string } | null;
+    layers: LoadingLayer[];
+  } | null;
+};
+
+function loadingHtml(app: AppJson, art: LoadingArt): string {
+  const escape = (text: string) =>
+    text.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;"));
+  const name = escape(app.productName);
+  const loading = app.loading;
+  const message = loading?.message
+    ? escape(loading.message)
+    : `Starting ${name}…`;
+  // The background's own colour (scheme-aware) beats the loading colours.
+  const pageColor = art.background?.color ?? null;
+  const background = pageColor?.light ?? loading?.background ?? "#0f1115";
+  const color = loading?.color ?? "#e6e8eb";
+  const accent = loading?.accent ?? "#4ade80";
+  const dark = loading?.dark;
+  const darkBackground = pageColor?.dark ?? dark?.background;
+  const darkVars =
+    dark || darkBackground
+      ? `
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: ${darkBackground ?? background};
+          --fg: ${dark?.color ?? color};
+          --accent: ${dark?.accent ?? accent};
+        }
+      }`
+      : "";
+  const attr = (text: string) =>
+    text.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  // The background's layers, each placed by the shared layer style (the
+  // same declarations Connect's home screen applies), swapped by scheme.
+  const layersTag =
+    art.background && art.background.layers.length > 0
+      ? `<div class="layers" aria-hidden="true">
+      ${art.background.layers
+        .map((layer) =>
+          layer.dark
+            ? `<picture>
+        <source srcset="${attr(layer.dark)}" media="(prefers-color-scheme: dark)" />
+        <img src="${attr(layer.light)}" alt="" style="${attr(layer.style)}" />
+      </picture>`
+            : `<img src="${attr(layer.light)}" alt="" style="${attr(layer.style)}" />`,
+        )
+        .join("\n      ")}
+    </div>
+    `
+      : "";
+  // <picture> swaps the file by color scheme; a plain <img> otherwise.
+  const picture = (
+    cls: string,
+    file: string,
+    darkFile: string | undefined,
+    attrs = "",
+  ) =>
+    darkFile
+      ? `<picture>
+        <source srcset="./${darkFile}" media="(prefers-color-scheme: dark)" />
+        <img class="${cls}" src="./${file}" alt=""${attrs} />
+      </picture>
       `
+      : `<img class="${cls}" src="./${file}" alt=""${attrs} />
+      `;
+  const main = art.main;
+  const logoTag =
+    main?.kind === "splash"
+      ? picture("splash", main.file, main.dark)
+      : main
+        ? picture(
+            "logo",
+            main.file,
+            main.dark,
+            ` width="${LOGO_CSS_PX}" height="${LOGO_CSS_PX}"`,
+          )
+        : "";
+  const cornerTag = art.corner
+    ? `<div class="corner" aria-hidden="true">${picture("art", art.corner.file, art.corner.dark)}</div>
+    `
     : "";
   return `<!doctype html>
 <html lang="en">
@@ -138,14 +247,18 @@ function loadingHtml(productName: string, logo: string | null): string {
     <meta charset="utf-8" />
     <title>${name}</title>
     <style>
-      :root { color-scheme: light dark; }
+      :root {
+        color-scheme: light dark;
+        --bg: ${background}; --fg: ${color}; --accent: ${accent};
+      }${darkVars}
       body {
-        margin: 0; height: 100vh;
+        margin: 0; height: 100vh; overflow: hidden;
         display: flex; align-items: center; justify-content: center;
         font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: #0f1115; color: #e6e8eb;
+        background: var(--bg); color: var(--fg);
       }
       .box {
+        position: relative; z-index: 1;
         text-align: center;
         display: flex; flex-direction: column; align-items: center; gap: 20px;
       }
@@ -153,9 +266,19 @@ function loadingHtml(productName: string, logo: string | null): string {
         width: ${LOGO_CSS_PX}px; height: ${LOGO_CSS_PX}px;
         object-fit: contain; display: block;
       }
+      .splash {
+        width: min(720px, 80vw); max-height: 65vh;
+        object-fit: contain; display: block;
+      }
+      .corner {
+        position: fixed; right: 0; bottom: 0; z-index: 0;
+        width: clamp(220px, 30vw, 520px); line-height: 0; pointer-events: none;
+      }
+      .layers { position: fixed; inset: 0; z-index: 0; }
+      .art { width: 100%; height: auto; display: block; }
       .dot {
         width: 10px; height: 10px; border-radius: 50%;
-        background: #4ade80; display: inline-block; margin-right: 8px;
+        background: var(--accent); display: inline-block; margin-right: 8px;
         animation: pulse 1.2s ease-in-out infinite;
       }
       @keyframes pulse { 0%,100% { opacity: .35 } 50% { opacity: 1 } }
@@ -164,9 +287,9 @@ function loadingHtml(productName: string, logo: string | null): string {
   </head>
   <body>
     <div class="box">
-      ${logoTag}<div><span class="dot"></span>Starting ${name}…</div>
+      ${logoTag}<div><span class="dot"></span>${message}</div>
     </div>
-  </body>
+    ${layersTag}${cornerTag}</body>
 </html>
 `;
 }
@@ -196,6 +319,8 @@ function tauriConf(input: ProjectShellInput): string {
           width: win.width ?? 1440,
           height: win.height ?? 900,
           resizable: win.resizable ?? true,
+          ...(win.minWidth ? { minWidth: win.minWidth } : {}),
+          ...(win.minHeight ? { minHeight: win.minHeight } : {}),
           visible: true,
           dragDropEnabled: false,
           create: false,
@@ -283,6 +408,11 @@ const GITIGNORE = `# Generated tauri shell — only Cargo.lock and app-icon.png 
 /gen
 /icons
 /ui/logo.png
+/ui/splash.png
+/ui/splash-dark.png
+/ui/art.*
+/ui/art-dark.*
+/ui/bg-*
 /dist-stack
 /binaries
 `;
@@ -314,15 +444,74 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
   const shellDir = path.join(hostDir, SHELL_DIR);
   const iconSrc = path.resolve(hostDir, app.icon);
   const iconBytes = fs.existsSync(iconSrc) ? fs.readFileSync(iconSrc) : null;
+  const readRel = (rel: string | null | undefined): Buffer | null => {
+    if (!rel) return null;
+    const abs = path.resolve(hostDir, rel);
+    return fs.existsSync(abs) ? fs.readFileSync(abs) : null;
+  };
+  const splashBytes = readRel(app.splash);
+  const splashDarkBytes = readRel(app.splashDark);
+  const artBytes = readRel(app.loading?.art);
+  const artDarkBytes = readRel(app.loading?.artDark);
+  const artExt = (rel: string | null | undefined) =>
+    rel ? path.extname(rel).toLowerCase() || ".png" : ".png";
+  const artFile = `${LOADING_ART}${artExt(app.loading?.art)}`;
+  const artDarkFile = `${LOADING_ART}-dark${artExt(app.loading?.artDark)}`;
+  // The background's layers: a file beside app.json is staged beside the
+  // page as bg-<n>[-dark].<ext>; a URL or data URI is used as given; a layer
+  // whose light image is missing is dropped (a missing dark one falls back
+  // to the light one).
+  const background = normalizeBackground(app.background);
+  const staged: Array<[string, Buffer]> = [];
+  const stage = (ref: string, stem: string): string | undefined => {
+    if (isPassthroughImageRef(ref)) return ref;
+    const abs = path.resolve(hostDir, ref);
+    if (!fs.existsSync(abs)) return undefined;
+    const file = `${stem}${artExt(ref)}`;
+    staged.push([path.join(shellDir, "ui", file), fs.readFileSync(abs)]);
+    return `./${file}`;
+  };
+  const layers = (background?.layers ?? []).flatMap(
+    (layer, index): LoadingLayer[] => {
+      const variants = imageVariants(layer.src);
+      const light = stage(variants.light, `${LOADING_BG}-${index}`);
+      if (!light) return [];
+      const dark = variants.dark
+        ? stage(variants.dark, `${LOADING_BG}-${index}-dark`)
+        : undefined;
+      return [
+        { light, ...(dark ? { dark } : {}), style: layerStyleText(layer) },
+      ];
+    },
+  );
+  // A background replaces the splash/logo and the corner art: its layers are
+  // the page's decoration, the status line stays centred above them.
+  const art: LoadingArt = {
+    main: background
+      ? null
+      : splashBytes
+        ? {
+            kind: "splash",
+            file: LOADING_SPLASH,
+            ...(splashDarkBytes ? { dark: LOADING_SPLASH_DARK } : {}),
+          }
+        : iconBytes
+          ? { kind: "logo", file: LOADING_LOGO }
+          : null,
+    corner:
+      !background && artBytes
+        ? { file: artFile, ...(artDarkBytes ? { dark: artDarkFile } : {}) }
+        : null,
+    background: background
+      ? { color: colorVariants(background.color), layers }
+      : null,
+  };
   const files: Array<[string, string]> = [
     ["Cargo.toml", cargoToml(app, binName)],
     ["src/main.rs", MAIN_RS],
     ["build.rs", BUILD_RS],
     ["tauri.conf.json", tauriConf(input)],
-    [
-      "ui/index.html",
-      loadingHtml(app.productName, iconBytes ? LOADING_LOGO : null),
-    ],
+    ["ui/index.html", loadingHtml(app, art)],
     ["capabilities/default.json", defaultCapability()],
     ["capabilities/connect.json", connectCapability(connectPort)],
     [".gitignore", GITIGNORE],
@@ -333,17 +522,23 @@ export function projectShell(input: ProjectShellInput): ProjectShellResult {
     if (writeIfChanged(path.join(shellDir, rel), content)) changed = true;
   }
   // Stage the icon source next to the shell (tauri icon reads it at build),
-  // and the same full-resolution source as the loading page's logo.
-  if (iconBytes) {
-    for (const dest of [
-      path.join(shellDir, ICON_SOURCE),
-      path.join(shellDir, "ui", LOADING_LOGO),
-    ]) {
-      if (!fs.existsSync(dest) || !fs.readFileSync(dest).equals(iconBytes)) {
-        fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, iconBytes);
-        changed = true;
-      }
+  // the same full-resolution source as the loading page's logo, and the
+  // splash when app.json names one.
+  const copies: Array<[string, Buffer | null]> = [
+    [path.join(shellDir, ICON_SOURCE), iconBytes],
+    [path.join(shellDir, "ui", LOADING_LOGO), iconBytes],
+    [path.join(shellDir, "ui", LOADING_SPLASH), splashBytes],
+    [path.join(shellDir, "ui", LOADING_SPLASH_DARK), splashDarkBytes],
+    [path.join(shellDir, "ui", artFile), artBytes],
+    [path.join(shellDir, "ui", artDarkFile), artDarkBytes],
+    ...staged,
+  ];
+  for (const [dest, bytes] of copies) {
+    if (!bytes) continue;
+    if (!fs.existsSync(dest) || !fs.readFileSync(dest).equals(bytes)) {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, bytes);
+      changed = true;
     }
   }
   return { shellDir, binName, changed };

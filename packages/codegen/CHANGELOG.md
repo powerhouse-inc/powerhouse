@@ -1,3 +1,49 @@
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **codegen,connect:** generated editors and modules are typed for their document; agents and Connect docs describe props at the top and hooks below ([406b754a7e](https://github.com/powerhouse-inc/powerhouse/commit/406b754a7e))
+- **codegen:** ph migrate and ph init seed hosts/connect/style.css, drop local packages' style.css imports and the old empty @theme, and warn on page theming in style.css ([3d61e279bd](https://github.com/powerhouse-inc/powerhouse/commit/3d61e279bd))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **codegen:** scaffold cli/desktop attach every switchboard drive via $map ([ff607adada](https://github.com/powerhouse-inc/powerhouse/commit/ff607adada))
+- **codegen:** vetra-switchboard serves the switchboard host's drives too ([8b1675b637](https://github.com/powerhouse-inc/powerhouse/commit/8b1675b637))
+- **shared,codegen:** assistant.port slot in powerhouse.config.json ([bf1cba34da](https://github.com/powerhouse-inc/powerhouse/commit/bf1cba34da))
+- **codegen:** scaffold hosts use output tokens and @satisfies {PHHost} ([993d6ed658](https://github.com/powerhouse-inc/powerhouse/commit/993d6ed658))
+- **codegen:** type powerhouse.config.json imports for tsc -p hosts ([1673db4901](https://github.com/powerhouse-inc/powerhouse/commit/1673db4901))
+- **codegen:** ph generate hosts writes outputs.js per producer; scaffold wires tsc -p hosts ([5a60da669a](https://github.com/powerhouse-inc/powerhouse/commit/5a60da669a))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **connect:** the generic plugin owns the drive explorer's icons ([8e6bb1d044](https://github.com/powerhouse-inc/powerhouse/commit/8e6bb1d044))
+- **connect:** project loader, branded PWA manifest and custom-shell first paint ([43465eae3b](https://github.com/powerhouse-inc/powerhouse/commit/43465eae3b))
+- **desktop:** theme the loading page and bound the window from app.json ([71fe3aa00b](https://github.com/powerhouse-inc/powerhouse/commit/71fe3aa00b))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **codegen:** ph generate hosts survives a host failing the lint and recursive outputs schemas (review) ([2969a1ee5f](https://github.com/powerhouse-inc/powerhouse/commit/2969a1ee5f))
+- **codegen:** give the scaffold desktop switchboard backend an explicit kind ([064ffc92ba](https://github.com/powerhouse-inc/powerhouse/commit/064ffc92ba))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **codegen,connect:** generated editors and modules are typed for their document; agents and Connect docs describe props at the top and hooks below ([406b754a7e](https://github.com/powerhouse-inc/powerhouse/commit/406b754a7e))
+- **codegen:** ph migrate and ph init seed hosts/connect/style.css, drop local packages' style.css imports and the old empty @theme, and warn on page theming in style.css ([3d61e279bd](https://github.com/powerhouse-inc/powerhouse/commit/3d61e279bd))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

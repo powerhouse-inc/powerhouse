@@ -1,0 +1,8 @@
+{
+  "name": "@powerhousedao/desktop",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./runner": "./runner.ts"
+  }
+}

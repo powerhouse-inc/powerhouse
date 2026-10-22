@@ -1,3 +1,42 @@
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **desktop:** declared/resolved host schemas from one definition and an explicit verbs list ([7be4d3d499](https://github.com/powerhouse-inc/powerhouse/commit/7be4d3d499))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **desktop:** typed host contract for the desktop runner ([163566829e](https://github.com/powerhouse-inc/powerhouse/commit/163566829e))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **desktop:** dark-scheme splash, colors and corner art on the loading page ([5df5e588b7](https://github.com/powerhouse-inc/powerhouse/commit/5df5e588b7))
+- **desktop:** theme the loading page and bound the window from app.json ([71fe3aa00b](https://github.com/powerhouse-inc/powerhouse/commit/71fe3aa00b))
+- splash images for the desktop loading page and Connect's home hero ([45a7e316b3](https://github.com/powerhouse-inc/powerhouse/commit/45a7e316b3))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **desktop:** refuse two local tarballs of one package ([14564637cb](https://github.com/powerhouse-inc/powerhouse/commit/14564637cb))
+- **desktop:** allow output tokens when validating members for build ([2ade3d9044](https://github.com/powerhouse-inc/powerhouse/commit/2ade3d9044))
+- **desktop:** rebuild the shell when its icon set changes ([719db10a1c](https://github.com/powerhouse-inc/powerhouse/commit/719db10a1c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/desktop to align it with other projects, there were no code changes.

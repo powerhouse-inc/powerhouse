@@ -1531,6 +1531,7 @@ export class ReactorBuilder {
         health: groupCommit.health,
         close: () => groupCommit.close(),
       },
+      shutdown: this.createShutdown(reactor, database),
     };
 
     catchUp.start();
@@ -1835,6 +1836,49 @@ export class ReactorBuilder {
     });
   }
 
+  /**
+   * The module's `shutdown`: one memoized teardown shared by programmatic
+   * callers and the signal handlers, so neither path re-kills the reactor,
+   * re-runs a hook or re-destroys the database after the other. Reads
+   * `shutdownHooks` when it runs, as the signal path always has.
+   */
+  private createShutdown(
+    reactor: IReactor,
+    database: Kysely<Database>,
+  ): () => Promise<void> {
+    const logger = this.logger!;
+    const hooks = this.shutdownHooks;
+    let shutdown: Promise<void> | undefined;
+
+    const run = async () => {
+      try {
+        await reactor.kill().completed;
+      } catch (error) {
+        logger.error("Shutdown failed waiting for reactor:", error);
+        throw error;
+      }
+
+      for (const hook of hooks) {
+        try {
+          await hook();
+        } catch (error) {
+          logger.error("Shutdown hook failed:", error);
+        }
+      }
+
+      try {
+        await database.destroy();
+      } catch (error) {
+        logger.error("Shutdown failed destroying database:", error);
+        throw error;
+      }
+
+      logger.info("Shutdown complete");
+    };
+
+    return () => (shutdown ??= run());
+  }
+
   private attachSignalHandlers(module: InProcessReactorModule): void {
     if (
       typeof globalThis === "undefined" ||
@@ -1849,12 +1893,13 @@ export class ReactorBuilder {
     let shutdownInProgress = false;
     let pendingExitCode: number | undefined;
 
-    // While our async cleanup runs, swap process.exit for a recording shim so
-    // peer SIGINT handlers (notably vite's bindCLIShortcuts handler, default
-    // enabled) cannot terminate the process before reactor.kill() and
-    // database.destroy() finish. Without this guard the process exits during
-    // the first microtask of our async chain, leaving e.g. PGlite's WAL dirty
-    // and the data-dir lock held.
+    // process.exit is a recording shim until teardown finishes: peer SIGINT
+    // handlers (vite's bindCLIShortcuts, on by default) would otherwise exit
+    // the process before database.destroy(), leaving PGlite's WAL dirty and
+    // its data-dir lock held.
+    //
+    // module.shutdown() is memoized, so a signal during or after a
+    // programmatic shutdown waits for that teardown and then exits.
     const handler = async (signal: string) => {
       if (shutdownInProgress) {
         this.logger!.warn(
@@ -1871,35 +1916,15 @@ export class ReactorBuilder {
 
       this.logger!.info(`Received ${signal}, starting graceful shutdown...`);
 
-      const status = module.reactor.kill();
-
       try {
-        await status.completed;
-      } catch (error) {
-        this.logger!.error("Shutdown failed waiting for reactor:", error);
+        await module.shutdown();
+      } catch {
+        // module.shutdown() logged which step failed.
         nodeProcess.exit = realExit;
         realExit(1);
         return;
       }
 
-      for (const hook of this.shutdownHooks) {
-        try {
-          await hook();
-        } catch (error) {
-          this.logger!.error("Shutdown hook failed:", error);
-        }
-      }
-
-      try {
-        await module.database.destroy();
-      } catch (error) {
-        this.logger!.error("Shutdown failed destroying database:", error);
-        nodeProcess.exit = realExit;
-        realExit(1);
-        return;
-      }
-
-      this.logger!.info("Shutdown complete");
       nodeProcess.exit = realExit;
       // A failure code set before the signal (a fatal-error handler) wins
       // over a peer handler's exit(0).

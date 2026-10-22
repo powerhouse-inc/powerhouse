@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.71",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -47,6 +47,7 @@
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/document-engineering": "catalog:",
+    "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@types/node": "catalog:",
     "arg": "^5.0.2",

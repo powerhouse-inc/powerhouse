@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/desktop",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.71",
   "description": "The desktop runner for uniform-runners hosts: the generic compound stack wrapped in a native shell — dev opens the window, build stages the shippable stack.",
   "repository": {
     "type": "git",
@@ -33,10 +33,12 @@
     "tsc": "tsc",
     "lint": "cd ../.. && oxlint packages/desktop",
     "build": "tsdown",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "emit-schemas": "tsx scripts/emit-schemas.ts"
   },
   "dependencies": {
     "@powerhousedao/host-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

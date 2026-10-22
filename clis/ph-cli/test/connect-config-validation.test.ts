@@ -67,15 +67,15 @@ describe("buildConnectFlagPatch — 20 field flags", () => {
     });
   });
 
-  it("homeBackground → branding.homeBackground (URL string)", () => {
+  it("homeBackground → home.background (URL string)", () => {
     expect(
       buildConnectFlagPatch({ homeBackground: "https://example.com/bg.png" }),
-    ).toEqual({ branding: { homeBackground: "https://example.com/bg.png" } });
+    ).toEqual({ home: { background: "https://example.com/bg.png" } });
   });
 
-  it("homeBackground (empty string) → branding.homeBackground: null", () => {
+  it("homeBackground (empty string) → home.background: null", () => {
     expect(buildConnectFlagPatch({ homeBackground: "" })).toEqual({
-      branding: { homeBackground: null },
+      home: { background: null },
     });
   });
 

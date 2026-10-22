@@ -94,7 +94,10 @@ describe("projectReactorToSwitchboard", () => {
   it("uses the postgres url for a postgres backend", () => {
     const { env } = projectReactorToSwitchboard({
       backends: {
-        main: { storage: { kind: "postgres", url: "postgres://x" } },
+        main: {
+          kind: "in-process",
+          storage: { kind: "postgres", url: "postgres://x" },
+        },
       },
     });
     expect(env.PH_REACTOR_DATABASE_URL).toBe("postgres://x");

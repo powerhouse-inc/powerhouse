@@ -9,6 +9,9 @@
   "references": [
     {
       "path": "../host-core"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

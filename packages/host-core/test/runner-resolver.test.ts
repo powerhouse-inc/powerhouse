@@ -44,7 +44,7 @@ export const hostSchema = {
   safeParse(host) {
     return host.name === "reject-me"
       ? { success: false, error: { issues: [{ path: ["name"], message: "rejected by schema" }] } }
-      : { success: true };
+      : { success: true, data: host };
   },
 };
 export async function run(host, ctx) { return { ran: host.name, verb: ctx.verb }; }
