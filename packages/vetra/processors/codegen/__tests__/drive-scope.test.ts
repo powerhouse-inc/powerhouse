@@ -7,7 +7,11 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor-browser";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  addFile,
+  addFolder,
+  driveDocumentModelModule,
+} from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
   generateId,
@@ -113,6 +117,19 @@ describe("codegen processor drive scope", () => {
     return { client };
   }
 
+  // The factory's first, cold codegen import outlasts waitFor's default.
+  async function waitForProcessor(driveId: string): Promise<void> {
+    await vi.waitFor(
+      () =>
+        expect(
+          module!
+            .reactorModule!.processorManager.getAll()
+            .map((t) => t.driveId),
+        ).toContain(driveId),
+      { timeout: 10_000 },
+    );
+  }
+
   async function addSpecSheet(
     client: IReactorClient,
     driveId: string,
@@ -129,11 +146,7 @@ describe("codegen processor drive scope", () => {
     const { client } = await setup();
     const vetraDriveId = await createDrive(client, "vetra-scope");
     const otherDriveId = await createDrive(client, "stockroom-north");
-    await vi.waitFor(() =>
-      expect(
-        module!.reactorModule!.processorManager.getAll().map((t) => t.driveId),
-      ).toContain(vetraDriveId),
-    );
+    await waitForProcessor(vetraDriveId);
 
     await addSpecSheet(client, otherDriveId);
     await new Promise((resolve) => setTimeout(resolve, DEBOUNCE_SETTLED_MS));
@@ -144,11 +157,7 @@ describe("codegen processor drive scope", () => {
   it("logs a skipped batch once, for its final state", async () => {
     const { client } = await setup();
     const vetraDriveId = await createDrive(client, "vetra-scope");
-    await vi.waitFor(() =>
-      expect(
-        module!.reactorModule!.processorManager.getAll().map((t) => t.driveId),
-      ).toContain(vetraDriveId),
-    );
+    await waitForProcessor(vetraDriveId);
 
     await addSpecSheet(client, vetraDriveId);
 
@@ -159,5 +168,34 @@ describe("codegen processor drive scope", () => {
     const messages = skippedMessages(info);
     expect(messages).toHaveLength(1);
     expect(messages[0]).toContain("'Spec sheet'");
+  });
+
+  // A valid model would be generated into this package, so reaching
+  // validation is what shows the model was passed to its generator.
+  it("passes a model in a folder of the Vetra drive to its generator", async () => {
+    const { client } = await setup();
+    const vetraDriveId = await createDrive(client, "vetra-scope");
+    await waitForProcessor(vetraDriveId);
+
+    // A node in a folder and no child edge, as in drives older than the edges.
+    const folderId = generateId();
+    const model = await client.createEmpty<PHDocument>(
+      "powerhouse/document-model",
+    );
+    await client.execute(vetraDriveId, "main", [
+      addFolder({ id: folderId, name: "Models" }),
+      addFile({
+        id: model.header.id,
+        name: "Spec sheet",
+        documentType: "powerhouse/document-model",
+        parentFolder: folderId,
+      }),
+    ]);
+    await client.execute(model.header.id, "main", specSheetActions());
+
+    await vi.waitFor(() => expect(skippedMessages(info)).toHaveLength(1), {
+      timeout: 10_000,
+    });
+    expect(skippedMessages(info)[0]).toContain("'Spec sheet'");
   });
 });
