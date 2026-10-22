@@ -77,7 +77,7 @@ export const Route = createFileRoute("/_app/inventory")({
 
 - Links come after the drives, sorted by `order`, then by `label`.
 - `icon` is optional: any component that takes `size` (and `className`), e.g. from `lucide-react`.
-- Routes with path params (`$id`) are not listed: the sidebar cannot fill in the param.
+- Routes with path params (`$id`) are not listed: the sidebar cannot fill in the param. `ph build` and Studio warn about a `nav` on one.
 
 ## Hide or collapse the sidebar on a page
 

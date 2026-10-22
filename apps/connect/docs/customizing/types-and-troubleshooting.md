@@ -57,7 +57,7 @@ In 6.2.3 dev prereleases only, `RouteSelection` and scoped PH stores (`createSco
 The generic plugin's UI moved behind the plugin, which a project's routes follow by hand:
 
 - `AppLayout`, `ConnectSidebar`, `SidebarDriveItems`, `SidebarNavItems` and `OpenDocument` import from `@powerhousedao/connect/generic`, not `/layout`.
-- `@powerhousedao/connect/route-views` exports only `ConnectRoot`; `Home`, `DriveLayout`, `NodeView`, `DrivePending` and `SettingsPage` import from `/generic`.
+- `@powerhousedao/connect/route-views` exports only `ConnectRoot`; `Home` (and its parts), `DriveLayout`, `NodeView`, `DrivePending` and `SettingsPage` import from `/generic`.
 - `generic()`, `genericActive`, `IfPlugin` and `useIsPluginActive` are gone; a plugin's `ui()` provides its views.
 - Connect's About, AI Assistant, Danger Zone, Default Editors and Package Manager tabs are the generic plugin's code routes, so `@powerhousedao/connect/routes/_app/settings/<tab>` no longer exists for them. An override imports the tab's options as `genericSettingsTabs["<tab>"]` from `@powerhousedao/connect/generic` instead; links to these tabs are untyped, so use `useLinkProps({ settings: "<tab>" })`.
 

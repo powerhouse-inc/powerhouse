@@ -27,9 +27,9 @@ These paths are relative to this file, inside `node_modules/@powerhousedao/conne
 - Connect routes with [TanStack Router](https://tanstack.com/router) file routes. The project's `hosts/connect/routes/` folder joins Connect's own routes in one router. `ph vetra`, `ph connect studio`, `ph connect build` and `ph build` all mount it.
 - A file in `_app/` renders inside Connect's layout, with the sidebar. Its route id starts with `/_app` but its URL does not: `_app/inventory.tsx` is `createFileRoute("/_app/inventory")` at `/inventory`. Any other file is a full page.
 - A route describes itself through `staticData`: `nav` lists it in the sidebar, `settings` makes it a settings tab, `sidebar` hides or collapses the sidebar, `modals` and `modalFrame` restyle modals.
-- Connect's routes come from `@powerhousedao/connect-core`. Each route file exports `options`, everything but the component. A project file at the same path spreads `options` and sets its own `component`.
+- Connect's routes come from `@powerhousedao/connect-core`. Each route file exports `options`, everything but the component. A project file at the same path spreads `options` and sets its own `component`; `ph build` and Studio warn when it doesn't.
 - The generic plugin (`@powerhousedao/connect/plugins/generic`) draws Connect's sidebar, home, drive views and settings tabs. Without it, core's plain views show. A project's route files win over both.
-- `@powerhousedao/connect/layout` exports core's layout parts. `@powerhousedao/connect/generic` adds the generic plugin's parts (`AppLayout`, `ConnectSidebar`, `OpenDocument`, `genericSettingsTabs`).
+- `@powerhousedao/connect/layout` exports core's layout parts. `@powerhousedao/connect/generic` adds the generic plugin's parts (`AppLayout`, `ConnectSidebar`, `OpenDocument`, `genericSettingsTabs`, and the home's `ConnectHomeScreen`, `HomeDriveItem`, `HomeAddDriveItem` and `useVisibleDrives`).
 
 ## A first page
 
