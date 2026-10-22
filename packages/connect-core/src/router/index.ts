@@ -21,6 +21,8 @@ export {
   useDriveRouteIds,
 } from "./route-data.js";
 export type { DriveRouteView } from "./route-data.js";
+export { useCreateDocumentTarget } from "./create-target.js";
+export type { CreateDocumentTarget } from "./create-target.js";
 export { useIsColdStart } from "./cold-start.js";
 export { disposeConnectAppRouter, getConnectAppRouter } from "./app-router.js";
 export type { ConnectAppRouterOptions } from "./app-router.js";

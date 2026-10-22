@@ -9,13 +9,28 @@ export type CreateDocumentModalProps = ComponentPropsWithoutRef<
   typeof Modal
 > & {
   readonly onContinue: (nodeName: string) => void;
+  /** The drives to pick from when none is given; an empty list asks for one. */
+  readonly drives?: readonly { id: string; name: string }[];
+  readonly driveId?: string;
+  readonly onDriveChange?: (driveId: string) => void;
+  readonly onAddDrive?: () => void;
 };
 
 const CLOSE_ANIMATION_DURATION = 300;
 
 export function CreateDocumentModal(props: CreateDocumentModalProps) {
-  const { onOpenChange, onContinue, overlayProps, contentProps, ...restProps } =
-    props;
+  const {
+    onOpenChange,
+    onContinue,
+    overlayProps,
+    contentProps,
+    drives,
+    driveId,
+    onDriveChange,
+    onAddDrive,
+    ...restProps
+  } = props;
+  const needsDrive = !!drives && !driveId;
 
   const [nodeName, setNodeName] = useState("");
   const [isValid, setIsValid] = useState(false);
@@ -26,13 +41,13 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
   };
 
   const handleCreate = useCallback(() => {
-    if (!isValid) {
+    if (!isValid || needsDrive) {
       return;
     }
 
     onContinue(nodeName);
     setTimeout(() => setNodeName(""), CLOSE_ANIMATION_DURATION);
-  }, [isValid, nodeName, onContinue]);
+  }, [isValid, needsDrive, nodeName, onContinue]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -77,12 +92,47 @@ export function CreateDocumentModal(props: CreateDocumentModalProps) {
             required
             value={nodeName}
           />
+          {!!drives?.length && (
+            <label className="mt-4 flex flex-col gap-1 text-sm text-muted-foreground">
+              Drive
+              <select
+                className="rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                value={driveId ?? ""}
+                onChange={(e) => onDriveChange?.(e.target.value)}
+              >
+                {!driveId && <option value="">Choose a drive</option>}
+                {drives.map((drive) => (
+                  <option key={drive.id} value={drive.id}>
+                    {drive.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {drives?.length === 0 && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              There's no drive to create it in.{" "}
+              {onAddDrive && (
+                <button
+                  type="button"
+                  className="cursor-pointer text-foreground underline"
+                  onClick={onAddDrive}
+                >
+                  Add a drive
+                </button>
+              )}
+            </p>
+          )}
         </div>
         <div className="mt-8 flex justify-between gap-3">
           <ModalButton variant="cancel" type="button" onClick={handleCancel}>
             Cancel
           </ModalButton>
-          <ModalButton variant="confirm" type="submit" disabled={!isValid}>
+          <ModalButton
+            variant="confirm"
+            type="submit"
+            disabled={!isValid || needsDrive}
+          >
             Create
           </ModalButton>
         </div>

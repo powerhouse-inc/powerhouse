@@ -117,6 +117,7 @@ afterAll(() => {
 
 beforeEach(() => {
   store.reactorClient = module.client;
+  store.fullReactorClient = undefined;
   store.documentCache = new DocumentCache(module.client);
   store.drives = [];
   store.selectedDriveId = undefined;
@@ -883,6 +884,69 @@ describe("core's modals", () => {
     expect(history.location.search).toBe("");
     expect(history.length).toBe(entries);
     expect(store.modal).toBeUndefined();
+  });
+
+  // Outside a drive the modal names one; it never closes without creating.
+  it("creates outside a drive in the drive picked, or the modal's driveId", async () => {
+    store.fullReactorClient = module.client;
+    const alpha = await createDrive("Alpha");
+    const beta = await createDrive("Beta");
+    store.drives = [alpha, beta];
+    const { history } = mount(
+      "/?modal=create-document&documentType=powerhouse/document-model",
+    );
+    const dialog = await screen.findByRole("dialog");
+    const create = within(dialog).getByRole("button", { name: "Create" });
+    expect((create as HTMLButtonElement).disabled).toBe(true);
+
+    const picker = within(dialog).getByRole("combobox", { name: "Drive" });
+    act(() => {
+      (picker as HTMLSelectElement).value = beta.header.id;
+      picker.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect((create as HTMLButtonElement).disabled).toBe(false);
+    click(create);
+    await vi.waitFor(async () => {
+      const current = await module.client.get<DocumentDriveDocument>(
+        beta.header.id,
+      );
+      expect(current.state.global.nodes).toHaveLength(1);
+    });
+    // The new document opens in its drive, though the modal opened on home.
+    await vi.waitFor(() =>
+      expect(history.location.pathname).toMatch(
+        new RegExp(`^/d/${beta.header.slug}/.+`),
+      ),
+    );
+
+    cleanup();
+    mount(
+      `/?modal=create-document&documentType=powerhouse/document-model&driveId=${alpha.header.id}`,
+    );
+    const given = await screen.findByRole("dialog");
+    expect(within(given).queryByRole("combobox")).toBeNull();
+    click(within(given).getByRole("button", { name: "Create" }));
+    await vi.waitFor(async () => {
+      const current = await module.client.get<DocumentDriveDocument>(
+        alpha.header.id,
+      );
+      expect(current.state.global.nodes).toHaveLength(1);
+    });
+  });
+
+  it("asks for a drive when there is none", async () => {
+    mount("/?modal=create-document&documentType=powerhouse/document-model");
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/no drive to create it in/)).toBeTruthy();
+    expect(
+      (
+        within(dialog).getByRole("button", {
+          name: "Create",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    click(within(dialog).getByRole("button", { name: "Add a drive" }));
+    await vi.waitFor(() => expect(store.modal?.type).toBe("addDrive"));
   });
 
   it("opens from a link, and closes in place", async () => {
