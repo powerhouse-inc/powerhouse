@@ -9,13 +9,14 @@ import type { IReactorClient } from "@powerhousedao/reactor";
  * `IReactorClient`) and `GraphQLReactorClient`, which talks plain GraphQL to a
  * Switchboard without bundling a reactor.
  *
- * Deliberately excluded: `drives`, relationships, `find`, `resolveIdOrSlug`,
+ * Deliberately excluded: `drives`, relationships, `resolveIdOrSlug`,
  * `executeAsync`/`executeBatch`, jobs, `createEmpty`, `rename` and the document
  * model module getters.
  */
 export interface IReactorBrowserClient extends Pick<
   IReactorClient,
   | "get"
+  | "find"
   | "subscribe"
   | "execute"
   | "getOperations"

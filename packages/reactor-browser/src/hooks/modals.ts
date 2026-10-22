@@ -1,5 +1,7 @@
 import type { PHModal, PHSearchUpdate } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
+import { isPlainClick, type LinkProps } from "./link-props.js";
+import { useSearchParams } from "./url-state.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 import {
   getPHNavigation,
@@ -157,6 +159,23 @@ export function modalHref(modal: PHModal) {
     ...modalSearch(modal),
   };
   return `${pathname}${recordToSearch(next)}`;
+}
+
+/** Props for an `<a>` that opens a routed `modal` over the current page on a
+ * plain click; new tabs and copied links get its URL. */
+export function useModalLinkProps(
+  modal: PHModal,
+): Pick<LinkProps, "href" | "onClick"> {
+  // Re-renders as the page's search changes, so the href stays current.
+  useSearchParams();
+  return {
+    href: modalHref(modal),
+    onClick: (event) => {
+      if (!isPlainClick(event)) return;
+      event.preventDefault();
+      showPHModal(modal);
+    },
+  };
 }
 
 /** Shows the create document modal */
