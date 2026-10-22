@@ -1,43 +1,8 @@
-# Customizing Connect
+# Customizing Connect: contributor notes
 
-How a Powerhouse project (scaffolded by `ph init`) changes what Connect shows: its own pages, sidebar links, settings tabs, and the layout around them.
+Working on Connect's customization surface in this monorepo: the tools and the files behind it.
 
-## TL;DR
-
-Connect routes with [TanStack Router](https://tanstack.com/router) file routes. A project adds file routes to `hosts/connect/routes/`, and `ph connect build`, `ph connect studio` and `ph connect preview` mount them beside Connect's own routes in one router.
-
-```
-hosts/connect/routes/
-├── _app.tsx                 optional: replaces Connect's layout (sidebar)
-├── _app/
-│   ├── inventory.tsx        /inventory, inside the layout
-│   └── settings/
-│       └── inventory.tsx    /settings/inventory, a settings tab
-└── status.tsx               /status, a full page without the layout
-```
-
-- A file in `_app/` renders inside Connect's layout, with the sidebar.
-- Any other file renders as a full page.
-- A route lists itself in the sidebar with `staticData.nav`, and adds a settings tab with `staticData.settings`.
-- Route loaders read the app's PH store from the router context.
-
-Connect's runtime settings (app name, drives, Renown, package registry) are the other way to customize it. They live in `powerhouse.config.json`; see [RUNTIME-CONFIG.md](./RUNTIME-CONFIG.md).
-
-## Guides
-
-| Guide | Covers |
-| --- | --- |
-| [Pages, sidebar links and settings tabs](./docs/customizing/pages.md) | Add a page, list it in the sidebar, hide the sidebar on it, add a settings tab, set the page title. |
-| [Layout and the loading screen](./docs/customizing/layout.md) | Replace the sidebar or the whole layout; what the prerendered loading screen shows. |
-| [Data and navigation](./docs/customizing/data-and-navigation.md) | Route loaders, the open drive and document, editor props, typed search params, navigating from editors. |
-| [Override Connect's routes](./docs/customizing/overrides.md) | Replace home, the drive view, the open document, settings or the 404 page; slow routes, not found and errors. |
-| [Modals](./docs/customizing/modals.md) | Routed modals, replacing a modal's view, framing every modal. |
-| [Styles and branding](./docs/customizing/styles-and-branding.md) | The project's Tailwind build and theme tokens; app name and favicon per host. |
-| [Hosts and plugins](./docs/customizing/hosts-and-plugins.md) | Routes per host, host plugins, the generic plugin and a plugin's UI. |
-| [Extend Connect from a package](./docs/customizing/packages.md) | A package's routes in every Connect that loads it; registering routes from code. |
-| [Types, troubleshooting and upgrading](./docs/customizing/types-and-troubleshooting.md) | The generated route tree, common symptoms, `ph migrate`. |
-
-Coding agents start from the [customize-connect skill](./skills/customize-connect/SKILL.md), which links to these guides.
+To customize Connect from a project, start from the [customize-connect skill](./skills/customize-connect/SKILL.md): its table maps each change to a guide in [`docs/customizing/`](./docs/customizing/), for people and coding agents alike. The skill is what ships with the package; keep it, not this file, as the index of the guides.
 
 ## UI screenshots of core's views
 

@@ -26,6 +26,7 @@ These paths are relative to this file, inside `node_modules/@powerhousedao/conne
 
 - Connect routes with [TanStack Router](https://tanstack.com/router) file routes. The project's `hosts/connect/routes/` folder joins Connect's own routes in one router. `ph vetra`, `ph connect studio`, `ph connect build` and `ph build` all mount it.
 - A file in `_app/` renders inside Connect's layout, with the sidebar. Its route id starts with `/_app` but its URL does not: `_app/inventory.tsx` is `createFileRoute("/_app/inventory")` at `/inventory`. Any other file is a full page.
+- A route's `loader` reads the app's PH store from the router context (`context.store`: drives, `reactorClient`, `documentCache`); components read live data with the `@powerhousedao/reactor-browser` hooks.
 - A route describes itself through `staticData`: `nav` lists it in the sidebar, `settings` makes it a settings tab, `sidebar` hides or collapses the sidebar, `modals` and `modalFrame` restyle modals.
 - Connect's routes come from `@powerhousedao/connect-core`. Each route file exports `options`, everything but the component. A project file at the same path spreads `options` and sets its own `component`; `ph build` and Studio warn when it doesn't.
 - The generic plugin (`@powerhousedao/connect/plugins/generic`) draws Connect's sidebar, home, drive views and settings tabs. Without it, core's plain views show. A project's route files win over both.
@@ -64,7 +65,7 @@ function Inventory() {
 
 ## Check your work
 
-1. Run Vetra (`ph vetra`) or `ph connect studio`, and open the route's URL. Restart it after creating the routes folder for the first time, because the folder is detected at startup.
+1. Run Vetra (`ph vetra`) or `ph connect studio`, and open the route's URL. Restart it after creating the routes folder for the first time, because the folder is detected at startup. Studio shows a loading screen that fails to render over the page and in its log.
 2. Run `ph build`. It generates `.ph/connect-routes.gen.ts` and type-checks the routes. Unknown route ids in `createFileRoute`, `Link` or `useNavigate` mean the tree is stale or the tsconfig lacks the `route-tree` paths; see [types-and-troubleshooting.md](../../docs/customizing/types-and-troubleshooting.md).
 3. When the layout or `_app`'s `pendingComponent` changed, run `ph connect build`. It prerenders the loading screen and fails on code that touches `window` while rendering.
 
