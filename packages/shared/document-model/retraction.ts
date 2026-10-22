@@ -369,6 +369,20 @@ export function redoTarget(
   return undefined;
 }
 
+/** The targets of `scope` derived from the rows `document` holds; for a client holding the whole log. */
+export function undoRedoTargetsOf<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+  reducer: StateReducer<TState>,
+): UndoRedoTargets {
+  const rows = document.operations[scope] ?? [];
+  const { applied } = deriveScope(document, rows, () => reducer, scope);
+  return {
+    undoTarget: undoTarget(rows, applied),
+    redoTarget: redoTarget(rows, applied),
+  };
+}
+
 /** What a stream's targets advance from: the targets, and the ids that make a row rewrite. */
 export type UndoTargetsBase = {
   targets: UndoRedoTargets;

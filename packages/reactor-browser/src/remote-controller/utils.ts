@@ -81,7 +81,7 @@ export function convertRemoteOperations(
   return operations;
 }
 
-/** Reconstruct a PHDocument from remote document data and operations. */
+/** Reconstruct a PHDocument from remote document data and operations; the header carries the remote protocol versions. */
 export function buildPulledDocument(
   remoteDoc: RemoteDocumentData,
   operations: DocumentOperations,
@@ -107,6 +107,15 @@ export function buildPulledDocument(
         remoteDoc.revisionsList.map((r) => [r.scope, r.revision]),
       ),
       branch,
+      // The creator chose these; the local reducer must run what the host runs.
+      ...(remoteDoc.protocolVersions != null
+        ? {
+            protocolVersions: remoteDoc.protocolVersions as Record<
+              string,
+              number
+            >,
+          }
+        : {}),
     },
     state: remoteDoc.state as PHBaseState,
     initialState: initialDoc.initialState,

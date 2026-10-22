@@ -1,4 +1,7 @@
-import { DocumentModelController } from "document-model";
+import {
+  DocumentModelController,
+  documentModelDocumentModelModule,
+} from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
   GetDocumentOperationsQuery,
@@ -1199,6 +1202,191 @@ describe("RemoteDocumentController", () => {
       await expect(controller.push()).rejects.toThrow("Create failed");
 
       expect(controller.status.pendingActionCount).toBe(1);
+    });
+  });
+
+  describe("undo and redo", () => {
+    const signer = () => ({
+      user: { address: "0x123", networkId: "eip155:1", chainId: 1 },
+      app: { name: "test-app", key: "key-123" },
+      publicKey: {} as CryptoKey,
+      sign: vi.fn(),
+      verify: vi.fn(),
+      signAction: vi.fn().mockResolvedValue(["", "", "", "", "sig-123"]),
+    });
+
+    const contentOp = (index: number, name: string) => ({
+      index,
+      timestampUtcMs: new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString(),
+      hash: `hash-${index}`,
+      skip: 0,
+      error: null,
+      id: `op-${index}`,
+      action: {
+        id: `action-${index}`,
+        type: "SET_MODEL_NAME",
+        timestampUtcMs: new Date(
+          Date.UTC(2026, 0, 1, 0, 0, index),
+        ).toISOString(),
+        input: { name },
+        scope: "global",
+        context: null,
+      },
+    });
+
+    function remoteAt(baseReducer: number) {
+      const docData = {
+        ...makeDocData({
+          state: documentModelDocumentModelModule.utils.createState(),
+          revisionsList: [{ scope: "global", revision: 1 }],
+        }),
+        protocolVersions: { "base-reducer": baseReducer },
+      };
+      return createMockClient({
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse(docData as never, {
+            items: [contentOp(0, "remote") as never],
+          }),
+        ),
+      });
+    }
+
+    function pushedActions(client: RemoteControllerGraphQLClient) {
+      return vi.mocked(client.MutateDocument).mock.calls[0][0].actions;
+    }
+
+    it("pulls the remote header's protocol versions", async () => {
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client: remoteAt(3), documentId: "doc-1" },
+      );
+
+      expect(controller.header.protocolVersions?.["base-reducer"]).toBe(3);
+    });
+
+    it("signs a RETRACT of the last content row on base-reducer 3", async () => {
+      const client = remoteAt(3);
+      const author = signer();
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1", signer: author },
+      );
+
+      controller.setModelName({ name: "local" });
+      const local = controller.operations.global.at(-1)!.action.id;
+      controller.undo();
+
+      expect(controller.state.global.name).toBe("remote");
+      await controller.push();
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "RETRACT",
+      ]);
+      expect(actions[1].input).toEqual({ target: local });
+      expect(actions[1].context!.signer!.user!.address).toBe("0x123");
+      expect(author.signAction).toHaveBeenCalledTimes(2);
+    });
+
+    it("redoes by retracting the retraction on base-reducer 3", async () => {
+      const client = remoteAt(3);
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      controller.undo();
+      const undone = controller.operations.global.at(-1)!.action.id;
+      expect(controller.state.global.name).toBe("");
+      controller.redo();
+
+      expect(controller.state.global.name).toBe("remote");
+      await controller.push();
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "RETRACT",
+        "RETRACT",
+      ]);
+      expect(actions[0].input).toEqual({ target: "action-0" });
+      expect(actions[1].input).toEqual({ target: undone });
+    });
+
+    it("refuses an undo with nothing to retract on base-reducer 3", async () => {
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client: remoteAt(3), documentId: "doc-1" },
+      );
+      controller.undo();
+
+      expect(() => controller.undo()).toThrow("nothing to undo");
+      expect(controller.status.pendingActionCount).toBe(1);
+    });
+
+    it("replays a pending RETRACT on rebase", async () => {
+      const v3 = (revision: number) => ({
+        ...makeDocData({
+          state: documentModelDocumentModelModule.utils.createState(),
+          revisionsList: [{ scope: "global", revision }],
+        }),
+        protocolVersions: { "base-reducer": 3 },
+      });
+      const page = (items: unknown[]) => ({
+        items,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        cursor: null,
+      });
+      const client = createMockClient({
+        GetDocumentWithOperations: vi
+          .fn()
+          .mockResolvedValueOnce(
+            makeDocWithOpsResponse(v3(1) as never, {
+              items: [contentOp(0, "remote") as never],
+            }),
+          )
+          .mockResolvedValue(
+            makeDocWithOpsResponse(v3(2) as never, {
+              items: [contentOp(1, "other") as never],
+            }),
+          ),
+        GetDocument: vi.fn().mockResolvedValue({
+          document: { document: v3(2), childIds: [] },
+        }),
+        GetDocumentOperations: vi.fn().mockResolvedValue({
+          documentOperations: page([contentOp(1, "other")]),
+        }),
+      });
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1", onConflict: "rebase" },
+      );
+
+      controller.undo();
+      await controller.push();
+
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual(["RETRACT"]);
+      expect(actions[0].input).toEqual({ target: "action-0" });
+    });
+
+    // Unchanged below base-reducer 3: the local UNDO becomes the NOOP it pushes.
+    it("still undoes locally below base-reducer 3", async () => {
+      const client = remoteAt(2);
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      controller.setModelName({ name: "local" });
+      controller.undo();
+
+      expect(controller.state.global.name).toBe("remote");
+      await controller.push();
+      const actions = pushedActions(client);
+      expect(actions.map((action) => action.type)).toEqual([
+        "SET_MODEL_NAME",
+        "NOOP",
+      ]);
     });
   });
 });

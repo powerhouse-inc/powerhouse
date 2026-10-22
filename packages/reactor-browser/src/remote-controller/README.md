@@ -13,6 +13,7 @@ A lightweight controller that wraps `PHDocumentController` with remote push/pull
   - [Batch mode](#batch-mode)
   - [Streaming mode](#streaming-mode)
 - [Signing](#signing)
+- [Undo and redo](#undo-and-redo)
 - [Conflict handling](#conflict-handling)
   - [Reject strategy](#reject-strategy)
   - [Rebase strategy](#rebase-strategy)
@@ -199,6 +200,15 @@ const signature = result.operations[0].context?.signer?.signatures[0];
 
 Each action is signed with the operation's `prevOpHash` before push. Signatures are preserved through the push/pull roundtrip.
 
+## Undo and redo
+
+`undo(scope = "global")` and `redo(scope = "global")` apply locally and track what they produce, like any action method. What that is depends on the document's base-reducer version, which a pulled document takes from the remote header:
+
+- Below base-reducer 3, the local reducer applies UNDO or REDO as before.
+- On base-reducer 3, the controller resolves the target from its own log, pending local actions included, and applies a `RETRACT` of it. The configured signer signs the `RETRACT` on push. With nothing to undo or redo, the call throws. The host refuses a `RETRACT` whose target is gone or already retracted; the controller does not re-resolve it.
+
+A new document has no remote header until the first push creates it, so undo before that runs under the flagless local header.
+
 ## Conflict handling
 
 When multiple controllers edit the same document concurrently, a push may conflict with changes made by another peer. By default no conflict check is performed (last-write-wins). Set the `onConflict` option to enable pull-before-push conflict detection.
@@ -314,6 +324,8 @@ Both return `RemoteDocumentControllerWith<C>`, which includes the base class plu
 | `pull()`             | `Promise<RemoteDocumentData>` | Pull latest state from remote, replacing local document.     |
 | `delete(propagate?)` | `Promise<boolean>`            | Delete the document on the remote.                           |
 | `onChange(listener)` | `() => void`                  | Register a change listener. Returns an unsubscribe function. |
+| `undo(scope?)`       | `this`                        | Undo the last change of `scope`; see [Undo and redo](#undo-and-redo). |
+| `redo(scope?)`       | `this`                        | Redo the last undo of `scope`.                               |
 
 Action methods from the wrapped controller are also available and return `this` for chaining.
 
@@ -368,7 +380,7 @@ type SyncStatus = {
 
 1. Fetch the document via `GetDocument`.
 2. Fetch all operations via paginated `GetDocumentOperations`.
-3. Reconstruct a `PHDocument` from the remote state and operations.
+3. Reconstruct a `PHDocument` from the remote state, operations and header protocol versions.
 4. Replace the inner controller with a new instance built from the pulled document.
 5. Clear the action tracker.
 
