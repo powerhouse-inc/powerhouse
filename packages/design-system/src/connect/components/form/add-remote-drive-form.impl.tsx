@@ -42,6 +42,8 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
   const [hasConfirmedUrl, setHasConfirmedUrl] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [url, setUrl] = useState("");
+  // The URL the details are for: confirming waits for the typed URL's.
+  const [fetchedUrl, setFetchedUrl] = useState<string>();
   const [debouncedUrl, setDebouncedUrl] = useDebounceValue(url, 500);
 
   const { register, handleSubmit, setValue } = useForm<Inputs>({
@@ -59,11 +61,13 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
     // eslint-disable-next-line react-hooks-extra/set-state-in-effect
     setHasConfirmedUrl(false);
     if (debouncedUrl === "") return;
+    let current = true;
     fetchPublicDrive().catch(console.error);
 
     async function fetchPublicDrive() {
       try {
         const { id, name } = await requestPublicDrive(debouncedUrl);
+        if (!current) return;
         setPublicDriveDetails({
           id,
           name,
@@ -72,14 +76,20 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
           availableOffline: true,
         });
         setValue("availableOffline", true);
+        setFetchedUrl(debouncedUrl);
         setIsUrlValid(true);
         setErrorMessage("");
       } catch (error) {
+        if (!current) return;
         setPublicDriveDetails(undefined);
+        setFetchedUrl(undefined);
         setIsUrlValid(false);
         setErrorMessage((error as Error).message);
       }
     }
+    return () => {
+      current = false;
+    };
   }, [debouncedUrl, setValue, sharingType]);
 
   function onSubmit({ availableOffline }: Inputs) {
@@ -123,7 +133,7 @@ export function AddRemoteDriveForm(props: AddPublicDriveFormProps) {
             className="mt-4 w-full py-2 text-base"
             color="dark"
             size="small"
-            disabled={!isUrlValid || url === ""}
+            disabled={!isUrlValid || url === "" || fetchedUrl !== url}
             onClick={(e) => {
               e.preventDefault();
               setHasConfirmedUrl(true);
