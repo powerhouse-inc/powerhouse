@@ -71,9 +71,11 @@ export const createDocumentTool = {
 
 export const getDocumentTool = {
   name: "getDocument",
-  description: "Retrieve a document by its ID",
+  description:
+    "Retrieve a document by its ID, passed as `id` (or `documentId`, as the other document tools name it)",
   inputSchema: {
-    id: z.string().describe("ID of the document to retrieve"),
+    id: z.string().optional().describe("ID of the document to retrieve"),
+    documentId: z.string().optional().describe("Alias of `id`"),
   },
   outputSchema: {
     document: z.unknown().describe("The retrieved Document"),
@@ -378,7 +380,13 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const document = await client.get<PHDocument>(params.id, view);
+      const id = params.id ?? params.documentId;
+      if (!id) {
+        throw new Error(
+          "getDocument needs the document's ID in `id` (or `documentId`)",
+        );
+      }
+      const document = await client.get<PHDocument>(id, view);
       return { document: { header: document.header, state: document.state } };
     }),
 

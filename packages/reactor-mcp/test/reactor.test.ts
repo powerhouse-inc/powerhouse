@@ -105,6 +105,31 @@ describe("ReactorMcpProvider", () => {
       });
     });
 
+    it("accepts the ID as documentId", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocument.callback({
+        documentId: document.header.id,
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        document: {
+          header: expect.objectContaining({ id: document.header.id }),
+        },
+      });
+    });
+
+    it("names the expected parameter when no ID is given", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocument.callback({});
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain("`id` (or `documentId`)");
+    });
+
     it("should handle errors gracefully", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDocument.callback({
