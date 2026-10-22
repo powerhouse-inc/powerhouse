@@ -344,6 +344,54 @@ describe("KyselyDocumentView", () => {
       expect(updatedSnapshot?.lastOperationHash).toBe("hash-1");
       expect(updatedSnapshot?.snapshotVersion).toBe(2);
     });
+
+    it("should index state holding a lone surrogate, which jsonb cannot store", async () => {
+      const documentId = generateId();
+      // A preview cut at a fixed length can end inside a surrogate pair.
+      const snippet = "bold \u{1D5EF}".slice(0, -1);
+      const operation = {
+        operation: {
+          index: 0,
+          timestampUtcMs: new Date().toISOString(),
+          hash: "hash-0",
+          skip: 0,
+          id: generateId(),
+          action: setDriveName({ name: "Mail" }),
+        },
+        context: {
+          documentId,
+          documentType: "powerhouse/document-drive",
+          scope: "global",
+          branch: "main",
+          resultingState: JSON.stringify({
+            header: { name: "x\uD835" },
+            global: {
+              snippet,
+              ["key\uDC00"]: [snippet],
+              whole: "\u{1D5EF}",
+            },
+          }),
+          ordinal: 1,
+        },
+      };
+
+      await view.indexOperations([operation]);
+
+      const rows = await db
+        .selectFrom("DocumentSnapshot")
+        .select(["scope", "content", "name"])
+        .where("documentId", "=", documentId)
+        .orderBy("scope")
+        .execute();
+
+      expect(rows.map((row) => row.scope)).toEqual(["global", "header"]);
+      expect(rows[0]!.content).toEqual({
+        snippet: "bold �",
+        ["key�"]: ["bold �"],
+        whole: "\u{1D5EF}",
+      });
+      expect(rows[1]!.name).toBe("x�");
+    });
   });
 
   describe("exists", () => {
