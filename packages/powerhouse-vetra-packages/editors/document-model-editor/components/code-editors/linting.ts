@@ -3,7 +3,8 @@ import { linter } from "@codemirror/lint";
 import { filterSchema } from "@graphql-tools/utils";
 import type { GraphQLSchema } from "graphql";
 import { GraphQLError, locatedError } from "graphql";
-import { validateSDL } from "graphql/validation/validate.js";
+// The ESM file: the .js one is graphql's CommonJS build, a second graphql in a bundle.
+import { validateSDL } from "graphql/validation/validate.mjs";
 import { safeParseSdl } from "../../context/schema-context.js";
 
 /* Converts a GraphQLError to a Diagnostic

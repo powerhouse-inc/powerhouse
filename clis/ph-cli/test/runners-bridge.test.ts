@@ -2,20 +2,48 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { HostDefinition, RunnerContext } from "@powerhousedao/host-core";
+import type { RunnerContext } from "@powerhousedao/host-core";
+import {
+  hostSchema as connectHostSchema,
+  type ConnectHost,
+} from "../src/runners/connect.js";
+import {
+  hostSchema as switchboardHostSchema,
+  type SwitchboardHost,
+} from "../src/runners/switchboard.js";
 
 /** The bridges must call the SAME services the classic commands call — these
  * tests pin the host→args mapping, not the services themselves. */
 
+// The services return their vite server; a handle needs only these two.
+const fakeVite = (url: string) => ({
+  resolvedUrls: { local: [url], network: [] },
+  close: vi.fn().mockResolvedValue(undefined),
+});
 vi.mock("../src/services/connect-studio.js", () => ({
-  runConnectStudio: vi.fn().mockResolvedValue(undefined),
+  runConnectStudio: vi
+    .fn()
+    .mockImplementation((args: { port: number }) =>
+      Promise.resolve(fakeVite(`http://localhost:${args.port}/`)),
+    ),
 }));
 vi.mock("../src/services/switchboard.js", () => ({
   // the real service returns the server handle; workflows off in these tests
-  startSwitchboard: vi.fn().mockResolvedValue({ workflowsEnabled: false }),
+  startSwitchboard: vi.fn().mockImplementation((args: { port: number }) =>
+    Promise.resolve({
+      workflowsEnabled: false,
+      mcpEnabled: true,
+      port: args.port,
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    }),
+  ),
 }));
 vi.mock("../src/services/connect-preview.js", () => ({
-  runConnectPreview: vi.fn().mockResolvedValue(undefined),
+  runConnectPreview: vi
+    .fn()
+    .mockImplementation((args: { host: string; port: number }) =>
+      Promise.resolve(fakeVite(`http://${args.host}:${args.port}/`)),
+    ),
 }));
 vi.mock("../src/services/connect-build.js", () => ({
   runConnectBuild: vi.fn().mockResolvedValue(undefined),
@@ -23,7 +51,12 @@ vi.mock("../src/services/connect-build.js", () => ({
 
 const ctx: RunnerContext = { projectRoot: "/lab", verb: "run", env: {} };
 
-const connectHost = (over: Partial<HostDefinition> = {}): HostDefinition => ({
+/** Verbs receive the PARSED host, as validateHost hands it to them. */
+const connect = (host: ConnectHost) => connectHostSchema.parse(host);
+const switchboard = (host: SwitchboardHost) =>
+  switchboardHostSchema.parse(host);
+
+const connectHost = (over: Partial<ConnectHost> = {}): ConnectHost => ({
   name: "lab-connect",
   runner: { module: "@powerhousedao/ph-cli/runners/connect", port: 6599 },
   config: { branding: { appName: "Lab" } },
@@ -38,7 +71,7 @@ describe("connect bridge runner", () => {
     expect(runner.kind).toBe("reactor");
     expect(runner.hostSchema.safeParse(connectHost()).success).toBe(true);
 
-    await runner.dev(connectHost(), ctx);
+    await runner.dev(connect(connectHost()), ctx);
     const [args, logger, callerOverride] =
       vi.mocked(runConnectStudio).mock.calls[0];
     expect(args).toMatchObject({ port: 6599, open: false, printUrls: true });
@@ -52,7 +85,7 @@ describe("connect bridge runner", () => {
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.run(
-      connectHost({ runner: { module: "m", openBrowser: true } }),
+      connect(connectHost({ runner: { module: "m", openBrowser: true } })),
       ctx,
     );
     expect(vi.mocked(runConnectStudio).mock.calls[0][0]).toMatchObject({
@@ -61,10 +94,99 @@ describe("connect bridge runner", () => {
     });
   });
 
+  it("warns at boot on config owned by a plugin the composition lacks", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const host = connect(
+        connectHost({
+          runner: {
+            module: "@powerhousedao/ph-cli/runners/connect",
+            port: 6599,
+            plugins: ["@powerhousedao/connect/plugins/workflows"],
+          },
+          config: { drives: { allowAddDrive: true } },
+        }),
+      );
+      await runner.dev(host, { ...ctx, verb: "dev" });
+      const messages = warn.mock.calls.map((call) => String(call[0]));
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toContain(
+        "hosts/lab-connect/host.js: config.drives.allowAddDrive is dead config",
+      );
+      expect(messages[0]).toContain('"@powerhousedao/connect/plugins/generic"');
+      expect(messages[0]).toContain('verb "dev"');
+
+      // Composing the owner silences it; a classic host (no plugins) too.
+      warn.mockClear();
+      await runner.dev(
+        connect(
+          connectHost({
+            runner: {
+              module: "@powerhousedao/ph-cli/runners/connect",
+              plugins: [
+                {
+                  module: "@powerhousedao/connect/plugins/generic",
+                  config: { allowAddDrive: true },
+                },
+              ],
+            },
+            config: { drives: { allowAddDrive: true } },
+          }),
+        ),
+        { ...ctx, verb: "dev" },
+      );
+      await runner.dev(
+        connect(connectHost({ config: { drives: { allowAddDrive: true } } })),
+        { ...ctx, verb: "dev" },
+      );
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      log.mockRestore();
+    }
+  });
+
   it("rejects a host without a name", async () => {
     const runner = await import("../src/runners/connect.js");
     expect(
       runner.hostSchema.safeParse({ runner: { module: "m" } }).success,
+    ).toBe(false);
+  });
+
+  it("takes output tokens in config.drives.defaultDrives[].url and renown.switchboardUrl (declared form only)", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const graphql = {
+      $output: { host: "switchboard", path: ["endpoints", "graphql"] },
+    };
+    const host: ConnectHost = {
+      name: "connect",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      config: {
+        drives: {
+          defaultDrives: [
+            {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "sektar", "url"],
+                },
+              },
+            },
+          ],
+        },
+        renown: { switchboardUrl: graphql },
+      },
+    };
+    expect(runner.declaredHostSchema.safeParse(host).error).toBeUndefined();
+    expect(runner.hostSchema.safeParse(host).success).toBe(false);
+    // a field that names no other host's output stays plain
+    expect(
+      runner.declaredHostSchema.safeParse({
+        ...host,
+        config: { renown: { url: graphql } },
+      }).success,
     ).toBe(false);
   });
 });
@@ -73,13 +195,13 @@ describe("switchboard bridge runner", () => {
   it("maps run → production and dev → dev loader", async () => {
     const runner = await import("../src/runners/switchboard.js");
     const { startSwitchboard } = await import("../src/services/switchboard.js");
-    const host: HostDefinition = {
+    const host = switchboard({
       name: "lab-switchboard",
       runner: {
         module: "@powerhousedao/ph-cli/runners/switchboard",
         port: 7599,
       },
-    };
+    });
 
     const { classicSwitchboardArgs } =
       await import("../src/services/classic-args.js");
@@ -143,19 +265,20 @@ describe("switchboard bridge runner", () => {
     const dataDir = mkdtempSync(join(tmpdir(), "ph-bridge-datadir-"));
     try {
       await runner.run(
-        {
+        switchboard({
           name: "lab-switchboard",
           runner: { module: "m", port: 7599 },
           reactor: {
             backends: {
               main: {
+                kind: "in-process",
                 storage: { kind: "path", dataDir },
                 readModel: { url: "dev.db" },
               },
             },
             protocol: { featureFlags: { documentDecisions: true } },
           },
-        },
+        }),
         ctx,
       );
       expect(process.env.REACTOR_DOCUMENT_DECISIONS).toBe("true");
@@ -176,11 +299,11 @@ describe("switchboard bridge runner", () => {
     try {
       await expect(
         runner.run(
-          {
+          switchboard({
             name: "lab-switchboard",
             runner: { module: "m" },
             reactor: { protocol: { featureFlags: { authEnforcement: false } } },
-          },
+          }),
           ctx,
         ),
       ).rejects.toThrow(
@@ -198,10 +321,10 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     const { runConnectPreview } =
       await import("../src/services/connect-preview.js");
     await runner.serve(
-      {
+      connect({
         name: "lab-connect",
         runner: { module: "m", port: 8099, outDir: "build-out" },
-      },
+      }),
       ctx,
     );
     expect(vi.mocked(runConnectPreview).mock.calls[0][0]).toMatchObject({
@@ -216,7 +339,10 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectBuild } =
       await import("../src/services/connect-build.js");
-    await runner.build({ name: "lab-connect", runner: { module: "m" } }, ctx);
+    await runner.build(
+      connect({ name: "lab-connect", runner: { module: "m" } }),
+      ctx,
+    );
     expect(vi.mocked(runConnectBuild).mock.calls[0][0]).toMatchObject({
       outDir: "dist",
     });
@@ -290,6 +416,31 @@ describe("connect bridge runner — serve/build verbs (P3.3)", () => {
     expect(connect?.branding).toEqual({ appName: "Lab" });
   });
 
+  it("serve keeps the build's images over the host's project paths", async () => {
+    const { withoutBuiltImages } = await import("../src/runners/connect.js");
+    const url = "https://cdn.example/logo.png";
+    expect(
+      withoutBuiltImages({
+        branding: {
+          appName: "Lab",
+          icon: "./icons/app.png",
+          loader: { src: "./icons/loader.png", animation: "pulse", size: 88 },
+          favicon: "icon.ico",
+        },
+      })?.branding,
+    ).toEqual({ appName: "Lab" });
+    // URLs, data URIs and resets are served as given
+    expect(
+      withoutBuiltImages({
+        branding: { icon: url, loader: { src: url, animation: "none" } },
+      })?.branding,
+    ).toEqual({ icon: url, loader: { src: url, animation: "none" } });
+    expect(
+      withoutBuiltImages({ branding: { icon: null, loader: "./l.png" } })
+        ?.branding,
+    ).toEqual({ icon: null });
+  });
+
   it("dev mounts the host's routes", async () => {
     const runner = await import("../src/runners/connect.js");
     const { runConnectStudio } =
@@ -312,12 +463,16 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
-      {
+      connect({
         name: "lab-connect",
         runner: { module: "m" },
         config: {
           // the scaffold default that must NOT veto declared structure:
-          instance: { reactorWorker: false, multiReactor: false },
+          instance: {
+            namespace: null,
+            reactorWorker: false,
+            multiReactor: false,
+          },
           drives: {
             defaultDrives: [
               { url: "http://existing/d/kept", name: null, icon: null },
@@ -334,7 +489,7 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
           },
           placement: { primary: "local" },
         },
-      },
+      }),
       ctx,
     );
     const override = vi.mocked(runConnectStudio).mock
@@ -358,12 +513,18 @@ describe("connect bridge runner — structural multi-reactor (P4.2/P4.3)", () =>
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
-      {
+      connect({
         name: "lab-connect",
         runner: { module: "m" },
-        config: { instance: { multiReactor: false } },
+        config: {
+          instance: {
+            namespace: null,
+            reactorWorker: false,
+            multiReactor: false,
+          },
+        },
         reactor: { backends: { local: { kind: "in-process" } } },
-      },
+      }),
       ctx,
     );
     const override = vi.mocked(runConnectStudio).mock
@@ -385,7 +546,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
       await import("../src/services/connect-studio.js");
     vi.mocked(runConnectStudio).mockClear();
     await runner.dev(
-      {
+      connect({
         name: "lab-connect",
         runner: { module: "m", port: 6599 },
         config: { branding: { appName: "Lab" } },
@@ -394,7 +555,7 @@ describe("connect bridge runner — reactor projection (P2.5)", () => {
           workflows: true,
           protocol: { createSignaturePolicy: "legacy" },
         },
-      },
+      }),
       ctx,
     );
     const override = vi.mocked(runConnectStudio).mock.calls[0][2];

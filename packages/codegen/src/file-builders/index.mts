@@ -7,6 +7,8 @@ export * from "./document-model/document-model.js";
 export * from "./document-model/upgrade-migration.js";
 export * from "./document-model/utils.js";
 export * from "./editor-common.js";
+export * from "./hosts/host-typing-files.js";
+export * from "./hosts/outputs-file.js";
 export * from "./index-files.js";
 export * from "./manifest.js";
 export * from "./pieces.js";

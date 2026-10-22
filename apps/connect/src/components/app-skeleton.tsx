@@ -7,6 +7,7 @@ import { getBasePath } from "../utils/browser.js";
 import { getIsEmbedded } from "@powerhousedao/connect-core/embedded";
 import {
   ConnectSidebar,
+  getProjectLoader,
   HomeScreen,
   LogoAnimation,
 } from "@powerhousedao/design-system/connect";
@@ -23,6 +24,15 @@ import {
   type MigrationPhase,
 } from "./migration-status.js";
 const LOADER_DELAY = 250;
+
+/** Set by the build when the project's `_app` replaces Connect's layout:
+ * the loading state then shows no Connect chrome, only the loader. */
+function isCustomShell() {
+  return (
+    typeof document !== "undefined" &&
+    document.querySelector('meta[name="ph-custom-shell"]') !== null
+  );
+}
 
 const PHASE_LABEL: Record<MigrationPhase, string> = {
   clone: "Backing up local database…",
@@ -77,9 +87,14 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
     <div
       className={`skeleton-loader absolute inset-0 z-10 flex items-center justify-center ${showLoading ? "" : "hidden"}`}
     >
-      <div className="animate-pulse overflow-hidden rounded-full shadow-lg motion-reduce:animate-none">
+      {getProjectLoader() ? (
+        // The project's loader brings its own motion and shape.
         <LogoAnimation />
-      </div>
+      ) : (
+        <div className="animate-pulse overflow-hidden rounded-full shadow-lg motion-reduce:animate-none">
+          <LogoAnimation />
+        </div>
+      )}
       {isSSR ? (
         <script
           dangerouslySetInnerHTML={{
@@ -101,6 +116,14 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
    * vetra-studio BUILD iframe), suppress the sidebar during the Suspense
    * fallback so the loading state matches the loaded state. */
   const isEmbedded = !isSSR && getIsEmbedded();
+  if (!isSSR && isCustomShell()) {
+    return (
+      <div className="relative flex h-screen overflow-hidden bg-background">
+        {props.children ?? <Loader />}
+        <MigrationOverlay />
+      </div>
+    );
+  }
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {!isEmbedded && (

@@ -1,5 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { bundledPackageVersions } from "./bundled-package-versions.ts";
 
 // Bundles src/prerender/shell.tsx for Node; scripts/prerender-shell.ts runs it.
 export default defineConfig({
@@ -11,6 +12,7 @@ export default defineConfig({
     CONNECT_GIT_SHA: JSON.stringify("prerender"),
     PH_CONNECT_SENTRY_RELEASE: JSON.stringify("prerender"),
     PH_CONNECT_BUILD_HASH: JSON.stringify("prerender"),
+    ...bundledPackageVersions,
   },
   ssr: { target: "node" },
   build: {

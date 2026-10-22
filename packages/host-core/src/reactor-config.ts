@@ -7,55 +7,22 @@
  * client and server cannot diverge, and a contradicting pre-set env fails boot.
  */
 
-export type ReactorBackendKind = "in-process" | "worker" | "remote";
+import type {
+  ReactorBackend,
+  ReactorBackendKind,
+  ReactorConfig,
+  ReactorProtocol,
+} from "./host-schemas.js";
 
-export interface ReactorStorageConfig {
-  kind: "idb" | "memory" | "path" | "postgres";
-  dataDir?: string;
-  url?: string;
-}
-
-export interface ReactorPackageConfig {
-  cdnUrl?: string;
-  specs?: string[];
-  /** on-demand model resolution (was DYNAMIC_MODEL_LOADING). */
-  dynamic?: boolean;
-}
-
-export interface ReactorRemoteConfig {
-  host?: string;
-  url?: string;
-}
-
-export interface ReactorBackend {
-  kind?: ReactorBackendKind;
-  storage?: ReactorStorageConfig;
-  readModel?: { url?: string };
-  packages?: ReactorPackageConfig;
-  remote?: ReactorRemoteConfig;
-}
-
-/** Replay/admission rules every sync peer must share. */
-export interface ReactorProtocol {
-  featureFlags?: {
-    documentDecisions?: boolean;
-    authEnforcement?: boolean;
-    authGroups?: boolean;
-    authConditions?: boolean;
-  };
-  createSignaturePolicy?: "legacy" | "v2-required";
-  unsupportedStoredDocuments?: "refuse" | "read-only";
-}
-
-export interface ReactorConfig {
-  backends?: Record<string, ReactorBackend>;
-  placement?: {
-    primary?: string;
-    default?: Record<string, unknown>;
-  };
-  workflows?: boolean;
-  protocol?: ReactorProtocol;
-}
+export type {
+  ReactorBackend,
+  ReactorBackendKind,
+  ReactorConfig,
+  ReactorPackageConfig,
+  ReactorProtocol,
+  ReactorRemoteConfig,
+  ReactorStorageConfig,
+} from "./host-schemas.js";
 
 /** The single primary backend for phase-2 projection (multi-backend routing is
  * track R). Prefers placement.primary, else "main"/"local", else the first. */
@@ -139,10 +106,9 @@ export function projectReactorToSwitchboard(
  * shared PHReactorClientMode; kept local to avoid an import cycle). */
 export type ReactorClientMode = "in-process" | "worker" | "remote" | "router";
 
-const LOCAL_BACKEND_KINDS = new Set<ReactorBackendKind | undefined>([
+const LOCAL_BACKEND_KINDS = new Set<ReactorBackendKind>([
   "in-process",
   "worker",
-  undefined,
 ]);
 
 /**

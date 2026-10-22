@@ -1,0 +1,76 @@
+{
+  "branding": {
+    "appName": "Sektar",
+    "icon": "./icons/sektar.png",
+    "loader": {
+      "src": "./icons/sektar_192x192.png",
+      "animation": "pulse",
+      "size": 88
+    }
+  },
+  "app": {
+    "logLevel": "info",
+    "basePath": "/",
+    "offline": true,
+    "studioMode": false
+  },
+  "ai": {
+    "assistantEnabled": false
+  },
+  "packages": {
+    "externalEnabled": true,
+    "liveReload": false
+  },
+  "drives": {
+    "allowAddDrive": true,
+    "defaultDrives": [],
+    "sections": {
+      "remote": {
+        "enabled": true,
+        "allowAdd": true,
+        "allowDelete": true
+      },
+      "local": {
+        "enabled": true,
+        "allowAdd": true,
+        "allowDelete": true
+      }
+    }
+  },
+  "renown": {
+    "url": "https://www.renown.id",
+    "networkId": "eip155",
+    "chainId": 1
+  },
+  "sentry": {
+    "dsn": null,
+    "env": "dev",
+    "tracing": false
+  },
+  "openPanel": {
+    "clientId": "",
+    "trackUiEvents": true,
+    "trackOperations": true
+  },
+  "instance": {
+    "namespace": null,
+    "reactorWorker": false,
+    "multiReactor": false
+  },
+  "reactor": {
+    "featureFlags": {
+      "documentDecisions": false,
+      "authEnforcement": false,
+      "authGroups": false,
+      "authConditions": false
+    },
+    "createSignaturePolicy": "v2-required",
+    "unsupportedStoredDocuments": "refuse"
+  },
+  "pwa": {
+    "manifest": {
+      "theme_color": "#1F3A2E",
+      "background_color": "#F5F7F3"
+    }
+  }
+}

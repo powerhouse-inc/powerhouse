@@ -1,0 +1,49 @@
+{
+  "$id": "https://powerhouse.inc/schemas/ph-cli/runner-switchboard.outputs.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "origin": {
+      "type": "string",
+      "format": "uri"
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "graphql": {
+          "type": "string",
+          "format": "uri"
+        },
+        "mcp": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": ["graphql"],
+      "additionalProperties": false
+    },
+    "drives": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": ["id", "url"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["origin", "endpoints", "drives"],
+  "additionalProperties": false
+}

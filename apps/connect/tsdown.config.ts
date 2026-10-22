@@ -1,5 +1,6 @@
 import { defineConfig } from "tsdown";
 import { dtsExportList } from "../../tsdown.dts.mjs";
+import { bundledPackageVersions } from "./bundled-package-versions.ts";
 
 const version =
   process.env.WORKSPACE_VERSION ?? process.env.npm_package_version ?? "unknown";
@@ -15,6 +16,7 @@ export default defineConfig({
     "route-tree": "src/route-tree.ts",
     "route-views": "src/route-views/index.ts",
     prerender: "src/prerender/shell.tsx",
+    "plugin-configs": "src/plugin-configs/index.ts",
     "pglite.worker": "pglite.worker.ts",
     "pglite.worker.legacy": "pglite.worker.legacy.ts",
     "reactor.worker": "src/reactor.worker.ts",
@@ -54,5 +56,6 @@ export default defineConfig({
     CONNECT_VERSION: JSON.stringify(version),
     CONNECT_GIT_SHA: JSON.stringify(gitSha),
     CONNECT_PACKAGED_DIST: "true",
+    ...bundledPackageVersions,
   },
 });

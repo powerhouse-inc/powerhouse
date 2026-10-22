@@ -1,6 +1,6 @@
-import { Modal } from "@powerhousedao/design-system";
 import {
   ConnectSelect,
+  Modal,
   ModalButton,
 } from "@powerhousedao/design-system/connect";
 import type { DocumentSpecification } from "@powerhousedao/shared/document-model";

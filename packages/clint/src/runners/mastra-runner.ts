@@ -3,16 +3,13 @@ import fs from "node:fs";
 import { createServer, type Server } from "node:http";
 import {
   defaultUserDataDir,
-  loadHost,
   probeRun,
-  reactorHostSchema,
   resolveUserDataPlaceholders,
-  writeRunRecord,
-  clearRunRecord,
-  type HostDefinition,
-  type ReactorConfig,
   type RunnerContext,
+  type RunnerHandle,
 } from "@powerhousedao/host-core";
+import { defineHostSchemas } from "@powerhousedao/host-core/schema";
+import { z } from "zod";
 import {
   attachRemoteReactor,
   type RemoteReactorAttachment,
@@ -25,72 +22,122 @@ import {
 
 /**
  * mastra-runner (P5.6): the headless agent host. Its reactor is a REMOTE
- * attach — a lone `remote` backend naming a running switchboard (by sibling
- * host reference or URL); it depends on that switchboard and never starts
- * one. `run`/`serve` expose an OpenAI-compatible chat-completions endpoint
- * (streaming SSE + non-streaming, stateless baseline — the caller owns
- * session state); without a configured model it answers as the DEMO agent.
- * `build` compiles skills and agent profiles (ph-clint-dev's pipeline,
- * ported).
+ * attach — a lone `remote` backend whose `remote.url` is the running
+ * switchboard's GraphQL endpoint (typically the output token
+ * `switchboard.endpoints.graphql`, resolved before the verb runs); it depends
+ * on that switchboard and never starts one. `run`/`serve` expose an
+ * OpenAI-compatible chat-completions endpoint (streaming SSE +
+ * non-streaming, stateless baseline — the caller owns session state);
+ * without a configured model it answers as the DEMO agent. `build` compiles
+ * skills and agent profiles (ph-clint-dev's pipeline, ported).
  */
 
 export const kind = "reactor";
 
-export const hostSchema = reactorHostSchema;
+/** The verbs this runner exports (`promptFromMessages` is a helper). */
+export const verbs = ["run", "serve", "build"] as const;
+
+/** The token a host writes for the switchboard endpoint (error hints). */
+const REMOTE_URL_HINT =
+  'remote: { url: switchboard.endpoints.graphql } (from ../switchboard/outputs.js), or literally { url: { $output: { host: "switchboard", path: ["endpoints", "graphql"] } } }';
 
 /**
- * host.js config for the agent host — OPERATOR SETTINGS only (rewire R5):
- * `model` selects the LLM; `instructions`/`prompts` shape the agent. Framework
- * KNOBS (maxSteps, cacheControl, memory tuning, untilIdle, tool allowlists)
- * stay in code, and the agent CARD (description/image) comes from the host's
- * `profile`, not here. An LLM API key is a SECRET — env only, never config.
+ * The agent host, from one definition in two forms: DECLARED (`apiKey` may
+ * be a token, e.g. `{ $env: "OPENROUTER_API_KEY" }`; what host.js authors
+ * write) and RESOLVED (what the verbs receive).
+ *
+ * `config` holds OPERATOR SETTINGS only (rewire R5): `model` selects the
+ * LLM, `apiKey` authenticates it, `instructions`/`prompts` shape the agent.
+ * Framework KNOBS (maxSteps, cacheControl, memory tuning, untilIdle, tool
+ * allowlists) stay in code, and the agent CARD (description/image) comes
+ * from the host's `profile`, not here.
  */
-interface AgentHostConfig {
-  model?: string;
-  instructions?: string;
-  prompts?: {
-    skillsDir?: string;
-    agentsDir?: string;
-    outDir?: string;
-  };
+const schemas = defineHostSchemas((s) => {
+  const agentHostConfigSchema = z.strictObject({
+    /** Mastra model router id (e.g. "openrouter/<vendor>/<model>"). Absent:
+     * the runner answers as the demo agent. */
+    model: z.string().min(1).optional(),
+    /** The model provider's API key. A SECRET: write it as
+     * `{ $env: "OPENROUTER_API_KEY" }` so it comes from the environment at
+     * resolve time and never sits in the host file. Passed to the provider
+     * as given; the runner does not read `process.env` itself. Absent, the
+     * Mastra model router falls back to its own provider env lookup. */
+    apiKey: s.tokenable(z.string().min(1)).optional(),
+    instructions: z.string().optional(),
+    /** `build`: skill + agent-profile compilation inputs and output. */
+    prompts: z
+      .strictObject({
+        skillsDir: z.string().min(1).optional(),
+        agentsDir: z.string().min(1).optional(),
+        outDir: z.string().min(1).optional(),
+      })
+      .optional(),
+  });
+  /** `reactor` is the base block: a lone `remote` backend naming the
+   * switchboard to attach to. `runner` takes no options beyond the base. */
+  return s.reactorHostSchema.extend({
+    runner: s.runnerBaseSchema.strict(),
+    config: agentHostConfigSchema.optional(),
+  });
+});
+/** Declared form: what a host file may contain before resolution. */
+export const declaredHostSchema = schemas.declaredHostSchema;
+/** Resolved form: what the verbs receive (and `validateHost` checks). */
+export const hostSchema = schemas.hostSchema;
+
+/** What an agent host.js author writes. */
+export type MastraHostInput = z.input<typeof declaredHostSchema>;
+/** What the verbs receive. */
+export type MastraHost = z.output<typeof hostSchema>;
+export type AgentHostConfig = NonNullable<MastraHostInput["config"]>;
+
+/** What serving the agent produces: where its OpenAI-compatible API is
+ * actually bound. */
+export const outputsSchema = z.strictObject({
+  /** `http://<bound host>:<bound port>`. */
+  origin: z.url(),
+  endpoints: z.strictObject({
+    /** OpenAI-compatible base URL (`<origin>/v1`). */
+    openai: z.url(),
+    /** Readiness probe (`<origin>/ready`). */
+    ready: z.url(),
+  }),
+});
+
+export type MastraOutputs = z.infer<typeof outputsSchema>;
+
+declare global {
+  interface PHHostRunners {
+    "@powerhousedao/clint/mastra-runner": {
+      host: MastraHostInput;
+      outputs: MastraOutputs;
+    };
+  }
 }
 
 const DEFAULT_AGENT_PORT = 4910;
 
-/** Resolve the remote backend's switchboard url: `remote.url` as given, or a
- * sibling host reference (`remote.host`) whose runner.port names the port. */
-async function resolveRemoteUrl(
-  host: HostDefinition,
-  ctx: RunnerContext,
-): Promise<string> {
-  const reactor = host.reactor as ReactorConfig | undefined;
-  const backends = Object.entries(reactor?.backends ?? {});
-  const remote = backends.find(([, b]) => b.kind === "remote")?.[1];
+/** The remote backend's switchboard url, as resolved before the verb. The
+ * sibling-reference resolver (`remote: { host }`) is gone: an output token
+ * names the endpoint the switchboard actually bound. */
+function remoteUrl(host: MastraHost): string {
+  const backends = Object.values(host.reactor?.backends ?? {});
+  const remote = backends.find((b) => b.kind === "remote");
   if (!remote) {
     throw new Error(
       `hosts/${host.name}: an agent host attaches to a RUNNING switchboard — ` +
         `declare a remote backend, e.g. reactor.backends.switchboard = ` +
-        `{ kind: "remote", remote: { host: "switchboard" } }.`,
+        `{ kind: "remote", ${REMOTE_URL_HINT} }.`,
     );
   }
-  const ref = remote.remote as { url?: string; host?: string } | undefined;
-  if (ref?.url) return ref.url;
-  if (ref?.host) {
-    const sibling = await loadHost(ctx.projectRoot, ref.host);
-    const port = sibling.host.runner.port;
-    if (typeof port !== "number") {
-      throw new Error(
-        `hosts/${host.name}: sibling host "${ref.host}" declares no ` +
-          `runner.port to derive the switchboard endpoint from — set one, or ` +
-          `use remote.url.`,
-      );
-    }
-    return `http://localhost:${port}/graphql`;
+  const url = remote.remote?.url;
+  if (typeof url !== "string" || url.length === 0) {
+    throw new Error(
+      `hosts/${host.name}: the remote backend needs the switchboard's ` +
+        `GraphQL url: ${REMOTE_URL_HINT}.`,
+    );
   }
-  throw new Error(
-    `hosts/${host.name}: the remote backend needs remote.url or a sibling ` +
-      `remote.host reference.`,
-  );
+  return url;
 }
 
 type ChatMessage = { role: string; content: unknown };
@@ -134,26 +181,22 @@ function completionChunk(
   })}\n\n`;
 }
 
-export interface AgentServeHandle {
-  port: number;
-  endpoints: Record<string, string>;
-  ready: Promise<void>;
-  shutdown: () => Promise<void>;
-}
+export type AgentServeHandle = RunnerHandle<MastraOutputs>;
 
 async function serveAgent(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<AgentServeHandle> {
   const userData = defaultUserDataDir(ctx.projectRoot, ctx.env);
   const resolved = resolveUserDataPlaceholders(host, userData);
-  const config = (resolved.config ?? {}) as AgentHostConfig;
+  const config = resolved.config ?? {};
   const port =
     typeof resolved.runner.port === "number"
       ? resolved.runner.port
       : DEFAULT_AGENT_PORT;
 
-  // Single-instance lock, standalone-run parity with the compound.
+  // Single-instance lock: refuse before attaching or binding when the record
+  // start-run wrote for a running instance of this host is live.
   const projectName = (() => {
     try {
       return (
@@ -175,9 +218,8 @@ async function serveAgent(
   }
 
   // The reactor: attach, loudly, before serving anything.
-  const remoteUrl = await resolveRemoteUrl(resolved, ctx);
   const attachment: RemoteReactorAttachment = await attachRemoteReactor({
-    url: remoteUrl,
+    url: remoteUrl(resolved),
     documentModels: [],
   });
   console.log(`[${resolved.name}] reactor attached: ${attachment.endpoint}`);
@@ -191,6 +233,7 @@ async function serveAgent(
         config.instructions ??
         `You are ${resolved.name}, a Powerhouse project agent.`,
       model: config.model,
+      apiKey: config.apiKey,
     });
   } else {
     provider = createDemoProvider(resolved.name);
@@ -207,11 +250,7 @@ async function serveAgent(
       if (req.method === "GET" && url === "/v1/models") {
         // The agent card: id + model, plus description/image from the host's
         // profile (rewire R5 — identity lives in profile, not config).
-        const profile = (resolved.profile ?? {}) as {
-          description?: string;
-          icon?: string;
-          name?: string;
-        };
+        const profile = resolved.profile ?? {};
         res.writeHead(200, { "content-type": "application/json" });
         res.end(
           JSON.stringify({
@@ -323,42 +362,29 @@ async function serveAgent(
   await ready;
   // The actual bound port (a requested 0 means "any free port").
   const boundPort = (server.address() as { port: number }).port;
+  const origin = `http://127.0.0.1:${boundPort}`;
+  const outputs = outputsSchema.parse({
+    origin,
+    endpoints: { openai: `${origin}/v1`, ready: `${origin}/ready` },
+  });
   console.log(
-    `[${resolved.name}] agent API (OpenAI-compatible): http://127.0.0.1:${boundPort}/v1  (model: ${provider.modelId})`,
+    `[${resolved.name}] agent API (OpenAI-compatible): ${outputs.endpoints.openai}  (model: ${provider.modelId})`,
   );
 
-  writeRunRecord(ctx.projectRoot, {
-    pid: process.pid,
-    hostName: resolved.name,
-    projectName,
-    startedAt: new Date().toISOString(),
-    members: {
-      [resolved.name]: {
-        port: boundPort,
-        url: `http://127.0.0.1:${boundPort}/v1`,
-      },
-    },
-    extra: { reactor: attachment.endpoint, model: provider.modelId },
-  });
-  const cleanup = () => clearRunRecord(ctx.projectRoot, resolved.name);
-  process.once("exit", cleanup);
-
+  // No run record here: standalone `ph run` (start-run) publishes `outputs`
+  // in the v2 record because this module exports `outputsSchema`, and a
+  // compound records its members itself. One writer per record.
   return {
-    port: boundPort,
-    endpoints: {
-      openai: `http://127.0.0.1:${boundPort}/v1`,
-      ready: `http://127.0.0.1:${boundPort}/ready`,
-    },
+    outputs,
     ready,
     shutdown: async () => {
-      cleanup();
       await new Promise((resolve) => server.close(resolve));
     },
   };
 }
 
 export async function run(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<AgentServeHandle> {
   return serveAgent(host, ctx);
@@ -368,10 +394,10 @@ export const serve = run;
 
 /** `build` — skill + agent-profile compilation (ph-clint-dev's pipeline). */
 export async function build(
-  host: HostDefinition,
+  host: MastraHost,
   ctx: RunnerContext,
 ): Promise<void> {
-  const config = (host.config ?? {}) as AgentHostConfig;
+  const config = host.config ?? {};
   const { buildSkills } = await import("../dev/build-skills.js");
   const result = await buildSkills({
     rootDir: ctx.projectRoot,

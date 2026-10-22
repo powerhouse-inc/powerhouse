@@ -1,3 +1,4 @@
+export * from "./background.js";
 export * from "./config-loader.js";
 export * from "./dynamic-base.js";
 export * from "./env-config.js";
@@ -8,3 +9,4 @@ export * from "./pwa-manifest.js";
 export * from "./runtime-config.js";
 export * from "./schema-fragments.js";
 export * from "./shared-deps.js";
+export * from "./connect-config-schema.js";

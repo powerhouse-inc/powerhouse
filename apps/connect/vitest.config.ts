@@ -1,12 +1,14 @@
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+import { bundledPackageVersions } from "./bundled-package-versions.ts";
 
 export default defineConfig({
   // `tsconfigPaths()` resolves the `@powerhousedao/connect/*` path aliases
   // declared in tsconfig.json (e.g. `@powerhousedao/connect/services` ->
   // `./src/services/index.ts`), matching how the Vite build resolves them.
   plugins: [react(), tsconfigPaths()],
+  define: bundledPackageVersions,
   resolve: {
     // Use the "source" export condition from package.json exports maps,
     // matching the project-wide tsconfig.options.json

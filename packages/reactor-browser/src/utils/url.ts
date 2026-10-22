@@ -71,7 +71,7 @@ function namedSlug(owner: object, name: string, id: string) {
 export function findDriveBySlug(
   drives: readonly DocumentDriveDocument[] | undefined,
   ref: string | undefined,
-) {
+): DocumentDriveDocument | undefined {
   if (!drives || !ref) return undefined;
   const exact = drives.find(
     (d) => d.header.slug === ref || d.header.id === ref,

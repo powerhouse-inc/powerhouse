@@ -1,0 +1,8 @@
+{
+  "name": "@powerhousedao/host-core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./runners/compound": "./compound.ts"
+  }
+}

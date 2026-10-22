@@ -43,7 +43,10 @@ export const pluginEntrySchema = z.union([
   pluginEntryObjectSchema,
 ]);
 
-export type PluginEntry = z.infer<typeof pluginEntrySchema>;
+/** The validated (runtime) entry shape. Authors write `PluginEntry`
+ * (host-types.ts), which types known plugins' configs. */
+export type PluginEntryData = z.infer<typeof pluginEntrySchema>;
+export type { PluginEntry } from "./host-types.js";
 
 export interface NormalizedPluginEntry {
   module: string;
@@ -53,7 +56,7 @@ export interface NormalizedPluginEntry {
 }
 
 export function normalizePluginEntry(
-  entry: PluginEntry,
+  entry: PluginEntryData,
 ): NormalizedPluginEntry {
   if (typeof entry === "string") {
     return { module: entry, enabled: true, verbs: "*", config: {} };
@@ -69,7 +72,7 @@ export function normalizePluginEntry(
 /** Module is the identity key: a duplicate makes override targeting and
  * ordering ambiguous, so it fails loudly. */
 export function normalizePluginEntries(
-  entries: readonly PluginEntry[],
+  entries: readonly PluginEntryData[],
   where: string,
 ): NormalizedPluginEntry[] {
   const normalized = entries.map(normalizePluginEntry);
