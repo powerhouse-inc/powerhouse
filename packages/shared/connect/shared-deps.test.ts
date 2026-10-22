@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PEER_EXTERNAL_DEPENDENCIES } from "../clis/constants.js";
 import {
   checkSharedDeps,
   EXTERNALIZABLE_SHARED_SPECIFIERS,
@@ -7,8 +9,44 @@ import {
   parseDepSpec,
   rewritePackageSource,
   SHARED_DEP_SPECIFIERS,
+  SHARED_DEPS,
   SHARED_SUBPATHS,
 } from "./shared-deps.js";
+
+const isWorkspacePackage = (name: string) =>
+  name.startsWith("@powerhousedao/") || name === "document-model";
+
+const peerRangeIn = (packageJson: string, name: string) =>
+  (
+    JSON.parse(readFileSync(new URL(packageJson, import.meta.url), "utf8")) as {
+      peerDependencies?: Record<string, string>;
+    }
+  ).peerDependencies?.[name];
+
+describe("the shared packages a project provides", () => {
+  // Connect resolves them from the project, so ph init and ph migrate must add them.
+  it("are peers of every generated project, at Connect's and core's ranges", () => {
+    const external = [
+      ...new Set(
+        SHARED_DEPS.map((d) => d.package).filter((p) => !isWorkspacePackage(p)),
+      ),
+    ];
+    expect(external.length).toBeGreaterThan(0);
+    for (const name of external) {
+      expect(PEER_EXTERNAL_DEPENDENCIES, name).toHaveProperty([name]);
+    }
+    const router = PEER_EXTERNAL_DEPENDENCIES["@tanstack/react-router"];
+    expect(
+      peerRangeIn(
+        "../../../apps/connect/package.json",
+        "@tanstack/react-router",
+      ),
+    ).toBe(router.peer);
+    expect(
+      peerRangeIn("../../connect-core/package.json", "@tanstack/react-router"),
+    ).toBe(router.peer);
+  });
+});
 
 describe("parseDepSpec", () => {
   const cases: Array<[spec: string, pkg: string, sub: string]> = [

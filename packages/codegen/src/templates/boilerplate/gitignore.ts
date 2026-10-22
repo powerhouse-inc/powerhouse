@@ -6,5 +6,6 @@ node_modules
 *.tsbuildinfo
 
 .ph
+backup-documents
 projects-import.js
 `;
