@@ -50,7 +50,7 @@ Path to a document model spec (.phd or .json) to generate from<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing document model to re-generate<br><br>
+Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -88,7 +88,7 @@ Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen<
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing editor to re-generate<br><br>
+Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -126,7 +126,7 @@ Path to a powerhouse/app spec file (.phd or .json) to drive codegen<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing app to re-generate<br><br>
+Name of the directory of an existing app to re-generate (my-app or editors/my-app)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -176,7 +176,7 @@ Path to a powerhouse/processor spec file (.phd or .json) to drive codegen<br><br
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing processor to re-generate<br><br>
+Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -214,7 +214,7 @@ Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing subgraph to re-generate<br><br>
+Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -266,7 +266,7 @@ One line describing what the piece connects to<br><br>
 **usage:** `--description <str>`<br>
 
 #### Dir <br>
-Name of the directory of an existing piece to re-register<br><br>
+Name of the directory of an existing piece to re-register (my-piece or pieces/my-piece)<br><br>
 **usage:** `--dir <dir>`<br>
 
 

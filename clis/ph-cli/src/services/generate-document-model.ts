@@ -11,8 +11,10 @@ import {
   saveSpec,
 } from "@powerhousedao/vetra/codegen";
 import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
-import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { GenerateDocumentModelArgs } from "../types.js";
+import { resolveModuleDirName } from "../utils/module-dir.js";
 import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts.js";
 
 export async function startGenerateDocumentModel(
@@ -33,7 +35,22 @@ export async function startGenerateDocumentModel(
     return;
   }
   if (all) {
-    await generateAllDocumentModels(project);
+    const { documentModels, unreadableDirs } =
+      await generateAllDocumentModels(project);
+    await project.save();
+    if (documentModels.length === 0 && unreadableDirs.length === 0) {
+      console.log("No document models found in document-models/.");
+    }
+    for (const { name } of documentModels) {
+      console.log(`Regenerated document model "${name}"`);
+    }
+    for (const dirName of unreadableDirs) {
+      console.warn(
+        `Skipped document-models/${dirName}: expected a valid document model spec at document-models/${dirName}/${dirName}.json. Kept the manifest's document models.`,
+      );
+    }
+    await warnSubgraphTypeConflicts(projectDir);
+    return;
   } else if (document) {
     if (document.endsWith(".phd")) {
       const doc = (await getDocument(document)) as DocumentModelDocument;
@@ -43,11 +60,29 @@ export async function startGenerateDocumentModel(
       await generateDocumentModel(state, project);
     }
   } else if (dir) {
-    const documentModelDirName = dirname(dir);
-    const documentModelFileName = `${documentModelDirName}.json`;
-    const documentModelFilePath = join(dir, documentModelFileName);
-    const state = await loadDocumentModel(documentModelFilePath);
+    const dirName = resolveModuleDirName(
+      projectDir,
+      "document-models",
+      dir,
+      "my-document-model",
+    );
+    const specPath = join(
+      projectDir,
+      "document-models",
+      dirName,
+      `${dirName}.json`,
+    );
+    if (!existsSync(specPath)) {
+      throw new Error(`document-models/${dirName} has no ${dirName}.json.`);
+    }
+    const state = await loadDocumentModel(specPath);
     await generateDocumentModel(state, project);
+    await project.save();
+    console.log(
+      `Regenerated document model "${state.name}" in document-models/${dirName}`,
+    );
+    await warnSubgraphTypeConflicts(projectDir);
+    return;
   } else {
     console.log(
       "Please specify one of `document`, `dir`, `all`, or `extract`.",

@@ -10,8 +10,13 @@ import {
   saveSpec,
 } from "@powerhousedao/vetra/codegen";
 import type { DocumentEditorDocument } from "@powerhousedao/vetra/document-models/document-editor";
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { GenerateEditorArgs } from "../types.js";
+import { resolveModuleDirName } from "../utils/module-dir.js";
+
+const MODULE_FILE_EXPECTATION =
+  "an EditorModule with string literals for config.id, config.name and documentTypes";
 
 export async function startGenerateEditor(
   args: GenerateEditorArgs,
@@ -24,14 +29,31 @@ export async function startGenerateEditor(
   const project = buildTsMorphProject(projectDir);
   if (extract) {
     const docs = extractEditorDocuments(project);
+    if (docs.length === 0) {
+      console.log("No document editors found in editors/.");
+    }
     for (const doc of docs) {
       const path = await saveSpec(doc, projectDir);
       console.log(`Wrote ${path}`);
     }
     return;
   }
+  const report: string[] = [];
   if (all) {
-    await generateAllEditors(project);
+    const { editors, unreadableDirs } = await generateAllEditors(project);
+    if (editors.length === 0 && unreadableDirs.length === 0) {
+      report.push("No document editors found in editors/.");
+    }
+    for (const editor of editors) {
+      report.push(
+        `Regenerated editor "${editor.name}" in editors/${editor.dirName}`,
+      );
+    }
+    for (const dirName of unreadableDirs) {
+      console.warn(
+        `Skipped editors/${dirName}: expected its module.ts to export ${MODULE_FILE_EXPECTATION}. Kept the manifest's editors.`,
+      );
+    }
   } else if (document) {
     const doc = (await getDocument(document)) as DocumentEditorDocument;
     await generateEditorFromDocument(doc, project);
@@ -46,9 +68,25 @@ export async function startGenerateEditor(
       project,
     );
   } else if (dir) {
-    const editorArgs = getEditorMetadata(project, dirname(dir));
+    const dirName = resolveModuleDirName(
+      projectDir,
+      "editors",
+      dir,
+      "my-editor",
+    );
+    if (!existsSync(join(projectDir, "editors", dirName, "module.ts"))) {
+      throw new Error(`editors/${dirName} has no module.ts.`);
+    }
+    const editorArgs = getEditorMetadata(project, dirName);
     if (!editorArgs) {
-      throw new Error(`Failed to get data for editor in dir "${dir}"`);
+      throw new Error(
+        `Could not read editors/${dirName}/module.ts: expected ${MODULE_FILE_EXPECTATION}.`,
+      );
+    }
+    if (editorArgs.documentTypes.includes("powerhouse/document-drive")) {
+      throw new Error(
+        `editors/${dirName} is a drive app, not a document editor. Use \`ph-cli generate app --dir ${dirName}\` instead.`,
+      );
     }
     const {
       name: editorName,
@@ -65,6 +103,9 @@ export async function startGenerateEditor(
       },
       project,
     );
+    report.push(
+      `Regenerated editor "${editorName}" in editors/${editorDirName}`,
+    );
   } else {
     console.log(
       "Please specify one of `name`, `document`, `dir`, `all`, or `extract`.",
@@ -72,4 +113,7 @@ export async function startGenerateEditor(
     return;
   }
   await project.save();
+  for (const line of report) {
+    console.log(line);
+  }
 }

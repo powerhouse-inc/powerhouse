@@ -8,7 +8,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory, File } from "../utils/fs-args.js";
+import { File, ModuleDir } from "../utils/fs-args.js";
 import { CommaSeparatedStrings } from "../utils/comma-separated.js";
 
 export const generateAppCmd = command({
@@ -36,9 +36,10 @@ export const generateAppCmd = command({
         "Path to a powerhouse/app spec file (.phd or .json) to drive codegen",
     }),
     dir: option({
-      type: optional(Directory),
+      type: optional(ModuleDir),
       long: "dir",
-      description: "Name of the directory of an existing app to re-generate",
+      description:
+        "Name of the directory of an existing app to re-generate (my-app or editors/my-app)",
     }),
     disableDragAndDrop: flag({
       type: boolean,
