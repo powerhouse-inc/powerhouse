@@ -946,7 +946,10 @@ describe("core's modals", () => {
       ).disabled,
     ).toBe(true);
     click(within(dialog).getByRole("button", { name: "Add a drive" }));
-    await vi.waitFor(() => expect(store.modal?.type).toBe("addDrive"));
+    // The modal opens through a navigation, which a loaded CI runner can take over a second for.
+    await vi.waitFor(() => expect(store.modal?.type).toBe("addDrive"), {
+      timeout: 5000,
+    });
   });
 
   it("opens from a link, and closes in place", async () => {
