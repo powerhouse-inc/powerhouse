@@ -538,6 +538,27 @@ describe("ReactorMcpProvider", () => {
       expect(drive.state.global.name).toBe("Stockroom North");
     });
 
+    it("names the drive and records the preferred editor", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const added = await provider.tools.addDrive.callback({
+        driveInput: {
+          global: { name: "With Pref" },
+          preferredEditor: "stockroom",
+        },
+      });
+      expect(added.isError).toBeUndefined();
+
+      const result = await provider.tools.getDrive.callback({
+        driveId: (added.structuredContent as { driveId: string }).driveId,
+      });
+      const { drive } = result.structuredContent as {
+        drive: DocumentDriveDocument;
+      };
+      expect(drive.header.name).toBe("With Pref");
+      expect(drive.header.meta?.preferredEditor).toBe("stockroom");
+      expect(drive.state.global.name).toBe("With Pref");
+    });
+
     it("should add a drive with minimal input", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addDrive.callback({
