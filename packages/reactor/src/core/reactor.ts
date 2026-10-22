@@ -5,11 +5,14 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { redoTarget, undoTarget } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { buildCreateActions } from "../client/derivations.js";
-import { scopeDerivation } from "../derivation/index.js";
+import {
+  scopeDerivation,
+  UndoTargetsCache,
+  type DerivedScope,
+} from "../derivation/index.js";
 import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
@@ -94,6 +97,7 @@ export class Reactor implements IReactor {
   private documentView: IDocumentView;
   private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
+  private readonly undoTargets: UndoTargetsCache;
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
   private catchUp: CatchUpScheduler | undefined;
@@ -129,6 +133,11 @@ export class Reactor implements IReactor {
     this.operationStore = operationStore;
     this.eventBus = eventBus;
     this.executorManager = executorManager;
+    this.undoTargets = new UndoTargetsCache(
+      operationStore,
+      (documentId, scope, branch, signal) =>
+        this.deriveForUndo(documentId, scope, branch, signal),
+    );
 
     const [status, setShutdown, setCompleted] =
       createMutableShutdownStatus(false);
@@ -448,6 +457,16 @@ export class Reactor implements IReactor {
       branch,
     );
 
+    return this.undoTargets.resolve(documentId, scope, branch, signal);
+  }
+
+  /** A full derivation of the scope, for the undo-targets cache to seed from. */
+  private async deriveForUndo(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DerivedScope> {
     const [derive, document, rows] = await Promise.all([
       scopeDerivation(
         this.operationStore,
@@ -467,11 +486,7 @@ export class Reactor implements IReactor {
     ]);
     throwIfAborted(signal, () => new AbortError());
 
-    const { applied } = derive(document, rows, scope);
-    return {
-      undoTarget: undoTarget(rows, applied),
-      redoTarget: redoTarget(rows, applied),
-    };
+    return { rows, applied: derive(document, rows, scope).applied };
   }
 
   /** Every stored row of a scope, as a cold rebuild reads them. */
