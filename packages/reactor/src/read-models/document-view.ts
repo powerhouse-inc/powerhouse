@@ -203,6 +203,15 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             operationType !== "DELETE_DOCUMENT" &&
             scope !== "header");
 
+        // Likewise for `name`: SET_NAME is a global op, so only SET_NAME,
+        // global ops and CREATE/UPGRADE echo the current name.
+        const preserveHeaderName =
+          denied ||
+          (operationType !== "CREATE_DOCUMENT" &&
+            operationType !== "UPGRADE_DOCUMENT" &&
+            operationType !== "SET_NAME" &&
+            scope !== "global");
+
         if (operationType === "DELETE_DOCUMENT" && !denied) {
           const now = new Date();
           await trx
@@ -312,7 +321,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           // write pay to decompress and ship a copy of the state it was about
           // to overwrite.
           const needsExistingContent =
-            scopeName === "header" && preserveHeaderMeta;
+            scopeName === "header" &&
+            (preserveHeaderMeta || preserveHeaderName);
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
@@ -349,7 +359,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             if (typeof headerSlug === "string") {
               slug = headerSlug;
             }
-            if (typeof headerName === "string") {
+            if (typeof headerName === "string" && !preserveHeaderName) {
               name = headerName;
             }
 
@@ -358,8 +368,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
                 string,
                 unknown
               >;
-              if (existingHeader && "meta" in existingHeader) {
+              if (preserveHeaderMeta && "meta" in existingHeader) {
                 newState.meta = existingHeader.meta;
+              }
+              if (preserveHeaderName && "name" in existingHeader) {
+                newState.name = existingHeader.name;
               }
             }
 
