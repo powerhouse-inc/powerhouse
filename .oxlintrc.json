@@ -931,6 +931,7 @@
     "packages/reactor-api/src/packages/vite-loader.mts",
     "packages/reactor/test/executor/worker/entry/worker-bootstrap.mjs",
     "packages/reactor/test/integration/projection-worker-bootstrap.mjs",
-    "packages/reactor/test/core/fixtures/model-barrel.mjs"
+    "packages/reactor/test/core/fixtures/model-barrel.mjs",
+    "packages/reactor-browser/test/fixtures/registry/"
   ]
 }

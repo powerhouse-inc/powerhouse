@@ -245,11 +245,11 @@ export function createWorkerReactorClientModule(
     client: clientProxy,
     adminClient: createWorkerAdminClient(router),
     inspector: createInspectorProxy(router),
-    registerPackages: async (sources: WorkerPackageSource[]) => {
+    registerPackages: async (sources: WorkerPackageSource[], specs = []) => {
       await router.request((id) => ({
         k: "register-packages",
         id,
-        specs: [],
+        specs,
         sources,
       }));
     },

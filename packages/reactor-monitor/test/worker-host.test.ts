@@ -405,6 +405,7 @@ describe("buildWorkerReactor", () => {
       {
         importPackage: () =>
           Promise.resolve({ extraDocumentModelModule: extraModel }),
+        fetchSource: () => Promise.resolve("export {};"),
       },
     );
     try {

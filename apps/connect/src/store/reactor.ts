@@ -90,6 +90,11 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import {
+  registryPackageSpec,
+  subscribeRegistryPackageChanges,
+  syncRegistryModels,
+} from "../utils/worker-registry-packages.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -410,7 +415,7 @@ export async function createReactor(
     }
     const packageSpecs = packageManager
       .getRegistryPackages()
-      .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
+      .map(registryPackageSpec);
     // Silent tab loader (no install prompt; the worker already loaded the model).
     const registryClient = new RegistryClient(packageManager.cdnUrl ?? "");
     const documentModelLoader: IDocumentModelLoader = {
@@ -500,6 +505,19 @@ export async function createReactor(
           );
         }
       })();
+    });
+    // Packages installed or updated after boot: the tab's registry and the worker load them.
+    subscribeRegistryPackageChanges(packageManager, (specs) => {
+      syncRegistryModels(
+        workerClient.reactorClientModule.reactorModule.documentModelRegistry,
+        loadedDocumentModels(),
+      );
+      registerPackages([], specs).catch((error: unknown) => {
+        logger.error(
+          "Failed to load packages in the reactor worker: @error",
+          error,
+        );
+      });
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.
