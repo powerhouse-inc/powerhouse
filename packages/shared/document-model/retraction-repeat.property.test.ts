@@ -3,9 +3,11 @@ import { retract, type Action } from "./actions.js";
 import { isDenied } from "./denied.js";
 import { baseCreateDocument, type PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
+import { createReducer } from "./reducer.js";
 import {
   deriveScope,
   reduceOne,
+  retractIds,
   retractionTarget,
   tailAppliesIncrementally,
   type ReducerFor,
@@ -165,14 +167,6 @@ const named = (rows: readonly Operation[]) =>
       .filter((target): target is string => target !== undefined),
   );
 
-/** Every stored RETRACT row's id, rewound rows included. */
-const retractIds = (rows: readonly Operation[]) =>
-  new Set(
-    rows
-      .filter((operation) => operation.action.type === "RETRACT")
-      .map((operation) => operation.action.id),
-  );
-
 /** The id of each op id's latest stored row that is a RETRACT. */
 function latestRetractIds(rows: readonly Operation[]): Set<string> {
   const latest = new Map<string, Operation>();
@@ -266,5 +260,23 @@ describe("a repeated action id under the rule", () => {
         holds: (id) => retractIds(base).has(id),
       }),
     ).toBe(false);
+  });
+
+  it("re-derives in the shared reducer when the appended action repeats a RETRACT's id", () => {
+    const reducer = createReducer(listReducer);
+    const stamp = (action: Action): Action => ({
+      ...action,
+      timestampUtcMs: new Date().toISOString(),
+    });
+    const a = stamp(content("a"));
+    const undo = stamp({ ...retract("a", "global"), id: "r" });
+    let document = reducer(emptyDocument(), a);
+    document = reducer(document, undo);
+    expect(items(document)).toEqual([]);
+
+    document = reducer(document, stamp(content("r")));
+
+    expect(items(document)).toEqual(["a", "r"]);
+    expect(items(document)).toEqual(full(document.operations.global ?? []));
   });
 });

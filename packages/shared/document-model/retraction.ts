@@ -414,11 +414,24 @@ export function undoTargetsBase(
   };
 }
 
+/** The action ids that RETRACT rows among `rows` carry. */
+export function retractIds(rows: readonly { action: Action }[]): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    if (row.action.type === "RETRACT") ids.add(row.action.id);
+  }
+  return ids;
+}
+
 /** What a stream holds before a tail appended to it. */
 export type TailBase = {
   /** Whether a stored RETRACT names `actionId`, present or not. */
   readonly named: (actionId: string) => boolean;
-  /** Whether a row before the tail carries `actionId`; a superset only costs a re-derive. */
+  /**
+   * Whether a stored row repeats `actionId` in a way that matters. It must
+   * cover every id a stored RETRACT carries, rewound rows included: only that
+   * repeat changes what applies. A superset only costs a re-derive.
+   */
   readonly holds: (actionId: string) => boolean;
 };
 
