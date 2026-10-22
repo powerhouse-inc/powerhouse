@@ -521,6 +521,23 @@ describe("ReactorMcpProvider", () => {
       });
     });
 
+    it("names the drive in both the header and the global state", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const added = await provider.tools.addDrive.callback({
+        driveInput: { global: { name: "Stockroom North" } },
+      });
+      expect(added.isError).toBeUndefined();
+
+      const result = await provider.tools.getDrive.callback({
+        driveId: (added.structuredContent as { driveId: string }).driveId,
+      });
+      const { drive } = result.structuredContent as {
+        drive: DocumentDriveDocument;
+      };
+      expect(drive.header.name).toBe("Stockroom North");
+      expect(drive.state.global.name).toBe("Stockroom North");
+    });
+
     it("should add a drive with minimal input", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addDrive.callback({

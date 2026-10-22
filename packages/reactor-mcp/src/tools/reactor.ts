@@ -4,6 +4,7 @@ import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive
 import {
   setAvailableOffline,
   setDriveIcon,
+  setDriveName,
   setSharingType,
 } from "@powerhousedao/shared/document-drive";
 import type {
@@ -523,6 +524,9 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       }
 
       const actions: Action[] = [];
+      if (driveInput.global.name) {
+        actions.push(setDriveName({ name: driveInput.global.name }));
+      }
       if (driveInput.global.icon) {
         actions.push(setDriveIcon({ icon: driveInput.global.icon }));
       }
