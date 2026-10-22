@@ -51,7 +51,7 @@ This checks the fixes made since the Haiku run (`f304cbb` → `a4abd20`: 14 file
 
 ## Files
 
-- `shots/phone-*`: the phone checks. `-custom` is the project's layout; `wrapped` and `ownnav` are the two edge cases, printed as JSON only.
+- `shots/phone-*`: the phone checks. `-custom` is the project's layout; `-wrapped` and `-ownnav` are the two edge cases (1a, 1b).
 - `shots/rows-after-create.png`: the row check.
 - `shots/light-*`: the served Connect walk-through.
 - `scripts/`:
