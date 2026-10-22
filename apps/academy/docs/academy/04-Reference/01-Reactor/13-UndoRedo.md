@@ -64,6 +64,8 @@ Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/Reac
 
 On version 3 the client resolves the target with `undoRedoTargets` and submits a `RETRACT` of it signed by the client's own signer. On versions 1 and 2 it submits `UNDO` or `REDO`. The GraphQL light client does the same, resolving the target through the Switchboard's `undoRedoTargets` query; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods). Either way the author signs, so a policy must grant the author `RETRACT` for undo on version 3.
 
+`RemoteDocumentController` from `@powerhousedao/reactor-browser` runs the version the remote document's header names. Its `undo(scope)` and `redo(scope)` resolve the target from the controller's own log, including actions not yet pushed, and apply a `RETRACT` that its signer signs on push. On versions 1 and 2 they apply `UNDO` or `REDO` locally, as before. A new document has no remote header until its first push, so undo before that runs under version 2.
+
 The `RETRACT` names the row the call saw as the latest, so an edit that lands in between is not undone. If the target is retracted or gone by the time the `RETRACT` runs, the write fails with `RetractionRefusedError`; the client does not resolve again or retry.
 
 To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
