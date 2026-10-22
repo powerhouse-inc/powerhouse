@@ -30,6 +30,13 @@ export function applyReactorEnvProjection(
   // mkdir is not recursive (the ph-win sidecar did this too).
   const storage = primaryBackend(reactor)?.storage;
   if (storage?.kind === "path" && storage.dataDir) {
+    // `ph run` resolves `$env` and the `${userData}` sugar before the verb;
+    // an unresolved one here would mkdir a literal "${userData}" folder.
+    if (/\$\{(userData|projectRoot)\}/.test(storage.dataDir)) {
+      throw new Error(
+        `${hostFileLabel}: storage.dataDir "${storage.dataDir}" was not resolved; resolve the host (resolveHostOutputs) before starting it.`,
+      );
+    }
     fs.mkdirSync(storage.dataDir, { recursive: true });
   }
   return options;

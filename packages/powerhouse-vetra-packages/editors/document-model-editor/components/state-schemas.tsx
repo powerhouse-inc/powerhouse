@@ -1,5 +1,5 @@
 import { twMerge } from "tailwind-merge";
-import { Checkbox } from "@powerhousedao/design-system/ui";
+import { Checkbox } from "@powerhousedao/design-system/connect";
 import { Kind } from "graphql";
 import {
   lazy,

@@ -4,7 +4,6 @@ import {
   registerPackageRoutes,
 } from "@powerhousedao/connect-core/router";
 import * as common from "@powerhousedao/powerhouse-vetra-packages";
-import commonPkg from "@powerhousedao/powerhouse-vetra-packages/package.json" with { type: "json" };
 import type {
   IPackagesListener,
   PackageManagerInstallResult,
@@ -35,8 +34,6 @@ import {
   writeMergedPwaFragment,
 } from "./utils/pwa-idb.js";
 import { refreshPwaManifestLink } from "./utils/pwa-manifest-link.js";
-import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
-import workflowPkg from "@powerhousedao/workflow/package.json" with { type: "json" };
 
 type PackageMeta = {
   name: string;
@@ -122,6 +119,11 @@ export function sharedDepMismatchWarnings(
   return formatSharedDepWarnings(checkSharedDeps(pkgJson, hostVersions));
 }
 
+// The bundled packages' versions, inlined by bundled-package-versions.ts.
+declare const PH_COMMON_PACKAGE_VERSION: string;
+declare const PH_VETRA_PACKAGE_VERSION: string;
+declare const PH_WORKFLOW_PACKAGE_VERSION: string;
+
 const LOCAL_PACKAGE_NAME = "Local" as const;
 
 // Package CSS goes in external-packages: above Connect's reset so it can style
@@ -179,13 +181,17 @@ export class BrowserPackageManager implements IPackageManager {
     this.addLocalPackage(
       common.manifest.name,
       genericChrome ? common : { ...common, editors: [] },
-      commonPkg.version,
+      PH_COMMON_PACKAGE_VERSION,
     );
     // Vetra is builder-only and not CDN-loadable; lazy-load it (code-split
     // chunk, never fetched in production) only in studio mode.
     if (studioMode) {
       const vetra = await import("@powerhousedao/vetra");
-      this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
+      this.addLocalPackage(
+        vetra.manifest.name,
+        vetra,
+        PH_VETRA_PACKAGE_VERSION,
+      );
     }
     // Same shape for the workflow package, behind its own independent flag.
     // Only the package root: `./pieces` and `./reactor` are node-only.
@@ -194,7 +200,7 @@ export class BrowserPackageManager implements IPackageManager {
       this.addLocalPackage(
         workflow.manifest.name,
         workflow,
-        workflowPkg.version,
+        PH_WORKFLOW_PACKAGE_VERSION,
       );
     }
     if (localPackage) {

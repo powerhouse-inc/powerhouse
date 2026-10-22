@@ -63,12 +63,6 @@ export {
   type ReactorDriveClientArgs,
 } from "./client/reactor-drive-client.js";
 export {
-  createReactorDriveResolvers,
-  REACTOR_DRIVE_SUBGRAPH_NAME,
-  reactorDriveSubgraphTypeDefs,
-  type ReactorDriveResolverContext,
-} from "./subgraph/index.js";
-export {
   migrateLegacyDriveState,
   type MigrateLegacyDriveStateArgs,
   type MigrateLegacyDriveStateResult,

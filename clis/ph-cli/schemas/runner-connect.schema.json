@@ -1,0 +1,1755 @@
+{
+  "$id": "https://powerhouse.inc/schemas/ph-cli/runner-connect.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runner": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaultVerb": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "module": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "verbs": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "*"
+                      },
+                      {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    ]
+                  },
+                  "config": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": ["module"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "openBrowser": {
+          "type": "boolean"
+        },
+        "strictPort": {
+          "type": "boolean"
+        },
+        "outDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cspRegistrySync": {
+          "type": "boolean"
+        },
+        "routes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean",
+              "const": false
+            }
+          ]
+        }
+      },
+      "required": ["module"],
+      "additionalProperties": false
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "branding": {
+          "type": "object",
+          "properties": {
+            "appName": {
+              "description": "Browser tab title, installed-app name and in-app brand text. null or omitted: 'Powerhouse Connect'.",
+              "type": ["string", "null"]
+            },
+            "icon": {
+              "description": "App icon master (1024x1024 PNG recommended, or an SVG). The favicons and installed-app icons are found next to it as <name>_16x16.png, _32x32, _64x64, _192x192 and _512x512; the 64 px one is the in-app logo. null or omitted: Connect's icon.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "favicon": {
+              "description": "The browser tab icon: a file (.ico, .svg or .png) relative to the project, served and built as icon.ico. A build input; the built runtime config leaves it out. `ph connect build --favicon` wins over it.",
+              "type": ["string", "null"]
+            },
+            "loader": {
+              "description": "The loading image (first paint, app start, drive and editor loading). A path gets a gentle pulse; { src, animation, size } says otherwise, with animation \"none\" for an image that animates itself (animated SVG, GIF or WebP). null or omitted: Connect's animated logo.",
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "src": {
+                          "type": "string",
+                          "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                        },
+                        "animation": {
+                          "description": "Motion applied to the image (default pulse).",
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": ["pulse", "spin", "none"]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "size": {
+                          "description": "Rendered width in CSS pixels (default 96); the height follows the image.",
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 16,
+                              "maximum": 512
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["src"],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "App identity and visual branding. Every field is optional; null means the default."
+        },
+        "home": {
+          "type": "object",
+          "properties": {
+            "background": {
+              "description": "The home screen's background: { color, layers } with each image positioned and sized, or one image pinned bottom-right. null or omitted: the bundled gradient.",
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "color": {
+                          "description": "The page colour, or { light, dark }. Omitted or null: the theme's page background.",
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "light": {
+                                      "type": "string"
+                                    },
+                                    "dark": {
+                                      "type": ["string", "null"]
+                                    }
+                                  },
+                                  "required": ["light"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "layers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "src": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "light": {
+                                        "type": "string",
+                                        "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                                      },
+                                      "dark": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": ["light"],
+                                    "additionalProperties": false
+                                  }
+                                ],
+                                "description": "One image for both colour schemes, or { light, dark } (dark falls back to light)."
+                              },
+                              "position": {
+                                "description": "Distances to the pane's edges; at most one per axis. Omitted: centred both ways.",
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "top": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "right": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "bottom": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "left": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "width": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "height": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "minWidth": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "minHeight": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "maxWidth": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "maxHeight": {
+                                "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                "type": ["number", "string", "null"]
+                              },
+                              "opacity": {
+                                "description": "0 to 1 (default 1).",
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "fade": {
+                                "description": "Feather depth per edge, fading the layer into the page colour.",
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "top": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "right": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "bottom": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      },
+                                      "left": {
+                                        "description": "A CSS length: a number is px; a string is used as written (\"40%\", \"min(55%, 880px)\", \"calc(50% - 120px)\").",
+                                        "type": ["number", "string", "null"]
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["src"],
+                            "additionalProperties": false,
+                            "description": "An image laid over the page, absolutely positioned: the edges set in `position` pin it, an axis with neither edge set is centred."
+                          },
+                          "description": "Painted in order; the first is at the back."
+                        }
+                      },
+                      "required": ["layers"],
+                      "additionalProperties": false
+                    }
+                  ],
+                  "description": "Layered images over a page colour, or a single image pinned to the bottom-right corner. null keeps the default."
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "The home screen (the generic chrome's landing page)."
+        },
+        "app": {
+          "type": "object",
+          "properties": {
+            "logLevel": {
+              "description": "Log level applied by Connect's logger at boot. Affects browser-side output only.",
+              "default": "info",
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"]
+            },
+            "basePath": {
+              "description": "Base path Connect is mounted under (e.g. '/connect' for subpath deploys). Normalised at runtime to start and end with '/'. Defaults to the build-time BASE_URL.",
+              "default": "/",
+              "type": "string"
+            },
+            "offline": {
+              "description": "When true (default), the build emits a precaching service worker so Connect's app shell works offline, and the SPA registers it at boot. Set false to opt this deployment out: no service worker is built, the SPA skips registration, and any previously-installed worker is unregistered.",
+              "default": true,
+              "type": "boolean"
+            },
+            "studioMode": {
+              "description": "Studio mode. Enables builder-only capabilities: Connect loads the vetra package and exposes DocumentModel (and vetra spec types) as creatable documents. Forced on by `ph vetra` / `ph connect studio`; false by default.",
+              "default": false,
+              "type": "boolean"
+            },
+            "workflowsEnabled": {
+              "description": "Powerhouse workflows in Connect. When true the tab loads the @powerhousedao/workflow package (workflow + connection documents, their editors and Workflow Studio) and the reactor worker registers its document models. Falls back to the top-level `workflows.enabled`; set it to override that for Connect. Independent of studioMode. False when neither is set.",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Top-level Connect application behaviour."
+        },
+        "ai": {
+          "type": "object",
+          "properties": {
+            "assistantEnabled": {
+              "description": "When true, Connect mounts the in-browser AI assistant (bottom-right chat FAB that talks to a user-configured OpenAI-compatible endpoint and acts on the reactor). Disabled by default.",
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "AI assistant (chat) behaviour."
+        },
+        "packages": {
+          "type": "object",
+          "properties": {
+            "externalEnabled": {
+              "description": "When false, Connect refuses to load any package that wasn't bundled at build time. Affirmative replacement for the legacy PH_CONNECT_EXTERNAL_PACKAGES_DISABLED env var.",
+              "default": true,
+              "type": "boolean"
+            },
+            "liveReload": {
+              "description": "When true, Connect subscribes to the static-mode `/__packages` SSE channel so live publishes flow into the running tab without a page reload. Only works under hosting that serves this channel (e.g. ph-clint static mode).",
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Runtime behaviour for the Connect package manager (separate from top-level `packages[]`, which lists which packages to load)."
+        },
+        "drives": {
+          "type": "object",
+          "properties": {
+            "allowAddDrive": {
+              "description": "When false, the SPA hides the 'add drive' affordance entirely (top-level). Per-section overrides live in `sections.{remote,local}.allowAdd`.",
+              "default": true,
+              "type": "boolean"
+            },
+            "defaultDrives": {
+              "description": "Drives the SPA auto-connects to on first load. Each entry is either a remote drive (a URL, with optional name/icon overrides) or a local drive (created locally on first boot, with a stable id and optional name/icon/app).",
+              "default": [],
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        ]
+                      },
+                      "name": {
+                        "type": ["string", "null"]
+                      },
+                      "icon": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": ["url"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "local": {
+                        "type": "boolean",
+                        "const": true,
+                        "description": "Discriminator: this entry is a local drive created on first boot."
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "Stable drive id. The drive is created with this id on first boot and is not re-created on later boots."
+                      },
+                      "name": {
+                        "type": ["string", "null"]
+                      },
+                      "icon": {
+                        "type": ["string", "null"]
+                      },
+                      "app": {
+                        "description": "Drive app (preferred editor) to open on the drive.",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["local", "id"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "preserveStrategy": {
+              "description": "Strategy applied when defaultDrives change between deploys. 'preserve-all' keeps user-added drives untouched; 'preserve-by-url-and-detach' detaches removed default drives. No schema default — opt-in only.",
+              "type": "string",
+              "enum": ["preserve-all", "preserve-by-url-and-detach"]
+            },
+            "sections": {
+              "type": "object",
+              "properties": {
+                "remote": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "allowAdd": {
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "allowDelete": {
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar."
+                },
+                "local": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "When false, the section is hidden in the sidebar.",
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "allowAdd": {
+                      "description": "When false, the section's 'add drive' affordance is hidden.",
+                      "default": true,
+                      "type": "boolean"
+                    },
+                    "allowDelete": {
+                      "description": "When false, drives in this section cannot be deleted from the UI.",
+                      "default": true,
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Visibility and add/delete affordances for a drive section in the sidebar."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Per-section visibility and affordance toggles. `remote` covers what was historically split into 'public' + 'cloud'; `local` is browser-local drives."
+            },
+            "icons": {
+              "description": "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon.",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "localDrive": {
+                      "description": "Local drives without an icon of their own.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "remoteDrive": {
+                      "description": "Remote drives without an icon of their own.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "folder": {
+                      "description": "Folders.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "document": {
+                      "description": "Documents whose type has no icon in `documents`.",
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "documents": {
+                      "description": "Per document type, e.g. \"acme/invoice\".",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "string",
+                            "description": "Image reference: a project-relative file path, a URL, or a data URI."
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "The drive explorer's icons (the generic plugin's); each null keeps the built-in icon."
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "description": "Default-drive and add-drive UI behaviour."
+        },
+        "renown": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "description": "Renown auth service URL.",
+              "default": "https://www.renown.id",
+              "type": "string"
+            },
+            "networkId": {
+              "description": "CAIP-2 network namespace (e.g. 'eip155').",
+              "default": "eip155",
+              "type": "string"
+            },
+            "chainId": {
+              "description": "CAIP-2 chain reference within the network namespace.",
+              "default": 1,
+              "type": "number"
+            },
+            "namespace": {
+              "description": "Renown localStorage namespace; share it across Connects to share login.",
+              "type": "string"
+            },
+            "switchboardUrl": {
+              "description": "Switchboard GraphQL URL. When set, Connect enables in-page (no-redirect) Renown sign-in; otherwise it falls back to the redirect flow via `url`.",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/$defs/__schema0"
+                }
+              ]
+            },
+            "adapters": {
+              "type": "object",
+              "properties": {
+                "rainbow": {
+                  "type": "object",
+                  "properties": {
+                    "walletConnectProjectId": {
+                      "description": "WalletConnect project id; required for this adapter to function.",
+                      "type": "string"
+                    },
+                    "infuraProjectId": {
+                      "description": "Optional Infura project id used to build RPC transports.",
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "wagmi + RainbowKit external-wallet adapter config."
+                },
+                "privy": {
+                  "type": "object",
+                  "properties": {
+                    "appId": {
+                      "description": "Privy application id; required for this adapter to function.",
+                      "type": "string"
+                    },
+                    "clientId": {
+                      "description": "Optional Privy client id.",
+                      "type": "string"
+                    },
+                    "methods": {
+                      "description": "Login methods this adapter offers; default per adapter when omitted.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Privy embedded/social adapter config."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Per-adapter wallet config for in-page auth. Presence of an adapter key enables it; omit or leave empty for redirect-only behaviour."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Renown identity / authentication coordinates."
+        },
+        "sentry": {
+          "type": "object",
+          "properties": {
+            "dsn": {
+              "description": "Sentry DSN URL. `null` disables Sentry entirely; the SPA never loads the Sentry SDK chunk.",
+              "default": null,
+              "type": ["string", "null"]
+            },
+            "env": {
+              "description": "Sentry environment label, surfaced as the `environment` tag on every event.",
+              "default": "dev",
+              "type": "string"
+            },
+            "tracing": {
+              "description": "Enable Sentry performance tracing.",
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Sentry error-tracking coordinates. Set `dsn` to enable Sentry; leave `dsn` null to disable. The Sentry release tag stays build-time (stamped via Vite's `define` from WORKSPACE_VERSION) so it always matches the sourcemaps uploaded by CI."
+        },
+        "openPanel": {
+          "type": "object",
+          "properties": {
+            "clientId": {
+              "description": "OpenPanel client id. Empty string disables OpenPanel entirely.",
+              "default": "",
+              "type": "string"
+            },
+            "apiUrl": {
+              "description": "OpenPanel API URL for self-hosted instances (e.g. 'https://openpanel.example/api'). Omit to use OpenPanel's hosted API.",
+              "type": "string"
+            },
+            "trackUiEvents": {
+              "description": "Track UI events.",
+              "default": true,
+              "type": "boolean"
+            },
+            "trackOperations": {
+              "description": "Track document operations.",
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "OpenPanel product analytics. Set `clientId` to enable; an empty `clientId` disables it. Events are only sent after the user accepts analytics cookies. Takes precedence over the build-time PH_CONNECT_OPENPANEL_* env vars."
+        },
+        "instance": {
+          "type": "object",
+          "properties": {
+            "namespace": {
+              "description": "Explicit storage/SharedWorker namespace for this instance. `null` derives it from the base path (and, later, the configured endpoint), so root deployments stay byte-identical.",
+              "default": null,
+              "type": ["string", "null"]
+            },
+            "reactorWorker": {
+              "type": "boolean",
+              "description": "Host the reactor in a shared worker instead of on the main thread. Off by default; the main-thread reactor stays the proven path until cutover is verified. Packaged deployments load the worker from the prebuilt bundle `ph connect build` emits under __reactor_worker__/ (the dev server builds it lazily at the same path); when that bundle is absent the feature reports itself unavailable instead of starting a worker that cannot load.",
+              "default": false
+            },
+            "multiReactor": {
+              "description": "Opt-in multi-reactor routing. When on, Connect routes through the in-browser reactor plus remote backends instead of the single in-browser reactor. Off by default; the single-reactor path is unchanged.",
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": ["namespace", "reactorWorker"],
+          "additionalProperties": false,
+          "description": "Per-instance identity. Lets one origin host multiple isolated Connect instances, each with its own storage + SharedWorker namespace."
+        },
+        "reactor": {
+          "type": "object",
+          "properties": {
+            "featureFlags": {
+              "type": "object",
+              "properties": {
+                "documentDecisions": {
+                  "description": "Decide writes from the document stream rather than the document meta cache, so a backdated deletion denies the operations that sort after it.",
+                  "default": false,
+                  "type": "boolean"
+                },
+                "authEnforcement": {
+                  "description": "Enforce the auth scope's policy at admission, replay, and read. Requires documentDecisions.",
+                  "default": false,
+                  "type": "boolean"
+                },
+                "authGroups": {
+                  "description": "Let `{ group }` principals match against the rosters of the group documents a policy names. Requires authEnforcement.",
+                  "default": false,
+                  "type": "boolean"
+                },
+                "authConditions": {
+                  "description": "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
+                  "default": false,
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge."
+            },
+            "createSignaturePolicy": {
+              "description": "What new documents are created as. `v2-required` documents accept only v2 action signatures and take content-addressed ids; set `legacy` while any peer Connect syncs with predates them. Existing documents keep their policy.",
+              "default": "v2-required",
+              "type": "string",
+              "enum": ["legacy", "v2-required"]
+            },
+            "unsupportedStoredDocuments": {
+              "description": "What the reactor does when this browser's store holds documents at protocol versions this build does not run. `refuse` fails the boot and names the versions; `read-only` boots and keeps those documents read-only.",
+              "default": "refuse",
+              "type": "string",
+              "enum": ["refuse", "read-only"]
+            }
+          },
+          "additionalProperties": false,
+          "description": "Settings for the reactor Connect runs in the browser, on the main thread or in the shared worker alike."
+        },
+        "pwa": {
+          "type": "object",
+          "properties": {
+            "manifest": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "short_name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "theme_color": {
+                  "type": "string"
+                },
+                "background_color": {
+                  "type": "string"
+                },
+                "display": {
+                  "type": "string",
+                  "enum": ["fullscreen", "standalone", "minimal-ui", "browser"]
+                },
+                "start_url": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                },
+                "icons": {
+                  "description": "Icons appended to the built-in set and de-duplicated by (src, sizes, purpose).",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "src": {
+                        "type": "string"
+                      },
+                      "sizes": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "purpose": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["src"],
+                    "additionalProperties": false
+                  }
+                },
+                "file_handlers": {
+                  "description": "File associations appended after Connect's built-in .phd/.phdm handler and de-duplicated on the whole entry. Entries only declare accepted types; there is no action field, because opening the files requires Connect's own runtime handling, so every handler opens at the app root.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "accept": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^\\."
+                          }
+                        },
+                        "description": "MIME type → file extensions. Each extension must start with '.'; browsers ignore entries without it."
+                      },
+                      "icons": {
+                        "description": "OS-level file-type icons.",
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "src": {
+                              "type": "string"
+                            },
+                            "sizes": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string"
+                            },
+                            "purpose": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["src"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "launch_type": {
+                        "type": "string",
+                        "enum": ["single-client", "multiple-clients"]
+                      }
+                    },
+                    "required": ["accept"],
+                    "additionalProperties": false
+                  }
+                },
+                "launch_handler": {
+                  "description": "How the OS launches the app for handled files/links. Connect defaults to focus-existing.",
+                  "type": "object",
+                  "properties": {
+                    "client_mode": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "focus-existing",
+                        "navigate-existing",
+                        "navigate-new"
+                      ]
+                    }
+                  },
+                  "required": ["client_mode"],
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false,
+              "description": "Web-app-manifest field overrides."
+            },
+            "globPatterns": {
+              "description": "Extra Workbox precache globs, unioned with the built-ins.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "globIgnores": {
+              "description": "Extra precache ignore globs, unioned with the built-ins.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "maximumFileSizeToCacheInBytes": {
+              "description": "Raise the precache file-size ceiling. The max across all contributors wins, so no contributor can shrink another's limit.",
+              "type": "number"
+            },
+            "runtimeCaching": {
+              "description": "Runtime-caching rules appended after the built-in rules. Workbox is first-match-wins, so these cannot override a built-in rule matching the same URL.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "urlPattern": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "description": "RegExp source."
+                          },
+                          "flags": {
+                            "description": "RegExp flags (e.g. 'i').",
+                            "type": "string"
+                          }
+                        },
+                        "required": ["source"],
+                        "additionalProperties": false
+                      }
+                    ],
+                    "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time."
+                  },
+                  "handler": {
+                    "type": "string",
+                    "enum": [
+                      "CacheFirst",
+                      "CacheOnly",
+                      "NetworkFirst",
+                      "NetworkOnly",
+                      "StaleWhileRevalidate"
+                    ]
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": ["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH"]
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "cacheName": {
+                        "type": "string"
+                      },
+                      "networkTimeoutSeconds": {
+                        "description": "Seconds a NetworkFirst rule waits for the network before falling back to the cache.",
+                        "type": "number"
+                      },
+                      "expiration": {
+                        "type": "object",
+                        "properties": {
+                          "maxEntries": {
+                            "type": "number"
+                          },
+                          "maxAgeSeconds": {
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "cacheableResponse": {
+                        "type": "object",
+                        "properties": {
+                          "statuses": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            }
+                          },
+                          "headers": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["urlPattern", "handler"],
+                "additionalProperties": false
+              }
+            },
+            "navigateFallbackDenylist": {
+              "description": "Extra SPA navigate-fallback denylist patterns, unioned with the built-ins.",
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "description": "RegExp source."
+                      },
+                      "flags": {
+                        "description": "RegExp flags (e.g. 'i').",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["source"],
+                    "additionalProperties": false
+                  }
+                ],
+                "description": "URL match. A string is matched verbatim by Workbox; { source, flags } is rebuilt into a RegExp at build time."
+              }
+            }
+          },
+          "additionalProperties": false,
+          "description": "Progressive-web-app / service-worker overrides, layered on Connect's built-in PWA defaults at build time. Scalar fields deep-merge (this layer wins); the array members (icons, file_handlers, globs, runtimeCaching and denylist patterns) are additive; maximumFileSizeToCacheInBytes takes the max across contributors. (categories is not set here — it is derived from the manifest's category field.) Only applied when connect.app.offline is true."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Connect-specific UI customisations. All fields optional; omit the section entirely for default behaviour."
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reactor": {
+      "type": "object",
+      "properties": {
+        "backends": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["in-process", "worker", "remote"]
+              },
+              "storage": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": ["idb", "memory", "path", "postgres"]
+                  },
+                  "dataDir": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "$env": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "optional": {
+                                    "type": "boolean",
+                                    "const": true
+                                  }
+                                },
+                                "required": ["name", "optional"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": ["$env"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind"],
+                "additionalProperties": false
+              },
+              "readModel": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "packages": {
+                "type": "object",
+                "properties": {
+                  "cdnUrl": {
+                    "type": "string"
+                  },
+                  "specs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dynamic": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "remote": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      {
+                        "$ref": "#/$defs/__schema0"
+                      }
+                    ]
+                  }
+                },
+                "required": ["url"],
+                "additionalProperties": false
+              },
+              "projection": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "dbPoolSize": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
+              "executors": {
+                "type": "object",
+                "properties": {
+                  "numWorkers": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "string",
+                        "const": "auto"
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": ["kind"],
+            "additionalProperties": false
+          }
+        },
+        "placement": {
+          "type": "object",
+          "properties": {
+            "primary": {
+              "type": "string"
+            },
+            "default": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": {}
+            }
+          },
+          "additionalProperties": false
+        },
+        "protocol": {
+          "type": "object",
+          "properties": {
+            "featureFlags": {
+              "type": "object",
+              "properties": {
+                "documentDecisions": {
+                  "type": "boolean"
+                },
+                "authEnforcement": {
+                  "type": "boolean"
+                },
+                "authGroups": {
+                  "type": "boolean"
+                },
+                "authConditions": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "createSignaturePolicy": {
+              "type": "string",
+              "enum": ["legacy", "v2-required"]
+            },
+            "unsupportedStoredDocuments": {
+              "type": "string",
+              "enum": ["refuse", "read-only"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "workflows": {
+          "type": "boolean"
+        },
+        "renown": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "networkId": {
+              "type": "string"
+            },
+            "chainId": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "additionalProperties": false
+        },
+        "packages": {
+          "type": "object",
+          "properties": {
+            "registryUrl": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "admins": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "renown": {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": {}
+            }
+          },
+          "additionalProperties": false
+        },
+        "drives": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "projectHash": {
+                    "anyOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "const": "id"
+                      }
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "icon": {
+                    "type": "string"
+                  },
+                  "preferredEditor": {
+                    "type": "string"
+                  },
+                  "sharingType": {
+                    "type": "string",
+                    "enum": ["public", "private", "shared"]
+                  },
+                  "availableOffline": {
+                    "type": "boolean"
+                  },
+                  "remote": {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "$ref": "#/$defs/__schema0"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["url"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["slug"],
+                "additionalProperties": false
+              }
+            },
+            {
+              "$ref": "#/$defs/__schema0"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "runner"],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "$output": {
+              "type": "object",
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "member": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": ["host", "path"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["$output"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$concat": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "$ref": "#/$defs/__schema0"
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["$concat"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$map": {
+              "type": "object",
+              "properties": {
+                "over": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "$output": {
+                          "type": "object",
+                          "properties": {
+                            "host": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "member": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "required": ["host", "path"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": ["$output"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "$item": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "as": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "path": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": ["as", "path"],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      },
+                      "required": ["$item"],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "as": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "to": {},
+                "into": {
+                  "type": "string",
+                  "const": "record"
+                }
+              },
+              "required": ["over", "to"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["$map"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$item": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "as": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "path": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["as", "path"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": ["$item"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$key": {
+              "anyOf": [
+                {
+                  "type": "boolean",
+                  "const": true
+                },
+                {
+                  "type": "string",
+                  "minLength": 1
+                }
+              ]
+            }
+          },
+          "required": ["$key"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$env": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "optional": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": ["name", "optional"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": ["$env"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

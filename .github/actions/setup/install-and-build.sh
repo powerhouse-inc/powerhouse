@@ -35,6 +35,11 @@ for name in $(node -p 'require("./package.json").scripts.build' | grep -o -- '--
   if grep -qxF -- "$name" <<<"$selected"; then build_filters+=("--filter=$name"); fi
 done
 if [[ ${#build_filters[@]} -gt 0 ]]; then
+  # The root `build` script runs this first; a filtered build bypasses it.
+  # Without the .tsbuild outputs, dist declarations emit cross-package types
+  # as `any` (see the script).
+  # shellcheck disable=SC2086 # one package name per word
+  node scripts/build-declarations.mjs $selected
   pnpm "${build_filters[@]}" --no-bail run build
 fi
 

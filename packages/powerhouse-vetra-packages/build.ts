@@ -6,8 +6,9 @@ import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { build } from "tsdown";
 
+// Connect bundles these packages, so their dependencies stay imports it resolves once.
 await build({
-  ...buildBrowserBuildConfig(),
+  ...buildBrowserBuildConfig({ bundleDependencies: false }),
   outDir: join("dist", "browser"),
 });
 

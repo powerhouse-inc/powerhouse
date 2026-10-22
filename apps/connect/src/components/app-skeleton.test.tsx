@@ -11,6 +11,7 @@ vi.mock("@powerhousedao/design-system/connect", () => ({
     <div data-testid="home-screen">{children}</div>
   ),
   LogoAnimation: () => <div data-testid="logo" />,
+  getProjectLoader: () => null,
 }));
 
 vi.mock("@powerhousedao/reactor-browser", () => ({
@@ -76,5 +77,20 @@ describe("AppSkeleton", () => {
     render(<AppSkeleton />);
 
     expect(loaderIsVisible()).toBe(false);
+  });
+
+  it("shows only the loader when the project's _app replaces Connect's layout", () => {
+    const meta = document.createElement("meta");
+    meta.name = "ph-custom-shell";
+    meta.content = "true";
+    document.head.appendChild(meta);
+    try {
+      const { queryByTestId } = render(<AppSkeleton />);
+      expect(queryByTestId("sidebar")).toBeNull();
+      expect(queryByTestId("home-screen")).toBeNull();
+      expect(queryByTestId("logo")).not.toBeNull();
+    } finally {
+      meta.remove();
+    }
   });
 });

@@ -620,6 +620,17 @@ export interface InProcessReactorModule extends ReactorModule {
   storageFacts: ReactorStorageFacts;
   /** Set by `withGroupCommitPGlite`; the host closes the store through it. */
   groupCommitStorage?: IGroupCommitStorage;
+  /**
+   * Graceful teardown, in the order the `withSignalHandlers()` path uses:
+   * `reactor.kill()`, then every `withShutdownHook` / `registerShutdownHook`
+   * hook in order (a failing hook is logged and skipped), then
+   * `database.destroy()`. Runs once: every call, concurrent or later, returns
+   * the same promise, and a SIGINT/SIGTERM through `withSignalHandlers()`
+   * joins it rather than tearing down again. Never exits the process; only
+   * the signal path does. Rejects when the reactor fails to stop (the hooks
+   * and the database are then left alone) or the database fails to close.
+   */
+  shutdown: () => Promise<void>;
 }
 
 /**

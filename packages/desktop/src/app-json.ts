@@ -1,3 +1,5 @@
+import type { PHBackground } from "@powerhousedao/shared/clis";
+import { validateBackground } from "@powerhousedao/shared/connect";
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
@@ -24,7 +26,108 @@ const windowSchema = z
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     resizable: z.boolean().optional(),
+    /** Smallest size the window can be dragged to (logical pixels). */
+    minWidth: z.number().int().positive().optional(),
+    minHeight: z.number().int().positive().optional(),
   })
+  .optional();
+
+const cssColorSchema = z
+  .string()
+  .regex(
+    /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
+    "use a hex color (#rgb, #rgba, #rrggbb or #rrggbbaa)",
+  );
+
+/** The loading page's colors. */
+const loadingColorsSchema = z.strictObject({
+  /** Page background (default #0f1115). */
+  background: cssColorSchema.nullable().optional(),
+  /** Status text color (default #e6e8eb). */
+  color: cssColorSchema.nullable().optional(),
+  /** The pulsing status dot (default #4ade80). */
+  accent: cssColorSchema.nullable().optional(),
+});
+
+/** The loading page's look, so the window opens in the app's own colors
+ * instead of the default dark page. Every field is optional, and `null`
+ * means the default (the scaffold lists the fields that way). */
+const loadingSchema = loadingColorsSchema
+  .extend({
+    /** Status line under the art (default "Starting <productName>…"). */
+    message: z.string().min(1).nullable().optional(),
+    /** Colors for `prefers-color-scheme: dark`; without it the page keeps
+     * the light colors in both schemes. */
+    dark: loadingColorsSchema.nullable().optional(),
+    /** Deprecated: a decoration pinned to the bottom-right corner, relative
+     * to app.json, with `artDark` its dark-scheme counterpart. Superseded by
+     * the top-level `background`, which ignores these when set. */
+    art: z.string().min(1).nullable().optional(),
+    artDark: z.string().min(1).nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+// The loading page's background: the same `PHBackground` as Connect's
+// `connect.branding.homeBackground` (shared/clis/types.ts), so the scaffold
+// can copy one into the other and both pages place their art alike. Paths
+// are relative to app.json; URLs and data URIs pass through.
+const imageRefSchema = z.string().min(1);
+const schemedImageSchema = z.union([
+  imageRefSchema,
+  z.strictObject({
+    light: imageRefSchema,
+    dark: imageRefSchema.nullable().optional(),
+  }),
+]);
+const lengthSchema = z
+  .union([z.number(), z.string().min(1)])
+  .nullable()
+  .optional();
+const edgesSchema = z
+  .strictObject({
+    top: lengthSchema,
+    right: lengthSchema,
+    bottom: lengthSchema,
+    left: lengthSchema,
+  })
+  .nullable()
+  .optional();
+const backgroundLayerSchema = z.strictObject({
+  src: schemedImageSchema,
+  position: edgesSchema,
+  width: lengthSchema,
+  height: lengthSchema,
+  minWidth: lengthSchema,
+  minHeight: lengthSchema,
+  maxWidth: lengthSchema,
+  maxHeight: lengthSchema,
+  opacity: z.number().min(0).max(1).nullable().optional(),
+  fade: edgesSchema,
+});
+const backgroundSchema = z
+  .union([
+    imageRefSchema,
+    z.strictObject({
+      color: z
+        .union([
+          z.string().min(1),
+          z.strictObject({
+            light: z.string().min(1),
+            dark: z.string().min(1).nullable().optional(),
+          }),
+        ])
+        .nullable()
+        .optional(),
+      layers: z.array(backgroundLayerSchema),
+    }),
+  ])
+  .superRefine((background: PHBackground, ctx) => {
+    for (const problem of validateBackground(background, "background")) {
+      ctx.addIssue({ code: "custom", message: problem });
+    }
+  })
+  .nullable()
   .optional();
 
 const fileAssociationSchema = z.strictObject({
@@ -59,6 +162,18 @@ export const appJsonSchema = z.strictObject({
   /** Single source image (square PNG, 1024×1024 recommended); the icon set
    * for every platform is generated from it via `tauri icon`. */
   icon: z.string().min(1),
+  /** The loading page's background: images positioned and sized over a
+   * page colour (`{ color, layers }`), or one image pinned bottom-right.
+   * The status line stays centred above them. `ph generate desktop-shell`
+   * copies Connect's `connect.branding.homeBackground` here. null or
+   * omitted: the app icon (or `splash`) above the status line. */
+  background: backgroundSchema,
+  /** Deprecated in favour of `background`: a wide splash image shown above
+   * the status line instead of the square icon. Relative to this file. */
+  splash: z.string().min(1).nullable().optional(),
+  /** Deprecated with `splash`: its `prefers-color-scheme: dark` variant. */
+  splashDark: z.string().min(1).nullable().optional(),
+  loading: loadingSchema,
   window: windowSchema,
   fileAssociations: z.array(fileAssociationSchema).optional(),
   shell: shellSourceSchema,
