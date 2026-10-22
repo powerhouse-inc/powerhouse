@@ -267,23 +267,152 @@ function exemptPowerhouseFromReleaseAge(workDir: string): void {
   );
 }
 
-/** Pins `zod` in `workDir` to this checkout's version: linked packages use this
- * checkout's zod, and two zod 4 copies don't share types. */
-function alignZodWithCheckout(workDir: string): void {
-  // The installed version, not the catalog's range: the linked packages use it.
-  const zodManifest = path.join(MONOREPO, "node_modules/zod/package.json");
-  const { version } = JSON.parse(fs.readFileSync(zodManifest, "utf-8")) as {
-    version?: string;
-  };
-  if (!version) fail(`no zod version in ${zodManifest}`);
+/**
+ * Packages whose types a recipe shares with the linked packages. TypeScript
+ * dedupes only an identical name@version, and the recipe resolves fresh from
+ * the registry. zod: two zod 4 copies don't share types. The tanstack pair: a
+ * recipe's route tree augments router-core's `FileRoutesByPath` and `Register`
+ * through react-router, and Connect's linked route sources see that only
+ * through the same copy; otherwise every `createFileRoute` path is rejected.
+ */
+const SHARED_TYPE_PACKAGES = [
+  "zod",
+  "@tanstack/react-router",
+  "@tanstack/router-core",
+];
+
+/** The checkout root as `fs.realpathSync` spells it, for walks from a realpath. */
+const MONOREPO_REAL = fs.realpathSync(MONOREPO);
+
+/** The manifest Node would find for `name` from `dir`, stopping at the checkout root. */
+function findInstalled(name: string, dir: string): string | undefined {
+  for (let current = dir; ; current = path.dirname(current)) {
+    const manifest = path.join(current, "node_modules", name, "package.json");
+    if (fs.existsSync(manifest)) return manifest;
+    if (
+      current === MONOREPO ||
+      current === MONOREPO_REAL ||
+      current === path.dirname(current)
+    ) {
+      return undefined;
+    }
+  }
+}
+
+function readManifest(file: string): Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(file, "utf-8")) as Record<string, unknown>;
+}
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+] as const;
+
+/**
+ * The installed copies of the shared-type packages the package in `dir` uses,
+ * as a map from each copy's real directory to its manifest. Only declared
+ * dependencies count, so a package that doesn't use zod isn't credited with
+ * the root's copy. The walk continues through each copy found, so router-core
+ * is also read where react-router resolves it, not only where the linked
+ * package declares it.
+ */
+function sharedCopies(dir: string): Map<string, Record<string, unknown>> {
+  const copies = new Map<string, Record<string, unknown>>();
+  const queue = [dir];
+  for (let i = 0; i < queue.length; i++) {
+    const pkg = readManifest(path.join(queue[i], "package.json"));
+    const declared = new Set(
+      DEPENDENCY_FIELDS.flatMap((field) =>
+        Object.keys((pkg[field] as Record<string, string> | undefined) ?? {}),
+      ),
+    );
+    for (const name of SHARED_TYPE_PACKAGES) {
+      if (!declared.has(name)) continue;
+      const manifest = findInstalled(name, queue[i]);
+      if (manifest === undefined) continue;
+      const real = fs.realpathSync(path.dirname(manifest));
+      if (copies.has(real)) continue;
+      copies.set(real, readManifest(manifest));
+      queue.push(real);
+    }
+  }
+  return copies;
+}
+
+/**
+ * The version of each shared-type package the linked packages use: the
+ * installed one, not the catalog's range. A package no linked package depends
+ * on is left out, so a recipe that links nothing router-related keeps its own
+ * versions.
+ */
+function checkoutVersions(linkMap: Map<string, string>): Map<string, string> {
+  // name → version → the linked packages that use that copy
+  const found = new Map<string, Map<string, Set<string>>>();
+  for (const [pkg, dir] of linkMap) {
+    for (const [real, manifest] of sharedCopies(dir)) {
+      const { name, version } = manifest as { name?: string; version?: string };
+      if (!name || !version) fail(`no name or version in ${real}/package.json`);
+      const byVersion = found.get(name) ?? new Map<string, Set<string>>();
+      found.set(name, byVersion);
+      byVersion.set(version, (byVersion.get(version) ?? new Set()).add(pkg));
+    }
+  }
+
+  const versions = new Map<string, string>();
+  for (const name of SHARED_TYPE_PACKAGES) {
+    const byVersion = found.get(name);
+    if (byVersion === undefined) continue;
+    if (byVersion.size > 1) {
+      fail(
+        `linked packages resolve more than one ${name}, so a recipe can't share its types with all of them:\n` +
+          [...byVersion]
+            .map(([v, pkgs]) => `  ${v}: ${[...pkgs].join(", ")}`)
+            .join("\n"),
+      );
+    }
+    versions.set(name, [...byVersion.keys()][0]);
+  }
+  return versions;
+}
+
+/**
+ * Override each shared-type package in `workDir` to the version this checkout
+ * resolves. See SHARED_TYPE_PACKAGES for why.
+ */
+function alignSharedTypesWithCheckout(
+  workDir: string,
+  versions: Map<string, string>,
+): void {
+  if (versions.size === 0) return;
 
   const file = path.join(workDir, "pnpm-workspace.yaml");
-  const existing = fs.readFileSync(file, "utf-8");
-  const entry = `  zod: "${version}"\n`;
-  const updated = /^overrides:\s*$/m.test(existing)
-    ? existing.replace(/^overrides:\s*\n/m, (block) => `${block}${entry}`)
-    : `${existing}${existing.endsWith("\n") ? "" : "\n"}\n# Added by test/recipes-e2e: one zod with the linked packages.\noverrides:\n${entry}`;
-  fs.writeFileSync(file, updated);
+  const lines = fs.readFileSync(file, "utf-8").split("\n");
+  const entries = [...versions].map(([name, v]) => `  "${name}": "${v}"`);
+
+  const start = lines.findIndex((l) => /^overrides:\s*(#.*)?$/.test(l));
+  if (start === -1) {
+    if (lines.at(-1) === "") lines.pop();
+    lines.push(
+      "",
+      "# Added by test/recipes-e2e: one copy of each with the linked packages.",
+      "overrides:",
+      ...entries,
+      "",
+    );
+  } else {
+    // Drop the recipes repo's own entry for a package this replaces: a
+    // duplicate mapping key fails the install.
+    let end = start + 1;
+    while (end < lines.length && !/^\S/.test(lines[end])) end++;
+    const keyOf = (line: string) => /^\s+(["']?)(.+?)\1\s*:/.exec(line)?.[2];
+    const kept = lines
+      .slice(start + 1, end)
+      .filter((l) => !versions.has(keyOf(l) ?? ""));
+    lines.splice(start + 1, end - start - 1, ...entries, ...kept);
+  }
+  fs.writeFileSync(file, lines.join("\n"));
 }
 
 /** Rewrite the Powerhouse specifiers of every recipe in `workDir` to `link:`. */
@@ -490,6 +619,8 @@ async function main(): Promise<void> {
   }
 
   assertBuilt(linkMap);
+  // Before anything is written: fail() exits without restoring an in-place run.
+  const versions = checkoutVersions(linkMap);
 
   const restores: (() => void)[] = [];
   const cleanup = () => {
@@ -545,8 +676,10 @@ async function main(): Promise<void> {
     step("Exempting Powerhouse packages from the release-age policy");
     exemptPowerhouseFromReleaseAge(options.workDir);
 
-    step("Pinning zod to this checkout's version");
-    alignZodWithCheckout(options.workDir);
+    step("Pinning shared-type packages to this checkout's versions");
+    for (const [name, version] of versions)
+      console.log(`  ${name} → ${version}`);
+    alignSharedTypesWithCheckout(options.workDir, versions);
 
     if (options.install) {
       step("Installing");
@@ -591,9 +724,11 @@ async function main(): Promise<void> {
       }
 
       step(`${label} :: ${phase}`);
+      // --fail-if-no-match: a filter that matches no project exits 0 with no
+      // output, which would report a recipe that never ran as a pass.
       const result = await run(
         "pnpm",
-        ["--filter", recipe.name, "run", phase],
+        ["--filter", recipe.name, "--fail-if-no-match", "run", phase],
         {
           cwd: options.workDir,
           timeoutMs: options.timeoutMs,
