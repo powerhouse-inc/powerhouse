@@ -1,6 +1,6 @@
 // The connection editor's own form over a just-created document, hosted in the
 // host modal so binding a step never leaves the workflow editor.
-import { Modal } from "@powerhousedao/design-system";
+import { Modal } from "@powerhousedao/design-system/connect";
 import { actions, useConnectionDocumentById } from "document-models/connection";
 import { useEffect, useState } from "react";
 import { connectionCallbacks } from "../../connection-editor/connection-callbacks.js";

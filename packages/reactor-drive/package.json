@@ -19,6 +19,11 @@
       "source": "./index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./subgraph": {
+      "source": "./src/subgraph/index.ts",
+      "types": "./dist/subgraph.d.ts",
+      "import": "./dist/subgraph.js"
     }
   },
   "sideEffects": false,

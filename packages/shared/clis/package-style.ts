@@ -98,6 +98,8 @@ export type PackageStyleOptions = {
   browserDir: string;
   /** The project's local packages, whose old style.css imports are dropped. */
   localPackages?: readonly string[];
+  /** The theme the classes build against, by reference: Connect's by default. */
+  references?: readonly string[];
 };
 
 /** What `ph build` compiles to a package's stylesheet: the classes in the
@@ -105,15 +107,21 @@ export type PackageStyleOptions = {
  * Tailwind's and Connect's theme by reference, so not emitted. */
 export function packageStyleEntry(
   current: string | undefined,
-  { browserDir, localPackages }: PackageStyleOptions,
+  {
+    browserDir,
+    localPackages,
+    references = ["@powerhousedao/connect/theme.css"],
+  }: PackageStyleOptions,
 ): string {
   const { tailwind, rest } = projectStyle(current ?? "", localPackages);
   const options = tailwindOptions(tailwind);
   return `${[
     `@import "tailwindcss/theme.css" theme(reference)${options};`,
-    `@reference "@powerhousedao/connect/theme.css";`,
+    ...references.map((file) => `@reference ${JSON.stringify(file)};`),
     `@import "tailwindcss/utilities.css" source(none)${options};`,
     `@source ${JSON.stringify(browserDir)};`,
+    // Source maps carry the sources the bundle left out.
+    `@source not ${JSON.stringify(`${browserDir}/**/*.map`)};`,
     rest,
   ].join("\n")}\n`;
 }

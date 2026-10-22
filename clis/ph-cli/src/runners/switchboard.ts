@@ -377,7 +377,8 @@ async function start(
     const { seedWorkflowsDrive } = await import("../services/vetra.js");
     const { generateProjectDriveId } = await import("../utils.js");
     const url = await seedWorkflowsDrive(switchboard.reactor, port);
-    drives.workflows = { id: generateProjectDriveId("workflows"), url };
+    if (url)
+      drives.workflows = { id: generateProjectDriveId("workflows"), url };
   }
 
   const ready = waitForDrive(driveUrl, 180_000);

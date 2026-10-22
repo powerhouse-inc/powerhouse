@@ -1,6 +1,9 @@
-import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
+import {
+  CreateDocumentWithTypeModal,
+  Icon,
+  PowerhouseButton,
+} from "@powerhousedao/design-system/connect";
 import type { DocumentTypeOption } from "@powerhousedao/design-system/connect";
-import { CreateDocumentWithTypeModal } from "@powerhousedao/design-system/connect";
 import {
   addDocument,
   preloadEditorModule,

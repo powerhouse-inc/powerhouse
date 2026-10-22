@@ -48,6 +48,7 @@ describe("packageStyleEntry", () => {
       `@import "tailwindcss/utilities.css" source(none) prefix(tw) important;`,
     ]);
     expect(entry).toContain(`@source "./out/browser";`);
+    expect(entry).toContain(`@source not "./out/browser/**/*.map";`);
   });
 
   it("drops only the local packages' old imports", () => {
@@ -58,6 +59,17 @@ describe("packageStyleEntry", () => {
     );
     expect(entry).not.toContain("@acme/pkg");
     expect(entry).toContain(vendor);
+  });
+
+  it("references another theme when given one", () => {
+    const entry = packageStyleEntry(undefined, {
+      browserDir: "./dist/browser",
+      references: ["@powerhousedao/design-system/theme.css"],
+    });
+    expect(entry).toContain(
+      `@reference "@powerhousedao/design-system/theme.css";`,
+    );
+    expect(entry).not.toContain("connect/theme.css");
   });
 
   it("builds the package's classes without a style.css", () => {

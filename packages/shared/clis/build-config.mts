@@ -191,7 +191,13 @@ export type BrowserBuildConfigOptions = {
   sharedDeps?: boolean;
   /** Extra bundler plugins, such as the external dependency guard. */
   plugins?: InlineConfig["plugins"];
+  /** Inline every dependency (default: true), as a package Connect loads from
+   * the CDN needs. False leaves declared dependencies to the app that bundles it. */
+  bundleDependencies?: boolean;
 };
+
+// A dependency's stylesheet stays bundled, so `style.css` keeps the vendor CSS.
+const stylesheets = [/\.css$/];
 
 export function buildBrowserBuildConfig(
   options: BrowserBuildConfigOptions = {},
@@ -201,7 +207,8 @@ export function buildBrowserBuildConfig(
     ...baseBrowserConfig,
     plugins: [...baseBrowserConfig.plugins, ...pluginList(options.plugins)],
     deps: {
-      alwaysBundle,
+      alwaysBundle:
+        (options.bundleDependencies ?? true) ? alwaysBundle : stylesheets,
       neverBundle: [
         ...browserNeverBundle,
         ...(sharedDeps ? sharedNeverBundle : []),
