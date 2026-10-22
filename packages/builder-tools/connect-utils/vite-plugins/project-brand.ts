@@ -413,7 +413,7 @@ export type ProjectFavicon = ProjectAsset & {
  * `branding.icon` (an SVG master is one scalable favicon). They replace
  * Connect's static icon.ico link in index.html; none keeps it. A favicon
  * named outright (`faviconPath`: `branding.favicon` or `--favicon`) wins: it
- * is built as icon.ico, so the icon's siblings stand aside.
+ * is built as icon.ico (or icon.svg, icon.png), so the icon's siblings stand aside.
  */
 export function resolveProjectFavicons(
   projectRoot: string,
