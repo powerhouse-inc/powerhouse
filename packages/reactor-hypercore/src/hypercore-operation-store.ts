@@ -671,6 +671,33 @@ export class HypercoreOperationStore implements IOperationStore {
     return found;
   }
 
+  async getAllOperationsByIds(
+    documentId: string,
+    scope: string,
+    branch: string,
+    opIds: string[],
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+    if (opIds.length === 0) {
+      return [];
+    }
+
+    const wanted = new Set(opIds);
+    const stored = await this.getSince(
+      documentId,
+      scope,
+      branch,
+      -1,
+      undefined,
+      undefined,
+      signal,
+    );
+    return stored.results.filter((operation) => wanted.has(operation.id));
+  }
+
   async getOperationsByIds(
     documentId: string,
     scope: string,
