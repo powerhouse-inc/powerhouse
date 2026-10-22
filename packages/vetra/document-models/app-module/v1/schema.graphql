@@ -26,7 +26,7 @@ tree) and can opt into which document types they accept.
 """
 type AppModuleState {
   """
-  Display name of the drive app. Also used as the source for the generated folder name under `apps/`.
+  Display name of the drive app. Also used as the source for the generated folder name under `editors/`.
   """
   name: String!
   """
