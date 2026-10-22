@@ -1,6 +1,7 @@
 import {
   addFile,
   driveDocumentModelModule,
+  setSharingType,
 } from "@powerhousedao/shared/document-drive";
 import {
   actions,
@@ -691,6 +692,46 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.id).toBe("rename-test-2");
         expect(result.header.name).toBe("Named with View");
+      });
+
+      it("keeps the name when the preferred editor changes after it", async () => {
+        const doc = createDocModelDocument({ id: "rename-test-3" });
+        await client.create(doc);
+
+        await client.rename("rename-test-3", "Renamed");
+        const result = await client.setPreferredEditor(
+          "rename-test-3",
+          "some-app",
+        );
+        expect(result.header.name).toBe("Renamed");
+
+        const read = await client.get("rename-test-3");
+        expect(read.header.name).toBe("Renamed");
+        expect(read.header.meta?.preferredEditor).toBe("some-app");
+      });
+
+      it("keeps the name when a local operation follows it", async () => {
+        const drive = await client.createEmpty("powerhouse/document-drive");
+
+        await client.rename(drive.header.id, "Renamed");
+        await client.execute(drive.header.id, "main", [
+          setSharingType({ type: "PUBLIC" }),
+        ]);
+
+        const read = await client.get(drive.header.id);
+        expect(read.header.name).toBe("Renamed");
+      });
+
+      it("keeps the preferred editor when the name changes after it", async () => {
+        const doc = createDocModelDocument({ id: "rename-test-4" });
+        await client.create(doc);
+
+        await client.setPreferredEditor("rename-test-4", "some-app");
+        await client.rename("rename-test-4", "Renamed");
+
+        const read = await client.get("rename-test-4");
+        expect(read.header.name).toBe("Renamed");
+        expect(read.header.meta?.preferredEditor).toBe("some-app");
       });
     });
   });
