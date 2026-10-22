@@ -5,6 +5,7 @@ import {
   isDriveAuthError,
   PropagationMode,
   type IReactorClient,
+  type ISyncManager,
   type PollBehavior,
 } from "@powerhousedao/reactor";
 import {
@@ -27,6 +28,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
+import { LocalDriveIdConflictError } from "../errors.js";
 import { showPHModal } from "../hooks/modals.js";
 import { getFullReactorClient } from "../hooks/reactor.js";
 
@@ -178,6 +180,46 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   return await reactorClient.create<DocumentDriveDocument>(driveDoc);
 }
 
+/** Whether a remote for the drive is registered, or being registered. */
+function hasDriveRemote(sync: ISyncManager, driveId: string): boolean {
+  const collectionId = DriveCollectionId.forDrive(driveId);
+  return (
+    inFlightRemoteRegistrations.has(collectionId.key) ||
+    sync.list().some((remote) => remote.meta.collectionId.equals(collectionId))
+  );
+}
+
+// A local document under the remote drive's id, with no remote syncing it,
+// dead-letters every operation the remote sends ("Document … already exists").
+async function findLocalDriveIdConflict(
+  reactorClient: IReactorClient,
+  sync: ISyncManager,
+  driveId: string,
+): Promise<LocalDriveIdConflictError | undefined> {
+  if (hasDriveRemote(sync, driveId)) return;
+  if (!(await reactorClient.isDocumentIdTaken(driveId))) return;
+  // find skips a soft-deleted document, whose id stays taken.
+  const { results } = await reactorClient.find({ ids: [driveId] });
+  const local = results.at(0) as Partial<DocumentDriveDocument> | undefined;
+  if (!local) return new LocalDriveIdConflictError(driveId, "deleted");
+  return new LocalDriveIdConflictError(driveId, {
+    name: local.header?.name || local.state?.global.name || undefined,
+  });
+}
+
+/**
+ * Throws {@link LocalDriveIdConflictError} when `addRemoteDrive` would refuse
+ * the drive because a local document already holds its id.
+ */
+export async function assertRemoteDriveAddable(driveId: string) {
+  const reactorClient = getFullReactorClient();
+  const sync =
+    getPHStore()?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  if (!reactorClient || !sync) return;
+  const conflict = await findLocalDriveIdConflict(reactorClient, sync, driveId);
+  if (conflict) throw conflict;
+}
+
 export async function addRemoteDrive(
   url: string,
   driveId?: string,
@@ -215,6 +257,13 @@ export async function addRemoteDrive(
   }
 
   const resolvedDriveId = driveId ?? driveInfo.id;
+  const conflict = await findLocalDriveIdConflict(
+    reactorClient,
+    sync,
+    resolvedDriveId,
+  );
+  if (conflict) throw conflict;
+
   const collectionId = DriveCollectionId.forDrive(resolvedDriveId);
 
   const inFlight = inFlightRemoteRegistrations.get(collectionId.key);

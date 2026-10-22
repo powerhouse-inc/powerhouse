@@ -4,6 +4,7 @@ import {
   getFullReactorClient,
   getPHStore,
   isDriveAuthError,
+  LocalDriveIdConflictError,
   ReactorBuilder,
   ReactorClientBuilder,
   setDriveMetadata,
@@ -177,6 +178,10 @@ async function addRemoteDefaultDrive(
       if (isDriveAuthError(error)) {
         // addRemoteDrive already surfaces the login modal; auth failures
         // don't self-heal, so don't burn the remaining retries.
+        break;
+      }
+      if (LocalDriveIdConflictError.isError(error)) {
+        console.error(`Default drive ${drive.url} not added:`, error.message);
         break;
       }
       if (attempt === MAX_ATTEMPTS) {

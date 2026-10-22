@@ -21,6 +21,7 @@ export {
 export {
   addDrive,
   addRemoteDrive,
+  assertRemoteDriveAddable,
   deleteDrive,
   renameDrive,
   setDriveAvailableOffline,

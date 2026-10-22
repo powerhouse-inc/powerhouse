@@ -22,6 +22,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   // No store: the add does not wait for the drive to be listed.
   getPHStore: () => undefined,
   isDriveAuthError: vi.fn(() => false),
+  LocalDriveIdConflictError: { isError: () => false },
   ReactorBuilder: class {},
   ReactorClientBuilder: class {},
   setDriveMetadata: vi.fn(),

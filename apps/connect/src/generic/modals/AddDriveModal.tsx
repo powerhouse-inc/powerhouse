@@ -7,6 +7,7 @@ import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/desig
 import {
   addDrive,
   addRemoteDrive,
+  assertRemoteDriveAddable,
   closePHModal,
   extractDriveSlugFromPath,
   fetchDriveInfo,
@@ -18,6 +19,7 @@ import {
   usePHModal,
   waitForDocumentReady,
   getPHStore,
+  LocalDriveIdConflictError,
 } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import { getCreateDriveAppOptions } from "../pages/create-drive-app-options.js";
@@ -100,9 +102,20 @@ export function AddDriveModal() {
         }
       })();
     } catch (e) {
+      if (LocalDriveIdConflictError.isError(e)) {
+        toast(e.message, { type: "connect-warning" });
+      }
       console.error(e);
     }
   };
+
+  // The form shows a lookup's error under the URL and can't be confirmed.
+  async function requestPublicDrive(url: string) {
+    const driveInfo = await fetchDriveInfo(url);
+    await assertRemoteDriveAddable(driveInfo.id);
+    return driveInfo;
+  }
+
   async function onAddLocalDriveSubmit(data: AppOptions) {
     await onAddLocalDrive(data);
     closePHModal();
@@ -124,7 +137,7 @@ export function AddDriveModal() {
       onAddRemoteDrive={(data) => {
         void onAddRemoteDriveSubmit(data);
       }}
-      requestPublicDrive={(url: string) => fetchDriveInfo(url)}
+      requestPublicDrive={requestPublicDrive}
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}
