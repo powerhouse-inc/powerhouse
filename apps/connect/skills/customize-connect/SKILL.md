@@ -13,7 +13,7 @@ Connect is the Powerhouse web app that shows drives, documents and their editors
 | Pages, sidebar links, settings tabs, page titles | File routes in `hosts/connect/routes/` | [pages.md](../../docs/customizing/pages.md) |
 | Sidebar, layout, loading screen | `hosts/connect/routes/_app.tsx` | [layout.md](../../docs/customizing/layout.md) |
 | Home, drive view, open document, settings page, 404 | A route file at Connect's route path | [overrides.md](../../docs/customizing/overrides.md) |
-| Loading data, search params, links from editors | Route `loader`, `validateSearch`; `@powerhousedao/reactor-browser` | [data-and-navigation.md](../../docs/customizing/data-and-navigation.md) |
+| Loading data, documents of one type across drives, search params, links from editors | Route `loader`, `validateSearch`; `useDocumentsOfType` and the other `@powerhousedao/reactor-browser` hooks | [data-and-navigation.md](../../docs/customizing/data-and-navigation.md) |
 | Modals | `staticData.modals`, `staticData.modalFrame` | [modals.md](../../docs/customizing/modals.md) |
 | Colours, fonts, CSS; app name and favicon per host | `style.css`; `connect.branding` | [styles-and-branding.md](../../docs/customizing/styles-and-branding.md) |
 | Several Connects with different routes, config or plugins | `hosts/<name>/host.js` | [hosts-and-plugins.md](../../docs/customizing/hosts-and-plugins.md) |
