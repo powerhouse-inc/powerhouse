@@ -1,0 +1,89 @@
+{
+  "$schema": "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/shared/clis/source-config.schema.json",
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors",
+  "processorsDir": "./processors",
+  "subgraphsDir": "./subgraphs",
+  "studio": {
+    "port": 6415
+  },
+  "reactor": {
+    "port": 7415
+  },
+  "packages": [
+    {
+      "packageName": "stock-app",
+      "version": "1.0.0",
+      "provider": "registry"
+    }
+  ],
+  "packageRegistryUrl": "http://localhost:8080",
+  "connect": {
+    "branding": {
+      "appName": "Consumer Connect",
+      "homeBackground": null
+    },
+    "app": {
+      "logLevel": "info",
+      "basePath": "/",
+      "offline": true,
+      "studioMode": false
+    },
+    "ai": {
+      "assistantEnabled": false
+    },
+    "packages": {
+      "externalEnabled": true,
+      "liveReload": false
+    },
+    "drives": {
+      "allowAddDrive": true,
+      "defaultDrives": [],
+      "sections": {
+        "remote": {
+          "enabled": true,
+          "allowAdd": true,
+          "allowDelete": true
+        },
+        "local": {
+          "enabled": true,
+          "allowAdd": true,
+          "allowDelete": true
+        }
+      }
+    },
+    "renown": {
+      "url": "https://www.renown.id",
+      "networkId": "eip155",
+      "chainId": 1
+    },
+    "sentry": {
+      "dsn": null,
+      "env": "dev",
+      "tracing": false
+    },
+    "openPanel": {
+      "clientId": "",
+      "trackUiEvents": true,
+      "trackOperations": true
+    },
+    "instance": {
+      "namespace": null,
+      "reactorWorker": false,
+      "multiReactor": false
+    },
+    "reactor": {
+      "featureFlags": {
+        "documentDecisions": false,
+        "authEnforcement": false,
+        "authGroups": false,
+        "authConditions": false
+      },
+      "createSignaturePolicy": "v2-required",
+      "unsupportedStoredDocuments": "refuse"
+    }
+  },
+  "vetra": {
+    "connectPort": 2415
+  }
+}

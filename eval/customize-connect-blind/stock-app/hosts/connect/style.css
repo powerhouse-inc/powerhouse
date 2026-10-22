@@ -1,0 +1,29 @@
+/* This Connect's theme: token values and global rules. The page's Tailwind build
+     adds it after style.css; ph build leaves it out of the package's stylesheet. */
+/* static: the page keeps these tokens even unused, as packages' classes read them. */
+@theme static {
+  /* Stock App's brand teal. */
+  --color-brand-50: #f0fdfa;
+  --color-brand-300: #5eead4;
+  --color-brand-700: #0f766e;
+  --color-brand-950: #042f2e;
+}
+
+/* Semantic tokens: a light value on :root and a dark one on :root.dark. */
+:root {
+  --primary: var(--color-brand-700);
+  --primary-foreground: var(--color-brand-50);
+  --ring: var(--color-brand-700);
+  --accent: #ccfbf1;
+  --accent-foreground: var(--color-brand-950);
+}
+
+:root.dark {
+  --primary: var(--color-brand-300);
+  --primary-foreground: var(--color-brand-950);
+  --ring: var(--color-brand-300);
+  --accent: #134e4a;
+  --accent-foreground: var(--color-brand-50);
+  --background: #0b1717;
+  --card: #112222;
+}

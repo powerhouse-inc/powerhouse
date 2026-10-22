@@ -1,0 +1,12 @@
+import { chromium } from "/home/user/powerhouse/test/package-e2e/node_modules/@playwright/test/index.mjs";
+const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 }, colorScheme: "dark" });
+const page = await ctx.newPage();
+await page.goto("http://localhost:4173/inventory", { waitUntil: "commit" });
+await page.waitForSelector("text=Opening the stockroom", { timeout: 10000 }).catch(() => {});
+console.log("early html class:", await page.evaluate(() => document.documentElement.className), "bg:", await page.evaluate(() => getComputedStyle(document.body).backgroundColor));
+await page.screenshot({ path: "/tmp/connect-eval2/shots/61-loading-shell-dark-js.png" });
+await page.waitForTimeout(8000);
+console.log("later html class:", await page.evaluate(() => document.documentElement.className), (await page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 120));
+await page.screenshot({ path: "/tmp/connect-eval2/shots/62-preview-inventory-dark.png" });
+await browser.close();

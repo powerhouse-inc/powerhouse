@@ -1,0 +1,13 @@
+import { open, shot, dismissCookies, BASE } from "./lib.mjs";
+const { browser, page, logs, requests } = await open();
+await page.goto(BASE + "/", { waitUntil: "domcontentloaded" });
+await dismissCookies(page);
+for (let i = 0; i < 40 && !(await page.locator('a[href^="/d/"]').count()); i++) await page.waitForTimeout(1000);
+await page.waitForTimeout(5000);
+console.log("title:", await page.title());
+console.log("links:", (await page.locator("a").evaluateAll((as) => as.map((a) => `${(a.getAttribute("aria-label") ?? a.textContent ?? "").trim().slice(0, 30)}=>${a.getAttribute("href")}`))).join(" | "));
+await shot(page, "01-home");
+console.log("stylesheets:", await page.evaluate(() => [...document.styleSheets].map((s) => s.href ?? `inline(${s.cssRules.length})`).join("\n  ")));
+console.log("stock-app requests:\n  " + requests.join("\n  "));
+console.log("LOGS:\n" + logs.slice(0, 20).join("\n"));
+await browser.close();

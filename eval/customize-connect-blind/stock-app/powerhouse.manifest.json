@@ -1,0 +1,28 @@
+{
+  "name": "stock-app",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [
+    {
+      "id": "stock-app/inventory-item",
+      "name": "InventoryItem"
+    }
+  ],
+  "apps": [],
+  "editors": [
+    {
+      "name": "InventoryItemEditor",
+      "id": "inventory-item-editor",
+      "documentTypes": [
+        "stock-app/inventory-item"
+      ]
+    }
+  ],
+  "processors": [],
+  "subgraphs": [],
+  "config": []
+}
