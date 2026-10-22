@@ -19,24 +19,20 @@ Editors, drive apps and Connect open modals with `showPHModal(modal)` from `@pow
 - **Core** has a plain view for each of its modals, so every host can show what editors and drive apps open.
 - **With the generic plugin**, Connect shows its design-system views for all of them; without it, core's.
 
-A plain `<a href={modalHref(modal)}>` reloads the app. To open a routed modal in the app, show it on a plain click and leave new tabs to the browser:
+A plain `<a href={modalHref(modal)}>` reloads the app. `useModalLinkProps(modal)` gives a link that opens the modal in place on a plain click, and its URL to new tabs and copied links:
 
 ```tsx
-import { isPlainClick, modalHref, showPHModal } from "@powerhousedao/reactor-browser";
+import { useModalLinkProps } from "@powerhousedao/reactor-browser";
 
 const modal = { type: "createDocument", documentType: "powerhouse/todo" } as const;
 
-<a
-  href={modalHref(modal)}
-  onClick={(event) => {
-    if (!isPlainClick(event)) return;
-    event.preventDefault();
-    showPHModal(modal);
-  }}
->
-  New todo list
-</a>;
+function NewTodoListLink() {
+  return <a {...useModalLinkProps(modal)}>New todo list</a>;
+}
 ```
+
+- The href follows the page's query params as they change.
+- Confirmations (`deleteItem` and the like) aren't routed, so their link has no URL of its own; open them with `showPHModal(modal)` from a button.
 
 ## Replace a modal's view
 
