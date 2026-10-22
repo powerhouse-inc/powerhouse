@@ -3,8 +3,8 @@ import { tsx } from "@tmpl/core";
 export const appEditorFileTemplate = () =>
   tsx`
 /**
- * WARNING: DO NOT EDIT
- * This file is auto-generated and updated by codegen
+ * The drive app's root. Codegen writes it once and leaves it, and the scaffold
+ * in ./components, alone from then on, so edit it as you need.
  */
 import { useSetPHAppConfig } from "@powerhousedao/reactor-browser";
 import type { EditorProps } from "document-model";
