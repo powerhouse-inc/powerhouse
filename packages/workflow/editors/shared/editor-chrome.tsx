@@ -11,6 +11,7 @@ import {
   assertNever,
   optionalBaseReducerCapabilities,
   undo,
+  undoNeedsTargets,
   type Action,
   type BaseReducerCapabilities,
   type Operation,
@@ -125,11 +126,11 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
   }>();
   const caps =
     known ?? (read?.documentId === props.documentId ? read.caps : undefined);
-  const v3 = caps?.undo === "retraction";
-  // Base-reducer 3 reads it from the history, which the cache doesn't hold.
-  const [canUndoV3, setCanUndoV3] = useState(false);
-  const canUndo = v3
-    ? canUndoV3
+  const targeted = caps !== undefined && undoNeedsTargets(caps);
+  // A targeted undo reads it from the history, which the cache doesn't hold.
+  const [canUndoTargeted, setCanUndoTargeted] = useState(false);
+  const canUndo = targeted
+    ? canUndoTargeted
     : Object.values(document?.header.revision ?? {}).some(Boolean);
   // Edits undone here, newest last: the reactor keeps no clipboard to redo
   // from. Any other edit after `head` voids them. On base-reducer 3 an entry
@@ -201,6 +202,18 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
         return assertNever(model, "undo model");
     }
   };
+  // What a redo of `last` sends.
+  const redoOf = (last: Action[], model: UndoModel): Action[] => {
+    switch (model) {
+      case "skip":
+      case "noop-chain":
+        return redoActions(last);
+      case "retraction":
+        return retractions(last.map((action) => action.id));
+      default:
+        return assertNever(model, "undo model");
+    }
+  };
 
   const doUndo = () =>
     run(async () => {
@@ -227,10 +240,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
         setUndone([]);
         return;
       }
-      const again =
-        model === "retraction"
-          ? retractions(last.map((action) => action.id))
-          : redoActions(last);
+      const again = redoOf(last, model);
       for (const action of again) own.current.add(action.id);
       try {
         await send(again);
@@ -280,11 +290,13 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     };
   }, [hasDocument, known, props.documentId]);
   useEffect(() => {
-    if (!v3) return;
+    if (!targeted) return;
     let active = true;
     void globalHistory(props.documentId)
       .then((history) => {
-        if (active) setCanUndoV3(canUndoOn3(history, latest.current.policy));
+        if (active) {
+          setCanUndoTargeted(canUndoOn3(history, latest.current.policy));
+        }
       })
       .catch((error: unknown) => {
         console.error("Failed to read undo availability:", error);
@@ -292,7 +304,7 @@ export function UndoRedo(props: { documentId: string; policy?: UndoPolicy }) {
     return () => {
       active = false;
     };
-  }, [revision, v3, props.documentId]);
+  }, [revision, targeted, props.documentId]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
