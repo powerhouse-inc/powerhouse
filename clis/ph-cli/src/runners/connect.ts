@@ -22,6 +22,7 @@ import {
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
+import { join } from "node:path";
 import { z } from "zod";
 import type {
   ConnectBuildArgs,
@@ -345,6 +346,14 @@ export function withoutBuiltImages(config: PHConnectRuntimeConfig | undefined) {
   return { ...config, branding: served };
 }
 
+// Per host: Studio and other hosts' dev servers run side by side in one project.
+const viteCacheOf = (host: ConnectHostParsed, ctx: RunnerContext) =>
+  join(
+    ctx.projectRoot,
+    "node_modules",
+    `.vite-${host.name.replace(/[^\w.-]/g, "_")}`,
+  );
+
 export async function dev(
   host: ConnectHostParsed,
   ctx: RunnerContext,
@@ -355,6 +364,7 @@ export async function dev(
   const server = await startUnderSupervisor(ctx, () =>
     runConnectStudio(args, undefined, callerOverride(host, ctx, ctx.verb), {
       routes: host.runner.routes,
+      cacheDir: viteCacheOf(host, ctx),
     }),
   );
   // vite's dev server binds its default host ("localhost") here.
