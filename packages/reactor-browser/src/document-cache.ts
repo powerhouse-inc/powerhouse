@@ -7,8 +7,10 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type {
   DocumentRefetchState,
+  DocumentsOfTypeEntry,
   FulfilledPromise,
   IDocumentCache,
+  IDocumentTypeCache,
   IOperationCache,
   OperationsCacheEntry,
   PromiseState,
@@ -91,6 +93,51 @@ export function isOperationCache(cache: unknown): cache is IOperationCache {
   );
 }
 
+/** The snapshot every unloaded type reads as, frozen so `useSyncExternalStore` sees one value. */
+export const IDLE_DOCUMENTS_OF_TYPE_ENTRY: DocumentsOfTypeEntry = Object.freeze(
+  {
+    status: "idle",
+    ids: Object.freeze([]) as readonly string[],
+    error: undefined,
+    hasNextPage: false,
+  },
+);
+
+/** Whether a document cache also lists documents by type. */
+export function isDocumentTypeCache(
+  cache: unknown,
+): cache is IDocumentTypeCache {
+  if (typeof cache !== "object" || cache === null) return false;
+  const candidate = cache as Partial<IDocumentTypeCache>;
+  return (
+    typeof candidate.getDocumentsOfTypeState === "function" &&
+    typeof candidate.loadDocumentsOfType === "function" &&
+    typeof candidate.loadMoreDocumentsOfType === "function" &&
+    typeof candidate.subscribeDocumentsOfType === "function"
+  );
+}
+
+/** A promise already settled with `value`, readable without awaiting. */
+function fulfilledPromise<T>(value: T): PromiseWithState<T> {
+  const promise = Promise.resolve(value) as PromiseWithState<T>;
+  promise.status = "fulfilled";
+  (promise as FulfilledPromise<T>).value = value;
+  return promise;
+}
+
+const typeKey = (type: string, limit: number) => `${limit}:${type}`;
+
+/** Bookkeeping for one type's pages that is not part of its snapshot. */
+type DocumentsOfTypeRequest = {
+  type: string;
+  limit: number;
+  /** The first page's load, which a suspending reader waits on; reloads keep it. */
+  firstPage: PromiseWithState<void>;
+  /** Marks a page superseded by a reload. */
+  controller: AbortController;
+  nextCursor: string | undefined;
+};
+
 /**
  * Page size used to refresh a scope whose request record has gone missing.
  * A loaded scope always has one, so this is a floor rather than a default.
@@ -128,7 +175,9 @@ type OperationsRequest = {
  * It also holds paginated operation history per document scope (see `IOperationCache`),
  * which is dropped for a document whenever a change event for it arrives.
  */
-export class DocumentCache implements IDocumentCache, IOperationCache {
+export class DocumentCache
+  implements IDocumentCache, IOperationCache, IDocumentTypeCache
+{
   private documents = new Map<string, PromiseWithState<PHDocument>>();
   private batchPromises = new Map<
     string,
@@ -165,6 +214,11 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
   private operationRequests = new Map<string, Map<string, OperationsRequest>>();
   private operationListeners = new Map<string, (() => void)[]>();
 
+  /** Documents by type and page size, keyed by typeKey. */
+  private typeEntries = new Map<string, DocumentsOfTypeEntry>();
+  private typeRequests = new Map<string, DocumentsOfTypeRequest>();
+  private typeListeners = new Map<string, (() => void)[]>();
+
   private unsubscribe: (() => void) | null = null;
 
   constructor(private client: IReactorBrowserClient) {
@@ -174,6 +228,7 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
   }
 
   private handleDocumentChange(event: DocumentChangeEvent): void {
+    this.reloadTypesChangedBy(event);
     if (event.type === DOCUMENT_CHANGE_TYPE.Deleted) {
       const documentId = event.context?.childId;
       if (documentId) {
@@ -600,6 +655,149 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     }
   }
 
+  getDocumentsOfTypeState(type: string, limit: number): DocumentsOfTypeEntry {
+    return (
+      this.typeEntries.get(typeKey(type, limit)) ?? IDLE_DOCUMENTS_OF_TYPE_ENTRY
+    );
+  }
+
+  loadDocumentsOfType(type: string, limit: number): Promise<void> {
+    const key = typeKey(type, limit);
+    const request = this.typeRequests.get(key);
+    if (request) return request.firstPage;
+    const controller = new AbortController();
+    const created: DocumentsOfTypeRequest = {
+      type,
+      limit,
+      firstPage: fulfilledPromise(undefined),
+      controller,
+      nextCursor: undefined,
+    };
+    this.typeRequests.set(key, created);
+    created.firstPage = addPromiseState(
+      this.loadTypePage(key, "", limit, controller, []),
+    );
+    return created.firstPage;
+  }
+
+  loadMoreDocumentsOfType(type: string, limit: number): void {
+    const key = typeKey(type, limit);
+    const entry = this.getDocumentsOfTypeState(type, limit);
+    const request = this.typeRequests.get(key);
+    if (entry.status !== "success" || !request?.nextCursor) return;
+    void this.loadTypePage(
+      key,
+      request.nextCursor,
+      limit,
+      request.controller,
+      entry.ids,
+    );
+  }
+
+  subscribeDocumentsOfType(
+    type: string,
+    limit: number,
+    callback: () => void,
+  ): () => void {
+    const key = typeKey(type, limit);
+    this.typeListeners.set(key, [
+      ...(this.typeListeners.get(key) ?? []),
+      callback,
+    ]);
+    return () => {
+      const current = this.typeListeners.get(key) ?? [];
+      this.typeListeners.set(
+        key,
+        current.filter((listener) => listener !== callback),
+      );
+    };
+  }
+
+  /** Loads one page after `before` and appends it; never rejects, the entry holds the error. */
+  private async loadTypePage(
+    key: string,
+    cursor: string,
+    limit: number,
+    controller: AbortController,
+    before: readonly string[],
+  ): Promise<void> {
+    const type = this.typeRequests.get(key)?.type ?? "";
+    this.setTypeEntry(key, {
+      ...this.getTypeEntry(key),
+      status: "pending",
+    });
+    try {
+      const page = await this.client.find(
+        { type },
+        undefined,
+        { cursor, limit },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      for (const document of page.results) {
+        this.primeDocument(document);
+      }
+      const request = this.typeRequests.get(key);
+      if (request) request.nextCursor = page.nextCursor;
+      this.setTypeEntry(key, {
+        status: "success",
+        ids: [...before, ...page.results.map((d) => d.header.id)],
+        error: undefined,
+        hasNextPage: !!page.nextCursor,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      this.setTypeEntry(key, {
+        ...this.getTypeEntry(key),
+        status: "error",
+        error,
+      });
+    }
+  }
+
+  /** Reloads every loaded page of a type a created or deleted document belongs to. */
+  private reloadTypesChangedBy(event: DocumentChangeEvent): void {
+    if (this.typeRequests.size === 0) return;
+    let changed: (key: string, type: string) => boolean;
+    if (event.type === DOCUMENT_CHANGE_TYPE.Created) {
+      const types = new Set(event.documents.map((d) => d.header.documentType));
+      changed = (_key, type) => types.has(type);
+    } else if (event.type === DOCUMENT_CHANGE_TYPE.Deleted) {
+      const id = event.context?.childId;
+      if (!id) return;
+      changed = (key) => this.getTypeEntry(key).ids.includes(id);
+    } else {
+      return;
+    }
+    for (const [key, request] of this.typeRequests) {
+      if (!changed(key, request.type)) continue;
+      request.controller.abort();
+      const controller = new AbortController();
+      // One page as long as everything loaded, so the list keeps its length.
+      const loaded = this.getTypeEntry(key).ids.length;
+      const limit = Math.max(request.limit, loaded);
+      request.controller = controller;
+      void this.loadTypePage(key, "", limit, controller, []);
+    }
+  }
+
+  private primeDocument(document: PHDocument): void {
+    const current = this.documents.get(document.header.id);
+    if (current && current.status !== "rejected") return;
+    this.documents.set(document.header.id, fulfilledPromise(document));
+  }
+
+  private getTypeEntry(key: string): DocumentsOfTypeEntry {
+    return this.typeEntries.get(key) ?? IDLE_DOCUMENTS_OF_TYPE_ENTRY;
+  }
+
+  private setTypeEntry(key: string, entry: DocumentsOfTypeEntry): void {
+    this.typeEntries.set(key, entry);
+    for (const listener of this.typeListeners.get(key) ?? []) {
+      listener();
+    }
+  }
+
   /**
    * Disposes of the cache and unsubscribes from document change events.
    */
@@ -615,6 +813,12 @@ export class DocumentCache implements IDocumentCache, IOperationCache {
     }
     this.operationRequests.clear();
     this.operationEntries.clear();
+    for (const request of this.typeRequests.values()) {
+      request.controller.abort();
+    }
+    this.typeRequests.clear();
+    this.typeEntries.clear();
+    this.typeListeners.clear();
     this.refetcher.clear();
     this.operationListeners.clear();
   }

@@ -12,6 +12,7 @@ export * from "./connect.js";
 export * from "./dispatch.js";
 export * from "./document-by-id.js";
 export * from "./document-cache.js";
+export * from "./documents-of-type.js";
 export * from "./document-model-modules.js";
 export * from "./document-of-type.js";
 export * from "./document-operations.js";
