@@ -524,7 +524,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       );
       const driveId = drive.header.id;
 
-      // Before the rename: a header-scope op after SET_NAME echoes a stale name.
+      // Before the rename, so reactors without the document-view name fix keep it.
       if (driveInput.preferredEditor) {
         await client.setPreferredEditor(driveId, driveInput.preferredEditor);
       }
