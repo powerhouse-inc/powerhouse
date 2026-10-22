@@ -86,6 +86,8 @@ export type ConnectRoutes = {
   plugins: PluginOption[];
   /** Connect's route files and the project's share one router. */
   dedupe: string[];
+  /** Pre-bundled for Connect's route files; see connectRouteFileDeps. */
+  include: string[];
 };
 
 /** Connect's route files: core's routes with Connect's views. */
@@ -445,6 +447,34 @@ function connectDirOf(projectRoot: string) {
   );
 }
 
+/** What Connect's route files import, besides each other. */
+const CONNECT_ROUTE_FILE_DEPS = [
+  "@tanstack/react-router",
+  "@powerhousedao/connect-core/router",
+];
+
+const IN_NODE_MODULES = /[\\/]node_modules[\\/]/;
+
+/**
+ * The `optimizeDeps.include` entries an installed Connect's route files need.
+ *
+ * Connect and core ship their route files as `.tsx`, which Vite never
+ * pre-bundles, so the dev server serves them as they are. Vite also discovers
+ * no dependency for a module inside node_modules, so their bare imports load
+ * unbundled too, and the CommonJS packages under the router
+ * (use-sync-external-store, safe-stable-stringify) then fail in the browser.
+ * Pre-bundling these by Connect's name gives the route files the copies they
+ * resolve to; core need not be resolvable from the project. A Connect outside
+ * node_modules (the monorepo, a linked checkout) is source to Vite, so its
+ * imports are discovered and pre-bundled anyway.
+ */
+export function connectRouteFileDeps(connectDir: string): string[] {
+  if (!IN_NODE_MODULES.test(connectDir)) return [];
+  return CONNECT_ROUTE_FILE_DEPS.map(
+    (dep) => `@powerhousedao/connect > ${dep}`,
+  );
+}
+
 /** Mounts a project's routes folder over Connect's routes; without one,
  * Connect keeps its prebuilt tree and no router plugin runs. */
 export function connectRoutes(
@@ -453,6 +483,7 @@ export function connectRoutes(
 ): ConnectRoutes {
   const connectDir = connectDirOf(projectRoot);
   const find = ROUTE_TREE_FIND;
+  const include = connectRouteFileDeps(connectDir);
   if (!routesDir) {
     // Stale only without hosts/connect/routes/: a routeless host keeps the project's tree.
     if (!resolveConnectRoutesDir(projectRoot)) {
@@ -463,6 +494,7 @@ export function connectRoutes(
       aliases: [{ find, replacement: join(connectDir, "dist/route-tree.js") }],
       plugins: [],
       dedupe: [],
+      include,
     };
   }
   const config = connectRoutesGeneratorConfig(
@@ -491,6 +523,7 @@ export function connectRoutes(
       tanstackRouter(config),
     ],
     dedupe: ["@tanstack/react-router"],
+    include,
   };
 }
 

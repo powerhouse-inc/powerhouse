@@ -550,6 +550,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         "@powerhousedao/design-system/connect",
         "@powerhousedao/reactor-browser",
         "@powerhousedao/document-engineering",
+        ...routes.include,
       ],
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },

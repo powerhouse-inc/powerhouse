@@ -15,6 +15,7 @@ import { build } from "vite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CONNECT_ROUTES_GEN,
+  connectRouteFileDeps,
   connectRouterChunkGroups,
   connectRoutes,
   connectRoutesGeneratorConfig,
@@ -292,6 +293,29 @@ describe("connectRoutes", () => {
     expect(replacement).not.toMatch(/connect-core[\\/]dist/);
     // Not imported: Connect's views read the runtime config as they load.
     expect(existsSync(replacement)).toBe(true);
+  });
+});
+
+describe("connectRouteFileDeps", () => {
+  it("pre-bundles the router and core's router by Connect's name for an installed Connect", () => {
+    const installed =
+      "/project/node_modules/.pnpm/@powerhousedao+connect@6.2.3/node_modules/@powerhousedao/connect";
+    expect(connectRouteFileDeps(installed)).toEqual([
+      "@powerhousedao/connect > @tanstack/react-router",
+      "@powerhousedao/connect > @powerhousedao/connect-core/router",
+    ]);
+    expect(
+      connectRouteFileDeps(
+        "C:\\project\\node_modules\\@powerhousedao\\connect",
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("adds nothing for a Connect outside node_modules", () => {
+    expect(connectRouteFileDeps(connectDir)).toEqual([]);
+    // The workspace links Connect, so its fixtures resolve to apps/connect.
+    const fixture = join(repoRoot, "test/test-consumer-project");
+    expect(connectRoutes(fixture).include).toEqual([]);
   });
 });
 

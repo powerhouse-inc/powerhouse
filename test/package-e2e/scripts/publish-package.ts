@@ -8,14 +8,11 @@ import {
   REGISTRY_URL,
   writeNpmrc,
 } from "@powerhousedao/e2e-utils";
+import { PROJECT_DIR, PROJECT_NAME, PROJECT_PARENT } from "./lib/project.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const FIXTURES = path.join(ROOT, "fixtures");
-// Use /tmp so pnpm doesn't pick the project up via the monorepo workspace globs.
-const PROJECT_PARENT = process.env.PH_PROJECT_PARENT ?? "/tmp/ph-pkg-e2e";
-const PROJECT_NAME = process.env.PH_PKG_NAME ?? "test-todo-package";
-const PROJECT_DIR = path.join(PROJECT_PARENT, PROJECT_NAME);
 const PUBLISHED_FILE = path.join(ROOT, ".published.json");
 // Channel for the scaffolded project's @powerhousedao/* deps.
 // "dev" tracks the in-flight dev branch; override with PH_TAG=staging|latest.
