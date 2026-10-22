@@ -145,7 +145,6 @@
     "@sentry/react": "^10.17.0",
     "@tailwindcss/node": "catalog:",
     "@tanstack/react-query": "^5.90.2",
-    "@tanstack/react-router": "^1.170.41",
     "document-model": "workspace:*",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
@@ -164,6 +163,7 @@
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-router": "^1.170.41",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/router-core": "1.171.34",
     "@tanstack/router-plugin": "1.168.42",
@@ -186,6 +186,7 @@
     "vite-tsconfig-paths": "catalog:"
   },
   "peerDependencies": {
+    "@tanstack/react-router": "^1.170.41",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }
