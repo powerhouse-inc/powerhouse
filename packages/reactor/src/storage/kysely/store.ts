@@ -850,7 +850,8 @@ export class KyselyOperationStore implements IOperationStore {
     throwIfAborted(signal);
 
     const found = new Set<string>();
-    const chunkSize = MAX_BIND_PARAMETERS - 3;
+    // Beside the three stream slots and the count.
+    const chunkSize = MAX_BIND_PARAMETERS - 4;
     for (let i = 0; i < opIds.length; i += chunkSize) {
       throwIfAborted(signal);
       const rows = await this.queryExecutor
