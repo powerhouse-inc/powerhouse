@@ -260,10 +260,6 @@ export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   }
 }
 
-function unknownBaseReducer(version: never): never {
-  throw new Error(`Unknown base-reducer version ${String(version)}`);
-}
-
 function processSkipOperation<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   action: Action,
@@ -471,12 +467,22 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     options.skipIndexValidation,
   );
 
-  // Only process undo for actual UNDO actions in protocol v1
-  // For v2, NOOPs always have skip=1 and indices increment
+  if (byRule) {
+    return applyByRule(
+      newDocument,
+      _action.scope,
+      customReducer,
+      dispatch,
+      skipValue,
+      options,
+    );
+  }
+
   // NOOP operations with skip > 0 will have their clipboard populated server-side
   const isNoopWithSkip = _action.type === "NOOP" && skipValue > 0;
-  switch (protocolVersion) {
-    case 1:
+  const undoModel = caps.undo;
+  switch (undoModel) {
+    case "skip":
       if (isUndo(action)) {
         const result = processUndoOperation(
           newDocument,
@@ -486,7 +492,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
         return result;
       }
       break;
-    case 2:
+    case "noop-chain":
       // V2 UNDO: Rebuild state using garbageCollectV2 which handles consecutive NOOPs as chains
       // Also trigger for NOOP operations loaded from sync (they have skip > 0)
       if (isUndo(action) || isNoopWithSkip) {
@@ -529,20 +535,10 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
         } as PHDocument<TState>;
       }
       break;
-    case 3:
-      if (byRule) {
-        return applyByRule(
-          newDocument,
-          _action.scope,
-          customReducer,
-          dispatch,
-          skipValue,
-          options,
-        );
-      }
+    case "retraction":
       break;
     default:
-      unknownBaseReducer(protocolVersion);
+      assertNever(undoModel, "undo model");
   }
 
   if (shouldProcessSkipOperation) {
