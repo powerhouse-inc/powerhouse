@@ -542,6 +542,16 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   versions) instead of letting the host choose. A `new XController()`
   header is base-reducer 2, so such a document is created at 2 and its
   undo stays the v2 NOOP chain on both sides.
+- Merge with main: main's reactor-mcp `addActions` accepts UNDO and REDO
+  base actions, which base-reducer 3 refuses when submitted. Where undo
+  retracts a target, each UNDO or REDO step (its `count` times) now runs
+  through the client's `undo` or `redo`, which resolves the target and
+  signs the RETRACT; the actions around it are executed in order. The MCP
+  `subject` only gates reads, and `undo` returns nothing the tool serves.
+  Below 3 the base actions are submitted as on main.
+- Merge with main: cold head reads now resume from the latest keyframe, so
+  the base-reducer 3 tail check (`tailNeedsWholeLog`) decides head reads
+  too; an invalidation still owes a full replay first.
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip

@@ -1435,6 +1435,7 @@ describe("RemoteDocumentController", () => {
         DocumentModelController,
         { client, signer: author },
       );
+      const headed = structuredClone(controller.document.state);
 
       controller.setModelName({ name: "local" });
       const local = controller.operations.global.at(-1)!.action.id;
@@ -1446,6 +1447,7 @@ describe("RemoteDocumentController", () => {
       const created = createdDocument(client);
       expect(created.header.protocolVersions?.["base-reducer"]).toBe(3);
       expect(created.operations.global ?? []).toEqual([]);
+      expect(created.state).toEqual(headed);
       const actions = pushedActions(client);
       expect(actions.map((action) => action.type)).toEqual([
         "SET_MODEL_NAME",

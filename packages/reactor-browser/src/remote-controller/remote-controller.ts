@@ -342,7 +342,7 @@ export class RemoteDocumentController<
       ),
     ]);
     const document = headNewDocument(module, undefined, policy, versions);
-    this.uncreated = uncreatedDocument(document);
+    this.uncreated = structuredClone(document);
     this.replaceInner(document);
   }
 
