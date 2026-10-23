@@ -180,6 +180,9 @@ export async function spawnHost(
     ? fs.createWriteStream(options.logFile, { flags: "a" })
     : undefined;
   let tail = "";
+  log?.on("error", (error) => {
+    tail = (tail + `logFile: ${error.message}\n`).slice(-TAIL_BYTES);
+  });
   const args = [cli, "run", options.host];
   if (options.verb !== undefined) args.push(options.verb);
   const posix = process.platform !== "win32";
@@ -207,11 +210,12 @@ export async function spawnHost(
     const done = (code: number | null, sig: NodeJS.Signals | null) => {
       if (exit) return;
       exit = { code, signal: sig, forced };
-      log?.end();
       signal?.removeEventListener("abort", onAbort);
       resolve(exit);
     };
     child.once("exit", done);
+    // After the last chunk: stdio may still flush past "exit".
+    child.once("close", () => log?.end());
     child.once("error", (error) => {
       tail = (tail + `${error.message}\n`).slice(-TAIL_BYTES);
       if (child.pid === undefined) done(null, null);
