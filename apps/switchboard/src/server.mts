@@ -161,13 +161,14 @@ import {
   defaultStoreDirs,
   resolvePhDir,
 } from "@powerhousedao/shared/clis/ph-dir";
+import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
 
 const defaultLogger = childLogger(["switchboard"]);
 
 const LogLevel = (process.env.LOG_LEVEL as ILogger["level"] | "") || "info";
 setLogLevel(LogLevel);
 
-dotenv.config();
+if (!isDotenvDisabled()) dotenv.config();
 
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
