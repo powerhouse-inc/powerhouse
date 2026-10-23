@@ -3,12 +3,8 @@ import { logger } from "document-model";
 import { useMemo, useRef } from "react";
 import { dispatchActions } from "../actions/dispatch.js";
 
-/**
- * Returns a dispatch function for dispatching actions to a document.
- * Used internally by other hooks to provide action dispatching capabilities.
- * @param document - The document to dispatch actions to.
- * @returns A tuple containing the document and a dispatch function.
- */
+/** Dispatches actions. `onErrors` gets an `OperationRejectedError` per action the document
+ * did not apply, or why the dispatch failed; `onSuccess` gets the document once it lands. */
 export type DispatchFn<TAction> = (
   actionOrActions: TAction[] | TAction | undefined,
   onErrors?: (errors: Error[]) => void,
@@ -27,8 +23,8 @@ export function createDispatch<TDocument = PHDocument, TAction = Action>(
   /**
    * Dispatches actions to the document.
    * @param actionOrActions - The action or actions to dispatch.
-   * @param onErrors - Callback invoked with any errors that occurred during action execution,
-   * or with the failure when the dispatch itself did not complete.
+   * @param onErrors - Callback invoked with an `OperationRejectedError` for each action the
+   * document did not apply, or with the failure when the dispatch itself did not complete.
    */
   return function dispatch(actionOrActions, onErrors, onSuccess) {
     // A caller waiting on a callback hears exactly once, even on a rejection.
