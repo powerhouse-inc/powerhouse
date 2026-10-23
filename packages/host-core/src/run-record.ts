@@ -21,19 +21,25 @@ export type RunProbe =
   | { status: "live"; record: RunRecord }
   | { status: "foreign"; record: RunRecord };
 
-// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR.
-const runDir = (projectDir: string) =>
-  path.join(resolvePhDir(projectDir), "run");
-const recordPath = (projectDir: string, hostName: string) =>
-  path.join(runDir(projectDir), `${hostName}.json`);
+type Env = Readonly<Record<string, string | undefined>>;
+
+// Under the project's .ph tree — relocated with it by PH_USER_DATA_DIR. The
+// readers take `env` so a launcher can read a child's records.
+const runDir = (projectDir: string, env: Env = process.env) =>
+  path.join(resolvePhDir(projectDir, env), "run");
+const recordPath = (projectDir: string, hostName: string, env?: Env) =>
+  path.join(runDir(projectDir, env), `${hostName}.json`);
 
 export function readRunRecord(
   projectDir: string,
   hostName: string,
+  env: Env = process.env,
 ): RunRecord | undefined {
   let raw: unknown;
   try {
-    raw = JSON.parse(fs.readFileSync(recordPath(projectDir, hostName), "utf8"));
+    raw = JSON.parse(
+      fs.readFileSync(recordPath(projectDir, hostName, env), "utf8"),
+    );
   } catch {
     return undefined;
   }
@@ -43,17 +49,24 @@ export function readRunRecord(
 }
 
 /** Every valid v2 record under `.ph/run/` (invalid and v1 files skipped). */
-export function listRunRecords(projectDir: string): RunRecord[] {
+export function listRunRecords(
+  projectDir: string,
+  env: Env = process.env,
+): RunRecord[] {
   let files: string[];
   try {
-    files = fs.readdirSync(runDir(projectDir));
+    files = fs.readdirSync(runDir(projectDir, env));
   } catch {
     return [];
   }
   return files
     .filter((file) => file.endsWith(".json"))
     .flatMap((file) => {
-      const record = readRunRecord(projectDir, file.slice(0, -".json".length));
+      const record = readRunRecord(
+        projectDir,
+        file.slice(0, -".json".length),
+        env,
+      );
       return record ? [record] : [];
     });
 }
@@ -79,9 +92,13 @@ export function writeRunRecord(projectDir: string, record: RunRecord): void {
   fs.writeFileSync(target, `${JSON.stringify(valid, null, 2)}\n`);
 }
 
-export function clearRunRecord(projectDir: string, hostName: string): void {
+export function clearRunRecord(
+  projectDir: string,
+  hostName: string,
+  env: Env = process.env,
+): void {
   try {
-    fs.rmSync(recordPath(projectDir, hostName));
+    fs.rmSync(recordPath(projectDir, hostName, env));
   } catch {
     // already gone
   }
@@ -110,8 +127,9 @@ export function probeRun(
   projectDir: string,
   hostName: string,
   projectName: string,
+  env: Env = process.env,
 ): RunProbe {
-  const record = readRunRecord(projectDir, hostName);
+  const record = readRunRecord(projectDir, hostName, env);
   if (!record) return { status: "none" };
   if (!isPidAlive(record.pid)) return { status: "stale", record };
   if (record.projectName !== projectName) return { status: "foreign", record };

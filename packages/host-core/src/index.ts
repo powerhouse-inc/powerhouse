@@ -20,19 +20,27 @@ export {
 export {
   CONNECT_RUNNER,
   getVerb,
+  hostSchemaIssues,
   isSchemaLike,
+  kindShapeIssues,
+  knownVerbIssues,
   listVerbs,
   ONE_SHOT_VERBS,
   resolveRunnerModule,
   RunnerError,
   validateDeclaredHost,
   validateHost,
+  type BootCheckContext,
+  type BootIssue,
   type DeclaredHostOptions,
   type HostSchemaIssue,
+  type HostSchemaIssues,
   type HostSchemaLike,
   type RunnerContext,
+  type RunnerIssue,
   type RunnerModule,
   type RunnerVerb,
+  type SchemaIssue,
   type ValidateHostOptions,
 } from "./runner-resolver.js";
 export {
@@ -46,10 +54,25 @@ export {
   type RunProbe,
 } from "./run-record.js";
 export {
+  spawnHost,
+  SpawnHostError,
+  type HostExit,
+  type SpawnedHost,
+  type SpawnHostOptions,
+  type SpawnHostPhase,
+} from "./spawn-host.js";
+export {
   runCompound,
   type RunCompoundOptions,
   type RunCompoundResult,
 } from "./compound.js";
+export {
+  checkHost,
+  type CheckDeferred,
+  type CheckHostOptions,
+  type CheckHostResult,
+} from "./check-host.js";
+export type { CheckStage, HostIssue } from "./host-issues.js";
 export {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
@@ -146,7 +169,12 @@ export {
   projectDriveIdWith,
   type DriveDeclaration,
 } from "./drive-schema.js";
-export { substituteBuiltinEnv, type BuiltinEnv } from "./env-substitution.js";
+export {
+  BUILTIN_ENV_NAMES,
+  isBuiltinEnvName,
+  substituteBuiltinEnv,
+  type BuiltinEnv,
+} from "./env-substitution.js";
 export {
   concatTokenSchema,
   envTokenSchema,
@@ -192,6 +220,7 @@ export {
   primaryBackend,
   projectReactorToConnect,
   projectReactorToSwitchboard,
+  protocolConflicts,
   protocolEnv,
   reactorClientMode,
   type ConnectReactorProjection,

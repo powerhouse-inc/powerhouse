@@ -222,6 +222,4 @@ export async function addDefaultReactorDrive(
   return `http://localhost:${serverPort}/d/${driveId}`;
 }
 
-export function isPostgresUrl(url: string) {
-  return url.startsWith("postgresql") || url.startsWith("postgres");
-}
+export { isPostgresUrl } from "./postgres-url.mjs";

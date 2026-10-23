@@ -3,7 +3,11 @@ import {
   genericCompoundHostSchema,
   type HostDefinition,
 } from "../host-schemas.js";
-import { runCompound, type RunCompoundResult } from "../compound.js";
+import {
+  compoundStartVerb,
+  runCompound,
+  type RunCompoundResult,
+} from "../compound.js";
 import { readProjectName } from "../run-record.js";
 import type { RunnerContext } from "../runner-resolver.js";
 
@@ -41,8 +45,7 @@ export async function run(
   host: HostDefinition,
   ctx: RunnerContext,
 ): Promise<RunCompoundResult> {
-  const defaultVerb = host.runner.defaultVerb ?? "run";
-  return startAt(host, ctx, defaultVerb);
+  return startAt(host, ctx, compoundStartVerb("run", host.runner));
 }
 
 export async function dev(

@@ -1,4 +1,4 @@
-import { isPostgresUrl } from "./utils.mjs";
+import { projectionWorkerIssues } from "./boot-preconditions.mjs";
 import { parseNonNegativeInt } from "./env.mjs";
 
 export type SwitchboardProjectionWorkerOptions = {
@@ -50,16 +50,8 @@ export function assertProjectionWorkerSupported(args: {
   dev: boolean;
   reactorDbUrl: string | undefined;
 }): void {
-  if (args.dev) {
-    throw new Error(
-      "The projection worker (REACTOR_PROJECTION_WORKER) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
-    );
-  }
-  if (!args.reactorDbUrl || !isPostgresUrl(args.reactorDbUrl)) {
-    throw new Error(
-      "The projection worker (REACTOR_PROJECTION_WORKER) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
-    );
-  }
+  const issue = projectionWorkerIssues(args).at(0);
+  if (issue) throw new Error(issue);
 }
 
 function parseOnOff(raw: string | undefined): boolean | undefined {

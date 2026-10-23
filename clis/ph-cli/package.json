@@ -68,6 +68,7 @@
     "cmd-ts": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",
+    "dotenv": "catalog:",
     "enquirer": "catalog:",
     "kysely": "catalog:",
     "package-manager-detector": "catalog:",
