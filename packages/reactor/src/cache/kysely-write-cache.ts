@@ -13,6 +13,7 @@ import {
   baseReducerVersion,
   deriveScopeVersioned,
   documentDerivesByRule,
+  retractIds,
   tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
@@ -1134,8 +1135,9 @@ export class KyselyWriteCache implements IWriteCache {
     if (rows.length === 0) {
       return false;
     }
-    // A v3 op id derives from the action id, so a repeated op id is a repeated action id.
-    const [named, repeated] = await Promise.all([
+    // An op id derives from its action id, so the stored rows of these op ids
+    // include every stored RETRACT carrying a tail row's action id.
+    const [named, stored] = await Promise.all([
       this.operationStore.findReferencing(
         documentId,
         scope,
@@ -1143,7 +1145,7 @@ export class KyselyWriteCache implements IWriteCache {
         rows.map((operation) => operation.action.id),
         signal,
       ),
-      this.operationStore.findRepeatedOperationIds(
+      this.operationStore.getAllOperationsByIds(
         documentId,
         scope,
         branch,
@@ -1151,11 +1153,7 @@ export class KyselyWriteCache implements IWriteCache {
         signal,
       ),
     ]);
-    const held = new Set(
-      rows
-        .filter((operation) => repeated.has(operation.id))
-        .map((operation) => operation.action.id),
-    );
+    const held = retractIds(stored);
     return !tailAppliesIncrementally(rows, {
       named: (id) => named.has(id),
       holds: (id) => held.has(id),

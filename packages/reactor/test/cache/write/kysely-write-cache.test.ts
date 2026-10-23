@@ -49,7 +49,6 @@ function createMockOperationStore(): IOperationStore {
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     findOperationIds: vi.fn().mockResolvedValue(new Set()),
     findReferencing: vi.fn().mockResolvedValue(new Set()),
-    findRepeatedOperationIds: vi.fn().mockResolvedValue(new Set()),
     getAllOperationsByIds: vi.fn().mockResolvedValue([]),
     getOperationsByIds: vi.fn().mockResolvedValue([]),
   };

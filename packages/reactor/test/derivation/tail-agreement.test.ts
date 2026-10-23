@@ -64,6 +64,8 @@ type Scenario = {
   base: (ids: Ids) => Row[];
   tail: (ids: Ids) => Row[];
   rederives: boolean;
+  /** The undo cache's `holds` is every stored id, so it may re-derive where the write cache need not. */
+  undoRederives?: boolean;
 };
 
 function add(id: string, actionId?: string): Row {
@@ -119,6 +121,18 @@ const scenarios: Scenario[] = [
     name: "a row repeating a base content id (log mode)",
     base: (ids) => [add("a", ids.a), add("b")],
     tail: (ids) => [add("x", ids.a)],
+    rederives: false,
+    undoRederives: true,
+  },
+  {
+    name: "a row repeating a rewound copy of a RETRACT's id (log mode)",
+    base: (ids) => [
+      add("a", ids.a),
+      retractOf(ids.a, ids.r),
+      add("x", ids.r),
+      { ...add("y"), skip: 1 },
+    ],
+    tail: (ids) => [add("z", ids.r)],
     rederives: true,
   },
   {
@@ -222,7 +236,7 @@ describe.each(backends)("tail predicate agreement on %s", (_name, create) => {
 
   it.each(scenarios)(
     "both caches agree on $name",
-    async ({ base, tail, rederives }) => {
+    async ({ base, tail, rederives, undoRederives = rederives }) => {
       const ids: Ids = new Proxy({} as Ids, {
         get: (known, key: string) => (known[key] ??= generateId()),
       });
@@ -271,7 +285,7 @@ describe.each(backends)("tail predicate agreement on %s", (_name, create) => {
       });
       expect({ writeRederived, undoRederived }).toEqual({
         writeRederived: rederives,
-        undoRederived: rederives,
+        undoRederived: undoRederives,
       });
       await writeCache.shutdown();
     },

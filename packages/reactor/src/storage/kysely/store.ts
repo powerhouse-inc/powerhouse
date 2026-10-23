@@ -840,37 +840,6 @@ export class KyselyOperationStore implements IOperationStore {
     return new Set(rows.map((row) => row.opId));
   }
 
-  async findRepeatedOperationIds(
-    documentId: string,
-    scope: string,
-    branch: string,
-    opIds: string[],
-    signal?: AbortSignal,
-  ): Promise<Set<string>> {
-    throwIfAborted(signal);
-
-    const found = new Set<string>();
-    // Beside the three stream slots and the count.
-    const chunkSize = MAX_BIND_PARAMETERS - 4;
-    for (let i = 0; i < opIds.length; i += chunkSize) {
-      throwIfAborted(signal);
-      const rows = await this.queryExecutor
-        .selectFrom("Operation")
-        .select("opId")
-        .where("opId", "in", opIds.slice(i, i + chunkSize))
-        .where("documentId", "=", documentId)
-        .where("scope", "=", scope)
-        .where("branch", "=", branch)
-        .groupBy("opId")
-        .having((eb) => eb.fn.countAll(), ">", 1)
-        .execute();
-      for (const row of rows) {
-        found.add(row.opId);
-      }
-    }
-    return found;
-  }
-
   async getAllOperationsByIds(
     documentId: string,
     scope: string,

@@ -635,42 +635,6 @@ export class HypercoreOperationStore implements IOperationStore {
     return found;
   }
 
-  async findRepeatedOperationIds(
-    documentId: string,
-    scope: string,
-    branch: string,
-    opIds: string[],
-    signal?: AbortSignal,
-  ): Promise<Set<string>> {
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const found = new Set<string>();
-    if (opIds.length === 0) {
-      return found;
-    }
-
-    const wanted = new Set(opIds);
-    const seen = new Set<string>();
-    const stored = await this.getSince(
-      documentId,
-      scope,
-      branch,
-      -1,
-      undefined,
-      undefined,
-      signal,
-    );
-    for (const operation of stored.results) {
-      if (!wanted.has(operation.id)) continue;
-      if (seen.has(operation.id)) found.add(operation.id);
-      seen.add(operation.id);
-    }
-
-    return found;
-  }
-
   async getAllOperationsByIds(
     documentId: string,
     scope: string,

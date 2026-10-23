@@ -566,7 +566,7 @@ describe("HypercoreOperationStore", () => {
     });
   });
 
-  describe("findRepeatedOperationIds", () => {
+  describe("getAllOperationsByIds", () => {
     const documentType = "powerhouse/test-doc";
 
     async function append(
@@ -594,34 +594,13 @@ describe("HypercoreOperationStore", () => {
       );
     }
 
-    it("returns the op ids stored at more than one row of the stream", async () => {
-      const documentId = generateId();
-      const once = makeOp(0);
-      const twice = makeOp(1);
-      await append(documentId, [once, twice]);
-      await append(documentId, [{ ...twice, skip: 1 }]);
-
-      expect(
-        await store.findRepeatedOperationIds(documentId, "global", "main", [
-          once.id,
-          twice.id,
-          "absent",
-        ]),
-      ).toEqual(new Set([twice.id]));
-    });
-
     it("returns nothing for no ids", async () => {
       expect(
-        await store.findRepeatedOperationIds(
-          generateId(),
-          "global",
-          "main",
-          [],
-        ),
-      ).toEqual(new Set());
+        await store.getAllOperationsByIds(generateId(), "global", "main", []),
+      ).toEqual([]);
     });
 
-    it("getAllOperationsByIds returns every row of each op id in index order", async () => {
+    it("returns every row of each op id in index order", async () => {
       const documentId = generateId();
       const once = makeOp(0);
       const twice = makeOp(1);
