@@ -6,8 +6,10 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { isPidAlive } from "../src/run-record.js";
 import {
@@ -33,6 +35,11 @@ process.on("SIGTERM", () => {
   if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
 });
 console.log("fake ph run", process.argv.slice(2).join(" "));
+if (process.env.FAKE_SPLIT_UTF8) {
+  const bytes = Buffer.from([0x63, 0x61, 0x66, 0xc3, 0xa9, 0x0a]);
+  process.stdout.write(bytes.subarray(0, 4));
+  setTimeout(() => process.stdout.write(bytes.subarray(4)), 50);
+}
 if (process.env.FAKE_EXIT_EARLY) {
   console.error("fake: boom");
   process.exit(3);
@@ -65,9 +72,18 @@ setInterval(() => {}, 1000);
 
 const temporary: string[] = [];
 const spawned: SpawnedHost[] = [];
+const launchers: number[] = [];
+const hostPids: number[] = [];
 
 afterEach(async () => {
   for (const host of spawned.splice(0)) await host.stop();
+  for (const pid of [...launchers.splice(0), ...hostPids.splice(0)]) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // gone
+    }
+  }
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -137,6 +153,65 @@ async function rejection(promise: Promise<unknown>): Promise<SpawnHostError> {
     throw error;
   }
   throw new Error("expected a SpawnHostError");
+}
+
+const SPAWN_HOST_SRC = fileURLToPath(
+  new URL("../src/spawn-host.ts", import.meta.url),
+);
+const HOST_CORE_DIR = fileURLToPath(new URL("..", import.meta.url));
+
+/** A separate launcher process (own group) that spawns the fake host. */
+async function launch(
+  projectRoot: string,
+  dataDir: string,
+  exitAfterReady: boolean,
+): Promise<{ launcherPid: number; hostPid: number }> {
+  const script = path.join(tempDir("ph-spawn-launcher-"), "launcher.mts");
+  writeFileSync(
+    script,
+    `import { spawnHost } from ${JSON.stringify(pathToFileHref(SPAWN_HOST_SRC))};
+const host = await spawnHost({ projectRoot: ${JSON.stringify(projectRoot)}, host: "sb", dataDir: ${JSON.stringify(dataDir)}, readyTimeoutMs: 20000 });
+console.log(JSON.stringify({ hostPid: host.pid }));
+${exitAfterReady ? "process.exit(0);" : "setInterval(() => {}, 1000);"}
+`,
+  );
+  const launcher = spawn(
+    process.execPath,
+    ["--conditions=source", "--import", "tsx", script],
+    { cwd: HOST_CORE_DIR, detached: true, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  launchers.push(launcher.pid ?? -1);
+  let out = "";
+  let err = "";
+  launcher.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+    err += chunk;
+  });
+  const hostPid = await new Promise<number>((resolve, reject) => {
+    launcher.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      out += chunk;
+      const line = /\{"hostPid":\d+\}/.exec(out);
+      if (line) resolve((JSON.parse(line[0]) as { hostPid: number }).hostPid);
+    });
+    launcher.once("exit", (code) => {
+      if (!/hostPid/.test(out))
+        reject(new Error(`launcher exited ${code}: ${err}`));
+    });
+  });
+  hostPids.push(hostPid);
+  return { launcherPid: launcher.pid ?? -1, hostPid };
+}
+
+function pathToFileHref(file: string): string {
+  return new URL(`file://${file}`).href;
+}
+
+async function waitDead(pid: number, ms = 10_000): Promise<boolean> {
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    if (!isPidAlive(pid)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return false;
 }
 
 const recordFile = (dataDir: string) =>
@@ -289,6 +364,60 @@ describe("spawnHost", () => {
   it("refuses a runner that exports no outputsSchema", async () => {
     const projectRoot = makeProject({ outputsSchema: false });
     await expect(start({ projectRoot })).rejects.toThrow(/no outputsSchema/);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "a Ctrl-C of the launcher's group reaches the host",
+    async () => {
+      const projectRoot = makeProject();
+      const { launcherPid, hostPid } = await launch(
+        projectRoot,
+        tempDir("ph-spawn-data-"),
+        false,
+      );
+      process.kill(-launcherPid, "SIGINT");
+      expect(await waitDead(launcherPid)).toBe(true);
+      expect(await waitDead(hostPid)).toBe(true);
+    },
+    30_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "a launcher that exits without stop() takes the host down",
+    async () => {
+      const projectRoot = makeProject();
+      const dataDir = tempDir("ph-spawn-data-");
+      const { hostPid } = await launch(projectRoot, dataDir, true);
+      expect(await waitDead(hostPid)).toBe(true);
+      expect(existsSync(recordFile(dataDir))).toBe(false);
+    },
+    30_000,
+  );
+
+  it("decodes a multibyte character split across chunks", async () => {
+    const projectRoot = makeProject();
+    let text = "";
+    const host = await start({
+      projectRoot,
+      env: { FAKE_SPLIT_UTF8: "1", FAKE_DELAY: "200" },
+      onOutput: (_stream, chunk) => {
+        text += chunk;
+      },
+    });
+    await host.stop();
+    expect(text).toContain("caf\u00e9\n");
+    expect(text).not.toContain("\ufffd");
+  });
+
+  it("survives an onOutput that throws", async () => {
+    const projectRoot = makeProject();
+    const host = await start({
+      projectRoot,
+      onOutput: () => {
+        throw new Error("listener bug");
+      },
+    });
+    await expect(host.stop()).resolves.toMatchObject({ code: 0 });
   });
 
   it("forwards output to onOutput and logFile", async () => {

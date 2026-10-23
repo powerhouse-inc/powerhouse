@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -71,6 +71,8 @@ const READY_TIMEOUT_MS = 120_000;
 const STOP_TIMEOUT_MS = 30_000;
 const POLL_MS = 100;
 const TAIL_BYTES = 8 * 1024;
+// A grandchild may hold the pipes open past the child's exit.
+const CLOSE_WAIT_MS = 1_000;
 
 const BASE_ENV_KEYS = ["PATH", "HOME", "TMPDIR"];
 const WIN32_ENV_KEYS = [
@@ -157,7 +159,27 @@ const sleep = (ms: number) =>
     setTimeout(resolve, ms).unref();
   });
 
-/** `ph run <host> [verb]` as a child; ready when its run record appears. */
+// Children still running when this process exits get SIGTERM, so a launcher
+// that exits without stop() leaves no host behind.
+const live = new Set<ChildProcess>();
+let exitHookInstalled = false;
+function track(child: ChildProcess): void {
+  live.add(child);
+  child.once("exit", () => live.delete(child));
+  if (exitHookInstalled) return;
+  exitHookInstalled = true;
+  process.once("exit", () => {
+    for (const running of live) running.kill("SIGTERM");
+  });
+}
+
+/**
+ * `ph run <host> [verb]` as a child; ready when its run record appears.
+ *
+ * The child shares this process's group, so a terminal Ctrl-C reaches both.
+ * It runs the project's own ph-cli: one older than PH_NO_DOTENV reads the
+ * project's `.env` anyway.
+ */
 export async function spawnHost(
   options: SpawnHostOptions,
 ): Promise<SpawnedHost> {
@@ -185,24 +207,26 @@ export async function spawnHost(
   });
   const args = [cli, "run", options.host];
   if (options.verb !== undefined) args.push(options.verb);
-  const posix = process.platform !== "win32";
   const child = spawn(process.execPath, args, {
     cwd: projectRoot,
     env,
     stdio: ["ignore", "pipe", "pipe"],
-    // Own process group: the SIGKILL fallback reaches the whole tree.
-    detached: posix,
     windowsHide: true,
   });
+  track(child);
 
-  const onChunk = (stream: "stdout" | "stderr") => (data: Buffer) => {
-    const chunk = data.toString("utf8");
+  const onChunk = (stream: "stdout" | "stderr") => (chunk: string) => {
     tail = (tail + chunk).slice(-TAIL_BYTES);
     log?.write(chunk);
-    options.onOutput?.(stream, chunk);
+    try {
+      options.onOutput?.(stream, chunk);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      tail = (tail + `onOutput: ${message}\n`).slice(-TAIL_BYTES);
+    }
   };
-  child.stdout.on("data", onChunk("stdout"));
-  child.stderr.on("data", onChunk("stderr"));
+  child.stdout.setEncoding("utf8").on("data", onChunk("stdout"));
+  child.stderr.setEncoding("utf8").on("data", onChunk("stderr"));
 
   let forced = false;
   let exit: HostExit | undefined;
@@ -214,11 +238,17 @@ export async function spawnHost(
       resolve(exit);
     };
     child.once("exit", done);
-    // After the last chunk: stdio may still flush past "exit".
-    child.once("close", () => log?.end());
     child.once("error", (error) => {
       tail = (tail + `${error.message}\n`).slice(-TAIL_BYTES);
       if (child.pid === undefined) done(null, null);
+    });
+  });
+
+  // After the last chunk: stdio may still flush past "exit".
+  const closed = new Promise<void>((resolve) => {
+    child.once("close", () => {
+      log?.end();
+      resolve();
     });
   });
 
@@ -228,13 +258,17 @@ export async function spawnHost(
       ? []
       : listRunRecords(projectRoot, readerEnv).filter((r) => r.pid === pid);
 
-  const kill = (sig: NodeJS.Signals, group: boolean) => {
+  const kill = (sig: NodeJS.Signals) => {
     if (pid === undefined) return;
     try {
-      if (group && posix) process.kill(-pid, sig);
-      else process.kill(pid, sig);
+      process.kill(pid, sig);
     } catch {
       // already gone
+    }
+  };
+  const clearOwnRecords = () => {
+    for (const record of ownRecords()) {
+      clearRunRecord(projectRoot, record.host, readerEnv);
     }
   };
 
@@ -242,8 +276,7 @@ export async function spawnHost(
   const stop = (): Promise<HostExit> => {
     stopping ??= (async () => {
       if (!exit) {
-        // The pid only: the host's own handler runs its ordered teardown.
-        kill("SIGTERM", false);
+        kill("SIGTERM");
         let timer: NodeJS.Timeout | undefined;
         const timedOut = await Promise.race([
           exited.then(() => false),
@@ -254,14 +287,12 @@ export async function spawnHost(
         clearTimeout(timer);
         if (timedOut) {
           forced = true;
-          kill("SIGKILL", true);
+          kill("SIGKILL");
         }
       }
       const result = await exited;
       // A killed child skips its exit handler's record clear.
-      for (const record of ownRecords()) {
-        clearRunRecord(projectRoot, record.host, readerEnv);
-      }
+      clearOwnRecords();
       return result;
     })();
     return stopping;
@@ -274,7 +305,28 @@ export async function spawnHost(
 
   const deadline = Date.now() + readyTimeoutMs;
   for (;;) {
-    const record = ownRecords().at(0);
+    const aborted = signal?.aborted ?? false;
+    // Before the record: a child killed after writing it leaves it behind.
+    if (exit && !aborted) {
+      clearOwnRecords();
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        closed,
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, CLOSE_WAIT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
+      const how =
+        exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
+      throw new SpawnHostError(
+        `spawnHost: ph run ${options.host} exited (${how}) before writing its run record.`,
+        "exited",
+        tail,
+        exit,
+      );
+    }
+    const record = aborted ? undefined : ownRecords().at(0);
     if (record) {
       return {
         pid: record.pid,
@@ -285,17 +337,6 @@ export async function spawnHost(
         exited,
         stop,
       };
-    }
-    const aborted = signal?.aborted ?? false;
-    if (exit && !aborted) {
-      const how =
-        exit.signal !== null ? `signal ${exit.signal}` : `code ${exit.code}`;
-      throw new SpawnHostError(
-        `spawnHost: ph run ${options.host} exited (${how}) before writing its run record.`,
-        "exited",
-        tail,
-        exit,
-      );
     }
     if (aborted || Date.now() >= deadline) {
       const phase: SpawnHostPhase = aborted ? "aborted" : "timeout";
