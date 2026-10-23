@@ -581,7 +581,7 @@ throw new MissingIdError("message");
 3. The error message is stored in \`operation.error\` as a string
 4. **The state is NOT mutated** - it remains unchanged from before the operation
 
-This holds for the document \`reducer\` returns in tests. In Connect, an editor's \`document.operations\` is not loaded, so don't look for rejected operations there. Read them with \`useDocumentOperations(document.header.id, "global")\` from \`@powerhousedao/reactor-browser\` (pages arrive oldest first; call \`fetchNextPage\` while \`hasNextPage\`), or open the document's revision history in Connect, which shows each operation's errors.
+This holds for the document \`reducer\` returns in tests. In Connect, an editor's \`document.operations\` holds an empty array per scope, whatever the history, so don't look for rejected operations there. Read them with \`useDocumentOperations(document.header.id, "global")\` from \`@powerhousedao/reactor-browser\` (pages arrive oldest first; call \`fetchNextPage\` while \`hasNextPage\`), or open the document's revision history in Connect, which shows each operation's errors.
 
 ##### Accessing the Correct Operation Index
 

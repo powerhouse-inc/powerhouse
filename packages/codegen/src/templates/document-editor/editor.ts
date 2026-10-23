@@ -85,7 +85,7 @@ export default function Editor({
           </label>
         </div>
 
-        {/* Document state */}
+        {/* Document state. For its history use useDocumentOperations(document.header.id, "global"), not document.operations */}
         <div className="mt-6">
           <h3 className="text-base">Document State</h3>
           <DocumentStateViewer state={document.state} />
