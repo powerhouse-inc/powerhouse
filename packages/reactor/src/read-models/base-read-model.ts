@@ -845,17 +845,20 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
   /**
    * A document gone from the write cache, or purged, is absent; so is one
    * stored at a protocol version this reactor does not run, which it cannot
-   * build.
+   * build, and which `unsupported` also lists.
    */
-  private async rebuildIfConfigured(
-    items: OperationWithContext[],
-  ): Promise<{ items: OperationWithContext[]; absent: number[] }> {
+  private async rebuildIfConfigured(items: OperationWithContext[]): Promise<{
+    items: OperationWithContext[];
+    absent: number[];
+    unsupported: number[];
+  }> {
     if (!this.config.rebuildStateOnInit) {
-      return { items, absent: [] };
+      return { items, absent: [], unsupported: [] };
     }
 
     const rebuilt: OperationWithContext[] = [];
     const absent: number[] = [];
+    const unsupported: number[] = [];
     for (const item of items) {
       // The marker has no state to rebuild; its stream has no CREATE_DOCUMENT.
       if (isPurgeMarker(item.operation)) {
@@ -872,6 +875,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
             await this.recordSkipped(item.context.documentId, ordinalOf(item));
           }
           absent.push(ordinalOf(item));
+          unsupported.push(ordinalOf(item));
           continue;
         }
         if (
@@ -891,7 +895,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       }
       rebuilt.push(...result);
     }
-    return { items: rebuilt, absent };
+    return { items: rebuilt, absent, unsupported };
   }
 
   private skipUnsupported(error: UnsupportedProtocolVersionError): void {
@@ -977,7 +981,11 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     }
   }
 
-  /** False while the document's protocol versions are still unsupported. */
+  /**
+   * False while the document is still unsupported, its skip kept. The probe
+   * refuses only by protocol; a model that cannot build it refuses in the
+   * rebuild, which re-records the skip.
+   */
   private async applySkippedDocument(
     documentId: string,
     from: number,
@@ -1009,6 +1017,7 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
         const rebuilt = await this.rebuildIfConfigured(items);
         await this.commitFenced(rebuilt.items);
         this.updateConsistencyTracker(rebuilt.items);
+        if (rebuilt.unsupported.length > 0) return false;
       }
       if (!page.nextCursor || ordinals.length < page.results.length) {
         return true;

@@ -115,11 +115,10 @@ describe("read-only over documents at an unsupported base-reducer version", () =
 
   async function build(
     configure: (builder: ReactorBuilder) => ReactorBuilder,
+    drive: typeof driveDocumentModelModule = driveDocumentModelModule,
   ): Promise<InProcessReactorModule> {
     const module = await configure(
-      new ReactorBuilder().withDocumentModelSources([
-        driveDocumentModelModule as never,
-      ]),
+      new ReactorBuilder().withDocumentModelSources([drive as never]),
     ).buildModule();
     reactors.push(module.reactor);
     return module;
@@ -438,6 +437,79 @@ describe("read-only over documents at an unsupported base-reducer version", () =
         .sort((a, b) => a - b);
       expect(received, drive).toEqual(ordinals.unsupported);
     }
+  });
+
+  it("keeps a skip its retry re-records until the model can build the document", async () => {
+    const db = await createDefaultDatabase();
+    const writer = await build((b) =>
+      b.withKysely(db).withExecutorConfig({ featureFlags: { undoV3: true } }),
+    );
+    await succeeded(
+      writer.reactor,
+      await writer.reactor.create(driveAt(UNSUPPORTED, 3)),
+    );
+    for (let i = 0; i < 12; i++) {
+      await succeeded(
+        writer.reactor,
+        await writer.reactor.execute(UNSUPPORTED, "main", [
+          addFolder({ id: generateId(), name: `f${i}`, parentFolder: null }),
+        ]),
+      );
+    }
+    await writer.reactor.kill().completed;
+    reactors.splice(reactors.indexOf(writer.reactor), 1);
+    const schema = db.withSchema(REACTOR_SCHEMA);
+    await schema.updateTable("ViewState").set({ lastOrdinal: 0 }).execute();
+    await schema.deleteFrom("DocumentSnapshot").execute();
+    const firstGlobal = Number(
+      (await schema
+        .selectFrom("operation_index_operations")
+        .select("ordinal")
+        .where("documentId", "=", UNSUPPORTED)
+        .where("scope", "=", "global")
+        .orderBy("ordinal")
+        .executeTakeFirstOrThrow())!.ordinal,
+    );
+    const record = [
+      {
+        readModelId: `document-view${SKIPPED_DOCUMENT_MARKER}${UNSUPPORTED}`,
+        lastOrdinal: firstGlobal,
+      },
+    ];
+
+    const untagged = {
+      ...driveDocumentModelModule,
+      reducer: ((
+        ...args: Parameters<typeof driveDocumentModelModule.reducer>
+      ) =>
+        driveDocumentModelModule.reducer(
+          ...args,
+        )) as typeof driveDocumentModelModule.reducer,
+    };
+    for (let boot = 0; boot < 2; boot++) {
+      const narrow = await build(
+        (b) =>
+          b
+            .withKysely(db)
+            .withUnsupportedStoredDocuments("read-only")
+            .withExecutorConfig({ featureFlags: { undoV3: true } }),
+        untagged,
+      );
+      await narrow.catchUp.sweepNow();
+      expect(await skipped(db), `boot ${boot}`).toEqual(record);
+      await narrow.reactor.kill().completed;
+      reactors.splice(reactors.indexOf(narrow.reactor), 1);
+    }
+
+    const tagged = await build((b) =>
+      b.withKysely(db).withExecutorConfig({ featureFlags: { undoV3: true } }),
+    );
+    const document =
+      await tagged.reactor.get<
+        ReturnType<typeof driveDocumentModelModule.utils.createDocument>
+      >(UNSUPPORTED);
+    expect(document.state.global.nodes).toHaveLength(12);
+    expect(await skipped(db)).toEqual([]);
   });
 
   it("still blocks on a document it registers but cannot build", async () => {
