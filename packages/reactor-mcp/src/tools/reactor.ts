@@ -4,6 +4,7 @@ import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive
 import {
   setAvailableOffline,
   setDriveIcon,
+  setDriveName,
   setSharingType,
 } from "@powerhousedao/shared/document-drive";
 import type {
@@ -15,7 +16,11 @@ import type {
 import { createAction } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
-import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
+import {
+  createBaseAction,
+  toolWithCallback,
+  validateDocumentModelAction,
+} from "./utils.js";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 
@@ -63,9 +68,11 @@ export const createDocumentTool = {
 
 export const getDocumentTool = {
   name: "getDocument",
-  description: "Retrieve a document by its ID",
+  description:
+    "Retrieve a document by its ID, passed as `id` (or `documentId`, as the other document tools name it)",
   inputSchema: {
-    id: z.string().describe("ID of the document to retrieve"),
+    id: z.string().optional().describe("ID of the document to retrieve"),
+    documentId: z.string().optional().describe("Alias of `id`"),
   },
   outputSchema: {
     document: z.unknown().describe("The retrieved Document"),
@@ -97,7 +104,7 @@ export const deleteDocumentTool = {
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP.",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
     actions: z
@@ -370,7 +377,13 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const document = await client.get<PHDocument>(params.id, view);
+      const id = params.id ?? params.documentId;
+      if (!id) {
+        throw new Error(
+          "getDocument needs the document's ID in `id` (or `documentId`)",
+        );
+      }
+      const document = await client.get<PHDocument>(id, view);
       return { document: { header: document.header, state: document.state } };
     }),
 
@@ -437,6 +450,19 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         );
       }
       const actions: Action[] = params.actions.map((paramAction) => {
+        const baseAction = createBaseAction(
+          paramAction.type,
+          paramAction.input,
+          paramAction.scope,
+        );
+        if (baseAction) {
+          if (!baseAction.action) {
+            throw new Error(
+              `Invalid action ${JSON.stringify(paramAction)}: ${baseAction.errors.join(", ")}`,
+            );
+          }
+          return baseAction.action;
+        }
         const action: Action = createAction(
           paramAction.type,
           paramAction.input ?? {},
@@ -486,14 +512,18 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       );
       const driveId = drive.header.id;
 
-      if (driveInput.global.name) {
-        await client.rename(driveId, driveInput.global.name);
-      }
+      // Before the rename, so reactors without the document-view name fix keep it.
       if (driveInput.preferredEditor) {
         await client.setPreferredEditor(driveId, driveInput.preferredEditor);
       }
+      if (driveInput.global.name) {
+        await client.rename(driveId, driveInput.global.name);
+      }
 
       const actions: Action[] = [];
+      if (driveInput.global.name) {
+        actions.push(setDriveName({ name: driveInput.global.name }));
+      }
       if (driveInput.global.icon) {
         actions.push(setDriveIcon({ icon: driveInput.global.icon }));
       }

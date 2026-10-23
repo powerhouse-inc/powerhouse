@@ -166,6 +166,7 @@ the full reactor client implement:
 | ------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                 | By id or slug. A `view.revision` throws: the read API has no point-in-time reads. |
 | `getOperations(identifier, view?, filter?, ...)`  | Paged; `next()` follows the cursor.                                               |
+| `find(search, view?, paging?, signal?)`           | Paged documents by type, parent or ids; `useDocumentsOfType` reads by type.        |
 | `create(document, parentIdentifier?, signal?)`    | Emits `Created`.                                                                  |
 | `execute(identifier, branch, actions, signal?)`   | Fetches the document, stamps and signs a single action, pushes, emits `Updated`.  |
 | `deleteDocument(identifier, propagate?, signal?)` | Emits `Deleted`.                                                                  |
@@ -478,7 +479,7 @@ Known and deliberate. Nothing here is a bug report.
   `addDocument`, `addFileWithProgress` and `copyNode` helpers throw or no-op for
   the same reason. Render editor components the app imports directly, and build
   actions the app declares itself.
-- **No drives, and `find` and jobs only on the class.** They are not on
+- **No drives, and jobs only on the class.** They are not on
   `IReactorBrowserClient`, so the hooks never call them. There is no drive
   bootstrapping anywhere: `create(document, parentIdentifier?)` is the only
   parenting the hooks use.

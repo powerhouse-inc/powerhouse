@@ -1,4 +1,7 @@
-import { resolveDynamicBaseUrl } from "@powerhousedao/shared/connect";
+import {
+  EXTERNALIZABLE_SHARED_SPECIFIERS,
+  resolveDynamicBaseUrl,
+} from "@powerhousedao/shared/connect";
 
 // Set by `ph connect build`: the content-hashed shared-deps module URL.
 declare const PH_CONNECT_SHARED_DEPS_URL: string | undefined;
@@ -77,4 +80,39 @@ export function getSharedDeps(): Promise<SharedDeps | null> {
     }
   })();
   return cached;
+}
+
+/** The shared-dep entries of an import map (exact and trailing-slash), as absolute URLs. */
+export function sharedImportsFromImportMap(
+  importMapJson: string | null | undefined,
+  pageUrl: string,
+): Record<string, string> {
+  let imports: Record<string, string> = {};
+  try {
+    imports =
+      (
+        JSON.parse(importMapJson ?? "{}") as {
+          imports?: Record<string, string>;
+        }
+      ).imports ?? {};
+  } catch {
+    return {};
+  }
+  const isShared = (key: string) => {
+    const spec = key.endsWith("/") ? key.slice(0, -1) : key;
+    return EXTERNALIZABLE_SHARED_SPECIFIERS.some(
+      (shared) => spec === shared || spec.startsWith(`${shared}/`),
+    );
+  };
+  return Object.fromEntries(
+    Object.entries(imports)
+      .filter(([key]) => isShared(key))
+      .map(([key, url]) => [key, new URL(url, pageUrl).href]),
+  );
+}
+
+/** Dev has no vendor table, but its import map points the shared deps at shims a worker can import. */
+export function pageSharedImports(): Record<string, string> {
+  const script = document.querySelector('script[type="importmap"]');
+  return sharedImportsFromImportMap(script?.textContent, window.location.href);
 }

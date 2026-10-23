@@ -820,3 +820,10 @@ body {
   border-radius: 6px;
   padding: 0.4rem 0.6rem;
 }
+
+/* A checkbox sits beside its text, not above it. */
+.rm-form label.rm-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+}

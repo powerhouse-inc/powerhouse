@@ -421,6 +421,85 @@ describe("ProcessorQueue", () => {
     });
   });
 
+  describe("rewind", () => {
+    const open = () => Promise.resolve();
+
+    it("should replay every matching operation above the ordinal", async () => {
+      const index = [op(1), op(2), op(3), op(4)];
+      const { queue, cursor, delivered, persisted } = harness({
+        lastOrdinal: 4,
+        index,
+      });
+
+      await queue.rewind(1, open);
+
+      expect(delivered).toEqual([[2, 3, 4]]);
+      expect(cursor.lastOrdinal).toBe(4);
+      expect(persisted[0]?.lastOrdinal).toBe(1);
+    });
+
+    it("should clear an error and resume the processor", async () => {
+      let fail = true;
+      const { queue, cursor, delivered } = harness({
+        index: [op(1), op(2)],
+        onOperations: () =>
+          fail ? Promise.reject(new Error("boom")) : Promise.resolve(),
+      });
+      await queue.live([op(1)]);
+      expect(cursor.status).toBe("errored");
+
+      fail = false;
+      await queue.rewind(0, open);
+
+      expect(cursor.status).toBe("active");
+      expect(cursor.lastError).toBeUndefined();
+      expect(delivered).toEqual([[1, 2]]);
+    });
+
+    it("should refuse an ordinal below the floor or above the cursor", async () => {
+      const { queue, cursor, processor } = harness({
+        lastOrdinal: 4,
+        floor: 2,
+        index: [op(1), op(2), op(3), op(4)],
+      });
+
+      await expect(queue.rewind(1, open)).rejects.toThrow(
+        "can replay from ordinal 2 to 4, not 1",
+      );
+      await expect(queue.rewind(5, open)).rejects.toThrow(
+        "can replay from ordinal 2 to 4, not 5",
+      );
+
+      expect(processor.onOperations).not.toHaveBeenCalled();
+      expect(cursor.lastOrdinal).toBe(4);
+    });
+
+    it("should not move before its gate opens, and report the gate's error", async () => {
+      let fail!: (error: Error) => void;
+      const gate = new Promise<void>((_, reject) => (fail = reject));
+      const { queue, cursor, processor } = harness({
+        lastOrdinal: 2,
+        index: [op(1), op(2)],
+      });
+
+      const rewound = queue.rewind(0, () => gate);
+      await Promise.resolve();
+      expect(cursor.lastOrdinal).toBe(2);
+
+      fail(new Error("clear failed"));
+      await expect(rewound).rejects.toThrow("clear failed");
+      expect(cursor.lastOrdinal).toBe(2);
+      expect(processor.onOperations).not.toHaveBeenCalled();
+    });
+
+    it("should reject once closed", async () => {
+      const { queue } = harness();
+      await queue.close();
+
+      await expect(queue.rewind(0, open)).rejects.toThrow("is closed");
+    });
+  });
+
   describe("backfill", () => {
     it("should page from the cursor and advance per page", async () => {
       const index = [1, 2, 3, 4, 5].map((n) => op(n));

@@ -1,4 +1,7 @@
-import type { ProcessorStatus } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorRerunOptions,
+  ProcessorStatus,
+} from "@powerhousedao/shared/processors";
 import type { RebuildResult, ValidationResult } from "../admin/types.js";
 import type { CatchUpStatus, SweepResult } from "../catch-up/types.js";
 import type { Job } from "../queue/types.js";
@@ -142,6 +145,10 @@ export type InspectorProcessorInfo = {
   status: ProcessorStatus;
   lastError: string | undefined;
   lastErrorTimestamp: Date | undefined;
+  /** The lowest ordinal a replay can start from. */
+  floor: number;
+  /** Whether a rerun can clear what it derived first. */
+  clearable: boolean;
 };
 
 /** The in-memory queue's debugging surface; not part of `IQueue`. */
@@ -180,6 +187,10 @@ export interface IInspectorAdmin {
   pauseQueue(): Promise<void>;
   resumeQueue(): Promise<void>;
   retryProcessor(processorId: string): Promise<void>;
+  rerunProcessor(
+    processorId: string,
+    options: ProcessorRerunOptions,
+  ): Promise<void>;
   sweepCatchUp(): Promise<SweepResult[]>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<RebuildResult>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<RebuildResult>;

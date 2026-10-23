@@ -1,5 +1,6 @@
 import { AnalyticsSubgraph } from "./graphql/analytics-subgraph.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
+import { InspectionAdminSubgraph } from "./graphql/inspection/admin-subgraph.js";
 import { InspectionSubgraph } from "./graphql/inspection/subgraph.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "./graphql/system/subgraph.js";
@@ -17,12 +18,16 @@ export const DefaultCoreSubgraphs = [
 /** The core subgraphs a server registers, given its optional services. */
 export function coreSubgraphClasses(options: {
   inspection: boolean;
+  inspectionAdmin: boolean;
   documentPermissions: boolean;
 }): SubgraphClass[] {
   return [
     ...DefaultCoreSubgraphs,
     ReactorSubgraph,
     ...(options.inspection ? [InspectionSubgraph] : []),
+    ...(options.inspection && options.inspectionAdmin
+      ? [InspectionAdminSubgraph]
+      : []),
     ...(options.documentPermissions ? [AuthSubgraph] : []),
   ];
 }

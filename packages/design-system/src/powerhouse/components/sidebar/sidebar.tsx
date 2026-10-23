@@ -32,13 +32,12 @@ export function Sidebar({
     <div
       {...props}
       className={twMerge(
-        `group z-1 flex h-full flex-col bg-sidebar text-sidebar-foreground`,
+        // A strip beside the page; on a phone, a bar along its bottom.
+        `group z-1 flex h-full w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground max-sm:h-auto max-sm:w-full max-sm:flex-row max-sm:pb-[env(safe-area-inset-bottom)]`,
         className,
       )}
       ref={ref}
-      style={{
-        width: minWidth,
-      }}
+      style={{ "--sidebar-width": minWidth } as React.CSSProperties}
     >
       {children}
     </div>

@@ -196,6 +196,38 @@ describe("Connect's _app layout", () => {
     expect(navLinks()).toEqual([]);
   });
 
+  // A phone shows Connect's sidebar as a bar under the page; a project's own keeps its place.
+  // The layout flips to a bar under the page, by CSS, when its child is Connect's sidebar.
+  it("marks Connect's sidebar for the phone layout, passed in, wrapped or not, and not a project's own", async () => {
+    const marked = () =>
+      sidebar()!
+        .closest("[role=presentation]")!
+        .querySelector(":scope > [data-connect-sidebar]");
+    const layouts = {
+      default: () => <AppLayout />,
+      passed: () => <AppLayout sidebar={<Sidebar extraItems={null} />} />,
+      wrapped: () => {
+        // A project component that reads hooks, then renders Connect's sidebar.
+        const ProjectSidebar = () => <Sidebar extraItems={null} />;
+        return <AppLayout sidebar={<ProjectSidebar />} />;
+      },
+      own: () => <AppLayout sidebar={<nav id="sidebar" />} />,
+    };
+    for (const [name, layout] of Object.entries(layouts)) {
+      mount("/", layout);
+      await vi.waitFor(() => expect(shownPage()).toBe("home"));
+      expect(!!marked(), name).toBe(name !== "own");
+      expect(sidebar()!.closest("[role=presentation]")!.className).toContain(
+        "max-sm:has-[>[data-connect-sidebar]]:flex-col-reverse",
+      );
+      cleanup();
+      unbind?.();
+      unbind = undefined;
+      restore?.();
+      restore = undefined;
+    }
+  });
+
   it("keeps a layout's own sidebar without the generic plugin", async () => {
     served.composition = [];
     function ProjectLayout() {

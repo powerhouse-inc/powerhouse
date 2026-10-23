@@ -197,4 +197,18 @@ describe("Connect with and without the generic plugin", () => {
       removeConnectRoutes([about]);
     }
   });
+
+  it("names a drive in the create modal outside one, preselecting the only drive", async () => {
+    await mount("/?modal=create-document&documentType=powerhouse/todo");
+    const dialog = await screen.findByRole("dialog", undefined, {
+      timeout: 10_000,
+    });
+    const picker = within(dialog).getByRole("combobox", { name: "Drive" });
+    expect((picker as HTMLSelectElement).value).toBe(
+      store.drives![0].header.id,
+    );
+    expect(
+      within(dialog).queryByRole("option", { name: "Choose a drive" }),
+    ).toBeNull();
+  });
 });

@@ -15,6 +15,10 @@ import {
   type RemoteReactorAttachment,
 } from "../integrations/powerhouse/remote-reactor.js";
 import {
+  createReactorReadTools,
+  type ReactorReadClient,
+} from "../integrations/powerhouse/reactor-tools.js";
+import {
   createDemoProvider,
   createMastraProvider,
   type AgentStreamProvider,
@@ -224,9 +228,17 @@ async function serveAgent(
   });
   console.log(`[${resolved.name}] reactor attached: ${attachment.endpoint}`);
 
-  // The agent: real Mastra when a model is configured, demo otherwise.
+  // The agent: real Mastra when a model is configured, demo otherwise. A real
+  // agent gets read tools over the attached reactor (list drives, list
+  // documents, read one) so it answers from the fleet's documents.
   let provider: AgentStreamProvider;
   if (config.model) {
+    const tools = await createReactorReadTools(
+      attachment.client as ReactorReadClient,
+    );
+    console.log(
+      `[${resolved.name}] reactor tools: ${Object.keys(tools).join(", ")}`,
+    );
     provider = await createMastraProvider({
       agentName: resolved.name,
       instructions:
@@ -234,6 +246,7 @@ async function serveAgent(
         `You are ${resolved.name}, a Powerhouse project agent.`,
       model: config.model,
       apiKey: config.apiKey,
+      tools,
     });
   } else {
     provider = createDemoProvider(resolved.name);

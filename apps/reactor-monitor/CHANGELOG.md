@@ -1,3 +1,34 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🚀 Features
+
+- **reactor-monitor-app:** keep a remote's bearer for the tab's session ([ebc3e715b3](https://github.com/powerhouse-inc/powerhouse/commit/ebc3e715b3))
+- **reactor,reactor-api,reactor-monitor:** rerun a processor, cleared or from an ordinal ([279342d614](https://github.com/powerhouse-inc/powerhouse/commit/279342d614))
+- **reactor-monitor-app:** paste an admin bearer into a remote's gate note ([e04afd8e23](https://github.com/powerhouse-inc/powerhouse/commit/e04afd8e23))
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **reactor-monitor-app:** a remote restored from a saved set takes a pasted bearer ([1630dc21bf](https://github.com/powerhouse-inc/powerhouse/commit/1630dc21bf))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

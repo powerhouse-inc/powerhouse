@@ -37,10 +37,63 @@ function InventoryDrive() {
 
 - `useDriveRouteData()` returns the open `drive`, `folder` and `documentId` from the drive routes' loaders, live.
 - Connect's routes nested under an overridden one stay: the node route renders in an overridden drive route's `<Outlet />`, and the tabs in an overridden settings page's.
-- Drive apps and editors come from packages, not routes. Override a route only to change Connect around them.
+- Drive apps and editors come from packages, not routes ([drive-apps.md](./drive-apps.md)). Override a route only to change Connect around them.
 - Without the generic plugin, each of Connect's files shows core's view instead (a header, an index of drives, a directory listing, a JSON view). An override shows the same view either way.
 - `_app.tsx` and `__root.tsx` are not overridden here: a project's `_app.tsx` replaces the layout ([layout.md](./layout.md)), and the root route is Connect's.
 - To hide a route, override it with a `beforeLoad` that throws `notFound()` or `redirect()`.
+- `ph build` and Studio warn about an override that doesn't import its route's `options`: what Connect sets on the route is dropped.
+
+### Build on the home page
+
+`Home` is made of parts that `/generic` exports, so a custom home keeps Connect's drive cards and adds its own:
+
+```tsx
+// hosts/connect/routes/_app/index.tsx
+import {
+  ConnectHomeScreen,
+  HomeAddDriveItem,
+  HomeDriveItem,
+  useVisibleDrives,
+} from "@powerhousedao/connect/generic";
+import { options } from "@powerhousedao/connect/routes/_app/index";
+import { HomeScreenItem } from "@powerhousedao/design-system/connect";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/")({
+  ...options,
+  component: InventoryHome,
+});
+
+// A card like the drives', for a page of the project's own.
+function OpenOrdersCard() {
+  const navigate = useNavigate();
+  return (
+    <HomeScreenItem
+      title="Open orders"
+      description="Orders on the floor"
+      onClick={() => void navigate({ to: "/orders" })}
+    />
+  );
+}
+
+function InventoryHome() {
+  const drives = useVisibleDrives();
+  return (
+    <ConnectHomeScreen>
+      <OpenOrdersCard />
+      {drives?.map((drive) => (
+        <HomeDriveItem key={drive.header.id} drive={drive} />
+      ))}
+      <HomeAddDriveItem />
+    </ConnectHomeScreen>
+  );
+}
+```
+
+- `ConnectHomeScreen` is the grid on the configured `branding.homeBackground`.
+- `useVisibleDrives()` is `useDrives()` without the drives dismissed from the sign-in gate this session.
+- `HomeAddDriveItem` renders nothing where adding drives is turned off.
+- `HomeScreenItem` (`@powerhousedao/design-system/connect`) is the card the drives use: `title`, `description`, an `icon` element, and `href` or `onClick`.
 
 ## Loading, not found and errors
 
@@ -71,7 +124,7 @@ export const Route = createFileRoute("/_app/d/$driveSlug")({
 // hosts/connect/routes/_app/d/$driveSlug.tsx
 import { isDriveNotFound } from "@powerhousedao/connect/router";
 import { options } from "@powerhousedao/connect/routes/_app/d/$driveSlug";
-import type { NotFoundRouteProps } from "@tanstack/react-router";
+import { createFileRoute, type NotFoundRouteProps } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_app/d/$driveSlug")({
   ...options,
@@ -84,6 +137,8 @@ export const Route = createFileRoute("/_app/d/$driveSlug")({
 A project route throws `notFound()` the same way:
 
 ```tsx
+import { createFileRoute, notFound } from "@tanstack/react-router";
+
 export const Route = createFileRoute("/_app/documents/$documentId")({
   loader: async ({ context, params }) => {
     // ...
@@ -96,14 +151,14 @@ export const Route = createFileRoute("/_app/documents/$documentId")({
 
 ### Errors
 
-A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
+A loader or render error shows the route's `errorComponent`, else Connect's error view (with the generic plugin) or core's. It gets `{ error, reset }`; `error` is `unknown`, since anything can be thrown, and `reset()` retries the route. Connect reports the error to Sentry when Sentry is configured.
 
 ```tsx
 export const Route = createFileRoute("/_app/reports")({
   loader: loadReports,
   errorComponent: ({ error, reset }) => (
     <div role="alert">
-      <p>{error.message}</p>
+      <p>{error instanceof Error ? error.message : "Something went wrong"}</p>
       <button onClick={reset}>Try again</button>
     </div>
   ),

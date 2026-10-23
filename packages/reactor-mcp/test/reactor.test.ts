@@ -105,6 +105,31 @@ describe("ReactorMcpProvider", () => {
       });
     });
 
+    it("accepts the ID as documentId", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocument.callback({
+        documentId: document.header.id,
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        document: {
+          header: expect.objectContaining({ id: document.header.id }),
+        },
+      });
+    });
+
+    it("names the expected parameter when no ID is given", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocument.callback({});
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain("`id` (or `documentId`)");
+    });
+
     it("should handle errors gracefully", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDocument.callback({
@@ -399,6 +424,65 @@ describe("ReactorMcpProvider", () => {
       expect(getTextContent(result)).toContain("Input validation error");
     });
 
+    it("renames a document with SET_NAME", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: document.header.id,
+        actions: [{ type: "SET_NAME", input: "Renamed", scope: "global" }],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const updated = await client.get(document.header.id);
+      expect(updated.header.name).toBe("Renamed");
+    });
+
+    it("sets the preferred editor with SET_PREFERRED_EDITOR", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [
+          {
+            type: "SET_PREFERRED_EDITOR",
+            input: { preferredEditor: "some-app" },
+            scope: "header",
+          },
+        ],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const updated = await client.get(drive.header.id);
+      expect(updated.header.meta?.preferredEditor).toBe("some-app");
+    });
+
+    it("rejects a base action in the wrong scope", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.addActions.callback({
+        documentId: document.header.id,
+        actions: [
+          {
+            type: "SET_PREFERRED_EDITOR",
+            input: { preferredEditor: "some-app" },
+            scope: "global",
+          },
+        ],
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain(
+        `Action scope "global" does not match operation scope "header"`,
+      );
+    });
+
     it("should throw error on action on non-existent document", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addActions.callback({
@@ -461,6 +545,44 @@ describe("ReactorMcpProvider", () => {
           documentType: "powerhouse/document-drive",
         }),
       });
+    });
+
+    it("names the drive in both the header and the global state", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const added = await provider.tools.addDrive.callback({
+        driveInput: { global: { name: "Stockroom North" } },
+      });
+      expect(added.isError).toBeUndefined();
+
+      const result = await provider.tools.getDrive.callback({
+        driveId: (added.structuredContent as { driveId: string }).driveId,
+      });
+      const { drive } = result.structuredContent as {
+        drive: DocumentDriveDocument;
+      };
+      expect(drive.header.name).toBe("Stockroom North");
+      expect(drive.state.global.name).toBe("Stockroom North");
+    });
+
+    it("names the drive and records the preferred editor", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const added = await provider.tools.addDrive.callback({
+        driveInput: {
+          global: { name: "With Pref" },
+          preferredEditor: "stockroom",
+        },
+      });
+      expect(added.isError).toBeUndefined();
+
+      const result = await provider.tools.getDrive.callback({
+        driveId: (added.structuredContent as { driveId: string }).driveId,
+      });
+      const { drive } = result.structuredContent as {
+        drive: DocumentDriveDocument;
+      };
+      expect(drive.header.name).toBe("With Pref");
+      expect(drive.header.meta?.preferredEditor).toBe("stockroom");
+      expect(drive.state.global.name).toBe("With Pref");
     });
 
     it("should add a drive with minimal input", async () => {

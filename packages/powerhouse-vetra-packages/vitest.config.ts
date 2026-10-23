@@ -1,4 +1,7 @@
+import { createRequire } from "node:module";
 import { configDefaults, defineConfig } from "vitest/config";
+
+const require = createRequire(import.meta.url);
 
 export default defineConfig({
   resolve: {
@@ -6,6 +9,8 @@ export default defineConfig({
     // document-model/test) resolve via their TypeScript sources rather
     // than requiring their dist/ to exist first.
     conditions: ["source", "import", "module", "default"],
+    // One graphql realm: the CommonJS entry the externalized deps load.
+    alias: [{ find: /^graphql$/, replacement: require.resolve("graphql") }],
   },
   ssr: {
     resolve: {
@@ -13,7 +18,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["editors/**/*.test.ts", "document-models/**/*.test.ts"],
+    include: [
+      "editors/**/*.test.ts",
+      "editors/**/*.test.tsx",
+      "document-models/**/*.test.ts",
+    ],
     exclude: [...configDefaults.exclude, "**/helpers.test.ts"],
     globals: true,
     server: {

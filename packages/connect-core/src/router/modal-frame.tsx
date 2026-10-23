@@ -50,7 +50,8 @@ export function ModalDialog(props: {
       onClick={(event) => {
         if (event.target === event.currentTarget) closePHModal();
       }}
-      className={props.className}
+      // Tailwind's reset drops the margin that centres a modal dialog.
+      className={props.className ? `m-auto ${props.className}` : "m-auto"}
     >
       {props.children}
     </dialog>

@@ -153,7 +153,10 @@ export class InMemoryQueue implements IQueue {
   }
 
   /** A create whose versions need a model that cannot load is a protocol refusal. */
-  private modelLoadFailure(input: CreateDocumentActionInput): ErrorInfo {
+  private modelLoadFailure(
+    input: CreateDocumentActionInput,
+    loadError: unknown,
+  ): ErrorInfo {
     const error = modelUnavailableRefusal(input);
     if (error) {
       return {
@@ -164,9 +167,11 @@ export class InMemoryQueue implements IQueue {
         source: error,
       };
     }
+    const cause =
+      loadError instanceof Error ? loadError.message : String(loadError);
     return {
       name: "Error",
-      message: `Failed to load document model for type: ${input.model}`,
+      message: `Failed to load document model for type: ${input.model}: ${cause}`,
       stack: new Error().stack || "",
     };
   }
@@ -201,8 +206,8 @@ export class InMemoryQueue implements IQueue {
     if (createInput?.model) {
       try {
         await this.resolver.ensureModelLoaded(createInput.model);
-      } catch {
-        await this.failJob(job.id, this.modelLoadFailure(createInput));
+      } catch (error) {
+        await this.failJob(job.id, this.modelLoadFailure(createInput, error));
         return;
       }
     }

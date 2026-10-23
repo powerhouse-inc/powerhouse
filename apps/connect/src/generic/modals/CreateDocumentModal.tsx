@@ -2,12 +2,18 @@ import { CreateDocumentModal as ConnectCreateDocumentModal } from "@powerhouseda
 import {
   addDocument,
   closePHModal,
-  setSelectedNode,
+  getDriveName,
+  getNodeTarget,
+  openTarget,
+  showPHModal,
   useDocumentModelModuleById,
   useNodeParentFolderById,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { useDriveRouteData } from "@powerhousedao/connect-core/router";
+import {
+  useCreateDocumentTarget,
+  useDriveRouteData,
+} from "@powerhousedao/connect-core/router";
 
 export const CreateDocumentModal: React.FC = () => {
   const phModal = usePHModal();
@@ -18,30 +24,41 @@ export const CreateDocumentModal: React.FC = () => {
     documentType,
     documentModelVersion,
   );
+  // The modal's drive, else the open one, else one picked in the modal.
+  const target = useCreateDocumentTarget(open ? phModal.driveId : undefined);
   // In the open folder, else beside the open document.
-  const { drive, folder, documentId } = useDriveRouteData();
+  const { folder, documentId } = useDriveRouteData();
   const parentFolder = useNodeParentFolderById(documentId);
 
   const onCreateDocument = async (documentName: string) => {
-    closePHModal();
+    const { drive } = target;
     if (!drive || !documentModel) return;
+    closePHModal();
 
     const node = await addDocument(
       drive.header.id,
       documentName || `New ${documentModel.documentModel.global.name}`,
       documentModel.documentModel.global.id,
-      folder?.id ?? parentFolder?.id,
+      target.isOpenDrive ? (folder?.id ?? parentFolder?.id) : undefined,
       undefined,
       undefined,
       undefined,
       documentModelVersion,
     );
-    setSelectedNode(node);
+    // Opens it in its drive, wherever the modal was opened.
+    openTarget(getNodeTarget(node, drive));
   };
 
   return (
     <ConnectCreateDocumentModal
       open={open}
+      drives={target.choices?.map((drive) => ({
+        id: drive.header.id,
+        name: getDriveName(drive),
+      }))}
+      driveId={target.drive?.header.id}
+      onDriveChange={target.pick}
+      onAddDrive={() => showPHModal({ type: "addDrive" })}
       onContinue={(documentName) => {
         void onCreateDocument(documentName);
       }}

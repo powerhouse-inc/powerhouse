@@ -295,4 +295,106 @@ describe("BaseReadModel catch-up", () => {
     expect(model.commits.flat().sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 6]);
     expect(await storedCursor()).toBe(6);
   });
+
+  describe("rebuilding state", () => {
+    /** Logs each rebuild (by operation index) and each commit, in order. */
+    function trackRebuilds(model: RecordingModel): string[] {
+      const events: string[] = [];
+      vi.mocked(writeCache.getState).mockImplementation(
+        (_documentId, _scope, _branch, revision) => {
+          events.push(`rebuild ${revision}`);
+          return Promise.resolve({} as never);
+        },
+      );
+      model.onCommit = (items) => {
+        events.push(`commit ${items.map((i) => i.context.ordinal).join(",")}`);
+        return Promise.resolve();
+      };
+      return events;
+    }
+
+    it("commits each chunk of a swept stream before rebuilding the next", async () => {
+      const model = makeModel({
+        rebuildStateOnInit: true,
+        indexing: { commitChunkSize: 2, yieldDeadlineMs: 0 },
+      });
+      await model.init();
+      const ops = await commit(
+        ["doc-a", 0],
+        ["doc-a", 1],
+        ["doc-a", 2],
+        ["doc-a", 3],
+        ["doc-a", 4],
+      );
+      await model.indexOperations(ops.slice(1));
+      const events = trackRebuilds(model);
+
+      const result = await sweep(model);
+
+      expect(events).toEqual([
+        "rebuild 0",
+        "rebuild 1",
+        "commit 1,2",
+        "rebuild 2",
+        "rebuild 3",
+        "commit 3,4",
+        "rebuild 4",
+        "commit 5",
+      ]);
+      expect(result).toMatchObject({ replayed: 1, reapplied: 4, to: 5 });
+      expect(await storedCursor()).toBe(5);
+    });
+
+    it("commits each chunk of a boot replay before rebuilding the next", async () => {
+      await commit(["doc-a", 0], ["doc-b", 0], ["doc-c", 0]);
+      const model = makeModel({
+        rebuildStateOnInit: true,
+        indexing: { commitChunkSize: 2, yieldDeadlineMs: 0 },
+      });
+      const events = trackRebuilds(model);
+
+      await model.init();
+
+      expect(events).toEqual([
+        "rebuild 0",
+        "rebuild 0",
+        "commit 1,2",
+        "rebuild 0",
+        "commit 3",
+      ]);
+      expect(await storedCursor()).toBe(3);
+    });
+
+    it("holds the cursor below a swept stream whose later chunk fails, and retries it whole", async () => {
+      const model = makeModel({
+        rebuildStateOnInit: true,
+        indexing: { commitChunkSize: 2, yieldDeadlineMs: 0 },
+      });
+      await model.init();
+      const ops = await commit(
+        ["doc-a", 0],
+        ["doc-a", 1],
+        ["doc-a", 2],
+        ["doc-a", 3],
+      );
+      await model.indexOperations(ops.slice(1));
+      model.commits.length = 0;
+
+      model.failOn = 3;
+      const blocked = await sweep(model);
+      expect(blocked.blockedAt).toMatchObject({ ordinal: 3 });
+      expect(blocked.to).toBe(0);
+      expect(model.commits).toEqual([[1, 2]]);
+
+      model.failOn = 0;
+      const retried = await sweep(model);
+      expect(retried.blockedAt).toBeUndefined();
+      expect(retried.to).toBe(4);
+      expect(model.commits).toEqual([
+        [1, 2],
+        [1, 2],
+        [3, 4],
+      ]);
+    });
+  });
 });

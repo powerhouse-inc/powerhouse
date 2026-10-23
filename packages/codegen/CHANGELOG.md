@@ -1,3 +1,30 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **codegen:** the drive-app scaffold names the drive by its display name, and its root component says it is yours to edit ([427d6dcc46](https://github.com/powerhouse-inc/powerhouse/commit/427d6dcc46))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

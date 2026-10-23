@@ -211,4 +211,124 @@ describe("write cache snapshot revision labels", () => {
     expect(moduleIds(viaLegacy)).toHaveLength(25);
     expect(moduleIds(viaLegacy)).toEqual(moduleIds(fromScratch));
   });
+
+  describe("head reads", () => {
+    /** A cache with nothing in memory over the same stores, as after a restart. */
+    async function restarted(): Promise<KyselyWriteCache> {
+      const registry = new DocumentModelRegistry();
+      registry.registerModules(documentModelDocumentModelModule);
+      const fresh = new KyselyWriteCache(keyframeStore, store, registry, {
+        maxDocuments: 10,
+        ringBufferSize: 30,
+        keyframeInterval: 10,
+      });
+      await fresh.startup();
+      return fresh;
+    }
+
+    async function corruptKeyframeAtTen(): Promise<void> {
+      const atTen = await cache.getState(docId, "global", BRANCH, 10);
+      await keyframeStore.putKeyframe(docId, "global", BRANCH, 10, {
+        ...atTen,
+        header: { ...atTen.header, revision: { document: 2 } },
+        operations: {},
+        clipboard: [],
+      } as never);
+    }
+
+    it("resume from the latest keyframe after a restart", async () => {
+      await appendGlobal(docId, 11);
+      await corruptKeyframeAtTen();
+
+      const fresh = await restarted();
+
+      await expect(fresh.getState(docId, "global", BRANCH)).rejects.toThrow(
+        /Corrupt keyframe/,
+      );
+    });
+
+    it("replay the whole log after an invalidation", async () => {
+      await appendGlobal(docId, 11);
+      await corruptKeyframeAtTen();
+
+      cache.invalidate(docId, "global", BRANCH);
+      const afterInvalidate = await cache.getState(docId, "global", BRANCH);
+
+      expect(moduleIds(afterInvalidate)).toHaveLength(12);
+      expect(afterInvalidate.operations.global).toHaveLength(12);
+    });
+
+    it("replay the whole log for the streams a document invalidation covers", async () => {
+      await appendGlobal(docId, 11);
+      await corruptKeyframeAtTen();
+
+      const fresh = await restarted();
+      fresh.invalidate(docId);
+
+      await fresh.getState(docId, "document", BRANCH);
+      const global = await fresh.getState(docId, "global", BRANCH);
+      expect(global.operations.global).toHaveLength(12);
+    });
+
+    it("return to the keyframe once the owed replay is done", async () => {
+      await appendGlobal(docId, 11);
+      await corruptKeyframeAtTen();
+
+      const fresh = await restarted();
+      fresh.invalidate(docId, "global", BRANCH);
+      await fresh.getState(docId, "global", BRANCH);
+
+      // Evicted without an invalidation, as the LRU does.
+      fresh.clear();
+
+      await expect(fresh.getState(docId, "global", BRANCH)).rejects.toThrow(
+        /Corrupt keyframe/,
+      );
+    });
+
+    it("match a rebuild from scratch", async () => {
+      await appendGlobal(docId, 20);
+
+      await cache.getState(docId, "global", BRANCH);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(
+        (await keyframeStore.listKeyframes(docId, "global", BRANCH)).map(
+          (k) => k.revision,
+        ),
+      ).toEqual([20]);
+
+      await appendGlobal(docId, 23);
+      const viaKeyframe = await (
+        await restarted()
+      ).getState(docId, "global", BRANCH);
+
+      cache.invalidate(docId, "global", BRANCH);
+      const fromScratch = await cache.getState(docId, "global", BRANCH);
+
+      expect(moduleIds(viaKeyframe)).toHaveLength(24);
+      expect(moduleIds(viaKeyframe)).toEqual(moduleIds(fromScratch));
+      expect(viaKeyframe.header.revision).toEqual(fromScratch.header.revision);
+      expect(viaKeyframe.operations.global.map((op) => op.index)).toEqual([
+        20, 21, 22, 23,
+      ]);
+    });
+
+    it("read a positional keyframe left over from the count convention", async () => {
+      await appendGlobal(docId, 24);
+
+      const atTen = await cache.getState(docId, "global", BRANCH, 10);
+      await keyframeStore.putKeyframe(docId, "global", BRANCH, 10, {
+        ...atTen,
+        header: { ...atTen.header, revision: { document: 2, global: 25 } },
+        operations: {},
+        clipboard: [],
+      } as never);
+
+      const viaLegacy = await (
+        await restarted()
+      ).getState(docId, "global", BRANCH);
+
+      expect(moduleIds(viaLegacy)).toHaveLength(25);
+    });
+  });
 });

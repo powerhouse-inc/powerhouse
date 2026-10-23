@@ -89,6 +89,16 @@ function StateEditor({
 
   // Track if we've already synced to prevent double-calls in StrictMode
   const hasSyncedRef = useRef(false);
+  // Opening the editor shows a mismatched initial value; only an edit syncs it.
+  const [openedWith] = useState(() => ({
+    sharedSchemaSdl,
+    initialValue,
+    modelName,
+  }));
+  const editedSinceOpen =
+    sharedSchemaSdl !== openedWith.sharedSchemaSdl ||
+    initialValue !== openedWith.initialValue ||
+    modelName !== openedWith.modelName;
 
   const { initialValueErrors, fixedState } = useMemo(() => {
     const existingValue = initialValue || "{}";
@@ -114,7 +124,7 @@ function StateEditor({
       existingValue,
     );
 
-    if (errors.length && syncWithSchema) {
+    if (errors.length && syncWithSchema && editedSinceOpen) {
       const computedFixedState = makeMinimalObjectForStateType({
         sharedSchemaDocumentNode,
         stateTypeDefinitionNode,
@@ -125,7 +135,14 @@ function StateEditor({
       }
     }
     return { initialValueErrors: errors, fixedState: null };
-  }, [sharedSchemaSdl, initialValue, syncWithSchema, scope, modelName]);
+  }, [
+    sharedSchemaSdl,
+    initialValue,
+    syncWithSchema,
+    editedSinceOpen,
+    scope,
+    modelName,
+  ]);
 
   // Handle the side effect of syncing initial state separately
   useEffect(() => {

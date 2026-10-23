@@ -46,9 +46,13 @@ export interface WorkerReactorClientModule extends ReactorClientModule {
   /**
    * Loads (or, for a source already loaded, REPLACES) URL-addressed packages
    * in the worker's registry. A vetra watch rebuild re-sends the project's
-   * models through this with a cache-busted URL.
+   * models through this with a cache-busted URL. `specs` are registry packages
+   * (`name@version`), replaced when their version changes.
    */
-  registerPackages: (sources: WorkerPackageSource[]) => Promise<void>;
+  registerPackages: (
+    sources: WorkerPackageSource[],
+    specs?: string[],
+  ) => Promise<void>;
 }
 
 export type LOADING = null;

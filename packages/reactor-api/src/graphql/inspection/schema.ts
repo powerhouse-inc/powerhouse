@@ -118,6 +118,8 @@ export const inspectionTypeDefs = gql`
     status: String!
     lastError: String
     lastErrorTimestampUtcMs: Float
+    floor: Float!
+    clearable: Boolean!
   }
 
   """

@@ -6,12 +6,18 @@
  * Tailwind theme classes. This keeps the prop contract (poll + retry) in
  * plain CSS.
  */
+import type { InspectorProcessorInfo } from "@powerhousedao/reactor";
 import type {
-  IInspectorAdmin,
-  InspectorProcessorInfo,
-} from "@powerhousedao/reactor";
-import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
-import { useCallback, useEffect, useState } from "react";
+  MonitorInspector,
+  ProcessorLevers,
+} from "@powerhousedao/reactor-monitor";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   ADMIN_ALLOWED,
   AdminGateNote,
@@ -20,12 +26,98 @@ import {
 
 export type ProcessorsTabProps = {
   readonly inspector: MonitorInspector;
-  /** Processor retry; absent where the reactor serves no levers. */
-  readonly levers?: IInspectorAdmin;
+  /** Processor retry and rerun; absent where the reactor serves no levers. */
+  readonly levers?: ProcessorLevers;
   readonly admin?: AdminGate;
 };
 
+type RerunOptions = Parameters<ProcessorLevers["rerunProcessor"]>[1];
+
 const POLL_INTERVAL_MS = 2000;
+
+/** Asks how to rerun one processor: cleared from its floor, or from an ordinal. */
+function RerunForm({
+  processor,
+  onRerun,
+  onCancel,
+}: {
+  readonly processor: InspectorProcessorInfo;
+  readonly onRerun: (options: RerunOptions) => Promise<void>;
+  readonly onCancel: () => void;
+}) {
+  const { floor, lastOrdinal, clearable } = processor;
+  const [clear, setClear] = useState(clearable);
+  const [from, setFrom] = useState(String(floor));
+  const [pending, setPending] = useState(false);
+  const fromOrdinal = Number(from);
+  const inRange =
+    from.trim() !== "" &&
+    Number.isInteger(fromOrdinal) &&
+    fromOrdinal >= floor &&
+    fromOrdinal <= lastOrdinal;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!clear && !inRange) {
+      return;
+    }
+    setPending(true);
+    await onRerun({ clear, fromOrdinal: clear ? floor : fromOrdinal });
+    setPending(false);
+  };
+
+  return (
+    <form
+      aria-label={`Rerun ${processor.processorId}`}
+      className="rm-form rm-form-inline"
+      data-testid="rerun-form"
+      onSubmit={(event) => void submit(event)}
+    >
+      <label className="rm-check">
+        <input
+          checked={clear}
+          disabled={!clearable}
+          onChange={(event) => setClear(event.target.checked)}
+          type="checkbox"
+        />
+        Clear its read model first
+      </label>
+      {clear ? (
+        <p className="rm-note" data-testid="rerun-clear-note">
+          Replays from ordinal {floor}. Processors of this drive that share its
+          read model are cleared and replayed with it.
+        </p>
+      ) : (
+        <label>
+          Replay operations above ordinal ({floor}–{lastOrdinal})
+          <input
+            max={lastOrdinal}
+            min={floor}
+            onChange={(event) => setFrom(event.target.value)}
+            step={1}
+            type="number"
+            value={from}
+          />
+        </label>
+      )}
+      {clearable ? null : (
+        <p className="rm-note" data-testid="rerun-not-clearable">
+          This processor cannot clear its read model, so a rerun only replays.
+        </p>
+      )}
+      <button
+        className="rm-btn rm-btn-warn"
+        disabled={pending || (!clear && !inRange)}
+        type="submit"
+      >
+        {pending ? "Rerunning…" : "Rerun"}
+      </button>
+      <button className="rm-btn" onClick={onCancel} type="button">
+        Cancel
+      </button>
+    </form>
+  );
+}
 
 export function ProcessorsTab({
   inspector,
@@ -37,6 +129,9 @@ export function ProcessorsTab({
   const [error, setError] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [rerunId, setRerunId] = useState<string | null>(null);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  const [rerunNote, setRerunNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -75,6 +170,28 @@ export function ProcessorsTab({
     [levers, load],
   );
 
+  const handleRerun = useCallback(
+    async (processorId: string, options: RerunOptions) => {
+      if (!levers) {
+        return;
+      }
+      try {
+        await levers.rerunProcessor(processorId, options);
+        setRerunError(null);
+        setRerunNote(
+          `Rerun of ${processorId} is under way; its last ordinal climbs as it replays.`,
+        );
+        setRerunId(null);
+      } catch (e) {
+        setRerunNote(null);
+        setRerunError(e instanceof Error ? e.message : String(e));
+      }
+      await load();
+    },
+    [levers, load],
+  );
+
+  const leversOpen = admin.enabled && !!levers;
   const activeCount = processors.filter((p) => p.status === "active").length;
   const erroredCount = processors.filter((p) => p.status === "errored").length;
 
@@ -118,6 +235,16 @@ export function ProcessorsTab({
           Retry failed: {retryError}
         </p>
       ) : null}
+      {rerunError ? (
+        <p className="rm-error" role="alert">
+          Rerun failed: {rerunError}
+        </p>
+      ) : null}
+      {rerunNote ? (
+        <p className="rm-note" role="status">
+          {rerunNote}
+        </p>
+      ) : null}
 
       <div className="rm-table-wrap">
         <table className="rm-table">
@@ -143,53 +270,82 @@ export function ProcessorsTab({
               </tr>
             ) : (
               processors.map((processor) => (
-                <tr
-                  key={processor.processorId}
-                  className={
-                    processor.status === "errored" ? "rm-row-error" : undefined
-                  }
-                >
-                  <td>
-                    <span
-                      className={
-                        processor.status === "active"
-                          ? "rm-badge rm-badge-ok"
-                          : "rm-badge rm-badge-error"
-                      }
-                    >
-                      {processor.status}
-                    </span>
-                  </td>
-                  <td title={processor.processorId}>{processor.processorId}</td>
-                  <td title={processor.factoryId}>{processor.factoryId}</td>
-                  <td title={processor.driveId}>{processor.driveId}</td>
-                  <td>{processor.processorIndex}</td>
-                  <td>{processor.lastOrdinal}</td>
-                  <td title={processor.lastError}>
-                    {processor.lastError ?? "-"}
-                  </td>
-                  <td>
-                    {processor.lastErrorTimestamp
-                      ? processor.lastErrorTimestamp.toLocaleString()
-                      : "-"}
-                  </td>
-                  <td>
-                    {processor.status === "errored" ? (
-                      <button
-                        className="rm-btn rm-btn-warn"
-                        disabled={
-                          retryingId === processor.processorId ||
-                          !admin.enabled ||
-                          !levers
+                <Fragment key={processor.processorId}>
+                  <tr
+                    className={
+                      processor.status === "errored"
+                        ? "rm-row-error"
+                        : undefined
+                    }
+                  >
+                    <td>
+                      <span
+                        className={
+                          processor.status === "active"
+                            ? "rm-badge rm-badge-ok"
+                            : "rm-badge rm-badge-error"
                         }
-                        onClick={() => void handleRetry(processor.processorId)}
+                      >
+                        {processor.status}
+                      </span>
+                    </td>
+                    <td title={processor.processorId}>
+                      {processor.processorId}
+                    </td>
+                    <td title={processor.factoryId}>{processor.factoryId}</td>
+                    <td title={processor.driveId}>{processor.driveId}</td>
+                    <td>{processor.processorIndex}</td>
+                    <td>{processor.lastOrdinal}</td>
+                    <td title={processor.lastError}>
+                      {processor.lastError ?? "-"}
+                    </td>
+                    <td>
+                      {processor.lastErrorTimestamp
+                        ? processor.lastErrorTimestamp.toLocaleString()
+                        : "-"}
+                    </td>
+                    <td>
+                      {processor.status === "errored" ? (
+                        <button
+                          className="rm-btn rm-btn-warn"
+                          disabled={
+                            retryingId === processor.processorId || !leversOpen
+                          }
+                          onClick={() =>
+                            void handleRetry(processor.processorId)
+                          }
+                          type="button"
+                        >
+                          Retry
+                        </button>
+                      ) : null}
+                      <button
+                        className="rm-btn"
+                        disabled={!leversOpen}
+                        onClick={() => {
+                          setRerunError(null);
+                          setRerunId(processor.processorId);
+                        }}
                         type="button"
                       >
-                        Retry
+                        Rerun…
                       </button>
-                    ) : null}
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  {rerunId === processor.processorId ? (
+                    <tr>
+                      <td colSpan={9}>
+                        <RerunForm
+                          onCancel={() => setRerunId(null)}
+                          onRerun={(options) =>
+                            handleRerun(processor.processorId, options)
+                          }
+                          processor={processor}
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))
             )}
           </tbody>

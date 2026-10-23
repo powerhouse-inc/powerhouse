@@ -92,6 +92,8 @@ type FakeServerOptions = {
   workflows?: boolean;
   syncChannels?: readonly string[];
   remote?: Record<string, unknown>;
+  /** Whether the host serves `inspection-admin` to this caller. */
+  levers?: boolean;
 };
 
 /** Answers the inspection documents by operation name, recording each request. */
@@ -253,6 +255,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
             status: "errored",
             lastError: "boom",
             lastErrorTimestampUtcMs: LAST_ERROR_MS,
+            floor: 0,
+            clearable: true,
           },
           {
             processorId: "p-2",
@@ -263,6 +267,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
             status: "active",
             lastError: null,
             lastErrorTimestampUtcMs: null,
+            floor: 3,
+            clearable: false,
           },
         ],
       },
@@ -293,7 +299,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
     }),
   };
 
-  const fetchImpl: typeof fetch = (_input, init) => {
+  const levers = { served: options.levers ?? false };
+  const fetchImpl: typeof fetch = (input, init) => {
     const body = JSON.parse((init?.body as string | undefined) ?? "{}") as {
       query: string;
       variables: Record<string, unknown>;
@@ -303,6 +310,19 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
       throw new Error(`unnamed operation: ${body.query}`);
     }
     requests.push({ operation: name, variables: body.variables });
+    if (String(input).endsWith("/inspection-admin")) {
+      if (!levers.served) {
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }
+      return Promise.resolve(
+        Response.json({
+          data:
+            name === "ReactorInspectionAdminAccess"
+              ? { inspectionAdmin: { processors: true } }
+              : { [name]: true },
+        }),
+      );
+    }
     if (info.access === null && !OPEN_READS.has(name)) {
       return Promise.resolve(
         Response.json({
@@ -325,7 +345,7 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
     return Promise.resolve(Response.json({ data: answer() }));
   };
 
-  return { fetchImpl, requests, info, wireRemote };
+  return { fetchImpl, requests, info, wireRemote, levers };
 }
 
 function remoteDescriptor(
@@ -504,6 +524,15 @@ describe("RemoteInspectorClient reads", () => {
       pendingJobs: [QUEUE_JOB],
       executingJobs: [],
     });
+  });
+
+  it("carries a processor's replay floor and whether it can be cleared", async () => {
+    const processors = await client.getProcessors();
+
+    expect(processors.map((p) => [p.floor, p.clearable])).toEqual([
+      [0, true],
+      [3, false],
+    ]);
   });
 
   it("rebuilds a processor's error Date from epoch milliseconds", async () => {
@@ -832,6 +861,54 @@ describe("provisioning a remote reactor", () => {
     expect(reactor.admin).toBeUndefined();
     expect(reactor.dbQuery).toBeUndefined();
     expect(reactor.syncAdmin).toBeUndefined();
+  });
+
+  it("offers no processor levers when the host does not serve inspection-admin", async () => {
+    const reactor = await provisionRemote(
+      remoteDescriptor(fakeInspectionServer().fetchImpl),
+    );
+
+    expect(reactor.processorLevers).toBeUndefined();
+  });
+
+  it("reruns a processor through inspection-admin, with the descriptor's bearer", async () => {
+    const server = fakeInspectionServer({ levers: true });
+    const seen: string[] = [];
+    const reactor = await provisionRemote(
+      remoteDescriptor(
+        (input, init) => {
+          seen.push(
+            `${String(input)} ${new Headers(init?.headers).get("authorization")}`,
+          );
+          return server.fetchImpl(input, init);
+        },
+        { headers: () => ({ authorization: "Bearer admin" }) },
+      ),
+    );
+
+    await reactor.processorLevers!.rerunProcessor("f-1:drive-a:0", {
+      clear: false,
+      fromOrdinal: 7,
+    });
+
+    expect(server.requests.at(-1)).toEqual({
+      operation: "ReactorInspectionRerunProcessor",
+      variables: { processorId: "f-1:drive-a:0", clear: false, fromOrdinal: 7 },
+    });
+    expect(seen.at(-1)).toBe(
+      "http://host.example/graphql/inspection-admin Bearer admin",
+    );
+  });
+
+  it("picks the levers up on a re-check once the host serves them", async () => {
+    const server = fakeInspectionServer();
+    const reactor = await provisionRemote(remoteDescriptor(server.fetchImpl));
+    expect(reactor.processorLevers).toBeUndefined();
+
+    server.levers.served = true;
+    await reactor.refreshInfo();
+
+    expect(reactor.processorLevers).toBeDefined();
   });
 
   it("surfaces the GraphQL base and inspection auth, so a sibling subgraph derives", async () => {

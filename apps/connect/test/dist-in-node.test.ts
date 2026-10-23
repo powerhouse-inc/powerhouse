@@ -21,6 +21,7 @@ beforeAll(() => {
 }, 120_000);
 
 describe("Connect's dist in plain Node", () => {
+  // A cold Node process loading the whole dist: over 5 s on a Windows runner.
   it("evaluates the entries a project layout imports without build-time globals", () => {
     const out = runInNode(`
       const config = await import("@powerhousedao/connect-core/runtime-config");
@@ -31,5 +32,5 @@ describe("Connect's dist in plain Node", () => {
       console.log(entries.length);
     `);
     expect(out.trim()).toBe("5");
-  });
+  }, 60_000);
 });

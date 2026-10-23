@@ -76,7 +76,7 @@ export type AppModuleState = {
   allowedDocumentTypes: Maybe<Array<Scalars["String"]["output"]>>;
   /** Whether the app surface accepts dropped files from the user. Defaults to true. */
   isDragAndDropEnabled: Scalars["Boolean"]["output"];
-  /** Display name of the drive app. Also used as the source for the generated folder name under `apps/`. */
+  /** Display name of the drive app. Also used as the source for the generated folder name under `editors/`. */
   name: Scalars["String"]["output"];
   /** Lifecycle status. While DRAFT the app definition is editable and codegen is skipped; switching to CONFIRMED triggers app scaffold generation. */
   status: StatusType;

@@ -20,24 +20,37 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
   const {
     icon,
     title,
-    description: _description,
+    description,
     containerClassName,
     active,
     href,
     onClick,
     onPreload,
   } = props;
-  const Element = href ? "a" : "div";
+  const Element = href ? "a" : onClick ? "button" : "div";
   const current = href ? props["aria-current"] : undefined;
   return (
     <ConnectTooltip
-      content={title}
+      content={
+        description ? (
+          <>
+            <span className="block font-medium">{title}</span>
+            <span className="block opacity-80">{description}</span>
+          </>
+        ) : (
+          title
+        )
+      }
       side="right"
       sideOffset={12}
       className="border-none bg-primary px-3 py-2 text-sm text-primary-foreground"
     >
       <Element
         href={href}
+        type={Element === "button" ? "button" : undefined}
+        // The strip shows only icons: the name and description are for assistive tech.
+        aria-label={title}
+        aria-description={description}
         aria-current={current}
         className={twMerge(
           "group/sidebar-item relative flex cursor-pointer flex-col items-center justify-center text-center text-sm text-foreground",
@@ -53,19 +66,22 @@ export const SidebarItem = function SidebarItem(props: SidebarItemProps) {
       >
         <div
           className={twMerge(
-            "absolute top-1/2 left-0 hidden h-10 w-1 -translate-y-1/2 rounded-r-sm bg-info group-aria-[current=page]/sidebar-item:block",
+            "absolute top-1/2 left-0 hidden h-10 w-1 -translate-y-1/2 rounded-r-sm bg-info group-aria-[current=page]/sidebar-item:block max-sm:hidden!",
             active && "block",
           )}
         />
         <div
           className={twMerge(
-            "absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-sm bg-secondary opacity-0 transition-opacity group-hover/sidebar-item:opacity-100 group-aria-[current=page]/sidebar-item:hidden",
+            "absolute top-1/2 left-0 h-6 w-1 -translate-y-1/2 rounded-r-sm bg-secondary opacity-0 transition-opacity group-hover/sidebar-item:opacity-100 group-aria-[current=page]/sidebar-item:hidden max-sm:hidden",
             active && "hidden",
           )}
         />
-        <div className="mx-auto py-4">
+        <div className="mx-auto py-4 max-sm:px-3 max-sm:py-2">
           {icon || (
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+            <div
+              aria-hidden
+              className="flex size-8 items-center justify-center rounded-lg bg-primary"
+            >
               <span className="text-sm font-medium text-primary-foreground">
                 {title.slice(0, 1).toUpperCase()}
               </span>

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "6.2.3-dev.71",
+  "version": "6.2.3-dev.73",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -37,6 +37,7 @@
     "@tanstack/virtual-file-routes": "1.162.0",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
+    "es-module-lexer": "^2.0.0",
     "magic-string": "^0.30.21",
     "vite": "catalog:",
     "vite-plugin-html": "catalog:",

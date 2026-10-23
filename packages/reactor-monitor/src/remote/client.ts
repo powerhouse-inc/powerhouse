@@ -166,6 +166,8 @@ function toProcessor(wire: WireInspectorProcessor): InspectorProcessorInfo {
       wire.lastErrorTimestampUtcMs === null
         ? undefined
         : new Date(wire.lastErrorTimestampUtcMs),
+    floor: Number(wire.floor),
+    clearable: wire.clearable,
   };
 }
 

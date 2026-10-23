@@ -15,9 +15,14 @@ export const styleTemplate = css`
 export const hostStyleTemplate = css`
   /* This Connect's theme: token values and global rules. The page's Tailwind build
      adds it after style.css; ph build leaves it out of the package's stylesheet. */
+  /* Colours: a semantic token (--primary, --background, ...) takes a light value
+     on :root and a dark one on :root.dark; on :root alone it wins in dark mode too. */
+  :root {
+  }
+  :root.dark {
+  }
   /* static: the page keeps these tokens even unused, as packages' classes read them. */
   @theme static {
-    /* Override Connect's theme variables here, e.g. --color-primary. */
-    /* See https://tailwindcss.com/docs/theme#using-a-custom-theme for details */
+    /* Other theme values, e.g. --font-sans: https://tailwindcss.com/docs/theme */
   }
 `.raw;

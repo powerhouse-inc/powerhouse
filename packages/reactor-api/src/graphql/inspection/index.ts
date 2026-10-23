@@ -1,3 +1,5 @@
+export { inspectionAdminTypeDefs } from "./admin-schema.js";
+export { InspectionAdminSubgraph } from "./admin-subgraph.js";
 export {
   createInspectionResolvers,
   type InspectionCallerGate,

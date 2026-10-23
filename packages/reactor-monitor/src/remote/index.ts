@@ -9,6 +9,11 @@ export {
   INSPECTION_OPERATIONS,
   type InspectionOperationName,
 } from "./operations.js";
+export {
+  INSPECTION_ADMIN_OPERATIONS,
+  inspectionAdminEndpoint,
+  RemoteProcessorLevers,
+} from "./levers.js";
 export { inspectionEndpoint, provisionRemote } from "./provision.js";
 export { RemoteSyncManagerClient } from "./sync-manager.js";
 export {

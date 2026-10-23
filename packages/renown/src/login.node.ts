@@ -87,7 +87,9 @@ export async function openBrowser(url: string): Promise<void> {
   if (platform === "darwin") {
     await execFileAsync("open", [url]);
   } else if (platform === "win32") {
-    await execFileAsync("cmd", ["/c", "start", "", url]);
+    // Not `cmd /c start`: cmd splits the command line at each `&`, so the
+    // browser got only the URL's first query parameter.
+    await execFileAsync("rundll32", ["url.dll,FileProtocolHandler", url]);
   } else {
     await execFileAsync("xdg-open", [url]);
   }

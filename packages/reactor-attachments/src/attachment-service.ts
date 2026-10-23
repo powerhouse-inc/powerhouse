@@ -93,14 +93,16 @@ export class AttachmentService implements IAttachmentService {
         `clientHash must be a 64-character lowercase hex string, got: ${options.clientHash}`,
       );
     }
+    // Zero is a real size: an empty file has a well-defined hash (the hash of
+    // no bytes) and is stored like any other. Mail carries them, and refusing
+    // one failed the whole step that tried to ingest the message.
     if (
       options.sizeBytes === undefined ||
-      !Number.isInteger(options.sizeBytes) ||
-      options.sizeBytes <= 0 ||
-      !Number.isSafeInteger(options.sizeBytes)
+      !Number.isSafeInteger(options.sizeBytes) ||
+      options.sizeBytes < 0
     ) {
       throw new Error(
-        "sizeBytes must be a positive safe integer when clientHash is provided",
+        "sizeBytes must be a non-negative safe integer when clientHash is provided",
       );
     }
 

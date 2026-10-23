@@ -46,6 +46,7 @@ import {
 import { createRequire } from "node:module";
 import { dirname as pathDirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { initSync, parse } from "es-module-lexer";
 import {
   acquireLock,
   LOCK_STALE_MS,
@@ -141,39 +142,32 @@ export function vendorRelativePath(vendorUrl: string): string {
   return `../__vendor__/${file}`;
 }
 
-// Import/export specifier positions in emitted ES output, minified included:
-// static imports/re-exports, side-effect imports, and dynamic import(). The
-// lookbehind keeps member calls like `map.import("x")` out.
-const SPECIFIER_PATTERNS = [
-  /(?<![.\w$])import\s*\(\s*["']([^"']+)["']/g,
-  /(?<![.\w$])import\s*[^"'()]*?from\s*["']([^"']+)["']/g,
-  /(?<![.\w$])export\s*[^"'()]*?from\s*["']([^"']+)["']/g,
-  /(?<![.\w$])import\s*["']([^"']+)["']/g,
-];
+// Static imports, re-exports and string-literal dynamic imports, parsed, so
+// import-like text in strings and comments doesn't count.
+function importSpecifiers(code: string): string[] {
+  initSync();
+  const [imports] = parse(code);
+  return imports.flatMap((specifier) =>
+    specifier.d === -2 || specifier.n === undefined ? [] : [specifier.n],
+  );
+}
 
 /**
  * Module specifiers a worker cannot resolve: anything that is not relative,
  * root-relative, or an http(s)/data/blob URL. Used as a post-build guard so a
  * leftover bare (or `node:`) import fails the build with a name instead of
  * shipping a worker that dies on its first import statement.
- *
- * Expects minified (comment-free) output: a raw-text scan cannot tell a real
- * import from a JSDoc code sample, and unminified kysely/viem are full of the
- * latter. The build below always minifies for exactly this reason.
  */
 export function findDisallowedSpecifiers(code: string): string[] {
   const found = new Set<string>();
-  for (const pattern of SPECIFIER_PATTERNS) {
-    for (const match of code.matchAll(pattern)) {
-      const spec = match[1];
-      if (
-        !spec.startsWith("./") &&
-        !spec.startsWith("../") &&
-        !spec.startsWith("/") &&
-        !/^(https?:|data:|blob:)/.test(spec)
-      ) {
-        found.add(spec);
-      }
+  for (const spec of importSpecifiers(code)) {
+    if (
+      !spec.startsWith("./") &&
+      !spec.startsWith("../") &&
+      !spec.startsWith("/") &&
+      !/^(https?:|data:|blob:)/.test(spec)
+    ) {
+      found.add(spec);
     }
   }
   return [...found].sort();
@@ -581,17 +575,14 @@ export function publishDirAtomic(tmpDir: string, outDir: string): void {
 }
 
 // Relative specifiers in import positions, used to walk the emitted graph.
-const RELATIVE_SPECIFIER_PATTERNS = SPECIFIER_PATTERNS;
-
 function findRelativeSpecifiers(code: string): string[] {
-  const found = new Set<string>();
-  for (const pattern of RELATIVE_SPECIFIER_PATTERNS) {
-    for (const match of code.matchAll(pattern)) {
-      const spec = match[1];
-      if (spec.startsWith("./") || spec.startsWith("../")) found.add(spec);
-    }
-  }
-  return [...found];
+  return [
+    ...new Set(
+      importSpecifiers(code).filter(
+        (spec) => spec.startsWith("./") || spec.startsWith("../"),
+      ),
+    ),
+  ];
 }
 
 // Normalize a bundle-relative path: forward slashes, `.`/`..` folded. Paths
@@ -707,13 +698,17 @@ export function workerSafeVendorImports(
   for (const [spec, url] of Object.entries(vendorImports)) {
     const entryFile = url.slice(url.lastIndexOf("/") + 1);
     if (!existsSync(join(vendorDir, entryFile))) continue;
-    const clean = walkBundleGraph(
-      vendorDir,
-      entryFile,
-      (_file, code) =>
-        findDisallowedSpecifiers(code).length === 0 &&
-        findWorkerUnsafeMarkers(code).length === 0,
-    );
+    const clean = walkBundleGraph(vendorDir, entryFile, (_file, code) => {
+      // A chunk the lexer can't parse can't be vouched for: the worker bundles it instead.
+      try {
+        return (
+          findDisallowedSpecifiers(code).length === 0 &&
+          findWorkerUnsafeMarkers(code).length === 0
+        );
+      } catch {
+        return false;
+      }
+    });
     if (clean) safe[spec] = url;
   }
   return safe;

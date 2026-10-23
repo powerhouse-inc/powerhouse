@@ -1035,6 +1035,60 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     expect(doc17).toBeDefined();
   });
 
+  it("should read no further than the target revision when walking a stream", async () => {
+    const docId = "test-warm-walk";
+    const docType = "powerhouse/document-model";
+
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations(createCreateDocumentOperation(docId, docType));
+    });
+
+    const operations: Operation[] = [];
+    for (let i = 1; i <= 25; i++) {
+      operations.push(createTestOperation(docId, { index: i, skip: 0 }));
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of operations) {
+        txn.addOperations(op);
+      }
+    });
+
+    await cache.getState(docId, "global", "main", 10);
+
+    const getSince = operationStore.getSince.bind(operationStore);
+    const globalReads: number[] = [];
+    vi.spyOn(operationStore, "getSince").mockImplementation(async (...args) => {
+      const result = await getSince(...args);
+      if (args[1] === "global") globalReads.push(result.results.length);
+      return result;
+    });
+
+    const applied: number[] = [];
+    vi.mocked(registry.getModule).mockReturnValue({
+      reducer: (
+        doc: PHDocument,
+        _action: unknown,
+        _dispatch: unknown,
+        options: { replayOptions: { operation: Operation } },
+      ) => {
+        applied.push(options.replayOptions.operation.index);
+        return doc;
+      },
+      utils: documentModelDocumentModelModule.utils,
+    } as never);
+
+    for (let revision = 11; revision <= 25; revision++) {
+      await cache.getState(docId, "global", "main", revision);
+    }
+
+    expect(applied).toEqual(Array.from({ length: 15 }, (_, i) => i + 11));
+    expect(globalReads).toHaveLength(15);
+    for (const rows of globalReads) {
+      expect(rows).toBeLessThanOrEqual(2);
+    }
+  });
+
   it("should cache result after warm rebuild", async () => {
     const docId = "test-warm-4";
     const docType = "powerhouse/document-model";

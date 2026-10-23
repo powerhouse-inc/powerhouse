@@ -1,3 +1,32 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **builder-tools,shared,ph-cli:** an svg or png favicon builds with its type, as icon.svg or icon.png, and index.html links it ([c404c23227](https://github.com/powerhouse-inc/powerhouse/commit/c404c23227))
+- **builder-tools,connect:** a loading shell that fails to prerender shows in studio's overlay and log, naming each error and its component's source line ([ebfb1e2d30](https://github.com/powerhouse-inc/powerhouse/commit/ebfb1e2d30))
+- **builder-tools,connect-core,connect,ph-cli:** routes generation takes settings tab overrides, fails on two routes at one url, and warns on silent drops in builds and studio ([35461fda2c](https://github.com/powerhouse-inc/powerhouse/commit/35461fda2c))
+- **builder-tools,connect,ph-cli,reactor-api:** studio works with an installed connect and the packages it loads: route deps pre-bundled, the tree live and watched, a vite cache per server ([3bf42449fb](https://github.com/powerhouse-inc/powerhouse/commit/3bf42449fb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

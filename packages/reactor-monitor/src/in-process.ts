@@ -112,6 +112,7 @@ export async function provisionInProcess(
     client: built.module.client,
     inspector: toMonitorInspector(built.inspector),
     admin: built.inspector,
+    processorLevers: built.inspector,
     dbQuery: built.dbQuery,
     syncManager:
       syncManager && syncInspector

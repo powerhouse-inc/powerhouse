@@ -273,13 +273,19 @@ export class DriveClient implements IDriveClient {
       nodeIdentifier,
     );
     const driveId = await this.resolveReference(driveIdentifier, signal);
-    const nodeId = await this.resolveReference(nodeIdentifier, signal);
     const drive = await this.client.get<DocumentDriveDocument>(
       driveId,
       undefined,
       signal,
     );
-    const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+    // A folder is a node, not a document: a resolver that reads documents
+    // cannot resolve its id. Only an identifier that is no node's id is
+    // resolved, as a file's slug.
+    const nodes = drive.state.global.nodes;
+    const nodeId = nodes.some((n) => n.id === nodeIdentifier)
+      ? nodeIdentifier
+      : await this.resolveReference(nodeIdentifier, signal);
+    const node = nodes.find((n) => n.id === nodeId);
 
     if (!node) {
       // No FileNode, but the document may still exist as an orphan (relationship

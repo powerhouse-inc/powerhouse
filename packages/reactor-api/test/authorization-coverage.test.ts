@@ -5,6 +5,7 @@ import { AnalyticsSubgraph } from "../src/graphql/analytics-subgraph.js";
 import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
 import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { InspectionAdminSubgraph } from "../src/graphql/inspection/admin-subgraph.js";
 import { InspectionSubgraph } from "../src/graphql/inspection/subgraph.js";
 import { PackagesSubgraph } from "../src/graphql/packages/subgraph.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
@@ -201,6 +202,11 @@ const SUBGRAPHS: Record<string, () => BaseSubgraph> = {
         documentModelRegistry: {},
         facts: {},
       },
+    } as unknown as SubgraphArgs),
+  "inspection-admin": () =>
+    new InspectionAdminSubgraph({
+      ...mockArgs,
+      inspection: { admin: {} },
     } as unknown as SubgraphArgs),
   analytics: () => new AnalyticsSubgraph(mockArgs),
   "document-model": () =>

@@ -1,4 +1,7 @@
-import type { IProcessorManager } from "@powerhousedao/shared/processors";
+import type {
+  IProcessorManager,
+  ProcessorRerunOptions,
+} from "@powerhousedao/shared/processors";
 import type {
   IDocumentIntegrityService,
   RebuildResult,
@@ -220,6 +223,8 @@ export class ReactorInspector
         status: processor.status,
         lastError: processor.lastError,
         lastErrorTimestamp: processor.lastErrorTimestamp,
+        floor: processor.floor,
+        clearable: typeof processor.record.processor.clear === "function",
       })),
     );
   }
@@ -286,6 +291,19 @@ export class ReactorInspector
       );
     }
     return processor.retry();
+  }
+
+  rerunProcessor(
+    processorId: string,
+    options: ProcessorRerunOptions,
+  ): Promise<void> {
+    const manager = this.components.processorManager;
+    if (!manager) {
+      return Promise.reject(
+        unsupported("Rerunning a processor", NO_PROCESSORS),
+      );
+    }
+    return manager.rerun(processorId, options);
   }
 
   sweepCatchUp(): Promise<SweepResult[]> {

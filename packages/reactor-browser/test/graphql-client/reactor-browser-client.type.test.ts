@@ -11,6 +11,7 @@ describe("IReactorBrowserClient", () => {
   it("exposes exactly the agreed members", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
+      | "find"
       | "subscribe"
       | "execute"
       | "getOperations"

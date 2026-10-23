@@ -142,6 +142,8 @@ export type WireInspectorProcessor = {
   readonly status: string;
   readonly lastError: string | null;
   readonly lastErrorTimestampUtcMs: number | null;
+  readonly floor: number;
+  readonly clearable: boolean;
 };
 
 export type WireStorageHealth = {
@@ -360,6 +362,8 @@ export const INSPECTION_WIRE_FIELDS = {
     "status",
     "lastError",
     "lastErrorTimestampUtcMs",
+    "floor",
+    "clearable",
   ]),
   InspectionStorageHealth: fieldsOf<WireStorageHealth>()([
     "tracked",
@@ -436,6 +440,6 @@ export const INSPECTION_ROOT_FIELDS: {
 
 /** Ordinals pass 2^31, so these are `Float` rather than `Int`. */
 export const INSPECTION_ORDINAL_FIELDS = {
-  InspectionProcessor: ["lastOrdinal"],
+  InspectionProcessor: ["lastOrdinal", "floor"],
   InspectionCursor: ["cursorOrdinal", "liveAckOrdinal", "liveLatestOrdinal"],
 } as const satisfies Record<string, readonly string[]>;

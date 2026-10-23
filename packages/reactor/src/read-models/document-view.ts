@@ -42,6 +42,43 @@ import type {
 
 type Database = StorageDatabase & DocumentViewDatabase;
 
+/** JSON.stringify writes a lone surrogate as an escape, or leaves it raw. */
+const LONE_SURROGATE_ESCAPE = /\\u[dD][89a-fA-F][0-9a-fA-F]{2}/;
+
+/**
+ * Replaces lone surrogates in a parsed state's strings and keys with U+FFFD,
+ * in place. jsonb rejects them ("invalid input syntax for type json"), so a
+ * reducer that cuts a string inside a surrogate pair would otherwise fail every
+ * commit of its document and hold the cursor below it for good. `source` is the
+ * JSON text the value came from; most states skip the walk on its check.
+ */
+function withWellFormedStrings(value: unknown, source: string): unknown {
+  if (source.isWellFormed() && !LONE_SURROGATE_ESCAPE.test(source)) {
+    return value;
+  }
+  return toWellFormedDeep(value);
+}
+
+function toWellFormedDeep(value: unknown): unknown {
+  if (typeof value === "string") return value.toWellFormed();
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i] = toWellFormedDeep(value[i]);
+    }
+    return value;
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      const fixed = toWellFormedDeep(record[key]);
+      const wellFormedKey = key.toWellFormed();
+      if (wellFormedKey !== key) delete record[key];
+      record[wellFormedKey] = fixed;
+    }
+  }
+  return value;
+}
+
 /**
  * What a single-document read of a deleted document returns. A listing omits a
  * deleted document under either value.
@@ -138,7 +175,10 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
         let fullState: Record<string, unknown>;
         try {
-          fullState = JSON.parse(resultingState) as Record<string, unknown>;
+          fullState = withWellFormedStrings(
+            JSON.parse(resultingState),
+            resultingState,
+          ) as Record<string, unknown>;
         } catch (error) {
           throw new Error(
             `Failed to parse resultingState for operation ${operation.id || "unknown"}: ${error instanceof Error ? error.message : String(error)}`,
@@ -163,6 +203,15 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             operationType !== "UPGRADE_DOCUMENT" &&
             operationType !== "DELETE_DOCUMENT" &&
             scope !== "header");
+
+        // Likewise for `name`: SET_NAME is a global op, so only SET_NAME,
+        // global ops and CREATE/UPGRADE echo the current name.
+        const preserveHeaderName =
+          denied ||
+          (operationType !== "CREATE_DOCUMENT" &&
+            operationType !== "UPGRADE_DOCUMENT" &&
+            operationType !== "SET_NAME" &&
+            scope !== "global");
 
         if (operationType === "DELETE_DOCUMENT" && !denied) {
           const now = new Date();
@@ -273,7 +322,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           // write pay to decompress and ship a copy of the state it was about
           // to overwrite.
           const needsExistingContent =
-            scopeName === "header" && preserveHeaderMeta;
+            scopeName === "header" &&
+            (preserveHeaderMeta || preserveHeaderName);
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
@@ -310,7 +360,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             if (typeof headerSlug === "string") {
               slug = headerSlug;
             }
-            if (typeof headerName === "string") {
+            if (typeof headerName === "string" && !preserveHeaderName) {
               name = headerName;
             }
 
@@ -319,8 +369,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
                 string,
                 unknown
               >;
-              if (existingHeader && "meta" in existingHeader) {
+              if (preserveHeaderMeta && "meta" in existingHeader) {
                 newState.meta = existingHeader.meta;
+              }
+              if (preserveHeaderName && "name" in existingHeader) {
+                newState.name = existingHeader.name;
               }
             }
 

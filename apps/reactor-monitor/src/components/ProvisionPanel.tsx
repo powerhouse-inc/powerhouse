@@ -34,7 +34,7 @@ export type ProvisionRequest = {
   readonly syncMode: ProvisionSyncMode;
   /** Required for `remote`: the reactor's GraphQL endpoint. */
   readonly remoteUrl?: string;
-  /** `remote` only; held in memory, never persisted. */
+  /** `remote` only; kept in the tab's session storage, by the remote's url. */
   readonly bearer?: string;
   /**
    * Built reactors only; `none` leaves the reactor without a byte store, and is
@@ -151,7 +151,7 @@ export function ProvisionPanel({
                 autoComplete="off"
                 className="rm-secret"
                 onChange={(e) => setBearer(e.target.value)}
-                placeholder="optional; kept in memory only"
+                placeholder="optional; kept for this tab only"
                 spellCheck={false}
                 type="text"
                 value={bearer}

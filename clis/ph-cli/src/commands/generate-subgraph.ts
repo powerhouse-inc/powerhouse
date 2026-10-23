@@ -1,6 +1,6 @@
 import { debugArgs } from "@powerhousedao/shared/clis/args";
 import { command, flag, option, optional, string } from "cmd-ts";
-import { Directory, File } from "../utils/fs-args.js";
+import { File, ModuleDir } from "../utils/fs-args.js";
 import { skipInstallArgs } from "../utils/install-added-dependencies.js";
 
 export const generateSubgraphCmd = command({
@@ -21,10 +21,10 @@ export const generateSubgraphCmd = command({
         "Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen",
     }),
     dir: option({
-      type: optional(Directory),
+      type: optional(ModuleDir),
       long: "dir",
       description:
-        "Name of the directory of an existing subgraph to re-generate",
+        "Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph)",
     }),
     all: flag({
       long: "all",

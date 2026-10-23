@@ -17,9 +17,10 @@ import {
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
-  AdminGateNote,
   adminGateFor,
+  OperatorGateNote,
   operatorGateFor,
+  processorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
@@ -33,6 +34,8 @@ import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
   buildDescriptor as buildDescriptorFromForm,
   createMonitorWorker,
+  remoteHeaders,
+  setRemoteBearer,
 } from "./provisioning.js";
 import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
@@ -106,8 +109,19 @@ function ReadyPanel({
   const admin = adminGateFor(reactor);
   const sql = sqlGateFor(reactor);
   const operator = operatorGateFor(reactor);
+  const takeBearer =
+    reactor.kind === "remote"
+      ? async (bearer: string) => {
+          setRemoteBearer(reactor.url, bearer);
+          await recheck();
+        }
+      : undefined;
   const operational = (body: ReactNode): ReactNode =>
-    operator.enabled ? body : <AdminGateNote gate={operator} />;
+    operator.enabled ? (
+      body
+    ) : (
+      <OperatorGateNote gate={operator} onBearer={takeBearer} />
+    );
 
   switch (tab) {
     case "Overview":
@@ -147,9 +161,9 @@ function ReadyPanel({
     case "Processors":
       return operational(
         <ProcessorsTab
-          admin={admin}
+          admin={processorGateFor(reactor)}
           inspector={reactor.inspector}
-          levers={reactor.admin}
+          levers={reactor.processorLevers}
         />,
       );
     case "Catch-up":
@@ -358,11 +372,20 @@ function AppBody({
  * Re-attaches the live handles a persisted descriptor cannot carry. A worker
  * descriptor's `createWorker` is a function, so it is dropped on save and must
  * be restored from the app's own SharedWorker seam before the descriptor can
- * provision again after a reload. Every other kind round-trips as-is.
+ * provision again after a reload. A remote's headers are dropped too (they
+ * carry its bearer), so it gets back the reader a bearer pasted into its gate
+ * note reaches. Every other kind round-trips as-is.
  */
 function rehydrateDescriptor(descriptor: ReactorDescriptor): ReactorDescriptor {
   if (descriptor.kind === "worker") {
     return { ...descriptor, createWorker: createMonitorWorker };
+  }
+  if (descriptor.kind === "remote" && descriptor.remote) {
+    const { url } = descriptor.remote;
+    return {
+      ...descriptor,
+      remote: { ...descriptor.remote, headers: () => remoteHeaders(url) },
+    };
   }
   return descriptor;
 }
