@@ -54,14 +54,6 @@ function quietLogger(): ILogger {
   return logger as unknown as ILogger;
 }
 
-async function ephemeralPort(): Promise<number> {
-  const server = net.createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as net.AddressInfo;
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return port;
-}
-
 async function isFree(port: number): Promise<boolean> {
   const server = net.createServer();
   return new Promise((resolve) => {
@@ -130,10 +122,9 @@ describe("switchboard handle shutdown (real server)", () => {
       throw new Error("shutdown() must not exit the process");
     });
 
-    const port = await ephemeralPort();
     const host = switchboardRunner.hostSchema.parse({
       name: "lab-switchboard",
-      runner: { module: "m", port },
+      runner: { module: "m", port: 0 },
     });
     const handle = toStartedHandle(
       await switchboardRunner.run(host, {
@@ -144,6 +135,8 @@ describe("switchboard handle shutdown (real server)", () => {
       "sb",
     );
     await handle.ready;
+    const { origin } = handle.outputs as switchboardRunner.SwitchboardOutputs;
+    const port = Number(new URL(origin).port);
     const reactorModule = owned?.reactorModule;
     if (!reactorModule) throw new Error("the server built no reactor module");
     const kill = vi.spyOn(reactorModule.reactor, "kill");
