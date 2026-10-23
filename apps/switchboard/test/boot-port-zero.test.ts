@@ -74,9 +74,12 @@ describe("booting Switchboard on port 0", () => {
     const graphql = await fetch(`http://localhost:${port}/graphql`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ query: "{ __typename }" }),
+      // Routed to a subgraph, which the gateway fetches at its own port.
+      body: JSON.stringify({ query: "{ system { __typename } }" }),
     });
-    expect(graphql.status).toBe(200);
+    expect(await graphql.json()).toEqual({
+      data: { system: { __typename: "SystemInfo" } },
+    });
     expect(defaultDriveUrl).toBe(`http://localhost:${port}/d/default-drive`);
   }, 60_000);
 

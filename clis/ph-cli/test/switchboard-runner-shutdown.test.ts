@@ -170,7 +170,14 @@ describe("switchboard handle shutdown (real server)", () => {
       const outputs = handle.outputs as switchboardRunner.SwitchboardOutputs;
       const port = Number(new URL(outputs.origin).port);
       expect(port).toBeGreaterThan(0);
-      expect(outputs.endpoints.graphql).toBe(`${outputs.origin}/graphql`);
+      const graphql = await fetch(outputs.endpoints.graphql, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "{ system { __typename } }" }),
+      });
+      expect(await graphql.json()).toEqual({
+        data: { system: { __typename: "SystemInfo" } },
+      });
       const drives = Object.values(outputs.drives);
       expect(drives.length).toBeGreaterThan(0);
       for (const drive of drives) {
