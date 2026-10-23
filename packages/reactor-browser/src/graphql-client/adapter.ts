@@ -27,8 +27,8 @@ export type RevisionsListSelection = GetDocumentQueryFields["revisionsList"];
  * `createPresignedHeader`: the creation signature is not fetchable over
  * GraphQL and is not part of the operation signing payload.
  *
- * The read path never fetches operation history, so `operations` is a map of
- * the document's known scopes to empty arrays.
+ * The read path never fetches operation history, so `operations` maps each
+ * scope of the document's state and revisions to an empty array.
  *
  * `branch` is the branch the document was read from. The GraphQL type does not
  * carry it, so it has to be passed back in by the caller; it defaults to the
@@ -42,7 +42,7 @@ export function phDocumentFromGetDocument<
     header: phDocumentHeaderFromGetDocument(document, branch),
     state,
     initialState: state,
-    operations: emptyOperationsForScopes(document.revisionsList),
+    operations: emptyOperationsForScopes(state, document.revisionsList),
     clipboard: [],
   };
   return phDocument as TDocument;
@@ -114,9 +114,14 @@ function phDocumentHeaderFromGetDocument(
 }
 
 function emptyOperationsForScopes(
+  state: PHBaseState,
   revisionsList: RevisionsListSelection,
 ): DocumentOperations {
-  return Object.fromEntries(revisionsList.map((r) => [r.scope, []]));
+  const scopes = new Set([
+    ...Object.keys(state),
+    ...revisionsList.map((r) => r.scope),
+  ]);
+  return Object.fromEntries([...scopes].map((scope) => [scope, []]));
 }
 
 /** The `DateTime` scalar deserializes as either an ISO string or a `Date`. */

@@ -1,4 +1,5 @@
 import type {
+  DocumentOperations,
   OperationWithContext,
   PHAuthState,
   PHDocument,
@@ -41,6 +42,21 @@ import type {
 } from "./types.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;
+
+/**
+ * A snapshot carries no operation history: each scope the document has maps
+ * to an empty list, so `operations[scope]` is an array as the type says.
+ */
+function emptyOperations(
+  state: Record<string, unknown>,
+  header: PHDocumentHeader,
+): DocumentOperations {
+  const scopes = new Set([
+    ...Object.keys(state),
+    ...Object.keys(header.revision),
+  ]);
+  return Object.fromEntries([...scopes].map((scope) => [scope, []]));
+}
 
 /** JSON.stringify writes a lone surrogate as an escape, or leaves it raw. */
 const LONE_SURROGATE_ESCAPE = /\\u[dD][89a-fA-F][0-9a-fA-F]{2}/;
@@ -559,7 +575,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       header,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
-      operations: {},
+      operations: emptyOperations(state, header),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       initialState: state as any,
       clipboard: [],
@@ -670,7 +686,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         header,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         state: state as any,
-        operations: {},
+        operations: emptyOperations(state, header),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         initialState: state as any,
         clipboard: [],
