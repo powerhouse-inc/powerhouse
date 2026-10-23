@@ -12,7 +12,6 @@ import {
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
-import { workerTrustPolicyIssue } from "./boot-preconditions.mjs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -164,20 +163,6 @@ export async function getRenownTrustPolicyConfig(
       initArgs: { ...options, ...(self ? { self } : {}) },
     },
   };
-}
-
-/**
- * Fails the boot when pooled workers would refuse every signed write the
- * in-process executor accepts: a `self` Renown source gives workers no trust
- * policy spec, so under authEnforcement they apply the default.
- */
-export function assertWorkerTrustPolicy(config: {
-  workers: number;
-  authEnforcement: boolean;
-  renownSource: "self" | "remote";
-}): void {
-  const issue = workerTrustPolicyIssue(config);
-  if (issue) throw new Error(issue);
 }
 
 function ownIdentity(

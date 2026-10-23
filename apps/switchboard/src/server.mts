@@ -140,7 +140,7 @@ import {
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
 import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
-import { workerPoolIssues } from "./boot-preconditions.mjs";
+import { reactorDbUrlOf, workerPoolIssues } from "./boot-preconditions.mjs";
 import {
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
@@ -522,10 +522,7 @@ async function initServer(
     process.env.DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
 
-  const reactorDbUrl =
-    options.dbPath ??
-    process.env.PH_REACTOR_DATABASE_URL ??
-    process.env.PH_SWITCHBOARD_DATABASE_URL;
+  const reactorDbUrl = reactorDbUrlOf(options.dbPath, process.env);
   // Postgres URLs or local PGlite dirs under the project's .ph tree. When
   // the caller passes in a reactor, the reactor-side PGLite dir is unused —
   // the caller owns its own storage. Only the read-model dir is still needed

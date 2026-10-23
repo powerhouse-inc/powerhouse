@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  reactorDbUrlOf,
   switchboardBootFactsFromEnv,
   switchboardBootIssues,
   type SwitchboardBootFacts,
@@ -130,5 +131,19 @@ describe("switchboardBootFactsFromEnv", () => {
     ]);
     expect(facts.workers).toBe(0);
     expect(facts.projectionWorker).toBe(false);
+  });
+});
+
+describe("reactorDbUrlOf", () => {
+  it("prefers dbPath, then PH_REACTOR_DATABASE_URL, then PH_SWITCHBOARD_DATABASE_URL", () => {
+    const env = {
+      PH_REACTOR_DATABASE_URL: "./r",
+      PH_SWITCHBOARD_DATABASE_URL: POSTGRES,
+    };
+    expect(reactorDbUrlOf("./d", env)).toBe("./d");
+    expect(reactorDbUrlOf(undefined, env)).toBe("./r");
+    expect(
+      reactorDbUrlOf(undefined, { PH_SWITCHBOARD_DATABASE_URL: POSTGRES }),
+    ).toBe(POSTGRES);
   });
 });

@@ -1,6 +1,12 @@
-import type { RenownConfig } from "@powerhousedao/reactor-api";
+import type {
+  RenownConfig,
+  resolveRenownConfig,
+} from "@powerhousedao/reactor-api";
 import type { ILogger } from "document-model";
-import type { SwitchboardBootFacts } from "./boot-preconditions.mjs";
+import {
+  reactorDbUrlOf,
+  type SwitchboardBootFacts,
+} from "./boot-preconditions.mjs";
 import { resolveProjectionWorkerOptions } from "./projection-worker.mjs";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
 import { resolveWorkerPoolOptions } from "./worker-pool.mjs";
@@ -9,6 +15,7 @@ import { resolveWorkerPoolOptions } from "./worker-pool.mjs";
 
 export {
   projectionWorkerIssues,
+  reactorDbUrlOf,
   switchboardBootIssues,
   workerPoolIssues,
   workerTrustPolicyIssue,
@@ -27,6 +34,23 @@ const silent: ILogger = {
   child: () => silent,
 };
 
+let renownConfigLoad: Promise<typeof resolveRenownConfig> | undefined;
+
+/** reactor-api's root loads the cwd .env into process.env at import; undo that. */
+function loadResolveRenownConfig(): Promise<typeof resolveRenownConfig> {
+  return (renownConfigLoad ??= (async () => {
+    const before = { ...process.env };
+    try {
+      return (await import("@powerhousedao/reactor-api")).resolveRenownConfig;
+    } finally {
+      for (const name of Object.keys(process.env)) {
+        if (!(name in before)) delete process.env[name];
+      }
+      Object.assign(process.env, before);
+    }
+  })());
+}
+
 export interface BootFactsOptions {
   dev: boolean;
   /** The server's `dbPath` option (a host's readModel.url). */
@@ -40,8 +64,7 @@ export async function switchboardBootFactsFromEnv(
   env: NodeJS.ProcessEnv,
   options: BootFactsOptions,
 ): Promise<{ facts: SwitchboardBootFacts; issues: string[] }> {
-  // Lazy: reactor-api's root loads the cwd .env at import.
-  const { resolveRenownConfig } = await import("@powerhousedao/reactor-api");
+  const resolveRenown = await loadResolveRenownConfig();
   const issues: string[] = [];
   let workers = 0;
   try {
@@ -59,14 +82,10 @@ export async function switchboardBootFactsFromEnv(
     dev: options.dev,
     workers,
     projectionWorker,
-    reactorDbUrl:
-      options.dbPath ??
-      env.PH_REACTOR_DATABASE_URL ??
-      env.PH_SWITCHBOARD_DATABASE_URL,
+    reactorDbUrl: reactorDbUrlOf(options.dbPath, env),
     authEnforcement:
       resolveReactorFeatureFlags(env).flags.authEnforcement === true,
-    renownSource: resolveRenownConfig(options.configuredRenown, env, silent)
-      .source,
+    renownSource: resolveRenown(options.configuredRenown, env, silent).source,
   };
   return { facts, issues };
 }

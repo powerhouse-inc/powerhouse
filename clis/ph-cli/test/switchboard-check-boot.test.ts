@@ -70,6 +70,36 @@ describe("switchboard runner checkBoot", () => {
     expect(await issuesOf(postgres, { REACTOR_WORKERS: "2" })).toEqual([]);
   });
 
+  it("ignores an empty readModel.url, as the server's dbPath option does", async () => {
+    const postgres = host({
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: { kind: "postgres", url: POSTGRES },
+            readModel: { url: "" },
+          },
+        },
+      },
+    });
+    expect(await issuesOf(postgres, { REACTOR_WORKERS: "2" })).toEqual([]);
+  });
+
+  it("takes dbPath from a non-empty readModel.url", async () => {
+    const readModel = host({
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: { kind: "path", dataDir: "./.ph/r" },
+            readModel: { url: POSTGRES },
+          },
+        },
+      },
+    });
+    expect(await issuesOf(readModel, { REACTOR_WORKERS: "2" })).toEqual([]);
+  });
+
   it("refuses workers under auth enforcement with a self Renown source", async () => {
     const env = {
       REACTOR_WORKERS: "2",

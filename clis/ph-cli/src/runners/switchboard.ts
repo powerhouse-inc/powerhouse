@@ -2,7 +2,6 @@ import {
   defineHostSchemas,
   drivesSchema,
   mergeDrivePlan,
-  primaryBackend,
   protocolConflicts,
   resolveDriveDeclaration,
   resolveHostPlugins,
@@ -18,7 +17,8 @@ import {
 import path from "node:path";
 import {
   applyReactorEnvProjection,
-  projectedReactorEnv,
+  switchboardBootProjection,
+  switchboardDevMode,
 } from "./reactor-env.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
@@ -114,8 +114,7 @@ async function toSwitchboardArgs(
   return {
     ...classic,
     port: runner.port ?? classic.port,
-    // The verb owns dev mode; `runner.dev` is the host-file spelling of it.
-    dev: devMode || runner.dev === true ? true : classic.dev,
+    dev: switchboardDevMode(devMode, runner) ? true : classic.dev,
     // A declared composition owns the carved switches (R2): the mcp plugin's
     // presence sets it, its absence must deactivate. Classic path: classic.
     mcp: composed ? undefined : classic.mcp,
@@ -454,12 +453,13 @@ export async function checkBoot(
   const { getConfig } = await import("@powerhousedao/config/node");
   const { switchboardBootFactsFromEnv, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");
-  const readModelUrl: unknown = primaryBackend(host.reactor)?.readModel?.url;
+  const projection = switchboardBootProjection(host.reactor, ctx.env);
   const { facts, issues: parseIssues } = await switchboardBootFactsFromEnv(
-    projectedReactorEnv(host.reactor, ctx.env),
+    { ...ctx.env, ...projection.env },
     {
-      dev: ctx.verb === "dev" || host.runner.dev === true,
-      ...(typeof readModelUrl === "string" ? { dbPath: readModelUrl } : {}),
+      // As the `dev` verb starts it.
+      dev: switchboardDevMode(ctx.verb === "dev", host.runner),
+      ...(projection.dbPath !== undefined ? { dbPath: projection.dbPath } : {}),
       configuredRenown: getConfig(
         path.join(ctx.projectRoot, "powerhouse.config.json"),
       ).auth?.renown,
