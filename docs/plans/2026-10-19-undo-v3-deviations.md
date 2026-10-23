@@ -451,19 +451,9 @@ Applying a tail without re-deriving.
   carrying it inert, so its target applies again. `signatureVerification:
   "log"` logs such a repeat and stores it; the write cache used to keep the
   target retracted where a cold derivation brought it back.
-- `IOperationStore` has a new required member, `findRepeatedOperationIds`:
-  the op ids among those given that are stored at more than one row of a
-  stream. The write cache asks it for the tail's op ids; on base-reducer 3
-  an op id derives from the action id, so a repeated op id is a repeated
-  action id. Rewound copies count, so after a reshuffle a tail holding a
-  re-appended row re-derives once more than it must. Kysely groups by
-  `opId` on the existing unique index; Hypercore scans the stream, as its
-  `findOperationIds` does.
-- Not changed: the executor's single-row append still decides on
-  `findReferencing` alone (`needsFullHistory`, then `applyByRule`'s
-  `rewritesScope`), so under `"log"` a row repeating a RETRACT's id is
-  applied incrementally and the stored state differs from a cold
-  derivation. Pinned `it.fails` in `derivation/log-mode-repeat.test.ts`.
+- Superseded in round 4: the write cache's repeated-id lookup
+  (`findRepeatedOperationIds`, removed) and the executor gap this round
+  pinned `it.fails` (closed in round 3b).
 
 The remote controller.
 
@@ -518,15 +508,42 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   falls back to sequential execution when a later write repeats a stored
   RETRACT's id. It also falls back when two later writes share an id.
 - The write cache still asks `findRepeatedOperationIds`, a superset that
-  re-derives after a reshuffle. That cost was recorded in round 3 and is
-  not changed here.
+  re-derives after a reshuffle (changed in round 4).
+
+## Architecture fixes, round 4 (2026-10-23)
+
+- The write cache's `holds` is the set of ids that stored RETRACT rows
+  carry, read with `getAllOperationsByIds` over the tail's op ids, as the
+  executor reads it. An op id derives from its action id on every version,
+  so those rows include every stored RETRACT carrying a tail row's id;
+  a tail RETRACT matches itself but re-derives anyway. A log-mode repeat of
+  a content id no longer re-derives the write cache; the undo-targets cache
+  keeps its superset (`base.ids`) and still does. `findRepeatedOperationIds`
+  is gone from `IOperationStore`, Kysely, Hypercore and the mocks, so the
+  branch adds one store member, `getAllOperationsByIds`.
+- The version arch test also flags `<`, `>`, `<=`, `>=`, `==`, `!=` and
+  their strict forms against a number on a capability row's `version`
+  (`caps.version`, `capabilitiesOf(v)?.version`), reversed forms included.
+  The receiver must name caps or capabilities, so other records' `version`
+  fields (auth state, tokens, refs) pass. No production file tripped it.
+- `RemoteDocumentController.pull` without a document id heads the document
+  with the host's signature policy and per-type versions through the same
+  light-client selection `GraphQLReactorClient` uses, now in
+  `graphql-client/create-defaults.ts`. The first push creates the remote
+  with `CreateDocument` from that header and the initial state instead of
+  `CreateEmptyDocument`, so the host runs the creator's versions and an
+  undo before the first push is a signed RETRACT on base-reducer 3.
+  `RemoteControllerGraphQLClient` gains `GetCreateDefaults` and
+  `GetCreateProtocolVersions` (a public type change); a host without
+  `createDefaults` refuses a new document as `getCreateSignaturePolicy`
+  does.
+- Behaviour change: `RemoteDocumentController.from` over a new document
+  creates the remote under the wrapped document's header (its id and
+  versions) instead of letting the host choose. A `new XController()`
+  header is base-reducer 2, so such a document is created at 2 and its
+  undo stays the v2 NOOP chain on both sides.
 
 ## Known gaps
-
-- A new document has no remote header until the remote controller's first
-  push creates it, so an undo before that runs under the local flagless
-  header (base-reducer 2) and pushes a NOOP even to a host that creates the
-  document at 3.
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
 - The decision walk uses a single reducer on upgraded models.
