@@ -25,6 +25,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -287,6 +288,8 @@ export function ProcessorsTab({
   const [priority, setPriority] = useState<CatchUpPriorityState | undefined>();
   const [settingPriority, setSettingPriority] = useState(false);
   const [priorityError, setPriorityError] = useState<string | null>(null);
+  // Bumped as a set starts and ends: a read begun before it is stale.
+  const prioritySets = useRef(0);
 
   const load = useCallback(async () => {
     try {
@@ -303,10 +306,12 @@ export function ProcessorsTab({
     } catch {
       setCatchUp(undefined);
     }
+    const sets = prioritySets.current;
     try {
-      setPriority(await inspector.getCatchUpPriority());
+      const read = await inspector.getCatchUpPriority();
+      if (prioritySets.current === sets) setPriority(read);
     } catch {
-      setPriority(undefined);
+      if (prioritySets.current === sets) setPriority(undefined);
     }
   }, [inspector]);
 
@@ -398,12 +403,14 @@ export function ProcessorsTab({
         return;
       }
       setSettingPriority(true);
+      prioritySets.current++;
       try {
         await levers.setCatchUpPriority(prioritySettingOf(value));
         setPriorityError(null);
       } catch (e) {
         setPriorityError(e instanceof Error ? e.message : String(e));
       } finally {
+        prioritySets.current++;
         setSettingPriority(false);
       }
       await load();

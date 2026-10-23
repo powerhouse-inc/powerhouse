@@ -521,6 +521,48 @@ describe("ProcessorsTab catch-up priority", () => {
     });
   });
 
+  it("ignores a read begun before a setting landed", async () => {
+    let current = priorityAt();
+    let releaseStale!: () => void;
+    let reads = 0;
+    const inspector = {
+      ...inspectorOf([processor()]),
+      getCatchUpPriority: () => {
+        const read = current;
+        // The second read, a refresh, answers only after the setting.
+        if (++reads !== 2) return Promise.resolve(read);
+        return new Promise<CatchUpPriorityState>(
+          (resolve) => (releaseStale = () => resolve(read)),
+        );
+      },
+    } as unknown as MonitorInspector;
+    const levers = leversStub();
+    levers.setCatchUpPriority.mockImplementation(() => {
+      current = priorityAt({ mode: "fixed", level: 0, reason: "fixed" });
+      return Promise.resolve();
+    });
+    const view = render(
+      <ProcessorsTab inspector={inspector} levers={levers} />,
+    );
+    await waitFor(() => expect(prioritySelect(view).disabled).toBe(false));
+
+    fireEvent.click(view.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(reads).toBe(2));
+    fireEvent.change(prioritySelect(view), { target: { value: "0" } });
+    await waitFor(() =>
+      expect(view.getByTestId("catch-up-priority").textContent).toBe(
+        "Priority 0 · fixed",
+      ),
+    );
+
+    releaseStale();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(view.getByTestId("catch-up-priority").textContent).toBe(
+      "Priority 0 · fixed",
+    );
+    expect(prioritySelect(view).value).toBe("0");
+  });
+
   it("reports a refused setting", async () => {
     const levers = leversStub();
     levers.setCatchUpPriority.mockRejectedValue(new Error("not now"));
