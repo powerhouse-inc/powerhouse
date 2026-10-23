@@ -276,7 +276,11 @@ export function migratedPackageJson(
   return updated;
 }
 
-export async function migrate(version: string, projectDir = process.cwd()) {
+export async function migrate(
+  version: string,
+  projectDir = process.cwd(),
+  options: { skipInstall?: boolean } = {},
+) {
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
@@ -315,8 +319,10 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   const project = buildTsMorphProject(projectDir);
   console.log("Fixing legacy import paths...");
   fixLegacyImportPaths(project, packageJson.name);
-  console.log("Installing dependencies...");
-  await installProjectDependencies(projectDir);
+  if (!options.skipInstall) {
+    console.log("Installing dependencies...");
+    await installProjectDependencies(projectDir);
+  }
   console.log("Re-generating code...");
   await generateAll(project);
   await project.save();

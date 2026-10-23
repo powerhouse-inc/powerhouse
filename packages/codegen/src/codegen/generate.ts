@@ -39,6 +39,7 @@ import {
   getAppMetadata,
   getEditorDirNames,
   getEditorMetadata,
+  getNonProcessorDirNames,
   getOrCreateDirectory,
   getProcessorDirNames,
   getProcessorMetadata,
@@ -324,13 +325,19 @@ export async function generateProcessor(
   });
 }
 
-/* Runs generate for each directory found in the project's `processors` directory  */
+/* Runs generate for each processor found in the project's `processors` directory.
+ * Folders that hold no processor, such as shared helpers, are left alone. */
 export async function generateAllProcessors(project: Project) {
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
     "processors",
   );
   const projectDir = processorsDir.getParentOrThrow().getPath();
+  for (const dirName of getNonProcessorDirNames(project)) {
+    console.warn(
+      `[codegen] processors/${dirName} is not a processor (no processor.ts or *FactoryBuilder export, not registered in processors/connect.ts or switchboard.ts); left as it is`,
+    );
+  }
   const processorsToGenerate = getProcessorDirNames(project).map((dirName) =>
     getProcessorMetadata(project, dirName),
   );
