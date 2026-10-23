@@ -1,5 +1,4 @@
 import { PGlite } from "@electric-sql/pglite";
-import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import { NodeFS } from "@electric-sql/pglite/nodefs";
 import { childLogger } from "document-model";
 import type { Knex } from "knex";
@@ -10,6 +9,7 @@ import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
 import { PGLITE_UTC_PARSERS } from "../pglite/parsers.js";
+import type { PGliteLike } from "../pglite/pglite-like.js";
 import {
   createDurableNodeFs,
   resolvePgliteFsync,
@@ -76,17 +76,17 @@ export function isPostgresConnectionString(connectionString: string) {
 /**
  * Optional factory used by callers (e.g. Switchboard) to inject a
  * version-specific PGLite instance — e.g. `pglite-legacy-02` when an existing
- * data dir was created with an older PG major. Wire-compatible with the
- * current PGLite class for the surface knex-pglite uses.
+ * data dir was created with an older PG major, or a worker-backed
+ * `ThreadedPGlite`. Anything meeting {@link PGliteLike} works.
  */
 export type PgliteFactory = (
   connectionString: string | undefined,
-) => PGliteType;
+) => PGliteLike;
 
 export interface DbClient {
   db: Db;
   knex: Knex;
-  pglite: PGliteType | undefined;
+  pglite: PGliteLike | undefined;
 }
 
 // One client per connection string: two PGlite instances on one PGDATA corrupt it.
@@ -104,7 +104,7 @@ export function getDbClient(
 
   const isPg = connectionString && isPostgresConnectionString(connectionString);
   const client = isPg ? "pg" : (ClientPgLite as typeof knex.Client);
-  const pgliteInstance: PGliteType | undefined = isPg
+  const pgliteInstance: PGliteLike | undefined = isPg
     ? undefined
     : pgliteFactory
       ? pgliteFactory(connectionString)

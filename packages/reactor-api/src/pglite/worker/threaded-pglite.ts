@@ -1,7 +1,9 @@
 import type { QueryOptions, Results } from "@electric-sql/pglite";
 import { childLogger, type ILogger } from "document-model";
 import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { Worker, type ResourceLimits } from "node:worker_threads";
+import type { PGliteLike } from "../pglite-like.js";
 import { fromPGliteErrorInfo } from "./error-info.js";
 import {
   PGliteWorkerClosedError,
@@ -76,7 +78,7 @@ export function resolvePgliteWorkerMemoryMb(
  * The instance is a plain extensible object, since knex stores its own
  * bookkeeping on the connection.
  */
-export class ThreadedPGlite {
+export class ThreadedPGlite implements PGliteLike {
   readonly label: string;
   /** Settles once the worker has opened the store; rejects with {@link PGliteWorkerInitError}. */
   readonly waitReady: Promise<void>;
@@ -105,7 +107,13 @@ export class ThreadedPGlite {
     const memoryLimitMb =
       options.memoryLimitMb ?? resolvePgliteWorkerMemoryMb(process.env);
 
-    this.worker = new Worker(options.workerScript ?? pgliteWorkerEntryPath, {
+    const workerScript = options.workerScript ?? pgliteWorkerEntryPath;
+    if (workerScript === null) {
+      throw new Error(
+        "No PGlite worker script is available: build @powerhousedao/reactor-api or pass workerScript",
+      );
+    }
+    this.worker = new Worker(workerScript, {
       name: `pglite:${this.label}`,
       resourceLimits: { maxOldGenerationSizeMb: memoryLimitMb },
     });
@@ -466,14 +474,37 @@ function toResults<T>(result: WorkerResults): Results<T> {
   return out;
 }
 
-/** The built worker entry; chunking may place this module in `dist/` or `dist/src/pglite/`. */
-function resolvePgliteWorkerEntryPath(): string {
+/**
+ * The worker script: the built entry (chunking may place this module in
+ * `dist/` or `dist/src/pglite/`), or, when this module runs from its
+ * TypeScript source, a bootstrap that loads the entry through tsx. Null when
+ * neither is available.
+ */
+function resolvePgliteWorkerEntryPath(): string | null {
+  if (/\.m?ts$/.test(new URL(import.meta.url).pathname)) {
+    return resolveSourceBootstrap();
+  }
   const candidates = [
     "./src/pglite/worker/entry.mjs",
     "./worker/entry.mjs",
     "./entry.mjs",
   ].map((relative) => fileUrlToPath(new URL(relative, import.meta.url)));
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+function resolveSourceBootstrap(): string | null {
+  const bootstrap = fileUrlToPath(
+    new URL("./source-bootstrap.mjs", import.meta.url),
+  );
+  if (!existsSync(bootstrap)) {
+    return null;
+  }
+  try {
+    createRequire(import.meta.url).resolve("tsx/esm/api");
+  } catch {
+    return null;
+  }
+  return bootstrap;
 }
 
 function fileUrlToPath(url: URL): string {
@@ -487,5 +518,5 @@ function fileUrlToPath(url: URL): string {
   return pathname;
 }
 
-/** Absolute path of the built worker entry, for `new Worker(...)`. */
+/** Absolute path of the worker script for `new Worker(...)`; null when none can run here. */
 export const pgliteWorkerEntryPath = resolvePgliteWorkerEntryPath();

@@ -7,8 +7,9 @@ import {
 } from "../../../src/pglite/worker/errors.js";
 import {
   DEFAULT_PGLITE_WORKER_MEMORY_MB,
+  ThreadedPGlite,
+  pgliteWorkerEntryPath,
   resolvePgliteWorkerMemoryMb,
-  type ThreadedPGlite,
 } from "../../../src/pglite/worker/threaded-pglite.js";
 import {
   BOOT_TIMEOUT_MS,
@@ -238,6 +239,19 @@ describe("ThreadedPGlite lifecycle", () => {
       await expect(pg.query("select 1")).rejects.toBeInstanceOf(
         PGliteWorkerExitedError,
       );
+      await pg.close();
+    },
+    BOOT_TIMEOUT_MS,
+  );
+
+  it(
+    "runs from source through the tsx bootstrap when no script is given",
+    async () => {
+      expect(pgliteWorkerEntryPath).toMatch(/source-bootstrap\.mjs$/);
+      const pg = new ThreadedPGlite({ store: memoryStore() });
+      await pg.waitReady;
+      const { rows } = await pg.query<{ v: number }>("select 7 as v");
+      expect(rows[0].v).toBe(7);
       await pg.close();
     },
     BOOT_TIMEOUT_MS,

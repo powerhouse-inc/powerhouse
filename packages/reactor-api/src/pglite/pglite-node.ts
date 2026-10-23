@@ -40,3 +40,4 @@ export {
 } from "./preflight.js";
 export { PGLITE_UTC_PARSERS } from "./parsers.js";
 export * from "./worker/index.js";
+export type { PGliteLike } from "./pglite-like.js";
