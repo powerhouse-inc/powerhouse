@@ -26,7 +26,7 @@ Inside it, the `@powerhousedao/reactor-browser` hooks read the route it is shown
 - `useLinkProps(useNodeTarget(node))` makes a row a real link.
 - `getDriveName(drive)` is the drive's display name; drives made in the UI leave `header.name` empty.
 - `showCreateDocumentModal(type)` opens Connect's create modal, which adds the document to the open folder and opens it.
-- Documents in Connect don't carry their operations, so `document.operations.global` can be undefined; read history with `useDocumentOperations(id, "global")`.
+- Documents in Connect don't carry their operations: `document.operations.global` is an empty array, however long the history. Read history with `useDocumentOperations(id, "global")`, and the operation count with `document.header.revision.global`.
 
 The `reactor-browser` actions do the same work from outside the app: `addFolder(driveId, name, parentId?)`, `renameDriveNode(driveId, nodeId, name)` and `deleteNode(driveId, nodeId)`.
 
