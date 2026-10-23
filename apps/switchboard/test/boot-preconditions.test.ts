@@ -66,8 +66,8 @@ describe("switchboardBootIssues", () => {
 });
 
 describe("switchboardBootFactsFromEnv", () => {
-  it("reads the facts with the server's parsers", () => {
-    const { facts, issues } = switchboardBootFactsFromEnv(
+  it("reads the facts with the server's parsers", async () => {
+    const { facts, issues } = await switchboardBootFactsFromEnv(
       {
         REACTOR_WORKERS: "3",
         REACTOR_PROJECTION_WORKER: "on",
@@ -88,36 +88,39 @@ describe("switchboardBootFactsFromEnv", () => {
     });
   });
 
-  it("prefers dbPath, then PH_REACTOR_DATABASE_URL", () => {
+  it("prefers dbPath, then PH_REACTOR_DATABASE_URL", async () => {
     const env = {
       PH_REACTOR_DATABASE_URL: "./reactor",
       PH_SWITCHBOARD_DATABASE_URL: POSTGRES,
     };
     expect(
-      switchboardBootFactsFromEnv(env, { dev: false }).facts.reactorDbUrl,
+      (await switchboardBootFactsFromEnv(env, { dev: false })).facts
+        .reactorDbUrl,
     ).toBe("./reactor");
     expect(
-      switchboardBootFactsFromEnv(env, { dev: false, dbPath: POSTGRES }).facts
-        .reactorDbUrl,
+      (await switchboardBootFactsFromEnv(env, { dev: false, dbPath: POSTGRES }))
+        .facts.reactorDbUrl,
     ).toBe(POSTGRES);
   });
 
-  it("lets RENOWN_SOURCE win over the configured source", () => {
+  it("lets RENOWN_SOURCE win over the configured source", async () => {
     const configuredRenown = { source: "self" as const };
     expect(
-      switchboardBootFactsFromEnv({}, { dev: false, configuredRenown }).facts
-        .renownSource,
+      (await switchboardBootFactsFromEnv({}, { dev: false, configuredRenown }))
+        .facts.renownSource,
     ).toBe("self");
     expect(
-      switchboardBootFactsFromEnv(
-        { RENOWN_SOURCE: "remote" },
-        { dev: false, configuredRenown },
+      (
+        await switchboardBootFactsFromEnv(
+          { RENOWN_SOURCE: "remote" },
+          { dev: false, configuredRenown },
+        )
       ).facts.renownSource,
     ).toBe("remote");
   });
 
-  it("turns parser errors into issues", () => {
-    const { facts, issues } = switchboardBootFactsFromEnv(
+  it("turns parser errors into issues", async () => {
+    const { facts, issues } = await switchboardBootFactsFromEnv(
       { REACTOR_WORKERS: "lots", REACTOR_PROJECTION_WORKER: "maybe" },
       { dev: false },
     );

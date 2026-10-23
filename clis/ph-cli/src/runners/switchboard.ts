@@ -455,7 +455,7 @@ export async function checkBoot(
   const { switchboardBootFactsFromEnv, switchboardBootIssues } =
     await import("@powerhousedao/switchboard/boot");
   const readModelUrl: unknown = primaryBackend(host.reactor)?.readModel?.url;
-  const { facts, issues: parseIssues } = switchboardBootFactsFromEnv(
+  const { facts, issues: parseIssues } = await switchboardBootFactsFromEnv(
     projectedReactorEnv(host.reactor, ctx.env),
     {
       dev: ctx.verb === "dev" || host.runner.dev === true,

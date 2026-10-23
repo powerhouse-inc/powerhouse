@@ -1,7 +1,4 @@
-import {
-  resolveRenownConfig,
-  type RenownConfig,
-} from "@powerhousedao/reactor-api/renown-config";
+import type { RenownConfig } from "@powerhousedao/reactor-api";
 import type { ILogger } from "document-model";
 import type { SwitchboardBootFacts } from "./boot-preconditions.mjs";
 import { resolveProjectionWorkerOptions } from "./projection-worker.mjs";
@@ -39,10 +36,12 @@ export interface BootFactsOptions {
 }
 
 /** The server's boot facts from `env`; a parser error becomes an issue and its fact stays off. */
-export function switchboardBootFactsFromEnv(
+export async function switchboardBootFactsFromEnv(
   env: NodeJS.ProcessEnv,
   options: BootFactsOptions,
-): { facts: SwitchboardBootFacts; issues: string[] } {
+): Promise<{ facts: SwitchboardBootFacts; issues: string[] }> {
+  // Lazy: reactor-api's root loads the cwd .env at import.
+  const { resolveRenownConfig } = await import("@powerhousedao/reactor-api");
   const issues: string[] = [];
   let workers = 0;
   try {

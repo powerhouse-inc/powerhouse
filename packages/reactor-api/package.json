@@ -34,11 +34,6 @@
       "types": "./dist/src/graphql/subgraph-types.d.mts",
       "import": "./dist/src/graphql/subgraph-types.mjs"
     },
-    "./renown-config": {
-      "source": "./src/services/renown-config.ts",
-      "types": "./dist/src/services/renown-config.d.mts",
-      "import": "./dist/src/services/renown-config.mjs"
-    },
     "./test": {
       "import": "./test/index.ts"
     }

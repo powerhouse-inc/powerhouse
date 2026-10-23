@@ -18,6 +18,7 @@ async function checkEnv(
 ): Promise<Record<string, string | undefined>> {
   if (envFile === undefined) {
     loadProjectEnv(projectRoot);
+    // A snapshot: a .env a runner's checkBoot loads later never reaches it.
     return { ...process.env };
   }
   try {
