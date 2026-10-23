@@ -1,6 +1,5 @@
 import type { Action } from "./actions.js";
 import type { BaseReducerCapabilities } from "./base-reducer-protocol.js";
-import { RULE_EXEMPT_SCOPES } from "./base-reducer-protocol.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import { undoRedoTargetsOf } from "./retraction.js";
@@ -56,16 +55,15 @@ export function undoRedoBatch<TState extends PHBaseState>(
   };
 
   const targetsOf = (scope: string): UndoRedoTargets =>
-    RULE_EXEMPT_SCOPES.has(scope)
-      ? {}
-      : undoRedoTargetsOf(
-          {
-            ...document,
-            operations: { ...document.operations, [scope]: streamOf(scope) },
-          },
-          scope,
-          reducer,
-        );
+    undoRedoTargetsOf(
+      {
+        ...document,
+        operations: { ...document.operations, [scope]: streamOf(scope) },
+      },
+      caps,
+      scope,
+      reducer,
+    );
 
   return {
     actions,

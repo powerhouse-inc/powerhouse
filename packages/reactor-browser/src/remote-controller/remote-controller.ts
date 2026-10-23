@@ -275,7 +275,7 @@ export class RemoteDocumentController<
   private undoOrRedo(type: "UNDO" | "REDO", scope: string): this {
     const caps = baseReducerCapabilities(this.inner.header);
     const targets = undoNeedsTargets(caps)
-      ? undoRedoTargetsOf(this.inner.document, scope, this.stateReducer())
+      ? undoRedoTargetsOf(this.inner.document, caps, scope, this.stateReducer())
       : undefined;
     for (const action of undoRedoActions(caps, type, scope, targets)) {
       this.applyAction(action);

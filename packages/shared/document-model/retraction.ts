@@ -1,7 +1,8 @@
 import { castDraft, create, unsafe } from "mutative";
 import type { Action } from "./actions.js";
 import { baseActionReducer } from "./base-action-reducer.js";
-import { RULE_EXEMPT_SCOPES } from "./base-reducer-protocol.js";
+import type { BaseReducerCapabilities } from "./base-reducer-protocol.js";
+import { derivesByRule, RULE_EXEMPT_SCOPES } from "./base-reducer-protocol.js";
 import { isDenied } from "./denied.js";
 import type { PHDocument } from "./documents.js";
 import {
@@ -369,12 +370,17 @@ export function redoTarget(
   return undefined;
 }
 
-/** The targets of `scope` derived from the rows `document` holds; for a client holding the whole log. */
+/**
+ * The targets of `scope` derived from the rows `document` holds; for a client
+ * holding the whole log. None where the rule does not derive `scope`.
+ */
 export function undoRedoTargetsOf<TState extends PHBaseState>(
   document: PHDocument<TState>,
+  caps: BaseReducerCapabilities,
   scope: string,
   reducer: StateReducer<TState>,
 ): UndoRedoTargets {
+  if (!derivesByRule(caps, scope)) return {};
   const rows = document.operations[scope] ?? [];
   const { applied } = deriveScope(document, rows, () => reducer, scope);
   return {

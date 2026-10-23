@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Action } from "./actions.js";
+import { capabilitiesOf } from "./base-reducer-protocol.js";
 import { AUTH_NO_GRANT_REASON } from "./denied.js";
 import { baseCreateDocument, type PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
@@ -11,6 +12,7 @@ import {
   redoTarget,
   reduceOne,
   retractedActionIds,
+  undoRedoTargetsOf,
   undoTarget,
   type ReducerFor,
   type ScopeVersions,
@@ -750,4 +752,34 @@ describe("review fixes", () => {
     const { applied } = derive(rows);
     expect(undoTarget(rows, applied)).toBe("a");
   });
+});
+
+describe("undoRedoTargetsOf", () => {
+  const withRows = (scope: string, ...actions: Action[]) => {
+    const document = createDoc();
+    return {
+      ...document,
+      operations: { ...document.operations, [scope]: stream(...actions) },
+    };
+  };
+
+  it("finds the targets of a scope the rule derives", () => {
+    const document = withRows("global", add("a"), add("b"), R("b"));
+    expect(
+      undoRedoTargetsOf(document, capabilitiesOf(3), "global", listReducer),
+    ).toEqual({ undoTarget: "a", redoTarget: "R(b)" });
+  });
+
+  it.each(["auth", "document"])(
+    "finds none in the %s scope, which the rule does not derive",
+    (scope) => {
+      const document = withRows(
+        scope,
+        action("a", "ADD", { item: "a" }, scope),
+      );
+      expect(
+        undoRedoTargetsOf(document, capabilitiesOf(3), scope, listReducer),
+      ).toEqual({});
+    },
+  );
 });

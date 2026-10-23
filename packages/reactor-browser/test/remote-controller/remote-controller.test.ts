@@ -3,7 +3,10 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { creationActions } from "@powerhousedao/shared/document-model";
+import {
+  creationActions,
+  NoUndoRedoTargetError,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
   GetDocumentOperationsQuery,
@@ -1342,6 +1345,47 @@ describe("RemoteDocumentController", () => {
       expect(() => controller.undo()).toThrow("nothing to undo");
       expect(controller.status.pendingActionCount).toBe(1);
     });
+
+    it.each(["auth", "document"])(
+      "finds no target in the %s scope on base-reducer 3",
+      async (scope) => {
+        const controller = await RemoteDocumentController.pull(
+          DocumentModelController,
+          { client: remoteAt(3), documentId: "doc-1" },
+        );
+        controller.setModelName({ name: "local" });
+
+        expect(() => controller.undo(scope)).toThrow(NoUndoRedoTargetError);
+        expect(() => controller.redo(scope)).toThrow(NoUndoRedoTargetError);
+        expect(controller.status.pendingActionCount).toBe(1);
+      },
+    );
+
+    // Unchanged below base-reducer 3: the local UNDO and REDO fail as before.
+    it.each([
+      [1, "auth", /UNDO is not permitted/, /REDO is not permitted/],
+      [1, "document", /is not iterable/, /no operations in the clipboard/],
+      [2, "auth", /UNDO is not permitted/, /REDO is not permitted/],
+      [
+        2,
+        "document",
+        /no more operations to undo/,
+        /no operations in the clipboard/,
+      ],
+    ] as const)(
+      "still fails a local undo below base-reducer 3 (v%s %s)",
+      async (baseReducer, scope, undoError, redoError) => {
+        const controller = await RemoteDocumentController.pull(
+          DocumentModelController,
+          { client: remoteAt(baseReducer), documentId: "doc-1" },
+        );
+        controller.setModelName({ name: "local" });
+
+        expect(() => controller.undo(scope)).toThrow(undoError);
+        expect(() => controller.redo(scope)).toThrow(redoError);
+        expect(controller.status.pendingActionCount).toBe(1);
+      },
+    );
 
     it("replays a pending RETRACT on rebase", async () => {
       const v3 = (revision: number) => ({
