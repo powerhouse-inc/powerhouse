@@ -3,6 +3,7 @@ import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
+  CatchUpPriority,
   DriveCollectionId,
   EventBus,
   IN_MEMORY_PGLITE_STORAGE_FACTS,
@@ -13,7 +14,9 @@ import {
   ReactorClientBuilder,
   createHybridProjectionCoordinatorFactory,
   instrumentPgPool,
+  parseCatchUpPriority,
   parseDriveUrl,
+  type CatchUpPrioritySetting,
   type Database,
   type InProcessReactorClientModule,
   type JwtHandler,
@@ -27,6 +30,8 @@ import {
   PackageManagementService,
   PackagesSubgraph,
   initializeAndStartAPI,
+  NodeEventLoopDelay,
+  RequestLoadRecorder,
   reportFailure,
   resolveRenownConfig,
   runDetached,
@@ -66,6 +71,7 @@ import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { register } from "node:module";
+import type http from "node:http";
 import net from "node:net";
 import path from "path";
 import { Pool } from "pg";
@@ -674,6 +680,10 @@ async function initServer(
   // Set only when we build the reactor ourselves; a caller-provided one keeps
   // its own lifecycle and must not be torn down here.
   let ownedReactorModule: InProcessReactorClientModule | undefined;
+  // Paces an owned reactor's processor backfills; fed by this server's load.
+  const catchUpPriority = new CatchUpPriority(
+    catchUpPrioritySettingFromEnv(process.env.PH_CATCH_UP_PRIORITY, logger),
+  );
   // The models workers and workflow pieces import; only on a reactor built here.
   let workerModels: ModelManifestSource | undefined;
   // Bound once the api serves the renown read model; see `localCredentialCheck`.
@@ -748,7 +758,8 @@ async function initServer(
         legacyProcessorIds:
           process.env.REACTOR_LEGACY_PROCESSOR_IDS !== "false",
       })
-      .withUnsupportedStoredDocuments(unsupportedStoredDocuments);
+      .withUnsupportedStoredDocuments(unsupportedStoredDocuments)
+      .withCatchUpPriority(catchUpPriority);
 
     // Feeds `module.pools`, which ReactorInstrumentation reads to emit
     // reactor.db.pool.{acquire.wait_duration,size,idle,waiting}. Without this
@@ -1350,9 +1361,13 @@ async function initServer(
   // Ahead of the api: the runtime's store lives in the read-model database
   // that dispose closes, and its children outlive the reactor otherwise.
   // Memoized: the reactor's shutdown hook and a caller can both reach it.
+  const stopCatchUpLoad = ownedReactorModule
+    ? feedCatchUpPriority(catchUpPriority, api.httpServer)
+    : () => {};
   let apiDrained: Promise<void> | undefined;
   const drainApi = () =>
     (apiDrained ??= (async () => {
+      stopCatchUpLoad();
       if (pluginHost) await pluginHost.observe("onShutdown");
       await privacy?.stop();
       await workflowsRetry?.stop();
@@ -1718,4 +1733,39 @@ export {
 
 if (import.meta.main) {
   await startSwitchboard({ fatalErrorShutdown: true });
+}
+
+/** `PH_CATCH_UP_PRIORITY`: `dynamic` (the default) or a fixed level `0`-`7`. */
+function catchUpPrioritySettingFromEnv(
+  value: string | undefined,
+  logger: ILogger,
+): CatchUpPrioritySetting {
+  const setting = parseCatchUpPriority(value);
+  if (setting) return setting;
+  logger.warn(
+    "PH_CATCH_UP_PRIORITY=@Value is neither dynamic nor a level 0-7; using dynamic",
+    JSON.stringify(value),
+  );
+  return { mode: "dynamic" };
+}
+
+/**
+ * Feeds the priority this server's request load and main-thread event-loop
+ * delay, and ticks its controller every second. Returns the stop.
+ */
+function feedCatchUpPriority(
+  priority: CatchUpPriority,
+  server: http.Server,
+): () => void {
+  const recorder = new RequestLoadRecorder({
+    eventLoopDelay: new NodeEventLoopDelay(),
+  });
+  recorder.attach(server);
+  priority.setLoadSource(recorder);
+  const stopTicking = priority.startTicking();
+  return () => {
+    stopTicking();
+    priority.setLoadSource(undefined);
+    recorder.stop();
+  };
 }

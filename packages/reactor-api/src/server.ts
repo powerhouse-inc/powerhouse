@@ -1307,6 +1307,7 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    httpServer,
     httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,

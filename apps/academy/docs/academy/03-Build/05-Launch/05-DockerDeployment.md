@@ -256,6 +256,7 @@ For a single-database deployment (the normal case, and what the repo's compose f
 | `PH_PGLITE_WORKER_MEMORY_MB`         | JavaScript heap limit of each PGlite worker thread, in MB; PGlite's own WebAssembly memory is outside it                               | `1024`               |
 | `PH_PGLITE_VACUUM_FULL_QUIET_MS`     | A store over 256 MB at open gets a VACUUM FULL once it has had no writes for this long, in ms                                          | `60000`              |
 | `PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS` | The longest that VACUUM FULL waits for a quiet store, counted from open, in ms; `0` waits for quiet only                               | `1800000`            |
+| `PH_CATCH_UP_PRIORITY`               | Pace of processor catch-up against requests: `dynamic` follows load (levels 1-6); `0` (requests only) to `7` (catch-up only) is fixed  | `dynamic`            |
 | `SKIP_DB_MIGRATIONS`                 | `true` = skip the entrypoint's Postgres migration run                                                                                  | _unset_              |
 
 #### Core Configuration
