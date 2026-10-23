@@ -1395,6 +1395,7 @@ describe("RemoteDocumentController", () => {
       initialGlobal: Record<string, unknown>,
       content: { type: string; input: object }[],
       hostGlobal: Record<string, unknown>,
+      baseReducer = 3,
     ) {
       const created = documentModelDocumentModelModule.utils.createDocument({
         global: initialGlobal as never,
@@ -1412,8 +1413,8 @@ describe("RemoteDocumentController", () => {
         action: { ...action, context: null },
       });
       const items = [
-        ...creationActions(created, { "base-reducer": 3 }).map((action, i) =>
-          row(i, action as never),
+        ...creationActions(created, { "base-reducer": baseReducer }).map(
+          (action, i) => row(i, action as never),
         ),
         ...content.map(({ type, input }, i) =>
           row(i, {
@@ -1437,7 +1438,7 @@ describe("RemoteDocumentController", () => {
             { scope: "global", revision: content.length },
           ],
         }),
-        protocolVersions: { "base-reducer": 3 },
+        protocolVersions: { "base-reducer": baseReducer },
       };
       return createMockClient({
         GetDocumentWithOperations: vi
@@ -1465,6 +1466,24 @@ describe("RemoteDocumentController", () => {
       expect(controller.state.global.description).toBe("");
       await controller.push();
       expect(pushedActions(client)[0].input).toEqual({ target: "action-0" });
+    });
+
+    it("undoes below base-reducer 3 from the state the document was created with", async () => {
+      const client = remoteCreatedWith(
+        { name: "Team" },
+        [{ type: "SET_MODEL_DESCRIPTION", input: { description: "d" } }],
+        { name: "Team", description: "d" },
+        2,
+      );
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      controller.undo();
+
+      expect(controller.state.global.name).toBe("Team");
+      expect(controller.state.global.description).toBe("");
     });
 
     it("resolves the undo target against the state the document was created with", async () => {
