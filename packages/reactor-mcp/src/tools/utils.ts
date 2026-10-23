@@ -151,11 +151,6 @@ const BASE_ACTION_SCOPES: Record<string, string | null> = {
   NOOP: null,
 };
 
-/** How many steps an UNDO or REDO input asks for; one when it names none. */
-export function undoRedoCount(input: unknown): number {
-  return countInput(input) ?? 1;
-}
-
 function countInput(input: unknown): number | undefined {
   if (typeof input === "number") return input;
   if (
