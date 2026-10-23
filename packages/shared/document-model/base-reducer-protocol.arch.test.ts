@@ -26,11 +26,16 @@ const VERSION =
   /(?:\b\w*(?:protocolVersion|baseReducerVersion)\b|\[\s*["']base-reducer["']\s*\])/
     .source;
 const OPERATOR = /(?:[!=]==?|[<>]=?)/.source;
+/** A capability row's `version`: `caps.version`, `capabilitiesOf(v)?.version`. */
+const CAPS_VERSION =
+  /\b\w*(?:[cC]aps|[cC]apabilit\w*)(?:\([^()]*\))?\??\.version\b/.source;
 /** A comparison against a version number instead of a capability read. */
 const VERSION_COMPARE = new RegExp(
   [
     `${VERSION}\\s*\\)?\\s*${OPERATOR}\\s*\\d`,
     `\\d\\s*${OPERATOR}\\s*\\(?\\s*${VERSION}`,
+    `${CAPS_VERSION}\\s*\\)?\\s*${OPERATOR}\\s*\\d`,
+    `\\d\\s*${OPERATOR}\\s*\\(?\\s*${CAPS_VERSION}`,
     /\bversion\s*[!=]==\s*3\b/.source,
   ].join("|"),
 );
@@ -203,6 +208,16 @@ describe("the version seam detector", () => {
     ],
     ["a relational comparison", `if (protocolVersion >= 3) run();`],
     ["a reversed comparison", `if (3 <= baseReducerVersion(header)) run();`],
+    ["a capability row's version compared", `if (caps.version >= 3) run();`],
+    ["a capability row's version equated", `if (caps.version === 2) run();`],
+    [
+      "a looked-up row's version compared",
+      `if (baseReducerCapabilities(header).version > 2) run();`,
+    ],
+    [
+      "a reversed optional row comparison",
+      `if (3 !== capabilitiesFor(versions)?.version) run();`,
+    ],
     ["a Map read", `const v = versions.get("base-reducer");`],
     [
       "a destructured read",
@@ -230,6 +245,17 @@ describe("the version seam detector", () => {
       `switch (version) {\n  // case 1:\n  default: log("case 2:");\n}`,
     ],
     ["building a header", `return { ...rest, "base-reducer": fitted };`],
+    ["passing the row's version on", `const protocolVersion = caps.version;`],
+    ["naming the row's version in a refusal", `caps.version,`],
+    [
+      "defaulting a missing row's version",
+      `capabilitiesFor(versions)?.version ?? 0,`,
+    ],
+    [
+      "the row's version in a message",
+      "`no state reducers for base-reducer ${caps.version}`,",
+    ],
+    ["another record's version compared", `if (token.version !== 1) throw;`],
   ])("passes %s", (_name, source) => {
     expect(versionSeamHits(source)).toEqual([]);
   });
