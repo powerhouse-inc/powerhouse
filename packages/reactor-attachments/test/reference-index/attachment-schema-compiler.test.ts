@@ -11,6 +11,40 @@ const REF_A = `attachment://v1:${"a".repeat(64)}` as const;
 const REF_B = `attachment://v1:${"b".repeat(64)}` as const;
 const REF_C = `attachment://v2:${"c".repeat(64)}` as const;
 
+describe("developer scalar prelude", () => {
+  it("compiles an input using a developer scalar", () => {
+    const module = documentModule([
+      specification(1, [
+        operation(
+          "ATTACH_FILE",
+          "input AttachFileInput { ref: AttachmentRef! value: Amount_Fiat }",
+        ),
+      ]),
+    ]);
+    const extractor = new AttachmentSchemaCompiler().forModuleAction(
+      module,
+      "ATTACH_FILE",
+    );
+    expect(
+      extractor.extract(action("ATTACH_FILE", { ref: REF_A, value: REF_B })),
+    ).toEqual([REF_A]);
+  });
+
+  it("does not add the host-only JSONObject scalar", () => {
+    const module = documentModule([
+      specification(1, [
+        operation(
+          "ATTACH_FILE",
+          "input AttachFileInput { ref: AttachmentRef! value: JSONObject }",
+        ),
+      ]),
+    ]);
+    expect(() =>
+      new AttachmentSchemaCompiler().forModuleAction(module, "ATTACH_FILE"),
+    ).toThrow("the effective GraphQL schema is invalid");
+  });
+});
+
 function operation(
   name: string | null,
   schema: string | null,

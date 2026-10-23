@@ -2223,6 +2223,7 @@ describe("GraphQLManager", () => {
           emit = handler;
         },
         onSubgraphsChange: vi.fn(),
+        onScalarsChange: vi.fn(),
         onProcessorsChange: vi.fn(),
       } as unknown as PackageManager;
       setupEventListeners(

@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo } from "react";
 import {
   hiddenQueryTypeDefDoc,
   initialSchemaStr,
+  standardLibScalars,
   typeDefsDoc,
 } from "../constants/documents.js";
 
@@ -32,6 +33,15 @@ type TSchemaContextProps = {
   children: React.ReactNode;
 };
 
+/* A model may declare a standard library scalar itself, as the attachment docs
+ do for AttachmentRef; the standard library already declares it once. */
+function isNotStandardLibScalar(definition: DefinitionNode) {
+  return !(
+    definition.kind === Kind.SCALAR_TYPE_DEFINITION &&
+    standardLibScalars.has(definition.name.value)
+  );
+}
+
 /*
  Combines the always-included definitions and all user SDLs into a single
  DocumentNode and builds a schema in one shot. Building atomically lets
@@ -40,7 +50,7 @@ type TSchemaContextProps = {
  validate-then-merge strategy would introduce. Throws if the combined SDL is
  invalid; callers are expected to catch.
 */
-function makeSharedSchemaSdl(
+export function makeSharedSchemaSdl(
   globalStateSchemaSdl?: string,
   localStateSchemaSdl?: string,
   operationSchemasSdl?: string,
@@ -55,7 +65,7 @@ function makeSharedSchemaSdl(
     if (!sdl) continue;
     const ast = safeParseSdl(sdl);
     if (!ast) continue;
-    definitions.push(...ast.definitions);
+    definitions.push(...ast.definitions.filter(isNotStandardLibScalar));
   }
 
   const documentNode: DocumentNode = {

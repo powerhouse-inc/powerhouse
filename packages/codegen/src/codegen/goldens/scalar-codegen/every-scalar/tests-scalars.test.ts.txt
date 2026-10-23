@@ -1,0 +1,35 @@
+import { generateMock } from "document-model/mock";
+import {
+  isScalarFixtureDocument,
+  reducer,
+  setScalars,
+  SetScalarsInputSchema,
+  utils,
+} from "document-models/scalar-fixture/v1";
+import { describe, expect, it } from "vitest";
+
+describe("ScalarsOperations", () => {
+  it("should handle setScalars operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(SetScalarsInputSchema(), {
+      fDateTime: "2024-01-01T00:00:00.000Z",
+      fAddress: "eip155:0x0000000000000000000000000000000000000000",
+      fAttachmentRef:
+        "attachment://v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      fDate: "2024-01-01T00:00:00.000Z",
+      fURL: "https://example.com",
+    });
+
+    const updatedDocument = reducer(document, setScalars(input));
+
+    expect(isScalarFixtureDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "SET_SCALARS",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+});

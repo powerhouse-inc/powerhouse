@@ -96,6 +96,7 @@ import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { setupEventListeners } from "./packages/package-listeners.js";
 import { PackageManager } from "./packages/package-manager.js";
+import type { ScalarRegistry } from "./utils/scalar-types.js";
 import {
   AuthService,
   type CredentialVerifier,
@@ -507,6 +508,7 @@ type SetupGraphQLManagerOptions = {
     extended: Map<string, SubgraphClass[]>;
     core: SubgraphClass[];
   };
+  scalars: ScalarRegistry;
   logger: ILogger;
   authorizationService: IAuthorizationService;
   authService?: AuthService;
@@ -536,6 +538,7 @@ async function setupGraphQLManager({
   analyticsStore,
   syncManager,
   subgraphs,
+  scalars,
   logger,
   authorizationService,
   authService,
@@ -588,6 +591,7 @@ async function setupGraphQLManager({
     subgraphs.core,
     authFetchMiddleware,
     requireAuthFetchMiddleware,
+    scalars,
   );
 
   await graphqlManager.applyPackageSubgraphs(subgraphs.extended);
@@ -1254,6 +1258,7 @@ async function _setupAPI(
       extended: subgraphs,
       core: coreSubgraphs,
     },
+    scalars: packages.getScalarRegistry(),
     logger: logger.child(["graphql-manager"]),
     authorizationService,
     authService,

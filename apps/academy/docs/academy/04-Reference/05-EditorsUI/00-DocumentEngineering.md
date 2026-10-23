@@ -1,10 +1,11 @@
 # Document-Engineering
 
 The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
-Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
 These components are offered through the **Powerhouse Document-Engineering system** with the help of storybook & the Academy documentation.
 
 It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on GraphQL scalars.
+
+Document models use built-in scalars from `document-model/scalars` by name, including `OID` and `EthereumAddress`. See the [built-in scalar names](/academy/Build/DocumentModelCreation/CustomScalars#name-the-export-after-the-scalar) for the full list. To define a scalar for your package, see [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
 
 :::info
 A GraphQL scalar is essentially a primitive, indivisible value in the GraphQL type system.
@@ -12,7 +13,7 @@ Here are the key points to understand:
 
 - **Basic Building Blocks:** Scalars are the basic data types—like String, Int, Float, Boolean, and ID—that represent atomic values.
 - **Leaf Nodes:** Scalars are the "leaves" of a GraphQL query. They can't have any sub-fields, meaning once you hit a scalar in a query, that's the final value.
-- **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem.
+- **Scalars beyond the five GraphQL types:** Use a built-in scalar by name, such as `DateTime`, or define one for your package as described in [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
   :::
 
 ## What are Components?
@@ -35,13 +36,9 @@ The same component that will be used in a document viewer will have a **disabled
 
 ### Scalar Components
 
-Scalars are here to help you define custom fields in your document model schema and speed up the development process.
-There are two applications of scalar components in the document model workflow:
+A scalar component is a form field for one GraphQL scalar. Write the scalar name in the state schema. In the editor, import the component and place it on that field.
 
-1. At the **schema definition** level where you build your schema and write your GraphQL state schema.
-2. At the **frontend / react** level where you import it and place it in your UI to represent the scalar field
-
-These are specialized form components, each corresponding to a GraphQL scalar type (e.g., String, Number, Boolean, Currency, PHID). They are built on top of react-hook-form, offering out-of-the-box validation but must be wrapped with a Form component in order to work properly.
+These are specialized form components, each corresponding to a GraphQL scalar type, such as `String`, `Boolean`, `Currency`, or `PHID`. They are built on top of react-hook-form, with validation and form state management. Wrap them in a `Form` component from the same library.
 
 **Location:** @powerhousedao/document-engineering/scalars  
 https://github.com/powerhouse-inc/document-engineering
@@ -219,7 +216,7 @@ import { ... } from '@powerhousedao/document-engineering/ui';
 
 ### Scalars
 
-For data manipulation and transformation utilities:
+Form components for scalar fields, such as `Form` and `BooleanField`:
 
 ```typescript
 import { ... } from '@powerhousedao/document-engineering/scalars';
@@ -227,7 +224,7 @@ import { ... } from '@powerhousedao/document-engineering/scalars';
 
 ### GraphQL
 
-For GraphQL related utilities and schema definitions:
+The `./graphql` export holds the component library's own GraphQL scalar definitions. Document models and subgraphs don't use them. In their schemas, name a built-in scalar from `document-model/scalars`, or define one as described in [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
 
 ```typescript
 import { ... } from '@powerhousedao/document-engineering/graphql';
@@ -246,13 +243,9 @@ import "@powerhousedao/document-engineering/style.css";
 Within the project, the following import maps are available:
 
 - `#assets` - Assets utilities and components
-- `#scalars` - Scalar transformations and utilities
+- `#scalars` - Form components for scalar fields
 - `#ui` - UI components
 - `#graphql` - GraphQL related utilities
 
 Please don't hesitate to reach out in our discord channels with any questions.  
 Happy designing!
-
-### Up next: Create Custom Scalars
-
-You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Reference/EditorsUI/CreateCustomScalars).

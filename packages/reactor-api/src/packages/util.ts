@@ -56,6 +56,17 @@ export async function loadSubgraphs(
   return loadDependency(packageName, "subgraphs");
 }
 
+/** The header every failed load of a package entry logs, whatever the kind. */
+export function failedLoadHeader(kind: string): string {
+  return `Failed to load ${kind} from @pkg:`;
+}
+
+export async function loadScalars(
+  packageName: string,
+): Promise<Record<string, unknown>> {
+  return loadDependency(packageName, "scalars");
+}
+
 /**
  * Tries to import processors from a package. This function cannot throw.
  */

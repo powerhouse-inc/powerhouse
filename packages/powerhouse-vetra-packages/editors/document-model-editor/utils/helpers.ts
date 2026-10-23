@@ -1,5 +1,3 @@
-import type { Serializable } from "@powerhousedao/document-engineering/graphql";
-import { getPHCustomScalarByTypeName } from "@powerhousedao/document-engineering/graphql";
 import { pascalCase } from "change-case";
 import type {
   ASTNode,
@@ -49,7 +47,8 @@ import {
   STRING_GQL_PRIMITIVE_NAME,
 } from "../constants/graphql-kinds.js";
 import { safeParseSdl } from "../context/schema-context.js";
-import type { Scope } from "../types/documents.js";
+import { standardLibScalars } from "../constants/documents.js";
+import type { Scope, Serializable } from "../types/documents.js";
 
 export function makeStateSchemaNameForScope(modelName: string, scope: string) {
   const modelNamePascalCase = pascalCase(modelName);
@@ -406,22 +405,19 @@ function makeMinimalValueForGqlScalar(
     );
     return null;
   }
-  const scalar = getPHCustomScalarByTypeName(name);
+  const scalar = standardLibScalars.get(name);
   if (!scalar) {
     return null;
   }
-  const existingValueIsValid = scalar.schema.safeParse(existingFieldValue);
-  if (existingValueIsValid.success) {
+  if (name === "Upload") {
+    throw new Error(
+      "The editor cannot derive an initial state value for an Upload field.",
+    );
+  }
+  if (scalar.schema.safeParse(existingFieldValue).success) {
     return existingFieldValue;
   }
-  if (!isNonNull) {
-    return null;
-  }
-  const minimalValue = scalar.getDefaultValue?.();
-  if (minimalValue) {
-    return minimalValue;
-  }
-  return existingFieldValue;
+  return isNonNull ? existingFieldValue : null;
 }
 
 function makeMinimalValueForGqlUnion(
