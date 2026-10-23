@@ -1558,6 +1558,9 @@ importers:
       oxfmt:
         specifier: 'catalog:'
         version: 0.68.0
+      postcss:
+        specifier: ^8.5.29
+        version: 8.5.29
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
