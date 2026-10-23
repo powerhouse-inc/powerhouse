@@ -78,8 +78,7 @@ describe("exportHost", () => {
       members: {},
     });
     expect(exported.host).toEqual((await loadHost(root, "switchboard")).host);
-    const parsed = hostExportSchema.parse(roundTrip(exported));
-    expect(() => backendsToDescriptors(reactorOf(parsed.host))).not.toThrow();
+    expect(hostExportSchema.safeParse(roundTrip(exported)).success).toBe(true);
   });
 
   it("exports a compound's members by folder", async () => {
@@ -87,12 +86,6 @@ describe("exportHost", () => {
     const exported = await exportHost(root, "cli");
     expect(Object.keys(exported.members)).toEqual(["switchboard", "connect"]);
     expect(hostExportSchema.safeParse(roundTrip(exported)).success).toBe(true);
-
-    const standalone = await exportHost(root, "switchboard");
-    expect(
-      backendsToDescriptors(memberReactor(exported, "cli-switchboard")),
-    ).toEqual(backendsToDescriptors(reactorOf(standalone.host)));
-
     const sites = collectTokenSites(memberReactor(exported, "cli-connect"));
     expect(sites.map((site) => site.path)).toContainEqual([
       "backends",
@@ -105,7 +98,8 @@ describe("exportHost", () => {
   it("keeps ${userData} in a desktop member's projected storage", async () => {
     const exported = await exportHost(project("scaffold"), "desktop");
     expect(Object.keys(exported.members)).toEqual(["switchboard", "connect"]);
-    const reactor = memberReactor(exported, "desktop-switchboard");
+    const parsed = hostExportSchema.parse(roundTrip(exported));
+    const reactor = memberReactor(parsed, "desktop-switchboard");
     expect(collectTokenSites(reactor)).toEqual([]);
     expect(backendsToDescriptors(reactor)).toMatchObject([
       {
@@ -116,7 +110,22 @@ describe("exportHost", () => {
     ]);
   });
 
-  it("follows a nested compound's members once", async () => {
+  it("projects an inheriting member like its standalone host", async () => {
+    const root = project("scaffold");
+    const vetra = hostExportSchema.parse(
+      roundTrip(await exportHost(root, "vetra")),
+    );
+    const connect = hostExportSchema.parse(
+      roundTrip(await exportHost(root, "connect")),
+    );
+    const descriptors = backendsToDescriptors(
+      memberReactor(vetra, "vetra-studio"),
+    );
+    expect(descriptors).toMatchObject([{ kind: "worker", name: "main" }]);
+    expect(descriptors).toEqual(backendsToDescriptors(reactorOf(connect.host)));
+  });
+
+  it("follows nested compounds depth-first", async () => {
     const reactor = (name: string) => ({
       name,
       runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
@@ -134,6 +143,46 @@ describe("exportHost", () => {
     });
     const exported = await exportHost(root, "outer");
     expect(Object.keys(exported.members)).toEqual(["inner", "a", "b"]);
+  });
+
+  it("terminates on a children cycle", async () => {
+    const compound = (name: string, child: string) => ({
+      name,
+      runner: { module: "@powerhousedao/host-core/runners/compound" },
+      children: { c: { host: child } },
+    });
+    const root = plainProject({
+      outer: compound("outer", "inner"),
+      inner: compound("inner", "outer"),
+    });
+    const exported = await exportHost(root, "outer");
+    expect(Object.keys(exported.members)).toEqual(["inner", "outer"]);
+  });
+
+  it("refuses a host its schema rejects", async () => {
+    const root = plainProject({
+      typo: {
+        name: "typo",
+        runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
+        reactr: {},
+      },
+    });
+    await expect(exportHost(root, "typo")).rejects.toThrow(
+      /not a valid host export[\s\S]*reactr/,
+    );
+  });
+
+  it("refuses invalid children", async () => {
+    const root = plainProject({
+      stack: {
+        name: "stack",
+        runner: { module: "@powerhousedao/host-core/runners/compound" },
+        children: { x: {} },
+      },
+    });
+    await expect(exportHost(root, "stack")).rejects.toThrow(
+      /invalid `children`/,
+    );
   });
 
   it("refuses an unknown host", async () => {
@@ -180,15 +229,34 @@ describe("hostExportSchema", () => {
     ]);
   });
 
-  it("refuses members on a reactor host", async () => {
-    const value = roundTrip(
+  it("refuses a member no child reaches", async () => {
+    const cli = await cliExport();
+    const reactorHost = roundTrip(
       await exportHost(project("scaffold"), "switchboard"),
     ) as HostExport;
+    for (const value of [cli, reactorHost]) {
+      const members = value.members as Record<string, unknown>;
+      const result = hostExportSchema.safeParse({
+        ...value,
+        members: { ...members, stray: { name: "s", runner: { module: "m" } } },
+      });
+      expect(result.error?.issues.map((issue) => issue.path)).toEqual([
+        ["members", "stray"],
+      ]);
+    }
+  });
+
+  it("names the field a host fails on", async () => {
+    const value = await cliExport();
+    const members = value.members as Record<string, Record<string, unknown>>;
     const result = hostExportSchema.safeParse({
       ...value,
-      members: { connect: value.host },
+      members: { ...members, connect: { ...members.connect, reactr: {} } },
     });
-    expect(result.error?.issues[0]?.path).toEqual(["members"]);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({ path: ["members", "connect"] }),
+    ]);
+    expect(result.error?.issues[0]?.message).toMatch(/reactr/);
   });
 
   it("refuses an unknown top-level key", async () => {
