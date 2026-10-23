@@ -3,7 +3,11 @@ import { ERRNO_CODES } from "@electric-sql/pglite/basefs";
 import type { NodeFS } from "@electric-sql/pglite/nodefs";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { dirBytes, PgliteMaintenance } from "./maintenance.js";
+import {
+  dirBytes,
+  PgliteMaintenance,
+  type MaintenanceGate,
+} from "./maintenance.js";
 import { syncTree } from "./sync-tree.js";
 
 export type NodeFsClass = typeof NodeFS;
@@ -18,6 +22,12 @@ export interface DurableNodeFsOptions {
   maintenanceIntervalMs?: number;
   /** `base/` size at open; default 256 MB; 0 disables. */
   vacuumFullAboveBytes?: number;
+  /** See `MaintenanceOptions.vacuumFullQuietMs`; default 60 s. */
+  vacuumFullQuietMs?: number;
+  /** See `MaintenanceOptions.gate`. */
+  maintenanceGate?: MaintenanceGate;
+  /** Clock for the maintenance quiet window; tests pass their own. */
+  now?: () => number;
   logger?: { warn(message: string): void };
   /** Emscripten abort (a Postgres PANIC, e.g. ENOSPC on WAL). */
   onAbort?: (what: unknown) => void;
@@ -118,6 +128,9 @@ export function createDurableNodeFs(
   const maintenance = new PgliteMaintenance({
     intervalMs: options.maintenanceIntervalMs,
     vacuumFullAboveBytes: options.vacuumFullAboveBytes,
+    vacuumFullQuietMs: options.vacuumFullQuietMs,
+    gate: options.maintenanceGate,
+    now: options.now,
     logger,
   });
 

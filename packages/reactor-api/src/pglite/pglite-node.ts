@@ -8,7 +8,9 @@ export {
 export {
   DEFAULT_MAINTENANCE_INTERVAL_MS,
   DEFAULT_VACUUM_FULL_ABOVE_BYTES,
+  DEFAULT_VACUUM_FULL_QUIET_MS,
   PgliteMaintenance,
+  type MaintenanceGate,
   type MaintenanceLogger,
   type MaintenanceOptions,
   type MaintenanceOutcome,

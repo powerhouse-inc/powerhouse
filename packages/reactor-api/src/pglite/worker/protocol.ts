@@ -29,6 +29,8 @@ export type PGliteWorkerDurableFsOptions = {
   maintenanceIntervalMs?: number;
   /** Undefined keeps the DurableNodeFs default (256 MB); 0 disables. */
   vacuumFullAboveBytes?: number;
+  /** Undefined keeps the DurableNodeFs default (60 s); 0 runs VACUUM FULL on the first pass. */
+  vacuumFullQuietMs?: number;
 };
 
 /** What the worker opens. */
@@ -73,6 +75,8 @@ export type InitRequest = {
 export type QueryRequest = {
   type: "query";
   id: number;
+  /** The reservation this statement runs under, or null for the request queue. */
+  admission: number | null;
   sql: string;
   params: unknown[];
   options: WorkerQueryOptions;
@@ -81,6 +85,7 @@ export type QueryRequest = {
 export type ExecRequest = {
   type: "exec";
   id: number;
+  admission: number | null;
   sql: string;
   options: WorkerQueryOptions;
 };
@@ -90,11 +95,35 @@ export type CloseRequest = {
   id: number;
 };
 
+/**
+ * Asks for the connection: answered with `admitted` once everything queued
+ * ahead (requests and maintenance passes) has finished. Until the matching
+ * `release`, the worker runs only statements tagged with this reservation.
+ */
+export type ReserveRequest = {
+  type: "reserve";
+  id: number;
+};
+
+/** Ends a reservation; the request queue resumes. Not answered. */
+export type ReleaseRequest = {
+  type: "release";
+  id: number;
+};
+
 export type HostMessage =
   | InitRequest
   | QueryRequest
   | ExecRequest
-  | CloseRequest;
+  | CloseRequest
+  | ReserveRequest
+  | ReleaseRequest;
+
+export type AdmittedMessage = {
+  type: "admitted";
+  id: number;
+  inTransaction: boolean;
+};
 
 export type ReadyMessage = {
   type: "ready";
@@ -144,6 +173,7 @@ export type LogMessage = {
 };
 
 export type WorkerMessage =
+  | AdmittedMessage
   | ReadyMessage
   | QueryResultMessage
   | ExecResultMessage

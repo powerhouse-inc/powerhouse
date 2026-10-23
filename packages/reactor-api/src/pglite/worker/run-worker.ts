@@ -1,6 +1,7 @@
 import type { PGlite, PGliteOptions, Results } from "@electric-sql/pglite";
 import type { MessagePort } from "node:worker_threads";
 import { createDurableNodeFs, type NodeFsClass } from "../durable-node-fs.js";
+import type { MaintenanceGate } from "../maintenance.js";
 import { PGLITE_UTC_PARSERS } from "../parsers.js";
 import { toPGliteErrorInfo } from "./error-info.js";
 import type {
@@ -32,7 +33,8 @@ export function runPGliteWorker(port: MessagePort): void {
   let initError: unknown = null;
   let closed = false;
   let abortReported = false;
-  let tail: Promise<void> = Promise.resolve();
+  let tail: Promise<unknown> = Promise.resolve();
+  let admission: Admission | null = null;
 
   function post(message: WorkerMessage): void {
     port.postMessage(message);
@@ -94,6 +96,7 @@ export function runPGliteWorker(port: MessagePort): void {
       instance = await createPGlite(msg.store, {
         warn: (message) => log("warn", message),
         onAbort: (what) => reportAbort(`PGlite aborted: ${String(what)}`),
+        maintenanceGate: enqueue,
       });
     } catch (error) {
       initError = error;
@@ -159,8 +162,36 @@ export function runPGliteWorker(port: MessagePort): void {
     post({ type: "closed", id });
   }
 
+  /** Runs `task` after everything queued so far: requests, reservations, maintenance passes. */
+  function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = tail.then(task);
+    tail = result.catch(() => undefined);
+    return result;
+  }
+
+  /** Holds the queue for one reservation: only its tagged statements run until it is released. */
+  async function handleReserve(id: number): Promise<void> {
+    const state: Admission = {
+      id,
+      release: () => undefined,
+      statements: Promise.resolve(),
+    };
+    const released = new Promise<void>((resolve) => {
+      state.release = resolve;
+    });
+    admission = state;
+    post({ type: "admitted", id, inTransaction: inTransaction() });
+    await released;
+    await state.statements;
+    admission = null;
+  }
+
   function handle(msg: HostMessage): Promise<void> {
     switch (msg.type) {
+      case "reserve":
+        return handleReserve(msg.id);
+      case "release":
+        return Promise.resolve();
       case "init":
         return handleInit(msg);
       case "query":
@@ -195,13 +226,34 @@ export function runPGliteWorker(port: MessagePort): void {
   });
 
   port.on("message", (msg: HostMessage) => {
-    tail = tail.then(() => handle(msg));
+    if (msg.type === "release") {
+      if (admission?.id === msg.id) admission.release();
+      return;
+    }
+    const current = admission;
+    if (
+      (msg.type === "query" || msg.type === "exec") &&
+      current !== null &&
+      msg.admission === current.id
+    ) {
+      current.statements = current.statements.then(() => handle(msg));
+      return;
+    }
+    void enqueue(() => handle(msg));
   });
 }
+
+type Admission = {
+  id: number;
+  release: () => void;
+  /** The reservation's own statements, run in order outside the queue. */
+  statements: Promise<void>;
+};
 
 type CreateHooks = {
   warn: (message: string) => void;
   onAbort: (what: unknown) => void;
+  maintenanceGate: MaintenanceGate;
 };
 
 async function createPGlite(
@@ -224,6 +276,8 @@ async function createPGlite(
           fsync: durable.fsync,
           maintenanceIntervalMs: durable.maintenanceIntervalMs,
           vacuumFullAboveBytes: durable.vacuumFullAboveBytes,
+          vacuumFullQuietMs: durable.vacuumFullQuietMs,
+          maintenanceGate: hooks.maintenanceGate,
           logger: { warn: hooks.warn },
           onAbort: hooks.onAbort,
         });

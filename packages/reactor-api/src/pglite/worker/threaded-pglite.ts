@@ -1,5 +1,6 @@
 import type { QueryOptions, Results } from "@electric-sql/pglite";
 import { childLogger, type ILogger } from "document-model";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { Worker, type ResourceLimits } from "node:worker_threads";
@@ -39,7 +40,7 @@ export type PGliteAbortListener = (reason: string) => void;
 /** Called once, when the worker thread is gone; `error` is null after a clean close. */
 export type PGliteExitListener = (error: Error | null) => void;
 
-type PendingKind = "init" | "query" | "exec" | "close";
+type PendingKind = "init" | "query" | "exec" | "close" | "reserve";
 
 type Pending = {
   kind: PendingKind;
@@ -87,6 +88,8 @@ export class ThreadedPGlite implements PGliteLike {
   private readonly logger: ILogger;
   private readonly closeGraceMs: number;
   private readonly pending = new Map<number, Pending>();
+  /** The reservation an `admit` run is executing under, carried through its async calls. */
+  private readonly admission = new AsyncLocalStorage<number>();
   private readonly abortListeners = new Set<PGliteAbortListener>();
   private readonly exitListeners = new Set<PGliteExitListener>();
   private nextId = 1;
@@ -177,6 +180,7 @@ export class ThreadedPGlite implements PGliteLike {
     const result = await this.request<WorkerResults>("query", (id) => ({
       type: "query",
       id,
+      admission: this.currentAdmission(),
       sql,
       params: params ?? [],
       options: wireOptions,
@@ -189,10 +193,32 @@ export class ThreadedPGlite implements PGliteLike {
     const results = await this.request<WorkerResults[]>("exec", (id) => ({
       type: "exec",
       id,
+      admission: this.currentAdmission(),
       sql,
       options: wireOptions,
     }));
     return results.map((result) => toResults(result));
+  }
+
+  /**
+   * `HardenedPGliteDialect`'s admission hook: `run` starts only once the worker
+   * can run its statements at once, with nothing queued ahead and no
+   * maintenance pass in progress, so the dialect's statement deadline (which
+   * starts inside `run`) never counts time spent waiting behind other work.
+   * Statements `run` issues bypass the queue until it settles; everything
+   * else waits behind them.
+   */
+  async admit<T>(run: () => Promise<T>): Promise<T> {
+    let reservation = 0;
+    await this.request<void>("reserve", (id) => {
+      reservation = id;
+      return { type: "reserve", id };
+    });
+    try {
+      return await this.admission.run(reservation, run);
+    } finally {
+      this.release(reservation);
+    }
   }
 
   /** The status after the most recently answered request, as PGlite reported it. */
@@ -272,6 +298,18 @@ export class ThreadedPGlite implements PGliteLike {
     }
   }
 
+  private currentAdmission(): number | null {
+    return this.admission.getStore() ?? null;
+  }
+
+  private release(reservation: number): void {
+    if (this.phase === "closed") {
+      return;
+    }
+    const message: HostMessage = { type: "release", id: reservation };
+    this.worker.postMessage(message);
+  }
+
   private request<T>(
     kind: PendingKind,
     build: (id: number) => HostMessage,
@@ -296,6 +334,9 @@ export class ThreadedPGlite implements PGliteLike {
 
   private handleMessage(msg: WorkerMessage): void {
     switch (msg.type) {
+      case "admitted":
+        this.settle(msg.id, msg.inTransaction, undefined);
+        return;
       case "ready":
         this.settle(msg.id, msg.inTransaction, undefined);
         return;
