@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,6 +14,7 @@ import { runHostExport } from "../src/services/host/export.js";
 
 const temporary: string[] = [];
 afterEach(() => {
+  delete process.env.PH_CALLER_CWD;
   for (const dir of temporary.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -70,6 +72,20 @@ describe("ph host export", () => {
     expect(result).toEqual({ exitCode: 0 });
     const written: unknown = JSON.parse(readFileSync(out, "utf8"));
     expect(hostExportSchema.safeParse(written).success).toBe(true);
+  });
+
+  it("resolves a relative --out against the caller's cwd", async () => {
+    const dir = makeProject();
+    const caller = path.join(dir, "hosts");
+    process.env.PH_CALLER_CWD = caller;
+    const result = await runHostExport({
+      host: "stack",
+      projectRoot: dir,
+      out: "stack.json",
+    });
+    expect(result).toEqual({ exitCode: 0 });
+    expect(existsSync(path.join(caller, "stack.json"))).toBe(true);
+    expect(existsSync(path.join(dir, "stack.json"))).toBe(false);
   });
 
   it("fails an unknown host on stderr", async () => {

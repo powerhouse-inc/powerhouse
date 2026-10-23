@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { exportHost, type HostExport } from "@powerhousedao/host-core";
+import { CALLER_CWD_ENV } from "@powerhousedao/shared/clis/command-names";
 
 export interface HostExportArgs {
   host: string;
@@ -31,7 +32,8 @@ export async function runHostExport(
   const json = `${JSON.stringify(exported, null, 2)}\n`;
   if (args.out === undefined) return { stdout: json, exitCode: 0 };
   try {
-    await writeFile(path.resolve(args.out), json);
+    const from = process.env[CALLER_CWD_ENV] ?? process.cwd();
+    await writeFile(path.resolve(from, args.out), json);
   } catch (error) {
     return {
       stderr: `Cannot write ${args.out}: ${message(error)}\n`,
