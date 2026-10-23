@@ -12,6 +12,7 @@ import {
   MAX_MERGED_OPERATIONS,
   ProcessorQueue,
   type ProcessorCursorState,
+  type ProcessorProgressState,
 } from "../../src/processors/processor-queue.js";
 import type { PagedResults } from "../../src/shared/types.js";
 import { createMockLogger, deferred } from "../factories.js";
@@ -90,6 +91,7 @@ function pagedIndex(
 type Harness = {
   queue: ProcessorQueue;
   cursor: ProcessorCursorState;
+  progress: ProcessorProgressState;
   delivered: number[][];
   persisted: ProcessorCursorState[];
   processor: IProcessor & { onOperations: ReturnType<typeof vi.fn> };
@@ -121,6 +123,10 @@ function harness(
     lastError: undefined,
     lastErrorTimestamp: undefined,
   };
+  const progress: ProcessorProgressState = {
+    runFrom: cursor.lastOrdinal,
+    phase: "live",
+  };
   const processor = {
     onOperations: vi.fn(async (ops: OperationWithContext[]) => {
       if (options.onOperations) await options.onOperations(ops);
@@ -133,6 +139,7 @@ function harness(
     processor,
     filter: options.filter ?? {},
     cursor,
+    progress,
     floor: options.floor ?? 0,
     readSince: options.readSince ?? pagedIndex(options.index ?? []),
     routedThrough: options.routedThrough ?? (() => Number.MAX_SAFE_INTEGER),
@@ -147,7 +154,7 @@ function harness(
     lookupRetries: options.lookupRetries,
     logger: createMockLogger(),
   });
-  return { queue, cursor, delivered, persisted, processor };
+  return { queue, cursor, progress, delivered, persisted, processor };
 }
 
 describe("ProcessorQueue", () => {
@@ -351,6 +358,7 @@ describe("ProcessorQueue", () => {
         },
         filter: {},
         cursor,
+        progress: { runFrom: 0, phase: "live" },
         floor: 0,
         readSince: pagedIndex([]),
         routedThrough: () => Number.MAX_SAFE_INTEGER,
@@ -977,6 +985,82 @@ describe("ProcessorQueue", () => {
 
       expect(delivered).toEqual([[1, 2]]);
       expect(cursor).toMatchObject({ status: "active", lastOrdinal: 2 });
+    });
+  });
+
+  describe("progress", () => {
+    it("keeps the run start where a backfill began while the cursor climbs", async () => {
+      const index = [1, 2, 3, 4, 5, 6].map((n) => op(n));
+      const gate = deferred();
+      let calls = 0;
+      const { queue, cursor, progress } = harness({
+        lastOrdinal: 2,
+        readSince: pagedIndex(index, 2),
+        onOperations: () => (++calls === 2 ? gate.promise : Promise.resolve()),
+      });
+      expect(progress).toEqual({ runFrom: 2, phase: "live" });
+
+      const done = queue.backfill();
+      expect(progress.phase).toBe("catching-up");
+
+      await vi.waitFor(() => expect(calls).toBe(2));
+      expect(cursor.lastOrdinal).toBe(4);
+      expect(progress).toEqual({ runFrom: 2, phase: "catching-up" });
+
+      gate.resolve();
+      await done;
+      expect(cursor.lastOrdinal).toBe(6);
+      expect(progress).toEqual({ runFrom: 6, phase: "live" });
+    });
+
+    it("follows the cursor while live", async () => {
+      const { queue, progress } = harness();
+
+      await queue.live([op(1), op(2)]);
+      await queue.advance(5);
+
+      expect(progress).toEqual({ runFrom: 5, phase: "live" });
+    });
+
+    it("starts a rewind's run at its ordinal", async () => {
+      const index = [1, 2, 3, 4].map((n) => op(n));
+      const gate = deferred();
+      const runs: number[] = [];
+      const { queue, progress } = harness({
+        lastOrdinal: 4,
+        index,
+        onOperations: () => {
+          runs.push(progress.runFrom);
+          return gate.promise;
+        },
+      });
+
+      const rewound = queue.rewind(1, () => Promise.resolve());
+      await vi.waitFor(() => expect(runs).toEqual([1]));
+      expect(progress.phase).toBe("catching-up");
+
+      gate.resolve();
+      await rewound;
+      expect(progress).toEqual({ runFrom: 4, phase: "live" });
+    });
+
+    it("reads errored after a failure until a retry replays", async () => {
+      let fail = true;
+      const { queue, cursor, progress } = harness({
+        index: [op(1), op(2)],
+        onOperations: () =>
+          fail ? Promise.reject(new Error("boom")) : Promise.resolve(),
+      });
+
+      await queue.backfill();
+      expect(cursor.status).toBe("errored");
+      expect(progress).toEqual({ runFrom: 0, phase: "errored" });
+
+      fail = false;
+      const retried = queue.retry();
+      expect(progress.phase).toBe("errored");
+      await retried;
+      expect(progress).toEqual({ runFrom: 2, phase: "live" });
     });
   });
 });

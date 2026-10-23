@@ -95,6 +95,8 @@ function fakeInspectionFetch(host: Host): typeof fetch {
             lastErrorTimestampUtcMs: null,
             floor: 0,
             clearable: true,
+            runFrom: 40,
+            phase: "live",
           },
         ],
       },

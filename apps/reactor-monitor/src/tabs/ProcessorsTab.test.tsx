@@ -1,10 +1,13 @@
 // @vitest-environment happy-dom
-import type { InspectorProcessorInfo } from "@powerhousedao/reactor";
+import type {
+  CatchUpStatus,
+  InspectorProcessorInfo,
+} from "@powerhousedao/reactor";
 import type {
   MonitorInspector,
   ProcessorLevers,
 } from "@powerhousedao/reactor-monitor";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessorsTab } from "./ProcessorsTab.js";
 
@@ -22,6 +25,8 @@ function processor(
     lastErrorTimestamp: undefined,
     floor: 10,
     clearable: true,
+    runFrom: 40,
+    phase: "live",
     ...overrides,
   };
 }
@@ -151,5 +156,151 @@ describe("ProcessorsTab rerun", () => {
       ),
     );
     expect(view.getByTestId("rerun-form")).toBeTruthy();
+  });
+});
+
+function catchUpAt(head: number): CatchUpStatus {
+  return {
+    watermark: { head, settledThrough: head, waitingOn: [] },
+    consumers: [],
+  };
+}
+
+function bar(view: ReturnType<typeof render>, name: string) {
+  return view.getByRole("progressbar", { name });
+}
+
+describe("ProcessorsTab progress", () => {
+  const sektar = [
+    processor({
+      processorId: "sektar:mail:0",
+      factoryId: "sektar",
+      driveId: "mail",
+      runFrom: 100,
+      lastOrdinal: 150,
+      phase: "catching-up",
+    }),
+    processor({
+      processorId: "sektar:docs:0",
+      factoryId: "sektar",
+      driveId: "docs",
+      runFrom: 200,
+      lastOrdinal: 200,
+      phase: "live",
+    }),
+    processor({
+      processorId: "vetra:docs:0",
+      factoryId: "vetra",
+      driveId: "docs",
+      runFrom: 200,
+      lastOrdinal: 200,
+      phase: "live",
+    }),
+  ];
+
+  it("draws a bar per factory against the catch-up head", async () => {
+    const inspector = {
+      getProcessors: () => Promise.resolve(sektar),
+      getCatchUpStatus: () => Promise.resolve(catchUpAt(300)),
+    } as unknown as MonitorInspector;
+    const view = render(<ProcessorsTab inspector={inspector} />);
+
+    await waitFor(() =>
+      expect(bar(view, "sektar (2 drives)").getAttribute("aria-valuenow")).toBe(
+        "25",
+      ),
+    );
+    const sektarBar = bar(view, "sektar (2 drives)");
+    expect(sektarBar.getAttribute("aria-valuemin")).toBe("0");
+    expect(sektarBar.getAttribute("aria-valuemax")).toBe("100");
+    expect(sektarBar.getAttribute("aria-valuetext")).toBe(
+      "25%, 50 of 200 ordinals",
+    );
+    const vetraBar = bar(view, "vetra (1 drive)");
+    expect(vetraBar.getAttribute("aria-valuenow")).toBe("100");
+    expect(vetraBar.getAttribute("aria-valuetext")).toBe("done");
+    expect(view.queryByTestId("progress-head-unknown")).toBeNull();
+    expect(view.getByText("sektar:mail:0")).toBeTruthy();
+  });
+
+  it("expands a factory to a bar per drive", async () => {
+    const inspector = {
+      getProcessors: () => Promise.resolve(sektar),
+      getCatchUpStatus: () => Promise.resolve(catchUpAt(300)),
+    } as unknown as MonitorInspector;
+    const view = render(<ProcessorsTab inspector={inspector} />);
+    const toggle = await waitFor(() =>
+      view.getByRole("button", { name: "Show drives of sektar" }),
+    );
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(view.queryByTestId("progress-drives-sektar")).toBeNull();
+
+    fireEvent.click(toggle);
+
+    expect(
+      view
+        .getByRole("button", { name: "Hide drives of sektar" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(bar(view, "mail").getAttribute("aria-valuenow")).toBe("25");
+    expect(bar(view, "docs").getAttribute("aria-valuetext")).toBe("done");
+  });
+
+  it("marks a factory errored when one of its processors is", async () => {
+    const inspector = {
+      getProcessors: () =>
+        Promise.resolve([
+          processor({
+            status: "errored",
+            phase: "errored",
+            runFrom: 0,
+            lastOrdinal: 40,
+          }),
+        ]),
+      getCatchUpStatus: () => Promise.resolve(catchUpAt(80)),
+    } as unknown as MonitorInspector;
+    const view = render(<ProcessorsTab inspector={inspector} />);
+
+    await waitFor(() =>
+      expect(
+        bar(view, "factory (1 drive)").getAttribute("aria-valuetext"),
+      ).toBe("errored at 50%, 40 of 80 ordinals"),
+    );
+    expect(
+      within(view.getByTestId("processor-progress")).getByText("errored"),
+    ).toBeTruthy();
+  });
+
+  it("falls back to the highest cursor when catch-up status is refused", async () => {
+    const inspector = {
+      getProcessors: () =>
+        Promise.resolve([
+          processor({
+            processorId: "f:a:0",
+            factoryId: "f",
+            driveId: "a",
+            runFrom: 0,
+            lastOrdinal: 30,
+            phase: "catching-up",
+          }),
+          processor({
+            processorId: "f:b:0",
+            factoryId: "f",
+            driveId: "b",
+            runFrom: 60,
+            lastOrdinal: 60,
+          }),
+        ]),
+      getCatchUpStatus: () => Promise.reject(new Error("forbidden")),
+    } as unknown as MonitorInspector;
+    const view = render(<ProcessorsTab inspector={inspector} />);
+
+    await waitFor(() =>
+      expect(bar(view, "f (2 drives)").getAttribute("aria-valuenow")).toBe(
+        "50",
+      ),
+    );
+    expect(view.getByTestId("progress-head-unknown")).toBeTruthy();
+    expect(view.queryByText(/Failed to load processors/)).toBeNull();
   });
 });

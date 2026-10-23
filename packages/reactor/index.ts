@@ -600,6 +600,7 @@ export type {
   ProcessorFactoryBuilder,
   ProcessorFilter,
   ProcessorRecord,
+  ProcessorPhase,
   ProcessorStatus,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";

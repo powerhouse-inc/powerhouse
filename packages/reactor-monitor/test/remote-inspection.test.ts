@@ -257,6 +257,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
             lastErrorTimestampUtcMs: LAST_ERROR_MS,
             floor: 0,
             clearable: true,
+            runFrom: 12,
+            phase: "errored",
           },
           {
             processorId: "p-2",
@@ -269,6 +271,8 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
             lastErrorTimestampUtcMs: null,
             floor: 3,
             clearable: false,
+            runFrom: 3,
+            phase: "catching-up",
           },
         ],
       },
@@ -532,6 +536,15 @@ describe("RemoteInspectorClient reads", () => {
     expect(processors.map((p) => [p.floor, p.clearable])).toEqual([
       [0, true],
       [3, false],
+    ]);
+  });
+
+  it("carries a processor's run start and phase", async () => {
+    const processors = await client.getProcessors();
+
+    expect(processors.map((p) => [p.runFrom, p.phase])).toEqual([
+      [12, "errored"],
+      [3, "catching-up"],
     ]);
   });
 

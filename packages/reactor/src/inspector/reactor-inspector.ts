@@ -225,6 +225,8 @@ export class ReactorInspector
         lastErrorTimestamp: processor.lastErrorTimestamp,
         floor: processor.floor,
         clearable: typeof processor.record.processor.clear === "function",
+        runFrom: processor.runFrom,
+        phase: processor.phase,
       })),
     );
   }

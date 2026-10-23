@@ -525,6 +525,8 @@ export class ProcessorManager
       lastError: state.lastError,
       lastErrorTimestamp: state.lastErrorTimestamp,
       floor: 0,
+      runFrom: state.lastOrdinal,
+      phase: "errored",
       retry: () => this.retryOwed(factoryId, driveId),
     });
   }
@@ -1068,6 +1070,8 @@ export class ProcessorManager
       record,
       ...cursor,
       floor,
+      runFrom: cursor.lastOrdinal,
+      phase: cursor.status === "errored" ? "errored" : "live",
       retry: () => queue.retry(),
     };
     const queue = new ProcessorQueue({
@@ -1075,6 +1079,7 @@ export class ProcessorManager
       processor: record.processor,
       filter: record.filter,
       cursor: tracked,
+      progress: tracked,
       floor,
       readSince: (ordinal) => this.operationIndex.getSinceOrdinal(ordinal),
       routedThrough: () => this.highWater(),
