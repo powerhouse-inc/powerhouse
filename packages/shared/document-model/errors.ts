@@ -25,6 +25,68 @@ export class InvalidActionInputZodError extends InvalidActionInputError {
   }
 }
 
+/** A model version a rule derivation needs, whose reducer createReducer did not build. */
+export class MissingStateReducerError extends Error {
+  public readonly documentType: string;
+  public readonly version?: number;
+
+  constructor(documentType: string, version?: number) {
+    const model =
+      version === undefined ? documentType : `${documentType} v${version}`;
+    super(
+      `Cannot replay ${model} on base-reducer 3: its reducer was not built by createReducer`,
+    );
+    this.name = "MissingStateReducerError";
+    this.documentType = documentType;
+    this.version = version;
+  }
+
+  static isError(error: unknown): error is MissingStateReducerError {
+    return error instanceof Error && error.name === "MissingStateReducerError";
+  }
+}
+
+/**
+ * An UNDO or REDO, submitted or loaded from a peer, into a document whose base
+ * reducer undoes by retraction. Its client resolves the target and submits a
+ * RETRACT of it, signed by the author, as IReactorClient.undo does.
+ */
+export class SubmittedUndoRefusedError extends Error {
+  public readonly documentId: string;
+  public readonly actionType: string;
+
+  constructor(documentId: string, actionType: string) {
+    super(
+      `${actionType} cannot be submitted to document ${documentId}: its base reducer undoes by RETRACT of a target, which IReactorClient.undo and redo resolve and sign`,
+    );
+    this.name = "SubmittedUndoRefusedError";
+    this.documentId = documentId;
+    this.actionType = actionType;
+  }
+
+  static isError(error: unknown): error is SubmittedUndoRefusedError {
+    return error instanceof Error && error.name === "SubmittedUndoRefusedError";
+  }
+}
+
+/** A base-reducer 3 UNDO or REDO of a scope with no row to retract. */
+export class NoUndoRedoTargetError extends Error {
+  public readonly actionType: "UNDO" | "REDO";
+  public readonly scope: string;
+
+  constructor(actionType: "UNDO" | "REDO", scope: string) {
+    const verb = actionType === "UNDO" ? "undo" : "redo";
+    super(`Cannot ${verb}: nothing to ${verb} in scope history`);
+    this.name = "NoUndoRedoTargetError";
+    this.actionType = actionType;
+    this.scope = scope;
+  }
+
+  static isError(error: unknown): error is NoUndoRedoTargetError {
+    return error instanceof Error && error.name === "NoUndoRedoTargetError";
+  }
+}
+
 /**
  * Error thrown when attempting to downgrade a document version.
  */

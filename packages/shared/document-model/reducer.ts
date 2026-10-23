@@ -6,8 +6,19 @@ import {
   operationFromOperation,
 } from "./actions.js";
 import { applyAuthAction, assertAuthScopeActionAllowed } from "./auth.js";
+import { baseActionReducer } from "./base-action-reducer.js";
+import { tagStateReducer } from "./state-reducer.js";
+import { isDenied } from "./denied.js";
+import { SubmittedUndoRefusedError } from "./errors.js";
 import {
+  appliesRewind,
+  assertNever,
   baseReducerVersion,
+  capabilitiesOf,
+  derivesByRule,
+  type BaseReducerVersion,
+} from "./base-reducer-protocol.js";
+import {
   diffOperations,
   garbageCollect,
   garbageCollectDocumentOperations,
@@ -25,18 +36,26 @@ import {
   type PHDocumentHeader,
 } from "./documents.js";
 import {
+  appliedOperations,
+  deriveScope,
+  positionalOperations,
+  reduceOne,
+  retractedActionIds,
+  retractIds,
+  tailAppliesIncrementally,
+  type ReducerFor,
+} from "./retraction.js";
+import {
   redoOperation,
-  setNameOperation,
-  setPreferredEditorOperation,
   undoOperation,
   undoOperationV2,
   type DocumentOperations,
   type Operation,
   type OperationContext,
 } from "./operations.js";
-import { DocumentActionSchema } from "./schemas.js";
 import type { PHBaseState } from "./state.js";
 import type {
+  DeriveScope,
   Reducer,
   ReducerOptions,
   ReplayDocumentOptions,
@@ -202,59 +221,43 @@ export function updateDocument<TDocument extends PHDocument>(
 }
 
 /**
- * The base document reducer function.
- *
- * @param state The current state of the document.
- * @param action The action being applied to the document.
- * @returns The updated document state.
- */
-function _baseReducer<TState extends PHBaseState = PHBaseState>(
-  document: PHDocument<TState>,
-  action: Action,
-): PHDocument<TState> {
-  // throws if action is not valid base action
-  const parsedAction = DocumentActionSchema().parse(action);
-
-  switch (parsedAction.type) {
-    // TODO: This needs to be changed to a HEADER scope action if it's changing the header.
-    case "SET_NAME":
-      return setNameOperation(document, parsedAction.input);
-    case "SET_PREFERRED_EDITOR":
-      return setPreferredEditorOperation(document, parsedAction.input);
-    default:
-      return document;
-  }
-}
-
-/**
  * Processes an UNDO or REDO action.
  *
  * @param document The current state of the document.
  * @param action The action being applied to the document.
  * @param skip The number of operations to skip before applying the action.
+ * @param protocolVersion The document's base-reducer version.
  * @returns The updated document, calculated skip value and transformed action (if applied).
  */
 export function processUndoRedo<TState extends PHBaseState = PHBaseState>(
   document: PHDocument<TState>,
   action: Action,
   skip: number,
-  protocolVersion = 1,
+  protocolVersion: BaseReducerVersion = 1,
 ): {
   document: PHDocument<TState>;
   action: Action;
   skip: number;
   reuseLastOperationIndex: boolean;
 } {
-  switch (action.type) {
-    case "UNDO":
-      if (protocolVersion >= 2) {
-        return undoOperationV2(document, action, skip);
-      }
-      return undoOperation(document, action, skip);
-    case "REDO":
-      return redoOperation(document, action, skip);
+  if (action.type !== "UNDO" && action.type !== "REDO") {
+    return { document, action, skip, reuseLastOperationIndex: false };
+  }
+  const { undo: model } = capabilitiesOf(protocolVersion);
+  switch (model) {
+    case "skip":
+      return action.type === "UNDO"
+        ? undoOperation(document, action, skip)
+        : redoOperation(document, action, skip);
+    case "noop-chain":
+      return action.type === "UNDO"
+        ? undoOperationV2(document, action, skip)
+        : redoOperation(document, action, skip);
+    case "retraction":
+      // The reactor refuses the same input; a client submits RETRACT.
+      throw new SubmittedUndoRefusedError(document.header.id, action.type);
     default:
-      return { document, action, skip, reuseLastOperationIndex: false };
+      return assertNever(model, "undo model");
   }
 }
 
@@ -406,13 +409,21 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
   // UNDO/REDO are rejected on the auth scope.
   assertAuthScopeActionAllowed(_action);
 
+  const protocolVersion: BaseReducerVersion =
+    options.protocolVersion ?? baseReducerVersion(document.header);
+  const caps = capabilitiesOf(protocolVersion);
+  const byRule = derivesByRule(caps, _action.scope);
+
   let skipValue = skip ?? options.replayOptions?.operation.skip ?? 0;
   let newDocument = {
     ...document,
   };
   let reuseLastOperationIndex = false;
 
-  const shouldProcessSkipOperation = !ignoreSkipOperations && skipValue > 0;
+  const shouldProcessSkipOperation =
+    appliesRewind(caps, _action.scope) &&
+    !ignoreSkipOperations &&
+    skipValue > 0;
 
   if (isUndoRedo(_action)) {
     const {
@@ -420,12 +431,7 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
       action: transformedAction,
       document: processedDocument,
       reuseLastOperationIndex: reuseIndex,
-    } = processUndoRedo(
-      document,
-      _action,
-      skipValue,
-      options.protocolVersion ?? baseReducerVersion(document.header),
-    );
+    } = processUndoRedo(document, _action, skipValue, protocolVersion);
 
     _action = transformedAction;
     skipValue = calculatedSkip;
@@ -440,8 +446,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
   // if the action is one the base document actions (SET_NAME, UNDO, REDO)
   // then runs the base reducer first
-  if (isDocumentAction(_action)) {
-    newDocument = _baseReducer(newDocument, _action);
+  if (!byRule && isDocumentAction(_action)) {
+    newDocument = baseActionReducer(newDocument, _action);
   }
 
   // updates the document revision number, last modified date
@@ -462,61 +468,78 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
     options.skipIndexValidation,
   );
 
-  // Only process undo for actual UNDO actions in protocol v1
-  // For v2, NOOPs always have skip=1 and indices increment
-  // NOOP operations with skip > 0 will have their clipboard populated server-side
-  const protocolVersion =
-    options.protocolVersion ?? baseReducerVersion(document.header);
-  if (isUndo(action) && protocolVersion < 2) {
-    const result = processUndoOperation(
+  if (byRule) {
+    return applyByRule(
       newDocument,
-      action.scope,
+      _action.scope,
       customReducer,
+      dispatch,
+      skipValue,
+      options,
     );
-    return result;
   }
 
-  // V2 UNDO: Rebuild state using garbageCollectV2 which handles consecutive NOOPs as chains
-  // Also trigger for NOOP operations loaded from sync (they have skip > 0)
+  // NOOP operations with skip > 0 will have their clipboard populated server-side
   const isNoopWithSkip = _action.type === "NOOP" && skipValue > 0;
-  if ((isUndo(action) || isNoopWithSkip) && protocolVersion >= 2) {
-    const scope = _action.scope;
-    const scopeOperations = newDocument.operations[scope] || [];
-    const sortedOps = sortOperations([...scopeOperations]);
+  const undoModel = caps.undo;
+  switch (undoModel) {
+    case "skip":
+      if (isUndo(action)) {
+        const result = processUndoOperation(
+          newDocument,
+          action.scope,
+          customReducer,
+        );
+        return result;
+      }
+      break;
+    case "noop-chain":
+      // V2 UNDO: Rebuild state using garbageCollectV2 which handles consecutive NOOPs as chains
+      // Also trigger for NOOP operations loaded from sync (they have skip > 0)
+      if (isUndo(action) || isNoopWithSkip) {
+        const scope = _action.scope;
+        const scopeOperations = newDocument.operations[scope] || [];
+        const sortedOps = sortOperations([...scopeOperations]);
 
-    // Get operations that should be applied (excludes undone operations)
-    const effectiveOps = garbageCollectV2(sortedOps) as Operation[];
+        // Get operations that should be applied (excludes undone operations)
+        const effectiveOps = garbageCollectV2(sortedOps) as Operation[];
 
-    // Build operations for replay - only include non-NOOP operations
-    const opsToReplay = effectiveOps.filter(
-      (op: Operation) => op.action.type !== "NOOP",
-    );
+        // Build operations for replay - only include non-NOOP operations
+        const opsToReplay = effectiveOps.filter(
+          (op: Operation) => op.action.type !== "NOOP",
+        );
 
-    // Create document operations with only the effective ops for this scope
-    const replayOps: DocumentOperations = {
-      ...newDocument.operations,
-      [scope]: opsToReplay,
-    };
+        // Create document operations with only the effective ops for this scope
+        const replayOps: DocumentOperations = {
+          ...newDocument.operations,
+          [scope]: opsToReplay,
+        };
 
-    // Replay to rebuild state using replayOperations which wraps the reducer
-    // Pass skipIndexValidation since garbageCollectV2 creates gapped indices
-    const rebuiltDoc = replayOperations(
-      newDocument.initialState,
-      replayOps,
-      customReducer,
-      newDocument.header,
-      dispatch,
-      baseReducer,
-      {},
-      { skipIndexValidation: true },
-    );
+        // Replay to rebuild state using replayOperations which wraps the reducer
+        // Pass skipIndexValidation since garbageCollectV2 creates gapped indices
+        const rebuiltDoc = replayOperations(
+          newDocument.initialState,
+          replayOps,
+          customReducer,
+          newDocument.header,
+          dispatch,
+          baseReducer,
+          {},
+          { skipIndexValidation: true },
+        );
 
-    // Return document with rebuilt state but original operations (including all NOOPs)
-    return {
-      ...rebuiltDoc,
-      operations: newDocument.operations,
-      clipboard: [],
-    } as PHDocument<TState>;
+        // Return document with rebuilt state but original operations (including all NOOPs)
+        return {
+          ...rebuiltDoc,
+          operations: newDocument.operations,
+          clipboard: [],
+        } as PHDocument<TState>;
+      }
+      break;
+    case "retraction":
+      break;
+    default:
+      assertNever(undoModel, "undo model");
   }
 
   if (shouldProcessSkipOperation) {
@@ -648,6 +671,94 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 }
 
 /**
+ * Base-reducer 3: applies the appended row, or re-derives the scope when the
+ * row rewinds, retracts, is named by a retraction, or repeats a stored
+ * RETRACT's id. A stored `error` is diagnostic: it is written only on the
+ * appended row.
+ */
+function applyByRule<TState extends PHBaseState>(
+  document: PHDocument<TState>,
+  scope: string,
+  customReducer: StateReducer<TState>,
+  dispatch: SignalDispatch | undefined,
+  skip: number,
+  options: ReducerOptions,
+): PHDocument<TState> {
+  const operations = document.operations[scope] ?? [];
+  const appended = operations.at(-1);
+  if (!appended) {
+    throw new Error(`No operations found for scope: ${scope}`);
+  }
+  const appendedId = appended.action.id;
+
+  const appendedReducer: StateReducer<TState> = (state, action) =>
+    customReducer(state, action, dispatch);
+  const reducerFor: ReducerFor<TState> = (operation) =>
+    operation.action.id === appendedId ? appendedReducer : customReducer;
+
+  const targeted =
+    options.targeted ?? retractedActionIds(positionalOperations(operations));
+  const carried = options.retractIds ?? retractIds(operations.slice(0, -1));
+  const rebuild = !tailAppliesIncrementally(
+    [{ skip, action: appended.action }],
+    { named: (id) => targeted.has(id), holds: (id) => carried.has(id) },
+  );
+
+  let next = document;
+  let error: string | undefined;
+  if (rebuild) {
+    let thrown: unknown;
+    const onThrow = (operation: Operation, caught: unknown) => {
+      if (operation.action.id === appendedId) thrown = caught;
+    };
+    const derived = options.deriveScope
+      ? options.deriveScope(document, operations, scope, onThrow)
+      : deriveScope(document, operations, reducerFor, scope, onThrow);
+    next = derived.document;
+    const threw =
+      !derived.applied.has(appendedId) &&
+      appliedOperations(operations).some(
+        (operation) => operation.action.id === appendedId,
+      );
+    if (threw) {
+      error = errorMessage(thrown);
+    }
+  } else if (!isDenied(appended)) {
+    try {
+      next = reduceOne(document, appended, reducerFor);
+    } catch (caught) {
+      error = errorMessage(caught);
+    }
+  }
+
+  const replayHash = options.replayOptions?.operation.hash;
+  const row: Operation = {
+    ...appended,
+    hash: replayHash ? replayHash : hashDocumentStateForScope(next, scope),
+    ...(error === undefined ? {} : { error }),
+    ...(options.reuseOperationResultingState
+      ? {
+          resultingState: JSON.stringify(
+            (next.state as Record<string, unknown>)[scope],
+          ),
+        }
+      : {}),
+  };
+  return {
+    ...next,
+    operations: {
+      ...next.operations,
+      [scope]: [...operations.slice(0, -1), row],
+    },
+  };
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return typeof error === "string" ? error : "Action failed";
+}
+
+/**
  * Helper function to create a document model reducer.
  *
  * @remarks
@@ -676,5 +787,7 @@ export function createReducer<TState extends PHBaseState = PHBaseState>(
   ) => {
     return documentReducer(document, action, stateReducer, dispatch, options);
   };
-  return reducer;
+  return tagStateReducer(reducer, stateReducer);
 }
+
+export { stateReducerOf } from "./state-reducer.js";

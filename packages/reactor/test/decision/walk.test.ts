@@ -2,6 +2,10 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import {
+  compareActionIds,
+  legacyIdOrder,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   comparePositions,
@@ -10,7 +14,7 @@ import {
 import { staticReadSet } from "../../src/decision/build-decision-model.js";
 import { documentDecisionModel } from "../../src/decision/document-decision-model.js";
 import type { WalkPosition, WalkStream } from "../../src/decision/walk.js";
-import { walkByPosition } from "../../src/decision/walk.js";
+import { walkByPosition, walkIdOrder } from "../../src/decision/walk.js";
 
 /**
  * A document whose state is the list of operation ids applied to it, so a walk's
@@ -75,7 +79,7 @@ function walkDeciding(
   deny: (operation: Operation) => boolean,
 ): WalkPosition[] {
   const positions: WalkPosition[] = [];
-  const walk = walkByPosition(streams);
+  const walk = walkByPosition(streams, walkIdOrder(streams, "d"));
   let step = walk.next(false);
   while (!step.done) {
     positions.push(step.value);
@@ -264,6 +268,7 @@ describe("walkByPosition", () => {
       comparePositions(
         { streamKey: "auth", scope: "auth", operation: authLowerId },
         { streamKey: "global", scope: "global", operation: domainHigherId },
+        legacyIdOrder,
       ),
     ).toBeLessThan(0);
 
@@ -273,6 +278,7 @@ describe("walkByPosition", () => {
       comparePositions(
         { streamKey: "auth", scope: "auth", operation: authHigherId },
         { streamKey: "global", scope: "global", operation: domainLowerId },
+        legacyIdOrder,
       ),
     ).toBeLessThan(0);
 
@@ -281,6 +287,7 @@ describe("walkByPosition", () => {
       comparePositions(
         { streamKey: "global", scope: "global", operation: domainLowerId },
         { streamKey: "auth", scope: "auth", operation: authHigherId },
+        legacyIdOrder,
       ),
     ).toBeGreaterThan(0);
   });
@@ -315,6 +322,7 @@ describe("walkByPosition", () => {
       comparePositions(
         { streamKey: "x", scope: "x", operation: a },
         { streamKey: "y", scope: "y", operation: b },
+        legacyIdOrder,
       ),
     ).toBeGreaterThan(0);
 
@@ -324,22 +332,86 @@ describe("walkByPosition", () => {
       comparePositions(
         { streamKey: "x", scope: "x", operation: c },
         { streamKey: "y", scope: "y", operation: d },
+        legacyIdOrder,
       ),
     ).toBeGreaterThan(0);
+  });
+
+  it("breaks a tie by the evaluated document's id order, not by which streams joined", () => {
+    const v3 = (id: string) => {
+      const document = doc();
+      document.header = {
+        ...document.header,
+        id,
+        protocolVersions: { "base-reducer": 3 },
+      };
+      return document;
+    };
+    const v2 = (id: string) => {
+      const document = doc();
+      document.header = {
+        ...document.header,
+        id,
+        protocolVersions: { "base-reducer": 2 },
+      };
+      return document;
+    };
+    const streams = (target: PHDocument, other: PHDocument): WalkStream[] => [
+      {
+        streamKey: "x",
+        scope: "x",
+        document: target,
+        operations: indexed([op("a", 5)]),
+        apply: append,
+      },
+      {
+        streamKey: "y",
+        scope: "y",
+        document: other,
+        operations: indexed([op("B", 5)]),
+        apply: append,
+      },
+    ];
+    const walked = (walk: WalkStream[], documentId: string) => {
+      const ids: string[] = [];
+      const steps = walkByPosition(walk, walkIdOrder(walk, documentId));
+      let step = steps.next(false);
+      while (!step.done) {
+        ids.push(step.value.operation.action.id!);
+        step = steps.next(false);
+      }
+      return ids;
+    };
+
+    expect("a".localeCompare("B")).toBeLessThan(0);
+    // A v2 document keeps the locale order with a v3 stream in its read set.
+    const v2Walk = streams(v2("target"), v3("group"));
+    expect(walkIdOrder(v2Walk, "target")).toBe(legacyIdOrder);
+    expect(walked(v2Walk, "target")).toEqual(["a", "B"]);
+    // A v3 document breaks ties by code unit over every stream it walks.
+    const v3Walk = streams(v3("target"), v2("other"));
+    expect(walkIdOrder(v3Walk, "target")).toBe(compareActionIds);
+    expect(walked(v3Walk, "target")).toEqual(["B", "a"]);
   });
 
   it("orders identically however the streams are handed in", () => {
     const a = indexed([op("a1", 1), op("a2", 4)]);
     const b = indexed([op("b1", 2), op("b2", 3)]);
 
-    const forwards = mergeByPosition([
-      { streamKey: "a", scope: "a", operations: a },
-      { streamKey: "b", scope: "b", operations: b },
-    ]);
-    const backwards = mergeByPosition([
-      { streamKey: "b", scope: "b", operations: [...b].reverse() },
-      { streamKey: "a", scope: "a", operations: [...a].reverse() },
-    ]);
+    const forwards = mergeByPosition(
+      [
+        { streamKey: "a", scope: "a", operations: a },
+        { streamKey: "b", scope: "b", operations: b },
+      ],
+      legacyIdOrder,
+    );
+    const backwards = mergeByPosition(
+      [
+        { streamKey: "b", scope: "b", operations: [...b].reverse() },
+        { streamKey: "a", scope: "a", operations: [...a].reverse() },
+      ],
+      legacyIdOrder,
+    );
 
     expect(backwards.map((p) => p.operation.action.id)).toEqual(
       forwards.map((p) => p.operation.action.id),

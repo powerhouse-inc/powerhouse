@@ -1,4 +1,5 @@
 import { JOB_NOT_FOUND_ERROR_NAME } from "@powerhousedao/reactor";
+import { GraphQLReactorClient } from "@powerhousedao/reactor-browser";
 import { misrouteOf } from "@powerhousedao/reactor-router";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
@@ -6,7 +7,7 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createGraphQLRoutableBackend } from "../src/runtime/multi-reactor.js";
 import {
   data,
@@ -93,9 +94,10 @@ describe("createGraphQLRoutableBackend declares what GraphQL serves", () => {
     ]);
   });
 
-  it("reads the create defaults from createDefaults", async () => {
+  it("reads the signature policy and the per-type create versions from createDefaults", async () => {
     const { backend, stub } = await backendOver({}, ({ body }) =>
-      body.operationName === "GetCreateDefaults"
+      body.operationName === "GetCreateDefaults" ||
+      body.operationName === "GetCreateProtocolVersions"
         ? data({
             createDefaults: {
               signaturePolicy: "legacy",
@@ -106,12 +108,17 @@ describe("createGraphQLRoutableBackend declares what GraphQL serves", () => {
     );
 
     expect(await backend.getCreateSignaturePolicy()).toBe("legacy");
-    expect(await backend.getCreateProtocolVersions("drive-1")).toEqual({
+    expect(
+      await backend.getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+        parentIdentifier: "drive-1",
+      }),
+    ).toEqual({
       "base-reducer": 2,
     });
-    expect(stub.received.map((r) => r.body.variables)).toEqual([
-      {},
-      { parentIdOrSlug: "drive-1" },
+    expect(stub.received.map((r) => r.body.operationName)).toEqual([
+      "GetCreateDefaults",
+      "GetCreateProtocolVersions",
     ]);
   });
 
@@ -258,5 +265,73 @@ describe("createGraphQLRoutableBackend Drive-Id", () => {
       misrouted: true,
       documentId: "drive-1",
     });
+  });
+});
+
+describe("createGraphQLRoutableBackend undo and redo", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(["undo", "redo"] as const)(
+    "forwards %s to the GraphQL client and learns the drive it answers",
+    async (method) => {
+      const forwarded = vi
+        .spyOn(GraphQLReactorClient.prototype, method)
+        .mockResolvedValue(driveDocument("drive-1") as never);
+      const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+      const signal = new AbortController().signal;
+
+      const result = await backend[method]!(
+        "drive-1",
+        "global",
+        "main",
+        signal,
+      );
+
+      expect(forwarded).toHaveBeenCalledExactlyOnceWith(
+        "drive-1",
+        "global",
+        "main",
+        signal,
+      );
+      expect(result.header.id).toBe("drive-1");
+      await backend.create(modelDocument("doc-new"), "drive-1");
+      expect(driveIdOf(stub.received, "CreateDocument")).toBe("drive-1");
+    },
+  );
+
+  it.each(["undo", "redo"] as const)(
+    "learns nothing from a %s that answers a document that is not a drive",
+    async (method) => {
+      vi.spyOn(GraphQLReactorClient.prototype, method).mockResolvedValue(
+        modelDocument("drive-1") as never,
+      );
+      const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+
+      await backend[method]!("drive-1");
+      await backend.create(modelDocument("doc-new"), "drive-1");
+      expect(driveIdOf(stub.received, "CreateDocument")).toBeUndefined();
+    },
+  );
+
+  it("forwards undoRedoAvailability to the GraphQL client", async () => {
+    const availability = { canUndo: true, canRedo: false };
+    const forwarded = vi
+      .spyOn(GraphQLReactorClient.prototype, "undoRedoAvailability")
+      .mockResolvedValue(availability);
+    const { backend, stub } = await backendOver({ "drive-1": DRIVE_TYPE });
+    const signal = new AbortController().signal;
+
+    expect(
+      await backend.undoRedoAvailability!("doc-1", "global", "main", signal),
+    ).toEqual(availability);
+    expect(forwarded).toHaveBeenCalledExactlyOnceWith(
+      "doc-1",
+      "global",
+      "main",
+      signal,
+    );
+    expect(stub.received).toEqual([]);
   });
 });

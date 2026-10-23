@@ -55,6 +55,15 @@ describe("protocolEnv", () => {
       REACTOR_DOCUMENT_DECISIONS: "true",
     });
   });
+
+  it("maps undoV3 onto REACTOR_UNDO_V3", () => {
+    expect(protocolEnv({ featureFlags: { undoV3: false } })).toEqual({
+      REACTOR_UNDO_V3: "false",
+    });
+    expect(protocolEnv({ featureFlags: { undoV3: true } })).toEqual({
+      REACTOR_UNDO_V3: "true",
+    });
+  });
 });
 
 describe("projectReactorToSwitchboard", () => {
@@ -203,5 +212,22 @@ describe("assertProtocolConsistency (the enforcement teeth)", () => {
         CREATE_SIGNATURE_POLICY: "v2-required",
       }),
     ).toThrow(/CREATE_SIGNATURE_POLICY/);
+  });
+
+  it("reads REACTOR_UNDO_V3 as on unless it is exactly false", () => {
+    const on = { featureFlags: { undoV3: true } };
+    const off = { featureFlags: { undoV3: false } };
+    expect(() =>
+      assertProtocolConsistency(on, { REACTOR_UNDO_V3: "1" }),
+    ).not.toThrow();
+    expect(() =>
+      assertProtocolConsistency(off, { REACTOR_UNDO_V3: "false" }),
+    ).not.toThrow();
+    expect(() =>
+      assertProtocolConsistency(on, { REACTOR_UNDO_V3: "false" }),
+    ).toThrow(/REACTOR_UNDO_V3 is "false".*but "true"/s);
+    expect(() =>
+      assertProtocolConsistency(off, { REACTOR_UNDO_V3: "0" }),
+    ).toThrow(/REACTOR_UNDO_V3 is "0".*but "false"/s);
   });
 });

@@ -549,9 +549,14 @@ export const connectReactorFeatureFlagsSchema = z
         "Evaluate `where` and `match` conditions on grants. Requires authGroups. Do not enable on a fleet `preflight:auth` reports as crossing a reducer version.",
       default: false,
     }),
+    undoV3: z.boolean().optional().meta({
+      description:
+        "Support base-reducer 3 (id-targeted undo), which new documents then take. A peer without it is held from base-reducer 3 documents until it upgrades.",
+      default: true,
+    }),
   })
   .describe(
-    "Enforcement flags. Each implies its predecessors, and the reactor refuses to boot on a set that names a later flag without an earlier one. These are consensus settings: a Connect syncing with a fleet must carry the same flags the fleet does, or the two reach different replay outcomes for the same history and diverge.",
+    "Reactor feature flags. The four enforcement flags each imply their predecessors, and the reactor refuses to boot on a set that names a later one without an earlier one. They are consensus settings: a Connect syncing with a fleet must carry the same enforcement flags the fleet does, or the two reach different replay outcomes for the same history and diverge. undoV3 has no prerequisites; peers negotiate it.",
   );
 
 export const connectReactorSchema = z

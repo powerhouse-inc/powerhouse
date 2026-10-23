@@ -1,12 +1,26 @@
 // Undo that steps over operations that are not the author's edits, such as
 // the runtime's test and run facts, and redo of what it took back.
 import {
+  assertNever,
+  capabilitiesOf,
   garbageCollect,
   garbageCollectV2,
-  generateId,
+  generateActionId,
+  groupedActionId,
+  isDenied,
+  isDocumentAction,
+  optionalBaseReducerCapabilities,
+  positionalOperations,
+  retract,
+  retractedActionIds,
   sortOperations,
+  undoGroupOfId,
   type Action,
+  type BaseReducerCapabilities,
+  type CreateDocumentActionInput,
   type Operation,
+  type PHDocumentHeader,
+  type UndoModel,
 } from "@powerhousedao/shared/document-model";
 
 export interface UndoPolicy {
@@ -26,34 +40,114 @@ export interface UndoPlan {
   undone: Action[];
 }
 
-// Actions of one edit share an id prefix, so undo takes them back together.
-const GROUP_PREFIX = "undo-group:";
-
+// Actions of one edit share an id suffix, so undo takes them back together.
 export function newUndoGroup(): string {
-  return generateId();
+  return generateActionId();
 }
 
 export function groupedAction<A extends Action>(action: A, group: string): A {
-  return { ...action, id: `${GROUP_PREFIX}${group}:${generateId()}` };
+  return { ...action, id: groupedActionId(generateActionId(), group) };
 }
 
 export function undoGroupOf(action: Action): string | undefined {
-  if (!action.id.startsWith(GROUP_PREFIX)) return undefined;
-  const end = action.id.indexOf(":", GROUP_PREFIX.length);
-  return end > GROUP_PREFIX.length
-    ? action.id.slice(GROUP_PREFIX.length, end)
-    : undefined;
+  return undoGroupOfId(action.id);
 }
 
-// The operations still in effect: undone ones and the NOOPs removed.
+// The header's capabilities; a header without a version, as the GraphQL light
+// client builds it, takes them from the document's CREATE_DOCUMENT, else 1.
+// An unknown version throws.
+export function undoCapabilities(
+  header: PHDocumentHeader,
+  create?: Operation,
+): BaseReducerCapabilities {
+  const input =
+    create?.action.type === "CREATE_DOCUMENT"
+      ? (create.action.input as Partial<CreateDocumentActionInput> | undefined)
+      : undefined;
+  return (
+    optionalBaseReducerCapabilities(header) ??
+    optionalBaseReducerCapabilities({
+      ...header,
+      protocolVersions: input?.protocolVersions,
+    }) ??
+    capabilitiesOf(1)
+  );
+}
+
+// Below the retraction model: the operations still in effect, undone ones and
+// the NOOPs removed.
 export function effectiveOperations(
   operations: readonly Operation[],
-  protocolVersion: number,
+  model: Exclude<UndoModel, "retraction">,
 ): Operation[] {
   const sorted = sortOperations([...operations]);
-  const kept =
-    protocolVersion >= 2 ? garbageCollectV2(sorted) : garbageCollect(sorted);
-  return kept.filter((operation) => operation.action.type !== "NOOP");
+  return keptOperations(sorted, model).filter(
+    (operation) => operation.action.type !== "NOOP",
+  );
+}
+
+function keptOperations(
+  sorted: Operation[],
+  model: Exclude<UndoModel, "retraction">,
+): Operation[] {
+  switch (model) {
+    case "skip":
+      return garbageCollect(sorted);
+    case "noop-chain":
+      return garbageCollectV2(sorted);
+    default:
+      return assertNever(model, "undo model");
+  }
+}
+
+// Base-reducer 3: the live rows an undo may retract. Base actions, NOOPs,
+// retractions and denied rows are not edits.
+export function liveOperations(operations: readonly Operation[]): Operation[] {
+  const rows = positionalOperations(operations);
+  const retracted = retractedActionIds(rows);
+  return rows.filter(
+    (operation) =>
+      !retracted.has(operation.action.id) &&
+      !NOT_EDITS.has(operation.action.type) &&
+      !isDocumentAction(operation.action) &&
+      !isDenied(operation),
+  );
+}
+
+const NOT_EDITS = new Set(["NOOP", "RETRACT", "UNDO", "REDO"]);
+
+// Base-reducer 3: the ids undo retracts, the live rows of the last edit
+// outside `policy.skip`; null when there is none. A row that threw is
+// retracted too, which changes nothing.
+export function planRetraction(
+  operations: readonly Operation[],
+  policy: UndoPolicy,
+): string[] | null {
+  const live = liveOperations(operations);
+  const last = live.findLast(
+    (operation) => !policy.skip.has(operation.action.type),
+  );
+  if (!last) return null;
+  const group = undoGroupOf(last.action);
+  if (group === undefined) return [last.action.id];
+  return live
+    .filter((operation) => undoGroupOf(operation.action) === group)
+    .map((operation) => operation.action.id);
+}
+
+export function canUndoOn3(
+  operations: readonly Operation[],
+  policy: UndoPolicy,
+): boolean {
+  return planRetraction(operations, policy) !== null;
+}
+
+// One RETRACT per id, sent together.
+export function retractions(
+  ids: readonly string[],
+  scope = "global",
+): Action[] {
+  return ids.map((id) => retract(id, scope));
 }
 
 // Where the edit ending at `last` starts: back through its group's actions,
@@ -124,7 +218,7 @@ export function editedSince(
 // A fresh action carrying an undone edit, to dispatch as its redo.
 export function redoAction(action: Action): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: action.type,
     scope: action.scope,
     input: action.input,

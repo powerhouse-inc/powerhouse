@@ -3,8 +3,14 @@ import type {
   CreateDocumentAction,
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
+import {
+  documentFromCreation,
+  derivesByRule,
+  optionalBaseReducerCapabilities,
+  usesRetractionRule,
+} from "@powerhousedao/shared/document-model";
 import {
   DocumentNotFoundError,
   DocumentPurgedError,
@@ -21,7 +27,27 @@ import type {
   StreamQuery,
 } from "./types.js";
 import type { WalkStream } from "./walk.js";
-import { walkByPosition } from "./walk.js";
+import { walkByPosition, walkIdOrder } from "./walk.js";
+
+/**
+ * A rule version's stream reducers. A stream the rule derives cannot be
+ * walked without them, so a model that supplies none fails closed.
+ */
+export function ruleReducers(
+  before: PHDocument,
+  scope: string,
+  reducers: ((document: PHDocument) => ReducerFor) | undefined,
+): ReducerFor | undefined {
+  const caps = optionalBaseReducerCapabilities(before.header);
+  if (caps === undefined || !usesRetractionRule(caps)) return undefined;
+  const reducerFor = reducers?.(before);
+  if (reducerFor === undefined && derivesByRule(caps, scope)) {
+    throw new Error(
+      `Cannot walk ${scope} of ${before.header.id}: its decision model supplies no state reducers for base-reducer ${caps.version}`,
+    );
+  }
+  return reducerFor;
+}
 
 /** The stream key for evaluated operations whose scope no projection reads. */
 const EVALUATED_ONLY = "evaluated";
@@ -150,9 +176,7 @@ export async function evaluateByPosition<M>(
         error instanceof DocumentNotFoundError &&
         !(error instanceof DocumentPurgedError)
       ) {
-        return createDocumentFromAction(
-          creation.action as CreateDocumentAction,
-        );
+        return documentFromCreation(creation.action as CreateDocumentAction);
       }
       throw error;
     }
@@ -263,6 +287,7 @@ export async function evaluateByPosition<M>(
       document: before,
       operations: [...storedOperations, ...operations],
       apply: definition.foldEvaluatedScope,
+      reducerFor: ruleReducers(before, scope, definition.evaluatedScopeReducer),
     });
   } else {
     walked.push({
@@ -303,13 +328,27 @@ export async function evaluateByPosition<M>(
         throw error;
       }
 
+      // Base-reducer 3 derives the stream by the rule over every row: a
+      // reshuffle's skip can sit on a row no filter keeps, and without it the
+      // rewound original survives as a duplicate. Elsewhere the read stays
+      // narrowed, as before.
+      const reducerFor = ruleReducers(
+        before,
+        query.scope,
+        projection.scopeReducer,
+      );
+      const filter =
+        reducerFor === undefined
+          ? { actionTypes: projection.decidingActions }
+          : undefined;
+
       const streamOperations = (
         await operationStore.getSince(
           query.documentId,
           query.scope,
           query.branch,
           -1,
-          { actionTypes: projection.decidingActions },
+          filter,
           undefined,
           signal,
         )
@@ -322,6 +361,7 @@ export async function evaluateByPosition<M>(
         document: before,
         operations: streamOperations,
         apply: projection.apply,
+        reducerFor,
       });
       derivedEntries.push({ name: projection.name, query });
     }
@@ -330,7 +370,7 @@ export async function evaluateByPosition<M>(
   const reasons = new Map<string, string | undefined>();
 
   // By hand, because for...of cannot send the verdict back into the generator.
-  const walk = walkByPosition(walked);
+  const walk = walkByPosition(walked, walkIdOrder(walked, target.documentId));
   let step = walk.next(false);
   while (!step.done) {
     const position = step.value;

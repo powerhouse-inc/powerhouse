@@ -1,6 +1,7 @@
-import type {
-  Operation,
-  PHDocument,
+import {
+  createReducer,
+  type Operation,
+  type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,6 +20,9 @@ import {
   createUpgradeDocumentOperation,
 } from "../../factories.js";
 import { SnapshotPosition } from "../../../src/cache/write-cache-types.js";
+
+/** Applies every operation and leaves state as it was. */
+const keepsState = createReducer(() => undefined);
 
 function createMockOperationStore(): IOperationStore {
   return {
@@ -44,6 +48,8 @@ function createMockOperationStore(): IOperationStore {
     }),
     getStreamLatestTimestamp: vi.fn().mockResolvedValue(undefined),
     findOperationIds: vi.fn().mockResolvedValue(new Set()),
+    findReferencing: vi.fn().mockResolvedValue(new Set()),
+    getAllOperationsByIds: vi.fn().mockResolvedValue([]),
     getOperationsByIds: vi.fn().mockResolvedValue([]),
   };
 }
@@ -582,9 +588,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
       registerModules: vi.fn(),
       unregisterModules: vi.fn(),
       getModule: vi.fn().mockReturnValue({
-        reducer: (doc: PHDocument) => {
-          return doc;
-        },
+        reducer: keepsState,
         utils: documentModelDocumentModelModule.utils,
       }),
       getAllModules: vi.fn(),
@@ -805,7 +809,7 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     const docType = "powerhouse/document-model";
 
     const versionAwareGetModule = vi.fn().mockReturnValue({
-      reducer: (doc: PHDocument) => doc,
+      reducer: keepsState,
       utils: documentModelDocumentModelModule.utils,
     });
 
@@ -886,9 +890,7 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
       registerModules: vi.fn(),
       unregisterModules: vi.fn(),
       getModule: vi.fn().mockReturnValue({
-        reducer: (doc: PHDocument) => {
-          return doc;
-        },
+        reducer: keepsState,
         utils: documentModelDocumentModelModule.utils,
       }),
       getAllModules: vi.fn(),
@@ -1037,8 +1039,16 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docId = "test-warm-walk";
     const docType = "powerhouse/document-model";
 
+    // The replay path; base-reducer 3 derives through the state reducer.
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(
+          docId,
+          docType,
+          {},
+          { protocolVersions: { "base-reducer": 2 } },
+        ),
+      );
     });
 
     const operations: Operation[] = [];

@@ -43,6 +43,7 @@ const SERVED: Record<
   getIncomingRelationships: true,
   getOutgoingRelationshipEdges: true,
   getIncomingRelationshipEdges: true,
+  newDocument: true,
   create: true,
   createEmpty: true,
   execute: true,
@@ -73,6 +74,10 @@ const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
   isServed: true,
   getCreateSignaturePolicy: true,
   getCreateProtocolVersions: true,
+  undo: true,
+  redo: true,
+  undoRedoTargets: true,
+  undoRedoAvailability: true,
 };
 
 type AnyMethod = (...args: unknown[]) => unknown;

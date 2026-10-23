@@ -43,6 +43,7 @@ interface RelationshipPostWriteArgs {
   job: Job;
 }
 import {
+  documentFromCreation,
   hashDocumentStateForScope,
   normalizeDocumentModelVersion,
 } from "@powerhousedao/shared/document-model";
@@ -50,13 +51,13 @@ import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type { Job } from "../queue/types.js";
+import { ModuleNotFoundError } from "../registry/errors.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import {
   DocumentDeletedError,
   DocumentNotFoundError,
   DocumentPurgedError,
   ReservedActionError,
-  UnsupportedProtocolVersionError,
   UpgradePreconditionFailedError,
 } from "../shared/errors.js";
 import { AppendConditionFailedError } from "../storage/interfaces.js";
@@ -65,7 +66,6 @@ import type {
   ExecutingJob,
   JobResult,
   PendingWrite,
-  ProtocolSupport,
   ReactorFeatureFlags,
 } from "./types.js";
 import type { RegisteredDecisionModel } from "../decision/registered-model.js";
@@ -75,7 +75,6 @@ import {
   applyUpgradeDocumentAction,
   buildErrorResult,
   buildSuccessResult,
-  createDocumentFromAction,
   createOperation,
   GATED_DOCUMENT_ACTIONS,
   getNextIndexForScope,
@@ -85,50 +84,17 @@ import {
   updateDocumentRevision,
 } from "./util.js";
 import { SnapshotPosition } from "../cache/write-cache-types.js";
+import { createNeedsModel, type IProtocolGate } from "../protocol/gate.js";
 
 export class DocumentActionHandler {
-  private readonly loggedUnregisteredProtocols = new Set<string>();
-
   constructor(
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
     private driveContainerTypes: ReadonlySet<string>,
     private featureFlags: ReactorFeatureFlags,
     private decisionModel: RegisteredDecisionModel,
-    private protocolSupport: ProtocolSupport,
+    private protocolGate: IProtocolGate,
   ) {}
-
-  /** Keys this reactor does not register are admitted: it cannot judge them. */
-  unsupportedProtocol(
-    documentId: string,
-    protocolVersions: { readonly [protocol: string]: number } | undefined,
-  ): UnsupportedProtocolVersionError | undefined {
-    for (const [protocol, version] of Object.entries(protocolVersions ?? {})) {
-      const supported = this.protocolSupport[protocol] as
-        | readonly number[]
-        | undefined;
-      if (supported === undefined) {
-        if (!this.loggedUnregisteredProtocols.has(protocol)) {
-          this.loggedUnregisteredProtocols.add(protocol);
-          this.logger.info(
-            "Admitting document @documentId with unregistered protocol @protocol @version",
-            documentId,
-            protocol,
-            version,
-          );
-        }
-        continue;
-      }
-      if (!supported.includes(version)) {
-        return new UnsupportedProtocolVersionError(
-          documentId,
-          protocol,
-          version,
-        );
-      }
-    }
-    return undefined;
-  }
 
   /** Whether the write arrives with its evaluation already decided. */
   private alreadyEvaluated(executing: ExecutingJob): boolean {
@@ -400,15 +366,27 @@ export class DocumentActionHandler {
     }
 
     const input = action.input as CreateDocumentActionInput;
-    const unsupported = this.unsupportedProtocol(
+    const unsupported = this.protocolGate.refusal(
       input.documentId,
       input.protocolVersions,
+      input.model,
     );
     if (unsupported) {
       return buildErrorResult(job, unsupported, startTime);
     }
+    // The queue's gate loaded the model on the host; a worker may still lack it.
+    if (
+      createNeedsModel(input.protocolVersions) &&
+      this.protocolGate.registeredModules(input.model).length === 0
+    ) {
+      return buildErrorResult(
+        job,
+        new ModuleNotFoundError(input.model),
+        startTime,
+      );
+    }
 
-    const document = createDocumentFromAction(action as CreateDocumentAction);
+    const document = documentFromCreation(action as CreateDocumentAction);
 
     let operation = createOperation(action, 0, skip, {
       documentId: document.header.id,

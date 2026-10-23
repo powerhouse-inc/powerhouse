@@ -1,3 +1,4 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type {
   HoldReason,
   Operation,
@@ -185,6 +186,8 @@ type InboxBatchEnqueued = {
 enum OutboxMode {
   Backfill = "backfill",
   BatchTriggered = "batch-triggered",
+  /** A held document's whole history, below the peer's ack. */
+  Release = "release",
 }
 
 const defaultSyncManagerConfig: SyncManagerConfig = {
@@ -250,6 +253,15 @@ function createdVersions(
     }
   }
   return undefined;
+}
+
+/** The document type the operations for `documentId` carry. */
+function documentTypeOf(
+  operations: readonly OperationWithContext[],
+  documentId: string,
+): string | undefined {
+  return operations.find(({ context }) => context.documentId === documentId)
+    ?.context.documentType;
 }
 
 /** The load was refused because this very id is purged here: a drop. */
@@ -374,6 +386,7 @@ export class SyncManager
     documentId: string,
     branch: string,
   ) => Promise<ProtocolVersions | undefined>;
+  private readonly modelRefusal: LocalPeer["modelRefusal"];
   private readonly peerUpdates = new Map<string, Promise<void>>();
   private readonly peerUnsubscribes = new Map<string, () => void>();
   // remote name -> marker op id -> the inbox item loading it
@@ -411,7 +424,10 @@ export class SyncManager
     driveContainerTypes: ReadonlySet<string>,
     watermark: ISettledWatermark,
     config: Partial<SyncManagerConfig> = {},
-    localPeer: LocalPeer = { capabilities: PEER_CAPABILITIES, flags: {} },
+    localPeer: LocalPeer = {
+      capabilities: PEER_CAPABILITIES,
+      flags: resolveFeatureFlags(),
+    },
     holds: ISyncHoldStorage = new InMemorySyncHoldStorage(),
     purges?: PurgeLookup,
     receivedMarkers: ISyncReceivedMarkerStorage = new InMemorySyncReceivedMarkerStorage(),
@@ -445,6 +461,7 @@ export class SyncManager
       if (wanted !== undefined) this.wanted[capability.name] = wanted;
     }
     this.holds = holds;
+    this.modelRefusal = localPeer.modelRefusal;
     this.protocolVersionsOf =
       localPeer.protocolVersionsOf ??
       ((documentId, branch) => this.indexedVersions(documentId, branch));
@@ -972,6 +989,14 @@ export class SyncManager
     const held = this.heldFor(remote.meta.name);
     const key = holdKey(documentId, branch);
     if (held.has(key)) return;
+    this.logger.info(
+      "Holding @documentId from @remote: it runs @protocol @version, the peer supports @peerSupports",
+      documentId,
+      remote.meta.name,
+      reason.protocol,
+      reason.version,
+      reason.peerSupports.length > 0 ? reason.peerSupports.join(", ") : "none",
+    );
     const record: SyncHoldRecord = {
       remoteName: remote.meta.name,
       documentId,
@@ -1107,7 +1132,7 @@ export class SyncManager
       }
       return a.context.ordinal - b.context.ordinal;
     });
-    this.emitBatches(remote, operations, OutboxMode.Backfill, {
+    this.emitBatches(remote, operations, OutboxMode.Release, {
       lastJobByDoc: new Map(),
     });
   }
@@ -1169,20 +1194,27 @@ export class SyncManager
     versions: ProtocolVersions,
     peer: Supports,
   ): boolean {
+    let message: string;
     let errorType: SyncOperationErrorType;
-    let reason = holdReason(this.localSupport, versions, this.capabilities);
-    if (reason) {
+    const local = holdReason(this.localSupport, versions, this.capabilities);
+    const documentType = documentTypeOf(syncOp.operations, syncOp.documentId);
+    const model =
+      local || documentType === undefined
+        ? undefined
+        : this.modelRefusal?.(documentType, versions);
+    if (local) {
       errorType = "UNSUPPORTED_PROTOCOL";
+      message = `Document ${syncOp.documentId} requires ${local.protocol} ${local.version}, which this reactor does not support`;
+    } else if (model) {
+      errorType = "UNSUPPORTED_PROTOCOL";
+      message = `Document ${syncOp.documentId} requires ${model.protocol} ${model.version}, which this reactor cannot run for ${documentType}`;
     } else {
-      reason = holdReason(peer, versions, this.capabilities);
+      const reason = holdReason(peer, versions, this.capabilities);
       if (!reason) return false;
       errorType = "PEER_PROTOCOL_UNSUPPORTED";
+      message = `Remote ${remote.meta.name} wrote into document ${syncOp.documentId} at ${reason.protocol} ${reason.version}, which its peer does not announce`;
     }
 
-    const message =
-      errorType === "UNSUPPORTED_PROTOCOL"
-        ? `Document ${syncOp.documentId} requires ${reason.protocol} ${reason.version}, which this reactor does not support`
-        : `Remote ${remote.meta.name} wrote into document ${syncOp.documentId} at ${reason.protocol} ${reason.version}, which its peer does not announce`;
     syncOp.failed(
       new ChannelError(ChannelErrorSource.Inbox, new Error(message), errorType),
     );
@@ -2281,6 +2313,26 @@ export class SyncManager
         error instanceof Error ? error.message : String(error),
       );
       return;
+    }
+
+    // A refusal answers an earlier revision of this reactor, and the sender
+    // releases its hold on the new one; reporting it again would re-hold.
+    const stale = records.filter(
+      (record) =>
+        record.errorSource === ChannelErrorSource.Inbox &&
+        record.errorType === "UNSUPPORTED_PROTOCOL",
+    );
+    if (stale.length > 0) {
+      records = records.filter((record) => !stale.includes(record));
+      for (const record of stale) {
+        void this.deadLetterStorage.remove(record.id).catch((error) => {
+          this.logger.error(
+            "Failed to drop a stale refusal (@id, @error)",
+            record.id,
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+      }
     }
 
     if (records.length === 0) {
@@ -3450,6 +3502,7 @@ export class SyncManager
         batch.branch,
         batch.operations,
       );
+      syncOp.awaitingPush = mode === OutboxMode.Release;
 
       syncOps.push(syncOp);
       chain.lastJobByDoc.set(batch.documentId, jobId);

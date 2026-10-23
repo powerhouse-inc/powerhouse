@@ -1,9 +1,16 @@
+import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { hashDocumentStateForScope } from "@powerhousedao/shared/document-model";
+import {
+  hashDocumentStateForScope,
+  localSupports,
+  PEER_CAPABILITIES,
+} from "@powerhousedao/shared/document-model";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { firstOutOfOrderPair } from "../decision/stream-order.js";
+import type { ProtocolSupport } from "../executor/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import { UnsupportedProtocolVersionError } from "../shared/errors.js";
 import { throwIfAborted } from "../shared/utils.js";
 import type {
   IDocumentView,
@@ -19,6 +26,7 @@ import type {
   StreamOrderIssue,
   ValidationResult,
 } from "./types.js";
+import { createProtocolGate } from "../protocol/gate.js";
 
 export class DocumentIntegrityService implements IDocumentIntegrityService {
   private readonly keyframeStore: IKeyframeStore;
@@ -26,19 +34,25 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
   private readonly writeCache: IWriteCache;
   private readonly documentView: IDocumentView;
   private readonly documentModelRegistry: IDocumentModelRegistry;
+  private readonly protocolSupport: ProtocolSupport;
 
+  /** `protocolSupport` defaults to the default peer capabilities with no flags. */
   constructor(
     keyframeStore: IKeyframeStore,
     operationStore: IOperationStore,
     writeCache: IWriteCache,
     documentView: IDocumentView,
     documentModelRegistry: IDocumentModelRegistry,
+    protocolSupport?: ProtocolSupport,
   ) {
     this.keyframeStore = keyframeStore;
     this.operationStore = operationStore;
     this.writeCache = writeCache;
     this.documentView = documentView;
     this.documentModelRegistry = documentModelRegistry;
+    this.protocolSupport =
+      protocolSupport ??
+      localSupports(PEER_CAPABILITIES, resolveFeatureFlags()).protocols;
   }
 
   async validateDocument(
@@ -62,8 +76,41 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
         maxDocuments: 1,
         ringBufferSize: 1,
         keyframeInterval: Number.MAX_SAFE_INTEGER,
+        gate: createProtocolGate(
+          this.protocolSupport,
+          this.documentModelRegistry,
+        ),
       },
     );
+    const unsupported = (
+      error: UnsupportedProtocolVersionError,
+    ): ValidationResult => ({
+      documentId,
+      isConsistent:
+        keyframeIssues.length === 0 &&
+        snapshotIssues.length === 0 &&
+        streamOrderIssues.length === 0,
+      keyframeIssues,
+      snapshotIssues,
+      streamOrderIssues,
+      unsupported: { protocol: error.protocol, version: error.version },
+    });
+
+    // Every later read runs this check too; a document with no keyframes and
+    // no snapshot would otherwise reach none of them.
+    try {
+      await replayCache.getState(
+        documentId,
+        "document",
+        branch,
+        undefined,
+        signal,
+      );
+    } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return unsupported(error);
+      }
+    }
 
     const keyframes = await this.keyframeStore.listKeyframes(
       documentId,
@@ -76,13 +123,21 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
       throwIfAborted(signal);
 
       replayCache.invalidate(documentId, keyframe.scope, branch);
-      const replayedDoc = await replayCache.getState(
-        documentId,
-        keyframe.scope,
-        branch,
-        keyframe.revision,
-        signal,
-      );
+      let replayedDoc: PHDocument;
+      try {
+        replayedDoc = await replayCache.getState(
+          documentId,
+          keyframe.scope,
+          branch,
+          keyframe.revision,
+          signal,
+        );
+      } catch (error) {
+        if (UnsupportedProtocolVersionError.isError(error)) {
+          return unsupported(error);
+        }
+        throw error;
+      }
 
       const kfHash = hashDocumentStateForScope(
         keyframe.document,
@@ -136,7 +191,10 @@ export class DocumentIntegrityService implements IDocumentIntegrityService {
           undefined,
           signal,
         );
-      } catch {
+      } catch (error) {
+        if (UnsupportedProtocolVersionError.isError(error)) {
+          return unsupported(error);
+        }
         throwIfAborted(signal);
         continue;
       }

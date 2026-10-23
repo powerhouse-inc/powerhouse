@@ -1,4 +1,5 @@
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { IProtocolGate } from "../protocol/gate.js";
 
 /**
  * Configuration options for the write cache
@@ -12,6 +13,9 @@ export type WriteCacheConfig = {
 
   /** Persist a keyframe snapshot every N revisions. Default: 10 */
   keyframeInterval: number;
+
+  /** Refuses a document stored outside the versions this reactor runs, typed. */
+  gate?: IProtocolGate;
 };
 
 /**

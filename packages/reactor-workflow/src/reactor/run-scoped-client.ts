@@ -2,6 +2,7 @@
 // run user within the step's declaration, connection and deadline (ADR 0005).
 import type { ReactorClient } from "@powerhousedao/pieces-framework";
 import {
+  createEmptyDocument,
   deleteDocumentAction,
   JobStatus,
   PropagationMode,
@@ -319,12 +320,12 @@ export class RunScopedReactorClient implements ReactorClient {
     return this.createDocument<TDocument>(document, parentId, abort);
   }
 
-  async createEmpty<TDocument extends PHDocument>(
+  async newDocument<TDocument extends PHDocument = PHDocument>(
     documentModelType: string,
-    options?: Parameters<IReactorClient["createEmpty"]>[1],
+    options?: Parameters<IReactorClient["newDocument"]>[1],
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.assertWritable("createEmpty");
+    this.assertWritable("newDocument");
     const abort = this.signal(signal);
     const module = await this.modelModule(
       documentModelType,
@@ -335,15 +336,30 @@ export class RunScopedReactorClient implements ReactorClient {
       options?.parentIdentifier === undefined
         ? undefined
         : await this.resolveReference(options.parentIdentifier, "main", abort);
-    const base = await this.inner.getCreateProtocolVersions(parentId, abort);
-    const document = withSignaturePolicy(
-      module.utils.createDocument(),
+    const base = await this.inner.getCreateProtocolVersions(
+      { documentType: documentModelType, parentIdentifier: parentId },
+      abort,
+    );
+    return createEmptyDocument(
+      module,
+      options,
       await this.inner.getCreateSignaturePolicy(),
-      { protocolVersions: { ...base, ...options?.protocolVersions } },
-    );
-    document.state.document.version = normalizeDocumentModelVersion(
-      module.version,
-    );
+      base,
+    ) as TDocument;
+  }
+
+  async createEmpty<TDocument extends PHDocument>(
+    documentModelType: string,
+    options?: Parameters<IReactorClient["createEmpty"]>[1],
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    this.assertWritable("createEmpty");
+    const abort = this.signal(signal);
+    const document = await this.newDocument(documentModelType, options, abort);
+    const parentId =
+      options?.parentIdentifier === undefined
+        ? undefined
+        : await this.resolveReference(options.parentIdentifier, "main", abort);
     return this.createDocument<TDocument>(document, parentId, abort);
   }
 

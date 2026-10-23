@@ -40,6 +40,7 @@ import {
   createCopyHeader,
   createPresignedHeader,
   createZip,
+  creationState,
   documentModelDocumentType,
   generateId,
   hasDerivedDocumentId,
@@ -48,7 +49,6 @@ import {
   setPreferredEditor,
   signaturePolicyOf,
   UnsupportedDocumentModelVersionError,
-  withSignaturePolicy,
   type UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
@@ -231,25 +231,15 @@ export async function fetchDocumentOperations(
 export function extractInitialState(
   documentScopeOps: Operation[],
 ): PHBaseState {
-  const upgradeOp = documentScopeOps.find(
-    (op) => op.action.type === "UPGRADE_DOCUMENT",
+  const initialState = creationState(documentScopeOps);
+  if (initialState) {
+    return initialState;
+  }
+  throw new Error(
+    documentScopeOps.some((op) => op.action.type === "UPGRADE_DOCUMENT")
+      ? "UPGRADE_DOCUMENT operation has no initialState — document is invalid"
+      : "No UPGRADE_DOCUMENT operation found — document is invalid",
   );
-  if (!upgradeOp) {
-    throw new Error(
-      "No UPGRADE_DOCUMENT operation found — document is invalid",
-    );
-  }
-  const input = upgradeOp.action.input as {
-    initialState?: PHBaseState;
-    state?: PHBaseState;
-  };
-  const initialState = input.initialState ?? input.state;
-  if (!initialState) {
-    throw new Error(
-      "UPGRADE_DOCUMENT operation has no initialState — document is invalid",
-    );
-  }
-  return initialState;
 }
 
 export function filterDomainOperations(
@@ -464,37 +454,13 @@ export async function addDocument(
     throw new Error("ReactorClient not initialized");
   }
 
-  // get the module
-  let documentModelModule: DocumentModelModule;
-  if (documentModelVersion !== undefined) {
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
-    const module = documentModelModules.find(
-      (m) =>
-        m.documentModel.global.id === documentType &&
-        (m.version ?? 1) === documentModelVersion,
-    );
-    if (!module) {
-      throw new Error(
-        `Document model not found for type: ${documentType} with version: ${documentModelVersion}`,
-      );
-    }
-    documentModelModule = module;
-  } else {
-    documentModelModule =
-      await reactorClient.getDocumentModelModule(documentType);
-  }
-
   // create - use passed document's state if available
   const newDocument =
     document ??
-    withSignaturePolicy(
-      documentModelModule.utils.createDocument(),
-      await reactorClient.getCreateSignaturePolicy(),
-    );
-  if (!document) {
-    newDocument.state.document.version = documentModelModule.version ?? 1;
-  }
+    (await reactorClient.newDocument(documentType, {
+      parentIdentifier: driveId,
+      documentModelVersion,
+    }));
   newDocument.header.name = name;
   if (preferredEditor) {
     newDocument.header.meta = {
@@ -582,7 +548,11 @@ async function createImportedDocument(
   for (let attempt = 1; ; attempt++) {
     let header: PHDocumentHeader;
     if (!v2Required) {
-      header = createPresignedHeader(documentId, document.header.documentType);
+      header = createPresignedHeader(
+        documentId,
+        document.header.documentType,
+        document.header.protocolVersions,
+      );
     } else if (keepsId && attempt === 1) {
       header = createPresignedHeader(documentId, document.header.documentType);
       header.createdAtUtcIso = document.header.createdAtUtcIso;
@@ -1141,7 +1111,10 @@ async function _duplicateDocument(
 
   const config: VersionedReplayConfig = { reducers, upgradeManifest };
   // A copy keeps its source's versions; selection fills the keys it lacks.
-  const selected = await reactor.getCreateProtocolVersions(driveId);
+  const selected = await reactor.getCreateProtocolVersions({
+    documentType: document.header.documentType,
+    parentIdentifier: driveId,
+  });
   const header = createCopyHeader(
     {
       documentType: document.header.documentType,

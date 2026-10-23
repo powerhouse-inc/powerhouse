@@ -8,15 +8,20 @@ describe("IReactorBrowserClient", () => {
     expect(true).toBe(true);
   });
 
-  it("exposes exactly the seven agreed members", () => {
+  it("exposes exactly the agreed members", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
       | "find"
       | "subscribe"
       | "execute"
       | "getOperations"
+      | "newDocument"
       | "create"
       | "deleteDocument"
+      | "undo"
+      | "redo"
+      | "undoRedoTargets"
+      | "undoRedoAvailability"
     >();
     expect(true).toBe(true);
   });

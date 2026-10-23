@@ -8,7 +8,7 @@ import {
   type PollBehavior,
 } from "@powerhousedao/reactor";
 import {
-  driveCreateDocument,
+  driveDocumentType,
   setAvailableOffline,
   setDriveIcon as createSetDriveIconAction,
   setDriveName as createSetDriveNameAction,
@@ -17,14 +17,11 @@ import {
   type DriveInput,
   type SharingType,
 } from "@powerhousedao/shared/document-drive";
-import type { PHDocument } from "@powerhousedao/shared/document-model";
-import {
-  DEFAULT_SIGNATURE_POLICY,
-  requestedSignaturePolicy,
-  withSignaturePolicy,
-  type ProtocolVersions,
-  type SignaturePolicy,
+import type {
+  PHBaseState,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { requestedSignaturePolicy } from "@powerhousedao/shared/document-model";
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
@@ -124,18 +121,6 @@ export async function waitForDocumentReady(
   });
 }
 
-/** The full client's creation default, else the library's. */
-async function createSignaturePolicy(): Promise<SignaturePolicy> {
-  const client = getFullReactorClient();
-  return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
-}
-
-/** What the full client selects for a drive, which has no parent. */
-async function createProtocolVersions(): Promise<ProtocolVersions> {
-  const client = getFullReactorClient();
-  return client ? client.getCreateProtocolVersions() : {};
-}
-
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
   if (!isAllowedToCreateDocuments) {
@@ -150,24 +135,21 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   // A configured id (e.g. a local default drive) overrides the generated one,
   // and only a legacy drive can take a chosen id. Empty strings are the "not
   // provided" signal used by the Add Drive modal.
-  const driveDoc = withSignaturePolicy(
-    driveCreateDocument({
-      global: {
-        name: input.global.name || "",
-        icon: input.global.icon ?? null,
-        nodes: [],
-      },
-    }),
-    requestedSignaturePolicy(
-      input,
-      input.id ? "legacy" : await createSignaturePolicy(),
-    ),
+  const driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
+    driveDocumentType,
     {
+      initialState: {
+        global: {
+          name: input.global.name || "",
+          icon: input.global.icon ?? null,
+          nodes: [],
+        },
+      } as Partial<PHBaseState>,
+      signaturePolicy: input.id
+        ? requestedSignaturePolicy(input, "legacy")
+        : input.signaturePolicy,
       id: input.id || undefined,
-      protocolVersions: {
-        ...(await createProtocolVersions()),
-        ...input.protocolVersions,
-      },
+      protocolVersions: input.protocolVersions,
     },
   );
 

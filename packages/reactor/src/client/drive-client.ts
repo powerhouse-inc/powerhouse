@@ -2,7 +2,8 @@ import {
   addFolder as addFolderAction,
   copyNode as copyNodeAction,
   deleteNode as deleteNodeAction,
-  driveCreateDocument,
+  driveDocumentModelModule,
+  driveDocumentType,
   generateNodesCopy,
   getDescendants,
   handleTargetNameCollisions,
@@ -17,15 +18,15 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
 import {
+  creationActions,
+  createVersionsOf,
   actions,
   createCopyHeader,
   generateId,
-  normalizeDocumentModelVersion,
-  requestedSignaturePolicy,
-  withSignaturePolicy,
   type Action,
-  type CreateDocumentActionInput,
+  type DocumentModelModule,
   type ISigner,
+  type PHBaseState,
   type PHDocument,
   type PHDocumentHeader,
   type ProtocolVersions,
@@ -33,11 +34,10 @@ import {
 import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
+import { createEmptyDocument } from "./derivations.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
@@ -48,7 +48,12 @@ import { getSharedActionScope, signActions } from "../core/utils.js";
 import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
 import { JobStatus } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
-import type { IDriveClient, IReactorClient } from "./types.js";
+import type {
+  CopyNodeOptions,
+  CreateProtocolVersionsOptions,
+  IDriveClient,
+  IReactorClient,
+} from "./types.js";
 
 /** The client members a {@link DriveClient} reads and writes through. */
 export type DriveClientDeps = Pick<
@@ -67,16 +72,18 @@ export type BatchSubmitter = (
   signal?: AbortSignal,
 ) => Promise<BatchExecutionResult>;
 
-/** A copy keeps its source's versions; selection fills only the keys it lacks. */
+/** The source's versions under `override`; selection fills the keys both lack. */
 function withSelectedVersions(
   header: PHDocumentHeader,
   selected: ProtocolVersions,
+  override: ProtocolVersions | undefined,
 ): Pick<PHDocumentHeader, "documentType" | "protocolVersions"> {
   return {
     documentType: header.documentType,
-    protocolVersions: header.protocolVersions
-      ? { ...selected, ...header.protocolVersions }
-      : undefined,
+    protocolVersions:
+      header.protocolVersions || override
+        ? { ...selected, ...header.protocolVersions, ...override }
+        : undefined,
   };
 }
 
@@ -93,6 +100,11 @@ export class DriveClient implements IDriveClient {
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string>,
+    private readonly createProtocolVersions: (
+      options: CreateProtocolVersionsOptions,
+      signal?: AbortSignal,
+    ) => Promise<ProtocolVersions> = (options, signal) =>
+      client.getCreateProtocolVersions(options, signal),
   ) {
     this.executeBatch =
       typeof submitter === "function"
@@ -105,25 +117,25 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = withSignaturePolicy(
-      driveCreateDocument({
-        global: {
-          name: input.global.name || "",
-          icon: input.global.icon ?? null,
-          nodes: [],
-        },
-      }),
-      requestedSignaturePolicy(
-        input,
-        await this.client.getCreateSignaturePolicy(),
-      ),
+    const driveDoc = createEmptyDocument(
+      driveDocumentModelModule as unknown as DocumentModelModule,
       {
-        protocolVersions: {
-          ...(await this.client.getCreateProtocolVersions(undefined, signal)),
-          ...input.protocolVersions,
-        },
+        initialState: {
+          global: {
+            name: input.global.name || "",
+            icon: input.global.icon ?? null,
+            nodes: [],
+          },
+        } as Partial<PHBaseState>,
+        signaturePolicy: input.signaturePolicy,
+        protocolVersions: input.protocolVersions,
       },
-    );
+      await this.client.getCreateSignaturePolicy(),
+      await this.client.getCreateProtocolVersions(
+        { documentType: driveDocumentType },
+        signal,
+      ),
+    ) as DocumentDriveDocument;
     if (input.preferredEditor) {
       driveDoc.header.meta = {
         ...driveDoc.header.meta,
@@ -153,40 +165,14 @@ export class DriveClient implements IDriveClient {
     const documentId = document.header.id;
     const driveId = await this.resolveReference(driveIdentifier, signal);
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
-
+    const protocolVersions = await createVersionsOf(
+      document,
+      (options) => this.createProtocolVersions(options, signal),
+      driveId,
+    );
     const documentActions: Action[] = await signActions(
       [
-        createDocumentAction(createInput),
-        upgradeDocumentAction({
-          documentId: document.header.id,
-          model: document.header.documentType,
-          fromVersion: 0,
-          // imported files may predate the document scope entirely
-          toVersion: normalizeDocumentModelVersion(
-            (document.state as Partial<typeof document.state>).document
-              ?.version,
-          ),
-          initialState: document.state,
-        }),
+        ...creationActions(document, protocolVersions),
         addRelationshipAction(driveId, documentId, "child"),
       ],
       this.signer,
@@ -417,6 +403,7 @@ export class DriveClient implements IDriveClient {
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
     this.logger.verbose(
       "drives.copyNode(@driveIdentifier, @srcNodeId, @targetParentFolderId)",
@@ -460,14 +447,20 @@ export class DriveClient implements IDriveClient {
     }
 
     const policy = await this.client.getCreateSignaturePolicy();
-    const base = await this.client.getCreateProtocolVersions(
-      drive.header.id,
-      signal,
-    );
+    const selectedByType = new Map<string, ProtocolVersions>();
     for (const entry of copyPlan) {
       const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
       if (!node || !isFileNode(node)) continue;
       const srcDoc = await this.client.get(entry.srcId, undefined, signal);
+      const documentType = srcDoc.header.documentType;
+      let base = selectedByType.get(documentType);
+      if (base === undefined) {
+        base = await this.createProtocolVersions(
+          { documentType, parentIdentifier: drive.header.id },
+          signal,
+        );
+        selectedByType.set(documentType, base);
+      }
 
       // Read snapshots carry no operations, so the copy is seeded from the
       // source's current state rather than replayed. Replaying here would also
@@ -476,7 +469,7 @@ export class DriveClient implements IDriveClient {
       const duplicated: PHDocument = {
         ...srcDoc,
         header: createCopyHeader(
-          withSelectedVersions(srcDoc.header, base),
+          withSelectedVersions(srcDoc.header, base, options?.protocolVersions),
           entry.targetId,
           policy,
         ),

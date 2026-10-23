@@ -90,14 +90,19 @@ enum PropagationMode {
 }
 ```
 
-### `CreateDocumentOptions`
+### `NewDocumentOptions`
 
-Options for `createEmpty()`.
+Options for `newDocument()` and `createEmpty()`.
 
 ```typescript
-type CreateDocumentOptions = {
+type NewDocumentOptions = {
   parentIdentifier?: string; // id or slug of parent document
   documentModelVersion?: number; // defaults to latest
+  protocolVersions?: { [protocol: string]: number }; // merged over the selection
+  signaturePolicy?: SignaturePolicy; // overrides the client's default
+  initialState?: Partial<PHBaseState>; // passed to the model's createDocument
+  name?: string;
+  id?: string; // kept only under the legacy policy
 };
 ```
 
@@ -529,9 +534,23 @@ In React, prefer the [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) 
 
 All write methods internally create jobs and wait for them to reach `READ_READY` before resolving (except `executeAsync` which returns immediately).
 
+### `newDocument`
+
+Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `create` or `drives.addFile`.
+
+```typescript
+newDocument<TDocument extends PHDocument = PHDocument>(
+  documentType: string,
+  options?: NewDocumentOptions,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+---
+
 ### `create`
 
-Create a document from a full `PHDocument` object.
+Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument).
 
 ```typescript
 create<TDocument extends PHDocument = PHDocument>(
@@ -553,12 +572,12 @@ create<TDocument extends PHDocument = PHDocument>(
 
 ### `createEmpty`
 
-Create an empty document of a given type.
+Create the document [`newDocument`](#newdocument) builds.
 
 ```typescript
 createEmpty<TDocument extends PHDocument>(
   documentModelType: string,
-  options?: CreateDocumentOptions,
+  options?: NewDocumentOptions,
   signal?: AbortSignal,
 ): Promise<TDocument>
 ```
@@ -568,7 +587,7 @@ createEmpty<TDocument extends PHDocument>(
 | Name                | Type                    | Required | Description                            |
 | ------------------- | ----------------------- | -------- | -------------------------------------- |
 | `documentModelType` | `string`                | Yes      | e.g. `"powerhouse/todo-list"`          |
-| `options`           | `CreateDocumentOptions` | No       | Parent identifier and/or model version |
+| `options`           | `NewDocumentOptions`    | No       | Parent identifier, model version and the rest of `newDocument`'s options |
 | `signal`            | `AbortSignal`           | No       | Cancel the request                     |
 
 ---
@@ -602,6 +621,8 @@ execute<TDocument extends PHDocument>(
 | `signal`             | `AbortSignal` | No       | Cancel the request                         |
 
 **Returns** the updated document after all actions are applied and read models are updated.
+
+On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond.
 
 **Example:**
 
@@ -678,6 +699,85 @@ setPreferredEditor(
 | `preferredEditor`    | `string \| null` | Yes      | Editor id, or `null` to clear it  |
 | `branch`             | `string`         | No       | Defaults to `"main"`              |
 | `signal`             | `AbortSignal`    | No       | Cancel the request                |
+
+---
+
+### `undo`
+
+Undo the last applied operation of a scope and wait for completion.
+
+```typescript
+undo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+**Parameters:**
+
+| Name                 | Type          | Required | Description            |
+| -------------------- | ------------- | -------- | ---------------------- |
+| `documentIdentifier` | `string`      | Yes      | Document id or slug    |
+| `scope`              | `string`      | No       | Defaults to `"global"` |
+| `branch`             | `string`      | No       | Defaults to `"main"`   |
+| `signal`             | `AbortSignal` | No       | Cancel the request     |
+
+On a base-reducer 3 document the client resolves the target with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer; with nothing to undo it throws before submitting. The `RETRACT` names the row the call saw, so an edit landing in between is not undone, and a target retracted or gone by then fails the write with `RetractionRefusedError` without resolving again. On base-reducer 1 and 2 it submits `UNDO`. A submitted `UNDO` or `REDO` on base-reducer 3 is refused with `SubmittedUndoRefusedError`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+
+---
+
+### `redo`
+
+Redo the last undo of a scope and wait for completion. Same parameters as [`undo`](#undo).
+
+```typescript
+redo<TDocument extends PHDocument = PHDocument>(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+On base-reducer 3 the client resolves the last live retraction with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer, under `undo`'s race rule. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
+
+---
+
+### `undoRedoTargets`
+
+The rows a base-reducer 3 `undo` and `redo` of a scope would retract now, resolved by the reactor through the read gate. A scope the subject may not read has none; below base-reducer 3 there are none.
+
+```typescript
+undoRedoTargets(
+  documentIdentifier: string,
+  scope?: string, // defaults to "global"
+  view?: ViewFilter, // branch and subject
+  signal?: AbortSignal,
+): Promise<UndoRedoTargets>
+
+type UndoRedoTargets = { undoTarget?: string; redoTarget?: string };
+```
+
+---
+
+### `undoRedoAvailability`
+
+Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo).
+
+```typescript
+undoRedoAvailability(
+  documentIdentifier: string,
+  scope?: string,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<UndoRedoAvailability>
+
+type UndoRedoAvailability = { canUndo: boolean; canRedo: boolean };
+```
+
+Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope has any operation and `canRedo` is always `false`. A scope the caller may not read reports neither.
 
 ---
 
@@ -974,7 +1074,7 @@ moveNode(
 
 ### `copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document.
+Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document, which keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
 
 ```typescript
 copyNode(
@@ -982,6 +1082,7 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
+  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<DocumentDriveDocument>
 ```
 

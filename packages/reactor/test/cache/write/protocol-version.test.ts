@@ -95,12 +95,12 @@ describe("protocol version on rebuild", () => {
     return cache.getState(docId, "global", BRANCH);
   }
 
-  it("carries base-reducer 2 from a create the reactor wrote", async () => {
+  it("carries base-reducer 3 from a create the reactor wrote", async () => {
     const document = await seedAndRebuild(
       createCreateDocumentOperation(generateId(), DOC_TYPE),
     );
 
-    expect(document.header.protocolVersions).toEqual({ "base-reducer": 2 });
+    expect(document.header.protocolVersions).toEqual({ "base-reducer": 3 });
   });
 
   it("rejects a create that records no protocol version", async () => {

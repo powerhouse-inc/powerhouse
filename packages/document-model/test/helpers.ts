@@ -1,15 +1,21 @@
 import type {
   Action,
   CreateState,
+  DeriveScope,
   Operation,
   PHBaseState,
   PHDocument,
   StateReducer,
 } from "@powerhousedao/shared/document-model";
 import {
+  capabilitiesOf,
   createAction,
   createReducer,
   defaultBaseState,
+  deriveScope,
+  redoTarget,
+  undoRedoActions,
+  undoTarget,
 } from "@powerhousedao/shared/document-model";
 import { randomUUID } from "crypto";
 import type { TestPHState } from "./types.js";
@@ -178,6 +184,27 @@ export const mutableCountReducer: StateReducer<CountPHState> = (
 };
 
 export const countReducer = createReducer<CountPHState>(baseCountReducer);
+
+/** A client's base-reducer 3 undo or redo of `global`: resolve the target, then dispatch its RETRACT. */
+export function pressOn3(
+  document: CountDocument,
+  type: "UNDO" | "REDO",
+  derive?: DeriveScope,
+): CountDocument {
+  const rows = document.operations.global ?? [];
+  const { applied } = derive
+    ? derive(document, rows, "global")
+    : deriveScope(document, rows, () => baseCountReducer, "global");
+  const targets = {
+    undoTarget: undoTarget(rows, applied),
+    redoTarget: redoTarget(rows, applied),
+  };
+  return undoRedoActions(capabilitiesOf(3), type, "global", targets).reduce(
+    (next, action) =>
+      countReducer(next, action, undefined, derive && { deriveScope: derive }),
+    document,
+  );
+}
 
 export const mapOperations = (operations: Operation[]) => {
   return operations.map(({ action: { input, type, scope }, index, skip }) => ({

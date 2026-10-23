@@ -9,9 +9,19 @@ import type {
 import {
   actionSignerIdentity,
   actionSigningTarget,
+  baseReducerCapabilities,
+  headNewDocument,
+  stateReducerOf,
   toTransportAction,
+  undoNeedsTargets,
+  undoRedoActions,
+  undoRedoTargetsOf,
 } from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
+import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "../graphql-client/create-defaults.js";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
 import type {
@@ -35,6 +45,7 @@ import {
   extractRevisionMap,
   hasRevisionConflict,
   screamingSnakeToCamel,
+  uncreatedDocument,
 } from "./utils.js";
 
 /** Extract TState from a PHDocumentController subclass. */
@@ -45,9 +56,9 @@ type InferState<C> = C extends PHDocumentController<infer S> ? S : never;
  * These are the dynamically-added methods (not on the base PHDocumentController prototype).
  */
 type ActionMethodsOf<C, TRemote> = {
-  [K in Exclude<keyof C, keyof PHDocumentController<any>>]: C[K] extends (
-    input: infer I,
-  ) => unknown
+  [
+    K in Exclude<keyof C, keyof PHDocumentController<any> | "undo" | "redo">
+  ]: C[K] extends (input: infer I) => unknown
     ? (input: I) => TRemote & ActionMethodsOf<C, TRemote>
     : C[K];
 };
@@ -71,6 +82,8 @@ export class RemoteDocumentController<
   /** The remote's id for the document; `documentId` may be a slug. */
   private canonicalDocumentId?: string;
   private remoteRevision: Record<string, number> = {};
+  /** What the first push creates the remote from, until it has. */
+  private uncreated?: PHDocument;
   private hasPulled = false;
   private pushScheduled = false;
   private pushQueue: Promise<void> = Promise.resolve();
@@ -80,6 +93,9 @@ export class RemoteDocumentController<
     this.inner = inner;
     this.options = options;
     this.documentId = options.documentId ?? "";
+    if (this.documentId === "") {
+      this.uncreated = uncreatedDocument(inner.document);
+    }
     this.remoteClient = new RemoteClient(
       options.client,
       options.operationsPageSize,
@@ -227,14 +243,7 @@ export class RemoteDocumentController<
       this.options.branch ?? "main",
     );
 
-    // Recreate inner controller with pulled document
-    const ControllerClass = this.inner.constructor as new (
-      doc?: PHDocument<PHBaseState>,
-    ) => TController;
-    this.inner = new ControllerClass(pulledDocument);
-
-    // Re-setup interceptors on the new inner instance
-    this.setupActionInterceptors();
+    this.replaceInner(pulledDocument);
 
     // Clear tracker (remote is source of truth)
     this.tracker.clear();
@@ -245,6 +254,43 @@ export class RemoteDocumentController<
     this.notifyListeners("pull");
 
     return remoteDoc;
+  }
+
+  // --- Undo ---
+
+  /**
+   * Undoes the last applied operation of `scope` under this controller's
+   * signer: UNDO below base-reducer 3; on it, a RETRACT of the target this
+   * controller's own log resolves, pending actions included.
+   */
+  undo(scope: string = "global"): this {
+    return this.undoOrRedo("UNDO", scope);
+  }
+
+  /** Redoes the last undo of `scope`; see {@link undo}. */
+  redo(scope: string = "global"): this {
+    return this.undoOrRedo("REDO", scope);
+  }
+
+  private undoOrRedo(type: "UNDO" | "REDO", scope: string): this {
+    const caps = baseReducerCapabilities(this.inner.header);
+    const targets = undoNeedsTargets(caps)
+      ? undoRedoTargetsOf(this.inner.document, caps, scope, this.stateReducer())
+      : undefined;
+    for (const action of undoRedoActions(caps, type, scope, targets)) {
+      this.applyAction(action);
+    }
+    return this;
+  }
+
+  private stateReducer() {
+    const reducer = stateReducerOf(this.inner.module.reducer);
+    if (reducer === undefined) {
+      throw new Error(
+        `Document model ${this.inner.header.documentType} has no state reducer to resolve undo targets with`,
+      );
+    }
+    return reducer;
   }
 
   // --- Static factories ---
@@ -262,6 +308,8 @@ export class RemoteDocumentController<
 
     if (options.documentId) {
       await remote.pull();
+    } else {
+      await remote.headNewDocument();
     }
 
     return remote as RemoteDocumentControllerWith<C>;
@@ -271,6 +319,8 @@ export class RemoteDocumentController<
    * Wrap an existing controller instance with remote capabilities.
    * Pending local actions on the inner controller are NOT tracked
    * (only new actions through the remote controller are tracked).
+   * Without a `documentId`, the first push creates the remote under the
+   * wrapped document's header.
    */
   static from<C extends PHDocumentController<any>>(
     controller: C,
@@ -284,15 +334,38 @@ export class RemoteDocumentController<
 
   // --- Private methods ---
 
-  /** Create the document on the remote if it doesn't exist yet. */
+  /** Heads the new document with the host's versions for its type, as `newDocument` does. */
+  private async headNewDocument(): Promise<void> {
+    const module = this.inner.module;
+    const [policy, versions] = await Promise.all([
+      readCreateSignaturePolicy(this.options.client),
+      readCreateProtocolVersions(
+        this.options.client,
+        {
+          documentType: this.inner.header.documentType,
+          parentIdentifier: this.options.parentIdentifier,
+        },
+        [module],
+      ),
+    ]);
+    const document = headNewDocument(module, undefined, policy, versions);
+    this.uncreated = structuredClone(document);
+    this.replaceInner(document);
+  }
+
+  /** Creates the remote from the local header, so both run the versions its creator chose. */
   private async ensureRemoteDocument(): Promise<void> {
     if (this.documentId !== "") return;
-    const remoteDoc = await this.remoteClient.createEmptyDocument(
-      this.inner.header.documentType,
+    if (this.uncreated === undefined) {
+      throw new Error("Cannot create: the new document was not kept");
+    }
+    const remoteDoc = await this.remoteClient.createDocument(
+      this.uncreated,
       this.options.parentIdentifier,
     );
     this.documentId = remoteDoc.id;
     this.canonicalDocumentId = remoteDoc.id;
+    this.uncreated = undefined;
   }
 
   /** Set up interceptors for all action methods on the inner controller. */
@@ -309,47 +382,72 @@ export class RemoteDocumentController<
       }
 
       Object.defineProperty(this, actionType, {
-        value: (input: unknown) => {
-          // Snapshot operation counts per scope BEFORE applying
-          const opCountsBefore: Record<string, number> = {};
-          for (const scope in this.inner.operations) {
-            opCountsBefore[scope] = this.inner.operations[scope].length;
-          }
-
-          // Apply locally via inner controller
-          (
-            this.inner as unknown as Record<string, (input: unknown) => unknown>
-          )[actionType](input);
-
-          // Find which scope got the new operation
-          const newOp = this.findNewOperation(opCountsBefore);
-
-          // Get prevOp in the SAME scope as the new operation
-          const prevOp = newOp
-            ? this.getLastOperationInScope(newOp.action.scope, newOp)
-            : undefined;
-          const prevOpHash = prevOp?.hash ?? "";
-          const prevOpIndex = prevOp?.index ?? -1;
-
-          if (!newOp) {
-            // Action produced no operation (NOOP) — nothing to track
-            return this;
-          }
-
-          // Track the action for push
-          this.tracker.track(newOp.action, prevOpHash, prevOpIndex);
-          this.notifyListeners("action");
-
-          if (this.options.mode === "streaming") {
-            this.schedulePush();
-          }
-
-          return this;
-        },
+        value: (input: unknown) =>
+          this.applyAndTrack(() => {
+            // Apply locally via inner controller
+            (
+              this.inner as unknown as Record<
+                string,
+                (input: unknown) => unknown
+              >
+            )[actionType](input);
+          }),
         enumerable: true,
         configurable: true,
       });
     }
+  }
+
+  /** Applies `action` locally through the model's reducer and tracks it. */
+  private applyAction(action: Action): this {
+    return this.applyAndTrack(() => {
+      this.replaceInner(this.inner.module.reducer(this.inner.document, action));
+    });
+  }
+
+  /** Runs `apply`, then tracks the operation it added for push. */
+  private applyAndTrack(apply: () => void): this {
+    // Snapshot operation counts per scope BEFORE applying
+    const opCountsBefore: Record<string, number> = {};
+    for (const scope in this.inner.operations) {
+      opCountsBefore[scope] = this.inner.operations[scope].length;
+    }
+
+    apply();
+
+    // Find which scope got the new operation
+    const newOp = this.findNewOperation(opCountsBefore);
+
+    // Get prevOp in the SAME scope as the new operation
+    const prevOp = newOp
+      ? this.getLastOperationInScope(newOp.action.scope, newOp)
+      : undefined;
+    const prevOpHash = prevOp?.hash ?? "";
+    const prevOpIndex = prevOp?.index ?? -1;
+
+    if (!newOp) {
+      // Action produced no operation (NOOP) — nothing to track
+      return this;
+    }
+
+    // Track the action for push
+    this.tracker.track(newOp.action, prevOpHash, prevOpIndex);
+    this.notifyListeners("action");
+
+    if (this.options.mode === "streaming") {
+      this.schedulePush();
+    }
+
+    return this;
+  }
+
+  /** Recreates the inner controller over `document` and re-intercepts it. */
+  private replaceInner(document: PHDocument<PHBaseState>): void {
+    const ControllerClass = this.inner.constructor as new (
+      doc?: PHDocument<PHBaseState>,
+    ) => TController;
+    this.inner = new ControllerClass(document);
+    this.setupActionInterceptors();
   }
 
   /**
@@ -462,6 +560,11 @@ export class RemoteDocumentController<
     await this.pull();
 
     for (const action of actions) {
+      // A RETRACT names its target; a stale one is the host's to refuse.
+      if (action.type === "RETRACT") {
+        this.applyAction(action);
+        continue;
+      }
       // Action types are SCREAMING_SNAKE_CASE but interceptors use camelCase
       const methodName = screamingSnakeToCamel(action.type);
       const method = (

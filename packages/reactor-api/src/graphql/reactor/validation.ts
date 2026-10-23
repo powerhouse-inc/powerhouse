@@ -222,6 +222,13 @@ export const CreateDefaultsDTO = z
   })
   .strip();
 
+export const UndoRedoTargetsDTO = z
+  .object({
+    undoTarget: z.string().nullable().optional(),
+    redoTarget: z.string().nullable().optional(),
+  })
+  .strip();
+
 export const ActionEvaluationDTO = z
   .object({
     decision: z.enum(["ALLOW", "DENY"]),

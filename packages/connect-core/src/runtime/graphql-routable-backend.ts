@@ -129,8 +129,8 @@ export function createGraphQLRoutableBackend(
     subscribe: (search, callback, view) =>
       gql.subscribe(search, callback, view),
     getCreateSignaturePolicy: () => gql.getCreateSignaturePolicy(),
-    getCreateProtocolVersions: (parent, signal) =>
-      gql.getCreateProtocolVersions(parent, signal),
+    getCreateProtocolVersions: (options, signal) =>
+      gql.getCreateProtocolVersions(options, signal),
     create: async <TDocument extends PHDocument = PHDocument>(
       document: PHDocument,
       parent?: string,
@@ -158,6 +158,28 @@ export function createGraphQLRoutableBackend(
         : job;
     },
     waitForJob: (job, signal) => gql.waitForJob(job, signal),
+    undo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await gql.undo<TDocument>(identifier, scope, branch, signal),
+      ),
+    redo: async <TDocument extends PHDocument = PHDocument>(
+      identifier: string,
+      scope?: string,
+      branch?: string,
+      signal?: AbortSignal,
+    ) =>
+      drives.learn(
+        await gql.redo<TDocument>(identifier, scope, branch, signal),
+      ),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      gql.undoRedoTargets(identifier, scope, view, signal),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      gql.undoRedoAvailability(identifier, scope, branch, signal),
   };
   return {
     backend,

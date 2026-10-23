@@ -17,169 +17,178 @@ import { createDocModelDocument } from "../factories.js";
 const INCOMING_TS = "2026-01-01T00:00:01.000Z";
 const LOCAL_TS = "2026-01-01T00:00:02.000Z";
 
-/**
- * A reshuffle hands its whole skip to whichever operation sorts first and
- * zeroes every other one. A NOOP is the v2 undo marker and carries no rank of
- * its own, so it sorts first as readily as anything else does -- and the skip
- * it is handed then spans everything the reshuffle retired, which is not the
- * marker's own 1.
- */
-describe("the skip a load job leaves on a NOOP", () => {
-  let reactor: IReactor;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-  });
-
-  afterEach(() => {
-    reactor?.kill();
-    vi.useRealTimers();
-  });
-
-  async function settle(jobId: string): Promise<string | undefined> {
-    await vi.waitUntil(async () => {
-      const status = await reactor.getJobStatus(jobId);
-      return (
-        status.status === JobStatus.FAILED ||
-        status.status === JobStatus.READ_READY
-      );
-    });
-    const status = await reactor.getJobStatus(jobId);
-    return status.status === JobStatus.FAILED
-      ? (status.error?.message ?? "job failed")
-      : undefined;
-  }
-
-  async function globalOps(documentId: string): Promise<Operation[]> {
-    const result = await reactor.getOperations(documentId, {
-      branch: "main",
-      scopes: ["global"],
-    });
-    return (
-      (result as Record<string, { results: Operation[] } | undefined>).global
-        ?.results ?? []
-    );
-  }
-
-  /** An operation as a peer would send it, stamped ahead of the local stream. */
-  function incoming(
-    documentId: string,
-    index: number,
-    action: { id: string; type: string; input: unknown },
-  ): Operation {
-    return {
-      id: deriveOperationId(documentId, "global", "main", action.id),
-      index,
-      skip: action.type === "NOOP" ? 1 : 0,
-      hash: "",
-      timestampUtcMs: INCOMING_TS,
-      action: {
-        ...action,
-        scope: "global",
-        timestampUtcMs: INCOMING_TS,
-      },
-    } as unknown as Operation;
-  }
-
+describe("base-reducer 2", () => {
   /**
-   * A document holding one operation and an undo of it. The undo leaves a NOOP
-   * marker with skip 1 at the head, and the load that follows has both
-   * revisions to retire.
+   * A reshuffle hands its whole skip to whichever operation sorts first and
+   * zeroes every other one. A NOOP is the v2 undo marker and carries no rank of
+   * its own, so it sorts first as readily as anything else does -- and the skip
+   * it is handed then spans everything the reshuffle retired, which is not the
+   * marker's own 1.
    */
-  async function undoneDocument(id: string): Promise<string> {
-    const document = createDocModelDocument({ id });
-    expect(await settle((await reactor.create(document)).id)).toBeUndefined();
+  describe("the skip a load job leaves on a NOOP", () => {
+    let reactor: IReactor;
 
-    vi.setSystemTime(new Date(LOCAL_TS));
-    expect(
-      await settle(
-        (
-          await reactor.execute(document.header.id, "main", [
-            addModule({ id: "m0", name: "m0" }),
-          ])
-        ).id,
-      ),
-    ).toBeUndefined();
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    });
 
-    expect(
-      await settle(
-        (
-          await reactor.execute(document.header.id, "main", [
-            { type: "UNDO", scope: "global", input: {} } as never,
-          ])
-        ).id,
-      ),
-    ).toBeUndefined();
+    afterEach(() => {
+      reactor?.kill();
+      vi.useRealTimers();
+    });
 
-    return document.header.id;
-  }
+    async function settle(jobId: string): Promise<string | undefined> {
+      await vi.waitUntil(async () => {
+        const status = await reactor.getJobStatus(jobId);
+        return (
+          status.status === JobStatus.FAILED ||
+          status.status === JobStatus.READ_READY
+        );
+      });
+      const status = await reactor.getJobStatus(jobId);
+      return status.status === JobStatus.FAILED
+        ? (status.error?.message ?? "job failed")
+        : undefined;
+    }
 
-  beforeEach(async () => {
-    reactor = await new ReactorBuilder()
-      .withDocumentModelSources([documentModelDocumentModelModule as never])
-      .build();
-  });
+    async function globalOps(documentId: string): Promise<Operation[]> {
+      const result = await reactor.getOperations(documentId, {
+        branch: "main",
+        scopes: ["global"],
+      });
+      return (
+        (result as Record<string, { results: Operation[] } | undefined>).global
+          ?.results ?? []
+      );
+    }
 
-  it("keeps the reshuffle's skip when the NOOP sorts first", async () => {
-    const docId = await undoneDocument("noop-sorts-first");
+    /** An operation as a peer would send it, stamped ahead of the local stream. */
+    function incoming(
+      documentId: string,
+      index: number,
+      action: { id: string; type: string; input: unknown },
+    ): Operation {
+      return {
+        id: deriveOperationId(documentId, "global", "main", action.id),
+        index,
+        skip: action.type === "NOOP" ? 1 : 0,
+        hash: "",
+        timestampUtcMs: INCOMING_TS,
+        action: {
+          ...action,
+          scope: "global",
+          timestampUtcMs: INCOMING_TS,
+        },
+      } as unknown as Operation;
+    }
 
-    const before = await globalOps(docId);
-    // The marker as the undo wrote it: one operation retired, at the head.
-    expect(before.find((op) => op.action.type === "NOOP")?.skip).toBe(1);
+    /**
+     * A document holding one operation and an undo of it. The undo leaves a NOOP
+     * marker with skip 1 at the head, and the load that follows has both
+     * revisions to retire.
+     */
+    async function undoneDocument(id: string): Promise<string> {
+      const document = createDocModelDocument({
+        id,
+        protocolVersions: { "base-reducer": 2 },
+      });
+      expect(await settle((await reactor.create(document)).id)).toBeUndefined();
 
-    // A NOOP from a peer, earlier than everything local, so it sorts first and
-    // the reshuffle hands it the whole batch skip. Its index is below the local
-    // head, so the load reshuffles rather than appending.
-    const load = await reactor.load(docId, "main", [
-      incoming(docId, 0, {
-        id: "incoming-noop",
-        type: "NOOP",
-        input: {},
-      }),
-    ]);
-    expect(await settle(load.id)).toBeUndefined();
+      vi.setSystemTime(new Date(LOCAL_TS));
+      expect(
+        await settle(
+          (
+            await reactor.execute(document.header.id, "main", [
+              addModule({ id: "m0", name: "m0" }),
+            ])
+          ).id,
+        ),
+      ).toBeUndefined();
 
-    const after = await globalOps(docId);
-    const sortedFirst = after.find((op) => op.action.id === "incoming-noop");
-    expect(sortedFirst).toBeDefined();
+      expect(
+        await settle(
+          (
+            await reactor.execute(document.header.id, "main", [
+              { type: "UNDO", scope: "global", input: {} } as never,
+            ])
+          ).id,
+        ),
+      ).toBeUndefined();
 
-    // Two local revisions were retired, so the skip is 2. Overwritten with the
-    // marker's own 1 it stops covering what the reshuffle retired, and that
-    // operation reads back as live history on the next round.
-    expect(sortedFirst?.skip).toBe(2);
-  });
+      return document.header.id;
+    }
 
-  it("leaves a re-appended local NOOP's skip at zero", async () => {
-    const docId = await undoneDocument("noop-sorts-later");
+    beforeEach(async () => {
+      reactor = await new ReactorBuilder()
+        .withDocumentModelSources([documentModelDocumentModelModule as never])
+        .build();
+    });
 
-    const localNoopId = (await globalOps(docId)).find(
-      (op) => op.action.type === "NOOP",
-    )?.action.id;
-    expect(localNoopId).toBeDefined();
+    it("keeps the reshuffle's skip when the NOOP sorts first", async () => {
+      const docId = await undoneDocument("noop-sorts-first");
 
-    // An ordinary operation sorts first and takes the batch skip, which retires
-    // m0 as well. The NOOP that undid m0 is re-appended behind it.
-    const load = await reactor.load(docId, "main", [
-      incoming(docId, 0, {
-        id: "incoming-module",
-        type: "ADD_MODULE",
-        input: { id: "m1", name: "m1" },
-      }),
-    ]);
-    expect(await settle(load.id)).toBeUndefined();
+      const before = await globalOps(docId);
+      // The marker as the undo wrote it: one operation retired, at the head.
+      expect(before.find((op) => op.action.type === "NOOP")?.skip).toBe(1);
 
-    const after = await globalOps(docId);
-    expect(after.find((op) => op.action.id === "incoming-module")?.skip).toBe(
-      2,
-    );
+      // A NOOP from a peer, earlier than everything local, so it sorts first and
+      // the reshuffle hands it the whole batch skip. Its index is below the local
+      // head, so the load reshuffles rather than appending.
+      const load = await reactor.load(docId, "main", [
+        incoming(docId, 0, {
+          id: "incoming-noop",
+          type: "NOOP",
+          input: {},
+        }),
+      ]);
+      expect(await settle(load.id)).toBeUndefined();
 
-    // m0 is not re-appended, so a positive skip would undo m1 in its place.
-    const reappended = after.filter((op) => op.action.id === localNoopId).pop();
-    expect(reappended?.skip).toBe(0);
-    const document = await reactor.get<DocumentModelDocument>(docId);
-    expect(
-      document.state.global.specifications[0].modules.map((entry) => entry.id),
-    ).toEqual(["m1"]);
+      const after = await globalOps(docId);
+      const sortedFirst = after.find((op) => op.action.id === "incoming-noop");
+      expect(sortedFirst).toBeDefined();
+
+      // Two local revisions were retired, so the skip is 2. Overwritten with the
+      // marker's own 1 it stops covering what the reshuffle retired, and that
+      // operation reads back as live history on the next round.
+      expect(sortedFirst?.skip).toBe(2);
+    });
+
+    it("leaves a re-appended local NOOP's skip at zero", async () => {
+      const docId = await undoneDocument("noop-sorts-later");
+
+      const localNoopId = (await globalOps(docId)).find(
+        (op) => op.action.type === "NOOP",
+      )?.action.id;
+      expect(localNoopId).toBeDefined();
+
+      // An ordinary operation sorts first and takes the batch skip, which retires
+      // m0 as well. The NOOP that undid m0 is re-appended behind it.
+      const load = await reactor.load(docId, "main", [
+        incoming(docId, 0, {
+          id: "incoming-module",
+          type: "ADD_MODULE",
+          input: { id: "m1", name: "m1" },
+        }),
+      ]);
+      expect(await settle(load.id)).toBeUndefined();
+
+      const after = await globalOps(docId);
+      expect(after.find((op) => op.action.id === "incoming-module")?.skip).toBe(
+        2,
+      );
+
+      // m0 is not re-appended, so a positive skip would undo m1 in its place.
+      const reappended = after
+        .filter((op) => op.action.id === localNoopId)
+        .pop();
+      expect(reappended?.skip).toBe(0);
+      const document = await reactor.get<DocumentModelDocument>(docId);
+      expect(
+        document.state.global.specifications[0].modules.map(
+          (entry) => entry.id,
+        ),
+      ).toEqual(["m1"]);
+    });
   });
 });

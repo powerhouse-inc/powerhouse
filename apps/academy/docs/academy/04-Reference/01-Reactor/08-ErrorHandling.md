@@ -13,7 +13,7 @@ Errors reach your code from the reactor through three channels:
 This page is the consolidated error reference for the reactor. For attachment errors see [Attachment service](/academy/Reference/Reactor/AttachmentService); for sync-channel behavior see [Synchronization](/academy/Reference/Reactor/Synchronization).
 
 :::info[Import paths]
-Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
+Importable error values come from `@powerhousedao/reactor`: `EventBusAggregateError`, `ModuleNotFoundError`, `DuplicateModuleError`, `InvalidModuleError`, `DuplicateManifestError`, `ChannelError`, `ChannelErrorSource`, `SyncOperationAggregateError`, `PollingChannelError`, `RetractionRefusedError`, `ReservedActionError`, `isDriveAuthError`, and `DRIVE_AUTH_ERROR_MESSAGES`. `@powerhousedao/reactor-browser` re-exports only `isDriveAuthError`. Attachment errors come from `@powerhousedao/reactor-attachments`. Several errors are internal and cannot be imported; this page marks each one.
 :::
 
 ## Job failures
@@ -75,6 +75,8 @@ try {
 ```
 
 Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
+
+`RetractionRefusedError` and `ReservedActionError` are exported, but reach you here the same way, as a plain `Error` carrying the message. Both are terminal, so the job fails without a retry. See [Undo and redo](/academy/Reference/Reactor/UndoRedo#errors).
 
 #### `executeBatch` throws `BatchJobFailedError`
 
@@ -280,7 +282,7 @@ try {
 | Mechanism | Applies to | Cross-boundary safe |
 | --- | --- | --- |
 | `err.name === "AbortError"` | aborted reactor calls (DOM-compatible name) | Yes |
-| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError` | Yes (name-based) |
+| `X.isError(err)` (static) | `ModuleNotFoundError`, `DuplicateModuleError`, `DuplicateManifestError`, `RetractionRefusedError`, `ReservedActionError` | Yes (name-based) |
 | `err instanceof X` | `EventBusAggregateError`, `ChannelError`, `SyncOperationAggregateError`, attachment errors | No |
 | `err.name === "X"` | any class above (all set `this.name`) | Yes |
 | `isDriveAuthError(err)` | un-rewrapped GraphQL-channel errors only | only in-channel |

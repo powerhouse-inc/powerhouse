@@ -11,7 +11,8 @@ import {
   type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
-  type CreateDocumentOptions,
+  type NewDocumentOptions,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
@@ -21,11 +22,14 @@ import {
   type PagingOptions,
   type PropagationMode,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import {
   actions as documentActions,
+  createVersionsOf,
   normalizeDocumentModelVersion,
   UnsupportedDocumentModelVersionError,
   type Action,
@@ -77,7 +81,11 @@ type OptionalMember =
   | "removeRelationship"
   | "moveRelationship"
   | "getDocumentModelModules"
-  | "getDocumentModelModule";
+  | "getDocumentModelModule"
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability";
 
 function declared<K extends OptionalMember>(
   backend: RouterBackend,
@@ -368,22 +376,22 @@ export class RoutingReactorClient implements IReactorClient {
 
   /** Asked of the parent's backend: the answer is about its collections. */
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
+    const parentIdentifier = options.parentIdentifier;
     if (parentIdentifier === undefined) {
       return this.dispatcher.onBackend(
         "getCreateProtocolVersions",
         this.dispatcher.primary,
-        (backend) => backend.api.getCreateProtocolVersions(undefined, signal),
+        (backend) => backend.api.getCreateProtocolVersions(options, signal),
         ATTEMPT.read,
       );
     }
     return this.dispatcher.onDocument(
       "getCreateProtocolVersions",
       parentIdentifier,
-      (backend) =>
-        backend.api.getCreateProtocolVersions(parentIdentifier, signal),
+      (backend) => backend.api.getCreateProtocolVersions(options, signal),
       ATTEMPT.read,
     );
   }
@@ -687,8 +695,17 @@ export class RoutingReactorClient implements IReactorClient {
             : await beforeSubmit(() =>
                 resolveOn(target, parentIdentifier, signal),
               );
+        const protocolVersions = await createVersionsOf(
+          document,
+          (options) =>
+            beforeSubmit(() =>
+              target.api.getCreateProtocolVersions(options, signal),
+            ),
+          parentId,
+        );
         const jobs = await buildCreateJobs(
           document,
+          protocolVersions,
           parentId,
           this.signer,
           signal,
@@ -703,27 +720,19 @@ export class RoutingReactorClient implements IReactorClient {
 
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const document = await this.emptyDocument(
-      documentModelType,
-      options,
-      signal,
-    );
+    const document = await this.newDocument(documentModelType, options, signal);
     return this.create<TDocument>(document, options?.parentIdentifier, signal);
   }
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.emptyDocument(
-      documentModelType,
-      options,
-      signal,
-    );
+    const document = await this.newDocument(documentModelType, options, signal);
     return this.createAsync(document, options?.parentIdentifier, signal);
   }
 
@@ -852,6 +861,88 @@ export class RoutingReactorClient implements IReactorClient {
     );
     this.recordBatchJobs(result.jobs, backend.name);
     return result;
+  }
+
+  /** The owning backend resolves the target and signs the write. */
+  undo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.dispatcher.onDocument(
+      "undo",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undo")<TDocument>(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.write,
+    );
+  }
+
+  /** See {@link undo}. */
+  redo<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.dispatcher.onDocument(
+      "redo",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "redo")<TDocument>(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.write,
+    );
+  }
+
+  undoRedoTargets(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    return this.dispatcher.onDocument(
+      "undoRedoTargets",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undoRedoTargets")(
+          documentIdentifier,
+          scope,
+          view,
+          signal,
+        ),
+      ATTEMPT.read,
+    );
+  }
+
+  undoRedoAvailability(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability> {
+    return this.dispatcher.onDocument(
+      "undoRedoAvailability",
+      documentIdentifier,
+      (backend) =>
+        declared(backend, "undoRedoAvailability")(
+          documentIdentifier,
+          scope,
+          branch,
+          signal,
+        ),
+      ATTEMPT.read,
+    );
   }
 
   rename(
@@ -1152,11 +1243,12 @@ export class RoutingReactorClient implements IReactorClient {
     return job;
   }
 
-  private async emptyDocument(
+  /** Versions from the parent's backend, the module from this client's models. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
     documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
     const module = selectDocumentModelModule(
       await this.allModules(signal),
       documentModelType,
@@ -1164,9 +1256,15 @@ export class RoutingReactorClient implements IReactorClient {
     );
     const [policy, versions] = await Promise.all([
       this.getCreateSignaturePolicy(),
-      this.getCreateProtocolVersions(options?.parentIdentifier, signal),
+      this.getCreateProtocolVersions(
+        {
+          documentType: documentModelType,
+          parentIdentifier: options?.parentIdentifier,
+        },
+        signal,
+      ),
     ]);
-    return createEmptyDocument(module, options, policy, versions);
+    return createEmptyDocument(module, options, policy, versions) as TDocument;
   }
 
   private async allModules(

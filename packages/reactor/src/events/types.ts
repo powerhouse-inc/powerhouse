@@ -65,6 +65,7 @@ export const ReactorEventTypes = {
   MODEL_LOADED: 10008,
   SIGNATURE_REFUSED: 10009,
   CATCHUP_SWEPT: 10010,
+  STORED_MODEL_REFUSED: 10011,
 } as const;
 
 /**
@@ -84,6 +85,15 @@ export type ReadModelIndexingStage = "pre_ready" | "post_ready";
  */
 export type ModelLoadedEvent = {
   documentType: string;
+};
+
+/**
+ * Emitted when a model loaded after boot cannot run the protocol versions its
+ * stored documents carry. Their writes are refused; reads skip them.
+ */
+export type StoredModelRefusedEvent = {
+  documentType: string;
+  refusals: { protocol: string; version: number; documentType?: string }[];
 };
 
 /**

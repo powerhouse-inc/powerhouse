@@ -1,22 +1,28 @@
 import type {
   Action,
-  CreateDocumentActionInput,
   DocumentModelModule,
   ISigner,
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { normalizeDocumentModelVersion } from "@powerhousedao/shared/document-model";
+import {
+  creationActions,
+  documentDerivesByRule,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import {
+  scopeDerivation,
+  UndoTargetsCache,
+  type DerivedScope,
+} from "../derivation/index.js";
+import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
 import {
   addRelationshipAction,
-  createDocumentAction,
   deleteDocumentAction,
   removeRelationshipAction,
   updateRelationshipAction,
-  upgradeDocumentAction,
 } from "../actions/index.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
@@ -60,6 +66,7 @@ import {
   type BatchLoadResult,
   type IReactor,
   type ReactorFeatures,
+  type UndoRedoTargets,
 } from "./types.js";
 import {
   buildSingleJobMeta,
@@ -93,6 +100,7 @@ export class Reactor implements IReactor {
   private documentView: IDocumentView;
   private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
+  private readonly undoTargets: UndoTargetsCache;
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
   private catchUp: CatchUpScheduler | undefined;
@@ -113,6 +121,8 @@ export class Reactor implements IReactor {
     private readonly disposers: Unsubscribe[] = [],
     // Run last on kill(), once nothing routes to what they close.
     private readonly closers: Array<() => Promise<void>> = [],
+    // Undo resolution derives the scope; the gate refuses an unrunnable document.
+    private readonly protocolGate?: IProtocolGate,
   ) {
     this.catchUp = catchUp;
     this.logger = logger;
@@ -126,6 +136,11 @@ export class Reactor implements IReactor {
     this.operationStore = operationStore;
     this.eventBus = eventBus;
     this.executorManager = executorManager;
+    this.undoTargets = new UndoTargetsCache(
+      operationStore,
+      (documentId, scope, branch, signal) =>
+        this.deriveForUndo(documentId, scope, branch, signal),
+    );
 
     const [status, setShutdown, setCompleted] =
       createMutableShutdownStatus(false);
@@ -432,6 +447,86 @@ export class Reactor implements IReactor {
     return result;
   }
 
+  async resolveUndoRedo(
+    documentId: string,
+    scope: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets> {
+    this.logger.verbose(
+      "resolveUndoRedo(@documentId, @scope, @branch)",
+      documentId,
+      scope,
+      branch,
+    );
+
+    const { header } = await this.documentView.get(
+      documentId,
+      { branch, scopes: ["document"] },
+      undefined,
+      signal,
+    );
+    if (!documentDerivesByRule(header, scope)) {
+      return {};
+    }
+    return this.undoTargets.resolve(documentId, scope, branch, signal);
+  }
+
+  /** A full derivation of the scope, for the undo-targets cache to seed from. */
+  private async deriveForUndo(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<DerivedScope> {
+    const [derive, document, rows] = await Promise.all([
+      scopeDerivation(
+        this.operationStore,
+        this.documentModelRegistry,
+        this.protocolGate,
+        documentId,
+        branch,
+        signal,
+      ),
+      this.documentView.get(
+        documentId,
+        { branch, scopes: [scope] },
+        undefined,
+        signal,
+      ),
+      this.scopeRows(documentId, scope, branch, signal),
+    ]);
+    throwIfAborted(signal, () => new AbortError());
+
+    return { rows, applied: derive(document, rows, scope).applied };
+  }
+
+  /** Every stored row of a scope, as a cold rebuild reads them. */
+  private async scopeRows(
+    documentId: string,
+    scope: string,
+    branch: string,
+    signal?: AbortSignal,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor: string | undefined = "0";
+    while (cursor !== undefined) {
+      throwIfAborted(signal, () => new AbortError());
+      const page = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        -1,
+        undefined,
+        { cursor, limit: 100 },
+        signal,
+      );
+      rows.push(...page.results);
+      cursor = page.nextCursor || undefined;
+    }
+    return rows;
+  }
+
   async find(
     search: SearchFilter,
     view?: ViewFilter,
@@ -515,40 +610,18 @@ export class Reactor implements IReactor {
 
     throwIfAborted(signal, () => new AbortError());
 
-    const createInput: CreateDocumentActionInput = {
-      model: document.header.documentType,
-      version: 0,
-      documentId: document.header.id,
-      signing: {
-        signature: document.header.id,
-        publicKey: document.header.sig.publicKey,
-        nonce: document.header.sig.nonce,
-        createdAtUtcIso: document.header.createdAtUtcIso,
-        documentType: document.header.documentType,
-      },
-      slug: document.header.slug,
-      name: document.header.name,
-      branch: document.header.branch,
-      meta: document.header.meta,
-      protocolVersions: document.header.protocolVersions ?? {
-        "base-reducer": 2,
-      },
-    };
-
-    const createAction = createDocumentAction(createInput);
-    const upgradeAction = upgradeDocumentAction({
-      documentId: document.header.id,
-      model: document.header.documentType,
-      fromVersion: 0,
-      // imported documents may predate the document scope entirely
-      toVersion: normalizeDocumentModelVersion(
-        (document.state as Partial<typeof document.state>).document?.version,
-      ),
-      initialState: document.state,
-    });
+    // Choosing versions is the creating client's job, not the reactor's.
+    if (!document.header.protocolVersions) {
+      throw new Error(
+        `Document ${document.header.id} carries no protocolVersions: build it with IReactorClient.newDocument, or create it through IReactorClient`,
+      );
+    }
 
     const branch = document.header.branch || "main";
-    let actions: Action[] = [createAction, upgradeAction];
+    let actions: Action[] = creationActions(
+      document,
+      document.header.protocolVersions,
+    );
     if (signer) {
       actions = await signActions(
         actions,

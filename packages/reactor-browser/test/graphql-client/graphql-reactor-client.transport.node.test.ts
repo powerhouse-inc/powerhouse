@@ -6,6 +6,8 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   actions,
   withSignaturePolicy,
+  type DocumentModelModule,
+  type Reducer,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import {
@@ -16,6 +18,8 @@ import {
   GraphQLReactorClient,
   type DriveIdCall,
 } from "../../src/graphql-client/graphql-reactor-client.js";
+
+const DOCUMENT_MODEL = "powerhouse/document-model";
 
 // Reply bodies are what reactor-api's Apollo gateway and drive middleware send.
 
@@ -77,6 +81,21 @@ function clientFor(
   return new GraphQLReactorClient({ url, realtime: false, driveIdFor });
 }
 
+/** Apollo's answer to a query passing an argument its schema lacks. */
+function unknownArgument(argument: string, field: string): Reply {
+  return {
+    status: 400,
+    body: JSON.stringify({
+      errors: [
+        {
+          message: `Unknown argument "${argument}" on field "${field}".`,
+          extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+        },
+      ],
+    }),
+  };
+}
+
 /** Apollo's answer to a query naming a root field its schema lacks. */
 function unknownField(field: string): Reply {
   return {
@@ -94,7 +113,7 @@ function unknownField(field: string): Reply {
 }
 
 describe("GraphQLReactorClient create defaults over the wire", () => {
-  it("reads both defaults from createDefaults", async () => {
+  it("reads the signature policy from createDefaults", async () => {
     const { url, received } = await serve(() => ({
       status: 200,
       body: JSON.stringify({
@@ -106,28 +125,227 @@ describe("GraphQLReactorClient create defaults over the wire", () => {
         },
       }),
     }));
-    const client = clientFor(url);
 
-    expect(await client.getCreateSignaturePolicy()).toBe("legacy");
-    expect(await client.getCreateProtocolVersions("parent-1")).toEqual({
-      "base-reducer": 2,
-    });
-    expect(received.map((entry) => entry.body.variables)).toEqual([
-      {},
-      { parentIdOrSlug: "parent-1" },
-    ]);
+    expect(await clientFor(url).getCreateSignaturePolicy()).toBe("legacy");
+    expect(received.map((entry) => entry.body.variables)).toEqual([{}]);
   });
 
   it("refuses with a typed error against a Switchboard without createDefaults", async () => {
     const { url } = await serve(() => unknownField("createDefaults"));
-    const client = clientFor(url);
 
-    await expect(client.getCreateSignaturePolicy()).rejects.toBeInstanceOf(
-      GraphQLOperationNotSupportedError,
-    );
     await expect(
-      client.getCreateProtocolVersions("parent-1"),
+      clientFor(url).getCreateSignaturePolicy(),
     ).rejects.toBeInstanceOf(GraphQLOperationNotSupportedError);
+  });
+});
+
+describe("GraphQLReactorClient create protocol versions", () => {
+  const tagged =
+    documentModelDocumentModelModule as unknown as DocumentModelModule;
+  const untagged: DocumentModelModule = {
+    ...tagged,
+    reducer: ((...args) => (tagged.reducer as Reducer)(...args)) as Reducer,
+  };
+
+  /**
+   * A Switchboard whose createDefaults selects `hostVersions` for a type, or
+   * reactor-wide; `"before-document-type"` is one that predates the argument.
+   */
+  async function clientKnowing(
+    documentModels: DocumentModelModule[],
+    hostVersions:
+      | Record<string, unknown>
+      | ((documentType: string | undefined) => Record<string, unknown>)
+      | "unknown-field",
+    host: "per-type" | "before-document-type" = "per-type",
+  ) {
+    const { url, received } = await serve(({ body }) => {
+      if (hostVersions === "unknown-field")
+        return unknownField("createDefaults");
+      const variables = body.variables as { documentType?: string } | undefined;
+      if (
+        host === "before-document-type" &&
+        body.operationName === "GetCreateProtocolVersions"
+      ) {
+        return unknownArgument("documentType", "Query.createDefaults");
+      }
+      const versions =
+        typeof hostVersions === "function"
+          ? hostVersions(variables?.documentType)
+          : hostVersions;
+      return {
+        status: 200,
+        body: JSON.stringify({
+          data: {
+            createDefaults: {
+              signaturePolicy: "v2-required",
+              protocolVersions: versions,
+            },
+          },
+        }),
+      };
+    });
+    const client = new GraphQLReactorClient({
+      url,
+      realtime: false,
+      documentModels,
+    });
+    return { client, received };
+  }
+
+  const quietly = async <T>(run: () => Promise<T>): Promise<T> => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      return await run();
+    } finally {
+      warn.mockRestore();
+    }
+  };
+
+  it("asks the host to select for the type and parent", async () => {
+    const { client, received } = await clientKnowing([tagged], {
+      "base-reducer": 3,
+    });
+
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: DOCUMENT_MODEL,
+        parentIdentifier: "parent-1",
+      }),
+    ).toEqual({ "base-reducer": 3 });
+    expect(received.map((entry) => entry.body.operationName)).toEqual([
+      "GetCreateProtocolVersions",
+    ]);
+    expect(received[0].body.variables).toEqual({
+      documentType: DOCUMENT_MODEL,
+      parentIdOrSlug: "parent-1",
+    });
+  });
+
+  it("takes the host's per-type answer, which caps a type the host cannot run at 3", async () => {
+    const { client } = await clientKnowing([tagged], (documentType) =>
+      documentType === DOCUMENT_MODEL
+        ? { "base-reducer": 2 }
+        : { "base-reducer": 3 },
+    );
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+  });
+
+  it("fits down a model whose reducer createReducer did not build on this client", async () => {
+    const { client } = await clientKnowing([untagged], { "base-reducer": 3 });
+
+    expect(
+      await quietly(() =>
+        client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+      ),
+    ).toEqual({ "base-reducer": 2 });
+  });
+
+  it("gives a type the client does not know base-reducer 2", async () => {
+    const { client } = await clientKnowing([tagged], { "base-reducer": 3 });
+
+    expect(
+      await client.getCreateProtocolVersions({
+        documentType: "powerhouse/test",
+      }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(
+      await client.getCreateProtocolVersions({ documentType: undefined }),
+    ).toEqual({ "base-reducer": 3 });
+  });
+
+  it("falls back to the reactor-wide answer on a host that predates per-type selection", async () => {
+    const { client, received } = await clientKnowing(
+      [tagged],
+      { "base-reducer": 2 },
+      "before-document-type",
+    );
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(received.map((entry) => entry.body.operationName)).toEqual([
+      "GetCreateProtocolVersions",
+      "GetCreateDefaults",
+    ]);
+  });
+
+  it("caps a newer host's base-reducer at what this build runs", async () => {
+    const { client } = await clientKnowing([tagged], { "base-reducer": 4 });
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 3 });
+  });
+
+  it("refuses a malformed host answer, or a version of a known protocol it does not run", async () => {
+    const malformed = await clientKnowing([tagged], { "base-reducer": "3" });
+    await expect(
+      malformed.client.getCreateProtocolVersions({
+        documentType: DOCUMENT_MODEL,
+      }),
+    ).rejects.toThrow("malformed version for protocol base-reducer");
+
+    const newerSignature = await clientKnowing([tagged], {
+      "base-reducer": 3,
+      signature: 3,
+    });
+    await expect(
+      newerSignature.client.getCreateProtocolVersions({
+        documentType: DOCUMENT_MODEL,
+      }),
+    ).rejects.toThrow("Cannot create at signature 3");
+  });
+
+  it("caps at the baseline when the host selects no base-reducer", async () => {
+    const { client } = await clientKnowing([tagged], {});
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+  });
+
+  it("caps at the baseline on a host without createDefaults", async () => {
+    const { client, received } = await clientKnowing([tagged], "unknown-field");
+
+    expect(
+      await client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).toEqual({ "base-reducer": 2 });
+    expect(received).toHaveLength(1);
+  });
+
+  it("heads a new document with the host's selection and its signature policy", async () => {
+    const { client } = await clientKnowing([tagged], { "base-reducer": 3 });
+
+    const document = await client.newDocument(DOCUMENT_MODEL, {
+      name: "New",
+    });
+
+    expect(document.header.documentType).toBe(DOCUMENT_MODEL);
+    expect(document.header.name).toBe("New");
+    expect(document.header.protocolVersions).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
+  });
+
+  it("passes on any other createDefaults failure", async () => {
+    const { url } = await serve(() => ({
+      status: 500,
+      body: JSON.stringify({ errors: [{ message: "boom" }] }),
+    }));
+    const client = new GraphQLReactorClient({
+      url,
+      realtime: false,
+      documentModels: [tagged],
+    });
+
+    await expect(
+      client.getCreateProtocolVersions({ documentType: DOCUMENT_MODEL }),
+    ).rejects.toThrow();
   });
 });
 

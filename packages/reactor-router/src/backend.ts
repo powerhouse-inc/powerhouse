@@ -7,6 +7,7 @@ import {
   type BatchSubmitter,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
@@ -17,6 +18,8 @@ import {
   type PropagationMode,
   type ReactorInfo,
   type SearchFilter,
+  type UndoRedoAvailability,
+  type UndoRedoTargets,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -125,7 +128,7 @@ export interface IRoutableBackend {
   ): () => void;
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions>;
 
@@ -215,6 +218,31 @@ export interface IRoutableBackend {
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>>;
   getDocumentModelModule?(documentType: string): Promise<DocumentModelModule>;
+  /** The backend's own client signs what it submits. */
+  undo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  redo?<TDocument extends PHDocument = PHDocument>(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+  undoRedoTargets?(
+    documentIdentifier: string,
+    scope?: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
+  undoRedoAvailability?(
+    documentIdentifier: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoAvailability>;
 }
 
 export type RoutableBackendConfig = {
@@ -274,8 +302,8 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     subscribe: (search, callback, view) =>
       client.subscribe(search, callback, view),
     getCreateSignaturePolicy: () => client.getCreateSignaturePolicy(),
-    getCreateProtocolVersions: (parent, signal) =>
-      client.getCreateProtocolVersions(parent, signal),
+    getCreateProtocolVersions: (options, signal) =>
+      client.getCreateProtocolVersions(options, signal),
     create: (document, parent, signal) =>
       client.create(document, parent, signal),
     execute: (identifier, branch, actions, signal, subject) =>
@@ -326,6 +354,14 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
       client.getDocumentModelModules(namespace, paging, signal),
     getDocumentModelModule: (documentType) =>
       client.getDocumentModelModule(documentType),
+    undo: (identifier, scope, branch, signal) =>
+      client.undo(identifier, scope, branch, signal),
+    redo: (identifier, scope, branch, signal) =>
+      client.redo(identifier, scope, branch, signal),
+    undoRedoTargets: (identifier, scope, view, signal) =>
+      client.undoRedoTargets(identifier, scope, view, signal),
+    undoRedoAvailability: (identifier, scope, branch, signal) =>
+      client.undoRedoAvailability(identifier, scope, branch, signal),
   };
 }
 

@@ -3,11 +3,12 @@ import type {
   ActionSigningTarget,
   ISigner,
   Operation,
+  SynthesizedIdForm,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
   deriveOperationId,
-  hashBrowser,
+  synthesizedActionId,
 } from "@powerhousedao/shared/document-model";
 
 /** Submitted types whose stored action the reducer writes in their place. */
@@ -15,14 +16,6 @@ export const SYNTHESIZING_TYPES: ReadonlySet<string> = new Set([
   "UNDO",
   "REDO",
 ]);
-
-/**
- * The id of the action synthesized from `submittedId`. Derived, so the stored
- * operation answers for the submitted id at the live-id check.
- */
-export function synthesizedActionId(submittedId: string): string {
-  return hashBrowser(`synthesized:${submittedId}`, "sha1", "hex").slice(0, 32);
-}
 
 /**
  * Whether `operation` stores an action the reducer made from `submitted`
@@ -58,10 +51,11 @@ export async function signSynthesized(
   submitted: Action,
   target: ActionSigningTarget & { scope: string },
   signer: ISigner,
+  form: SynthesizedIdForm,
   signal?: AbortSignal,
 ): Promise<void> {
   const synthesized = operation.action;
-  const id = synthesizedActionId(submitted.id);
+  const id = synthesizedActionId(submitted.id, form);
   const timestampUtcMs =
     (operation.timestampUtcMs as string | undefined) ||
     (synthesized.timestampUtcMs as string | undefined) ||

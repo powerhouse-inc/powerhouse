@@ -1,4 +1,4 @@
-import type { Operation } from "@powerhousedao/shared/document-model";
+import type { IdOrder, Operation } from "@powerhousedao/shared/document-model";
 import type { StreamQuery } from "./types.js";
 
 /** Identifies a stream within a walk. */
@@ -29,6 +29,7 @@ export type StreamOperations = {
 export function comparePositions(
   a: PositionedOperation,
   b: PositionedOperation,
+  compareIds: IdOrder,
 ): number {
   const aTime = Date.parse(a.operation.timestampUtcMs);
   const bTime = Date.parse(b.operation.timestampUtcMs);
@@ -51,14 +52,15 @@ export function comparePositions(
     return aAuth ? -1 : 1;
   }
 
-  const actionIds = (a.operation.action.id ?? "").localeCompare(
+  const actionIds = compareIds(
+    a.operation.action.id ?? "",
     b.operation.action.id ?? "",
   );
   if (actionIds !== 0) {
     return actionIds;
   }
 
-  return (a.operation.id ?? "").localeCompare(b.operation.id ?? "");
+  return compareIds(a.operation.id ?? "", b.operation.id ?? "");
 }
 
 /**
@@ -68,6 +70,7 @@ export function comparePositions(
  */
 export function mergeByPosition(
   streams: StreamOperations[],
+  compareIds: IdOrder,
 ): PositionedOperation[] {
   const merged: PositionedOperation[] = [];
 
@@ -81,7 +84,7 @@ export function mergeByPosition(
     }
   }
 
-  return merged.sort(comparePositions);
+  return merged.sort((a, b) => comparePositions(a, b, compareIds));
 }
 
 /**

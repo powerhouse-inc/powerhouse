@@ -24,6 +24,7 @@ import {
   OperationResultPageDTO,
   PHDocumentDTO,
   PHDocumentResultPageDTO,
+  UndoRedoTargetsDTO,
 } from "./validation.js";
 
 type OperationName = keyof Sdk;
@@ -102,6 +103,18 @@ const operationValidators: OperationValidators = {
   GetCreateDefaults: (data) => {
     if (data.createDefaults) {
       CreateDefaultsDTO.parse(data.createDefaults);
+    }
+  },
+  GetCreateProtocolVersions: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.pick({ protocolVersions: true }).parse(
+        data.createDefaults,
+      );
+    }
+  },
+  GetUndoRedoTargets: (data) => {
+    if (data.undoRedoTargets) {
+      UndoRedoTargetsDTO.parse(data.undoRedoTargets);
     }
   },
   EvaluateActions: (data) => {

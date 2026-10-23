@@ -1,6 +1,7 @@
 import type {
   Operation,
   PHDocument,
+  ReducerFor,
 } from "@powerhousedao/shared/document-model";
 import { DocumentNotFoundError } from "../shared/errors.js";
 import type { AppendConditionStream } from "../storage/interfaces.js";
@@ -178,6 +179,7 @@ export type DerivedProjection = {
   decidingActions: string[];
   apply: (document: PHDocument, operation: Operation) => PHDocument;
   queryOverHistory?: (reads: StreamHistory[]) => StreamQuery[];
+  scopeReducer?: (document: PHDocument) => ReducerFor;
 };
 
 /**
@@ -201,6 +203,7 @@ export function derivedReadSet<M>(
       decidingActions: projection.decidingActions,
       apply: projection.apply,
       queryOverHistory: projection.queryOverHistory,
+      scopeReducer: projection.scopeReducer,
     });
   }
 

@@ -1,3 +1,4 @@
+import type { UndoRedoTargets } from "@powerhousedao/shared/document-model";
 import type {
   Action,
   DocumentModelModule,
@@ -18,7 +19,10 @@ import type { ReactorClient } from "../client/reactor-client.js";
 import type { IReactorClient } from "../client/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
-import type { ReactorFeatureFlags } from "../executor/types.js";
+import type {
+  ProtocolSupport,
+  ReactorFeatureFlags,
+} from "../executor/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { GroupReevaluationTrigger } from "./group-reevaluation-trigger.js";
@@ -129,6 +133,8 @@ export type BatchLoadRequest = {
 export type BatchLoadResult = {
   jobs: Record<string, JobInfo>;
 };
+
+export type { UndoRedoTargets };
 
 /**
  * The main Reactor interface that serves as a facade for document operations.
@@ -296,6 +302,27 @@ export interface IReactor {
   ): Promise<Record<string, PagedResults<Operation>>>;
 
   /**
+   * Resolves what a base-reducer 3 undo and redo of a scope would retract:
+   * from every stored row, each derived with its own model version and every
+   * upgrade applied at its boundary. A client submits a RETRACT of the target
+   * under its author's signature; base-reducer 3 refuses a submitted UNDO or
+   * REDO. A scope the retraction rule does not derive, and every scope below
+   * 3, has none.
+   *
+   * @param documentId - The document id
+   * @param scope - The scope to undo or redo in
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The undo and redo targets, each absent when there is none
+   */
+  resolveUndoRedo(
+    documentId: string,
+    scope: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<UndoRedoTargets>;
+
+  /**
    * Filters documents by criteria and returns a list of them
    *
    * @param search - Search filter options (type, parentId, identifiers)
@@ -347,6 +374,14 @@ export interface IReactor {
 
   /**
    * Applies a list of actions to a document.
+   *
+   * On base-reducer 3 a submitted UNDO or REDO fails the job with
+   * `SubmittedUndoRefusedError`: undo there is a RETRACT of a target, which
+   * `resolveUndoRedo` resolves and the author signs.
+   *
+   * On base-reducer 3 the actions run in canonical order (timestamp, then
+   * action id), not array order. `generateActionId` ids keep one process's
+   * creation order; other ids tied in a millisecond run in id order.
    *
    * @param docId - Document id
    * @param branch - Branch to apply actions to
@@ -574,6 +609,8 @@ export interface InProcessReactorModule extends ReactorModule {
    * does, and the read surface is composed outside the reactor.
    */
   featureFlags: ReactorFeatureFlags;
+  /** The protocol versions this reactor runs, which its reads check stored documents against. */
+  protocolSupport: ProtocolSupport;
   queue: IQueue;
   jobTracker: IJobTracker;
   executorManager: IJobExecutorManager;

@@ -22,6 +22,8 @@ import {
 
 const PROBE_MS = 50;
 const HELD = { protocol: "document-purge", version: 1 };
+// Within the baseline, so neither peer is held from the document itself.
+const V2 = { "base-reducer": 2 };
 
 async function quarantined(node: Node): Promise<string[]> {
   return node.module.syncModule!.deadLetterStorage.listQuarantinedDocumentIds();
@@ -85,7 +87,9 @@ describe("peers without erasure [Postgres]", () => {
   it("holds the marker for a silent peer and one lacking document-purge, and each receives it alone on upgrade", async () => {
     await succeeded(
       host.reactor,
-      host.reactor.create(createDocModelDocument({ id: "x" })),
+      host.reactor.create(
+        createDocModelDocument({ id: "x", protocolVersions: V2 }),
+      ),
     );
     await succeeded(
       host.reactor,

@@ -11,11 +11,15 @@ import type {
   Action,
   AuthSubject,
   DocumentModelModule,
+  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
   createAction,
-  withSignaturePolicy,
+  optionalBaseReducerCapabilities,
+  stateReducerOf,
+  undoNeedsTargets,
+  undoRedoBatch,
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
@@ -104,10 +108,18 @@ export const deleteDocumentTool = {
   },
 } as const satisfies ToolSchema;
 
+type ParamAction = { type: string; input?: unknown; scope: string };
+
+function isUndoRedo(
+  action: ParamAction,
+): action is ParamAction & { type: "UNDO" | "REDO" } {
+  return action.type === "UNDO" || action.type === "REDO";
+}
+
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }; on base-reducer 3 each step retracts one row, counting rows added earlier in the same call) and NOOP. The actions are submitted as one job, so a refused job writes none of them.",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
     actions: z
@@ -378,6 +390,26 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
     return client.getDocumentModelModule(documentType);
   }
 
+  /** Every stored row of one scope, through the read gate. */
+  async function scopeOperations(
+    documentId: string,
+    scope: string,
+  ): Promise<Operation[]> {
+    const rows: Operation[] = [];
+    let cursor = "";
+    do {
+      const page = await client.getOperations(
+        documentId,
+        { ...view, branch: "main", scopes: [scope] },
+        undefined,
+        { cursor, limit: 500 },
+      );
+      rows.push(...page.results);
+      cursor = page.nextCursor ?? "";
+    } while (cursor);
+    return rows;
+  }
+
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
       const id = params.id ?? params.documentId;
@@ -392,19 +424,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
       if (params.driveId) {
-        const module = await getDocumentModelModule(params.documentType);
-        if (!module) {
-          throw new Error(
-            `Document model for type '${params.documentType}' not found`,
-          );
-        }
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await client.getCreateSignaturePolicy(),
-        );
-        if (params.name) {
-          document.header.name = params.name;
-        }
+        const document = await client.newDocument(params.documentType, {
+          parentIdentifier: params.driveId,
+          name: params.name || undefined,
+        });
         const created = await client.drives.addFile(
           params.driveId,
           document,
@@ -461,7 +484,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           `Document model for document type '${document.header.documentType}' not found`,
         );
       }
-      const actions: Action[] = params.actions.map((paramAction) => {
+      const buildAction = (paramAction: ParamAction): Action => {
         const baseAction = createBaseAction(
           paramAction.type,
           paramAction.input,
@@ -492,9 +515,41 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           );
         }
         return action;
-      });
+      };
 
-      // Execute actions on the document using the "main" branch
+      const caps = optionalBaseReducerCapabilities(document.header);
+      const undoSteps = params.actions.filter(isUndoRedo);
+      let actions: Action[];
+      if (caps === undefined || !undoNeedsTargets(caps) || !undoSteps.length) {
+        actions = params.actions.map(buildAction);
+      } else {
+        // Each step retracts a target resolved over the stored rows and the earlier actions.
+        const reducer = stateReducerOf(documentModel.reducer);
+        if (reducer === undefined) {
+          throw new Error(
+            `Document model ${document.header.documentType} has no state reducer to resolve undo targets with`,
+          );
+        }
+        const operations: Record<string, Operation[]> = {};
+        for (const scope of new Set(undoSteps.map((step) => step.scope))) {
+          operations[scope] = await scopeOperations(params.documentId, scope);
+        }
+        const batch = undoRedoBatch({ ...document, operations }, caps, reducer);
+        for (const paramAction of params.actions) {
+          if (!isUndoRedo(paramAction)) {
+            batch.add(buildAction(paramAction));
+            continue;
+          }
+          const { count } = buildAction(paramAction).input as {
+            count: number;
+          };
+          for (let i = 0; i < count; i++) {
+            batch.undoOrRedo(paramAction.type, paramAction.scope);
+          }
+        }
+        actions = [...batch.actions];
+      }
+
       await client.execute(
         params.documentId,
         "main",

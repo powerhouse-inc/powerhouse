@@ -19,6 +19,7 @@ import {
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
+import { SKIPPED_DOCUMENT_MARKER } from "../../src/read-models/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
@@ -180,6 +181,22 @@ describe("catchup on a store", () => {
         status: "released",
         lastError: null,
         lastErrorTimestamp: null,
+      })
+      .execute();
+
+    expect(await cursors()).toEqual({
+      "document-indexer": 2,
+      "document-view": 6,
+      "pkg:drive:0": 5,
+    });
+  });
+
+  it("leaves out a skipped document's record", async () => {
+    await db
+      .insertInto("ViewState")
+      .values({
+        readModelId: `document-view${SKIPPED_DOCUMENT_MARKER}doc-a`,
+        lastOrdinal: 1,
       })
       .execute();
 

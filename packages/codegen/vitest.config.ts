@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "src/codegen/features.test.ts",
       "src/codegen/generate-apps.test.ts",
+      "src/codegen/generate.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
       "src/codegen/migrate.test.ts",
       "src/codegen/migrate-package-json.test.ts",
@@ -24,6 +25,7 @@ export default defineConfig({
       "src/file-builders/boilerplate/package.json.test.ts",
       "src/file-builders/boilerplate/project-ports.test.ts",
       "src/file-builders/boilerplate/generated-project-files.test.ts",
+      "src/utils/validation.test.ts",
       "src/file-builders/boilerplate/generated-hosts.test.ts",
       "src/file-builders/hosts/outputs-file.test.ts",
       "src/file-builders/boilerplate/migrate-style.test.ts",

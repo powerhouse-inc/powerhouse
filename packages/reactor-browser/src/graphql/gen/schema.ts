@@ -668,9 +668,11 @@ export type Query = {
    */
   readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
   readonly syncHolds: ReadonlyArray<SyncHold>;
+  readonly undoRedoTargets: UndoRedoTargets;
 };
 
 export type QueryCreateDefaultsArgs = {
+  documentType?: InputMaybe<Scalars["String"]["input"]>;
   parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
 };
 
@@ -759,6 +761,12 @@ export type QueryPollSyncEnvelopesArgs = {
 export type QuerySyncHoldsArgs = {
   documentId?: InputMaybe<Scalars["String"]["input"]>;
   remoteName?: InputMaybe<Scalars["String"]["input"]>;
+};
+
+export type QueryUndoRedoTargetsArgs = {
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type ReactorOperation = {
@@ -913,6 +921,11 @@ export type TouchChannelResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
   readonly manifest?: Maybe<Scalars["JSONObject"]["output"]>;
   readonly success: Scalars["Boolean"]["output"];
+};
+
+export type UndoRedoTargets = {
+  readonly redoTarget?: Maybe<Scalars["String"]["output"]>;
+  readonly undoTarget?: Maybe<Scalars["String"]["output"]>;
 };
 
 export type ViewFilterInput = {
@@ -1336,6 +1349,28 @@ export type GetCreateDefaultsQuery = {
   readonly createDefaults: {
     readonly signaturePolicy: string;
     readonly protocolVersions: NonNullable<unknown>;
+  };
+};
+
+export type GetCreateProtocolVersionsQueryVariables = Exact<{
+  parentIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
+  documentType: Scalars["String"]["input"];
+}>;
+
+export type GetCreateProtocolVersionsQuery = {
+  readonly createDefaults: { readonly protocolVersions: NonNullable<unknown> };
+};
+
+export type GetUndoRedoTargetsQueryVariables = Exact<{
+  documentIdOrSlug: Scalars["String"]["input"];
+  scope?: InputMaybe<Scalars["String"]["input"]>;
+  branch?: InputMaybe<Scalars["String"]["input"]>;
+}>;
+
+export type GetUndoRedoTargetsQuery = {
+  readonly undoRedoTargets: {
+    readonly undoTarget?: string | null | undefined;
+    readonly redoTarget?: string | null | undefined;
   };
 };
 
@@ -2133,6 +2168,35 @@ export const GetCreateDefaultsDocument = gql`
     }
   }
 `;
+export const GetCreateProtocolVersionsDocument = gql`
+  query GetCreateProtocolVersions(
+    $parentIdOrSlug: String
+    $documentType: String!
+  ) {
+    createDefaults(
+      parentIdOrSlug: $parentIdOrSlug
+      documentType: $documentType
+    ) {
+      protocolVersions
+    }
+  }
+`;
+export const GetUndoRedoTargetsDocument = gql`
+  query GetUndoRedoTargets(
+    $documentIdOrSlug: String!
+    $scope: String
+    $branch: String
+  ) {
+    undoRedoTargets(
+      documentIdOrSlug: $documentIdOrSlug
+      scope: $scope
+      branch: $branch
+    ) {
+      undoTarget
+      redoTarget
+    }
+  }
+`;
 export const EvaluateActionsDocument = gql`
   query EvaluateActions(
     $documentIdentifier: String!
@@ -2708,6 +2772,42 @@ export function getSdk(
             signal,
           }),
         "GetCreateDefaults",
+        "query",
+        variables,
+      );
+    },
+    GetCreateProtocolVersions(
+      variables: GetCreateProtocolVersionsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetCreateProtocolVersionsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetCreateProtocolVersionsQuery>({
+            document: GetCreateProtocolVersionsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetCreateProtocolVersions",
+        "query",
+        variables,
+      );
+    },
+    GetUndoRedoTargets(
+      variables: GetUndoRedoTargetsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetUndoRedoTargetsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetUndoRedoTargetsQuery>({
+            document: GetUndoRedoTargetsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetUndoRedoTargets",
         "query",
         variables,
       );

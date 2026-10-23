@@ -1,5 +1,8 @@
 import type {
   Action,
+  BaseReducerCapabilities,
+  CreateDocumentAction,
+  DeriveScope,
   DocumentModelModule,
   ISigner,
   Operation,
@@ -7,9 +10,19 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
+  acceptsSubmittedRetract,
+  acceptsSubmittedUndoRedo,
   actionSignerIdentity,
-  baseReducerVersion,
+  assertNever,
+  baseReducerCapabilities,
+  capabilitiesFor,
+  compareCanonical,
+  conflictWindowMovesEveryRow,
+  createdCapabilities,
   decide,
+  deriveOperationId,
+  derivesByRule,
+  documentDerivesByRule,
   garbageCollect,
   groupDocumentType,
   isPurgeMarker,
@@ -22,11 +35,20 @@ import {
   localSupports,
   normalizeDocumentModelVersion,
   PEER_CAPABILITIES,
+  positionalOperations,
+  retractedActionIds,
+  retractIds,
+  RULE_EXEMPT_SCOPES,
+  skipMayUndo,
   sortOperations,
+  sortsJobsCanonically,
+  tailAppliesIncrementally,
+  tieOrderOf,
   withProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
+import { scopeDerivation } from "../derivation/index.js";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import { resolveFeatureFlags } from "../core/feature-flags.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
@@ -48,6 +70,7 @@ import {
   AuthTimestampNotMonotonicError,
   DocumentDeletedError,
   DocumentNotDeletedError,
+  DocumentNotFoundError,
   DocumentPurgedError,
   ExcessiveReshuffleError,
   GroupInUseError,
@@ -55,6 +78,10 @@ import {
   InvalidSignatureError,
   PurgeTooLargeError,
   ReservedActionError,
+  RetractionRefusedError,
+  SubmittedUndoRefusedError,
+  type RetractionRefusalReason,
+  UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import {
@@ -84,6 +111,7 @@ import { staticReadSet } from "../decision/build-decision-model.js";
 import { evaluateByPosition } from "../decision/evaluation.js";
 import { retractionSkip } from "../decision/merged-order.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
+import { createProtocolGate, type IProtocolGate } from "../protocol/gate.js";
 import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
 import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
@@ -193,6 +221,64 @@ type EvaluationCriteria = {
  * decide-and-reduce logic while differing only in how many operations reach
  * the store per transaction.
  */
+/** The previous write's result a batch reduces the next write against. */
+type CarriedState = {
+  document: PHDocument;
+  /** What the rule read about the write's id; undefined outside the rule. */
+  lookups?: RuleLookups;
+};
+
+/** What base-reducer 3 reads about write ids before deciding to re-derive. */
+type RuleLookups = {
+  /** The ids a stored RETRACT names. */
+  targeted: ReadonlySet<string>;
+  /** The ids a stored RETRACT row carries, rewound rows included. */
+  retractIds: ReadonlySet<string>;
+};
+
+const NO_RULE_LOOKUPS: RuleLookups = {
+  targeted: new Set(),
+  retractIds: new Set(),
+};
+
+async function readRuleLookups(
+  operationStore: IOperationStore,
+  documentId: string,
+  scope: string,
+  branch: string,
+  actionIds: string[],
+  signal?: AbortSignal,
+): Promise<RuleLookups> {
+  const [targeted, rows] = await Promise.all([
+    operationStore.findReferencing(
+      documentId,
+      scope,
+      branch,
+      actionIds,
+      signal,
+    ),
+    operationStore.getAllOperationsByIds(
+      documentId,
+      scope,
+      branch,
+      actionIds.map((id) => deriveOperationId(documentId, scope, branch, id)),
+      signal,
+    ),
+  ]);
+  return { targeted, retractIds: retractIds(rows) };
+}
+
+/** Whether `writes`, appended after what `lookups` read, apply row by row. */
+function appliesIncrementally(
+  writes: readonly PendingWrite[],
+  lookups: RuleLookups,
+): boolean {
+  return tailAppliesIncrementally(writes, {
+    named: (id) => lookups.targeted.has(id),
+    holds: (id) => lookups.retractIds.has(id),
+  });
+}
+
 type PreparedWrite = {
   action: Action;
   sourceRemote: string;
@@ -220,6 +306,124 @@ type ScopeOutcome = {
  * returned JobResult there, which is what the queue, the worker protocol and
  * every test expect a failed job to look like.
  */
+/** The received row the reducer replays: whose hash and skip it keeps. */
+function replayedOperation(
+  operation: Operation,
+  caps: BaseReducerCapabilities,
+): Operation {
+  switch (caps.replayHash) {
+    case "sender":
+      return operation;
+    case "receiver":
+      return { ...operation, hash: "", skip: 0 };
+    default:
+      return assertNever(caps.replayHash, "replay hash");
+  }
+}
+
+/** The stored document's protocol, read once per job before it runs. */
+type StoredProtocol = {
+  /** Why this reactor cannot run the stored document. */
+  refusal?: Error;
+  /** Undefined when nothing is stored yet. */
+  caps?: BaseReducerCapabilities;
+  /** The header read failed for a reason other than absence. */
+  unreadable?: Error;
+};
+
+/**
+ * An UNDO or REDO, submitted or loaded from a peer, where the version undoes by
+ * RETRACT. A loaded one would make each replica mint its own RETRACT id.
+ */
+function undoRedoRefusal(
+  job: Job,
+  stored: BaseReducerCapabilities | undefined,
+): SubmittedUndoRefusedError | undefined {
+  let actions: readonly Action[];
+  let caps = stored;
+  if (job.kind === "mutation") {
+    actions = job.actions;
+  } else if (job.kind === "load") {
+    actions = job.operations.map((operation) => operation.action);
+    caps ??= createdCapabilities(
+      actions.find(
+        (action): action is CreateDocumentAction =>
+          action.type === "CREATE_DOCUMENT",
+      )?.input,
+    );
+  } else {
+    return undefined;
+  }
+  if (!caps || acceptsSubmittedUndoRedo(caps)) {
+    return undefined;
+  }
+  const refused = actions.find(isUndoRedo);
+  return refused
+    ? new SubmittedUndoRefusedError(job.documentId, refused.type)
+    : undefined;
+}
+
+/** No base reducer applies a retraction in these scopes. */
+function isRetractOutsideRule(action: Action): boolean {
+  return action.type === "RETRACT" && RULE_EXEMPT_SCOPES.has(action.scope);
+}
+
+/**
+ * Why a submitted RETRACT of `target` cannot apply to the positional `rows`.
+ * Decided by liveness over the rows, not by whether a stored RETRACT names the
+ * target: a retraction that was itself retracted leaves its target live.
+ */
+function retractionRefusal(
+  target: unknown,
+  rows: readonly Operation[],
+): RetractionRefusalReason | undefined {
+  if (
+    typeof target !== "string" ||
+    !rows.some((operation) => operation.action.id === target)
+  ) {
+    return "target-missing";
+  }
+  return retractedActionIds(rows).has(target) ? "target-retracted" : undefined;
+}
+
+/**
+ * The rows a submitted RETRACT is admitted against: what `stream` applies now,
+ * plus each row a reshuffle re-appends that it has not written back yet. A
+ * RETRACT's rewind must not hide a target the same job puts back.
+ */
+function admissionRows(
+  stream: readonly Operation[],
+  reappended: readonly Operation[],
+): Operation[] {
+  const rows = positionalOperations(stream);
+  const present = new Set(rows.map((operation) => operation.action.id));
+  return [
+    ...rows,
+    ...reappended.filter((operation) => !present.has(operation.action.id)),
+  ];
+}
+
+/** The stored rows among `operations` a reshuffle re-appends, with the verdict each lands with. */
+function reappendedRows(
+  job: Job,
+  operations: readonly Operation[],
+  verdicts: readonly (string | undefined)[],
+): Operation[] {
+  const submitted = new Set(job.actions.map((action) => action.id));
+  const rows: Operation[] = [];
+  operations.forEach((operation, i) => {
+    if (!submitted.has(operation.action.id)) {
+      rows.push({ ...operation, deniedReason: verdicts[i] });
+    }
+  });
+  return rows;
+}
+
+/** A rule write whose scope the reducer re-derives from every row; UNDO and REDO become RETRACTs. */
+function needsFullHistory(write: PendingWrite, lookups: RuleLookups): boolean {
+  return isUndoRedo(write.action) || !appliesIncrementally([write], lookups);
+}
+
 /** The ids of a purge job's request, which a drive purge may precede. */
 function purgeRequestDocumentIds(job: Job): string[] {
   const ids = job.meta.purgeRequestDocumentIds;
@@ -288,6 +492,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private decisionModel: RegisteredDecisionModel;
   private signatureAdmission: SignatureAdmission;
   private documentActionHandler: DocumentActionHandler;
+  private protocolGate: IProtocolGate;
   private executionScope: IExecutionScope;
   private signer: ISigner;
   private readonly flusher: IStorageFlusher;
@@ -357,13 +562,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         ),
       },
     );
+    this.protocolGate = createProtocolGate(
+      this.config.protocolSupport,
+      registry,
+      logger,
+    );
     this.documentActionHandler = new DocumentActionHandler(
       registry,
       logger,
       driveContainerTypes,
       this.featureFlags,
       this.decisionModel,
-      this.config.protocolSupport,
+      this.protocolGate,
     );
     this.executionScope =
       executionScope ??
@@ -583,7 +793,9 @@ export class SimpleJobExecutor implements IJobExecutor {
     let pendingEvent: JobWriteReadyEvent | undefined;
 
     if (job.kind === "mutation") {
-      const reserved = job.actions.find((action) => isPurgeMarker(action));
+      const reserved = job.actions.find(
+        (action) => isPurgeMarker(action) || isRetractOutsideRule(action),
+      );
       if (reserved) {
         return {
           result: buildErrorResult(
@@ -642,19 +854,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       ),
     };
 
-    const unsupported = await this.unsupportedStoredProtocol(
-      job,
-      stores,
-      signal,
-    );
-    if (unsupported) {
-      return { result: buildErrorResult(job, unsupported, startTime) };
+    const stored = await this.readStoredProtocol(job, stores, signal);
+    if (stored.refusal) {
+      return { result: buildErrorResult(job, stored.refusal, startTime) };
+    }
+    const undoRefusal = undoRedoRefusal(job, stored.caps);
+    if (undoRefusal) {
+      return { result: buildErrorResult(job, undoRefusal, startTime) };
     }
 
     const indexTxn = stores.operationIndex.start();
 
     if (job.kind === "load") {
-      const loadResult = await this.executeLoadJob({
+      const loadResult = await this.executeLoadJob(stored, {
         job,
         startTime,
         indexTxn,
@@ -662,6 +874,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
         replayingAcceptedHistory: true,
         evaluatedByPosition: false,
+        reappended: [],
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
@@ -702,6 +915,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
         replayingAcceptedHistory: false,
         evaluatedByPosition: false,
+        reappended: [],
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
@@ -785,7 +999,12 @@ export class SimpleJobExecutor implements IJobExecutor {
       return this.committedOutcome(job, committed, [], [], stores, startTime);
     }
 
-    const positioned = await this.positionByTimestamp(fresh, stores, signal);
+    const positioned = await this.positionByTimestamp(
+      fresh,
+      stored,
+      stores,
+      signal,
+    );
     if (positioned.error) {
       return { result: buildErrorResult(job, positioned.error, startTime) };
     }
@@ -798,6 +1017,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       signal,
       replayingAcceptedHistory: false,
       evaluatedByPosition: positioned.evaluatedByPosition,
+      reappended: positioned.reappended,
       postCommitInvalidations,
       postCommitMembershipInvalidations,
       touchedStreams,
@@ -821,16 +1041,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Put here because a re-eval pass writes through the same db transaction.
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope: job.scope, operations: actionResult.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         result: {
           job,
           success: false as const,
-          error: reevaluationError,
+          error: reevaluation.error,
           duration: Date.now() - startTime,
         },
       };
@@ -841,14 +1061,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
-    for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-      actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    // The pass's rows follow the job's own in the index transaction.
+    const written = [
+      ...actionResult.operationsWithContext,
+      ...reevaluation.operationsWithContext,
+    ];
+    for (let i = 0; i < written.length; i++) {
+      written[i].context.ordinal = ordinals[i];
     }
     return this.committedOutcome(
       job,
       committed,
-      actionResult.operationsWithContext,
-      actionResult.generatedOperations,
+      written,
+      [
+        ...actionResult.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
       stores,
       startTime,
     );
@@ -1320,16 +1548,22 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
   }
 
-  /** A stored document at a version this reactor does not run is read-only here. */
-  private async unsupportedStoredProtocol(
+  /**
+   * The stored header's base-reducer capabilities, read once per job. A
+   * stored document at a version this reactor does not run is read-only here.
+   */
+  private async readStoredProtocol(
     job: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
-  ): Promise<Error | undefined> {
-    let versions;
+  ): Promise<StoredProtocol> {
+    let stored: {
+      documentType: string;
+      protocolVersions?: { readonly [protocol: string]: number };
+    };
     try {
       // Read the way admission reads: with decisions on, execution bypasses the meta cache.
-      versions =
+      stored =
         this.featureFlags.documentDecisions && job.kind !== "load"
           ? (
               await stores.writeCache.getState(
@@ -1339,22 +1573,32 @@ export class SimpleJobExecutor implements IJobExecutor {
                 undefined,
                 signal,
               )
-            ).header.protocolVersions
-          : (
-              await stores.documentMetaCache.getDocumentMeta(
-                job.documentId,
-                job.branch,
-                signal,
-              )
-            ).protocolVersions;
-    } catch {
+            ).header
+          : await stores.documentMetaCache.getDocumentMeta(
+              job.documentId,
+              job.branch,
+              signal,
+            );
+    } catch (error) {
+      if (UnsupportedProtocolVersionError.isError(error)) {
+        return { refusal: error };
+      }
       // Not stored yet, or unreadable: the job's own reads decide.
-      return undefined;
+      return DocumentNotFoundError.isError(error)
+        ? {}
+        : {
+            unreadable:
+              error instanceof Error ? error : new Error(String(error)),
+          };
     }
-    return this.documentActionHandler.unsupportedProtocol(
+    const refusal = this.protocolGate.refusal(
       job.documentId,
-      versions,
+      stored.protocolVersions,
+      stored.documentType,
     );
+    return refusal
+      ? { refusal }
+      : { caps: capabilitiesFor(stored.protocolVersions) };
   }
 
   /**
@@ -1619,17 +1863,74 @@ export class SimpleJobExecutor implements IJobExecutor {
   }
 
   /**
+   * A submitted RETRACT into a document whose base reducer has no retraction
+   * rule, or on base-reducer 3 one whose target is absent or already
+   * retracted. Stored rows a backdated write re-appends, loads and
+   * re-evaluations are not submitted, and are never refused here. A denied
+   * RETRACT is inert, so only the version refuses it.
+   */
+  private refuseSubmittedRetract(
+    write: PendingWrite,
+    executing: ExecutingJob,
+    document: PHDocument,
+  ): JobResult | undefined {
+    const { action } = write;
+    const { job, startTime } = executing;
+    if (
+      action.type !== "RETRACT" ||
+      job.kind !== "mutation" ||
+      !job.actions.some((submitted) => submitted.id === action.id)
+    ) {
+      return undefined;
+    }
+
+    let caps: BaseReducerCapabilities;
+    try {
+      caps = baseReducerCapabilities(document.header);
+    } catch (error) {
+      return buildErrorResult(
+        job,
+        error instanceof Error ? error : new Error(String(error)),
+        startTime,
+      );
+    }
+
+    if (!acceptsSubmittedRetract(caps)) {
+      return buildErrorResult(
+        job,
+        new ReservedActionError(job.documentId, action.type),
+        startTime,
+      );
+    }
+    if (write.deniedReason !== undefined || !derivesByRule(caps, job.scope)) {
+      return undefined;
+    }
+    const target = (action.input as { target?: unknown } | null)?.target;
+    const reason = retractionRefusal(
+      target,
+      admissionRows(document.operations[job.scope] ?? [], executing.reappended),
+    );
+    return reason === undefined
+      ? undefined
+      : buildErrorResult(
+          job,
+          new RetractionRefusedError(job.documentId, String(target), reason),
+          startTime,
+        );
+  }
+
+  /**
    * Decides a write and reduces it, without persisting anything.
    *
    * Split from the commit so one write and a batch of them share this logic
-   * rather than keeping two copies of it. `baseDocument` lets a batch thread
-   * the previous action's result forward instead of reading its own write back
+   * rather than keeping two copies of it. `carried` lets a batch thread the
+   * previous action's result forward instead of reading its own write back
    * out of the cache, which is the only reason the reduce has to be sequential.
    */
   private async prepareRegularWrite(
     write: PendingWrite,
     executing: ExecutingJob,
-    baseDocument?: PHDocument,
+    carried?: CarriedState,
   ): Promise<PreparedWrite | JobResult> {
     const { action, skip, sourceOperation, sourceRemote, deniedReason } = write;
     const { job, startTime, indexTxn, stores, signal } = executing;
@@ -1658,7 +1959,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           { verb: "execute", scope: action.scope, operation: action.type },
           signal,
           this.featureFlags.authConditions
-            ? { actionInput: action.input, carriedDocument: baseDocument }
+            ? { actionInput: action.input, carriedDocument: carried?.document }
             : undefined,
         );
       } catch (error) {
@@ -1736,16 +2037,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     // left the resulting state derived from the superseded lineage, which is
     // what the document view stores and serves; the write cache recovered on
     // its next cold read and the read model never did.
-    if (isUndoRedo(action) || skip > 0) {
+    const invalidated = isUndoRedo(action) || skip > 0;
+    if (invalidated) {
       stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
-    let document: PHDocument;
-    if (baseDocument !== undefined) {
-      document = baseDocument;
-    } else {
+    const readHead = async (): Promise<PHDocument | JobResult> => {
       try {
-        document = await stores.writeCache.getState(
+        return await stores.writeCache.getState(
           job.documentId,
           job.scope,
           job.branch,
@@ -1759,6 +2058,62 @@ export class SimpleJobExecutor implements IJobExecutor {
           startTime,
         );
       }
+    };
+
+    let document: PHDocument;
+    if (carried !== undefined) {
+      document = carried.document;
+    } else {
+      const head = await readHead();
+      if ("success" in head) {
+        return head;
+      }
+      document = head;
+    }
+
+    // Base-reducer 3 re-derives the scope from every row for a write that
+    // retracts, that a stored RETRACT names, or that repeats a stored
+    // RETRACT's id. Only the version says whether the rule runs, so such a
+    // write reads again once the slice is dropped.
+    let lookups = carried?.lookups;
+    if (
+      carried === undefined &&
+      deniedReason === undefined &&
+      documentDerivesByRule(document.header, job.scope)
+    ) {
+      try {
+        lookups = await readRuleLookups(
+          stores.operationStore,
+          job.documentId,
+          job.scope,
+          job.branch,
+          [action.id],
+          signal,
+        );
+      } catch (error) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
+      if (!invalidated && needsFullHistory(write, lookups)) {
+        stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
+        const head = await readHead();
+        if ("success" in head) {
+          return head;
+        }
+        document = head;
+      }
+    }
+
+    const retractRefusal = this.refuseSubmittedRetract(
+      write,
+      executing,
+      document,
+    );
+    if (retractRefusal) {
+      return retractRefusal;
     }
 
     // The interim gate, superseded by the auth projection. Re-evaluating already
@@ -1847,16 +2202,50 @@ export class SimpleJobExecutor implements IJobExecutor {
         },
       };
     } else {
+      // A base-reducer 3 write that re-derives the scope does so as a cold
+      // rebuild would: each row with its own module version's reducer.
+      let deriveScope: DeriveScope | undefined;
+      if (
+        documentDerivesByRule(document.header, job.scope) &&
+        needsFullHistory(write, lookups ?? NO_RULE_LOOKUPS)
+      ) {
+        try {
+          deriveScope = await scopeDerivation(
+            stores.operationStore,
+            this.registry,
+            this.protocolGate,
+            job.documentId,
+            job.branch,
+            signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            startTime,
+          );
+        }
+      }
       try {
-        const protocolVersion = baseReducerVersion(document.header);
+        const caps = baseReducerCapabilities(document.header);
+        const protocolVersion = caps.version;
+        const ruleOptions = {
+          ...(lookups === undefined
+            ? {}
+            : { targeted: lookups.targeted, retractIds: lookups.retractIds }),
+          ...(deriveScope === undefined ? {} : { deriveScope }),
+        };
         const reducerOptions = sourceOperation
           ? {
               skip,
               branch: job.branch,
-              replayOptions: { operation: sourceOperation },
+              replayOptions: {
+                operation: replayedOperation(sourceOperation, caps),
+              },
               protocolVersion,
+              ...ruleOptions,
             }
-          : { skip, branch: job.branch, protocolVersion };
+          : { skip, branch: job.branch, protocolVersion, ...ruleOptions };
         updatedDocument = withProtocolVersions(
           module.reducer(
             document as PHDocument,
@@ -1906,6 +2295,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           action,
           { documentId: job.documentId, scope, branch: job.branch },
           this.signer,
+          baseReducerCapabilities(document.header).synthesizedId,
           signal,
         );
       } catch (error) {
@@ -2094,7 +2484,8 @@ export class SimpleJobExecutor implements IJobExecutor {
    *   whose indices are not a simple ascending run from the head.
    * - UNDO, REDO and NOOP-with-skip each invalidate the write cache to
    *   force a full-history rebuild, so they cannot be reduced against state
-   *   threaded from the write before them.
+   *   threaded from the write before them. A RETRACT re-derives the scope
+   *   from every row for the same reason.
    * - The auth scope decides later writes against the policy earlier ones
    *   install, so a batch would decide them all against the policy as it stood
    *   before the batch.
@@ -2117,11 +2508,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     return writes.every((write) => {
       const type = write.action.type;
       return (
-        write.skip === 0 &&
+        !needsFullHistory(write, NO_RULE_LOOKUPS) &&
         write.deniedReason === undefined &&
         write.sourceOperation === undefined &&
         !DOCUMENT_SCOPE_ACTIONS.has(type) &&
-        !isUndoRedo(write.action) &&
         type !== "NOOP"
       );
     });
@@ -2145,8 +2535,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     writes: PendingWrite[],
     executing: ExecutingJob,
   ): Promise<JobResult> {
+    const { job } = executing;
     const prepared: PreparedWrite[] = [];
-    let carried: PHDocument | undefined;
+    let carried: CarriedState | undefined;
+    let lookups: RuleLookups | undefined;
     let lastYield = performance.now();
 
     for (const write of writes) {
@@ -2157,8 +2549,37 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (outcome.denied) {
         return this.executeRegularActionsSequentially(writes, executing);
       }
+
+      // A later write that would re-derive from every row needs rows the
+      // carried slice does not hold.
+      if (
+        prepared.length === 0 &&
+        documentDerivesByRule(outcome.document.header, job.scope)
+      ) {
+        const later = writes.slice(1);
+        try {
+          lookups = await readRuleLookups(
+            executing.stores.operationStore,
+            job.documentId,
+            job.scope,
+            job.branch,
+            later.map((write) => write.action.id),
+            executing.signal,
+          );
+        } catch (error) {
+          return buildErrorResult(
+            job,
+            error instanceof Error ? error : new Error(String(error)),
+            executing.startTime,
+          );
+        }
+        if (!appliesIncrementally(later, lookups)) {
+          return this.executeRegularActionsSequentially(writes, executing);
+        }
+      }
+
       prepared.push(outcome);
-      carried = outcome.updatedDocument;
+      carried = { document: outcome.updatedDocument, lookups };
 
       if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
         await yieldToMain();
@@ -2270,10 +2691,12 @@ export class SimpleJobExecutor implements IJobExecutor {
    * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
-    job: Job,
+    submitted: Job,
+    storedProtocol: StoredProtocol,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
+    let job = submitted;
     const plain = (): PositionedWrites => ({
       writes: job.actions.map((action) => ({
         action,
@@ -2281,10 +2704,22 @@ export class SimpleJobExecutor implements IJobExecutor {
         sourceRemote: "",
       })),
       evaluatedByPosition: false,
+      reappended: [],
     });
 
-    if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
+    if (job.actions.length === 0) {
       return plain();
+    }
+
+    const caps = storedProtocol.caps;
+    const canonical = sortsJobsCanonically(caps);
+    // v1/v2 keep main's flag-off append; v3 is positioned whatever the flag.
+    if (!canonical && !this.featureFlags.documentDecisions) {
+      return plain();
+    }
+    // A create has nothing stored to order against.
+    if (storedProtocol.unreadable) {
+      throw storedProtocol.unreadable;
     }
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
@@ -2326,7 +2761,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
       if (violation) {
-        return { writes: [], evaluatedByPosition: false, error: violation };
+        return {
+          writes: [],
+          evaluatedByPosition: false,
+          reappended: [],
+          error: violation,
+        };
       }
 
       if (!backdated) {
@@ -2340,7 +2780,31 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    if (!backdated) {
+    // Canonical order stores a job in the order every receiver sorts it into,
+    // and a tie with a stored row is broken by action id, not arrival.
+    let first: Operation | undefined;
+    if (canonical) {
+      const asRow = (action: Action) =>
+        ({
+          id: action.id,
+          index: 0,
+          skip: 0,
+          hash: "",
+          timestampUtcMs: action.timestampUtcMs,
+          action,
+        }) as Operation;
+      job = {
+        ...job,
+        actions: [...job.actions].sort((a, b) =>
+          compareCanonical(asRow(a), asRow(b)),
+        ),
+      };
+      first = asRow(job.actions[0]);
+    }
+    const tied =
+      canonical && earliestAt === Date.parse(revisions.latestTimestamp);
+
+    if (!backdated && !tied) {
       return plain();
     }
 
@@ -2353,11 +2817,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         undefined,
         signal,
       )
-    ).results.filter((operation) => !isGenesisOperation(operation));
+    ).results.filter(
+      (operation) =>
+        !isGenesisOperation(operation) &&
+        (first === undefined || compareCanonical(operation, first) > 0),
+    );
 
     // Nothing to move here, but still below another scope's newest operation.
     const nothingToMove = async (): Promise<PositionedWrites> => {
-      if (!this.featureFlags.authEnforcement) {
+      if (!backdated || !this.featureFlags.authEnforcement) {
         return plain();
       }
       return this.evaluatePositioned(
@@ -2421,8 +2889,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // Given positions rather than stored rows, so a tie puts the new write
-    // after what is already there.
+    // Given positions rather than stored rows, so on base-reducer 2 a tied
+    // structure action goes after what is already there.
     const incoming = job.actions.map(
       (action, i) =>
         ({
@@ -2439,6 +2907,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       { index: nextIndex, skip: retractionSkip(nextIndex, firstRetracted) },
       moving,
       incoming,
+      tieOrderOf(caps),
     );
 
     stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
@@ -2453,6 +2922,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           sourceRemote: "",
         })),
         evaluatedByPosition: false,
+        reappended: reappendedRows(job, merged, []),
       };
     }
 
@@ -2489,6 +2959,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         return {
           writes: [],
           evaluatedByPosition: false,
+          reappended: [],
           error: refusalError(
             reason,
             job.documentId,
@@ -2507,6 +2978,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         deniedReason: reasons[i],
       })),
       evaluatedByPosition: true,
+      reappended: reappendedRows(job, operations, reasons),
     };
   }
 
@@ -2616,9 +3088,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async reevaluateIfCriteriaMet(
     criteria: EvaluationCriteria,
     executing: ExecutingJob,
-  ): Promise<Error | undefined> {
+  ): Promise<{ error?: Error; operationsWithContext: OperationWithContext[] }> {
+    const skipped = { operationsWithContext: [] };
     if (!this.featureFlags.documentDecisions) {
-      return undefined;
+      return skipped;
     }
 
     const { job, stores, signal } = executing;
@@ -2631,7 +3104,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         stream.query.branch === job.branch,
     );
     if (!inReadSet) {
-      return undefined;
+      return skipped;
     }
 
     const revisions = await stores.operationStore.getRevisions(
@@ -2645,11 +3118,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       (operation) => Date.parse(operation.timestampUtcMs) < latest,
     );
     if (!backdated) {
-      return undefined;
+      return skipped;
     }
 
-    const outcome = await this.reevaluateDocument(executing);
-    return outcome.error;
+    return this.reevaluateDocument(executing);
   }
 
   /**
@@ -2809,7 +3281,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  private async executeLoadJob(executing: ExecutingJob): Promise<JobResult> {
+  private async executeLoadJob(
+    stored: StoredProtocol,
+    executing: ExecutingJob,
+  ): Promise<JobResult> {
     const { job, startTime, indexTxn, stores, signal } = executing;
 
     if (job.operations.length === 0) {
@@ -2827,9 +3302,23 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
         signal,
       );
-    } catch {
-      // Document meta not found -- continue with load (may be a new document)
+    } catch (error) {
+      // Not found: the load may create the document. Any other failure would
+      // read a base-reducer 3 document as base-reducer 2.
+      if (!DocumentNotFoundError.isError(error)) {
+        return buildErrorResult(
+          job,
+          error instanceof Error ? error : new Error(String(error)),
+          startTime,
+        );
+      }
     }
+
+    // Base-reducer 3 skips are this replica's own rewinds, never an undo, and
+    // its conflict window is the receiver's.
+    const caps = stored.caps;
+    const canonical = sortsJobsCanonically(caps);
+    const skipsMayUndo = skipMayUndo(caps);
 
     // Without DCB, we reject entire load jobs. With DCB we are able to
     // accept/deny individual operations.
@@ -2885,6 +3374,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     let selection = await this.selectLoadWrites(
       job,
       job.operations,
+      caps,
       stores,
       signal,
     );
@@ -2935,7 +3425,13 @@ export class SimpleJobExecutor implements IJobExecutor {
           duration: Date.now() - startTime,
         };
       }
-      selection = await this.selectLoadWrites(job, remaining, stores, signal);
+      selection = await this.selectLoadWrites(
+        job,
+        remaining,
+        caps,
+        stores,
+        signal,
+      );
     }
 
     const {
@@ -3031,10 +3527,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       existingOpsToReshuffle.length === 0 && skipCount === 0
         ? incomingOpsToApply
             .slice()
-            .sort((a, b) => a.index - b.index)
+            .sort((a, b) =>
+              // A sender's reshuffle puts its rows out of timestamp order,
+              // and canonical order does not read the skip that orders them.
+              canonical ? compareCanonical(a, b) : a.index - b.index,
+            )
             .map((operation, i) => ({
               ...operation,
               index: latestRevision + i,
+              // A trivial append rewinds nothing.
+              skip: skipsMayUndo ? operation.skip : 0,
             }))
         : reshuffleByTimestamp(
             {
@@ -3046,6 +3548,7 @@ export class SimpleJobExecutor implements IJobExecutor {
               ...operation,
               id: operation.id,
             })),
+            tieOrderOf(caps),
           );
 
     // A NOOP is the v2 undo marker, and it is only a marker while its skip is
@@ -3067,6 +3570,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     for (const operation of reshuffledOperations) {
       // A local NOOP's target stays behind; a skip would undo another operation.
       if (
+        skipsMayUndo &&
         operation.action.type === "NOOP" &&
         operation.skip === 0 &&
         incomingIds.has(operation.action.id)
@@ -3128,15 +3632,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope, operations: result.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         job,
         success: false,
-        error: reevaluationError,
+        error: reevaluation.error,
         duration: Date.now() - startTime,
       };
     }
@@ -3144,8 +3648,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     return {
       job,
       success: true,
-      operations: result.generatedOperations,
-      operationsWithContext: result.operationsWithContext,
+      operations: [
+        ...result.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
+      operationsWithContext: [
+        ...result.operationsWithContext,
+        ...reevaluation.operationsWithContext,
+      ],
       duration: Date.now() - startTime,
     };
   }
@@ -3154,6 +3664,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async selectLoadWrites(
     job: Job,
     operations: Operation[],
+    caps: BaseReducerCapabilities | undefined,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<{
@@ -3250,7 +3761,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (rows.some((row) => liveOps.has(row))) {
         continue;
       }
-      if (rows.some((row) => supersededBy(row)?.action.type === "NOOP")) {
+      if (
+        skipMayUndo(caps) &&
+        rows.some((row) => supersededBy(row)?.action.type === "NOOP")
+      ) {
         undoneActionIds.add(actionId);
       } else {
         predecessorBound = Math.min(
@@ -3268,7 +3782,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       // ops share timestamps (bulk imports). Local ops whose action.id matches
       // an incoming op are kept so dedup + reshuffle can remap them correctly
       // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
+      //
+      // In canonical order every conflicting row moves, whatever the sender's
+      // indexes, so order follows the row set and a tie with an incoming row
+      // is broken by action id.
+      if (
+        !conflictWindowMovesEveryRow(caps) &&
+        op.index < predecessorBound &&
+        !incomingActionIds.has(op.action.id)
+      ) {
         return false;
       }
       return liveOps.has(op);

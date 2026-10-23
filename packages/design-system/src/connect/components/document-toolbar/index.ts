@@ -11,6 +11,11 @@ export {
 } from "./toolbar-button.js";
 export { ToolbarInput } from "./toolbar-input.js";
 export { ToolbarName } from "./toolbar-name.js";
+export {
+  undoRoute,
+  useBaseReducer3UndoRedo,
+  type UndoRoute,
+} from "./use-document-undo-redo.js";
 
 export type {
   ContainerComponent,

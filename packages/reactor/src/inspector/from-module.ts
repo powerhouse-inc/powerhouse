@@ -53,6 +53,7 @@ export function createReactorInspector(
       module.writeCache,
       module.documentView,
       module.documentModelRegistry,
+      module.protocolSupport,
     ),
     storageHealth:
       options.storageHealth ?? groupCommitHealth(module.groupCommitStorage),

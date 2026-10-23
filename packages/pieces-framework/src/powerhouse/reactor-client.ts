@@ -24,6 +24,7 @@ export type ReadMethods =
 // Pieces build actions with the model's action creators and pass them to
 // `execute`; `deleteDocument` refuses a cascade.
 export type WriteMethods =
+  | "newDocument"
   | "create"
   | "createEmpty"
   | "execute"
@@ -53,6 +54,11 @@ export type RefusedMethods =
   | "isServed"
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
+  // Pieces build their own undo with the model's action creators.
+  | "undo"
+  | "redo"
+  | "undoRedoTargets"
+  | "undoRedoAvailability"
   // Drive reads take no subject; pieces read a drive with `get`.
   | "drives";
 

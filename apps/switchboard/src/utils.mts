@@ -1,30 +1,32 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
-  reactorDriveCreateDocument,
+  REACTOR_DRIVE_DOCUMENT_TYPE,
   reactorDriveCreateState,
 } from "@powerhousedao/reactor-drive";
 import {
-  driveCreateDocument,
   driveCreateState,
+  driveDocumentType,
 } from "@powerhousedao/shared/document-drive";
 import type { DriveInput } from "@powerhousedao/shared/document-drive";
-import {
-  withSignaturePolicy,
-  type PHDocument,
+import type {
+  PHBaseState,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
 
 /**
  * A configured id pins the drive, and only a legacy drive can take a chosen
  * id; otherwise the client's creation default applies.
  */
-async function underCreatePolicy<TDocument extends PHDocument>(
+function newDrive<TDocument extends PHDocument>(
   client: IReactorClient,
-  document: TDocument,
+  documentType: string,
+  initialState: Partial<PHBaseState>,
   id: string | undefined,
 ): Promise<TDocument> {
-  return id
-    ? withSignaturePolicy(document, "legacy", { id })
-    : withSignaturePolicy(document, await client.getCreateSignaturePolicy());
+  return client.newDocument<TDocument>(documentType, {
+    initialState,
+    ...(id ? { signaturePolicy: "legacy" as const, id } : {}),
+  });
 }
 
 type DefaultDriveLogger = { error: (message: string) => void };
@@ -103,30 +105,33 @@ export async function addDefaultDrive(
   }
 
   const { global } = driveCreateState();
-  const created = driveCreateDocument({
-    global: {
-      ...global,
-      name: drive.global.name,
-      icon: drive.global.icon ?? global.icon,
-    },
-    local: {
-      availableOffline: drive.local?.availableOffline ?? false,
-      sharingType: drive.local?.sharingType ?? "public",
-      listeners: drive.local?.listeners ?? [],
-      triggers: drive.local?.triggers ?? [],
-    },
-  });
-
   const taken = await slugTakenBy(
     client,
     drive,
-    created.header.documentType,
+    driveDocumentType,
     serverPort,
     logger,
   );
   if (taken !== undefined) return taken ?? undefined;
 
-  const document = await underCreatePolicy(client, created, drive.id);
+  const document = await newDrive(
+    client,
+    driveDocumentType,
+    {
+      global: {
+        ...global,
+        name: drive.global.name,
+        icon: drive.global.icon ?? global.icon,
+      },
+      local: {
+        availableOffline: drive.local?.availableOffline ?? false,
+        sharingType: drive.local?.sharingType ?? "public",
+        listeners: drive.local?.listeners ?? [],
+        triggers: drive.local?.triggers ?? [],
+      },
+    } as Partial<PHBaseState>,
+    drive.id,
+  );
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
   }
@@ -177,29 +182,33 @@ export async function addDefaultReactorDrive(
   }
 
   const { global, local } = reactorDriveCreateState();
-  const created = reactorDriveCreateDocument({
-    global: {
-      ...global,
-      name: drive.global.name,
-      icon: drive.global.icon ?? global.icon,
-    },
-    local: {
-      ...local,
-      availableOffline: drive.local?.availableOffline ?? local.availableOffline,
-      sharingType: drive.local?.sharingType ?? local.sharingType,
-    },
-  });
-
   const taken = await slugTakenBy(
     client,
     drive,
-    created.header.documentType,
+    REACTOR_DRIVE_DOCUMENT_TYPE,
     serverPort,
     logger,
   );
   if (taken !== undefined) return taken ?? undefined;
 
-  const document = await underCreatePolicy(client, created, drive.id);
+  const document = await newDrive(
+    client,
+    REACTOR_DRIVE_DOCUMENT_TYPE,
+    {
+      global: {
+        ...global,
+        name: drive.global.name,
+        icon: drive.global.icon ?? global.icon,
+      },
+      local: {
+        ...local,
+        availableOffline:
+          drive.local?.availableOffline ?? local.availableOffline,
+        sharingType: drive.local?.sharingType ?? local.sharingType,
+      },
+    } as Partial<PHBaseState>,
+    drive.id,
+  );
   if (drive.slug && drive.slug.length > 0) {
     document.header.slug = drive.slug;
   }

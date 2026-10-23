@@ -271,7 +271,7 @@ describe("runtime-config loader", () => {
     expect(after.connect.app?.basePath).toBe("/refreshed");
   });
 
-  it("carries reactor enforcement flags from the file, defaulting the rest to off", async () => {
+  it("carries reactor enforcement flags from the file, defaulting the rest", async () => {
     stubFetch({
       schemaVersion: 2,
       packages: [],
@@ -291,6 +291,7 @@ describe("runtime-config loader", () => {
       authEnforcement: true,
       authGroups: false,
       authConditions: false,
+      undoV3: true,
     });
   });
 
