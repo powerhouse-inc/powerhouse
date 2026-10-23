@@ -16,6 +16,7 @@ import {
   generateId,
   retract,
   synthesizedActionId,
+  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { upgradeDocumentAction } from "../../src/actions/index.js";
@@ -181,6 +182,29 @@ describe("ReactorClient undo and redo on base-reducer 3", () => {
     expect(resolved).toBe(0);
     expect(await stream(id)).toHaveLength(1);
   });
+
+  it.each(["auth", "document"])(
+    "resolves nothing in the %s scope, which the rule does not derive",
+    async (scope) => {
+      await build();
+      const id = await createDocument(createBaseReducer3Document());
+      await add(id, "a");
+      const [a] = await stream(id);
+
+      expect(await reactor.resolveUndoRedo(id, scope)).toEqual({});
+      expect(await client.undoRedoTargets(id, scope)).toEqual({});
+      expect(await client.undoRedoAvailability(id, scope)).toEqual({
+        canUndo: false,
+        canRedo: false,
+      });
+      await expect(client.undo(id, scope)).rejects.toThrow(
+        "Cannot undo: nothing to undo in scope history",
+      );
+      expect(await client.undoRedoTargets(id)).toEqual({
+        undoTarget: a.action.id,
+      });
+    },
+  );
 
   it("resolves targets for the subject the view names, through the read gate", async () => {
     const gate: IReadGate = {
@@ -395,6 +419,38 @@ describe.each([1, 2] as const)(
       expect(undone?.action.type).toBe("NOOP");
     });
 
+    it("resolves no undo targets", async () => {
+      await build();
+      const id = await createDocument(
+        createDocModelDocument({
+          protocolVersions: { "base-reducer": version },
+        }),
+      );
+      await add(id, "a");
+      await add(id, "b");
+      await client.undo(id);
+
+      expect(await reactor.resolveUndoRedo(id, "global")).toEqual({});
+      expect(await client.undoRedoTargets(id)).toEqual({});
+    });
+
+    it("resolves no undo targets for a model createReducer did not tag", async () => {
+      await build([untagged(itemsV1)], []);
+      const id = await createDocument(
+        withSignaturePolicy(createItemsDocument(), "legacy", {
+          protocolVersions: { "base-reducer": version },
+        }),
+      );
+      await client.execute(id, "main", [addItem("a")]);
+
+      expect(await reactor.resolveUndoRedo(id, "global")).toEqual({});
+      expect(await client.undoRedoTargets(id)).toEqual({});
+      expect(await client.undoRedoAvailability(id)).toEqual({
+        canUndo: true,
+        canRedo: false,
+      });
+    });
+
     it("reports nothing in a scope the subject may not read", async () => {
       const gate: IReadGate = {
         scopePredicate: () => Promise.resolve((scope) => scope !== "global"),
@@ -480,6 +536,15 @@ function itemsModule(
       local: {},
     },
   } as unknown as DocumentModelModule;
+}
+
+/** The same model, its reducer not built by createReducer. */
+function untagged(module: DocumentModelModule): DocumentModelModule {
+  const reducer = module.reducer as (...args: unknown[]) => unknown;
+  return {
+    ...module,
+    reducer: (...args: unknown[]) => reducer(...args),
+  } as DocumentModelModule;
 }
 
 const itemsV1 = itemsModule(1);

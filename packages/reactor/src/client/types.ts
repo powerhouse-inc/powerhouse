@@ -824,7 +824,8 @@ export interface IReactorClient {
   /**
    * The rows a base-reducer 3 {@link undo} and {@link redo} of `scope` would
    * retract now, resolved by the reactor. A scope the subject may not read
-   * has none. Below 3 there are none: UNDO and REDO name no target.
+   * has none, nor does a scope the retraction rule does not derive. Below 3
+   * there are none: UNDO and REDO name no target.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"

@@ -5,7 +5,10 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { creationActions } from "@powerhousedao/shared/document-model";
+import {
+  creationActions,
+  documentDerivesByRule,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -457,6 +460,15 @@ export class Reactor implements IReactor {
       branch,
     );
 
+    const { header } = await this.documentView.get(
+      documentId,
+      { branch, scopes: ["document"] },
+      undefined,
+      signal,
+    );
+    if (!documentDerivesByRule(header, scope)) {
+      return {};
+    }
     return this.undoTargets.resolve(documentId, scope, branch, signal);
   }
 

@@ -306,7 +306,8 @@ export interface IReactor {
    * from every stored row, each derived with its own model version and every
    * upgrade applied at its boundary. A client submits a RETRACT of the target
    * under its author's signature; base-reducer 3 refuses a submitted UNDO or
-   * REDO.
+   * REDO. A scope the retraction rule does not derive, and every scope below
+   * 3, has none.
    *
    * @param documentId - The document id
    * @param scope - The scope to undo or redo in
