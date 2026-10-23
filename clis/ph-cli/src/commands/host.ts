@@ -1,4 +1,4 @@
-import { hostCheckArgs } from "@powerhousedao/shared/clis/args";
+import { hostCheckArgs, hostExportArgs } from "@powerhousedao/shared/clis/args";
 import { command, subcommands } from "cmd-ts";
 
 export const check = command({
@@ -17,9 +17,25 @@ export const check = command({
   },
 });
 
+// `export` is a reserved word.
+export const exportCmd = command({
+  name: "export",
+  description:
+    "Print a host as declared, with every member a compound names, as JSON " +
+    "(tokens unresolved). `--out` writes it to a file instead.",
+  args: hostExportArgs,
+  handler: async (args) => {
+    const { runHostExport } = await import("../services/host/export.js");
+    const { stdout, stderr, exitCode } = await runHostExport(args);
+    if (stdout !== undefined) process.stdout.write(stdout);
+    if (stderr !== undefined) process.stderr.write(stderr);
+    process.exitCode = exitCode;
+  },
+});
+
 export const host = subcommands({
   name: "host",
   description:
-    "Inspect the project's hosts/ (FEATURE_UNIFORM_RUNNERS_ENABLED): `check`.",
-  cmds: { check },
+    "Inspect the project's hosts/ (FEATURE_UNIFORM_RUNNERS_ENABLED): `check`, `export`.",
+  cmds: { check, export: exportCmd },
 });

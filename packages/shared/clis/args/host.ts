@@ -19,3 +19,17 @@ export const hostCheckArgs = {
     description: "the verb to check at (default: run)",
   }),
 };
+
+// `ph host export` (FEATURE_UNIFORM_RUNNERS_ENABLED).
+export const hostExportArgs = {
+  host: positional({
+    type: string,
+    displayName: "host",
+    description: "the host to export (a directory under hosts/)",
+  }),
+  out: option({
+    type: optional(string),
+    long: "out",
+    description: "write the JSON to this file instead of stdout",
+  }),
+};
