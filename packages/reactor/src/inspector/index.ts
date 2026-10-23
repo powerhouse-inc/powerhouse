@@ -26,6 +26,14 @@ export {
   type SyncInspectionReadOpKey,
 } from "./ops.js";
 export {
+  computeProgress,
+  PROCESSOR_MANAGER_CONSUMER_ID,
+  type FactoryProgress,
+  type ProcessorProgress,
+  type ReactorProgress,
+  type ReadModelProgress,
+} from "./progress.js";
+export {
   ReactorInspector,
   type ReactorInspectorComponents,
   type ReactorInspectorFacts,
