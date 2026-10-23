@@ -142,7 +142,8 @@ export function renderBars(
     return `${fit(row.label, labelWidth)} ${bar} ${percent(row).padStart(7)}`;
   });
   if (!priority) return bars;
-  return [renderPriority(priority).slice(0, Math.max(columns, 1)), ...bars];
+  // Short of the last column, so a full line never wraps.
+  return [renderPriority(priority).slice(0, Math.max(columns - 1, 1)), ...bars];
 }
 
 /** One line for a log without a TTY, listing only what is still catching up. */

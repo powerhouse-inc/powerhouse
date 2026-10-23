@@ -280,6 +280,12 @@ describe("catch-up priority", () => {
     expect(lines[1]).toMatch(/^sektar\s+█+░+\s+62%$/);
   });
 
+  it("cuts the priority line short of the terminal's last column", () => {
+    const [line] = renderBars(catchingUp, 20, dynamic6);
+
+    expect(line).toBe("catch-up priority 6");
+  });
+
   it("appends the priority to the plain line", () => {
     expect(renderLine(catchingUp, dynamic6)).toBe(
       "catch-up: sektar 62% · priority 6 dynamic",
