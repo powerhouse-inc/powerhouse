@@ -321,9 +321,9 @@ export class CatchUpPriority {
 
   /**
    * Gives way as the current level says before the next page. At level 0 it
-   * waits until the level rises. `cancel` ends any wait early.
+   * waits until the level rises. `cancel` aborting ends any wait early.
    */
-  async betweenPages(cancel?: Promise<void>): Promise<void> {
+  async betweenPages(cancel?: AbortSignal): Promise<void> {
     await this.whileStopped(cancel);
     const settings = CATCH_UP_LEVELS[this.level]!;
     switch (settings.giveWay) {
@@ -339,18 +339,18 @@ export class CatchUpPriority {
     }
   }
 
-  private whileStopped(cancel?: Promise<void>): Promise<void> {
-    if (this.level > 0) return Promise.resolve();
+  private whileStopped(cancel?: AbortSignal): Promise<void> {
+    if (this.level > 0 || cancel?.aborted) return Promise.resolve();
     return new Promise((resolve) => {
-      const stop = this.subscribe((state) => {
-        if (state.level === 0) return;
-        stop();
+      const end = () => {
+        unsubscribe();
+        cancel?.removeEventListener("abort", end);
         resolve();
+      };
+      const unsubscribe = this.subscribe((state) => {
+        if (state.level !== 0) end();
       });
-      void cancel?.then(() => {
-        stop();
-        resolve();
-      });
+      cancel?.addEventListener("abort", end, { once: true });
     });
   }
 

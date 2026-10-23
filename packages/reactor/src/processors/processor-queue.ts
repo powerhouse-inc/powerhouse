@@ -58,9 +58,9 @@ export type ProcessorQueueOptions = {
   backfillSlots?: IBackfillSlots;
   /**
    * Runs between backfill pages; defaults to yielding to the event loop.
-   * `closing` resolves once the queue closes, so a long wait can end early.
+   * `closing` aborts once the queue closes, so a long wait can end early.
    */
-  betweenPages?: (closing: Promise<void>) => Promise<void>;
+  betweenPages?: (closing: AbortSignal) => Promise<void>;
   /** Read before every backfill page; defaults to the index's page size. */
   pageSize?: () => number;
   logger: ILogger;
@@ -168,12 +168,10 @@ export class ProcessorQueue {
   private wake: (() => void) | undefined;
   // Set once a lookup exhausts its retries; nothing moves until one answers.
   private parked = false;
-  private readonly closing: Promise<void>;
-  private signalClosed: () => void = () => {};
+  // Aborted on close; waits listen on it and stop listening as they settle.
+  private readonly closing = new AbortController();
 
-  constructor(private readonly options: ProcessorQueueOptions) {
-    this.closing = new Promise((resolve) => (this.signalClosed = resolve));
-  }
+  constructor(private readonly options: ProcessorQueueOptions) {}
 
   get isClosed(): boolean {
     return this.closed;
@@ -296,7 +294,7 @@ export class ProcessorQueue {
       }
     });
     this.closed = true;
-    this.signalClosed();
+    this.closing.abort();
     this.wake?.();
     return disconnect;
   }
@@ -560,7 +558,7 @@ export class ProcessorQueue {
     const { cursor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
-    const release = await slots.acquire(this.closing);
+    const release = await slots.acquire(this.closing.signal);
     if (this.closed) {
       release();
       return;
@@ -622,7 +620,7 @@ export class ProcessorQueue {
       if (!page.next) break;
       // Re-read from where this page ended, so a new page size applies now.
       const scanned = highestOf(page.results);
-      await betweenPages(this.closing);
+      await betweenPages(this.closing.signal);
       try {
         page = await this.options.readSince(scanned, pageSize());
       } catch (error) {

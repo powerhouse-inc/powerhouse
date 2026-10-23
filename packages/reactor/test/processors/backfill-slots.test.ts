@@ -1,6 +1,8 @@
+import { getEventListeners } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import {
   BackfillSlots,
+  pauseFor,
   yieldToEventLoop,
 } from "../../src/processors/backfill-slots.js";
 
@@ -98,14 +100,44 @@ describe("BackfillSlots", () => {
 
   it("ends a wait without a slot once cancelled", async () => {
     const slots = new BackfillSlots(0);
-    let cancel!: () => void;
-    const cancelled = new Promise<void>((resolve) => (cancel = resolve));
-    const waiting = slots.acquire(cancelled);
-    cancel();
+    const controller = new AbortController();
+    const waiting = slots.acquire(controller.signal);
+    controller.abort();
     (await waiting)();
 
     expect(slots.waiters).toBe(0);
     expect(slots.inUse).toBe(0);
+    (await slots.acquire(controller.signal))();
+    expect(slots.waiters).toBe(0);
+  });
+
+  it("stops listening for a cancel once a wait gets its slot", async () => {
+    const slots = new BackfillSlots(1);
+    const { signal } = new AbortController();
+    for (let i = 0; i < 5; i++) {
+      const holder = await slots.acquire(signal);
+      const waiting = slots.acquire(signal);
+      expect(getEventListeners(signal, "abort")).toHaveLength(1);
+      holder();
+      (await waiting)();
+    }
+    expect(getEventListeners(signal, "abort")).toHaveLength(0);
+  });
+});
+
+describe("pauseFor", () => {
+  it("ends early once cancelled, and stops listening once it ends", async () => {
+    const controller = new AbortController();
+    const started = Date.now();
+    const waiting = pauseFor(10_000, controller.signal);
+    controller.abort();
+    await waiting;
+    expect(Date.now() - started).toBeLessThan(1_000);
+
+    const { signal } = new AbortController();
+    await pauseFor(1, signal);
+    await pauseFor(1, signal);
+    expect(getEventListeners(signal, "abort")).toHaveLength(0);
   });
 });
 

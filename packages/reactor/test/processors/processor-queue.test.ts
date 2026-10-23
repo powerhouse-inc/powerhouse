@@ -120,7 +120,7 @@ function harness(
     lookupRetryMs?: number;
     lookupRetries?: number;
     backfillSlots?: IBackfillSlots;
-    betweenPages?: (closing: Promise<void>) => Promise<void>;
+    betweenPages?: (closing: AbortSignal) => Promise<void>;
     pageSize?: () => number;
   } = {},
 ): Harness {
@@ -465,7 +465,12 @@ describe("ProcessorQueue", () => {
         onOperations: (ops) => {
           events.push(`page ${ops[0]!.context.ordinal}`);
           // Armed once the backfill runs, so it can only fire if a page gives way.
-          if (events.length === 1) setTimeout(() => events.push("timer"), 0);
+          if (events.length === 1) {
+            setTimeout(() => events.push("timer"), 0);
+            // Past the timer's 1 ms, so it is due at the next turn.
+            const due = Date.now() + 2;
+            while (Date.now() < due);
+          }
           return Promise.resolve();
         },
       });
@@ -524,8 +529,7 @@ describe("ProcessorQueue", () => {
       return {
         backfillSlots: priority.slots,
         pageSize: () => priority.pageSize(),
-        betweenPages: (closing: Promise<void>) =>
-          priority.betweenPages(closing),
+        betweenPages: (closing: AbortSignal) => priority.betweenPages(closing),
       };
     }
 

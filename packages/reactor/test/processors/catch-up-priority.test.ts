@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 import {
   CATCH_UP_LEVELS,
@@ -260,7 +261,26 @@ describe("CatchUpPriority", () => {
 
   it("ends a level-0 wait when cancelled", async () => {
     const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
-    await priority.betweenPages(Promise.resolve());
+    await priority.betweenPages(AbortSignal.abort());
+
+    const controller = new AbortController();
+    const waiting = priority.betweenPages(controller.signal);
+    controller.abort();
+    await waiting;
+  });
+
+  it("leaves no listener behind once a wait between pages ends", async () => {
+    const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+    const { signal } = new AbortController();
+    const waits = [1, 2, 3].map(() => priority.betweenPages(signal));
+    expect(getEventListeners(signal, "abort")).toHaveLength(3);
+
+    priority.set({ mode: "fixed", level: 1 });
+    await Promise.all(waits);
+    expect(getEventListeners(signal, "abort")).toHaveLength(0);
+    const listeners = (priority as unknown as { listeners: Set<unknown> })
+      .listeners;
+    expect(listeners.size).toBe(0);
   });
 
   it("ticks on a timer until stopped", () => {

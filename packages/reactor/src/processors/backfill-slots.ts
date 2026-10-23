@@ -2,9 +2,9 @@
 export interface IBackfillSlots {
   /**
    * Resolves with a release once a slot is free; release exactly once. When
-   * `cancel` resolves first, the wait ends with a no-op release and no slot.
+   * `cancel` aborts first, the wait ends with a no-op release and no slot.
    */
-  acquire(cancel?: Promise<void>): Promise<() => void>;
+  acquire(cancel?: AbortSignal): Promise<() => void>;
 }
 
 /** Backfills beyond this wait for a slot, so live reads keep reaching the store. */
@@ -47,20 +47,26 @@ export class BackfillSlots implements IBackfillSlots {
     return this.waiting.length;
   }
 
-  acquire(cancel?: Promise<void>): Promise<() => void> {
+  acquire(cancel?: AbortSignal): Promise<() => void> {
     if (this.waiting.length === 0 && this.held < this.limit) {
       this.held++;
       return Promise.resolve(this.releaser());
     }
+    if (cancel?.aborted) return Promise.resolve(() => {});
     return new Promise((resolve) => {
-      const waiter: Waiter = (release) => resolve(release);
-      this.waiting.push(waiter);
-      void cancel?.then(() => {
+      // The listener goes with the wait, so a long-lived signal collects none.
+      const onAbort = () => {
         const index = this.waiting.indexOf(waiter);
         if (index === -1) return;
         this.waiting.splice(index, 1);
         resolve(() => {});
-      });
+      };
+      const waiter: Waiter = (release) => {
+        cancel?.removeEventListener("abort", onAbort);
+        resolve(release);
+      };
+      this.waiting.push(waiter);
+      cancel?.addEventListener("abort", onAbort, { once: true });
     });
   }
 
@@ -109,13 +115,18 @@ export function yieldToEventLoop(): Promise<void> {
   });
 }
 
-/** Waits `ms` on the real clock, or until `cancel` resolves. */
-export function pauseFor(ms: number, cancel?: Promise<void>): Promise<void> {
+/** Waits `ms` on the real clock, or until `cancel` aborts. */
+export function pauseFor(ms: number, cancel?: AbortSignal): Promise<void> {
+  if (cancel?.aborted) return Promise.resolve();
   return new Promise((resolve) => {
-    const timer = realSetTimeout(resolve, ms);
-    void cancel?.then(() => {
+    const onAbort = () => {
       realClearTimeout(timer);
       resolve();
-    });
+    };
+    const timer = realSetTimeout(() => {
+      cancel?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    cancel?.addEventListener("abort", onAbort, { once: true });
   });
 }
