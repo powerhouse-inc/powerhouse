@@ -40,6 +40,7 @@ import {
   createCopyHeader,
   createPresignedHeader,
   createZip,
+  creationState,
   documentModelDocumentType,
   generateId,
   hasDerivedDocumentId,
@@ -230,25 +231,15 @@ export async function fetchDocumentOperations(
 export function extractInitialState(
   documentScopeOps: Operation[],
 ): PHBaseState {
-  const upgradeOp = documentScopeOps.find(
-    (op) => op.action.type === "UPGRADE_DOCUMENT",
+  const initialState = creationState(documentScopeOps);
+  if (initialState) {
+    return initialState;
+  }
+  throw new Error(
+    documentScopeOps.some((op) => op.action.type === "UPGRADE_DOCUMENT")
+      ? "UPGRADE_DOCUMENT operation has no initialState — document is invalid"
+      : "No UPGRADE_DOCUMENT operation found — document is invalid",
   );
-  if (!upgradeOp) {
-    throw new Error(
-      "No UPGRADE_DOCUMENT operation found — document is invalid",
-    );
-  }
-  const input = upgradeOp.action.input as {
-    initialState?: PHBaseState;
-    state?: PHBaseState;
-  };
-  const initialState = input.initialState ?? input.state;
-  if (!initialState) {
-    throw new Error(
-      "UPGRADE_DOCUMENT operation has no initialState — document is invalid",
-    );
-  }
-  return initialState;
 }
 
 export function filterDomainOperations(
