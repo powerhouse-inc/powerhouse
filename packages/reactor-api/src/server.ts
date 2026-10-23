@@ -624,6 +624,16 @@ async function startServer(
   return { httpServer, wsServer };
 }
 
+function boundPortOf(httpServer: http.Server): number {
+  const address = httpServer.address();
+  if (address === null || typeof address === "string") {
+    throw new Error(
+      `The HTTP server is not bound to a TCP port: ${String(address)}`,
+    );
+  }
+  return address.port;
+}
+
 /**
  * Private helper function that sets up common infrastructure before API initialization.
  * This includes auth configuration, database setup, and package manager initialization.
@@ -1179,6 +1189,7 @@ async function _setupAPI(
     options.https,
     logger,
   );
+  const boundPort = boundPortOf(httpServer);
 
   // Authorization service is always present; created here because the
   // parent-document resolver used for permission inheritance needs the
@@ -1260,7 +1271,7 @@ async function _setupAPI(
     authService,
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-    port,
+    port: boundPort,
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
@@ -1292,7 +1303,7 @@ async function _setupAPI(
       },
       httpAdapter,
     );
-    logger.info(`MCP server available at http://localhost:${port}/mcp`);
+    logger.info(`MCP server available at http://localhost:${boundPort}/mcp`);
   }
 
   const dispose = buildApiDispose({
@@ -1306,6 +1317,7 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    port: boundPort,
     httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,

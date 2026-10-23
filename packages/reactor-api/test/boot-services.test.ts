@@ -43,4 +43,17 @@ describe("booting the API", () => {
     expect(api.relationalDb).toBeDefined();
     expect(typeof api.relationalDb.createNamespace).toBe("function");
   });
+
+  it("reports the port it bound when asked for an ephemeral one", async () => {
+    const api = await initializeAndStartAPI(
+      initializeClient,
+      { port: 0, dbPath: undefined, mcp: false },
+      "switchboard",
+    );
+    dispose = api.dispose;
+
+    expect(api.port).toBeGreaterThan(0);
+    const health = await fetch(`http://localhost:${api.port}/health`);
+    expect(health.status).toBe(200);
+  });
 });
