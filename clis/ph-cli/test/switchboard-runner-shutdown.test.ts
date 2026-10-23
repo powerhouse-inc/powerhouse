@@ -158,4 +158,34 @@ describe("switchboard handle shutdown (real server)", () => {
     expect(await isFree(port)).toBe(true);
     expect(exit).not.toHaveBeenCalled();
   }, 120_000);
+
+  it("reports the OS-picked port when the host asks for port 0", async () => {
+    const host = switchboardRunner.hostSchema.parse({
+      name: "lab-switchboard",
+      runner: { module: "m", port: 0 },
+    });
+    const handle = toStartedHandle(
+      await switchboardRunner.run(host, {
+        projectRoot: state.tempRoot,
+        verb: "run",
+        env: {},
+      } satisfies RunnerContext),
+      "sb",
+    );
+    try {
+      await handle.ready;
+      const outputs = handle.outputs as switchboardRunner.SwitchboardOutputs;
+      const port = Number(new URL(outputs.origin).port);
+      expect(port).toBeGreaterThan(0);
+      expect(outputs.endpoints.graphql).toBe(`${outputs.origin}/graphql`);
+      const drives = Object.values(outputs.drives);
+      expect(drives.length).toBeGreaterThan(0);
+      for (const drive of drives) {
+        expect(drive.url.startsWith(`${outputs.origin}/d/`)).toBe(true);
+        expect((await fetch(drive.url)).ok).toBe(true);
+      }
+    } finally {
+      await handle.shutdown?.();
+    }
+  }, 120_000);
 });

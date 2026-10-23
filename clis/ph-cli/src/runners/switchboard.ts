@@ -35,6 +35,8 @@ const schemas = defineHostSchemas((s) =>
   s.reactorHostSchema.extend({
     runner: s.runnerBaseSchema
       .extend({
+        /** 0 binds a port the OS picks; `origin` reports it. */
+        port: z.number().int().min(0).max(65535).optional(),
         /** Dev mode without the `dev` verb (the Vite package loader). */
         dev: z.boolean().optional(),
         /** The project package output dir `build` writes (default "dist"). */
