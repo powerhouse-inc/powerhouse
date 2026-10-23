@@ -920,7 +920,7 @@ describe("core's modals", () => {
     );
 
     cleanup();
-    mount(
+    const { history: givenHistory } = mount(
       `/?modal=create-document&documentType=powerhouse/document-model&driveId=${alpha.header.id}`,
     );
     const given = await screen.findByRole("dialog");
@@ -932,6 +932,12 @@ describe("core's modals", () => {
       );
       expect(current.state.global.nodes).toHaveLength(1);
     });
+    // Its navigation follows the create; left pending, it lands in the next test.
+    await vi.waitFor(() =>
+      expect(givenHistory.location.pathname).toMatch(
+        new RegExp(`^/d/${alpha.header.slug}/.+`),
+      ),
+    );
   });
 
   it("asks for a drive when there is none", async () => {
@@ -946,10 +952,7 @@ describe("core's modals", () => {
       ).disabled,
     ).toBe(true);
     click(within(dialog).getByRole("button", { name: "Add a drive" }));
-    // The modal opens through a navigation, which a loaded CI runner can take over a second for.
-    await vi.waitFor(() => expect(store.modal?.type).toBe("addDrive"), {
-      timeout: 5000,
-    });
+    await vi.waitFor(() => expect(store.modal?.type).toBe("addDrive"));
   });
 
   it("opens from a link, and closes in place", async () => {
