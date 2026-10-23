@@ -76,6 +76,11 @@ export interface IProcessor {
    * PURGE_DOCUMENT, whatever the filter, as the last delivery before
    * `onDisconnect`. A purged document's operations other than its marker are
    * not delivered. Erase a document's data on either deletion action.
+   *
+   * `context.resultingState` is the executor's state after the operation on a
+   * live delivery. On a replay (first install, catch-up after a restart,
+   * rerun, retry) it is what the record's `replayState` says: by default the
+   * document's latest state, which can be newer than the operation.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
