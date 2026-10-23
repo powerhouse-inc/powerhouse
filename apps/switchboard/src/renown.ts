@@ -12,6 +12,7 @@ import {
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
+import { workerTrustPolicyIssue } from "./boot-preconditions.mjs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -175,20 +176,8 @@ export function assertWorkerTrustPolicy(config: {
   authEnforcement: boolean;
   renownSource: "self" | "remote";
 }): void {
-  if (
-    config.workers > 0 &&
-    config.authEnforcement &&
-    config.renownSource === "self"
-  ) {
-    throw new Error(
-      "The executor worker pool (REACTOR_WORKERS) cannot verify signers when " +
-        "REACTOR_AUTH_ENFORCEMENT is on and Renown credentials are read from " +
-        'this switchboard ("self" via auth.renown.source or RENOWN_SOURCE): ' +
-        "pooled workers have no trust policy and would refuse every signed " +
-        "write. Set RENOWN_SOURCE=remote, or disable the worker pool " +
-        "(REACTOR_WORKERS=0).",
-    );
-  }
+  const issue = workerTrustPolicyIssue(config);
+  if (issue) throw new Error(issue);
 }
 
 function ownIdentity(

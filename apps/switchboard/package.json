@@ -19,6 +19,11 @@
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
     },
+    "./boot": {
+      "source": "./src/boot.mts",
+      "types": "./dist/boot.d.mts",
+      "import": "./dist/boot.mjs"
+    },
     "./plugins/mcp": {
       "source": "./src/plugins/mcp.mts",
       "types": "./dist/plugins/mcp.d.mts",

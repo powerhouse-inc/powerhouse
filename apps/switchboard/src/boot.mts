@@ -1,0 +1,73 @@
+import {
+  resolveRenownConfig,
+  type RenownConfig,
+} from "@powerhousedao/reactor-api/renown-config";
+import type { ILogger } from "document-model";
+import type { SwitchboardBootFacts } from "./boot-preconditions.mjs";
+import { resolveProjectionWorkerOptions } from "./projection-worker.mjs";
+import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
+import { resolveWorkerPoolOptions } from "./worker-pool.mjs";
+
+// The boot preconditions without the server: importing this reads no .env.
+
+export {
+  projectionWorkerIssues,
+  switchboardBootIssues,
+  workerPoolIssues,
+  workerTrustPolicyIssue,
+  type SwitchboardBootFacts,
+} from "./boot-preconditions.mjs";
+
+const noop = () => {};
+const silent: ILogger = {
+  level: "error",
+  verbose: noop,
+  debug: noop,
+  info: noop,
+  warn: noop,
+  error: noop,
+  errorHandler: noop,
+  child: () => silent,
+};
+
+export interface BootFactsOptions {
+  dev: boolean;
+  /** The server's `dbPath` option (a host's readModel.url). */
+  dbPath?: string;
+  /** powerhouse.config.json `auth.renown`. */
+  configuredRenown?: RenownConfig;
+}
+
+/** The server's boot facts from `env`; a parser error becomes an issue and its fact stays off. */
+export function switchboardBootFactsFromEnv(
+  env: NodeJS.ProcessEnv,
+  options: BootFactsOptions,
+): { facts: SwitchboardBootFacts; issues: string[] } {
+  const issues: string[] = [];
+  let workers = 0;
+  try {
+    workers = resolveWorkerPoolOptions(undefined, env)?.numWorkers ?? 0;
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
+  let projectionWorker = false;
+  try {
+    projectionWorker = resolveProjectionWorkerOptions(undefined, env) !== null;
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
+  const facts: SwitchboardBootFacts = {
+    dev: options.dev,
+    workers,
+    projectionWorker,
+    reactorDbUrl:
+      options.dbPath ??
+      env.PH_REACTOR_DATABASE_URL ??
+      env.PH_SWITCHBOARD_DATABASE_URL,
+    authEnforcement:
+      resolveReactorFeatureFlags(env).flags.authEnforcement === true,
+    renownSource: resolveRenownConfig(options.configuredRenown, env, silent)
+      .source,
+  };
+  return { facts, issues };
+}

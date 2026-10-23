@@ -12,6 +12,7 @@ export default defineConfig({
     "src/packages/https-hooks.mts",
     "src/pglite/pglite-node.ts",
     "src/graphql/subgraph-types.ts",
+    "src/services/renown-config.ts",
   ],
   platform: "node",
   outDir: "dist",
