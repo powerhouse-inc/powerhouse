@@ -643,7 +643,6 @@ function boundPortOf(httpServer: http.Server): number {
  * This includes auth configuration, database setup, and package manager initialization.
  */
 async function _setupCommonInfrastructure(options: Options): Promise<{
-  port: number;
   listenPort: ListenPort;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
@@ -1047,7 +1046,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   return {
-    port,
     listenPort,
     httpAdapter,
     httpRoutes,
@@ -1080,7 +1078,6 @@ async function _setupAPI(
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
   authEnabled: boolean,
   authService: AuthService | undefined,
-  port: number,
   listenPort: ListenPort,
   packages: PackageManager,
   relationalDb: IRelationalDb,
@@ -1193,7 +1190,7 @@ async function _setupAPI(
   // Start the server
   const { httpServer, wsServer } = await startServer(
     httpAdapter,
-    port,
+    listenPort.current,
     options.https,
     logger,
   );
@@ -1477,7 +1474,6 @@ export async function initializeAndStartAPI(
   }
 > {
   const {
-    port,
     listenPort,
     httpAdapter,
     httpRoutes,
@@ -1552,7 +1548,6 @@ export async function initializeAndStartAPI(
     requireAuthFetchMiddleware,
     authEnabled,
     authService,
-    port,
     listenPort,
     packages,
     relationalDb,
