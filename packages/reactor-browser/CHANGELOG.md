@@ -1,3 +1,18 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **reactor-browser:** useDocumentsOfType pages a model's documents across drives, useDocumentLinkProps and useModalLinkProps link them in place, slug helpers are typed ([228e30b98c](https://github.com/powerhouse-inc/powerhouse/commit/228e30b98c))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **connect-core,connect,design-system,reactor-browser:** the create-document modal outside a drive asks for one, preselecting the only drive, and takes a driveId ([7ae549e673](https://github.com/powerhouse-inc/powerhouse/commit/7ae549e673))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

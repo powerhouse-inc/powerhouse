@@ -1,3 +1,17 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **ph-cli,desktop:** ph run connect build and serve default to .ph/connect-build/dist, so they leave the package build alone ([cc6eeaa001](https://github.com/powerhouse-inc/powerhouse/commit/cc6eeaa001))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

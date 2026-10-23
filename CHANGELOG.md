@@ -1,3 +1,40 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **clint:** give the Mastra agent read tools over the attached reactor ([80899e7f30](https://github.com/powerhouse-inc/powerhouse/commit/80899e7f30))
+- **connect,connect-core,design-system:** home page parts for a custom home, accessible sidebar items and a phone layout, a centred modal dialog, router devtools off by default ([19de3ad862](https://github.com/powerhouse-inc/powerhouse/commit/19de3ad862))
+- **reactor-browser:** useDocumentsOfType pages a model's documents across drives, useDocumentLinkProps and useModalLinkProps link them in place, slug helpers are typed ([228e30b98c](https://github.com/powerhouse-inc/powerhouse/commit/228e30b98c))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **builder-tools,connect:** a loading shell that fails to prerender shows in studio's overlay and log, naming each error and its component's source line ([ebfb1e2d30](https://github.com/powerhouse-inc/powerhouse/commit/ebfb1e2d30))
+- **builder-tools,connect,ph-cli,reactor-api:** studio works with an installed connect and the packages it loads: route deps pre-bundled, the tree live and watched, a vite cache per server ([3bf42449fb](https://github.com/powerhouse-inc/powerhouse/commit/3bf42449fb))
+- **builder-tools,connect-core,connect,ph-cli:** routes generation takes settings tab overrides, fails on two routes at one url, and warns on silent drops in builds and studio ([35461fda2c](https://github.com/powerhouse-inc/powerhouse/commit/35461fda2c))
+- **builder-tools,shared,ph-cli:** an svg or png favicon builds with its type, as icon.svg or icon.png, and index.html links it ([c404c23227](https://github.com/powerhouse-inc/powerhouse/commit/c404c23227))
+- **codegen:** the drive-app scaffold names the drive by its display name, and its root component says it is yours to edit ([427d6dcc46](https://github.com/powerhouse-inc/powerhouse/commit/427d6dcc46))
+- **connect:** publish the tab's PGlite to the relational hooks ([284919d4e9](https://github.com/powerhouse-inc/powerhouse/commit/284919d4e9))
+- **connect-core,connect:** core's and connect's built code runs in plain node, so a project's loading shell prerenders ([ece1559217](https://github.com/powerhouse-inc/powerhouse/commit/ece1559217))
+- **connect-core,connect,design-system,reactor-browser:** the create-document modal outside a drive asks for one, preselecting the only drive, and takes a driveId ([7ae549e673](https://github.com/powerhouse-inc/powerhouse/commit/7ae549e673))
+- **design-system:** adding a remote drive waits for the typed url's drive before it can be confirmed, so an early click isn't undone ([43b7ffdce0](https://github.com/powerhouse-inc/powerhouse/commit/43b7ffdce0))
+- **ph-cli,desktop:** ph run connect build and serve default to .ph/connect-build/dist, so they leave the package build alone ([cc6eeaa001](https://github.com/powerhouse-inc/powerhouse/commit/cc6eeaa001))
+- **reactor:** read-model catch-up rebuilds and commits one chunk at a time ([e8a0c4bd84](https://github.com/powerhouse-inc/powerhouse/commit/e8a0c4bd84))
+- **reactor:** removeNode removes a folder when references resolve as documents ([536ba63419](https://github.com/powerhouse-inc/powerhouse/commit/536ba63419))
+- **reactor:** cold head reads resume from the latest keyframe ([422f711bf8](https://github.com/powerhouse-inc/powerhouse/commit/422f711bf8))
+- **reactor:** a positional warm-miss rebuild reads only up to its target ([670527dde7](https://github.com/powerhouse-inc/powerhouse/commit/670527dde7))
+- **reactor:** document-view stores state whose strings hold lone surrogates ([59c7a66e47](https://github.com/powerhouse-inc/powerhouse/commit/59c7a66e47))
+- **reactor-attachments,switchboard:** an empty file is a valid attachment ([223d231756](https://github.com/powerhouse-inc/powerhouse/commit/223d231756))
+- **renown:** ph login on Windows opens the whole login URL ([b7ee91889a](https://github.com/powerhouse-inc/powerhouse/commit/b7ee91889a))
+- **switchboard:** one process per PGlite store ([a2283f4a52](https://github.com/powerhouse-inc/powerhouse/commit/a2283f4a52))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

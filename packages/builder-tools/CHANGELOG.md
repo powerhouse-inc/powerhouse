@@ -1,3 +1,20 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **builder-tools,shared,ph-cli:** an svg or png favicon builds with its type, as icon.svg or icon.png, and index.html links it ([c404c23227](https://github.com/powerhouse-inc/powerhouse/commit/c404c23227))
+- **builder-tools,connect:** a loading shell that fails to prerender shows in studio's overlay and log, naming each error and its component's source line ([ebfb1e2d30](https://github.com/powerhouse-inc/powerhouse/commit/ebfb1e2d30))
+- **builder-tools,connect-core,connect,ph-cli:** routes generation takes settings tab overrides, fails on two routes at one url, and warns on silent drops in builds and studio ([35461fda2c](https://github.com/powerhouse-inc/powerhouse/commit/35461fda2c))
+- **builder-tools,connect,ph-cli,reactor-api:** studio works with an installed connect and the packages it loads: route deps pre-bundled, the tree live and watched, a vite cache per server ([3bf42449fb](https://github.com/powerhouse-inc/powerhouse/commit/3bf42449fb))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

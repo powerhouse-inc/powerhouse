@@ -1,3 +1,16 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **clint:** give the Mastra agent read tools over the attached reactor ([80899e7f30](https://github.com/powerhouse-inc/powerhouse/commit/80899e7f30))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

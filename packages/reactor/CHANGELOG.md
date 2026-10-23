@@ -1,3 +1,23 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **reactor:** document-view stores state whose strings hold lone surrogates ([59c7a66e47](https://github.com/powerhouse-inc/powerhouse/commit/59c7a66e47))
+- **reactor:** a positional warm-miss rebuild reads only up to its target ([670527dde7](https://github.com/powerhouse-inc/powerhouse/commit/670527dde7))
+- **reactor:** cold head reads resume from the latest keyframe ([422f711bf8](https://github.com/powerhouse-inc/powerhouse/commit/422f711bf8))
+- **reactor:** removeNode removes a folder when references resolve as documents ([536ba63419](https://github.com/powerhouse-inc/powerhouse/commit/536ba63419))
+- **reactor:** read-model catch-up rebuilds and commits one chunk at a time ([e8a0c4bd84](https://github.com/powerhouse-inc/powerhouse/commit/e8a0c4bd84))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

@@ -1,3 +1,19 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **renown:** ph login on Windows opens the whole login URL ([b7ee91889a](https://github.com/powerhouse-inc/powerhouse/commit/b7ee91889a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features

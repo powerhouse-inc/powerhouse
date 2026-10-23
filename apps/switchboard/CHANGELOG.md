@@ -1,3 +1,20 @@
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **switchboard:** one process per PGlite store ([a2283f4a52](https://github.com/powerhouse-inc/powerhouse/commit/a2283f4a52))
+- **reactor-attachments,switchboard:** an empty file is a valid attachment ([223d231756](https://github.com/powerhouse-inc/powerhouse/commit/223d231756))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.71 (2026-10-22)
 
 ### 🚀 Features
