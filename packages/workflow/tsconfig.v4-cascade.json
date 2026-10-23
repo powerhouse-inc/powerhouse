@@ -27,6 +27,7 @@
     "dist",
     "node_modules",
     ".tsbuild",
+    ".ph",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.stories.tsx"
