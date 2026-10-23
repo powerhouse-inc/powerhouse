@@ -11,11 +11,7 @@ import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  spawnHost,
-  SpawnHostError,
-  type SpawnedHost,
-} from "@powerhousedao/host-core";
+import { spawnHost, type SpawnedHost } from "@powerhousedao/host-core";
 import { afterEach, describe, expect, it } from "vitest";
 
 // The project's .env points the read model at a dead Postgres: boot needs PH_NO_DOTENV.
@@ -96,21 +92,12 @@ describe.skipIf(process.platform === "win32")("spawnHost (real ph-cli)", () => {
     const dataDir = mkdtempSync(path.join(tmpdir(), "ph-spawn-e2e-data-"));
     temporary.push(projectRoot, dataDir);
 
-    try {
-      host = await spawnHost({
-        projectRoot,
-        host: "sb",
-        dataDir,
-        readyTimeoutMs: 150_000,
-      });
-    } catch (error) {
-      if (error instanceof SpawnHostError) {
-        throw new Error(`${error.message}\n(phase ${error.phase})`, {
-          cause: error,
-        });
-      }
-      throw error;
-    }
+    host = await spawnHost({
+      projectRoot,
+      host: "sb",
+      dataDir,
+      readyTimeoutMs: 150_000,
+    });
     expect(host.record.host).toBe(HOST_NAME);
     expect(existsSync(path.join(projectRoot, ".ph"))).toBe(false);
     expect(existsSync(path.join(dataDir, ".ph", "reactor-storage"))).toBe(true);
