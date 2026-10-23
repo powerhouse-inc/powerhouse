@@ -35,3 +35,12 @@ export const run = neverLaunched("@powerhousedao/ph-cli/runners/switchboard");
 export const serve = run;
 export const dev = run;
 export const build = run;
+
+// Test-only: FIXTURE_BOOT_ISSUE stands in for the real boot predicates.
+export function checkBoot(
+  _host: unknown,
+  ctx: { env: Readonly<Record<string, string | undefined>> },
+) {
+  const message = ctx.env.FIXTURE_BOOT_ISSUE;
+  return message ? [{ path: "reactor", message }] : [];
+}

@@ -90,7 +90,29 @@ export interface RunnerModule<O = unknown> {
   /** The verb names, when the module exports functions that are not verbs
    * (helpers). Absent: every exported function is a verb. */
   verbs?: readonly string[];
+  /** What the verb would refuse at boot, given the parsed host and an
+   * environment (`ph host check`). Starts nothing. */
+  checkBoot?: (
+    host: O,
+    ctx: BootCheckContext,
+  ) => readonly BootIssue[] | Promise<readonly BootIssue[]>;
   [key: string]: unknown;
+}
+
+export interface BootCheckContext {
+  projectRoot: string;
+  /** The verb the host would run at (a compound member's own verb). */
+  verb: string;
+  /** The environment the verb would see; never `process.env` implicitly. */
+  env: Readonly<Record<string, string | undefined>>;
+  /** The host file, for messages (`hosts/switchboard/host.js`). */
+  file: string;
+}
+
+export interface BootIssue {
+  path?: string;
+  message: string;
+  hint?: string;
 }
 
 /** Exports that are part of the contract but are not verbs. */
@@ -100,6 +122,7 @@ const NON_VERB_EXPORTS = new Set([
   "outputsSchema",
   "verbs",
   "kind",
+  "checkBoot",
   "default",
 ]);
 
@@ -140,6 +163,14 @@ export async function resolveRunnerModule(
   if (declared !== undefined && typeof declared.safeParse !== "function") {
     throw new RunnerError(
       `Runner "${specifier}" exports a \`declaredHostSchema\` without safeParse.`,
+    );
+  }
+  if (
+    module.checkBoot !== undefined &&
+    typeof module.checkBoot !== "function"
+  ) {
+    throw new RunnerError(
+      `Runner "${specifier}" exports a \`checkBoot\` that is not a function.`,
     );
   }
   const verbs = module.verbs;

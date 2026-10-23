@@ -58,10 +58,19 @@ export interface ResolveSources {
 }
 
 export class TokenResolutionError extends Error {
-  constructor(message: string) {
+  /** The host path that failed and the reason, without the file prefix. */
+  readonly detail?: { path: string; reason: string };
+
+  constructor(message: string, detail?: { path: string; reason: string }) {
     super(message);
     this.name = "TokenResolutionError";
+    if (detail) this.detail = detail;
   }
+}
+
+/** Why a required `$env` cannot resolve. */
+export function unsetEnvMessage(name: string): string {
+  return `reads $env ${name}, which is not set. Set ${name} in the environment of the process that resolves this host (or declare { $env: { name: "${name}", optional: true } } to omit the property when unset).`;
 }
 
 /** A resolved `{ $env: { name, optional: true } }` whose variable is unset,
@@ -271,9 +280,11 @@ class Resolver {
     const inside = scope.length
       ? ` (rendering $map element ${scope.map(elementText).join(" › ")})`
       : "";
-    throw new TokenResolutionError(
-      `${where}\`${formatPath(trail)}\` ${message}${inside}`,
-    );
+    const path = formatPath(trail);
+    throw new TokenResolutionError(`${where}\`${path}\` ${message}${inside}`, {
+      path,
+      reason: `${message}${inside}`,
+    });
   }
 
   value(value: unknown, trail: Trail, scope: Scope = []): unknown {
@@ -542,9 +553,9 @@ class Resolver {
     const lookup = this.sources.outputs.lookup(ref);
     if (lookup.status === "unavailable") {
       const where = this.sources.where ? `${this.sources.where}: ` : "";
-      throw new TokenResolutionError(
-        `${where}${lookup.message}\n  (needed by \`${formatPath(trail)}\`: ${describeToken(token)})`,
-      );
+      const path = formatPath(trail);
+      const reason = `${lookup.message}\n  (needed by \`${path}\`: ${describeToken(token)})`;
+      throw new TokenResolutionError(`${where}${reason}`, { path, reason });
     }
     const hit = walkPath(lookup.outputs, path);
     if (!hit.ok) {
@@ -584,11 +595,7 @@ class Resolver {
     const value = this.sources.env?.[name];
     if (value !== undefined) return value;
     if (optional) return this.omit("an optional $env").value;
-    return this.fail(
-      trail,
-      `reads $env ${name}, which is not set. Set ${name} in the environment of the process that resolves this host (or declare { $env: { name: "${name}", optional: true } } to omit the property when unset).`,
-      scope,
-    );
+    return this.fail(trail, unsetEnvMessage(name), scope);
   }
 
   concat(parts: unknown, trail: Trail, scope: Scope = []): string {

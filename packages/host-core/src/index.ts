@@ -30,6 +30,8 @@ export {
   RunnerError,
   validateDeclaredHost,
   validateHost,
+  type BootCheckContext,
+  type BootIssue,
   type DeclaredHostOptions,
   type HostSchemaIssue,
   type HostSchemaIssues,
@@ -55,6 +57,13 @@ export {
   type RunCompoundOptions,
   type RunCompoundResult,
 } from "./compound.js";
+export {
+  checkHost,
+  type CheckDeferred,
+  type CheckHostOptions,
+  type CheckHostResult,
+} from "./check-host.js";
+export type { CheckStage, HostIssue } from "./host-issues.js";
 export {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
