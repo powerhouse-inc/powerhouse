@@ -551,7 +551,9 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   Below 3 the base actions are submitted as on main.
 - Merge with main: cold head reads now resume from the latest keyframe, so
   the base-reducer 3 tail check (`tailNeedsWholeLog`) decides head reads
-  too; an invalidation still owes a full replay first.
+  too; an invalidation still owes a full replay first. With that change a
+  positional read of revision 0 took the head keyframe (`targetRevision ||
+  MAX_SAFE_INTEGER`); it now maps only a missing target to the head.
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
