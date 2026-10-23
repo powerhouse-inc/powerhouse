@@ -18,9 +18,10 @@ import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 /**
- * Detects a hand-customized processor directory using a layout that predates
- * the current scaffold (class defined in index.ts, no processor.ts). When
- * present we leave the directory and surrounding wiring (factory-builders
+ * Detects a hand-written processor directory: it has files but no
+ * processor.ts, and none of them import one (the scaffold's factory.ts and
+ * index.ts do), e.g. the legacy layout (class in index.ts) or a factory-only
+ * processor. We leave the directory and surrounding wiring (factory-builders
  * file, manifest) untouched — the user owns it.
  */
 function isCustomizedProcessorDir(
@@ -28,9 +29,13 @@ function isCustomizedProcessorDir(
 ) {
   if (!processorDir) return false;
   if (processorDir.getSourceFile("processor.ts")) return false;
-  const indexFile = processorDir.getSourceFile("index.ts");
-  if (!indexFile) return false;
-  return indexFile.getClasses().some((c) => c.isExported());
+  const files = processorDir.getSourceFiles();
+  const importsProcessor = files.some((file) =>
+    [...file.getImportDeclarations(), ...file.getExportDeclarations()].some(
+      (d) => /^\.\/processor(\.js)?$/.test(d.getModuleSpecifierValue() ?? ""),
+    ),
+  );
+  return files.length > 0 && !importsProcessor;
 }
 
 export async function tsMorphGenerateProcessor(args: {
@@ -63,12 +68,9 @@ export async function tsMorphGenerateProcessor(args: {
   // the project; add them so a customized dir is detected, not overwritten.
   project.addSourceFilesAtPaths(path.join(dirPath, "*.ts"));
   if (isCustomizedProcessorDir(project.getDirectory(dirPath))) {
-    const relativePath = path.relative(
-      projectDir,
-      path.join(dirPath, "index.ts"),
-    );
+    const relativePath = path.relative(projectDir, dirPath);
     console.warn(
-      `[codegen] Skipping processor scaffold for "${kebabCaseName}": legacy layout detected "${relativePath}"`,
+      `[codegen] Skipping processor scaffold for "${kebabCaseName}": "${relativePath}" has no processor.ts`,
     );
     return;
   }
