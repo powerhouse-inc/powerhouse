@@ -2,16 +2,24 @@ import {
   defineHostSchemas,
   drivesSchema,
   mergeDrivePlan,
+  protocolConflicts,
   resolveDriveDeclaration,
   resolveHostPlugins,
   seedDrives,
+  type BootCheckContext,
+  type BootIssue,
   type DriveSeederClient,
   type ResolvedDrive,
   type ResolvedPlugin,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import { applyReactorEnvProjection } from "./reactor-env.js";
+import path from "node:path";
+import {
+  applyReactorEnvProjection,
+  switchboardBootProjection,
+  switchboardDevMode,
+} from "./reactor-env.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
 import type { BuildArgs, SwitchboardArgs } from "../types.js";
@@ -106,8 +114,7 @@ async function toSwitchboardArgs(
   return {
     ...classic,
     port: runner.port ?? classic.port,
-    // The verb owns dev mode; `runner.dev` is the host-file spelling of it.
-    dev: devMode || runner.dev === true ? true : classic.dev,
+    dev: switchboardDevMode(devMode, runner) ? true : classic.dev,
     // A declared composition owns the carved switches (R2): the mcp plugin's
     // presence sets it, its absence must deactivate. Classic path: classic.
     mcp: composed ? undefined : classic.mcp,
@@ -431,6 +438,37 @@ export async function dev(
   ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
   return start(host, ctx, true);
+}
+
+/** What the server would refuse at boot for this host, `ctx.verb` and `ctx.env` (`ph host check`). */
+export async function checkBoot(
+  host: SwitchboardHostParsed,
+  ctx: BootCheckContext,
+): Promise<BootIssue[]> {
+  const issues: BootIssue[] = protocolConflicts(
+    host.reactor?.protocol,
+    ctx.env,
+    ctx.file,
+  ).map((message) => ({ path: "reactor.protocol", message }));
+  const { getConfig } = await import("@powerhousedao/config/node");
+  const { switchboardBootFactsFromEnv, switchboardBootIssues } =
+    await import("@powerhousedao/switchboard/boot");
+  const projection = switchboardBootProjection(host.reactor, ctx.env);
+  const { facts, issues: parseIssues } = await switchboardBootFactsFromEnv(
+    { ...ctx.env, ...projection.env },
+    {
+      // As the `dev` verb starts it.
+      dev: switchboardDevMode(ctx.verb === "dev", host.runner),
+      ...(projection.dbPath !== undefined ? { dbPath: projection.dbPath } : {}),
+      configuredRenown: getConfig(
+        path.join(ctx.projectRoot, "powerhouse.config.json"),
+      ).auth?.renown,
+    },
+  );
+  for (const message of [...parseIssues, ...switchboardBootIssues(facts)]) {
+    issues.push({ path: "", message });
+  }
+  return issues;
 }
 
 /** Build the project's reactor package (the SAME service as `ph build`) — what

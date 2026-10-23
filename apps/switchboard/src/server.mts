@@ -140,8 +140,8 @@ import {
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
 import { resolveCreateSignaturePolicy } from "./create-signature-policy.mjs";
+import { reactorDbUrlOf, workerPoolIssues } from "./boot-preconditions.mjs";
 import {
-  assertWorkerTrustPolicy,
   getRenownSignerConfig,
   getRenownTrustPolicyConfig,
   initRenown,
@@ -523,10 +523,7 @@ async function initServer(
     process.env.DATABASE_URL ??
     process.env.PH_SWITCHBOARD_DATABASE_URL;
 
-  const reactorDbUrl =
-    options.dbPath ??
-    process.env.PH_REACTOR_DATABASE_URL ??
-    process.env.PH_SWITCHBOARD_DATABASE_URL;
+  const reactorDbUrl = reactorDbUrlOf(options.dbPath, process.env);
   // Postgres URLs or local PGlite dirs under the project's .ph tree. When
   // the caller passes in a reactor, the reactor-side PGLite dir is unused —
   // the caller owns its own storage. Only the read-model dir is still needed
@@ -595,22 +592,16 @@ async function initServer(
     workerPool = null;
   }
   if (workerPool) {
-    if (dev) {
-      throw new Error(
-        "The executor worker pool (REACTOR_WORKERS) is not supported in dev mode: Vite-loaded document models cannot cross a worker-thread boundary",
-      );
-    }
-    assertWorkerTrustPolicy({
+    const issue = workerPoolIssues({
+      dev: dev === true,
       workers: workerPool.numWorkers,
+      projectionWorker: false,
+      reactorDbUrl,
       authEnforcement:
         resolveReactorFeatureFlags(process.env).flags.authEnforcement === true,
       renownSource: renownConfig.source,
-    });
-    if (!reactorDbUrl || !isPostgresUrl(reactorDbUrl)) {
-      throw new Error(
-        "The executor worker pool (REACTOR_WORKERS) requires a Postgres reactor database — set PH_REACTOR_DATABASE_URL or PH_SWITCHBOARD_DATABASE_URL. PGlite cannot be shared across worker threads.",
-      );
-    }
+    }).at(0);
+    if (issue) throw new Error(issue);
   }
 
   const unsupportedStoredDocuments = resolveUnsupportedStoredDocuments(

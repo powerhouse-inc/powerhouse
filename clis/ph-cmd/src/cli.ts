@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-import { phCliCommandNames } from "@powerhousedao/shared/clis/command-names";
 import {
   initCliTelemetry,
   type TelemetryClient,
 } from "@powerhousedao/shared/clis/telemetry";
 import { assertNodeVersion } from "@powerhousedao/shared/clis/utils";
 import { getVersion } from "./get-version.js";
+import { forwardsToPhCli } from "./utils/forward.js";
 import { maybeNotifyOutdated } from "./utils/version-check.js";
 
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
 // values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra", "host"]);
 
 function detectPackageManager(): string | undefined {
   // npm, pnpm, yarn and bun all set npm_config_user_agent like
@@ -97,15 +97,12 @@ async function main() {
     process.exit(0);
   }
 
-  // forward command to the local ph-cli installation if it exists. `run` is
-  // uniform-runners surface: flag off → fall through to the cmd-ts tree
-  // (whose help registry also omits it), as if the command did not exist.
+  // forward command to the local ph-cli installation if it exists. `run` and
+  // `host` are uniform-runners surface: flag off → fall through to the cmd-ts
+  // tree (whose help registry also omits them), as if they did not exist.
   const { isUniformRunnersEnabled } =
     await import("@powerhousedao/shared/clis/feature-flags");
-  if (
-    phCliCommandNames.includes(command as (typeof phCliCommandNames)[number]) &&
-    (command !== "run" || isUniformRunnersEnabled())
-  ) {
+  if (forwardsToPhCli(command, isUniformRunnersEnabled())) {
     await runPhCliCommand(command);
     process.exit(0);
   }
