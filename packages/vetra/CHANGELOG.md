@@ -1,3 +1,19 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **vetra:** app module descriptions point at the editors/ folder codegen writes ([b3b3a08ffa](https://github.com/powerhouse-inc/powerhouse/commit/b3b3a08ffa))
+- **vetra:** codegen checks vetra drive membership by node or child edge when the debounce fires ([8273b738d3](https://github.com/powerhouse-inc/powerhouse/commit/8273b738d3))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **vetra:** codegen only reacts to the vetra drive's documents and logs a batch once ([63ee8c52d9](https://github.com/powerhouse-inc/powerhouse/commit/63ee8c52d9))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.72 (2026-10-23)
 
 ### 🚀 Features

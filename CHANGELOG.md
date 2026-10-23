@@ -1,3 +1,35 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🚀 Features
+
+- **connect:** in dev the reactor worker takes the shared deps from the page's import map ([ddd7bfab2d](https://github.com/powerhouse-inc/powerhouse/commit/ddd7bfab2d))
+- **reactor,reactor-api,reactor-monitor:** rerun a processor, cleared or from an ordinal ([279342d614](https://github.com/powerhouse-inc/powerhouse/commit/279342d614))
+- **reactor-monitor-app:** paste an admin bearer into a remote's gate note ([e04afd8e23](https://github.com/powerhouse-inc/powerhouse/commit/e04afd8e23))
+- **reactor-monitor-app:** keep a remote's bearer for the tab's session ([ebc3e715b3](https://github.com/powerhouse-inc/powerhouse/commit/ebc3e715b3))
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **reactor:** document view keeps the name when a non-global op echoes a stale header ([25f7e91726](https://github.com/powerhouse-inc/powerhouse/commit/25f7e91726))
+- **reactor:** a create job that can't load its model fails with the loader's reason ([958631d53d](https://github.com/powerhouse-inc/powerhouse/commit/958631d53d))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **reactor-mcp:** addActions accepts document-model base actions in their scope ([b9a718baeb](https://github.com/powerhouse-inc/powerhouse/commit/b9a718baeb))
+- **reactor-mcp:** addDrive sets the drive name in the global state too ([2c700d6312](https://github.com/powerhouse-inc/powerhouse/commit/2c700d6312))
+- **reactor-mcp:** addDrive keeps the name when a preferred editor is set ([fc867a14a1](https://github.com/powerhouse-inc/powerhouse/commit/fc867a14a1))
+- **reactor-mcp:** getDocument accepts the id as documentId too ([18fb0fc73f](https://github.com/powerhouse-inc/powerhouse/commit/18fb0fc73f))
+- **reactor-monitor-app:** a remote restored from a saved set takes a pasted bearer ([1630dc21bf](https://github.com/powerhouse-inc/powerhouse/commit/1630dc21bf))
+- **vetra:** codegen only reacts to the vetra drive's documents and logs a batch once ([63ee8c52d9](https://github.com/powerhouse-inc/powerhouse/commit/63ee8c52d9))
+- **vetra:** codegen checks vetra drive membership by node or child edge when the debounce fires ([8273b738d3](https://github.com/powerhouse-inc/powerhouse/commit/8273b738d3))
+- **vetra:** app module descriptions point at the editors/ folder codegen writes ([b3b3a08ffa](https://github.com/powerhouse-inc/powerhouse/commit/b3b3a08ffa))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.72 (2026-10-23)
 
 ### 🚀 Features
