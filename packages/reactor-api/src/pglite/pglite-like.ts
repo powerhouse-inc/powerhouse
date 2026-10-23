@@ -17,4 +17,6 @@ export interface PGliteLike {
   exec(sql: string, options?: QueryOptions): Promise<Results[]>;
   isInTransaction(): boolean;
   close(): Promise<void>;
+  /** HardenedPGliteDialect's admission hook; see `ThreadedPGlite.admit`. */
+  admit?<T>(run: () => Promise<T>): Promise<T>;
 }

@@ -4,6 +4,7 @@ import path from "node:path";
 
 export const DEFAULT_MAINTENANCE_INTERVAL_MS = 5 * 60 * 1000;
 export const DEFAULT_VACUUM_FULL_ABOVE_BYTES = 256 * 1024 * 1024;
+export const DEFAULT_VACUUM_FULL_QUIET_MS = 60 * 1000;
 const MAINTENANCE_RETRY_MS = 1000;
 
 export type MaintenanceOutcome =
@@ -18,18 +19,39 @@ export interface MaintenanceLogger {
   warn(message: string): void;
 }
 
+/** Runs a maintenance pass in the owner's turn; see {@link MaintenanceOptions.gate}. */
+export type MaintenanceGate = <T>(task: () => Promise<T>) => Promise<T>;
+
 export interface MaintenanceOptions {
   /** VACUUM + CHECKPOINT cadence; PGlite has no autovacuum. Default 5 min; 0 disables. */
   intervalMs?: number;
   /** First pass runs VACUUM FULL when `base/` exceeds this at open. Default 256 MB; 0 disables. */
   vacuumFullAboveBytes?: number;
+  /**
+   * VACUUM FULL holds the store for minutes on a large dir, so it waits for a
+   * store with no synced statement (no write, no catch-up) for this long,
+   * counted from open; until then a pass runs plain VACUUM and keeps the
+   * VACUUM FULL pending. Default 60 s; 0 runs it on the first pass.
+   */
+  vacuumFullQuietMs?: number;
+  /**
+   * Queues each pass with the store's other work, e.g. behind a worker's
+   * pending requests, so a pass never starts ahead of a statement already
+   * admitted. A pass still waiting here when the store closes is skipped.
+   */
+  gate?: MaintenanceGate;
   logger?: MaintenanceLogger;
+  /** Clock for the quiet window; tests pass their own. */
+  now?: () => number;
 }
 
 export class PgliteMaintenance {
   private readonly intervalMs: number;
   private readonly vacuumFullAboveBytes: number;
+  private readonly vacuumFullQuietMs: number;
+  private readonly gate?: MaintenanceGate;
   private readonly logger?: MaintenanceLogger;
+  private readonly now: () => number;
 
   private pg?: PGlite;
   private label = "";
@@ -38,6 +60,9 @@ export class PgliteMaintenance {
   private vacuumFullPending = false;
   private timer?: ReturnType<typeof setTimeout>;
   private inFlight?: Promise<MaintenanceOutcome>;
+  private active = false;
+  private deferralLogged = false;
+  private lastSyncAt = 0;
 
   constructor(options: MaintenanceOptions = {}) {
     this.intervalMs = Math.max(
@@ -48,7 +73,13 @@ export class PgliteMaintenance {
       0,
       options.vacuumFullAboveBytes ?? DEFAULT_VACUUM_FULL_ABOVE_BYTES,
     );
+    this.vacuumFullQuietMs = Math.max(
+      0,
+      options.vacuumFullQuietMs ?? DEFAULT_VACUUM_FULL_QUIET_MS,
+    );
+    this.gate = options.gate;
     this.logger = options.logger;
+    this.now = options.now ?? Date.now;
   }
 
   get scheduled(): boolean {
@@ -64,28 +95,53 @@ export class PgliteMaintenance {
     this.label = label;
     this.vacuumFullPending =
       this.vacuumFullAboveBytes > 0 && baseBytes > this.vacuumFullAboveBytes;
+    this.lastSyncAt = this.now();
     this.schedule(this.intervalMs);
   }
 
   noteSync(): void {
     this.syncsSinceMaintenance++;
+    this.lastSyncAt = this.now();
   }
 
+  /** Waits for a pass that has started; one still queued at the gate is left to skip itself. */
   async stop(): Promise<void> {
     this.closing = true;
     this.cancel();
-    await this.inFlight;
+    if (this.active) await this.inFlight;
   }
 
   async run(): Promise<MaintenanceOutcome> {
+    if (this.gate) return this.gate(() => this.runNow());
+    return this.runNow();
+  }
+
+  private async runNow(): Promise<MaintenanceOutcome> {
+    this.active = true;
+    try {
+      return await this.pass();
+    } finally {
+      this.active = false;
+    }
+  }
+
+  private async pass(): Promise<MaintenanceOutcome> {
     const pg = this.pg;
     if (this.closing || !pg?.ready) return "not-ready";
     // pg.close() does not take the query mutex; recheck before each statement.
     const isReady = (): boolean => pg.ready && !this.closing;
-    if (this.syncsSinceMaintenance === 0 && !this.vacuumFullPending) {
+    const full =
+      this.vacuumFullPending &&
+      this.now() - this.lastSyncAt >= this.vacuumFullQuietMs;
+    if (this.vacuumFullPending && !full && !this.deferralLogged) {
+      this.deferralLogged = true;
+      this.logger?.warn(
+        `DurableNodeFs: ${this.label}/base exceeds ${this.vacuumFullAboveBytes} bytes; VACUUM FULL waits until the store has had no writes for ${this.vacuumFullQuietMs} ms`,
+      );
+    }
+    if (!full && this.syncsSinceMaintenance === 0) {
       return "idle";
     }
-    const full = this.vacuumFullPending;
     let outcome: MaintenanceOutcome;
     try {
       outcome = await pg._runExclusiveQuery(async () => {
@@ -120,7 +176,7 @@ export class PgliteMaintenance {
     }
     if (outcome !== "vacuum" && outcome !== "vacuum-full") return outcome;
     this.syncsSinceMaintenance = 0;
-    this.vacuumFullPending = false;
+    if (full) this.vacuumFullPending = false;
     return outcome;
   }
 
