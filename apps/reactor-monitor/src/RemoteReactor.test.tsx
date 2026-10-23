@@ -14,6 +14,7 @@ import {
 } from "./components/AdminGate.js";
 import type { ProvisionRequest } from "./components/ProvisionPanel.js";
 import { buildDescriptor as buildFormDescriptor } from "./provisioning.js";
+import { MonitoringSetsStore } from "./monitoring-sets.js";
 
 const WAIT = { timeout: 10_000 } as const;
 
@@ -277,6 +278,41 @@ describe("remote reactor in the monitor app", () => {
       WAIT,
     );
     expect(view.queryByTestId("operator-bearer-form")).toBeNull();
+  }, 20_000);
+
+  it("takes a pasted bearer on a remote restored from a saved set", async () => {
+    const host: Host = { access: null, adminBearer: "admin-token" };
+    const saved = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => saved.get(key) ?? null,
+      setItem: (key: string, value: string) => void saved.set(key, value),
+    };
+    new MonitoringSetsStore(storage).setActiveDescriptors([
+      {
+        kind: "remote",
+        name: "restored-switchboard",
+        remote: { url: "http://switchboard.test/graphql" },
+      },
+    ]);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fakeInspectionFetch(host);
+    try {
+      const view = render(<App store={new MonitoringSetsStore(storage)} />);
+      await waitFor(() => expect(view.getByTitle("ready")).toBeTruthy(), WAIT);
+      fireEvent.click(view.getByText("restored-switchboard"));
+      fireEvent.click(view.getByRole("button", { name: "Queue" }));
+
+      fireEvent.change(view.getByLabelText("Admin bearer token"), {
+        target: { value: "admin-token" },
+      });
+      fireEvent.click(view.getByRole("button", { name: "Use bearer" }));
+      await waitFor(
+        () => expect(view.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
+        WAIT,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   }, 20_000);
 
   it("disables the levers and the DB tab for an operator, with the reason", async () => {

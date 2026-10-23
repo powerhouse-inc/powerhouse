@@ -36,7 +36,8 @@ export function setRemoteBearer(name: string, bearer: string): void {
   }
 }
 
-function remoteHeaders(name: string): Record<string, string> {
+/** A remote's headers: its current bearer, read per request. */
+export function remoteHeaders(name: string): Record<string, string> {
   const bearer = remoteBearers.get(name);
   return bearer ? { Authorization: `Bearer ${bearer}` } : {};
 }
