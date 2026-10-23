@@ -68,10 +68,11 @@ export async function initRenown(
     .withKeyPairStorage(keyStorage)
     .build();
 
-  const renown = await new RenownBuilder(
-    "switchboard",
-    storagePath ? { storagePath } : {},
-  )
+  // keyPath too: the builder's default key storage mkdirs <cwd>/.ph.
+  const renown = await new RenownBuilder("switchboard", {
+    ...(storagePath ? { storagePath } : {}),
+    ...(keypairPath ? { keyPath: keypairPath } : {}),
+  })
     .withCrypto(renownCrypto)
     .withBaseUrl(baseUrl)
     .build();
