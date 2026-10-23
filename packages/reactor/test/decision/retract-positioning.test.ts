@@ -13,7 +13,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import { firstOutOfOrderPair } from "../../src/decision/stream-order.js";
-import { JobStatus } from "../../src/shared/types.js";
+import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import {
   assertOneRuleAgreement,
   storedRows,
@@ -99,6 +99,24 @@ describe("positionByTimestamp on base-reducer 3", () => {
 
   async function execute(action: Action): Promise<void> {
     await settle((await module.reactor.execute(docId, "main", [action])).id);
+  }
+
+  async function executeJob(actions: Action[]): Promise<JobInfo> {
+    const job = await module.reactor.execute(docId, "main", actions);
+    await vi.waitUntil(
+      async () => {
+        const { status } = await module.reactor.getJobStatus(job.id);
+        return status === JobStatus.READ_READY || status === JobStatus.FAILED;
+      },
+      { timeout: 10_000 },
+    );
+    return module.reactor.getJobStatus(job.id);
+  }
+
+  function expectRefused(job: JobInfo, reason: string): void {
+    expect(job.status).toBe(JobStatus.FAILED);
+    expect(job.error?.name).toBe("RetractionRefusedError");
+    expect(job.error?.message).toContain(reason);
   }
 
   async function add(id: string, second: number): Promise<Action> {
@@ -205,5 +223,84 @@ describe("positionByTimestamp on base-reducer 3", () => {
       positional: ["a", "z", "RETRACT(b)", "b"],
       served: ["a", "z"],
     });
+  });
+  it("admits every RETRACT of a backdated job whose first rewinds the others' targets", async () => {
+    await add("a", 1);
+    const b = await add("b", 3);
+    const c = await add("c", 4);
+
+    const job = await executeJob([at(retract(b.id), 2), at(retract(c.id), 2)]);
+
+    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    await check({
+      stream: "0:a/0 1:b/0 2:c/0 3:RETRACT(b)/2 4:RETRACT(c)/0 5:b/0 6:c/0",
+      positional: ["a", "RETRACT(b)", "RETRACT(c)", "b", "c"],
+      served: ["a"],
+    });
+  });
+
+  it("admits a RETRACT whose target the job re-appends before it", async () => {
+    await add("a", 1);
+    const b = await add("b", 3);
+    const c = await add("c", 5);
+
+    const job = await executeJob([at(retract(b.id), 2), at(retract(c.id), 4)]);
+
+    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    await check({
+      stream: "0:a/0 1:b/0 2:c/0 3:RETRACT(b)/2 4:b/0 5:RETRACT(c)/0 6:c/0",
+      positional: ["a", "RETRACT(b)", "b", "RETRACT(c)", "c"],
+      served: ["a"],
+    });
+  });
+
+  it("admits every RETRACT of a job tied with targets that sort after it", async () => {
+    await add("a", 1);
+    const b = at({ ...addModule({ id: "b", name: "b" }), id: "~b" }, 3);
+    const c = at({ ...addModule({ id: "c", name: "c" }), id: "~c" }, 3);
+    await execute(b);
+    await execute(c);
+
+    const job = await executeJob([at(retract(b.id), 3), at(retract(c.id), 3)]);
+
+    expect(job.error?.message ?? job.status).toBe(JobStatus.READ_READY);
+    expect(await served()).toEqual(["a"]);
+    await assertOneRuleAgreement({ module, document });
+  });
+
+  it("still refuses a backdated RETRACT whose target is absent", async () => {
+    await add("a", 1);
+    const b = await add("b", 3);
+    const before = await storedRows(module, docId);
+
+    expectRefused(
+      await executeJob([at(retract(b.id), 2), at(retract("missing"), 2)]),
+      "target-missing",
+    );
+
+    expect(await storedRows(module, docId)).toEqual(before);
+    expect(await served()).toEqual(["a", "b"]);
+  });
+
+  it("still refuses a backdated RETRACT of a target the job already retracts", async () => {
+    await add("a", 1);
+    const b = await add("b", 3);
+
+    expectRefused(
+      await executeJob([at(retract(b.id), 2), at(retract(b.id), 2)]),
+      "target-retracted",
+    );
+
+    expect(await served()).toEqual(["a", "b"]);
+  });
+
+  it("still refuses a backdated RETRACT of a target a moved RETRACT retracts", async () => {
+    await add("a", 1);
+    const b = await add("b", 3);
+    await execute(at(retract(b.id), 4));
+
+    expectRefused(await executeJob([at(retract(b.id), 2)]), "target-retracted");
+
+    expect(await served()).toEqual(["a"]);
   });
 });

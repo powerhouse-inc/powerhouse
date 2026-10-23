@@ -369,15 +369,14 @@ function isRetractOutsideRule(action: Action): boolean {
 }
 
 /**
- * Why a submitted RETRACT of `target` cannot apply to `stream`. Decided by
- * liveness over the rows, not by whether a stored RETRACT names the target:
- * a retraction that was itself retracted leaves its target live.
+ * Why a submitted RETRACT of `target` cannot apply to the positional `rows`.
+ * Decided by liveness over the rows, not by whether a stored RETRACT names the
+ * target: a retraction that was itself retracted leaves its target live.
  */
 function retractionRefusal(
   target: unknown,
-  stream: readonly Operation[],
+  rows: readonly Operation[],
 ): RetractionRefusalReason | undefined {
-  const rows = positionalOperations(stream);
   if (
     typeof target !== "string" ||
     !rows.some((operation) => operation.action.id === target)
@@ -385,6 +384,39 @@ function retractionRefusal(
     return "target-missing";
   }
   return retractedActionIds(rows).has(target) ? "target-retracted" : undefined;
+}
+
+/**
+ * The rows a submitted RETRACT is admitted against: what `stream` applies now,
+ * plus each row a reshuffle re-appends that it has not written back yet. A
+ * RETRACT's rewind must not hide a target the same job puts back.
+ */
+function admissionRows(
+  stream: readonly Operation[],
+  reappended: readonly Operation[],
+): Operation[] {
+  const rows = positionalOperations(stream);
+  const present = new Set(rows.map((operation) => operation.action.id));
+  return [
+    ...rows,
+    ...reappended.filter((operation) => !present.has(operation.action.id)),
+  ];
+}
+
+/** The stored rows among `operations` a reshuffle re-appends, with the verdict each lands with. */
+function reappendedRows(
+  job: Job,
+  operations: readonly Operation[],
+  verdicts: readonly (string | undefined)[],
+): Operation[] {
+  const submitted = new Set(job.actions.map((action) => action.id));
+  const rows: Operation[] = [];
+  operations.forEach((operation, i) => {
+    if (!submitted.has(operation.action.id)) {
+      rows.push({ ...operation, deniedReason: verdicts[i] });
+    }
+  });
+  return rows;
 }
 
 /** A rule write whose scope the reducer re-derives from every row; UNDO and REDO become RETRACTs. */
@@ -842,6 +874,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
         replayingAcceptedHistory: true,
         evaluatedByPosition: false,
+        reappended: [],
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
@@ -882,6 +915,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
         replayingAcceptedHistory: false,
         evaluatedByPosition: false,
+        reappended: [],
         postCommitInvalidations,
         postCommitMembershipInvalidations,
         touchedStreams,
@@ -983,6 +1017,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       signal,
       replayingAcceptedHistory: false,
       evaluatedByPosition: positioned.evaluatedByPosition,
+      reappended: positioned.reappended,
       postCommitInvalidations,
       postCommitMembershipInvalidations,
       touchedStreams,
@@ -1873,7 +1908,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     const target = (action.input as { target?: unknown } | null)?.target;
     const reason = retractionRefusal(
       target,
-      document.operations[job.scope] ?? [],
+      admissionRows(document.operations[job.scope] ?? [], executing.reappended),
     );
     return reason === undefined
       ? undefined
@@ -2669,6 +2704,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         sourceRemote: "",
       })),
       evaluatedByPosition: false,
+      reappended: [],
     });
 
     if (job.actions.length === 0) {
@@ -2725,7 +2761,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
       if (violation) {
-        return { writes: [], evaluatedByPosition: false, error: violation };
+        return {
+          writes: [],
+          evaluatedByPosition: false,
+          reappended: [],
+          error: violation,
+        };
       }
 
       if (!backdated) {
@@ -2881,6 +2922,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           sourceRemote: "",
         })),
         evaluatedByPosition: false,
+        reappended: reappendedRows(job, merged, []),
       };
     }
 
@@ -2917,6 +2959,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         return {
           writes: [],
           evaluatedByPosition: false,
+          reappended: [],
           error: refusalError(
             reason,
             job.documentId,
@@ -2935,6 +2978,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         deniedReason: reasons[i],
       })),
       evaluatedByPosition: true,
+      reappended: reappendedRows(job, operations, reasons),
     };
   }
 
