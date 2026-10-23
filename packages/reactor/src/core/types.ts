@@ -52,6 +52,7 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { CatchUpPriority } from "../processors/catch-up-priority.js";
 import type { PoolInstrumentation } from "../storage/pool-instrumentation.js";
 import type { IGroupCommitStorage } from "../storage/kysely/group-commit-storage.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -612,6 +613,8 @@ export interface InProcessReactorModule extends ReactorModule {
   degradedComponents: DegradedComponent[];
   /** Read-side catch-up: status and an on-demand sweep. */
   catchUp: ICatchUp;
+  /** Paces processor backfills against requests; see `withCatchUpPriority`. */
+  catchUpPriority: CatchUpPriority;
   /** The settled watermark this thread's catch-up sweeps up to. */
   settledWatermark: ISettledWatermark;
   /** Enqueues purge jobs; the erasure scheduler is its only caller. */

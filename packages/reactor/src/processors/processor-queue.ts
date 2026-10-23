@@ -38,7 +38,11 @@ export type ProcessorQueueOptions = {
   progress: ProcessorProgressState;
   /** Ordinals at or below this are never delivered. */
   floor: number;
-  readSince: (ordinal: number) => Promise<PagedResults<OperationWithContext>>;
+  /** Up to `limit` operations above `ordinal`; `next` set when more remain. */
+  readSince: (
+    ordinal: number,
+    limit: number,
+  ) => Promise<PagedResults<OperationWithContext>>;
   /** Highest ordinal routed so far; anything above it has yet to arrive live. */
   routedThrough: () => number;
   /** The manager's appliedThrough; the cursor never passes it. */
@@ -52,8 +56,13 @@ export type ProcessorQueueOptions = {
   lookupRetries?: number;
   /** Shared across a manager's queues; defaults to no limit. */
   backfillSlots?: IBackfillSlots;
-  /** Runs between backfill pages; defaults to yielding to the event loop. */
-  betweenPages?: () => Promise<void>;
+  /**
+   * Runs between backfill pages; defaults to yielding to the event loop.
+   * `closing` resolves once the queue closes, so a long wait can end early.
+   */
+  betweenPages?: (closing: Promise<void>) => Promise<void>;
+  /** Read before every backfill page; defaults to the index's page size. */
+  pageSize?: () => number;
   logger: ILogger;
 };
 
@@ -140,6 +149,9 @@ function highestOf(ops: OperationWithContext[]): number {
 /** Largest merged live call, matching the operation index's page size. */
 export const MAX_MERGED_OPERATIONS = 500;
 
+/** The operation index's default page size. */
+export const DEFAULT_BACKFILL_PAGE_SIZE = 500;
+
 const LOOKUP_RETRY_MS = 100;
 const MAX_LOOKUP_RETRY_MS = 30_000;
 const LOOKUP_RETRIES = 10;
@@ -156,8 +168,12 @@ export class ProcessorQueue {
   private wake: (() => void) | undefined;
   // Set once a lookup exhausts its retries; nothing moves until one answers.
   private parked = false;
+  private readonly closing: Promise<void>;
+  private signalClosed: () => void = () => {};
 
-  constructor(private readonly options: ProcessorQueueOptions) {}
+  constructor(private readonly options: ProcessorQueueOptions) {
+    this.closing = new Promise((resolve) => (this.signalClosed = resolve));
+  }
 
   get isClosed(): boolean {
     return this.closed;
@@ -280,6 +296,7 @@ export class ProcessorQueue {
       }
     });
     this.closed = true;
+    this.signalClosed();
     this.wake?.();
     return disconnect;
   }
@@ -543,7 +560,11 @@ export class ProcessorQueue {
     const { cursor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
-    const release = await slots.acquire();
+    const release = await slots.acquire(this.closing);
+    if (this.closed) {
+      release();
+      return;
+    }
     try {
       await this.scanBackfill();
     } finally {
@@ -556,10 +577,12 @@ export class ProcessorQueue {
     if (cursor.status !== "active" || this.parked) return;
     this.options.progress.runFrom = cursor.lastOrdinal;
     const betweenPages = this.options.betweenPages ?? yieldToEventLoop;
+    const pageSize =
+      this.options.pageSize ?? (() => DEFAULT_BACKFILL_PAGE_SIZE);
 
     let page: PagedResults<OperationWithContext>;
     try {
-      page = await this.options.readSince(cursor.lastOrdinal);
+      page = await this.options.readSince(cursor.lastOrdinal, pageSize());
     } catch (error) {
       await this.fail(error, "reading backfill");
       return;
@@ -597,9 +620,11 @@ export class ProcessorQueue {
       await this.raiseCursor(highestOf(page.results));
 
       if (!page.next) break;
-      await betweenPages();
+      // Re-read from where this page ended, so a new page size applies now.
+      const scanned = highestOf(page.results);
+      await betweenPages(this.closing);
       try {
-        page = await page.next();
+        page = await this.options.readSince(scanned, pageSize());
       } catch (error) {
         await this.fail(error, "reading backfill");
         return;

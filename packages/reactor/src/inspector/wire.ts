@@ -1,3 +1,4 @@
+import type { CatchUpPriorityState } from "../processors/catch-up-priority.js";
 import type { Job } from "../queue/types.js";
 import type { DeadLetterRecord } from "../storage/interfaces.js";
 import type {
@@ -148,6 +149,29 @@ export type WireInspectorProcessor = {
   readonly phase: string;
 };
 
+export type WireCatchUpLevelSettings = {
+  readonly slots: number;
+  readonly pageSize: number;
+  readonly pauseMs: number;
+  readonly giveWay: string;
+};
+
+export type WireCatchUpLoadSample = {
+  readonly requests: number;
+  readonly p95LatencyMs: number;
+  readonly eventLoopDelayMs: number;
+  readonly idleForMs: number;
+};
+
+/** `sample` is null until a dynamic tick has sampled the host's load. */
+export type WireCatchUpPriority = {
+  readonly mode: string;
+  readonly level: number;
+  readonly settings: WireCatchUpLevelSettings;
+  readonly reason: string;
+  readonly sample: WireCatchUpLoadSample | null;
+};
+
 export type WireStorageHealth = {
   readonly tracked: boolean;
   readonly healthy: boolean;
@@ -242,6 +266,18 @@ export function toWireQueueState(snapshot: QueueStateSnapshot): WireQueueState {
     executingJobs: snapshot.executingJobs.map((job) =>
       toWireQueueJob(job, "executing"),
     ),
+  };
+}
+
+export function toWireCatchUpPriority(
+  state: CatchUpPriorityState,
+): WireCatchUpPriority {
+  return {
+    mode: state.mode,
+    level: state.level,
+    settings: { ...state.settings },
+    reason: state.reason,
+    sample: state.sample ? { ...state.sample } : null,
   };
 }
 
@@ -368,6 +404,25 @@ export const INSPECTION_WIRE_FIELDS = {
     "clearable",
     "runFrom",
     "phase",
+  ]),
+  InspectionCatchUpLevelSettings: fieldsOf<WireCatchUpLevelSettings>()([
+    "slots",
+    "pageSize",
+    "pauseMs",
+    "giveWay",
+  ]),
+  InspectionCatchUpLoadSample: fieldsOf<WireCatchUpLoadSample>()([
+    "requests",
+    "p95LatencyMs",
+    "eventLoopDelayMs",
+    "idleForMs",
+  ]),
+  InspectionCatchUpPriority: fieldsOf<WireCatchUpPriority>()([
+    "mode",
+    "level",
+    "settings",
+    "reason",
+    "sample",
   ]),
   InspectionStorageHealth: fieldsOf<WireStorageHealth>()([
     "tracked",

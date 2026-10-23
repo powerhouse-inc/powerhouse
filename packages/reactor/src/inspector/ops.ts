@@ -41,6 +41,11 @@ export const INSPECTOR_OPS = {
     tier: "read",
     gql: "catchUpStatus",
   },
+  getCatchUpPriority: {
+    rpc: "catchUp.priority",
+    tier: "read",
+    gql: "catchUpPriority",
+  },
   getStorageHealth: {
     rpc: "storage.health",
     tier: "read",
@@ -56,6 +61,7 @@ export const INSPECTOR_OPS = {
   retryProcessor: { rpc: "processors.retry", tier: "admin" },
   rerunProcessor: { rpc: "processors.rerun", tier: "admin" },
   sweepCatchUp: { rpc: "catchUp.sweepNow", tier: "admin" },
+  setCatchUpPriority: { rpc: "catchUp.setPriority", tier: "admin" },
   rebuildKeyframes: { rpc: "integrity.rebuildKeyframes", tier: "admin" },
   rebuildSnapshots: { rpc: "integrity.rebuildSnapshots", tier: "admin" },
   queryDb: { rpc: "db.query", tier: "sql" },

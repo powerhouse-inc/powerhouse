@@ -12,6 +12,14 @@ import type {
   ICatchUp,
   SweepResult,
 } from "../catch-up/types.js";
+import {
+  assertCatchUpPrioritySetting,
+  CATCH_UP_LEVELS,
+  DYNAMIC_START_LEVEL,
+  type CatchUpPriority,
+  type CatchUpPrioritySetting,
+  type CatchUpPriorityState,
+} from "../processors/catch-up-priority.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { DriveInspection } from "./drive-inspection.js";
@@ -49,6 +57,7 @@ export type ReactorInspectorComponents = {
   queue?: IInspectableQueue;
   processorManager?: IProcessorManager;
   catchUp?: ICatchUp;
+  catchUpPriority?: CatchUpPriority;
   integrity?: IDocumentIntegrityService;
   storageHealth?: IInspectorStorageHealthProvider;
   documentModelRegistry?: IDocumentModelRegistry;
@@ -99,6 +108,14 @@ const NO_INSPECTABLE_QUEUE =
 const NO_CATCH_UP = "it was built without catch-up";
 const NO_INTEGRITY = "it has no document integrity service";
 const NO_PROCESSORS = "it was built without a processor manager";
+
+const noCatchUpPriority: CatchUpPriorityState = {
+  mode: "dynamic",
+  level: DYNAMIC_START_LEVEL,
+  settings: CATCH_UP_LEVELS[DYNAMIC_START_LEVEL]!,
+  reason: "no processor manager",
+  sample: undefined,
+};
 
 /** In-process inspector over a reactor module's live components. */
 export class ReactorInspector
@@ -239,6 +256,17 @@ export class ReactorInspector
     return Promise.resolve(catchUp.status());
   }
 
+  getCatchUpPriority(): Promise<CatchUpPriorityState> {
+    const priority = this.components.catchUpPriority;
+    if (!priority) {
+      return Promise.resolve({
+        ...noCatchUpPriority,
+        settings: { ...noCatchUpPriority.settings },
+      });
+    }
+    return Promise.resolve(priority.get());
+  }
+
   getStorageHealth(): Promise<InspectorStorageHealth> {
     const provider = this.components.storageHealth;
     if (!provider) {
@@ -314,6 +342,24 @@ export class ReactorInspector
       return Promise.reject(unsupported("Sweeping catch-up", NO_CATCH_UP));
     }
     return catchUp.sweepNow();
+  }
+
+  setCatchUpPriority(setting: CatchUpPrioritySetting): Promise<void> {
+    const priority = this.components.catchUpPriority;
+    if (!priority) {
+      return Promise.reject(
+        unsupported("Setting the catch-up priority", NO_PROCESSORS),
+      );
+    }
+    try {
+      assertCatchUpPrioritySetting(setting);
+    } catch (error) {
+      return Promise.reject(
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    }
+    priority.set(setting);
+    return Promise.resolve();
   }
 
   rebuildKeyframes(

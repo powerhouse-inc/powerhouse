@@ -38,9 +38,74 @@ describe("BackfillSlots", () => {
     expect(third).toBe(false);
   });
 
-  it("refuses a size that is not a positive integer", () => {
-    expect(() => new BackfillSlots(0)).toThrow("positive integer");
-    expect(() => new BackfillSlots(1.5)).toThrow("positive integer");
+  it("refuses a size that is not a non-negative integer", () => {
+    expect(() => new BackfillSlots(-1)).toThrow("non-negative integer");
+    expect(() => new BackfillSlots(1.5)).toThrow("non-negative integer");
+    expect(() => new BackfillSlots(2).resize(-1)).toThrow(
+      "non-negative integer",
+    );
+  });
+
+  it("hands nothing out at size 0 until it is raised", async () => {
+    const slots = new BackfillSlots(0);
+    let acquired = false;
+    const waiting = slots.acquire().then((release) => {
+      acquired = true;
+      return release;
+    });
+    await Promise.resolve();
+    expect(acquired).toBe(false);
+
+    slots.resize(1);
+    (await waiting)();
+    expect(acquired).toBe(true);
+  });
+
+  it("starts every waiter a raise makes room for, in order", async () => {
+    const slots = new BackfillSlots(1);
+    await slots.acquire();
+    const order: number[] = [];
+    const waiters = [1, 2, 3].map((n) =>
+      slots.acquire().then(() => order.push(n)),
+    );
+
+    slots.resize(3);
+    await Promise.all(waiters.slice(0, 2));
+    await Promise.resolve();
+
+    expect(order).toEqual([1, 2]);
+    expect(slots.inUse).toBe(3);
+    expect(slots.waiters).toBe(1);
+  });
+
+  it("lets holders keep their slots when lowered, and makes new acquires wait", async () => {
+    const slots = new BackfillSlots(3);
+    const first = await slots.acquire();
+    const second = await slots.acquire();
+    slots.resize(1);
+    expect(slots.inUse).toBe(2);
+
+    let third = false;
+    void slots.acquire().then(() => (third = true));
+    first();
+    await Promise.resolve();
+    expect(third).toBe(false);
+
+    second();
+    await vi.waitFor(() => expect(third).toBe(true));
+    expect(slots.inUse).toBe(1);
+  });
+
+  it("ends a wait without a slot once cancelled", async () => {
+    const slots = new BackfillSlots(0);
+    let cancel!: () => void;
+    const cancelled = new Promise<void>((resolve) => (cancel = resolve));
+    const waiting = slots.acquire(cancelled);
+    cancel();
+    (await waiting)();
+
+    expect(slots.waiters).toBe(0);
+    expect(slots.inUse).toBe(0);
   });
 });
 

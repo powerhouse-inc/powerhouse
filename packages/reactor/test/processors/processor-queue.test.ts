@@ -18,6 +18,7 @@ import {
   BackfillSlots,
   type IBackfillSlots,
 } from "../../src/processors/backfill-slots.js";
+import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
 import type { PagedResults } from "../../src/shared/types.js";
 import { createMockLogger, deferred } from "../factories.js";
 
@@ -109,6 +110,7 @@ function harness(
     index?: OperationWithContext[];
     readSince?: (
       ordinal: number,
+      limit: number,
     ) => Promise<PagedResults<OperationWithContext>>;
     onOperations?: (ops: OperationWithContext[]) => Promise<void>;
     onDisconnect?: () => Promise<void>;
@@ -118,7 +120,8 @@ function harness(
     lookupRetryMs?: number;
     lookupRetries?: number;
     backfillSlots?: IBackfillSlots;
-    betweenPages?: () => Promise<void>;
+    betweenPages?: (closing: Promise<void>) => Promise<void>;
+    pageSize?: () => number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -160,6 +163,7 @@ function harness(
     lookupRetries: options.lookupRetries,
     backfillSlots: options.backfillSlots,
     betweenPages: options.betweenPages,
+    pageSize: options.pageSize,
     logger: createMockLogger(),
   });
   return { queue, cursor, progress, delivered, persisted, processor };
@@ -495,6 +499,122 @@ describe("ProcessorQueue", () => {
     });
   });
 
+  describe("catch-up priority", () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, i) => op(i + 1));
+
+    // Honours the limit each read asks for, as getSinceOrdinal does.
+    function limitedIndex(index: OperationWithContext[], reads: number[]) {
+      return (ordinal: number, limit: number) => {
+        reads.push(limit);
+        const after = index.filter((o) => o.context.ordinal > ordinal);
+        const results = after.slice(0, limit);
+        return Promise.resolve<PagedResults<OperationWithContext>>({
+          results,
+          options: { cursor: "", limit },
+          next:
+            after.length > limit
+              ? () => Promise.reject(new Error("next() is not used"))
+              : undefined,
+        });
+      };
+    }
+
+    function paced(priority: CatchUpPriority) {
+      return {
+        backfillSlots: priority.slots,
+        pageSize: () => priority.pageSize(),
+        betweenPages: (closing: Promise<void>) =>
+          priority.betweenPages(closing),
+      };
+    }
+
+    it("reads each page with the page size current at that page", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 1 });
+      const reads: number[] = [];
+      let pages = 0;
+      const { queue, delivered, cursor } = harness({
+        readSince: limitedIndex(many(1200), reads),
+        ...paced(priority),
+        onOperations: () => {
+          if (++pages === 1) priority.set({ mode: "fixed", level: 6 });
+          return Promise.resolve();
+        },
+      });
+
+      await queue.backfill();
+
+      expect(reads).toEqual([100, 1000, 1000]);
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 1000, 100]);
+      expect(cursor.lastOrdinal).toBe(1200);
+    });
+
+    it("never starts a scan at level 0, and starts it once the level rises", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({
+        index: many(3),
+        ...paced(priority),
+      });
+
+      const done = queue.backfill();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(delivered).toEqual([]);
+
+      priority.set({ mode: "fixed", level: 4 });
+      await done;
+      expect(delivered).toEqual([[1, 2, 3]]);
+    });
+
+    it("stops a running scan after its page at level 0, holding its slot", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 1 });
+      const reads: number[] = [];
+      const { queue, delivered, cursor } = harness({
+        readSince: limitedIndex(many(250), reads),
+        ...paced(priority),
+        onOperations: () => {
+          if (delivered.length === 0) priority.set({ mode: "fixed", level: 0 });
+          return Promise.resolve();
+        },
+      });
+
+      const done = queue.backfill();
+      await vi.waitFor(() => expect(delivered).toHaveLength(1));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(delivered).toHaveLength(1);
+      expect(cursor.lastOrdinal).toBe(100);
+      expect(priority.slots.inUse).toBe(1);
+
+      priority.set({ mode: "fixed", level: 2 });
+      await done;
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 150]);
+      expect(priority.slots.inUse).toBe(0);
+    });
+
+    it("keeps delivering live operations at level 0", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({ ...paced(priority) });
+
+      await queue.live([op(1), op(2)]);
+
+      expect(delivered).toEqual([[1, 2]]);
+    });
+
+    it("lets a closing queue leave a level-0 wait", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({
+        index: many(2),
+        ...paced(priority),
+      });
+
+      const done = queue.backfill();
+      await queue.close();
+      await done;
+
+      expect(delivered).toEqual([]);
+      expect(priority.slots.waiters).toBe(0);
+    });
+  });
+
   describe("rewind", () => {
     const open = () => Promise.resolve();
 
@@ -625,13 +745,12 @@ describe("ProcessorQueue", () => {
 
     it("should mark errored when a later page read rejects", async () => {
       const index = [1, 2, 3].map((n) => op(n));
-      const first = await pagedIndex(index, 2)(0);
+      const read = pagedIndex(index, 2);
       const { queue, cursor, delivered } = harness({
-        readSince: () =>
-          Promise.resolve({
-            ...first,
-            next: () => Promise.reject(new Error("page 2 failed")),
-          }),
+        readSince: (ordinal) =>
+          ordinal === 0
+            ? read(ordinal)
+            : Promise.reject(new Error("page 2 failed")),
       });
 
       await queue.backfill();
