@@ -3,14 +3,21 @@
  * packages/design-system/src/connect/components/catch-up-inspector/catch-up-inspector.tsx
  * for the same reason as QueueTab.tsx (see its header comment).
  */
-import type { CatchUpStatus, IInspectorAdmin } from "@powerhousedao/reactor";
+import {
+  computeProgress,
+  type CatchUpStatus,
+  type IInspectorAdmin,
+  type ReadModelProgress,
+} from "@powerhousedao/reactor";
 import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ADMIN_ALLOWED,
   AdminGateNote,
   type AdminGate,
 } from "../components/AdminGate.js";
+import { percentOf, ProgressBar } from "../components/ProgressBar.js";
+import { withHead } from "../lib/catch-up.js";
 
 export type CatchUpTabProps = {
   readonly inspector: MonitorInspector;
@@ -33,6 +40,17 @@ function formatDuration(ms: number): string {
     return `${minutes}m ${seconds}s`;
   }
   return `${seconds}s`;
+}
+
+function readModelValue(row: ReadModelProgress): string {
+  if (row.blocked) return "blocked";
+  if (row.complete) return "done";
+  return `${percentOf(row.fraction)}%`;
+}
+
+function readModelDetail(row: ReadModelProgress): string {
+  const position = `applied through ${row.appliedThrough} of ${row.head}`;
+  return `${readModelValue(row)}, ${position}`;
 }
 
 export function CatchUpTab({
@@ -85,6 +103,10 @@ export function CatchUpTab({
   const consumers = status?.consumers ?? [];
   const settledThrough = watermark?.settledThrough ?? 0;
   const blockedCount = consumers.filter((c) => c.blockedAt).length;
+  const readModels = useMemo(() => {
+    const measurable = withHead(status);
+    return measurable ? computeProgress([], measurable).readModels : [];
+  }, [status]);
 
   return (
     <div className="rm-tab">
@@ -142,6 +164,25 @@ export function CatchUpTab({
 
       {error ? (
         <p className="rm-error">Catch-up request failed: {error}</p>
+      ) : null}
+
+      {readModels.length > 0 ? (
+        <section
+          aria-label="Read model progress"
+          className="rm-progress-list"
+          data-testid="read-model-progress"
+        >
+          {readModels.map((row) => (
+            <ProgressBar
+              detail={readModelDetail(row)}
+              fraction={row.fraction}
+              key={row.consumerId}
+              label={row.consumerId}
+              tone={row.blocked ? "error" : row.complete ? "done" : "active"}
+              value={readModelValue(row)}
+            />
+          ))}
+        </section>
       ) : null}
 
       <div className="rm-table-wrap">

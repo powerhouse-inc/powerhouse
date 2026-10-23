@@ -6,7 +6,14 @@
  * Tailwind theme classes. This keeps the prop contract (poll + retry) in
  * plain CSS.
  */
-import type { InspectorProcessorInfo } from "@powerhousedao/reactor";
+import {
+  computeProgress,
+  type CatchUpStatus,
+  type FactoryProgress,
+  type InspectorProcessorInfo,
+  type ProcessorPhase,
+  type ProcessorProgress,
+} from "@powerhousedao/reactor";
 import type {
   MonitorInspector,
   ProcessorLevers,
@@ -15,6 +22,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type FormEvent,
 } from "react";
@@ -23,6 +31,12 @@ import {
   AdminGateNote,
   type AdminGate,
 } from "../components/AdminGate.js";
+import {
+  percentOf,
+  ProgressBar,
+  type ProgressTone,
+} from "../components/ProgressBar.js";
+import { withHead } from "../lib/catch-up.js";
 
 export type ProcessorsTabProps = {
   readonly inspector: MonitorInspector;
@@ -34,6 +48,116 @@ export type ProcessorsTabProps = {
 type RerunOptions = Parameters<ProcessorLevers["rerunProcessor"]>[1];
 
 const POLL_INTERVAL_MS = 2000;
+
+const PHASE_TONE: Record<ProcessorPhase, ProgressTone> = {
+  "catching-up": "active",
+  live: "done",
+  errored: "error",
+};
+
+/** What a factory's and a processor's progress have in common. */
+type Measured = {
+  readonly phase: ProcessorPhase;
+  readonly fraction: number;
+  readonly done: number;
+  readonly total: number;
+};
+
+function valueOf({ phase, fraction }: Measured): string {
+  if (phase === "errored") return "errored";
+  if (phase === "live") return "done";
+  return `${percentOf(fraction)}%`;
+}
+
+function detailOf(measured: Measured): string {
+  const ordinals = `${measured.done} of ${measured.total} ordinals`;
+  if (measured.phase === "live") return "done";
+  if (measured.phase === "errored") {
+    return `errored at ${percentOf(measured.fraction)}%, ${ordinals}`;
+  }
+  return `${percentOf(measured.fraction)}%, ${ordinals}`;
+}
+
+function processorLabel(row: ProcessorProgress, perDrive: boolean): string {
+  return perDrive ? row.driveId : `${row.driveId} #${row.processorIndex}`;
+}
+
+/** One bar per factory, each expandable to a bar per processor. */
+function FactoryProgressList({
+  factories,
+  headKnown,
+}: {
+  readonly factories: FactoryProgress[];
+  readonly headKnown: boolean;
+}) {
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (factoryId: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(factoryId)) next.add(factoryId);
+      return next;
+    });
+
+  return (
+    <section
+      aria-label="Processor progress"
+      className="rm-progress-list"
+      data-testid="processor-progress"
+    >
+      {headKnown ? null : (
+        <p className="rm-note" data-testid="progress-head-unknown">
+          The head is unknown here, so progress is measured against the highest
+          processor cursor.
+        </p>
+      )}
+      {factories.map((factory) => {
+        const open = expanded.has(factory.factoryId);
+        const drives = `${factory.driveCount} ${factory.driveCount === 1 ? "drive" : "drives"}`;
+        const label = `${factory.factoryId} (${drives})`;
+        const perDrive = factory.processors.length === factory.driveCount;
+        return (
+          <div className="rm-progress-group" key={factory.factoryId}>
+            <div className="rm-progress-head">
+              <button
+                aria-expanded={open}
+                aria-label={`${open ? "Hide" : "Show"} drives of ${factory.factoryId}`}
+                className="rm-progress-toggle"
+                onClick={() => toggle(factory.factoryId)}
+                type="button"
+              >
+                {open ? "▾" : "▸"}
+              </button>
+              <ProgressBar
+                detail={detailOf(factory)}
+                fraction={factory.fraction}
+                label={label}
+                tone={PHASE_TONE[factory.phase]}
+                value={valueOf(factory)}
+              />
+            </div>
+            {open ? (
+              <div
+                className="rm-progress-children"
+                data-testid={`progress-drives-${factory.factoryId}`}
+              >
+                {factory.processors.map((row) => (
+                  <ProgressBar
+                    detail={detailOf(row)}
+                    fraction={row.fraction}
+                    key={row.processorId}
+                    label={processorLabel(row, perDrive)}
+                    tone={PHASE_TONE[row.phase]}
+                    value={valueOf(row)}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
 
 /** Asks how to rerun one processor: cleared from its floor, or from an ordinal. */
 function RerunForm({
@@ -125,6 +249,7 @@ export function ProcessorsTab({
   admin = ADMIN_ALLOWED,
 }: ProcessorsTabProps) {
   const [processors, setProcessors] = useState<InspectorProcessorInfo[]>([]);
+  const [catchUp, setCatchUp] = useState<CatchUpStatus | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
@@ -141,6 +266,12 @@ export function ProcessorsTab({
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
+    }
+    // The head only scales the bars; without it they fall back to the cursors.
+    try {
+      setCatchUp(withHead(await inspector.getCatchUpStatus()));
+    } catch {
+      setCatchUp(undefined);
     }
   }, [inspector]);
 
@@ -194,6 +325,10 @@ export function ProcessorsTab({
   const leversOpen = admin.enabled && !!levers;
   const activeCount = processors.filter((p) => p.status === "active").length;
   const erroredCount = processors.filter((p) => p.status === "errored").length;
+  const progress = useMemo(
+    () => computeProgress(processors, catchUp),
+    [processors, catchUp],
+  );
 
   return (
     <div className="rm-tab">
@@ -244,6 +379,13 @@ export function ProcessorsTab({
         <p className="rm-note" role="status">
           {rerunNote}
         </p>
+      ) : null}
+
+      {progress.factories.length > 0 ? (
+        <FactoryProgressList
+          factories={progress.factories}
+          headKnown={progress.headKnown}
+        />
       ) : null}
 
       <div className="rm-table-wrap">
