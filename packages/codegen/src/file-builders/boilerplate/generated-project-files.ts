@@ -57,7 +57,12 @@ import {
   localPackageNames,
 } from "@powerhousedao/shared/clis/package-style";
 import { formatSafe } from "utils";
-import { migratedStyle, pageThemeWarning, readStyle } from "./migrate-style.js";
+import {
+  connectThemeMessages,
+  migratedStyle,
+  moveConnectTheme,
+  readStyle,
+} from "./migrate-style.js";
 import {
   mergedVitestConfig,
   readIfExists,
@@ -116,21 +121,28 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, "reactor/index.ts"),
     await formatSafe(reactorTsTemplate),
   );
-  // An existing style.css keeps the project's rules; only Connect's imports change.
-  const style = readStyle(projectDir);
+  // An existing style.css keeps the project's rules; only Connect's imports
+  // change, and Connect's theme moves to the host's stylesheet.
+  const hostFile = join(projectDir, HOST_STYLESHEET);
+  const theme = moveConnectTheme(
+    migratedStyle(readStyle(projectDir), localPackageNames(projectDir)),
+    existsSync(hostFile) ? readFileSync(hostFile, "utf8") : undefined,
+  );
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
-    await formatSafe(
-      migratedStyle(style, localPackageNames(projectDir)),
-      "css",
-    ),
+    await formatSafe(theme.style, "css"),
   );
-  const warning = pageThemeWarning(style);
-  if (warning) console.warn(`⚠ ${warning}`);
-  await seedUserOwnedFile(
-    join(projectDir, HOST_STYLESHEET),
-    await formatSafe(hostStyleTemplate, "css"),
-  );
+  if (theme.host !== undefined) {
+    await writeFileEnsuringDir(hostFile, await formatSafe(theme.host, "css"));
+  } else {
+    await seedUserOwnedFile(
+      hostFile,
+      await formatSafe(hostStyleTemplate, "css"),
+    );
+  }
+  const { info, warnings } = connectThemeMessages(theme);
+  for (const message of info) console.log(message);
+  for (const message of warnings) console.warn(`⚠ ${message}`);
   const vitestConfigPath = join(projectDir, "vitest.config.ts");
   await writeFileEnsuringDir(
     vitestConfigPath,
