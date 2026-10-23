@@ -58,11 +58,30 @@ import {
 } from "@powerhousedao/shared/clis/package-style";
 import { formatSafe } from "utils";
 import { migratedStyle, pageThemeWarning, readStyle } from "./migrate-style.js";
+import {
+  mergedVitestConfig,
+  readIfExists,
+  withProjectArrayEntries,
+} from "./merge-project-config.js";
 
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
+  // Config files keep the entries the project added to their exclude lists.
+  const tsconfigPath = join(projectDir, "tsconfig.json");
   await writeFileEnsuringDir(
-    join(projectDir, "tsconfig.json"),
-    await formatSafe(tsConfigTemplate, "json"),
+    tsconfigPath,
+    await formatSafe(
+      withProjectArrayEntries(
+        "tsconfig.json",
+        tsConfigTemplate,
+        readIfExists(tsconfigPath),
+        [
+          { keyPath: ["include"] },
+          // .ph left the excludes so .ph/connect-routes.gen.ts is checked.
+          { keyPath: ["exclude"], dropped: [".ph"] },
+        ],
+      ),
+      "json",
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, "index.html"),
@@ -72,9 +91,18 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, "main.tsx"),
     await formatSafe(mainTsxTemplate),
   );
+  const oxlintPath = join(projectDir, ".oxlintrc.json");
   await writeFileEnsuringDir(
-    join(projectDir, ".oxlintrc.json"),
-    await formatSafe(oxlintConfigTemplate, "json"),
+    oxlintPath,
+    await formatSafe(
+      withProjectArrayEntries(
+        ".oxlintrc.json",
+        oxlintConfigTemplate,
+        readIfExists(oxlintPath),
+        [{ keyPath: ["ignorePatterns"] }],
+      ),
+      "json",
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, ".oxfmtrc.json"),
@@ -103,9 +131,12 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, HOST_STYLESHEET),
     await formatSafe(hostStyleTemplate, "css"),
   );
+  const vitestConfigPath = join(projectDir, "vitest.config.ts");
   await writeFileEnsuringDir(
-    join(projectDir, "vitest.config.ts"),
-    await formatSafe(vitestConfigTemplate),
+    vitestConfigPath,
+    await formatSafe(
+      mergedVitestConfig(vitestConfigTemplate, readIfExists(vitestConfigPath)),
+    ),
   );
 }
 
