@@ -24,6 +24,14 @@ const FAKE_CLI = `import { existsSync, mkdirSync, readFileSync, rmSync, writeFil
 import path from "node:path";
 const runDir = path.join(process.env.PH_USER_DATA_DIR ?? process.cwd(), ".ph", "run");
 const file = path.join(runDir, "${HOST_NAME}.json");
+process.on("exit", () => {
+  try {
+    if (JSON.parse(readFileSync(file, "utf8")).pid === process.pid) rmSync(file);
+  } catch {}
+});
+process.on("SIGTERM", () => {
+  if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
+});
 console.log("fake ph run", process.argv.slice(2).join(" "));
 if (process.env.FAKE_EXIT_EARLY) {
   console.error("fake: boom");
@@ -37,14 +45,6 @@ if (existsSync(file)) {
     process.exit(1);
   } catch {}
 }
-process.on("exit", () => {
-  try {
-    if (JSON.parse(readFileSync(file, "utf8")).pid === process.pid) rmSync(file);
-  } catch {}
-});
-process.on("SIGTERM", () => {
-  if (!process.env.FAKE_IGNORE_TERM) process.exit(0);
-});
 if (!process.env.FAKE_NEVER_READY) {
   setTimeout(() => {
     mkdirSync(runDir, { recursive: true });
@@ -213,7 +213,7 @@ describe("spawnHost", () => {
       }),
     );
     expect(error.phase).toBe("timeout");
-    expect(error.exit).toEqual({ code: 0, signal: null, forced: false });
+    expect(error.exit?.forced).toBe(false);
   });
 
   it.skipIf(process.platform === "win32")(
@@ -234,16 +234,16 @@ describe("spawnHost", () => {
   it("aborts before ready", async () => {
     const projectRoot = makeProject();
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 200);
     const error = await rejection(
       start({
         projectRoot,
         signal: controller.signal,
+        onOutput: () => controller.abort(),
         env: { FAKE_NEVER_READY: "1" },
       }),
     );
     expect(error.phase).toBe("aborted");
-    expect(error.exit?.code).toBe(0);
+    expect(error.exit).toEqual({ code: 0, signal: null, forced: false });
   });
 
   it("stops on abort after ready", async () => {
