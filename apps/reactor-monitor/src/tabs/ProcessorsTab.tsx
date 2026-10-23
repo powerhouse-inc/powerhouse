@@ -113,7 +113,7 @@ function FactoryProgressList({
       {factories.map((factory) => {
         const open = expanded.has(factory.factoryId);
         const drives = `${factory.driveCount} ${factory.driveCount === 1 ? "drive" : "drives"}`;
-        const label = `${factory.factoryId} (${drives})`;
+        const label = `${factory.label} (${drives})`;
         const perDrive = factory.processors.length === factory.driveCount;
         return (
           <div className="rm-progress-group" key={factory.factoryId}>

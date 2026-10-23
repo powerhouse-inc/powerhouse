@@ -65,6 +65,7 @@ describe("progressRows", () => {
       factories: [
         {
           factoryId: "D:\\projects\\ph-win\\workspace\\sektar",
+          label: "sektar",
           driveCount: 8,
           phase: "catching-up",
           done: 31,
@@ -74,6 +75,7 @@ describe("progressRows", () => {
         },
         {
           factoryId: "@powerhousedao/vetra",
+          label: "vetra",
           driveCount: 1,
           phase: "live",
           done: 0,
@@ -83,6 +85,7 @@ describe("progressRows", () => {
         },
         {
           factoryId: "broken",
+          label: "broken",
           driveCount: 2,
           phase: "errored",
           done: 0,

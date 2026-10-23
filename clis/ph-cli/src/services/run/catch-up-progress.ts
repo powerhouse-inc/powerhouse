@@ -15,16 +15,14 @@ export type ProgressRow = {
 /** Reads the current rows; rejects while the reactor cannot answer. */
 export type ProgressSource = () => Promise<readonly ProgressRow[]>;
 
-/** A factory id that is a project path names the project by its folder. */
-function factoryLabel(factoryId: string, driveCount: number): string {
-  const name = factoryId.split(/[\\/]/).filter(Boolean).at(-1) ?? factoryId;
-  return `${name} (${driveCount} ${driveCount === 1 ? "drive" : "drives"})`;
+function withDrives(label: string, driveCount: number): string {
+  return `${label} (${driveCount} ${driveCount === 1 ? "drive" : "drives"})`;
 }
 
 /** One row per processor factory, then one per reactor read model. */
 export function progressRows(progress: ReactorProgress): ProgressRow[] {
   const factories = progress.factories.map((factory): ProgressRow => ({
-    label: factoryLabel(factory.factoryId, factory.driveCount),
+    label: withDrives(factory.label, factory.driveCount),
     fraction: factory.fraction,
     state:
       factory.phase === "errored"

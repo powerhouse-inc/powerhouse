@@ -87,6 +87,7 @@ describe("computeProgress", () => {
     expect(progress.factories).toEqual([
       {
         factoryId: "f",
+        label: "f",
         driveCount: 1,
         phase: "catching-up",
         done: 30,
@@ -121,6 +122,25 @@ describe("computeProgress", () => {
       total: 0,
       fraction: 1,
     });
+  });
+
+  it("names a factory by the last segment of a project path or package id", () => {
+    const { factories } = computeProgress(
+      [
+        processor({ processorId: "a", factoryId: "D:\\work\\sektar" }),
+        processor({ processorId: "b", factoryId: "/home/me/projects/ledger/" }),
+        processor({ processorId: "c", factoryId: "@powerhousedao/vetra" }),
+        processor({ processorId: "d", factoryId: "plain" }),
+      ],
+      status(10),
+    );
+
+    expect(factories.map((f) => [f.factoryId, f.label])).toEqual([
+      ["@powerhousedao/vetra", "vetra"],
+      ["/home/me/projects/ledger/", "ledger"],
+      ["D:\\work\\sektar", "sektar"],
+      ["plain", "plain"],
+    ]);
   });
 
   it("shows a queued replay at the head as not started, not as done", () => {

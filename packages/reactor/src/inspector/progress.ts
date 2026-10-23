@@ -24,6 +24,8 @@ export type ProcessorProgress = {
 /** One factory's processors, summed. */
 export type FactoryProgress = {
   factoryId: string;
+  /** A short name: a factory id that is a project path is named by its folder. */
+  label: string;
   /** Distinct drives among `processors`. */
   driveCount: number;
   /** Errored if any is, else catching up if any is, else live. */
@@ -134,6 +136,7 @@ function factoryProgress(
   }
   return {
     factoryId,
+    label: factoryLabel(factoryId),
     driveCount: new Set(rows.map((row) => row.driveId)).size,
     phase: aggregatePhase(rows),
     done,
@@ -145,6 +148,10 @@ function factoryProgress(
     ),
     processors: rows,
   };
+}
+
+function factoryLabel(factoryId: string): string {
+  return factoryId.split(/[\\/]/).filter(Boolean).at(-1) ?? factoryId;
 }
 
 function aggregatePhase(rows: ProcessorProgress[]): ProcessorPhase {
