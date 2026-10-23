@@ -11,7 +11,7 @@ import {
 } from "./resolve/declared.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
 import { describeMapElements } from "./resolve/resolve.js";
-import { unwrapEscapes } from "./resolve/walk.js";
+import { formatPath, unwrapEscapes } from "./resolve/walk.js";
 import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 
 /**
@@ -370,12 +370,18 @@ export function validateHost<O>(
   );
 }
 
+export interface SchemaIssue extends RunnerIssue {
+  /** The line `validateHost` prints: zod's dotted path (other runners' tests
+   * match on it), then the message. */
+  printed: string;
+}
+
 export interface HostSchemaIssues<O> {
   /** Kind shape, an unresolved token (forbid mode) and unknown verbs, in
    * the order the throwing validator checks them. */
   issues: RunnerIssue[];
   /** The schema's own issues; absent when the host parsed. */
-  schemaIssues?: RunnerIssue[];
+  schemaIssues?: SchemaIssue[];
   data?: O;
 }
 
@@ -406,10 +412,9 @@ export function hostSchemaIssues<O>(
   // the schema (and the verb) see the literal.
   const result = schema.safeParse(unwrapEscapes(host));
   if (result.success) return { issues, data: result.data };
-  const schemaIssues = result.error.issues.map((issue) => {
-    // Dotted, as before T3 (other runners' tests match on it).
+  const schemaIssues = result.error.issues.map((issue): SchemaIssue => {
     const element = describeMapElements(host, issue.path);
-    const path =
+    const dotted =
       (issue.path.map(String).join(".") || "<root>") +
       (element ? ` (${element})` : "");
     // A token in a field that does not take one: say so, rather than
@@ -417,7 +422,16 @@ export function hostSchemaIssues<O>(
     const message = tokenKeyOf(valueAt(host, issue.path))
       ? "this field does not take an output token (it is not token-able); spell the value literally."
       : issue.message;
-    return { path, message };
+    return {
+      path: formatPath(
+        issue.path.filter(
+          (key): key is string | number =>
+            typeof key === "string" || typeof key === "number",
+        ),
+      ),
+      message: element ? `${message} (${element})` : message,
+      printed: `${dotted}: ${message}`,
+    };
   });
   return { issues, schemaIssues };
 }
@@ -435,7 +449,7 @@ function parseHost<O>(
   if (first) throw new RunnerError(`${file}: ${first.message}`, first.hint);
   if (checked.schemaIssues) {
     const issues = checked.schemaIssues
-      .map((issue) => `  - ${issue.path}: ${issue.message}`)
+      .map((issue) => `  - ${issue.printed}`)
       .join("\n");
     throw new RunnerError(
       `${file} failed validation against the hostSchema of "${specifier}":\n${issues || "  (no details reported)"}`,

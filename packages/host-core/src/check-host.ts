@@ -1,10 +1,11 @@
 import {
+  compoundStartVerb,
   memberVerbOf,
   prepareMember,
   takesCspRegistrySync,
   type PreparedMember,
 } from "./compound.js";
-import { substituteBuiltinEnv } from "./env-substitution.js";
+import { isBuiltinEnvName, substituteBuiltinEnv } from "./env-substitution.js";
 import { loadHost } from "./host-loader.js";
 import type { CheckStage, HostIssue } from "./host-issues.js";
 import type { ChildWrapper, CompoundWiring } from "./host-schemas.js";
@@ -65,8 +66,6 @@ export interface CheckHostResult {
   deferred: CheckDeferred[];
 }
 
-const BUILTIN_ENV = new Set(["userData", "projectRoot"]);
-
 /** The `ph run` pipeline up to the verb, collecting every issue; starts nothing. */
 export async function checkHost(
   name: string,
@@ -107,7 +106,7 @@ export async function checkHost(
     specifier,
     verb,
     outputsSchemaOf: producerOutputsSchemas(producers),
-    self: { members: selfMembersOf(refs) },
+    self: "outputs",
   });
   return result;
 }
@@ -123,19 +122,9 @@ interface Subject {
 interface ReactorSubject extends Subject {
   outputsSchemaOf: (ref: OutputRef) => OutputsSchemaLookup;
   /** Whose `$output` tokens stay in place when no outputs are given. */
-  self: SelfMembers;
+  self: SelfMembers | "outputs";
   /** A compound member's wiring, applied before resolved validation. */
   patch?: (host: Record<string, unknown>) => Record<string, unknown>;
-}
-
-/** Each producer a standalone host reads, as a stand-in member to defer. */
-function selfMembersOf(refs: readonly OutputRef[]): SelfMembers["members"] {
-  const members = new Map<string, { key: string; host: string }>();
-  for (const ref of refs) {
-    const key = ref.member ?? ref.host;
-    members.set(key, { key, host: ref.host });
-  }
-  return [...members.values()];
 }
 
 /** Declared validation; returns whether its tokens and its shape passed. */
@@ -204,7 +193,7 @@ async function checkSubject(
   const unset = envSitesOf(subject.host).filter(
     (site) =>
       !site.optional &&
-      !BUILTIN_ENV.has(site.name) &&
+      !isBuiltinEnvName(site.name) &&
       options.env[site.name] === undefined,
   );
   for (const site of unset) {
@@ -259,7 +248,7 @@ async function checkSubject(
       env: options.env,
       file,
     });
-    for (const i of boot) issue("boot", { path: i.path ?? "", ...i });
+    for (const i of boot) issue("boot", { ...i, path: i.path ?? "" });
   } catch (error) {
     issue("boot", "", error);
   }
@@ -274,10 +263,18 @@ async function checkCompound(
   const { host, runner, specifier } = subject;
   const declared = checkDeclared(result, subject);
   if (!declared.tokens || !declared.shape) return;
-  const schema = runner.declaredHostSchema ?? runner.hostSchema;
-  const own = schemaIssuesOf(runner, schema, specifier, host, true);
-  for (const i of own) issue("resolved", i);
-  if (own.length > 0) return;
+  // Without a declared schema, checkDeclared checked the kind shape only.
+  if (!runner.declaredHostSchema) {
+    const own = schemaIssuesOf(
+      runner,
+      runner.hostSchema,
+      specifier,
+      host,
+      true,
+    );
+    for (const i of own) issue("resolved", i);
+    if (own.length > 0) return;
+  }
 
   const children = (
     isPlainObject(host.children) ? host.children : {}
@@ -285,10 +282,12 @@ async function checkCompound(
   const wiring = (
     isPlainObject(host.config) ? host.config : {}
   ) as CompoundWiring;
-  const runnerBlock = host.runner as { defaultVerb?: string };
-  // The generic compound's `run` starts its members at its defaultVerb.
-  const verb =
-    subject.verb === "run" ? (runnerBlock.defaultVerb ?? "run") : subject.verb;
+  // The generic compound's mapping; a runner with its own (desktop's
+  // `serve`) is checked as if it were generic.
+  const verb = compoundStartVerb(
+    subject.verb,
+    host.runner as { defaultVerb?: string },
+  );
 
   const prepared: PreparedMember[] = [];
   for (const [key, member] of Object.entries(children)) {
@@ -362,7 +361,14 @@ function issuer(result: CheckHostResult, file: string) {
     error?: unknown,
   ): void => {
     if (typeof found !== "string") {
-      result.issues.push({ stage, file, ...found });
+      const { path, message, hint } = found;
+      result.issues.push({
+        stage,
+        file,
+        path,
+        message,
+        ...(hint ? { hint } : {}),
+      });
       return;
     }
     const text = error instanceof Error ? error.message : String(error);

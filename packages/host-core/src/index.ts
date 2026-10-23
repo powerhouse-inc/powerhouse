@@ -40,6 +40,7 @@ export {
   type RunnerIssue,
   type RunnerModule,
   type RunnerVerb,
+  type SchemaIssue,
   type ValidateHostOptions,
 } from "./runner-resolver.js";
 export {
@@ -160,7 +161,12 @@ export {
   projectDriveIdWith,
   type DriveDeclaration,
 } from "./drive-schema.js";
-export { substituteBuiltinEnv, type BuiltinEnv } from "./env-substitution.js";
+export {
+  BUILTIN_ENV_NAMES,
+  isBuiltinEnvName,
+  substituteBuiltinEnv,
+  type BuiltinEnv,
+} from "./env-substitution.js";
 export {
   concatTokenSchema,
   envTokenSchema,

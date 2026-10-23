@@ -233,6 +233,90 @@ describe("checkHost: one issue per stage", () => {
     ]);
   });
 
+  it("resolved: a resolved value the hostSchema rejects, and no boot after it", async () => {
+    writeHost("invariants", "resolved-bad-url", {
+      name: "inv-resolved-bad-url",
+      runner: { module: "@powerhousedao/ph-cli/runners/switchboard" },
+      reactor: {
+        drives: [
+          { slug: "far", remote: { url: { $env: "FIXTURE_REMOTE_URL" } } },
+        ],
+      },
+    });
+    const env = {
+      ...ENV,
+      FIXTURE_REMOTE_URL: "",
+      FIXTURE_BOOT_ISSUE: "would boot",
+    };
+    const result = await check("invariants", "resolved-bad-url", { env });
+    expect(result.issues.map((i) => [i.stage, i.path])).toEqual([
+      ["resolved", "reactor.drives[0].remote.url"],
+    ]);
+    const fixed = await check("invariants", "resolved-bad-url", {
+      env: { ...env, FIXTURE_REMOTE_URL: "http://127.0.0.1:1/d/far" },
+    });
+    expect(fixed.issues.map((i) => i.stage)).toEqual(["boot"]);
+  });
+
+  it("boot: members are checked at the verbs the compound starts them at", async () => {
+    const env = { ...ENV, FIXTURE_BOOT_ISSUE: "verb" };
+    const verbsOf = async (host: string, verb?: string) =>
+      (await check("matrix", host, { env, ...(verb ? { verb } : {}) })).issues
+        .filter((i) => i.file === "hosts/switchboard/host.js")
+        .map((i) => [i.path, i.message]);
+    expect(await verbsOf("cli-map")).toEqual([["", "verb run"]]);
+    expect(await verbsOf("cli-map", "dev")).toEqual([["", "verb dev"]]);
+    writeHost("matrix", "compound-dev", {
+      name: "lab-compound-dev",
+      runner: {
+        module: "@powerhousedao/host-core/runners/compound",
+        defaultVerb: "dev",
+      },
+      children: { sb: { host: "switchboard" } },
+    });
+    expect(await verbsOf("compound-dev")).toEqual([["", "verb dev"]]);
+  });
+
+  it("defers a producer read both bare and member-qualified", async () => {
+    writeHost("invariants", "bare-and-member", {
+      name: "inv-bare-and-member",
+      runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+      reactor: {
+        drives: [
+          {
+            slug: "a",
+            remote: {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  path: ["drives", "inv", "url"],
+                },
+              },
+            },
+          },
+          {
+            slug: "b",
+            remote: {
+              url: {
+                $output: {
+                  host: "switchboard",
+                  member: "sb",
+                  path: ["drives", "inv", "url"],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    const result = await check("invariants", "bare-and-member");
+    expect(result.issues).toEqual([]);
+    expect(result.deferred.map((d) => d.members)).toEqual([
+      ["switchboard"],
+      ["switchboard#sb"],
+    ]);
+  });
+
   it("boot: skipped at a one-shot verb", async () => {
     const env = { ...ENV, FIXTURE_BOOT_ISSUE: "workers need postgres" };
     const result = await check("invariants", "switchboard", {

@@ -1,8 +1,13 @@
-import { substituteBuiltinEnv, type BuiltinEnv } from "../env-substitution.js";
+import {
+  isBuiltinEnvName,
+  substituteBuiltinEnv,
+  type BuiltinEnv,
+} from "../env-substitution.js";
 import { tokenKeyOf, tokenSchema } from "../tokens.js";
 import {
   elementSchemaOf,
   isOptionalField,
+  refKey,
   schemaAtPath,
   type OutputRef,
 } from "./declared.js";
@@ -248,7 +253,7 @@ class Resolver {
 
   constructor(
     private readonly sources: ResolveSources,
-    private readonly self?: SelfMembers,
+    private readonly self?: SelfMembers | "outputs",
   ) {}
 
   /** The member keys a token reads (`$output` on a member's host), when
@@ -264,6 +269,10 @@ class Resolver {
         typeof operand.member === "string"
           ? { host: operand.host, member: operand.member }
           : { host: operand.host };
+      if (this.self === "outputs") {
+        keys.add(refKey(ref));
+        continue;
+      }
       const isMember = this.self.members.some((m) => m.host === ref.host);
       if (!isMember) continue;
       const target = memberForRef(ref, this.self.members);
@@ -323,7 +332,11 @@ class Resolver {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value)) {
       // deferSelf: member wrappers resolve per member, not here.
-      if (this.self && trail.length === 0 && key === "children") {
+      if (
+        typeof this.self === "object" &&
+        trail.length === 0 &&
+        key === "children"
+      ) {
         out[key] = child;
         continue;
       }
@@ -589,7 +602,7 @@ class Resolver {
       return this.fail(trail, "is a malformed $env token.", scope);
     }
     const builtins = this.sources.builtins;
-    if ((name === "userData" || name === "projectRoot") && builtins?.[name]) {
+    if (isBuiltinEnvName(name) && builtins?.[name]) {
       return builtins[name];
     }
     const value = this.sources.env?.[name];
@@ -624,8 +637,9 @@ class Resolver {
 export interface ResolveOptions {
   /** Resolving a COMPOUND's own fields: tokens that read one of its members
    * are deferred until those members have started (see
-   * `DeferredResolution`); `children` is left for the members. */
-  deferSelf: SelfMembers;
+   * `DeferredResolution`); `children` is left for the members. `"outputs"`
+   * defers every `$output` (its `members` are the producers' ref keys). */
+  deferSelf: SelfMembers | "outputs";
 }
 
 /**
