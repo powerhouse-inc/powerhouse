@@ -9,7 +9,7 @@ import {
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { isPidAlive } from "../src/run-record.js";
 import {
@@ -78,6 +78,7 @@ const hostPids: number[] = [];
 afterEach(async () => {
   for (const host of spawned.splice(0)) await host.stop();
   for (const pid of [...launchers.splice(0), ...hostPids.splice(0)]) {
+    if (pid <= 0) continue;
     try {
       process.kill(pid, "SIGKILL");
     } catch {
@@ -169,7 +170,7 @@ async function launch(
   const script = path.join(tempDir("ph-spawn-launcher-"), "launcher.mts");
   writeFileSync(
     script,
-    `import { spawnHost } from ${JSON.stringify(pathToFileHref(SPAWN_HOST_SRC))};
+    `import { spawnHost } from ${JSON.stringify(pathToFileURL(SPAWN_HOST_SRC).href)};
 const host = await spawnHost({ projectRoot: ${JSON.stringify(projectRoot)}, host: "sb", dataDir: ${JSON.stringify(dataDir)}, readyTimeoutMs: 20000 });
 console.log(JSON.stringify({ hostPid: host.pid }));
 ${exitAfterReady ? "process.exit(0);" : "setInterval(() => {}, 1000);"}
@@ -180,7 +181,9 @@ ${exitAfterReady ? "process.exit(0);" : "setInterval(() => {}, 1000);"}
     ["--conditions=source", "--import", "tsx", script],
     { cwd: HOST_CORE_DIR, detached: true, stdio: ["ignore", "pipe", "pipe"] },
   );
-  launchers.push(launcher.pid ?? -1);
+  const launcherPid = launcher.pid;
+  if (launcherPid === undefined) throw new Error("launcher did not start");
+  launchers.push(launcherPid);
   let out = "";
   let err = "";
   launcher.stderr.setEncoding("utf8").on("data", (chunk: string) => {
@@ -198,11 +201,7 @@ ${exitAfterReady ? "process.exit(0);" : "setInterval(() => {}, 1000);"}
     });
   });
   hostPids.push(hostPid);
-  return { launcherPid: launcher.pid ?? -1, hostPid };
-}
-
-function pathToFileHref(file: string): string {
-  return new URL(`file://${file}`).href;
+  return { launcherPid, hostPid };
 }
 
 async function waitDead(pid: number, ms = 10_000): Promise<boolean> {
