@@ -54,6 +54,14 @@ export {
   type RunProbe,
 } from "./run-record.js";
 export {
+  spawnHost,
+  SpawnHostError,
+  type HostExit,
+  type SpawnedHost,
+  type SpawnHostOptions,
+  type SpawnHostPhase,
+} from "./spawn-host.js";
+export {
   runCompound,
   type RunCompoundOptions,
   type RunCompoundResult,
