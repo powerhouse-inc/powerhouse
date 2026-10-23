@@ -1039,8 +1039,16 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     const docId = "test-warm-walk";
     const docType = "powerhouse/document-model";
 
+    // The replay path; base-reducer 3 derives through the state reducer.
     await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
-      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createCreateDocumentOperation(
+          docId,
+          docType,
+          {},
+          { protocolVersions: { "base-reducer": 2 } },
+        ),
+      );
     });
 
     const operations: Operation[] = [];

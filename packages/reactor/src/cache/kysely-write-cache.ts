@@ -745,7 +745,7 @@ export class KyselyWriteCache implements IWriteCache {
     signal?: AbortSignal,
     fromKeyframe = true,
   ): Promise<PHDocument> {
-    const effectiveTargetRevision = targetRevision || Number.MAX_SAFE_INTEGER;
+    const effectiveTargetRevision = targetRevision ?? Number.MAX_SAFE_INTEGER;
 
     const keyframe = fromKeyframe
       ? await this.findNearestKeyframe(

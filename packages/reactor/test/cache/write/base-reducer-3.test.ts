@@ -343,6 +343,16 @@ describe("write cache on base-reducer 3", () => {
       expect(readsWholeLog(getSince)).toBe(true);
     });
 
+    it("reads revision 0 positionally, not from a later keyframe", async () => {
+      for (const id of ["a", "b", "c", "d", "e"]) await add(id);
+      await persistKeyframeAt(4);
+      cache.invalidate(docId);
+
+      const document = await cache.getState(docId, "global", BRANCH, 0);
+
+      expect(moduleIds(document)).toEqual(["a"]);
+    });
+
     it("persists keyframes that hold the derived state", async () => {
       await add("a");
       const b = await add("b");
