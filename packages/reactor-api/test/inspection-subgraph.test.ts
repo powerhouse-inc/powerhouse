@@ -227,6 +227,7 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
     "queueState { isPaused }",
     "processors { processorId }",
     "catchUpStatus",
+    "catchUpPriority { level }",
     "storageHealth { tracked }",
     "attachmentInfo { present }",
     "remotes { remoteName }",
@@ -251,6 +252,30 @@ describe("inspection subgraph: OPEN does not make every caller an operator", () 
     expect(result.errors).toBeUndefined();
     expect(result.data?.inspection).toMatchObject({
       queueState: { isPaused: false },
+    });
+  });
+
+  it("serves the catch-up priority to a listed admin", async () => {
+    module = await buildReadGateReactor();
+    const { schema } = buildSchema(module, openHost());
+    module.reactorModule!.catchUpPriority.set({ mode: "fixed", level: 6 });
+    const result = await run(
+      schema,
+      `{ inspection { catchUpPriority {
+        mode level reason
+        settings { slots pageSize pauseMs giveWay }
+        sample { requests p95LatencyMs eventLoopDelayMs idleForMs } } } }`,
+      contextFor(OPERATOR),
+    );
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.inspection).toEqual({
+      catchUpPriority: {
+        mode: "fixed",
+        level: 6,
+        reason: "fixed",
+        settings: { slots: 6, pageSize: 1000, pauseMs: 0, giveWay: "yield" },
+        sample: null,
+      },
     });
   });
 

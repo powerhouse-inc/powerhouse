@@ -25,6 +25,7 @@ const OPERATOR = "0xOperator";
 function levers(): IInspectorAdmin & {
   retryProcessor: ReturnType<typeof vi.fn>;
   rerunProcessor: ReturnType<typeof vi.fn>;
+  setCatchUpPriority: ReturnType<typeof vi.fn>;
 } {
   const refuse = () => Promise.reject(new Error("not under test"));
   return {
@@ -35,6 +36,7 @@ function levers(): IInspectorAdmin & {
     rebuildSnapshots: refuse,
     retryProcessor: vi.fn().mockResolvedValue(undefined),
     rerunProcessor: vi.fn().mockResolvedValue(undefined),
+    setCatchUpPriority: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -58,25 +60,35 @@ const RERUN = `mutation Rerun($id: String!, $clear: Boolean!, $from: Float!) {
   inspectionRerunProcessor(processorId: $id, clear: $clear, fromOrdinal: $from)
 }`;
 const RETRY = `mutation Retry($id: String!) { inspectionRetryProcessor(processorId: $id) }`;
-const ACCESS = `{ inspectionAdmin { processors } }`;
+const ACCESS = `{ inspectionAdmin { processors catchUpPriority } }`;
+const PRIORITY = `mutation Priority($mode: String!, $level: Int) {
+  inspectionSetCatchUpPriority(mode: $mode, level: $level)
+}`;
 
 describe("inspection-admin subgraph", () => {
   it("refuses every field to a caller the host does not list as an admin", async () => {
     const admin = levers();
     const schema = buildSchema(admin);
     for (const caller of [contextFor(), contextFor("0xsomeone")]) {
-      for (const source of [ACCESS, RERUN, RETRY]) {
+      for (const source of [ACCESS, RERUN, RETRY, PRIORITY]) {
         const result = await graphql({
           schema,
           source,
           contextValue: caller,
-          variableValues: { id: "p", clear: false, from: 0 },
+          variableValues: {
+            id: "p",
+            clear: false,
+            from: 0,
+            mode: "fixed",
+            level: 7,
+          },
         });
         expect(result.errors?.[0]?.extensions.code).toBe("FORBIDDEN");
       }
     }
     expect(admin.rerunProcessor).not.toHaveBeenCalled();
     expect(admin.retryProcessor).not.toHaveBeenCalled();
+    expect(admin.setCatchUpPriority).not.toHaveBeenCalled();
   });
 
   it("pulls the levers for a listed admin, whatever the address's case", async () => {
@@ -85,7 +97,9 @@ describe("inspection-admin subgraph", () => {
     const ctx = contextFor(OPERATOR);
 
     const access = await graphql({ schema, source: ACCESS, contextValue: ctx });
-    expect(access.data).toEqual({ inspectionAdmin: { processors: true } });
+    expect(access.data).toEqual({
+      inspectionAdmin: { processors: true, catchUpPriority: true },
+    });
 
     const rerun = await graphql({
       schema,
@@ -107,6 +121,54 @@ describe("inspection-admin subgraph", () => {
     });
     expect(retry.data).toEqual({ inspectionRetryProcessor: true });
     expect(admin.retryProcessor).toHaveBeenCalledWith("factory:drive:1");
+  });
+
+  it("sets the catch-up priority for a listed admin", async () => {
+    const admin = levers();
+    const schema = buildSchema(admin);
+    const ctx = contextFor(OPERATOR);
+
+    const fixed = await graphql({
+      schema,
+      source: PRIORITY,
+      contextValue: ctx,
+      variableValues: { mode: "fixed", level: 0 },
+    });
+    expect(fixed.data).toEqual({ inspectionSetCatchUpPriority: true });
+    expect(admin.setCatchUpPriority).toHaveBeenLastCalledWith({
+      mode: "fixed",
+      level: 0,
+    });
+
+    const dynamic = await graphql({
+      schema,
+      source: PRIORITY,
+      contextValue: ctx,
+      variableValues: { mode: "dynamic" },
+    });
+    expect(dynamic.errors).toBeUndefined();
+    expect(admin.setCatchUpPriority).toHaveBeenLastCalledWith({
+      mode: "dynamic",
+    });
+  });
+
+  it.each([
+    [{ mode: "fixed", level: 8 }, "level from 0 to 7"],
+    [{ mode: "fixed", level: -1 }, "level from 0 to 7"],
+    [{ mode: "fixed" }, "level from 0 to 7"],
+    [{ mode: "dynamic", level: 3 }, "takes no level"],
+    [{ mode: "turbo", level: 3 }, '"fixed" or "dynamic"'],
+  ])("refuses the priority %j as bad input", async (variables, message) => {
+    const admin = levers();
+    const result = await graphql({
+      schema: buildSchema(admin),
+      source: PRIORITY,
+      contextValue: contextFor(OPERATOR),
+      variableValues: variables,
+    });
+    expect(result.errors?.[0]?.extensions.code).toBe("BAD_USER_INPUT");
+    expect(result.errors?.[0]?.message).toContain(message);
+    expect(admin.setCatchUpPriority).not.toHaveBeenCalled();
   });
 
   it("returns a lever's refusal to the admin", async () => {
