@@ -9,7 +9,15 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { initFeatureFlags } from "../src/feature-flags.js";
 import { installFatalErrorShutdown } from "../src/fatal-shutdown.mjs";
 import {
@@ -66,12 +74,19 @@ class FakeWorkerEvents {
 describe("resolvePgliteWorkersEnabled", () => {
   let featureFlags: BooleanFlagSource;
 
+  const previous = process.env[PH_PGLITE_WORKERS];
+
   beforeAll(async () => {
     featureFlags = await initFeatureFlags();
   });
 
-  afterEach(() => {
+  beforeEach(() => {
     delete process.env[PH_PGLITE_WORKERS];
+  });
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env[PH_PGLITE_WORKERS];
+    else process.env[PH_PGLITE_WORKERS] = previous;
   });
 
   it("falls back to the default constant", async () => {
