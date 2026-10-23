@@ -110,7 +110,11 @@ function processorProgress(
     lastOrdinal: info.lastOrdinal,
     done,
     total,
-    fraction: fractionOf(done, total),
+    fraction: fractionOf(
+      done,
+      total,
+      info.phase === "catching-up" && head >= info.runFrom,
+    ),
   };
 }
 
@@ -134,7 +138,11 @@ function factoryProgress(
     phase: aggregatePhase(rows),
     done,
     total,
-    fraction: fractionOf(done, total),
+    fraction: fractionOf(
+      done,
+      total,
+      rows.some((row) => row.phase === "catching-up" && row.fraction === 0),
+    ),
     processors: rows,
   };
 }
@@ -145,8 +153,10 @@ function aggregatePhase(rows: ProcessorProgress[]): ProcessorPhase {
   return "live";
 }
 
-function fractionOf(done: number, total: number): number {
-  return total <= 0 ? 1 : clamp(done / total);
+/** Nothing to scan is complete, unless a replay is queued and has yet to start. */
+function fractionOf(done: number, total: number, queued: boolean): number {
+  if (total > 0) return clamp(done / total);
+  return queued ? 0 : 1;
 }
 
 function clamp(value: number): number {

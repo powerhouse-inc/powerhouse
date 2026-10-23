@@ -123,6 +123,23 @@ describe("computeProgress", () => {
     });
   });
 
+  it("shows a queued replay at the head as not started, not as done", () => {
+    const { factories } = computeProgress(
+      [
+        processor({
+          processorId: "f:a:0",
+          runFrom: 40,
+          lastOrdinal: 40,
+          phase: "catching-up",
+        }),
+      ],
+      status(40),
+    );
+
+    expect(factories[0]!.processors[0]!.fraction).toBe(0);
+    expect(factories[0]!.fraction).toBe(0);
+  });
+
   it("treats a head below the run start as nothing left to scan", () => {
     const [factory] = computeProgress(
       [
