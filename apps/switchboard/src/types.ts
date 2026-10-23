@@ -1,5 +1,6 @@
 import type { ResolvedPlugin } from "@powerhousedao/host-core";
 import type {
+  IInspector,
   InProcessReactorClientModule,
   IReactorClient,
   ModelManifestEntry,
@@ -228,6 +229,8 @@ export type SwitchboardReactor = {
   mcpEnabled: boolean;
   /** Whether `/graphql/inspection` is mounted, after the option and INSPECTION_ENABLED. */
   inspectionEnabled: boolean;
+  /** The reactor's inspector, as the host reads it (processors, catch-up); undefined without inspection. */
+  inspector: IInspector | undefined;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**

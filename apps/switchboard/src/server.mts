@@ -1609,6 +1609,7 @@ async function initServer(
     })(),
     mcpEnabled: options.mcp !== false,
     inspectionEnabled: options.inspection !== false,
+    inspector: api.inspection?.inspector,
     renown,
     port: serverPort,
     shutdown,
