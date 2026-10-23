@@ -4,7 +4,10 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { deserializeSignature } from "@powerhousedao/shared/document-model";
+import {
+  creationState,
+  deserializeSignature,
+} from "@powerhousedao/shared/document-model";
 import type {
   ConflictInfo,
   RemoteDocumentData,
@@ -81,7 +84,11 @@ export function convertRemoteOperations(
   return operations;
 }
 
-/** Reconstruct a PHDocument from remote document data and operations; the header carries the remote protocol versions. */
+/**
+ * Reconstruct a PHDocument from remote document data and operations; the
+ * header carries the remote protocol versions. `initialDoc` supplies the rest
+ * of the header, and the initial state when the operations do not record one.
+ */
 export function buildPulledDocument(
   remoteDoc: RemoteDocumentData,
   operations: DocumentOperations,
@@ -118,7 +125,9 @@ export function buildPulledDocument(
         : {}),
     },
     state: remoteDoc.state as PHBaseState,
-    initialState: initialDoc.initialState,
+    // Undo re-derives a scope from here, so it must be the state the creator recorded.
+    initialState:
+      creationState(operations.document ?? []) ?? initialDoc.initialState,
     operations,
     clipboard: [],
   };

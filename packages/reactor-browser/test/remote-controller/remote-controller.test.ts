@@ -3,6 +3,7 @@ import {
   documentModelDocumentModelModule,
 } from "document-model";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { creationActions } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
   GetDocumentOperationsQuery,
@@ -1387,6 +1388,116 @@ describe("RemoteDocumentController", () => {
       const actions = pushedActions(client);
       expect(actions.map((action) => action.type)).toEqual(["RETRACT"]);
       expect(actions[0].input).toEqual({ target: "action-0" });
+    });
+
+    /** A v3 remote created with `initialGlobal`, then given `content` rows. */
+    function remoteCreatedWith(
+      initialGlobal: Record<string, unknown>,
+      content: { type: string; input: object }[],
+      hostGlobal: Record<string, unknown>,
+    ) {
+      const created = documentModelDocumentModelModule.utils.createDocument({
+        global: initialGlobal as never,
+      });
+      const row = (
+        index: number,
+        action: Omit<RemoteOperation["action"], "context">,
+      ) => ({
+        index,
+        timestampUtcMs: action.timestampUtcMs,
+        hash: `hash-${action.scope}-${index}`,
+        skip: 0,
+        error: null,
+        id: `op-${action.scope}-${index}`,
+        action: { ...action, context: null },
+      });
+      const items = [
+        ...creationActions(created, { "base-reducer": 3 }).map((action, i) =>
+          row(i, action as never),
+        ),
+        ...content.map(({ type, input }, i) =>
+          row(i, {
+            id: `action-${i}`,
+            type,
+            input,
+            scope: "global",
+            timestampUtcMs: new Date(
+              Date.UTC(2026, 0, 1, 0, 0, i),
+            ).toISOString(),
+          }),
+        ),
+      ];
+      const docData = {
+        ...makeDocData({
+          state: documentModelDocumentModelModule.utils.createState({
+            global: hostGlobal as never,
+          }),
+          revisionsList: [
+            { scope: "document", revision: 2 },
+            { scope: "global", revision: content.length },
+          ],
+        }),
+        protocolVersions: { "base-reducer": 3 },
+      };
+      return createMockClient({
+        GetDocumentWithOperations: vi
+          .fn()
+          .mockResolvedValue(
+            makeDocWithOpsResponse(docData as never, { items: items as never }),
+          ),
+      });
+    }
+
+    it("re-derives an undo from the state the document was created with", async () => {
+      const client = remoteCreatedWith(
+        { name: "Team" },
+        [{ type: "SET_MODEL_DESCRIPTION", input: { description: "d" } }],
+        { name: "Team", description: "d" },
+      );
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      controller.undo();
+
+      expect(controller.state.global.name).toBe("Team");
+      expect(controller.state.global.description).toBe("");
+      await controller.push();
+      expect(pushedActions(client)[0].input).toEqual({ target: "action-0" });
+    });
+
+    it("resolves the undo target against the state the document was created with", async () => {
+      const withModule = (name: string) => {
+        const global = structuredClone(
+          documentModelDocumentModelModule.utils.createState().global,
+        ) as unknown as { specifications: { modules: unknown[] }[] };
+        global.specifications[0].modules = [
+          { id: "m1", name, description: "", operations: [] },
+        ];
+        return global;
+      };
+      const client = remoteCreatedWith(
+        withModule("before"),
+        [
+          { type: "SET_MODEL_DESCRIPTION", input: { description: "d" } },
+          { type: "SET_MODULE_NAME", input: { id: "m1", name: "after" } },
+        ],
+        { ...withModule("after"), description: "d" },
+      );
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      controller.undo();
+
+      expect(controller.state.global.specifications[0].modules[0].name).toBe(
+        "before",
+      );
+      expect(controller.state.global.description).toBe("d");
+      await controller.push();
+      expect(pushedActions(client)[0].input).toEqual({ target: "action-1" });
     });
 
     function newDocumentHostAt(baseReducer: number) {
