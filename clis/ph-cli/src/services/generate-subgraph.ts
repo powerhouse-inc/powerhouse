@@ -10,6 +10,7 @@ import {
 } from "@powerhousedao/codegen/utils";
 import {
   extractSubgraphDocuments,
+  findSubgraphNameConflict,
   generateSubgraphFromDocument,
   getDocument,
   saveSpec,
@@ -24,6 +25,11 @@ import { warnSubgraphTypeConflicts } from "../utils/warn-subgraph-type-conflicts
 
 const INDEX_FILE_EXPECTATION =
   "a class extending BaseSubgraph with a string literal `name`";
+
+async function assertSubgraphNameFree(projectDir: string, name: string) {
+  const conflict = await findSubgraphNameConflict(projectDir, name);
+  if (conflict) throw new Error(conflict);
+}
 
 export async function startGenerateSubgraph(
   args: GenerateSubgraphArgs,
@@ -62,8 +68,10 @@ export async function startGenerateSubgraph(
     }
   } else if (document) {
     const doc = (await getDocument(document)) as SubgraphModuleDocument;
+    await assertSubgraphNameFree(projectDir, doc.state.global.name);
     await generateSubgraphFromDocument(doc, project);
   } else if (name) {
+    await assertSubgraphNameFree(projectDir, name);
     await generateSubgraph(name, project);
   } else if (dir) {
     const dirName = resolveModuleDirName(

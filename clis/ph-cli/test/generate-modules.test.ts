@@ -442,6 +442,15 @@ describe("ph-cli generate subgraph", () => {
     );
   });
 
+  it("refuses a name a document model's subgraph has", async () => {
+    await expect(
+      startGenerateSubgraph(subgraphArgs({ name: "Subgraph Module" }), root),
+    ).rejects.toThrow(
+      'Subgraph name "subgraph-module" is taken by a document model subgraph',
+    );
+    expect(existsSync(join(root, "subgraphs", "subgraph-module"))).toBe(false);
+  });
+
   it("--extract writes a spec for the subgraph", async () => {
     await startGenerateSubgraph(subgraphArgs({ extract: true }), root);
 
