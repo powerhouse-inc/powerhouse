@@ -9,6 +9,7 @@ import { type Generated, Kysely } from "kysely";
 import { KyselyKnexDialect, PGColdDialect } from "kysely-knex";
 import fs from "node:fs";
 import path from "node:path";
+import { PGLITE_UTC_PARSERS } from "../pglite/parsers.js";
 import {
   createDurableNodeFs,
   resolvePgliteFsync,
@@ -63,12 +64,7 @@ export interface OperationUserPermissionTable {
 
 type Db = Kysely<any>;
 
-// PGlite parses `timestamp` (no tz) columns as local time; read-model columns
-// store UTC, so parse them as UTC or values shift by the host's TZ offset.
-export const PGLITE_UTC_PARSERS = {
-  // 1114 = timestamp without time zone
-  1114: (value: string) => new Date(`${value.replace(" ", "T")}Z`),
-} as const;
+export { PGLITE_UTC_PARSERS };
 
 export function isPostgresConnectionString(connectionString: string) {
   return (
