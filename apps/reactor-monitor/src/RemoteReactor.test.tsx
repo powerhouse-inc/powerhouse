@@ -408,11 +408,12 @@ describe("remote reactor in the monitor app", () => {
     );
     await waitFor(
       () =>
-        expect(view.getByRole("status").textContent).toContain(
-          "Rerun of 1 processor is under way",
-        ),
+        expect(
+          view.getByRole("button", { name: "Rerun 0 processors" }),
+        ).toBeTruthy(),
       WAIT,
     );
+    expect(view.queryByTestId("rerun-form")).toBeNull();
   }, 20_000);
 
   it("disables the levers and the DB tab for an operator, with the reason", async () => {

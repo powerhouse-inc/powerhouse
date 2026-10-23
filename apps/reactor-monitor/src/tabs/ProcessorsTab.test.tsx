@@ -180,12 +180,8 @@ describe("ProcessorsTab selection and rerun", () => {
       clear: true,
       fromOrdinal: 3,
     });
-    await waitFor(() =>
-      expect(view.getByRole("status").textContent).toContain(
-        "Rerun of 2 processors is under way",
-      ),
-    );
-    expect(view.queryByTestId("rerun-form")).toBeNull();
+    await waitFor(() => expect(view.queryByTestId("rerun-form")).toBeNull());
+    expect(view.queryByRole("status")).toBeNull();
     expect(rerunButton(view).textContent).toBe("Rerun 0 processors");
   });
 

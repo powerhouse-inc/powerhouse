@@ -218,7 +218,7 @@ function RerunForm({
         disabled={pending || (!clear && !inRange)}
         type="submit"
       >
-        {pending ? "Rerunning…" : `Rerun ${count}`}
+        {pending ? "Starting…" : "Start rerun"}
       </button>
       <button className="rm-btn" onClick={onCancel} type="button">
         Cancel
@@ -241,7 +241,6 @@ export function ProcessorsTab({
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [rerunOpen, setRerunOpen] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
-  const [rerunNote, setRerunNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -332,13 +331,7 @@ export function ProcessorsTab({
             ]
           : [],
       );
-      const started = requests.length - failures.length;
       setRerunError(failures.length > 0 ? failures.join("; ") : null);
-      setRerunNote(
-        started > 0
-          ? `Rerun of ${plural(started, "processor", "processors")} is under way; the bars show how far each has got.`
-          : null,
-      );
       if (failures.length === 0) {
         setRerunOpen(false);
         setSelected(new Set());
@@ -517,11 +510,6 @@ export function ProcessorsTab({
       {rerunError ? (
         <p className="rm-error" role="alert">
           Rerun failed: {rerunError}
-        </p>
-      ) : null}
-      {rerunNote ? (
-        <p className="rm-note" role="status">
-          {rerunNote}
         </p>
       ) : null}
       {processors.length > 0 && !progress.headKnown ? (
