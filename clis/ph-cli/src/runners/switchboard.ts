@@ -2,16 +2,24 @@ import {
   defineHostSchemas,
   drivesSchema,
   mergeDrivePlan,
+  primaryBackend,
+  protocolConflicts,
   resolveDriveDeclaration,
   resolveHostPlugins,
   seedDrives,
+  type BootCheckContext,
+  type BootIssue,
   type DriveSeederClient,
   type ResolvedDrive,
   type ResolvedPlugin,
   type RunnerContext,
   type RunnerHandle,
 } from "@powerhousedao/host-core";
-import { applyReactorEnvProjection } from "./reactor-env.js";
+import path from "node:path";
+import {
+  applyReactorEnvProjection,
+  projectedReactorEnv,
+} from "./reactor-env.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
 import type { BuildArgs, SwitchboardArgs } from "../types.js";
@@ -431,6 +439,36 @@ export async function dev(
   ctx: RunnerContext,
 ): Promise<SwitchboardHandle> {
   return start(host, ctx, true);
+}
+
+/** What the server would refuse at boot for this host, `ctx.verb` and `ctx.env` (`ph host check`). */
+export async function checkBoot(
+  host: SwitchboardHostParsed,
+  ctx: BootCheckContext,
+): Promise<BootIssue[]> {
+  const issues: BootIssue[] = protocolConflicts(
+    host.reactor?.protocol,
+    ctx.env,
+    ctx.file,
+  ).map((message) => ({ path: "reactor.protocol", message }));
+  const { getConfig } = await import("@powerhousedao/config/node");
+  const { switchboardBootFactsFromEnv, switchboardBootIssues } =
+    await import("@powerhousedao/switchboard/boot");
+  const readModelUrl: unknown = primaryBackend(host.reactor)?.readModel?.url;
+  const { facts, issues: parseIssues } = switchboardBootFactsFromEnv(
+    projectedReactorEnv(host.reactor, ctx.env),
+    {
+      dev: ctx.verb === "dev" || host.runner.dev === true,
+      ...(typeof readModelUrl === "string" ? { dbPath: readModelUrl } : {}),
+      configuredRenown: getConfig(
+        path.join(ctx.projectRoot, "powerhouse.config.json"),
+      ).auth?.renown,
+    },
+  );
+  for (const message of [...parseIssues, ...switchboardBootIssues(facts)]) {
+    issues.push({ path: "", message });
+  }
+  return issues;
 }
 
 /** Build the project's reactor package (the SAME service as `ph build`) — what

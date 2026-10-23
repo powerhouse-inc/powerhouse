@@ -6,6 +6,21 @@ import {
   type ReactorConfig,
 } from "@powerhousedao/host-core";
 
+/** The env the server would boot with: `env` plus the reactor block's projection where `env` leaves a var unset. */
+export function projectedReactorEnv(
+  reactor: ReactorConfig | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+): Record<string, string | undefined> {
+  const projected: Record<string, unknown> =
+    projectReactorToSwitchboard(reactor).env;
+  const out = { ...env };
+  for (const [name, value] of Object.entries(projected)) {
+    // A deferred $output token is not a value yet.
+    if (out[name] === undefined && typeof value === "string") out[name] = value;
+  }
+  return out;
+}
+
 /**
  * Apply a host's reactor block to the CURRENT process env, the way the
  * in-process switchboard server reads it at boot (D2.c: env derivation
