@@ -182,11 +182,11 @@ Connect's SPA reads runtime configuration from `/powerhouse.config.json`, never 
 
 #### Container shape and secrets
 
-| Variable                 | Description                                                 | Default  |
-| ------------------------ | ----------------------------------------------------------- | -------- |
-| `PORT`                   | Port the nginx server listens on                            | `3001`   |
-| `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`      |
-| `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_  |
+| Variable                 | Description                                                 | Default |
+| ------------------------ | ----------------------------------------------------------- | ------- |
+| `PORT`                   | Port the nginx server listens on                            | `3001`  |
+| `PH_CONNECT_BASE_PATH`   | nginx base URL path                                         | `/`     |
+| `PH_CONNECT_CONFIG_JSON` | Runtime config JSON to merge into the dist file (see below) | _unset_ |
 
 Connect does **not** read any database variables — it is a static frontend. Database connection strings belong on the Switchboard service (see below).
 
@@ -238,26 +238,30 @@ Switchboard stores the reactor and the read models in one of two backends. When 
 
 Each PGlite directory is a plain Postgres data directory (`PGDATA`), and Postgres runs its own crash recovery when the store opens. A store written by an earlier release as a single `snapshot.bin` file is converted once, on the first boot: the snapshot is extracted beside the directory, verified, swapped into place, and the old directory is deleted. The conversion needs free disk for one extra copy of the store while it runs and logs one line per store when it finishes.
 
-| Variable                      | Description                                                                    | Default           |
-| ----------------------------- | ------------------------------------------------------------------------------ | ----------------- |
-| `PH_REACTOR_DATABASE_URL`     | Postgres URL for reactor storage; also triggers the entrypoint's migrations    | _unset_ (PGlite)  |
-| `PH_SWITCHBOARD_DATABASE_URL` | Postgres URL for the read model and (as fallback) the reactor                  | _unset_ (PGlite)  |
-| `DATABASE_URL`                | Postgres URL for the read model (checked before `PH_SWITCHBOARD_DATABASE_URL`) | _unset_ (PGlite)  |
+| Variable                      | Description                                                                    | Default          |
+| ----------------------------- | ------------------------------------------------------------------------------ | ---------------- |
+| `PH_REACTOR_DATABASE_URL`     | Postgres URL for reactor storage; also triggers the entrypoint's migrations    | _unset_ (PGlite) |
+| `PH_SWITCHBOARD_DATABASE_URL` | Postgres URL for the read model and (as fallback) the reactor                  | _unset_ (PGlite) |
+| `DATABASE_URL`                | Postgres URL for the read model (checked before `PH_SWITCHBOARD_DATABASE_URL`) | _unset_ (PGlite) |
 
 For a single-database deployment (the normal case, and what the repo's compose files do), set `PH_REACTOR_DATABASE_URL` and `PH_SWITCHBOARD_DATABASE_URL` to the same URL.
 
-| Variable              | Description                                                                                                            | Default            |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `PH_PGLITE_IN_MEMORY` | `1` = run PGlite in memory (no persistence)                                                                            | _unset_            |
-| `PH_PGLITE_FSYNC`     | `0` = do not fsync each commit; faster, but an OS crash or power loss can corrupt the store. Leave unset in production | _unset_ (fsync on) |
-| `PH_MIGRATE_PGLITE`   | `true` = migrate local PGlite data to the PG version this image ships                                                  | _unset_            |
-| `PH_FORCE_PG_VERSION` | `16` or `17` = wipe the local PGlite data dirs and re-initialize at that major                                         | _unset_            |
-| `SKIP_DB_MIGRATIONS`  | `true` = skip the entrypoint's Postgres migration run                                                                  | _unset_            |
+| Variable                             | Description                                                                                                                            | Default              |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `PH_PGLITE_IN_MEMORY`                | `1` = run PGlite in memory (no persistence)                                                                                            | _unset_              |
+| `PH_PGLITE_FSYNC`                    | `0` = do not fsync each commit; faster, but an OS crash or power loss can corrupt the store. Leave unset in production                 | _unset_ (fsync on)   |
+| `PH_MIGRATE_PGLITE`                  | `true` = migrate local PGlite data to the PG version this image ships                                                                  | _unset_              |
+| `PH_FORCE_PG_VERSION`                | `16` or `17` = wipe the local PGlite data dirs and re-initialize at that major                                                         | _unset_              |
+| `PH_PGLITE_WORKERS`                  | `false` = run each PGlite store in the main thread instead of its own worker thread, where long queries and maintenance block requests | _unset_ (workers on) |
+| `PH_PGLITE_WORKER_MEMORY_MB`         | JavaScript heap limit of each PGlite worker thread, in MB; PGlite's own WebAssembly memory is outside it                               | `1024`               |
+| `PH_PGLITE_VACUUM_FULL_QUIET_MS`     | A store over 256 MB at open gets a VACUUM FULL once it has had no writes for this long, in ms                                          | `60000`              |
+| `PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS` | The longest that VACUUM FULL waits for a quiet store, counted from open, in ms; `0` waits for quiet only                               | `1800000`            |
+| `SKIP_DB_MIGRATIONS`                 | `true` = skip the entrypoint's Postgres migration run                                                                                  | _unset_              |
 
 #### Core Configuration
 
 | Variable                    | Description                                                          | Default                     |
-| --------------------------- | ------------------------------------------------------------------   | -------------------------   |
+| --------------------------- | -------------------------------------------------------------------- | --------------------------- |
 | `PORT`                      | Port the server listens on (exported as `PH_SWITCHBOARD_PORT`)       | `3000`                      |
 | `PH_SWITCHBOARD_PORT`       | Explicit port override                                               | `$PORT`                     |
 | `PH_DEFAULT_DRIVE_TYPE`     | `powerhouse/document-drive` or `powerhouse/reactor-drive`            | _unset_                     |

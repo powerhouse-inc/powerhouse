@@ -91,7 +91,7 @@ describe("resolvePgliteWorkersEnabled", () => {
   });
 
   it("falls back to the default constant", async () => {
-    expect(PGLITE_WORKERS_DEFAULT).toBe(false);
+    expect(PGLITE_WORKERS_DEFAULT).toBe(true);
     await expect(resolvePgliteWorkersEnabled({ featureFlags })).resolves.toBe(
       PGLITE_WORKERS_DEFAULT,
     );

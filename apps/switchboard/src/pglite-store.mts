@@ -29,7 +29,7 @@ type FatalProcess = Parameters<typeof triggerFatalShutdown>[2];
 export const PH_PGLITE_WORKERS = "PH_PGLITE_WORKERS";
 
 /** Whether PGlite stores run in worker threads when neither the host nor PH_PGLITE_WORKERS says. */
-export const PGLITE_WORKERS_DEFAULT = false;
+export const PGLITE_WORKERS_DEFAULT = true;
 
 export interface PgliteWorkersFlagInput {
   featureFlags: BooleanFlagSource;
