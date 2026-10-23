@@ -71,8 +71,8 @@ export class RequestLoadRecorder implements ICatchUpLoadSource {
   private readonly windowMs: number;
   private readonly now: () => number;
   private readonly eventLoopDelay: IEventLoopDelaySource | undefined;
-  private completions: Completion[] = [];
-  private loopReadings: LoopReading[] = [];
+  private readonly completions: Completion[] = [];
+  private readonly loopReadings: LoopReading[] = [];
   private lastCompletedAt: number;
   private readonly detachers: (() => void)[] = [];
 
@@ -92,29 +92,33 @@ export class RequestLoadRecorder implements ICatchUpLoadSource {
       const accept = request.headers.accept ?? "";
       if (!isCountedRequest(request.url ?? "", accept)) return;
       const started = this.now();
-      response.once("finish", () => this.record(this.now() - started));
+      // "close" fires once whether the response finished or the client went
+      // away, so an aborted request still counts with its time so far.
+      response.once("close", () => this.record(this.now() - started));
     };
     server.on("request", onRequest);
     this.detachers.push(() => server.off("request", onRequest));
   }
 
+  // Pruned here too, so the window bounds memory even when nothing samples.
   record(durationMs: number): void {
     const at = this.now();
     this.completions.push({ at, ms: durationMs });
     this.lastCompletedAt = at;
+    dropBefore(this.completions, at - this.windowMs);
   }
 
   sample(): CatchUpLoadSample {
     const now = this.now();
     const since = now - this.windowMs;
-    this.completions = this.completions.filter((c) => c.at > since);
+    dropBefore(this.completions, since);
     if (this.eventLoopDelay) {
       this.loopReadings.push({
         at: now,
         p99Ms: this.eventLoopDelay.takeP99Ms(),
       });
     }
-    this.loopReadings = this.loopReadings.filter((r) => r.at > since);
+    dropBefore(this.loopReadings, since);
     return {
       requests: this.completions.length,
       p95LatencyMs: percentile(
@@ -130,6 +134,13 @@ export class RequestLoadRecorder implements ICatchUpLoadSource {
     for (const detach of this.detachers.splice(0)) detach();
     this.eventLoopDelay?.stop();
   }
+}
+
+/** Drops entries at or before `since`; entries are in time order. */
+function dropBefore(entries: { at: number }[], since: number): void {
+  let stale = 0;
+  while (stale < entries.length && entries[stale]!.at <= since) stale++;
+  if (stale > 0) entries.splice(0, stale);
 }
 
 /** Nearest-rank percentile; 0 for no values. */

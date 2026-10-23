@@ -93,6 +93,19 @@ describe("RequestLoadRecorder", () => {
     expect(recorder.sample().eventLoopDelayMs).toBe(0);
   });
 
+  it("keeps only the window's requests even when nothing samples", () => {
+    const time = clock();
+    const recorder = new RequestLoadRecorder({ now: time.now });
+    for (let i = 0; i < 1_000; i++) {
+      recorder.record(5);
+      time.advance(100);
+    }
+    const kept = (recorder as unknown as { completions: unknown[] })
+      .completions;
+    expect(kept.length).toBeLessThanOrEqual(50);
+    expect(recorder.sample().requests).toBe(49);
+  });
+
   describe("attached to a server", () => {
     let server: http.Server | undefined;
 
@@ -126,6 +139,47 @@ describe("RequestLoadRecorder", () => {
       recorder.stop();
       await get("/graphql");
       expect(recorder.sample().requests).toBe(2);
+    });
+
+    it("records a request the client aborts", async () => {
+      let received!: () => void;
+      const arrived = new Promise<void>((resolve) => (received = resolve));
+      // Never answers: only the client going away ends the request.
+      server = http.createServer(() => received());
+      const recorder = new RequestLoadRecorder();
+      recorder.attach(server);
+      await new Promise<void>((resolve) =>
+        server!.listen(0, "127.0.0.1", resolve),
+      );
+      const { port } = server.address() as AddressInfo;
+      const controller = new AbortController();
+      const request = fetch(`http://127.0.0.1:${port}/graphql`, {
+        signal: controller.signal,
+      }).catch(() => undefined);
+
+      await arrived;
+      controller.abort();
+      await request;
+
+      await expect.poll(() => recorder.sample().requests).toBe(1);
+      server.closeAllConnections();
+    });
+
+    it("records a finished request once", async () => {
+      server = http.createServer((_req, res) => res.end("ok"));
+      const recorder = new RequestLoadRecorder();
+      recorder.attach(server);
+      await new Promise<void>((resolve) =>
+        server!.listen(0, "127.0.0.1", resolve),
+      );
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(`http://127.0.0.1:${port}/graphql`);
+      await response.text();
+      server.closeAllConnections();
+
+      await expect.poll(() => recorder.sample().requests).toBe(1);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(recorder.sample().requests).toBe(1);
     });
   });
 });
