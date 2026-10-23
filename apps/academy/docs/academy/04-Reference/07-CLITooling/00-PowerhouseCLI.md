@@ -1063,15 +1063,13 @@ Run migrations
 ## Parameters
 
 ### Arguments
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `[version]`
 
 
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
-
-**Default:** `latest`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `--version, -v <str>`
 
 
 
