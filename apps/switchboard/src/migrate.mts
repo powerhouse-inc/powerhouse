@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import dotenv from "dotenv";
-dotenv.config();
+import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
+if (!isDotenvDisabled()) dotenv.config();
 
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";

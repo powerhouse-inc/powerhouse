@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
-dotenv.config();
+import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
+if (!isDotenvDisabled()) dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
 import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
