@@ -543,12 +543,21 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   header is base-reducer 2, so such a document is created at 2 and its
   undo stays the v2 NOOP chain on both sides.
 - Merge with main: main's reactor-mcp `addActions` accepts UNDO and REDO
-  base actions, which base-reducer 3 refuses when submitted. Where undo
-  retracts a target, each UNDO or REDO step (its `count` times) now runs
-  through the client's `undo` or `redo`, which resolves the target and
-  signs the RETRACT; the actions around it are executed in order. The MCP
-  `subject` only gates reads, and `undo` returns nothing the tool serves.
-  Below 3 the base actions are submitted as on main.
+  base actions, which base-reducer 3 refuses when submitted. On 3 the call
+  stays one job: the actions are built in call order into shared
+  `undoRedoBatch`, and each UNDO or REDO step (its `count` times) becomes a
+  RETRACT of the target `undoRedoTargetsOf` finds over the scope's stored
+  rows and the call's earlier actions. So `[A, UNDO, B]` submits
+  `[A, RETRACT(A), B]`, a count of N retracts the call's own content rows
+  first, and base actions are skipped. The client signs the job as it signs
+  any other. The stored rows are read through the subject's read gate; an
+  unreadable scope has nothing to undo. Nothing to undo fails the call
+  before anything is submitted. Below 3 the base actions are submitted as
+  on main.
+- `undoRedoActions` throws a typed `NoUndoRedoTargetError` (action type and
+  scope) when there is nothing to retract, so `ReactorClient`,
+  `GraphQLReactorClient` and `RemoteDocumentController` throw it too. Its
+  message is unchanged.
 - Merge with main: cold head reads now resume from the latest keyframe, so
   the base-reducer 3 tail check (`tailNeedsWholeLog`) decides head reads
   too; an invalidation still owes a full replay first. With that change a
@@ -559,6 +568,10 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
 - The decision walk uses a single reducer on upgraded models.
+- MCP `addActions` with UNDO or REDO on base-reducer 3 reads the scope's
+  whole history and re-derives it once per step, with the model's latest
+  reducer (as `RemoteDocumentController` does), not the host's versioned
+  derivation or its undo-targets cache.
 - Lost-operation resend (R1, R2) is not implemented. The base-reducer 3 twin
   of "is repaired when A's reshuffle echo reaches B alone" is pinned
   `it.fails`: v3 does not repair it either.
