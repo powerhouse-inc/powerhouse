@@ -5,8 +5,9 @@ import {
   type PackageSubgraphConflicts,
   type RefusedDocumentModel,
 } from "@powerhousedao/reactor-api/subgraph-types";
-import { type DocumentNode, parse } from "graphql";
-import { type Dirent, readdirSync, readFileSync } from "node:fs";
+import { kebabCase } from "change-case";
+import { type DocumentNode, Kind, parse } from "graphql";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Templates with substitutions are skipped: their SDL is only known at runtime.
@@ -86,11 +87,39 @@ function describe(name: string, conflict: PackageSubgraphConflicts): string {
   return `Subgraph "${name}" defines ${claims}, so the supergraph leaves it out. Rename them in its schema.ts.`;
 }
 
-/** A warning per model or subgraph the server would refuse or leave out. */
-export async function lintSubgraphTypes(projectDir: string): Promise<string[]> {
-  const models = directories(join(projectDir, "document-models"))
+function loadModels(projectDir: string) {
+  return directories(join(projectDir, "document-models"))
     .map(loadDocumentModelInDir)
     .filter((model) => model !== undefined);
+}
+
+/** Why the server would refuse a new subgraph scaffolded as `name`, if it
+ * would; an existing one is left to {@link lintSubgraphTypes}. */
+export async function findSubgraphNameConflict(
+  projectDir: string,
+  name: string,
+): Promise<string | undefined> {
+  const subgraphName = kebabCase(name);
+  if (existsSync(join(projectDir, "subgraphs", subgraphName, "index.ts"))) {
+    return undefined;
+  }
+  const { conflicts } = await findPackageSubgraphConflicts(
+    [
+      {
+        name: subgraphName,
+        typeDefs: { kind: Kind.DOCUMENT, definitions: [] },
+      },
+    ],
+    loadModels(projectDir),
+  );
+  const holder = conflicts.get(subgraphName)?.nameHeldBy;
+  if (!holder || holder === "package") return undefined;
+  return `Subgraph name "${subgraphName}" is taken by a ${holder} subgraph, so the server would refuse this one. Choose another name, such as "${subgraphName}-api".`;
+}
+
+/** A warning per model or subgraph the server would refuse or leave out. */
+export async function lintSubgraphTypes(projectDir: string): Promise<string[]> {
+  const models = loadModels(projectDir);
   const subgraphsDir = join(projectDir, "subgraphs");
   const subgraphs: PackageSubgraph[] = [];
   for (const dir of subgraphDirs(subgraphsDir)) {

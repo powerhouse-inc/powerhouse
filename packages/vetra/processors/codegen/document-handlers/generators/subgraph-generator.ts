@@ -1,4 +1,5 @@
 import { generateSubgraph } from "@powerhousedao/codegen";
+import { findSubgraphNameConflict } from "../../../../codegen/subgraph-type-lint.js";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,
@@ -69,6 +70,14 @@ export class SubgraphGenerator extends BaseDocumentGen {
     if (state.name && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
+        const conflict = await findSubgraphNameConflict(
+          this.config.CURRENT_WORKING_DIR,
+          state.name,
+        );
+        if (conflict) {
+          logger.error(`❌ Skipping subgraph generation: ${conflict}`);
+          return;
+        }
         await generateSubgraph(state.name, this.project);
         await this.project.save();
         logger.info(
