@@ -11,9 +11,10 @@ import {
   type RenownTrustPolicyOptions,
   type SwitchboardRequestFn,
 } from "@renown/sdk/node";
+import { resolvePhDir } from "@powerhousedao/shared/clis/ph-dir";
 import { childLogger } from "document-model";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 const logger = childLogger(["switchboard", "renown"]);
 
@@ -24,6 +25,8 @@ export interface RenownOptions {
   requireExisting?: boolean;
   /** Base url of the Renown instance to use */
   baseUrl?: string;
+  /** Renown user storage. Defaults to .ph/.renown.json under PH_USER_DATA_DIR, else cwd */
+  storagePath?: string;
 }
 
 /**
@@ -38,6 +41,9 @@ export async function initRenown(
     keypairPath,
     requireExisting = false,
     baseUrl = DEFAULT_RENOWN_URL,
+    storagePath = process.env.PH_USER_DATA_DIR
+      ? join(resolvePhDir(), ".renown.json")
+      : undefined,
   } = options;
 
   const keyStorage = new NodeKeyStorage(keypairPath, {
@@ -62,7 +68,10 @@ export async function initRenown(
     .withKeyPairStorage(keyStorage)
     .build();
 
-  const renown = await new RenownBuilder("switchboard", {})
+  const renown = await new RenownBuilder(
+    "switchboard",
+    storagePath ? { storagePath } : {},
+  )
     .withCrypto(renownCrypto)
     .withBaseUrl(baseUrl)
     .build();
