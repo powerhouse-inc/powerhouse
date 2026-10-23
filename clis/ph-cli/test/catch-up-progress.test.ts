@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { IInspector } from "@powerhousedao/reactor";
 import {
+  inspectorProgressSource,
   progressRows,
   renderBars,
   renderLine,
+  renderPriority,
   startProgressDisplay,
+  type ProgressPriority,
   type ProgressRow,
+  type ProgressSnapshot,
   type ProgressStream,
 } from "../src/services/run/catch-up-progress.js";
 
@@ -29,6 +34,19 @@ const catchingUp: ProgressRow[] = [
   { label: "sektar", fraction: 0.62, state: "catching-up" },
   { label: "document-view", fraction: 1, state: "done" },
 ];
+
+const dynamic6: ProgressPriority = {
+  mode: "dynamic",
+  level: 6,
+  reason: "idle 14 s",
+};
+
+function snapshot(
+  rows: readonly ProgressRow[],
+  priority?: ProgressPriority,
+): Promise<ProgressSnapshot> {
+  return Promise.resolve({ rows, priority });
+}
 
 describe("renderBars", () => {
   it("fits every line to the terminal width and states the progress", () => {
@@ -141,7 +159,7 @@ describe("startProgressDisplay", () => {
   it("draws the bars in a terminal and prints other output above them", async () => {
     const stdout = stream(true);
     const stderr = stream(true);
-    const display = startProgressDisplay(() => Promise.resolve(catchingUp), {
+    const display = startProgressDisplay(() => snapshot(catchingUp), {
       stdout,
       stderr,
       pollMs: 60_000,
@@ -164,7 +182,7 @@ describe("startProgressDisplay", () => {
 
   it("does not redraw in the middle of a line another write left open", async () => {
     const stdout = stream(true);
-    const display = startProgressDisplay(() => Promise.resolve(catchingUp), {
+    const display = startProgressDisplay(() => snapshot(catchingUp), {
       stdout,
       stderr: stream(true),
       pollMs: 60_000,
@@ -185,7 +203,7 @@ describe("startProgressDisplay", () => {
     const original = stdout.write;
     let rows: ProgressRow[] = catchingUp;
     vi.useFakeTimers();
-    const display = startProgressDisplay(() => Promise.resolve(rows), {
+    const display = startProgressDisplay(() => snapshot(rows), {
       stdout,
       stderr,
       pollMs: 1_000,
@@ -206,7 +224,7 @@ describe("startProgressDisplay", () => {
     const stdout = stream(false);
     const original = stdout.write;
     vi.useFakeTimers();
-    const display = startProgressDisplay(() => Promise.resolve(catchingUp), {
+    const display = startProgressDisplay(() => snapshot(catchingUp), {
       stdout,
       stderr: stream(false),
       pollMs: 1_000,
@@ -230,8 +248,7 @@ describe("startProgressDisplay", () => {
     let fail = false;
     vi.useFakeTimers();
     const display = startProgressDisplay(
-      () =>
-        fail ? Promise.reject(new Error("busy")) : Promise.resolve(catchingUp),
+      () => (fail ? Promise.reject(new Error("busy")) : snapshot(catchingUp)),
       { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 1_000 },
     );
     await vi.advanceTimersByTimeAsync(0);
@@ -240,5 +257,89 @@ describe("startProgressDisplay", () => {
 
     expect(stdout.out.at(-1)).toBe("catch-up: sektar 62%\n");
     display.stop();
+  });
+});
+
+describe("catch-up priority", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("states a dynamic priority with its reason, and a fixed one without", () => {
+    expect(renderPriority(dynamic6)).toBe(
+      "catch-up priority 6 (dynamic, idle 14 s)",
+    );
+    expect(renderPriority({ mode: "fixed", level: 3, reason: "fixed" })).toBe(
+      "catch-up priority 3 (fixed)",
+    );
+  });
+
+  it("starts the bar block with the priority line", () => {
+    const lines = renderBars(catchingUp, 60, dynamic6);
+
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toBe("catch-up priority 6 (dynamic, idle 14 s)");
+    expect(lines[1]).toMatch(/^sektar\s+█+░+\s+62%$/);
+  });
+
+  it("appends the priority to the plain line", () => {
+    expect(renderLine(catchingUp, dynamic6)).toBe(
+      "catch-up: sektar 62% · priority 6 dynamic",
+    );
+  });
+
+  it("draws the priority above the bars in a terminal", async () => {
+    const stdout = stream(true);
+    const display = startProgressDisplay(() => snapshot(catchingUp, dynamic6), {
+      stdout,
+      stderr: stream(true),
+      pollMs: 60_000,
+    });
+    await settle();
+
+    const written = stdout.out.join("");
+    expect(written.indexOf("catch-up priority 6 (dynamic, idle 14 s)")).toBe(0);
+    expect(written).toContain("62%");
+    stdout.out.length = 0;
+    stdout.write("a log line\n");
+    expect(stdout.out.join("").indexOf("\x1b[3A")).toBe(0);
+    display.stop();
+  });
+
+  it("prints the priority on the plain line without a terminal", async () => {
+    const stdout = stream(false);
+    vi.useFakeTimers();
+    const display = startProgressDisplay(
+      () => snapshot(catchingUp, { mode: "fixed", level: 2, reason: "fixed" }),
+      { stdout, stderr: stream(false), pollMs: 1_000, lineMs: 1_000 },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(stdout.out.at(-1)).toBe("catch-up: sektar 62% · priority 2 fixed\n");
+    display.stop();
+  });
+
+  it("reads the priority from the inspector, and goes without when refused", async () => {
+    const getCatchUpPriority = vi.fn(() =>
+      Promise.resolve({
+        mode: "dynamic",
+        level: 5,
+        settings: { slots: 4, pageSize: 500, pauseMs: 0, giveWay: "yield" },
+        reason: "busy, healthy",
+        sample: undefined,
+      }),
+    );
+    const inspector = {
+      getProcessors: () => Promise.resolve([]),
+      getCatchUpStatus: () => Promise.reject(new Error("none")),
+      getCatchUpPriority,
+    } as unknown as IInspector;
+    const source = inspectorProgressSource(inspector);
+
+    await expect(source()).resolves.toEqual({
+      rows: [],
+      priority: { mode: "dynamic", level: 5, reason: "busy, healthy" },
+    });
+
+    getCatchUpPriority.mockRejectedValue(new Error("old host"));
+    await expect(source()).resolves.toEqual({ rows: [], priority: undefined });
   });
 });

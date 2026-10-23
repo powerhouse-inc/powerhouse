@@ -1,5 +1,6 @@
 import {
   computeProgress,
+  type CatchUpPriorityState,
   type IInspector,
   type ReactorProgress,
 } from "@powerhousedao/reactor";
@@ -12,8 +13,21 @@ export type ProgressRow = {
   readonly state: "catching-up" | "done" | "errored";
 };
 
+/** The catch-up priority as the progress display states it. */
+export type ProgressPriority = {
+  readonly mode: CatchUpPriorityState["mode"];
+  readonly level: number;
+  readonly reason: string;
+};
+
+/** What one read of the source shows: the bars, and the priority when known. */
+export type ProgressSnapshot = {
+  readonly rows: readonly ProgressRow[];
+  readonly priority: ProgressPriority | undefined;
+};
+
 /** Reads the current rows; rejects while the reactor cannot answer. */
-export type ProgressSource = () => Promise<readonly ProgressRow[]>;
+export type ProgressSource = () => Promise<ProgressSnapshot>;
 
 function withDrives(label: string, driveCount: number): string {
   return `${label} (${driveCount} ${driveCount === 1 ? "drive" : "drives"})`;
@@ -39,7 +53,7 @@ export function progressRows(progress: ReactorProgress): ProgressRow[] {
   return [...factories, ...readModels];
 }
 
-/** Rows from a reactor's inspector: its processors and its catch-up status. */
+/** Rows from a reactor's inspector: its processors, catch-up status and priority. */
 export function inspectorProgressSource(inspector: IInspector): ProgressSource {
   return async () => {
     const processors = await inspector.getProcessors();
@@ -51,8 +65,25 @@ export function inspectorProgressSource(inspector: IInspector): ProgressSource {
     } catch {
       catchUp = undefined;
     }
-    return progressRows(computeProgress(processors, catchUp));
+    let priority: ProgressPriority | undefined;
+    try {
+      const state = await inspector.getCatchUpPriority();
+      priority = { mode: state.mode, level: state.level, reason: state.reason };
+    } catch {
+      priority = undefined;
+    }
+    return {
+      rows: progressRows(computeProgress(processors, catchUp)),
+      priority,
+    };
   };
+}
+
+/** `catch-up priority 6 (dynamic, idle 14 s)`, or `catch-up priority 3 (fixed)`. */
+export function renderPriority(priority: ProgressPriority): string {
+  const why =
+    priority.mode === "dynamic" ? `dynamic, ${priority.reason}` : "fixed";
+  return `catch-up priority ${priority.level} (${why})`;
 }
 
 /** The slice of a TTY stream the display writes to and intercepts. */
@@ -93,28 +124,37 @@ function fit(label: string, width: number): string {
     : `…${label.slice(label.length - width + 1)}`;
 }
 
-/** The bar block, one line per row, sized to `columns`. */
+/** The bar block, one line per row, sized to `columns`, under the priority when known. */
 export function renderBars(
   rows: readonly ProgressRow[],
   columns: number,
+  priority?: ProgressPriority,
 ): string[] {
   const labelWidth = Math.min(
     MAX_LABEL,
     Math.max(...rows.map((row) => row.label.length), 0),
   );
   const barWidth = Math.max(MIN_BAR, columns - labelWidth - 12);
-  return rows.map((row) => {
+  const bars = rows.map((row) => {
     const fraction = row.state === "done" ? 1 : row.fraction;
     const filled = Math.round(Math.min(Math.max(fraction, 0), 1) * barWidth);
     const bar = "█".repeat(filled) + "░".repeat(barWidth - filled);
     return `${fit(row.label, labelWidth)} ${bar} ${percent(row).padStart(7)}`;
   });
+  if (!priority) return bars;
+  return [renderPriority(priority).slice(0, Math.max(columns, 1)), ...bars];
 }
 
 /** One line for a log without a TTY, listing only what is still catching up. */
-export function renderLine(rows: readonly ProgressRow[]): string {
+export function renderLine(
+  rows: readonly ProgressRow[],
+  priority?: ProgressPriority,
+): string {
   const busy = rows.filter((row) => row.state !== "done");
-  return `catch-up: ${busy.map((row) => `${row.label} ${percent(row)}`).join(" · ")}`;
+  const line = `catch-up: ${busy.map((row) => `${row.label} ${percent(row)}`).join(" · ")}`;
+  return priority
+    ? `${line} · priority ${priority.level} ${priority.mode}`
+    : line;
 }
 
 function busy(rows: readonly ProgressRow[]): boolean {
@@ -133,6 +173,7 @@ export function startProgressDisplay(
   const { stdout, stderr } = options;
   const tty = stdout.isTTY === true;
   let rows: readonly ProgressRow[] = [];
+  let priority: ProgressPriority | undefined;
   let drawn = 0;
   let atLineStart = true;
   let lastLine = 0;
@@ -150,7 +191,7 @@ export function startProgressDisplay(
   };
   const draw = () => {
     if (!tty || stopped || !atLineStart || !busy(rows)) return;
-    const lines = renderBars(rows, stdout.columns ?? 80);
+    const lines = renderBars(rows, stdout.columns ?? 80, priority);
     originalOut(`${lines.join("\n")}\n`);
     drawn = lines.length;
   };
@@ -176,7 +217,7 @@ export function startProgressDisplay(
     if (reading || stopped) return;
     reading = true;
     try {
-      rows = await source();
+      ({ rows, priority } = await source());
     } catch {
       // The reactor did not answer; keep the last rows until it does.
     } finally {
@@ -190,7 +231,7 @@ export function startProgressDisplay(
     }
     const now = Date.now();
     if (busy(rows) && now - lastLine >= (options.lineMs ?? DEFAULT_LINE_MS)) {
-      originalOut(`${renderLine(rows)}\n`);
+      originalOut(`${renderLine(rows, priority)}\n`);
       lastLine = now;
     }
   };
