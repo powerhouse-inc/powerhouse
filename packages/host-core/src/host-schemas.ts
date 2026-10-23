@@ -251,7 +251,11 @@ function buildHostSchemas(tokenField: FieldWrappers) {
    * (as on a standalone host); there is no wrapper-level `plugins`. */
   const childWrapperSchema = z.strictObject({
     host: z.string().min(1),
-    runner: runnerBaseSchema.partial().optional(),
+    // 0 passes here; the member runner's own schema decides whether it may.
+    runner: runnerBaseSchema
+      .partial()
+      .extend({ port: z.number().int().min(0).max(65535).optional() })
+      .optional(),
     config: z.looseObject({}).optional(),
     reactor: reactorSchema.optional(),
   });
