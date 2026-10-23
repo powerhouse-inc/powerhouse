@@ -64,6 +64,7 @@ export {
   type CheckHostResult,
 } from "./check-host.js";
 export type { CheckStage, HostIssue } from "./host-issues.js";
+export { exportHost } from "./host-export.js";
 export {
   defaultUserDataDir,
   resolveUserDataPlaceholders,
@@ -153,6 +154,7 @@ export {
   type RunnerBase,
   type RunnerKind,
 } from "./host-schemas.js";
+export { hostExportSchema, type HostExport } from "./host-export-schema.js";
 export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,
