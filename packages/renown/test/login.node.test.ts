@@ -2,12 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IRenown } from "../src/types.js";
 
 let openBrowserShouldFail = false;
+let execFileCalls: unknown[][] | undefined;
 
 vi.mock("node:child_process", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,
     execFile: (...args: unknown[]) => {
+      if (execFileCalls) {
+        execFileCalls.push(args.slice(0, -1));
+        const cb = args[args.length - 1];
+        if (typeof cb === "function") {
+          (cb as (err: null, stdout: string, stderr: string) => void)(
+            null,
+            "",
+            "",
+          );
+        }
+        return {};
+      }
       if (openBrowserShouldFail) {
         const cb = args[args.length - 1];
         if (typeof cb === "function") {
@@ -25,8 +38,34 @@ const {
   formatExpiry,
   generateAccessToken,
   getAuthStatus,
+  openBrowser,
   parseExpiry,
 } = await import("../src/login.node.js");
+
+describe("openBrowser", () => {
+  const originalPlatform = process.platform;
+
+  beforeEach(() => {
+    execFileCalls = [];
+  });
+
+  afterEach(() => {
+    execFileCalls = undefined;
+    Object.defineProperty(process, "platform", { value: originalPlatform });
+  });
+
+  it("hands Windows the whole URL, without a shell that splits it at &", async () => {
+    Object.defineProperty(process, "platform", { value: "win32" });
+    const url =
+      "https://renown.test/console?session=s-1&connect=did:key:z6Mk&app=did:key:z6Mk";
+
+    await openBrowser(url);
+
+    expect(execFileCalls).toEqual([
+      ["rundll32", ["url.dll,FileProtocolHandler", url]],
+    ]);
+  });
+});
 
 describe("parseExpiry", () => {
   it("parses days", () => {
