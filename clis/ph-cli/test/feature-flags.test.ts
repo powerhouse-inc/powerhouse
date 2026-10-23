@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isUniformRunnersEnabled,
   UNIFORM_RUNNERS_FLAG,
@@ -23,4 +23,27 @@ describe("isUniformRunnersEnabled", () => {
       );
     },
   );
+});
+
+describe("help listing", () => {
+  const saved = process.env[UNIFORM_RUNNERS_FLAG];
+  afterEach(() => {
+    if (saved === undefined) delete process.env[UNIFORM_RUNNERS_FLAG];
+    else process.env[UNIFORM_RUNNERS_FLAG] = saved;
+    vi.resetModules();
+  });
+
+  it.each([
+    ["", false],
+    ["1", true],
+  ])("with the flag %j lists run and host: %s", async (value, listed) => {
+    process.env[UNIFORM_RUNNERS_FLAG] = value;
+    vi.resetModules();
+    const { phCliHelpCommands } =
+      await import("@powerhousedao/shared/clis/args");
+    const names = Object.keys(phCliHelpCommands);
+    expect(names.includes("run")).toBe(listed);
+    expect(names.includes("host")).toBe(listed);
+    expect(names).toContain("generate");
+  });
 });
