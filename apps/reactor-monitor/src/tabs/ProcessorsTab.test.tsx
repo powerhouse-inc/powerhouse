@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type {
+  CatchUpPriorityState,
   CatchUpStatus,
   InspectorProcessorInfo,
 } from "@powerhousedao/reactor";
@@ -34,20 +35,40 @@ function processor(
 function inspectorOf(
   processors: InspectorProcessorInfo[],
   catchUp?: CatchUpStatus,
+  priority?: () => CatchUpPriorityState,
 ): MonitorInspector {
   return {
     getProcessors: () => Promise.resolve(processors),
     getCatchUpStatus: () =>
       catchUp ? Promise.resolve(catchUp) : Promise.reject(new Error("none")),
+    getCatchUpPriority: () =>
+      priority
+        ? Promise.resolve(priority())
+        : Promise.reject(new Error("none")),
   } as unknown as MonitorInspector;
 }
 
 function leversStub(): ProcessorLevers & {
   rerunProcessor: ReturnType<typeof vi.fn>;
+  setCatchUpPriority: ReturnType<typeof vi.fn>;
 } {
   return {
     retryProcessor: vi.fn().mockResolvedValue(undefined),
     rerunProcessor: vi.fn().mockResolvedValue(undefined),
+    setCatchUpPriority: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
+function priorityAt(
+  overrides: Partial<CatchUpPriorityState> = {},
+): CatchUpPriorityState {
+  return {
+    mode: "dynamic",
+    level: 6,
+    settings: { slots: 6, pageSize: 1000, pauseMs: 0, giveWay: "yield" },
+    reason: "idle 14 s",
+    sample: undefined,
+    ...overrides,
   };
 }
 
@@ -412,5 +433,141 @@ describe("ProcessorsTab progress in the table", () => {
     );
     expect(view.getByTestId("progress-head-unknown")).toBeTruthy();
     expect(view.queryByText(/Failed to load processors/)).toBeNull();
+  });
+});
+
+describe("ProcessorsTab catch-up priority", () => {
+  const prioritySelect = (view: ReturnType<typeof render>) =>
+    view.getByLabelText("Catch-up priority") as HTMLSelectElement;
+
+  it("shows the priority it reads, dynamic with the controller's reason", async () => {
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([processor()], undefined, () => priorityAt())}
+        levers={leversStub()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(view.getByTestId("catch-up-priority").textContent).toBe(
+        "Priority 6 · dynamic · idle 14 s",
+      ),
+    );
+    expect(prioritySelect(view).value).toBe("dynamic");
+    expect(prioritySelect(view).disabled).toBe(false);
+  });
+
+  it("shows a fixed level without a reason", async () => {
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([processor()], undefined, () =>
+          priorityAt({ mode: "fixed", level: 3, reason: "fixed" }),
+        )}
+        levers={leversStub()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(view.getByTestId("catch-up-priority").textContent).toBe(
+        "Priority 3 · fixed",
+      ),
+    );
+    expect(prioritySelect(view).value).toBe("3");
+  });
+
+  it("sets a fixed level or dynamic through the levers, then rereads", async () => {
+    let current = priorityAt();
+    const levers = leversStub();
+    levers.setCatchUpPriority.mockImplementation(
+      (setting: { mode: string; level?: number }) => {
+        current =
+          setting.mode === "fixed"
+            ? priorityAt({
+                mode: "fixed",
+                level: setting.level,
+                reason: "fixed",
+              })
+            : priorityAt({ level: 4, reason: "starting" });
+        return Promise.resolve();
+      },
+    );
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([processor()], undefined, () => current)}
+        levers={levers}
+      />,
+    );
+    await waitFor(() => expect(prioritySelect(view).disabled).toBe(false));
+
+    fireEvent.change(prioritySelect(view), { target: { value: "0" } });
+    await waitFor(() =>
+      expect(view.getByTestId("catch-up-priority").textContent).toBe(
+        "Priority 0 · fixed",
+      ),
+    );
+    expect(levers.setCatchUpPriority).toHaveBeenLastCalledWith({
+      mode: "fixed",
+      level: 0,
+    });
+
+    fireEvent.change(prioritySelect(view), { target: { value: "dynamic" } });
+    await waitFor(() =>
+      expect(view.getByTestId("catch-up-priority").textContent).toBe(
+        "Priority 4 · dynamic · starting",
+      ),
+    );
+    expect(levers.setCatchUpPriority).toHaveBeenLastCalledWith({
+      mode: "dynamic",
+    });
+  });
+
+  it("reports a refused setting", async () => {
+    const levers = leversStub();
+    levers.setCatchUpPriority.mockRejectedValue(new Error("not now"));
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([processor()], undefined, () => priorityAt())}
+        levers={levers}
+      />,
+    );
+    await waitFor(() => expect(prioritySelect(view).disabled).toBe(false));
+
+    fireEvent.change(prioritySelect(view), { target: { value: "7" } });
+
+    await waitFor(() =>
+      expect(view.getByRole("alert").textContent).toBe(
+        "Setting the catch-up priority failed: not now",
+      ),
+    );
+  });
+
+  it("disables the control without levers, with the gate's reason", async () => {
+    const view = render(
+      <ProcessorsTab
+        admin={{ enabled: false, reason: "no levers here" }}
+        inspector={inspectorOf([processor()], undefined, () => priorityAt())}
+      />,
+    );
+
+    await waitFor(() => view.getByTestId("catch-up-priority"));
+    expect(prioritySelect(view).disabled).toBe(true);
+    expect(
+      view
+        .getByText("Catch-up priority", { exact: false })
+        .getAttribute("title"),
+    ).toBe("no levers here");
+  });
+
+  it("shows no status where the priority cannot be read", async () => {
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([processor()])}
+        levers={leversStub()}
+      />,
+    );
+    await loaded(view, "factory:drive:0");
+
+    expect(view.queryByTestId("catch-up-priority")).toBeNull();
+    expect(prioritySelect(view).disabled).toBe(true);
   });
 });

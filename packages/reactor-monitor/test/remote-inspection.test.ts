@@ -280,6 +280,22 @@ function fakeInspectionServer(options: FakeServerOptions = {}) {
     ReactorInspectionCatchUp: () => ({
       inspection: { catchUpStatus: { consumers: [], watermark: null } },
     }),
+    ReactorInspectionCatchUpPriority: () => ({
+      inspection: {
+        catchUpPriority: {
+          mode: "dynamic",
+          level: 6,
+          settings: { slots: 6, pageSize: 1000, pauseMs: 0, giveWay: "yield" },
+          reason: "idle 14 s",
+          sample: {
+            requests: 0,
+            p95LatencyMs: 0,
+            eventLoopDelayMs: 12.5,
+            idleForMs: 14_200,
+          },
+        },
+      },
+    }),
     ReactorInspectionStorageHealth: () => ({
       inspection: {
         storageHealth: {
@@ -586,6 +602,21 @@ describe("RemoteInspectorClient reads", () => {
     await expect(client.getCatchUpStatus()).resolves.toEqual({
       consumers: [],
       watermark: null,
+    });
+  });
+
+  it("decodes the catch-up priority with its last load sample", async () => {
+    await expect(client.getCatchUpPriority()).resolves.toEqual({
+      mode: "dynamic",
+      level: 6,
+      settings: { slots: 6, pageSize: 1000, pauseMs: 0, giveWay: "yield" },
+      reason: "idle 14 s",
+      sample: {
+        requests: 0,
+        p95LatencyMs: 0,
+        eventLoopDelayMs: 12.5,
+        idleForMs: 14_200,
+      },
     });
   });
 
@@ -911,6 +942,26 @@ describe("provisioning a remote reactor", () => {
     expect(seen.at(-1)).toBe(
       "http://host.example/graphql/inspection-admin Bearer admin",
     );
+  });
+
+  it("sets the catch-up priority through inspection-admin", async () => {
+    const server = fakeInspectionServer({ levers: true });
+    const reactor = await provisionRemote(remoteDescriptor(server.fetchImpl));
+
+    await reactor.processorLevers!.setCatchUpPriority({
+      mode: "fixed",
+      level: 0,
+    });
+    expect(server.requests.at(-1)).toEqual({
+      operation: "ReactorInspectionSetCatchUpPriority",
+      variables: { mode: "fixed", level: 0 },
+    });
+
+    await reactor.processorLevers!.setCatchUpPriority({ mode: "dynamic" });
+    expect(server.requests.at(-1)).toEqual({
+      operation: "ReactorInspectionSetCatchUpPriority",
+      variables: { mode: "dynamic", level: null },
+    });
   });
 
   it("picks the levers up on a re-check once the host serves them", async () => {

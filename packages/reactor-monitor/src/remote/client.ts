@@ -1,5 +1,7 @@
 import type {
+  CatchUpPriorityState,
   CatchUpStatus,
+  WireCatchUpPriority,
   InspectorAttachmentInfo,
   InspectorDocumentModelInfo,
   InspectorDriveInfo,
@@ -64,6 +66,29 @@ function toInfo(wire: WireReactorInfo): MonitorReactorInfo {
     access: wire.access
       ? { admin: wire.access.admin, sql: wire.access.sql }
       : null,
+  };
+}
+
+function toCatchUpPriority(wire: WireCatchUpPriority): CatchUpPriorityState {
+  return {
+    mode: wire.mode === "fixed" ? "fixed" : "dynamic",
+    level: wire.level,
+    settings: {
+      slots: wire.settings.slots,
+      pageSize: wire.settings.pageSize,
+      pauseMs: wire.settings.pauseMs,
+      giveWay: wire.settings
+        .giveWay as CatchUpPriorityState["settings"]["giveWay"],
+    },
+    reason: wire.reason,
+    sample: wire.sample
+      ? {
+          requests: wire.sample.requests,
+          p95LatencyMs: wire.sample.p95LatencyMs,
+          eventLoopDelayMs: wire.sample.eventLoopDelayMs,
+          idleForMs: wire.sample.idleForMs,
+        }
+      : undefined,
   };
 }
 
@@ -320,6 +345,13 @@ export class RemoteInspectorClient
       inspection: { catchUpStatus: CatchUpStatus };
     }>("catchUpStatus");
     return data.inspection.catchUpStatus;
+  }
+
+  async getCatchUpPriority(): Promise<CatchUpPriorityState> {
+    const data = await this.query<{
+      inspection: { catchUpPriority: WireCatchUpPriority };
+    }>("catchUpPriority");
+    return toCatchUpPriority(data.inspection.catchUpPriority);
   }
 
   async getStorageHealth(): Promise<InspectorStorageHealth> {

@@ -8,6 +8,8 @@
  */
 import {
   computeProgress,
+  type CatchUpPrioritySetting,
+  type CatchUpPriorityState,
   type CatchUpStatus,
   type FactoryProgress,
   type InspectorProcessorInfo,
@@ -29,6 +31,7 @@ import {
 import {
   ADMIN_ALLOWED,
   AdminGateNote,
+  NO_PROCESSOR_LEVERS_REASON,
   type AdminGate,
 } from "../components/AdminGate.js";
 import {
@@ -93,6 +96,35 @@ function factoryDetailOf(factory: FactoryProgress): string {
     return `errored at ${percentOf(factory.fraction)}%, ${count}`;
   }
   return `${percentOf(factory.fraction)}%, ${count}`;
+}
+
+const PRIORITY_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: "dynamic", label: "Dynamic" },
+  { value: "0", label: "0 (requests only)" },
+  { value: "1", label: "1" },
+  { value: "2", label: "2" },
+  { value: "3", label: "3" },
+  { value: "4", label: "4" },
+  { value: "5", label: "5" },
+  { value: "6", label: "6" },
+  { value: "7", label: "7 (catch-up only)" },
+];
+
+function priorityValueOf(state: CatchUpPriorityState | undefined): string {
+  if (!state || state.mode === "dynamic") return "dynamic";
+  return String(state.level);
+}
+
+function prioritySettingOf(value: string): CatchUpPrioritySetting {
+  return value === "dynamic"
+    ? { mode: "dynamic" }
+    : { mode: "fixed", level: Number(value) };
+}
+
+/** `Priority 6 · dynamic · idle 14 s`, or `Priority 3 · fixed`. */
+export function priorityStatusOf(state: CatchUpPriorityState): string {
+  const head = `Priority ${state.level} · ${state.mode}`;
+  return state.mode === "dynamic" ? `${head} · ${state.reason}` : head;
 }
 
 function plural(count: number, one: string, many: string): string {
@@ -252,6 +284,9 @@ export function ProcessorsTab({
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [rerunOpen, setRerunOpen] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
+  const [priority, setPriority] = useState<CatchUpPriorityState | undefined>();
+  const [settingPriority, setSettingPriority] = useState(false);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -267,6 +302,11 @@ export function ProcessorsTab({
       setCatchUp(withHead(await inspector.getCatchUpStatus()));
     } catch {
       setCatchUp(undefined);
+    }
+    try {
+      setPriority(await inspector.getCatchUpPriority());
+    } catch {
+      setPriority(undefined);
     }
   }, [inspector]);
 
@@ -352,7 +392,29 @@ export function ProcessorsTab({
     [levers, load],
   );
 
+  const handlePriority = useCallback(
+    async (value: string) => {
+      if (!levers) {
+        return;
+      }
+      setSettingPriority(true);
+      try {
+        await levers.setCatchUpPriority(prioritySettingOf(value));
+        setPriorityError(null);
+      } catch (e) {
+        setPriorityError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setSettingPriority(false);
+      }
+      await load();
+    },
+    [levers, load],
+  );
+
   const leversOpen = admin.enabled && !!levers;
+  const priorityClosedReason = leversOpen
+    ? undefined
+    : admin.reason || NO_PROCESSOR_LEVERS_REASON;
   const activeCount = processors.filter((p) => p.status === "active").length;
   const erroredCount = processors.filter((p) => p.status === "errored").length;
   const allIds = processors.map((p) => p.processorId);
@@ -479,6 +541,21 @@ export function ProcessorsTab({
       <div className="rm-tab-header">
         <h2>Processors</h2>
         <div className="rm-actions">
+          <label className="rm-priority-control" title={priorityClosedReason}>
+            Catch-up priority
+            <select
+              aria-label="Catch-up priority"
+              disabled={!leversOpen || !priority || settingPriority}
+              onChange={(event) => void handlePriority(event.target.value)}
+              value={priorityValueOf(priority)}
+            >
+              {PRIORITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             className="rm-btn"
             disabled={loading}
@@ -511,6 +588,17 @@ export function ProcessorsTab({
           onRerun={handleRerun}
           processors={chosen}
         />
+      ) : null}
+
+      {priority ? (
+        <p className="rm-priority-status" data-testid="catch-up-priority">
+          {priorityStatusOf(priority)}
+        </p>
+      ) : null}
+      {priorityError ? (
+        <p className="rm-error" role="alert">
+          Setting the catch-up priority failed: {priorityError}
+        </p>
       ) : null}
 
       <div className="rm-stat-bar">

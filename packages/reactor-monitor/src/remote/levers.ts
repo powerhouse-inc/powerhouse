@@ -1,3 +1,4 @@
+import type { CatchUpPrioritySetting } from "@powerhousedao/reactor";
 import type { ProcessorRerunOptions } from "@powerhousedao/shared/processors";
 import type { ProcessorLevers } from "../types.js";
 import {
@@ -23,6 +24,12 @@ export const INSPECTION_ADMIN_OPERATIONS = {
       clear: $clear
       fromOrdinal: $fromOrdinal
     )
+  }`,
+  setCatchUpPriority: `mutation ReactorInspectionSetCatchUpPriority(
+    $mode: String!
+    $level: Int
+  ) {
+    inspectionSetCatchUpPriority(mode: $mode, level: $level)
   }`,
 } as const;
 
@@ -71,6 +78,16 @@ export class RemoteProcessorLevers implements ProcessorLevers {
       "rerunProcessor",
       INSPECTION_ADMIN_OPERATIONS.rerunProcessor,
       { processorId, clear: options.clear, fromOrdinal: options.fromOrdinal },
+    );
+  }
+
+  async setCatchUpPriority(setting: CatchUpPrioritySetting): Promise<void> {
+    await this.transport.request(
+      "setCatchUpPriority",
+      INSPECTION_ADMIN_OPERATIONS.setCatchUpPriority,
+      setting.mode === "fixed"
+        ? { mode: "fixed", level: setting.level }
+        : { mode: "dynamic", level: null },
     );
   }
 }
