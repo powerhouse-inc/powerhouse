@@ -1,5 +1,4 @@
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HostPlugin, ResolvedPlugin } from "@powerhousedao/host-core";
@@ -10,17 +9,6 @@ import {
   createSwitchboardPluginHost,
 } from "../src/plugin-host.mjs";
 import { startSwitchboard, type StartServerOptions } from "../src/server.mjs";
-
-// `port: 0` would bind a random port the switchboard does not report back, so
-// the test picks a free one and pins it.
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  if (!address || typeof address === "string") throw new Error("no port");
-  return address.port;
-}
 
 function stubLogger(): ILogger {
   const logger = {
@@ -66,8 +54,7 @@ async function withPluginHostSwitchboard(
     switchboard = await startSwitchboard({
       workflows: { enabled: false },
       dbPath: join(tempRoot, "read-model"),
-      port: await freePort(),
-      strictPort: true,
+      port: 0,
       disableLocalPackages: true,
       identity: { keypairPath: join(tempRoot, "identity.json") },
       drive: {

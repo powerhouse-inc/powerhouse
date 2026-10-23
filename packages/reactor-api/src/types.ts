@@ -51,6 +51,8 @@ export type ReadinessGate = {
 
 export type API = {
   httpAdapter: IHttpAdapter;
+  /** The port the HTTP server bound; the ephemeral one when 0 was requested. */
+  port: number;
   /** Hands each package a namespaced slice of the HTTP surface. */
   httpRoutes: HttpRouteService;
   graphqlManager: GraphQLManager;

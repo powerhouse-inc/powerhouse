@@ -81,6 +81,7 @@ import {
   RelationalWebhookStore,
   WEBHOOK_SEGMENT,
   WebhookService,
+  type PublicOrigin,
 } from "./http/index.js";
 import {
   decodeExplorerUrlState,
@@ -624,12 +625,25 @@ async function startServer(
   return { httpServer, wsServer };
 }
 
+/** The requested port until the server listens, the bound one after. */
+type ListenPort = { current: number };
+
+function boundPortOf(httpServer: http.Server): number {
+  const address = httpServer.address();
+  if (address === null || typeof address === "string") {
+    throw new Error(
+      `The HTTP server is not bound to a TCP port: ${String(address)}`,
+    );
+  }
+  return address.port;
+}
+
 /**
  * Private helper function that sets up common infrastructure before API initialization.
  * This includes auth configuration, database setup, and package manager initialization.
  */
 async function _setupCommonInfrastructure(options: Options): Promise<{
-  port: number;
+  listenPort: ListenPort;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
@@ -1005,7 +1019,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Webhook tokens live in the reactor's own database rather than per host, so
   // a URL a provider has registered keeps working across a restart and any
   // replica can serve it.
-  const publicUrl = resolvePublicOrigin(port);
+  const listenPort: ListenPort = { current: port };
+  const publicUrl = resolvePublicOrigin(listenPort);
   const webhooks = new WebhookService({
     store: new RelationalWebhookStore(relationalDb),
     basePath: config.basePath,
@@ -1031,7 +1046,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   return {
-    port,
+    listenPort,
     httpAdapter,
     httpRoutes,
     authFetchMiddleware,
@@ -1063,7 +1078,7 @@ async function _setupAPI(
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
   authEnabled: boolean,
   authService: AuthService | undefined,
-  port: number,
+  listenPort: ListenPort,
   packages: PackageManager,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
@@ -1175,10 +1190,12 @@ async function _setupAPI(
   // Start the server
   const { httpServer, wsServer } = await startServer(
     httpAdapter,
-    port,
+    listenPort.current,
     options.https,
     logger,
   );
+  const boundPort = boundPortOf(httpServer);
+  listenPort.current = boundPort;
 
   // Authorization service is always present; created here because the
   // parent-document resolver used for permission inheritance needs the
@@ -1260,7 +1277,7 @@ async function _setupAPI(
     authService,
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-    port,
+    port: boundPort,
     reactorDriveClient,
     syncServingGate,
     httpRoutes,
@@ -1292,7 +1309,7 @@ async function _setupAPI(
       },
       httpAdapter,
     );
-    logger.info(`MCP server available at http://localhost:${port}/mcp`);
+    logger.info(`MCP server available at http://localhost:${boundPort}/mcp`);
   }
 
   const dispose = buildApiDispose({
@@ -1306,6 +1323,7 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    port: boundPort,
     httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,
@@ -1456,7 +1474,7 @@ export async function initializeAndStartAPI(
   }
 > {
   const {
-    port,
+    listenPort,
     httpAdapter,
     httpRoutes,
     authFetchMiddleware,
@@ -1530,7 +1548,7 @@ export async function initializeAndStartAPI(
     requireAuthFetchMiddleware,
     authEnabled,
     authService,
-    port,
+    listenPort,
     packages,
     relationalDb,
     analyticsStore,
@@ -1585,12 +1603,13 @@ export async function initializeAndStartAPI(
  * dev` behind a tunnel and, at worst, obviously wrong rather than silently
  * unusable.
  */
-function resolvePublicOrigin(port: number): string {
+function resolvePublicOrigin(listenPort: ListenPort): PublicOrigin {
   const explicit = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
   if (explicit) return withScheme(explicit);
   const domain = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME;
   if (domain) return withScheme(domain);
-  return `http://localhost:${port}`;
+  // Read on use: the port is only known once the server listens.
+  return () => `http://localhost:${listenPort.current}`;
 }
 
 function withScheme(origin: string): string {
