@@ -800,9 +800,9 @@ export class ProcessorManager
       const missed =
         tracked.lastOrdinal < slot.reservedAt ||
         lowestRoutedOrdinal !== undefined;
-      if (tracked.status === "active" && missed) {
-        deliveries.push(queue.backfill());
-      }
+      // Not awaited: a replay paced by the catch-up priority, stopped at
+      // level 0, would hold up the commit and every processor's projection.
+      if (tracked.status === "active" && missed) void queue.backfill();
       const matching = creationItems?.filter((op) =>
         matchesFilter(op, tracked.record.filter),
       );

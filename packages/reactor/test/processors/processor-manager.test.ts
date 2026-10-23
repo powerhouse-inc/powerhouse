@@ -36,6 +36,7 @@ import type {
   ReadModelIndexedEvent,
 } from "../../src/events/types.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
+import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
 import { ProcessorManager } from "../../src/processors/processor-manager.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
@@ -293,6 +294,16 @@ function ordinalsOf(processor: {
   return processor.receivedOperations
     .map((op) => op.context.ordinal)
     .sort((a, b) => a - b);
+}
+
+// A new drive's backfill runs after its creating commit returns: waits for
+// the replay to end, then a turn more for anything queued behind it.
+async function caughtUp(
+  manager: ProcessorManager,
+  processorId: string,
+): Promise<void> {
+  await vi.waitFor(() => expect(manager.get(processorId)?.phase).toBe("live"));
+  await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 // What `reactor.create` plus a first edit commits: creation in scope
@@ -1982,6 +1993,7 @@ describe("ProcessorManager Standalone Tests", () => {
 
       await processorManager.indexOperations([ops[2]!]);
       await processorManager.indexOperations([ops[0]!, ops[1]!]);
+      await caughtUp(processorManager, `current-factory:${driveId}:0`);
 
       expect(ordinalsOf(processor)).toEqual([1, 2, 3]);
     });
@@ -2514,6 +2526,7 @@ describe("ProcessorManager Standalone Tests", () => {
       await creation;
       releaseChild.resolve();
       await child;
+      await caughtUp(pm, `f:${driveId}:0`);
 
       expect(ordinalsOf(processor)).toEqual([1, 2]);
     });
@@ -3043,6 +3056,58 @@ describe("ProcessorManager Standalone Tests", () => {
       ]);
 
       await vi.waitFor(() => expect(ordinalsOf(after)).toContain(2));
+    });
+
+    it("commits a new drive and keeps live operations flowing at level 0", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const manager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        new ConsistencyTracker(),
+        new ConsoleLogger(["test"]),
+        DEFAULT_DRIVE_CONTAINER_TYPES,
+        { catchUpPriority: priority },
+      );
+      await manager.init();
+      const processors = new Map<
+        string,
+        ReturnType<typeof createMockProcessor>
+      >();
+      await manager.registerFactory("f", (header) => {
+        const processor = createMockProcessor();
+        processors.set(header.id, processor);
+        return [{ processor, filter: { documentType: [DRIVE_DOCUMENT_TYPE] } }];
+      });
+
+      const first = generateId();
+      const second = generateId();
+      const ops = [
+        makeDriveCreateOp(first, 1),
+        makeOp(first, 2, { index: 0 }),
+        makeDriveCreateOp(second, 3),
+        makeOp(first, 4, { index: 1 }),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      await manager.indexOperations([ops[0]!]);
+      await manager.indexOperations([ops[1]!]);
+
+      // The second drive's processor has history to replay, stopped at level 0.
+      const committed = await Promise.race([
+        manager.indexOperations([ops[2]!]).then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(resolve, 2_000, false)),
+      ]);
+      expect(committed).toBe(true);
+      expect(manager.get(`f:${second}:0`)?.phase).toBe("catching-up");
+
+      await manager.indexOperations([ops[3]!]);
+      expect(ordinalsOf(processors.get(first)!)).toEqual([1, 2, 3, 4]);
+      expect(ordinalsOf(processors.get(second)!)).toEqual([]);
+
+      priority.set({ mode: "fixed", level: 4 });
+      await caughtUp(manager, `f:${second}:0`);
+      expect(ordinalsOf(processors.get(second)!)).toEqual([1, 2, 3, 4]);
+      await manager.shutdown();
     });
 
     it("replays from a processor cursor lowered externally", async () => {
