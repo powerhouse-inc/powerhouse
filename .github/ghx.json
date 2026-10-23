@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "components": {
+    "connect": {
+      "paths": ["apps/connect/**"]
+    },
+    "apps-reactor-monitor": {
+      "paths": ["apps/reactor-monitor/**"]
+    },
+    "packages-reactor-monitor": {
+      "paths": ["packages/reactor-monitor/**"]
+    },
+    "apps-switchboard": {
+      "paths": ["apps/switchboard/**"]
+    },
+    "test-switchboard": {
+      "paths": ["test/switchboard/**"]
+    },
+    "ph-cli": {
+      "paths": ["clis/ph-cli/**"]
+    },
+    "ph-cmd": {
+      "paths": ["clis/ph-cmd/**"]
+    },
+    "analytics-engine": {
+      "paths": ["packages/analytics-engine/**"]
+    },
+    "benchmarks": {
+      "paths": ["packages/analytics-engine/benchmarks/**"]
+    },
+    "browser": {
+      "paths": ["packages/analytics-engine/browser/**"]
+    },
+    "compat": {
+      "paths": ["packages/analytics-engine/compat/**"]
+    },
+    "core": {
+      "paths": ["packages/analytics-engine/core/**"]
+    },
+    "graphql": {
+      "paths": ["packages/analytics-engine/graphql/**"]
+    },
+    "knex": {
+      "paths": ["packages/analytics-engine/knex/**"]
+    },
+    "pg": {
+      "paths": ["packages/analytics-engine/pg/**"]
+    },
+    "builder-tools": {
+      "paths": ["packages/builder-tools/**"]
+    },
+    "clint": {
+      "paths": ["packages/clint/**"]
+    },
+    "packages-codegen": {
+      "paths": ["packages/codegen/**"]
+    },
+    "test-codegen": {
+      "paths": ["test/codegen/**"]
+    },
+    "common": {
+      "paths": ["packages/common/**"]
+    },
+    "config": {
+      "paths": ["packages/config/**"]
+    },
+    "connect-core": {
+      "paths": ["packages/connect-core/**"]
+    },
+    "design-system": {
+      "paths": ["packages/design-system/**"]
+    },
+    "desktop": {
+      "paths": ["packages/desktop/**"]
+    },
+    "document-model": {
+      "paths": ["packages/document-model/**"]
+    },
+    "host-core": {
+      "paths": ["packages/host-core/**"]
+    },
+    "opentelemetry-instrumentation-reactor": {
+      "paths": ["packages/opentelemetry-instrumentation-reactor/**"]
+    },
+    "pieces-framework": {
+      "paths": ["packages/pieces-framework/**"]
+    },
+    "powerhouse-vetra-packages": {
+      "paths": ["packages/powerhouse-vetra-packages/**"]
+    },
+    "reactor": {
+      "paths": ["packages/reactor/**"]
+    },
+    "reactor-api": {
+      "paths": ["packages/reactor-api/**"]
+    },
+    "reactor-attachments": {
+      "paths": ["packages/reactor-attachments/**"]
+    },
+    "reactor-browser": {
+      "paths": ["packages/reactor-browser/**"]
+    },
+    "reactor-drive": {
+      "paths": ["packages/reactor-drive/**"]
+    },
+    "reactor-group": {
+      "paths": ["packages/reactor-group/**"]
+    },
+    "reactor-hypercore": {
+      "paths": ["packages/reactor-hypercore/**"]
+    },
+    "reactor-mcp": {
+      "paths": ["packages/reactor-mcp/**"]
+    },
+    "reactor-privacy": {
+      "paths": ["packages/reactor-privacy/**"]
+    },
+    "reactor-router": {
+      "paths": ["packages/reactor-router/**"]
+    },
+    "reactor-workflow": {
+      "paths": ["packages/reactor-workflow/**"]
+    },
+    "host": {
+      "paths": ["packages/reactor/bench/host/**"]
+    },
+    "registry": {
+      "paths": ["packages/registry/**"]
+    },
+    "renown": {
+      "paths": ["packages/renown/**"]
+    },
+    "shared": {
+      "paths": ["packages/shared/**"]
+    },
+    "vetra": {
+      "paths": ["packages/vetra/**"]
+    },
+    "vetra-studio": {
+      "paths": ["packages/vetra-studio/**"]
+    },
+    "workflow": {
+      "paths": ["packages/workflow/**"]
+    },
+    "dark-mode": {
+      "paths": ["scripts/dark-mode/**"]
+    },
+    "profiling": {
+      "paths": ["scripts/profiling/**"]
+    },
+    "release": {
+      "paths": ["scripts/release/**"]
+    },
+    "e2e-utils": {
+      "paths": ["test/e2e-utils/**"]
+    },
+    "lb-loadtest": {
+      "paths": ["test/lb-loadtest/**"]
+    },
+    "package-e2e": {
+      "paths": ["test/package-e2e/**"]
+    },
+    "recipes-e2e": {
+      "paths": ["test/recipes-e2e/**"]
+    },
+    "registry-e2e": {
+      "paths": ["test/registry-e2e/**"]
+    },
+    "test-client": {
+      "paths": ["test/test-client/**"]
+    },
+    "test-connect": {
+      "paths": ["test/test-connect/**"]
+    },
+    "test-consumer-project": {
+      "paths": ["test/test-consumer-project/**"]
+    },
+    "test-fusion": {
+      "paths": ["test/test-fusion/**"]
+    },
+    "test-sync-queue": {
+      "paths": ["test/test-sync-queue/**"]
+    },
+    "versioned-documents": {
+      "paths": ["test/versioned-documents/**"]
+    },
+    "vetra-e2e": {
+      "paths": ["test/vetra-e2e/**"]
+    },
+    "workflow-piece-e2e": {
+      "paths": ["test/workflow-piece-e2e/**"]
+    },
+    "doc-harness": {
+      "paths": ["tools/doc-harness/**"]
+    }
+  },
+  "merge": {
+    "method": "merge"
+  },
+  "ci": {
+    "expected": [],
+    "keySteps": [],
+    "ignore": []
+  }
+}
