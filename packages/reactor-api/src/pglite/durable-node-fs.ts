@@ -24,6 +24,8 @@ export interface DurableNodeFsOptions {
   vacuumFullAboveBytes?: number;
   /** See `MaintenanceOptions.vacuumFullQuietMs`; default 60 s. */
   vacuumFullQuietMs?: number;
+  /** See `MaintenanceOptions.vacuumFullMaxDeferMs`; default 30 min. */
+  vacuumFullMaxDeferMs?: number;
   /** See `MaintenanceOptions.gate`. */
   maintenanceGate?: MaintenanceGate;
   /** Clock for the maintenance quiet window; tests pass their own. */
@@ -129,6 +131,7 @@ export function createDurableNodeFs(
     intervalMs: options.maintenanceIntervalMs,
     vacuumFullAboveBytes: options.vacuumFullAboveBytes,
     vacuumFullQuietMs: options.vacuumFullQuietMs,
+    vacuumFullMaxDeferMs: options.vacuumFullMaxDeferMs,
     gate: options.maintenanceGate,
     now: options.now,
     logger,

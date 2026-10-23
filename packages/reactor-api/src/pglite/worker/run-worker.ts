@@ -277,6 +277,7 @@ async function createPGlite(
           maintenanceIntervalMs: durable.maintenanceIntervalMs,
           vacuumFullAboveBytes: durable.vacuumFullAboveBytes,
           vacuumFullQuietMs: durable.vacuumFullQuietMs,
+          vacuumFullMaxDeferMs: durable.vacuumFullMaxDeferMs,
           maintenanceGate: hooks.maintenanceGate,
           logger: { warn: hooks.warn },
           onAbort: hooks.onAbort,

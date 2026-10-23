@@ -5,6 +5,8 @@ import path from "node:path";
 export const DEFAULT_MAINTENANCE_INTERVAL_MS = 5 * 60 * 1000;
 export const DEFAULT_VACUUM_FULL_ABOVE_BYTES = 256 * 1024 * 1024;
 export const DEFAULT_VACUUM_FULL_QUIET_MS = 60 * 1000;
+/** A VACUUM FULL waits for a quiet store at most this long from open. */
+export const DEFAULT_VACUUM_FULL_MAX_DEFER_MS = 30 * 60_000;
 const MAINTENANCE_RETRY_MS = 1000;
 
 export type MaintenanceOutcome =
@@ -35,6 +37,12 @@ export interface MaintenanceOptions {
    */
   vacuumFullQuietMs?: number;
   /**
+   * The longest a pending VACUUM FULL waits for that quiet window, counted
+   * from open; past it the next pass runs VACUUM FULL anyway. Default 30 min;
+   * 0 waits for the quiet window however long it takes.
+   */
+  vacuumFullMaxDeferMs?: number;
+  /**
    * Queues each pass with the store's other work, e.g. behind a worker's
    * pending requests, so a pass never starts ahead of a statement already
    * admitted. A pass still waiting here when the store closes is skipped.
@@ -49,6 +57,7 @@ export class PgliteMaintenance {
   private readonly intervalMs: number;
   private readonly vacuumFullAboveBytes: number;
   private readonly vacuumFullQuietMs: number;
+  private readonly vacuumFullMaxDeferMs: number;
   private readonly gate?: MaintenanceGate;
   private readonly logger?: MaintenanceLogger;
   private readonly now: () => number;
@@ -63,6 +72,7 @@ export class PgliteMaintenance {
   private active = false;
   private deferralLogged = false;
   private lastSyncAt = 0;
+  private openedAt = 0;
 
   constructor(options: MaintenanceOptions = {}) {
     this.intervalMs = Math.max(
@@ -76,6 +86,10 @@ export class PgliteMaintenance {
     this.vacuumFullQuietMs = Math.max(
       0,
       options.vacuumFullQuietMs ?? DEFAULT_VACUUM_FULL_QUIET_MS,
+    );
+    this.vacuumFullMaxDeferMs = Math.max(
+      0,
+      options.vacuumFullMaxDeferMs ?? DEFAULT_VACUUM_FULL_MAX_DEFER_MS,
     );
     this.gate = options.gate;
     this.logger = options.logger;
@@ -96,6 +110,7 @@ export class PgliteMaintenance {
     this.vacuumFullPending =
       this.vacuumFullAboveBytes > 0 && baseBytes > this.vacuumFullAboveBytes;
     this.lastSyncAt = this.now();
+    this.openedAt = this.lastSyncAt;
     this.schedule(this.intervalMs);
   }
 
@@ -130,13 +145,17 @@ export class PgliteMaintenance {
     if (this.closing || !pg?.ready) return "not-ready";
     // pg.close() does not take the query mutex; recheck before each statement.
     const isReady = (): boolean => pg.ready && !this.closing;
+    const now = this.now();
+    const overdue =
+      this.vacuumFullMaxDeferMs > 0 &&
+      now - this.openedAt >= this.vacuumFullMaxDeferMs;
     const full =
       this.vacuumFullPending &&
-      this.now() - this.lastSyncAt >= this.vacuumFullQuietMs;
+      (now - this.lastSyncAt >= this.vacuumFullQuietMs || overdue);
     if (this.vacuumFullPending && !full && !this.deferralLogged) {
       this.deferralLogged = true;
       this.logger?.warn(
-        `DurableNodeFs: ${this.label}/base exceeds ${this.vacuumFullAboveBytes} bytes; VACUUM FULL waits until the store has had no writes for ${this.vacuumFullQuietMs} ms`,
+        `DurableNodeFs: ${this.label}/base exceeds ${this.vacuumFullAboveBytes} bytes; VACUUM FULL waits until the store has had no writes for ${this.vacuumFullQuietMs} ms${this.vacuumFullMaxDeferMs > 0 ? `, or at most ${this.vacuumFullMaxDeferMs} ms from open` : ""}`,
       );
     }
     if (!full && this.syncsSinceMaintenance === 0) {

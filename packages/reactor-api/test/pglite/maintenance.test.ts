@@ -257,6 +257,40 @@ describe("durable NodeFS maintenance", () => {
     LONG,
   );
 
+  it(
+    "runs a deferred VACUUM FULL once it is overdue, even on a store that is never quiet",
+    async () => {
+      const seed = await start({ maintenanceIntervalMs: 0 });
+      await seed.pg.exec("CREATE TABLE t (v int)");
+      await seed.pg.close();
+
+      let now = 1_000_000;
+      const { pg, warn, maintain } = await start(
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: 1,
+          vacuumFullQuietMs: 60_000,
+          vacuumFullMaxDeferMs: 300_000,
+          now: () => now,
+        },
+        seed.dir,
+      );
+      for (let minute = 0; minute < 4; minute++) {
+        await pg.query("INSERT INTO t VALUES (1)");
+        now += 30_000;
+        await expect(maintain()).resolves.toBe("vacuum");
+        now += 30_000;
+      }
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("or at most 300000 ms from open"),
+      );
+      await pg.query("INSERT INTO t VALUES (2)");
+      now += 60_000;
+      await expect(maintain()).resolves.toBe("vacuum-full");
+    },
+    LONG,
+  );
+
   it("queues a pass at the gate and does not wait for it on stop", async () => {
     let open = (): void => undefined;
     const gateOpen = new Promise<void>((resolve) => {

@@ -31,6 +31,8 @@ export type PGliteWorkerDurableFsOptions = {
   vacuumFullAboveBytes?: number;
   /** Undefined keeps the DurableNodeFs default (60 s); 0 runs VACUUM FULL on the first pass. */
   vacuumFullQuietMs?: number;
+  /** Undefined keeps the DurableNodeFs default (30 min); 0 waits for the quiet window only. */
+  vacuumFullMaxDeferMs?: number;
 };
 
 /** What the worker opens. */
