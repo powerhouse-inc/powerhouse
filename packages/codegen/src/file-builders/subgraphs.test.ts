@@ -27,6 +27,7 @@ import {
   customSubgraphSchemaTemplate,
 } from "templates";
 import { afterEach, describe, expect, it } from "vitest";
+import { getSubgraphMetadata } from "../utils/get-subgraph-metadata.js";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { makeSubgraphsIndexFile } from "./subgraphs.js";
 
@@ -131,6 +132,42 @@ describe("makeSubgraphsIndexFile", () => {
       'export * as StatementsSubgraph from "./statements/index.js";',
     );
     expect(index.match(/LedgerSubgraph/g)).toHaveLength(1);
+  });
+
+  it("exports a subgraph whose BaseSubgraph import does not resolve", async () => {
+    const root = makeProject([]);
+    mkdirSync(join(root, "subgraphs", "statements"), { recursive: true });
+    writeFileSync(
+      join(root, "subgraphs", "statements", "index.ts"),
+      'import { BaseSubgraph } from "@powerhousedao/reactor-api";\nexport class StatementsSubgraph extends BaseSubgraph {}\n',
+    );
+    const project = buildTsMorphProject(root);
+
+    await makeSubgraphsIndexFile({
+      project,
+      subgraphsDir: join(root, "subgraphs"),
+    });
+    await project.save();
+
+    const index = readFileSync(join(root, "subgraphs", "index.ts"), "utf-8");
+    expect(index).toContain(
+      'export * as StatementsSubgraph from "./statements/index.js";',
+    );
+  });
+});
+
+describe("getSubgraphMetadata", () => {
+  it("reads the name of a subgraph whose BaseSubgraph import does not resolve", () => {
+    const root = makeProject([]);
+    mkdirSync(join(root, "subgraphs", "statements"), { recursive: true });
+    writeFileSync(
+      join(root, "subgraphs", "statements", "index.ts"),
+      'import { BaseSubgraph } from "@powerhousedao/reactor-api";\nexport class StatementsSubgraph extends BaseSubgraph {\n  name = "statements";\n}\n',
+    );
+
+    expect(
+      getSubgraphMetadata(buildTsMorphProject(root), "statements"),
+    ).toEqual({ subgraphName: "statements" });
   });
 });
 

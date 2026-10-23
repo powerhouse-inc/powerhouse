@@ -1,6 +1,6 @@
 import { join } from "path";
 import { find, pipe } from "remeda";
-import { SyntaxKind, type Project } from "ts-morph";
+import { type ClassDeclaration, SyntaxKind, type Project } from "ts-morph";
 import { getOrCreateDirectory } from "utils";
 
 /** Names of the `subgraphs/` directories, on disk or in the project, that hold an `index.ts` */
@@ -18,6 +18,16 @@ export function getSubgraphDirNames(project: Project) {
     .sort();
 }
 
+/** Whether `classDeclaration` is a subgraph class. */
+export function extendsBaseSubgraph(classDeclaration: ClassDeclaration) {
+  // `extends` text needs no resolution; the base class needs reactor-api.
+  return (
+    (classDeclaration.getExtends()?.getText().includes("BaseSubgraph") ||
+      classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph")) ??
+    false
+  );
+}
+
 export function getSubgraphMetadata(project: Project, dirName: string) {
   const { directory: subgraphDir } = getOrCreateDirectory(
     project,
@@ -27,16 +37,7 @@ export function getSubgraphMetadata(project: Project, dirName: string) {
 
   return pipe(
     subgraphDir.getSourceFile("index.ts")?.getClasses() ?? [],
-    find(
-      (classDeclaration) =>
-        // `extends` text needs no resolution; the base class needs reactor-api.
-        (classDeclaration.getExtends()?.getText().includes("BaseSubgraph") ||
-          classDeclaration
-            .getBaseClass()
-            ?.getText()
-            .includes("BaseSubgraph")) ??
-        false,
-    ),
+    find(extendsBaseSubgraph),
     (classDeclaration) =>
       classDeclaration
         ?.getInstanceProperty("name")

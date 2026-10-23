@@ -581,7 +581,20 @@ throw new MissingIdError("message");
 3. The error message is stored in \`operation.error\` as a string
 4. **The state is NOT mutated** - it remains unchanged from before the operation
 
-This holds for the document \`reducer\` returns in tests. In Connect, an editor's \`document.operations\` is not loaded, so don't look for rejected operations there. Read them with \`useDocumentOperations(document.header.id, "global")\` from \`@powerhousedao/reactor-browser\` (pages arrive oldest first; call \`fetchNextPage\` while \`hasNextPage\`), or open the document's revision history in Connect, which shows each operation's errors.
+This holds for the document \`reducer\` returns in tests. In Connect, an editor's \`document.operations\` holds an empty array per scope, whatever the history, so don't look for rejected operations there. To tell the user an action was rejected, pass \`dispatch\` an \`onErrors\` callback. It gets an \`OperationRejectedError\` (from \`@powerhousedao/reactor-browser\`) for each action the document rejected: \`message\` is the reducer's error message, \`actionType\` the operation, and \`kind\` is \`"reducer-error"\`, or \`"denied"\` for a write the document's policy refused. Clear the message before dispatching, since \`onSuccess\` also runs when an action was rejected:
+
+~~~tsx
+const [error, setError] = useState<string>();
+
+const handleRename = (title: string) => {
+  setError(undefined);
+  dispatch(actions.setTitle({ title }), (errors) =>
+    setError(errors[0]?.message),
+  );
+};
+~~~
+
+Show the error next to the input that caused it. To list past operations and their errors, read them with \`useDocumentOperations(document.header.id, "global")\` (pages arrive oldest first; call \`fetchNextPage\` while \`hasNextPage\`), or open the document's revision history in Connect.
 
 ##### Accessing the Correct Operation Index
 

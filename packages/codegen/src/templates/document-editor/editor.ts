@@ -14,14 +14,19 @@ import type {
   ${v.documentModelDocumentTypeName},
 } from "${v.documentModelImportPath}";
 import { actions } from "${v.documentModelImportPath}";
+import { useState } from "react";
 
 export default function Editor({
   document,
   dispatch,
 }: EditorProps<${v.documentModelDocumentTypeName}, ${v.actionTypeName}>) {
+  // The reducer's message for the last action the document rejected
+  const [error, setError] = useState<string>();
+
   const handleSetName = (name: string) => {
+    setError(undefined);
     // 'actions' contains all available actions for this document type
-    dispatch(actions.setName(name));
+    dispatch(actions.setName(name), (errors) => setError(errors[0]?.message));
   };
 
   return (
@@ -48,6 +53,11 @@ export default function Editor({
             className="font-semibold"
           />
         </label>
+        {error && (
+          <p role="alert" className="text-red-700">
+            {error}
+          </p>
+        )}
         <hr />
 
         {/* Document header info */}
@@ -85,7 +95,7 @@ export default function Editor({
           </label>
         </div>
 
-        {/* Document state */}
+        {/* Document state. For its history use useDocumentOperations(document.header.id, "global"), not document.operations */}
         <div className="mt-6">
           <h3 className="text-base">Document State</h3>
           <DocumentStateViewer state={document.state} />

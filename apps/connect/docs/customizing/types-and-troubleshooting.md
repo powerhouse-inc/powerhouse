@@ -26,7 +26,7 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 | A package's `dist/style.css` is hundreds of KB, or a host's `@theme` values revert to the defaults once the package loads | The package was built before packages left Connect's CSS out: its stylesheet is a full Tailwind build, whose tokens outrank the host's. Rebuild it with `ph build` and publish it; see [A package's styles](./styles-and-branding.md#a-packages-styles). |
 | A package's token or rule works in its own Connect but not in another | It is in `hosts/connect/style.css`, which `ph build` leaves out. Move what the package's editors and routes need to `style.css`. |
 | A host's token override doesn't reach a package's classes | The page emits only the tokens its own classes use. Override it in `@theme static` in the host's stylesheet; see [Styles](./styles-and-branding.md#styles). |
-| Installing a package re-themes Connect | The package's `style.css` sets Connect's tokens or global rules, which ship in its stylesheet. Move them to its `hosts/connect/style.css`; `ph migrate` warns about them. |
+| Installing a package re-themes Connect | The package's `style.css` sets Connect's tokens or global rules, which ship in its stylesheet. Move them to its `hosts/connect/style.css`; `ph migrate` moves Connect's token overrides, or warns about what it can't move. |
 | `ph build` fails: `./theme.css` is not exported from `@powerhousedao/connect` | The project's `@powerhousedao/connect` is older than `ph-cli`. Update it to the same version. |
 | You want to see the route tree, matches and loader state | Studio shows TanStack's router devtools when the page has `?devtools=1`, or after `localStorage.setItem("ph:router-devtools", "1")`. They are off by default and never in a build. |
 
@@ -37,7 +37,7 @@ The build generates `.ph/connect-routes.gen.ts`: the route tree of Connect's rou
 - `style.css` imports `@powerhousedao/connect/tailwind.css` instead of `@powerhousedao/design-system/theme.css` and `@powerhousedao/connect/style.css`. The project's own rules stay.
 - `tsconfig.json` includes `.ph/connect-routes.gen.ts`, the generated tree that types the project's routes.
 - `style.css` drops the `@import './node_modules/<package>/dist/style.css'` lines that `ph install --local` added. Connect loads a bundled package's stylesheet with its code.
-- `hosts/connect/style.css` holds this Connect's theme; `ph migrate` creates it and warns when `style.css` sets tokens or global rules, which now ship in the package's stylesheet. Move a Connect's theme there by hand.
+- `hosts/connect/style.css` holds this Connect's theme; `ph migrate` creates it. A project that themed Connect in `style.css` (`--primary` on `:root` and `.dark`, say) re-themes every Connect that installs its package until the overrides move. `ph migrate` moves Connect's token overrides there when the host's file is new or empty, and otherwise warns with the rules and tokens to move by hand; see [Styles](./styles-and-branding.md#styles).
 - A Tailwind host that imported `@powerhousedao/connect-core/theme.css` for core's classes imports `@powerhousedao/connect-core/tailwind.css`. `theme.css` now holds only core's tokens. `@powerhousedao/connect/tailwind.css` does this already.
 
 A package rebuilt with `ph build` ships only its own classes and rules (see [A package's styles](./styles-and-branding.md#a-packages-styles)). Republish packages so the Connects that load them keep one Tailwind build per page.

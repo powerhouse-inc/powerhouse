@@ -340,7 +340,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.get("doc-1");
       expect(result).toBeDefined();
-      expect(result.operations).toEqual({});
+      expect(result.operations).toEqual({ document: [] });
 
       expect(mockDb.where).not.toHaveBeenCalledWith(
         "scope",

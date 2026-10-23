@@ -10,7 +10,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { lintSubgraphTypes } from "../codegen/subgraph-type-lint.js";
+import {
+  findSubgraphNameConflict,
+  lintSubgraphTypes,
+} from "../codegen/subgraph-type-lint.js";
 
 const temporary: string[] = [];
 
@@ -226,5 +229,42 @@ describe("lintSubgraphTypes", () => {
     });
 
     expect(await lintSubgraphTypes(root)).toEqual([]);
+  });
+});
+
+describe("findSubgraphNameConflict", () => {
+  it("refuses a new subgraph named like the package's model subgraph", async () => {
+    const root = makeProject({});
+
+    expect(await findSubgraphNameConflict(root, "SubgraphModule")).toBe(
+      'Subgraph name "subgraph-module" is taken by a document model subgraph, so the server would refuse this one. Choose another name, such as "subgraph-module-api".',
+    );
+  });
+
+  it("refuses a new subgraph named like a core subgraph", async () => {
+    const root = makeProject({});
+
+    expect(await findSubgraphNameConflict(root, "system")).toBe(
+      'Subgraph name "system" is taken by a core subgraph, so the server would refuse this one. Choose another name, such as "system-api".',
+    );
+  });
+
+  it("accepts a name of its own", async () => {
+    const root = makeProject({});
+
+    expect(
+      await findSubgraphNameConflict(root, "subgraph-module-api"),
+    ).toBeUndefined();
+  });
+
+  it("leaves an existing subgraph to the lint", async () => {
+    const root = makeProject({
+      "subgraph-module": template("SubgraphModule", "subgraphModule"),
+    });
+    writeFileSync(join(root, "subgraphs", "subgraph-module", "index.ts"), "");
+
+    expect(
+      await findSubgraphNameConflict(root, "subgraph-module"),
+    ).toBeUndefined();
   });
 });

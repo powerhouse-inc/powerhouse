@@ -1534,7 +1534,8 @@ export type EditorDispatch = (
   onErrorCallback?: ActionErrorCallback,
 ) => void;
 
-/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome. */
+/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome.
+ * In Connect, `onErrors` gets an `OperationRejectedError` per rejected action. */
 export type DocumentDispatch<TAction extends Action = Action> = (
   actionOrActions:
     | TAction

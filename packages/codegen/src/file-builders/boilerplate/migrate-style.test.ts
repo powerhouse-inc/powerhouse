@@ -1,13 +1,24 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { dirname, join } from "node:path";
+import postcss from "postcss";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEGACY_THEME_LINES } from "@powerhousedao/shared/clis/package-style";
-import { styleTemplate } from "templates";
+import { hostStyleTemplate, styleTemplate } from "templates";
+import { formatSafe } from "utils";
 
 const legacyThemeTemplate = `${LEGACY_THEME_LINES.join("\n")}\n`;
-import { writeGeneratedProjectRootFiles } from "./generated-project-files.js";
-import { migratedStyle, pageThemeWarning } from "./migrate-style.js";
+import {
+  writeAllGeneratedProjectFiles,
+  writeGeneratedProjectRootFiles,
+} from "./generated-project-files.js";
+import { CONNECT_THEME_TOKENS, migratedStyle } from "./migrate-style.js";
 
 const CUSTOM = `@theme {
   --color-brand: #f60;
@@ -101,22 +112,19 @@ describe("migratedStyle", () => {
   });
 });
 
-describe("pageThemeWarning", () => {
-  it("warns when style.css sets tokens or global rules", () => {
-    expect(pageThemeWarning(OLD_TEMPLATE)).toContain("hosts/connect/style.css");
-    expect(
-      pageThemeWarning(`${styleTemplate}\n:root.dark { color: red; }\n`),
-    ).toBeDefined();
-  });
-
-  it("stays quiet for the template and the package's own rules", () => {
-    expect(pageThemeWarning(styleTemplate)).toBeUndefined();
-    expect(
-      pageThemeWarning(`${styleTemplate}${legacyThemeTemplate}`),
-    ).toBeUndefined();
-    expect(
-      pageThemeWarning(`${styleTemplate}\n.brand { color: red; }\n`),
-    ).toBeUndefined();
+describe("CONNECT_THEME_TOKENS", () => {
+  it("lists the tokens the design system and core set on :root and .dark", () => {
+    const tokens = new Set<string>();
+    for (const file of [
+      "../../../../design-system/theme.css",
+      "../../../../connect-core/theme.css",
+    ]) {
+      const css = readFileSync(new URL(file, import.meta.url), "utf8");
+      postcss.parse(css).walkRules(/^(:root|\.dark|:root\.dark)$/, (rule) => {
+        rule.walkDecls((decl) => void tokens.add(decl.prop));
+      });
+    }
+    expect([...CONNECT_THEME_TOKENS].sort()).toEqual([...tokens].sort());
   });
 });
 
@@ -146,5 +154,177 @@ describe("a project's style.css on migrate", () => {
     writeFileSync(host, ":root { --x: 1; }\n");
     await writeGeneratedProjectRootFiles(dir);
     expect(readFileSync(host, "utf8")).toBe(":root { --x: 1; }\n");
+  });
+});
+
+// A project that themed Connect in its package's style.css, as UMH did.
+const THEMED = `@import "tailwindcss";
+@import "@powerhousedao/connect/style.css";
+
+@theme {
+  --color-umh: #0036ff;
+}
+
+/* UMH blue for primary buttons and focus rings. */
+:root {
+  --primary: var(--color-umh);
+  --ring: var(--color-umh);
+}
+
+:root.dark {
+  --primary: #7a93ff;
+  --umh-graphite: #e6e9ef;
+}
+
+:root {
+  --umh-andon-green: #1f9d55;
+}
+
+.umh-page {
+  color: var(--umh-graphite);
+}
+`;
+
+describe("Connect's theme in style.css on migrate", () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true });
+  });
+
+  async function migrateProject(files: Record<string, string>) {
+    const dir = mkdtempSync(join(tmpdir(), "ph-migrate-theme-"));
+    dirs.push(dir);
+    for (const [file, css] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, file)), { recursive: true });
+      writeFileSync(join(dir, file), css);
+    }
+    const log = vi.spyOn(console, "log");
+    const warn = vi.spyOn(console, "warn");
+    await writeAllGeneratedProjectFiles(dir);
+    const read = (file: string) => readFileSync(join(dir, file), "utf8");
+    const messages = (spy: typeof log) => {
+      const text = spy.mock.calls.map((args) => String(args[0])).join("\n");
+      spy.mockRestore();
+      return text;
+    };
+    return {
+      style: read("style.css"),
+      host: read("hosts/connect/style.css"),
+      info: messages(log),
+      warnings: messages(warn),
+    };
+  }
+
+  const declsOf = (css: string, selector: string) => {
+    const decls: string[] = [];
+    postcss.parse(css).walkRules(selector, (rule) => {
+      rule.walkDecls((decl) => void decls.push(`${decl.prop}: ${decl.value}`));
+    });
+    return decls;
+  };
+
+  it("moves the token overrides to a new host stylesheet", async () => {
+    const { style, host, info, warnings } = await migrateProject({
+      "style.css": THEMED,
+    });
+    expect(declsOf(host, ":root")).toEqual([
+      "--primary: var(--color-umh)",
+      "--ring: var(--color-umh)",
+    ]);
+    expect(declsOf(host, ":root.dark")).toEqual(["--primary: #7a93ff"]);
+    expect(host).toContain("UMH blue for primary buttons");
+    expect(host).toContain("@theme static");
+    // The package's own tokens and rules stay.
+    expect(style).not.toMatch(/--primary|--ring|UMH blue/);
+    expect(declsOf(style, ":root")).toEqual(["--umh-andon-green: #1f9d55"]);
+    expect(declsOf(style, ":root.dark")).toEqual(["--umh-graphite: #e6e9ef"]);
+    expect(style).toContain("--color-umh: #0036ff;");
+    expect(style).toContain(".umh-page");
+    expect(info).toContain(
+      "Moved Connect's theme from style.css to hosts/connect/style.css",
+    );
+    expect(info).toContain(":root (--primary, --ring)");
+    expect(warnings).not.toContain("theme tokens");
+
+    // A second run finds nothing to move and leaves the host's file alone.
+    const again = await migrateProject({
+      "style.css": style,
+      "hosts/connect/style.css": host,
+    });
+    expect(again.style).toBe(style);
+    expect(again.host).toBe(host);
+    expect(again.info).not.toContain("Moved Connect's theme");
+    expect(again.warnings).not.toContain("theme tokens");
+  });
+
+  it("fills the template's host stylesheet that migrate seeded earlier", async () => {
+    const seeded = await migrateProject({ "style.css": styleTemplate });
+    const { host } = await migrateProject({
+      "style.css": THEMED,
+      "hosts/connect/style.css": seeded.host,
+    });
+    expect(declsOf(host, ":root")).toHaveLength(2);
+    expect(host.match(/^:root \{/gm)).toHaveLength(1);
+  });
+
+  it("warns, naming the file, rules and tokens, when the host has rules of its own", async () => {
+    const own = `:root {\n  --background: #fff;\n}\n`;
+    const { style, host, warnings } = await migrateProject({
+      "style.css": THEMED,
+      "hosts/connect/style.css": own,
+    });
+    expect(host).toBe(own);
+    expect(declsOf(style, ":root")).toContain("--primary: var(--color-umh)");
+    expect(warnings).toContain("Move them to hosts/connect/style.css");
+    expect(warnings).toContain(
+      ":root (--primary, --ring): hosts/connect/style.css has rules of its own",
+    );
+    expect(warnings).toContain(":root.dark (--primary)");
+  });
+
+  it("warns about overrides it can't move on its own", async () => {
+    const { style, host, info, warnings } = await migrateProject({
+      "style.css": `${styleTemplate}
+@layer base {
+  :root {
+    --primary: #0a5bc4;
+  }
+}
+:root,
+.umh-page {
+  --ring: red;
+}
+body {
+  font-size: 14px;
+}
+`,
+    });
+    expect(style).toContain("--primary: #0a5bc4;");
+    expect(style).toContain("--ring: red;");
+    expect(declsOf(host, ":root")).toEqual([]);
+    expect(info).not.toContain("Moved Connect's theme");
+    expect(warnings).toContain(":root (--primary): inside @layer base");
+    expect(warnings).toContain(
+      ":root, .umh-page (--ring): its selector targets other elements too",
+    );
+    expect(warnings).toContain("style.css has global rules (body)");
+  });
+
+  it("warns and keeps style.css when it isn't valid CSS", async () => {
+    const css = `${styleTemplate}\n:root {\n  --primary: red;\n`;
+    const { style, warnings } = await migrateProject({ "style.css": css });
+    expect(style).toContain("--primary: red;");
+    expect(warnings).toContain("Couldn't check style.css for Connect's theme");
+  });
+
+  it("does nothing for a project without overrides", async () => {
+    const css = `${styleTemplate}\n:root {\n  --umh-andon-green: #1f9d55;\n}\n`;
+    const { style, host, info, warnings } = await migrateProject({
+      "style.css": css,
+    });
+    expect(style).toBe(await formatSafe(css, "css"));
+    expect(host).toBe(await formatSafe(hostStyleTemplate, "css"));
+    expect(info).not.toContain("Connect's theme");
+    expect(warnings).not.toContain("style.css");
   });
 });

@@ -154,6 +154,11 @@ export type PHDocument<TState extends PHBaseState = PHBaseState> = {
   /**
    * The operations history of the document.
    *
+   * Only documents built by reducers carry it. Documents read from a reactor,
+   * such as an editor's `document` in Connect, have an empty array per scope;
+   * read their history with `useDocumentOperations(document.header.id, scope)`
+   * and their operation count with `header.revision[scope]`.
+   *
    * This will be removed in a future release.
    */
   operations: DocumentOperations;
