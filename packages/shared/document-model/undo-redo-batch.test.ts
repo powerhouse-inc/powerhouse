@@ -29,6 +29,7 @@ const reducer: StateReducer<CountState> = (state, act) => {
   if (act.type === "INC") {
     state[act.scope as "global" | "local"].count += 1;
   }
+  return undefined;
 };
 
 function documentWith(...stored: Action[]): PHDocument<CountState> {
