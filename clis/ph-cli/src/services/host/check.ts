@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { checkHost, type HostIssue } from "@powerhousedao/host-core";
+import { CALLER_CWD_ENV } from "@powerhousedao/shared/clis/command-names";
 import { loadProjectEnv } from "@powerhousedao/shared/clis/project-env";
 import dotenv from "dotenv";
 
@@ -21,8 +22,9 @@ async function checkEnv(
     // A snapshot: a .env a runner's checkBoot loads later never reaches it.
     return { ...process.env };
   }
+  const from = process.env[CALLER_CWD_ENV] ?? process.cwd();
   try {
-    return dotenv.parse(await readFile(path.resolve(envFile), "utf8"));
+    return dotenv.parse(await readFile(path.resolve(from, envFile), "utf8"));
   } catch (error) {
     throw new Error(
       `Cannot read the env file ${envFile}: ${error instanceof Error ? error.message : String(error)}`,
