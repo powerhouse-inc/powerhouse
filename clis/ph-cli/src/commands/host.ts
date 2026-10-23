@@ -12,7 +12,8 @@ export const check = command({
     const { runHostCheck } = await import("../services/host/check.js");
     const { output, exitCode } = await runHostCheck(args);
     console.log(output);
-    process.exit(exitCode);
+    // Not process.exit: on macOS a piped stdout is async and would be cut.
+    process.exitCode = exitCode;
   },
 });
 
