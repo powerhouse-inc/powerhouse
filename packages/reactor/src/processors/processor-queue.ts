@@ -15,6 +15,7 @@ import {
   yieldToEventLoop,
   type IBackfillSlots,
 } from "./backfill-slots.js";
+import type { ReplayPage } from "./replay-state.js";
 import { matchesFilter } from "./utils.js";
 
 export type ProcessorCursorState = Pick<
@@ -56,6 +57,8 @@ export type ProcessorQueueOptions = {
   lookupRetries?: number;
   /** Shared across a manager's queues; defaults to no limit. */
   backfillSlots?: IBackfillSlots;
+  /** Starts one backfill scan's state filling; without it a replay delivers as read. */
+  replayState?: () => ReplayPage | undefined;
   /**
    * Runs between backfill pages; defaults to yielding to the event loop.
    * `closing` aborts once the queue closes, so a long wait can end early.
@@ -586,6 +589,7 @@ export class ProcessorQueue {
     const betweenPages = this.options.betweenPages ?? yieldToEventLoop;
     const pageSize =
       this.options.pageSize ?? (() => DEFAULT_BACKFILL_PAGE_SIZE);
+    const fill = this.options.replayState?.();
 
     let page: PagedResults<OperationWithContext>;
     try {
@@ -615,6 +619,14 @@ export class ProcessorQueue {
           return;
         }
         live = withoutPurged(matching, purged);
+      }
+      if (fill && live.length > 0) {
+        try {
+          live = await fill(live);
+        } catch (error) {
+          await this.fail(error, "reading replay state");
+          return;
+        }
       }
       if (live.length > 0) {
         if (!(await this.deliver(live))) {

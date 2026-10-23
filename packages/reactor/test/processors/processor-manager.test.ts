@@ -590,6 +590,65 @@ describe("ProcessorManager Integration Tests", () => {
       expect(processor.onDisconnect).toHaveBeenCalledTimes(1);
       expect(processor.receivedOperations).toEqual([]);
     });
+
+    describe("replay state", () => {
+      async function replayed(
+        replayState: "latest" | "collapse" | "exact" | "operations" | undefined,
+      ): Promise<{ names: unknown[]; states: (string | undefined)[] }> {
+        const driveId = await driveWithHistory(3);
+        const processor = createMockProcessor();
+        await reactorModule.processorManager.registerFactory(
+          `replay-${replayState ?? "default"}`,
+          () => [
+            {
+              processor,
+              filter: {
+                documentType: [DRIVE_DOCUMENT_TYPE],
+                scope: ["global"],
+              },
+              ...(replayState ? { replayState } : {}),
+            },
+          ],
+        );
+        await vi.waitFor(() =>
+          expect(trackedFor(processor)?.phase).toBe("live"),
+        );
+        const ops = processor.receivedOperations.filter(
+          (op) => op.context.documentId === driveId,
+        );
+        const states = ops.map((op) => op.context.resultingState);
+        const names = states.map((state) =>
+          state === undefined
+            ? undefined
+            : (JSON.parse(state) as { global: { name: unknown } }).global.name,
+        );
+        return { names, states };
+      }
+
+      it("gives every replayed operation the latest state by default", async () => {
+        const { names } = await replayed(undefined);
+
+        expect(names).toEqual(["name-2", "name-2", "name-2"]);
+      });
+
+      it("delivers only the latest state per stream in collapse mode", async () => {
+        const { names } = await replayed("collapse");
+
+        expect(names).toEqual(["name-2"]);
+      });
+
+      it("gives each replayed operation its own state in exact mode", async () => {
+        const { names } = await replayed("exact");
+
+        expect(names).toEqual(["name-0", "name-1", "name-2"]);
+      });
+
+      it("replays without state in operations mode", async () => {
+        const { states } = await replayed("operations");
+
+        expect(states).toEqual([undefined, undefined, undefined]);
+      });
+    });
   });
 
   describe("Operation Routing", () => {

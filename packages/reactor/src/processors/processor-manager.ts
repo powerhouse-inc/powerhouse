@@ -11,6 +11,7 @@ import type {
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import { CatchUpPriority } from "./catch-up-priority.js";
+import { startReplayState, type ReplaySnapshotRow } from "./replay-state.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -1094,6 +1095,11 @@ export class ProcessorManager
       backfillSlots: this.catchUpPriority.slots,
       pageSize: () => this.catchUpPriority.pageSize(),
       betweenPages: (closing) => this.catchUpPriority.betweenPages(closing),
+      replayState: () =>
+        startReplayState(record.replayState ?? "latest", {
+          snapshots: (ids, branches) => this.readSnapshots(ids, branches),
+          exact: (operations) => this.rebuildStateForOperations(operations),
+        }),
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
@@ -1155,6 +1161,25 @@ export class ProcessorManager
       op.operation.action.type === "CREATE_DOCUMENT" &&
       this.driveContainerTypes.has(op.context.documentType)
     );
+  }
+
+  private readSnapshots(
+    documentIds: string[],
+    branches: string[],
+  ): Promise<ReplaySnapshotRow[]> {
+    return this.db
+      .selectFrom("DocumentSnapshot")
+      .select([
+        "documentId",
+        "scope",
+        "branch",
+        "content",
+        "lastOperationIndex",
+        "isDeleted",
+      ])
+      .where("documentId", "in", documentIds)
+      .where("branch", "in", branches)
+      .execute();
   }
 
   private async discoverExistingDrives(): Promise<void> {

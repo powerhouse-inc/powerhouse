@@ -104,10 +104,28 @@ export interface IProcessor {
 /**
  * Relates a processor to its filter configuration.
  */
+/**
+ * What a replayed operation carries. A replay (first install, catch-up after a
+ * restart, rerun, retry) reads operations from the index, which keeps no
+ * `resultingState`; a live delivery always carries the executor's.
+ *
+ * - `latest` (the default): every operation, with the document's latest state.
+ *   It can be newer than the operation, never older than a state already
+ *   delivered for that stream.
+ * - `collapse`: per document stream, one delivery with the latest state; the
+ *   operations it includes are skipped. Only for processors whose output
+ *   depends on the latest state alone.
+ * - `exact`: every operation, with its state at its own revision. Slower.
+ * - `operations`: every operation, without state.
+ */
+export type ReplayStateMode = "latest" | "collapse" | "exact" | "operations";
+
 export type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
   startFrom?: "beginning" | "current";
+  /** What a replayed operation carries; `latest` when omitted. */
+  replayState?: ReplayStateMode;
   // Stable cursor key within its factory and drive. Derived from the
   // processor's namespace or class name when omitted.
   id?: string;
