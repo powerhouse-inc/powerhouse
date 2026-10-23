@@ -138,6 +138,27 @@ export default function Editor({
 - Components inside the editor call the generated `useSelected<Model>Document()`. It reads the document the editor was rendered with, from an `EditorDocumentProvider` the host renders around the editor; without one it reads the app's selection.
 - An editor that reads its document from props needs a Connect that passes them (see [Upgrading](./types-and-troubleshooting.md#upgrading)). Editors that only use the hooks work in every Connect.
 
+### Show that an action was rejected
+
+When a reducer throws one of the model's errors, the operation is stored with the error and the state stays unchanged. The write itself succeeds, so the editor hears about it only if it asks. Pass `dispatch` an `onErrors` callback:
+
+```tsx
+const [error, setError] = useState<string>();
+
+function rename(title: string) {
+  setError(undefined);
+  dispatch(actions.setTitle({ title }), (errors) =>
+    setError(errors[0]?.message),
+  );
+}
+```
+
+- Each rejected action arrives as an `OperationRejectedError` from `@powerhousedao/reactor-browser`. `message` is the reducer's error message. The error also has `actionId`, `actionType`, `scope`, the operation's `index`, and `kind`: `"reducer-error"`, or `"denied"` for a write the document's policy refused. `OperationRejectedError.isError(error)` tells it apart from a dispatch that failed outright, such as a missing document.
+- A batch reports only the actions that were rejected; the others still apply.
+- `onSuccess`, the third argument, runs once the write lands, also when an action in it was rejected. Clear the error before dispatching, not in `onSuccess`.
+- This works in every reactor mode: in-process, worker and remote.
+- Don't read `document.operations` for this: Connect does not load an editor's operations. The revision history lists every operation's errors.
+
 ### Render an editor or a drive app yourself
 
 A project route that renders an editor passes it `document` and `dispatch`, and wraps it in `EditorDocumentProvider` from `@powerhousedao/reactor-browser` with the same pair. `useEditorModuleFor(document)` picks the document's editor:
