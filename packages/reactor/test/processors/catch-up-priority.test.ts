@@ -57,7 +57,20 @@ describe("DynamicPriorityController", () => {
       level: 2,
       reason: "pressure: p95 412 ms",
     });
-    expect(ticks(controller, pressure, 2)).toEqual([1, 1]);
+    expect(ticks(controller, pressure, 4)).toEqual([2, 2, 2, 2]);
+    expect(ticks(controller, pressure, 6)).toEqual([1, 1, 1, 1, 1, 1]);
+  });
+
+  it("drops once per spike, holding while the window still holds it", () => {
+    const controller = new DynamicPriorityController(6);
+    const spike = { ...busy, p95LatencyMs: 900 };
+    expect(controller.tick(spike).level).toBe(4);
+    // The spike stays in the 5 s window for the next ticks.
+    const held = Array.from({ length: 4 }, () => controller.tick(spike));
+    expect(held.map((d) => d.level)).toEqual([4, 4, 4, 4]);
+    expect(held[0]!.reason).toBe("pressure: p95 900 ms, cooling down");
+    // Pressure still there a window later is a new spike.
+    expect(controller.tick(spike).level).toBe(2);
   });
 
   it("drops on event-loop delay pressure even without requests", () => {
@@ -111,9 +124,9 @@ describe("DynamicPriorityController", () => {
     expect(controller.tick(quiet).reason).toBe("holding");
   });
 
-  it("holds at 6 when requests return healthy", () => {
+  it("comes down to 5 when requests return healthy after idling to 6", () => {
     const controller = new DynamicPriorityController(6);
-    expect(ticks(controller, busy, 6)).toEqual(Array(6).fill(6));
+    expect(ticks(controller, busy, 6)).toEqual(Array(6).fill(5));
   });
 
   it("clamps its start to 1-6", () => {
@@ -185,6 +198,18 @@ describe("CatchUpPriority", () => {
     priority.set({ mode: "fixed", level: 0 });
     expect(priority.slots.size).toBe(0);
     expect(priority.pageSize()).toBe(100);
+  });
+
+  it("drops the last load sample when set", () => {
+    const priority = new CatchUpPriority(
+      { mode: "dynamic" },
+      { sample: () => busy },
+    );
+    priority.tick();
+    expect(priority.get().sample).toEqual(busy);
+
+    priority.set({ mode: "fixed", level: 3 });
+    expect(priority.get().sample).toBeUndefined();
   });
 
   it("restarts the controller at 4 when set back to dynamic", () => {

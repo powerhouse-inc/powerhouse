@@ -79,6 +79,13 @@ export const PRESSURE_LOOP_DELAY_MS = 100;
 export const HEALTHY_P95_MS = 125;
 export const HEALTHY_LOOP_DELAY_MS = 50;
 export const PRESSURE_DROP = 2;
+/**
+ * Ticks after a pressure drop in which pressure only holds: one spike stays in
+ * the window this long, so it drops the level once, not once per tick.
+ */
+export const PRESSURE_COOLDOWN_TICKS = Math.ceil(
+  CATCH_UP_LOAD_WINDOW_MS / CATCH_UP_TICK_MS,
+);
 export const CALM_TICKS_TO_RISE = 5;
 export const IDLE_AFTER_MS = 10_000;
 export const IDLE_TICKS_TO_RISE = 2;
@@ -134,13 +141,15 @@ export type DynamicPriorityDecision = {
  * Additive increase, multiplicative decrease against a latency target, with an
  * idle boost and hysteresis. Pure: each `tick` takes one load sample over the
  * window and returns the level and why. First matching rule wins: pressure
- * drops 2; busy and healthy rises 1 after 5 calm ticks, to at most 5; idle for
- * 10 s rises 1 every 2 ticks, to at most 6; otherwise it holds.
+ * drops 2, then holds for a window's worth of ticks; busy and healthy rises 1
+ * after 5 calm ticks, to at most 5; idle for 10 s rises 1 every 2 ticks, to at
+ * most 6; otherwise it holds.
  */
 export class DynamicPriorityController {
   private current: number;
   private calmTicks = 0;
   private idleTicks = 0;
+  private cooldownTicks = 0;
 
   constructor(start: number = DYNAMIC_START_LEVEL) {
     this.current = clampDynamic(start);
@@ -151,17 +160,21 @@ export class DynamicPriorityController {
   }
 
   tick(sample: CatchUpLoadSample): DynamicPriorityDecision {
+    if (this.cooldownTicks > 0) this.cooldownTicks--;
     if (
       sample.p95LatencyMs > PRESSURE_P95_MS ||
       sample.eventLoopDelayMs > PRESSURE_LOOP_DELAY_MS
     ) {
       this.calmTicks = 0;
       this.idleTicks = 0;
-      this.current = Math.max(MIN_DYNAMIC_LEVEL, this.current - PRESSURE_DROP);
       const reason =
         sample.p95LatencyMs > PRESSURE_P95_MS
           ? `pressure: p95 ${Math.round(sample.p95LatencyMs)} ms`
           : `pressure: loop delay ${Math.round(sample.eventLoopDelayMs)} ms`;
+      // The window still holds the spike that caused the last drop.
+      if (this.cooldownTicks > 0) return this.decide(`${reason}, cooling down`);
+      this.cooldownTicks = PRESSURE_COOLDOWN_TICKS;
+      this.current = Math.max(MIN_DYNAMIC_LEVEL, this.current - PRESSURE_DROP);
       return this.decide(reason);
     }
 
@@ -171,6 +184,8 @@ export class DynamicPriorityController {
       sample.eventLoopDelayMs < HEALTHY_LOOP_DELAY_MS
     ) {
       this.idleTicks = 0;
+      // An idle boost to 6 ends once requests are back.
+      if (this.current > MAX_BUSY_LEVEL) this.current = MAX_BUSY_LEVEL;
       this.calmTicks++;
       if (this.calmTicks >= CALM_TICKS_TO_RISE) {
         this.calmTicks = 0;
@@ -253,6 +268,8 @@ export class CatchUpPriority {
   set(setting: CatchUpPrioritySetting): void {
     assertCatchUpPrioritySetting(setting);
     this.mode = setting.mode;
+    // A sample from before the switch describes neither mode's level.
+    this.sample = undefined;
     if (setting.mode === "fixed") {
       this.apply(setting.level, FIXED_REASON);
       return;
