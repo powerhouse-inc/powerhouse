@@ -954,21 +954,9 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     for (const row of rows) {
       if (!row.readModelId.startsWith(prefix)) continue;
       const documentId = row.readModelId.slice(prefix.length);
+      let applied: boolean;
       try {
-        if (!(await this.applySkippedDocument(documentId, row.lastOrdinal))) {
-          this.skippedFrom.set(documentId, row.lastOrdinal);
-          continue;
-        }
-        await this.db
-          .deleteFrom("ViewState")
-          .where("readModelId", "=", row.readModelId)
-          .execute();
-        this.catchUpLogger.info(
-          "@consumer applied skipped document @documentId from ordinal @ordinal",
-          this.consumerId,
-          documentId,
-          row.lastOrdinal,
-        );
+        applied = await this.applySkippedDocument(documentId, row.lastOrdinal);
       } catch (error) {
         this.skippedFrom.set(documentId, row.lastOrdinal);
         this.catchUpLogger.error(
@@ -977,7 +965,32 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
           documentId,
           error,
         );
+        continue;
       }
+      if (!applied) {
+        this.skippedFrom.set(documentId, row.lastOrdinal);
+        continue;
+      }
+      try {
+        await this.db
+          .deleteFrom("ViewState")
+          .where("readModelId", "=", row.readModelId)
+          .execute();
+      } catch (error) {
+        this.catchUpLogger.error(
+          "@consumer applied skipped document @documentId but could not clear its record; the next boot applies it again: @error",
+          this.consumerId,
+          documentId,
+          error,
+        );
+        continue;
+      }
+      this.catchUpLogger.info(
+        "@consumer applied skipped document @documentId from ordinal @ordinal",
+        this.consumerId,
+        documentId,
+        row.lastOrdinal,
+      );
     }
   }
 
