@@ -10,6 +10,11 @@ import type {
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import type { PagedResults } from "../shared/types.js";
+import {
+  UNLIMITED_BACKFILL_SLOTS,
+  yieldToEventLoop,
+  type IBackfillSlots,
+} from "./backfill-slots.js";
 import { matchesFilter } from "./utils.js";
 
 export type ProcessorCursorState = Pick<
@@ -45,6 +50,10 @@ export type ProcessorQueueOptions = {
   lookupRetryMs?: number;
   /** Retries of a failed tombstone lookup before the processor parks. */
   lookupRetries?: number;
+  /** Shared across a manager's queues; defaults to no limit. */
+  backfillSlots?: IBackfillSlots;
+  /** Runs between backfill pages; defaults to yielding to the event loop. */
+  betweenPages?: () => Promise<void>;
   logger: ILogger;
 };
 
@@ -531,9 +540,22 @@ export class ProcessorQueue {
   }
 
   private async runBackfill(): Promise<void> {
+    const { cursor } = this.options;
+    if (cursor.status !== "active" || this.parked) return;
+    const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
+    const release = await slots.acquire();
+    try {
+      await this.scanBackfill();
+    } finally {
+      release();
+    }
+  }
+
+  private async scanBackfill(): Promise<void> {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     this.options.progress.runFrom = cursor.lastOrdinal;
+    const betweenPages = this.options.betweenPages ?? yieldToEventLoop;
 
     let page: PagedResults<OperationWithContext>;
     try {
@@ -575,6 +597,7 @@ export class ProcessorQueue {
       await this.raiseCursor(highestOf(page.results));
 
       if (!page.next) break;
+      await betweenPages();
       try {
         page = await page.next();
       } catch (error) {

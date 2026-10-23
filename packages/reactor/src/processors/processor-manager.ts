@@ -10,6 +10,11 @@ import type {
   ProcessorRerunOptions,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
+import {
+  BackfillSlots,
+  DEFAULT_MAX_CONCURRENT_BACKFILLS,
+  type IBackfillSlots,
+} from "./backfill-slots.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -78,6 +83,8 @@ export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
   // record id, namespace or class name, so reordering factories is safe.
   legacyProcessorIds?: boolean;
+  /** Backfills scanning at once across every processor; default 3. */
+  maxConcurrentBackfills?: number;
 };
 
 // Routing tables are only read or written synchronously; everything that
@@ -114,6 +121,7 @@ export class ProcessorManager
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
+  private backfillSlots: IBackfillSlots;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -134,6 +142,9 @@ export class ProcessorManager
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
+    this.backfillSlots = new BackfillSlots(
+      options.maxConcurrentBackfills ?? DEFAULT_MAX_CONCURRENT_BACKFILLS,
+    );
   }
 
   override async init(): Promise<void> {
@@ -1082,6 +1093,7 @@ export class ProcessorManager
       progress: tracked,
       floor,
       readSince: (ordinal) => this.operationIndex.getSinceOrdinal(ordinal),
+      backfillSlots: this.backfillSlots,
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),

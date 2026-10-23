@@ -14,6 +14,10 @@ import {
   type ProcessorCursorState,
   type ProcessorProgressState,
 } from "../../src/processors/processor-queue.js";
+import {
+  BackfillSlots,
+  type IBackfillSlots,
+} from "../../src/processors/backfill-slots.js";
 import type { PagedResults } from "../../src/shared/types.js";
 import { createMockLogger, deferred } from "../factories.js";
 
@@ -113,6 +117,8 @@ function harness(
     purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
     lookupRetryMs?: number;
     lookupRetries?: number;
+    backfillSlots?: IBackfillSlots;
+    betweenPages?: () => Promise<void>;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -152,6 +158,8 @@ function harness(
     purged: options.purged ?? (() => Promise.resolve(new Set())),
     lookupRetryMs: options.lookupRetryMs ?? 1,
     lookupRetries: options.lookupRetries,
+    backfillSlots: options.backfillSlots,
+    betweenPages: options.betweenPages,
     logger: createMockLogger(),
   });
   return { queue, cursor, progress, delivered, persisted, processor };
@@ -426,6 +434,64 @@ describe("ProcessorQueue", () => {
 
       expect(cursor.status).toBe("active");
       expect(delivered).toEqual([[1, 2]]);
+    });
+  });
+
+  describe("backfill pages", () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, i) => op(i + 1));
+
+    it("runs its between-pages step after every page but the last", async () => {
+      const betweenPages = vi.fn(() => Promise.resolve());
+      const { queue, delivered } = harness({
+        readSince: pagedIndex(many(250), 100),
+        betweenPages,
+      });
+
+      await queue.backfill();
+
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 100, 50]);
+      expect(betweenPages).toHaveBeenCalledTimes(2);
+    });
+
+    it("lets a timer run in the middle of a backfill by default", async () => {
+      const events: string[] = [];
+      const { queue } = harness({
+        readSince: pagedIndex(many(300), 100),
+        onOperations: (ops) => {
+          events.push(`page ${ops[0]!.context.ordinal}`);
+          // Armed once the backfill runs, so it can only fire if a page gives way.
+          if (events.length === 1) setTimeout(() => events.push("timer"), 0);
+          return Promise.resolve();
+        },
+      });
+
+      await queue.backfill();
+
+      expect(events).toContain("timer");
+      expect(events.at(-1)).not.toBe("timer");
+    });
+
+    it("waits for a free backfill slot shared with other queues", async () => {
+      const slots = new BackfillSlots(1);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const first = harness({
+        index: [op(1)],
+        backfillSlots: slots,
+        onOperations: () => held,
+      });
+      const second = harness({ index: [op(1)], backfillSlots: slots });
+
+      const firstDone = first.queue.backfill();
+      const secondDone = second.queue.backfill();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(second.processor.onOperations).not.toHaveBeenCalled();
+
+      release();
+      await firstDone;
+      await secondDone;
+      expect(second.delivered).toEqual([[1]]);
     });
   });
 
