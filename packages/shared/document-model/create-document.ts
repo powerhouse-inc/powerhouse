@@ -2,8 +2,10 @@ import { generateActionId } from "./action-id.js";
 import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import { createPresignedHeader } from "./header.js";
+import type { Operation } from "./operations.js";
 import type { ProtocolVersions } from "./signature-policy.js";
 import { defaultBaseState } from "./state.js";
+import type { PHBaseState } from "./state.js";
 import type {
   CreateDocumentAction,
   CreateDocumentActionInput,
@@ -70,6 +72,19 @@ export function creationActions(
       initialState: document.state,
     }),
   ];
+}
+
+/** The state `creationActions` recorded: the snapshot the document scope's first UPGRADE_DOCUMENT carries. */
+export function creationState(
+  documentScope: readonly Operation[],
+): PHBaseState | undefined {
+  const genesis = documentScope.find(
+    (operation) => operation.action.type === "UPGRADE_DOCUMENT",
+  );
+  const input = genesis?.action.input as
+    | { initialState?: PHBaseState; state?: PHBaseState }
+    | undefined;
+  return input?.initialState ?? input?.state;
 }
 
 /** The document a CREATE_DOCUMENT heads, before UPGRADE_DOCUMENT sets its state. */

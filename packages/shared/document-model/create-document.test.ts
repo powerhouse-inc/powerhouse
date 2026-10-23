@@ -1,6 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { documentFromCreation } from "./create-document.js";
+import {
+  creationActions,
+  creationState,
+  documentFromCreation,
+} from "./create-document.js";
+import type { PHDocument } from "./documents.js";
+import { createPresignedHeader } from "./header.js";
+import type { Operation } from "./operations.js";
+import { defaultBaseState } from "./state.js";
 import type { CreateDocumentAction } from "./types.js";
+
+describe("creationState", () => {
+  const rows = (document: PHDocument): Operation[] =>
+    creationActions(document, { "base-reducer": 3 }).map((action, index) => ({
+      id: `op-${index}`,
+      index,
+      skip: 0,
+      hash: "",
+      timestampUtcMs: action.timestampUtcMs,
+      action,
+    }));
+
+  it("reads back the state creationActions recorded", () => {
+    const state = { ...defaultBaseState(), global: { name: "Team" } };
+    const document = {
+      header: createPresignedHeader(),
+      state,
+      initialState: state,
+      operations: {},
+      clipboard: [],
+    } as PHDocument;
+
+    expect(creationState(rows(document))).toEqual(state);
+  });
+
+  it("is undefined without an UPGRADE_DOCUMENT", () => {
+    const document = {
+      header: createPresignedHeader(),
+      state: defaultBaseState(),
+      initialState: defaultBaseState(),
+      operations: {},
+      clipboard: [],
+    } as PHDocument;
+
+    expect(creationState(rows(document).slice(0, 1))).toBeUndefined();
+  });
+});
 
 describe("documentFromCreation", () => {
   it("should create a document with minimal input", () => {
