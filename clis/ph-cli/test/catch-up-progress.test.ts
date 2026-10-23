@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  progressRows,
   renderBars,
   renderLine,
   startProgressDisplay,
@@ -53,6 +54,72 @@ describe("renderBars", () => {
 
     expect(line).toMatch(/^….*workspace\\sektar /);
     expect(line).toMatch(/errored$/);
+  });
+});
+
+describe("progressRows", () => {
+  it("names a project factory by its folder, with its drives, and maps phases", () => {
+    const rows = progressRows({
+      head: 100,
+      headKnown: true,
+      factories: [
+        {
+          factoryId: "D:\\projects\\ph-win\\workspace\\sektar",
+          driveCount: 8,
+          phase: "catching-up",
+          done: 31,
+          total: 50,
+          fraction: 0.62,
+          processors: [],
+        },
+        {
+          factoryId: "@powerhousedao/vetra",
+          driveCount: 1,
+          phase: "live",
+          done: 0,
+          total: 0,
+          fraction: 1,
+          processors: [],
+        },
+        {
+          factoryId: "broken",
+          driveCount: 2,
+          phase: "errored",
+          done: 0,
+          total: 10,
+          fraction: 0,
+          processors: [],
+        },
+      ],
+      readModels: [
+        {
+          consumerId: "document-view",
+          thread: "host",
+          appliedThrough: 100,
+          head: 100,
+          fraction: 1,
+          complete: true,
+          blocked: false,
+        },
+        {
+          consumerId: "document-indexer",
+          thread: "host",
+          appliedThrough: 40,
+          head: 100,
+          fraction: 0.4,
+          complete: false,
+          blocked: true,
+        },
+      ],
+    });
+
+    expect(rows).toEqual([
+      { label: "sektar (8 drives)", fraction: 0.62, state: "catching-up" },
+      { label: "vetra (1 drive)", fraction: 1, state: "done" },
+      { label: "broken (2 drives)", fraction: 0, state: "errored" },
+      { label: "document-view", fraction: 1, state: "done" },
+      { label: "document-indexer", fraction: 0.4, state: "errored" },
+    ]);
   });
 });
 

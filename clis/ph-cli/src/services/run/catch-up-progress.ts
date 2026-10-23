@@ -1,3 +1,9 @@
+import {
+  computeProgress,
+  type IInspector,
+  type ReactorProgress,
+} from "@powerhousedao/reactor";
+
 /** One bar: a processor factory or a read model, and how far its catch-up has got. */
 export type ProgressRow = {
   readonly label: string;
@@ -8,6 +14,48 @@ export type ProgressRow = {
 
 /** Reads the current rows; rejects while the reactor cannot answer. */
 export type ProgressSource = () => Promise<readonly ProgressRow[]>;
+
+/** A factory id that is a project path names the project by its folder. */
+function factoryLabel(factoryId: string, driveCount: number): string {
+  const name = factoryId.split(/[\\/]/).filter(Boolean).at(-1) ?? factoryId;
+  return `${name} (${driveCount} ${driveCount === 1 ? "drive" : "drives"})`;
+}
+
+/** One row per processor factory, then one per reactor read model. */
+export function progressRows(progress: ReactorProgress): ProgressRow[] {
+  const factories = progress.factories.map((factory): ProgressRow => ({
+    label: factoryLabel(factory.factoryId, factory.driveCount),
+    fraction: factory.fraction,
+    state:
+      factory.phase === "errored"
+        ? "errored"
+        : factory.phase === "catching-up"
+          ? "catching-up"
+          : "done",
+  }));
+  const readModels = progress.readModels.map((model): ProgressRow => ({
+    label: model.consumerId,
+    fraction: model.fraction,
+    state: model.blocked ? "errored" : model.complete ? "done" : "catching-up",
+  }));
+  return [...factories, ...readModels];
+}
+
+/** Rows from a reactor's inspector: its processors and its catch-up status. */
+export function inspectorProgressSource(inspector: IInspector): ProgressSource {
+  return async () => {
+    const processors = await inspector.getProcessors();
+    let catchUp:
+      | Awaited<ReturnType<IInspector["getCatchUpStatus"]>>
+      | undefined;
+    try {
+      catchUp = await inspector.getCatchUpStatus();
+    } catch {
+      catchUp = undefined;
+    }
+    return progressRows(computeProgress(processors, catchUp));
+  };
+}
 
 /** The slice of a TTY stream the display writes to and intercepts. */
 export type ProgressStream = {
