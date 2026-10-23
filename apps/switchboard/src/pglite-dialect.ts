@@ -1,4 +1,3 @@
-import type { PGlite } from "@electric-sql/pglite";
 import {
   HardenedPGliteDialect,
   type HardenedPGliteDialectOptions,
@@ -11,6 +10,7 @@ import type {
   QueryCompiler,
 } from "kysely";
 import type { ILogger } from "document-model";
+import type { PGliteLike } from "@powerhousedao/reactor-api/pglite-node";
 import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
 
 type FatalProcess = Parameters<typeof triggerFatalShutdown>[2];
@@ -40,10 +40,10 @@ type IntrospectedDatabase = Parameters<Dialect["createIntrospector"]>[0];
 // database.destroy() chain.
 export class ClosablePGliteDialect implements Dialect {
   readonly #inner: HardenedPGliteDialect;
-  readonly #pglite: PGlite;
+  readonly #pglite: PGliteLike;
 
   constructor(
-    pglite: PGlite,
+    pglite: PGliteLike,
     options: Partial<HardenedPGliteDialectOptions> = {},
   ) {
     this.#pglite = pglite;

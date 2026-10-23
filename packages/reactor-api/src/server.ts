@@ -137,6 +137,7 @@ import {
   type PgliteFactory,
 } from "./utils/db.js";
 import type { ReportError } from "./utils/detached.js";
+import type { PGliteLike } from "./pglite/pglite-like.js";
 import {
   openCurrentPgliteForVerify,
   preparePgliteDataDir,
@@ -451,7 +452,7 @@ async function initializeDatabaseAndAnalytics(
  */
 function makeDbClosers(
   knexInstance: { destroy: () => Promise<void> },
-  pglite: PGlite | undefined,
+  pglite: PGliteLike | undefined,
   logger: ILogger,
 ): Array<() => Promise<void>> {
   const closers: Array<() => Promise<void>> = [() => knexInstance.destroy()];

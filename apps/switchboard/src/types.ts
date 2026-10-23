@@ -134,6 +134,10 @@ export type StartServerOptions = {
   /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
    * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
   inspection?: boolean;
+  /** Open each PGlite store (reactor-storage, read-storage) in its own worker
+   * thread. Wins either way over PH_PGLITE_WORKERS; unset, the env var
+   * decides, then PGLITE_WORKERS_DEFAULT. */
+  pgliteWorkers?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
    * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
   workflows?: {

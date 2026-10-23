@@ -1,12 +1,6 @@
 #!/usr/bin/env node
-import type { PGlite } from "@electric-sql/pglite";
 import { metrics, trace } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
-import {
-  createDurableNodeFs,
-  resolvePgliteFsync,
-  type DurableNodeFs,
-} from "@powerhousedao/reactor-api/pglite-node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   DriveCollectionId,
@@ -32,7 +26,6 @@ import {
   ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
-  PGLITE_UTC_PARSERS,
   initializeAndStartAPI,
   reportFailure,
   resolveRenownConfig,
@@ -41,9 +34,11 @@ import {
   type ClientInitializerDependencies,
   type CredentialVerifier,
   type IPackageLoader,
+  type PgliteFactory,
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
+import { ThreadedPGlite } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
@@ -80,10 +75,7 @@ import {
   registerAttachmentReferenceReadModel,
   registerAttachmentReferenceReadModelOnModule,
 } from "./attachment-reference-read-model.mjs";
-import {
-  installFatalErrorShutdown,
-  triggerFatalShutdown,
-} from "./fatal-shutdown.mjs";
+import { installFatalErrorShutdown } from "./fatal-shutdown.mjs";
 import {
   resolvePrivacy,
   startPrivacy,
@@ -132,10 +124,13 @@ import {
 } from "./pglite-dialect.js";
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
+  createPgliteStoreFactory,
+  resolvePgliteWorkersEnabled,
+  terminateOnPoisoned,
+} from "./pglite-store.mjs";
+import {
   CURRENT_PG_MAJOR,
   isSupportedMajor,
-  loadNodeFsClass,
-  loadPGliteModule,
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
@@ -187,45 +182,6 @@ function warnIgnoredFlushInterval(logger: ILogger): void {
   logger.warn(
     "PGLITE_FLUSH_INTERVAL_MS is set but ignored: PGlite stores no longer snapshot on a timer.",
   );
-}
-
-// A Postgres PANIC (ENOSPC on WAL, a failed fdatasync) aborts the wasm
-// runtime; the store is dead and the process must not keep accepting writes.
-function onPgliteAbort(logger: ILogger, what: unknown): void {
-  if (!triggerFatalShutdown("PGlite aborted", what)) {
-    logger.error("PGlite aborted: @error", what);
-  }
-}
-
-// 0.2.17 syncs WAL through open_datasync, which NODEFS cannot honour, so on
-// PG16 only checkpoints reach the host disk; commits are durable against an
-// app crash, not a power loss, until --migrate-pglite upgrades the dir.
-function pgliteFsyncFor(
-  major: SupportedPgMajor,
-  dir: string,
-  logger: ILogger,
-): boolean {
-  const wanted = resolvePgliteFsync(process.env);
-  if (wanted && major === 16) {
-    logger.warn(
-      `PGlite data dir ${dir} is PG16 on pglite-legacy-02, which does not sync commits to disk; only checkpoints are synced until --migrate-pglite upgrades it.`,
-    );
-  }
-  return wanted;
-}
-
-/** Preloads the module's NodeFS so the returned factory can be synchronous. */
-async function loadDurableFsFactory(
-  major: SupportedPgMajor,
-  logger: ILogger,
-): Promise<(dir: string) => DurableNodeFs> {
-  const NodeFS = await loadNodeFsClass(major);
-  return (dir) =>
-    createDurableNodeFs(NodeFS, dir, {
-      fsync: pgliteFsyncFor(major, dir, logger),
-      logger,
-      onAbort: (what) => onPgliteAbort(logger, what),
-    });
 }
 
 // When set, runs both reactor and read-model PGLite instances purely in-memory.
@@ -339,6 +295,8 @@ export async function createReactorKysely(opts: {
    * path never reads.
    */
   hostPoolSize: () => number;
+  /** Open the PGlite store in its own worker thread. */
+  pgliteWorkers: boolean;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -347,6 +305,7 @@ export async function createReactorKysely(opts: {
     reactorPgliteMajor,
     inMemory,
     hostPoolSize,
+    pgliteWorkers,
     logger,
   } = opts;
 
@@ -372,25 +331,22 @@ export async function createReactorKysely(opts: {
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
     throw new Error("Reactor PGLite directory not resolved");
   }
-  const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
-  const pglite = inMemory
-    ? new PGlite()
-    : new PGlite({
-        fs: (await loadDurableFsFactory(reactorPgliteMajor, logger))(
-          reactorPgliteDir,
-        ),
-      });
-  logger.info(
-    inMemory
-      ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
-      : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
-  );
+  const openStore = await createPgliteStoreFactory({
+    label: "reactor-storage",
+    major: reactorPgliteMajor,
+    parsers: "none",
+    inMemory,
+    threaded: pgliteWorkers,
+    logger,
+  });
+  const pglite = openStore(reactorPgliteDir);
+  const dialectOptions =
+    pglite instanceof ThreadedPGlite
+      ? terminateOnPoisoned(reactorPgliteDialectOptions(logger), pglite)
+      : reactorPgliteDialectOptions(logger);
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(
-        pglite,
-        reactorPgliteDialectOptions(logger),
-      ),
+      dialect: new ClosablePGliteDialect(pglite, dialectOptions),
     }),
     poolInstrumentation: undefined,
     storageFacts: inMemory
@@ -764,6 +720,7 @@ async function initServer(
       reactorPgliteMajor,
       inMemory: PGLITE_IN_MEMORY,
       hostPoolSize: () => resolveHostPoolSize(process.env),
+      pgliteWorkers: options.pgliteWorkers === true,
       logger,
     });
 
@@ -1102,20 +1059,18 @@ async function initServer(
   // constructs the matching PGLite (current or legacy) for the detected
   // PG_VERSION. reactor-api calls the factory synchronously, so the legacy
   // module is preloaded above.
-  let pgliteFactory:
-    | ((connectionString: string | undefined) => PGlite)
-    | undefined;
+  let pgliteFactory: PgliteFactory | undefined;
   if (readModelPgliteDir && readModelPgliteMajor !== null) {
-    const { PGlite: ReadModelPGlite } =
-      await loadPGliteModule(readModelPgliteMajor);
-    const durableFs = await loadDurableFsFactory(readModelPgliteMajor, logger);
-    pgliteFactory = PGLITE_IN_MEMORY
-      ? () => new ReadModelPGlite({ parsers: PGLITE_UTC_PARSERS })
-      : (connectionString) =>
-          new ReadModelPGlite({
-            fs: durableFs(connectionString ?? readModelPgliteDir),
-            parsers: PGLITE_UTC_PARSERS,
-          });
+    const openReadStore = await createPgliteStoreFactory({
+      label: "read-storage",
+      major: readModelPgliteMajor,
+      parsers: "utc-timestamps",
+      inMemory: PGLITE_IN_MEMORY,
+      threaded: options.pgliteWorkers === true,
+      logger,
+    });
+    pgliteFactory = (connectionString) =>
+      openReadStore(connectionString ?? readModelPgliteDir);
   }
 
   const api = await initializeAndStartAPI(
@@ -1685,6 +1640,10 @@ export const startSwitchboard = async (
     featureFlags,
     option: options.inspection,
   });
+  options.pgliteWorkers = await resolvePgliteWorkersEnabled({
+    featureFlags,
+    option: options.pgliteWorkers,
+  });
   // This switchboard's own identity authenticates against the same Renown
   // instance it verifies incoming credentials against, unless told otherwise.
   const renownConfig = resolveRenownConfig(
@@ -1712,6 +1671,7 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
         INSPECTION_ENABLED: options.inspection,
+        PH_PGLITE_WORKERS: options.pgliteWorkers,
         PH_WORKFLOWS_ENABLED: options.workflows?.enabled,
       },
       null,
