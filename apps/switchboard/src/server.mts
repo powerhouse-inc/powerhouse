@@ -299,7 +299,8 @@ async function resolveServerPort(
   strictPort: boolean,
   logger: ILogger,
 ): Promise<number> {
-  if (strictPort) return requested;
+  // 0 asks the OS for a free port at bind time: nothing to probe.
+  if (requested === 0 || strictPort) return requested;
   for (let i = 0; i < PORT_FALLBACK_ATTEMPTS; i++) {
     const candidate = requested + i;
     if (await isPortAvailable(candidate)) {
@@ -483,7 +484,7 @@ export function deriveAttachmentServiceConfig(
 }
 
 async function initServer(
-  serverPort: number,
+  requestedPort: number,
   options: StartServerOptions,
   renown: IRenown | null,
   renownConfig: ResolvedRenownConfig,
@@ -1121,7 +1122,7 @@ async function initServer(
   const api = await initializeAndStartAPI(
     initializeClient,
     {
-      port: serverPort,
+      port: requestedPort,
       dbPath: readModelPath,
       pgliteFactory,
       https: options.https,
@@ -1146,6 +1147,7 @@ async function initServer(
     "switchboard",
   );
   apiRef.current = api;
+  const serverPort = api.port;
 
   if (renownConfig.source === "self") {
     const { graphqlManager: manager } = api;
