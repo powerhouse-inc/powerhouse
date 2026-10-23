@@ -85,6 +85,16 @@ function detailOf(measured: Measured): string {
   return `${percentOf(measured.fraction)}%, ${ordinals}`;
 }
 
+/** A factory's bar averages its processors, so its detail counts them, not ordinals. */
+function factoryDetailOf(factory: FactoryProgress): string {
+  const count = `${factory.processorsDone} of ${factory.processors.length} processors done`;
+  if (factory.phase === "live") return `done, ${count}`;
+  if (factory.phase === "errored") {
+    return `errored at ${percentOf(factory.fraction)}%, ${count}`;
+  }
+  return `${percentOf(factory.fraction)}%, ${count}`;
+}
+
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
@@ -239,6 +249,7 @@ export function ProcessorsTab({
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [rerunOpen, setRerunOpen] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
 
@@ -346,9 +357,17 @@ export function ProcessorsTab({
   const erroredCount = processors.filter((p) => p.status === "errored").length;
   const allIds = processors.map((p) => p.processorId);
 
+  const toggleFactory = (factoryId: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (!next.delete(factoryId)) next.add(factoryId);
+      return next;
+    });
+
   const factoryRow = (factory: FactoryProgress) => {
     const ids = factory.processors.map((row) => row.processorId);
     const label = `${factory.label} (${plural(factory.driveCount, "drive", "drives")})`;
+    const open = !collapsed.has(factory.factoryId);
     return (
       <tr className="rm-factory-row" key={`factory:${factory.factoryId}`}>
         <td>
@@ -361,11 +380,20 @@ export function ProcessorsTab({
           />
         </td>
         <td colSpan={2} title={factory.factoryId}>
+          <button
+            aria-expanded={open}
+            aria-label={`${open ? "Collapse" : "Expand"} ${factory.label}`}
+            className="rm-factory-toggle"
+            onClick={() => toggleFactory(factory.factoryId)}
+            type="button"
+          >
+            {open ? "▾" : "▸"}
+          </button>
           <strong>{label}</strong>
         </td>
         <td className="rm-progress-cell">
           <ProgressBar
-            detail={detailOf(factory)}
+            detail={factoryDetailOf(factory)}
             fraction={factory.fraction}
             hideLabel
             label={label}
@@ -555,9 +583,11 @@ export function ProcessorsTab({
                 return (
                   <Fragment key={factory.factoryId}>
                     {factoryRow(factory)}
-                    {factory.processors.map((row) =>
-                      processorRow(row, perDrive),
-                    )}
+                    {collapsed.has(factory.factoryId)
+                      ? null
+                      : factory.processors.map((row) =>
+                          processorRow(row, perDrive),
+                        )}
                   </Fragment>
                 );
               })

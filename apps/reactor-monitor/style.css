@@ -922,3 +922,20 @@ body {
 .rm-rerun-form {
   margin-block: 0.5rem;
 }
+
+.rm-factory-toggle {
+  width: 1.4rem;
+  padding: 0;
+  margin-right: 0.25rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.rm-factory-toggle:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}

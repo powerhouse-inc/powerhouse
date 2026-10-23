@@ -71,6 +71,7 @@ describe("progressRows", () => {
           done: 31,
           total: 50,
           fraction: 0.62,
+          processorsDone: 0,
           processors: [],
         },
         {
@@ -81,6 +82,7 @@ describe("progressRows", () => {
           done: 0,
           total: 0,
           fraction: 1,
+          processorsDone: 0,
           processors: [],
         },
         {
@@ -91,6 +93,7 @@ describe("progressRows", () => {
           done: 0,
           total: 10,
           fraction: 0,
+          processorsDone: 0,
           processors: [],
         },
       ],

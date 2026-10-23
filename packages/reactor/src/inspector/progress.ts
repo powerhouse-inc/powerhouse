@@ -30,9 +30,13 @@ export type FactoryProgress = {
   driveCount: number;
   /** Errored if any is, else catching up if any is, else live. */
   phase: ProcessorPhase;
+  /** Ordinals scanned and to scan, summed over the processors replaying now. */
   done: number;
   total: number;
+  /** The mean of its processors' fractions: a live one counts as complete. */
   fraction: number;
+  /** Its processors that are live. */
+  processorsDone: number;
   processors: ProcessorProgress[];
 };
 
@@ -59,7 +63,8 @@ export type ReactorProgress = {
 
 /**
  * Turns processor cursors and the catch-up head into progress bars: one per
- * processor, summed per factory, and one per reactor read model. A live
+ * processor, averaged per factory (project factories first), and one per
+ * reactor read model. A live
  * processor has no run in progress, so it counts as complete whatever its lag.
  * Without a catch-up status the head is taken as the highest cursor.
  */
@@ -79,7 +84,11 @@ export function computeProgress(
     byFactory.set(info.factoryId, rows);
   }
   const factories = [...byFactory.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(
+      ([a], [b]) =>
+        Number(isProjectPath(b)) - Number(isProjectPath(a)) ||
+        a.localeCompare(b),
+    )
     .map(([factoryId, rows]) => factoryProgress(factoryId, rows));
 
   const readModels = (catchUp?.consumers ?? [])
@@ -134,6 +143,7 @@ function factoryProgress(
     done += row.done;
     total += row.total;
   }
+  const fractions = rows.reduce((sum, row) => sum + row.fraction, 0);
   return {
     factoryId,
     label: factoryLabel(factoryId),
@@ -141,13 +151,15 @@ function factoryProgress(
     phase: aggregatePhase(rows),
     done,
     total,
-    fraction: fractionOf(
-      done,
-      total,
-      rows.some((row) => row.phase === "catching-up" && row.fraction === 0),
-    ),
+    fraction: rows.length === 0 ? 1 : clamp(fractions / rows.length),
+    processorsDone: rows.filter((row) => row.phase === "live").length,
     processors: rows,
   };
+}
+
+/** A factory registered by a project is keyed by its folder; a package's by its name. */
+function isProjectPath(factoryId: string): boolean {
+  return /^(?:[A-Za-z]:[\\/]|\/)/.test(factoryId);
 }
 
 function factoryLabel(factoryId: string): string {

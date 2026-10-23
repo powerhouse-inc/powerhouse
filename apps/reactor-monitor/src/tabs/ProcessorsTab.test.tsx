@@ -302,14 +302,14 @@ describe("ProcessorsTab progress in the table", () => {
 
     await waitFor(() =>
       expect(bar(view, "sektar (2 drives)").getAttribute("aria-valuenow")).toBe(
-        "25",
+        "62",
       ),
     );
     expect(bar(view, "sektar (2 drives)").getAttribute("aria-valuetext")).toBe(
-      "25%, 50 of 200 ordinals",
+      "62%, 1 of 2 processors done",
     );
     expect(bar(view, "vetra (1 drive)").getAttribute("aria-valuetext")).toBe(
-      "done",
+      "done, 1 of 1 processors done",
     );
     expect(view.queryByTestId("progress-head-unknown")).toBeNull();
   });
@@ -339,6 +339,25 @@ describe("ProcessorsTab progress in the table", () => {
     ]);
   });
 
+  it("collapses and expands a factory's processor rows", async () => {
+    const view = render(
+      <ProcessorsTab inspector={inspectorOf(sektar, catchUpAt(300))} />,
+    );
+    const collapse = await waitFor(() =>
+      view.getByRole("button", { name: "Collapse sektar" }),
+    );
+    expect(collapse.getAttribute("aria-expanded")).toBe("true");
+    expect(view.queryByLabelText("Select sektar:mail:0")).toBeTruthy();
+
+    fireEvent.click(collapse);
+
+    expect(view.queryByLabelText("Select sektar:mail:0")).toBeNull();
+    expect(view.queryByLabelText("Select vetra:docs:0")).toBeTruthy();
+    expect(bar(view, "sektar (2 drives)")).toBeTruthy();
+    fireEvent.click(view.getByRole("button", { name: "Expand sektar" }));
+    expect(view.queryByLabelText("Select sektar:mail:0")).toBeTruthy();
+  });
+
   it("marks a factory errored when one of its processors is", async () => {
     const view = render(
       <ProcessorsTab
@@ -359,7 +378,7 @@ describe("ProcessorsTab progress in the table", () => {
     await waitFor(() =>
       expect(
         bar(view, "factory (1 drive)").getAttribute("aria-valuetext"),
-      ).toBe("errored at 50%, 40 of 80 ordinals"),
+      ).toBe("errored at 50%, 0 of 1 processors done"),
     );
   });
 
@@ -388,7 +407,7 @@ describe("ProcessorsTab progress in the table", () => {
 
     await waitFor(() =>
       expect(bar(view, "f (2 drives)").getAttribute("aria-valuenow")).toBe(
-        "50",
+        "75",
       ),
     );
     expect(view.getByTestId("progress-head-unknown")).toBeTruthy();

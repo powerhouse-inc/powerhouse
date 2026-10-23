@@ -93,6 +93,7 @@ describe("computeProgress", () => {
         done: 30,
         total: 100,
         fraction: 0.3,
+        processorsDone: 0,
         processors: [
           {
             processorId: "f:a:0",
@@ -136,11 +137,36 @@ describe("computeProgress", () => {
     );
 
     expect(factories.map((f) => [f.factoryId, f.label])).toEqual([
-      ["@powerhousedao/vetra", "vetra"],
       ["/home/me/projects/ledger/", "ledger"],
       ["D:\\work\\sektar", "sektar"],
+      ["@powerhousedao/vetra", "vetra"],
       ["plain", "plain"],
     ]);
+  });
+
+  it("averages a factory over all its processors, a live one counting as complete", () => {
+    const [factory] = computeProgress(
+      [
+        processor({
+          processorId: "f:a:0",
+          runFrom: 0,
+          lastOrdinal: 50,
+          phase: "catching-up",
+        }),
+        processor({ processorId: "f:b:0", runFrom: 100, lastOrdinal: 100 }),
+        processor({ processorId: "f:c:0", runFrom: 100, lastOrdinal: 100 }),
+        processor({ processorId: "f:d:0", runFrom: 100, lastOrdinal: 100 }),
+      ],
+      status(100),
+    ).factories;
+
+    expect(factory).toMatchObject({
+      phase: "catching-up",
+      fraction: 0.875,
+      processorsDone: 3,
+      done: 50,
+      total: 100,
+    });
   });
 
   it("shows a queued replay at the head as not started, not as done", () => {
@@ -264,8 +290,8 @@ describe("computeProgress", () => {
       phase: "catching-up",
       done: 100,
       total: 400,
-      fraction: 0.25,
     });
+    expect(sektar.fraction).toBeCloseTo(0.25);
     expect(
       sektar.processors.map((row) => `${row.driveId}:${row.processorIndex}`),
     ).toEqual(["d1:1", "d1:3", "d2:2", "d3:0"]);
