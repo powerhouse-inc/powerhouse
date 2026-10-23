@@ -126,7 +126,7 @@ export function OperatorGateNote({
               autoComplete="off"
               className="rm-secret"
               onChange={(event) => setBearer(event.target.value)}
-              placeholder="kept in memory only"
+              placeholder="kept for this tab only"
               spellCheck={false}
               type="text"
               value={bearer}

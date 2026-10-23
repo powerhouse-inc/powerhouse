@@ -22,23 +22,71 @@ export function createMonitorWorker(name: string): SharedWorker {
   );
 }
 
-// Each remote's bearer, by reactor name: its headers read it per request, so
-// one pasted after provisioning reaches the host without re-provisioning.
-const remoteBearers = new Map<string, string>();
+/** Prefix of the sessionStorage key holding a host's bearer, by its GraphQL url. */
+export const REMOTE_BEARER_KEY_PREFIX = "ph:reactor-monitor:bearer:";
 
-/** Sets (or, when empty, clears) the bearer a remote reactor sends. */
-export function setRemoteBearer(name: string, bearer: string): void {
-  const trimmed = bearer.trim().replace(/^Bearer\s+/i, "");
-  if (trimmed) {
-    remoteBearers.set(name, trimmed);
-  } else {
-    remoteBearers.delete(name);
+// Where storage is blocked, the bearers live as long as the page instead.
+const unstoredBearers = new Map<string, string>();
+
+function sessionStore(): Storage | undefined {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
   }
 }
 
-/** A remote's headers: its current bearer, read per request. */
-export function remoteHeaders(name: string): Record<string, string> {
-  const bearer = remoteBearers.get(name);
+/** True for a JWT whose `exp` has passed; any other token is taken as it is. */
+function isExpired(token: string): boolean {
+  const payload = token.split(".")[1];
+  if (!payload) return false;
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const { exp } = JSON.parse(atob(base64)) as { exp?: unknown };
+    return typeof exp === "number" && exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sets (or, when empty, clears) the bearer sent to the host at `url`. It is
+ * kept for the tab's session, so a reload keeps it and closing the tab drops
+ * it, and read per request, so one pasted after provisioning is sent at once.
+ */
+export function setRemoteBearer(url: string, bearer: string): void {
+  const trimmed = bearer.trim().replace(/^Bearer\s+/i, "");
+  const key = REMOTE_BEARER_KEY_PREFIX + url;
+  const store = sessionStore();
+  try {
+    if (store && trimmed) store.setItem(key, trimmed);
+    else if (store) store.removeItem(key);
+    if (store) return;
+  } catch {
+    // Storage refused the write; keep the bearer for this page instead.
+  }
+  if (trimmed) unstoredBearers.set(url, trimmed);
+  else unstoredBearers.delete(url);
+}
+
+function bearerFor(url: string): string | undefined {
+  let bearer = unstoredBearers.get(url);
+  try {
+    bearer ??=
+      sessionStore()?.getItem(REMOTE_BEARER_KEY_PREFIX + url) ?? undefined;
+  } catch {
+    // Unreadable storage holds no bearer.
+  }
+  if (bearer && isExpired(bearer)) {
+    setRemoteBearer(url, "");
+    return undefined;
+  }
+  return bearer;
+}
+
+/** The headers for the host at `url`: its bearer, unless that has expired. */
+export function remoteHeaders(url: string): Record<string, string> {
+  const bearer = bearerFor(url);
   return bearer ? { Authorization: `Bearer ${bearer}` } : {};
 }
 
@@ -47,7 +95,8 @@ export function remoteHeaders(name: string): Record<string, string> {
  *
  * `syncMode: "local"` builds a lone `LocalChannelFactory` (no "Add remote");
  * `"connect"` keeps the gql scheme, which also composes a local factory.
- * A remote's bearer rides `remote.headers`, a function, so it is never persisted.
+ * A remote's bearer rides `remote.headers`, a function reading the tab's
+ * session store, so a monitoring set never carries it.
  */
 export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
   const {
@@ -59,12 +108,10 @@ export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
     attachmentStore = "none",
   } = request;
   if (kind === "remote") {
-    setRemoteBearer(name, bearer ?? "");
-    return {
-      kind,
-      name,
-      remote: { url: remoteUrl ?? "", headers: () => remoteHeaders(name) },
-    };
+    const url = remoteUrl ?? "";
+    // No bearer keeps the one this tab already holds for the host.
+    if (bearer) setRemoteBearer(url, bearer);
+    return { kind, name, remote: { url, headers: () => remoteHeaders(url) } };
   }
   const sync = syncMode === "local" ? { local: true } : undefined;
   if (kind === "worker") {

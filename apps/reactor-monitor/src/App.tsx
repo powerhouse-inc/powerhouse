@@ -112,7 +112,7 @@ function ReadyPanel({
   const takeBearer =
     reactor.kind === "remote"
       ? async (bearer: string) => {
-          setRemoteBearer(reactor.name, bearer);
+          setRemoteBearer(reactor.url, bearer);
           await recheck();
         }
       : undefined;
@@ -381,10 +381,10 @@ function rehydrateDescriptor(descriptor: ReactorDescriptor): ReactorDescriptor {
     return { ...descriptor, createWorker: createMonitorWorker };
   }
   if (descriptor.kind === "remote" && descriptor.remote) {
-    const { name } = descriptor;
+    const { url } = descriptor.remote;
     return {
       ...descriptor,
-      remote: { ...descriptor.remote, headers: () => remoteHeaders(name) },
+      remote: { ...descriptor.remote, headers: () => remoteHeaders(url) },
     };
   }
   return descriptor;

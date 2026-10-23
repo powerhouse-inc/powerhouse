@@ -197,10 +197,36 @@ describe("remote reactor in the monitor app", () => {
   beforeEach(() => {
     try {
       window.localStorage.clear();
+      window.sessionStorage.clear();
     } catch {
       // No storage in this environment.
     }
   });
+
+  it("keeps a bearer across a reload, so a restored remote reads as an admin", async () => {
+    const host: Host = { access: null, adminBearer: "admin-token" };
+    const view = remoteApp(host);
+    await provisionRemoteReactor(view, "reloaded-switchboard", "admin-token");
+    view.unmount();
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = fakeInspectionFetch(host);
+    try {
+      const reloaded = render(<App />);
+      await waitFor(
+        () => expect(reloaded.getByTitle("ready")).toBeTruthy(),
+        WAIT,
+      );
+      fireEvent.click(reloaded.getByText("reloaded-switchboard"));
+      fireEvent.click(reloaded.getByRole("button", { name: "Queue" }));
+      await waitFor(
+        () => expect(reloaded.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
+        WAIT,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }, 20_000);
 
   it("requires a URL, because a remote reactor IS its URL", () => {
     const view = remoteApp({ access: null });
