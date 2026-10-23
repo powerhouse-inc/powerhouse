@@ -18,6 +18,7 @@ import {
   PH_PGLITE_WORKERS,
   resolvePgliteWorkersEnabled,
   routePgliteWorkerFailures,
+  terminateOnPoisoned,
   type PgliteStoreOptions,
 } from "../src/pglite-store.mjs";
 import type { BooleanFlagSource } from "../src/workflow-runtime.mjs";
@@ -140,6 +141,24 @@ describe("routePgliteWorkerFailures", () => {
       "PGlite worker exited: @error",
       expect.any(Error),
     );
+  });
+});
+
+describe("terminateOnPoisoned", () => {
+  it("reports the poisoning, then stops the store's worker", () => {
+    const calls: string[] = [];
+    const options = terminateOnPoisoned(
+      { onPoisoned: () => calls.push("reported"), statementTimeoutMs: 5 },
+      {
+        terminate: () => {
+          calls.push("terminated");
+          return Promise.resolve();
+        },
+      },
+    );
+    expect(options.statementTimeoutMs).toBe(5);
+    options.onPoisoned?.(new Error("hung"));
+    expect(calls).toEqual(["reported", "terminated"]);
   });
 });
 

@@ -12,6 +12,7 @@ import {
   type PGliteLike,
   type PGliteParserPreset,
 } from "@powerhousedao/reactor-api/pglite-node";
+import type { HardenedPGliteDialectOptions } from "@powerhousedao/reactor";
 import type { ILogger } from "document-model";
 import { triggerFatalShutdown } from "./fatal-shutdown.mjs";
 import {
@@ -88,6 +89,31 @@ export function routePgliteWorkerFailures(
   store.onExit((error) => {
     if (error !== null) onPgliteWorkerExit(logger, error, proc);
   });
+}
+
+/** A store whose thread can be stopped at once. */
+export interface TerminableStore {
+  terminate(): Promise<void>;
+}
+
+/**
+ * Adds a terminate of the store's worker to the dialect's `onPoisoned`: a
+ * statement that never settled holds the worker's only connection, and the
+ * fatal shutdown's close would otherwise queue behind it until its grace ran
+ * out.
+ */
+export function terminateOnPoisoned(
+  options: Partial<HardenedPGliteDialectOptions>,
+  store: TerminableStore,
+): Partial<HardenedPGliteDialectOptions> {
+  const reportPoisoned = options.onPoisoned;
+  return {
+    ...options,
+    onPoisoned: (cause) => {
+      reportPoisoned?.(cause);
+      void store.terminate();
+    },
+  };
 }
 
 // 0.2.17 syncs WAL through open_datasync, which NODEFS cannot honour, so on

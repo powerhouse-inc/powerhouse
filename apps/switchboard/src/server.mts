@@ -38,6 +38,7 @@ import {
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
+import { ThreadedPGlite } from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
@@ -124,13 +125,12 @@ import {
 import { runPglitePreflight } from "./pglite-preflight.js";
 import {
   createPgliteStoreFactory,
-  loadDurableFsFactory,
   resolvePgliteWorkersEnabled,
+  terminateOnPoisoned,
 } from "./pglite-store.mjs";
 import {
   CURRENT_PG_MAJOR,
   isSupportedMajor,
-  loadPGliteModule,
   type SupportedPgMajor,
 } from "./pglite-version.js";
 import { resolveReactorFeatureFlags } from "./reactor-feature-flags.mjs";
@@ -295,6 +295,8 @@ export async function createReactorKysely(opts: {
    * path never reads.
    */
   hostPoolSize: () => number;
+  /** Open the PGlite store in its own worker thread. */
+  pgliteWorkers: boolean;
   logger: ILogger;
 }): Promise<ReactorStorage> {
   const {
@@ -303,6 +305,7 @@ export async function createReactorKysely(opts: {
     reactorPgliteMajor,
     inMemory,
     hostPoolSize,
+    pgliteWorkers,
     logger,
   } = opts;
 
@@ -328,25 +331,22 @@ export async function createReactorKysely(opts: {
   if (!reactorPgliteDir || reactorPgliteMajor === null) {
     throw new Error("Reactor PGLite directory not resolved");
   }
-  const { PGlite } = await loadPGliteModule(reactorPgliteMajor);
-  const pglite = inMemory
-    ? new PGlite()
-    : new PGlite({
-        fs: (await loadDurableFsFactory(reactorPgliteMajor, logger))(
-          reactorPgliteDir,
-        ),
-      });
-  logger.info(
-    inMemory
-      ? `Using in-memory PGlite (PG${reactorPgliteMajor}) for reactor storage [PH_PGLITE_IN_MEMORY=1]`
-      : `Using PGlite (PG${reactorPgliteMajor}) for reactor storage at ${reactorPgliteDir}`,
-  );
+  const openStore = await createPgliteStoreFactory({
+    label: "reactor-storage",
+    major: reactorPgliteMajor,
+    parsers: "none",
+    inMemory,
+    threaded: pgliteWorkers,
+    logger,
+  });
+  const pglite = openStore(reactorPgliteDir);
+  const dialectOptions =
+    pglite instanceof ThreadedPGlite
+      ? terminateOnPoisoned(reactorPgliteDialectOptions(logger), pglite)
+      : reactorPgliteDialectOptions(logger);
   return {
     kysely: new Kysely<Database>({
-      dialect: new ClosablePGliteDialect(
-        pglite,
-        reactorPgliteDialectOptions(logger),
-      ),
+      dialect: new ClosablePGliteDialect(pglite, dialectOptions),
     }),
     poolInstrumentation: undefined,
     storageFacts: inMemory
@@ -720,6 +720,7 @@ async function initServer(
       reactorPgliteMajor,
       inMemory: PGLITE_IN_MEMORY,
       hostPoolSize: () => resolveHostPoolSize(process.env),
+      pgliteWorkers: options.pgliteWorkers === true,
       logger,
     });
 
