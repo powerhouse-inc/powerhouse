@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.69)<br>
+# Powerhouse CLI Commands (6.2.3-dev.73)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -50,7 +50,7 @@ Path to a document model spec (.phd or .json) to generate from<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing document model to re-generate<br><br>
+Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -88,7 +88,7 @@ Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen<
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing editor to re-generate<br><br>
+Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -126,7 +126,7 @@ Path to a powerhouse/app spec file (.phd or .json) to drive codegen<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing app to re-generate<br><br>
+Name of the directory of an existing app to re-generate (my-app or editors/my-app)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -176,7 +176,7 @@ Path to a powerhouse/processor spec file (.phd or .json) to drive codegen<br><br
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing processor to re-generate<br><br>
+Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -214,7 +214,7 @@ Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen<br><br>
 **usage:** `--document, -d <file>`<br>
 
 #### Dir <br>
-Name of the directory of an existing subgraph to re-generate<br><br>
+Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -266,7 +266,7 @@ One line describing what the piece connects to<br><br>
 **usage:** `--description <str>`<br>
 
 #### Dir <br>
-Name of the directory of an existing piece to re-register<br><br>
+Name of the directory of an existing piece to re-register (my-piece or pieces/my-piece)<br><br>
 **usage:** `--dir <dir>`<br>
 
 
@@ -759,7 +759,7 @@ Override connect.branding.appName.<br><br>
 **usage:** `--app-name <str>`<br>
 
 #### Home Background <br>
-Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.<br><br>
+Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient.<br><br>
 **usage:** `--home-background <str>`<br>
 
 #### Sentry Dsn <br>
@@ -775,7 +775,7 @@ Override connect.sentry.tracing (Sentry performance tracing).<br><br>
 **usage:** `--sentry-tracing-enabled <value>`<br>
 
 #### Favicon <br>
-Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.<br><br>
+Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd.<br><br>
 **usage:** `--favicon <str>`<br>
 
 #### Base <br>
@@ -1039,15 +1039,15 @@ show help<br><br>
 Run migrations
 ### arguments
 #### Version <br>
-The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `[version]`<br>
 
 
 ### options
 #### Version <br>
-The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages.<br><br>
 **usage:** `--version, -v <str>`<br>
-**default**: `latest`
+
 
 ### flags
 #### Force <br>

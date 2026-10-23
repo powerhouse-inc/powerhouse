@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.73",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
@@ -54,6 +54,10 @@
     "./connect/*": {
       "source": "./connect/*.ts",
       "import": "./dist/connect/*.js"
+    },
+    "./host-tokens": {
+      "source": "./host-tokens/index.ts",
+      "import": "./dist/host-tokens/index.js"
     },
     "./analytics": {
       "source": "./analytics/index.ts",

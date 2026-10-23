@@ -74,6 +74,8 @@ export const codegenFactoryBuilder: ProcessorFactoryBuilder = (
       project,
       config,
       cwd,
+      driveHeader.id,
+      module.client,
       vetraConfig?.interactive,
     );
     return [

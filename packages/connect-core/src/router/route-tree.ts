@@ -84,12 +84,9 @@ export function addConnectRoutes(routes: readonly AnyRoute[]) {
     if (!parent) throw new Error("A Connect route needs getParentRoute");
     const children = (parent.children ?? []) as AnyRoute[];
     if (children.includes(route)) continue;
-    // A project's file route keeps its path; the code route steps aside.
+    // A project's file route at its path replaces it, as documented: no warning.
     const path = (route.options as RouteOptions).path;
-    if (path && children.some((child) => samePath(child, path))) {
-      console.warn(`[connect] a route already serves "${path}"; skipping`);
-      continue;
-    }
+    if (path && children.some((child) => samePath(child, path))) continue;
     parent.addChildren([...children, route]);
   }
 }

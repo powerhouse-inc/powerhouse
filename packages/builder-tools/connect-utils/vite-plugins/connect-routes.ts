@@ -19,6 +19,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Alias, Plugin, PluginOption } from "vite";
+import { normalizePath } from "vite";
 import { resolvePackage } from "../helpers.js";
 
 /** A project's routes for its Connect deployment, beside Connect's own. */
@@ -65,6 +66,22 @@ export function connectRoutesTreeOf(projectRoot: string, routesDir: string) {
   return join(projectRoot, ".ph", `${relative(projectRoot, routesDir)}.gen.ts`);
 }
 
+/** The dev watcher's filter for `.ph/`, which holds build output: ignored but
+ * for the host's route tree, rewritten as route files come and go. */
+export function ignoreDotPhButRouteTree(
+  projectRoot: string,
+  routesDir?: string | false,
+) {
+  const tree =
+    routesDir && normalizePath(connectRoutesTreeOf(projectRoot, routesDir));
+  return (file: string) => {
+    const path = normalizePath(resolve(projectRoot, file));
+    if (!path.includes("/.ph/")) return false;
+    // The tree and the folders that lead to it stay watched.
+    return !tree || (path !== tree && !tree.startsWith(`${path}/`));
+  };
+}
+
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */
 export const APP_LAYOUT = "_app";
 
@@ -74,6 +91,11 @@ function findRouteFile(dir: string, name: string) {
     .find((file) => existsSync(file));
 }
 
+/** Whether the project's `_app` replaces Connect's layout (and its chrome). */
+export function hasProjectAppLayout(routesDir: string | undefined): boolean {
+  return !!routesDir && !!findRouteFile(routesDir, APP_LAYOUT);
+}
+
 export type ConnectRoutes = {
   /** Points Connect at the tree to route with, then at what its route files render. */
   aliases: Alias[];
@@ -81,6 +103,8 @@ export type ConnectRoutes = {
   plugins: PluginOption[];
   /** Connect's route files and the project's share one router. */
   dedupe: string[];
+  /** Pre-bundled for Connect's route files; see connectRouteFileDeps. */
+  include: string[];
 };
 
 /** Connect's route files: core's routes with Connect's views. */
@@ -263,6 +287,17 @@ function writePackageRoutesModule(
   }
 }
 
+/** The `_app/` paths of the generic plugin's code routes, e.g. its settings
+ * tabs: a project file at one is an override, never offered. */
+function genericAppRouteIds(connectDir: string): string[] {
+  const file = join(connectDir, "generic-routes.json");
+  if (!existsSync(file)) return [];
+  return (
+    (JSON.parse(readFileSync(file, "utf8")) as { appRoutes?: string[] })
+      .appRoutes ?? []
+  );
+}
+
 /** The router plugin's config: Connect's root and routes, and the project's. */
 export function connectRoutesGeneratorConfig(
   connectDir: string,
@@ -316,9 +351,10 @@ export function connectRoutesGeneratorConfig(
     onRouteTreeChanged: ({ routeNodes }) => {
       writePackageRoutesModule(projectRoot, projectRoutes, routeNodes, {
         routesDirectory,
-        connectAppIds: new Set(
-          routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
-        ),
+        connectAppIds: new Set([
+          ...routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
+          ...genericAppRouteIds(connectDir),
+        ]),
       });
     },
   };
@@ -349,6 +385,16 @@ export function connectRoutesGeneratorConfig(
   );
 }
 
+// What each route file was last warned about: a warning shows once while it
+// holds, and again if it comes back; ph connect build generates three times.
+const reported = new Map<string, string>();
+function reportDrops(file: string, messages: readonly string[]) {
+  const key = messages.join("\n");
+  if (reported.get(file) === key) return;
+  reported.set(file, key);
+  for (const message of messages) console.warn(`[connect] ${message}`);
+}
+
 /** Writes the route tree of Connect's and the project's routes; throws on a
  * collision that is not an override, which the router plugin would only log. */
 export async function generateConnectRoutes(
@@ -359,15 +405,34 @@ export async function generateConnectRoutes(
     projectRoot,
     routesDir,
   ),
+  warn?: (message: string) => void,
 ) {
   mkdirSync(dirname(config.generatedRouteTree), { recursive: true });
+  let routeNodes: RouteNodes = [];
+  const collect: GeneratorPlugin = {
+    name: "ph-connect-route-urls",
+    onRouteTreeChanged: (tree) => {
+      routeNodes = tree.routeNodes;
+    },
+  };
   try {
-    await new Generator({ config, root: projectRoot }).run();
+    await new Generator({
+      config: { ...config, plugins: [...(config.plugins ?? []), collect] },
+      root: projectRoot,
+    }).run();
+    assertNoSharedUrls(routeNodes);
     assertNoDuplicateRoutes(config.generatedRouteTree);
     importConnectRoutesByPackage(
       config.generatedRouteTree,
       config.routesDirectory,
     );
+    const drops = dropsContext(projectRoot, routesDir, config.routesDirectory);
+    for (const node of routeNodes) {
+      const found = dropsOf(node, drops);
+      if (!found) continue;
+      if (warn) found.messages.forEach(warn);
+      else reportDrops(found.file, found.messages);
+    }
   } catch (error) {
     const errors: unknown[] = Array.isArray(error) ? error : [error];
     const message = errors
@@ -417,6 +482,132 @@ function assertNoDuplicateRoutes(treeFile: string) {
   );
 }
 
+// The URL a route serves: its id without pathless `_layout` segments.
+const urlOf = (routePath: string) =>
+  `/${routePath
+    .split("/")
+    .filter((segment) => segment && !segment.startsWith("_"))
+    .join("/")}`;
+
+// Ids differ when one route is in a layout and the other isn't, e.g. a
+// project's settings.tsx and Connect's _app/settings.tsx; the router keeps one.
+function assertNoSharedUrls(routeNodes: RouteNodes) {
+  const byUrl = new Map<string, string[]>();
+  for (const node of routeNodes) {
+    if (node._fsRouteType === "pathless_layout" || !node.routePath) continue;
+    const url = urlOf(node.routePath);
+    byUrl.set(url, [...(byUrl.get(url) ?? []), node.fullPath]);
+  }
+  const shared = [...byUrl].filter(([, files]) => files.length > 1);
+  if (shared.length === 0) return;
+  throw new Error(
+    shared
+      .map(
+        ([url, files]) =>
+          `More than one route serves ${url}; override Connect's in _app/ instead:\n ${files.join("\n ")}`,
+      )
+      .join("\n"),
+  );
+}
+
+/** The object literal after `key:` in `source`, braces balanced; strings aren't parsed. */
+function objectAfter(source: string, key: string) {
+  const start = source.search(new RegExp(`\\b${key}\\s*:\\s*\\{`));
+  if (start < 0) return undefined;
+  const open = source.indexOf("{", start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    else if (source[i] === "}" && --depth === 0) {
+      return source.slice(open, i + 1);
+    }
+  }
+  return undefined;
+}
+
+type DropsContext = {
+  projectRoot: string;
+  routesDir: string;
+  routesDirectory: string;
+  connectAppIds: ReadonlySet<string>;
+  genericAppIds: ReadonlySet<string>;
+};
+
+function dropsContext(
+  projectRoot: string,
+  routesDir: string,
+  routesDirectory: string,
+): DropsContext {
+  return {
+    projectRoot,
+    routesDir,
+    routesDirectory,
+    connectAppIds: new Set(
+      routeFilesIn(join(routesDirectory, APP_LAYOUT)).map(routeIdOf),
+    ),
+    genericAppIds: new Set(
+      genericAppRouteIds(dirname(dirname(routesDirectory))),
+    ),
+  };
+}
+
+/** What the router drops from a project route file without a word: a nav item
+ * it can't link, and an override without the options of the route it replaces. */
+function dropsOf(
+  node: { filePath: string; routePath?: string },
+  context: DropsContext,
+): { file: string; messages: string[] } | undefined {
+  const file = join(context.routesDirectory, node.filePath);
+  if (!file.startsWith(`${context.routesDir}${sep}`) || !existsSync(file)) {
+    return undefined;
+  }
+  const shown = relative(context.projectRoot, file).split(sep).join("/");
+  const source = readFileSync(file, "utf8");
+  const messages: string[] = [];
+  const staticData = objectAfter(source, "staticData");
+  if (node.routePath?.includes("$") && staticData?.match(/\bnav\s*:/)) {
+    messages.push(
+      `${shown}: staticData.nav is ignored on ${node.routePath}, whose params the sidebar can't fill in.`,
+    );
+  }
+  const appDir = join(context.routesDir, APP_LAYOUT);
+  if (file.startsWith(`${appDir}${sep}`)) {
+    const id = routeIdOf(relative(appDir, file).split(sep).join("/"));
+    const connectFile = `@powerhousedao/connect/routes/${APP_LAYOUT}/${id}`;
+    if (context.connectAppIds.has(id) && !source.includes(`"${connectFile}"`)) {
+      messages.push(
+        `${shown} replaces Connect's route without its options, so what Connect sets on it (loader, search params, pending view, title) is dropped; spread them: import { options } from "${connectFile}".`,
+      );
+    }
+    if (
+      context.genericAppIds.has(id) &&
+      !source.includes("genericSettingsTabs")
+    ) {
+      const tab = id.split("/").at(-1);
+      messages.push(
+        `${shown} replaces a settings tab without its options, so the tab isn't listed; spread genericSettingsTabs["${tab}"] from "@powerhousedao/connect/generic".`,
+      );
+    }
+  }
+  return { file, messages };
+}
+
+/** Warns, as Studio regenerates the tree, about each route file it rewrites. */
+function dropsPlugin(
+  projectRoot: string,
+  routesDir: string,
+  routesDirectory: string,
+): GeneratorPlugin {
+  const context = dropsContext(projectRoot, routesDir, routesDirectory);
+  return {
+    name: "ph-connect-silent-drops",
+    afterTransform: ({ node }) => {
+      const found = dropsOf(node, context);
+      if (found) reportDrops(found.file, found.messages);
+    },
+  };
+}
+
 function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -440,6 +631,35 @@ function connectDirOf(projectRoot: string) {
   );
 }
 
+/** What Connect's route files import, besides each other. */
+export const CONNECT_ROUTE_FILE_DEPS = [
+  "@tanstack/react-router",
+  "@powerhousedao/connect-core/router",
+  "@powerhousedao/connect/route-views",
+];
+
+const IN_NODE_MODULES = /[\\/]node_modules[\\/]/;
+
+/**
+ * The `optimizeDeps.include` entries an installed Connect's route files need.
+ *
+ * Connect and core ship their route files as `.tsx`, which Vite never
+ * pre-bundles, so the dev server serves them as they are. Vite also discovers
+ * no dependency for a module inside node_modules, so their bare imports load
+ * unbundled too, and the CommonJS packages under the router
+ * (use-sync-external-store, safe-stable-stringify) then fail in the browser.
+ * Pre-bundling these by Connect's name gives the route files the copies they
+ * resolve to; core need not be resolvable from the project. A Connect outside
+ * node_modules (the monorepo, a linked checkout) is source to Vite, so its
+ * imports are discovered and pre-bundled anyway.
+ */
+export function connectRouteFileDeps(connectDir: string): string[] {
+  if (!IN_NODE_MODULES.test(connectDir)) return [];
+  return CONNECT_ROUTE_FILE_DEPS.map(
+    (dep) => `@powerhousedao/connect > ${dep}`,
+  );
+}
+
 /** Mounts a project's routes folder over Connect's routes; without one,
  * Connect keeps its prebuilt tree and no router plugin runs. */
 export function connectRoutes(
@@ -448,6 +668,7 @@ export function connectRoutes(
 ): ConnectRoutes {
   const connectDir = connectDirOf(projectRoot);
   const find = ROUTE_TREE_FIND;
+  const include = connectRouteFileDeps(connectDir);
   if (!routesDir) {
     // Stale only without hosts/connect/routes/: a routeless host keeps the project's tree.
     if (!resolveConnectRoutesDir(projectRoot)) {
@@ -458,6 +679,7 @@ export function connectRoutes(
       aliases: [{ find, replacement: join(connectDir, "dist/route-tree.js") }],
       plugins: [],
       dedupe: [],
+      include,
     };
   }
   const config = connectRoutesGeneratorConfig(
@@ -483,9 +705,16 @@ export function connectRoutes(
     plugins: [
       check,
       // Before react(): it splits route files ahead of the JSX transform.
-      tanstackRouter(config),
+      tanstackRouter({
+        ...config,
+        plugins: [
+          ...(config.plugins ?? []),
+          dropsPlugin(projectRoot, routesDir, config.routesDirectory),
+        ],
+      }),
     ],
     dedupe: ["@tanstack/react-router"],
+    include,
   };
 }
 

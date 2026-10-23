@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-23T18:49:29.163Z
+> Generated: 2026-10-23T18:54:01.642Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -14756,7 +14756,7 @@ Generate a document model
 ### Options
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -14780,7 +14780,7 @@ Generate a document editor
 
 **Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -14804,7 +14804,7 @@ Generate a drive app
 
 **Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing app to re-generate (my-app or editors/my-app) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -14838,7 +14838,7 @@ Generate a processor
 **Default:** `switchboard,connect`
 **Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -14862,7 +14862,7 @@ Generate a subgraph
 
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -14899,7 +14899,7 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 **Default:** `custom`
 **Description** - One line describing what the piece connects to - Usage: `--description <str>`
 
-**Dir** - Name of the directory of an existing piece to re-register - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing piece to re-register (my-piece or pieces/my-piece) - Usage: `--dir <dir>`
 
 
 ### Flags
@@ -15244,7 +15244,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **App Name** - Override connect.branding.appName. - Usage: `--app-name <str>`
 
-**Home Background** - Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default. - Usage: `--home-background <str>`
+**Home Background** - Override connect.home.background (the generic plugin's home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient. - Usage: `--home-background <str>`
 
 **Sentry Dsn** - Override connect.sentry.dsn (Sentry DSN URL). Pass an empty string ("") to set null and disable Sentry. - Usage: `--sentry-dsn <str>`
 
@@ -15252,7 +15252,7 @@ Build has no read mode; passing only &lt;key&gt; without &lt;value&gt; errors ou
 
 **Sentry Tracing Enabled** - Override connect.sentry.tracing (Sentry performance tracing). - Usage: `--sentry-tracing-enabled <value>`
 
-**Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd. - Usage: `--favicon <str>`
+**Favicon** - Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd. - Usage: `--favicon <str>`
 
 **Base** - Base path for the app - Usage: `--base <str>`
 
@@ -15469,13 +15469,11 @@ Run migrations
 ## Parameters
 
 ### Arguments
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `[version]`
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
-
-**Default:** `latest`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `--version, -v <str>`
 
 
 ### Flags
@@ -16753,6 +16751,13 @@ Anything expressible over arrays is expressible here —
 result is always readable in place. Import cycles between host files fail at
 load with both names.
 
+A host file may import exactly three things: the project's
+`powerhouse.config.json`, a sibling's `../<host>/host.js`, and a sibling's
+generated `../<host>/outputs.js` (`ph generate hosts`). `process.` is banned —
+read the environment with `{ $env: "NAME" }` (or
+`{ $env: { name: "NAME", optional: true } }` to omit the property when unset),
+resolved when the host starts.
+
 ## Core reactor config (not plugins)
 
 Some things every reactor has; they are **core config**, not plugins:
@@ -16868,6 +16873,76 @@ the chrome, for example into the document title, so it stays a top-level
 side behaves the same way: removing `mcp` removes `/mcp`.)
 
 
+### Workflows: one link, two plugins
+
+Workflows have a server half and a browser half, and the two are declared so
+the link between them is visible in `hosts/`:
+
+```js
+// hosts/switchboard/host.js — serves the workflow runtime AND the drive
+plugins: [
+  {
+    module: "@powerhousedao/switchboard/plugins/workflows",
+    // the Workflows drive this plugin seeds; `drive: false` = runtime only
+    config: { drive: { slug: "workflows", name: "Workflows" } },
+  },
+],
+
+// hosts/connect/host.js — loads Workflow Studio, attaches that drive
+plugins: [
+  {
+    module: "@powerhousedao/connect/plugins/workflows",
+    config: { drive: "http://localhost:4001/d/workflows" },
+  },
+],
+```
+
+- The **switchboard plugin** contributes its drive to the host's drive plan
+  (`contributions.drives`): `ph run switchboard --explain drives` lists it
+  with the plugin as the source, a host declaration with the same slug wins,
+  and the drive opens in Workflow Studio (`preferredEditor: "workflow-studio"`
+  on the drive document). Defaults: slug `workflows`, name `Workflows`, a
+  project-hashed id (the id classic `ph vetra` gave it).
+- The **Connect plugin** is presence-is-activation like the other built-ins:
+  listed, Connect loads the workflow package (Workflow Studio exists) and
+  attaches `drive` as a remote default drive; absent from a declared
+  composition, `app.workflowsEnabled` is zeroed. The drive must be the
+  switchboard's — Workflow Studio reaches the workflow runtime through the
+  selected drive's switchboard, so a local copy of the drive would point the
+  studio at the wrong endpoint. Connect warns when a drive names a drive app
+  that no installed package provides, and Workflow Studio warns when its
+  drive has no switchboard behind it.
+
+**Read the link from the switchboard's outputs instead of spelling the
+URL.** `drive` takes an output token: `switchboard.drives.workflows.url` from
+the generated `../switchboard/outputs.js` (`ph generate hosts`), or the literal
+form below:
+
+```js
+"vetra-studio": {
+  host: "connect",
+  runner: {
+    plugins: [
+      ...connect.runner.plugins,
+      {
+        module: "@powerhousedao/connect/plugins/workflows",
+        config: {
+          drive: { $output: { host: "switchboard", path: ["drives", "workflows", "url"] } },
+        },
+      },
+    ],
+  },
+},
+```
+
+Inside a compound the token reads the switchboard member's live outputs, so
+the compound starts that member first. Standalone `ph run connect` reads the
+running switchboard's run record, and fails naming `ph run switchboard` when
+none is running. The removed `{ from, slug }` form fails validation, naming
+the token form. (The classic switches,
+`workflows.enabled` / `connect.app.workflowsEnabled` / the host's
+`reactor.workflows`, still parse; with the plugins listed they are redundant.)
+
 ## Writing your own plugin
 
 A complete switchboard plugin with config, in one file:
@@ -16972,39 +17047,51 @@ replaces `reactor`; each member wraps a sibling host by folder name:
 ```js
 
 
-const serverPort = switchboard.runner.port;
-const serverDrives = [{ slug: "powerhouse", name: "Acme" }];
-
+/** @satisfies {PHHost} */
 export default {
   name: "desktop",
   runner: { module: "@powerhousedao/desktop/runner" },
-  config: { startOrder: ["server", "app"] },
   children: {
-    server: {
-      host: "switchboard",                       // the sibling folder
-      runner: { plugins: [...switchboard.runner.plugins] },
-      reactor: { ...switchboard.reactor, drives: serverDrives },
-    },
+    server: { host: "switchboard" },            // the sibling folder, as is
     app: {
       host: "connect",
-      runner: { defaultVerb: "serve", port: 3000,
-                plugins: [...connect.runner.plugins] },
-      // the SAME drive list, attached as remotes — declared once, projected twice
+      runner: { defaultVerb: "serve", port: 3000 },
+      // Every drive the server member serves (declared and plugin-created,
+      // e.g. Workflows), attached as a remote by the URL it reports.
       reactor: {
         ...connect.reactor,
-        drives: serverDrives.map((d) => ({
-          slug: d.slug,
-          remote: { url: `http://127.0.0.1:${serverPort}/d/${d.slug}` },
-        })),
+        drives: {
+          $map: {
+            over: { $output: { host: "switchboard", path: ["drives"] } },
+            to: { slug: { $key: true }, remote: { url: server.drives.$item.url } },
+          },
+        },
       },
     },
   },
 };
 ```
 
-Wrapper semantics are **full-statement**: a section present on the wrapper
-replaces the member's section wholesale (spread the member's own section in,
-as above, when you mean "theirs plus mine"). Compound-level plugins
+Wrapper semantics are **full-statement** for `config` and `reactor`: a
+section present on the wrapper replaces the member's section wholesale
+(spread the member's own section in, as above, when you mean "theirs plus
+mine"). `runner` is the exception: it key-merges over the member's own, so
+`port` or `defaultVerb` alone keeps the member's plugins.
+
+**Start order comes from the tokens.** The `app` member reads the `server`
+member's outputs, so the compound starts `server` first and resolves `app`'s
+tokens from its live outputs; `config.startOrder` is optional (it must agree
+with the tokens). `ph run desktop --explain outputs` prints the order and,
+while a producer runs, each token's value.
+
+**`$map`** renders a list (or, with `into: "record"`, a record) from a
+collection output: `over` is an `$output` (or, nested, an `$item`), `to` is
+the template rendered once per element. Inside `to`, `{ $key: true }` is the
+element's key (the index for an array) and `{ $item: ["url"] }` — or the
+typed `server.drives.$item.url` from `outputs.js` — reads a path of the
+element. Records are visited in key-sorted order, so the result is
+deterministic. A nested map names outer bindings with `as` and
+`{ $item: { as, path } }` / `{ $key: "<as>" }`. Compound-level plugins
 (`appliesTo: "compound"`) act on the member set — the clint proxy is the
 reference example: one front port, routes declared per member, resolved from
 each child's `runner.{host, port}`.
@@ -17014,6 +17101,7 @@ each child's `runner.{host, port}`.
 | symptom | tool |
 | --- | --- |
 | which drives will exist, and why | `ph run <host> --explain drives` |
+| which outputs a host reads, start order, current values | `ph run <host> --explain outputs` |
 | plugin rejected on this host | the error names the plugin, its `appliesTo`, and the host type |
 | two plugins provide one hook | boot error naming both — provide hooks have one winner |
 | entry config rejected | boot error naming the entry and the schema failure |
@@ -33483,7 +33571,9 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.packages.externalEnabled`           | `--external-packages`          | boolean                                      |
 | `connect.packages.registryUrl`               | `--packages-registry`          | string                                       |
 | `connect.branding.appName`                   | `--app-name`                   | string                                       |
-| `connect.branding.homeBackground`            | `--home-background`            | string (pass `""` to reset to bundled image) |
+| `connect.branding.icon`                      | —                              | image ref (project path, URL or data URI); favicons and app icons are its `_16x16`…`_512x512` siblings (a `branding.favicon` wins for the favicon); null = Connect's icon |
+| `connect.branding.loader`                    | —                              | image ref or `{ src, animation, size }`; null = Connect's animated logo |
+| `connect.home.background`                    | `--home-background`            | image ref pinned bottom-right (flag), or `{ color, layers }` with positioned, sized, fading layers (config); `""` resets to the bundled gradient |
 | `connect.drives.allowAddDrive`               | `--allow-add-drive`            | boolean                                      |
 | `connect.drives.defaultDrives`               | `--default-drives-url`         | comma-list → array of `{url, name, icon}`    |
 | `connect.drives.preserveStrategy`            | `--drive-preserve-strategy`    | `preserve-all \| preserve-by-url-and-detach` |
@@ -33493,6 +33583,7 @@ Every `connect.*` field has a dedicated flag. Both `ph connect config` and `ph c
 | `connect.drives.sections.local.enabled`      | `--local-drives-enabled`       | boolean                                      |
 | `connect.drives.sections.local.allowAdd`     | `--local-drives-allow-add`     | boolean                                      |
 | `connect.drives.sections.local.allowDelete`  | `--local-drives-allow-delete`  | boolean                                      |
+| `connect.drives.icons.*`                     | —                              | the explorer's icons, owned by the generic plugin (`icons` in its entry under uniform runners): `localDrive`, `remoteDrive`, `folder`, `document`, `documents[type]` as image refs; null = built-in icon |
 | `connect.renown.url`                         | `--renown-url`                 | string                                       |
 | `connect.renown.networkId`                   | `--renown-network-id`          | string                                       |
 | `connect.renown.chainId`                     | `--renown-chain-id`            | number                                       |

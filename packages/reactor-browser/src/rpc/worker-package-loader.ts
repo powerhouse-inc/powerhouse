@@ -3,9 +3,9 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
-import { rewritePackageSource } from "@powerhousedao/shared/connect";
 import { RegistryClient } from "../registry/client.js";
 import type { WorkerPackageSource } from "@powerhousedao/reactor/rpc";
+import { ModuleGraph, type ModuleGraphOptions } from "./module-graph.js";
 
 export type PackageImporter = (url: string) => Promise<Record<string, unknown>>;
 
@@ -13,13 +13,9 @@ export type WorkerPackageLoaderOptions = {
   cdnUrl: string;
   importPackage: PackageImporter;
   resolvePackages?: (documentType: string) => Promise<string[]>;
-  /** Absolute-URL import map for shared deps (worker import maps don't
-   *  exist, so the source is rewritten to these URLs and blob-imported). */
+  /** Absolute URLs for the shared deps a registry package leaves bare; a worker has no import map. */
   sharedImports?: Record<string, string>;
-  /** Import a rewritten source string (blob URL). Only called when a
-   *  rewrite happened; omit to disable shared-deps loading in a worker. */
-  importSource?: (source: string) => Promise<Record<string, unknown>>;
-};
+} & Pick<ModuleGraphOptions, "fetchSource" | "createModuleUrl" | "warn">;
 
 export type PackageLoadFailure = {
   name: string;
@@ -27,14 +23,40 @@ export type PackageLoadFailure = {
   error: unknown;
 };
 
+/** One line for a failed load: the package, its URL and why. */
+export function describeLoadFailure(failure: PackageLoadFailure): string {
+  const reason =
+    failure.error instanceof Error
+      ? failure.error.message
+      : String(failure.error);
+  return `${failure.name} (${failure.url}): ${reason}`;
+}
+
 type SourceReplacement =
   | { status: "replaced"; types: Set<string> }
+  | { status: "unchanged" }
   | { status: "stale" }
   | { status: "failed"; failure: PackageLoadFailure };
 
+function summarize(results: SourceReplacement[]): {
+  types: string[];
+  failures: PackageLoadFailure[];
+} {
+  const types = new Set<string>();
+  const failures: PackageLoadFailure[] = [];
+  for (const result of results) {
+    if (result.status === "replaced") {
+      for (const type of result.types) types.add(type);
+    } else if (result.status === "failed") {
+      failures.push(result.failure);
+    }
+  }
+  return { types: [...types], failures };
+}
+
 const SOURCE_KEY_PREFIX = "src:";
 
-// Keys are registry specs (`name`, `name@1.2.3`, `@scope/name@1.2.3`) or
+// Takes registry specs (`name`, `name@1.2.3`, `@scope/name@1.2.3`) or
 // source keys (`src:<name>`, see sourceKey).
 function packageName(key: string): string {
   if (key.startsWith(SOURCE_KEY_PREFIX)) {
@@ -98,10 +120,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   private readonly cdnUrl: string;
   private readonly importPackage: PackageImporter;
   private readonly resolvePackages: (documentType: string) => Promise<string[]>;
-  private readonly sharedImports?: Record<string, string>;
-  private readonly importSource?: (
-    source: string,
-  ) => Promise<Record<string, unknown>>;
+  private readonly moduleGraph: ModuleGraph;
   // Keyed by `documentType@version`: a type can ship several module versions
   // side by side, and keying by type alone would evict all but the last.
   private readonly modulesByKey = new Map<string, DocumentModelModule>();
@@ -110,17 +129,22 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
   // What each loaded source contributed, so a reload can remove it first.
   private readonly keysBySource = new Map<string, Set<string>>();
   private readonly manifestTypesBySource = new Map<string, Set<string>>();
-  private readonly loadedSpecs = new Set<string>();
+  // The URL each key's current modules came from.
+  private readonly loadedUrls = new Map<string, string>();
   private readonly failures: PackageLoadFailure[] = [];
-  private readonly pendingLoads = new Map<string, Promise<void>>();
+  private readonly pendingLoads = new Map<string, Promise<SourceReplacement>>();
   private readonly generationBySource = new Map<string, number>();
   private generation = 0;
 
   constructor(options: WorkerPackageLoaderOptions) {
     this.cdnUrl = options.cdnUrl.replace(/\/$/, "");
     this.importPackage = options.importPackage;
-    this.sharedImports = options.sharedImports;
-    this.importSource = options.importSource;
+    this.moduleGraph = new ModuleGraph({
+      sharedImports: options.sharedImports,
+      fetchSource: options.fetchSource,
+      createModuleUrl: options.createModuleUrl,
+      warn: options.warn,
+    });
     const registryClient = new RegistryClient(options.cdnUrl);
     this.resolvePackages =
       options.resolvePackages ??
@@ -133,6 +157,16 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
       [...new Set(specs)].map((spec) => this.loadPackage(spec)),
     );
     return this.models;
+  }
+
+  /** Loads registry packages added or updated after boot; returns the types whose modules changed, and the failures. */
+  async updatePackages(
+    specs: string[],
+  ): Promise<{ types: string[]; failures: PackageLoadFailure[] }> {
+    const results = await Promise.all(
+      [...new Set(specs)].map((spec) => this.loadPackage(spec)),
+    );
+    return summarize(results);
   }
 
   /** Loads URL-addressed packages (local project packages). Idempotent. */
@@ -158,16 +192,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
         this.replaceSource(sourceKey(source), source.url),
       ),
     );
-    const types = new Set<string>();
-    const failures: PackageLoadFailure[] = [];
-    for (const result of results) {
-      if (result.status === "replaced") {
-        for (const type of result.types) types.add(type);
-      } else if (result.status === "failed") {
-        failures.push(result.failure);
-      }
-    }
-    return { types: [...types], failures };
+    return summarize(results);
   }
 
   // On a miss, discover the package(s) for the type and import them on demand.
@@ -241,24 +266,34 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     );
   }
 
-  private async loadPackage(spec: string): Promise<void> {
+  // Keyed by bare name: a bare spec takes whatever version is loaded, a pinned one replaces another.
+  private loadPackage(spec: string): Promise<SourceReplacement> {
     const name = packageName(spec);
-    const url = `${this.cdnUrl}/${name}/browser/document-models/index.js`;
-    await this.loadFromUrl(spec, url);
+    const url = `${this.cdnUrl}/${spec}/browser/document-models/index.js`;
+    const loaded = this.loadedUrls.get(name);
+    if (loaded !== undefined && (spec === name || loaded === url)) {
+      return Promise.resolve({ status: "unchanged" });
+    }
+    return this.loadFromUrl(name, url, loaded !== undefined);
   }
 
-  // Concurrent loads of one key share an import; a separate generation would
+  // Concurrent loads of one URL share an import; a separate generation would
   // mark the earlier one stale and its caller would miss the module.
-  private loadFromUrl(key: string, url: string): Promise<void> {
-    if (this.loadedSpecs.has(key)) {
-      return Promise.resolve();
+  private loadFromUrl(
+    key: string,
+    url: string,
+    replace = false,
+  ): Promise<SourceReplacement> {
+    if (!replace && this.loadedUrls.has(key)) {
+      return Promise.resolve({ status: "unchanged" });
     }
-    let pending = this.pendingLoads.get(key);
+    const pendingKey = `${key} ${url}`;
+    let pending = this.pendingLoads.get(pendingKey);
     if (!pending) {
-      pending = this.replaceSource(key, url)
-        .finally(() => this.pendingLoads.delete(key))
-        .then(() => undefined);
-      this.pendingLoads.set(key, pending);
+      pending = this.replaceSource(key, url).finally(() =>
+        this.pendingLoads.delete(pendingKey),
+      );
+      this.pendingLoads.set(pendingKey, pending);
     }
     return pending;
   }
@@ -273,7 +308,7 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     this.generationBySource.set(key, generation);
     let namespace: Record<string, unknown>;
     try {
-      namespace = await this.importNamespace(url);
+      namespace = await this.importNamespace(key, url);
     } catch (error) {
       if (this.generationBySource.get(key) !== generation) {
         return { status: "stale" };
@@ -297,34 +332,19 @@ export class WorkerPackageLoader implements IDocumentModelLoader {
     for (const added of this.registerNamespace(key, namespace)) {
       types.add(added);
     }
-    this.loadedSpecs.add(key);
+    this.loadedUrls.set(key, url);
     return { status: "replaced", types };
   }
 
-  private async importNamespace(url: string): Promise<Record<string, unknown>> {
-    // Shared-deps hosts fetch the source so shared specifiers can be
-    // rewritten to absolute vendor URLs (import maps don't apply to blob
-    // imports). Packages without shared/relative imports still go through
-    // the plain importPackage path below.
-    const hasSharedImports =
-      this.sharedImports !== undefined &&
-      Object.keys(this.sharedImports).length > 0;
-    const source = hasSharedImports
-      ? await (await fetch(url)).text()
-      : undefined;
-    const rewritten =
-      source !== undefined
-        ? rewritePackageSource(source, url, this.sharedImports!)
-        : source;
-    if (rewritten !== undefined && rewritten !== source) {
-      if (!this.importSource) {
-        throw new Error(
-          "importSource is required to load a package that imports shared deps",
-        );
-      }
-      return this.importSource(rewritten);
+  // Sources are dev-server or prebuilt worker modules; registry packages leave shared deps bare.
+  private async importNamespace(
+    key: string,
+    url: string,
+  ): Promise<Record<string, unknown>> {
+    if (key.startsWith(SOURCE_KEY_PREFIX)) {
+      return this.importPackage(url);
     }
-    return this.importPackage(url);
+    return this.importPackage(await this.moduleGraph.resolve(url));
   }
 
   /** Registers a namespace as the key's whole contribution; returns its module types. */

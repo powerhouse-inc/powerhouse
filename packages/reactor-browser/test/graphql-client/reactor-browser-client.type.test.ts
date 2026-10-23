@@ -8,9 +8,10 @@ describe("IReactorBrowserClient", () => {
     expect(true).toBe(true);
   });
 
-  it("exposes exactly the six agreed members", () => {
+  it("exposes exactly the seven agreed members", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
+      | "find"
       | "subscribe"
       | "execute"
       | "getOperations"

@@ -79,6 +79,13 @@ network I/O. CI restores the same directory into the recipes checkout from an
 rather than once per run — the Hub rate-limits runner IPs, and a 429 there used
 to redden the whole job.
 
+Recipes with browser tests run `playwright install chromium` inside their `test`
+script, which puts a cold Chromium download inside the 600s limit. CI
+pre-installs Chromium, with a cache, for every `playwright-core` version in the
+recipes lockfile. The recipes' Playwright version, not this repo's, decides which
+Chromium revision gets downloaded. With the browser already in place, the
+recipe's own install step does nothing.
+
 ## Options
 
 | Flag | Effect |

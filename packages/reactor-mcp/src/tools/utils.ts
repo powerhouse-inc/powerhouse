@@ -5,6 +5,7 @@ import type {
   DocumentModelModule,
   Operation,
 } from "@powerhousedao/shared/document-model";
+import { baseActions } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 
@@ -139,4 +140,80 @@ export function validateDocumentModelAction(
     isValid: errors.length === 0,
     errors,
   };
+}
+
+/** The scope each base action must carry; `null` means any scope of the document. */
+const BASE_ACTION_SCOPES: Record<string, string | null> = {
+  SET_NAME: "global",
+  SET_PREFERRED_EDITOR: "header",
+  UNDO: null,
+  REDO: null,
+  NOOP: null,
+};
+
+function countInput(input: unknown): number | undefined {
+  if (typeof input === "number") return input;
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "count" in input &&
+    typeof input.count === "number"
+  ) {
+    return input.count;
+  }
+  return undefined;
+}
+
+/**
+ * Builds a document-model base action (SET_NAME, SET_PREFERRED_EDITOR, UNDO,
+ * REDO, NOOP) with its action creator. Returns `null` for any other type.
+ */
+export function createBaseAction(
+  type: string,
+  input: unknown,
+  scope: string,
+): { action: Action | null; errors: string[] } | null {
+  if (!Object.hasOwn(BASE_ACTION_SCOPES, type)) return null;
+
+  const expectedScope = BASE_ACTION_SCOPES[type];
+  if (expectedScope !== null && scope !== expectedScope) {
+    return {
+      action: null,
+      errors: [
+        `Action scope "${scope}" does not match operation scope "${expectedScope}"`,
+      ],
+    };
+  }
+
+  try {
+    switch (type) {
+      case "SET_NAME":
+        return {
+          action: baseActions.setName(input as string | { name: string }),
+          errors: [],
+        };
+      case "SET_PREFERRED_EDITOR":
+        return {
+          action: baseActions.setPreferredEditor(
+            input as string | null | { preferredEditor: string | null },
+          ),
+          errors: [],
+        };
+      case "UNDO":
+        return {
+          action: baseActions.undo(countInput(input), scope),
+          errors: [],
+        };
+      case "REDO":
+        return {
+          action: baseActions.redo(countInput(input), scope),
+          errors: [],
+        };
+      default:
+        return { action: baseActions.noop(scope), errors: [] };
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : JSON.stringify(e);
+    return { action: null, errors: [`Input validation error: ${message}`] };
+  }
 }

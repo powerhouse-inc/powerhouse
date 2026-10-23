@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.73",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -30,12 +30,6 @@
       "types": "./dist/runners/switchboard.d.mts",
       "import": "./dist/runners/switchboard.mjs",
       "default": "./dist/runners/switchboard.mjs"
-    },
-    "./runners/compound": {
-      "source": "./src/runners/compound.ts",
-      "types": "./dist/runners/compound.d.mts",
-      "import": "./dist/runners/compound.mjs",
-      "default": "./dist/runners/compound.mjs"
     }
   },
   "files": [
@@ -50,7 +44,8 @@
     "postbuild": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "bun run ./src/cli.ts",
-    "cli": "node ./dist/cli.mjs"
+    "cli": "node ./dist/cli.mjs",
+    "emit-schemas": "tsx scripts/emit-runner-schemas.ts"
   },
   "keywords": [],
   "author": "",

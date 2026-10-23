@@ -22,6 +22,11 @@ export const env = loadRuntimeEnv({
 });
 
 declare const PH_CONNECT_SENTRY_RELEASE: string;
+// Undefined when Node runs this module untransformed, e.g. to prerender the shell.
+const sentryRelease =
+  typeof PH_CONNECT_SENTRY_RELEASE !== "undefined"
+    ? PH_CONNECT_SENTRY_RELEASE
+    : undefined;
 
 // Runtime fields come from the JSON, not env. start-connect.tsx's top-level
 // await guarantees the loader cache is warm by the time this module
@@ -110,7 +115,7 @@ function getBuiltInDefaults(): Omit<
     renownChainId: runtime.renown?.chainId,
     switchboardUrl: runtime.renown?.switchboardUrl,
     renownAdapters: runtime.renown?.adapters,
-    sentryRelease: PH_CONNECT_SENTRY_RELEASE,
+    sentryRelease,
     sentryDsn: runtime.sentry?.dsn ?? undefined,
     sentryEnv: runtime.sentry?.env,
     isDiffAnalyticsEnabled: env.PH_CONNECT_DIFF_ANALYTICS_ENABLED,
@@ -240,7 +245,7 @@ export const connectConfig = {
     adapters: runtime.renown?.adapters,
   },
   sentry: {
-    release: PH_CONNECT_SENTRY_RELEASE,
+    release: sentryRelease,
     // `dsn: null` (default) means Sentry is disabled — useInitSentry bails.
     dsn: runtime.sentry?.dsn ?? null,
     env: runtime.sentry?.env,

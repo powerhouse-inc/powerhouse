@@ -181,10 +181,11 @@ export class InMemoryQueue implements IQueue {
     if (documentType) {
       try {
         await this.resolver.ensureModelLoaded(documentType);
-      } catch {
+      } catch (error) {
+        const cause = error instanceof Error ? error.message : String(error);
         await this.failJob(job.id, {
           name: "Error",
-          message: `Failed to load document model for type: ${documentType}`,
+          message: `Failed to load document model for type: ${documentType}: ${cause}`,
           stack: new Error().stack || "",
         });
         return;

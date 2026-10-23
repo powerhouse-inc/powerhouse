@@ -1,3 +1,96 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🚀 Features
+
+- **connect:** in dev the reactor worker takes the shared deps from the page's import map ([ddd7bfab2d](https://github.com/powerhouse-inc/powerhouse/commit/ddd7bfab2d))
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **connect,connect-core,design-system:** home page parts for a custom home, accessible sidebar items and a phone layout, a centred modal dialog, router devtools off by default ([19de3ad862](https://github.com/powerhouse-inc/powerhouse/commit/19de3ad862))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **connect:** publish the tab's PGlite to the relational hooks ([284919d4e9](https://github.com/powerhouse-inc/powerhouse/commit/284919d4e9))
+- **connect-core,connect,design-system,reactor-browser:** the create-document modal outside a drive asks for one, preselecting the only drive, and takes a driveId ([7ae549e673](https://github.com/powerhouse-inc/powerhouse/commit/7ae549e673))
+- **builder-tools,connect:** a loading shell that fails to prerender shows in studio's overlay and log, naming each error and its component's source line ([ebfb1e2d30](https://github.com/powerhouse-inc/powerhouse/commit/ebfb1e2d30))
+- **builder-tools,connect-core,connect,ph-cli:** routes generation takes settings tab overrides, fails on two routes at one url, and warns on silent drops in builds and studio ([35461fda2c](https://github.com/powerhouse-inc/powerhouse/commit/35461fda2c))
+- **builder-tools,connect,ph-cli,reactor-api:** studio works with an installed connect and the packages it loads: route deps pre-bundled, the tree live and watched, a vite cache per server ([3bf42449fb](https://github.com/powerhouse-inc/powerhouse/commit/3bf42449fb))
+- **connect-core,connect:** core's and connect's built code runs in plain node, so a project's loading shell prerenders ([ece1559217](https://github.com/powerhouse-inc/powerhouse/commit/ece1559217))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Wouter Kampmann
+
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **shared,workflow:** the package stylesheet entry takes the theme to reference and skips source maps; workflow's stylesheet holds its own classes and vendor CSS against the design system's theme ([f3bfe645e9](https://github.com/powerhouse-inc/powerhouse/commit/f3bfe645e9))
+- **codegen,connect:** generated editors and modules are typed for their document; agents and Connect docs describe props at the top and hooks below ([406b754a7e](https://github.com/powerhouse-inc/powerhouse/commit/406b754a7e))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+- **builder-tools,connect:** the host's stylesheet, hosts/<host>/style.css, joins the project's in Connect's builds and loading shell ([5c9f498355](https://github.com/powerhouse-inc/powerhouse/commit/5c9f498355))
+- **shared,ph-cli,connect:** a package's stylesheet holds only its own classes and rules, against Connect's theme by reference, in external-packages; ph install --local leaves style.css alone ([d0b0e9d463](https://github.com/powerhouse-inc/powerhouse/commit/d0b0e9d463))
+- **design-system,connect-core,connect,shared:** theme.css holds Connect's tokens without its classes, plugins in plugins.css, one layer order with Tailwind's properties layer first ([f7ffdd1a27](https://github.com/powerhouse-inc/powerhouse/commit/f7ffdd1a27))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **connect:** workflows plugin drive is ref(z.url()); { from, slug } rejected naming the token form ([b93b7d507f](https://github.com/powerhouse-inc/powerhouse/commit/b93b7d507f))
+- **connect:** zod-only @powerhousedao/connect/plugin-configs entry ([9a02ff9c42](https://github.com/powerhouse-inc/powerhouse/commit/9a02ff9c42))
+- **connect:** strict configSchemas and PHPluginConfigs entries for the built-in plugins ([fe32f4405c](https://github.com/powerhouse-inc/powerhouse/commit/fe32f4405c))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **connect:** the generic plugin owns the drive explorer's icons ([8e6bb1d044](https://github.com/powerhouse-inc/powerhouse/commit/8e6bb1d044))
+- **connect:** project loader, branded PWA manifest and custom-shell first paint ([43465eae3b](https://github.com/powerhouse-inc/powerhouse/commit/43465eae3b))
+- project icon sets for Connect and Desktop hosts (proof of concept) ([b0fb21b1de](https://github.com/powerhouse-inc/powerhouse/commit/b0fb21b1de))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **connect:** drop host-core/schema from the plugin-configs allowlists ([48136d0904](https://github.com/powerhouse-inc/powerhouse/commit/48136d0904))
+- **builder-tools:** branding.favicon and --favicon win over branding.icon's favicons ([c26dcd077a](https://github.com/powerhouse-inc/powerhouse/commit/c26dcd077a))
+- **connect:** core's loading shell carries the loader slot, so a project's branding.loader shows without the generic plugin ([91bfb2a58d](https://github.com/powerhouse-inc/powerhouse/commit/91bfb2a58d))
+- **connect:** drop a redundant issue-code check in the workflows drive error ([40685ce941](https://github.com/powerhouse-inc/powerhouse/commit/40685ce941))
+- **connect:** invalid plugin entry config fails naming the plugin and the key ([f38d7e5726](https://github.com/powerhouse-inc/powerhouse/commit/f38d7e5726))
+- **connect:** project favicons replace the static icon.ico at boot ([9b99a0959a](https://github.com/powerhouse-inc/powerhouse/commit/9b99a0959a))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **shared,workflow:** the package stylesheet entry takes the theme to reference and skips source maps; workflow's stylesheet holds its own classes and vendor CSS against the design system's theme ([f3bfe645e9](https://github.com/powerhouse-inc/powerhouse/commit/f3bfe645e9))
+- **codegen,connect:** generated editors and modules are typed for their document; agents and Connect docs describe props at the top and hooks below ([406b754a7e](https://github.com/powerhouse-inc/powerhouse/commit/406b754a7e))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+- **builder-tools,connect:** the host's stylesheet, hosts/<host>/style.css, joins the project's in Connect's builds and loading shell ([5c9f498355](https://github.com/powerhouse-inc/powerhouse/commit/5c9f498355))
+- **shared,ph-cli,connect:** a package's stylesheet holds only its own classes and rules, against Connect's theme by reference, in external-packages; ph install --local leaves style.css alone ([d0b0e9d463](https://github.com/powerhouse-inc/powerhouse/commit/d0b0e9d463))
+- **design-system,connect-core,connect,shared:** theme.css holds Connect's tokens without its classes, plugins in plugins.css, one layer order with Tailwind's properties layer first ([f7ffdd1a27](https://github.com/powerhouse-inc/powerhouse/commit/f7ffdd1a27))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

@@ -200,7 +200,7 @@ function makeCompoundProject(): { dir: string; sink: string } {
 import { appendFileSync } from "node:fs";
 const sink = ${JSON.stringify(sink)};
 export const kind = "reactor";
-export const hostSchema = { safeParse: () => ({ success: true }) };
+export const hostSchema = { safeParse: (host) => ({ success: true, data: host }) };
 export async function dev(host, ctx) {
   appendFileSync(
     sink,
@@ -218,7 +218,7 @@ export const run = dev;
     `export default {
       name: "worker-host",
       runner: { module: "fake-runner", defaultVerb: "dev", plugins: ["base-plugin"] },
-      reactor: { driveA: true, driveB: true },
+      reactor: { namespace: "base", workflows: true },
       config: { a: 1 },
     };`,
   );
@@ -229,7 +229,7 @@ export const run = dev;
       name: "app",
       runner: { module: "fake-runner", defaultVerb: "dev" },
       children: {
-        worker: { host: "worker", runner: { port: 9999 }, reactor: { driveC: true } },
+        worker: { host: "worker", runner: { port: 9999 }, reactor: { namespace: "wrapper" } },
       },
       config: { runtimeRecord: false },
     };`,
@@ -285,8 +285,8 @@ describe("resolveMemberHost full-statement semantics (via runCompound)", () => {
       port: 9999,
     });
     // reactor: full statement — the wrapper's reactor REPLACES the base's,
-    // not merges with it (driveA/driveB from base must be gone).
-    expect(call.reactor).toEqual({ driveC: true });
+    // not merges with it (base's workflows key must be gone).
+    expect(call.reactor).toEqual({ namespace: "wrapper" });
     // config: wrapper did not declare one, so base's config carries through.
     expect(call.config).toEqual({ a: 1 });
   });
@@ -312,7 +312,7 @@ describe("resolveMemberHost full-statement semantics (via runCompound)", () => {
       installSignalHandlers: false,
     });
     const [call] = readCalls(sink);
-    expect(call.reactor).toEqual({ driveA: true, driveB: true });
+    expect(call.reactor).toEqual({ namespace: "base", workflows: true });
     expect(call.config).toEqual({ a: 1 });
     expect(call.runner).toEqual({
       module: "fake-runner",

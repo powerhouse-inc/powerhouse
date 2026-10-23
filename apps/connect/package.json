@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.2.3-dev.69",
+  "version": "6.2.3-dev.73",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -12,12 +12,12 @@
     "dist",
     "skills",
     "docs",
-    "CUSTOMIZING.md",
     "RUNTIME-CONFIG.md",
     "src/routes",
     "src/router",
     "src/route-tree.ts",
     "src/routeTree.gen.ts",
+    "generic-routes.json",
     "style.css",
     "tailwind.css",
     "theme.css",
@@ -71,6 +71,12 @@
       "types": "./dist/route-views.d.ts",
       "import": "./dist/route-views.js"
     },
+    "./plugin-configs": {
+      "source": "./src/plugin-configs/index.ts",
+      "types": "./dist/plugin-configs.d.ts",
+      "import": "./dist/plugin-configs.js",
+      "default": "./dist/plugin-configs.js"
+    },
     "./routes/*": "./src/routes/*.tsx",
     "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css",
@@ -103,7 +109,7 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build": "pnpm run build:bundle && pnpm run build:css && pnpm run build:shell",
-    "build:bundle": "tsdown",
+    "build:bundle": "tsdown && node scripts/assert-plugin-configs.mjs",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:shell": "vite build --config vite.prerender.config.ts --logLevel warn && node scripts/prerender-shell.ts",
     "build:debug": "cross-env PH_DEBUG_BUILD=true vite build",
@@ -138,7 +144,6 @@
     "@sentry/react": "^10.17.0",
     "@tailwindcss/node": "catalog:",
     "@tanstack/react-query": "^5.90.2",
-    "@tanstack/react-router": "^1.170.41",
     "document-model": "workspace:*",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
@@ -157,6 +162,7 @@
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-router": "^1.170.41",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/router-core": "1.171.34",
     "@tanstack/router-plugin": "1.168.42",
@@ -179,6 +185,7 @@
     "vite-tsconfig-paths": "catalog:"
   },
   "peerDependencies": {
+    "@tanstack/react-router": "^1.170.41",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   }

@@ -450,8 +450,17 @@ export async function startViteServer(root: string, logger?: Logger) {
     root,
     configFile: false,
     logger,
-    server: { middlewareMode: true, watch: { ignored: ["**/.ph/**"] } },
+    server: {
+      middlewareMode: true,
+      // It loads modules, never serves a page: no HMR port to collide on.
+      hmr: false,
+      watch: { ignored: ["**/.ph/**"] },
+    },
     appType: "custom",
+    // Its own cache, and no client deps to optimize: Studio's cache is the
+    // project's node_modules/.vite, which it would otherwise rewrite.
+    cacheDir: path.join(root, "node_modules", ".vite-reactor"),
+    optimizeDeps: { noDiscovery: true, include: [], entries: [] },
     build: {
       rollupOptions: {
         input: [],

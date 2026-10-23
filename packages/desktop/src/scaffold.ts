@@ -1,3 +1,6 @@
+import type { PHBackground } from "@powerhousedao/shared/clis";
+import { mapBackgroundImages } from "@powerhousedao/shared/connect";
+import { isPassthroughImageRef } from "@powerhousedao/shared/connect/image-ref";
 import { deflateSync } from "node:zlib";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,6 +20,33 @@ export interface ScaffoldDesktopShellOptions {
   productName: string;
   /** Overwrite an existing app.json (default: refuse, to protect edits). */
   force?: boolean;
+  /** The loading page's background, with its paths already relative to the
+   * host directory (see `rebaseBackground`); `ph generate desktop-shell`
+   * passes Connect's `connect.home.background`. Default: none. */
+  background?: PHBackground | null;
+}
+
+/**
+ * A background whose project-relative paths are rewritten to be relative to
+ * another directory (powerhouse.config.json's root -> hosts/desktop, where
+ * app.json resolves them from). URLs and data URIs are left as they are.
+ */
+export function rebaseBackground(
+  background: PHBackground,
+  fromDir: string,
+  toDir: string,
+): PHBackground {
+  const rebase = (ref: string): string => {
+    if (isPassthroughImageRef(ref)) return ref;
+    const rel = path
+      .relative(toDir, path.resolve(fromDir, ref))
+      .split(path.sep)
+      .join("/");
+    return rel.startsWith(".") ? rel : `./${rel}`;
+  };
+  return typeof background === "string"
+    ? rebase(background)
+    : mapBackgroundImages(background, rebase);
 }
 
 export interface ScaffoldResult {
@@ -114,6 +144,9 @@ export function scaffoldDesktopShell(
     identifier: options.identifier,
     productName: options.productName,
     icon: `./${iconFile}`,
+    // The loading page's branding; null = the defaults (see app-json.ts).
+    background: options.background ?? null,
+    loading: null,
     window: { title: options.productName, width: 1440, height: 900 },
     fileAssociations: [
       {

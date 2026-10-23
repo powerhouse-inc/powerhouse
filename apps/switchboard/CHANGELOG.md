@@ -1,3 +1,69 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **switchboard:** one process per PGlite store ([a2283f4a52](https://github.com/powerhouse-inc/powerhouse/commit/a2283f4a52))
+- **reactor-attachments,switchboard:** an empty file is a valid attachment ([223d231756](https://github.com/powerhouse-inc/powerhouse/commit/223d231756))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **ph-cli:** runners export declared + resolved host schemas; compound members leave Ctrl-C to the compound ([4dc7c40322](https://github.com/powerhouse-inc/powerhouse/commit/4dc7c40322))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **switchboard:** shutdown() stops the owned reactor, idempotently ([26b46c1a36](https://github.com/powerhouse-inc/powerhouse/commit/26b46c1a36))
+- **switchboard:** typed configSchema and PHPluginConfigs entry for every built-in plugin ([ed25110339](https://github.com/powerhouse-inc/powerhouse/commit/ed25110339))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **switchboard:** the port probe falls back to ipv4 on a host without ipv6, and names the port when it fails ([a18c187faa](https://github.com/powerhouse-inc/powerhouse/commit/a18c187faa))
+- **switchboard,reactor-api,ph-cli:** a slug another document holds is never moved: a default drive reuses a drive that holds it or is logged and skipped, and graphql creates refuse it ([245cc68e6c](https://github.com/powerhouse-inc/powerhouse/commit/245cc68e6c))
+- **switchboard:** an aborted boot stops the owned reactor through its shutdown ([ac4d0b05bf](https://github.com/powerhouse-inc/powerhouse/commit/ac4d0b05bf))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

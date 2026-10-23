@@ -20,8 +20,8 @@ import {
  */
 export type WorkerPackageImporters = {
   importPackage: PackageImporter;
-  /** Imports a rewritten source string (blob URL); omit to disable it. */
-  importSource?: (source: string) => Promise<Record<string, unknown>>;
+  /** Reads a registry package's module sources; defaults to fetch. */
+  fetchSource?: (url: string) => Promise<string>;
 };
 
 export type BuildWorkerReactorOptions = {
@@ -81,9 +81,7 @@ export async function buildWorkerReactor(
     loader = new WorkerPackageLoader({
       cdnUrl: construct.cdnUrl ?? "",
       importPackage: importers.importPackage,
-      ...(importers.importSource
-        ? { importSource: importers.importSource }
-        : {}),
+      fetchSource: importers.fetchSource,
     });
     await loader.loadPackages(construct.packageSpecs ?? []);
     await loader.loadSources(construct.packageSources ?? []);

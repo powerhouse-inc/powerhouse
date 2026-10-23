@@ -21,7 +21,7 @@ import {
   tsMorphGenerateSubgraph,
 } from "file-builders";
 import { derivePieceId } from "name-builders";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { readPackage } from "read-pkg";
 import {
@@ -37,9 +37,13 @@ import {
 import type { Project } from "ts-morph";
 import {
   getAppMetadata,
+  getEditorDirNames,
   getEditorMetadata,
+  getNonProcessorDirNames,
   getOrCreateDirectory,
+  getProcessorDirNames,
   getProcessorMetadata,
+  getSubgraphDirNames,
   getSubgraphMetadata,
   loadDocumentModelInDir,
   readPiecesList,
@@ -53,7 +57,9 @@ export async function generateDocumentModel(
   await tsMorphGenerateDocumentModel(documentModelState, project);
 }
 
-/* Runs generate for each document model json file found in the project's `document-models` directory  */
+/* Runs generate for each document model json file found in the project's `document-models` directory.
+ * Returns the document models it regenerated, and the directories without a readable `<dir>.json`.
+ */
 export async function generateAllDocumentModels(project: Project) {
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
@@ -61,21 +67,33 @@ export async function generateAllDocumentModels(project: Project) {
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const projectDir = documentModelsDir.getParentOrThrow().getPath();
-  const documentModelStateFiles = pipe(
-    readdirSync(documentModelsDirPath, { withFileTypes: true }),
-    map(loadDocumentModelInDir),
-    filter(isDefined),
-  );
+  const dirents = existsSync(documentModelsDirPath)
+    ? readdirSync(documentModelsDirPath, { withFileTypes: true })
+        .filter((dirent) => dirent.isDirectory())
+        .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
+  const loaded = dirents.map((dirent) => ({
+    dirName: dirent.name,
+    state: loadDocumentModelInDir(dirent),
+  }));
+  const unreadableDirs = loaded
+    .filter(({ state }) => state === undefined)
+    .map(prop("dirName"));
+  const documentModels = pipe(loaded, map(prop("state")), filter(isDefined));
 
-  for (const documentModelState of documentModelStateFiles) {
+  for (const documentModelState of documentModels) {
     await generateDocumentModel(documentModelState, project);
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "documentModels",
-    documentModelStateFiles.map((s) => s.id),
-  );
+  // An unreadable spec may be a document model's, so its manifest entry stays.
+  if (unreadableDirs.length === 0) {
+    await pruneManifestSection(
+      projectDir,
+      "documentModels",
+      documentModels.map((s) => s.id),
+    );
+  }
+  return { documentModels, unreadableDirs };
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
@@ -122,17 +140,19 @@ export async function generateEditor(
 /* Runs generate for all editors found in the project's `editors` directory.
  * Note: we intentionally filter out editors with the document type "powerhouse/document-drive".
  * These are handled separately by the `generateAllApps` function.
+ * Returns the editors it regenerated, and the directories whose `module.ts` it could not read.
  */
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const projectDir = editorsDir.getParentOrThrow().getPath();
-  // The project starts without files, so load the ones discovery reads.
-  project.addSourceFilesAtPaths(join(editorsDir.getPath(), "*", "module.ts"));
+  const dirNames = getEditorDirNames(project);
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
-  const editorsToAdd = pipe(
-    editorsDir.getDirectories(),
-    map((dir) => dir.getBaseName()),
+  const unreadableDirs = dirNames.filter(
+    (dirName) => !getEditorMetadata(project, dirName),
+  );
+  const editors = pipe(
+    dirNames,
     map((dirName) => getEditorMetadata(project, dirName)),
     filter(isTruthy),
     filter(
@@ -141,13 +161,13 @@ export async function generateAllEditors(project: Project) {
     ),
   );
 
-  for (const editorToAdd of editorsToAdd) {
+  for (const editor of editors) {
     const {
       name: editorName,
       id: editorId,
       dirName: editorDirName,
       documentTypes,
-    } = editorToAdd;
+    } = editor;
 
     await generateEditor(
       {
@@ -160,11 +180,15 @@ export async function generateAllEditors(project: Project) {
     );
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "editors",
-    editorsToAdd.map((e) => e.id),
-  );
+  // An unreadable module.ts may be an editor's, so its manifest entry stays.
+  if (unreadableDirs.length === 0) {
+    await pruneManifestSection(
+      projectDir,
+      "editors",
+      editors.map((e) => e.id),
+    );
+  }
+  return { editors, unreadableDirs };
 }
 
 type GenerateAppArgs = {
@@ -196,27 +220,31 @@ export async function generateApp(args: GenerateAppArgs, project: Project) {
 /* Runs generate for all apps found in the project's `editors` directory.
  * Note: we intentionally filter out editors which do not have the document type "powerhouse/document-drive".
  * These are handled separately by the `generateAllEditors` function.
+ * Returns the apps it regenerated, and the directories whose `module.ts` it could not read.
  */
 export async function generateAllApps(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const projectDir = editorsDir.getParentOrThrow().getPath();
+  const dirNames = getEditorDirNames(project);
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
-  const appsToAdd = pipe(
-    editorsDir.getDirectories(),
-    map((dir) => dir.getBaseName()),
+  const unreadableDirs = dirNames.filter(
+    (dirName) => !getEditorMetadata(project, dirName),
+  );
+  const apps = pipe(
+    dirNames,
     map((dirName) => getAppMetadata(project, dirName)),
     filter(isTruthy),
   );
 
-  for (const appToAdd of appsToAdd) {
+  for (const app of apps) {
     const {
       name: appName,
       id: appId,
       dirName: appDirName,
       allowedDocumentTypes,
       isDragAndDropEnabled,
-    } = appToAdd;
+    } = app;
     await generateApp(
       {
         appName,
@@ -229,29 +257,40 @@ export async function generateAllApps(project: Project) {
     );
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "apps",
-    appsToAdd.map((a) => a.id),
-  );
+  // An unreadable module.ts may be an app's, so its manifest entry stays.
+  if (unreadableDirs.length === 0) {
+    await pruneManifestSection(
+      projectDir,
+      "apps",
+      apps.map((a) => a.id),
+    );
+  }
+  return { apps, unreadableDirs };
 }
 export async function generateSubgraph(subgraphName: string, project: Project) {
   await tsMorphGenerateSubgraph({ subgraphName, project });
 }
 
-/* Runs generate for each directory found in the project's `subgraphs` directory  */
+/* Runs generate for each directory found in the project's `subgraphs` directory.
+ * Returns the subgraphs it regenerated, and the directories whose `index.ts` it could not read.
+ */
 export async function generateAllSubgraphs(project: Project) {
   const { directory: subgraphsDir } = getOrCreateDirectory(
     project,
     "subgraphs",
   );
   const projectDir = subgraphsDir.getParentOrThrow().getPath();
-  project.addSourceFilesAtPaths(join(subgraphsDir.getPath(), "*", "index.ts"));
+  const dirNames = getSubgraphDirNames(project);
   /* The subgraph's name is found in the `index.ts` file */
+  const subgraphs = dirNames.map((dirName) => ({
+    dirName,
+    ...getSubgraphMetadata(project, dirName),
+  }));
+  const unreadableDirs = subgraphs
+    .filter(({ subgraphName }) => subgraphName === undefined)
+    .map(prop("dirName"));
   const subgraphNames = pipe(
-    subgraphsDir.getDirectories(),
-    map((dir) => dir.getBaseName()),
-    map((dirName) => getSubgraphMetadata(project, dirName)),
+    subgraphs,
     map(prop("subgraphName")),
     filter(isDefined),
     unique(),
@@ -260,11 +299,15 @@ export async function generateAllSubgraphs(project: Project) {
     await generateSubgraph(subgraphName, project);
   }
 
-  await pruneManifestSection(
-    projectDir,
-    "subgraphs",
-    subgraphNames.map((name) => kebabCase(name)),
-  );
+  // An unreadable index.ts may be a subgraph's, so its manifest entry stays.
+  if (unreadableDirs.length === 0) {
+    await pruneManifestSection(
+      projectDir,
+      "subgraphs",
+      subgraphNames.map((name) => kebabCase(name)),
+    );
+  }
+  return { subgraphNames, unreadableDirs };
 }
 
 export async function generateProcessor(
@@ -282,22 +325,21 @@ export async function generateProcessor(
   });
 }
 
-/* Runs generate for each directory found in the project's `processors` directory  */
+/* Runs generate for each processor found in the project's `processors` directory.
+ * Folders that hold no processor, such as shared helpers, are left alone. */
 export async function generateAllProcessors(project: Project) {
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
     "processors",
   );
   const projectDir = processorsDir.getParentOrThrow().getPath();
-  // connect.ts and switchboard.ts decide each processor's apps.
-  project.addSourceFilesAtPaths([
-    join(processorsDir.getPath(), "*.ts"),
-    join(processorsDir.getPath(), "*", "*.ts"),
-  ]);
-  const processorsToGenerate = pipe(
-    processorsDir.getDirectories(),
-    map((dir) => dir.getBaseName()),
-    map((dirName) => getProcessorMetadata(project, dirName)),
+  for (const dirName of getNonProcessorDirNames(project)) {
+    console.warn(
+      `[codegen] processors/${dirName} is not a processor (no processor.ts or *FactoryBuilder export, not registered in processors/connect.ts or switchboard.ts); left as it is`,
+    );
+  }
+  const processorsToGenerate = getProcessorDirNames(project).map((dirName) =>
+    getProcessorMetadata(project, dirName),
   );
 
   for (const processorArgs of processorsToGenerate) {
@@ -309,6 +351,7 @@ export async function generateAllProcessors(project: Project) {
     "processors",
     processorsToGenerate.map((p) => kebabCase(p.processorName)),
   );
+  return processorsToGenerate;
 }
 
 function piecesProjectDir(project: Project) {

@@ -8,6 +8,7 @@ import {
   lintHostImports,
   loadHost,
   probeHostsFolder,
+  stripComments,
 } from "../src/host-loader.js";
 
 const temporary: string[] = [];
@@ -40,7 +41,7 @@ import config from "../../powerhouse.config.json" with { type: "json" };
 export default {
   name: "lab-vetra",
   runner: {
-    module: "@powerhousedao/ph-cli/runners/compound",
+    module: "@powerhousedao/host-core/runners/compound",
     defaultVerb: "dev",
   },
   children: {
@@ -79,7 +80,7 @@ describe("loadHost", () => {
     const loaded = await loadHost(project, "vetra");
     expect(loaded.host.name).toBe("lab-vetra");
     expect(loaded.host.runner.module).toBe(
-      "@powerhousedao/ph-cli/runners/compound",
+      "@powerhousedao/host-core/runners/compound",
     );
     // the projection resolved the referenced config value:
     expect(loaded.host.children).toMatchObject({
@@ -150,9 +151,31 @@ describe("loadHost", () => {
     writeHost(
       project,
       "dyn",
-      `export default { name: "x", runner: { module: "m" }, config: {} };\n// sneaky: import("node:fs")`,
+      `const fs = import("node:fs");\nexport default { name: "x", runner: { module: "m" }, config: {} };`,
     );
     await expect(loadHost(project, "dyn")).rejects.toThrow(/static data/);
+  });
+
+  it("loads a JSDoc import() type: comments are not code", async () => {
+    const project = makeProject();
+    writeHost(
+      project,
+      "typed",
+      [
+        `/** @type {import("@powerhousedao/ph-cli/runners/connect").ConnectHost} */`,
+        `// require("x") in a line comment, import "y" too`,
+        `export default {`,
+        `  name: "x",`,
+        `  runner: { module: "m" },`,
+        `  config: { url: "http://localhost:4001/d/x", t: \`a//b\` },`,
+        `};`,
+      ].join("\n"),
+    );
+    const loaded = await loadHost(project, "typed");
+    expect(loaded.host.config).toEqual({
+      url: "http://localhost:4001/d/x",
+      t: "a//b",
+    });
   });
 
   it("requires runner.module", async () => {
@@ -195,5 +218,47 @@ describe("lintHostImports", () => {
     expect(() => lintHostImports(`import "./setup.js";`, "host.js")).toThrow(
       HostLoadError,
     );
+  });
+
+  it("ignores imports and require() inside block and line comments", () => {
+    const source = [
+      `/*`,
+      `import "./setup.js";`,
+      `import x from "node:fs";`,
+      `*/`,
+      `// const y = require("node:path");`,
+      `export default {};`,
+    ].join("\n");
+    expect(lintHostImports(source, "host.js")).toEqual([]);
+  });
+
+  it("still sees a real require() after a string that contains //", () => {
+    expect(() =>
+      lintHostImports(
+        `const u = "http://x"; const fs = require("node:fs");`,
+        "host.js",
+      ),
+    ).toThrow(/static data/);
+  });
+});
+
+describe("stripComments", () => {
+  it("keeps strings, template literals and newlines; blanks comments", () => {
+    const source = `a = "//x"; // c\nb = '/*y*/'; /* d\ne */ t = \`//\`;`;
+    const out = stripComments(source);
+    expect(out.split("\n")).toHaveLength(3);
+    expect(out).toContain(`"//x"`);
+    expect(out).toContain(`'/*y*/'`);
+    expect(out).toContain("`//`");
+    expect(out).not.toMatch(/\bc\b|\bd\b|\be\b/);
+  });
+
+  it("keeps nested template literals whole and still strips the comment after them", () => {
+    const source = "t = `a ${`//b ${'/*'}`} c`; // gone\nu = `x`;";
+    const out = stripComments(source);
+    expect(out).toContain("`a ${`//b ${'/*'}`} c`;");
+    expect(out).toContain("u = `x`;");
+    expect(out).not.toContain("gone");
+    expect(out).toHaveLength(source.length);
   });
 });

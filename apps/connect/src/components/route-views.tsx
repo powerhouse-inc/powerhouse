@@ -5,7 +5,7 @@ import AppSkeleton from "./app-skeleton.js";
 import { LoadingShell } from "./prerendered-shell.js";
 
 // Loads quicker than this show no progress bar.
-const PROGRESS_DELAY_MS = 150;
+export const PROGRESS_DELAY_MS = 150;
 
 /** A thin top bar while a route takes longer than PROGRESS_DELAY_MS. */
 export function RouteProgressBar() {

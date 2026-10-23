@@ -54,6 +54,7 @@ export const INSPECTOR_OPS = {
   pauseQueue: { rpc: "queue.pause", tier: "admin" },
   resumeQueue: { rpc: "queue.resume", tier: "admin" },
   retryProcessor: { rpc: "processors.retry", tier: "admin" },
+  rerunProcessor: { rpc: "processors.rerun", tier: "admin" },
   sweepCatchUp: { rpc: "catchUp.sweepNow", tier: "admin" },
   rebuildKeyframes: { rpc: "integrity.rebuildKeyframes", tier: "admin" },
   rebuildSnapshots: { rpc: "integrity.rebuildSnapshots", tier: "admin" },

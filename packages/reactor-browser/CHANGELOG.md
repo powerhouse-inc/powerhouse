@@ -1,3 +1,65 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **reactor-browser:** useDocumentsOfType pages a model's documents across drives, useDocumentLinkProps and useModalLinkProps link them in place, slug helpers are typed ([228e30b98c](https://github.com/powerhouse-inc/powerhouse/commit/228e30b98c))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **connect-core,connect,design-system,reactor-browser:** the create-document modal outside a drive asks for one, preselecting the only drive, and takes a driveId ([7ae549e673](https://github.com/powerhouse-inc/powerhouse/commit/7ae549e673))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- project icon sets for Connect and Desktop hosts (proof of concept) ([b0fb21b1de](https://github.com/powerhouse-inc/powerhouse/commit/b0fb21b1de))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **reactor-browser:** declare drive lookup return types ([5bdffb548c](https://github.com/powerhouse-inc/powerhouse/commit/5bdffb548c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

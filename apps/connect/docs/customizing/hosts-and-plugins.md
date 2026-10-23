@@ -39,6 +39,29 @@ export default {
   }
   ```
 
+- Lint can't use that tsconfig: oxlint's type-aware rules check every file against the project's `tsconfig.json`, so they report the host's route ids as errors. Add the folder to `.oxlintrc.json`'s `ignorePatterns`, and type-check it with `tsc -p hosts/lab/routes/tsconfig.json`.
+
+## Run a host
+
+`ph run <host> <verb>` runs a host with its runner: `dev`, `build` and `serve` for a Connect host. It is behind a flag for now, for `ph` and `ph-cli` alike:
+
+```bash
+FEATURE_UNIFORM_RUNNERS_ENABLED=1 ph run lab dev
+```
+
+- `ph init` with the same flag writes a `hosts/<name>/host.js` for each built-in host (`connect`, `switchboard`, `vetra` and the others) and a `hosts/README.md` on their format. Without it, `ph init` writes only `hosts/connect/style.css`; write a host's `host.js` yourself, as above.
+- `build` writes to the host's `runner.outDir`, by default `.ph/connect-build/dist` as `ph connect build` does, and `serve` serves the same folder. `dist/` is the package that `ph build` writes.
+- Each host's dev server keeps its own Vite cache, `node_modules/.vite-<host>`, so `ph vetra` and `ph run lab dev` can run side by side.
+
+The setting that picks each command's port:
+
+| Command | Port | Default |
+| --- | --- | --- |
+| `ph connect studio` | `--port` | 3000 |
+| `ph vetra` | `--connect-port`, else `PH_VETRA_CONNECT_PORT`, else `vetra.connectPort` | 3001 |
+| `ph connect preview` | `--port` | 4173 |
+| `ph run <host> dev` and `serve` | the host's `runner.port`; the `hosts/connect/host.js` that `ph init` writes under the flag reads `studio.port` | 3000 |
+
 ## Host plugins
 
 `hosts/connect/host.js` also lists `runner.plugins`, read by `ph run connect`. They transform the served runtime config through the plugin host in `@powerhousedao/connect-core` (its `src/plugins/plugin-host.ts`), which runs the built-in plugins Connect registers ([`apps/connect/src/plugins/`](https://github.com/powerhouse-inc/powerhouse/tree/main/apps/connect/src/plugins)): `@powerhousedao/connect/plugins/generic` (`allowAddDrive`, drive sections), `.../sentry`, `.../openpanel` and `.../assistant`. A listed plugin switches its slice of the config on, and an unlisted one switches it off. Other modules are skipped with a warning.

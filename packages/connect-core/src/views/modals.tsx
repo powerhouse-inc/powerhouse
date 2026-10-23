@@ -5,6 +5,8 @@ import {
   deleteNode,
   exportFile,
   getDocumentUpgradePreview,
+  getDriveName,
+  getNodeTarget,
   logout,
   openRenown,
   openTarget,
@@ -27,6 +29,7 @@ import type { ReactNode } from "react";
 import { createElement, useEffect, useId, useState } from "react";
 import type { ModalFrameProps } from "../router/modal-frame.js";
 import { ModalDialog, useModalFrame } from "../router/modal-frame.js";
+import { useCreateDocumentTarget } from "../router/create-target.js";
 import { useDriveRouteData } from "../router/route-data.js";
 
 const buttonClass =
@@ -89,14 +92,17 @@ function useModal<T extends PHModal["type"]>(type: T) {
     : undefined;
 }
 
-/** A new document of the modal's type, in the open drive and folder. */
+/** A new document of the modal's type: in its `driveId`, else the open drive
+ * and folder, else a drive picked here. */
 export function CreateDocumentModal() {
   const modal = useModal("createDocument");
   const module = useDocumentModelModuleById(
     modal?.documentType,
     modal?.documentModelVersion,
   );
-  const { drive, folder } = useDriveRouteData();
+  const { folder } = useDriveRouteData();
+  const target = useCreateDocumentTarget(modal?.driveId);
+  const { drive } = target;
   const [name, setName] = useState("");
   const typeName = module?.documentModel.global.name ?? modal?.documentType;
   const create = async () => {
@@ -106,13 +112,14 @@ export function CreateDocumentModal() {
       drive.header.id,
       name.trim() || `New ${typeName}`,
       module.documentModel.global.id,
-      folder?.id,
+      target.isOpenDrive ? folder?.id : undefined,
       undefined,
       undefined,
       undefined,
       modal.documentModelVersion,
     );
-    setSelectedNode(node);
+    // Opens it in its drive, wherever the modal was opened.
+    openTarget(getNodeTarget(node, drive));
   };
   return (
     <Dialog
@@ -133,6 +140,7 @@ export function CreateDocumentModal() {
     >
       <form
         id="create-document"
+        className="flex flex-col gap-2"
         onSubmit={(event) => {
           event.preventDefault();
           void create();
@@ -148,8 +156,36 @@ export function CreateDocumentModal() {
             className="rounded border border-core-border bg-core-bg px-2 py-1"
           />
         </label>
+        {!!target.choices?.length && (
+          <label className="flex flex-col gap-1">
+            Drive
+            <select
+              value={drive?.header.id ?? ""}
+              onChange={(event) => target.pick(event.target.value)}
+              className="rounded border border-core-border bg-core-bg px-2 py-1"
+            >
+              {!drive && <option value="">Choose a drive</option>}
+              {target.choices.map((choice) => (
+                <option key={choice.header.id} value={choice.header.id}>
+                  {getDriveName(choice)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </form>
-      {!drive && <p className="text-core-muted">Open a drive first.</p>}
+      {target.choices?.length === 0 && (
+        <p className="text-core-muted">
+          There's no drive to create it in.{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => showPHModal({ type: "addDrive" })}
+          >
+            Add a drive
+          </button>
+        </p>
+      )}
     </Dialog>
   );
 }

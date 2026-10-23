@@ -99,6 +99,19 @@ describe("ReactorClient resolves slugs on every write target", () => {
     expect(await childIds(driveId)).toEqual([file.header.id]);
   });
 
+  it("removes a folder, which is a node and not a document, with the files in it", async () => {
+    const driveId = await createDriveWithSlug("drive-slug");
+    const folder = await client.drives.addFolder("drive-slug", "inbox");
+    const file = createDocModelDocument();
+    await client.drives.addFile("drive-slug", file, folder.id);
+
+    await client.drives.removeNode("drive-slug", folder.id);
+
+    const drive = await client.get<DocumentDriveDocument>(driveId);
+    expect(drive.state.global.nodes).toEqual([]);
+    await expect(client.get(file.header.id)).rejects.toThrow();
+  });
+
   it("removes a node from a slug drive by the node's slug", async () => {
     const driveId = await createDriveWithSlug("drive-slug");
     const file = createDocModelDocument({ slug: "file-slug" });

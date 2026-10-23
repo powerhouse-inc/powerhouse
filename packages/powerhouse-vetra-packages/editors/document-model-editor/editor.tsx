@@ -49,6 +49,7 @@ import {
   compareStringsWithoutWhitespace,
   initializeModelSchema,
   makeEmptyOperationSchema,
+  makeInitialValueForSchema,
   makeOperationInitialDoc,
 } from "./utils/helpers.js";
 const StateSchemas = lazy(() => import("./components/state-schemas.js"));
@@ -118,8 +119,13 @@ export default function Editor({
     modules: latestModules,
   } = latestSpec;
   const latestOperations = latestModules.flatMap((module) => module.operations);
+  // Only a blank model is initialized on open; one with content is left as is.
   const shouldSetInitialName = useRef(
-    !modelName && !!documentNodeName && latestOperations.length === 0,
+    !modelName &&
+      !!documentNodeName &&
+      specifications.length === 1 &&
+      !latestGlobalStateSchema &&
+      latestModules.length === 0,
   );
 
   useEffect(() => {
@@ -129,6 +135,10 @@ export default function Editor({
     const actions = [
       setModelName({ name: documentNodeName }),
       setStateSchema({ schema: initialSchemaDoc, scope: "global" }),
+      setInitialState({
+        initialValue: makeInitialValueForSchema(initialSchemaDoc),
+        scope: "global",
+      }),
     ];
     dispatch(actions);
     shouldSetInitialName.current = false;

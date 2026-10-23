@@ -1,5 +1,10 @@
-import type { ManagedRemoteReactor, ReactorDescriptor } from "../types.js";
+import type {
+  ManagedRemoteReactor,
+  MonitorReactorInfo,
+  ReactorDescriptor,
+} from "../types.js";
 import { RemoteInspectorClient } from "./client.js";
+import { inspectionAdminEndpoint, RemoteProcessorLevers } from "./levers.js";
 import { RemoteSyncManagerClient } from "./sync-manager.js";
 import { unwiredRemoteClient, unwiredRemoteEventBus } from "./unwired.js";
 
@@ -30,7 +35,18 @@ export async function provisionRemote(
     ...(remote.timeoutMs !== undefined ? { timeoutMs: remote.timeoutMs } : {}),
   });
 
+  const levers = new RemoteProcessorLevers({
+    url: inspectionAdminEndpoint(remote.url),
+    ...(remote.headers ? { headers: remote.headers } : {}),
+    ...(remote.fetch ? { fetch: remote.fetch } : {}),
+    ...(remote.timeoutMs !== undefined ? { timeoutMs: remote.timeoutMs } : {}),
+  });
+
+  // inspection-admin serves the callers that info reports an access to.
+  const leversFor = (read: MonitorReactorInfo) =>
+    read.access ? levers.served() : Promise.resolve(false);
   const info = await client.info();
+  let leversServed = await leversFor(info);
   const syncManager = new RemoteSyncManagerClient(client);
   // Remotes are an operator read; a failure to seed belongs to the Sync tab.
   if (info.access) {
@@ -57,7 +73,14 @@ export async function provisionRemote(
     get info() {
       return client.reportedInfo ?? info;
     },
-    refreshInfo: () => client.info(),
+    get processorLevers() {
+      return leversServed ? levers : undefined;
+    },
+    refreshInfo: async () => {
+      const refreshed = await client.info();
+      leversServed = await leversFor(refreshed);
+      return refreshed;
+    },
     inspector: client,
     syncManager,
     client: unwiredRemoteClient(endpoint),

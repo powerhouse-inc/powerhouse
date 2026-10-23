@@ -446,6 +446,51 @@ jobs:
           path: recipes-checkout/semantic-search/.model-cache
           key: hf-model-Xenova-all-MiniLM-L6-v2-q8
 
+      # Recipes with browser tests run `playwright install chromium` inside
+      # their `test` script, so a cold Chromium download (~1m to ~6m) counts
+      # against the 600s per-script limit. Install it here instead, outside
+      # that limit. The Chromium revision depends on the Playwright version,
+      # and the recipes use their own Playwright, not this repo's, so the
+      # version is read from the recipes lockfile (playwright-core is the
+      # package that defines the browser revisions). The workflow never
+      # installs recipes-checkout itself (the runner installs a scratch copy),
+      # so the lockfile is the only place to read it. If no recipe uses
+      # Playwright, the cache and install steps skip.
+      - name: Resolve the recipes' Playwright versions
+        id: recipes-playwright
+        run: |
+          versions=$(grep -oE '^  playwright-core@[0-9][0-9A-Za-z.+-]*' recipes-checkout/pnpm-lock.yaml | sed 's/.*@//' | sort -u | paste -sd+ - || true)
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
+          echo "Playwright versions in the recipes lockfile: ${versions:-none}"
+
+      # Same key format as the other jobs, so when a recipes version matches
+      # this repo's Playwright version, the jobs share one cache entry.
+      - name: Cache Playwright browsers
+        if: steps.recipes-playwright.outputs.versions != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.recipes-playwright.outputs.versions }}
+
+      # Runs from runner.temp so npx fetches the requested version instead of
+      # this repo's own playwright bin. After this, the recipe's own
+      # `playwright install chromium` finds the browser in place and does nothing.
+      # Each install deletes every cached browser that no installed Playwright
+      # package still references. On a fresh runner, the npx copies for the
+      # later versions don't exist yet, so with two versions the first install
+      # would delete the second version's restored Chromium and the second
+      # install would download it again. The env var below turns that cleanup off.
+      - name: Install Playwright Browsers
+        if: steps.recipes-playwright.outputs.versions != ''
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSIONS: ${{ steps.recipes-playwright.outputs.versions }}
+          PLAYWRIGHT_SKIP_BROWSER_GC: "1"
+        run: |
+          for v in ${VERSIONS//+/ }; do
+            npx -y "playwright@$v" install --with-deps chromium
+          done
+
       # drive-override's demo creates 10,000 documents, ~290s of the ~550s suite
       # on CI, so it runs on main and manual runs only. 600s covers it there.
       - name: Run recipe suite against this checkout

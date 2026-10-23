@@ -150,6 +150,18 @@ describe("relational template deletion [Postgres]", () => {
     expect(await rows(d.db)).toEqual(["doc-y"]);
   });
 
+  it("clears its namespace to an empty, migrated one for a rerun", async () => {
+    const f = await make(Todo, "drive-f", "doc-x", "doc-y");
+    expect(f.processor.clearScope).toBe(Todo.getNamespace("drive-f"));
+
+    await f.processor.clear();
+
+    expect(await schemaExists(f.schema)).toBe(true);
+    expect(await rows(f.db)).toEqual([]);
+    await f.db.insertInto("todo").values({ document_id: "doc-z" }).execute();
+    expect(await rows(f.db)).toEqual(["doc-z"]);
+  });
+
   it("keeps the namespace of a processor made without its drive id", async () => {
     const e = await make(Todo, undefined, "drive-z", "doc-x");
 

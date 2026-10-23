@@ -7,6 +7,11 @@ import {
 } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
+import { writeHostsTypesDts } from "../../codegen/generate-hosts.js";
+import {
+  hostsTsconfigTemplate,
+  withHostsTscScript,
+} from "../hosts/host-typing-files.js";
 import { writeJsonFile } from "write-json-file";
 import {
   agentsTemplate,
@@ -52,12 +57,36 @@ import {
   localPackageNames,
 } from "@powerhousedao/shared/clis/package-style";
 import { formatSafe } from "utils";
-import { migratedStyle, pageThemeWarning, readStyle } from "./migrate-style.js";
+import {
+  connectThemeMessages,
+  migratedStyle,
+  moveConnectTheme,
+  readStyle,
+} from "./migrate-style.js";
+import {
+  mergedVitestConfig,
+  readIfExists,
+  withProjectArrayEntries,
+} from "./merge-project-config.js";
 
 export async function writeGeneratedProjectRootFiles(projectDir: string) {
+  // Config files keep the entries the project added to their exclude lists.
+  const tsconfigPath = join(projectDir, "tsconfig.json");
   await writeFileEnsuringDir(
-    join(projectDir, "tsconfig.json"),
-    await formatSafe(tsConfigTemplate, "json"),
+    tsconfigPath,
+    await formatSafe(
+      withProjectArrayEntries(
+        "tsconfig.json",
+        tsConfigTemplate,
+        readIfExists(tsconfigPath),
+        [
+          { keyPath: ["include"] },
+          // .ph left the excludes so .ph/connect-routes.gen.ts is checked.
+          { keyPath: ["exclude"], dropped: [".ph"] },
+        ],
+      ),
+      "json",
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, "index.html"),
@@ -67,9 +96,18 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, "main.tsx"),
     await formatSafe(mainTsxTemplate),
   );
+  const oxlintPath = join(projectDir, ".oxlintrc.json");
   await writeFileEnsuringDir(
-    join(projectDir, ".oxlintrc.json"),
-    await formatSafe(oxlintConfigTemplate, "json"),
+    oxlintPath,
+    await formatSafe(
+      withProjectArrayEntries(
+        ".oxlintrc.json",
+        oxlintConfigTemplate,
+        readIfExists(oxlintPath),
+        [{ keyPath: ["ignorePatterns"] }],
+      ),
+      "json",
+    ),
   );
   await writeFileEnsuringDir(
     join(projectDir, ".oxfmtrc.json"),
@@ -83,24 +121,34 @@ export async function writeGeneratedProjectRootFiles(projectDir: string) {
     join(projectDir, "reactor/index.ts"),
     await formatSafe(reactorTsTemplate),
   );
-  // An existing style.css keeps the project's rules; only Connect's imports change.
-  const style = readStyle(projectDir);
+  // An existing style.css keeps the project's rules; only Connect's imports
+  // change, and Connect's theme moves to the host's stylesheet.
+  const hostFile = join(projectDir, HOST_STYLESHEET);
+  const theme = moveConnectTheme(
+    migratedStyle(readStyle(projectDir), localPackageNames(projectDir)),
+    existsSync(hostFile) ? readFileSync(hostFile, "utf8") : undefined,
+  );
   await writeFileEnsuringDir(
     join(projectDir, "style.css"),
-    await formatSafe(
-      migratedStyle(style, localPackageNames(projectDir)),
-      "css",
-    ),
+    await formatSafe(theme.style, "css"),
   );
-  const warning = pageThemeWarning(style);
-  if (warning) console.warn(`⚠ ${warning}`);
-  await seedUserOwnedFile(
-    join(projectDir, HOST_STYLESHEET),
-    await formatSafe(hostStyleTemplate, "css"),
-  );
+  if (theme.host !== undefined) {
+    await writeFileEnsuringDir(hostFile, await formatSafe(theme.host, "css"));
+  } else {
+    await seedUserOwnedFile(
+      hostFile,
+      await formatSafe(hostStyleTemplate, "css"),
+    );
+  }
+  const { info, warnings } = connectThemeMessages(theme);
+  for (const message of info) console.log(message);
+  for (const message of warnings) console.warn(`⚠ ${message}`);
+  const vitestConfigPath = join(projectDir, "vitest.config.ts");
   await writeFileEnsuringDir(
-    join(projectDir, "vitest.config.ts"),
-    await formatSafe(vitestConfigTemplate),
+    vitestConfigPath,
+    await formatSafe(
+      mergedVitestConfig(vitestConfigTemplate, readIfExists(vitestConfigPath)),
+    ),
   );
 }
 
@@ -248,6 +296,7 @@ export async function writeGeneratedHostsFiles(
     join(projectDir, "hosts/cli/host.js"),
     templates.cliHost,
   );
+  await writeHostsTypingFiles(projectDir);
   await seedUserOwnedFile(
     join(projectDir, "agents/README.md"),
     templates.agentsReadme,
@@ -271,6 +320,26 @@ export async function writeGeneratedHostsFiles(
     join(projectDir, "agents/index.ts"),
     templates.agentsIndex,
   );
+}
+
+/** `tsc -p hosts` wiring: seeds hosts/tsconfig.json (user-owned), writes
+ * hosts/types.d.ts + powerhouse.config.d.json.ts (codegen-owned; `ph
+ * generate hosts` refreshes them) and appends `tsc -p hosts` to the
+ * package.json `tsc` script. */
+async function writeHostsTypingFiles(projectDir: string) {
+  await seedUserOwnedFile(
+    join(projectDir, "hosts/tsconfig.json"),
+    hostsTsconfigTemplate,
+  );
+  await writeHostsTypesDts(projectDir);
+  const pkgPath = join(projectDir, "package.json");
+  if (!existsSync(pkgPath)) return;
+  const pkg = (await loadJsonFile(pkgPath)) as Record<string, unknown>;
+  const scripts = (pkg.scripts ?? {}) as Record<string, string>;
+  const tsc = withHostsTscScript(scripts.tsc);
+  if (scripts.tsc === tsc) return;
+  pkg.scripts = { ...scripts, tsc };
+  await writeJsonFile(pkgPath, pkg, { indent: 2 });
 }
 
 export async function writeAiConfigFiles(projectDir = process.cwd()) {

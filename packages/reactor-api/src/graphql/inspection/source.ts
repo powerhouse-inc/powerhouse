@@ -4,6 +4,7 @@ import {
   type IDocumentModelRegistry,
   type IInspectableAttachmentStore,
   type IInspector,
+  type IInspectorAdmin,
   type InProcessReactorModule,
   type IReactorFactsSink,
   type IInspectorStorageHealthProvider,
@@ -23,6 +24,8 @@ export interface IReactorInspectionSource {
   /** Facts the host learns after boot, e.g. a composed workflow runtime. */
   readonly facts: IReactorFactsSink;
   readonly throttle: InspectionThrottle;
+  /** Present when the host serves `inspection-admin`; only listed admins reach it. */
+  readonly admin: IInspectorAdmin | undefined;
 }
 
 export type ReactorInspectionOptions = {
@@ -31,6 +34,8 @@ export type ReactorInspectionOptions = {
   attachmentStore?: IInspectableAttachmentStore;
   workflows?: boolean;
   throttle?: Partial<InspectionThrottleConfig>;
+  /** Serve the `inspection-admin` levers to listed admins. Off by default. */
+  admin?: boolean;
 };
 
 export function createReactorInspectionSource(
@@ -50,5 +55,6 @@ export function createReactorInspectionSource(
     documentModelRegistry: module.documentModelRegistry,
     facts: inspector,
     throttle: new InspectionThrottle(options.throttle),
+    admin: options.admin ? inspector : undefined,
   };
 }

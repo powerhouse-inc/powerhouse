@@ -300,15 +300,39 @@ describe("AttachmentService.reserve hash-first mode", () => {
       ).rejects.toThrow(/sizeBytes/);
     });
 
-    it("throws when sizeBytes is zero with clientHash", async () => {
+    it("reserves an empty file: zero is a real size", async () => {
+      // The SHA-256 of no bytes. Mail carries empty attachments, and a refusal
+      // here failed the whole step that ingested the message.
+      const emptyHash =
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" as AttachmentHash;
+      store.stat.mockRejectedValue(new AttachmentNotFound(emptyHash));
+      reservations.create.mockResolvedValue({
+        ...MOCK_RESERVATION,
+        clientHash: emptyHash,
+        sizeBytes: 0,
+      });
+      await expect(
+        service.reserve({
+          mimeType: "application/octet-stream",
+          fileName: "empty",
+          clientHash: emptyHash,
+          sizeBytes: 0,
+        }),
+      ).resolves.toBeDefined();
+      expect(reservations.create).toHaveBeenCalledWith(
+        expect.objectContaining({ clientHash: emptyHash, sizeBytes: 0 }),
+      );
+    });
+
+    it("throws when sizeBytes is fractional with clientHash", async () => {
       await expect(
         service.reserve({
           mimeType: "application/pdf",
           fileName: "invoice",
           clientHash: VALID_HASH,
-          sizeBytes: 0,
+          sizeBytes: 1.5,
         }),
-      ).rejects.toThrow(/sizeBytes/);
+      ).rejects.toThrow(/non-negative safe integer/);
     });
 
     it("throws when sizeBytes is negative with clientHash", async () => {

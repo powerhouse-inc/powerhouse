@@ -2243,6 +2243,126 @@ describe("ProcessorManager Standalone Tests", () => {
     });
   });
 
+  describe("rerun", () => {
+    async function seeded(factory: ProcessorFactory, id = "rerun-factory") {
+      const driveId = generateId();
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(driveId, 2),
+        makeOp(driveId, 3),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+      await processorManager.registerFactory(id, factory);
+      await processorManager.indexOperations(ops);
+      await confirm(3);
+      return driveId;
+    }
+
+    function clearable(scope: string) {
+      const processor = createMockProcessor();
+      return Object.assign(processor, {
+        clearScope: scope,
+        clear: vi.fn().mockImplementation(() => {
+          processor.receivedOperations.length = 0;
+          return Promise.resolve();
+        }),
+      });
+    }
+
+    const received = (processor: ReturnType<typeof createMockProcessor>) =>
+      processor.receivedOperations.map((op) => op.context.ordinal);
+
+    it("should replay every operation above the ordinal it starts from", async () => {
+      const processor = createMockProcessor();
+      const driveId = await seeded(() => [{ processor, filter: {} }]);
+      expect(received(processor)).toEqual([1, 2, 3]);
+
+      await processorManager.rerun(`rerun-factory:${driveId}:0`, {
+        clear: false,
+        fromOrdinal: 1,
+      });
+
+      expect(received(processor)).toEqual([1, 2, 3, 2, 3]);
+      expect(
+        processorManager.get(`rerun-factory:${driveId}:0`)!.lastOrdinal,
+      ).toBe(3);
+    });
+
+    it("should refuse an ordinal above the cursor", async () => {
+      const processor = createMockProcessor();
+      const driveId = await seeded(() => [{ processor, filter: {} }]);
+
+      await expect(
+        processorManager.rerun(`rerun-factory:${driveId}:0`, {
+          clear: false,
+          fromOrdinal: 4,
+        }),
+      ).rejects.toThrow("can replay from ordinal 0 to 3, not 4");
+      expect(received(processor)).toEqual([1, 2, 3]);
+    });
+
+    it("should clear and replay the processors sharing a clear scope, and only those", async () => {
+      const nodes = clearable("shared");
+      const files = clearable("shared");
+      const other = clearable("other");
+      const driveId = await seeded(() => [
+        { processor: nodes, filter: {} },
+        { processor: files, filter: {} },
+        { processor: other, filter: {} },
+      ]);
+
+      await processorManager.rerun(`rerun-factory:${driveId}:1`, {
+        clear: true,
+        fromOrdinal: 0,
+      });
+
+      expect(nodes.clear).toHaveBeenCalledTimes(1);
+      expect(files.clear).toHaveBeenCalledTimes(1);
+      expect(other.clear).not.toHaveBeenCalled();
+      expect(received(nodes)).toEqual([1, 2, 3]);
+      expect(received(files)).toEqual([1, 2, 3]);
+      expect(received(other)).toEqual([1, 2, 3]);
+    });
+
+    it("should leave the cursors alone when clearing fails", async () => {
+      const processor = clearable("ns");
+      processor.clear.mockRejectedValue(new Error("drop failed"));
+      const driveId = await seeded(() => [{ processor, filter: {} }]);
+
+      await expect(
+        processorManager.rerun(`rerun-factory:${driveId}:0`, {
+          clear: true,
+          fromOrdinal: 0,
+        }),
+      ).rejects.toThrow("drop failed");
+      expect(
+        processorManager.get(`rerun-factory:${driveId}:0`)!.lastOrdinal,
+      ).toBe(3);
+      expect(received(processor)).toEqual([1, 2, 3]);
+    });
+
+    it("should refuse to clear a processor without clear()", async () => {
+      const processor = createMockProcessor();
+      const driveId = await seeded(() => [{ processor, filter: {} }]);
+
+      await expect(
+        processorManager.rerun(`rerun-factory:${driveId}:0`, {
+          clear: true,
+          fromOrdinal: 0,
+        }),
+      ).rejects.toThrow("has no clear()");
+    });
+
+    it("should refuse a processor it is not running", async () => {
+      await expect(
+        processorManager.rerun("nope:drive:0", {
+          clear: false,
+          fromOrdinal: 0,
+        }),
+      ).rejects.toThrow("is not running");
+    });
+  });
+
   describe("Delivery queues", () => {
     const CHILD = "powerhouse/document-model";
 

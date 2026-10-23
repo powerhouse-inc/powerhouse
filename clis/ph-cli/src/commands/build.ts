@@ -27,7 +27,10 @@ can load and still fail at runtime, so don't publish it.`,
       const { runBuild } = await import("../services/build.js");
       await runBuild(args);
     } catch (error) {
-      console.error(error);
+      // The message includes its cause; --debug adds the stack and the cause again.
+      console.error(
+        args.debug || !(error instanceof Error) ? error : error.message,
+      );
       process.exit(1);
     }
   },

@@ -259,6 +259,11 @@ export interface ManagedReactorBase {
   readonly inspector: MonitorInspector;
   /** Present when `info.access.admin`. */
   readonly admin?: IInspectorAdmin;
+  /**
+   * Processor retry and rerun: `admin`'s for a reactor the monitor built; a
+   * remote's while its host serves `inspection-admin` to this caller.
+   */
+  readonly processorLevers?: ProcessorLevers;
   /** Raw SQL against the reactor's own store; present when `info.access.sql`. */
   readonly dbQuery?: IReactorDbQuery;
   readonly syncManager: MonitorSyncManager | undefined;
@@ -319,6 +324,12 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
   readonly descriptorMismatch: boolean;
 }
 
+/** The processor levers a remote can serve beside its read-only inspection. */
+export type ProcessorLevers = Pick<
+  IInspectorAdmin,
+  "retryProcessor" | "rerunProcessor"
+>;
+
 /** A running reactor reached over its host's inspection subgraph; read-only. */
 export interface ManagedRemoteReactor extends ManagedReactorBase {
   readonly kind: "remote";
@@ -333,7 +344,7 @@ export interface ManagedRemoteReactor extends ManagedReactorBase {
   /** The inspection auth, for sibling subgraph reads of the same reactor. */
   readonly headers?: RemoteInspectionHeaders;
   readonly fetch?: typeof fetch;
-  /** Re-reads `info` from the reactor and updates the handle's. */
+  /** Re-reads `info`, and whether the levers are served, and updates the handle's. */
   refreshInfo(): Promise<MonitorReactorInfo>;
 }
 

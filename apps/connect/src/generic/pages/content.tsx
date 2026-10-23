@@ -19,25 +19,35 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { Outlet } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useDriveRouteData } from "@powerhousedao/connect-core/router";
 import { getRuntimeConfig } from "@powerhousedao/connect-core/runtime-config";
 import { useDriveAuthGate, useVisibleDrives } from "./use-drive-auth-gate.js";
 import { useOpenRenownLogin } from "../hooks/use-renown-login.js";
 
-/** Connect's home: the drives, and adding one. */
+/** Connect's home: the drives, and adding one. A custom home builds on its
+ * parts: ConnectHomeScreen, HomeDriveItem, HomeAddDriveItem, useVisibleDrives. */
 export function Home() {
   const drives = useVisibleDrives();
-  const isAddDriveEnabled = useIsAddDriveEnabled();
-  const runtimeConfig = getRuntimeConfig();
-  const homeBackground = runtimeConfig.connect?.branding?.homeBackground;
   return (
-    <HomeScreen homeBackground={homeBackground}>
-      {drives?.map((drive) => {
-        return <DriveItem key={drive.header.id} drive={drive} />;
-      })}
-      {isAddDriveEnabled && <HomeScreenAddDriveItem />}
-    </HomeScreen>
+    <ConnectHomeScreen>
+      {drives?.map((drive) => (
+        <HomeDriveItem key={drive.header.id} drive={drive} />
+      ))}
+      <HomeAddDriveItem />
+    </ConnectHomeScreen>
   );
+}
+
+/** The home's grid, on the configured `home.background`. */
+export function ConnectHomeScreen({ children }: { children?: ReactNode }) {
+  const homeBackground = getRuntimeConfig().connect.home?.background;
+  return <HomeScreen homeBackground={homeBackground}>{children}</HomeScreen>;
+}
+
+/** The add-drive tile, or nothing where adding drives is turned off. */
+export function HomeAddDriveItem() {
+  return useIsAddDriveEnabled() ? <HomeScreenAddDriveItem /> : null;
 }
 
 /** Connect's drive layout: the drive app around the open document, or the
@@ -69,7 +79,8 @@ export function NodeView() {
   ) : null;
 }
 
-function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
+/** A drive's card: its name, its app and a link that opens it. */
+export function HomeDriveItem({ drive }: { drive: DocumentDriveDocument }) {
   const editorModule = useAppModuleById(drive.header.meta?.preferredEditor);
   const description = editorModule?.config.name || "Drive Explorer App";
   const link = useLinkProps({ driveSlug: makeDriveSlug(drive) }, () =>
@@ -77,7 +88,6 @@ function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
   );
   return (
     <HomeScreenItem
-      key={drive.header.id}
       title={getDriveName(drive)}
       description={description}
       icon={<DriveIcon drive={drive} />}

@@ -149,6 +149,51 @@ describe("DriveClient Integration Tests", () => {
     });
   });
 
+  describe("removeNode with a resolver that reads documents", () => {
+    // How reactor-router resolves a reference when the backend has no
+    // resolveIdOrSlug (Connect's GraphQL client): by reading it as a document.
+    async function readingDriveClient() {
+      return new DriveClient(
+        client,
+        childLogger(["drive-client-test"]),
+        reactor,
+        (await TestP256Signer.create()).asISigner(),
+        async (identifier) => (await client.get(identifier)).header.id,
+      );
+    }
+
+    it("removes a folder, which is a node and not a document, with its files", async () => {
+      const drive = await createDrive();
+      const drives = await readingDriveClient();
+      const folder = await drives.addFolder(drive.header.id, "inbox");
+      const file = await drives.addFile(
+        drive.header.id,
+        documentModelDocumentModelModule.utils.createDocument(),
+        folder.id,
+      );
+
+      await drives.removeNode(drive.header.id, folder.id);
+
+      const after = await client.get<DocumentDriveDocument>(drive.header.id);
+      expect(after.state.global.nodes).toEqual([]);
+      await expect(client.get(file.header.id)).rejects.toThrow();
+    });
+
+    it("still removes a file by its id", async () => {
+      const drive = await createDrive();
+      const drives = await readingDriveClient();
+      const file = await drives.addFile(
+        drive.header.id,
+        documentModelDocumentModelModule.utils.createDocument(),
+      );
+
+      await drives.removeNode(drive.header.id, file.header.id);
+
+      const after = await client.get<DocumentDriveDocument>(drive.header.id);
+      expect(after.state.global.nodes).toEqual([]);
+    });
+  });
+
   describe("constructor", () => {
     async function addFileThrough(
       submitter: ConstructorParameters<typeof DriveClient>[2],

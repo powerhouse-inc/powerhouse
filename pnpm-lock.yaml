@@ -587,9 +587,6 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.2
         version: 5.90.21(react@19.2.6)
-      '@tanstack/react-router':
-        specifier: ^1.170.41
-        version: 1.170.41(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       document-model:
         specifier: workspace:*
         version: link:../../packages/document-model
@@ -639,6 +636,9 @@ importers:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.2.2(vite@8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0))
+      '@tanstack/react-router':
+        specifier: ^1.170.41
+        version: 1.170.41(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@tanstack/react-router-devtools':
         specifier: 1.167.2
         version: 1.167.2(@tanstack/react-router@1.170.41(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(@tanstack/router-core@1.171.34)(csstype@3.2.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -892,6 +892,9 @@ importers:
       vite:
         specifier: 'catalog:'
         version: 8.3.4(@types/node@25.2.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.13)(yaml@2.9.0)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@types/express':
         specifier: ^4.17.25
@@ -1358,6 +1361,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.3.2
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
@@ -1519,6 +1525,9 @@ importers:
       '@graphql-tools/merge':
         specifier: 'catalog:'
         version: 9.1.7(graphql@16.12.0)
+      '@powerhousedao/host-core':
+        specifier: workspace:*
+        version: link:../host-core
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1549,6 +1558,9 @@ importers:
       oxfmt:
         specifier: 'catalog:'
         version: 0.68.0
+      postcss:
+        specifier: ^8.5.29
+        version: 8.5.29
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
@@ -1938,6 +1950,9 @@ importers:
       '@powerhousedao/host-core':
         specifier: workspace:*
         version: link:../host-core
+      '@powerhousedao/shared':
+        specifier: workspace:*
+        version: link:../shared
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -2151,6 +2166,9 @@ importers:
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.2.2
+      '@testing-library/react':
+        specifier: ^16.3.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -2166,6 +2184,9 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
+      happy-dom:
+        specifier: ^20.8.9
+        version: 20.9.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -2547,6 +2568,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../document-model
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.3.2
       graphql-request:
         specifier: 'catalog:'
         version: 7.4.0(graphql@16.12.0)

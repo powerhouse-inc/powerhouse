@@ -122,6 +122,8 @@ export const PEER_EXTERNAL_DEPENDENCIES = {
   react: { peer: "^19", dev: "19.2.6" },
   "react-dom": { peer: "^19", dev: "19.2.6" },
   zod: { peer: "^4", dev: "4.6.5" },
+  // Project routes import it; Connect and connect-core take the project's copy.
+  "@tanstack/react-router": { peer: "^1.170.41", dev: "1.170.41" },
 } as const satisfies Record<string, PeerSpec>;
 
 // Per-feature deps added dynamically by codegen when required. `devVersioned`
@@ -194,6 +196,9 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/host-core",
   "@powerhousedao/clint",
   "@powerhousedao/desktop",
+  // the switchboard plugins the scaffolded switchboard host composes
+  // (workflows, mcp, …) and their PHPluginConfigs types for tsc -p hosts.
+  "@powerhousedao/switchboard",
 ];
 
 export const packageJsonExports = {

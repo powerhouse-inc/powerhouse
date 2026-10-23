@@ -3,6 +3,8 @@ export type PHModal =
       type: "createDocument";
       documentType: string;
       documentModelVersion?: number;
+      /** The drive to create it in; else the open drive, else the user picks one. */
+      driveId?: string;
     }
   | {
       type: "deleteItem";

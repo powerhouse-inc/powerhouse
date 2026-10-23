@@ -96,6 +96,7 @@ export async function renderShell(
         : CoreShellLoader;
 
   const errors: unknown[] = [];
+  const causes: string[] = [];
   const { prelude } = await prerender(
     <PHStoreProvider store={store}>
       <RouterProvider router={connectRouter.router} />
@@ -104,8 +105,9 @@ export async function renderShell(
     {
       // Inline every boundary; outlined ones need React's runtime to reveal.
       progressiveChunkSize: Number.POSITIVE_INFINITY,
-      onError: (error) => {
+      onError: (error, info) => {
         errors.push(error);
+        causes.push(describeRenderError(error, info?.componentStack));
       },
     },
   );
@@ -113,7 +115,10 @@ export async function renderShell(
   resetConnectPluginUi(routeTree as AnyRoute);
   // A boundary that errored renders its fallback, which is not the shell.
   if (errors.length) {
-    throw new AggregateError(errors, "The app shell failed to prerender");
+    throw new AggregateError(
+      errors,
+      `The app shell failed to prerender:\n${causes.join("\n")}`,
+    );
   }
   return await new Response(prelude).text();
 }
@@ -129,4 +134,11 @@ export async function renderProjectShells(stylesheet: string, css?: string) {
     shells[variant] = appShell("project", variant, markup, shellStyles);
   }
   return shells;
+}
+
+// The message and the component it came from: the stack is Connect's own code.
+function describeRenderError(error: unknown, componentStack?: string | null) {
+  const message = error instanceof Error ? error.message : String(error);
+  const component = componentStack?.trim().split("\n")[0]?.trim();
+  return ` - ${message}${component ? ` (${component})` : ""}`;
 }

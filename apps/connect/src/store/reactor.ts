@@ -75,7 +75,7 @@ import {
   refreshAppDrives,
   type ReactorClientPlan,
 } from "@powerhousedao/connect-core/runtime";
-import { getSharedDeps } from "../shared-deps.js";
+import { getSharedDeps, pageSharedImports } from "../shared-deps.js";
 import { isPackagedConnectDist } from "../utils/build-info.js";
 import {
   resolvePackagedReactorWorker,
@@ -90,6 +90,11 @@ import {
   REACTOR_INSTANCE_NAMESPACE,
   RELATIONAL_PGLITE_NAME,
 } from "../utils/storage-namespace.js";
+import {
+  registryPackageSpec,
+  subscribeRegistryPackageChanges,
+  syncRegistryModels,
+} from "../utils/worker-registry-packages.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 /**
@@ -410,7 +415,7 @@ export async function createReactor(
     }
     const packageSpecs = packageManager
       .getRegistryPackages()
-      .map((p) => (p.version ? `${p.name}@${p.version}` : p.name));
+      .map(registryPackageSpec);
     // Silent tab loader (no install prompt; the worker already loaded the model).
     const registryClient = new RegistryClient(packageManager.cdnUrl ?? "");
     const documentModelLoader: IDocumentModelLoader = {
@@ -466,7 +471,7 @@ export async function createReactor(
       relationalNamespace: RELATIONAL_PGLITE_NAME,
       cdnUrl: packageManager.cdnUrl ?? "",
       packageSpecs,
-      sharedImports: sharedDeps?.imports,
+      sharedImports: sharedDeps?.imports ?? pageSharedImports(),
       studioMode: phGlobalConfig.studioMode,
       workflowsEnabled: connectConfig.workflowsEnabled,
       renownChainId,
@@ -500,6 +505,19 @@ export async function createReactor(
           );
         }
       })();
+    });
+    // Packages installed or updated after boot: the tab's registry and the worker load them.
+    subscribeRegistryPackageChanges(packageManager, (specs) => {
+      syncRegistryModels(
+        workerClient.reactorClientModule.reactorModule.documentModelRegistry,
+        loadedDocumentModels(),
+      );
+      registerPackages([], specs).catch((error: unknown) => {
+        logger.error(
+          "Failed to load packages in the reactor worker: @error",
+          error,
+        );
+      });
     });
     // Block boot until the sync manager seeds remotes from the worker, so
     // list()/connection state are warm before consumers first read them.

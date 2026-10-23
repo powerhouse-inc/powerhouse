@@ -46,6 +46,56 @@ function DocumentSummary() {
 - Connect starts the reactor before it renders the router, so `reactorClient` is set in Connect. The check satisfies the type.
 - Loader data is a snapshot. It does not update when the document changes. For live data, read it in the component with the `@powerhousedao/reactor-browser` hooks (`useDrives`, `useDocument`, `useDocumentById`).
 - `store.drives` holds the drives that have arrived. On a deep link to a remote drive, it can be incomplete while `arrivals.isPending()` is true.
+- `useDocument`, `useDocumentById`, `useDocumentsByIds` and `useDocumentsOfType` suspend until their documents load. Put a `<Suspense>` boundary around the component that calls them, or give the route a `pendingComponent`; otherwise the nearest boundary above shows its fallback, which can be the whole layout.
+
+### Documents of one type, across drives
+
+`useDocumentsOfType` takes a document model module and returns its documents from every drive, a page at a time, typed by the module. The module is the `PascalCase` constant `ph generate` writes for the model, exported from `document-models/<name>`:
+
+```tsx
+// hosts/connect/routes/_app/ledgers.tsx
+import { ProductionLedger } from "document-models/production-ledger";
+import {
+  loadDocumentsOfType,
+  useDocumentLinkProps,
+  useDocumentsOfType,
+} from "@powerhousedao/reactor-browser";
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_app/ledgers")({
+  // The first page arrives with the route, so the page doesn't suspend.
+  loader: () => loadDocumentsOfType(ProductionLedger, { limit: 20 }),
+  component: Ledgers,
+});
+
+function Ledgers() {
+  const { documents, hasNextPage, loadNextPage } = useDocumentsOfType(
+    ProductionLedger,
+    { limit: 20 },
+  );
+  return (
+    <ul>
+      {documents.map((ledger) => (
+        <LedgerRow key={ledger.header.id} id={ledger.header.id} name={ledger.header.name} />
+      ))}
+      {hasNextPage && <button onClick={loadNextPage}>More</button>}
+    </ul>
+  );
+}
+
+function LedgerRow({ id, name }: { id: string; name: string }) {
+  // Opens the document in its drive; undefined until a loaded drive lists it.
+  const link = useDocumentLinkProps(id);
+  return <li>{link ? <a {...link}>{name}</a> : name}</li>;
+}
+```
+
+- `limit` is the page size (25 by default). `loadNextPage()` appends the next page; `hasNextPage` and `isLoadingNextPage` say where it is.
+- The order is the reactor's, not sorted; a local reactor returns them grouped by drive. Sort on the page when order matters.
+- Each document is checked against the module's schema. Documents of the type that fail it, e.g. written by another version of the model, are in `invalid`, not in `documents`.
+- The list follows documents being created and deleted, and each document updates as it changes.
+- In a Connect with a local reactor, the list is what the browser has synced so far.
+- `useDocumentLinkProps(id)` links any document by id through the drive that lists it, and `useDocumentTarget(id)` gives its `{ driveSlug, nodeSlug }`.
 
 ### The open drive and document
 
@@ -87,6 +137,27 @@ export default function Editor({
 - Pass `document` to `DocumentToolbar`. Without it, the toolbar shows the app's selected document, which is wrong when a host renders a document by id.
 - Components inside the editor call the generated `useSelected<Model>Document()`. It reads the document the editor was rendered with, from an `EditorDocumentProvider` the host renders around the editor; without one it reads the app's selection.
 - An editor that reads its document from props needs a Connect that passes them (see [Upgrading](./types-and-troubleshooting.md#upgrading)). Editors that only use the hooks work in every Connect.
+
+### Show that an action was rejected
+
+When a reducer throws one of the model's errors, the operation is stored with the error and the state stays unchanged. The write itself succeeds, so the editor hears about it only if it asks. Pass `dispatch` an `onErrors` callback:
+
+```tsx
+const [error, setError] = useState<string>();
+
+function rename(title: string) {
+  setError(undefined);
+  dispatch(actions.setTitle({ title }), (errors) =>
+    setError(errors[0]?.message),
+  );
+}
+```
+
+- Each rejected action arrives as an `OperationRejectedError` from `@powerhousedao/reactor-browser`. `message` is the reducer's error message. The error also has `actionId`, `actionType`, `scope`, the operation's `index`, and `kind`: `"reducer-error"`, or `"denied"` for a write the document's policy refused. `OperationRejectedError.isError(error)` tells it apart from a dispatch that failed outright, such as a missing document.
+- A batch reports only the actions that were rejected; the others still apply.
+- `onSuccess`, the third argument, runs once the write lands, also when an action in it was rejected. Clear the error before dispatching, not in `onSuccess`.
+- This works in every reactor mode: in-process, worker and remote.
+- Don't read `document.operations` for this: Connect does not load an editor's operations. The revision history lists every operation's errors.
 
 ### Render an editor or a drive app yourself
 

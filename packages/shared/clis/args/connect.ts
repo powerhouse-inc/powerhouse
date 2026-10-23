@@ -156,7 +156,7 @@ const connectRuntimeOverrideArgs = {
     type: optional(string),
     long: "home-background",
     description:
-      'Override connect.branding.homeBackground. URL or path to an image; pass an empty string ("") to reset to the bundled default.',
+      'Override connect.home.background (the generic plugin\'s home screen). URL or path to an image, pinned bottom-right; pass an empty string ("") to reset to the bundled gradient.',
   }),
   sentryDsn: option({
     type: optional(string),
@@ -217,7 +217,7 @@ export const connectBuildArgs = {
     type: optional(string),
     long: "favicon",
     description:
-      "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico; resolved relative to the build cwd.",
+      "Path to a favicon file (e.g. .ico) to bundle in place of the default Connect icon. Emitted as icon.ico, or icon.svg/icon.png for those types; resolved relative to the build cwd.",
   }),
   ...commonArgs,
 };

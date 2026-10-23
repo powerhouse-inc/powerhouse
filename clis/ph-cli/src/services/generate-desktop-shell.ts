@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { scaffoldDesktopShell } from "@powerhousedao/desktop";
+import { rebaseBackground, scaffoldDesktopShell } from "@powerhousedao/desktop";
+import type { PHBackground } from "@powerhousedao/shared/clis";
 
 export interface GenerateDesktopShellArgs {
   name?: string;
@@ -16,6 +17,19 @@ function projectSlug(pkgName: string | undefined): string {
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return seg || "app";
+}
+
+/** `connect.home.background` of the project's powerhouse.config.json, if
+ * any (absent or unreadable config: none). */
+function readHomeBackground(cwd: string): PHBackground | null {
+  try {
+    const config = JSON.parse(
+      fs.readFileSync(path.join(cwd, "powerhouse.config.json"), "utf8"),
+    ) as { connect?: { home?: { background?: PHBackground | null } } };
+    return config.connect?.home?.background ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** `ph generate desktop-shell`: write hosts/desktop/app.json + a placeholder
@@ -38,14 +52,26 @@ export function startGenerateDesktopShell(
   const identifier = args.identifier ?? `inc.powerhouse.desktop.${slug}`;
 
   const hostDir = path.join(cwd, "hosts", "desktop");
+  // The loading page takes Connect's home background, the same layers in
+  // the same places, with its paths rebased from the project root to
+  // hosts/desktop (app.json resolves them from where it lives).
+  const homeBackground = readHomeBackground(cwd);
   const result = scaffoldDesktopShell(hostDir, {
     identifier,
     productName,
     force: args.force,
+    background: homeBackground
+      ? rebaseBackground(homeBackground, cwd, hostDir)
+      : null,
   });
 
   const rel = (p: string) => path.relative(cwd, p).replace(/\\/g, "/");
   for (const f of result.created) console.log(`  created  ${rel(f)}`);
+  if (homeBackground && result.created.some((f) => f.endsWith("app.json"))) {
+    console.log(
+      "  copied   connect.home.background -> hosts/desktop/app.json background",
+    );
+  }
   for (const f of result.skipped) {
     console.log(`  skipped  ${rel(f)} (exists — pass --force to overwrite)`);
   }

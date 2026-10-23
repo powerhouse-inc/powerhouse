@@ -1,3 +1,70 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **clint:** give the Mastra agent read tools over the attached reactor ([80899e7f30](https://github.com/powerhouse-inc/powerhouse/commit/80899e7f30))
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Fable 5.1
+- Wouter Kampmann
+
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **clint:** resolve the shell's own tokens through host-core deferSelf ([15011891e9](https://github.com/powerhouse-inc/powerhouse/commit/15011891e9))
+- **clint:** resolve the shell's own agent/proxy fields after its members start ([7992b685a5](https://github.com/powerhouse-inc/powerhouse/commit/7992b685a5))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **clint:** agent urls and proxy upstreams are ref() fields; sibling resolvers deleted ([ac3a884674](https://github.com/powerhouse-inc/powerhouse/commit/ac3a884674))
+- **clint:** mastra-runner reads the resolved remote.url and takes apiKey from config ([2bdc19463a](https://github.com/powerhouse-inc/powerhouse/commit/2bdc19463a))
+- **clint:** typed host contracts for mastra-runner and clint-runner ([f3729a9d59](https://github.com/powerhouse-inc/powerhouse/commit/f3729a9d59))
+- **host-core:** zod single source for host types, kind-aware validateHost, v2 run records ([66e4bcaccd](https://github.com/powerhouse-inc/powerhouse/commit/66e4bcaccd))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **clint:** wait for the run record of a member re-attached by port ([7ac55c2aa5](https://github.com/powerhouse-inc/powerhouse/commit/7ac55c2aa5))
+- **clint:** start compound members in token-dependency order ([219fe31438](https://github.com/powerhouse-inc/powerhouse/commit/219fe31438))
+- **clint:** wait for a member's run record before reading its outputs ([1c57387b1f](https://github.com/powerhouse-inc/powerhouse/commit/1c57387b1f))
+- **clint:** start-run is the only standalone run-record writer ([4ce6fafcb3](https://github.com/powerhouse-inc/powerhouse/commit/4ce6fafcb3))
+- **clint:** tear the shell down when its outputs fail validation ([94473002b9](https://github.com/powerhouse-inc/powerhouse/commit/94473002b9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/clint to align it with other projects, there were no code changes.

@@ -15,6 +15,9 @@ function manifest(documentType: string, to: number) {
 
 type Namespace = Record<string, unknown>;
 
+// Registry entries with no imports: the loader imports their own URL.
+const nothingToRewrite = { fetchSource: () => Promise.resolve("export {};") };
+
 function deferred() {
   let resolve!: (namespace: Namespace) => void;
   let reject!: (error: unknown) => void;
@@ -36,6 +39,7 @@ function loaderOver(
     return typeof entry === "function" ? entry() : Promise.resolve(entry);
   });
   const loader = new WorkerPackageLoader({
+    ...nothingToRewrite,
     cdnUrl: "https://cdn.test",
     importPackage,
     resolvePackages: () => Promise.resolve(packageNames),
@@ -50,9 +54,10 @@ function moduleKeys(loader: WorkerPackageLoader): string[] {
 }
 
 describe("WorkerPackageLoader", () => {
-  it("imports each package's document-models subpath and collects models", async () => {
+  it("imports each package's document-models subpath at its version and collects models", async () => {
     const urls: string[] = [];
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example/-/cdn",
       importPackage: (url) => {
         urls.push(url);
@@ -64,7 +69,7 @@ describe("WorkerPackageLoader", () => {
     });
     const models = await loader.loadPackages(["@powerhousedao/common@1.2.3"]);
     expect(urls).toEqual([
-      "https://cdn.example/-/cdn/@powerhousedao/common/browser/document-models/index.js",
+      "https://cdn.example/-/cdn/@powerhousedao/common@1.2.3/browser/document-models/index.js",
     ]);
     expect(models).toHaveLength(1);
     expect(models[0]?.documentModel.global.id).toBe(
@@ -74,6 +79,7 @@ describe("WorkerPackageLoader", () => {
 
   it("resolves loaded models by document type and rejects unknown ones", async () => {
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: () =>
         Promise.resolve({ M: fakeModel("powerhouse/document-drive") }),
@@ -90,6 +96,7 @@ describe("WorkerPackageLoader", () => {
   it("loads an unknown type on demand via discovery", async () => {
     const urls: string[] = [];
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: (url) => {
         urls.push(url);
@@ -108,6 +115,7 @@ describe("WorkerPackageLoader", () => {
   it("preserves the import error as the cause when on-demand load fails", async () => {
     const importError = new Error("404");
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: () => Promise.reject(importError),
       resolvePackages: () => Promise.resolve(["broken-pkg"]),
@@ -121,6 +129,7 @@ describe("WorkerPackageLoader", () => {
   it("imports each spec only once across repeated loadPackages calls", async () => {
     const urls: string[] = [];
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: (url) => {
         urls.push(url);
@@ -135,6 +144,7 @@ describe("WorkerPackageLoader", () => {
   it("retries a previously failed spec on a later load", async () => {
     let attempt = 0;
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: () => {
         attempt += 1;
@@ -151,6 +161,7 @@ describe("WorkerPackageLoader", () => {
 
   it("keeps every version of a type a package exports", async () => {
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: () =>
         Promise.resolve({
@@ -166,6 +177,7 @@ describe("WorkerPackageLoader", () => {
 
   it("resolves a bare load to the highest registered version", async () => {
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: (url) =>
         Promise.resolve(
@@ -183,6 +195,7 @@ describe("WorkerPackageLoader", () => {
 
   it("records a failed package without aborting the others", async () => {
     const loader = new WorkerPackageLoader({
+      ...nothingToRewrite,
       cdnUrl: "https://cdn.example",
       importPackage: (url) =>
         url.includes("broken")
@@ -321,5 +334,74 @@ describe("WorkerPackageLoader", () => {
     expect(a.documentModel.global.id).toBe("ph/lazy");
     expect(b).toBe(a);
     expect(importPackage).toHaveBeenCalledTimes(1);
+  });
+
+  it("replaces a package's modules when its version changes", async () => {
+    const { loader, importPackage } = loaderOver({
+      "https://cdn.test/pkg@1.0.0/browser/document-models/index.js": {
+        A: fakeModel("test/a"),
+        B: fakeModel("test/b"),
+      },
+      "https://cdn.test/pkg@2.0.0/browser/document-models/index.js": {
+        A: fakeModel("test/a", 2),
+      },
+    });
+    await loader.loadPackages(["pkg@1.0.0"]);
+
+    const same = await loader.updatePackages(["pkg@1.0.0", "pkg"]);
+    const bumped = await loader.updatePackages(["pkg@2.0.0"]);
+
+    expect(same).toEqual({ types: [], failures: [] });
+    expect(bumped.types.sort()).toEqual(["test/a", "test/b"]);
+    expect(moduleKeys(loader)).toEqual(["test/a@2"]);
+    expect(importPackage).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a package added after boot with the types it brought", async () => {
+    const { loader } = loaderOver({
+      "https://cdn.test/late@1.0.0/browser/document-models/index.js": {
+        L: fakeModel("test/late"),
+      },
+    });
+
+    const result = await loader.updatePackages(["late@1.0.0", "missing"]);
+
+    expect(result.types).toEqual(["test/late"]);
+    expect(result.failures.map((failure) => failure.name)).toEqual(["missing"]);
+  });
+
+  it("fails a package whose code imports a dep the host doesn't share", async () => {
+    const importPackage = vi.fn();
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.test",
+      importPackage,
+      fetchSource: (url) =>
+        Promise.resolve(
+          url.endsWith("index.js")
+            ? 'export * from "../chunk.js";'
+            : 'import { x } from "document-model"; export const y = x;',
+        ),
+    });
+
+    await loader.loadPackages(["pkg"]);
+
+    expect(importPackage).not.toHaveBeenCalled();
+    expect(String(loader.loadFailures[0]?.error)).toContain(
+      'https://cdn.test/pkg/browser/chunk.js imports "document-model", which the host doesn\'t share with the worker',
+    );
+  });
+
+  it("imports a source's own URL without reading its modules", async () => {
+    const fetchSource = vi.fn();
+    const loader = new WorkerPackageLoader({
+      cdnUrl: "https://cdn.test",
+      importPackage: () => Promise.resolve({ S: fakeModel("test/s") }),
+      fetchSource,
+    });
+
+    await loader.loadSources([{ name: "s", url: "https://host.test/s.js" }]);
+
+    expect(moduleKeys(loader)).toEqual(["test/s@1"]);
+    expect(fetchSource).not.toHaveBeenCalled();
   });
 });

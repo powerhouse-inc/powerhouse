@@ -1,4 +1,5 @@
 import { Icon, SidebarFooter } from "#design-system";
+import { useConnectBranding } from "../branding/connect-branding.js";
 import { Settings } from "lucide-react";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
@@ -39,6 +40,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   etherscanUrl = "",
   ...props
 }) => {
+  // The branding's app icon (its 64 px variant); the Connect mark otherwise.
+  const appLogoSrc = useConnectBranding().icon;
   const settingsIcon = (
     <>
       <Settings className="text-foreground" size={24} strokeWidth={2} />
@@ -51,7 +54,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
     <SidebarFooter
       {...props}
       className={twMerge(
-        "flex flex-col items-center gap-3 border-t border-sidebar-border px-2 py-4 dark:border-none",
+        "flex flex-col items-center gap-3 border-t border-sidebar-border px-2 py-4 max-sm:flex-row max-sm:border-t-0 max-sm:border-l max-sm:py-2 dark:border-none",
         className,
       )}
     >
@@ -62,11 +65,21 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           className="cursor-pointer"
           onClick={onHomeClick}
         >
-          <Icon
-            className="text-muted-foreground"
-            name="ConnectSmall"
-            size={24}
-          />
+          {appLogoSrc ? (
+            <img
+              alt=""
+              className="object-contain"
+              src={appLogoSrc}
+              width={24}
+              height={24}
+            />
+          ) : (
+            <Icon
+              className="text-muted-foreground"
+              name="ConnectSmall"
+              size={24}
+            />
+          )}
         </button>
       )}
       {showDebug && onDebugClick && (
@@ -80,7 +93,7 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           <Icon className="text-foreground" name="Tube" />
         </button>
       )}
-      <div className={onHomeClick ? "mt-3" : ""}>
+      <div className={onHomeClick ? "mt-3 max-sm:mt-0" : ""}>
         {address ? (
           <SidebarUser
             address={address}

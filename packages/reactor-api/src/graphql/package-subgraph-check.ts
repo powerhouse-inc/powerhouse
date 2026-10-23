@@ -13,6 +13,7 @@ import {
   reservedTypeNames,
 } from "../utils/create-schema.js";
 import authSchema from "./auth/schema.graphql";
+import { inspectionAdminTypeDefs } from "./inspection/admin-schema.js";
 import { inspectionTypeDefs } from "./inspection/schema.js";
 import reactorSchema from "./reactor/schema.graphql";
 import {
@@ -46,6 +47,7 @@ export const coreSubgraphTypeDefs: ReadonlyMap<string, DocumentNode> = new Map([
   ["system", systemTypeDefs],
   ["r", gql(reactorSchema)],
   ["inspection", inspectionTypeDefs],
+  ["inspection-admin", inspectionAdminTypeDefs],
   ["auth", gql(authSchema)],
 ]);
 

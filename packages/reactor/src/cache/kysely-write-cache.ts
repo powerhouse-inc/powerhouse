@@ -161,6 +161,14 @@ function copyDocument(document: PHDocument): PHDocument {
  */
 type PendingRead = { evicted: boolean };
 
+/**
+ * An invalidation's promise that the next head read of each stream it covers
+ * replays the whole log. Callers invalidate before an UNDO, REDO or skip because
+ * reducing one needs the full operation history, which a keyframe does not carry.
+ * `done` holds the streams that have had their full replay since.
+ */
+type FullReplayMark = { prefix: string; done: Set<string> };
+
 export class KyselyWriteCache implements IWriteCache {
   private streams: Map<string, DocumentStream>;
   private lruTracker: LRUTracker<string>;
@@ -169,6 +177,7 @@ export class KyselyWriteCache implements IWriteCache {
   private registry: IDocumentModelRegistry;
   private config: Required<WriteCacheConfig>;
   private reads = new Map<string, Set<PendingRead>>();
+  private fullReplays = new Map<string, FullReplayMark[]>();
 
   constructor(
     keyframeStore: IKeyframeStore,
@@ -201,6 +210,7 @@ export class KyselyWriteCache implements IWriteCache {
     scoped.streams = this.streams;
     scoped.lruTracker = this.lruTracker;
     scoped.reads = this.reads;
+    scoped.fullReplays = this.fullReplays;
     return scoped;
   }
 
@@ -366,13 +376,23 @@ export class KyselyWriteCache implements IWriteCache {
       }
     }
 
+    const owedReplays =
+      targetRevision === undefined
+        ? this.owedFullReplays(documentId, streamKey)
+        : [];
+
     const document = await this.coldMissRebuild(
       documentId,
       scope,
       branch,
       targetRevision,
       signal,
+      owedReplays.length === 0,
     );
+
+    if (!read.evicted) {
+      this.settleFullReplays(documentId, streamKey, owedReplays);
+    }
 
     // header.revision is a next index; a snapshot is labelled by last index.
     const revision =
@@ -583,6 +603,8 @@ export class KyselyWriteCache implements IWriteCache {
       }
     }
 
+    this.oweFullReplay(documentId, scope, branch);
+
     return evicted;
   }
 
@@ -615,6 +637,65 @@ export class KyselyWriteCache implements IWriteCache {
     return this.streams.get(key);
   }
 
+  private oweFullReplay(
+    documentId: string,
+    scope: string | undefined,
+    branch: string | undefined,
+  ): void {
+    const prefix =
+      scope === undefined
+        ? `${documentId}:`
+        : branch === undefined
+          ? `${documentId}:${scope}:`
+          : `${this.makeStreamKey(documentId, scope, branch)}:`;
+
+    const marks = (this.fullReplays.get(documentId) ?? []).filter(
+      (mark) => !mark.prefix.startsWith(prefix),
+    );
+    for (const mark of marks) {
+      for (const key of mark.done) {
+        if (`${key}:`.startsWith(prefix)) {
+          mark.done.delete(key);
+        }
+      }
+    }
+    marks.push({ prefix, done: new Set() });
+    this.fullReplays.set(documentId, marks);
+  }
+
+  private owedFullReplays(
+    documentId: string,
+    streamKey: string,
+  ): FullReplayMark[] {
+    return (this.fullReplays.get(documentId) ?? []).filter(
+      (mark) =>
+        `${streamKey}:`.startsWith(mark.prefix) && !mark.done.has(streamKey),
+    );
+  }
+
+  private settleFullReplays(
+    documentId: string,
+    streamKey: string,
+    settled: FullReplayMark[],
+  ): void {
+    if (settled.length === 0) {
+      return;
+    }
+
+    for (const mark of settled) {
+      mark.done.add(streamKey);
+    }
+
+    const remaining = (this.fullReplays.get(documentId) ?? []).filter(
+      (mark) => mark.prefix !== `${streamKey}:` || !mark.done.has(streamKey),
+    );
+    if (remaining.length === 0) {
+      this.fullReplays.delete(documentId);
+    } else {
+      this.fullReplays.set(documentId, remaining);
+    }
+  }
+
   private async findNearestKeyframe(
     documentId: string,
     scope: string,
@@ -622,7 +703,7 @@ export class KyselyWriteCache implements IWriteCache {
     targetRevision: number,
     signal?: AbortSignal,
   ): Promise<{ revision: number; document: PHDocument } | undefined> {
-    if (targetRevision === Number.MAX_SAFE_INTEGER || targetRevision <= 0) {
+    if (targetRevision <= 0) {
       return undefined;
     }
 
@@ -1359,6 +1440,13 @@ export class KyselyWriteCache implements IWriteCache {
     // The base holds one operation per scope; a skip needs them all.
     let needsFullReplay = false;
 
+    // A positional rebuild reads only up to its target: a caller walking a
+    // stream revision by revision would otherwise reload the rest of it each time.
+    const paging =
+      targetRevision !== undefined
+        ? { cursor: "0", limit: Math.max(targetRevision - baseRevision, 1) }
+        : undefined;
+
     try {
       const pagedResults = await this.operationStore.getSince(
         documentId,
@@ -1366,7 +1454,7 @@ export class KyselyWriteCache implements IWriteCache {
         branch,
         baseRevision,
         undefined,
-        undefined,
+        paging,
         signal,
       );
 

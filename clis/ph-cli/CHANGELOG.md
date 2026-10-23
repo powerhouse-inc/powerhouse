@@ -1,3 +1,98 @@
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.72 (2026-10-23)
+
+### 🚀 Features
+
+- **shared,connect,codegen:** ph init and ph migrate give a project the router as a peer at connect's version, and the host stylesheet shows light and dark tokens ([0829546eaf](https://github.com/powerhouse-inc/powerhouse/commit/0829546eaf))
+
+### 🩹 Fixes
+
+- **builder-tools,shared,ph-cli:** an svg or png favicon builds with its type, as icon.svg or icon.png, and index.html links it ([c404c23227](https://github.com/powerhouse-inc/powerhouse/commit/c404c23227))
+- **builder-tools,connect-core,connect,ph-cli:** routes generation takes settings tab overrides, fails on two routes at one url, and warns on silent drops in builds and studio ([35461fda2c](https://github.com/powerhouse-inc/powerhouse/commit/35461fda2c))
+- **ph-cli,desktop:** ph run connect build and serve default to .ph/connect-build/dist, so they leave the package build alone ([cc6eeaa001](https://github.com/powerhouse-inc/powerhouse/commit/cc6eeaa001))
+- **builder-tools,connect,ph-cli,reactor-api:** studio works with an installed connect and the packages it loads: route deps pre-bundled, the tree live and watched, a vite cache per server ([3bf42449fb](https://github.com/powerhouse-inc/powerhouse/commit/3bf42449fb))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.2.3-dev.71 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+- **shared,ph-cli,connect:** a package's stylesheet holds only its own classes and rules, against Connect's theme by reference, in external-packages; ph install --local leaves style.css alone ([d0b0e9d463](https://github.com/powerhouse-inc/powerhouse/commit/d0b0e9d463))
+- **desktop:** vendor local package tarballs into the stack (PH_DESKTOP_LOCAL_PACKAGES) ([000bc39d10](https://github.com/powerhouse-inc/powerhouse/commit/000bc39d10))
+- **connect:** a connect host's config takes output tokens in its URL fields ([14846ab254](https://github.com/powerhouse-inc/powerhouse/commit/14846ab254))
+- **shared,codegen:** assistant.port slot in powerhouse.config.json ([bf1cba34da](https://github.com/powerhouse-inc/powerhouse/commit/bf1cba34da))
+- **ph-cli:** --explain shows $map drives and the values tokens resolve to ([505cb987e0](https://github.com/powerhouse-inc/powerhouse/commit/505cb987e0))
+- **ph-cli:** ph run resolves output tokens; --explain outputs ([0669eb31d7](https://github.com/powerhouse-inc/powerhouse/commit/0669eb31d7))
+- **ph-cli:** runners export declared + resolved host schemas; compound members leave Ctrl-C to the compound ([4dc7c40322](https://github.com/powerhouse-inc/powerhouse/commit/4dc7c40322))
+- **ph-cli:** ph generate hosts (flag-gated); generate all runs it when hosts/ exists ([29eb02a1aa](https://github.com/powerhouse-inc/powerhouse/commit/29eb02a1aa))
+- **codegen:** pure builders for generated outputs.js/.d.ts and the hosts typing files ([be3c35122f](https://github.com/powerhouse-inc/powerhouse/commit/be3c35122f))
+- **ph-cli:** validate composed Connect plugin entry configs at ph run ([870b5588d6](https://github.com/powerhouse-inc/powerhouse/commit/870b5588d6))
+- **ph-cli:** warn on dead Connect config at boot and in --explain ([0d948bf47b](https://github.com/powerhouse-inc/powerhouse/commit/0d948bf47b))
+- **ph-cli:** emit per-runner JSON Schemas with a drift test ([1719b81c1d](https://github.com/powerhouse-inc/powerhouse/commit/1719b81c1d))
+- **ph-cli:** standalone ph run passes the parsed host and writes a v2 record ([9d6488470a](https://github.com/powerhouse-inc/powerhouse/commit/9d6488470a))
+- **ph-cli:** typed connect and switchboard runner contracts ([ef0447ccfb](https://github.com/powerhouse-inc/powerhouse/commit/ef0447ccfb))
+- **connect,desktop:** layered backgrounds for the home screen and the loading page ([9ffe4915b4](https://github.com/powerhouse-inc/powerhouse/commit/9ffe4915b4))
+- splash images for the desktop loading page and Connect's home hero ([45a7e316b3](https://github.com/powerhouse-inc/powerhouse/commit/45a7e316b3))
+- project icon sets for Connect and Desktop hosts (proof of concept) ([b0fb21b1de](https://github.com/powerhouse-inc/powerhouse/commit/b0fb21b1de))
+- **host-core,ph-cli,switchboard,connect,codegen:** workflow plugins declare the drive and the link ([ab37f30600](https://github.com/powerhouse-inc/powerhouse/commit/ab37f30600))
+
+### 🩹 Fixes
+
+- **switchboard,reactor-api,ph-cli:** a slug another document holds is never moved: a default drive reuses a drive that holds it or is logged and skipped, and graphql creates refuse it ([245cc68e6c](https://github.com/powerhouse-inc/powerhouse/commit/245cc68e6c))
+- **ph-cli:** ph build rebuilds the types when tsc's declaration output is missing ([4218a1f7ac](https://github.com/powerhouse-inc/powerhouse/commit/4218a1f7ac))
+- **ph-cli:** connect serve keeps the build's branding images ([861c3d410a](https://github.com/powerhouse-inc/powerhouse/commit/861c3d410a))
+- **ph-cli:** a connect host with no config, plugins or drives builds classic; runner schemas carry routes and favicon ([55b49f511a](https://github.com/powerhouse-inc/powerhouse/commit/55b49f511a))
+- **host-core,ph-cli:** review findings for $map ([9ff3e273bd](https://github.com/powerhouse-inc/powerhouse/commit/9ff3e273bd))
+- **ph-cli:** explain reads plugin entries as data (PluginEntryData) ([bf644e8ade](https://github.com/powerhouse-inc/powerhouse/commit/bf644e8ade))
+- **host-core,ph-cli:** $$ escapes survive to the verb; connect members leave SIGTERM to the compound ([28b1c77ff7](https://github.com/powerhouse-inc/powerhouse/commit/28b1c77ff7))
+- **host-core,ph-cli:** review findings on the T3 resolver ([9c8fda53a4](https://github.com/powerhouse-inc/powerhouse/commit/9c8fda53a4))
+- **ph-cli:** switchboard handle shutdown stops the reactor; drop the signal guard ([faa0520fab](https://github.com/powerhouse-inc/powerhouse/commit/faa0520fab))
+- **clint:** start-run is the only standalone run-record writer ([4ce6fafcb3](https://github.com/powerhouse-inc/powerhouse/commit/4ce6fafcb3))
+- **ph-cli:** address review findings on the T2 runner contracts ([e57fce43dc](https://github.com/powerhouse-inc/powerhouse/commit/e57fce43dc))
+- the home screen uses the project background, not the splash ([83ae0e51e5](https://github.com/powerhouse-inc/powerhouse/commit/83ae0e51e5))
+- **ph-cli:** the switchboard runner seeds drives by slug, reusing a live drive under another id ([8dfa4ae7fe](https://github.com/powerhouse-inc/powerhouse/commit/8dfa4ae7fe))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.70 (2026-10-22)
+
+### 🚀 Features
+
+- **shared,design-system,workflow,vetra,powerhouse-vetra-packages,connect:** bundled packages leave their dependencies to Connect's build, which includes each once ([74bf2d8b37](https://github.com/powerhouse-inc/powerhouse/commit/74bf2d8b37))
+- **reactor-browser,design-system,connect-core,connect,vetra:** editor and drive contexts replace scoped PH stores; hosts pass editors and drive apps document and dispatch as props ([4596b2d037](https://github.com/powerhouse-inc/powerhouse/commit/4596b2d037))
+- **shared,ph-cli,connect:** a package's stylesheet holds only its own classes and rules, against Connect's theme by reference, in external-packages; ph install --local leaves style.css alone ([d0b0e9d463](https://github.com/powerhouse-inc/powerhouse/commit/d0b0e9d463))
+
+### 🩹 Fixes
+
+- **ph-cli:** ph build rebuilds the types when tsc's declaration output is missing ([4218a1f7ac](https://github.com/powerhouse-inc/powerhouse/commit/4218a1f7ac))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.69 (2026-10-21)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

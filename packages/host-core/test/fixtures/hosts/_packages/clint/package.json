@@ -1,0 +1,8 @@
+{
+  "name": "@powerhousedao/clint",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./mastra-runner": "./mastra-runner.ts"
+  }
+}

@@ -95,6 +95,8 @@ function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
     lastErrorTimestampUtcMs: info.lastErrorTimestamp
       ? info.lastErrorTimestamp.getTime()
       : null,
+    floor: toOrdinal(info.floor),
+    clearable: info.clearable,
   };
 }
 

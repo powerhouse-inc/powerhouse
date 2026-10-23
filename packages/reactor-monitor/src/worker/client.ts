@@ -246,7 +246,9 @@ export async function connectManagedWorkerReactor(
     descriptorMismatch,
     client,
     inspector: toMonitorInspector(inspector),
-    ...(info.access.admin ? { admin: inspector } : {}),
+    ...(info.access.admin
+      ? { admin: inspector, processorLevers: inspector }
+      : {}),
     ...(info.access.sql
       ? {
           dbQuery: {

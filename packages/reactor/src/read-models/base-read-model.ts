@@ -705,23 +705,40 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
     }
   }
 
+  /**
+   * Rebuilds and commits one chunk at a time, so a chunk's rebuilt states are
+   * released before the next is built: a long backlog costs one chunk of memory.
+   */
   private async replayOwned(owned: OperationWithContext[]): Promise<boolean> {
-    let rebuilt: { items: OperationWithContext[]; absent: number[] };
-    try {
-      rebuilt = await this.rebuildIfConfigured(owned);
-    } catch (error) {
-      this.cursor.settle(owned.map(ordinalOf), false);
-      this.block(owned[0]!, error);
-      return true;
-    }
-    this.cursor.settle(rebuilt.absent, true);
-    if (rebuilt.items.length === 0) return false;
+    const { commitChunkSize, yieldDeadlineMs } = this.indexing;
+    let lastYield = performance.now();
 
-    try {
-      await this.applyChunked(rebuilt.items);
-    } catch (error) {
-      this.block(this.failedItem ?? rebuilt.items[0]!, error);
-      return true;
+    for (let start = 0; start < owned.length; start += commitChunkSize) {
+      if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+      }
+      const chunk = owned.slice(start, start + commitChunkSize);
+      const rest = owned.slice(start + chunk.length);
+
+      let rebuilt: { items: OperationWithContext[]; absent: number[] };
+      try {
+        rebuilt = await this.rebuildIfConfigured(chunk);
+      } catch (error) {
+        this.cursor.settle([...chunk, ...rest].map(ordinalOf), false);
+        this.block(chunk[0]!, error);
+        return true;
+      }
+      this.cursor.settle(rebuilt.absent, true);
+      if (rebuilt.items.length === 0) continue;
+
+      try {
+        await this.applyChunked(rebuilt.items);
+      } catch (error) {
+        this.cursor.settle(rest.map(ordinalOf), false);
+        this.block(this.failedItem ?? rebuilt.items[0]!, error);
+        return true;
+      }
     }
     return false;
   }
@@ -761,38 +778,53 @@ export class BaseReadModel implements IReadModel, ICatchUpConsumer {
       items = mergeByOrdinal(group.late, suffix);
     }
 
-    let rebuilt: { items: OperationWithContext[]; absent: number[] };
-    try {
-      rebuilt = await this.rebuildIfConfigured(items);
-    } catch (error) {
-      this.cursor.settle(owned, false);
-      return {
-        replayed: 0,
-        reapplied: 0,
-        blockedAt: this.block(items[0]!, error),
-      };
-    }
+    // A chunk's rebuilt states are released before the next is built; a
+    // stream longer than one chunk commits in several transactions.
+    const { commitChunkSize, yieldDeadlineMs } = this.indexing;
+    let lastYield = performance.now();
+    let replayed = 0;
+    let applied = 0;
 
-    try {
-      await this.commitFenced(rebuilt.items);
-    } catch (error) {
-      this.cursor.settle(owned, false);
-      return {
-        replayed: 0,
-        reapplied: 0,
-        blockedAt: this.block(rebuilt.items[0] ?? items[0]!, error),
-      };
+    for (let start = 0; start < items.length; start += commitChunkSize) {
+      if (start > 0 && performance.now() - lastYield > yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+      }
+      const chunk = items.slice(start, start + commitChunkSize);
+
+      let rebuilt: { items: OperationWithContext[]; absent: number[] };
+      try {
+        rebuilt = await this.rebuildIfConfigured(chunk);
+      } catch (error) {
+        this.cursor.settle(owned, false);
+        return {
+          replayed: 0,
+          reapplied: 0,
+          blockedAt: this.block(chunk[0]!, error),
+        };
+      }
+
+      try {
+        await this.commitFenced(rebuilt.items);
+      } catch (error) {
+        this.cursor.settle(owned, false);
+        return {
+          replayed: 0,
+          reapplied: 0,
+          blockedAt: this.block(rebuilt.items[0] ?? chunk[0]!, error),
+        };
+      }
+
+      this.updateConsistencyTracker(rebuilt.items);
+      this.notifySwept(rebuilt.items);
+      applied += rebuilt.items.length;
+      for (const item of rebuilt.items) {
+        if (ownedSet.has(ordinalOf(item))) replayed++;
+      }
     }
 
     this.cursor.settle(owned, true);
-    this.updateConsistencyTracker(rebuilt.items);
-    this.notifySwept(rebuilt.items);
-
-    let replayed = 0;
-    for (const item of rebuilt.items) {
-      if (ownedSet.has(ordinalOf(item))) replayed++;
-    }
-    return { replayed, reapplied: rebuilt.items.length - replayed };
+    return { replayed, reapplied: applied - replayed };
   }
 
   /** A document gone from the write cache, or purged, is absent. */

@@ -29,13 +29,16 @@ export type IConnectOptions = {
   /* Build one bundle that serves under any subpath; base resolved at serve
    * time from a runtime global instead of baked in. Overrides the deploy base. */
   dynamicBase?: boolean;
-  /* Path to a custom favicon to bundle as icon.ico instead of the default
+  /* Path to a custom favicon to bundle (icon.ico, icon.svg or icon.png by type) instead of the default
    * Connect asset. Build input (not runtime config); from
    * `ph connect build --favicon`. Non-absolute paths resolve against the build cwd. */
   favicon?: string;
   /** The routes folder, relative to the project (a host's `runner.routes`);
    * `false` for none. Default: `hosts/connect/routes/` when it exists. */
   routes?: string | false;
+  /** Vite's cache folder. Default: Vite's, `node_modules/.vite`; a host's own
+   * keeps dev servers running side by side from rewriting each other's deps. */
+  cacheDir?: string;
   /**
    * Production vendor: the prebuilt shared-dependency bundle's import map and
    * version table (from `prebuildConnectVendor`). When set on a production

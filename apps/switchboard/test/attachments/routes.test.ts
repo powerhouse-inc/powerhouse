@@ -1203,6 +1203,32 @@ describe("attachment routes", () => {
       ).toBeNull();
     });
 
+    it("parseReserveOptions accepts an empty file in hash-first mode", () => {
+      const emptyHash =
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+      const opts = parseReserveOptions({
+        mimeType: "application/octet-stream",
+        fileName: "empty",
+        clientHash: emptyHash,
+        sizeBytes: 0,
+      });
+      expect(opts).not.toBeNull();
+      expect(opts!.sizeBytes).toBe(0);
+    });
+
+    it("parseReserveOptions rejects a negative or fractional sizeBytes", () => {
+      for (const sizeBytes of [-1, 1.5]) {
+        expect(
+          parseReserveOptions({
+            mimeType: "text/plain",
+            fileName: "file.txt",
+            clientHash: "a".repeat(64),
+            sizeBytes,
+          }),
+        ).toBeNull();
+      }
+    });
+
     it("parseReserveOptions rejects when clientHash is present but sizeBytes is absent", () => {
       expect(
         parseReserveOptions({
@@ -1225,17 +1251,6 @@ describe("attachment routes", () => {
         fileName: "file.txt",
         extension: null,
       });
-    });
-
-    it("parseReserveOptions rejects sizeBytes of zero", () => {
-      expect(
-        parseReserveOptions({
-          mimeType: "text/plain",
-          fileName: "file.txt",
-          clientHash: "a".repeat(64),
-          sizeBytes: 0,
-        }),
-      ).toBeNull();
     });
 
     it("parseReserveOptions rejects negative sizeBytes", () => {
