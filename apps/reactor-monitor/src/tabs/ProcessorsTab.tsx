@@ -47,7 +47,14 @@ export type ProcessorsTabProps = {
 
 type RerunOptions = Parameters<ProcessorLevers["rerunProcessor"]>[1];
 
+/** One processor to rerun, and how. */
+export type RerunRequest = {
+  readonly processorId: string;
+  readonly options: RerunOptions;
+};
+
 const POLL_INTERVAL_MS = 2000;
+const COLUMNS = 8;
 
 const PHASE_TONE: Record<ProcessorPhase, ProgressTone> = {
   "catching-up": "active",
@@ -78,107 +85,67 @@ function detailOf(measured: Measured): string {
   return `${percentOf(measured.fraction)}%, ${ordinals}`;
 }
 
-function processorLabel(row: ProcessorProgress, perDrive: boolean): string {
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+function processorName(row: ProcessorProgress, perDrive: boolean): string {
   return perDrive ? row.driveId : `${row.driveId} #${row.processorIndex}`;
 }
 
-/** One bar per factory, each expandable to a bar per processor. */
-function FactoryProgressList({
-  factories,
-  headKnown,
+/** A checkbox for a set of processors: checked when all are, mixed when some are. */
+function SelectBox({
+  label,
+  ids,
+  selected,
+  onChange,
+  disabled,
 }: {
-  readonly factories: FactoryProgress[];
-  readonly headKnown: boolean;
+  readonly label: string;
+  readonly ids: readonly string[];
+  readonly selected: ReadonlySet<string>;
+  readonly onChange: (ids: readonly string[], checked: boolean) => void;
+  readonly disabled: boolean;
 }) {
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (factoryId: string) =>
-    setExpanded((current) => {
-      const next = new Set(current);
-      if (!next.delete(factoryId)) next.add(factoryId);
-      return next;
-    });
-
+  const chosen = ids.filter((id) => selected.has(id)).length;
+  const all = ids.length > 0 && chosen === ids.length;
   return (
-    <section
-      aria-label="Processor progress"
-      className="rm-progress-list"
-      data-testid="processor-progress"
-    >
-      {headKnown ? null : (
-        <p className="rm-note" data-testid="progress-head-unknown">
-          The head is unknown here, so progress is measured against the highest
-          processor cursor.
-        </p>
-      )}
-      {factories.map((factory) => {
-        const open = expanded.has(factory.factoryId);
-        const drives = `${factory.driveCount} ${factory.driveCount === 1 ? "drive" : "drives"}`;
-        const label = `${factory.label} (${drives})`;
-        const perDrive = factory.processors.length === factory.driveCount;
-        return (
-          <div className="rm-progress-group" key={factory.factoryId}>
-            <div className="rm-progress-head">
-              <button
-                aria-expanded={open}
-                aria-label={`${open ? "Hide" : "Show"} drives of ${factory.factoryId}`}
-                className="rm-progress-toggle"
-                onClick={() => toggle(factory.factoryId)}
-                type="button"
-              >
-                {open ? "▾" : "▸"}
-              </button>
-              <ProgressBar
-                detail={detailOf(factory)}
-                fraction={factory.fraction}
-                label={label}
-                tone={PHASE_TONE[factory.phase]}
-                value={valueOf(factory)}
-              />
-            </div>
-            {open ? (
-              <div
-                className="rm-progress-children"
-                data-testid={`progress-drives-${factory.factoryId}`}
-              >
-                {factory.processors.map((row) => (
-                  <ProgressBar
-                    detail={detailOf(row)}
-                    fraction={row.fraction}
-                    key={row.processorId}
-                    label={processorLabel(row, perDrive)}
-                    tone={PHASE_TONE[row.phase]}
-                    value={valueOf(row)}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-    </section>
+    <input
+      aria-label={label}
+      checked={all}
+      disabled={disabled || ids.length === 0}
+      onChange={(event) => onChange(ids, event.target.checked)}
+      ref={(element) => {
+        if (element) element.indeterminate = chosen > 0 && !all;
+      }}
+      type="checkbox"
+    />
   );
 }
 
-/** Asks how to rerun one processor: cleared from its floor, or from an ordinal. */
+/** Asks how to rerun the selected processors: cleared from their floors, or replayed. */
 function RerunForm({
-  processor,
+  processors,
   onRerun,
   onCancel,
 }: {
-  readonly processor: InspectorProcessorInfo;
-  readonly onRerun: (options: RerunOptions) => Promise<void>;
+  readonly processors: readonly InspectorProcessorInfo[];
+  readonly onRerun: (requests: RerunRequest[]) => Promise<void>;
   readonly onCancel: () => void;
 }) {
-  const { floor, lastOrdinal, clearable } = processor;
-  const [clear, setClear] = useState(clearable);
-  const [from, setFrom] = useState(String(floor));
+  const unclearable = processors.filter((p) => !p.clearable).length;
+  const single = processors.length === 1 ? processors[0] : undefined;
+  const [clear, setClear] = useState(unclearable === 0);
+  const [from, setFrom] = useState(String(single?.floor ?? 0));
   const [pending, setPending] = useState(false);
   const fromOrdinal = Number(from);
   const inRange =
-    from.trim() !== "" &&
-    Number.isInteger(fromOrdinal) &&
-    fromOrdinal >= floor &&
-    fromOrdinal <= lastOrdinal;
+    single === undefined ||
+    (from.trim() !== "" &&
+      Number.isInteger(fromOrdinal) &&
+      fromOrdinal >= single.floor &&
+      fromOrdinal <= single.lastOrdinal);
+  const count = plural(processors.length, "processor", "processors");
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -186,55 +153,72 @@ function RerunForm({
       return;
     }
     setPending(true);
-    await onRerun({ clear, fromOrdinal: clear ? floor : fromOrdinal });
+    await onRerun(
+      processors.map((processor) => ({
+        processorId: processor.processorId,
+        options: {
+          clear,
+          fromOrdinal: single && !clear ? fromOrdinal : processor.floor,
+        },
+      })),
+    );
     setPending(false);
   };
 
   return (
     <form
-      aria-label={`Rerun ${processor.processorId}`}
-      className="rm-form rm-form-inline"
+      aria-label={`Rerun ${count}`}
+      className="rm-form rm-form-inline rm-rerun-form"
       data-testid="rerun-form"
       onSubmit={(event) => void submit(event)}
     >
       <label className="rm-check">
         <input
           checked={clear}
-          disabled={!clearable}
+          disabled={unclearable > 0}
           onChange={(event) => setClear(event.target.checked)}
           type="checkbox"
         />
-        Clear its read model first
+        Clear {single ? "its read model" : "their read models"} first
       </label>
       {clear ? (
         <p className="rm-note" data-testid="rerun-clear-note">
-          Replays from ordinal {floor}. Processors of this drive that share its
-          read model are cleared and replayed with it.
+          {single
+            ? `Replays from ordinal ${single.floor}.`
+            : "Replays each from its first ordinal."}{" "}
+          Processors of the same drive that share a read model are cleared and
+          replayed with it.
         </p>
-      ) : (
+      ) : single ? (
         <label>
-          Replay operations above ordinal ({floor}–{lastOrdinal})
+          Replay operations above ordinal ({single.floor}–{single.lastOrdinal})
           <input
-            max={lastOrdinal}
-            min={floor}
+            max={single.lastOrdinal}
+            min={single.floor}
             onChange={(event) => setFrom(event.target.value)}
             step={1}
             type="number"
             value={from}
           />
         </label>
-      )}
-      {clearable ? null : (
-        <p className="rm-note" data-testid="rerun-not-clearable">
-          This processor cannot clear its read model, so a rerun only replays.
+      ) : (
+        <p className="rm-note" data-testid="rerun-replay-note">
+          Replays each from its first ordinal, keeping what it already holds.
         </p>
       )}
+      {unclearable > 0 ? (
+        <p className="rm-note" data-testid="rerun-not-clearable">
+          {single
+            ? "This processor cannot clear its read model, so a rerun only replays."
+            : `${plural(unclearable, "of these cannot", "of these cannot")} clear a read model, so this rerun only replays.`}
+        </p>
+      ) : null}
       <button
         className="rm-btn rm-btn-warn"
         disabled={pending || (!clear && !inRange)}
         type="submit"
       >
-        {pending ? "Rerunning…" : "Rerun"}
+        {pending ? "Rerunning…" : `Rerun ${count}`}
       </button>
       <button className="rm-btn" onClick={onCancel} type="button">
         Cancel
@@ -254,7 +238,8 @@ export function ProcessorsTab({
   const [error, setError] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryError, setRetryError] = useState<string | null>(null);
-  const [rerunId, setRerunId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [rerunOpen, setRerunOpen] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
   const [rerunNote, setRerunNote] = useState<string | null>(null);
 
@@ -282,6 +267,31 @@ export function ProcessorsTab({
     return () => clearInterval(interval);
   }, [load]);
 
+  const byId = useMemo(
+    () => new Map(processors.map((p) => [p.processorId, p])),
+    [processors],
+  );
+  // A processor that went away is no longer selected.
+  const chosen = useMemo(
+    () => processors.filter((p) => selected.has(p.processorId)),
+    [processors, selected],
+  );
+  const progress = useMemo(
+    () => computeProgress(processors, catchUp),
+    [processors, catchUp],
+  );
+
+  const select = useCallback((ids: readonly string[], checked: boolean) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      for (const id of ids) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
   const handleRetry = useCallback(
     async (processorId: string) => {
       if (!levers) {
@@ -302,20 +312,36 @@ export function ProcessorsTab({
   );
 
   const handleRerun = useCallback(
-    async (processorId: string, options: RerunOptions) => {
+    async (requests: RerunRequest[]) => {
       if (!levers) {
         return;
       }
-      try {
-        await levers.rerunProcessor(processorId, options);
-        setRerunError(null);
-        setRerunNote(
-          `Rerun of ${processorId} is under way; its last ordinal climbs as it replays.`,
-        );
-        setRerunId(null);
-      } catch (e) {
-        setRerunNote(null);
-        setRerunError(e instanceof Error ? e.message : String(e));
+      const results = await Promise.allSettled(
+        requests.map((request) =>
+          levers.rerunProcessor(request.processorId, request.options),
+        ),
+      );
+      const failures = results.flatMap((result, index) =>
+        result.status === "rejected"
+          ? [
+              `${requests[index]!.processorId}: ${
+                result.reason instanceof Error
+                  ? result.reason.message
+                  : String(result.reason)
+              }`,
+            ]
+          : [],
+      );
+      const started = requests.length - failures.length;
+      setRerunError(failures.length > 0 ? failures.join("; ") : null);
+      setRerunNote(
+        started > 0
+          ? `Rerun of ${plural(started, "processor", "processors")} is under way; the bars show how far each has got.`
+          : null,
+      );
+      if (failures.length === 0) {
+        setRerunOpen(false);
+        setSelected(new Set());
       }
       await load();
     },
@@ -325,28 +351,146 @@ export function ProcessorsTab({
   const leversOpen = admin.enabled && !!levers;
   const activeCount = processors.filter((p) => p.status === "active").length;
   const erroredCount = processors.filter((p) => p.status === "errored").length;
-  const progress = useMemo(
-    () => computeProgress(processors, catchUp),
-    [processors, catchUp],
-  );
+  const allIds = processors.map((p) => p.processorId);
+
+  const factoryRow = (factory: FactoryProgress) => {
+    const ids = factory.processors.map((row) => row.processorId);
+    const label = `${factory.label} (${plural(factory.driveCount, "drive", "drives")})`;
+    return (
+      <tr className="rm-factory-row" key={`factory:${factory.factoryId}`}>
+        <td>
+          <SelectBox
+            disabled={!leversOpen}
+            ids={ids}
+            label={`Select every processor of ${factory.label}`}
+            onChange={select}
+            selected={selected}
+          />
+        </td>
+        <td colSpan={2} title={factory.factoryId}>
+          <strong>{label}</strong>
+        </td>
+        <td className="rm-progress-cell">
+          <ProgressBar
+            detail={detailOf(factory)}
+            fraction={factory.fraction}
+            hideLabel
+            label={label}
+            tone={PHASE_TONE[factory.phase]}
+            value={valueOf(factory)}
+          />
+        </td>
+        <td colSpan={COLUMNS - 4} />
+      </tr>
+    );
+  };
+
+  const processorRow = (row: ProcessorProgress, perDrive: boolean) => {
+    const processor = byId.get(row.processorId);
+    if (!processor) return null;
+    const name = processorName(row, perDrive);
+    return (
+      <tr
+        className={processor.status === "errored" ? "rm-row-error" : undefined}
+        key={row.processorId}
+      >
+        <td>
+          <input
+            aria-label={`Select ${processor.processorId}`}
+            checked={selected.has(processor.processorId)}
+            disabled={!leversOpen}
+            onChange={(event) =>
+              select([processor.processorId], event.target.checked)
+            }
+            type="checkbox"
+          />
+        </td>
+        <td className="rm-processor-name" title={processor.processorId}>
+          {name}
+        </td>
+        <td>
+          <span
+            className={
+              processor.status === "active"
+                ? "rm-badge rm-badge-ok"
+                : "rm-badge rm-badge-error"
+            }
+          >
+            {processor.status}
+          </span>
+        </td>
+        <td className="rm-progress-cell">
+          <ProgressBar
+            detail={detailOf(row)}
+            fraction={row.fraction}
+            hideLabel
+            label={processor.processorId}
+            tone={PHASE_TONE[row.phase]}
+            value={valueOf(row)}
+          />
+        </td>
+        <td>{processor.lastOrdinal}</td>
+        <td title={processor.lastError}>{processor.lastError ?? "-"}</td>
+        <td>
+          {processor.lastErrorTimestamp
+            ? processor.lastErrorTimestamp.toLocaleString()
+            : "-"}
+        </td>
+        <td>
+          {processor.status === "errored" ? (
+            <button
+              className="rm-btn rm-btn-warn"
+              disabled={retryingId === processor.processorId || !leversOpen}
+              onClick={() => void handleRetry(processor.processorId)}
+              type="button"
+            >
+              Retry
+            </button>
+          ) : null}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div className="rm-tab">
       <AdminGateNote gate={admin} />
       <div className="rm-tab-header">
         <h2>Processors</h2>
-        <button
-          className="rm-btn"
-          disabled={loading}
-          onClick={() => {
-            setLoading(true);
-            void load();
-          }}
-          type="button"
-        >
-          Refresh
-        </button>
+        <div className="rm-actions">
+          <button
+            className="rm-btn"
+            disabled={loading}
+            onClick={() => {
+              setLoading(true);
+              void load();
+            }}
+            type="button"
+          >
+            Refresh
+          </button>
+          <button
+            className="rm-btn rm-btn-warn"
+            disabled={!leversOpen || chosen.length === 0}
+            onClick={() => {
+              setRerunError(null);
+              setRerunOpen((open) => !open);
+            }}
+            type="button"
+          >
+            Rerun {plural(chosen.length, "processor", "processors")}
+          </button>
+        </div>
       </div>
+
+      {rerunOpen && chosen.length > 0 ? (
+        <RerunForm
+          key={chosen.map((p) => p.processorId).join("|")}
+          onCancel={() => setRerunOpen(false)}
+          onRerun={handleRerun}
+          processors={chosen}
+        />
+      ) : null}
 
       <div className="rm-stat-bar">
         <span>
@@ -380,23 +524,29 @@ export function ProcessorsTab({
           {rerunNote}
         </p>
       ) : null}
-
-      {progress.factories.length > 0 ? (
-        <FactoryProgressList
-          factories={progress.factories}
-          headKnown={progress.headKnown}
-        />
+      {processors.length > 0 && !progress.headKnown ? (
+        <p className="rm-note" data-testid="progress-head-unknown">
+          The head is unknown here, so progress is measured against the highest
+          processor cursor.
+        </p>
       ) : null}
 
       <div className="rm-table-wrap">
-        <table className="rm-table">
+        <table className="rm-table" data-testid="processor-progress">
           <thead>
             <tr>
+              <th>
+                <SelectBox
+                  disabled={!leversOpen}
+                  ids={allIds}
+                  label="Select every processor"
+                  onChange={select}
+                  selected={selected}
+                />
+              </th>
+              <th>Processor</th>
               <th>Status</th>
-              <th>Processor ID</th>
-              <th>Factory ID</th>
-              <th>Drive ID</th>
-              <th>Index</th>
+              <th>Progress</th>
               <th>Last Ordinal</th>
               <th>Error</th>
               <th>Error At</th>
@@ -406,89 +556,23 @@ export function ProcessorsTab({
           <tbody>
             {processors.length === 0 ? (
               <tr>
-                <td className="rm-table-empty" colSpan={9}>
+                <td className="rm-table-empty" colSpan={COLUMNS}>
                   {loading ? "Loading..." : "No processors registered"}
                 </td>
               </tr>
             ) : (
-              processors.map((processor) => (
-                <Fragment key={processor.processorId}>
-                  <tr
-                    className={
-                      processor.status === "errored"
-                        ? "rm-row-error"
-                        : undefined
-                    }
-                  >
-                    <td>
-                      <span
-                        className={
-                          processor.status === "active"
-                            ? "rm-badge rm-badge-ok"
-                            : "rm-badge rm-badge-error"
-                        }
-                      >
-                        {processor.status}
-                      </span>
-                    </td>
-                    <td title={processor.processorId}>
-                      {processor.processorId}
-                    </td>
-                    <td title={processor.factoryId}>{processor.factoryId}</td>
-                    <td title={processor.driveId}>{processor.driveId}</td>
-                    <td>{processor.processorIndex}</td>
-                    <td>{processor.lastOrdinal}</td>
-                    <td title={processor.lastError}>
-                      {processor.lastError ?? "-"}
-                    </td>
-                    <td>
-                      {processor.lastErrorTimestamp
-                        ? processor.lastErrorTimestamp.toLocaleString()
-                        : "-"}
-                    </td>
-                    <td>
-                      {processor.status === "errored" ? (
-                        <button
-                          className="rm-btn rm-btn-warn"
-                          disabled={
-                            retryingId === processor.processorId || !leversOpen
-                          }
-                          onClick={() =>
-                            void handleRetry(processor.processorId)
-                          }
-                          type="button"
-                        >
-                          Retry
-                        </button>
-                      ) : null}
-                      <button
-                        className="rm-btn"
-                        disabled={!leversOpen}
-                        onClick={() => {
-                          setRerunError(null);
-                          setRerunId(processor.processorId);
-                        }}
-                        type="button"
-                      >
-                        Rerun…
-                      </button>
-                    </td>
-                  </tr>
-                  {rerunId === processor.processorId ? (
-                    <tr>
-                      <td colSpan={9}>
-                        <RerunForm
-                          onCancel={() => setRerunId(null)}
-                          onRerun={(options) =>
-                            handleRerun(processor.processorId, options)
-                          }
-                          processor={processor}
-                        />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              ))
+              progress.factories.map((factory) => {
+                const perDrive =
+                  factory.processors.length === factory.driveCount;
+                return (
+                  <Fragment key={factory.factoryId}>
+                    {factoryRow(factory)}
+                    {factory.processors.map((row) =>
+                      processorRow(row, perDrive),
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

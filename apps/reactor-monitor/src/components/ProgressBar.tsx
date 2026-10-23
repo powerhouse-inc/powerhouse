@@ -9,6 +9,8 @@ export type ProgressBarProps = {
   readonly value?: string;
   /** Read out instead of `value`, e.g. with the ordinals behind it. */
   readonly detail?: string;
+  /** Leaves the label to the bar's accessible name, e.g. in a table row that names it. */
+  readonly hideLabel?: boolean;
 };
 
 /** Rounds down, so a bar reads 100% only once it is done. */
@@ -23,14 +25,21 @@ export function ProgressBar({
   tone,
   value,
   detail,
+  hideLabel = false,
 }: ProgressBarProps) {
   const percent = percentOf(fraction);
   const text = value ?? `${percent}%`;
   return (
-    <div className="rm-progress-row">
-      <span className="rm-progress-label" title={label}>
-        {label}
-      </span>
+    <div
+      className={
+        hideLabel ? "rm-progress-row rm-progress-row-bare" : "rm-progress-row"
+      }
+    >
+      {hideLabel ? null : (
+        <span className="rm-progress-label" title={label}>
+          {label}
+        </span>
+      )}
       <div
         aria-label={label}
         aria-valuemax={100}

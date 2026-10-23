@@ -831,7 +831,8 @@ body {
 /* Progress bars. The track derives from the text colour and the fills are
    mid-tone, so a bar reads on a light or a dark page alike. */
 
-.rm-progress-list {
+.rm-progress-list,
+.rm-progress-cell {
   --rm-progress-track: color-mix(in srgb, currentColor 14%, transparent);
   --rm-progress-active: #3b82f6;
   --rm-progress-done: #10b981;
@@ -930,4 +931,26 @@ body {
   .rm-progress-fill {
     transition: none;
   }
+}
+
+/* Bars inside a table cell: the row names them, so no label column. */
+.rm-progress-cell {
+  min-width: 11rem;
+}
+
+.rm-progress-row-bare {
+  grid-template-columns: minmax(4rem, 1fr) 4.5rem;
+}
+
+/* A factory's row heads its processors' rows. */
+.rm-factory-row td {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+.rm-processor-name {
+  padding-left: 1.25rem;
+}
+
+.rm-rerun-form {
+  margin-block: 0.5rem;
 }

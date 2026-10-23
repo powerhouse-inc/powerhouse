@@ -74,6 +74,10 @@ describe("CatchUpTab progress", () => {
       view.queryByRole("progressbar", { name: "processor-manager" }),
     ).toBeNull();
     expect(view.getAllByRole("progressbar")).toHaveLength(3);
+    expect(view.getByText("per factory on Processors")).toBeTruthy();
+    const table = view.getByTestId("read-model-progress");
+    expect(table.tagName).toBe("TABLE");
+    expect(table.querySelectorAll('[role="progressbar"]')).toHaveLength(3);
   });
 
   it("draws no bars when the status cannot be read", async () => {
@@ -86,7 +90,7 @@ describe("CatchUpTab progress", () => {
     await waitFor(() =>
       expect(view.getByText(/Catch-up request failed: refused/)).toBeTruthy(),
     );
-    expect(view.queryByTestId("read-model-progress")).toBeNull();
+    expect(view.queryAllByRole("progressbar")).toHaveLength(0);
   });
 
   it("draws no bars for a status without a watermark", async () => {

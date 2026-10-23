@@ -105,7 +105,8 @@ export function CatchUpTab({
   const blockedCount = consumers.filter((c) => c.blockedAt).length;
   const readModels = useMemo(() => {
     const measurable = withHead(status);
-    return measurable ? computeProgress([], measurable).readModels : [];
+    const rows = measurable ? computeProgress([], measurable).readModels : [];
+    return new Map(rows.map((row) => [row.consumerId, row]));
   }, [status]);
 
   return (
@@ -166,30 +167,12 @@ export function CatchUpTab({
         <p className="rm-error">Catch-up request failed: {error}</p>
       ) : null}
 
-      {readModels.length > 0 ? (
-        <section
-          aria-label="Read model progress"
-          className="rm-progress-list"
-          data-testid="read-model-progress"
-        >
-          {readModels.map((row) => (
-            <ProgressBar
-              detail={readModelDetail(row)}
-              fraction={row.fraction}
-              key={row.consumerId}
-              label={row.consumerId}
-              tone={row.blocked ? "error" : row.complete ? "done" : "active"}
-              value={readModelValue(row)}
-            />
-          ))}
-        </section>
-      ) : null}
-
       <div className="rm-table-wrap">
-        <table className="rm-table">
+        <table className="rm-table" data-testid="read-model-progress">
           <thead>
             <tr>
               <th>Consumer</th>
+              <th>Progress</th>
               <th>Thread</th>
               <th>Applied Through</th>
               <th>Lag</th>
@@ -204,19 +187,45 @@ export function CatchUpTab({
           <tbody>
             {consumers.length === 0 ? (
               <tr>
-                <td className="rm-table-empty" colSpan={10}>
+                <td className="rm-table-empty" colSpan={11}>
                   {loading && !status ? "Loading..." : "No catch-up consumers"}
                 </td>
               </tr>
             ) : (
               consumers.map((consumer) => {
                 const blocked = consumer.blockedAt;
+                const row = readModels.get(consumer.consumerId);
                 return (
                   <tr
                     key={consumer.consumerId}
                     className={blocked ? "rm-row-error" : undefined}
                   >
                     <td title={consumer.consumerId}>{consumer.consumerId}</td>
+                    <td className="rm-progress-cell">
+                      {row ? (
+                        <ProgressBar
+                          detail={readModelDetail(row)}
+                          fraction={row.fraction}
+                          hideLabel
+                          label={row.consumerId}
+                          tone={
+                            row.blocked
+                              ? "error"
+                              : row.complete
+                                ? "done"
+                                : "active"
+                          }
+                          value={readModelValue(row)}
+                        />
+                      ) : (
+                        <span
+                          className="rm-note"
+                          title="Its processors have their own bars on the Processors tab"
+                        >
+                          per factory on Processors
+                        </span>
+                      )}
+                    </td>
                     <td>{consumer.thread}</td>
                     <td>{consumer.appliedThrough}</td>
                     <td>{settledThrough - consumer.appliedThrough}</td>

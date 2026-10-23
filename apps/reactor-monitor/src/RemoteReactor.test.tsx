@@ -380,16 +380,17 @@ describe("remote reactor in the monitor app", () => {
     const withoutLevers = remoteApp({ access: OPERATOR });
     await provisionRemoteReactor(withoutLevers, "read-only-switchboard");
     fireEvent.click(withoutLevers.getByRole("button", { name: "Processors" }));
-    await waitFor(
-      () => expect(withoutLevers.getByText("factory:drive:0")).toBeTruthy(),
+    const box = (await waitFor(
+      () => withoutLevers.getByLabelText("Select factory:drive:0"),
       WAIT,
-    );
+    )) as HTMLInputElement;
     expect(withoutLevers.getByTestId("admin-gate-note").textContent).toBe(
       NO_PROCESSOR_LEVERS_REASON,
     );
+    expect(box.disabled).toBe(true);
     expect(
       withoutLevers
-        .getByRole("button", { name: "Rerun…" })
+        .getByRole("button", { name: "Rerun 0 processors" })
         .getAttribute("disabled"),
     ).not.toBeNull();
     withoutLevers.unmount();
@@ -397,17 +398,18 @@ describe("remote reactor in the monitor app", () => {
     const view = remoteApp({ access: OPERATOR, levers: true });
     await provisionRemoteReactor(view, "admin-switchboard");
     fireEvent.click(view.getByRole("button", { name: "Processors" }));
-    await waitFor(
-      () => expect(view.getByText("factory:drive:0")).toBeTruthy(),
-      WAIT,
+    fireEvent.click(
+      await waitFor(() => view.getByLabelText("Select factory:drive:0"), WAIT),
     );
     expect(view.queryByTestId("admin-gate-note")).toBeNull();
-    fireEvent.click(view.getByRole("button", { name: "Rerun…" }));
-    fireEvent.click(view.getByRole("button", { name: "Rerun" }));
+    fireEvent.click(view.getByRole("button", { name: "Rerun 1 processor" }));
+    fireEvent.click(
+      view.getByTestId("rerun-form").querySelector('button[type="submit"]')!,
+    );
     await waitFor(
       () =>
         expect(view.getByRole("status").textContent).toContain(
-          "Rerun of factory:drive:0 is under way",
+          "Rerun of 1 processor is under way",
         ),
       WAIT,
     );

@@ -7,7 +7,7 @@ import type {
   MonitorInspector,
   ProcessorLevers,
 } from "@powerhousedao/reactor-monitor";
-import { fireEvent, render, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ProcessorsTab } from "./ProcessorsTab.js";
 
@@ -31,9 +31,14 @@ function processor(
   };
 }
 
-function inspectorOf(processors: InspectorProcessorInfo[]): MonitorInspector {
+function inspectorOf(
+  processors: InspectorProcessorInfo[],
+  catchUp?: CatchUpStatus,
+): MonitorInspector {
   return {
     getProcessors: () => Promise.resolve(processors),
+    getCatchUpStatus: () =>
+      catchUp ? Promise.resolve(catchUp) : Promise.reject(new Error("none")),
   } as unknown as MonitorInspector;
 }
 
@@ -46,13 +51,84 @@ function leversStub(): ProcessorLevers & {
   };
 }
 
-async function openRerun(view: ReturnType<typeof render>) {
-  await waitFor(() => expect(view.getByText("factory:drive:0")).toBeTruthy());
-  fireEvent.click(view.getByRole("button", { name: "Rerun…" }));
-  return view.getByTestId("rerun-form");
+function catchUpAt(head: number): CatchUpStatus {
+  return {
+    watermark: { head, settledThrough: head, waitingOn: [] },
+    consumers: [],
+  };
 }
 
-describe("ProcessorsTab rerun", () => {
+const rerunButton = (view: ReturnType<typeof render>) =>
+  view.getByRole("button", { name: /^Rerun \d+ processors?$/ });
+
+async function loaded(view: ReturnType<typeof render>, processorId: string) {
+  return waitFor(() => view.getByLabelText(`Select ${processorId}`));
+}
+
+describe("ProcessorsTab selection and rerun", () => {
+  it("counts the selection on the Rerun button, disabled while none is selected", async () => {
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([
+          processor(),
+          processor({ processorId: "factory:other:0", driveId: "other" }),
+        ])}
+        levers={leversStub()}
+      />,
+    );
+    const first = await loaded(view, "factory:drive:0");
+
+    expect(rerunButton(view).textContent).toBe("Rerun 0 processors");
+    expect(rerunButton(view).getAttribute("disabled")).not.toBeNull();
+
+    fireEvent.click(first);
+    expect(rerunButton(view).textContent).toBe("Rerun 1 processor");
+    expect(rerunButton(view).getAttribute("disabled")).toBeNull();
+
+    fireEvent.click(view.getByLabelText("Select every processor"));
+    expect(rerunButton(view).textContent).toBe("Rerun 2 processors");
+
+    fireEvent.click(view.getByLabelText("Select every processor"));
+    expect(rerunButton(view).textContent).toBe("Rerun 0 processors");
+  });
+
+  it("selects a factory's processors from its row, and shows it mixed when some are", async () => {
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([
+          processor({
+            processorId: "sektar:mail:0",
+            factoryId: "sektar",
+            driveId: "mail",
+          }),
+          processor({
+            processorId: "sektar:docs:0",
+            factoryId: "sektar",
+            driveId: "docs",
+          }),
+          processor({
+            processorId: "vetra:docs:0",
+            factoryId: "vetra",
+            driveId: "docs",
+          }),
+        ])}
+        levers={leversStub()}
+      />,
+    );
+    await loaded(view, "sektar:mail:0");
+    const factory = view.getByLabelText(
+      "Select every processor of sektar",
+    ) as HTMLInputElement;
+
+    fireEvent.click(view.getByLabelText("Select sektar:mail:0"));
+    expect(factory.indeterminate).toBe(true);
+    expect(factory.checked).toBe(false);
+
+    fireEvent.click(factory);
+    expect(factory.checked).toBe(true);
+    expect(rerunButton(view).textContent).toBe("Rerun 2 processors");
+  });
+
   it("offers no rerun without levers, saying why", async () => {
     const view = render(
       <ProcessorsTab
@@ -60,59 +136,79 @@ describe("ProcessorsTab rerun", () => {
         inspector={inspectorOf([processor()])}
       />,
     );
-    await waitFor(() => expect(view.getByText("factory:drive:0")).toBeTruthy());
+    const box = (await loaded(view, "factory:drive:0")) as HTMLInputElement;
 
     expect(view.getByTestId("admin-gate-note").textContent).toBe(
       "no levers here",
     );
-    expect(
-      view.getByRole("button", { name: "Rerun…" }).getAttribute("disabled"),
-    ).not.toBeNull();
+    expect(box.disabled).toBe(true);
+    expect(rerunButton(view).getAttribute("disabled")).not.toBeNull();
   });
 
-  it("clears and replays from the floor by default", async () => {
+  it("clears and replays every selected processor from its floor by default", async () => {
     const levers = leversStub();
     const view = render(
-      <ProcessorsTab inspector={inspectorOf([processor()])} levers={levers} />,
+      <ProcessorsTab
+        inspector={inspectorOf([
+          processor(),
+          processor({
+            processorId: "factory:other:0",
+            driveId: "other",
+            floor: 3,
+          }),
+        ])}
+        levers={levers}
+      />,
     );
-    await openRerun(view);
+    await loaded(view, "factory:drive:0");
+    fireEvent.click(view.getByLabelText("Select every processor"));
+    fireEvent.click(rerunButton(view));
 
     expect(view.getByTestId("rerun-clear-note").textContent).toContain(
-      "Replays from ordinal 10",
+      "Replays each from its first ordinal",
     );
-    fireEvent.click(view.getByRole("button", { name: "Rerun" }));
+    fireEvent.click(
+      view.getByTestId("rerun-form").querySelector('button[type="submit"]')!,
+    );
 
-    await waitFor(() =>
-      expect(levers.rerunProcessor).toHaveBeenCalledWith("factory:drive:0", {
-        clear: true,
-        fromOrdinal: 10,
-      }),
-    );
+    await waitFor(() => expect(levers.rerunProcessor).toHaveBeenCalledTimes(2));
+    expect(levers.rerunProcessor).toHaveBeenCalledWith("factory:drive:0", {
+      clear: true,
+      fromOrdinal: 10,
+    });
+    expect(levers.rerunProcessor).toHaveBeenCalledWith("factory:other:0", {
+      clear: true,
+      fromOrdinal: 3,
+    });
     await waitFor(() =>
       expect(view.getByRole("status").textContent).toContain(
-        "Rerun of factory:drive:0 is under way",
+        "Rerun of 2 processors is under way",
       ),
     );
     expect(view.queryByTestId("rerun-form")).toBeNull();
+    expect(rerunButton(view).textContent).toBe("Rerun 0 processors");
   });
 
-  it("replays above an ordinal between the floor and the cursor", async () => {
+  it("replays one processor above an ordinal between its floor and its cursor", async () => {
     const levers = leversStub();
     const view = render(
       <ProcessorsTab inspector={inspectorOf([processor()])} levers={levers} />,
     );
-    await openRerun(view);
+    fireEvent.click(await loaded(view, "factory:drive:0"));
+    fireEvent.click(rerunButton(view));
     fireEvent.click(view.getByLabelText("Clear its read model first"));
     const ordinal = view.getByLabelText(/Replay operations above ordinal/);
-    const rerun = view.getByRole("button", { name: "Rerun" });
+    const submit = view
+      .getByTestId("rerun-form")
+      .querySelector('button[type="submit"]') as HTMLButtonElement;
 
     for (const outside of ["9", "41", "12.5", ""]) {
       fireEvent.change(ordinal, { target: { value: outside } });
-      expect(rerun.getAttribute("disabled")).not.toBeNull();
+      expect(submit.disabled).toBe(true);
     }
 
     fireEvent.change(ordinal, { target: { value: "25" } });
-    fireEvent.click(rerun);
+    fireEvent.click(submit);
     await waitFor(() =>
       expect(levers.rerunProcessor).toHaveBeenCalledWith("factory:drive:0", {
         clear: false,
@@ -121,56 +217,61 @@ describe("ProcessorsTab rerun", () => {
     );
   });
 
-  it("only replays a processor that cannot clear", async () => {
-    const levers = leversStub();
+  it("only replays when a selected processor cannot clear", async () => {
     const view = render(
       <ProcessorsTab
-        inspector={inspectorOf([processor({ clearable: false })])}
-        levers={levers}
+        inspector={inspectorOf([
+          processor(),
+          processor({
+            processorId: "factory:other:0",
+            driveId: "other",
+            clearable: false,
+          }),
+        ])}
+        levers={leversStub()}
       />,
     );
-    await openRerun(view);
+    await loaded(view, "factory:drive:0");
+    fireEvent.click(view.getByLabelText("Select every processor"));
+    fireEvent.click(rerunButton(view));
 
     const clear = view.getByLabelText(
-      "Clear its read model first",
+      "Clear their read models first",
     ) as HTMLInputElement;
     expect(clear.checked).toBe(false);
     expect(clear.disabled).toBe(true);
-    expect(view.getByTestId("rerun-not-clearable")).toBeTruthy();
+    expect(view.getByTestId("rerun-not-clearable").textContent).toContain(
+      "1 of these cannot",
+    );
+    expect(view.getByTestId("rerun-replay-note")).toBeTruthy();
   });
 
-  it("shows the host's refusal and keeps the form open", async () => {
+  it("names each refusal and keeps the form open", async () => {
     const levers = leversStub();
-    levers.rerunProcessor.mockRejectedValue(
-      new Error("can replay from ordinal 10 to 40, not 25"),
-    );
+    levers.rerunProcessor.mockRejectedValue(new Error("it is not running"));
     const view = render(
       <ProcessorsTab inspector={inspectorOf([processor()])} levers={levers} />,
     );
-    await openRerun(view);
-    fireEvent.click(view.getByRole("button", { name: "Rerun" }));
+    fireEvent.click(await loaded(view, "factory:drive:0"));
+    fireEvent.click(rerunButton(view));
+    fireEvent.click(
+      view.getByTestId("rerun-form").querySelector('button[type="submit"]')!,
+    );
 
     await waitFor(() =>
       expect(view.getByRole("alert").textContent).toBe(
-        "Rerun failed: can replay from ordinal 10 to 40, not 25",
+        "Rerun failed: factory:drive:0: it is not running",
       ),
     );
     expect(view.getByTestId("rerun-form")).toBeTruthy();
   });
 });
 
-function catchUpAt(head: number): CatchUpStatus {
-  return {
-    watermark: { head, settledThrough: head, waitingOn: [] },
-    consumers: [],
-  };
-}
-
 function bar(view: ReturnType<typeof render>, name: string) {
   return view.getByRole("progressbar", { name });
 }
 
-describe("ProcessorsTab progress", () => {
+describe("ProcessorsTab progress in the table", () => {
   const sektar = [
     processor({
       processorId: "sektar:mail:0",
@@ -198,83 +299,78 @@ describe("ProcessorsTab progress", () => {
     }),
   ];
 
-  it("draws a bar per factory against the catch-up head", async () => {
-    const inspector = {
-      getProcessors: () => Promise.resolve(sektar),
-      getCatchUpStatus: () => Promise.resolve(catchUpAt(300)),
-    } as unknown as MonitorInspector;
-    const view = render(<ProcessorsTab inspector={inspector} />);
+  it("heads each factory's rows with its bar, against the catch-up head", async () => {
+    const view = render(
+      <ProcessorsTab inspector={inspectorOf(sektar, catchUpAt(300))} />,
+    );
 
     await waitFor(() =>
       expect(bar(view, "sektar (2 drives)").getAttribute("aria-valuenow")).toBe(
         "25",
       ),
     );
-    const sektarBar = bar(view, "sektar (2 drives)");
-    expect(sektarBar.getAttribute("aria-valuemin")).toBe("0");
-    expect(sektarBar.getAttribute("aria-valuemax")).toBe("100");
-    expect(sektarBar.getAttribute("aria-valuetext")).toBe(
+    expect(bar(view, "sektar (2 drives)").getAttribute("aria-valuetext")).toBe(
       "25%, 50 of 200 ordinals",
     );
-    const vetraBar = bar(view, "vetra (1 drive)");
-    expect(vetraBar.getAttribute("aria-valuenow")).toBe("100");
-    expect(vetraBar.getAttribute("aria-valuetext")).toBe("done");
+    expect(bar(view, "vetra (1 drive)").getAttribute("aria-valuetext")).toBe(
+      "done",
+    );
     expect(view.queryByTestId("progress-head-unknown")).toBeNull();
-    expect(view.getByText("sektar:mail:0")).toBeTruthy();
   });
 
-  it("expands a factory to a bar per drive", async () => {
-    const inspector = {
-      getProcessors: () => Promise.resolve(sektar),
-      getCatchUpStatus: () => Promise.resolve(catchUpAt(300)),
-    } as unknown as MonitorInspector;
-    const view = render(<ProcessorsTab inspector={inspector} />);
-    const toggle = await waitFor(() =>
-      view.getByRole("button", { name: "Show drives of sektar" }),
+  it("gives every processor row its own bar", async () => {
+    const view = render(
+      <ProcessorsTab inspector={inspectorOf(sektar, catchUpAt(300))} />,
     );
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(view.queryByTestId("progress-drives-sektar")).toBeNull();
 
-    fireEvent.click(toggle);
-
-    expect(
-      view
-        .getByRole("button", { name: "Hide drives of sektar" })
-        .getAttribute("aria-expanded"),
-    ).toBe("true");
-    expect(bar(view, "mail").getAttribute("aria-valuenow")).toBe("25");
-    expect(bar(view, "docs").getAttribute("aria-valuetext")).toBe("done");
+    await waitFor(() =>
+      expect(bar(view, "sektar:mail:0").getAttribute("aria-valuenow")).toBe(
+        "25",
+      ),
+    );
+    expect(bar(view, "sektar:docs:0").getAttribute("aria-valuetext")).toBe(
+      "done",
+    );
+    const rows = [
+      ...view.getByTestId("processor-progress").querySelectorAll("tbody tr"),
+    ];
+    expect(rows.map((row) => row.className)).toEqual([
+      "rm-factory-row",
+      "",
+      "",
+      "rm-factory-row",
+      "",
+    ]);
   });
 
   it("marks a factory errored when one of its processors is", async () => {
-    const inspector = {
-      getProcessors: () =>
-        Promise.resolve([
-          processor({
-            status: "errored",
-            phase: "errored",
-            runFrom: 0,
-            lastOrdinal: 40,
-          }),
-        ]),
-      getCatchUpStatus: () => Promise.resolve(catchUpAt(80)),
-    } as unknown as MonitorInspector;
-    const view = render(<ProcessorsTab inspector={inspector} />);
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf(
+          [
+            processor({
+              status: "errored",
+              phase: "errored",
+              runFrom: 0,
+              lastOrdinal: 40,
+            }),
+          ],
+          catchUpAt(80),
+        )}
+      />,
+    );
 
     await waitFor(() =>
       expect(
         bar(view, "factory (1 drive)").getAttribute("aria-valuetext"),
       ).toBe("errored at 50%, 40 of 80 ordinals"),
     );
-    expect(
-      within(view.getByTestId("processor-progress")).getByText("errored"),
-    ).toBeTruthy();
   });
 
   it("falls back to the highest cursor when catch-up status is refused", async () => {
-    const inspector = {
-      getProcessors: () =>
-        Promise.resolve([
+    const view = render(
+      <ProcessorsTab
+        inspector={inspectorOf([
           processor({
             processorId: "f:a:0",
             factoryId: "f",
@@ -290,10 +386,9 @@ describe("ProcessorsTab progress", () => {
             runFrom: 60,
             lastOrdinal: 60,
           }),
-        ]),
-      getCatchUpStatus: () => Promise.reject(new Error("forbidden")),
-    } as unknown as MonitorInspector;
-    const view = render(<ProcessorsTab inspector={inspector} />);
+        ])}
+      />,
+    );
 
     await waitFor(() =>
       expect(bar(view, "f (2 drives)").getAttribute("aria-valuenow")).toBe(
