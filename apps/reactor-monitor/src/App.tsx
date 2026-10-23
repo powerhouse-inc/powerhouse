@@ -20,6 +20,7 @@ import {
   adminGateFor,
   OperatorGateNote,
   operatorGateFor,
+  processorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
@@ -160,9 +161,9 @@ function ReadyPanel({
     case "Processors":
       return operational(
         <ProcessorsTab
-          admin={admin}
+          admin={processorGateFor(reactor)}
           inspector={reactor.inspector}
-          levers={reactor.admin}
+          levers={reactor.processorLevers}
         />,
       );
     case "Catch-up":

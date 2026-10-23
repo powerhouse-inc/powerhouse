@@ -85,6 +85,20 @@ export interface IProcessor {
    * Also runs when the factory is unregistered, so it is not a deletion signal.
    */
   onDisconnect(): Promise<void>;
+
+  /**
+   * Optional. Erases everything this processor derived, so that a replay from
+   * its first ordinal rebuilds it. Called while none of the processors sharing
+   * its {@link clearScope} is being delivered to.
+   */
+  clear?(): Promise<void>;
+
+  /**
+   * What `clear` erases. Processors of one drive and factory with equal scopes
+   * share what they derived, so they are cleared and replayed together. A
+   * processor without one shares only with records holding the same instance.
+   */
+  readonly clearScope?: string;
 }
 
 /**
@@ -123,6 +137,14 @@ export type ProcessorFactoryBuilder<
 
 export type ProcessorStatus = "active" | "errored";
 
+/** How {@link IProcessorManager.rerun} replays a processor. */
+export type ProcessorRerunOptions = {
+  /** Erase what it derived first; `fromOrdinal` is then its floor. */
+  clear: boolean;
+  /** Without `clear`: the ordinal the replay starts above. */
+  fromOrdinal: number;
+};
+
 export type TrackedProcessor = {
   processorId: string;
   factoryId: string;
@@ -133,6 +155,8 @@ export type TrackedProcessor = {
   status: ProcessorStatus;
   lastError: string | undefined;
   lastErrorTimestamp: Date | undefined;
+  /** Ordinals at or below this are never delivered to it. */
+  floor: number;
   /**
    * Clears the error and resolves once the replay from the cursor completes.
    * Safe from anywhere, but awaiting it from this processor's own
@@ -177,6 +201,16 @@ export interface IProcessorManager {
    * inside a processor's own `onOperations`.
    */
   unregisterFactory(identifier: string): Promise<void>;
+
+  /**
+   * Replays a processor and resolves once the replay completes. With `clear`,
+   * it and the processors sharing its clear scope are cleared, then replayed
+   * from their floor; otherwise its cursor moves back to `fromOrdinal`, which
+   * lies between its floor and its cursor, and the processor receives every
+   * matching operation above it again. Rejects for an unknown processor, a
+   * `clear` one of them cannot do, or an ordinal outside that range.
+   */
+  rerun(processorId: string, options: ProcessorRerunOptions): Promise<void>;
 
   /**
    * Gets a tracked processor by its ID.

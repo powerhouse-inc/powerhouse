@@ -36,6 +36,19 @@ export function adminGateFor(reactor: ManagedReactor): AdminGate {
       );
 }
 
+export const NO_PROCESSOR_LEVERS_REASON =
+  "this host does not serve inspection-admin to this caller (INSPECTION_ADMIN_ENABLED, ADMINS)";
+
+/** Processor retry and rerun (`reactor.processorLevers`). */
+export function processorGateFor(reactor: ManagedReactor): AdminGate {
+  if (reactor.processorLevers) {
+    return ADMIN_ALLOWED;
+  }
+  return reactor.kind === "remote"
+    ? closed(NO_PROCESSOR_LEVERS_REASON)
+    : adminGateFor(reactor);
+}
+
 /** Raw SQL against the reactor's own store (`reactor.dbQuery`). */
 export function sqlGateFor(reactor: ManagedReactor): AdminGate {
   if (reactor.kind === "remote") {

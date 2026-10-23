@@ -8,7 +8,10 @@ import {
   type GraphQLSchema,
 } from "graphql";
 import { describe, expect, it } from "vitest";
-import { INSPECTION_OPERATIONS } from "../src/index.js";
+import {
+  INSPECTION_ADMIN_OPERATIONS,
+  INSPECTION_OPERATIONS,
+} from "../src/index.js";
 
 // The server's SDL, read as text: this package must not depend on reactor-api.
 function inspectionSchema(): GraphQLSchema {
@@ -23,6 +26,20 @@ function inspectionSchema(): GraphQLSchema {
     throw new Error(`no gql template in ${file}`);
   }
   return buildSchema(`scalar JSONObject\n${sdl}`);
+}
+
+function inspectionAdminSchema(): GraphQLSchema {
+  const file = fileURLToPath(
+    new URL(
+      "../../reactor-api/src/graphql/inspection/admin-schema.ts",
+      import.meta.url,
+    ),
+  );
+  const sdl = /gql`([\s\S]*?)`/.exec(readFileSync(file, "utf8"))?.[1];
+  if (!sdl) {
+    throw new Error(`no gql template in ${file}`);
+  }
+  return buildSchema(sdl);
 }
 
 function errorsOf(schema: GraphQLSchema, document: string): string[] {
@@ -65,4 +82,15 @@ describe("INSPECTION_OPERATIONS against reactor-api's inspection SDL", () => {
       ]),
     );
   });
+});
+
+describe("INSPECTION_ADMIN_OPERATIONS against reactor-api's inspection-admin SDL", () => {
+  const schema = inspectionAdminSchema();
+
+  it.each(Object.entries(INSPECTION_ADMIN_OPERATIONS))(
+    "%s validates",
+    (_name, document) => {
+      expect(errorsOf(schema, document)).toEqual([]);
+    },
+  );
 });

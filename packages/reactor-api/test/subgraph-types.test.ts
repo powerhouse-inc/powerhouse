@@ -72,10 +72,11 @@ describe("coreSubgraphTypeDefs", () => {
     const args = {
       reactorClient: {} as IReactorClient,
       graphqlManager: { setAdditionalContextFields: () => undefined },
-      inspection: {} as IReactorInspectionSource,
+      inspection: { admin: {} } as unknown as IReactorInspectionSource,
     } as unknown as SubgraphArgs;
     const core = coreSubgraphClasses({
       inspection: true,
+      inspectionAdmin: true,
       documentPermissions: true,
     }).map((Subgraph) => new Subgraph(args));
 

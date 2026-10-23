@@ -110,6 +110,21 @@ export abstract class RelationalDbProcessor<
     return this._namespace;
   }
 
+  /** Processors writing one namespace are cleared together. */
+  get clearScope(): string {
+    return this._namespace;
+  }
+
+  /** Drops the namespace and its tables, then migrates it afresh. */
+  async clear(): Promise<void> {
+    await this.dropNamespace();
+    await this.relationalDb.schema
+      .createSchema(this.namespaceSchema())
+      .ifNotExists()
+      .execute();
+    await this.initAndUpgrade();
+  }
+
   get query(): IRelationalQueryBuilder<TDatabaseSchema> {
     return relationalDbToQueryBuilder(this.relationalDb);
   }

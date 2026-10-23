@@ -8,6 +8,7 @@ import { fireEvent, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App.js";
 import {
+  NO_PROCESSOR_LEVERS_REASON,
   NOT_AN_OPERATOR_REASON,
   READS_ONLY_REASON,
   STILL_NOT_AN_OPERATOR,
@@ -33,6 +34,8 @@ type Host = {
   adminBearer?: string;
   workflows?: boolean;
   syncChannels?: readonly string[];
+  /** Whether the host serves inspection-admin to an operator. */
+  levers?: boolean;
 };
 
 const OPERATOR: WireInspectorAccess = { admin: false, sql: false };
@@ -78,20 +81,50 @@ function fakeInspectionFetch(host: Host): typeof fetch {
         },
       },
     }),
-    ReactorInspectionProcessors: () => ({ inspection: { processors: [] } }),
+    ReactorInspectionProcessors: () => ({
+      inspection: {
+        processors: [
+          {
+            processorId: "factory:drive:0",
+            factoryId: "factory",
+            driveId: "drive",
+            processorIndex: 0,
+            lastOrdinal: 40,
+            status: "active",
+            lastError: null,
+            lastErrorTimestampUtcMs: null,
+            floor: 0,
+            clearable: true,
+          },
+        ],
+      },
+    }),
     ReactorInspectionCatchUp: () => ({
       inspection: { catchUpStatus: { consumers: [], watermark: null } },
     }),
   };
 
-  return (_input, init) => {
+  return (input, init) => {
     const body = JSON.parse((init?.body as string | undefined) ?? "{}") as {
       query: string;
     };
-    const name = /query\s+(\w+)/.exec(body.query)?.[1] ?? "";
+    const name = /(?:query|mutation)\s+(\w+)/.exec(body.query)?.[1] ?? "";
     if (host.adminBearer !== undefined) {
       const auth = new Headers(init?.headers).get("authorization");
       host.access = auth === `Bearer ${host.adminBearer}` ? OPERATOR : null;
+    }
+    if (String(input).endsWith("/inspection-admin")) {
+      if (!host.levers || host.access === null) {
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }
+      return Promise.resolve(
+        Response.json({
+          data:
+            name === "ReactorInspectionAdminAccess"
+              ? { inspectionAdmin: { processors: true } }
+              : { [name]: true },
+        }),
+      );
     }
     if (host.access === null && !OPEN_READS.has(name)) {
       return Promise.resolve(
@@ -313,6 +346,43 @@ describe("remote reactor in the monitor app", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  }, 20_000);
+
+  it("offers a rerun on the Processors tab only where the host serves inspection-admin", async () => {
+    const withoutLevers = remoteApp({ access: OPERATOR });
+    await provisionRemoteReactor(withoutLevers, "read-only-switchboard");
+    fireEvent.click(withoutLevers.getByRole("button", { name: "Processors" }));
+    await waitFor(
+      () => expect(withoutLevers.getByText("factory:drive:0")).toBeTruthy(),
+      WAIT,
+    );
+    expect(withoutLevers.getByTestId("admin-gate-note").textContent).toBe(
+      NO_PROCESSOR_LEVERS_REASON,
+    );
+    expect(
+      withoutLevers
+        .getByRole("button", { name: "Rerun…" })
+        .getAttribute("disabled"),
+    ).not.toBeNull();
+    withoutLevers.unmount();
+
+    const view = remoteApp({ access: OPERATOR, levers: true });
+    await provisionRemoteReactor(view, "admin-switchboard");
+    fireEvent.click(view.getByRole("button", { name: "Processors" }));
+    await waitFor(
+      () => expect(view.getByText("factory:drive:0")).toBeTruthy(),
+      WAIT,
+    );
+    expect(view.queryByTestId("admin-gate-note")).toBeNull();
+    fireEvent.click(view.getByRole("button", { name: "Rerun…" }));
+    fireEvent.click(view.getByRole("button", { name: "Rerun" }));
+    await waitFor(
+      () =>
+        expect(view.getByRole("status").textContent).toContain(
+          "Rerun of factory:drive:0 is under way",
+        ),
+      WAIT,
+    );
   }, 20_000);
 
   it("disables the levers and the DB tab for an operator, with the reason", async () => {

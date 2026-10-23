@@ -70,7 +70,7 @@ type Task =
   | Delivery
   | EraseTask
   | {
-      kind: "backfill" | "retry" | "disconnect";
+      kind: "backfill" | "retry" | "rewind" | "disconnect";
       run: () => Promise<void>;
       done: () => void;
     };
@@ -206,6 +206,47 @@ export class ProcessorQueue {
     });
   }
 
+  /**
+   * Moves the cursor back to `toOrdinal` once `gate` resolves, clears any
+   * error, and replays from there. Rejects with `gate`'s error, for an ordinal
+   * below the floor or above the cursor, checked when the task runs, or once
+   * closed.
+   */
+  rewind(toOrdinal: number, gate: () => Promise<void>): Promise<void> {
+    if (this.closed) {
+      return Promise.reject(
+        new Error(
+          `Processor ${JSON.stringify(this.options.processorId)} is closed`,
+        ),
+      );
+    }
+    let refused: Error | undefined;
+    return this.replay("rewind", async () => {
+      try {
+        await gate();
+      } catch (error) {
+        refused = error instanceof Error ? error : new Error(String(error));
+        return;
+      }
+      const { cursor, floor } = this.options;
+      if (toOrdinal < floor || toOrdinal > cursor.lastOrdinal) {
+        refused = new Error(
+          `Processor ${JSON.stringify(this.options.processorId)} can replay from ordinal ${floor} to ${cursor.lastOrdinal}, not ${toOrdinal}`,
+        );
+        return;
+      }
+      cursor.lastOrdinal = toOrdinal;
+      cursor.status = "active";
+      cursor.lastError = undefined;
+      cursor.lastErrorTimestamp = undefined;
+      this.unrouted.clear();
+      await this.persist();
+      await this.runBackfill();
+    }).then(() => {
+      if (refused) throw refused;
+    });
+  }
+
   /** Stops cursor writes now; queued tasks still run before the disconnect. */
   close(): Promise<void> {
     if (this.closed) return Promise.resolve();
@@ -226,7 +267,7 @@ export class ProcessorQueue {
   }
 
   private replay(
-    kind: "backfill" | "retry",
+    kind: "backfill" | "retry" | "rewind",
     run: () => Promise<void>,
   ): Promise<void> {
     if (this.closed) return Promise.resolve();
@@ -241,7 +282,7 @@ export class ProcessorQueue {
   }
 
   private enqueue(
-    kind: "backfill" | "retry" | "disconnect",
+    kind: "backfill" | "retry" | "rewind" | "disconnect",
     run: () => Promise<void>,
   ): Promise<void> {
     return this.push((done) => ({ kind, run, done }));

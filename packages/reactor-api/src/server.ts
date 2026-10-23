@@ -1234,6 +1234,7 @@ async function _setupAPI(
   // set up subgraph manager
   const coreSubgraphs = coreSubgraphClasses({
     inspection: !!inspection,
+    inspectionAdmin: !!inspection?.admin,
     documentPermissions: !!documentPermissionService,
   });
   if (documentPermissionService) {
@@ -1555,6 +1556,7 @@ export async function initializeAndStartAPI(
     attachmentReadsFollowDocumentPolicy,
     reactorClientModule.reactorModule && options.inspection !== false
       ? createReactorInspectionSource(reactorClientModule.reactorModule, {
+          admin: process.env.INSPECTION_ADMIN_ENABLED === "true",
           ...options.inspection,
           attachmentStore: attachmentInspectionStore(attachments),
         })

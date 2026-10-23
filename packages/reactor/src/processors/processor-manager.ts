@@ -7,6 +7,7 @@ import type {
   IProcessorManager,
   ProcessorFactory,
   ProcessorRecord,
+  ProcessorRerunOptions,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
@@ -220,6 +221,37 @@ export class ProcessorManager
         SHUTDOWN_GRACE_MS,
       );
     }
+  }
+
+  async rerun(
+    processorId: string,
+    options: ProcessorRerunOptions,
+  ): Promise<void> {
+    const target = this.findBound(processorId);
+    if (!target) {
+      throw new Error(
+        `Cannot rerun processor ${JSON.stringify(processorId)}: it is not running`,
+      );
+    }
+    if (!options.clear) {
+      const { floor, lastOrdinal } = target.tracked;
+      if (options.fromOrdinal < floor || options.fromOrdinal > lastOrdinal) {
+        throw new Error(
+          `Processor ${JSON.stringify(processorId)} can replay from ordinal ${floor} to ${lastOrdinal}, not ${options.fromOrdinal}`,
+        );
+      }
+      return target.queue.rewind(options.fromOrdinal, () => Promise.resolve());
+    }
+    const members = this.clearGroupOf(target.tracked);
+    const unclearable = members.find(
+      (member) => typeof member.tracked.record.processor.clear !== "function",
+    );
+    if (unclearable) {
+      throw new Error(
+        `Cannot clear processor ${JSON.stringify(unclearable.tracked.processorId)}: it has no clear()`,
+      );
+    }
+    return this.clearAndReplay(members);
   }
 
   get(processorId: string): TrackedProcessor | undefined {
@@ -492,6 +524,7 @@ export class ProcessorManager
       status: "errored",
       lastError: state.lastError,
       lastErrorTimestamp: state.lastErrorTimestamp,
+      floor: 0,
       retry: () => this.retryOwed(factoryId, driveId),
     });
   }
@@ -845,6 +878,74 @@ export class ProcessorManager
     return this.releaseCursors(identifier);
   }
 
+  private findBound(processorId: string): Bound | undefined {
+    for (const bounds of this.processorsByDrive.values()) {
+      const found = bounds.find(
+        (bound) => bound.tracked.processorId === processorId,
+      );
+      if (found) return found;
+    }
+    return undefined;
+  }
+
+  /** The target and the processors of its drive and factory sharing what it derived. */
+  private clearGroupOf(target: TrackedProcessor): Bound[] {
+    const scope = target.record.processor.clearScope;
+    return (this.processorsByDrive.get(target.driveId) ?? []).filter(
+      ({ tracked }) =>
+        tracked.factoryId === target.factoryId &&
+        (tracked.record.processor === target.record.processor ||
+          (scope !== undefined &&
+            tracked.record.processor.clearScope === scope)),
+    );
+  }
+
+  /** Holds every member's queue, clears each processor once, then replays all from their floors. */
+  private async clearAndReplay(members: Bound[]): Promise<void> {
+    let waiting = members.length;
+    let allHeld!: () => void;
+    const held = new Promise<void>((resolve) => (allHeld = resolve));
+    let release!: (error?: Error) => void;
+    const cleared = new Promise<void>((resolve, reject) => {
+      release = (error) => (error ? reject(error) : resolve());
+    });
+    // Each gate settles without an unhandled rejection; the rewinds report it.
+    cleared.catch(() => undefined);
+    const rewinds = members.map(({ tracked, queue }) =>
+      queue.rewind(tracked.floor, () => {
+        waiting--;
+        if (waiting === 0) allHeld();
+        return cleared;
+      }),
+    );
+    const early = Promise.race(
+      rewinds.map((rewind) => rewind.then(() => new Promise<never>(() => {}))),
+    );
+    try {
+      await Promise.race([held, early]);
+    } catch (error) {
+      release(error instanceof Error ? error : new Error(String(error)));
+      await Promise.allSettled(rewinds);
+      throw error;
+    }
+    const processors = new Set(members.map((m) => m.tracked.record.processor));
+    try {
+      for (const processor of processors) {
+        await processor.clear!();
+      }
+    } catch (error) {
+      const failure = new Error(
+        `Clearing processor ${JSON.stringify(members[0]!.tracked.processorId)} failed: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+      release(failure);
+      await Promise.allSettled(rewinds);
+      throw failure;
+    }
+    release();
+    await Promise.all(rewinds);
+  }
+
   // A drive deleted before the factory's next registration still owes its rows.
   private releaseCursors(factoryId: string): Promise<void>[] {
     const writes: Promise<void>[] = [];
@@ -966,6 +1067,7 @@ export class ProcessorManager
       processorIndex,
       record,
       ...cursor,
+      floor,
       retry: () => queue.retry(),
     };
     const queue = new ProcessorQueue({
