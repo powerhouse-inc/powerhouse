@@ -124,6 +124,23 @@ export function buildPulledDocument(
   };
 }
 
+/** `document` as created: its header and initial state, without scope operations. */
+export function uncreatedDocument(
+  document: PHDocument<PHBaseState>,
+): PHDocument<PHBaseState> {
+  const { header, initialState } = structuredClone({
+    header: document.header,
+    initialState: document.initialState,
+  });
+  return {
+    header,
+    state: initialState,
+    initialState,
+    operations: {},
+    clipboard: [],
+  };
+}
+
 /** Extract revision map from a remote document's revisionsList. */
 export function extractRevisionMap(
   revisionsList: RemoteDocumentData["revisionsList"],

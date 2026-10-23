@@ -49,7 +49,7 @@ const client = createClient("https://switchboard.example.com/graphql");
 
 ### Create a new document
 
-Omit `documentId` and pass a `parentIdentifier` (the drive to create in):
+Omit `documentId` and pass a `parentIdentifier` (the drive to create in). `pull` heads the new document with the host's signature policy and protocol versions for its type, read from `createDefaults`, as `GraphQLReactorClient.newDocument` does. The first push creates the remote from that header, so the document runs the same versions before and after it:
 
 ```typescript
 const controller = await RemoteDocumentController.pull(
@@ -74,7 +74,7 @@ console.log(controller.status.pendingActionCount); // 3
 // Push all pending actions to the remote
 const result = await controller.push();
 console.log(result.actionCount); // 3
-console.log(controller.status.documentId); // "abc-123" (assigned by server)
+console.log(controller.status.documentId); // the id of the local header
 ```
 
 ### Pull an existing document
@@ -118,6 +118,8 @@ console.log(remote.header.name); // "Draft"
 remote.setModelName({ name: "MyModel" });
 await remote.push(); // creates on remote + pushes the SET_MODEL_NAME action
 ```
+
+Without a `documentId`, the first push creates the remote from the wrapped document's header and initial state, so the remote runs the versions that header names.
 
 ## Modes
 
@@ -207,7 +209,7 @@ Each action is signed with the operation's `prevOpHash` before push. Signatures 
 - Below base-reducer 3, the local reducer applies UNDO or REDO as before.
 - On base-reducer 3, the controller resolves the target from its own log, pending local actions included, and applies a `RETRACT` of it. The configured signer signs the `RETRACT` on push. With nothing to undo or redo, the call throws. The host refuses a `RETRACT` whose target is gone or already retracted; the controller does not re-resolve it.
 
-A new document has no remote header until the first push creates it, so undo before that runs under the flagless local header.
+A new document runs the versions its header names from the start (see [Create a new document](#create-a-new-document)), so undo before the first push is a `RETRACT` on base-reducer 3 too.
 
 ## Conflict handling
 
@@ -370,7 +372,7 @@ type SyncStatus = {
 ### Push flow
 
 1. Flush pending actions from the tracker.
-2. If this is a new document (no `documentId`), create it on the remote via `CreateEmptyDocument`.
+2. If this is a new document (no `documentId`), create it on the remote via `CreateDocument` from the local header and initial state.
 3. If `onConflict` is set, check if the remote has new operations since the last pull. Handle conflicts according to the strategy (reject, rebase, or custom merge).
 4. If a signer is configured, sign each action with its `prevOpHash`.
 5. Send all actions in a single `MutateDocument` call.

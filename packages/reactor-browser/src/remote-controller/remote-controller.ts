@@ -10,6 +10,7 @@ import {
   actionSignerIdentity,
   actionSigningTarget,
   baseReducerCapabilities,
+  headNewDocument,
   stateReducerOf,
   toTransportAction,
   undoNeedsTargets,
@@ -40,6 +41,7 @@ import {
   extractRevisionMap,
   hasRevisionConflict,
   screamingSnakeToCamel,
+  uncreatedDocument,
 } from "./utils.js";
 
 /** Extract TState from a PHDocumentController subclass. */
@@ -76,6 +78,8 @@ export class RemoteDocumentController<
   /** The remote's id for the document; `documentId` may be a slug. */
   private canonicalDocumentId?: string;
   private remoteRevision: Record<string, number> = {};
+  /** What the first push creates the remote from, until it has. */
+  private uncreated?: PHDocument;
   private hasPulled = false;
   private pushScheduled = false;
   private pushQueue: Promise<void> = Promise.resolve();
@@ -85,6 +89,9 @@ export class RemoteDocumentController<
     this.inner = inner;
     this.options = options;
     this.documentId = options.documentId ?? "";
+    if (this.documentId === "") {
+      this.uncreated = uncreatedDocument(inner.document);
+    }
     this.remoteClient = new RemoteClient(
       options.client,
       options.operationsPageSize,
@@ -297,6 +304,8 @@ export class RemoteDocumentController<
 
     if (options.documentId) {
       await remote.pull();
+    } else {
+      await remote.headNewDocument();
     }
 
     return remote as RemoteDocumentControllerWith<C>;
@@ -306,6 +315,8 @@ export class RemoteDocumentController<
    * Wrap an existing controller instance with remote capabilities.
    * Pending local actions on the inner controller are NOT tracked
    * (only new actions through the remote controller are tracked).
+   * Without a `documentId`, the first push creates the remote under the
+   * wrapped document's header.
    */
   static from<C extends PHDocumentController<any>>(
     controller: C,
@@ -319,15 +330,35 @@ export class RemoteDocumentController<
 
   // --- Private methods ---
 
-  /** Create the document on the remote if it doesn't exist yet. */
+  /** Heads the new document with the host's versions for its type, as `newDocument` does. */
+  private async headNewDocument(): Promise<void> {
+    const module = this.inner.module;
+    const [policy, versions] = await Promise.all([
+      this.remoteClient.getCreateSignaturePolicy(),
+      this.remoteClient.getCreateProtocolVersions(
+        this.inner.header.documentType,
+        this.options.parentIdentifier,
+        [module],
+      ),
+    ]);
+    const document = headNewDocument(module, undefined, policy, versions);
+    this.uncreated = uncreatedDocument(document);
+    this.replaceInner(document);
+  }
+
+  /** Creates the remote from the local header, so both run the versions its creator chose. */
   private async ensureRemoteDocument(): Promise<void> {
     if (this.documentId !== "") return;
-    const remoteDoc = await this.remoteClient.createEmptyDocument(
-      this.inner.header.documentType,
+    if (this.uncreated === undefined) {
+      throw new Error("Cannot create: the new document was not kept");
+    }
+    const remoteDoc = await this.remoteClient.createDocument(
+      this.uncreated,
       this.options.parentIdentifier,
     );
     this.documentId = remoteDoc.id;
     this.canonicalDocumentId = remoteDoc.id;
+    this.uncreated = undefined;
   }
 
   /** Set up interceptors for all action methods on the inner controller. */
