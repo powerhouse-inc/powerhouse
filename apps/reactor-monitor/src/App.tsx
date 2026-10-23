@@ -17,8 +17,8 @@ import {
 } from "@powerhousedao/reactor-monitor";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
-  AdminGateNote,
   adminGateFor,
+  OperatorGateNote,
   operatorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
@@ -33,6 +33,7 @@ import { MonitoringSetsStore } from "./monitoring-sets.js";
 import {
   buildDescriptor as buildDescriptorFromForm,
   createMonitorWorker,
+  setRemoteBearer,
 } from "./provisioning.js";
 import { AttachmentsTab } from "./tabs/AttachmentsTab.js";
 import { CatchUpTab } from "./tabs/CatchUpTab.js";
@@ -106,8 +107,19 @@ function ReadyPanel({
   const admin = adminGateFor(reactor);
   const sql = sqlGateFor(reactor);
   const operator = operatorGateFor(reactor);
+  const takeBearer =
+    reactor.kind === "remote"
+      ? async (bearer: string) => {
+          setRemoteBearer(reactor.name, bearer);
+          await recheck();
+        }
+      : undefined;
   const operational = (body: ReactNode): ReactNode =>
-    operator.enabled ? body : <AdminGateNote gate={operator} />;
+    operator.enabled ? (
+      body
+    ) : (
+      <OperatorGateNote gate={operator} onBearer={takeBearer} />
+    );
 
   switch (tab) {
     case "Overview":

@@ -22,6 +22,25 @@ export function createMonitorWorker(name: string): SharedWorker {
   );
 }
 
+// Each remote's bearer, by reactor name: its headers read it per request, so
+// one pasted after provisioning reaches the host without re-provisioning.
+const remoteBearers = new Map<string, string>();
+
+/** Sets (or, when empty, clears) the bearer a remote reactor sends. */
+export function setRemoteBearer(name: string, bearer: string): void {
+  const trimmed = bearer.trim().replace(/^Bearer\s+/i, "");
+  if (trimmed) {
+    remoteBearers.set(name, trimmed);
+  } else {
+    remoteBearers.delete(name);
+  }
+}
+
+function remoteHeaders(name: string): Record<string, string> {
+  const bearer = remoteBearers.get(name);
+  return bearer ? { Authorization: `Bearer ${bearer}` } : {};
+}
+
 /**
  * Builds the descriptor the provision form submits.
  *
@@ -39,15 +58,11 @@ export function buildDescriptor(request: ProvisionRequest): ReactorDescriptor {
     attachmentStore = "none",
   } = request;
   if (kind === "remote") {
+    setRemoteBearer(name, bearer ?? "");
     return {
       kind,
       name,
-      remote: {
-        url: remoteUrl ?? "",
-        ...(bearer
-          ? { headers: () => ({ Authorization: `Bearer ${bearer}` }) }
-          : {}),
-      },
+      remote: { url: remoteUrl ?? "", headers: () => remoteHeaders(name) },
     };
   }
   const sync = syncMode === "local" ? { local: true } : undefined;

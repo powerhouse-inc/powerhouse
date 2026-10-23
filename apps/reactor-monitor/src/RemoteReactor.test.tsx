@@ -10,6 +10,7 @@ import { App } from "./App.js";
 import {
   NOT_AN_OPERATOR_REASON,
   READS_ONLY_REASON,
+  STILL_NOT_AN_OPERATOR,
 } from "./components/AdminGate.js";
 import type { ProvisionRequest } from "./components/ProvisionPanel.js";
 import { buildDescriptor as buildFormDescriptor } from "./provisioning.js";
@@ -248,6 +249,34 @@ describe("remote reactor in the monitor app", () => {
     expect(view.getByTestId("admin-gate-note").textContent).toBe(
       READS_ONLY_REASON,
     );
+  }, 20_000);
+
+  it("takes a bearer pasted into the note, without re-provisioning", async () => {
+    const view = remoteApp({ access: null, adminBearer: "admin-token" });
+    await provisionRemoteReactor(view, "late-bearer-switchboard");
+    fireEvent.click(view.getByRole("button", { name: "Queue" }));
+    expect(view.getByTestId("admin-gate-note").textContent).toBe(
+      NOT_AN_OPERATOR_REASON,
+    );
+
+    const field = view.getByLabelText("Admin bearer token");
+    fireEvent.change(field, { target: { value: "wrong-token" } });
+    fireEvent.click(view.getByRole("button", { name: "Use bearer" }));
+    await waitFor(
+      () =>
+        expect(view.getByTestId("operator-bearer-refused").textContent).toBe(
+          STILL_NOT_AN_OPERATOR,
+        ),
+      WAIT,
+    );
+
+    fireEvent.change(field, { target: { value: "Bearer admin-token" } });
+    fireEvent.click(view.getByRole("button", { name: "Use bearer" }));
+    await waitFor(
+      () => expect(view.getByText(/Showing \d+ job\(s\)/)).toBeTruthy(),
+      WAIT,
+    );
+    expect(view.queryByTestId("operator-bearer-form")).toBeNull();
   }, 20_000);
 
   it("disables the levers and the DB tab for an operator, with the reason", async () => {
