@@ -121,6 +121,15 @@ export interface RunCompoundResult {
   handleSignal: (signal: "SIGINT" | "SIGTERM") => Promise<void>;
 }
 
+/** The verb the generic compound starts its members at for its own `verb`:
+ * `run` follows the compound's defaultVerb. */
+export function compoundStartVerb(
+  verb: string,
+  runner: { defaultVerb?: string },
+): string {
+  return verb === "run" ? (runner.defaultVerb ?? "run") : verb;
+}
+
 /** At compound verb "run" each member runs its own (merged) defaultVerb —
  * what lets a desktop compound pair a switchboard at `run` with a connect at
  * `serve`. An explicit forwarded verb stays uniform across members. */

@@ -31,3 +31,6 @@ export const uniformRunnerCommandNames: ReadonlySet<string> = new Set([
   "run",
   "host",
 ]);
+
+/** Set by ph-cmd on the ph-cli it spawns in the project root: where `ph` was run. */
+export const CALLER_CWD_ENV = "PH_CALLER_CWD";

@@ -6,19 +6,33 @@ import {
   type ReactorConfig,
 } from "@powerhousedao/host-core";
 
-/** The env the server would boot with: `env` plus the reactor block's projection where `env` leaves a var unset. */
-export function projectedReactorEnv(
+/** The reactor block as the switchboard boots with it: the vars `env` leaves unset, and dbPath. */
+export function switchboardBootProjection(
   reactor: ReactorConfig | undefined,
   env: Readonly<Record<string, string | undefined>>,
-): Record<string, string | undefined> {
-  const projected: Record<string, unknown> =
-    projectReactorToSwitchboard(reactor).env;
-  const out = { ...env };
-  for (const [name, value] of Object.entries(projected)) {
+): { env: Record<string, string>; dbPath?: string } {
+  const { env: projected, options } = projectReactorToSwitchboard(reactor);
+  const unset: Record<string, string> = {};
+  for (const [name, value] of Object.entries(projected) as [
+    string,
+    unknown,
+  ][]) {
     // A deferred $output token is not a value yet.
-    if (out[name] === undefined && typeof value === "string") out[name] = value;
+    if (env[name] === undefined && typeof value === "string")
+      unset[name] = value;
   }
-  return out;
+  return {
+    env: unset,
+    ...(options.dbPath !== undefined ? { dbPath: options.dbPath } : {}),
+  };
+}
+
+/** The verb owns dev mode; `runner.dev` is the host-file spelling of it. */
+export function switchboardDevMode(
+  devVerb: boolean,
+  runner: { dev?: boolean },
+): boolean {
+  return devVerb || runner.dev === true;
 }
 
 /**
@@ -36,11 +50,9 @@ export function applyReactorEnvProjection(
   reactor: ReactorConfig | undefined,
   hostFileLabel: string,
 ): { dbPath?: string } {
-  const { env, options } = projectReactorToSwitchboard(reactor);
   assertProtocolConsistency(reactor?.protocol, process.env, hostFileLabel);
-  for (const [name, value] of Object.entries(env)) {
-    if (process.env[name] === undefined) process.env[name] = value;
-  }
+  const projection = switchboardBootProjection(reactor, process.env);
+  Object.assign(process.env, projection.env);
   // A path-storage data dir must exist before the server boots — its own
   // mkdir is not recursive (the ph-win sidecar did this too).
   const storage = primaryBackend(reactor)?.storage;
@@ -54,5 +66,5 @@ export function applyReactorEnvProjection(
     }
     fs.mkdirSync(storage.dataDir, { recursive: true });
   }
-  return options;
+  return projection.dbPath !== undefined ? { dbPath: projection.dbPath } : {};
 }

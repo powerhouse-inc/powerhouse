@@ -11,6 +11,16 @@ export interface SwitchboardBootFacts {
   renownSource: "self" | "remote";
 }
 
+/** The reactor database the server boots with: its `dbPath` option, then the env. */
+export function reactorDbUrlOf(
+  dbPath: string | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+): string | undefined {
+  return (
+    dbPath ?? env.PH_REACTOR_DATABASE_URL ?? env.PH_SWITCHBOARD_DATABASE_URL
+  );
+}
+
 export function workerTrustPolicyIssue(
   facts: Pick<
     SwitchboardBootFacts,

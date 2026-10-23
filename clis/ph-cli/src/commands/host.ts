@@ -6,7 +6,7 @@ export const check = command({
   description:
     "Check a host the way `ph run` would, without starting it: every load, " +
     "validation, resolution and boot issue, grouped by host file. Exits 1 " +
-    "on any issue. `--env-file` checks against that file alone.",
+    "on any issue. `--env <file>` checks against that file alone.",
   args: hostCheckArgs,
   handler: async (args) => {
     const { runHostCheck } = await import("../services/host/check.js");

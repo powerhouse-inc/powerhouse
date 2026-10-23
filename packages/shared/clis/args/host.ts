@@ -7,9 +7,10 @@ export const hostCheckArgs = {
     displayName: "host",
     description: "the host to check (a directory under hosts/)",
   }),
+  // Not --env-file: node takes that flag even after the script name.
   envFile: option({
     type: optional(string),
-    long: "env-file",
+    long: "env",
     description:
       "check against this env file alone instead of the project .env and the process env",
   }),

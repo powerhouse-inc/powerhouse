@@ -8,61 +8,22 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { runSafely } from "cmd-ts";
 import { afterEach, describe, expect, it } from "vitest";
+import { check } from "../src/commands/host.js";
 import { runHostCheck } from "../src/services/host/check.js";
+import {
+  cleanupProjects,
+  makeProject,
+  POSTGRES,
+} from "./host-check-project.js";
 
-const RUNNER_SOURCE = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "src",
-  "runners",
-  "switchboard.ts",
-);
-const POSTGRES = "postgres://u:p@localhost:5432/reactor";
-
-const temporary: string[] = [];
 afterEach(() => {
   delete process.env.REACTOR_WORKERS;
-  for (const dir of temporary.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
+  delete process.env.PH_CALLER_CWD;
+  cleanupProjects();
 });
-
-/** The real runner via a shim outside node_modules, so vitest transforms it. */
-function makeProject(hosts: Record<string, unknown>): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "ph-host-check-"));
-  temporary.push(dir);
-  writeFileSync(path.join(dir, "powerhouse.config.json"), "{}");
-  writeFileSync(
-    path.join(dir, "package.json"),
-    JSON.stringify({ name: "lab", type: "module" }),
-  );
-  const shim = path.join(dir, "_shim", "ph-cli");
-  mkdirSync(shim, { recursive: true });
-  writeFileSync(
-    path.join(shim, "package.json"),
-    JSON.stringify({
-      name: "@powerhousedao/ph-cli",
-      type: "module",
-      exports: { "./runners/switchboard": "./switchboard.ts" },
-    }),
-  );
-  writeFileSync(
-    path.join(shim, "switchboard.ts"),
-    `export * from ${JSON.stringify(RUNNER_SOURCE)};\n`,
-  );
-  const scope = path.join(dir, "node_modules", "@powerhousedao");
-  mkdirSync(scope, { recursive: true });
-  symlinkSync(shim, path.join(scope, "ph-cli"), "dir");
-  for (const [name, host] of Object.entries(hosts)) {
-    mkdirSync(path.join(dir, "hosts", name), { recursive: true });
-    writeFileSync(
-      path.join(dir, "hosts", name, "host.js"),
-      `export default ${JSON.stringify(host)};`,
-    );
-  }
-  return dir;
-}
 
 function switchboard(reactor?: unknown) {
   return {
@@ -197,6 +158,39 @@ describe("ph host check", () => {
         envFile: path.join(dir, "missing.env"),
       }),
     ).rejects.toThrow(/Cannot read the env file/);
+  });
+
+  it("resolves a relative env file against the caller's cwd", async () => {
+    const dir = makeProject({ switchboard: switchboard(pglite) });
+    const caller = path.join(dir, "sub");
+    mkdirSync(caller);
+    writeFileSync(path.join(caller, "ci.env"), "REACTOR_WORKERS=2\n");
+    process.env.PH_CALLER_CWD = caller;
+    const result = await runHostCheck({
+      host: "switchboard",
+      projectRoot: dir,
+      envFile: "ci.env",
+    });
+    expect(result.output).toMatch(/REACTOR_WORKERS/);
+  });
+
+  it("takes the file as --env, which node leaves to the script", async () => {
+    const dir = makeProject({ switchboard: switchboard() });
+    const missing = path.join(dir, "missing.env");
+    await expect(
+      runSafely(check, ["switchboard", "--env", missing]),
+    ).rejects.toThrow(/Cannot read the env file/);
+    const probe = path.join(dir, "argv.mjs");
+    writeFileSync(probe, "console.log(JSON.stringify(process.argv.slice(2)));");
+    const node = spawnSync(
+      process.execPath,
+      [probe, "check", "--env", missing],
+      {
+        encoding: "utf8",
+      },
+    );
+    expect(node.status).toBe(0);
+    expect(JSON.parse(node.stdout)).toEqual(["check", "--env", missing]);
   });
 
   it("exits 1 for an unknown host", async () => {
