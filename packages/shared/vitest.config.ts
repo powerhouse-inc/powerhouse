@@ -70,6 +70,7 @@ export default defineConfig({
       "document-model/retraction-repeat.property.test.ts",
       "document-model/create-document.test.ts",
       "document-model/signature-policy.test.ts",
+      "document-model/undo-redo-batch.test.ts",
       "document-model/undo-redo-plan.test.ts",
       "document-model/signature-transport.test.ts",
       "document-model/utils.test.ts",

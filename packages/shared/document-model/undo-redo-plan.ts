@@ -7,6 +7,7 @@ import {
   optionalBaseReducerCapabilities,
 } from "./base-reducer-protocol.js";
 import type { PHDocumentHeader } from "./documents.js";
+import { NoUndoRedoTargetError } from "./errors.js";
 import type { CreateDocumentActionInput } from "./types.js";
 
 /** The action ids a retraction-model UNDO and REDO on a scope would retract. */
@@ -44,7 +45,7 @@ export function undoNeedsTargets(caps: BaseReducerCapabilities): boolean {
   }
 }
 
-/** What a client submits, signed by its author; throws when nothing is retractable. */
+/** What a client submits, signed by its author; throws NoUndoRedoTargetError when nothing is retractable. */
 export function undoRedoActions(
   caps: BaseReducerCapabilities,
   type: "UNDO" | "REDO",
@@ -59,8 +60,7 @@ export function undoRedoActions(
       const target =
         type === "UNDO" ? targets?.undoTarget : targets?.redoTarget;
       if (target === undefined) {
-        const verb = type === "UNDO" ? "undo" : "redo";
-        throw new Error(`Cannot ${verb}: nothing to ${verb} in scope history`);
+        throw new NoUndoRedoTargetError(type, scope);
       }
       return [retract(target, scope)];
     }

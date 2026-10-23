@@ -69,6 +69,24 @@ export class SubmittedUndoRefusedError extends Error {
   }
 }
 
+/** A base-reducer 3 UNDO or REDO of a scope with no row to retract. */
+export class NoUndoRedoTargetError extends Error {
+  public readonly actionType: "UNDO" | "REDO";
+  public readonly scope: string;
+
+  constructor(actionType: "UNDO" | "REDO", scope: string) {
+    const verb = actionType === "UNDO" ? "undo" : "redo";
+    super(`Cannot ${verb}: nothing to ${verb} in scope history`);
+    this.name = "NoUndoRedoTargetError";
+    this.actionType = actionType;
+    this.scope = scope;
+  }
+
+  static isError(error: unknown): error is NoUndoRedoTargetError {
+    return error instanceof Error && error.name === "NoUndoRedoTargetError";
+  }
+}
+
 /**
  * Error thrown when attempting to downgrade a document version.
  */
