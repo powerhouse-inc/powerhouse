@@ -13,12 +13,17 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { createAction } from "@powerhousedao/shared/document-model";
+import {
+  createAction,
+  optionalBaseReducerCapabilities,
+  undoNeedsTargets,
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import {
   createBaseAction,
   toolWithCallback,
+  undoRedoCount,
   validateDocumentModelAction,
 } from "./utils.js";
 
@@ -101,10 +106,16 @@ export const deleteDocumentTool = {
   },
 } as const satisfies ToolSchema;
 
+type UndoRedoStep = {
+  undoRedo: "UNDO" | "REDO";
+  scope: string;
+  count: number;
+};
+
 export const addActionsTool = {
   name: "addActions",
   description:
-    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }) and NOOP.",
+    "Adds actions to a document. Prefer adding multiples actions at once to reduce the number of steps. Besides the document model's operations, accepts the base actions SET_NAME (scope global, input: the name), SET_PREFERRED_EDITOR (scope header, input: { preferredEditor }), UNDO and REDO (input: { count }; on base-reducer 3 each step retracts one row) and NOOP.",
   inputSchema: {
     documentId: z.string().describe("ID of the document"),
     actions: z
@@ -449,47 +460,82 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           `Document model for document type '${document.header.documentType}' not found`,
         );
       }
-      const actions: Action[] = params.actions.map((paramAction) => {
-        const baseAction = createBaseAction(
-          paramAction.type,
-          paramAction.input,
-          paramAction.scope,
-        );
-        if (baseAction) {
-          if (!baseAction.action) {
+      // Where undo retracts a target, the client resolves and signs it.
+      const caps = optionalBaseReducerCapabilities(document.header);
+      const undoesByTarget = caps !== undefined && undoNeedsTargets(caps);
+      const steps: (Action | UndoRedoStep)[] = params.actions.map(
+        (paramAction) => {
+          if (
+            undoesByTarget &&
+            (paramAction.type === "UNDO" || paramAction.type === "REDO")
+          ) {
+            return {
+              undoRedo: paramAction.type,
+              scope: paramAction.scope,
+              count: undoRedoCount(paramAction.input),
+            };
+          }
+          const baseAction = createBaseAction(
+            paramAction.type,
+            paramAction.input,
+            paramAction.scope,
+          );
+          if (baseAction) {
+            if (!baseAction.action) {
+              throw new Error(
+                `Invalid action ${JSON.stringify(paramAction)}: ${baseAction.errors.join(", ")}`,
+              );
+            }
+            return baseAction.action;
+          }
+          const action: Action = createAction(
+            paramAction.type,
+            paramAction.input ?? {},
+            undefined,
+            undefined,
+            paramAction.scope,
+          );
+          const actionValidation = validateDocumentModelAction(
+            documentModel,
+            action,
+          );
+          if (!actionValidation.isValid) {
             throw new Error(
-              `Invalid action ${JSON.stringify(paramAction)}: ${baseAction.errors.join(", ")}`,
+              `Invalid action ${JSON.stringify(action)}: ${actionValidation.errors.join(", ")}`,
             );
           }
-          return baseAction.action;
-        }
-        const action: Action = createAction(
-          paramAction.type,
-          paramAction.input ?? {},
-          undefined,
-          undefined,
-          paramAction.scope,
-        );
-        const actionValidation = validateDocumentModelAction(
-          documentModel,
-          action,
-        );
-        if (!actionValidation.isValid) {
-          throw new Error(
-            `Invalid action ${JSON.stringify(action)}: ${actionValidation.errors.join(", ")}`,
-          );
-        }
-        return action;
-      });
-
-      // Execute actions on the document using the "main" branch
-      await client.execute(
-        params.documentId,
-        "main",
-        actions,
-        undefined,
-        subject,
+          return action;
+        },
       );
+
+      // Execute actions on the document using the "main" branch, in order
+      let pending: Action[] = [];
+      const flush = async () => {
+        if (pending.length === 0) return;
+        await client.execute(
+          params.documentId,
+          "main",
+          pending,
+          undefined,
+          subject,
+        );
+        pending = [];
+      };
+      for (const step of steps) {
+        if (!("undoRedo" in step)) {
+          pending.push(step);
+          continue;
+        }
+        await flush();
+        for (let i = 0; i < step.count; i++) {
+          if (step.undoRedo === "UNDO") {
+            await client.undo(params.documentId, step.scope, "main");
+          } else {
+            await client.redo(params.documentId, step.scope, "main");
+          }
+        }
+      }
+      await flush();
 
       return {
         success: true,

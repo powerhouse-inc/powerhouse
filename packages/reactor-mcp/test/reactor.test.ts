@@ -6,6 +6,7 @@ import type {
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   documentModelCreateDocument,
@@ -481,6 +482,46 @@ describe("ReactorMcpProvider", () => {
       expect(getTextContent(result)).toContain(
         `Action scope "global" does not match operation scope "header"`,
       );
+    });
+
+    it("undoes and redoes through the client on base-reducer 3", async () => {
+      const document = await client.createEmpty<PHDocument>(
+        "powerhouse/document-model",
+      );
+      expect(document.header.protocolVersions?.["base-reducer"]).toBe(3);
+
+      const provider = await createReactorMcpProvider({ client });
+      const setName = (name: string) =>
+        documentModelDocumentModelModule.actions.setModelName({ name });
+      const result = await provider.tools.addActions.callback({
+        documentId: document.header.id,
+        actions: [
+          setName("first"),
+          setName("second"),
+          setName("third"),
+          { type: "UNDO", input: { count: 2 }, scope: "global" },
+          { type: "REDO", input: {}, scope: "global" },
+        ],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const updated = await client.get<PHDocument>(document.header.id);
+      expect(
+        (updated.state as unknown as { global: { name: string } }).global.name,
+      ).toBe("second");
+      const operations = await client.getOperations(document.header.id);
+      expect(
+        operations.results
+          .filter((operation) => operation.action.scope === "global")
+          .map((operation) => operation.action.type),
+      ).toEqual([
+        "SET_MODEL_NAME",
+        "SET_MODEL_NAME",
+        "SET_MODEL_NAME",
+        "RETRACT",
+        "RETRACT",
+        "RETRACT",
+      ]);
     });
 
     it("should throw error on action on non-existent document", async () => {
