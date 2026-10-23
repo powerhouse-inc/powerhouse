@@ -317,6 +317,32 @@ describe("write cache on base-reducer 3", () => {
       expect(readsWholeLog(getSince)).toBe(true);
     });
 
+    it("resumes a head read from it when no row after it retracts", async () => {
+      for (const id of ["a", "b", "c", "d", "e"]) await add(id);
+      await persistKeyframeAt(4);
+      await add("f");
+      const getSince = vi.spyOn(store, "getSince");
+
+      const document = await cache.getState(docId, "global", BRANCH);
+
+      expect(globalOf(document)).toEqual(derived());
+      expect(readsWholeLog(getSince)).toBe(false);
+    });
+
+    it("rebuilds the whole log on a head read for a RETRACT after it", async () => {
+      const a = await add("a");
+      for (const id of ["b", "c", "d", "e"]) await add(id);
+      await persistKeyframeAt(4);
+      await append(retract(a));
+      const getSince = vi.spyOn(store, "getSince");
+
+      const document = await cache.getState(docId, "global", BRANCH);
+
+      expect(globalOf(document)).toEqual(derived());
+      expect(moduleIds(document)).toEqual(["b", "c", "d", "e"]);
+      expect(readsWholeLog(getSince)).toBe(true);
+    });
+
     it("persists keyframes that hold the derived state", async () => {
       await add("a");
       const b = await add("b");
