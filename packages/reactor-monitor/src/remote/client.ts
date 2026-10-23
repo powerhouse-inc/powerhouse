@@ -7,6 +7,7 @@ import type {
   InspectorDrivePage,
   InspectorProcessorInfo,
   InspectorStorageHealth,
+  ProcessorPhase,
   RemoteCursorInfo,
   RemoteSyncInspection,
   ValidationResult,
@@ -168,7 +169,20 @@ function toProcessor(wire: WireInspectorProcessor): InspectorProcessorInfo {
         : new Date(wire.lastErrorTimestampUtcMs),
     floor: Number(wire.floor),
     clearable: wire.clearable,
+    runFrom: Number(wire.runFrom),
+    phase: toPhase(wire.phase),
   };
+}
+
+const PROCESSOR_PHASES: readonly ProcessorPhase[] = [
+  "catching-up",
+  "live",
+  "errored",
+];
+
+// An unknown phase from a newer server reads as live rather than failing the list.
+function toPhase(phase: string): ProcessorPhase {
+  return PROCESSOR_PHASES.find((known) => known === phase) ?? "live";
 }
 
 // Issues ride a JSON scalar, so their shape is the server's word.

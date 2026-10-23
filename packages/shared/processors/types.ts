@@ -137,6 +137,13 @@ export type ProcessorFactoryBuilder<
 
 export type ProcessorStatus = "active" | "errored";
 
+/**
+ * Where a processor stands: replaying towards the head while a backfill,
+ * retry or rerun is queued or running, keeping up with live operations, or
+ * stopped on an error.
+ */
+export type ProcessorPhase = "catching-up" | "live" | "errored";
+
 /** How {@link IProcessorManager.rerun} replays a processor. */
 export type ProcessorRerunOptions = {
   /** Erase what it derived first; `fromOrdinal` is then its floor. */
@@ -157,6 +164,13 @@ export type TrackedProcessor = {
   lastErrorTimestamp: Date | undefined;
   /** Ordinals at or below this are never delivered to it. */
   floor: number;
+  /**
+   * The cursor as its current backfill, retry or rerun began; equal to
+   * `lastOrdinal` once live, so `lastOrdinal - runFrom` is the replay's
+   * progress.
+   */
+  runFrom: number;
+  phase: ProcessorPhase;
   /**
    * Clears the error and resolves once the replay from the cursor completes.
    * Safe from anywhere, but awaiting it from this processor's own

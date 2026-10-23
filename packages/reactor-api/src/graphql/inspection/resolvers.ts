@@ -97,6 +97,8 @@ function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
       : null,
     floor: toOrdinal(info.floor),
     clearable: info.clearable,
+    runFrom: toOrdinal(info.runFrom),
+    phase: info.phase,
   };
 }
 

@@ -5,6 +5,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGlite } from "@electric-sql/pglite";
+import type {
+  IProcessorManager,
+  TrackedProcessor,
+} from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
@@ -114,6 +118,43 @@ describe("ReactorInspector", () => {
       storageHealth: { getStorageHealth: () => tracked },
     });
     await expect(inspector.getStorageHealth()).resolves.toEqual(tracked);
+  });
+
+  it("reports each processor's run start and phase", async () => {
+    const tracked: TrackedProcessor = {
+      processorId: "f:drive:0",
+      factoryId: "f",
+      driveId: "drive",
+      processorIndex: 0,
+      record: {
+        processor: {
+          onOperations: () => Promise.resolve(),
+          onDisconnect: () => Promise.resolve(),
+        },
+        filter: {},
+      },
+      lastOrdinal: 40,
+      status: "active",
+      lastError: undefined,
+      lastErrorTimestamp: undefined,
+      floor: 0,
+      runFrom: 10,
+      phase: "catching-up",
+      retry: () => Promise.resolve(),
+    };
+    const processorManager = {
+      getAll: () => [tracked],
+    } as unknown as IProcessorManager;
+    const inspector = new ReactorInspector({ processorManager });
+
+    await expect(inspector.getProcessors()).resolves.toEqual([
+      expect.objectContaining({
+        lastOrdinal: 40,
+        runFrom: 10,
+        phase: "catching-up",
+        clearable: false,
+      }),
+    ]);
   });
 
   it("refuses levers on missing components rather than acknowledging them", async () => {

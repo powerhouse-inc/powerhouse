@@ -1399,6 +1399,8 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(tracked!.status).toBe("errored");
       expect(tracked!.lastOrdinal).toBe(1);
       expect(tracked!.lastError).toBe("Processor failure");
+      expect(tracked!.phase).toBe("errored");
+      expect(tracked!.runFrom).toBe(1);
 
       const cursor = await db
         .selectFrom("ProcessorCursor")
@@ -2288,6 +2290,44 @@ describe("ProcessorManager Standalone Tests", () => {
       ).toBe(3);
     });
 
+    it("should report where a rerun started while its cursor climbs", async () => {
+      const processor = createMockProcessor();
+      const driveId = await seeded(() => [{ processor, filter: {} }]);
+      const id = `rerun-factory:${driveId}:0`;
+      expect(processorManager.get(id)).toMatchObject({
+        lastOrdinal: 3,
+        runFrom: 3,
+        phase: "live",
+      });
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const onOperations = vi.mocked(processor.onOperations);
+      const before = onOperations.mock.calls.length;
+      onOperations.mockImplementationOnce(() => held);
+
+      const rerun = processorManager.rerun(id, {
+        clear: false,
+        fromOrdinal: 1,
+      });
+      expect(processorManager.get(id)!.phase).toBe("catching-up");
+      await vi.waitFor(() =>
+        expect(onOperations).toHaveBeenCalledTimes(before + 1),
+      );
+      expect(processorManager.get(id)).toMatchObject({
+        lastOrdinal: 1,
+        runFrom: 1,
+        phase: "catching-up",
+      });
+
+      release();
+      await rerun;
+      expect(processorManager.get(id)).toMatchObject({
+        lastOrdinal: 3,
+        runFrom: 3,
+        phase: "live",
+      });
+    });
+
     it("should refuse an ordinal above the cursor", async () => {
       const processor = createMockProcessor();
       const driveId = await seeded(() => [{ processor, filter: {} }]);
@@ -2743,6 +2783,9 @@ describe("ProcessorManager Standalone Tests", () => {
         lastError: "down",
       });
       await vi.waitFor(() => expect(first.onDisconnect).toHaveBeenCalled());
+      const owed = processorManager.get(`f:${driveId}:0`)!;
+      expect(owed).toMatchObject({ status: "errored", phase: "errored" });
+      expect(owed.runFrom).toBe(owed.lastOrdinal);
 
       const second = createMockProcessor();
       const headers: string[] = [];

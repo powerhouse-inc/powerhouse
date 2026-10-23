@@ -5,6 +5,7 @@ import {
 import type {
   IProcessor,
   ProcessorFilter,
+  ProcessorPhase,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
@@ -16,12 +17,20 @@ export type ProcessorCursorState = Pick<
   "lastOrdinal" | "status" | "lastError" | "lastErrorTimestamp"
 >;
 
+/** Where the current replay began and the phase it leaves the processor in. */
+export type ProcessorProgressState = {
+  runFrom: number;
+  phase: ProcessorPhase;
+};
+
 export type ProcessorQueueOptions = {
   processorId: string;
   processor: IProcessor;
   filter: ProcessorFilter;
   /** Mutated in place: the tracked processor the manager exposes. */
   cursor: ProcessorCursorState;
+  /** Mutated in place, like `cursor`. */
+  progress: ProcessorProgressState;
   /** Ordinals at or below this are never delivered. */
   floor: number;
   readSince: (ordinal: number) => Promise<PagedResults<OperationWithContext>>;
@@ -272,11 +281,13 @@ export class ProcessorQueue {
   ): Promise<void> {
     if (this.closed) return Promise.resolve();
     this.replaysAhead++;
+    this.syncProgress();
     return this.enqueue(kind, async () => {
       try {
         await run();
       } finally {
         this.replaysAhead--;
+        this.syncProgress();
       }
     });
   }
@@ -522,6 +533,7 @@ export class ProcessorQueue {
   private async runBackfill(): Promise<void> {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
+    this.options.progress.runFrom = cursor.lastOrdinal;
 
     let page: PagedResults<OperationWithContext>;
     try {
@@ -627,6 +639,15 @@ export class ProcessorQueue {
     cursor.status = "errored";
     cursor.lastError = errorMessage(error);
     cursor.lastErrorTimestamp = new Date();
+    this.syncProgress();
+  }
+
+  // Outside a replay the run start follows the cursor, so a live processor reads as done.
+  private syncProgress(): void {
+    const { cursor, progress } = this.options;
+    if (cursor.status === "errored") progress.phase = "errored";
+    else progress.phase = this.replaysAhead > 0 ? "catching-up" : "live";
+    if (this.replaysAhead === 0) progress.runFrom = cursor.lastOrdinal;
   }
 
   private async raiseCursor(through: number): Promise<void> {
@@ -646,6 +667,7 @@ export class ProcessorQueue {
   }
 
   private async persist(): Promise<void> {
+    this.syncProgress();
     if (this.closed) return;
     const { cursor } = this.options;
     try {

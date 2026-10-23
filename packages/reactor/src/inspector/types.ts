@@ -1,4 +1,5 @@
 import type {
+  ProcessorPhase,
   ProcessorRerunOptions,
   ProcessorStatus,
 } from "@powerhousedao/shared/processors";
@@ -149,6 +150,9 @@ export type InspectorProcessorInfo = {
   floor: number;
   /** Whether a rerun can clear what it derived first. */
   clearable: boolean;
+  /** The cursor as the current replay began; `lastOrdinal` once live. */
+  runFrom: number;
+  phase: ProcessorPhase;
 };
 
 /** The in-memory queue's debugging surface; not part of `IQueue`. */
