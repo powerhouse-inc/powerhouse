@@ -55,5 +55,8 @@ describe("booting the API", () => {
     expect(api.port).toBeGreaterThan(0);
     const health = await fetch(`http://localhost:${api.port}/health`);
     expect(health.status).toBe(200);
+    expect(api.httpRoutes.scopeFor("document-model").baseUrl).toBe(
+      `http://localhost:${api.port}/api/document-model`,
+    );
   });
 });
