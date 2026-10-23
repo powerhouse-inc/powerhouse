@@ -9,16 +9,7 @@ import type {
   RemoteOperation,
   RemoteOperationResultPage,
 } from "./types.js";
-import type {
-  DocumentModelModule,
-  ProtocolVersions,
-  SignaturePolicy,
-} from "@powerhousedao/shared/document-model";
 import type { ActionInput } from "../graphql/gen/schema.js";
-import {
-  readCreateProtocolVersions,
-  readCreateSignaturePolicy,
-} from "../graphql-client/create-defaults.js";
 
 /**
  * Thin facade over the GraphQL SDK for remote document operations.
@@ -358,24 +349,6 @@ export class RemoteClient implements IRemoteClient {
       parentIdentifier: parentIdentifier ?? null,
     });
     return result.createDocument;
-  }
-
-  /** See {@link readCreateSignaturePolicy}. */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return readCreateSignaturePolicy(this.client);
-  }
-
-  /** See {@link readCreateProtocolVersions}. */
-  getCreateProtocolVersions(
-    documentType: string,
-    parentIdentifier: string | undefined,
-    modules: readonly DocumentModelModule[],
-  ): Promise<ProtocolVersions> {
-    return readCreateProtocolVersions(
-      this.client,
-      { documentType, parentIdentifier },
-      modules,
-    );
   }
 
   /** Create an empty document of a given type on the remote. */

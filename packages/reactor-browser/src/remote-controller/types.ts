@@ -1,13 +1,10 @@
 import type {
   Action,
-  DocumentModelModule,
   DocumentOperations,
   ISigner,
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
-  ProtocolVersions,
-  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import type { ActionInput } from "../graphql/gen/schema.js";
 import type {
@@ -170,16 +167,6 @@ export interface IRemoteClient {
     documentType: string,
     parentIdentifier?: string,
   ): Promise<RemoteDocumentData>;
-
-  /** The host's signature policy for a new document. */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
-
-  /** The host's versions for a new document of `documentType`, fitted to `modules`. */
-  getCreateProtocolVersions(
-    documentType: string,
-    parentIdentifier: string | undefined,
-    modules: readonly DocumentModelModule[],
-  ): Promise<ProtocolVersions>;
 
   deleteDocument(
     identifier: string,

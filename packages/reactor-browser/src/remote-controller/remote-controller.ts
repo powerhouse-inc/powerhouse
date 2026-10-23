@@ -18,6 +18,10 @@ import {
   undoRedoTargetsOf,
 } from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
+import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "../graphql-client/create-defaults.js";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
 import type {
@@ -334,10 +338,13 @@ export class RemoteDocumentController<
   private async headNewDocument(): Promise<void> {
     const module = this.inner.module;
     const [policy, versions] = await Promise.all([
-      this.remoteClient.getCreateSignaturePolicy(),
-      this.remoteClient.getCreateProtocolVersions(
-        this.inner.header.documentType,
-        this.options.parentIdentifier,
+      readCreateSignaturePolicy(this.options.client),
+      readCreateProtocolVersions(
+        this.options.client,
+        {
+          documentType: this.inner.header.documentType,
+          parentIdentifier: this.options.parentIdentifier,
+        },
         [module],
       ),
     ]);

@@ -21,7 +21,7 @@ const SOURCE = /\.(ts|tsx|mts)$/;
 const NOT_PRODUCTION = /\.(test|spec|stories|d)\.(ts|tsx|mts)$/;
 
 /** Asking for a new document's versions: selection itself, or delegating it. */
-const SELECTS = /\bgetCreateProtocolVersions\(/;
+const SELECTS = /\b(?:getCreateProtocolVersions|readCreateProtocolVersions)\(/;
 
 /** Why each file may ask; anywhere else, build the header with newDocument. */
 const ALLOWED = new Map<string, string>([
@@ -40,6 +40,14 @@ const ALLOWED = new Map<string, string>([
   [
     "packages/reactor-browser/src/graphql-client/graphql-reactor-client.ts",
     "newDocument",
+  ],
+  [
+    "packages/reactor-browser/src/graphql-client/create-defaults.ts",
+    "the light client's selection",
+  ],
+  [
+    "packages/reactor-browser/src/remote-controller/remote-controller.ts",
+    "heads a new document as newDocument does",
   ],
   [
     "packages/connect-core/src/runtime/graphql-routable-backend.ts",
