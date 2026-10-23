@@ -182,7 +182,12 @@ export class ProcessorQueue {
     return this.replaysAhead > 0;
   }
 
-  /** Resolves at once behind a replay, so a pass never waits out a backfill. */
+  /**
+   * Resolves at once behind a replay, so a pass never waits out a backfill.
+   * Batches queued behind it wait in memory until it ends, which at level 0
+   * is until the level rises; they are kept, not folded into the replay, so
+   * each still arrives once and in order.
+   */
   live(ops: OperationWithContext[], check?: LiveCheck): Promise<void> {
     const delivered = this.push((done) => ({ kind: "live", ops, check, done }));
     return this.replaysAhead > 0 ? Promise.resolve() : delivered;
@@ -558,19 +563,23 @@ export class ProcessorQueue {
     const { cursor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
-    const release = await slots.acquire(this.closing.signal);
+    // Replaced when the scan gives its slot back between pages.
+    const slot = { release: await slots.acquire(this.closing.signal) };
     if (this.closed) {
-      release();
+      slot.release();
       return;
     }
     try {
-      await this.scanBackfill();
+      await this.scanBackfill(slots, slot);
     } finally {
-      release();
+      slot.release();
     }
   }
 
-  private async scanBackfill(): Promise<void> {
+  private async scanBackfill(
+    slots: IBackfillSlots,
+    slot: { release: () => void },
+  ): Promise<void> {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
     this.options.progress.runFrom = cursor.lastOrdinal;
@@ -621,6 +630,13 @@ export class ProcessorQueue {
       // Re-read from where this page ended, so a new page size applies now.
       const scanned = highestOf(page.results);
       await betweenPages(this.closing.signal);
+      if (this.closed) return;
+      // After a lower, scans over the new count queue again for a slot.
+      if (slots.oversubscribed()) {
+        slot.release();
+        slot.release = await slots.acquire(this.closing.signal);
+        if (this.closed) return;
+      }
       try {
         page = await this.options.readSince(scanned, pageSize());
       } catch (error) {

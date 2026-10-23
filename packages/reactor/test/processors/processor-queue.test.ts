@@ -603,6 +603,89 @@ describe("ProcessorQueue", () => {
       expect(delivered).toEqual([[1, 2]]);
     });
 
+    // Three scans of `count` each, all inside their first page's delivery.
+    async function threeScansMidPage(priority: CatchUpPriority, count: number) {
+      const gate = deferred();
+      let entered = 0;
+      const scans = [0, 1, 2].map(() => {
+        const scan = harness({
+          readSince: limitedIndex(many(count), []),
+          ...paced(priority),
+          onOperations: async () => {
+            if (scan.delivered.length > 0) return;
+            entered++;
+            await gate.promise;
+          },
+        });
+        return scan;
+      });
+      const done = scans.map((scan) => scan.queue.backfill());
+      await vi.waitFor(() => expect(entered).toBe(3));
+      return { scans, done, release: () => gate.resolve() };
+    }
+
+    it("takes slots back from running scans when the level drops", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 4 });
+      const { scans, done, release } = await threeScansMidPage(priority, 2000);
+
+      priority.set({ mode: "fixed", level: 1 });
+      release();
+      await vi.waitFor(() => expect(priority.slots.waiters).toBe(2));
+      expect(priority.slots.inUse).toBe(1);
+      const pagesAt = () => scans.map((scan) => scan.delivered.length);
+      const before = pagesAt();
+      await vi.waitFor(() =>
+        expect(pagesAt().reduce((a, b) => a + b)).toBeGreaterThanOrEqual(
+          before.reduce((a, b) => a + b) + 3,
+        ),
+      );
+      const moved = pagesAt().filter((pages, i) => pages > before[i]!);
+      expect(moved).toHaveLength(1);
+
+      priority.set({ mode: "fixed", level: 7 });
+      await Promise.all(done);
+      for (const scan of scans) expect(scan.cursor.lastOrdinal).toBe(2000);
+      expect(priority.slots.inUse).toBe(0);
+    });
+
+    it("resumes one scan of three when level 0 rises to 1", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 4 });
+      const { scans, done, release } = await threeScansMidPage(priority, 1000);
+
+      priority.set({ mode: "fixed", level: 0 });
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(scans.map((scan) => scan.delivered.length)).toEqual([1, 1, 1]);
+      expect(priority.slots.inUse).toBe(3);
+
+      priority.set({ mode: "fixed", level: 1 });
+      await vi.waitFor(() => expect(priority.slots.waiters).toBe(2));
+      expect(priority.slots.inUse).toBe(1);
+
+      priority.set({ mode: "fixed", level: 7 });
+      await Promise.all(done);
+      for (const scan of scans) expect(scan.cursor.lastOrdinal).toBe(1000);
+    });
+
+    it("reads no further page once closed during the pause", async () => {
+      const reads: number[] = [];
+      let close!: () => void;
+      const { queue, delivered } = harness({
+        readSince: limitedIndex(many(300), reads),
+        pageSize: () => 100,
+        betweenPages: () => {
+          close();
+          return Promise.resolve();
+        },
+      });
+      close = () => void queue.close();
+
+      await queue.backfill();
+
+      expect(reads).toEqual([100]);
+      expect(delivered).toEqual([Array.from({ length: 100 }, (_, i) => i + 1)]);
+    });
+
     it("lets a closing queue leave a level-0 wait", async () => {
       const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
       const { queue, delivered } = harness({

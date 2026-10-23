@@ -5,6 +5,8 @@ export interface IBackfillSlots {
    * `cancel` aborts first, the wait ends with a no-op release and no slot.
    */
   acquire(cancel?: AbortSignal): Promise<() => void>;
+  /** True while more slots are held than the size allows, after a lower. */
+  oversubscribed(): boolean;
 }
 
 /** Backfills beyond this wait for a slot, so live reads keep reaching the store. */
@@ -23,7 +25,8 @@ function assertSize(size: number): void {
 /**
  * A FIFO counting semaphore whose size can change. A raise hands slots to
  * waiters at once; a lower lets holders keep theirs until they release, so new
- * acquires wait. At size 0 nothing acquires.
+ * acquires wait, and `oversubscribed` tells holders to give theirs back. At
+ * size 0 nothing acquires.
  */
 export class BackfillSlots implements IBackfillSlots {
   private limit: number;
@@ -45,6 +48,10 @@ export class BackfillSlots implements IBackfillSlots {
 
   get waiters(): number {
     return this.waiting.length;
+  }
+
+  oversubscribed(): boolean {
+    return this.held > this.limit;
   }
 
   acquire(cancel?: AbortSignal): Promise<() => void> {
@@ -97,6 +104,7 @@ export class BackfillSlots implements IBackfillSlots {
 /** No limit: every backfill gets a slot at once. */
 export const UNLIMITED_BACKFILL_SLOTS: IBackfillSlots = {
   acquire: () => Promise.resolve(() => {}),
+  oversubscribed: () => false,
 };
 
 // Captured at load, so a test that fakes timers cannot freeze a backfill.
