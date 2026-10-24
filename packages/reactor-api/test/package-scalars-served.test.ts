@@ -737,7 +737,11 @@ describe("a registered scalar in the Apollo federation supergraph", () => {
     const { edit } = await servePackage(
       host,
       { Iban },
-      coreSubgraphClasses({ inspection: false, documentPermissions: true }),
+      coreSubgraphClasses({
+        inspection: false,
+        inspectionAdmin: false,
+        documentPermissions: true,
+      }),
     );
 
     for (const path of [
@@ -890,7 +894,11 @@ describe("a registered scalar named like a host subgraph's type", () => {
     const host = makeHost(logger);
     shutdown = () => host.manager.shutdown();
     await host.manager.init(
-      coreSubgraphClasses({ inspection: false, documentPermissions: true }),
+      coreSubgraphClasses({
+        inspection: false,
+        inspectionAdmin: false,
+        documentPermissions: true,
+      }),
       undefined,
       undefined,
       registryOf({ PHDocument }),

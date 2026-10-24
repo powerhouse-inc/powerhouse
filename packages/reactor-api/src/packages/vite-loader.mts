@@ -454,6 +454,7 @@ export async function startViteServer(root: string, logger?: Logger) {
       middlewareMode: true,
       // It loads modules, never serves a page: no HMR port to collide on.
       hmr: false,
+      ws: false,
       watch: { ignored: ["**/.ph/**"] },
     },
     appType: "custom",
