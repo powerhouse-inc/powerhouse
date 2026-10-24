@@ -1,3 +1,34 @@
+## 6.2.3-dev.75 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **switchboard,reactor-api:** honor PH_NO_DOTENV at import-time dotenv sites ([9d451ce0d0](https://github.com/powerhouse-inc/powerhouse/commit/9d451ce0d0))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+- **switchboard:** run PGlite stores in worker threads by default ([ee8a84ff4d](https://github.com/powerhouse-inc/powerhouse/commit/ee8a84ff4d))
+- **reactor-api,switchboard:** a deferred VACUUM FULL runs once overdue, and both timings are configurable ([0d083c8745](https://github.com/powerhouse-inc/powerhouse/commit/0d083c8745))
+- **switchboard:** open reactor-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([06a1916860](https://github.com/powerhouse-inc/powerhouse/commit/06a1916860))
+- **switchboard:** open read-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([0e0917a3d8](https://github.com/powerhouse-inc/powerhouse/commit/0e0917a3d8))
+- **reactor-api,switchboard:** accept a PGlite stand-in wherever the stores take a PGlite ([f1c7754d57](https://github.com/powerhouse-inc/powerhouse/commit/f1c7754d57))
+- **ph-cli,switchboard:** a catch-up progress display, and the inspector on the switchboard handle ([96ca0d3c29](https://github.com/powerhouse-inc/powerhouse/commit/96ca0d3c29))
+
+### 🩹 Fixes
+
+- **switchboard,ph-cli:** checkBoot shares the server's boot inputs; ./boot leaves process.env alone ([c613c635bc](https://github.com/powerhouse-inc/powerhouse/commit/c613c635bc))
+- **switchboard:** renown key storage stays out of cwd under an explicit keypair path ([d3d5d527c6](https://github.com/powerhouse-inc/powerhouse/commit/d3d5d527c6))
+- **switchboard:** renown user storage follows PH_USER_DATA_DIR ([18b7914617](https://github.com/powerhouse-inc/powerhouse/commit/18b7914617))
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.74 (2026-10-24)
 
 ### 🚀 Features

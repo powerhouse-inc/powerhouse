@@ -1,3 +1,34 @@
+## 6.2.3-dev.75 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **switchboard,reactor-api:** honor PH_NO_DOTENV at import-time dotenv sites ([9d451ce0d0](https://github.com/powerhouse-inc/powerhouse/commit/9d451ce0d0))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+- **reactor-api:** serve the catch-up priority and record request load ([d3e585b4e1](https://github.com/powerhouse-inc/powerhouse/commit/d3e585b4e1))
+- **reactor-api,switchboard:** a deferred VACUUM FULL runs once overdue, and both timings are configurable ([0d083c8745](https://github.com/powerhouse-inc/powerhouse/commit/0d083c8745))
+- **reactor-api,switchboard:** accept a PGlite stand-in wherever the stores take a PGlite ([f1c7754d57](https://github.com/powerhouse-inc/powerhouse/commit/f1c7754d57))
+- **reactor-api:** run a PGlite store in a worker thread behind a PGlite stand-in ([33b47c16e7](https://github.com/powerhouse-inc/powerhouse/commit/33b47c16e7))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+- **reactor,reactor-api,reactor-monitor:** rerun a processor, cleared or from an ordinal ([279342d614](https://github.com/powerhouse-inc/powerhouse/commit/279342d614))
+
+### 🩹 Fixes
+
+- **reactor-api:** bound the request load window and count aborted requests ([95c1290601](https://github.com/powerhouse-inc/powerhouse/commit/95c1290601))
+- **builder-tools,reactor-api:** the dev watchers skip the project's build output ([1542321847](https://github.com/powerhouse-inc/powerhouse/commit/1542321847))
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **reactor-api:** admit worker statements only when the worker can start them ([141b7fd688](https://github.com/powerhouse-inc/powerhouse/commit/141b7fd688))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.74 (2026-10-24)
 
 ### 🚀 Features

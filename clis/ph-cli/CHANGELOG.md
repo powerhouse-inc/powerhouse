@@ -1,3 +1,36 @@
+## 6.2.3-dev.75 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **ph-cli:** switchboard runner checkBoot from a pure env projection ([8340a3410a](https://github.com/powerhouse-inc/powerhouse/commit/8340a3410a))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **ph-cli:** show the catch-up priority with the progress bars ([6f37c09e61](https://github.com/powerhouse-inc/powerhouse/commit/6f37c09e61))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **ph-cli:** show processor and read-model catch-up as progress bars ([c3e82f7a0b](https://github.com/powerhouse-inc/powerhouse/commit/c3e82f7a0b))
+- **ph-cli,switchboard:** a catch-up progress display, and the inspector on the switchboard handle ([96ca0d3c29](https://github.com/powerhouse-inc/powerhouse/commit/96ca0d3c29))
+
+### 🩹 Fixes
+
+- **ph-cli,ph-cmd,shared:** ph host check takes --env, resolved against the caller's cwd ([fbd0b75abb](https://github.com/powerhouse-inc/powerhouse/commit/fbd0b75abb))
+- **switchboard,ph-cli:** checkBoot shares the server's boot inputs; ./boot leaves process.env alone ([c613c635bc](https://github.com/powerhouse-inc/powerhouse/commit/c613c635bc))
+- **ph-cli:** ph host check sets the exit code instead of exiting ([dd7f3c801e](https://github.com/powerhouse-inc/powerhouse/commit/dd7f3c801e))
+- **ph-cli,shared:** ph migrate with no version stays on the project's release channel ([d8a8d9813a](https://github.com/powerhouse-inc/powerhouse/commit/d8a8d9813a))
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+- **ph-cli:** keep the catch-up priority line short of the last column ([dd2ed06069](https://github.com/powerhouse-inc/powerhouse/commit/dd2ed06069))
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.74 (2026-10-24)
 
 ### 🚀 Features
