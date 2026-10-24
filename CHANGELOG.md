@@ -1,3 +1,42 @@
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **host-core:** run-record readers take an env for the .ph root ([12ccd0390e](https://github.com/powerhouse-inc/powerhouse/commit/12ccd0390e))
+- **host-core:** spawnHost launches ph run with a clean env and waits for the run record ([9be2cbd150](https://github.com/powerhouse-inc/powerhouse/commit/9be2cbd150))
+- **host-core:** checkHost collects issues across load/declared/resolve/resolved/boot; checkBoot runner hook ([e20a460122](https://github.com/powerhouse-inc/powerhouse/commit/e20a460122))
+- **host-core:** spawnHost launches ph run hosts with a clean env ([#3286](https://github.com/powerhouse-inc/powerhouse/pull/3286))
+- **host-core:** checkHost and ph host check ([#3287](https://github.com/powerhouse-inc/powerhouse/pull/3287))
+- **ph-cli:** switchboard runner checkBoot from a pure env projection ([8340a3410a](https://github.com/powerhouse-inc/powerhouse/commit/8340a3410a))
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **shared:** skip project .env loading under PH_NO_DOTENV ([c755409fad](https://github.com/powerhouse-inc/powerhouse/commit/c755409fad))
+- **switchboard,reactor-api:** honor PH_NO_DOTENV at import-time dotenv sites ([9d451ce0d0](https://github.com/powerhouse-inc/powerhouse/commit/9d451ce0d0))
+
+### 🩹 Fixes
+
+- **codegen:** the subgraphs index finds subgraph classes by their extends text ([bda1d74ee9](https://github.com/powerhouse-inc/powerhouse/commit/bda1d74ee9))
+- **codegen:** migrate and generate --all only regenerate folders under processors/ that hold a processor ([2aecde65ed](https://github.com/powerhouse-inc/powerhouse/commit/2aecde65ed))
+- **codegen:** migrate keeps the project's tsconfig, oxlint and vitest excludes ([637f4aa49f](https://github.com/powerhouse-inc/powerhouse/commit/637f4aa49f))
+- **host-core:** spawnHost closes its log after the last chunk and survives a log error ([47ff82d98a](https://github.com/powerhouse-inc/powerhouse/commit/47ff82d98a))
+- **host-core:** a spawnHost child no longer outlives its launcher ([19d9f3f51c](https://github.com/powerhouse-inc/powerhouse/commit/19d9f3f51c))
+- **host-core:** checkHost resolved-stage tests, bracket paths, shared builtins and start verb ([4b00b54348](https://github.com/powerhouse-inc/powerhouse/commit/4b00b54348))
+- **ph-cli:** ph host check sets the exit code instead of exiting ([dd7f3c801e](https://github.com/powerhouse-inc/powerhouse/commit/dd7f3c801e))
+- **ph-cli,ph-cmd,shared:** ph host check takes --env, resolved against the caller's cwd ([fbd0b75abb](https://github.com/powerhouse-inc/powerhouse/commit/fbd0b75abb))
+- **ph-cli,shared:** ph migrate with no version stays on the project's release channel ([d8a8d9813a](https://github.com/powerhouse-inc/powerhouse/commit/d8a8d9813a))
+- **reactor,reactor-browser:** documents read from a reactor carry an empty operation list per scope ([e90ca68bb8](https://github.com/powerhouse-inc/powerhouse/commit/e90ca68bb8))
+- **reactor-browser:** dispatch's onErrors gets an OperationRejectedError for each rejected action in every reactor mode ([be1b8a6768](https://github.com/powerhouse-inc/powerhouse/commit/be1b8a6768))
+- **switchboard:** renown user storage follows PH_USER_DATA_DIR ([18b7914617](https://github.com/powerhouse-inc/powerhouse/commit/18b7914617))
+- **switchboard:** renown key storage stays out of cwd under an explicit keypair path ([d3d5d527c6](https://github.com/powerhouse-inc/powerhouse/commit/d3d5d527c6))
+- **switchboard,ph-cli:** checkBoot shares the server's boot inputs; ./boot leaves process.env alone ([c613c635bc](https://github.com/powerhouse-inc/powerhouse/commit/c613c635bc))
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.73 (2026-10-23)
 
 ### 🚀 Features

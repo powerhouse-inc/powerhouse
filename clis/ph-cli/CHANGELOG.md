@@ -1,3 +1,25 @@
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **ph-cli:** switchboard runner checkBoot from a pure env projection ([8340a3410a](https://github.com/powerhouse-inc/powerhouse/commit/8340a3410a))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **ph-cli,ph-cmd,shared:** ph host check takes --env, resolved against the caller's cwd ([fbd0b75abb](https://github.com/powerhouse-inc/powerhouse/commit/fbd0b75abb))
+- **switchboard,ph-cli:** checkBoot shares the server's boot inputs; ./boot leaves process.env alone ([c613c635bc](https://github.com/powerhouse-inc/powerhouse/commit/c613c635bc))
+- **ph-cli:** ph host check sets the exit code instead of exiting ([dd7f3c801e](https://github.com/powerhouse-inc/powerhouse/commit/dd7f3c801e))
+- **ph-cli,shared:** ph migrate with no version stays on the project's release channel ([d8a8d9813a](https://github.com/powerhouse-inc/powerhouse/commit/d8a8d9813a))
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.73 (2026-10-23)
 
 ### 🩹 Fixes
