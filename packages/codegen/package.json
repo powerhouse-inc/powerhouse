@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.2.3-dev.72",
+  "version": "6.2.3-dev.74",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -58,6 +58,7 @@
     "load-json-file": "^7.0.1",
     "npm-registry-fetch": "^19.1.1",
     "oxfmt": "catalog:",
+    "postcss": "^8.5.29",
     "read-pkg": "catalog:",
     "remeda": "catalog:",
     "ts-morph": "catalog:",

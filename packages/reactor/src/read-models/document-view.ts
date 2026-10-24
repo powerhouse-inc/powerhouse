@@ -1,4 +1,5 @@
 import type {
+  DocumentOperations,
   OperationWithContext,
   PHAuthState,
   PHDocument,
@@ -41,6 +42,21 @@ import type {
 } from "./types.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;
+
+/**
+ * A snapshot carries no operation history: each scope the document has maps
+ * to an empty list, so `operations[scope]` is an array as the type says.
+ */
+function emptyOperations(
+  state: Record<string, unknown>,
+  header: PHDocumentHeader,
+): DocumentOperations {
+  const scopes = new Set([
+    ...Object.keys(state),
+    ...Object.keys(header.revision),
+  ]);
+  return Object.fromEntries([...scopes].map((scope) => [scope, []]));
+}
 
 /** JSON.stringify writes a lone surrogate as an escape, or leaves it raw. */
 const LONE_SURROGATE_ESCAPE = /\\u[dD][89a-fA-F][0-9a-fA-F]{2}/;
@@ -203,6 +219,15 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             operationType !== "DELETE_DOCUMENT" &&
             scope !== "header");
 
+        // Likewise for `name`: SET_NAME is a global op, so only SET_NAME,
+        // global ops and CREATE/UPGRADE echo the current name.
+        const preserveHeaderName =
+          denied ||
+          (operationType !== "CREATE_DOCUMENT" &&
+            operationType !== "UPGRADE_DOCUMENT" &&
+            operationType !== "SET_NAME" &&
+            scope !== "global");
+
         if (operationType === "DELETE_DOCUMENT" && !denied) {
           const now = new Date();
           await trx
@@ -312,7 +337,8 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           // write pay to decompress and ship a copy of the state it was about
           // to overwrite.
           const needsExistingContent =
-            scopeName === "header" && preserveHeaderMeta;
+            scopeName === "header" &&
+            (preserveHeaderMeta || preserveHeaderName);
 
           const existingSnapshot = await trx
             .selectFrom("DocumentSnapshot")
@@ -349,7 +375,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             if (typeof headerSlug === "string") {
               slug = headerSlug;
             }
-            if (typeof headerName === "string") {
+            if (typeof headerName === "string" && !preserveHeaderName) {
               name = headerName;
             }
 
@@ -358,8 +384,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
                 string,
                 unknown
               >;
-              if (existingHeader && "meta" in existingHeader) {
+              if (preserveHeaderMeta && "meta" in existingHeader) {
                 newState.meta = existingHeader.meta;
+              }
+              if (preserveHeaderName && "name" in existingHeader) {
+                newState.name = existingHeader.name;
               }
             }
 
@@ -546,7 +575,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       header,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
-      operations: {},
+      operations: emptyOperations(state, header),
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       initialState: state as any,
       clipboard: [],
@@ -657,7 +686,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         header,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         state: state as any,
-        operations: {},
+        operations: emptyOperations(state, header),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         initialState: state as any,
         clipboard: [],

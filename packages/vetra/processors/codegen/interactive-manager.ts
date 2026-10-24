@@ -44,6 +44,15 @@ export class InteractiveManager {
   }
 
   /**
+   * Drop the queued strands the predicate matches
+   */
+  public discardWhere(predicate: (strand: CodegenInput) => boolean): void {
+    for (const [key, queued] of this.strandQueue) {
+      if (predicate(queued.strand)) this.strandQueue.delete(key);
+    }
+  }
+
+  /**
    * Get all queued strands
    */
   public getQueuedStrands(): QueuedStrand[] {

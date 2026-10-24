@@ -61,7 +61,9 @@ describe("generateEditor", () => {
     );
     expect(editorContent).not.toContain(`useSelectedTestDocDocument`);
     expect(editorContent).toContain(`<DocumentToolbar document={document} />`);
-    expect(editorContent).toContain(`dispatch(actions.setName(name));`);
+    expect(editorContent).toContain(
+      `dispatch(actions.setName(name), (errors) => setError(errors[0]?.message));`,
+    );
 
     const modulePath = join(editorDir, "module.ts");
     expect(await fileExists(modulePath)).toBe(true);

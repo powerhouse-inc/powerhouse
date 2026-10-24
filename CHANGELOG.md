@@ -1,3 +1,74 @@
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **host-core:** run-record readers take an env for the .ph root ([12ccd0390e](https://github.com/powerhouse-inc/powerhouse/commit/12ccd0390e))
+- **host-core:** spawnHost launches ph run with a clean env and waits for the run record ([9be2cbd150](https://github.com/powerhouse-inc/powerhouse/commit/9be2cbd150))
+- **host-core:** checkHost collects issues across load/declared/resolve/resolved/boot; checkBoot runner hook ([e20a460122](https://github.com/powerhouse-inc/powerhouse/commit/e20a460122))
+- **host-core:** spawnHost launches ph run hosts with a clean env ([#3286](https://github.com/powerhouse-inc/powerhouse/pull/3286))
+- **host-core:** checkHost and ph host check ([#3287](https://github.com/powerhouse-inc/powerhouse/pull/3287))
+- **ph-cli:** switchboard runner checkBoot from a pure env projection ([8340a3410a](https://github.com/powerhouse-inc/powerhouse/commit/8340a3410a))
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **shared:** skip project .env loading under PH_NO_DOTENV ([c755409fad](https://github.com/powerhouse-inc/powerhouse/commit/c755409fad))
+- **switchboard,reactor-api:** honor PH_NO_DOTENV at import-time dotenv sites ([9d451ce0d0](https://github.com/powerhouse-inc/powerhouse/commit/9d451ce0d0))
+
+### 🩹 Fixes
+
+- **codegen:** the subgraphs index finds subgraph classes by their extends text ([bda1d74ee9](https://github.com/powerhouse-inc/powerhouse/commit/bda1d74ee9))
+- **codegen:** migrate and generate --all only regenerate folders under processors/ that hold a processor ([2aecde65ed](https://github.com/powerhouse-inc/powerhouse/commit/2aecde65ed))
+- **codegen:** migrate keeps the project's tsconfig, oxlint and vitest excludes ([637f4aa49f](https://github.com/powerhouse-inc/powerhouse/commit/637f4aa49f))
+- **host-core:** spawnHost closes its log after the last chunk and survives a log error ([47ff82d98a](https://github.com/powerhouse-inc/powerhouse/commit/47ff82d98a))
+- **host-core:** a spawnHost child no longer outlives its launcher ([19d9f3f51c](https://github.com/powerhouse-inc/powerhouse/commit/19d9f3f51c))
+- **host-core:** checkHost resolved-stage tests, bracket paths, shared builtins and start verb ([4b00b54348](https://github.com/powerhouse-inc/powerhouse/commit/4b00b54348))
+- **ph-cli:** ph host check sets the exit code instead of exiting ([dd7f3c801e](https://github.com/powerhouse-inc/powerhouse/commit/dd7f3c801e))
+- **ph-cli,ph-cmd,shared:** ph host check takes --env, resolved against the caller's cwd ([fbd0b75abb](https://github.com/powerhouse-inc/powerhouse/commit/fbd0b75abb))
+- **ph-cli,shared:** ph migrate with no version stays on the project's release channel ([d8a8d9813a](https://github.com/powerhouse-inc/powerhouse/commit/d8a8d9813a))
+- **reactor,reactor-browser:** documents read from a reactor carry an empty operation list per scope ([e90ca68bb8](https://github.com/powerhouse-inc/powerhouse/commit/e90ca68bb8))
+- **reactor-browser:** dispatch's onErrors gets an OperationRejectedError for each rejected action in every reactor mode ([be1b8a6768](https://github.com/powerhouse-inc/powerhouse/commit/be1b8a6768))
+- **switchboard:** renown user storage follows PH_USER_DATA_DIR ([18b7914617](https://github.com/powerhouse-inc/powerhouse/commit/18b7914617))
+- **switchboard:** renown key storage stays out of cwd under an explicit keypair path ([d3d5d527c6](https://github.com/powerhouse-inc/powerhouse/commit/d3d5d527c6))
+- **switchboard,ph-cli:** checkBoot shares the server's boot inputs; ./boot leaves process.env alone ([c613c635bc](https://github.com/powerhouse-inc/powerhouse/commit/c613c635bc))
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🚀 Features
+
+- **connect:** in dev the reactor worker takes the shared deps from the page's import map ([ddd7bfab2d](https://github.com/powerhouse-inc/powerhouse/commit/ddd7bfab2d))
+- **reactor,reactor-api,reactor-monitor:** rerun a processor, cleared or from an ordinal ([279342d614](https://github.com/powerhouse-inc/powerhouse/commit/279342d614))
+- **reactor-monitor-app:** paste an admin bearer into a remote's gate note ([e04afd8e23](https://github.com/powerhouse-inc/powerhouse/commit/e04afd8e23))
+- **reactor-monitor-app:** keep a remote's bearer for the tab's session ([ebc3e715b3](https://github.com/powerhouse-inc/powerhouse/commit/ebc3e715b3))
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **reactor:** document view keeps the name when a non-global op echoes a stale header ([25f7e91726](https://github.com/powerhouse-inc/powerhouse/commit/25f7e91726))
+- **reactor:** a create job that can't load its model fails with the loader's reason ([958631d53d](https://github.com/powerhouse-inc/powerhouse/commit/958631d53d))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **reactor-mcp:** addActions accepts document-model base actions in their scope ([b9a718baeb](https://github.com/powerhouse-inc/powerhouse/commit/b9a718baeb))
+- **reactor-mcp:** addDrive sets the drive name in the global state too ([2c700d6312](https://github.com/powerhouse-inc/powerhouse/commit/2c700d6312))
+- **reactor-mcp:** addDrive keeps the name when a preferred editor is set ([fc867a14a1](https://github.com/powerhouse-inc/powerhouse/commit/fc867a14a1))
+- **reactor-mcp:** getDocument accepts the id as documentId too ([18fb0fc73f](https://github.com/powerhouse-inc/powerhouse/commit/18fb0fc73f))
+- **reactor-monitor-app:** a remote restored from a saved set takes a pasted bearer ([1630dc21bf](https://github.com/powerhouse-inc/powerhouse/commit/1630dc21bf))
+- **vetra:** codegen only reacts to the vetra drive's documents and logs a batch once ([63ee8c52d9](https://github.com/powerhouse-inc/powerhouse/commit/63ee8c52d9))
+- **vetra:** codegen checks vetra drive membership by node or child edge when the debounce fires ([8273b738d3](https://github.com/powerhouse-inc/powerhouse/commit/8273b738d3))
+- **vetra:** app module descriptions point at the editors/ folder codegen writes ([b3b3a08ffa](https://github.com/powerhouse-inc/powerhouse/commit/b3b3a08ffa))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.72 (2026-10-23)
 
 ### 🚀 Features

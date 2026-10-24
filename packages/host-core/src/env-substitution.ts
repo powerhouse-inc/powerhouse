@@ -9,7 +9,17 @@ export interface BuiltinEnv {
   projectRoot?: string;
 }
 
-const BUILTIN = /\$\{(userData|projectRoot)\}/g;
+/** The always-resolvable `$env` names (also the `"${name}"` sugar). */
+export const BUILTIN_ENV_NAMES: readonly (keyof BuiltinEnv)[] = [
+  "userData",
+  "projectRoot",
+];
+
+export function isBuiltinEnvName(name: string): name is keyof BuiltinEnv {
+  return (BUILTIN_ENV_NAMES as readonly string[]).includes(name);
+}
+
+const BUILTIN = new RegExp(`\\$\\{(${BUILTIN_ENV_NAMES.join("|")})\\}`, "g");
 
 function substitute(text: string, env: BuiltinEnv): string {
   return text.replace(

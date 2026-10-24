@@ -16,9 +16,12 @@ import {
 } from "@powerhousedao/shared/document-model";
 import {
   getAppMetadata,
+  getEditorDirNames,
   getEditorMetadata,
   getOrCreateDirectory,
+  getProcessorDirNames,
   getProcessorMetadata,
+  getSubgraphDirNames,
   getSubgraphMetadata,
   loadDocumentModelInDir,
 } from "@powerhousedao/codegen/utils";
@@ -59,10 +62,8 @@ import {
 export function extractEditorDocuments(
   project: Project,
 ): DocumentEditorDocument[] {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  return editorsDir
-    .getDirectories()
-    .map((dir) => getEditorMetadata(project, dir.getBaseName()))
+  return getEditorDirNames(project)
+    .map((dirName) => getEditorMetadata(project, dirName))
     .filter(isDefined)
     .filter(
       ({ documentTypes }) =>
@@ -88,10 +89,8 @@ export function extractEditorDocuments(
  * predicate used by `generateAllApps`.
  */
 export function extractAppDocuments(project: Project): AppModuleDocument[] {
-  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  return editorsDir
-    .getDirectories()
-    .map((dir) => getAppMetadata(project, dir.getBaseName()))
+  return getEditorDirNames(project)
+    .map((dirName) => getAppMetadata(project, dirName))
     .filter(isDefined)
     .map(({ name, allowedDocumentTypes, isDragAndDropEnabled }) => {
       const global: AppModuleGlobalState = {
@@ -110,13 +109,8 @@ export function extractAppDocuments(project: Project): AppModuleDocument[] {
 export function extractProcessorDocuments(
   project: Project,
 ): ProcessorModuleDocument[] {
-  const { directory: processorsDir } = getOrCreateDirectory(
-    project,
-    "processors",
-  );
-  return processorsDir
-    .getDirectories()
-    .map((dir) => getProcessorMetadata(project, dir.getBaseName()))
+  return getProcessorDirNames(project)
+    .map((dirName) => getProcessorMetadata(project, dirName))
     .map(({ processorName, processorApps, processorType, documentTypes }) => {
       const global: ProcessorModuleGlobalState = {
         name: processorName,
@@ -139,13 +133,8 @@ export function extractProcessorDocuments(
 export function extractSubgraphDocuments(
   project: Project,
 ): SubgraphModuleDocument[] {
-  const { directory: subgraphsDir } = getOrCreateDirectory(
-    project,
-    "subgraphs",
-  );
-  return subgraphsDir
-    .getDirectories()
-    .map((dir) => getSubgraphMetadata(project, dir.getBaseName()).subgraphName)
+  return getSubgraphDirNames(project)
+    .map((dirName) => getSubgraphMetadata(project, dirName).subgraphName)
     .filter(isDefined)
     .map((name) => {
       const global: SubgraphModuleGlobalState = { name, status: "CONFIRMED" };

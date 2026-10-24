@@ -6,6 +6,7 @@ export default defineConfig({
     "src/index.mts",
     "src/server.mts",
     "src/utils.mts",
+    "src/boot.mts",
     "src/install-packages.mts",
     "src/migrate.mts",
     // R2: the built-in plugins, published as subpaths so host.js runner.plugins

@@ -10,6 +10,7 @@ export {
   primaryBackend,
   projectReactorToConnect,
   projectReactorToSwitchboard,
+  protocolConflicts,
   protocolEnv,
   reactorClientMode,
   type ConnectReactorProjection,

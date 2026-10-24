@@ -9,7 +9,7 @@ This project creates document models, editors, processors and subgraphs for the 
 
 - **Document Model**: A template for creating documents. Defines schema and allowed operations for a document type.
 - **Document**: An instance of a document model containing actual data that follows the model's structure and can be modified using operations.
-- **Drive**: A document of type "powerhouse/document-drive" representing a collection of documents and folders. Add documents using "addActions" with "ADD_FILE" action.
+- **Drive**: A document of type "powerhouse/document-drive" representing a collection of documents and folders. Add a document by creating it with "createDocument" and the drive's id in "driveId".
 - **Action**: A proposed change to a document (JSON object with action name and input). Dispatch using "addActions" tool.
 - **Operation**: A completed change to a document containing the action plus metadata (index, timestamp, hash, errors). Actions become operations after dispatch.
 
@@ -43,12 +43,13 @@ Escalate to the user only when startup actually fails — \`--strictPort\` rejec
 - Add new document model documents to "vetra-{hash}" drive unless specified otherwise
 - Always check document model schema before calling addActions
 - Use MCP tools for ALL document and document-model operations
+- \`getDocument\` takes the document's id as \`id\`; \`addActions\` and \`deleteDocument\` take \`documentId\`
 
 ## Document Model Creation Workflow
 
 ### 1. Planning Phase
 
-**MANDATORY**: Present your proposal to the user and ask for confirmation before implementing ANY document model.
+**MANDATORY in interactive sessions**: Present your proposal to the user and ask for confirmation before implementing ANY document model. In a non-interactive run (no user to answer), state the proposal and proceed.
 
 - **ALWAYS** describe the proposed document model structure (state schema, operations, modules) before creating
 - **NEVER** proceed with implementation without explicit user approval of your proposal
@@ -111,14 +112,14 @@ Then extend scenario tests to hit remaining branches: skip initialization to hit
 
 **NEVER** start by writing editor code, creating component files, or looking at how to scaffold an editor manually. The **only** way to create a new editor is through the MCP tools:
 
-1. Check if the document editor already exists. If it does, ask the user if a new one should be created or if the existing one should be reimplemented
+1. Check if the document editor already exists. If it does, ask the user (in interactive sessions) whether to create a new one or reimplement the existing one
 2. If it's a new editor, get the document editor schema using \`mcp__reactor-mcp__getDocumentModelSchema\` with \`type: "powerhouse/document-editor"\`
-3. Create a new editor document on the \`vetra-{hash}\` drive of type \`powerhouse/document-editor\` using \`mcp__reactor-mcp__addActions\` with the \`ADD_FILE\` action
-4. Configure the editor document with the required actions (set the editor name, target document model, etc.) according to the schema
+3. Create the editor document with \`mcp__reactor-mcp__createDocument\`: \`documentType: "powerhouse/document-editor"\` and \`driveId\` set to the \`vetra-{hash}\` drive. This adds it to the drive in the same step; do not also dispatch \`ADD_FILE\`
+4. Configure it in one \`mcp__reactor-mcp__addActions\` call (scope \`global\`): \`SET_EDITOR_NAME\`, one \`ADD_DOCUMENT_TYPE\` per document type it edits (\`{ id, documentType }\`), then \`SET_EDITOR_STATUS\` with \`{ status: "CONFIRMED" }\`
 
-⚠️ **The editor document MUST be confirmed/published — if it is left as draft state, the codegen will NOT run and no editor files will be generated.** Make sure the document state is not "DRAFT" after creation.
+⚠️ **The editor document MUST be CONFIRMED and have at least one document type — while it is DRAFT, codegen does NOT run and no editor files are generated.**
 
-5. Once the editor document is confirmed on the drive, the codegen automatically runs and generates boilerplate files in the \`editors/\` folder, including hooks, type definitions, and the editor component shell
+5. Once the editor document is confirmed, codegen writes \`editors/<editor-id>/\` (the id is the kebab-cased name) and registers the module in \`editors/editors.ts\`
 
 ### Phase 2: Implement the editor UI
 
@@ -369,6 +370,41 @@ editors/<name>/
     <wrappers bridging document-model types to AI Elements primitives>
 ~~~
 
+## Drive app creation flow
+
+A drive app is the view Connect shows for a drive: an editor module for \`powerhouse/document-drive\`. Create it through MCP, as with editors. Do not use \`ph generate app\` or write the scaffold by hand.
+
+### Phase 1: Create the app document via MCP
+
+1. Check \`editors/\` for an existing app (its \`module.ts\` lists \`powerhouse/document-drive\`). If one exists, ask the user (in interactive sessions) whether to create a new one or reimplement it
+2. Get the app schema with \`mcp__reactor-mcp__getDocumentModelSchema\` and \`type: "powerhouse/app"\`
+3. Create the app document with \`mcp__reactor-mcp__createDocument\`: \`documentType: "powerhouse/app"\` and \`driveId\` set to the \`vetra-{hash}\` drive
+4. Configure it in one \`mcp__reactor-mcp__addActions\` call (scope \`global\`): \`SET_APP_NAME\` (\`{ name }\`), \`SET_DOCUMENT_TYPES\` (\`{ documentTypes: [...] }\`, the types the app holds; an empty list allows every type), then \`SET_APP_STATUS\` with \`{ status: "CONFIRMED" }\`
+
+⚠️ **While the app document is DRAFT, codegen does NOT run.**
+
+5. Codegen writes \`editors/<app-id>/\`, not \`apps/\`. The app id is the kebab-cased name. It also registers the module in \`editors/editors.ts\` and \`powerhouse.manifest.json\`:
+   - \`editor.tsx\`: the app's root
+   - \`components/\`: a folder tree, folder contents and a create button to start from
+   - \`config.ts\`: \`allowedDocumentTypes\` and \`isDragAndDropEnabled\`
+   - \`module.ts\`: the module's id, name and document type
+
+### Phase 2: Implement the app
+
+- Codegen writes the scaffold once. Afterwards it leaves \`editor.tsx\`, \`components/\`, \`config.ts\` and \`module.ts\` alone and only re-registers the module. Edit them freely.
+- Changing the app document's document types later does not update \`config.ts\`. Edit \`allowedDocumentTypes\` there yourself.
+- **Read \`node_modules/@powerhousedao/connect/docs/customizing/drive-apps.md\` before writing code.** It covers the app's props (\`document\` is the drive, \`children\` is the open document's editor or \`null\`), the \`@powerhousedao/reactor-browser\` hooks for folders, nodes and navigation, and how a drive gets its app.
+
+### Attaching an app to a drive
+
+A drive shows the app its \`header.meta.preferredEditor\` names. Without one, Connect shows its generic Drive Explorer.
+
+- **New drive in Connect:** the Create Drive dialog's "Drive App" picker. Package apps are listed first.
+- **New drive via MCP:** \`mcp__reactor-mcp__addDrive\` with \`driveInput.preferredEditor: "<app-id>"\`.
+- **A drive every user gets:** a local entry in \`connect.drives.defaultDrives\` in \`powerhouse.config.json\`: \`{ "local": true, "id": "my-drive", "name": "My Drive", "app": "<app-id>" }\`. Connect creates it on first boot, once per id.
+- **Existing drive via MCP:** \`mcp__reactor-mcp__addActions\` on the drive with \`{ "type": "SET_PREFERRED_EDITOR", "scope": "header", "input": { "preferredEditor": "<app-id>" } }\`. If \`addActions\` rejects it as an invalid action, this reactor-mcp predates base-action support: create a new drive with the app instead.
+- **Existing drive from code:** \`setPreferredEditorOnNode(driveId, appId)\` from \`@powerhousedao/reactor-browser\`.
+
 ## Customizing Connect
 
 To change what Connect shows around documents and editors, **read \`node_modules/@powerhousedao/connect/skills/customize-connect/SKILL.md\` first**. That covers pages, sidebar links, settings tabs, the layout, overrides of Connect's own pages (home, drive view, settings, 404), modals, theming, and branding per host. The skill links to in-depth guides in the same package; read the one for your task before writing code.
@@ -544,6 +580,21 @@ throw new MissingIdError("message");
 2. The operation is still recorded in \`document.operations.global\` (or \`.local\`)
 3. The error message is stored in \`operation.error\` as a string
 4. **The state is NOT mutated** - it remains unchanged from before the operation
+
+This holds for the document \`reducer\` returns in tests. In Connect, an editor's \`document.operations\` holds an empty array per scope, whatever the history, so don't look for rejected operations there. To tell the user an action was rejected, pass \`dispatch\` an \`onErrors\` callback. It gets an \`OperationRejectedError\` (from \`@powerhousedao/reactor-browser\`) for each action the document rejected: \`message\` is the reducer's error message, \`actionType\` the operation, and \`kind\` is \`"reducer-error"\`, or \`"denied"\` for a write the document's policy refused. Clear the message before dispatching, since \`onSuccess\` also runs when an action was rejected:
+
+~~~tsx
+const [error, setError] = useState<string>();
+
+const handleRename = (title: string) => {
+  setError(undefined);
+  dispatch(actions.setTitle({ title }), (errors) =>
+    setError(errors[0]?.message),
+  );
+};
+~~~
+
+Show the error next to the input that caused it. To list past operations and their errors, read them with \`useDocumentOperations(document.header.id, "global")\` (pages arrive oldest first; call \`fetchNextPage\` while \`hasNextPage\`), or open the document's revision history in Connect.
 
 ##### Accessing the Correct Operation Index
 
@@ -733,9 +784,9 @@ input ClearAllInput {
 There might be two drives available with a special use case:
 
 1. **Vetra Drive** (\`vetra-{hash}\`):
-   - Contains **source documents**: document models and document editors
+   - Contains **source documents**: document models, document editors and drive apps
    - Used for development
-   - Add document model and editor definitions here
+   - Add document model, editor and app definitions here
 
 2. **Preview Drive** (\`preview-{hash}\`, named "Vetra Preview"):
    - Contains **demo and preview documents** (document instances)
@@ -746,15 +797,10 @@ There might be two drives available with a special use case:
 
 When working with drives (adding/removing documents, creating folders, etc.):
 
-1. **Always get the drive schema first**:
-
-   ~~~typescript
-   mcp__reactor -
-     mcp__getDocumentModelSchema({ type: "powerhouse/document-drive" });
-   ~~~
+1. **Always get the drive schema first**: call \`mcp__reactor-mcp__getDocumentModelSchema\` with \`type: "powerhouse/document-drive"\`.
 
 2. **Review available operations** in the schema, such as:
-   - \`ADD_FILE\` - Add a document to the drive
+   - \`ADD_FILE\` - Add a node for an existing document. To add a new document, use \`createDocument\` with \`driveId\` instead
    - \`ADD_FOLDER\` - Create a new folder
    - \`DELETE_NODE\` - Remove a file or folder (use this, NOT "DELETE_FILE")
    - \`UPDATE_NODE\` - Update node properties

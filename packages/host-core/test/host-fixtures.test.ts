@@ -1,15 +1,5 @@
-import {
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+import { readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   expectHost,
@@ -38,6 +28,15 @@ import {
   validateHost,
   type RunnerModule,
 } from "../src/runner-resolver.js";
+import {
+  BUILTINS,
+  CANNED,
+  cleanupProjects,
+  ENV,
+  FIXTURES,
+  project,
+  type Canned,
+} from "./fixture-project.js";
 
 /**
  * typed-host-configs G2 (2.2): each fixture host runs the whole pipeline
@@ -54,120 +53,9 @@ import {
 // fails if the resolver ever stops accepting `$map`.
 const MAP_PENDING = false;
 
-const FIXTURES = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "fixtures",
-  "hosts",
-);
-const PACKAGES = [
-  "ph-cli",
-  "clint",
-  "desktop",
-  "host-core",
-  "switchboard",
-  "vetra-studio",
-];
-
-/** The resolving process: a fixed environment and fixed built-ins, so the
- * expectations do not depend on the machine. */
-const ENV = {
-  FIXTURE_DATA_DIR: "/fixture/data",
-  FIXTURE_API_KEY: "sk-fixture",
-};
-const BUILTINS = {
-  userData: "/fixture/user-data",
-  projectRoot: "/fixture/project",
-};
 const CONNECT_RUNNER = "@powerhousedao/ph-cli/runners/connect";
 
-const temporary: string[] = [];
-afterAll(() => {
-  for (const dir of temporary.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-const projects = new Map<string, string>();
-
-/** A temp copy of a fixture project with the fixture packages linked. */
-function project(name: string): string {
-  const existing = projects.get(name);
-  if (existing) return existing;
-  const dir = mkdtempSync(path.join(tmpdir(), `ph-host-fixtures-${name}-`));
-  temporary.push(dir);
-  cpSync(path.join(FIXTURES, name), dir, { recursive: true });
-  writeFileSync(
-    path.join(dir, "package.json"),
-    JSON.stringify({ name: "my-project", type: "module" }),
-  );
-  const scope = path.join(dir, "node_modules", "@powerhousedao");
-  mkdirSync(scope, { recursive: true });
-  for (const pkg of PACKAGES) {
-    symlinkSync(
-      path.join(FIXTURES, "_packages", pkg),
-      path.join(scope, pkg),
-      "dir",
-    );
-  }
-  projects.set(name, dir);
-  return dir;
-}
-
-/* ---------------------------------------------------------- canned outputs */
-
-type Canned = Record<string, Record<string, unknown>>;
-
-function switchboardOutputs(
-  origin: string,
-  drives: Record<string, { id: string; served?: string }>,
-) {
-  return {
-    origin,
-    endpoints: { graphql: `${origin}/graphql`, mcp: `${origin}/mcp` },
-    drives: Object.fromEntries(
-      Object.entries(drives).map(([slug, { id, served }]) => [
-        slug,
-        { id, url: `${origin}/d/${served ?? slug}` },
-      ]),
-    ),
-  };
-}
-
-function connectOutputs(origin: string) {
-  return { origin, endpoints: { connect: `${origin}/` } };
-}
-
-/** What each producer FOLDER reports once started, per project. */
-const CANNED: Record<string, Canned> = {
-  scaffold: {
-    switchboard: switchboardOutputs("http://127.0.0.1:7491", {
-      powerhouse: { id: "powerhouse" },
-      workflows: { id: "workflows-0f1e2d3c" },
-    }),
-    connect: connectOutputs("http://127.0.0.1:6491"),
-  },
-  matrix: {
-    // `vetra` is projectHash: true (served under its hashed id); `shared`
-    // and the plugin-created `workflows` hash only the id. NOT in key
-    // order: `$map` visits a record key-sorted.
-    switchboard: switchboardOutputs("http://127.0.0.1:4001", {
-      workflows: { id: "workflows-0f1e2d3c" },
-      vetra: { id: "vetra-0f1e2d3c", served: "vetra-0f1e2d3c" },
-      lab: { id: "lab" },
-      shared: { id: "shared-0f1e2d3c" },
-    }),
-    ui: connectOutputs("http://127.0.0.1:3005"),
-    "connect-worker-idb": connectOutputs("http://127.0.0.1:3001"),
-  },
-  invariants: {
-    switchboard: switchboardOutputs("http://127.0.0.1:4401", {
-      inv: { id: "inv" },
-    }),
-    connect: connectOutputs("http://127.0.0.1:3401"),
-    ping: connectOutputs("http://127.0.0.1:3402"),
-    pong: connectOutputs("http://127.0.0.1:3403"),
-  },
-};
+afterAll(cleanupProjects);
 
 /** A producer's canned outputs, checked against its outputsSchema (as the
  * compound checks a started member's handle). */

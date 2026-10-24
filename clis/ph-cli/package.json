@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.2.3-dev.72",
+  "version": "6.2.3-dev.74",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -68,6 +68,7 @@
     "cmd-ts": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",
+    "dotenv": "catalog:",
     "enquirer": "catalog:",
     "kysely": "catalog:",
     "package-manager-detector": "catalog:",

@@ -23,6 +23,7 @@ import {
 } from "@powerhousedao/reactor";
 import { baseDocumentModels } from "@powerhousedao/reactor-browser/base-document-models";
 import {
+  describeLoadFailure,
   dispatchInspectorOp,
   dispatchSyncInspectionOp,
   FORWARDED_EVENT_TYPES,
@@ -434,17 +435,17 @@ const host = new ReactorHost({
         importPackage: (url) =>
           import(/* @vite-ignore */ url) as Promise<Record<string, unknown>>,
         sharedImports: construct.sharedImports,
-        importSource: (source) =>
-          import(
-            /* @vite-ignore */ URL.createObjectURL(
-              new Blob([source], { type: "text/javascript" }),
-            )
-          ) as Promise<Record<string, unknown>>,
       });
       await loader.loadPackages(construct.packageSpecs);
       // URL-addressed packages: the project's own models in dev, prebuilt
       // bundles under __reactor_worker__/packages/ in production.
       await loader.loadSources(construct.packageSources ?? []);
+      for (const failure of loader.loadFailures) {
+        console.error(
+          `[reactor.worker] failed to load package ${failure.name} from ${failure.url}:`,
+          failure.error,
+        );
+      }
       const flaggedModels = await loadFlaggedDocumentModels({
         studioMode: construct.studioMode,
         workflowsEnabled: construct.workflowsEnabled,
@@ -572,16 +573,20 @@ const host = new ReactorHost({
     if (!loader) {
       return;
     }
-    await loader.loadPackages(specs);
-    const { types, failures } = await loader.reloadSources(sources ?? []);
+    const packages = await loader.updatePackages(specs);
+    const reloaded = await loader.reloadSources(sources ?? []);
     if (registrar) {
-      registrar.replaceFamilies(types, loader.models);
+      registrar.replaceFamilies(
+        [...packages.types, ...reloaded.types],
+        loader.models,
+      );
       registrar.syncManifests(loader.upgradeManifests);
     }
+    const failures = [...packages.failures, ...reloaded.failures];
     if (failures.length > 0) {
       throw new AggregateError(
         failures.map((failure) => failure.error),
-        `Failed to reload package source(s): ${failures.map((failure) => failure.name).join(", ")}`,
+        `Failed to load package(s): ${failures.map(describeLoadFailure).join("; ")}`,
       );
     }
   },

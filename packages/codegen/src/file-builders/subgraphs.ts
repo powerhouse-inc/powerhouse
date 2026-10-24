@@ -11,6 +11,7 @@ import {
 import type { Project } from "ts-morph";
 import {
   ensureDirectoriesExist,
+  extendsBaseSubgraph,
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
@@ -131,11 +132,7 @@ export async function makeSubgraphsIndexFile(args: {
     project.getDirectoryOrThrow(subgraphsDir).getDescendantSourceFiles(),
     filter((sourceFile) => sourceFile.getBaseName() === "index.ts"),
     uniqueBy((sourceFile) => sourceFile.getFilePath()),
-    map((sourceFile) =>
-      sourceFile
-        .getClasses()
-        .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph")),
-    ),
+    map((sourceFile) => sourceFile.getClasses().find(extendsBaseSubgraph)),
     filter(isTruthy),
     map((classDeclaration) => ({
       name: classDeclaration.getNameOrThrow(),

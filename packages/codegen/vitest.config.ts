@@ -14,7 +14,10 @@ export default defineConfig({
     // folding them in is a separate effort from this change.
     include: [
       "src/codegen/features.test.ts",
+      "src/codegen/generate-apps.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
+      "src/codegen/migrate.test.ts",
+      "src/codegen/migrate-package-json.test.ts",
       "src/file-builders/pieces.test.ts",
       "src/file-builders/subgraphs.test.ts",
       "src/name-builders/derive-piece-id.test.ts",

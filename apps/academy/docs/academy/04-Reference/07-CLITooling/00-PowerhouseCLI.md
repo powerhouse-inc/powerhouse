@@ -288,7 +288,7 @@ Generate a document model
 ### Options
 **Document** - Path to a document model spec (.phd or .json) to generate from - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing document model to re-generate (my-document-model or document-models/my-document-model) - Usage: `--dir <dir>`
 
 
 
@@ -315,7 +315,7 @@ Generate a document editor
 
 **Document** - Path to a powerhouse/document-editor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing editor to re-generate (my-editor or editors/my-editor) - Usage: `--dir <dir>`
 
 
 
@@ -342,7 +342,7 @@ Generate a drive app
 
 **Document** - Path to a powerhouse/app spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing app to re-generate (my-app or editors/my-app) - Usage: `--dir <dir>`
 
 
 
@@ -379,7 +379,7 @@ Generate a processor
 **Default:** `switchboard,connect`
 **Document** - Path to a powerhouse/processor spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing processor to re-generate (my-processor or processors/my-processor) - Usage: `--dir <dir>`
 
 
 
@@ -406,7 +406,7 @@ Generate a subgraph
 
 **Document** - Path to a powerhouse/subgraph spec file (.phd or .json) to drive codegen - Usage: `--document, -d <file>`
 
-**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing subgraph to re-generate (my-subgraph or subgraphs/my-subgraph) - Usage: `--dir <dir>`
 
 
 
@@ -448,7 +448,7 @@ Generate a piece: a connector whose actions and triggers a workflow can call
 **Default:** `custom`
 **Description** - One line describing what the piece connects to - Usage: `--description <str>`
 
-**Dir** - Name of the directory of an existing piece to re-register - Usage: `--dir <dir>`
+**Dir** - Name of the directory of an existing piece to re-register (my-piece or pieces/my-piece) - Usage: `--dir <dir>`
 
 
 
@@ -1063,15 +1063,13 @@ Run migrations
 ## Parameters
 
 ### Arguments
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `[version]`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `[version]`
 
 
 
 
 ### Options
-**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
-
-**Default:** `latest`
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. Defaults to the release channel of the project's installed Powerhouse packages. - Usage: `--version, -v <str>`
 
 
 

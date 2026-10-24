@@ -1,3 +1,35 @@
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **codegen:** migrate keeps the project's tsconfig, oxlint and vitest excludes ([637f4aa49f](https://github.com/powerhouse-inc/powerhouse/commit/637f4aa49f))
+- **codegen:** migrate and generate --all only regenerate folders under processors/ that hold a processor ([2aecde65ed](https://github.com/powerhouse-inc/powerhouse/commit/2aecde65ed))
+- **codegen:** the subgraphs index finds subgraph classes by their extends text ([bda1d74ee9](https://github.com/powerhouse-inc/powerhouse/commit/bda1d74ee9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.72 (2026-10-23)
 
 ### 🚀 Features

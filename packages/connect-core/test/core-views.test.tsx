@@ -122,6 +122,7 @@ beforeEach(() => {
   store.drives = [];
   store.selectedDriveId = undefined;
   store.selectedNodeId = undefined;
+  store.modal = undefined;
   setPackages([]);
 });
 
@@ -200,6 +201,8 @@ async function createFile(
 }
 
 function mount(path: string, routes?: (routes: ConnectRoutes) => AnyRoute[]) {
+  // A test that mounts twice would leave the first router syncing the shared store.
+  unbind?.();
   const history = createMemoryHistory({ initialEntries: [path] });
   const connectRouter = createConnectRouter({
     store,

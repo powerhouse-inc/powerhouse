@@ -1,8 +1,13 @@
-import { substituteBuiltinEnv, type BuiltinEnv } from "../env-substitution.js";
+import {
+  isBuiltinEnvName,
+  substituteBuiltinEnv,
+  type BuiltinEnv,
+} from "../env-substitution.js";
 import { tokenKeyOf, tokenSchema } from "../tokens.js";
 import {
   elementSchemaOf,
   isOptionalField,
+  refKey,
   schemaAtPath,
   type OutputRef,
 } from "./declared.js";
@@ -58,10 +63,19 @@ export interface ResolveSources {
 }
 
 export class TokenResolutionError extends Error {
-  constructor(message: string) {
+  /** The host path that failed and the reason, without the file prefix. */
+  readonly detail?: { path: string; reason: string };
+
+  constructor(message: string, detail?: { path: string; reason: string }) {
     super(message);
     this.name = "TokenResolutionError";
+    if (detail) this.detail = detail;
   }
+}
+
+/** Why a required `$env` cannot resolve. */
+export function unsetEnvMessage(name: string): string {
+  return `reads $env ${name}, which is not set. Set ${name} in the environment of the process that resolves this host (or declare { $env: { name: "${name}", optional: true } } to omit the property when unset).`;
 }
 
 /** A resolved `{ $env: { name, optional: true } }` whose variable is unset,
@@ -239,7 +253,7 @@ class Resolver {
 
   constructor(
     private readonly sources: ResolveSources,
-    private readonly self?: SelfMembers,
+    private readonly self?: SelfMembers | "outputs",
   ) {}
 
   /** The member keys a token reads (`$output` on a member's host), when
@@ -255,6 +269,10 @@ class Resolver {
         typeof operand.member === "string"
           ? { host: operand.host, member: operand.member }
           : { host: operand.host };
+      if (this.self === "outputs") {
+        keys.add(refKey(ref));
+        continue;
+      }
       const isMember = this.self.members.some((m) => m.host === ref.host);
       if (!isMember) continue;
       const target = memberForRef(ref, this.self.members);
@@ -271,9 +289,11 @@ class Resolver {
     const inside = scope.length
       ? ` (rendering $map element ${scope.map(elementText).join(" › ")})`
       : "";
-    throw new TokenResolutionError(
-      `${where}\`${formatPath(trail)}\` ${message}${inside}`,
-    );
+    const path = formatPath(trail);
+    throw new TokenResolutionError(`${where}\`${path}\` ${message}${inside}`, {
+      path,
+      reason: `${message}${inside}`,
+    });
   }
 
   value(value: unknown, trail: Trail, scope: Scope = []): unknown {
@@ -312,7 +332,11 @@ class Resolver {
     const out: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(value)) {
       // deferSelf: member wrappers resolve per member, not here.
-      if (this.self && trail.length === 0 && key === "children") {
+      if (
+        typeof this.self === "object" &&
+        trail.length === 0 &&
+        key === "children"
+      ) {
         out[key] = child;
         continue;
       }
@@ -542,9 +566,9 @@ class Resolver {
     const lookup = this.sources.outputs.lookup(ref);
     if (lookup.status === "unavailable") {
       const where = this.sources.where ? `${this.sources.where}: ` : "";
-      throw new TokenResolutionError(
-        `${where}${lookup.message}\n  (needed by \`${formatPath(trail)}\`: ${describeToken(token)})`,
-      );
+      const path = formatPath(trail);
+      const reason = `${lookup.message}\n  (needed by \`${path}\`: ${describeToken(token)})`;
+      throw new TokenResolutionError(`${where}${reason}`, { path, reason });
     }
     const hit = walkPath(lookup.outputs, path);
     if (!hit.ok) {
@@ -578,17 +602,13 @@ class Resolver {
       return this.fail(trail, "is a malformed $env token.", scope);
     }
     const builtins = this.sources.builtins;
-    if ((name === "userData" || name === "projectRoot") && builtins?.[name]) {
+    if (isBuiltinEnvName(name) && builtins?.[name]) {
       return builtins[name];
     }
     const value = this.sources.env?.[name];
     if (value !== undefined) return value;
     if (optional) return this.omit("an optional $env").value;
-    return this.fail(
-      trail,
-      `reads $env ${name}, which is not set. Set ${name} in the environment of the process that resolves this host (or declare { $env: { name: "${name}", optional: true } } to omit the property when unset).`,
-      scope,
-    );
+    return this.fail(trail, unsetEnvMessage(name), scope);
   }
 
   concat(parts: unknown, trail: Trail, scope: Scope = []): string {
@@ -617,8 +637,9 @@ class Resolver {
 export interface ResolveOptions {
   /** Resolving a COMPOUND's own fields: tokens that read one of its members
    * are deferred until those members have started (see
-   * `DeferredResolution`); `children` is left for the members. */
-  deferSelf: SelfMembers;
+   * `DeferredResolution`); `children` is left for the members. `"outputs"`
+   * defers every `$output` (its `members` are the producers' ref keys). */
+  deferSelf: SelfMembers | "outputs";
 }
 
 /**

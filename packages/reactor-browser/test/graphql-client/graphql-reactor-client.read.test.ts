@@ -142,11 +142,16 @@ describe("GraphQLReactorClient.get", () => {
     expect(document.header.sig).toEqual({ publicKey: {}, nonce: "" });
   });
 
-  it("returns an empty operation list per known scope", async () => {
+  it("returns an empty operation list per scope of the state and revisions", async () => {
     const sdk = createMockSdk();
     const document = await createClientWith(sdk).get("doc-1");
 
-    expect(document.operations).toEqual({ global: [], document: [] });
+    // `local` has no revisions yet, but the state has it.
+    expect(document.operations).toEqual({
+      global: [],
+      local: [],
+      document: [],
+    });
   });
 
   it("carries header.meta through when the server provides it", async () => {

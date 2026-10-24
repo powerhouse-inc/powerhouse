@@ -1,3 +1,37 @@
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **host-core:** checkHost collects issues across load/declared/resolve/resolved/boot; checkBoot runner hook ([e20a460122](https://github.com/powerhouse-inc/powerhouse/commit/e20a460122))
+- **host-core:** spawnHost launches ph run with a clean env and waits for the run record ([9be2cbd150](https://github.com/powerhouse-inc/powerhouse/commit/9be2cbd150))
+- **host-core:** run-record readers take an env for the .ph root ([12ccd0390e](https://github.com/powerhouse-inc/powerhouse/commit/12ccd0390e))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **host-core:** checkHost resolved-stage tests, bracket paths, shared builtins and start verb ([4b00b54348](https://github.com/powerhouse-inc/powerhouse/commit/4b00b54348))
+- **host-core:** a spawnHost child no longer outlives its launcher ([19d9f3f51c](https://github.com/powerhouse-inc/powerhouse/commit/19d9f3f51c))
+- **host-core:** spawnHost closes its log after the last chunk and survives a log error ([47ff82d98a](https://github.com/powerhouse-inc/powerhouse/commit/47ff82d98a))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.73 (2026-10-23)
+
+### 🩹 Fixes
+
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.2.3-dev.72 (2026-10-23)
 
 ### 🚀 Features

@@ -94,8 +94,14 @@ export {
   type SyncStatusChangedBusEvent,
 } from "./sync-manager-proxy.js";
 export {
+  describeLoadFailure,
   WorkerPackageLoader,
   type PackageImporter,
   type PackageLoadFailure,
   type WorkerPackageLoaderOptions,
 } from "./worker-package-loader.js";
+export {
+  ModuleGraph,
+  resolveSharedSpecifier,
+  type ModuleGraphOptions,
+} from "./module-graph.js";

@@ -604,6 +604,21 @@ export function initializeModelSchema(modelName: string) {
   return initialSchemaDoc;
 }
 
+/** The initial value the schema sync would write for a new model's schema. */
+export function makeInitialValueForSchema(stateSchemaSdl: string) {
+  const documentNode = parse(stateSchemaSdl);
+  const stateTypeDefinitionNode = documentNode.definitions.find(
+    (def): def is ObjectTypeDefinitionNode =>
+      def.kind === Kind.OBJECT_TYPE_DEFINITION,
+  );
+  if (!stateTypeDefinitionNode) return "{}";
+  return makeMinimalObjectForStateType({
+    sharedSchemaDocumentNode: documentNode,
+    stateTypeDefinitionNode,
+    existingValue: "{}",
+  });
+}
+
 export function updateModelSchemaNames(params: {
   oldName: string;
   newName: string;
