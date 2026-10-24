@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-23T14:36:28.363Z
+> Generated: 2026-10-23T18:54:01.642Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -10266,10 +10266,11 @@ Each item in the `onOperations` list destructures as `{ operation, context }`:
 > Source: https://academy.vetra.io/academy/Reference/EditorsUI/DocumentEngineering
 
 The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
-Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
 These components are offered through the **Powerhouse Document-Engineering system** with the help of storybook & the Academy documentation.
 
 It provides a collection of pre-built, reusable UI components designed for consistency and efficiency across Powerhouse applications and editors. Think of it as a toolkit of standard UI elements like buttons, inputs, and checkboxes with many of these components based on GraphQL scalars.
+
+Document models use built-in scalars from `document-model/scalars` by name, including `OID` and `EthereumAddress`. See the [built-in scalar names](/academy/Build/DocumentModelCreation/CustomScalars#name-the-export-after-the-scalar) for the full list. To define a scalar for your package, see [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
 
 **INFO:**
 A GraphQL scalar is essentially a primitive, indivisible value in the GraphQL type system.
@@ -10277,7 +10278,7 @@ Here are the key points to understand:
 
 - **Basic Building Blocks:** Scalars are the basic data types—like String, Int, Float, Boolean, and ID—that represent atomic values.
 - **Leaf Nodes:** Scalars are the "leaves" of a GraphQL query. They can't have any sub-fields, meaning once you hit a scalar in a query, that's the final value.
-- **Custom Scalars:** Besides the built-in scalars, you can define custom scalars (e.g., a Date type) if you need to handle more specific formats or validations. Powerhouse does this specific for the web3 ecosystem.
+- **Scalars beyond the five GraphQL types:** Use a built-in scalar by name, such as `DateTime`, or define one for your package as described in [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
   :::
 
 ## What are Components?
@@ -10300,13 +10301,9 @@ The same component that will be used in a document viewer will have a **disabled
 
 ### Scalar Components
 
-Scalars are here to help you define custom fields in your document model schema and speed up the development process.
-There are two applications of scalar components in the document model workflow:
+A scalar component is a form field for one GraphQL scalar. Write the scalar name in the state schema. In the editor, import the component and place it on that field.
 
-1. At the **schema definition** level where you build your schema and write your GraphQL state schema.
-2. At the **frontend / react** level where you import it and place it in your UI to represent the scalar field
-
-These are specialized form components, each corresponding to a GraphQL scalar type (e.g., String, Number, Boolean, Currency, PHID). They are built on top of react-hook-form, offering out-of-the-box validation but must be wrapped with a Form component in order to work properly.
+These are specialized form components, each corresponding to a GraphQL scalar type, such as `String`, `Boolean`, `Currency`, or `PHID`. They are built on top of react-hook-form, with validation and form state management. Wrap them in a `Form` component from the same library.
 
 **Location:** @powerhousedao/document-engineering/scalars  
 https://github.com/powerhouse-inc/document-engineering
@@ -10484,7 +10481,7 @@ The Document Engineering package provides several entry points for different use
 
 ### Scalars
 
-For data manipulation and transformation utilities:
+Form components for scalar fields, such as `Form` and `BooleanField`:
 
 ```typescript
 
@@ -10492,7 +10489,7 @@ For data manipulation and transformation utilities:
 
 ### GraphQL
 
-For GraphQL related utilities and schema definitions:
+The `./graphql` export holds the component library's own GraphQL scalar definitions. Document models and subgraphs don't use them. In their schemas, name a built-in scalar from `document-model/scalars`, or define one as described in [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
 
 ```typescript
 
@@ -10511,16 +10508,12 @@ To include the package's styles:
 Within the project, the following import maps are available:
 
 - `#assets` - Assets utilities and components
-- `#scalars` - Scalar transformations and utilities
+- `#scalars` - Form components for scalar fields
 - `#ui` - UI components
 - `#graphql` - GraphQL related utilities
 
 Please don't hesitate to reach out in our discord channels with any questions.  
 Happy designing!
-
-### Up next: Create Custom Scalars
-
-You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Reference/EditorsUI/CreateCustomScalars).
 
 ---
 
@@ -12169,405 +12162,6 @@ function usePHDocumentEditorConfigByKey<TKey extends PHDocumentEditorConfigKey>(
   key: TKey,
 ): PHDocumentEditorConfig[TKey];
 ```
-
----
-
-
-## Step 1: Create Custom Scalars
-
-> Source: https://academy.vetra.io/academy/Reference/EditorsUI/CreateCustomScalars
-
-This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
-The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
-
-### Creating New GraphQL Scalars
-
-GraphQL scalars are custom data types that define how data is validated, serialized, and parsed. This guide will walk you through creating a new scalar in the `src/scalars/graphql/` directory.
-
-## Step 1: Create the Scalar File
-
-Create a new TypeScript file in `src/scalars/graphql/` for your scalar. Use `EmailAddress.ts` as a reference.
-
-**Example: Creating a `PhoneNumber.ts` scalar**
-
-```typescript
-
-  GraphQLError,
-  GraphQLScalarType,
-  type GraphQLScalarTypeConfig,
-  Kind,
-} from "graphql";
-
-
-export interface ScalarType {
-  input: string;
-  output: string;
-}
-
-export const type = "string"; // TS type in string form
-
-export const typedef = "scalar PhoneNumber";
-
-export const schema = z
-  .string()
-  .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format");
-
-export const stringSchema =
-  'z.string().regex(/^\\+?[1-9]\\d{1,14}$/, "Invalid phone number format")';
-
-const phoneValidation = (value: unknown): string => {
-  if (typeof value !== "string") {
-    throw new GraphQLError(`Value is not string: ${JSON.stringify(value)}`);
-  }
-
-  const result = schema.safeParse(value);
-
-  if (result.success) return result.data;
-  throw new GraphQLError(result.error.message);
-};
-
-export const config: GraphQLScalarTypeConfig<string, string> = {
-  name: "PhoneNumber",
-  description:
-    "A field whose value conforms to international phone number format.",
-  serialize: phoneValidation,
-  parseValue: phoneValidation,
-  parseLiteral: (value) => {
-    if (value.kind !== Kind.STRING) {
-      throw new GraphQLError(
-        `Can only validate strings as phone numbers but got a: ${value.kind}`,
-        { nodes: value },
-      );
-    }
-
-    return phoneValidation(value.value);
-  },
-};
-
-export const scalar = new GraphQLScalarType(config);
-```
-
-### Key Components to Update:
-
-1. **`type`**: The TypeScript type (usually `'string'` for text-based scalars)
-2. **`typedef`**: The GraphQL type definition (e.g., `'scalar PhoneNumber'`)
-3. **`schema`**: Zod validation schema for your data type
-4. **`stringSchema`**: String representation of the zod schema (used for code generation)
-5. **Validation function**: Custom validation logic for your scalar
-6. **`config.name`**: The name of your scalar (must match the typedef)
-7. **`config.description`**: Human-readable description of the scalar
-
-## Step 2: Register the Scalar in `scalars.ts`
-
-After creating your scalar file, you need to register it in `src/scalars/graphql/scalars.ts`. This involves updating multiple sections of the file.
-The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
-
-### 2.1 Add Namespace Import
-
-Add your scalar to the namespace imports section (around line 2):
-
-```typescript
-// namespace imports -- DO NOT REMOVE OR EDIT THIS COMMENT
-
-
-// ... other imports ...
-
-
-```
-
-### 2.2 Add Type Export
-
-Add the type export (around line 22):
-
-```typescript
-// export types -- DO NOT REMOVE OR EDIT THIS COMMENT
-export type { ScalarType as AmountScalarType } from "./Amount.js";
-// ... other type exports ...
-export type { ScalarType as PhoneNumberScalarType } from "./PhoneNumber.js"; // ADD THIS LINE
-export type { ScalarType as URLScalarType } from "./URL.js";
-```
-
-### 2.3 Add to Export Object
-
-Add your scalar to the main export object (around line 40):
-
-```typescript
-export {
-  Amount,
-  AmountCrypto,
-  // ... other exports ...
-  PhoneNumber, // ADD THIS LINE
-  URLScalar,
-};
-```
-
-### 2.4 Add to Custom Scalars
-
-Add your scalar to the `customScalars` object (around line 54):
-
-```typescript
-export const customScalars: Record<string, BasePHScalar<any>> = {
-  // ... other scalars ...
-  PhoneNumber, // ADD THIS LINE
-  URLScalar,
-} as const;
-```
-
-#### 2.5 Add to Resolvers
-
-Add your scalar to the `resolvers` object (around line 74):
-
-```typescript
-export const resolvers = {
-  // export resolvers -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens: AmountTokens.scalar,
-  // ... other resolvers ...
-  PhoneNumber: PhoneNumber.scalar, // ADD THIS LINE
-  Amount: Amount.scalar,
-};
-```
-
-### 2.6 Add to Type Definitions
-
-Add your typedef to the `typeDefs` array (around line 90):
-
-```typescript
-export const typeDefs = [
-  // export typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
-  AmountTokens.typedef,
-  // ... other typedefs ...
-  PhoneNumber.typedef, // ADD THIS LINE
-  Amount.typedef,
-];
-```
-
-### 2.7 Add to Generator Type Definitions
-
-Add your scalar to the `generatorTypeDefs` object (around line 105):
-
-```typescript
-export const generatorTypeDefs = {
-  // export generator typedefs -- DO NOT REMOVE OR EDIT THIS COMMENT
-  [AmountTokens.config.name]: AmountTokens.type,
-  // ... other entries ...
-  [PhoneNumber.config.name]: PhoneNumber.type, // ADD THIS LINE
-  [Amount.config.name]: Amount.type,
-};
-```
-
-### 2.8 Add to Validation Schema
-
-Add your scalar to the `validationSchema` object (around line 120):
-
-```typescript
-export const validationSchema = {
-  // export validation schema -- DO NOT REMOVE OR EDIT THIS COMMENT
-  [AmountTokens.config.name]: AmountTokens.stringSchema,
-  // ... other entries ...
-  [PhoneNumber.config.name]: PhoneNumber.stringSchema, // ADD THIS LINE
-  [Amount.config.name]: Amount.stringSchema,
-};
-```
-
-## Step 3: Create Tests for Your Scalar
-
-Every scalar must have comprehensive tests to ensure it works correctly. Create a test file in `src/scalars/graphql/test/` following the naming convention `YourScalar.test.ts`.
-
-**Example: Creating `PhoneNumber.test.ts`**
-
-```typescript
-
-
-describe("PhoneNumber Scalar", () => {
-  it("should serialize a phone number", () => {
-    const phoneNumber = "+1234567890";
-
-    expect(scalar.serialize(phoneNumber)).toBe(phoneNumber);
-  });
-
-  it("should throw an error if the value is not a string", () => {
-    const phoneNumber = 123;
-
-    expect(() => scalar.serialize(phoneNumber)).toThrow();
-  });
-
-  it("should throw an error if the value is not a valid phone number", () => {
-    const phoneNumber = "invalid-phone";
-
-    expect(() => scalar.serialize(phoneNumber)).toThrow();
-  });
-
-  it("should parse a valid phone number", () => {
-    const phoneNumber = "+1234567890";
-
-    expect(scalar.parseValue(phoneNumber)).toBe(phoneNumber);
-  });
-
-  it("should throw an error if parse a value that is not a valid phone number", () => {
-    const phoneNumber = "invalid-phone";
-
-    expect(() => scalar.parseValue(phoneNumber)).toThrow();
-  });
-
-  it("should throw an error if parse a value that is not a string", () => {
-    const phoneNumber = 123;
-
-    expect(() => scalar.parseValue(phoneNumber)).toThrow();
-  });
-
-  it("should parse a valid phone number from a literal", () => {
-    const phoneNumber = "+1234567890";
-
-    expect(
-      scalar.parseLiteral({
-        kind: Kind.STRING,
-        value: phoneNumber,
-      }),
-    ).toBe(phoneNumber);
-  });
-
-  it("should throw an error if parse a literal that is not a valid phone number", () => {
-    const phoneNumber = "invalid-phone";
-
-    expect(() =>
-      scalar.parseLiteral({
-        kind: Kind.STRING,
-        value: phoneNumber,
-      }),
-    ).toThrow();
-  });
-
-  it("should throw an error if parse a literal that is not a string", () => {
-    const phoneNumber = "+1234567890";
-
-    expect(() =>
-      scalar.parseLiteral({
-        kind: Kind.INT,
-        value: phoneNumber,
-      }),
-    ).toThrow();
-  });
-});
-```
-
-#### Required Test Cases
-
-Your scalar tests should cover these essential scenarios:
-
-##### Serialization Tests
-
-- ✅ **Valid values**: Test that valid inputs are serialized correctly
-- ❌ **Invalid types**: Test that non-string inputs throw errors
-- ❌ **Invalid format**: Test that strings not matching your validation throw errors
-
-##### Parse Value Tests
-
-- ✅ **Valid values**: Test that valid inputs are parsed correctly
-- ❌ **Invalid format**: Test that invalid strings throw errors
-- ❌ **Invalid types**: Test that non-string inputs throw errors
-
-##### Parse Literal Tests
-
-- ✅ **Valid STRING literals**: Test that valid string literals are parsed correctly
-- ❌ **Invalid STRING literals**: Test that invalid string literals throw errors
-- ❌ **Non-STRING literals**: Test that non-string literal kinds (INT, FLOAT, etc.) throw errors
-
-#### Testing Best Practices
-
-1. **Test edge cases**: Include boundary values and common invalid inputs
-2. **Test multiple valid formats**: If your scalar accepts different valid formats, test them all
-3. **Use descriptive test names**: Make it clear what each test is validating
-4. **Follow the naming convention**: `YourScalar.test.ts` in the `test/` directory
-
-#### Example Edge Cases for Different Scalar Types
-
-**String-based scalars (like PhoneNumber):**
-
-```typescript
-// Test empty string
-expect(() => scalar.parseValue("")).toThrow();
-
-// Test too long/short values
-expect(() => scalar.parseValue("123")).toThrow();
-expect(() => scalar.parseValue("+" + "1".repeat(20))).toThrow();
-
-// Test special characters
-expect(() => scalar.parseValue("+1-234-567-890")).not.toThrow();
-```
-
-**Number-based scalars:**
-
-```typescript
-// Test zero
-expect(scalar.parseValue(0)).toBe(0);
-
-// Test negative numbers
-expect(() => scalar.parseValue(-1)).toThrow();
-
-// Test decimal numbers
-expect(scalar.parseValue(123.45)).toBe(123.45);
-```
-
-**Date-based scalars:**
-
-```typescript
-// Test valid ISO date
-expect(scalar.parseValue("2023-12-25T00:00:00Z")).toBe("2023-12-25T00:00:00Z");
-
-// Test invalid date format
-expect(() => scalar.parseValue("25/12/2023")).toThrow();
-```
-
-## Step 4: Validate Your Implementation
-
-After implementing your scalar and tests, make sure to:
-
-1. **Run the tests** to ensure they all pass
-2. **Build the project** to ensure there are no TypeScript errors
-3. **Test GraphQL queries** that use your new scalar
-4. **Verify code generation** works with your new scalar
-
-### Common Scalar Types
-
-Here are some common patterns for different types of scalars:
-
-#### String-based Scalars
-
-```typescript
-export const type = "string";
-export const schema = z.string().min(1).max(100);
-```
-
-#### Number-based Scalars
-
-```typescript
-export const type = "number";
-export const schema = z.number().positive();
-```
-
-#### Date-based Scalars
-
-```typescript
-export const type = "string";
-export const schema = z.string().datetime();
-```
-
-**INFO:**
-**Contributing and UI for Scalars**
-
-- **Open Source**: Please submit contributions as a pull request to the Powerhouse team.
-- **UI is Optional but Helpful**: A design or UI for your scalar isn't required, but it helps reviewers understand its purpose.
-- **Semantic Scalars**: Some scalars don't need a unique UI. For instance, `Title` and `Description` might both use a simple text input but serve a semantic role by adding specific meaning and validation to the schema.
-  :::
-
-### Tips
-
-- Always follow the naming convention: use PascalCase for scalar names
-- Include meaningful validation in your Zod schema
-- Write clear, descriptive error messages
-- Keep the `stringSchema` in sync with your `schema` definition
-- Test edge cases in your validation function
-- Update all required sections in `scalars.ts`
 
 ---
 
@@ -15497,7 +15091,8 @@ it never replaces the Vetra drive.
 ## Build
 
 Build a Powerhouse package for publishing: a browser bundle and a node bundle of its
-document models, editors, subgraphs and processors, type declarations, and its stylesheet.
+document models, scalars, editors, subgraphs and processors, type declarations, and its
+stylesheet.
 
 Pieces under pieces/ are built too, each into its own self-contained module under
 dist/node/pieces/&lt;name&gt;, with a descriptor.json and package.json written beside it and
@@ -19274,7 +18869,7 @@ After installing `ph-cmd`, run `ph init` to initialize a project directory and s
 
 ## Design system
 
-The Powerhouse Design System is a collection of reusable front-end components based on GraphQL scalars, including custom scalars specific to the web3 ecosystem. It provides:
+The Powerhouse Design System is a collection of reusable front-end components based on GraphQL scalars, including Powerhouse built-in scalars such as `PHID` and `Amount`. It provides:
 
 - Consistent UI components across Powerhouse applications
 - Automatic inclusion as a dependency in new document model projects
@@ -21440,7 +21035,7 @@ type LineItem {
 ### State schema features:
 
 - Uses **GraphQL-like definitions** for a **clear, structured schema**.
-- Supports **custom scalar types** like `OID`, `Currency`, and `DateTime`. Or other Web3 specific scalars
+- Supports **built-in scalars** by name, such as `OID`, `Currency`, and `DateTime`.
 - Defines **relationships** using object references (`OID!`).
 
 The state schema acts as a **template** for document instances. Every new invoice created will follow this structure.
@@ -21628,10 +21223,12 @@ GraphQL has a set of built-in **scalar types**:
 - `Boolean`: `true` or `false`.
 - `ID`: A unique identifier, often used as a key for a field. It is serialized in the same way as a String; however, it is not intended to be human-readable.
 
-In addition to these standard types, the Powerhouse Document-Engineering system introduces custom scalars that are linked to reusable front-end components. These scalars are tailored for the web3 ecosystem and will be explored in the Component Library section of the documentation.
+Powerhouse built-in scalars come from `document-model/scalars` and are available by name in the schema. See the [built-in scalar names](/academy/Build/DocumentModelCreation/CustomScalars#name-the-export-after-the-scalar) for the full list. Editor components for those types are documented in [Document-Engineering](/academy/Reference/EditorsUI/DocumentEngineering).
+
+To define a scalar of your own with a zod schema, see [Custom scalars](/academy/Build/DocumentModelCreation/CustomScalars).
 
 **TIP:**
-Powerhouse provides the `OID` (Object ID) scalar type, which is a custom scalar specifically designed for unique identifiers in document models. It provides automatic ID generation capabilities when used with the `generateId()` function from the document-model core library.
+Powerhouse provides the `OID` (Object ID) scalar for unique identifiers in document models. Use `generateId()` from the document-model core library to generate an id for an `OID` field.
 
 
 ### Lists and non-null
@@ -21701,7 +21298,7 @@ type TodoListStats {
   - `stats: TodoListStats!` _(advanced)_: Holds aggregated statistics about the to-do items.
 
 - **`TodoItem` type**:
-  - `id: OID!`: Each `TodoItem` has a unique identifier using Powerhouse's custom `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
+  - `id: OID!`: Each `TodoItem` has a unique identifier using the built-in `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
   - `text: String!`: The textual description of the to-do item. It cannot be null, ensuring every to-do has a description.
   - `checked: Boolean!`: Indicates whether the to-do item is completed. It defaults to a boolean value (true or false) and cannot be null.
 
@@ -23462,6 +23059,445 @@ Document model versioning enables your applications to evolve safely while prese
 - [Use the Document Model Generator](/academy/Build/DocumentModelCreation/UseTheDocumentModelGenerator)
 - [Implement Document Reducers](/academy/Build/DocumentModelCreation/ImplementDocumentReducers)
 - [Powerhouse CLI Reference](/academy/Reference/CLITooling/PowerhouseCLI)
+
+---
+
+
+## Custom scalars
+
+> Source: https://academy.vetra.io/academy/Build/DocumentModelCreation/CustomScalars
+
+A custom scalar is a GraphQL scalar that your project defines with a zod schema. You declare it in a document model's SDL or use it in a custom subgraph. Codegen generates its TypeScript type and its zod validation from that schema, and the host checks every input value of the scalar against the same schema.
+
+Use a custom scalar when a field needs a format that the built-in scalars don't cover. This page uses an `Iban` scalar for international bank account numbers.
+
+## Define a scalar
+
+Export each scalar from `scalars/index.ts` at the project root. `ph init` doesn't create this file. Create it when you add your first custom scalar.
+
+```ts title="scalars/index.ts"
+
+
+export const Iban = defineScalar({
+  name: "Iban",
+  description: "International bank account number",
+  schema: z.string().regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/),
+  example: "DE89370400440532013000",
+});
+```
+
+`defineScalar` accepts these keys and no others:
+
+| Key           | Required | Purpose                                                                                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`        | Yes      | The GraphQL name of the scalar.                                                                                                      |
+| `schema`      | Yes      | A zod schema. Its output is the TypeScript type of the scalar and the value that reducers receive. The host validates input with it. |
+| `description` | No       | The scalar's GraphQL description. Introspection shows it.                                                                            |
+| `example`     | No       | A value the schema accepts. Generated reducer tests use its parsed form as the mock value for fields of this scalar.                 |
+
+API clients see the schema's error message when they send an invalid value. To replace zod's default message, pass `error`:
+
+```ts
+schema: z.string().regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/, {
+  error: "Expected an IBAN such as DE89370400440532013000",
+}),
+```
+
+Scalars run in Connect and on every host. Import only packages that run in both the browser and Node. `ph build` fails when `scalars/index.ts` imports a package that needs a native addon or a WebAssembly module.
+
+### Name the export after the scalar
+
+The export name must equal `name`. Codegen never runs your project code. It reads `Iban` from the SDL and imports `Iban` from `scalars/index.ts` by that name. The host also refuses a scalar whose export key differs from `name`.
+
+`defineScalar` throws for these names:
+
+- A name that is not a valid GraphQL name.
+- A GraphQL built-in scalar: `String`, `Int`, `Float`, `Boolean` or `ID`.
+- A Powerhouse catalog scalar: `Address`, `Amount`, `Amount_Crypto`, `Amount_Currency`, `Amount_Fiat`, `Amount_Money`, `Amount_Percentage`, `Amount_Tokens`, `AttachmentRef`, `Currency`, `Date`, `DateTime`, `EmailAddress`, `EthereumAddress`, `JSONObject`, `OID`, `OLabel`, `PHID`, `Unknown`, `Upload` or `URL`.
+
+It also throws for any key that is not in the table above, and for an `example` that the schema refuses. The message names the scalar and the reason:
+
+```text
+Cannot define scalar "Int": the name is a GraphQL built-in scalar.
+Cannot define scalar "Iban": the example fails the schema: ✖ Invalid string: must match pattern /^[A-Z]{2}\d{2}/
+```
+
+Scalar names are global on a host. The scalars of every installed package share one namespace with the catalog. If two packages define the same name with different definitions, the host keeps the one it loaded first and refuses the other.
+
+### Use the value type in TypeScript
+
+`ScalarValue` gives the TypeScript type of a scalar's values, which is the output type of its schema. For `Iban`, the type is `string`:
+
+```ts
+
+
+type IbanValue = ScalarValue<typeof Iban>; // string
+```
+
+A schema that ends in `.brand<"Iban">()` gives `string & $brand<"Iban">`, so TypeScript refuses a plain string where an `Iban` is expected. The `example` still takes a plain string, because it has the schema's input type. `defineScalar` parses the example and stores the output.
+
+### Return JSON that the schema accepts again
+
+The output of the schema is the canonical value of the scalar. Reducers receive the canonical value, and the document state stores it. `defineScalar` accepts a schema only when its output is JSON and is a valid input of the same schema. The host also checks that the output comes back unchanged when the schema parses it again.
+
+A schema can normalize the value. This `Iban` accepts lowercase letters and spaces around the number:
+
+```ts title="scalars/index.ts"
+export const Iban = defineScalar({
+  name: "Iban",
+  description: "International bank account number",
+  schema: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/),
+  example: "DE89370400440532013000",
+});
+```
+
+When a client sends `" de89370400440532013000 "`, the reducer receives `"DE89370400440532013000"`, whether the operation comes from Connect or from the host. An operation that Connect stores keeps the input as the user entered it.
+
+`defineScalar` accepts these schemas:
+
+- Checks such as `.regex()` and `.refine()`.
+- `.brand()`.
+- `.trim()`, `.toLowerCase()`, `.toUpperCase()` and `.overwrite()`.
+- A `.transform()` that keeps the type and returns the same value when it runs again.
+- `z.enum`, `z.literal` and unions.
+- Objects, including objects with optional or nullable properties.
+- Arrays, records and tuples.
+- `z.coerce.number()`, `z.coerce.string()` and `z.preprocess(String, z.string())`.
+- `.catch()`.
+- `z.custom` with a JSON type, such as ``z.custom<`0x${string}`>()``.
+
+A refused schema fails to type-check. The error names one of five causes:
+
+| Cause in the error                                                                             | Refused schemas                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defineScalar refuses this schema: its output is any`                                          | `z.any()`, `z.custom<any>()`                                                                                                                                                |
+| `defineScalar refuses this schema: it accepts a missing value; nullability belongs in the SDL` | `.optional()`, `.nullish()`, `.default()` and `.prefault()`, also on `z.coerce` and `z.preprocess` schemas                                                                  |
+| `defineScalar refuses this schema: its output must be JSON`                                    | An `undefined` at the top level or inside an array, such as `z.array(z.string().optional())`, a `Date` output, `z.unknown()`, `z.bigint()`, an object with a function field |
+| `defineScalar refuses this schema: its output can be null; nullability belongs in the SDL`     | `.nullable()`, a top-level `z.json()`                                                                                                                                       |
+| `defineScalar refuses this schema: its output must pass the schema again`                      | A `.transform()` or `.pipe()` that changes the type, such as `.transform(Number)` or `z.string().pipe(z.coerce.number())`                                                   |
+
+Make a field nullable in the SDL instead of in the schema. `iban: Iban` is nullable, and `iban: Iban!` is not.
+
+For `schema: z.string().transform(Number)`, TypeScript reports:
+
+```text
+Type 'ZodPipe<ZodString, ZodTransform<number, string>>' is not assignable to type 'ZodPipe<ZodString, ZodTransform<number, string>> & OutputFailsSchema'.
+  Property '"defineScalar refuses this schema: its output must pass the schema again"' is missing in type 'ZodPipe<ZodString, ZodTransform<number, string>>' but required in type 'OutputFailsSchema'.
+```
+
+TypeScript doesn't see every output that isn't JSON. It misses an explicit `undefined` in an optional object property, such as a transform that returns `{ value: undefined }` for `{ value?: string }`, and an `any` inside an object, such as `z.object({ value: z.any() })`. The host refuses such a value. Connect doesn't check it and stores it in the state.
+
+`defineScalar` also checks for a missing-value schema at runtime. This check catches JavaScript callers, casts, and a union with a coercing default, such as `z.union([z.coerce.number().default(7), z.string()])`, which TypeScript accepts:
+
+```text
+Cannot define scalar "Count": the schema accepts a missing value; nullability belongs in the SDL.
+```
+
+TypeScript can't tell whether a transform returns the same value when it runs again. The host checks that for every value it parses. For details, see [What the host validates](#what-the-host-validates).
+
+A schema with `.catch()` replaces a value that fails the schema with the fallback. The fallback must still be JSON that the schema returns unchanged on a second parse. Otherwise the host refuses it. For example, `z.string().regex(/^ok$/).catch((ctx) => String(ctx.input) + "!")` turns `"bad"` into `"bad!"`, and the host refuses the value because `"bad!"` parses to `"bad!!"`.
+
+The generated code makes a nullable field `.nullish()`, so a missing nullable field stays missing, even with `.catch()`. A required field can still get a value in Connect when a caller skips the types and leaves it out or sets it to `undefined`. The host never parses an absent value. In the reducer:
+
+- `.catch("c")` fills a missing required field with `"c"`.
+- `z.preprocess((v) => v ?? "x", z.string())` fills it with `"x"`.
+- `z.coerce.string()` turns a field set to `undefined` into the string `"undefined"`.
+- `z.preprocess(String, z.string())` turns a missing or `undefined` field into `"undefined"`.
+
+Use `z.string()` when a missing value must fail.
+
+### Store free-form JSON in an object
+
+A top-level `z.json()` can output `null`, so `defineScalar` refuses it with `its output can be null`. To accept any JSON value, put `z.json()` in an object property:
+
+```ts title="scalars/index.ts"
+export const Metadata = defineScalar({
+  name: "Metadata",
+  description: "Free-form JSON under a meta key",
+  schema: z.object({ meta: z.json() }),
+  example: { meta: { tags: ["a", "b"] } },
+});
+```
+
+### Store a big integer as a decimal string
+
+A `bigint` isn't JSON, so a scalar can't output one. Define a big integer as a decimal string:
+
+```ts title="scalars/index.ts"
+export const BigInteger = defineScalar({
+  name: "BigInteger",
+  description: "A signed integer of any size, as a decimal string",
+  schema: z
+    .string()
+    .regex(/^-?\d+$/)
+    .transform((s) => BigInt(s).toString())
+    .brand<"BigInteger">(),
+  example: "123",
+});
+```
+
+The transform writes one form for each number, so `"007"` becomes `"7"` and `"-0"` becomes `"0"`. The `example` is a plain string, because it has the schema's input type. In a reducer, convert the value with `BigInt` for arithmetic, and parse the result to write it back:
+
+```ts
+addAmountOperation(state, action) {
+  const total = BigInt(state.total) + BigInt(action.input.amount);
+  state.total = BigInteger.schema.parse(total.toString());
+},
+```
+
+The parse returns the branded type that the state field expects.
+
+## Use the scalar in a document model
+
+Declare `scalar Iban` once, in the state schema. The Vetra document-model editor merges the state and operation schemas, so a second declaration is a duplicate type there. Then use `Iban` like any other type, in state types and in operation inputs:
+
+```graphql title="State schema"
+scalar Iban
+
+type PaymentState {
+  iban: Iban
+}
+```
+
+```graphql title="Operation schema"
+input SetIbanInput {
+  iban: Iban!
+}
+```
+
+Regenerate the code:
+
+```bash
+ph generate all
+```
+
+The generated files in `document-models/<model>/v<N>/gen/schema/` import the definition from `scalars/index.ts`:
+
+- `types.ts` maps the input and output types of `Iban` to `import("document-model/scalars").ScalarValue<typeof import("../../../../../scalars/index.js").Iban>`.
+- `zod.ts` imports `{ Iban }` and validates `Iban` fields with `Iban.schema`.
+
+The generated reducer parses each operation's input with its zod schema. When the input uses `Iban`, directly or through a nested input type or a list, the reducer passes the parsed input to your operation reducer. Your reducer then receives canonical scalar values, whatever sent the operation: Connect, a GraphQL mutation or sync. For these operations, `z.object` drops keys that the input type doesn't declare, and a default value on an input field in the SDL fills in a missing field.
+
+Other operations receive the input as it was stored, as before. A model without custom scalars regenerates the same reducer, so its stored operations replay to the same state.
+
+Generated reducer tests mock `Iban` input fields with `Iban.example`, wrapped in an array for a list field. Without `example`, they generate a value from `Iban.schema`. For a `z.custom` schema, the mock generator throws `No generator for schema custom`, so set `example` when you use `z.custom`.
+
+## Use the scalar in a custom subgraph
+
+A custom subgraph uses `Iban` in its typeDefs. You can declare `scalar Iban` in the subgraph or leave the declaration out. The host declares every registered scalar in every subgraph and drops the subgraph's own declaration.
+
+```ts title="subgraphs/payments/schema.ts"
+
+
+export const schema: DocumentNode = gql`
+  type Query {
+    ibanCountry(iban: Iban!): String!
+  }
+`;
+```
+
+The host parses `iban` with the schema before the resolver runs, so the resolver receives the canonical value:
+
+```ts title="subgraphs/payments/resolvers.ts"
+
+
+export const getResolvers = (
+  subgraph: BaseSubgraph,
+): Record<string, unknown> => ({
+  Query: {
+    ibanCountry: (_parent: unknown, args: { iban: ScalarValue<typeof Iban> }) =>
+      args.iban.slice(0, 2),
+  },
+});
+```
+
+`Iban` has the same name everywhere: in the document-model subgraph at `/graphql/<model-name>`, in the custom subgraph at `/graphql/payments` and in the supergraph at `/graphql`. The host never prefixes it.
+
+For how to create and run a subgraph, see [Using subgraphs](/academy/Build/WorkWithData/UsingSubgraphs).
+
+## Add custom scalars to an existing project
+
+1. In the project root, run:
+
+   ```bash
+   ph migrate
+   ```
+
+   `ph migrate` adds the `./scalars` export to `package.json` and the `scalars` paths to `tsconfig.json`. It doesn't create or change `scalars/index.ts`. As for any upgrade, it also updates the Powerhouse dependencies and regenerates the code.
+
+2. Create `scalars/index.ts` at the project root and define your scalars in it.
+3. Declare them in the model SDL.
+4. Run `ph generate all`.
+5. Before you publish the package, run `ph build`. Hosts load the scalars from the package's `./scalars` export, which points into `dist/`.
+
+A project without custom scalars generates the same reducers as before. Only operations whose input uses a custom scalar receive the parsed input, as described in [Use the scalar in a document model](#use-the-scalar-in-a-document-model).
+
+## What the host validates
+
+A host, such as Switchboard or `ph vetra`, loads each package's `./scalars` export before the package's document models and subgraphs. Each exported definition registers its scalar by name.
+
+For each registered scalar, the host checks input values:
+
+- `parseValue` checks values that arrive as variables.
+- `parseLiteral` checks values written inline in the query.
+
+Both run the scalar's `schema` and pass its output to the resolver. When the schema refuses a value, the host refuses the request. The error message holds the GraphQL prefix, the scalar name and the message from `z.prettifyError`. For a variable:
+
+```text
+Variable "$iban" got invalid value "not-an-iban"; Expected type "Iban". Iban: ✖ Invalid string: must match pattern /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/
+```
+
+For an inline literal:
+
+```text
+Expected value of type "Iban!", found "not-an-iban"; Iban: ✖ Invalid string: must match pattern /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/
+```
+
+Both then write the output to JSON and read it back. If the copy differs from the output, the host refuses the request. This check catches schemas that skip the type check, such as one from a JavaScript package. For a schema that outputs a `bigint`, the value `"7"` gives:
+
+```text
+Iban: the schema output is not JSON: 7n
+```
+
+A number scalar refuses `-0` for the same reason, because JSON writes `-0` as `0`.
+
+Last, both parse the JSON copy a second time. If the second parse refuses the copy or returns a different value, the host refuses the request. For a scalar `Bang` with the schema `z.string().transform((s) => s + "!")`, the value `"abc"` gives:
+
+```text
+Bang: the schema must accept its own output unchanged, but "abc!" parses to "abc!!".
+```
+
+When the second parse refuses the copy, the message ends with `fails it:` and the zod error instead:
+
+```text
+Iban: the schema must accept its own output unchanged, but 7 fails it: ✖ Invalid input: expected string, received number
+```
+
+Connect doesn't run the JSON check or the second parse. It parses each input once, in the reducer.
+
+The subgraphs run these checks. The supergraph at `/graphql` forwards the value to the subgraph. It returns the subgraph's refusal inside a `400: Bad Request` error, with the message above under `extensions.response.body.errors`.
+
+`serialize` returns values unchanged. The host doesn't check the values that resolvers return.
+
+The host doesn't run the schemas of the catalog scalars, such as `EmailAddress` and `DateTime`. Codegen messages call these the built-in scalars. The host passes their values through as before.
+
+The host refuses to register a scalar in these cases:
+
+- The definition comes from a version of `document-model` whose definition format the host doesn't support.
+- The export key differs from `name`.
+- The name is a GraphQL built-in, a catalog scalar, or a type of the generated document-model schema such as `Query` or `Operation`. `defineScalar` doesn't check schema type names. A package that bundles another copy of `document-model` runs that copy's `defineScalar`, so the host checks all three again.
+- Another package already registered the same name with a different definition. The first package loaded wins.
+
+The host logs one warning per package, with the same header as a failed load, and names the packages involved:
+
+```text
+Failed to load scalars from @acme/payments:
+  Scalar Iban of package @acme/payments is refused: package @acme/banking already registers a different Iban.
+```
+
+A refused scalar is not served. The package's other scalars, document models and subgraphs still load.
+
+A scalar can also take a name that a host subgraph defines as a type, such as `PHDocument`. The host registers it but doesn't serve it, and the subgraph keeps the name. The host logs an error instead of the warning above:
+
+```text
+Refusing scalar PHDocument of package @acme/payments: subgraph r defines a type of that name
+```
+
+In `ph vetra`, saving `scalars/index.ts` rebuilds the GraphQL schema and reloads the project's document models, so the reducers also parse with the new definition. You don't need to restart.
+
+An object or list default value for an argument or input field of a custom or catalog scalar type breaks GraphQL introspection today.
+
+## Use your own resolver for a scalar
+
+A subgraph can put its own `GraphQLScalarType` for a registered scalar in its `resolvers`. The subgraph's resolver wins in that subgraph, and the registered validation doesn't run there. The host logs one warning per subgraph and scalar:
+
+```text
+Subgraph payments provides its own resolver for registered scalar Iban; the registered validation is not applied.
+```
+
+If you replace the resolver, your `parseValue` and `parseLiteral` must do the validation.
+
+## Fix common errors
+
+### Codegen stops with "declares scalar Iban, which is not a built-in scalar"
+
+```text
+Model PaymentModel declares scalar Iban, which is not a built-in scalar. Create scalars/index.ts and export it from there with defineScalar.
+```
+
+The model declares a scalar that isn't in the catalog, and the project has no `scalars/index.ts`. Create `scalars/index.ts` at the project root and export the scalar from it with `defineScalar`.
+
+### TypeScript reports "has no exported member 'Iban'"
+
+TypeScript reports these errors in `gen/schema/zod.ts` and `gen/schema/types.ts`:
+
+```text
+error TS2305: Module '"../../../../../scalars/index.js"' has no exported member 'Iban'.
+error TS2694: Namespace '"<project>/scalars/index"' has no exported member 'Iban'.
+```
+
+The model declares `scalar Iban`, but `scalars/index.ts` doesn't export `Iban`. Export it with `defineScalar`, and check that the export name equals `name`.
+
+### TypeScript reports "defineScalar refuses this schema"
+
+```text
+Property '"defineScalar refuses this schema: its output must pass the schema again"' is missing in type 'ZodPipe<ZodString, ZodTransform<number, string>>' but required in type 'OutputFailsSchema'.
+```
+
+The text after `refuses this schema:` names the cause:
+
+- `its output is any`: replace `z.any()` or `z.custom<any>()` with a schema for the actual type.
+- `it accepts a missing value; nullability belongs in the SDL`: remove `.optional()`, `.nullish()`, `.default()` or `.prefault()`, and make the field nullable in the SDL.
+- `its output must be JSON`: remove `.optional()` inside arrays, and return strings instead of a `Date` or a `bigint`.
+- `its output can be null; nullability belongs in the SDL`: remove `.nullable()`, and make the field nullable in the SDL. For free-form JSON, see [Store free-form JSON in an object](#store-free-form-json-in-an-object).
+- `its output must pass the schema again`: make the transform return a value of the input type.
+
+For the full lists, see [Return JSON that the schema accepts again](#return-json-that-the-schema-accepts-again).
+
+### `defineScalar` throws "Cannot define scalar"
+
+```text
+Cannot define scalar "Iban": the example fails the schema: ✖ Invalid string: must match pattern /^[A-Z]{2}\d{2}/
+Cannot define scalar "Count": the schema accepts a missing value; nullability belongs in the SDL.
+```
+
+The first error means `example` fails the schema. Change the example to a value the schema accepts. The second comes from a schema with `.optional()`, `.nullish()`, `.default()` or `.prefault()` that skipped the type check, for example through a cast, or that sits in a union. Remove the modifier and make the field nullable in the SDL. Other messages name an invalid or reserved name, or an unknown input key. See [Name the export after the scalar](#name-the-export-after-the-scalar).
+
+### The host refuses a value with "the schema output is not JSON"
+
+```text
+Iban: the schema output is not JSON: 7n
+```
+
+The schema returned a value that JSON can't hold unchanged, such as a `bigint`, a `Date`, `-0` or an object property set to `undefined`. TypeScript refuses a `bigint` or `Date` output, unless it comes from an `any` inside an object or the schema skipped the type check. Return a JSON value instead. For `-0`, the client must send `0`.
+
+### The host refuses a value with "the schema must accept its own output unchanged"
+
+```text
+Bang: the schema must accept its own output unchanged, but "abc!" parses to "abc!!".
+```
+
+A transform in the schema changes its own output each time it runs. Change the transform so that running it on its output returns the same value. When the message ends with `fails it:`, the schema refuses its own output. Make the output a valid input of the schema.
+
+### A custom subgraph fails with an unknown type
+
+```text
+Unknown type "Iban".
+```
+
+No loaded package registers `Iban`. Check that `scalars/index.ts` exports it and that `package.json` has the `./scalars` export. For an installed package, check that `ph build` ran before you published it. If the host refused the scalar, it logged a `Failed to load scalars from <package>:` warning with the reason.
+
+### `ph build` fails with "Document models and scalars run in Connect and on every host"
+
+```text
+scalars/index.ts imports <package>, which needs the WebAssembly module <file>. Document models and scalars run in Connect and on every host: use it from a subgraph, processor or piece instead.
+```
+
+The scalar imports a package that can't run in Connect. Move the validation that needs the package into a subgraph.
 
 ---
 

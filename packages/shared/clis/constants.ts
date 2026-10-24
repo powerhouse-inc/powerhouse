@@ -235,6 +235,11 @@ export const packageJsonExports = {
     types: "./dist/types/subgraphs/index.d.ts",
     node: "./dist/node/subgraphs/index.mjs",
   },
+  "./scalars": {
+    types: "./dist/types/scalars/index.d.ts",
+    browser: "./dist/browser/scalars/index.js",
+    node: "./dist/node/scalars/index.mjs",
+  },
   // The routes the package offers other Connects; built when it has any.
   "./connect-routes": {
     browser: "./dist/browser/connect-routes.js",

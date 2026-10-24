@@ -11,11 +11,15 @@ import {
   makeOperationImportNames,
   makeTestCaseForOperation,
 } from "templates";
-import { SyntaxKind } from "ts-morph";
+import { type SourceFile, SyntaxKind } from "ts-morph";
+import { getMockOverrideFieldNames } from "../../codegen/graphql.js";
 import {
-  getInputFieldNames,
-  getMockOverrideFieldNames,
-} from "../../codegen/graphql.js";
+  getInputFieldMocks,
+  getProjectScalarNames,
+  operationInputType,
+  projectScalarsImportPath,
+} from "../../codegen/project-scalars.js";
+import { buildSpecificationSchema } from "../../codegen/specification-schema.js";
 import {
   fixGenerateMockImports,
   formatSourceFileWithPrettier,
@@ -46,11 +50,16 @@ export async function makeOperationModuleTestFile(
     versionImportPath,
     testsDirPath,
     isPhDocumentOfTypeFunctionName,
+    projectDir,
   } = args;
+  const projectScalarNames = new Set(getProjectScalarNames(specification));
+  const schema = buildSpecificationSchema(specification);
   const overrideFieldsByScope = {
     global: getMockOverrideFieldNames(specification.state.global.schema),
     local: getMockOverrideFieldNames(specification.state.local.schema),
   };
+  const mockedProjectScalars = new Set<string>();
+  const mockedInputSchemas = new Set<string>();
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
@@ -172,12 +181,15 @@ export async function makeOperationModuleTestFile(
         o.scope === "local"
           ? overrideFieldsByScope.local
           : overrideFieldsByScope.global;
-      const overrideInputFields = getInputFieldNames(
-        o.schema,
-        `${pascalCase(o.name ?? "")}Input`,
-      )
-        .filter((f) => overrideStateFields.has(f))
-        .map((f) => ({ name: f, literal: overrideStateFields.get(f)! }));
+      const overrideInputFields = getInputFieldMocks(
+        operationInputType(schema, o),
+        overrideStateFields,
+        projectScalarNames,
+      );
+      for (const { projectScalars, inputSchemas } of overrideInputFields) {
+        for (const name of projectScalars) mockedProjectScalars.add(name);
+        for (const name of inputSchemas) mockedInputSchemas.add(name);
+      }
       return makeTestCaseForOperation(
         o,
         isPhDocumentOfTypeFunctionName,
@@ -187,6 +199,22 @@ export async function makeOperationModuleTestFile(
   );
 
   describeCallBody.addStatements(testCasesToAdd);
+
+  if (mockedInputSchemas.size > 0) {
+    addNamedImports(
+      sourceFile,
+      versionImportPath,
+      [...mockedInputSchemas].sort(),
+    );
+  }
+
+  if (mockedProjectScalars.size > 0) {
+    addNamedImports(
+      sourceFile,
+      projectScalarsImportPath(testsDirPath, projectDir),
+      [...mockedProjectScalars].sort(),
+    );
+  }
 
   if (sourceFile.getText().includes(GENERATE_MOCK_NAME)) {
     fixGenerateMockImports(sourceFile);
@@ -200,6 +228,26 @@ export async function makeOperationModuleTestFile(
 
   sourceFile.fixUnusedIdentifiers();
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+function addNamedImports(
+  sourceFile: SourceFile,
+  moduleSpecifier: string,
+  names: string[],
+) {
+  const declaration = sourceFile.getImportDeclaration(
+    (i) => !i.isTypeOnly() && i.getModuleSpecifierValue() === moduleSpecifier,
+  );
+  if (!declaration) {
+    sourceFile.addImportDeclaration({ namedImports: names, moduleSpecifier });
+    return;
+  }
+  const existing = new Set(
+    declaration.getNamedImports().map((i) => i.getName()),
+  );
+  for (const name of names) {
+    if (!existing.has(name)) declaration.addNamedImport(name);
+  }
 }
 
 export async function makeDocumentModelTestFile(

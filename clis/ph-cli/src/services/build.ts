@@ -304,11 +304,11 @@ export async function runBuild(args: BuildArgs) {
     ...buildNodeBuildConfig({
       sharedDeps,
       plugins: [
-        // Editors never run on a host; document models run in Connect too.
+        // Editors never run on a host; document models and scalars run in Connect too.
         externalDepsPlugin(trace, external, {
           root: projectRoot,
           ignoreDirs: ["editors"],
-          forbidDirs: ["document-models"],
+          forbidDirs: ["document-models", "scalars"],
           cache: detection,
         }),
       ],

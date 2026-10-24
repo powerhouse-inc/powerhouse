@@ -13,6 +13,9 @@ export default defineConfig({
     // predate this config and have never been wired into the workspace runner;
     // folding them in is a separate effort from this change.
     include: [
+      "src/codegen/scalar-codegen-golden.test.ts",
+      "src/codegen/project-scalar-codegen.test.ts",
+      "src/codegen/migrate-package-json.test.ts",
       "src/codegen/features.test.ts",
       "src/codegen/generate-apps.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",

@@ -1,5 +1,5 @@
 import type { AttachmentRef } from "@powerhousedao/reactor";
-import { generatorTypeDefs } from "@powerhousedao/document-engineering/graphql";
+import { documentModelScalars } from "document-model/scalars";
 import type {
   Action,
   DocumentModelModule,
@@ -28,13 +28,9 @@ import type {
 } from "./types.js";
 
 const ATTACHMENT_REF_TYPE = "AttachmentRef";
-const CODEGEN_SCALAR_NAMES = new Set([
-  "Unknown",
-  "DateTime",
-  "Address",
-  ATTACHMENT_REF_TYPE,
-  ...Object.keys(generatorTypeDefs as Record<string, string>),
-]);
+const MODEL_SCALAR_SCHEMAS = documentModelScalars.map(
+  ({ name }) => `scalar ${name}`,
+);
 
 type CompilerContext = {
   actionType: string;
@@ -154,10 +150,6 @@ function buildEffectiveSchema(
   specification: DocumentSpecification,
   context: CompilerContext,
 ): GraphQLSchema {
-  const scalarSchemas = Array.from(
-    CODEGEN_SCALAR_NAMES,
-    (name) => `scalar ${name}`,
-  );
   const stateSchemas = Object.values(specification.state).map(
     (state) => state.schema,
   );
@@ -170,7 +162,7 @@ function buildEffectiveSchema(
 
   try {
     const document = parse(
-      [...scalarSchemas, ...stateSchemas, ...operationSchemas]
+      [...MODEL_SCALAR_SCHEMAS, ...stateSchemas, ...operationSchemas]
         .filter(Boolean)
         .join("\n\n"),
     );

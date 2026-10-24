@@ -12,7 +12,14 @@
  * would be disproportionate.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -164,6 +171,82 @@ describe("isExpectedLoaderMiss", () => {
       "Failed to fetch http://localhost:8080/-/cdn/pkg/node/processors/index.mjs: 503",
     );
     expect(isExpectedLoaderMiss(broken, pkg, "processors")).toBe(false);
+  });
+
+  it("treats an unbuilt ./scalars entry as expected, installed or linked, and other load failures as real", () => {
+    const root = mkdtempSync(join(tmpdir(), "loader-miss-"));
+    try {
+      function writePackage(dir: string, name: string, built: string[] = []) {
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "package.json"),
+          JSON.stringify({
+            name,
+            type: "module",
+            exports: Object.fromEntries(
+              ["scalars", "document-models", "subgraphs"].map((subPath) => [
+                `./${subPath}`,
+                { node: `./dist/node/${subPath}/index.mjs` },
+              ]),
+            ),
+          }),
+        );
+        for (const subPath of built) {
+          mkdirSync(join(dir, "dist", "node", subPath), { recursive: true });
+          writeFileSync(
+            join(dir, "dist", "node", subPath, "index.mjs"),
+            'export * from "./chunk-missing.mjs";\n',
+          );
+        }
+      }
+      writePackage(
+        join(root, "node_modules", "@acme", "ledger"),
+        "@acme/ledger",
+      );
+      writePackage(join(root, "linked-source"), "@acme/linked");
+      writePackage(
+        join(root, "node_modules", "@acme", "broken"),
+        "@acme/broken",
+        ["scalars"],
+      );
+      symlinkSync(
+        join(root, "linked-source"),
+        join(root, "node_modules", "@acme", "linked"),
+        "dir",
+      );
+      // A child process, so Node resolves the packages as a host does and
+      // vitest's resolver does not answer instead.
+      const probe = join(root, "probe.mjs");
+      writeFileSync(
+        probe,
+        "const load = (specifier) => import(specifier).then(() => null, ({ code, message, url }) => ({ code, message, url }));\n" +
+          "console.log(JSON.stringify(Object.fromEntries(await Promise.all(process.argv.slice(2).map(async (specifier) => [specifier, await load(specifier)])))));\n",
+      );
+      const specifiers = [
+        "@acme/ledger/scalars",
+        "@acme/linked/scalars",
+        "@acme/ledger/document-models",
+        "@acme/broken/scalars",
+      ];
+      const thrown = JSON.parse(
+        execFileSync(process.execPath, [probe, ...specifiers], {
+          encoding: "utf8",
+        }),
+      ) as Record<string, { code: string; message: string; url?: string }>;
+      const miss = (specifier: string) => {
+        const [scope, name, subPath] = specifier.split("/");
+        const { message, ...properties } = thrown[specifier];
+        return isExpectedLoaderMiss(
+          Object.assign(new Error(message), properties),
+          `${scope}/${name}`,
+          subPath,
+        );
+      };
+
+      expect(specifiers.map(miss)).toEqual([true, true, false, false]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("does NOT treat a 404 for something else the bundle imports as expected", () => {

@@ -8,6 +8,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { ReportError } from "../utils/detached.js";
+import type { ScalarExport } from "./scalar-exports.js";
 
 // One entry of a reactor package's pieces list, declared here rather than
 // imported so reactor-api needs no dependency on a package meant for pieces.
@@ -50,6 +51,11 @@ export interface IPackageLoader {
     identifier: string,
     immediate?: boolean,
   ): Promise<SubgraphClass[]>;
+  /**
+   * The branded named exports of the package's `./scalars` entry. Optional:
+   * a loader without it answers for no package's scalars.
+   */
+  loadScalars?(identifier: string): Promise<ScalarExport[]>;
   loadProcessors(
     identifier: string,
     immediate?: boolean,
@@ -74,6 +80,11 @@ export interface ISubscribablePackageLoader extends IPackageLoader {
   onSubgraphsChange?(
     identifier: string,
     handler: (subgraphs: SubgraphClass[]) => void,
+    options?: ISubscriptionOptions,
+  ): () => void;
+  onScalarsChange?(
+    identifier: string,
+    handler: (scalars: ScalarExport[]) => void,
     options?: ISubscriptionOptions,
   ): () => void;
   onProcessorsChange?(
@@ -120,6 +131,7 @@ export type PackageManagerResult = {
   documentModels: DocumentModelModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
   subgraphs: Map<string, SubgraphClass[]>;
+  scalars: Map<string, ScalarExport[]>;
   processors: Map<string, ProcessorFactoryBuilder[]>;
   pieces: Map<string, PackagePieceEntry[]>;
 };

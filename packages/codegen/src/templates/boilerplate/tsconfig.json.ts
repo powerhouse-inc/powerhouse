@@ -22,6 +22,12 @@ export const tsconfigPathsTemplate = json`
 "processors/*": [
   "./processors/*/index.ts"
 ],
+"scalars": [
+  "./scalars/index.ts"
+],
+"scalars/*": [
+  "./scalars/*/index.ts"
+],
 "subgraphs": [
   "./subgraphs/index.ts"
 ],

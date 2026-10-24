@@ -196,9 +196,11 @@ describe("VitePackageLoader resolution", () => {
     await expect(loader.loadDocumentModels(BROKEN)).rejects.toMatchObject({
       code: PACKAGE_MODULE_FAILED,
     });
-    const errors = logged(errorSpy);
-    expect(errors).toContain(BROKEN);
-    expect(errors).toContain("boom in broken");
+    expect(logged(errorSpy)).toMatch(
+      new RegExp(
+        `Failed to load document models from ${BROKEN}:\\n  \\S+document-models\\.mjs: boom in broken`,
+      ),
+    );
   });
 
   // A miss inside the package is a broken module, not a package without one.

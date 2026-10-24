@@ -8,6 +8,7 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { packageJsonExports } from "@powerhousedao/shared/clis/constants";
 import { childLogger } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
@@ -22,8 +23,19 @@ import type {
 } from "./types.js";
 import { baseDocumentModels } from "./base-document-models.js";
 import {
+  buildScalarRegistry,
+  describeScalarRefusal,
+} from "./scalar-registry.js";
+import {
+  EMPTY_SCALAR_REGISTRY,
+  sameScalarRegistry,
+  type ScalarRegistry,
+} from "../utils/scalar-types.js";
+import type { ScalarExport } from "./scalar-exports.js";
+import {
   PACKAGE_MODULE_FAILED,
   debounce,
+  failedLoadHeader,
   manifestDeclaredSubgraphs,
 } from "./util.js";
 import { runDetached } from "../utils/detached.js";
@@ -31,6 +43,9 @@ import {
   REGISTRY_ENTRY_ABSENT,
   REGISTRY_EXTERNAL_DEPS_MISSING,
 } from "./registry-cache.js";
+
+// "./dist/node/scalars/index.mjs" without its leading ".".
+const BUILT_SCALARS_ENTRY = packageJsonExports["./scalars"].node.slice(1);
 
 /**
  * A loader throwing "this package isn't mine to load" is normal — loaders are
@@ -74,6 +89,18 @@ export function isExpectedLoaderMiss(
   ) {
     return true;
   }
+  // `ph init` exports ./scalars, but `ph build` builds it only once the
+  // project creates scalars/index.ts. Node then names the export's own target
+  // as the missing module; a missing import inside a built entry names another.
+  if (
+    code === "ERR_MODULE_NOT_FOUND" &&
+    subPath === "scalars" &&
+    "url" in error &&
+    typeof error.url === "string" &&
+    error.url.endsWith(BUILT_SCALARS_ENTRY)
+  ) {
+    return true;
+  }
   // HttpPackageLoader rejects local paths and invalid npm names before any fetch
   if (error.message.startsWith("Invalid package name:")) return true;
   if (code === "ERR_MODULE_NOT_FOUND") {
@@ -94,7 +121,15 @@ const ALREADY_LOGGED = new Set([
   PACKAGE_MODULE_FAILED,
 ]);
 
-type PackageKind = "document models" | "subgraphs" | "processors" | "pieces";
+type ScalarLoader = ISubscribablePackageLoader &
+  Required<Pick<ISubscribablePackageLoader, "loadScalars">>;
+
+type PackageKind =
+  | "document models"
+  | "scalars"
+  | "subgraphs"
+  | "processors"
+  | "pieces";
 
 // A failed load is kept apart from a package that ships none.
 type PackageLoad<T> =
@@ -152,6 +187,9 @@ export class PackageManager implements IPackageManager {
     UpgradeManifest<readonly number[]>[]
   >();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
+  private scalarsMap = new Map<string, ScalarExport[]>();
+  private scalarRegistry: ScalarRegistry = EMPTY_SCALAR_REGISTRY;
+  private loggedScalarRefusals = new Set<string>();
   private processorMap = new Map<string, Processor>();
   private piecesMap = new Map<string, PackagePieceEntry[]>();
   private configWatcher: StatWatcher | undefined;
@@ -165,6 +203,7 @@ export class PackageManager implements IPackageManager {
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
+    scalarsChange: [ScalarRegistry];
     processorsChange: [Map<string, Processor>];
     piecesChange: [Map<string, PackagePieceEntry[]>];
   }>();
@@ -205,6 +244,11 @@ export class PackageManager implements IPackageManager {
   ): Promise<PackageManagerResult> {
     this.logger.info("Loading packages: @packages", requested.join(", "));
 
+    const scalarsMap = this.settle(
+      "scalars",
+      await this.loadScalars(requested),
+      this.scalarsMap,
+    );
     const documentModelLoads = await this.loadDocumentModels(requested);
     const failed = requested.filter(
       (pkg) => documentModelLoads.get(pkg)?.status === "failed",
@@ -243,6 +287,7 @@ export class PackageManager implements IPackageManager {
       (pkg) => (this.removedAt.get(pkg) ?? 0) > requestedAt,
     );
     for (const map of [
+      scalarsMap,
       documentModelsMap,
       upgradeManifestsMap,
       subgraphsMap,
@@ -253,6 +298,7 @@ export class PackageManager implements IPackageManager {
     }
     const packages = requested.filter((pkg) => !removed.includes(pkg));
 
+    this.updateScalarsMap(scalarsMap);
     this.upgradeManifestsMap = upgradeManifestsMap;
     this.updatePackagesMap(documentModelsMap);
     this.updateSubgraphsMap(subgraphsMap);
@@ -274,6 +320,7 @@ export class PackageManager implements IPackageManager {
       ),
       upgradeManifests: this.getUniqueUpgradeManifests(),
       subgraphs: subgraphsMap,
+      scalars: scalarsMap,
       processors: processorsMap,
       pieces: piecesMap,
     };
@@ -303,10 +350,11 @@ export class PackageManager implements IPackageManager {
   }
 
   // The first loader to answer wins; only misses everywhere means absent.
-  private async loadEach<T>(
+  private async loadEach<T, L extends ISubscribablePackageLoader>(
     kind: PackageKind,
     packages: string[],
-    load: (loader: ISubscribablePackageLoader, pkg: string) => Promise<T[]>,
+    loaders: readonly L[],
+    load: (loader: L, pkg: string) => Promise<T[]>,
   ): Promise<Map<string, PackageLoad<T>>> {
     this.logger.debug(`Loading ${kind} from packages: ${packages.join(", ")}`);
     const subPath = subPathOf(kind);
@@ -316,7 +364,7 @@ export class PackageManager implements IPackageManager {
       const failures: { loader: string; error: unknown }[] = [];
       let loaded: PackageLoad<T> | undefined;
 
-      for (const loader of this.loaders) {
+      for (const loader of loaders) {
         try {
           loaded = { status: "loaded", value: await load(loader, pkg) };
           break;
@@ -351,15 +399,20 @@ export class PackageManager implements IPackageManager {
   private loadDocumentModels(
     packages: string[],
   ): Promise<Map<string, PackageLoad<DocumentModelModule>>> {
-    return this.loadEach("document models", packages, async (loader, pkg) => {
-      const documentModels = await loader.loadDocumentModels(pkg);
-      this.logger.info(
-        `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
-        pkg,
-        documentModels.map((dm) => dm.documentModel.global.id),
-      );
-      return documentModels;
-    });
+    return this.loadEach(
+      "document models",
+      packages,
+      this.loaders,
+      async (loader, pkg) => {
+        const documentModels = await loader.loadDocumentModels(pkg);
+        this.logger.info(
+          `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
+          pkg,
+          documentModels.map((dm) => dm.documentModel.global.id),
+        );
+        return documentModels;
+      },
+    );
   }
 
   /** Upgrade manifests currently loaded across all packages, one per type. */
@@ -402,8 +455,11 @@ export class PackageManager implements IPackageManager {
   private async loadSubgraphs(
     packages: string[],
   ): Promise<Map<string, PackageLoad<SubgraphClass>>> {
-    const loads = await this.loadEach("subgraphs", packages, (loader, pkg) =>
-      loader.loadSubgraphs(pkg),
+    const loads = await this.loadEach(
+      "subgraphs",
+      packages,
+      this.loaders,
+      (loader, pkg) => loader.loadSubgraphs(pkg),
     );
 
     // A bad export shape loads as none; only the manifest says some were meant.
@@ -422,13 +478,31 @@ export class PackageManager implements IPackageManager {
     return loads;
   }
 
+  private loadScalars(
+    packages: string[],
+  ): Promise<Map<string, PackageLoad<ScalarExport>>> {
+    return this.loadEach(
+      "scalars",
+      packages,
+      this.loaders.filter(
+        (loader): loader is ScalarLoader => loader.loadScalars !== undefined,
+      ),
+      (loader, pkg) => loader.loadScalars(pkg),
+    );
+  }
+
   private loadProcessors(
     packages: string[],
   ): Promise<Map<string, PackageLoad<ProcessorFactoryBuilder>>> {
-    return this.loadEach("processors", packages, async (loader, pkg) => {
-      const processors = await loader.loadProcessors(pkg);
-      return processors ? [processors] : [];
-    });
+    return this.loadEach(
+      "processors",
+      packages,
+      this.loaders,
+      async (loader, pkg) => {
+        const processors = await loader.loadProcessors(pkg);
+        return processors ? [processors] : [];
+      },
+    );
   }
 
   // Paths, not modules: a piece is code the host must not import, and what a
@@ -436,8 +510,11 @@ export class PackageManager implements IPackageManager {
   private async loadPieces(
     packages: string[],
   ): Promise<Map<string, PackageLoad<PackagePieceEntry>>> {
-    const loads = await this.loadEach("pieces", packages, (loader, pkg) =>
-      loader.loadPieces(pkg),
+    const loads = await this.loadEach(
+      "pieces",
+      packages,
+      this.loaders,
+      (loader, pkg) => loader.loadPieces(pkg),
     );
     for (const [pkg, load] of loads) {
       if (load.status !== "loaded" || load.value.length === 0) continue;
@@ -474,16 +551,25 @@ export class PackageManager implements IPackageManager {
     );
     if (realFailures.length === 0) return;
 
-    const details = realFailures
-      .map(({ loader, error }) => {
-        const message = error instanceof Error ? error.message : String(error);
-        return `  [${loader}] ${message}`;
-      })
-      .join("\n");
-    this.logger.warn(
-      `All package loaders failed to load ${kind} from @pkg:\n@details`,
+    this.warnFailedLoad(
+      kind,
       pkg,
-      details,
+      realFailures.map(({ loader, error }) => {
+        const message = error instanceof Error ? error.message : String(error);
+        return `[${loader}] ${message}`;
+      }),
+    );
+  }
+
+  private warnFailedLoad(
+    kind: PackageKind,
+    pkg: string,
+    reasons: readonly string[],
+  ): void {
+    this.logger.warn(
+      `${failedLoadHeader(kind)}\n@reasons`,
+      pkg,
+      reasons.map((reason) => `  ${reason}`).join("\n"),
     );
   }
 
@@ -541,6 +627,22 @@ export class PackageManager implements IPackageManager {
     if (next) this.updateSubgraphsMap(next);
   }
 
+  private async updateScalarsForPackage(pkg: string): Promise<void> {
+    this.logger.debug(`Updating scalars for package: ${pkg}`);
+    const load = (await this.loadScalars([pkg])).get(pkg);
+    if (!this.subscribedPackages.has(pkg)) return;
+    const next = this.withReload("scalars", this.scalarsMap, pkg, load);
+    if (!next) return;
+    this.updateScalarsMap(
+      new Map(
+        Array.from(this.subscribedPackages).flatMap((loaded) => {
+          const exports = next.get(loaded);
+          return exports ? [[loaded, exports] as const] : [];
+        }),
+      ),
+    );
+  }
+
   private async updateProcessorsForPackage(pkg: string): Promise<void> {
     this.logger.debug(`Updating processors for package: ${pkg}`);
     const load = (await this.loadProcessors([pkg])).get(pkg);
@@ -593,6 +695,9 @@ export class PackageManager implements IPackageManager {
         "subgraphs",
         () => this.updateSubgraphsForPackage(pkg),
       );
+      const onScalars = this.getDebouncedUpdateCallback(pkg, "scalars", () =>
+        this.updateScalarsForPackage(pkg),
+      );
       const onProcessors = this.getDebouncedUpdateCallback(
         pkg,
         "processors",
@@ -608,6 +713,9 @@ export class PackageManager implements IPackageManager {
         }
         if (loader.onSubgraphsChange) {
           unsubs.push(loader.onSubgraphsChange(pkg, onSubgraphs));
+        }
+        if (loader.onScalarsChange) {
+          unsubs.push(loader.onScalarsChange(pkg, onScalars));
         }
         if (loader.onProcessorsChange) {
           unsubs.push(loader.onProcessorsChange(pkg, onProcessors));
@@ -695,6 +803,28 @@ export class PackageManager implements IPackageManager {
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
   }
 
+  private updateScalarsMap(scalarsMap: Map<string, ScalarExport[]>) {
+    this.scalarsMap = scalarsMap;
+    const { registry, refusals } = buildScalarRegistry(scalarsMap);
+    const reported = new Set<string>();
+    const unreported = new Map<string, string[]>();
+    for (const refusal of refusals) {
+      const reason = describeScalarRefusal(refusal);
+      reported.add(reason);
+      if (this.loggedScalarRefusals.has(reason)) continue;
+      const reasons = unreported.get(refusal.packageName) ?? [];
+      reasons.push(reason);
+      unreported.set(refusal.packageName, reasons);
+    }
+    for (const [pkg, reasons] of unreported) {
+      this.warnFailedLoad("scalars", pkg, reasons);
+    }
+    this.loggedScalarRefusals = reported;
+    if (sameScalarRegistry(registry, this.scalarRegistry)) return;
+    this.scalarRegistry = registry;
+    this.eventEmitter.emit("scalarsChange", registry);
+  }
+
   private updateProcessorsMap(processorsMap: Map<string, Processor>) {
     const oldPackages = Array.from(this.processorMap.keys());
     const newPackages = Array.from(processorsMap.keys());
@@ -726,6 +856,11 @@ export class PackageManager implements IPackageManager {
     return new Map(this.docModelsMap);
   }
 
+  /** The scalars registered from every loaded package's `./scalars` entry. */
+  getScalarRegistry(): ScalarRegistry {
+    return this.scalarRegistry;
+  }
+
   /** The pieces every loaded package ships, keyed by the package. */
   getPieces(): Map<string, PackagePieceEntry[]> {
     return new Map(this.piecesMap);
@@ -754,6 +889,7 @@ export class PackageManager implements IPackageManager {
     this.processorMap = dropKey(this.processorMap);
     this.piecesMap = dropKey(this.piecesMap);
 
+    this.updateScalarsMap(dropKey(this.scalarsMap));
     this.updatePackagesMap(this.docModelsMap);
     this.updateSubgraphsMap(this.subgraphsMap);
     this.updateProcessorsMap(this.processorMap);
@@ -779,6 +915,17 @@ export class PackageManager implements IPackageManager {
       void runDetached(
         "Subgraphs change listener",
         () => handler(subgraphs),
+        this.detached,
+      );
+    });
+  }
+
+  /** Called when the registry changes; an equal rebuild is not a change. */
+  onScalarsChange(handler: (scalars: ScalarRegistry) => unknown): void {
+    this.eventEmitter.on("scalarsChange", (scalars) => {
+      void runDetached(
+        "Scalars change listener",
+        () => handler(scalars),
         this.detached,
       );
     });

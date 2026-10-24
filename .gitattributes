@@ -1,0 +1,2 @@
+packages/codegen/src/codegen/goldens/scalar-codegen/**/*.txt text eol=lf
+packages/reactor-api/test/goldens/scalars/*.txt text eol=lf
