@@ -119,6 +119,7 @@ export class RoutingReactorClient implements IReactorClient {
           : registry && ((): readonly DocumentModelModule[] => registry),
       dedupSize:
         options.subscriptionDedupSize ?? DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
+      answerFailedIdCheck: options.answerFailedIdCheck,
     };
     const drives = new BackendDrives(this.logger, signer);
     this.read = new RoutingReadClient(context, drives);

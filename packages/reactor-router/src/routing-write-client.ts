@@ -160,25 +160,22 @@ export class RoutingWriteClient implements IReactorWriteClient {
   /**
    * True when any backend serves or has taken the id; false only when every
    * backend answered. A backend without isDocumentIdTaken answers by isServed.
+   * A failure goes to the router's `answerFailedIdCheck` when it has one,
+   * which may answer it instead.
    */
-  isDocumentIdTaken(
+  async isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    return fanInExistence(
-      "isDocumentIdTaken",
-      this.dispatcher.backends,
-      async (backend) => {
-        if (await backend.api.isServed(documentId, undefined, signal)) {
-          return true;
-        }
-        const api = backend.api;
-        return api.isDocumentIdTaken === undefined
-          ? false
-          : api.isDocumentIdTaken(documentId, signal);
-      },
-      this.dispatcher.onDiagnostic,
-    );
+    try {
+      return await this.askIdTaken(documentId, signal);
+    } catch (error) {
+      const answer = this.context.answerFailedIdCheck?.(documentId, error);
+      if (answer === undefined) {
+        throw error;
+      }
+      return answer;
+    }
   }
 
   /** The holder's own description; without a write half, read from the holder. */
@@ -747,6 +744,26 @@ export class RoutingWriteClient implements IReactorWriteClient {
   }
 
   // Internals
+
+  private askIdTaken(
+    documentId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<boolean> {
+    return fanInExistence(
+      "isDocumentIdTaken",
+      this.dispatcher.backends,
+      async (backend) => {
+        if (await backend.api.isServed(documentId, undefined, signal)) {
+          return true;
+        }
+        const api = backend.api;
+        return api.isDocumentIdTaken === undefined
+          ? false
+          : api.isDocumentIdTaken(documentId, signal);
+      },
+      this.dispatcher.onDiagnostic,
+    );
+  }
 
   /**
    * Runs a document write on its holder: through the holder's write half when

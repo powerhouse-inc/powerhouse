@@ -15,6 +15,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   CrossBackendBatchError,
   CrossBackendRelationshipError,
+  FanInPartialFailureError,
   fromReactorClient,
   RoutingReactorClient,
   RoutingReadClient,
@@ -391,5 +392,69 @@ describe("fromReactorClient", () => {
 
     expect("read" in backend).toBe(false);
     expect("write" in backend).toBe(false);
+  });
+});
+
+describe("an id check with the remote backend down", () => {
+  /** A local backend that answers, and a remote one whose every probe fails. */
+  function remoteDown(localTaken: boolean) {
+    const local = new FakeBackend("local");
+    const remote = new FakeBackend("remote");
+    if (localTaken) {
+      local.seed(fakeDocument({ id: "doc-1" }));
+    }
+    remote.failing.add("isServed");
+    remote.failing.add("isDocumentIdTaken");
+    return { local, remote };
+  }
+
+  const fallBackToLocal = (
+    _documentId: string,
+    error: unknown,
+  ): boolean | undefined =>
+    error instanceof FanInPartialFailureError &&
+    error.failures.every((failure) => failure.backend === "remote")
+      ? false
+      : undefined;
+
+  it("answers from the local backend on the write half and the facade", async () => {
+    const free = remoteDown(false);
+    const client = new RoutingReactorClient(
+      [free.local.config(), free.remote.config()],
+      { onDiagnostic: silent, answerFailedIdCheck: fallBackToLocal },
+    );
+
+    await expect(client.write.isDocumentIdTaken("doc-1")).resolves.toBe(false);
+    await expect(client.isDocumentIdTaken("doc-1")).resolves.toBe(false);
+    expect(free.local.called("isDocumentIdTaken")).toBe(true);
+
+    const taken = remoteDown(true);
+    const again = new RoutingReactorClient(
+      [taken.local.config(), taken.remote.config()],
+      { onDiagnostic: silent, answerFailedIdCheck: fallBackToLocal },
+    );
+    await expect(again.write.isDocumentIdTaken("doc-1")).resolves.toBe(true);
+  });
+
+  it("still fails when the local backend cannot answer either", async () => {
+    const { local, remote } = remoteDown(false);
+    local.failing.add("isServed");
+    const client = new RoutingReactorClient([local.config(), remote.config()], {
+      onDiagnostic: silent,
+      answerFailedIdCheck: fallBackToLocal,
+    });
+
+    await expect(client.write.isDocumentIdTaken("doc-1")).rejects.toThrow(
+      FanInPartialFailureError,
+    );
+  });
+
+  it("fails without a fallback", async () => {
+    const { local, remote } = remoteDown(false);
+    const client = router([local.config(), remote.config()]);
+
+    await expect(client.write.isDocumentIdTaken("doc-1")).rejects.toThrow(
+      FanInPartialFailureError,
+    );
   });
 });

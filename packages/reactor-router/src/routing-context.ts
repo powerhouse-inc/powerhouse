@@ -16,6 +16,7 @@ import {
   type RouterBackend,
 } from "./backend.js";
 import type { RouteDispatcher } from "./dispatcher.js";
+import type { RoutingOptions } from "./types.js";
 
 /**
  * What the routing read and write halves share: one dispatcher (so one route
@@ -29,6 +30,10 @@ export type RoutingContext = {
   /** Absent, the primary backend's registry is asked. */
   readonly modules: (() => readonly DocumentModelModule[]) | undefined;
   readonly dedupSize: number;
+  /** See {@link RoutingOptions.answerFailedIdCheck}. */
+  readonly answerFailedIdCheck:
+    | ((documentId: string, error: unknown) => boolean | undefined)
+    | undefined;
 };
 
 /** Members a backend may leave out; calling one it left out is refused. */
