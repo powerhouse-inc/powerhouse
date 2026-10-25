@@ -57,6 +57,7 @@ export {
   type IJobStagePort,
 } from "./src/client/internal/handles.js";
 export type { ReactorClientParts } from "./src/client/internal/parts.js";
+export type { WriteSideParts } from "./src/client/internal/targets.js";
 export {
   DocumentChangeType,
   type ActionCandidate,

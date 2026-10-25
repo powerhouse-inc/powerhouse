@@ -44,7 +44,8 @@ export class KyselyWriteIdentityStore implements IWriteIdentityStore {
 
     if (idMatch && slugMatch && idMatch.documentId !== slugMatch.documentId) {
       throw new Error(
-        `Ambiguous identifier "${identifier}": matches both document ID "${idMatch.documentId}" and slug for document ID "${slugMatch.documentId}".`,
+        `Ambiguous identifier "${identifier}": matches both document ID "${idMatch.documentId}" and slug for document ID "${slugMatch.documentId}". ` +
+          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
       );
     }
 

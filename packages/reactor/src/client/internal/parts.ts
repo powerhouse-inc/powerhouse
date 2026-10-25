@@ -13,6 +13,7 @@ import type {
 import type { IReactorSubscriptionManager } from "../../subs/types.js";
 import type { ProtocolSelection } from "../types.js";
 import type { ActionEvaluationConfig } from "./evaluation.js";
+import type { WriteSideParts } from "./targets.js";
 
 /**
  * Everything the in-process read and write clients are built from. Both halves
@@ -31,4 +32,10 @@ export type ReactorClientParts = {
   actionEvaluation: ActionEvaluationConfig | undefined;
   createSignaturePolicy: SignaturePolicy;
   protocolSelection: ProtocolSelection;
+  /**
+   * The write side's identity table and operation store. Without them (a
+   * client built from `withReactor`), write targets resolve on the document
+   * view.
+   */
+  writeSide: WriteSideParts | undefined;
 };

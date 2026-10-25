@@ -43,6 +43,7 @@ import { warnOnce } from "./deprecations.js";
 import { DriveClientFacade } from "./drive-client.js";
 import type { ActionEvaluationConfig } from "./internal/evaluation.js";
 import type { ReactorClientParts } from "./internal/parts.js";
+import type { WriteSideParts } from "./internal/targets.js";
 import { ReactorReadClient } from "./read-client.js";
 import type {
   ActionCandidate,
@@ -126,6 +127,7 @@ export class ReactorClient implements IReactorClient {
       flags: {},
       collectionsOf: () => Promise.resolve({}),
     },
+    writeSide?: WriteSideParts,
   ) {
     const parts: ReactorClientParts = {
       logger,
@@ -139,6 +141,7 @@ export class ReactorClient implements IReactorClient {
       actionEvaluation,
       createSignaturePolicy,
       protocolSelection,
+      writeSide,
     };
     this.logger = logger;
     this.reactor = reactor;

@@ -117,7 +117,12 @@ export class ReactorWriteClient implements IReactorWriteClient {
       parts.readGate,
       parts.signer,
     );
-    this.targets = new WriteTargets(parts.documentView, parts.documentIndexer);
+    this.targets = new WriteTargets(
+      parts.documentView,
+      parts.documentIndexer,
+      parts.logger,
+      parts.writeSide,
+    );
     this.handles = new WriteHandleFactory(awaiterStagePort(parts.jobAwaiter));
     this.actionEvaluation = parts.actionEvaluation;
     this.createSignaturePolicy = parts.createSignaturePolicy;
@@ -131,7 +136,19 @@ export class ReactorWriteClient implements IReactorWriteClient {
       parts.signer,
       (identifier, signal) =>
         this.targets.resolveReference(identifier, "main", signal),
+      (identifier, signal) =>
+        this.targets.lookupLiveDocument(identifier, "main", signal),
     );
+  }
+
+  /**
+   * How many target resolutions the document view answered because the
+   * write-side identity table knew nothing of the identifier. Zero in the
+   * normal path; non-zero means identity rows are missing (an incomplete
+   * backfill).
+   */
+  get viewFallbackCount(): number {
+    return this.targets.viewFallbacks;
   }
 
   async isDocumentIdTaken(
@@ -149,9 +166,10 @@ export class ReactorWriteClient implements IReactorWriteClient {
   }
 
   /**
-   * Resolves the reference as a mutation does, then describes the document from
-   * the document view, ungated. The write-side identity table replaces the view
-   * here without changing the answer's shape.
+   * Resolves the reference as a mutation does and describes it from the write
+   * side: identity from the identity table, revision from the operation
+   * store's stream heads. Never reads the document view unless the identity
+   * table knows nothing of the identifier (see {@link WriteTargets}).
    */
   async describe(
     identifier: string,
@@ -159,24 +177,7 @@ export class ReactorWriteClient implements IReactorWriteClient {
     signal?: AbortSignal,
   ): Promise<WriteTargetDescription> {
     this.logger.verbose("describe(@identifier, @branch)", identifier, branch);
-    const documentId = await this.targets.resolveReference(
-      identifier,
-      branch,
-      signal,
-    );
-    const document = await this.documentView.get(
-      documentId,
-      { branch },
-      undefined,
-      signal,
-    );
-    return {
-      documentId: document.header.id,
-      documentType: document.header.documentType,
-      slug: document.header.slug,
-      branch: document.header.branch || branch,
-      revision: { ...document.header.revision },
-    };
+    return this.targets.describe(identifier, branch, signal);
   }
 
   /**
