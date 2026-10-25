@@ -1,10 +1,10 @@
 import type { Kysely } from "kysely";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   grantDocumentPermission,
   revokeDocumentPermission,
 } from "../src/graphql/auth/resolvers.js";
-import { runMigrations } from "../src/migrations/index.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import type {
   CanonicalDocumentId,
   IAuthorizationService,
@@ -15,7 +15,6 @@ import {
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
-import { getDbClient } from "../src/utils/db.js";
 
 /**
  * Manage-permission gating for the grant/revoke resolvers after consolidation:
@@ -29,9 +28,7 @@ describe("grant/revoke resolvers route through canManage", () => {
   let authorization: IAuthorizationService;
 
   beforeEach(async () => {
-    const { db: dbClient } = getDbClient();
-    db = dbClient as Kysely<DocumentPermissionDatabase>;
-    await runMigrations(db as Kysely<unknown>);
+    db = await openReactorPermissionStore();
     permissions = new DocumentPermissionService(db);
     authorization = createAuthorizationService(
       {
@@ -43,6 +40,10 @@ describe("grant/revoke resolvers route through canManage", () => {
       () => Promise.resolve([]),
     );
     await permissions.setDocumentProtection("doc-1", true);
+  });
+
+  afterEach(async () => {
+    await db.destroy();
   });
 
   it("lets a document owner without an ADMIN grant manage permissions", async () => {

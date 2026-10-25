@@ -4,7 +4,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
-import { runMigrations } from "../src/migrations/index.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
@@ -12,7 +12,6 @@ import {
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import { createGetParentIdsFn } from "../src/services/get-parent-ids.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
-import { getDbClient } from "../src/utils/db.js";
 
 /**
  * Integration tests for document permissions with the ReactorSubgraph.
@@ -67,9 +66,7 @@ describe("Permissions Integration Tests", () => {
     vi.clearAllMocks();
 
     // Create real in-memory database and permission service
-    const { db: dbClient } = getDbClient();
-    db = dbClient as Kysely<DocumentPermissionDatabase>;
-    await runMigrations(db as Kysely<unknown>);
+    db = await openReactorPermissionStore();
     documentPermissionService = new DocumentPermissionService(db);
     // These tests exercise grant enforcement, which only applies to protected
     // documents; unprotected documents are open under the authorization model.

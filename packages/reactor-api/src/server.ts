@@ -110,6 +110,10 @@ import {
   createAuthorizationService,
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import {
+  DEFAULT_PERMISSION_CACHE_OPTIONS,
+  DEFAULT_PERMISSION_CACHE_TTL_MS,
+} from "./services/permission-cache.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
@@ -639,6 +643,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
+  ownDocumentPermissions: OwnDocumentPermissions | null;
   authorizationConfig: AuthorizationConfig;
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
@@ -927,33 +932,31 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
   dbClosers.push(...analyticsClosers);
 
-  // Use provided document permission service, or create one if env var is set
-  let documentPermissionService = options.documentPermissionService;
-  if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
-    const { db, knex, pglite } = getDbClient(
-      options.dbPath,
-      options.pgliteFactory,
-    );
-    dbClosers.push(...makeDbClosers(knex, pglite, logger));
-    // Run document permission migrations
-    await runMigrations(db as Kysely<unknown>);
-    logger.info("Document permission migrations completed");
-    documentPermissionService = new DocumentPermissionService(
-      db as Kysely<DocumentPermissionDatabase>,
-      { defaultProtection },
-    );
-    logger.info("Document permission service initialized");
-  }
+  // Use the provided document permission service, or build one when the env
+  // var is set. Building waits for the client initializer, which may hand
+  // over the reactor store the permission tables live in.
+  const documentPermissionService = options.documentPermissionService;
+  const ownDocumentPermissions: OwnDocumentPermissions | null =
+    !documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true"
+      ? {
+          defaultProtection,
+          cacheTtlMs: resolvePermissionCacheTtlMs(
+            process.env.DOCUMENT_PERMISSION_CACHE_TTL_MS,
+            logger,
+          ),
+        }
+      : null;
 
   // The authorization policy collapses the prior dual enforcement paths into
   // one. Document permissions imply authentication (guaranteed by the boot
   // gate above). The service itself is created in _setupAPI, where the
   // reactor client needed for the parent-document resolver exists.
-  const policy = documentPermissionService
-    ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
-    : authEnabled
-      ? AuthorizationPolicy.ADMIN_ONLY
-      : AuthorizationPolicy.OPEN;
+  const policy =
+    documentPermissionService || ownDocumentPermissions
+      ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
+      : authEnabled
+        ? AuthorizationPolicy.ADMIN_ONLY
+        : AuthorizationPolicy.OPEN;
   const authorizationConfig: AuthorizationConfig = {
     admins,
     defaultProtection,
@@ -1042,6 +1045,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     relationalDb,
     analyticsStore,
     documentPermissionService,
+    ownDocumentPermissions,
     authorizationConfig,
     attachments,
     attachmentReferenceIndex,
@@ -1428,12 +1432,89 @@ export interface ClientInitializerResult {
   module: InProcessReactorClientModule;
   reactorDriveClient?: IDriveClient;
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
+  /**
+   * The reactor store, bound to the schema its migrations ran in, where the
+   * document permission tables live (reactor migration 029). When absent the
+   * permission service keeps the legacy tables on the read-model store.
+   */
+  permissionsDb?: Kysely<DocumentPermissionDatabase>;
 }
 
 export interface ClientInitializerDependencies {
   attachmentReferenceWriter: IAttachmentReferenceWriter;
   /** Upgrade manifests exported by the loaded packages, one per type. */
   upgradeManifests: UpgradeManifest<readonly number[]>[];
+  /** The read-model store, for moving data that used to live there. */
+  readModelDb: Kysely<unknown>;
+}
+
+/** Settings for the permission service the host builds itself. */
+type OwnDocumentPermissions = {
+  defaultProtection: boolean;
+  cacheTtlMs: number;
+};
+
+/**
+ * Builds the host's own permission service: on the reactor store when the
+ * client initializer handed it over, otherwise on the read-model store after
+ * running reactor-api's legacy permission migrations there.
+ */
+async function createOwnDocumentPermissionService(
+  settings: OwnDocumentPermissions,
+  permissionsDb: Kysely<DocumentPermissionDatabase> | undefined,
+  options: Options,
+  dbClosers: Array<() => Promise<void>>,
+  logger: ILogger,
+): Promise<DocumentPermissionService> {
+  const cacheOptions = {
+    ...DEFAULT_PERMISSION_CACHE_OPTIONS,
+    ttlMs: settings.cacheTtlMs,
+  };
+  const config = { defaultProtection: settings.defaultProtection };
+  if (permissionsDb) {
+    logger.info(
+      `Document permission service initialized on the reactor store (cache TTL ${settings.cacheTtlMs} ms)`,
+    );
+    return new DocumentPermissionService(permissionsDb, config, cacheOptions);
+  }
+
+  const { db, knex, pglite } = getDbClient(
+    options.dbPath,
+    options.pgliteFactory,
+  );
+  dbClosers.push(...makeDbClosers(knex, pglite, logger));
+  await runMigrations(db as Kysely<unknown>);
+  logger.info("Document permission migrations completed");
+  logger.info(
+    `Document permission service initialized on the read-model store (cache TTL ${settings.cacheTtlMs} ms)`,
+  );
+  return new DocumentPermissionService(
+    db as Kysely<DocumentPermissionDatabase>,
+    config,
+    cacheOptions,
+  );
+}
+
+/**
+ * The permission cache TTL from `DOCUMENT_PERMISSION_CACHE_TTL_MS`: a
+ * non-negative integer of milliseconds, 0 disabling the cache. Anything else
+ * falls back to the default with a warning.
+ */
+export function resolvePermissionCacheTtlMs(
+  raw: string | undefined,
+  logger: ILogger,
+): number {
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_PERMISSION_CACHE_TTL_MS;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    logger.warn(
+      `Ignoring DOCUMENT_PERMISSION_CACHE_TTL_MS=${raw}: expected a non-negative integer; using ${DEFAULT_PERMISSION_CACHE_TTL_MS} ms`,
+    );
+    return DEFAULT_PERMISSION_CACHE_TTL_MS;
+  }
+  return parsed;
 }
 
 export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
@@ -1467,7 +1548,8 @@ export async function initializeAndStartAPI(
     authService,
     relationalDb,
     analyticsStore,
-    documentPermissionService,
+    documentPermissionService: providedDocumentPermissionService,
+    ownDocumentPermissions,
     authorizationConfig,
     attachments,
     attachmentReferenceIndex,
@@ -1487,10 +1569,24 @@ export async function initializeAndStartAPI(
       status: "unavailable",
       reason: "initializer-did-not-report",
     },
+    permissionsDb,
   } = await clientInitializer(documentModels, {
     attachmentReferenceWriter: attachmentReferenceIndex.store,
     upgradeManifests,
+    readModelDb: getDbClient(options.dbPath, options.pgliteFactory).db,
   });
+
+  const documentPermissionService =
+    providedDocumentPermissionService ??
+    (ownDocumentPermissions
+      ? await createOwnDocumentPermissionService(
+          ownDocumentPermissions,
+          permissionsDb,
+          options,
+          dbClosers,
+          options.logger ?? defaultLogger,
+        )
+      : undefined);
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
