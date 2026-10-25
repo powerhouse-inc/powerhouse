@@ -58,6 +58,7 @@ import type {
   IReactorWriteClient,
   NodeWriteHandle,
   WriteHandle,
+  WriteReceipt,
 } from "./types.js";
 
 export type BatchSubmitter = (
@@ -122,6 +123,10 @@ export class DriveWriteClient implements IDriveWriteClient {
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string>,
+    private readonly lookupLiveDocument: (
+      identifier: string,
+      signal?: AbortSignal,
+    ) => Promise<string | undefined> = () => Promise.resolve(undefined),
   ) {
     this.executeBatch =
       typeof submitter === "function"
@@ -314,6 +319,20 @@ export class DriveWriteClient implements IDriveWriteClient {
       nodeIdentifier,
     );
     const driveId = await this.resolveReference(driveIdentifier, signal);
+
+    // A live document is a file node, or an orphan whose node never landed
+    // (ADD_FILE rejected the name). Both are removed the same way, without
+    // reading the drive: the drive reducer rejects DELETE_NODE of a node that
+    // is not there, which is reported on the job and not thrown, and the
+    // document and its relationship are deleted either way, as before.
+    const fileId = await this.lookupLiveDocument(nodeIdentifier, signal);
+    if (fileId !== undefined) {
+      return this.removeFileNode(driveId, fileId, signal);
+    }
+
+    // Anything else is a folder or unknown. The drive is read through the read
+    // half because a folder's removal needs its subtree: each file under it is
+    // a document that has to be deleted, which the reducer does not do.
     const drive = await this.reads.get<DocumentDriveDocument>(
       driveId,
       undefined,
@@ -378,8 +397,13 @@ export class DriveWriteClient implements IDriveWriteClient {
       [actions.setName({ name })],
       signal,
     );
-    const renamed = await renameHandle.document(undefined, signal);
-    if (renamed.header.name !== name) {
+    let renamed: WriteReceipt;
+    try {
+      renamed = await renameHandle.readable;
+    } catch (error) {
+      throw asJobError(error);
+    }
+    if (!(await this.renameApplied(renameHandle, renamed, name, signal))) {
       throw new Error("Document rename did not apply");
     }
     const handle = await this.write.execute(
@@ -446,6 +470,10 @@ export class DriveWriteClient implements IDriveWriteClient {
       srcNodeId,
       targetParentFolderId,
     );
+    // The one drive write that keeps reading through the read half: the copy
+    // plan is built from the source subtree's nodes and names, and each copied
+    // file is seeded from its source document's state. No token: it is a copy
+    // of what the user sees.
     const drive = await this.reads.get<DocumentDriveDocument>(
       driveIdentifier,
       undefined,
@@ -540,6 +568,25 @@ export class DriveWriteClient implements IDriveWriteClient {
     } catch (error) {
       throw asJobError(error);
     }
+  }
+
+  /**
+   * Whether a SET_NAME landed, from the job's per-action outcome: a reducer
+   * error or a denial does not fail the job, so the outcome is where a refused
+   * rename shows. A handle whose job carries no outcome (one settled by a
+   * facade-only client) is read back instead, as every rename once was.
+   */
+  private async renameApplied(
+    handle: WriteHandle,
+    receipt: WriteReceipt,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    if (receipt.job.result !== undefined) {
+      return receipt.job.result.allApplied;
+    }
+    const renamed = await handle.document(undefined, signal);
+    return renamed.header.name === name;
   }
 
   /** Submits one batch and returns a handle over all of its jobs. */
