@@ -1,5 +1,5 @@
 import { getPHStore } from "../hooks/ph-store.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorReadClient } from "@powerhousedao/reactor";
 import { SyncStatus } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
@@ -24,7 +24,7 @@ const syncStatusToUI: Record<SyncStatus, UISyncStatus> = {
 };
 
 export async function getDrives(
-  reactor: IReactorClient,
+  reactor: IReactorReadClient,
 ): Promise<DocumentDriveDocument[]> {
   // SearchFilter.type takes one string, so query each drive type and merge.
   const perType = await Promise.all(

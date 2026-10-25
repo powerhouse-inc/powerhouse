@@ -10,6 +10,7 @@ import type {
   AddPHGlobalEventHandler,
   BrowserReactorClientModule,
   IReactorBrowserClient,
+  ReactorBrowserHalves,
   SetPHGlobalValue,
   UsePHGlobalValue,
   WorkerReactorClientModule,
@@ -21,6 +22,7 @@ const reactorClientModuleEventFunctions = makePHEventFunctions(
   "reactorClientModule",
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
+const reactorHalvesEventFunctions = makePHEventFunctions("reactor");
 const fullReactorClientEventFunctions =
   makePHEventFunctions("fullReactorClient");
 
@@ -42,9 +44,32 @@ export const addReactorClientModuleEventHandler: AddPHGlobalEventHandler =
 export const useReactorClient: UsePHGlobalValue<IReactorBrowserClient> =
   reactorClientEventFunctions.useValue;
 
-/** Sets the reactor client */
-export const setReactorClient: SetPHGlobalValue<IReactorBrowserClient> =
-  reactorClientEventFunctions.setValue;
+/**
+ * Sets the reactor client, and `window.ph.reactor` to its read and write
+ * halves. A client without halves leaves `reactor` unset.
+ */
+export const setReactorClient: SetPHGlobalValue<IReactorBrowserClient> = (
+  client,
+) => {
+  reactorClientEventFunctions.setValue(client);
+  reactorHalvesEventFunctions.setValue(halvesOf(client));
+};
+
+/** Returns the reactor client's read and write halves */
+export const useReactorHalves: UsePHGlobalValue<ReactorBrowserHalves> =
+  reactorHalvesEventFunctions.useValue;
+
+/** Adds an event handler for the reactor client's halves */
+export const addReactorHalvesEventHandler: AddPHGlobalEventHandler =
+  reactorHalvesEventFunctions.addEventHandler;
+
+function halvesOf(
+  client: IReactorBrowserClient | undefined,
+): ReactorBrowserHalves | undefined {
+  const read = client?.read as ReactorBrowserHalves["read"] | undefined;
+  const write = client?.write as ReactorBrowserHalves["write"] | undefined;
+  return read && write ? { read, write } : undefined;
+}
 
 /** Adds an event handler for the reactor client */
 export const addReactorClientEventHandler: AddPHGlobalEventHandler =

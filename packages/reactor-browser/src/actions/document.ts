@@ -1,10 +1,13 @@
 import { getPHStore } from "../hooks/ph-store.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IReactorReadClient,
+  IReactorWriteClient,
+} from "@powerhousedao/reactor";
 import type {
   ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgressCallback,
-  IReactorBrowserClient,
+  IReactorBrowserReadClient,
   PHGlobal,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -67,7 +70,7 @@ const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
 /** An unreadable drive cannot be shown to hold no duplicate, so reads throw. */
 async function isDocumentInLocation(
-  reactorClient: IReactorClient,
+  reactorClient: IReactorReadClient,
   document: PHDocument,
   driveId: string,
   parentFolder?: string,
@@ -177,7 +180,7 @@ export async function getDocumentExtension(
     const reactorClient = getFullReactorClient();
     if (reactorClient) {
       const { results: documentModelModules } =
-        await reactorClient.getDocumentModelModules();
+        await reactorClient.read.getDocumentModelModules();
       const module = documentModelModules.find(
         (m: DocumentModelModule) => m.documentModel.global.id === documentType,
       );
@@ -194,7 +197,7 @@ export async function getDocumentExtension(
  * composite cursors, so all scopes are fetched in a single paginated stream.
  */
 export async function fetchDocumentOperations(
-  reactorClient: IReactorBrowserClient,
+  reactorClient: IReactorBrowserReadClient,
   document: PHDocument,
   pageSize = 100,
 ): Promise<DocumentOperations> {
@@ -365,7 +368,10 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   }
 
   // Fetch operations page-by-page (document from reactor has operations: {})
-  const operations = await fetchDocumentOperations(reactorClient, document);
+  const operations = await fetchDocumentOperations(
+    reactorClient.read,
+    document,
+  );
   const initialState = extractInitialState(operations["document"] ?? []);
   const documentWithOps = { ...document, operations, initialState };
 
@@ -414,7 +420,7 @@ export async function loadFile(path: string | File) {
 
   const documentType = baseDocument.header.documentType;
   const { results: documentModelModules } =
-    await reactorClient.getDocumentModelModules();
+    await reactorClient.read.getDocumentModelModules();
   const modulesForType = documentModelModules.filter(
     (module) => module.documentModel.global.id === documentType,
   );
@@ -468,7 +474,7 @@ export async function addDocument(
   let documentModelModule: DocumentModelModule;
   if (documentModelVersion !== undefined) {
     const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
+      await reactorClient.read.getDocumentModelModules();
     const module = documentModelModules.find(
       (m) =>
         m.documentModel.global.id === documentType &&
@@ -482,7 +488,7 @@ export async function addDocument(
     documentModelModule = module;
   } else {
     documentModelModule =
-      await reactorClient.getDocumentModelModule(documentType);
+      await reactorClient.read.getDocumentModelModule(documentType);
   }
 
   // create - use passed document's state if available
@@ -490,7 +496,7 @@ export async function addDocument(
     document ??
     withSignaturePolicy(
       documentModelModule.utils.createDocument(),
-      await reactorClient.getCreateSignaturePolicy(),
+      await reactorClient.read.getCreateSignaturePolicy(),
     );
   if (!document) {
     newDocument.state.document.version = documentModelModule.version ?? 1;
@@ -506,11 +512,12 @@ export async function addDocument(
   // Create document using ReactorClient
   let newDoc: PHDocument;
   try {
-    newDoc = await reactorClient.drives.addFile(
+    const added = await reactorClient.write.drives.addFile(
       driveId,
       newDocument,
       parentFolder,
     );
+    newDoc = await added.document();
   } catch (e) {
     logger.error("Error adding document: @error", e);
     throw new Error("There was an error adding document", { cause: e });
@@ -565,7 +572,7 @@ function isDocumentAlreadyExists(error: unknown): boolean {
  * fails leaves the drive untouched, so a retry has nothing to clean up.
  */
 async function createImportedDocument(
-  reactor: IReactorClient,
+  write: IReactorWriteClient,
   document: PHDocument,
   driveId: string,
   name?: string,
@@ -576,7 +583,7 @@ async function createImportedDocument(
   const v2Required = signaturePolicyOf(document.header) === "v2-required";
   const keepsId =
     (!v2Required || hasDerivedDocumentId(document.header)) &&
-    !(await reactor.isDocumentIdTaken(document.header.id));
+    !(await write.isDocumentIdTaken(document.header.id));
   let documentId = keepsId ? document.header.id : generateId();
 
   for (let attempt = 1; ; attempt++) {
@@ -726,7 +733,7 @@ export async function addFileWithProgress(
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
-      reactor,
+      reactor.read,
       document,
       driveId,
       parentFolder,
@@ -763,13 +770,13 @@ export async function addFileWithProgress(
     }
 
     // ensure we have the module + can load it (throws if not found)
-    await reactor.getDocumentModelModule(document.header.documentType);
+    await reactor.read.getDocumentModelModule(document.header.documentType);
 
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
     const created = await createImportedDocument(
-      reactor,
+      reactor.write,
       document,
       driveId,
       name,
@@ -780,7 +787,7 @@ export async function addFileWithProgress(
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
-    const _doc = await reactor.get(documentId);
+    const _doc = await reactor.read.get(documentId);
     console.log("Document created, starting upload of operations");
 
     // Uploading stage (20-100%), re-dispatching each mid-history upgrade at
@@ -884,7 +891,7 @@ export async function updateFile(
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to update files");
   }
-  const drive = await reactor.get<DocumentDriveDocument>(driveId);
+  const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
   const unsafeCastAsDrive = (await queueActions(
     drive,
     baseUpdateFile({
@@ -920,19 +927,16 @@ export async function addFolder(
   }
 
   // Get the drive document and add folder action
-  const _drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const _drive = await reactorClient.read.get<DocumentDriveDocument>(driveId);
   const folderId = generateId();
-  const updatedDrive = await reactorClient.execute<DocumentDriveDocument>(
-    driveId,
-    "main",
-    [
-      baseAddFolder({
-        id: folderId,
-        name,
-        parentFolder,
-      }),
-    ],
-  );
+  const added = await reactorClient.write.execute(driveId, "main", [
+    baseAddFolder({
+      id: folderId,
+      name,
+      parentFolder,
+    }),
+  ]);
+  const updatedDrive = await added.document<DocumentDriveDocument>();
 
   const node = updatedDrive.state.global.nodes.find(
     (node) => node.id === folderId,
@@ -955,7 +959,8 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
-  await reactorClient.drives.removeNode(driveId, nodeId);
+  const removed = await reactorClient.write.drives.removeNode(driveId, nodeId);
+  await removed.readable;
 }
 
 export async function renameNode(
@@ -973,20 +978,20 @@ export async function renameNode(
     throw new Error("ReactorClient not initialized");
   }
 
-  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+  const renamed = await reactorClient.write.execute(nodeId, "main", [
     setName({ name }),
   ]);
+  const renameNodeResult = await renamed.document();
 
   if (renameNodeResult.header.name !== name) {
     throw new Error("There was an error renaming the node");
   }
 
   // Rename the node in the drive document using updateNode action
-  const drive = await reactorClient.execute<DocumentDriveDocument>(
-    driveId,
-    "main",
-    [updateNode({ id: nodeId, name })],
-  );
+  const updated = await reactorClient.write.execute(driveId, "main", [
+    updateNode({ id: nodeId, name }),
+  ]);
+  const drive = await updated.document<DocumentDriveDocument>();
 
   const node = drive.state.global.nodes.find((n) => n.id === nodeId);
   if (!node) {
@@ -1010,19 +1015,19 @@ export async function renameDriveNode(
     throw new Error("ReactorClient not initialized");
   }
 
-  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+  const renamed = await reactorClient.write.execute(nodeId, "main", [
     setName({ name }),
   ]);
+  const renameNodeResult = await renamed.document();
 
   if (renameNodeResult.header.name !== name) {
     throw new Error("There was an error renaming the node");
   }
 
-  await reactorClient.execute(driveId, "main", [
+  const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
-
-  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const drive = await updated.document<DocumentDriveDocument>();
   return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
 }
 
@@ -1040,9 +1045,10 @@ export async function setPreferredEditorOnNode(
     throw new Error("ReactorClient not initialized");
   }
 
-  return reactorClient.execute(nodeId, "main", [
+  const handle = await reactorClient.write.execute(nodeId, "main", [
     setPreferredEditor(preferredEditor),
   ]);
+  return handle.document();
 }
 
 export async function moveNodeById(args: {
@@ -1071,12 +1077,13 @@ export async function moveNodeById(args: {
 
   if (isStrictEqual(targetParentFolder, srcId)) return;
 
-  return await reactorClient.execute(driveId, "main", [
+  const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: srcId,
       targetParentFolder,
     }),
   ]);
+  return handle.document();
 }
 
 export async function moveNode(
@@ -1093,12 +1100,13 @@ export async function moveNode(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  return await reactorClient.execute(driveId, "main", [
+  const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: src.id,
       targetParentFolder: target?.id,
     }),
   ]);
+  return handle.document();
 }
 
 /**
@@ -1106,7 +1114,7 @@ export async function moveNode(
  * Falls back gracefully when no upgrade manifest is registered for the document type.
  */
 async function _duplicateDocument(
-  reactor: IReactorClient,
+  reactor: IReactorReadClient,
   document: PHDocument,
   newId = generateId(),
   driveId?: string,
@@ -1184,7 +1192,7 @@ export async function copyNode(
     throw new Error("User is not allowed to copy documents");
   }
 
-  const drive = await reactor.get<DocumentDriveDocument>(driveId);
+  const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
 
   const copyNodesInput = generateNodesCopy(
     {
@@ -1222,10 +1230,10 @@ export async function copyNode(
 
   for (const fileNodeToCopy of fileNodesToCopy) {
     try {
-      const document = await reactor.get(fileNodeToCopy.srcId);
+      const document = await reactor.read.get(fileNodeToCopy.srcId);
 
       const duplicatedDocument = await _duplicateDocument(
-        reactor,
+        reactor.read,
         document,
         fileNodeToCopy.targetId,
         driveId,
@@ -1239,7 +1247,12 @@ export async function copyNode(
       // A v2-required copy takes a derived id, which the drive's node must name.
       fileNodeToCopy.targetId = duplicatedDocument.header.id;
 
-      await reactor.drives.addFile(driveId, duplicatedDocument, target?.id);
+      const added = await reactor.write.drives.addFile(
+        driveId,
+        duplicatedDocument,
+        target?.id,
+      );
+      await added.readable;
     } catch (e) {
       logger.error(
         `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,
@@ -1262,5 +1275,9 @@ export async function upgradeDocument(documentId: string, toVersion?: number) {
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  return reactorClient.upgradeDocument(documentId, toVersion);
+  const handle = await reactorClient.write.upgradeDocument(
+    documentId,
+    toVersion,
+  );
+  return handle.document();
 }
