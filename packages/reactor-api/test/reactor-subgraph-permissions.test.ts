@@ -10,6 +10,7 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
+import { withHalves } from "./utils/client-halves.js";
 import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import {
   AuthorizationPolicy,
@@ -58,19 +59,20 @@ describe("ReactorSubgraph Permission Checks", () => {
   );
 
   // Helper to create context with different user states
-  const createContext = (options: {
-    userAddress?: string;
-    appKey?: string;
-  }) => ({
-    user: options.userAddress
-      ? {
-          address: options.userAddress,
-          appKey: options.appKey ?? "did:key:zCallerApp",
-        }
-      : undefined,
-    headers: {},
-    db: {},
-  });
+  const createContext = (options: { userAddress?: string; appKey?: string }) =>
+    withHalves(
+      {
+        user: options.userAddress
+          ? {
+              address: options.userAddress,
+              appKey: options.appKey ?? "did:key:zCallerApp",
+            }
+          : undefined,
+        headers: {},
+        db: {},
+      },
+      mockReactorClient,
+    );
 
   const buildSubgraph = (
     authSvc: Partial<IAuthorizationService>,

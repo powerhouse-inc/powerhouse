@@ -1,6 +1,10 @@
 import { createRequire } from "node:module";
 import { ApolloGateway, LocalCompose } from "@apollo/gateway";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorReadClient,
+  IReactorWriteClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type {
   DocumentModelGlobalState,
   DocumentModelModule,
@@ -10,6 +14,7 @@ import type { GraphQLError, GraphQLSchema } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
+import { RequestClientBinder } from "../src/graphql/request-clients.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -150,7 +155,7 @@ function recorder<T extends object>(calls: Call[]): T {
 
 function buildSubgraph(calls: Call[]): BaseSubgraph {
   return new DocumentModelSubgraph(MODULE, {
-    reactorClient: recorder<IReactorClient>(calls),
+    readClient: recorder<IReactorReadClient>(calls),
     syncManager: recorder<ISyncManager>(calls),
     authorizationService: createAuthorizationService({
       admins: [],
@@ -161,7 +166,10 @@ function buildSubgraph(calls: Call[]): BaseSubgraph {
   } as unknown as SubgraphArgs);
 }
 
-const ctx = { headers: {}, db: null } as unknown as Context;
+const ctx = {
+  headers: {},
+  db: null,
+} as unknown as Context;
 
 function aliasErrors(errors: readonly GraphQLError[] | undefined) {
   return (errors ?? []).filter(
@@ -176,7 +184,16 @@ describe("document model subgraph argument names", () => {
   beforeEach(() => {
     calls = [];
     const subgraph = buildSubgraph(calls);
-    schema = createSchema([MODULE], subgraph.resolvers, subgraph.typeDefs);
+    // Bound as the manager binds it: mutations get the write half.
+    const binder = new RequestClientBinder(
+      recorder<IReactorReadClient>(calls),
+      recorder<IReactorWriteClient>(calls),
+    );
+    schema = createSchema(
+      [MODULE],
+      binder.bindResolvers(subgraph.resolvers),
+      subgraph.typeDefs,
+    );
   });
 
   function run(pair: Pair, args: string) {

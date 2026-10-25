@@ -3,7 +3,11 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ApolloGateway, LocalCompose } from "@apollo/gateway";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorReadClient,
+  IReactorWriteClient,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type * as GraphQL from "graphql";
 import {
   Kind,
@@ -16,6 +20,7 @@ import {
 import { beforeEach, describe, expect, it } from "vitest";
 import { ArgumentAliasError } from "../src/graphql/argument-aliases.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
+import { createRequestClients } from "../src/graphql/request-clients.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -195,7 +200,7 @@ function recorder<T extends object>(calls: Call[]): T {
 
 function buildSubgraph(calls: Call[]): ReactorSubgraph {
   return new ReactorSubgraph({
-    reactorClient: recorder<IReactorClient>(calls),
+    readClient: recorder<IReactorReadClient>(calls),
     syncManager: recorder<ISyncManager>(calls),
     authorizationService: createAuthorizationService({
       admins: [],
@@ -212,7 +217,7 @@ function buildSchema(subgraph: ReactorSubgraph): GraphQLSchema {
   return createSchema([], subgraph.resolvers, subgraph.typeDefs);
 }
 
-const ctx = { headers: {}, db: null } as unknown as Context;
+let ctx: Context;
 
 function aliasErrors(errors: readonly GraphQLError[] | undefined) {
   return (errors ?? []).filter(
@@ -227,6 +232,17 @@ describe("reactor subgraph argument names", () => {
   beforeEach(() => {
     calls = [];
     schema = buildSchema(buildSubgraph(calls));
+    // Both halves record into the same list; the schema here is unbound, so
+    // one context serves the queries and the mutations alike.
+    ctx = {
+      headers: {},
+      db: null,
+      clients: createRequestClients(
+        recorder<IReactorReadClient>(calls),
+        recorder<IReactorWriteClient>(calls),
+        "mutation",
+      ),
+    } as unknown as Context;
   });
 
   function run(pair: Pair, args: string) {

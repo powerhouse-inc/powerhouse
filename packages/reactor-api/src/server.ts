@@ -9,6 +9,8 @@ import type {
   InspectorAttachmentInfo,
   IReadModel,
   IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
   InProcessReactorModule,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
@@ -504,7 +506,7 @@ type SetupGraphQLManagerOptions = {
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   httpServer: http.Server;
   wsServer: WebSocketServer;
-  client: IReactorClient;
+  clients: ApiClients;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   syncManager: ISyncManager;
@@ -536,7 +538,7 @@ async function setupGraphQLManager({
   requireAuthFetchMiddleware,
   httpServer,
   wsServer,
-  client,
+  clients,
   relationalDb,
   analyticsStore,
   syncManager,
@@ -563,7 +565,9 @@ async function setupGraphQLManager({
     path: config.basePath,
     httpServer,
     wsServer,
-    reactorClient: client,
+    readClient: clients.read,
+    writeClient: clients.write,
+    reactorClient: clients.client,
     relationalDb,
     analyticsStore,
     syncManager,
@@ -1057,10 +1061,21 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 }
 
 /**
+ * The reactor clients the API runs on: the halves the framework wires, and the
+ * facade kept for consumers that have not moved (MCP, subgraphs that still
+ * call `reactorClient`).
+ */
+type ApiClients = {
+  read: IReactorReadClient;
+  write: IReactorWriteClient;
+  client: IReactorClient;
+};
+
+/**
  * Private helper function containing common setup logic for API initialization
  */
 async function _setupAPI(
-  reactorClient: IReactorClient,
+  clients: ApiClients,
   syncManager: ISyncManager,
   reactorProcessorManager: IReactorProcessorManager,
   httpAdapter: IHttpAdapter,
@@ -1093,7 +1108,9 @@ async function _setupAPI(
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
-      client: reactorClient,
+      client: clients.client,
+      read: clients.read,
+      write: clients.write,
       readModels,
       relationalDb,
       analyticsStore,
@@ -1187,11 +1204,11 @@ async function _setupAPI(
 
   // Authorization service is always present; created here because the
   // parent-document resolver used for permission inheritance needs the
-  // reactor client.
+  // read client.
   const authorizationService = createAuthorizationService(
     authorizationConfig,
     documentPermissionService,
-    createGetParentIdsFn(reactorClient),
+    createGetParentIdsFn(clients.read),
   );
   logger.info(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
@@ -1219,11 +1236,11 @@ async function _setupAPI(
   const floor = requireAuthFetchMiddleware !== undefined;
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
-      createCanonicalDocumentIdResolver(reactorClient),
+      createCanonicalDocumentIdResolver({ read: clients.read }),
       authorizationService,
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
-      reactorClient,
+      clients.read,
       attachmentReadsFollowDocumentPolicy ? syncServingGate : undefined,
       {
         refuseAnonymousWrites: authEnabled || floor,
@@ -1252,7 +1269,7 @@ async function _setupAPI(
     requireAuthFetchMiddleware,
     httpServer,
     wsServer,
-    client: reactorClient,
+    clients,
     relationalDb,
     analyticsStore,
     syncManager,
@@ -1288,7 +1305,7 @@ async function _setupAPI(
   if (mcpServerEnabled) {
     await setupMcpServer(
       {
-        client: reactorClient,
+        client: clients.client,
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
@@ -1528,7 +1545,10 @@ export async function initializeAndStartAPI(
   processorApp: ProcessorApp,
 ): Promise<
   API & {
+    /** @deprecated Use `read` and `write`. */
     client: IReactorClient;
+    read: IReactorReadClient;
+    write: IReactorWriteClient;
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
@@ -1620,7 +1640,11 @@ export async function initializeAndStartAPI(
   const readModels = readModelCoordinator?.readModels ?? [];
 
   const api = await _setupAPI(
-    reactorClient,
+    {
+      read: reactorClientModule.read,
+      write: reactorClientModule.write,
+      client: reactorClient,
+    },
     syncManager,
     reactorProcessorManager,
     httpAdapter,
@@ -1665,6 +1689,8 @@ export async function initializeAndStartAPI(
   return {
     ...api,
     client: reactorClient,
+    read: reactorClientModule.read,
+    write: reactorClientModule.write,
     syncManager,
     documentModelRegistry,
     readiness,

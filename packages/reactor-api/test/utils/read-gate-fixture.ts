@@ -2,6 +2,8 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   type InProcessReactorClientModule,
+  type IReactorReadClient,
+  type IReactorWriteClient,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
@@ -13,6 +15,7 @@ import {
   type PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { createRequestClients } from "../../src/graphql/request-clients.js";
 import type { Context } from "../../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -47,6 +50,20 @@ export function contextFor(address?: string): Context {
     headers: {},
     db: null,
   } as unknown as Context;
+}
+
+/**
+ * {@link contextFor} as a mutation's resolvers receive it: both halves of
+ * `module`, identifiers resolved on the write half.
+ */
+export function mutationContextFor(
+  module: { read: IReactorReadClient; write: IReactorWriteClient },
+  address?: string,
+): Context {
+  return {
+    ...contextFor(address),
+    clients: createRequestClients(module.read, module.write, "mutation"),
+  };
 }
 
 // Signs as HOST, so a grant can admit the host's writes without letting everyone read.

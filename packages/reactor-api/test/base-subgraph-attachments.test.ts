@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { BaseSubgraph } from "../src/graphql/base-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import type { IAttachmentClientProvider } from "../src/services/authorized-attachment.service.js";
+import { UNUSED_CLIENTS } from "./utils/client-halves.js";
 
 function makeProvider() {
   const forSubject = vi.fn(
@@ -21,7 +22,7 @@ function subgraph(attachments?: IAttachmentClientProvider): BaseSubgraph {
 }
 
 function anonymous(): Context {
-  return { headers: {}, db: undefined };
+  return { headers: {}, db: undefined, clients: UNUSED_CLIENTS };
 }
 
 function signedIn(address: string, appKey: string): Context {
@@ -29,6 +30,7 @@ function signedIn(address: string, appKey: string): Context {
     headers: {},
     db: undefined,
     user: { address, appKey, chainId: 1, networkId: "eip155" },
+    clients: UNUSED_CLIENTS,
   };
 }
 

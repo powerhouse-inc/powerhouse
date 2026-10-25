@@ -2,6 +2,7 @@ import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { withHalves } from "./utils/client-halves.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
 import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
@@ -58,9 +59,15 @@ describe("Permissions Integration Tests", () => {
   );
 
   // Context factory
-  const createContext = (options: { userAddress?: string }) => ({
-    user: options.userAddress ? { address: options.userAddress } : undefined,
-  });
+  const createContext = (options: { userAddress?: string }) =>
+    withHalves(
+      {
+        user: options.userAddress
+          ? { address: options.userAddress }
+          : undefined,
+      },
+      mockReactorClient,
+    );
 
   beforeEach(async () => {
     vi.clearAllMocks();
