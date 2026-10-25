@@ -16,6 +16,12 @@ export {
 } from "./subscription.js";
 export { createPortTransport, type IRpcTransport } from "./transport.js";
 export { RPC_PROTOCOL_VERSION } from "./protocol.js";
+export {
+  RemoteWriteHandles,
+  remoteStagePort,
+  writeResultToWire,
+  type RemoteReads,
+} from "./write-handles.js";
 export { DocumentModelRegistry } from "../registry/implementation.js";
 export type { IDocumentModelRegistry } from "../registry/interfaces.js";
 export { loadDocumentModelSpec } from "../executor/worker/load-spec.js";
@@ -57,6 +63,8 @@ export type {
   RpcUnregisterPackages,
   RpcUnsub,
   VersionFingerprint,
+  WireBatchWriteHandle,
+  WireWriteHandle,
   WorkerInspectorInfo,
   WorkerMigrationState,
   WorkerPackageSource,

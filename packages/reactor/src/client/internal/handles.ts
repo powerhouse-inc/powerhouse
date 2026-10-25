@@ -118,6 +118,15 @@ export function mergeConsistencyTokens(
   };
 }
 
+/**
+ * Every job id a handle waits for: the handles this module builds name them
+ * all; any other handle names only its primary job.
+ */
+export function jobIdsOf(handle: WriteHandle): readonly string[] {
+  const named = (handle as { jobIds?: readonly string[] }).jobIds;
+  return named ?? (handle.jobId === "" ? [] : [handle.jobId]);
+}
+
 /** The first FAILED job, in the order given, or undefined. */
 function firstFailed(jobs: readonly JobInfo[]): JobInfo | undefined {
   return jobs.find((job) => job.status === JobStatus.FAILED);
@@ -181,6 +190,11 @@ export class JobSetHandle implements WriteHandle {
     this.settledAtCreation = settledAtCreation;
   }
 
+  /** Every job of the write, the primary among them, in wait order. */
+  get jobIds(): readonly string[] {
+    return this.jobs.map((job) => job.id);
+  }
+
   get written(): Promise<WriteReceipt> {
     this.writtenReceipt ??= this.receiptAt("written");
     return this.writtenReceipt;
@@ -240,6 +254,7 @@ export class JobSetHandle implements WriteHandle {
  */
 export class SettledWriteHandle implements WriteHandle {
   readonly jobId = "";
+  readonly jobIds: readonly string[] = [];
   readonly documentId: string;
   readonly branch: string;
 
@@ -292,7 +307,9 @@ export class JobBatchHandle implements BatchWriteHandle {
   readonly jobs: Record<string, JobInfo>;
   readonly handles: Record<string, JobSetHandle>;
 
-  private readonly planOrder: readonly string[];
+  /** The plan keys in the order the request listed them. */
+  readonly planOrder: readonly string[];
+
   private writtenReceipts: Promise<Record<string, WriteReceipt>> | undefined;
   private readableReceipts: Promise<Record<string, WriteReceipt>> | undefined;
 
@@ -358,6 +375,11 @@ export class NodeHandle implements NodeWriteHandle {
 
   get jobId(): string {
     return this.handle.jobId;
+  }
+
+  /** The wrapped handle's job ids, where it names more than its primary. */
+  get jobIds(): readonly string[] {
+    return jobIdsOf(this.handle);
   }
 
   get documentId(): string {
