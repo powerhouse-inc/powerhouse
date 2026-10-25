@@ -71,6 +71,18 @@ const SEEDS: Record<string, (db: ReactorDb, t: Table) => Promise<unknown>> = {
     sql`insert into ${t("WriteIdentity")} ("documentId", branch, slug,
       "documentType", "createdAtUtcIso", "updatedAtUtcIso")
       values (${ID}, 'main', 'a-slug', 't', '', '')`.execute(db),
+  DocumentPermission: (db, t) =>
+    sql`insert into ${t("DocumentPermission")} ("documentId", "userAddress",
+      permission, "grantedBy") values (${ID}, '0xreader', 'READ', '0xowner')`.execute(
+      db,
+    ),
+  OperationUserPermission: (db, t) =>
+    sql`insert into ${t("OperationUserPermission")} ("documentId",
+      "operationType", "userAddress", "grantedBy")
+      values (${ID}, 'SET_NAME', '0xreader', '0xowner')`.execute(db),
+  DocumentProtection: (db, t) =>
+    sql`insert into ${t("DocumentProtection")} ("documentId", protected,
+      "ownerAddress") values (${ID}, true, '0xowner')`.execute(db),
   Document: (db, t) =>
     sql`insert into ${t("Document")} (id) values (${ID})`.execute(db),
   DocumentRelationship: async (db, t) => {

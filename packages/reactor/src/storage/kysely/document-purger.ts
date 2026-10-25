@@ -258,6 +258,21 @@ export class KyselyDocumentPurger {
       "documentId",
       documentId,
     );
+    removed.DocumentPermission = await this.deleteWhere(
+      "DocumentPermission",
+      "documentId",
+      documentId,
+    );
+    removed.OperationUserPermission = await this.deleteWhere(
+      "OperationUserPermission",
+      "documentId",
+      documentId,
+    );
+    removed.DocumentProtection = await this.deleteWhere(
+      "DocumentProtection",
+      "documentId",
+      documentId,
+    );
 
     // Counted first: deleting the Document row cascades both ways (004).
     const relationships = await this.db
@@ -373,6 +388,9 @@ export class KyselyDocumentPurger {
     table:
       | "SlugMapping"
       | "WriteIdentity"
+      | "DocumentPermission"
+      | "OperationUserPermission"
+      | "DocumentProtection"
       | "Document"
       | "group_references"
       | "sync_dead_letters"
