@@ -29,6 +29,9 @@ export {
   ReactorClient,
   type ActionEvaluationConfig,
 } from "./src/client/reactor-client.js";
+export { ReactorReadClient } from "./src/client/read-client.js";
+export { ReactorWriteClient } from "./src/client/write-client.js";
+export type { ReactorClientParts } from "./src/client/internal/parts.js";
 export {
   DocumentChangeType,
   type ActionCandidate,
@@ -37,6 +40,7 @@ export {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type IReactorReadClient,
   type ProtocolSelection,
   type UpgradeDocumentOptions,
 } from "./src/client/types.js";
@@ -296,7 +300,10 @@ export {
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
+  type IWriteIdentityStore,
   type OperationFilter,
+  type WriteIdentityRecord,
+  type WriteIdentityUpsert,
 } from "./src/storage/interfaces.js";
 
 // Decision Models
@@ -342,6 +349,7 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export { KyselyWriteIdentityStore } from "./src/storage/kysely/write-identity-store.js";
 export {
   DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
   DEFAULT_RECOVERY_TIMEOUT_MS,

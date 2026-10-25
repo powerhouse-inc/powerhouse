@@ -15,6 +15,7 @@ import {
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
+  type IReactorReadClient,
   type JobInfo,
   type OperationFilter,
   type PagedResults,
@@ -389,6 +390,25 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   // Reads
+
+  /**
+   * The read half. The router answers its reads itself until it is split into
+   * routing read and write clients, so the half is this client.
+   */
+  get read(): IReactorReadClient {
+    return this;
+  }
+
+  /** Each id read as `get` reads it, in the order given. */
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument[]> {
+    return Promise.all(
+      documentIds.map((id) => this.get<TDocument>(id, view, signal)),
+    );
+  }
 
   get<TDocument extends PHDocument>(
     identifier: string,

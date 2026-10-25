@@ -34,6 +34,7 @@ import type {
 } from "../core/types.js";
 import type { Evaluation } from "../decision/types.js";
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -252,21 +253,16 @@ export type ActionEvaluations = {
 };
 
 /**
- * The ReactorClient interface that wraps lower-level APIs to provide
- * a simpler interface for document operations.
+ * The read half of the reactor client: everything that answers from read
+ * models and never enqueues a job.
  *
- * Features:
- * - Wraps Jobs with Promises for easier async handling
- * - Manages signing of submitted Action objects
- * - Provides quality-of-life functions for common tasks
- * - Wraps subscription interface with ViewFilters
+ * Reads that accept a `consistencyToken` wait until the read models they read
+ * from hold every coordinate the token names, so a token from a write receipt
+ * bounds a read-after-write on any instance serving the same store. The token
+ * is the last parameter so that callers written before it existed keep their
+ * positional arguments.
  */
-export interface IReactorClient {
-  /**
-   * Drive-aware operations. See {@link IDriveClient}.
-   */
-  readonly drives: IDriveClient;
-
+export interface IReactorReadClient {
   /**
    * Retrieves a list of document model modules.
    *
@@ -292,18 +288,51 @@ export interface IReactorClient {
   ): Promise<DocumentModelModule<any>>;
 
   /**
+   * Retrieves the document model module matching the version a document is
+   * stamped with. Use this instead of {@link getDocumentModelModule}
+   * whenever a specific document is in hand: the latest-wins lookup feeds
+   * not-yet-upgraded documents the wrong reducer, diverging from replay.
+   *
+   * @param document - The document whose stamped version selects the module
+   * @returns The document model module registered for that version
+   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
+   */
+  getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>>;
+
+  /**
    * Retrieves a specific document by identifier (either id or slug).
    *
    * @param identifier - Required, this is the document id or slug
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument>;
+
+  /**
+   * Retrieves documents by id, in the order given, each gated as {@link get}
+   * gates one. Throws if any id names no document.
+   *
+   * @param documentIds - Document ids (not slugs)
+   * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
+   * @returns The documents, in the order of `documentIds`
+   */
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
 
   /**
    * Resolves an identifier (either an id or a slug) to the canonical document
@@ -313,16 +342,15 @@ export interface IReactorClient {
    *
    * @param identifier - Required, this is the document id or slug
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the lookup waits for
    * @returns The canonical document id
    */
   resolveIdOrSlug(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<string>;
-
-  /** True when the id is taken; a soft-deleted document's id is still taken. */
-  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
 
   /**
    * Retrieves operations for a document.
@@ -350,6 +378,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The target documents and paging cursor
    */
   getOutgoingRelationships(
@@ -358,6 +387,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
@@ -368,6 +398,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The source documents and paging cursor
    */
   getIncomingRelationships(
@@ -376,20 +407,22 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
    * Retrieves the outgoing relationship edges of a source document.
    *
-   * Unlike {@link IReactorClient.getOutgoingRelationships}, which returns the
-   * documents at the far end, this returns the edges themselves, carrying the
-   * metadata and timestamps recorded against each relationship.
+   * Unlike {@link IReactorReadClient.getOutgoingRelationships}, which returns
+   * the documents at the far end, this returns the edges themselves, carrying
+   * the metadata and timestamps recorded against each relationship.
    *
    * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
    * @param relationshipType - Optional relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The matching relationship edges and paging cursor
    */
   getOutgoingRelationshipEdges(
@@ -398,20 +431,22 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>>;
 
   /**
    * Retrieves the incoming relationship edges of a target document.
    *
-   * Unlike {@link IReactorClient.getIncomingRelationships}, which returns the
-   * documents at the far end, this returns the edges themselves, carrying the
-   * metadata and timestamps recorded against each relationship.
+   * Unlike {@link IReactorReadClient.getIncomingRelationships}, which returns
+   * the documents at the far end, this returns the edges themselves, carrying
+   * the metadata and timestamps recorded against each relationship.
    *
    * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
    * @param relationshipType - Optional relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The matching relationship edges and paging cursor
    */
   getIncomingRelationshipEdges(
@@ -420,6 +455,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>>;
 
   /**
@@ -431,6 +467,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns List of documents matching criteria and pagination cursor
    */
   find(
@@ -438,6 +475,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /** Whether {@link find} would serve the document; false when it is absent. */
@@ -446,6 +484,83 @@ export interface IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<boolean>;
+
+  /**
+   * The signature policy this client gives the documents it creates when the
+   * caller does not choose one. It never changes an existing document.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
+
+  /**
+   * protocolVersions for a new document under `parentIdentifier`, before the
+   * signature policy: what this reactor and the direct peers of the parent's
+   * collections agree on. Without a parent, the local preference.
+   */
+  getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions>;
+
+  /**
+   * Retrieves the status of a job
+   *
+   * @param jobId - The job id
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The job status
+   */
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
+
+  /**
+   * Waits for a job to reach READ_READY or FAILED. Resolves with the job in
+   * either case; a FAILED job is not a rejection here.
+   *
+   * @param jobId - The job id or job object
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The result of the job
+   */
+  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
+
+  /**
+   * Subscribes to changes for documents matching specified filters, gated as
+   * `find` is: an event naming a document the view's subject may read no domain
+   * scope of is withheld.
+   *
+   * @param search - Search filter options (type, parentId, identifiers)
+   * @param callback - Function called when documents change with the change event details
+   * @param view - Optional filter containing branch and scopes information
+   * @returns A function that unsubscribes from the changes
+   */
+  subscribe(
+    search: SearchFilter,
+    callback: (event: DocumentChangeEvent) => void,
+    view?: ViewFilter,
+  ): () => void;
+}
+
+/**
+ * The ReactorClient interface that wraps lower-level APIs to provide
+ * a simpler interface for document operations.
+ *
+ * It is the facade over the read and write halves: every read is the read
+ * half's, and `read` exposes that half directly.
+ *
+ * Features:
+ * - Wraps Jobs with Promises for easier async handling
+ * - Manages signing of submitted Action objects
+ * - Provides quality-of-life functions for common tasks
+ * - Wraps subscription interface with ViewFilters
+ */
+export interface IReactorClient extends IReactorReadClient {
+  /** The read half this facade answers its reads from. */
+  readonly read: IReactorReadClient;
+
+  /**
+   * Drive-aware operations. See {@link IDriveClient}.
+   */
+  readonly drives: IDriveClient;
+
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
 
   /**
    * Predicts whether the subject would be admitted to execute each of a set of
@@ -491,22 +606,6 @@ export interface IReactorClient {
     subject?: AuthSubject,
     signal?: AbortSignal,
   ): Promise<ActionEvaluations>;
-
-  /**
-   * The signature policy this client gives the documents it creates when the
-   * caller does not choose one. It never changes an existing document.
-   */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
-
-  /**
-   * protocolVersions for a new document under `parentIdentifier`, before the
-   * signature policy: what this reactor and the direct peers of the parent's
-   * collections agree on. Without a parent, the local preference.
-   */
-  getCreateProtocolVersions(
-    parentIdentifier?: string,
-    signal?: AbortSignal,
-  ): Promise<ProtocolVersions>;
 
   /**
    * Creates a document and waits for completion. The document keeps the
@@ -566,20 +665,6 @@ export interface IReactorClient {
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult>;
-
-  /**
-   * Retrieves the document model module matching the version a document is
-   * stamped with. Use this instead of {@link getDocumentModelModule}
-   * whenever a specific document is in hand: the latest-wins lookup feeds
-   * not-yet-upgraded documents the wrong reducer, diverging from replay.
-   *
-   * @param document - The document whose stamped version selects the module
-   * @returns The document model module registered for that version
-   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
-   */
-  getDocumentModelModuleForDocument(
-    document: PHDocument,
-  ): Promise<DocumentModelModule<any>>;
 
   /**
    * Upgrades a document to a newer document model version by dispatching an
@@ -844,38 +929,4 @@ export interface IReactorClient {
     request: BatchLoadRequest,
     signal?: AbortSignal,
   ): Promise<BatchLoadResult>;
-
-  /**
-   * Retrieves the status of a job
-   *
-   * @param jobId - The job id
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The job status
-   */
-  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
-
-  /**
-   * Waits for a job to complete
-   *
-   * @param jobId - The job id or job object
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The result of the job
-   */
-  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
-
-  /**
-   * Subscribes to changes for documents matching specified filters, gated as
-   * `find` is: an event naming a document the view's subject may read no domain
-   * scope of is withheld.
-   *
-   * @param search - Search filter options (type, parentId, identifiers)
-   * @param callback - Function called when documents change with the change event details
-   * @param view - Optional filter containing branch and scopes information
-   * @returns A function that unsubscribes from the changes
-   */
-  subscribe(
-    search: SearchFilter,
-    callback: (event: DocumentChangeEvent) => void,
-    view?: ViewFilter,
-  ): () => void;
 }

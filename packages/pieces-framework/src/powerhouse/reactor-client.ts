@@ -57,7 +57,11 @@ export type RefusedMethods =
   | "getCreateSignaturePolicy"
   | "getCreateProtocolVersions"
   // Drive reads take no subject; pieces read a drive with `get`.
-  | "drives";
+  | "drives"
+  // The client's halves; a piece reaches the reactor through the listed methods.
+  | "read"
+  | "write"
+  | "getMany";
 
 // Fails to compile, naming the method, when a client gains one no list names.
 export type Listed<T extends never> = T;
