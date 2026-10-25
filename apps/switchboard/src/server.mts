@@ -38,6 +38,7 @@ import {
   type CanonicalDocumentId,
   type ClientInitializerDependencies,
   type CredentialVerifier,
+  type DocumentPermissionDatabase,
   type IPackageLoader,
   type PgliteFactory,
   type ResolvedRenownConfig,
@@ -70,6 +71,7 @@ import * as Sentry from "@sentry/node";
 import { childLogger, setLogLevel, type ILogger } from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
+import { backfillPermissionTables } from "./permissions-backfill.mjs";
 import { register } from "node:module";
 import type http from "node:http";
 import net from "node:net";
@@ -685,6 +687,7 @@ async function initServer(
     {
       attachmentReferenceWriter,
       upgradeManifests,
+      readModelDb,
     }: ClientInitializerDependencies,
   ) => {
     // When the caller hands us a pre-built reactor module, reuse it
@@ -954,10 +957,42 @@ async function initServer(
       installFatalErrorShutdown(logger);
     }
 
+    // The permission tables live in the reactor store (reactor migration 029,
+    // applied by buildModule above); move what the read-model store still
+    // holds before the permission service serves a check. A reactor-api that
+    // predates the move hands over no read-model store and keeps its tables
+    // there, so nothing is moved.
+    const permissionsDb = baseKysely.withSchema(REACTOR_SCHEMA);
+    try {
+      if (readModelDb) {
+        await backfillPermissionTables(
+          readModelDb,
+          permissionsDb as unknown as Kysely<unknown>,
+          logger,
+        );
+      }
+    } catch (error) {
+      logger.error(
+        "Aborting boot: permission tables backfill failed: @error",
+        error,
+      );
+      try {
+        await module.reactorModule?.shutdown();
+      } catch (shutdownError) {
+        logger.error(
+          "Aborting boot: reactor shutdown failed: @error",
+          shutdownError,
+        );
+      }
+      throw error;
+    }
+
     return {
       module,
       reactorDriveClient,
       attachmentReferenceProjection: { status: "available" as const },
+      permissionsDb:
+        permissionsDb as unknown as Kysely<DocumentPermissionDatabase>,
     };
   };
 
