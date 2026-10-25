@@ -71,6 +71,18 @@ Documents support branching for draft/published workflows. Operations are isolat
 ### ConsistencyToken
 A token capturing operation coordinates, used for read-after-write consistency. Returned from mutations and passed to reads.
 
+### Client halves
+The client is split in two, with the old surface kept as a facade:
+
+- `IReactorReadClient` (`client/read-client.ts`): everything that answers from read models and never enqueues. Reads that can wait for a token take it as the last parameter (`get(id, view, signal, token)`).
+- `IReactorWriteClient` (`client/write-client.ts`): everything that enqueues. Each write resolves once its job is accepted and returns a `WriteHandle`: `written` (WRITE_READY), `readable` (READ_READY), `document(view?)` (readable, then the gated read-back with the receipt's token). A FAILED job rejects a stage with `JobFailedError`; a reducer error is reported on `receipt.job.result`, as before.
+- `IReactorClient` (`client/reactor-client.ts`): the facade, `read` and `write` composed, every old method and return type kept. Its writes are the write half followed by `handle.document()` and log a one-time deprecation warning (`client/deprecations.ts`, silenced by `PH_SILENCE_DEPRECATIONS`).
+- Drives follow the same split: `read.drives` (`DriveReadClient`), `write.drives` (`DriveWriteClient`), facade `drives` (`DriveClientFacade`). `DriveClient` and `FacadeWriteClient` adapt facade-only clients (the router until it is split).
+- Over RPC the halves are `read.*` and `write.*` methods; write handles cross the wire as ids and are rebuilt tab-side (`rpc/write-handles.ts`).
+- Shared internals live in `client/internal/`: read gating, write-target resolution, delete plans, action evaluation, handles.
+
+New framework code takes `module.read` / `module.write`; processors read through `module.read` and write through `module.dispatch`.
+
 ## Data Flow
 
 ### Write Path

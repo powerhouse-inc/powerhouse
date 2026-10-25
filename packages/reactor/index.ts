@@ -33,8 +33,10 @@ export {
   buildCreateJobs,
   createEmptyDocument,
   selectDocumentModelModule,
+  upgradeDocumentJob,
   upgradeDocumentWith,
   type UpgradeDocumentDeps,
+  type UpgradeOutcome,
 } from "./src/client/derivations.js";
 export {
   ReactorClient,
