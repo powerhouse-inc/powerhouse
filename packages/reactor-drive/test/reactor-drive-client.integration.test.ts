@@ -102,7 +102,8 @@ describe("ReactorDriveClient Integration", () => {
     killReactor = () => built.reactor.kill();
 
     driveClient = new ReactorDriveClient({
-      reactor: reactorClient,
+      read: reactorClient.read,
+      write: reactorClient.write,
       readModel: new DriveNodeView(
         schemaDb as unknown as Kysely<ReactorDriveDatabase>,
       ),
@@ -120,14 +121,15 @@ describe("ReactorDriveClient Integration", () => {
 
   /** This suite's client, over a reactor client with another creation default. */
   function clientCreating(policy: SignaturePolicy): ReactorDriveClient {
-    const reactor = new Proxy(reactorClient, {
+    const read = new Proxy(reactorClient.read, {
       get: (target, prop): unknown =>
         prop === "getCreateSignaturePolicy"
           ? () => Promise.resolve(policy)
           : Reflect.get(target, prop, target),
     });
     return new ReactorDriveClient({
-      reactor,
+      read,
+      write: reactorClient.write,
       readModel: new DriveNodeView(
         schemaDb as unknown as Kysely<ReactorDriveDatabase>,
       ),

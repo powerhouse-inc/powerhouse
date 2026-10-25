@@ -4,12 +4,16 @@ import {
   removeRelationshipAction,
   upgradeDocumentAction,
   type BatchExecutionRequest,
+  type ConsistencyToken,
   type ExecutionJobPlan,
   type IDriveClient,
   type IReactorClient,
+  type IReactorReadClient,
+  type IReactorWriteClient,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
+  type WriteReceipt,
 } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
@@ -54,10 +58,25 @@ import type {
   ReactorDriveNode,
 } from "../types.js";
 
-export interface ReactorDriveClientArgs {
+/** The client halves the drive client reads and writes through. */
+export interface ReactorDriveClientHalvesArgs {
+  read: IReactorReadClient;
+  write: IReactorWriteClient;
+  readModel: IDriveReadModel;
+}
+
+/**
+ * @deprecated Pass `read` and `write` ({@link ReactorDriveClientHalvesArgs}).
+ * A facade is accepted for one release; its halves are used.
+ */
+export interface ReactorDriveClientFacadeArgs {
   reactor: IReactorClient;
   readModel: IDriveReadModel;
 }
+
+export type ReactorDriveClientArgs =
+  | ReactorDriveClientHalvesArgs
+  | ReactorDriveClientFacadeArgs;
 
 /**
  * Implementation of {@link IDriveClient} backed by the reactor's relationship
@@ -67,11 +86,18 @@ export interface ReactorDriveClientArgs {
  * table consumed via {@link IDriveReadModel}.
  */
 export class ReactorDriveClient implements IDriveClient {
-  private readonly reactor: IReactorClient;
+  private readonly read: IReactorReadClient;
+  private readonly write: IReactorWriteClient;
   private readonly readModel: IDriveReadModel;
 
   constructor(args: ReactorDriveClientArgs) {
-    this.reactor = args.reactor;
+    if ("reactor" in args) {
+      this.read = args.reactor.read;
+      this.write = args.reactor.write;
+    } else {
+      this.read = args.read;
+      this.write = args.write;
+    }
     this.readModel = args.readModel;
   }
 
@@ -88,7 +114,7 @@ export class ReactorDriveClient implements IDriveClient {
       }),
       requestedSignaturePolicy(
         input,
-        await this.reactor.getCreateSignaturePolicy(),
+        await this.read.getCreateSignaturePolicy(),
       ),
       { protocolVersions: input.protocolVersions },
     );
@@ -106,7 +132,8 @@ export class ReactorDriveClient implements IDriveClient {
         preferredEditor: input.preferredEditor,
       };
     }
-    const created = await this.reactor.create(driveDoc, undefined, signal);
+    const handle = await this.write.create(driveDoc, undefined, signal);
+    const created = await handle.document(undefined, signal);
     return this.toLegacyDriveDocument(created, created.header.id);
   }
 
@@ -181,8 +208,14 @@ export class ReactorDriveClient implements IDriveClient {
       ],
     };
 
-    await this.reactor.executeBatch(request, signal);
-    return this.reactor.get<TDocument>(documentId, undefined, signal);
+    const batch = await this.write.executeBatch(request, signal);
+    const receipts = await batch.readable;
+    return this.read.get<TDocument>(
+      documentId,
+      undefined,
+      signal,
+      receipts.create.token,
+    );
   }
 
   async addFolder(
@@ -192,7 +225,7 @@ export class ReactorDriveClient implements IDriveClient {
     signal?: AbortSignal,
   ): Promise<FolderNode> {
     const folderId = generateId();
-    await this.reactor.execute(
+    await this.executed(
       driveIdentifier,
       "main",
       [
@@ -250,19 +283,20 @@ export class ReactorDriveClient implements IDriveClient {
         removeFolderAction({ folderId: nodeId }),
       ];
 
-      await this.reactor.execute(driveIdentifier, "main", batch, signal);
+      await this.executed(driveIdentifier, "main", batch, signal);
 
       for (const file of fileDescendants) {
-        await this.reactor.deleteDocument(
+        const deleted = await this.write.deleteDocument(
           file.id,
           "cascade" as PropagationMode,
           signal,
         );
+        await deleted.readable;
       }
       return;
     }
 
-    await this.reactor.execute(
+    await this.executed(
       driveIdentifier,
       "main",
       [
@@ -274,7 +308,8 @@ export class ReactorDriveClient implements IDriveClient {
       ],
       signal,
     );
-    await this.reactor.deleteDocument(nodeId, undefined, signal);
+    const deleted = await this.write.deleteDocument(nodeId, undefined, signal);
+    await deleted.readable;
   }
 
   async renameNode(
@@ -289,9 +324,10 @@ export class ReactorDriveClient implements IDriveClient {
     }
 
     if (node.kind === "file") {
-      await this.reactor.rename(nodeId, name, "main", signal);
+      const renamed = await this.write.rename(nodeId, name, "main", signal);
+      await renamed.readable;
     } else {
-      await this.reactor.execute(
+      await this.executed(
         driveIdentifier,
         "main",
         [updateFolderAction({ folderId: nodeId, name })],
@@ -315,12 +351,13 @@ export class ReactorDriveClient implements IDriveClient {
     preferredEditor: string | null,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.reactor.setPreferredEditor(
+    const handle = await this.write.setPreferredEditor(
       nodeId,
       preferredEditor,
       "main",
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
   async moveNode(
@@ -340,8 +377,9 @@ export class ReactorDriveClient implements IDriveClient {
       );
     }
 
+    let receipt: WriteReceipt;
     if (node.kind === "folder") {
-      await this.reactor.execute(
+      receipt = await this.executed(
         driveIdentifier,
         "main",
         [
@@ -358,7 +396,7 @@ export class ReactorDriveClient implements IDriveClient {
         parentFolderId: targetParentFolderId ?? null,
         documentType: node.documentType,
       };
-      await this.reactor.execute(
+      receipt = await this.executed(
         driveIdentifier,
         "main",
         [
@@ -378,10 +416,11 @@ export class ReactorDriveClient implements IDriveClient {
       );
     }
 
-    const drive = await this.reactor.get<PHDocument>(
+    const drive = await this.read.get<PHDocument>(
       driveIdentifier,
       undefined,
       signal,
+      receipt.token,
     );
     return this.toLegacyDriveDocument(drive, driveIdentifier);
   }
@@ -422,7 +461,7 @@ export class ReactorDriveClient implements IDriveClient {
     for (const node of subtree) {
       idMap.set(node.id, generateId());
     }
-    const policy = await this.reactor.getCreateSignaturePolicy();
+    const policy = await this.read.getCreateSignaturePolicy();
 
     const jobs: ExecutionJobPlan[] = [];
     const driveActions: Action[] = [];
@@ -459,14 +498,13 @@ export class ReactorDriveClient implements IDriveClient {
         continue;
       }
 
-      const srcDoc = await this.reactor.get<PHDocument>(
+      const srcDoc = await this.read.get<PHDocument>(
         node.id,
         undefined,
         signal,
       );
       const documentType = srcDoc.header.documentType;
-      const { results: allModules } =
-        await this.reactor.getDocumentModelModules();
+      const { results: allModules } = await this.read.getDocumentModelModules();
       const modulesForType = allModules.filter(
         (m) => m.documentModel.global.id === documentType,
       );
@@ -562,15 +600,19 @@ export class ReactorDriveClient implements IDriveClient {
       });
     }
 
+    let token: ConsistencyToken | undefined;
     if (jobs.length > 0) {
       const request: BatchExecutionRequest = { jobs };
-      await this.reactor.executeBatch(request, signal);
+      const batch = await this.write.executeBatch(request, signal);
+      const receipts = await batch.readable;
+      token = receipts.drive?.token;
     }
 
-    const drive = await this.reactor.get<PHDocument>(
+    const drive = await this.read.get<PHDocument>(
       driveIdentifier,
       undefined,
       signal,
+      token,
     );
     return this.toLegacyDriveDocument(drive, driveIdentifier);
   }
@@ -604,6 +646,22 @@ export class ReactorDriveClient implements IDriveClient {
       options: page.options,
       ...(page.nextCursor !== undefined ? { nextCursor: page.nextCursor } : {}),
     };
+  }
+
+  /** Submits actions and waits until every pre-ready read model holds them. */
+  private async executed(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal: AbortSignal | undefined,
+  ): Promise<WriteReceipt> {
+    const handle = await this.write.execute(
+      documentIdentifier,
+      branch,
+      actions,
+      signal,
+    );
+    return handle.readable;
   }
 
   private toLegacyNode(node: ReactorDriveNode): Node {
