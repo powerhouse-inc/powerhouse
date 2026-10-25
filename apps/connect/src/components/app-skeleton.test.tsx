@@ -18,7 +18,9 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   initTheme: vi.fn(),
 }));
 
-const { default: AppSkeleton } = await import("./app-skeleton.js");
+const { default: AppSkeleton, setPrerenderingCustomShell } =
+  await import("./app-skeleton.js");
+const { renderToString } = await import("react-dom/server");
 
 /** The loading indicator is hidden by the `hidden` class, not by unmounting. */
 function loaderIsVisible(): boolean {
@@ -92,5 +94,25 @@ describe("AppSkeleton", () => {
     } finally {
       meta.remove();
     }
+  });
+
+  // The prerendered shell is the first paint, before any meta tag is read: a
+  // project's own layout must not get Connect's sidebar there (on a phone it
+  // collapses to a lone settings button until the app has loaded).
+  it("prerenders only the loader for a project's own layout", () => {
+    setPrerenderingCustomShell(true);
+    try {
+      const html = renderToString(<AppSkeleton />);
+      expect(html).not.toContain('data-testid="sidebar"');
+      expect(html).not.toContain('data-testid="home-screen"');
+      expect(html).toContain('data-testid="logo"');
+    } finally {
+      setPrerenderingCustomShell(false);
+    }
+  });
+
+  it("prerenders Connect's chrome when the layout is Connect's", () => {
+    const html = renderToString(<AppSkeleton />);
+    expect(html).toContain('data-testid="sidebar"');
   });
 });

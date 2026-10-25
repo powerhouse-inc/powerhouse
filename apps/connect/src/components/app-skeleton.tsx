@@ -25,9 +25,22 @@ import {
 } from "./migration-status.js";
 const LOADER_DELAY = 250;
 
+/** Set while a project's shell is prerendered (prerender/shell.tsx): there is
+ * no document then, so no meta tag to read, but the render is the project's. */
+let prerenderingCustomShell = false;
+
+/** Marks the prerender that follows as a project's own layout (`true`) or
+ * Connect's (`false`); the prerender resets it when it is done. */
+export function setPrerenderingCustomShell(custom: boolean): void {
+  prerenderingCustomShell = custom;
+}
+
 /** Set by the build when the project's `_app` replaces Connect's layout:
- * the loading state then shows no Connect chrome, only the loader. */
+ * the loading state then shows no Connect chrome, only the loader. The
+ * prerendered shell says so too, or a phone shows Connect's sidebar, which
+ * collapses to its settings button, until the app has loaded. */
 function isCustomShell() {
+  if (prerenderingCustomShell) return true;
   return (
     typeof document !== "undefined" &&
     document.querySelector('meta[name="ph-custom-shell"]') !== null
@@ -116,7 +129,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
    * vetra-studio BUILD iframe), suppress the sidebar during the Suspense
    * fallback so the loading state matches the loaded state. */
   const isEmbedded = !isSSR && getIsEmbedded();
-  if (!isSSR && isCustomShell()) {
+  if (isCustomShell()) {
     return (
       <div className="relative flex h-screen overflow-hidden bg-background">
         {props.children ?? <Loader />}
