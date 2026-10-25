@@ -22,11 +22,15 @@ export type ReadMethods =
   | "getDocumentModelModuleForDocument";
 
 // Pieces build actions with the model's action creators and pass them to
-// `execute`; `deleteDocument` refuses a cascade.
+// `execute`; `deleteDocument` refuses a cascade. `executeAsync` writes as
+// `execute` does and, for a piece, also answers once the actions are applied,
+// but with the job instead of the document: the write for a caller that has
+// no use for the document, such as a file added to a large drive.
 export type WriteMethods =
   | "create"
   | "createEmpty"
   | "execute"
+  | "executeAsync"
   | "deleteDocument";
 
 // Offered to no piece; the host throws for them.
@@ -41,7 +45,6 @@ export type RefusedMethods =
   | "moveRelationship"
   | "upgradeDocument"
   | "deleteDocuments"
-  | "executeAsync"
   | "createAsync"
   | "createEmptyAsync"
   | "getJobStatus"
