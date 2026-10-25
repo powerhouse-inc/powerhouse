@@ -146,10 +146,17 @@ function createGate() {
 }
 
 // Holds the document reads the route loader and the view make while closed.
-function gatedClient(client: IReactorClient, gate: Gate) {
+/** Holds every `get`, on the facade and on its read half, at the gate. */
+function gatedClient<T extends Pick<IReactorClient, "get">>(
+  client: T,
+  gate: Gate,
+): T {
   return new Proxy(client, {
     get(target, key, receiver) {
       const value = Reflect.get(target, key, receiver) as unknown;
+      if (key === "read" && typeof value === "object" && value !== null) {
+        return gatedClient(value as Pick<IReactorClient, "get">, gate);
+      }
       if (key !== "get" || typeof value !== "function") return value;
       return async (...args: Parameters<IReactorClient["get"]>) => {
         await gate.wait();
