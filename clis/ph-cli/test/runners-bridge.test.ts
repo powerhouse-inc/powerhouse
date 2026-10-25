@@ -98,6 +98,23 @@ describe("connect bridge runner", () => {
     });
   });
 
+  it("passes runner.host to vite as the bind address, and leaves vite's default when unset", async () => {
+    const runner = await import("../src/runners/connect.js");
+    const { runConnectStudio } =
+      await import("../src/services/connect-studio.js");
+    vi.mocked(runConnectStudio).mockClear();
+    await runner.dev(
+      connect(connectHost({ runner: { module: "m", host: "0.0.0.0" } })),
+      ctx,
+    );
+    await runner.dev(connect(connectHost()), ctx);
+    const [withHost, withoutHost] = vi
+      .mocked(runConnectStudio)
+      .mock.calls.map((call) => call[0]);
+    expect(withHost).toMatchObject({ host: "0.0.0.0" });
+    expect(withoutHost).not.toHaveProperty("host");
+  });
+
   it("warns at boot on config owned by a plugin the composition lacks", async () => {
     const runner = await import("../src/runners/connect.js");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
