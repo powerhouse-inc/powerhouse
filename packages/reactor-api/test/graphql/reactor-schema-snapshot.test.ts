@@ -86,9 +86,11 @@ function fieldTypes(
 
 describe("reactor schema", () => {
   it("is the baseline plus the consistency argument and nothing else", () => {
+    // Both sides printed the same way, so a formatter touching the baseline
+    // file changes nothing.
     expect(
       printSchema(lexicographicSortSchema(withoutTheAddition(SOURCE))),
-    ).toBe(BASELINE.trimEnd());
+    ).toBe(printSchema(lexicographicSortSchema(buildSchema(BASELINE))));
   });
 
   it("takes an optional consistency token on exactly the six reads", () => {
