@@ -948,7 +948,8 @@ async function initServer(
     ) as unknown as Kysely<ReactorDriveDatabase>;
     driveNodeView = new DriveNodeView(reactorDriveSchemaDb);
     const reactorDriveClient = new ReactorDriveClient({
-      reactor: module.client,
+      read: module.read,
+      write: module.write,
       readModel: driveNodeView,
     });
 
@@ -1194,11 +1195,15 @@ async function initServer(
     api.httpAdapter.setupSentryErrorHandler(Sentry);
   }
 
-  const { client, graphqlManager, documentModelRegistry } = api;
+  // The framework wiring takes the halves; `client` (the facade) stays for
+  // the consumers that have not moved.
+  const { client, read, write, graphqlManager, documentModelRegistry } = api;
 
   const lateSubgraphs: Promise<unknown>[] = [];
   if (pluginHost) {
     pluginHost.ctx.client = client;
+    pluginHost.ctx.read = read;
+    pluginHost.ctx.write = write;
     pluginHost.ctx.graphqlManager = graphqlManager;
     pluginHost.ctx.lateSubgraphs = lateSubgraphs;
     pluginHost.ctx.reactorClientModule = options.reactor ?? ownedReactorModule;
@@ -1249,6 +1254,7 @@ async function initServer(
   const registerWorkflowSubgraph = (composed: ComposedWorkflowRuntime) => {
     const WorkflowRuntimeSubgraph = composed.subgraph;
     const workflowSubgraph = new WorkflowRuntimeSubgraph({
+      readClient: read,
       reactorClient: client,
       http: graphqlManager.scopeForPackage(WORKFLOW_PACKAGE_NAME),
       relationalDb: api.relationalDb,
@@ -1432,6 +1438,7 @@ async function initServer(
     const packagesSubgraph = new PackagesSubgraph({
       relationalDb: undefined as never,
       analyticsStore: undefined as never,
+      readClient: read,
       reactorClient: client,
       graphqlManager,
       syncManager: api.syncManager,
@@ -1474,6 +1481,7 @@ async function initServer(
           ),
       }),
       typeDefs: reactorDriveSubgraphTypeDefs,
+      readClient: read,
       reactorClient: client,
       relationalDb: undefined as never,
     };
