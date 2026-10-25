@@ -58,6 +58,31 @@ describe("renderBars", () => {
     expect(lines[1]).toMatch(/^document-view\s+█+\s+done$/);
   });
 
+  it("keeps every line short of the last column", () => {
+    for (const columns of [20, 48, 60, 80, 200]) {
+      for (const line of renderBars(catchingUp, columns, dynamic6)) {
+        expect(line.length).toBeLessThanOrEqual(columns - 1);
+      }
+    }
+  });
+
+  it("shrinks the label before the bar on a narrow terminal", () => {
+    const [line] = renderBars(
+      [
+        {
+          label: "attachment-reference-read-model",
+          fraction: 0.5,
+          state: "catching-up",
+        },
+      ],
+      48,
+    );
+
+    expect(line.length).toBeLessThanOrEqual(47);
+    expect(line).toMatch(/░/);
+    expect(line).toMatch(/50%$/);
+  });
+
   it("keeps the end of a long label, where processor factories differ", () => {
     const [line] = renderBars(
       [
