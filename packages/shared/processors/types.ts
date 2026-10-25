@@ -1,7 +1,10 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Action } from "../document-model/actions.js";
 import type { IAnalyticsStore } from "../analytics/types.js";
-import type { PHDocumentHeader } from "../document-model/documents.js";
+import type {
+  PHDocument,
+  PHDocumentHeader,
+} from "../document-model/documents.js";
 import type { PROCESSOR_APPS } from "./constants.js";
 import type { IHttpScope } from "./http.js";
 import type { IRelationalDb } from "./relational/types.js";
@@ -11,6 +14,18 @@ export type ProcessorDispatchResult = {
   status: string;
 };
 
+/** A dispatched create: the job, and the id the new document carries. */
+export type ProcessorDispatchCreateResult = ProcessorDispatchResult & {
+  documentId: string;
+};
+
+/** How a dispatched delete treats children: "cascade" deletes orphans too. */
+export type ProcessorDeletePropagation = "none" | "cascade";
+
+/**
+ * How a processor writes. Each member resolves once the write is accepted and
+ * answers with the job's id and status; it does not wait for the commit.
+ */
 export interface IProcessorDispatch {
   execute(
     docId: string,
@@ -18,6 +33,25 @@ export interface IProcessorDispatch {
     actions: Action[],
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
+  ): Promise<ProcessorDispatchResult>;
+
+  /**
+   * Adds a document to a drive, under `parentFolder` when given. The
+   * document's own creation has completed when this resolves; the drive's
+   * file node has been accepted.
+   */
+  createInDrive(
+    driveId: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchCreateResult>;
+
+  /** Deletes a document, and with "cascade" its orphaned children. */
+  deleteDocument(
+    docId: string,
+    propagate?: ProcessorDeletePropagation,
+    signal?: AbortSignal,
   ): Promise<ProcessorDispatchResult>;
 }
 

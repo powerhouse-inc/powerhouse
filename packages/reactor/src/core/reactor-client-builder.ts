@@ -300,6 +300,8 @@ export class ReactorClientBuilder {
     );
 
     return {
+      read: client.read,
+      write: client.write,
       client,
       reactor,
       eventBus,

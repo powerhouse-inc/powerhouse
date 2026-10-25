@@ -15,7 +15,13 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ICatchUp, ISettledWatermark } from "../catch-up/types.js";
 import type { ReactorClient } from "../client/reactor-client.js";
-import type { IReactorClient } from "../client/types.js";
+import type { ReactorReadClient } from "../client/read-client.js";
+import type {
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+} from "../client/types.js";
+import type { ReactorWriteClient } from "../client/write-client.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { ReactorFeatureFlags } from "../executor/types.js";
@@ -640,10 +646,19 @@ export interface InProcessReactorModule extends ReactorModule {
 }
 
 /**
- * Base reactor client contract — the client plus its reactor module. Satisfied
- * by every host; in-process hosts extend it with {@link InProcessReactorClientModule}.
+ * Base reactor client contract — the two client halves, the facade over them,
+ * and the reactor module. Satisfied by every host; in-process hosts extend it
+ * with {@link InProcessReactorClientModule}.
+ *
+ * Framework code takes `read` and `write`; `client` is for consumers that have
+ * not moved to the halves.
  */
 export interface ReactorClientModule {
+  /** Answers from read models; never enqueues. */
+  read: IReactorReadClient;
+  /** Enqueues; every write returns a handle. */
+  write: IReactorWriteClient;
+  /** The facade over both; kept for consumers that have not moved. */
   client: IReactorClient;
   reactorModule: ReactorModule | undefined;
 }
@@ -653,6 +668,8 @@ export interface ReactorClientModule {
  * the in-process graph internals.
  */
 export interface InProcessReactorClientModule extends ReactorClientModule {
+  read: ReactorReadClient;
+  write: ReactorWriteClient;
   client: ReactorClient;
   reactor: IReactor;
   eventBus: IEventBus;
