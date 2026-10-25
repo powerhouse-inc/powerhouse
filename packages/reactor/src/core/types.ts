@@ -46,6 +46,7 @@ import type {
   ISyncDeadLetterStorage,
   ISyncHoldStorage,
   ISyncRemoteStorage,
+  IWriteIdentityStore,
   OperationFilter,
 } from "../storage/interfaces.js";
 import type {
@@ -581,6 +582,8 @@ export interface InProcessReactorModule extends ReactorModule {
   database: Kysely<Database>;
   operationStore: IOperationStore;
   keyframeStore: IKeyframeStore;
+  /** The write side's document identity; mutations resolve targets with it. */
+  writeIdentityStore: IWriteIdentityStore;
   writeCache: IWriteCache;
   operationIndex: IOperationIndex;
   documentView: IDocumentView;

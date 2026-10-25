@@ -109,6 +109,7 @@ import {
   type IndexerDatabase,
 } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import { KyselyWriteIdentityStore } from "../storage/kysely/write-identity-store.js";
 import { DEFAULT_FLUSH_SYNC_TIMEOUT_MS } from "../storage/kysely/group-commit-pglite-client.js";
 import {
   createGroupCommitStorage,
@@ -1087,6 +1088,10 @@ export class ReactorBuilder {
       operationIndex,
     );
 
+    const writeIdentityStore = new KyselyWriteIdentityStore(
+      database as unknown as Kysely<StorageDatabase>,
+    );
+
     const executionScope: IExecutionScope = new KyselyExecutionScope(
       database as unknown as Kysely<StorageDatabase>,
       operationStore,
@@ -1095,6 +1100,7 @@ export class ReactorBuilder {
       writeCache,
       documentMetaCache,
       collectionMembershipCache,
+      writeIdentityStore,
     );
 
     let executorManager = this.executorManager;
@@ -1467,6 +1473,7 @@ export class ReactorBuilder {
       database,
       operationStore,
       keyframeStore,
+      writeIdentityStore,
       writeCache,
       operationIndex,
       documentView,
