@@ -195,6 +195,23 @@ export class RemoteWriteHandles {
     this.handles = new WriteHandleFactory(remoteStagePort(reads));
   }
 
+  fromWire(
+    value: WireWriteHandle,
+    signal: AbortSignal | undefined,
+  ): WriteHandle;
+  fromWire(
+    value: WireBatchWriteHandle,
+    signal: AbortSignal | undefined,
+  ): BatchWriteHandle;
+  fromWire(
+    value: readonly WireWriteHandle[],
+    signal: AbortSignal | undefined,
+  ): WriteHandle[];
+  fromWire(
+    value: Readonly<Record<string, WireWriteHandle>>,
+    signal: AbortSignal | undefined,
+  ): Record<string, WriteHandle>;
+  fromWire(value: unknown, signal: AbortSignal | undefined): unknown;
   fromWire(value: unknown, signal: AbortSignal | undefined): unknown {
     if (isWireWriteHandle(value)) {
       return this.handle(value, signal);

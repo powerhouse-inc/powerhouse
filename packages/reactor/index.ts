@@ -53,11 +53,24 @@ export {
 } from "./src/client/facade-write-client.js";
 export {
   JobFailedError,
+  JobBatchHandle,
+  JobSetHandle,
+  mergeConsistencyTokens,
+  WriteHandleFactory,
   type HandleReader,
   type IJobStagePort,
 } from "./src/client/internal/handles.js";
 export type { ReactorClientParts } from "./src/client/internal/parts.js";
 export type { WriteSideParts } from "./src/client/internal/targets.js";
+export type {
+  WireBatchWriteHandle,
+  WireWriteHandle,
+} from "./src/rpc/protocol.js";
+export {
+  RemoteWriteHandles,
+  remoteStagePort,
+  type RemoteReads,
+} from "./src/rpc/write-handles.js";
 export {
   DocumentChangeType,
   type ActionCandidate,
@@ -129,6 +142,7 @@ export {
 } from "./src/core/types.js";
 export {
   JobAwaiter,
+  settlesStage,
   type IJobAwaiter,
   type IJobStageAwaiter,
   type JobStage,
