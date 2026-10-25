@@ -67,6 +67,10 @@ const SEEDS: Record<string, (db: ReactorDb, t: Table) => Promise<unknown>> = {
   SlugMapping: (db, t) =>
     sql`insert into ${t("SlugMapping")} (slug, "documentId", scope, branch)
       values ('a-slug', ${ID}, 'header', 'main')`.execute(db),
+  WriteIdentity: (db, t) =>
+    sql`insert into ${t("WriteIdentity")} ("documentId", branch, slug,
+      "documentType", "createdAtUtcIso", "updatedAtUtcIso")
+      values (${ID}, 'main', 'a-slug', 't', '', '')`.execute(db),
   Document: (db, t) =>
     sql`insert into ${t("Document")} (id) values (${ID})`.execute(db),
   DocumentRelationship: async (db, t) => {

@@ -432,6 +432,16 @@ export const DELETE_LIST: RowCheck[] = [
       ),
   },
   {
+    table: "WriteIdentity",
+    count: (db, id) =>
+      countOf(
+        db
+          .selectFrom("WriteIdentity")
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .where("documentId", "=", id),
+      ),
+  },
+  {
     table: "Document",
     count: (db, id) =>
       countOf(
