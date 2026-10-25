@@ -121,7 +121,7 @@ function createdByLoad(request: BatchLoadRequest): Set<string> {
 /** The create job of a create batch first, then the rest. */
 function createJobsFirst(result: BatchExecutionResult): JobInfo[] {
   const jobs = Object.values(result.jobs);
-  const create = result.jobs.create ?? jobs[0];
+  const create = "create" in result.jobs ? result.jobs.create : jobs[0];
   return [create, ...jobs.filter((job) => job !== create)];
 }
 
