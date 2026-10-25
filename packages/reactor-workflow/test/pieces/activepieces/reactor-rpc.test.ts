@@ -152,6 +152,16 @@ export const probe = {
         return ctx.reactor.execute(ctx.propsValue.id, "main", [model.actions.setName("Nope")]);
       },
     },
+    "read-only-rename-async": {
+      name: "read-only-rename-async",
+      displayName: "Rename without read-back, declared read",
+      requireReactor: "read",
+      props: { id },
+      run: async (ctx) => {
+        const model = await ctx.reactor.getDocumentModelModule(MODEL);
+        return ctx.reactor.executeAsync(ctx.propsValue.id, "main", [model.actions.setName("Nope")]);
+      },
+    },
     refused: {
       name: "refused",
       displayName: "Refused",
@@ -208,6 +218,20 @@ export const probe = {
           addFile({ id: file.header.id, name: "Filed", documentType: MODEL }),
         ]);
         return { fileId: file.header.id, nodes: drive.state.global.nodes };
+      },
+    },
+    "file-into-drive-async": {
+      name: "file-into-drive-async",
+      displayName: "File into drive, no read-back",
+      requireReactor: "write",
+      props: { id },
+      run: async (ctx) => {
+        const model = await ctx.reactor.getDocumentModelModule(MODEL);
+        const file = await ctx.reactor.create(model.utils.createDocument(), ctx.propsValue.id);
+        const job = await ctx.reactor.executeAsync(ctx.propsValue.id, "main", [
+          addFile({ id: file.header.id, name: "Filed", documentType: MODEL }),
+        ]);
+        return { fileId: file.header.id, job: { status: job.status, hasDocument: "state" in job } };
       },
     },
     delete: {
@@ -729,6 +753,18 @@ describe("ctx.reactor over the reactor RPC", () => {
     expect(await nameOf(docs[2])).toBe("");
   }, 60_000);
 
+  it("refuses executeAsync under a read declaration, as it refuses execute", async () => {
+    const result = await testStep({
+      actionName: "read-only-rename-async",
+      config: { id: docs[2] },
+    });
+
+    expect(result.status).toBe("FAILED");
+    expect(result.error).toContain(ReactorAccessDeniedError);
+    expect(result.error).toContain("declares read access only");
+    expect(await nameOf(docs[2])).toBe("");
+  }, 60_000);
+
   it("refuses the client's convenience writes by name", async () => {
     const result = await testStep({
       actionName: "refused",
@@ -781,6 +817,27 @@ describe("ctx.reactor over the reactor RPC", () => {
     const edges = await publisher.getIncomingRelationshipEdges(fileId, "child");
     expect(edges.results.map((edge) => edge.sourceId)).toEqual([
       drive.header.id,
+    ]);
+  }, 60_000);
+
+  it("files into a drive with executeAsync: settled, answered with the job, not the drive", async () => {
+    const drive = await publisher.drives.create({ global: { name: "Files" } });
+
+    const result = await testStep({
+      actionName: "file-into-drive-async",
+      config: { id: drive.header.id },
+    });
+
+    expect(result.status).toBe("SUCCEEDED");
+    const { fileId, job } = result.output as {
+      fileId: string;
+      job: { status: string; hasDocument: boolean };
+    };
+    // Answered only once applied, as execute is; the step never sees the drive.
+    expect(job).toEqual({ status: "READ_READY", hasDocument: false });
+    const after = await publisher.get<typeof drive>(drive.header.id);
+    expect(after.state.global.nodes).toEqual([
+      expect.objectContaining({ id: fileId, kind: "file", name: "Filed" }),
     ]);
   }, 60_000);
 

@@ -46,6 +46,7 @@ const SERVED: Record<
   create: true,
   createEmpty: true,
   execute: true,
+  executeAsync: true,
   deleteDocument: true,
 };
 
@@ -61,7 +62,6 @@ const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
   moveRelationship: true,
   upgradeDocument: true,
   deleteDocuments: true,
-  executeAsync: true,
   createAsync: true,
   createEmptyAsync: true,
   getJobStatus: true,
