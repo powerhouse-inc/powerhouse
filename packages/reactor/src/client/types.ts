@@ -103,6 +103,116 @@ export type UpgradeDocumentOptions = {
   maxConflictRetries?: number;
 };
 
+/** Drive reads: a drive's nodes. Grouped under `read.drives`. */
+export interface IDriveReadClient {
+  /**
+   * Returns a single node from the drive's `state.global.nodes` array.
+   */
+  getNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Returns nodes in the drive, optionally filtered by parent folder:
+   * - omit `parentFolder` (or pass `undefined`) to list every node in the drive.
+   * - pass `null` to list only root-level nodes.
+   * - pass a folder id to list only the direct children of that folder.
+   */
+  listNodes(
+    driveIdentifier: string,
+    parentFolder?: string | null,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Node>>;
+}
+
+/** A write handle that also names the drive node the write made or changed. */
+export interface NodeWriteHandle extends WriteHandle {
+  readonly nodeId: string;
+}
+
+/**
+ * Drive writes, grouped under `write.drives`. Each resolves once its last step
+ * is accepted; a step a later step depends on (a file's document before the
+ * drive names it, a document rename before the node rename) has completed by
+ * then. A step that had to complete and FAILED throws the job's own error, by
+ * name.
+ */
+export interface IDriveWriteClient {
+  /** Creates a drive; the handle's document is the drive. */
+  create(input: DriveInput, signal?: AbortSignal): Promise<WriteHandle>;
+
+  /**
+   * Adds a document to a drive: the document batch (create, upgrade,
+   * relationship), completed, then the drive's ADD_FILE. The handle's document
+   * is the new file; its stages span both batches.
+   */
+  addFile(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Adds a folder node; `nodeId` is the new folder's id. */
+  addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle>;
+
+  /**
+   * Removes a node. Folder nodes cascade: descendant file documents are
+   * deleted first (each completed), then the folder node. The handle is the
+   * last step; its document is the drive.
+   */
+  removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Renames the node's document (completed and checked), then the drive's
+   * node entry. The handle's document is the drive.
+   */
+  renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle>;
+
+  /** The handle's document is the node's document. */
+  setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the drive. */
+  moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Copies a node and its subtree: each file is duplicated (completed), then
+   * the drive's nodes are copied. The handle's document is the drive.
+   */
+  copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+}
+
 /**
  * Drive-aware operations grouped under `client.drives`.
  *
@@ -344,6 +454,9 @@ export type WriteTargetDescription = {
  * `*Async` variants of the facade are this half's plain form, so it has none.
  */
 export interface IReactorWriteClient {
+  /** Drive writes. See {@link IDriveWriteClient}. */
+  readonly drives: IDriveWriteClient;
+
   /** True when the id is taken; a soft-deleted document's id is still taken. */
   isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
 
@@ -519,6 +632,9 @@ export interface IReactorWriteClient {
  * positional arguments.
  */
 export interface IReactorReadClient {
+  /** Drive reads. See {@link IDriveReadClient}. */
+  readonly drives: IDriveReadClient;
+
   /**
    * Retrieves a list of document model modules.
    *

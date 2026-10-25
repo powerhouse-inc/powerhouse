@@ -13,7 +13,12 @@ import {
   type JobInfo,
   type ViewFilter,
 } from "../../shared/types.js";
-import type { BatchWriteHandle, WriteHandle, WriteReceipt } from "../types.js";
+import type {
+  BatchWriteHandle,
+  NodeWriteHandle,
+  WriteHandle,
+  WriteReceipt,
+} from "../types.js";
 
 /**
  * A write's job FAILED: an infrastructure failure, a denial that aborted the
@@ -31,6 +36,18 @@ export class JobFailedError extends Error {
     this.name = "JobFailedError";
     this.job = job;
   }
+}
+
+/**
+ * A FAILED job's error as a plain Error carrying the job error's name and
+ * message, for callers that classify on the name.
+ */
+export function jobErrorOf(job: JobInfo): Error {
+  const error = new Error(job.error?.message ?? "Job failed");
+  if (job.error?.name) {
+    error.name = job.error.name;
+  }
+  return error;
 }
 
 /** Waits for a job to settle a stage, resolving with FAILED jobs too. */
@@ -329,6 +346,41 @@ export class JobBatchHandle implements BatchWriteHandle {
       }),
     );
     return Object.fromEntries(receipts);
+  }
+}
+
+/** A write handle that also names the drive node the write made or changed. */
+export class NodeHandle implements NodeWriteHandle {
+  constructor(
+    private readonly handle: WriteHandle,
+    readonly nodeId: string,
+  ) {}
+
+  get jobId(): string {
+    return this.handle.jobId;
+  }
+
+  get documentId(): string {
+    return this.handle.documentId;
+  }
+
+  get branch(): string {
+    return this.handle.branch;
+  }
+
+  get written(): Promise<WriteReceipt> {
+    return this.handle.written;
+  }
+
+  get readable(): Promise<WriteReceipt> {
+    return this.handle.readable;
+  }
+
+  document<TDocument extends PHDocument = PHDocument>(
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.handle.document<TDocument>(view, signal);
   }
 }
 

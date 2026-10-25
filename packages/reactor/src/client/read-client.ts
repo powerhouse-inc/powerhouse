@@ -37,12 +37,14 @@ import {
   encodeCompositeCursor,
   isCompositeCursor,
 } from "./cursor.js";
+import { DriveReadClient } from "./drive-read-client.js";
 import { type EventReads, EventReadsSource } from "./event-reads.js";
 import { ReadGating } from "./internal/gating.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import {
   DocumentChangeType,
   type DocumentChangeEvent,
+  type IDriveReadClient,
   type IReactorReadClient,
   type ProtocolSelection,
 } from "./types.js";
@@ -54,6 +56,8 @@ import { withAllScopes, withAuthScope } from "./util.js";
  * the read gate, and never enqueues a job.
  */
 export class ReactorReadClient implements IReactorReadClient {
+  readonly drives: IDriveReadClient;
+
   private readonly logger: ILogger;
   private readonly reactor: IReactor;
   private readonly subscriptionManager: IReactorSubscriptionManager;
@@ -85,6 +89,7 @@ export class ReactorReadClient implements IReactorReadClient {
     );
     this.createSignaturePolicy = parts.createSignaturePolicy;
     this.protocolSelection = parts.protocolSelection;
+    this.drives = new DriveReadClient(this, parts.logger);
   }
 
   async getDocumentModelModules(

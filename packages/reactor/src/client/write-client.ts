@@ -41,6 +41,7 @@ import {
   selectDocumentModelModule,
   upgradeDocumentJob,
 } from "./derivations.js";
+import { DriveWriteClient } from "./drive-write-client.js";
 import {
   decideCandidate,
   evaluationTargetId,
@@ -64,6 +65,7 @@ import type {
   ActionEvaluations,
   BatchWriteHandle,
   CreateDocumentOptions,
+  IDriveWriteClient,
   IReactorWriteClient,
   MoveRelationshipHandles,
   UpgradeDocumentOptions,
@@ -89,6 +91,8 @@ export type SubmittedExecution = {
  * model lookups and the read-back a handle's `document()` makes.
  */
 export class ReactorWriteClient implements IReactorWriteClient {
+  readonly drives: IDriveWriteClient;
+
   private readonly logger: ILogger;
   private readonly reactor: IReactor;
   private readonly signer: ISigner;
@@ -118,6 +122,16 @@ export class ReactorWriteClient implements IReactorWriteClient {
     this.actionEvaluation = parts.actionEvaluation;
     this.createSignaturePolicy = parts.createSignaturePolicy;
     this.read = read;
+    this.drives = new DriveWriteClient(
+      this,
+      read,
+      this.handles,
+      parts.logger,
+      (request, signal) => parts.reactor.executeBatch(request, signal),
+      parts.signer,
+      (identifier, signal) =>
+        this.targets.resolveReference(identifier, "main", signal),
+    );
   }
 
   async isDocumentIdTaken(

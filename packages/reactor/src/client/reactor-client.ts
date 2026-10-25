@@ -39,7 +39,7 @@ import type {
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import { DriveClient } from "./drive-client.js";
+import { DriveClientFacade } from "./drive-client.js";
 import type { ActionEvaluationConfig } from "./internal/evaluation.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import { ReactorReadClient } from "./read-client.js";
@@ -113,13 +113,7 @@ export class ReactorClient implements IReactorClient {
     this.reactor = reactor;
     this.read = new ReactorReadClient(parts);
     this.write = new ReactorWriteClient(parts, this.read);
-    this.drives = new DriveClient(
-      this,
-      logger,
-      (request, signal) => reactor.executeBatch(request, signal),
-      signer,
-      (id, signal) => this.write.resolveReference(id, "main", signal),
-    );
+    this.drives = new DriveClientFacade(this.read.drives, this.write.drives);
     this.logger.verbose("ReactorClient initialized");
   }
 

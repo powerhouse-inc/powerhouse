@@ -15,9 +15,19 @@ export {
 // Reactor Interface and Implementation
 export {
   DriveClient,
+  DriveClientFacade,
   type BatchSubmitter,
   type DriveClientDeps,
 } from "./src/client/drive-client.js";
+export {
+  DriveReadClient,
+  type DriveReadDeps,
+} from "./src/client/drive-read-client.js";
+export {
+  DriveWriteClient,
+  type DriveWriteHalf,
+  type DriveWriteReads,
+} from "./src/client/drive-write-client.js";
 export {
   buildCreateJobs,
   createEmptyDocument,
@@ -51,6 +61,9 @@ export {
   type CreateDocumentOptions,
   type DocumentChangeEvent,
   type IDriveClient,
+  type IDriveReadClient,
+  type IDriveWriteClient,
+  type NodeWriteHandle,
   type IReactorClient,
   type BatchWriteHandle,
   type IReactorReadClient,

@@ -1,4 +1,8 @@
 import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
+import {
   actions,
   type OperationWithContext,
   type PHDocument,
@@ -395,5 +399,49 @@ describe("JobAwaiter.waitForStage", () => {
     expect((await written).status).toBe(JobStatus.FAILED);
     expect((await job).status).toBe(JobStatus.FAILED);
     awaiter.shutdown();
+  });
+});
+
+describe("drive write handles", () => {
+  let module: InProcessReactorClientModule;
+
+  beforeEach(async () => {
+    module = await new ReactorClientBuilder()
+      .withReactorBuilder(
+        new ReactorBuilder().withDocumentModelSources([
+          driveDocumentModelModule as never,
+          documentModelDocumentModelModule,
+        ]),
+      )
+      .withSigner((await TestP256Signer.create()).asISigner())
+      .buildModule();
+  });
+
+  afterEach(() => {
+    module.reactor.kill();
+  });
+
+  it("hands back the file's handle from addFile and the node id from addFolder", async () => {
+    const write = module.client.write.drives;
+    const driveHandle = await write.create({ global: { name: "Handles" } });
+    const drive = await driveHandle.document<DocumentDriveDocument>();
+
+    const folder = await write.addFolder(drive.header.id, "inbox");
+    const withFolder = await folder.document<DocumentDriveDocument>();
+    expect(folder.documentId).toBe(drive.header.id);
+    expect(
+      withFolder.state.global.nodes.some((node) => node.id === folder.nodeId),
+    ).toBe(true);
+
+    const file = documentModelDocumentModelModule.utils.createDocument();
+    const added = await write.addFile(drive.header.id, file, folder.nodeId);
+    expect(added.documentId).toBe(file.header.id);
+    await added.readable;
+
+    const nodes = await module.client.read.drives.listNodes(
+      drive.header.id,
+      folder.nodeId,
+    );
+    expect(nodes.results.map((node) => node.id)).toEqual([file.header.id]);
   });
 });

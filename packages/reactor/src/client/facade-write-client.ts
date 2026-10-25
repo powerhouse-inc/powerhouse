@@ -1,3 +1,4 @@
+import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   AuthSubject,
@@ -18,6 +19,7 @@ import type {
 } from "../shared/types.js";
 import {
   JobBatchHandle,
+  NodeHandle,
   WriteHandleFactory,
   type HandleReader,
   type JobSetHandle,
@@ -27,7 +29,10 @@ import type {
   ActionEvaluations,
   BatchWriteHandle,
   CreateDocumentOptions,
+  IDriveClient,
+  IDriveWriteClient,
   IReactorClient,
+  NodeWriteHandle,
   IReactorWriteClient,
   MoveRelationshipHandles,
   UpgradeDocumentOptions,
@@ -42,6 +47,119 @@ import type {
 export type ReactorClientSurface = Omit<IReactorClient, "read" | "write">;
 
 /**
+ * Drive writes over a facade drive client. Its methods wait for their jobs and
+ * hand back no job ids, so every handle here is already settled.
+ */
+class FacadeDriveWriteClient implements IDriveWriteClient {
+  constructor(
+    private readonly drives: IDriveClient,
+    private readonly settled: (documentId: string) => WriteHandle,
+  ) {}
+
+  async create(input: DriveInput, signal?: AbortSignal): Promise<WriteHandle> {
+    const drive = await this.drives.create(input, signal);
+    return this.settled(drive.header.id);
+  }
+
+  async addFile(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const added = await this.drives.addFile(
+      driveIdentifier,
+      document,
+      parentFolder,
+      signal,
+    );
+    return this.settled(added.header.id);
+  }
+
+  async addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle> {
+    const folder = await this.drives.addFolder(
+      driveIdentifier,
+      name,
+      parentFolder,
+      signal,
+    );
+    return new NodeHandle(this.settled(driveIdentifier), folder.id);
+  }
+
+  async removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    await this.drives.removeNode(driveIdentifier, nodeId, signal);
+    return this.settled(driveIdentifier);
+  }
+
+  async renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle> {
+    const node = await this.drives.renameNode(
+      driveIdentifier,
+      nodeId,
+      name,
+      signal,
+    );
+    return new NodeHandle(this.settled(driveIdentifier), node.id);
+  }
+
+  async setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const document = await this.drives.setPreferredEditorOnNode(
+      nodeId,
+      preferredEditor,
+      signal,
+    );
+    return this.settled(document.header.id);
+  }
+
+  async moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const drive = await this.drives.moveNode(
+      driveIdentifier,
+      srcNodeId,
+      targetParentFolderId,
+      signal,
+    );
+    return this.settled(drive.header.id);
+  }
+
+  async copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const drive = await this.drives.copyNode(
+      driveIdentifier,
+      srcNodeId,
+      targetParentFolderId,
+      signal,
+    );
+    return this.settled(drive.header.id);
+  }
+}
+
+/**
  * A write half over a client that only has the facade surface, for
  * implementations not yet split (the routing client until it has its own
  * halves, test doubles).
@@ -54,6 +172,8 @@ export type ReactorClientSurface = Omit<IReactorClient, "read" | "write">;
  * true to what happened if not to when.
  */
 export class FacadeWriteClient implements IReactorWriteClient {
+  readonly drives: IDriveWriteClient;
+
   private readonly handles: WriteHandleFactory;
 
   constructor(private readonly client: ReactorClientSurface) {
@@ -61,6 +181,9 @@ export class FacadeWriteClient implements IReactorWriteClient {
       // The facade can only wait for READ_READY, which implies WRITE_READY.
       waitForStage: (jobId, _stage, signal) => client.waitForJob(jobId, signal),
     });
+    this.drives = new FacadeDriveWriteClient(client.drives, (documentId) =>
+      this.settledHandle(documentId, "main"),
+    );
   }
 
   isDocumentIdTaken(
