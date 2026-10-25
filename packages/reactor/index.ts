@@ -19,6 +19,7 @@ export {
   type BatchSubmitter,
   type DriveClientDeps,
 } from "./src/client/drive-client.js";
+export { warnOnce } from "./src/client/deprecations.js";
 export {
   DriveReadClient,
   type DriveReadDeps,

@@ -39,6 +39,7 @@ import type {
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
+import { warnOnce } from "./deprecations.js";
 import { DriveClientFacade } from "./drive-client.js";
 import type { ActionEvaluationConfig } from "./internal/evaluation.js";
 import type { ReactorClientParts } from "./internal/parts.js";
@@ -56,6 +57,36 @@ import type {
 import { ReactorWriteClient } from "./write-client.js";
 
 export type { ActionEvaluationConfig } from "./internal/evaluation.js";
+
+/** What each deprecated facade write points at, for its one-time warning. */
+const DEPRECATED_WRITES = {
+  create:
+    "Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  createEmpty:
+    "Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  upgradeDocument: "Use write.upgradeDocument(...), then handle.document().",
+  createDocumentInDrive:
+    "Use write.drives.addFile(...), then handle.document().",
+  execute:
+    "Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).",
+  executeBatch: "Use write.executeBatch(...) and await batch.readable.",
+  rename:
+    "Use write.rename(...); read back with handle.document() only if the document is needed.",
+  setPreferredEditor:
+    "Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.",
+  addRelationship:
+    "Use write.addRelationship(...), then handle.document() for the source.",
+  updateRelationship:
+    "Use write.updateRelationship(...), then handle.document() for the source.",
+  removeRelationship:
+    "Use write.removeRelationship(...), then handle.document() for the source.",
+  moveRelationship:
+    "Use write.moveRelationship(...), then removed.document() and added.document().",
+  deleteDocument: "Use write.deleteDocument(...) and await handle.readable.",
+  deleteDocuments:
+    "Use write.deleteDocuments(...) and await each handle's readable.",
+  loadBatch: "Use write.loadBatch(...).",
+} as const;
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
@@ -314,11 +345,15 @@ export class ReactorClient implements IReactorClient {
     return this.read.getCreateProtocolVersions(parentIdentifier, signal);
   }
 
+  /**
+   * @deprecated Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
+   */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce("IReactorClient.create", DEPRECATED_WRITES.create, this.logger);
     const handle = await this.write.create(document, parentIdentifier, signal);
     return handle.document<TDocument>(undefined, signal);
   }
@@ -336,11 +371,19 @@ export class ReactorClient implements IReactorClient {
     return this.write.submitCreate(document, parentIdentifier, signal);
   }
 
+  /**
+   * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
+   */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce(
+      "IReactorClient.createEmpty",
+      DEPRECATED_WRITES.createEmpty,
+      this.logger,
+    );
     const handle = await this.write.createEmpty(
       documentModelType,
       options,
@@ -367,12 +410,20 @@ export class ReactorClient implements IReactorClient {
     return this.write.submitCreate(document, options?.parentIdentifier, signal);
   }
 
+  /**
+   * @deprecated Use write.upgradeDocument(...), then handle.document().
+   */
   async upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     toVersion?: number,
     options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce(
+      "IReactorClient.upgradeDocument",
+      DEPRECATED_WRITES.upgradeDocument,
+      this.logger,
+    );
     const handle = await this.write.upgradeDocument(
       documentIdentifier,
       toVersion,
@@ -386,8 +437,8 @@ export class ReactorClient implements IReactorClient {
    * Creates an empty document in a drive as a single batched operation.
    * Delegates to {@link IDriveClient.addFile}.
    *
-   * @deprecated Use `client.drives.addFile` instead. This method will be
-   * removed in a future release.
+   * @deprecated Use write.drives.addFile(...), then handle.document(). This
+   * method will be removed in a future release.
    */
   createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,
@@ -395,6 +446,11 @@ export class ReactorClient implements IReactorClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce(
+      "IReactorClient.createDocumentInDrive",
+      DEPRECATED_WRITES.createDocumentInDrive,
+      this.logger,
+    );
     return this.drives.addFile<TDocument>(
       driveId,
       document,
@@ -403,6 +459,9 @@ export class ReactorClient implements IReactorClient {
     );
   }
 
+  /**
+   * @deprecated Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).
+   */
   async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
@@ -410,6 +469,7 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
     subject?: AuthSubject,
   ): Promise<TDocument> {
+    warnOnce("IReactorClient.execute", DEPRECATED_WRITES.execute, this.logger);
     const handle = await this.write.execute(
       documentIdentifier,
       branch,
@@ -443,21 +503,33 @@ export class ReactorClient implements IReactorClient {
     return submitted.job;
   }
 
+  /**
+   * @deprecated Use write.executeBatch(...) and await batch.readable.
+   */
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
+    warnOnce(
+      "IReactorClient.executeBatch",
+      DEPRECATED_WRITES.executeBatch,
+      this.logger,
+    );
     const batch = await this.write.executeBatch(request, signal);
     await batch.readable;
     return { jobs: batch.jobs };
   }
 
+  /**
+   * @deprecated Use write.rename(...); read back with handle.document() only if the document is needed.
+   */
   async rename(
     documentIdentifier: string,
     name: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    warnOnce("IReactorClient.rename", DEPRECATED_WRITES.rename, this.logger);
     const handle = await this.write.rename(
       documentIdentifier,
       name,
@@ -467,12 +539,20 @@ export class ReactorClient implements IReactorClient {
     return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.
+   */
   async setPreferredEditor(
     documentIdentifier: string,
     preferredEditor: string | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    warnOnce(
+      "IReactorClient.setPreferredEditor",
+      DEPRECATED_WRITES.setPreferredEditor,
+      this.logger,
+    );
     const handle = await this.write.setPreferredEditor(
       documentIdentifier,
       preferredEditor,
@@ -482,6 +562,9 @@ export class ReactorClient implements IReactorClient {
     return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.addRelationship(...), then handle.document() for the source.
+   */
   async addRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -490,6 +573,11 @@ export class ReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    warnOnce(
+      "IReactorClient.addRelationship",
+      DEPRECATED_WRITES.addRelationship,
+      this.logger,
+    );
     const handle = await this.write.addRelationship(
       sourceIdentifier,
       targetIdentifier,
@@ -501,6 +589,9 @@ export class ReactorClient implements IReactorClient {
     return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.updateRelationship(...), then handle.document() for the source.
+   */
   async updateRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -509,6 +600,11 @@ export class ReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    warnOnce(
+      "IReactorClient.updateRelationship",
+      DEPRECATED_WRITES.updateRelationship,
+      this.logger,
+    );
     const handle = await this.write.updateRelationship(
       sourceIdentifier,
       targetIdentifier,
@@ -520,6 +616,9 @@ export class ReactorClient implements IReactorClient {
     return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.removeRelationship(...), then handle.document() for the source.
+   */
   async removeRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -527,6 +626,11 @@ export class ReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
+    warnOnce(
+      "IReactorClient.removeRelationship",
+      DEPRECATED_WRITES.removeRelationship,
+      this.logger,
+    );
     const handle = await this.write.removeRelationship(
       sourceIdentifier,
       targetIdentifier,
@@ -537,6 +641,9 @@ export class ReactorClient implements IReactorClient {
     return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.moveRelationship(...), then removed.document() and added.document().
+   */
   async moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
@@ -548,6 +655,11 @@ export class ReactorClient implements IReactorClient {
     source: PHDocument;
     target: PHDocument;
   }> {
+    warnOnce(
+      "IReactorClient.moveRelationship",
+      DEPRECATED_WRITES.moveRelationship,
+      this.logger,
+    );
     const moved = await this.write.moveRelationship(
       sourceParentIdentifier,
       targetParentIdentifier,
@@ -562,18 +674,34 @@ export class ReactorClient implements IReactorClient {
     return { source, target };
   }
 
+  /**
+   * @deprecated Use write.loadBatch(...).
+   */
   loadBatch(
     request: BatchLoadRequest,
     signal?: AbortSignal,
   ): Promise<BatchLoadResult> {
+    warnOnce(
+      "IReactorClient.loadBatch",
+      DEPRECATED_WRITES.loadBatch,
+      this.logger,
+    );
     return this.write.loadBatch(request, signal);
   }
 
+  /**
+   * @deprecated Use write.deleteDocument(...) and await handle.readable.
+   */
   async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
+    warnOnce(
+      "IReactorClient.deleteDocument",
+      DEPRECATED_WRITES.deleteDocument,
+      this.logger,
+    );
     const handle = await this.write.deleteDocument(
       identifier,
       propagate,
@@ -582,11 +710,19 @@ export class ReactorClient implements IReactorClient {
     await handle.readable;
   }
 
+  /**
+   * @deprecated Use write.deleteDocuments(...) and await each handle's readable.
+   */
   async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
+    warnOnce(
+      "IReactorClient.deleteDocuments",
+      DEPRECATED_WRITES.deleteDocuments,
+      this.logger,
+    );
     const handles = await this.write.deleteDocuments(
       identifiers,
       propagate,

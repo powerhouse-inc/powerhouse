@@ -990,6 +990,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param parentIdentifier - Optional "id" or "slug" of parent document
    * @param signal - Optional abort signal to cancel the request
    * @returns The created document
+   *
+   * @deprecated Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
@@ -1019,6 +1021,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param documentModelType - Type of document to create
    * @param options - Optional creation options (parentIdentifier, documentModelVersion)
    * @param signal - Optional abort signal to cancel the request
+   *
+   * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
@@ -1060,6 +1064,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The upgraded document
    * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   *
+   * @deprecated Use write.upgradeDocument(...), then handle.document().
    */
   upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
@@ -1073,8 +1079,8 @@ export interface IReactorClient extends IReactorReadClient {
    * This is more efficient than createEmpty + addFile as it batches all
    * actions into dependent jobs and waits for them to complete together.
    *
-   * @deprecated Use {@link IDriveClient.addFile} via `client.drives.addFile`
-   * instead. This method will be removed in a future release.
+   * @deprecated Use write.drives.addFile(...), then handle.document(). This
+   * method will be removed in a future release.
    * @param driveId - The drive document id or slug
    * @param document - The document to create
    * @param parentFolder - Optional folder id within the drive
@@ -1106,6 +1112,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param subject - Optional read subject for the returned document; defaults
    *   to the client's signer
    * @returns The updated document
+   *
+   * @deprecated Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).
    */
   execute<TDocument extends PHDocument>(
     documentIdentifier: string,
@@ -1141,6 +1149,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param request - Batch mutation request with per-job actions and dependsOn keys
    * @param signal - Optional abort signal to cancel the request
    * @returns The completed batch result (job ids keyed by plan key)
+   *
+   * @deprecated Use write.executeBatch(...) and await batch.readable.
    */
   executeBatch(
     request: BatchExecutionRequest,
@@ -1155,6 +1165,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch to rename the document, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
+   *
+   * @deprecated Use write.rename(...); read back with handle.document() only if the document is needed.
    */
   rename(
     documentIdentifier: string,
@@ -1171,6 +1183,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
+   *
+   * @deprecated Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.
    */
   setPreferredEditor(
     documentIdentifier: string,
@@ -1192,6 +1206,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.addRelationship(...), then handle.document() for the source.
    */
   addRelationship(
     sourceIdentifier: string,
@@ -1213,6 +1229,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch holding the relationship, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.updateRelationship(...), then handle.document() for the source.
    */
   updateRelationship(
     sourceIdentifier: string,
@@ -1232,6 +1250,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch to remove the relationship from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.removeRelationship(...), then handle.document() for the source.
    */
   removeRelationship(
     sourceIdentifier: string,
@@ -1251,6 +1271,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param branch - Optional branch to apply the move to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
+   *
+   * @deprecated Use write.moveRelationship(...), then removed.document() and added.document().
    */
   moveRelationship(
     sourceParentIdentifier: string,
@@ -1271,6 +1293,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
+   *
+   * @deprecated Use write.deleteDocument(...) and await handle.readable.
    */
   deleteDocument(
     identifier: string,
@@ -1285,6 +1309,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
+   *
+   * @deprecated Use write.deleteDocuments(...) and await each handle's readable.
    */
   deleteDocuments(
     identifiers: string[],
@@ -1299,6 +1325,8 @@ export interface IReactorClient extends IReactorReadClient {
    * @param request - Batch load request containing jobs with dependencies
    * @param signal - Optional abort signal to cancel the request
    * @returns Map of job keys to completed job information
+   *
+   * @deprecated Use write.loadBatch(...).
    */
   loadBatch(
     request: BatchLoadRequest,
