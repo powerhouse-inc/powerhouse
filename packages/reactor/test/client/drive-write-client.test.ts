@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DriveWriteClient,
+  type BatchSubmitter,
   type DriveWriteHalf,
   type DriveWriteReads,
 } from "../../src/client/drive-write-client.js";
@@ -51,7 +52,7 @@ function driveClient(renameHandle: WriteHandle) {
     reads,
     new WriteHandleFactory({ waitForStage: vi.fn() }),
     createMockLogger(),
-    vi.fn(),
+    vi.fn<BatchSubmitter>(),
     createMockSigner(),
     (identifier) => Promise.resolve(identifier),
   );
