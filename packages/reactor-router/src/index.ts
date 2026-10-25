@@ -79,5 +79,15 @@ export {
   RoutingReactorClient,
   type RoutingClientOptions,
 } from "./routing-client.js";
-export { resolveOn, RoutingDriveClient } from "./routing-drive-client.js";
+export { RoutingReadClient } from "./routing-read-client.js";
+export { RoutingWriteClient } from "./routing-write-client.js";
+export type { RoutingContext } from "./routing-context.js";
+export { jobIdsOfHandle, RoutingHandles } from "./routing-handles.js";
+export {
+  BackendDrives,
+  resolveOn,
+  RoutingDriveClient,
+  RoutingDriveReadClient,
+  RoutingDriveWriteClient,
+} from "./routing-drive-client.js";
 export { changeKey, subscribeAll } from "./subscribe-mux.js";
