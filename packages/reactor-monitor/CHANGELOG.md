@@ -1,3 +1,15 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **reactor-monitor:** read and set the catch-up priority ([864588a7f5](https://github.com/powerhouse-inc/powerhouse/commit/864588a7f5))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

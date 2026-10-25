@@ -1,3 +1,20 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+- **switchboard:** run PGlite stores in worker threads by default ([ee8a84ff4d](https://github.com/powerhouse-inc/powerhouse/commit/ee8a84ff4d))
+- **reactor-api,switchboard:** a deferred VACUUM FULL runs once overdue, and both timings are configurable ([0d083c8745](https://github.com/powerhouse-inc/powerhouse/commit/0d083c8745))
+- **switchboard:** open reactor-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([06a1916860](https://github.com/powerhouse-inc/powerhouse/commit/06a1916860))
+- **switchboard:** open read-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([0e0917a3d8](https://github.com/powerhouse-inc/powerhouse/commit/0e0917a3d8))
+- **reactor-api,switchboard:** accept a PGlite stand-in wherever the stores take a PGlite ([f1c7754d57](https://github.com/powerhouse-inc/powerhouse/commit/f1c7754d57))
+- **ph-cli,switchboard:** a catch-up progress display, and the inspector on the switchboard handle ([96ca0d3c29](https://github.com/powerhouse-inc/powerhouse/commit/96ca0d3c29))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

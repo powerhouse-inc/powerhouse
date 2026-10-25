@@ -1,3 +1,23 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **reactor-monitor:** read and set the catch-up priority ([864588a7f5](https://github.com/powerhouse-inc/powerhouse/commit/864588a7f5))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor-monitor-app:** select processors to rerun, and show progress in the tables ([464a6b86d6](https://github.com/powerhouse-inc/powerhouse/commit/464a6b86d6))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **reactor-monitor-app:** show replay progress bars for processors and read models ([429baaf1d3](https://github.com/powerhouse-inc/powerhouse/commit/429baaf1d3))
+
+### 🩹 Fixes
+
+- **reactor-monitor:** ignore a priority read begun before a setting landed ([ce749cdd84](https://github.com/powerhouse-inc/powerhouse/commit/ce749cdd84))
+- **reactor-monitor-app:** progress cells span their column, and the rerun form reads cleanly ([76c6b31aa4](https://github.com/powerhouse-inc/powerhouse/commit/76c6b31aa4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

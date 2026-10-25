@@ -1,3 +1,15 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **reactor:** replayed operations carry document state ([e7e2801532](https://github.com/powerhouse-inc/powerhouse/commit/e7e2801532))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

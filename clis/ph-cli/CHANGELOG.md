@@ -1,3 +1,22 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **ph-cli:** show the catch-up priority with the progress bars ([6f37c09e61](https://github.com/powerhouse-inc/powerhouse/commit/6f37c09e61))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **ph-cli:** show processor and read-model catch-up as progress bars ([c3e82f7a0b](https://github.com/powerhouse-inc/powerhouse/commit/c3e82f7a0b))
+- **ph-cli,switchboard:** a catch-up progress display, and the inspector on the switchboard handle ([96ca0d3c29](https://github.com/powerhouse-inc/powerhouse/commit/96ca0d3c29))
+
+### 🩹 Fixes
+
+- **ph-cli:** keep the catch-up priority line short of the last column ([dd2ed06069](https://github.com/powerhouse-inc/powerhouse/commit/dd2ed06069))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

@@ -1,3 +1,15 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🩹 Fixes
+
+- **builder-tools:** the app-shell prerender server watches nothing ([3df43eb3a2](https://github.com/powerhouse-inc/powerhouse/commit/3df43eb3a2))
+- **builder-tools,reactor-api:** the dev watchers skip the project's build output ([1542321847](https://github.com/powerhouse-inc/powerhouse/commit/1542321847))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

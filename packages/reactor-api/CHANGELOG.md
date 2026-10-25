@@ -1,3 +1,25 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+- **reactor-api:** serve the catch-up priority and record request load ([d3e585b4e1](https://github.com/powerhouse-inc/powerhouse/commit/d3e585b4e1))
+- **reactor-api,switchboard:** a deferred VACUUM FULL runs once overdue, and both timings are configurable ([0d083c8745](https://github.com/powerhouse-inc/powerhouse/commit/0d083c8745))
+- **reactor-api,switchboard:** accept a PGlite stand-in wherever the stores take a PGlite ([f1c7754d57](https://github.com/powerhouse-inc/powerhouse/commit/f1c7754d57))
+- **reactor-api:** run a PGlite store in a worker thread behind a PGlite stand-in ([33b47c16e7](https://github.com/powerhouse-inc/powerhouse/commit/33b47c16e7))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+
+### 🩹 Fixes
+
+- **reactor-api:** bound the request load window and count aborted requests ([95c1290601](https://github.com/powerhouse-inc/powerhouse/commit/95c1290601))
+- **builder-tools,reactor-api:** the dev watchers skip the project's build output ([1542321847](https://github.com/powerhouse-inc/powerhouse/commit/1542321847))
+- **reactor-api:** admit worker statements only when the worker can start them ([141b7fd688](https://github.com/powerhouse-inc/powerhouse/commit/141b7fd688))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

@@ -1,3 +1,28 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **reactor:** replayed operations carry document state ([e7e2801532](https://github.com/powerhouse-inc/powerhouse/commit/e7e2801532))
+- **reactor:** runtime-adjustable catch-up priority for processor backfills ([86eddfc64a](https://github.com/powerhouse-inc/powerhouse/commit/86eddfc64a))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **reactor:** processor backfills give way between pages and share three slots ([230f4a04ef](https://github.com/powerhouse-inc/powerhouse/commit/230f4a04ef))
+- **reactor:** compute replay progress per processor factory and read model ([c42ed86d21](https://github.com/powerhouse-inc/powerhouse/commit/c42ed86d21))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+
+### 🩹 Fixes
+
+- **reactor:** never hold a new drive's commit for its processors' backfill ([845fb2f3be](https://github.com/powerhouse-inc/powerhouse/commit/845fb2f3be))
+- **reactor:** take backfill slots back from running scans when the level drops ([99aad1f41b](https://github.com/powerhouse-inc/powerhouse/commit/99aad1f41b))
+- **reactor:** stop catch-up waits from collecting listeners on close ([f06c7f8ee1](https://github.com/powerhouse-inc/powerhouse/commit/f06c7f8ee1))
+- **reactor:** drop the catch-up level once per pressure spike ([5e307e107d](https://github.com/powerhouse-inc/powerhouse/commit/5e307e107d))
+- **reactor:** a replay queued at the head reads as not started, not as done ([7fb655e524](https://github.com/powerhouse-inc/powerhouse/commit/7fb655e524))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

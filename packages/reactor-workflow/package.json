@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-workflow",
-  "version": "6.2.3-dev.75",
+  "version": "6.2.3-dev.76",
   "license": "AGPL-3.0-only",
   "type": "module",
   "sideEffects": false,

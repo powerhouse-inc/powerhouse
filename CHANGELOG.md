@@ -1,3 +1,49 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **ph-cli:** show processor and read-model catch-up as progress bars ([c3e82f7a0b](https://github.com/powerhouse-inc/powerhouse/commit/c3e82f7a0b))
+- **ph-cli:** show the catch-up priority with the progress bars ([6f37c09e61](https://github.com/powerhouse-inc/powerhouse/commit/6f37c09e61))
+- **ph-cli,switchboard:** a catch-up progress display, and the inspector on the switchboard handle ([96ca0d3c29](https://github.com/powerhouse-inc/powerhouse/commit/96ca0d3c29))
+- **reactor:** compute replay progress per processor factory and read model ([c42ed86d21](https://github.com/powerhouse-inc/powerhouse/commit/c42ed86d21))
+- **reactor:** processor backfills give way between pages and share three slots ([230f4a04ef](https://github.com/powerhouse-inc/powerhouse/commit/230f4a04ef))
+- **reactor:** runtime-adjustable catch-up priority for processor backfills ([86eddfc64a](https://github.com/powerhouse-inc/powerhouse/commit/86eddfc64a))
+- **reactor:** replayed operations carry document state ([e7e2801532](https://github.com/powerhouse-inc/powerhouse/commit/e7e2801532))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor-api:** run a PGlite store in a worker thread behind a PGlite stand-in ([33b47c16e7](https://github.com/powerhouse-inc/powerhouse/commit/33b47c16e7))
+- **reactor-api:** serve the catch-up priority and record request load ([d3e585b4e1](https://github.com/powerhouse-inc/powerhouse/commit/d3e585b4e1))
+- **reactor-api,switchboard:** accept a PGlite stand-in wherever the stores take a PGlite ([f1c7754d57](https://github.com/powerhouse-inc/powerhouse/commit/f1c7754d57))
+- **reactor-api,switchboard:** a deferred VACUUM FULL runs once overdue, and both timings are configurable ([0d083c8745](https://github.com/powerhouse-inc/powerhouse/commit/0d083c8745))
+- **reactor-monitor:** read and set the catch-up priority ([864588a7f5](https://github.com/powerhouse-inc/powerhouse/commit/864588a7f5))
+- **reactor-monitor-app:** show replay progress bars for processors and read models ([429baaf1d3](https://github.com/powerhouse-inc/powerhouse/commit/429baaf1d3))
+- **reactor-monitor-app:** select processors to rerun, and show progress in the tables ([464a6b86d6](https://github.com/powerhouse-inc/powerhouse/commit/464a6b86d6))
+- **switchboard:** open read-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([0e0917a3d8](https://github.com/powerhouse-inc/powerhouse/commit/0e0917a3d8))
+- **switchboard:** open reactor-storage in a PGlite worker thread behind PH_PGLITE_WORKERS ([06a1916860](https://github.com/powerhouse-inc/powerhouse/commit/06a1916860))
+- **switchboard:** run PGlite stores in worker threads by default ([ee8a84ff4d](https://github.com/powerhouse-inc/powerhouse/commit/ee8a84ff4d))
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+
+### 🩹 Fixes
+
+- **builder-tools:** the app-shell prerender server watches nothing ([3df43eb3a2](https://github.com/powerhouse-inc/powerhouse/commit/3df43eb3a2))
+- **builder-tools,reactor-api:** the dev watchers skip the project's build output ([1542321847](https://github.com/powerhouse-inc/powerhouse/commit/1542321847))
+- **ph-cli:** keep the catch-up priority line short of the last column ([dd2ed06069](https://github.com/powerhouse-inc/powerhouse/commit/dd2ed06069))
+- **reactor:** a replay queued at the head reads as not started, not as done ([7fb655e524](https://github.com/powerhouse-inc/powerhouse/commit/7fb655e524))
+- **reactor:** drop the catch-up level once per pressure spike ([5e307e107d](https://github.com/powerhouse-inc/powerhouse/commit/5e307e107d))
+- **reactor:** stop catch-up waits from collecting listeners on close ([f06c7f8ee1](https://github.com/powerhouse-inc/powerhouse/commit/f06c7f8ee1))
+- **reactor:** take backfill slots back from running scans when the level drops ([99aad1f41b](https://github.com/powerhouse-inc/powerhouse/commit/99aad1f41b))
+- **reactor:** never hold a new drive's commit for its processors' backfill ([845fb2f3be](https://github.com/powerhouse-inc/powerhouse/commit/845fb2f3be))
+- **reactor-api:** admit worker statements only when the worker can start them ([141b7fd688](https://github.com/powerhouse-inc/powerhouse/commit/141b7fd688))
+- **reactor-api:** bound the request load window and count aborted requests ([95c1290601](https://github.com/powerhouse-inc/powerhouse/commit/95c1290601))
+- **reactor-monitor:** ignore a priority read begun before a setting landed ([ce749cdd84](https://github.com/powerhouse-inc/powerhouse/commit/ce749cdd84))
+- **reactor-monitor-app:** progress cells span their column, and the rerun form reads cleanly ([76c6b31aa4](https://github.com/powerhouse-inc/powerhouse/commit/76c6b31aa4))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features

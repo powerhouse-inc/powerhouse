@@ -1,3 +1,15 @@
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **switchboard:** pace catch-up by PH_CATCH_UP_PRIORITY and request load ([278d0ec3cd](https://github.com/powerhouse-inc/powerhouse/commit/278d0ec3cd))
+- **switchboard:** run PGlite stores in worker threads by default ([ee8a84ff4d](https://github.com/powerhouse-inc/powerhouse/commit/ee8a84ff4d))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.75 (2026-10-24)
 
 ### 🚀 Features
