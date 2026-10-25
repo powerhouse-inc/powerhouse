@@ -21,7 +21,6 @@ import { SeededStateReader } from "../decision/read-gate.js";
 import type { Evaluation } from "../decision/types.js";
 import {
   AuthEnforcementDisabledError,
-  BatchJobFailedError,
   RelationshipNotFoundError,
 } from "../shared/errors.js";
 import {
@@ -29,7 +28,6 @@ import {
   PropagationMode,
   type ConsistencyToken,
   type JobInfo,
-  type ViewFilter,
 } from "../shared/types.js";
 import { DocumentExistence } from "../storage/interfaces.js";
 import type {
@@ -41,7 +39,7 @@ import {
   buildCreateJobs,
   createEmptyDocument,
   selectDocumentModelModule,
-  upgradeDocumentWith,
+  upgradeDocumentJob,
 } from "./derivations.js";
 import {
   decideCandidate,
@@ -50,6 +48,13 @@ import {
   type EvaluationTarget,
 } from "./internal/evaluation.js";
 import { ReadGating } from "./internal/gating.js";
+import {
+  awaiterStagePort,
+  JobBatchHandle,
+  WriteHandleFactory,
+  type HandleReader,
+  type JobSetHandle,
+} from "./internal/handles.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import { deletePlanKey, planDelete, planRemoval } from "./internal/signing.js";
 import { WriteTargets } from "./internal/targets.js";
@@ -57,16 +62,33 @@ import type { ReactorReadClient } from "./read-client.js";
 import type {
   ActionCandidate,
   ActionEvaluations,
+  BatchWriteHandle,
   CreateDocumentOptions,
+  IReactorWriteClient,
+  MoveRelationshipHandles,
   UpgradeDocumentOptions,
+  WriteHandle,
+  WriteTargetDescription,
 } from "./types.js";
+import { withAuthScope } from "./util.js";
+
+/** A submitted execute: the accepted job and the id it was stored under. */
+export type SubmittedExecution = {
+  job: JobInfo;
+  documentId: string;
+};
 
 /**
  * The in-process write half of the reactor client: signs, resolves targets and
- * enqueues. Holds the read half for what a write needs to read: creation
- * defaults, model lookups and the read-back of what it wrote.
+ * enqueues. Every write resolves once its job is accepted and returns a
+ * {@link WriteHandle}; a write that has to know an earlier step's outcome
+ * before submitting the next (a relationship move, an upgrade retried against
+ * concurrent edits) waits for that step itself.
+ *
+ * Holds the read half for what a write needs to read: creation defaults,
+ * model lookups and the read-back a handle's `document()` makes.
  */
-export class ReactorWriteClient {
+export class ReactorWriteClient implements IReactorWriteClient {
   private readonly logger: ILogger;
   private readonly reactor: IReactor;
   private readonly signer: ISigner;
@@ -74,6 +96,7 @@ export class ReactorWriteClient {
   private readonly documentView: IDocumentView;
   private readonly gating: ReadGating;
   private readonly targets: WriteTargets;
+  private readonly handles: WriteHandleFactory;
   private readonly actionEvaluation: ActionEvaluationConfig | undefined;
   private readonly createSignaturePolicy: SignaturePolicy;
   private readonly read: ReactorReadClient;
@@ -91,12 +114,12 @@ export class ReactorWriteClient {
       parts.signer,
     );
     this.targets = new WriteTargets(parts.documentView, parts.documentIndexer);
+    this.handles = new WriteHandleFactory(awaiterStagePort(parts.jobAwaiter));
     this.actionEvaluation = parts.actionEvaluation;
     this.createSignaturePolicy = parts.createSignaturePolicy;
     this.read = read;
   }
 
-  /** True when the id is taken; a soft-deleted document's id is still taken. */
   async isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
@@ -109,6 +132,37 @@ export class ReactorWriteClient {
       signal,
     );
     return taken[0];
+  }
+
+  /**
+   * Resolves the reference as a mutation does, then describes the document from
+   * the document view, ungated. The write-side identity table replaces the view
+   * here without changing the answer's shape.
+   */
+  async describe(
+    identifier: string,
+    branch: string = "main",
+    signal?: AbortSignal,
+  ): Promise<WriteTargetDescription> {
+    this.logger.verbose("describe(@identifier, @branch)", identifier, branch);
+    const documentId = await this.targets.resolveReference(
+      identifier,
+      branch,
+      signal,
+    );
+    const document = await this.documentView.get(
+      documentId,
+      { branch },
+      undefined,
+      signal,
+    );
+    return {
+      documentId: document.header.id,
+      documentType: document.header.documentType,
+      slug: document.header.slug,
+      branch: document.header.branch || branch,
+      revision: { ...document.header.revision },
+    };
   }
 
   /**
@@ -196,11 +250,11 @@ export class ReactorWriteClient {
     };
   }
 
-  async create<TDocument extends PHDocument = PHDocument>(
+  async create(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
-  ): Promise<TDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "create(@id, @parentIdentifier)",
       document.header.id,
@@ -212,21 +266,7 @@ export class ReactorWriteClient {
       parentIdentifier,
       signal,
     );
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.read.waitForJob(job, signal),
-      ),
-    );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    const created = await this.reactor.get<TDocument>(document.header.id);
-    return this.gating.gateDocument(created, undefined, signal);
+    return this.createHandle(document, batchResult, signal);
   }
 
   /** Signs and submits a document's create batch without waiting for it. */
@@ -242,11 +282,11 @@ export class ReactorWriteClient {
     return this.reactor.executeBatch({ jobs }, signal);
   }
 
-  async createEmpty<TDocument extends PHDocument>(
+  async createEmpty(
     documentModelType: string,
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
-  ): Promise<TDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "createEmpty(@documentModelType, @options)",
       documentModelType,
@@ -257,7 +297,7 @@ export class ReactorWriteClient {
       options,
       signal,
     );
-    return this.create<TDocument>(document, options?.parentIdentifier, signal);
+    return this.create(document, options?.parentIdentifier, signal);
   }
 
   /** A new, empty document of the type, under this client's create defaults. */
@@ -288,22 +328,18 @@ export class ReactorWriteClient {
     );
   }
 
-  /**
-   * Upgrades a document to a newer document model version. See
-   * {@link IReactorClient.upgradeDocument}.
-   */
-  async upgradeDocument<TDocument extends PHDocument = PHDocument>(
+  async upgradeDocument(
     documentIdentifier: string,
     toVersion?: number,
     options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
-  ): Promise<TDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "upgradeDocument(@documentIdentifier, @toVersion)",
       documentIdentifier,
       toVersion,
     );
-    const upgraded = await upgradeDocumentWith<TDocument>(
+    const outcome = await upgradeDocumentJob(
       {
         signer: this.signer,
         read: <T extends PHDocument>(
@@ -329,51 +365,57 @@ export class ReactorWriteClient {
       options,
       signal,
     );
-    return this.gating.gateDocument(
-      upgraded,
-      { branch: upgraded.header.branch || "main" },
-      signal,
+
+    if (outcome.kind === "unchanged") {
+      const unchanged = outcome.document;
+      return this.handles.settled(
+        outcome.documentId,
+        outcome.branch,
+        <T extends PHDocument>(
+          receipt: { branch: string },
+          view: Parameters<HandleReader>[1],
+          readSignal: AbortSignal | undefined,
+        ) =>
+          this.gating.gateDocument(
+            unchanged as unknown as T,
+            { ...view, branch: receipt.branch },
+            readSignal,
+          ),
+      );
+    }
+
+    return this.handles.forSettledJob(
+      outcome.job,
+      outcome.documentId,
+      outcome.branch,
+      this.readerById(outcome.documentId),
     );
   }
 
-  /**
-   * Applies a list of actions to a document and waits for completion.
-   *
-   * `subject` names who the returned document is read as; see
-   * {@link IReactorClient.execute}.
-   */
-  async execute<TDocument extends PHDocument>(
+  async execute(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
-    subject?: AuthSubject,
-  ): Promise<TDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "execute(@documentIdentifier, @branch, @count actions)",
       documentIdentifier,
       branch,
       actions.length,
     );
-    const jobInfo = await this.submitExecute(
+    const submitted = await this.submitExecute(
       documentIdentifier,
       branch,
       actions,
       signal,
     );
-
-    const completedJob = await this.read.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    const view: ViewFilter = { branch, subject };
-    return this.read.get<TDocument>(
-      documentIdentifier,
-      view,
+    return this.handles.forJob(
+      submitted.job,
+      submitted.documentId,
+      branch,
       signal,
-      completedJob.consistencyToken,
+      this.readerById(submitted.documentId),
     );
   }
 
@@ -383,7 +425,7 @@ export class ReactorWriteClient {
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
-  ): Promise<JobInfo> {
+  ): Promise<SubmittedExecution> {
     const documentId = await this.targets.resolveWriteTarget(
       documentIdentifier,
       branch,
@@ -397,13 +439,19 @@ export class ReactorWriteClient {
       signal,
     );
 
-    return this.reactor.execute(documentId, branch, signedActions, signal);
+    const job = await this.reactor.execute(
+      documentId,
+      branch,
+      signedActions,
+      signal,
+    );
+    return { job, documentId };
   }
 
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
-  ): Promise<BatchExecutionResult> {
+  ): Promise<BatchWriteHandle> {
     this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
 
     const signedJobs: ExecutionJobPlan[] = await Promise.all(
@@ -432,21 +480,25 @@ export class ReactorWriteClient {
       signal,
     );
 
-    const settled = await Promise.all(
-      Object.entries(batchResult.jobs).map(
-        async ([key, job]) =>
-          [key, await this.read.waitForJob(job, signal)] as const,
-      ),
-    );
-    const jobs = Object.fromEntries(settled);
-
-    for (const job of signedJobs) {
-      if (jobs[job.key]?.status === JobStatus.FAILED) {
-        throw new BatchJobFailedError(job.key, jobs);
-      }
+    const plans = new Map(signedJobs.map((plan) => [plan.key, plan]));
+    const handles: Record<string, JobSetHandle> = {};
+    for (const [key, job] of Object.entries(batchResult.jobs)) {
+      const plan = plans.get(key);
+      const documentId = plan?.documentId ?? job.documentId;
+      handles[key] = this.handles.forJob(
+        job,
+        documentId,
+        plan?.branch ?? "main",
+        signal,
+        this.readerById(documentId),
+      );
     }
 
-    return batchResult;
+    return new JobBatchHandle(
+      batchResult.jobs,
+      handles,
+      signedJobs.map((plan) => plan.key),
+    );
   }
 
   async rename(
@@ -454,7 +506,7 @@ export class ReactorWriteClient {
     name: string,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "rename(@documentIdentifier, @name, @branch)",
       documentIdentifier,
@@ -474,7 +526,7 @@ export class ReactorWriteClient {
     preferredEditor: string | null,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "setPreferredEditor(@documentIdentifier, @preferredEditor, @branch)",
       documentIdentifier,
@@ -496,7 +548,7 @@ export class ReactorWriteClient {
     metadata?: Record<string, unknown>,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "addRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
       sourceIdentifier,
@@ -515,7 +567,7 @@ export class ReactorWriteClient {
       branch,
       signal,
     );
-    const jobInfo = await this.reactor.addRelationship(
+    const job = await this.reactor.addRelationship(
       sourceId,
       targetId,
       relationshipType,
@@ -524,18 +576,12 @@ export class ReactorWriteClient {
       this.signer,
       signal,
     );
-
-    const completedJob = await this.read.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    return this.read.get<PHDocument>(
+    return this.handles.forJob(
+      job,
       sourceId,
-      { branch },
+      branch,
       signal,
-      completedJob.consistencyToken,
+      this.readerById(sourceId),
     );
   }
 
@@ -546,7 +592,7 @@ export class ReactorWriteClient {
     metadata: Record<string, unknown> | null,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "updateRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
       sourceIdentifier,
@@ -583,7 +629,7 @@ export class ReactorWriteClient {
       );
     }
 
-    const jobInfo = await this.reactor.updateRelationship(
+    const job = await this.reactor.updateRelationship(
       sourceId,
       targetId,
       relationshipType,
@@ -592,18 +638,12 @@ export class ReactorWriteClient {
       this.signer,
       signal,
     );
-
-    const completedJob = await this.read.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    return this.read.get<PHDocument>(
+    return this.handles.forJob(
+      job,
       sourceId,
-      { branch },
+      branch,
       signal,
-      completedJob.consistencyToken,
+      this.readerById(sourceId),
     );
   }
 
@@ -613,7 +653,7 @@ export class ReactorWriteClient {
     relationshipType: string,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<PHDocument> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "removeRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @branch)",
       sourceIdentifier,
@@ -631,7 +671,7 @@ export class ReactorWriteClient {
       branch,
       signal,
     );
-    const jobInfo = await this.reactor.removeRelationship(
+    const job = await this.reactor.removeRelationship(
       sourceId,
       targetId,
       relationshipType,
@@ -639,18 +679,12 @@ export class ReactorWriteClient {
       this.signer,
       signal,
     );
-
-    const completedJob = await this.read.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    return this.read.get<PHDocument>(
+    return this.handles.forJob(
+      job,
       sourceId,
-      { branch },
+      branch,
       signal,
-      completedJob.consistencyToken,
+      this.readerById(sourceId),
     );
   }
 
@@ -661,10 +695,7 @@ export class ReactorWriteClient {
     relationshipType: string,
     branch: string = "main",
     signal?: AbortSignal,
-  ): Promise<{
-    source: PHDocument;
-    target: PHDocument;
-  }> {
+  ): Promise<MoveRelationshipHandles> {
     this.logger.verbose(
       "moveRelationship(@sourceParentIdentifier, @targetParentIdentifier, @targetIdentifier, @relationshipType, @branch)",
       sourceParentIdentifier,
@@ -704,7 +735,7 @@ export class ReactorWriteClient {
     );
     const metadata = edge?.metadata;
 
-    const removeJobInfo = await this.reactor.removeRelationship(
+    const removeJob = await this.reactor.removeRelationship(
       sourceParentId,
       targetId,
       relationshipType,
@@ -712,17 +743,18 @@ export class ReactorWriteClient {
       this.signer,
       signal,
     );
-
-    const removeCompletedJob = await this.read.waitForJob(
-      removeJobInfo,
+    const removed = this.handles.forJob(
+      removeJob,
+      sourceParentId,
+      branch,
       signal,
+      this.readerById(sourceParentId),
     );
 
-    if (removeCompletedJob.status === JobStatus.FAILED) {
-      throw new Error(removeCompletedJob.error?.message);
-    }
+    // The add must not land on top of a remove that failed.
+    await removed.readable;
 
-    const addJobInfo = await this.reactor.addRelationship(
+    const addJob = await this.reactor.addRelationship(
       targetParentId,
       targetId,
       relationshipType,
@@ -731,26 +763,15 @@ export class ReactorWriteClient {
       this.signer,
       signal,
     );
-
-    const addCompletedJob = await this.read.waitForJob(addJobInfo, signal);
-
-    if (addCompletedJob.status === JobStatus.FAILED) {
-      throw new Error(addCompletedJob.error?.message);
-    }
-
-    const source = await this.read.get<PHDocument>(
-      sourceParentId,
-      { branch },
-      signal,
-      removeCompletedJob.consistencyToken,
-    );
-    const target = await this.read.get<PHDocument>(
+    const added = this.handles.forJob(
+      addJob,
       targetParentId,
-      { branch },
+      branch,
       signal,
-      addCompletedJob.consistencyToken,
+      this.readerById(targetParentId),
     );
-    return { source, target };
+
+    return { removed, added };
   }
 
   async loadBatch(
@@ -780,7 +801,7 @@ export class ReactorWriteClient {
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<WriteHandle> {
     this.logger.verbose(
       "deleteDocument(@identifier, @propagate)",
       identifier,
@@ -872,34 +893,33 @@ export class ReactorWriteClient {
       signal,
     );
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.read.waitForJob(job, signal),
-      ),
+    const jobs = Object.values(batchResult.jobs);
+    const rootJob = batchResult.jobs[deletePlanKey(rootId)] ?? jobs[0];
+    return this.handles.forJobs(
+      rootJob.id,
+      jobs,
+      rootId,
+      "main",
+      signal,
+      this.readerById(rootId),
     );
-
-    for (const completedJob of completedJobs) {
-      if (completedJob.status === JobStatus.FAILED) {
-        throw new Error(completedJob.error?.message);
-      }
-    }
   }
 
   async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<WriteHandle[]> {
     this.logger.verbose(
       "deleteDocuments(@count identifiers, @propagate)",
       identifiers.length,
       propagate,
     );
-    const deletePromises = identifiers.map((identifier) =>
-      this.deleteDocument(identifier, propagate, signal),
+    return Promise.all(
+      identifiers.map((identifier) =>
+        this.deleteDocument(identifier, propagate, signal),
+      ),
     );
-
-    await Promise.all(deletePromises);
   }
 
   /** The id a document reference names; see {@link WriteTargets}. */
@@ -909,6 +929,62 @@ export class ReactorWriteClient {
     signal?: AbortSignal,
   ): Promise<string> {
     return this.targets.resolveReference(identifier, branch, signal);
+  }
+
+  /**
+   * The read-back of a create. Without a view it is the read a create has
+   * always made: by id, on the job's own completion, gated as the writer. With
+   * a view it reads through that view, bounded by the receipt's token.
+   */
+  private createReader(): HandleReader {
+    return async <T extends PHDocument>(
+      receipt: { documentId: string; token: ConsistencyToken },
+      view: Parameters<HandleReader>[1],
+      signal: AbortSignal | undefined,
+    ): Promise<T> => {
+      const created =
+        view === undefined
+          ? await this.reactor.get<T>(receipt.documentId)
+          : await this.reactor.get<T>(
+              receipt.documentId,
+              withAuthScope(view),
+              receipt.token,
+              signal,
+            );
+      return this.gating.gateDocument(created, view, signal);
+    };
+  }
+
+  /** Reads the document back through the read half, with the receipt's token. */
+  private readerById(documentId: string): HandleReader {
+    return <T extends PHDocument>(
+      receipt: { branch: string; token: ConsistencyToken },
+      view: Parameters<HandleReader>[1],
+      signal: AbortSignal | undefined,
+    ): Promise<T> =>
+      this.read.get<T>(
+        documentId,
+        { ...view, branch: receipt.branch },
+        signal,
+        receipt.token,
+      );
+  }
+
+  private createHandle(
+    document: PHDocument,
+    batchResult: BatchExecutionResult,
+    signal: AbortSignal | undefined,
+  ): JobSetHandle {
+    const jobs = Object.values(batchResult.jobs);
+    const createJob = batchResult.jobs.create ?? jobs[0];
+    return this.handles.forJobs(
+      createJob.id,
+      jobs,
+      document.header.id,
+      document.header.branch || "main",
+      signal,
+      this.createReader(),
+    );
   }
 
   /**

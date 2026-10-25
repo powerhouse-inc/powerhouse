@@ -1,5 +1,6 @@
 import {
   buildCreateJobs,
+  FacadeWriteClient,
   createEmptyDocument,
   JOB_NOT_FOUND_ERROR_NAME,
   JobStatus,
@@ -16,6 +17,7 @@ import {
   type DocumentRelationship,
   type IReactorClient,
   type IReactorReadClient,
+  type IReactorWriteClient,
   type JobInfo,
   type OperationFilter,
   type PagedResults,
@@ -234,6 +236,11 @@ export type RoutingClientOptions = RoutingOptions & {
  */
 export class RoutingReactorClient implements IReactorClient {
   readonly drives: RoutingDriveClient;
+  /**
+   * The write half, over this client's own facade methods until the router is
+   * split into routing read and write clients.
+   */
+  readonly write: IReactorWriteClient = new FacadeWriteClient(this);
   private readonly dispatcher: RouteDispatcher;
   private readonly dedupSize: number;
   private readonly signer: ISigner;

@@ -253,6 +253,262 @@ export type ActionEvaluations = {
 };
 
 /**
+ * What a write hands back at a stage: the job as it stood, the token naming
+ * every operation it committed, and the document it targeted.
+ *
+ * A reducer error is not a failure: the operation is stored with its error,
+ * the job reaches READ_READY, and `job.result` says which actions erred.
+ */
+export type WriteReceipt = {
+  /** The job's state when the stage settled; status, error, result summary. */
+  job: JobInfo;
+  /** One coordinate per committed operation; pass it to a read to bound it. */
+  token: ConsistencyToken;
+  /** The canonical target; for a create, the id the document carries. */
+  documentId: string;
+  branch: string;
+};
+
+/**
+ * What a write hands back once its job is accepted: validated, signed and
+ * enqueued. Nothing waits for the commit unless the caller awaits a stage.
+ *
+ * Stage promises are created on first access, so a caller that stops at the
+ * handle (fire and forget) never owns an unhandled rejection. Stage waits are
+ * bounded by the signal the write was called with.
+ */
+export interface WriteHandle {
+  readonly jobId: string;
+  /** The canonical target; for a create, the id the document carries. */
+  readonly documentId: string;
+  readonly branch: string;
+  /**
+   * The operations are in the log (job WRITE_READY). Rejects with
+   * `JobFailedError` when the job FAILED.
+   */
+  readonly written: Promise<WriteReceipt>;
+  /**
+   * Every pre-ready read model holds the write (job READ_READY). Rejects with
+   * `JobFailedError` when the job FAILED.
+   */
+  readonly readable: Promise<WriteReceipt>;
+  /**
+   * `readable`, then the targeted document read with the receipt's token and
+   * gated as the writer, or as `view.subject` when given.
+   */
+  document<TDocument extends PHDocument = PHDocument>(
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+}
+
+/**
+ * What `executeBatch` hands back once every job is accepted: a handle per
+ * plan key and stages over the whole batch. A batch stage waits for every
+ * job, then rejects with a `BatchJobFailedError` naming the first failed job
+ * in plan order and carrying every job's state.
+ */
+export interface BatchWriteHandle {
+  /** The accepted jobs, keyed by plan key. */
+  readonly jobs: Record<string, JobInfo>;
+  readonly handles: Record<string, WriteHandle>;
+  readonly written: Promise<Record<string, WriteReceipt>>;
+  readonly readable: Promise<Record<string, WriteReceipt>>;
+}
+
+/**
+ * A relationship move is a remove followed by an add. The remove has settled
+ * (READ_READY) by the time the move resolves, because the add must not run on
+ * top of a remove that failed; the add has only been accepted.
+ */
+export type MoveRelationshipHandles = {
+  /** The remove from the old parent; its document is that parent. */
+  removed: WriteHandle;
+  /** The add to the new parent; its document is that parent. */
+  added: WriteHandle;
+};
+
+/** A document's write-side identity, as a mutation resolves its target. */
+export type WriteTargetDescription = {
+  documentId: string;
+  documentType: string;
+  slug: string;
+  branch: string;
+  /** The operation count per scope at the time of the lookup. */
+  revision: Record<string, number>;
+};
+
+/**
+ * The write half of the reactor client: everything that enqueues. Every write
+ * resolves when its job is accepted and returns a {@link WriteHandle}; the
+ * `*Async` variants of the facade are this half's plain form, so it has none.
+ */
+export interface IReactorWriteClient {
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
+
+  /**
+   * Resolves a document reference the way a mutation does and describes the
+   * document it names. A write-side read: it answers for what the write path
+   * sees, which may be ahead of the read models.
+   *
+   * @param identifier - Document id or slug
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   */
+  describe(
+    identifier: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteTargetDescription>;
+
+  /**
+   * Predicts whether the subject would be admitted to execute each candidate.
+   * A write-side read by design; see {@link IReactorClient.evaluateActions}.
+   */
+  evaluateActions(
+    documentIdentifier: string,
+    branch: string,
+    candidates: ActionCandidate[],
+    subject?: AuthSubject,
+    signal?: AbortSignal,
+  ): Promise<ActionEvaluations>;
+
+  /**
+   * Submits a document's creation: a `create` job and, with a parent, a
+   * relationship job on the parent. The handle's job is the create; its stages
+   * wait for both, and its document is the new one.
+   */
+  create(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** {@link create} for a new empty document of the type. */
+  createEmpty(
+    documentModelType: string,
+    options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Upgrades a document to a newer document model version. The upgrade is
+   * retried against concurrent edits, which needs each attempt's outcome, so
+   * this resolves once the upgrade has settled: the handle's stages are
+   * already satisfied. A document already at the target version gets a
+   * handle with no job (`jobId` empty).
+   *
+   * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   */
+  upgradeDocument(
+    documentIdentifier: string,
+    toVersion?: number,
+    options?: UpgradeDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Signs and submits actions on one document. */
+  execute(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Signs and submits dependent jobs; see {@link BatchWriteHandle}. */
+  executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchWriteHandle>;
+
+  rename(
+    documentIdentifier: string,
+    name: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the source. */
+  addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * The handle's document is the source.
+   *
+   * @throws RelationshipNotFoundError, before submitting, when the edge does not exist
+   */
+  updateRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the source. */
+  removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** See {@link MoveRelationshipHandles}. */
+  moveRelationship(
+    sourceParentIdentifier: string,
+    targetParentIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<MoveRelationshipHandles>;
+
+  /**
+   * Submits a document's deletion as one batch: the delete, its incoming
+   * relationship removals and, with CASCADE, every orphaned descendant. The
+   * handle's job is the root's delete; its stages wait for the whole batch.
+   */
+  deleteDocument(
+    identifier: string,
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** {@link deleteDocument} for each identifier, one handle each. */
+  deleteDocuments(
+    identifiers: string[],
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle[]>;
+
+  /**
+   * Loads batches of pre-existing operations (sync) and waits for every job,
+   * as the facade always has. Load jobs carry no client-side actions to hand
+   * back, so this keeps its job-map result.
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult>;
+}
+
+/**
  * The read half of the reactor client: everything that answers from read
  * models and never enqueues a job.
  *
@@ -553,6 +809,9 @@ export interface IReactorReadClient {
 export interface IReactorClient extends IReactorReadClient {
   /** The read half this facade answers its reads from. */
   readonly read: IReactorReadClient;
+
+  /** The write half this facade submits its writes through. */
+  readonly write: IReactorWriteClient;
 
   /**
    * Drive-aware operations. See {@link IDriveClient}.

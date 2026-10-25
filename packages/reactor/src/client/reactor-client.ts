@@ -320,12 +320,13 @@ export class ReactorClient implements IReactorClient {
     return this.read.getCreateProtocolVersions(parentIdentifier, signal);
   }
 
-  create<TDocument extends PHDocument = PHDocument>(
+  async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return this.write.create<TDocument>(document, parentIdentifier, signal);
+    const handle = await this.write.create(document, parentIdentifier, signal);
+    return handle.document<TDocument>(undefined, signal);
   }
 
   createAsync(
@@ -341,16 +342,17 @@ export class ReactorClient implements IReactorClient {
     return this.write.submitCreate(document, parentIdentifier, signal);
   }
 
-  createEmpty<TDocument extends PHDocument>(
+  async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return this.write.createEmpty<TDocument>(
+    const handle = await this.write.createEmpty(
       documentModelType,
       options,
       signal,
     );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   async createEmptyAsync(
@@ -371,18 +373,19 @@ export class ReactorClient implements IReactorClient {
     return this.write.submitCreate(document, options?.parentIdentifier, signal);
   }
 
-  upgradeDocument<TDocument extends PHDocument = PHDocument>(
+  async upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     toVersion?: number,
     options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return this.write.upgradeDocument<TDocument>(
+    const handle = await this.write.upgradeDocument(
       documentIdentifier,
       toVersion,
       options,
       signal,
     );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   /**
@@ -406,23 +409,26 @@ export class ReactorClient implements IReactorClient {
     );
   }
 
-  execute<TDocument extends PHDocument>(
+  async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
     subject?: AuthSubject,
   ): Promise<TDocument> {
-    return this.write.execute<TDocument>(
+    const handle = await this.write.execute(
       documentIdentifier,
       branch,
       actions,
       signal,
-      subject,
+    );
+    return handle.document<TDocument>(
+      subject === undefined ? undefined : { subject },
+      signal,
     );
   }
 
-  executeAsync(
+  async executeAsync(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
@@ -434,45 +440,55 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    return this.write.submitExecute(
+    const submitted = await this.write.submitExecute(
       documentIdentifier,
       branch,
       actions,
       signal,
     );
+    return submitted.job;
   }
 
-  executeBatch(
+  async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    return this.write.executeBatch(request, signal);
+    const batch = await this.write.executeBatch(request, signal);
+    await batch.readable;
+    return { jobs: batch.jobs };
   }
 
-  rename(
+  async rename(
     documentIdentifier: string,
     name: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.write.rename(documentIdentifier, name, branch, signal);
+    const handle = await this.write.rename(
+      documentIdentifier,
+      name,
+      branch,
+      signal,
+    );
+    return handle.document(undefined, signal);
   }
 
-  setPreferredEditor(
+  async setPreferredEditor(
     documentIdentifier: string,
     preferredEditor: string | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.write.setPreferredEditor(
+    const handle = await this.write.setPreferredEditor(
       documentIdentifier,
       preferredEditor,
       branch,
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
-  addRelationship(
+  async addRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
@@ -480,7 +496,7 @@ export class ReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.write.addRelationship(
+    const handle = await this.write.addRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
@@ -488,9 +504,10 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
-  updateRelationship(
+  async updateRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
@@ -498,7 +515,7 @@ export class ReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.write.updateRelationship(
+    const handle = await this.write.updateRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
@@ -506,25 +523,27 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
-  removeRelationship(
+  async removeRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.write.removeRelationship(
+    const handle = await this.write.removeRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
       branch,
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
-  moveRelationship(
+  async moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
     targetIdentifier: string,
@@ -535,7 +554,7 @@ export class ReactorClient implements IReactorClient {
     source: PHDocument;
     target: PHDocument;
   }> {
-    return this.write.moveRelationship(
+    const moved = await this.write.moveRelationship(
       sourceParentIdentifier,
       targetParentIdentifier,
       targetIdentifier,
@@ -543,6 +562,10 @@ export class ReactorClient implements IReactorClient {
       branch,
       signal,
     );
+    await moved.added.readable;
+    const source = await moved.removed.document(undefined, signal);
+    const target = await moved.added.document(undefined, signal);
+    return { source, target };
   }
 
   loadBatch(
@@ -552,20 +575,30 @@ export class ReactorClient implements IReactorClient {
     return this.write.loadBatch(request, signal);
   }
 
-  deleteDocument(
+  async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    return this.write.deleteDocument(identifier, propagate, signal);
+    const handle = await this.write.deleteDocument(
+      identifier,
+      propagate,
+      signal,
+    );
+    await handle.readable;
   }
 
-  deleteDocuments(
+  async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    return this.write.deleteDocuments(identifiers, propagate, signal);
+    const handles = await this.write.deleteDocuments(
+      identifiers,
+      propagate,
+      signal,
+    );
+    await Promise.all(handles.map((handle) => handle.readable));
   }
 
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {

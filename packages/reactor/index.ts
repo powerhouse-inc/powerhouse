@@ -30,7 +30,19 @@ export {
   type ActionEvaluationConfig,
 } from "./src/client/reactor-client.js";
 export { ReactorReadClient } from "./src/client/read-client.js";
-export { ReactorWriteClient } from "./src/client/write-client.js";
+export {
+  ReactorWriteClient,
+  type SubmittedExecution,
+} from "./src/client/write-client.js";
+export {
+  FacadeWriteClient,
+  type ReactorClientSurface,
+} from "./src/client/facade-write-client.js";
+export {
+  JobFailedError,
+  type HandleReader,
+  type IJobStagePort,
+} from "./src/client/internal/handles.js";
 export type { ReactorClientParts } from "./src/client/internal/parts.js";
 export {
   DocumentChangeType,
@@ -40,7 +52,13 @@ export {
   type DocumentChangeEvent,
   type IDriveClient,
   type IReactorClient,
+  type BatchWriteHandle,
   type IReactorReadClient,
+  type IReactorWriteClient,
+  type MoveRelationshipHandles,
+  type WriteHandle,
+  type WriteReceipt,
+  type WriteTargetDescription,
   type ProtocolSelection,
   type UpgradeDocumentOptions,
 } from "./src/client/types.js";
@@ -92,7 +110,12 @@ export {
   type ReactorModule,
   type SyncModule,
 } from "./src/core/types.js";
-export { JobAwaiter, type IJobAwaiter } from "./src/shared/awaiter.js";
+export {
+  JobAwaiter,
+  type IJobAwaiter,
+  type IJobStageAwaiter,
+  type JobStage,
+} from "./src/shared/awaiter.js";
 export {
   ConsistencyTracker,
   makeConsistencyKey,
