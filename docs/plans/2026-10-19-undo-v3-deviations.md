@@ -38,7 +38,9 @@ change, the entry gives the final behaviour.
   had no effect.
 - RETRACTs sharing an action id, and RETRACTs with malformed input, are
   inert, so forged rows cannot make liveness depend on arrival order or
-  wedge a derivation.
+  wedge a derivation. Since the landing fixes, admission refuses a repeated
+  action id on a rule scope in every mode, so a reactor never stores the
+  repeat this rule handles.
 - Base actions (`SET_NAME`, `SET_PREFERRED_EDITOR`) are neither content nor
   retractable: UNDO skips them and a RETRACT naming one is inert. They write
   the header, which deriving a scope never resets, so a retracted rename
@@ -451,6 +453,8 @@ Applying a tail without re-deriving.
   carrying it inert, so its target applies again. `signatureVerification:
   "log"` logs such a repeat and stores it; the write cache used to keep the
   target retracted where a cold derivation brought it back.
+- Superseded by the landing fixes: admission refuses the repeat, and the
+  predicate no longer checks for one.
 - Superseded in round 4: the write cache's repeated-id lookup
   (`findRepeatedOperationIds`, removed) and the executor gap this round
   pinned `it.fails` (closed in round 3b).
@@ -477,6 +481,10 @@ directories (146 today): a new edge fails, and a removed one must leave the
 list.
 
 ## Architecture fixes, round 3b (2026-10-22)
+
+Superseded by the landing fixes (2026-10-26): admission refuses a repeated
+action id on a rule scope in every mode, and `holds`, `retractIds` and
+`getAllOperationsByIds` are gone. Kept as the record of why.
 
 The executor's repeated-id gap under `signatureVerification: "log"`.
 
@@ -512,6 +520,7 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
 
 ## Architecture fixes, round 4 (2026-10-23)
 
+- Superseded by the landing fixes (2026-10-26), with round 3b.
 - The write cache's `holds` is the set of ids that stored RETRACT rows
   carry, read with `getAllOperationsByIds` over the tail's op ids, as the
   executor reads it. An op id derives from its action id on every version,
@@ -591,6 +600,26 @@ Main split the reactor client into read and write halves (ADR 0006).
   `creationActions`, and `IDriveWriteStrategy.copyNode` takes
   `CopyNodeOptions` (the reactor-drive strategy refuses an override, as its
   client did).
+
+## Landing fixes (2026-10-26)
+
+A repeated action id.
+
+- On a base-reducer 3 document's rule scopes (every scope but `document`
+  and `auth`), admission refuses an action id the stream already holds, in
+  both `signatureVerification` modes, as `DUPLICATE_ACTION`: a mutation
+  fails, a load drops the operation. A re-delivery stored exactly as it
+  arrives is still not a repeat, and a resubmission already stored as
+  submitted is still committed. Base-reducer 1 and 2, and the exempt
+  scopes, keep refusing it only under `enforce`.
+- The rule therefore never sees a positional repeat on a reactor host. A
+  tail row needs a re-derive only when it rewinds, retracts or is named by
+  a retraction. `IOperationStore.getAllOperationsByIds`, `holds`,
+  `retractIds`, `ReducerOptions.retractIds` and the undo-targets cache's id
+  set are removed, and with them the extra query on every base-reducer 3
+  write and Hypercore's stream scan per write.
+- `retractedActionIds` still makes RETRACTs sharing an id inert, so a
+  stream built outside a reactor derives as before.
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip

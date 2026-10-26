@@ -344,7 +344,7 @@ const reactorBuilder = new ReactorBuilder().withExecutorConfig({
 ```
 
 - `enforce` (the default) refuses the write.
-- `log` records every refusal and stores the write anyway.
+- `log` records every refusal and stores the write anyway, except a `DUPLICATE_ACTION` on a base-reducer 3 document outside its `document` and `auth` scopes. Undo there works by action id, so a repeated id is refused in both modes.
 
 Each refusal emits a `SIGNATURE_REFUSED` event on the reactor event bus, with the refusal `code`, the signature `scheme`, the admission `path` (`mutation` or `load`), and whether it was `enforced`. `@powerhousedao/opentelemetry-instrumentation-reactor` counts these as `reactor.signature.refusals`.
 
