@@ -1,5 +1,11 @@
 // @vitest-environment happy-dom
-import { fireEvent, render, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
@@ -182,6 +188,8 @@ describe("App with controller-managed switchboards", () => {
   });
 
   afterEach(() => {
+    // Unmount while fetch is still the stub, so no poll reaches the network.
+    cleanup();
     document.head
       .querySelectorAll(`meta[name="${TOKEN_META_NAME}"]`)
       .forEach((meta) => meta.remove());
