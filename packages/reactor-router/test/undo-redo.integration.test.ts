@@ -105,8 +105,10 @@ describe("router undo and redo", () => {
     const created = await client.createEmpty(DOCUMENT_MODEL, {
       parentIdentifier: drive,
     });
+    // Without a write half: a backend with one always has undo.
     const bare = {
       ...fromReactorClient(module.client),
+      write: undefined,
       undo: undefined,
       redo: undefined,
       undoRedoAvailability: undefined,
@@ -128,13 +130,17 @@ describe("router undo and redo", () => {
 });
 
 const UNDO_MEMBERS = ["undo", "redo", "undoRedoAvailability"];
-const WRITE_MEMBERS = [
+const HALF_WRITES = [
   ...UNDO_MEMBERS,
   "create",
   "execute",
   "executeBatch",
   "loadBatch",
   "deleteDocument",
+];
+const WRITE_MEMBERS = [
+  ...HALF_WRITES,
+  ...HALF_WRITES.map((member) => `write.${member}`),
   "submit.execute",
   "submit.create",
 ];
@@ -160,6 +166,22 @@ function recorded(backend: IRoutableBackend): {
   const wrapped = wrap("", backend);
   if (backend.submit) {
     wrapped.submit = wrap("submit.", backend.submit);
+  }
+  const write = backend.write;
+  if (write) {
+    // A class instance: its methods are on the prototype.
+    wrapped.write = new Proxy(write, {
+      get: (target, key, receiver) => {
+        const value = Reflect.get(target, key, receiver) as unknown;
+        if (typeof key !== "string" || typeof value !== "function") {
+          return value;
+        }
+        return (...args: unknown[]) => {
+          calls.push(`write.${key}`);
+          return (value as (...a: unknown[]) => unknown).apply(target, args);
+        };
+      },
+    });
   }
   return { backend: wrapped as unknown as IRoutableBackend, calls };
 }
@@ -214,7 +236,11 @@ describe("router undo and redo across two backends", () => {
     expect(modelName(await client.undo(id))).toBe("");
     expect(modelName(await client.redo(id))).toBe("first");
 
-    expect(writes(two.calls)).toEqual(["undoRedoAvailability", "undo", "redo"]);
+    expect(writes(two.calls)).toEqual([
+      "write.undoRedoAvailability",
+      "write.undo",
+      "write.redo",
+    ]);
     expect(writes(one.calls)).toEqual([]);
     expect(modelName(await owner.client.get(id))).toBe("first");
     await expect(primary.client.get(id)).rejects.toThrow();
@@ -226,6 +252,7 @@ describe("router undo and redo across two backends", () => {
     const one = recorded(fromReactorClient(primary.client));
     const two = recorded({
       ...fromReactorClient(owner.client),
+      write: undefined,
       undo: undefined,
       redo: undefined,
       undoRedoAvailability: undefined,
