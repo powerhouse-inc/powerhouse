@@ -139,6 +139,15 @@ describe("importing a .phd whose id may be taken", () => {
     expect(claimed).toEqual([SOURCE_ID]);
   });
 
+  it("keeps the file's protocol versions", async () => {
+    const { client, headers } = stubReactorClient(() => Promise.resolve(false));
+    installClient(client);
+
+    await addFileWithProgress(file, DRIVE_ID);
+
+    expect(headers[0].protocolVersions).toEqual({ "base-reducer": 2 });
+  });
+
   it("mints a new id when the id is taken", async () => {
     const { client, claimed } = stubReactorClient(() => Promise.resolve(true));
     installClient(client);

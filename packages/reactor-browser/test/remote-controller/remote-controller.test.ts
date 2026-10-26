@@ -1,4 +1,5 @@
 import { DocumentModelController } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type {
   GetDocumentOperationsQuery,
@@ -139,8 +140,22 @@ function createMockClient(
         revisionsList: [{ scope: "global", revision: 1 }],
       }),
     }),
-    CreateDocument: vi.fn().mockResolvedValue({
-      createDocument: makeDocData(),
+    CreateDocument: vi
+      .fn()
+      .mockImplementation(
+        ({ document }: { document: { header: { id: string } } }) =>
+          Promise.resolve({
+            createDocument: makeDocData({ id: document.header.id }),
+          }),
+      ),
+    GetCreateDefaults: vi.fn().mockResolvedValue({
+      createDefaults: {
+        signaturePolicy: "v2-required",
+        protocolVersions: { "base-reducer": 2 },
+      },
+    }),
+    GetCreateProtocolVersions: vi.fn().mockResolvedValue({
+      createDefaults: { protocolVersions: { "base-reducer": 2 } },
     }),
     CreateEmptyDocument: vi.fn().mockResolvedValue({
       createEmptyDocument: makeDocData({ id: "new-doc-1" }),
@@ -152,6 +167,12 @@ function createMockClient(
     BatchGetDocumentWithOperations: batchGetDocWithOps,
     ...overrides,
   } as unknown as RemoteControllerGraphQLClient;
+}
+
+/** The document the controller created the remote from. */
+function createdDocument(client: RemoteControllerGraphQLClient): PHDocument {
+  return vi.mocked(client.CreateDocument).mock.calls[0][0]
+    .document as PHDocument;
 }
 
 describe("RemoteDocumentController", () => {
@@ -283,13 +304,14 @@ describe("RemoteDocumentController", () => {
       controller.setName({ name: "New Doc" });
       const result = await controller.push();
 
-      // Should have created the document first
-      expect(client.CreateEmptyDocument).toHaveBeenCalledTimes(1);
-      // Then pushed actions
+      // Created from the local header, then pushed
+      expect(client.CreateDocument).toHaveBeenCalledTimes(1);
+      expect(client.CreateEmptyDocument).not.toHaveBeenCalled();
       expect(client.MutateDocument).toHaveBeenCalledTimes(1);
       expect(result.actionCount).toBe(1);
-      // documentId should be updated
-      expect(controller.status.documentId).toBe("new-doc-1");
+      expect(controller.status.documentId).toBe(
+        createdDocument(client).header.id,
+      );
     });
 
     it("pushes actions to existing document", async () => {
@@ -1178,11 +1200,9 @@ describe("RemoteDocumentController", () => {
       expect(controller.status.pendingActionCount).toBe(0);
     });
 
-    it("restores actions when CreateEmptyDocument fails for new docs", async () => {
+    it("restores actions when CreateDocument fails for new docs", async () => {
       const client = createMockClient({
-        CreateEmptyDocument: vi
-          .fn()
-          .mockRejectedValue(new Error("Create failed")),
+        CreateDocument: vi.fn().mockRejectedValue(new Error("Create failed")),
       });
 
       const controller = await RemoteDocumentController.pull(

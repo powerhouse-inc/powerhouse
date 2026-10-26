@@ -188,7 +188,9 @@ interface:
 | `getJob(jobId, signal?)`                                | One `jobStatus` read, no polling; `undefined` when the server answers none.                                                                          |
 | `waitForJob(jobOrId, signal?)`                          | Polls `jobStatus` until READ_READY or FAILED.                                                                                                        |
 | `setPreferredEditor(identifier, editor, branch?)`       | A signed `SET_PREFERRED_EDITOR` through `execute`.                                                                                                   |
-| `getCreateSignaturePolicy`, `getCreateProtocolVersions` | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`.                                             |
+| `getCreateSignaturePolicy`                              | Read from `createDefaults`. A Switchboard without that query throws `GraphQLOperationNotSupportedError`. |
+| `getCreateProtocolVersions`                             | What the Switchboard's `createDefaults` selects for the type and parent, as given: capped at what this build runs (a version of another known protocol it does not run, or a malformed answer, is refused) and fitted down to what this client's `documentModels` can predict. A Switchboard from before per-type selection answers reactor-wide; one without the query gives base-reducer 2, though `getCreateSignaturePolicy` refuses there. |
+| `newDocument`                                           | Heads a model's new document with `getCreateProtocolVersions` and `getCreateSignaturePolicy`; the module comes from `documentModels`, or the built-in drive model. |
 | `read.drives.getNode(driveId, nodeId, signal?)`         | Asks `driveNode`. Any drive type; the legacy `Node` shape. Absent or withheld throws.                                                                |
 | `read.drives.listNodes(driveId, parentFolder?, ...)`    | Asks `driveNodes`, paged; `next()` follows the cursor. Omit `parentFolder` for every node, `null` for the root level.                                |
 

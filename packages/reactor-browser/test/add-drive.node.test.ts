@@ -1,14 +1,35 @@
 // @vitest-environment happy-dom
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import {
   hasDerivedDocumentId,
+  headNewDocument,
   isDerivedDocumentId,
   signaturePolicyOf,
+  type DocumentModelModule,
+  type NewDocumentHeaderOptions,
+  type ProtocolVersions,
+  type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addDrive } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
+
+/** The client's newDocument, under a creation default and selection. */
+function newDocumentUnder(policy: SignaturePolicy, versions: ProtocolVersions) {
+  return (_type: string, options?: NewDocumentHeaderOptions) =>
+    Promise.resolve(
+      headNewDocument(
+        driveDocumentModelModule as unknown as DocumentModelModule,
+        options,
+        policy,
+        versions,
+      ),
+    );
+}
 
 describe("addDrive (issue #2838)", () => {
   const create = vi.fn();
@@ -19,7 +40,10 @@ describe("addDrive (issue #2838)", () => {
       Promise.resolve(doc),
     );
     window.ph = {
-      reactorClient: withHalves({ create }),
+      reactorClient: withHalves({
+        create,
+        newDocument: newDocumentUnder("v2-required", { "base-reducer": 3 }),
+      }),
     } as unknown as PHGlobal;
   });
 
@@ -63,16 +87,12 @@ describe("addDrive (issue #2838)", () => {
     expect(hasDerivedDocumentId(doc.header)).toBe(true);
   });
 
-  it("creates a legacy drive under the full client's legacy creation default", async () => {
+  it("creates a legacy drive under the client's legacy creation default", async () => {
     window.ph = {
-      reactorClient: withHalves({ create }),
-      reactorClientModule: {
-        client: withHalves({
-          getCreateSignaturePolicy: () => Promise.resolve("legacy"),
-          getCreateProtocolVersions: () =>
-            Promise.resolve({ "base-reducer": 2 }),
-        }),
-      },
+      reactorClient: withHalves({
+        create,
+        newDocument: newDocumentUnder("legacy", { "base-reducer": 2 }),
+      }),
     } as unknown as PHGlobal;
 
     await addDrive({ global: { name: "Legacy" } });
