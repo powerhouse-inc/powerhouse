@@ -2288,14 +2288,24 @@ export class SyncManager
     );
   }
 
+  /** Stale refusals are dropped before the limit, so they take no slot. */
   private async loadDeadLetters(remote: Remote, strict = false): Promise<void> {
-    let records: DeadLetterRecord[];
+    const limit = this.config.maxDeadLettersPerRemote;
+    const records: DeadLetterRecord[] = [];
+    const stale: DeadLetterRecord[] = [];
     try {
-      const page = await this.deadLetterStorage.list(remote.meta.name, {
-        cursor: "0",
-        limit: this.config.maxDeadLettersPerRemote,
-      });
-      records = page.results;
+      let cursor: string | undefined = "0";
+      while (cursor !== undefined && records.length < limit) {
+        const page = await this.deadLetterStorage.list(remote.meta.name, {
+          cursor,
+          limit,
+        });
+        for (const record of page.results) {
+          if (await this.isStaleRefusal(record)) stale.push(record);
+          else if (records.length < limit) records.push(record);
+        }
+        cursor = page.nextCursor;
+      }
     } catch (error) {
       if (strict) throw error;
       this.logger.error(
@@ -2306,22 +2316,17 @@ export class SyncManager
       return;
     }
 
-    const stale: DeadLetterRecord[] = [];
-    for (const record of records) {
-      if (await this.isStaleRefusal(record)) stale.push(record);
-    }
-    if (stale.length > 0) {
-      records = records.filter((record) => !stale.includes(record));
-      for (const record of stale) {
-        void this.deadLetterStorage.remove(record.id).catch((error) => {
+    await Promise.all(
+      stale.map((record) =>
+        this.deadLetterStorage.remove(record.id).catch((error: unknown) => {
           this.logger.error(
             "Failed to drop a stale refusal (@id, @error)",
             record.id,
             error instanceof Error ? error.message : String(error),
           );
-        });
-      }
-    }
+        }),
+      ),
+    );
 
     if (records.length === 0) {
       return;
