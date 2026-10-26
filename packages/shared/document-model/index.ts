@@ -6,8 +6,14 @@ export * from "./auth-v1.js";
 export * from "./base-reducer-protocol.js";
 export * from "./constants.js";
 export * from "./create-base-reducer.js";
-export * from "./create-document.js";
 export * from "./crypto.js";
+export {
+  createDocumentAction,
+  creationActions,
+  creationState,
+  documentFromCreation,
+  upgradeDocumentAction,
+} from "./create-document.js";
 export * from "./denied.js";
 export * from "./document-schema.js";
 export * from "./document-type.js";
