@@ -64,6 +64,7 @@ describe("enrolment and settings files", () => {
       appUpstream: "127.0.0.1:3000",
       upstreams: { api: "127.0.0.1:7540" },
       dns01Mode: "rfc2136",
+      listen: { https: 443, http: 80 },
       autostart: false,
     });
   });

@@ -64,6 +64,16 @@ export const portleTypeDefs = parse(/* GraphQL */ `
   type PortleDelegation {
     zone: String!
     nameservers: [String!]!
+    """
+    Whether the zone's NS records already point at the relay, as this
+    machine's resolver sees it. Known on portleStatus; null elsewhere.
+    """
+    delegated: Boolean
+  }
+
+  type PortleListen {
+    https: Int!
+    http: Int!
   }
 
   type PortleUpstream {
@@ -76,6 +86,7 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     appUpstream: String!
     upstreams: [PortleUpstream!]!
     dns01Mode: String!
+    listen: PortleListen!
     autostart: Boolean!
   }
 
@@ -128,6 +139,8 @@ export const portleTypeDefs = parse(/* GraphQL */ `
       appUpstream: String
       upstreams: [PortleUpstreamInput!]
       dns01Mode: String
+      listenHttps: Int
+      listenHttp: Int
     ): PortleStatus!
     """
     Bring the tunnel up. Refused unless every readiness check passes for the caller.
@@ -187,7 +200,10 @@ export function requireAdmin(api: PortleApi, ctx: Context): GateFacts {
 type WireUpstream = { label: string; target: string };
 
 /** The GraphQL shape of a status: maps become lists, exits flatten. */
-export function toWireStatus(status: TunnelStatus) {
+export function toWireStatus(
+  status: TunnelStatus,
+  delegated: boolean | null = null,
+) {
   const supervised = (s: TunnelStatus["tunnel"]["frpc"]) =>
     s && {
       name: s.name,
@@ -202,6 +218,7 @@ export function toWireStatus(status: TunnelStatus) {
     };
   return {
     ...status,
+    delegation: status.delegation && { ...status.delegation, delegated },
     settings: status.settings && {
       ...status.settings,
       upstreams: Object.entries(status.settings.upstreams).map(
@@ -244,7 +261,9 @@ export function createPortleSubgraph({
       Query: {
         portleReadiness: (_parent: unknown, _args: unknown, ctx: Context) =>
           readiness(api, ctx),
-        portleStatus: guarded(() => toWireStatus(runner.status())),
+        portleStatus: guarded(async () =>
+          toWireStatus(runner.status(), await runner.checkDelegation()),
+        ),
       },
       Mutation: {
         portleEnrol: guarded(
@@ -261,6 +280,8 @@ export function createPortleSubgraph({
             appUpstream?: string | null;
             upstreams?: WireUpstream[] | null;
             dns01Mode?: string | null;
+            listenHttps?: number | null;
+            listenHttp?: number | null;
           }) =>
             toWireStatus(
               runner.configure({
@@ -277,6 +298,14 @@ export function createPortleSubgraph({
                   : {}),
                 ...(args.dns01Mode
                   ? { dns01Mode: args.dns01Mode as "rfc2136" | "acmedns" }
+                  : {}),
+                ...(args.listenHttps != null || args.listenHttp != null
+                  ? {
+                      listen: {
+                        https: args.listenHttps ?? 443,
+                        http: args.listenHttp ?? 80,
+                      },
+                    }
                   : {}),
               }),
             ),

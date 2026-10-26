@@ -161,3 +161,43 @@ describe("renderCaddyfile", () => {
     expect(() => renderCaddyfile({ ...caddyInput, ...over })).toThrow();
   });
 });
+
+describe("listen ports", () => {
+  it("default to 443/80 with no global port lines", () => {
+    const out = renderCaddyfile(caddyInput);
+    expect(out).not.toContain("https_port");
+    expect(out).not.toContain("http_port");
+    expect(out).toContain("servers :443 {");
+    const toml = renderFrpcToml(frpcInput);
+    expect(toml).toContain("localPort = 443");
+    expect(toml).toContain("localPort = 80");
+  });
+
+  it("move Caddy's automatic HTTPS and the frpc targets to the given ports", () => {
+    const out = renderCaddyfile({
+      ...caddyInput,
+      listen: { https: 8443, http: 8080 },
+    });
+    expect(out).toContain("\thttps_port 8443\n\thttp_port 8080");
+    expect(out).toContain("servers :8443 {");
+    const toml = renderFrpcToml({
+      ...frpcInput,
+      localHttpsPort: 8443,
+      localHttpPort: 8080,
+    });
+    expect(toml).toContain("localPort = 8443");
+    expect(toml).toContain("localPort = 8080");
+  });
+
+  it("reject bad or equal ports", () => {
+    expect(() =>
+      renderCaddyfile({ ...caddyInput, listen: { https: 70000, http: 80 } }),
+    ).toThrow(/HTTPS port/);
+    expect(() =>
+      renderCaddyfile({ ...caddyInput, listen: { https: 8080, http: 8080 } }),
+    ).toThrow(/differ/);
+    expect(() => renderFrpcToml({ ...frpcInput, localHttpPort: -1 })).toThrow(
+      /local HTTP port/,
+    );
+  });
+});

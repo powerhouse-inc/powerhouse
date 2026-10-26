@@ -32,6 +32,12 @@ export interface SiteSettings {
   upstreams: Record<string, string>;
   /** rfc2136 straight to the relay's PowerDNS, or the acme-dns HTTPS fallback. */
   dns01Mode: "rfc2136" | "acmedns";
+  /**
+   * The local ports Caddy listens on. 443/80 is what the LAN path needs; a
+   * machine that cannot bind them (another server, macOS without root)
+   * can use high ports and still be reached through the relay.
+   */
+  listen: { https: number; http: number };
   /** Bring the tunnel up at boot when the gate passes. Set by start, cleared by stop. */
   autostart: boolean;
 }
@@ -97,6 +103,7 @@ export const DEFAULT_SITE_SETTINGS: Omit<SiteSettings, "controlPlaneUrl"> = {
   appUpstream: "127.0.0.1:3000",
   upstreams: {},
   dns01Mode: "rfc2136",
+  listen: { https: 443, http: 80 },
   autostart: false,
 };
 

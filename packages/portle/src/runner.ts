@@ -5,6 +5,7 @@ import {
   type BinaryLocations,
   type ResolveBinariesOptions,
 } from "./binaries.js";
+import { isDelegated, type ResolveNs } from "./delegation.js";
 import { enrolWithControlPlane } from "./site/enrol.js";
 import { LABEL_RE } from "./site/hostnames.js";
 import {
@@ -56,12 +57,14 @@ export interface EnrolInput {
 }
 
 export type SettingsPatch = Partial<
-  Pick<SiteSettings, "appUpstream" | "upstreams" | "dns01Mode">
+  Pick<SiteSettings, "appUpstream" | "upstreams" | "dns01Mode" | "listen">
 >;
 
 /** What the subgraph and the hooks drive; the class below is the real one. */
 export interface PortleRunnerLike {
   status(): TunnelStatus;
+  /** True/false for a customer zone; null when the site needs no delegation. */
+  checkDelegation(): Promise<boolean | null>;
   enrol(input: EnrolInput): Promise<TunnelStatus>;
   configure(patch: SettingsPatch): TunnelStatus;
   start(): Promise<TunnelStatus>;
@@ -71,6 +74,7 @@ export interface PortleRunnerLike {
 export interface PortleRunnerDeps extends ResolveBinariesOptions {
   stateDir: string;
   fetchImpl?: typeof fetch;
+  resolveNs?: ResolveNs;
   createSupervised?: (options: SupervisedOptions) => SupervisedLike;
   log?: (msg: string, detail?: Record<string, unknown>) => void;
 }
@@ -117,6 +121,12 @@ export class PortleRunner implements PortleRunnerLike {
     };
   }
 
+  async checkDelegation(): Promise<boolean | null> {
+    const delegation = this.#enrollment()?.delegation;
+    if (!delegation) return null;
+    return isDelegated(delegation, this.#deps.resolveNs);
+  }
+
   async enrol(input: EnrolInput): Promise<TunnelStatus> {
     if (this.#enrollment()) {
       throw new Error(
@@ -161,6 +171,16 @@ export class PortleRunner implements PortleRunnerLike {
     if (mode && mode !== "rfc2136" && mode !== "acmedns") {
       throw new Error(`dns01Mode must be rfc2136 or acmedns`);
     }
+    if (patch.listen) {
+      for (const [name, value] of Object.entries(patch.listen)) {
+        if (!Number.isInteger(value) || value < 1 || value > 65535) {
+          throw new Error(`listen.${name} must be a port number`);
+        }
+      }
+      if (patch.listen.https === patch.listen.http) {
+        throw new Error("listen.https and listen.http must differ");
+      }
+    }
     writeSiteSettings(this.#deps.stateDir, { ...settings, ...patch });
     return this.status();
   }
@@ -197,6 +217,8 @@ export class PortleRunner implements PortleRunnerLike {
         trustedCaFile: join(certsDir, "relay-ca.crt"),
         caddyHost: "127.0.0.1",
         vanityDomains: [],
+        localHttpsPort: settings.listen.https,
+        localHttpPort: settings.listen.http,
       }),
       0o600,
     );
@@ -237,15 +259,28 @@ export class PortleRunner implements PortleRunnerLike {
           ? enrollment.dns.resolvers
           : [dnsHost],
         dns01,
+        listen: settings.listen,
       }),
       0o600,
     );
     return { frpcConfig, caddyfile, certsDir };
   }
 
-  /** Rejects (never throws) so callers handle one failure shape. */
-  start(): Promise<TunnelStatus> {
-    return Promise.resolve().then(() => this.#startNow());
+  /**
+   * Brings the tunnel up. A customer zone must be delegated first: Caddy
+   * would otherwise ask the CA for a name the CA cannot resolve, and the
+   * negative answer is cached for an hour.
+   */
+  async start(): Promise<TunnelStatus> {
+    const delegation = this.#requireEnrollment().delegation;
+    if (delegation && !(await this.checkDelegation())) {
+      throw new Error(
+        `cannot start: ${delegation.zone} is not delegated yet. Create at your DNS provider: ${delegation.nameservers
+          .map((ns) => `${delegation.zone} NS ${ns}`)
+          .join("; ")} — then start again.`,
+      );
+    }
+    return this.#startNow();
   }
 
   #startNow(): TunnelStatus {

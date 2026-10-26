@@ -111,7 +111,7 @@ describe("portle subgraph", () => {
   });
 
   describe("status and mutations", () => {
-    it("portleStatus answers an admin with the wire shape", () => {
+    it("portleStatus answers an admin with the wire shape", async () => {
       const runner = fakeRunner(
         statusOf({
           enrolled: true,
@@ -121,6 +121,7 @@ describe("portle subgraph", () => {
             appUpstream: "127.0.0.1:2540",
             upstreams: { api: "127.0.0.1:7540" },
             dns01Mode: "rfc2136",
+            listen: { https: 443, http: 80 },
             autostart: true,
           },
           tunnel: {
@@ -141,11 +142,11 @@ describe("portle subgraph", () => {
       const { Query } = resolversOf(
         createPortleSubgraph({ api: apiOf(), runner }),
       );
-      const status = Query.portleStatus(
+      const status = (await Query.portleStatus(
         undefined,
         {},
         ctxOf(ADMIN),
-      ) as ReturnType<typeof toWireStatus>;
+      )) as ReturnType<typeof toWireStatus>;
       expect(status.settings?.upstreams).toEqual([
         { label: "api", target: "127.0.0.1:7540" },
       ]);
@@ -241,5 +242,58 @@ describe("portle subgraph", () => {
         noFloor.Mutation.portleStop(undefined, {}, ctxOf(STRANGER)),
       ).toThrow(/admins/);
     });
+  });
+});
+
+describe("portle subgraph: delegation and listen ports", () => {
+  it("portleStatus reports whether the zone is delegated, mutations leave it null", async () => {
+    const runner = fakeRunner(
+      statusOf({
+        enrolled: true,
+        delegation: {
+          zone: "dev.sektar.be",
+          nameservers: ["ns1.relaytest.portle.host."],
+        },
+      }),
+    );
+    runner.delegated = false;
+    const { Query, Mutation } = resolversOf(
+      createPortleSubgraph({ api: apiOf(), runner }),
+    );
+    const status = (await Query.portleStatus(
+      undefined,
+      {},
+      ctxOf(ADMIN),
+    )) as ReturnType<typeof toWireStatus>;
+    expect(status.delegation).toEqual({
+      zone: "dev.sektar.be",
+      nameservers: ["ns1.relaytest.portle.host."],
+      delegated: false,
+    });
+    const stopped = (await Mutation.portleStop(
+      undefined,
+      {},
+      ctxOf(ADMIN),
+    )) as ReturnType<typeof toWireStatus>;
+    expect(stopped.delegation?.delegated).toBeNull();
+  });
+
+  it("portleConfigure passes the listen ports through, defaulting the one not given", () => {
+    const runner = fakeRunner(statusOf({ enrolled: true }));
+    const { Mutation } = resolversOf(
+      createPortleSubgraph({ api: apiOf(), runner }),
+    );
+    Mutation.portleConfigure(undefined, { listenHttps: 8443 }, ctxOf(ADMIN));
+    Mutation.portleConfigure(
+      undefined,
+      { listenHttps: 8443, listenHttp: 8080 },
+      ctxOf(ADMIN),
+    );
+    Mutation.portleConfigure(undefined, {}, ctxOf(ADMIN));
+    expect(runner.calls).toEqual([
+      'configure {"listen":{"https":8443,"http":80}}',
+      'configure {"listen":{"https":8443,"http":8080}}',
+      "configure {}",
+    ]);
   });
 });

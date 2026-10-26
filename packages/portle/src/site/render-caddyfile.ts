@@ -50,6 +50,15 @@ export interface CaddyRenderInput {
   askUrl: string;
   resolvers: string[];
   dns01: Dns01;
+  /** Local listen ports; 443/80 unless the machine cannot bind them. */
+  listen?: { https: number; http: number } | undefined;
+}
+
+function port(value: number, what: string): number {
+  if (!Number.isInteger(value) || value < 1 || value > 65535) {
+    throw new Error(`invalid ${what}: ${JSON.stringify(value)}`);
+  }
+  return value;
 }
 
 /** Caddyfile quoted string: backslash and double quote escaped. */
@@ -104,8 +113,16 @@ export function renderCaddyfile(input: CaddyRenderInput): string {
 			server_url ${q(input.dns01.serverUrl)}
 		}`;
 
+  const https = port(input.listen?.https ?? 443, "HTTPS port");
+  const http = port(input.listen?.http ?? 80, "HTTP port");
+  if (https === http) throw new Error("HTTPS and HTTP ports must differ");
+
   const globals = [
     `	email ${token(input.email, "email")}`,
+    // Non-default ports: Caddy's automatic HTTPS (and its HTTP→HTTPS redirect)
+    // then serves the site blocks there instead of 443/80.
+    https !== 443 ? `	https_port ${https}` : "",
+    http !== 80 ? `	http_port ${http}` : "",
     input.acmeCaUrl ? `	acme_ca ${token(input.acmeCaUrl, "ACME CA URL")}` : "",
     input.acmeCaRootFile
       ? // A local path, quoted: Windows paths carry backslashes and may carry
@@ -115,7 +132,7 @@ export function renderCaddyfile(input: CaddyRenderInput): string {
     `
 	# PROXY protocol v2 from frpc only; plain LAN clients pass through unchanged
 	# (ignore = a spoofed header from anyone else is parsed and discarded).
-	servers :443 {
+	servers :${https} {
 		listener_wrappers {
 			proxy_protocol {
 				timeout 5s

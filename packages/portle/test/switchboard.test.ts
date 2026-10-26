@@ -83,6 +83,7 @@ describe("portle switchboard plugin", () => {
           appUpstream: "x:1",
           upstreams: {},
           dns01Mode: "rfc2136",
+          listen: { https: 443, http: 80 },
           autostart: true,
         },
       });
@@ -119,6 +120,7 @@ describe("portle switchboard plugin", () => {
             appUpstream: "x",
             upstreams: {},
             dns01Mode: "rfc2136",
+            listen: { https: 443, http: 80 },
             autostart: false,
           },
         }),
@@ -153,6 +155,7 @@ describe("portle switchboard plugin", () => {
           appUpstream: "x",
           upstreams: {},
           dns01Mode: "rfc2136",
+          listen: { https: 443, http: 80 },
           autostart: true,
         },
         tunnel: { state: "up", frpc: null, caddy: null },

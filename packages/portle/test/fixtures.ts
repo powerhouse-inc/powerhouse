@@ -102,10 +102,16 @@ export function statusOf(overrides: Partial<TunnelStatus> = {}): TunnelStatus {
 /** A runner that records calls and answers a fixed status. */
 export function fakeRunner(
   status: TunnelStatus = statusOf(),
-): PortleRunnerLike & { calls: string[]; status_: TunnelStatus } {
+): PortleRunnerLike & {
+  calls: string[];
+  status_: TunnelStatus;
+  delegated: boolean | null;
+} {
   const runner = {
     calls: [] as string[],
     status_: status,
+    delegated: null as boolean | null,
+    checkDelegation: () => Promise.resolve(runner.delegated),
     status: () => runner.status_,
     enrol: (input: { controlPlaneUrl: string; token: string }) => {
       runner.calls.push(`enrol ${input.controlPlaneUrl} ${input.token}`);

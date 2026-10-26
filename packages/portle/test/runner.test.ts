@@ -65,6 +65,8 @@ function runnerWith(
   const runner = new PortleRunner({
     stateDir,
     fetchImpl: okFetch,
+    // the fixture's customer zone counts as delegated unless a test says otherwise
+    resolveNs: () => Promise.resolve(["ns1.relaytest.portle.host"]),
     env: { PATH: "" },
     home: join(dir, "home"),
     platform: "linux",
@@ -261,5 +263,73 @@ describe("PortleRunner", () => {
     expect(
       readFileSync(join(stateDir, "certs", "acme-ca-root.pem"), "utf8"),
     ).toBe("ROOT");
+  });
+});
+
+describe("PortleRunner: delegation and listen ports", () => {
+  const seeded = async (resolveNs?: (zone: string) => Promise<string[]>) => {
+    const log = vi.fn();
+    const { runner, created } = runnerWith({ log, resolveNs });
+    await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
+    return { runner, created };
+  };
+
+  it("refuses to start a customer zone that is not delegated, naming the records", async () => {
+    const { runner, created } = await seeded(() =>
+      Promise.reject(new Error("ENOTFOUND")),
+    );
+    expect(await runner.checkDelegation()).toBe(false);
+    await expect(runner.start()).rejects.toThrow(
+      /dev\.sektar\.be is not delegated yet.*dev\.sektar\.be NS ns1\.relaytest\.portle\.host\./,
+    );
+    expect(created).toHaveLength(0);
+    expect(runner.status().tunnel.state).toBe("down");
+  });
+
+  it("starts once the resolver sees the relay's nameserver", async () => {
+    const { runner, created } = await seeded(() =>
+      Promise.resolve(["NS1.relaytest.portle.host"]),
+    );
+    expect(await runner.checkDelegation()).toBe(true);
+    await runner.start();
+    expect(created.map((s) => s.options.name)).toEqual(["caddy", "frpc"]);
+    await runner.stop();
+  });
+
+  it("answers null for a shared-zone site, which needs no delegation", async () => {
+    const shared = runnerWith({
+      fetchImpl: answering(
+        JSON.stringify({ ...enrollment, zoneKind: "shared", delegation: null }),
+        201,
+      ),
+      resolveNs: () => Promise.reject(new Error("never asked")),
+    });
+    await shared.runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
+    expect(await shared.runner.checkDelegation()).toBeNull();
+    await shared.runner.start();
+    expect(shared.runner.status().tunnel.state).toBe("up");
+    await shared.runner.stop();
+  });
+
+  it("renders the listen ports into both configs and validates them", async () => {
+    const { runner } = await seeded(() =>
+      Promise.resolve(["ns1.relaytest.portle.host"]),
+    );
+    expect(runner.status().settings?.listen).toEqual({ https: 443, http: 80 });
+    runner.configure({ listen: { https: 8443, http: 8080 } });
+    const out = runner.render();
+    const caddyfile = readFileSync(out.caddyfile, "utf8");
+    expect(caddyfile).toContain("https_port 8443");
+    expect(caddyfile).toContain("http_port 8080");
+    expect(caddyfile).toContain("servers :8443 {");
+    const frpcToml = readFileSync(out.frpcConfig, "utf8");
+    expect(frpcToml).toContain("localPort = 8443");
+    expect(frpcToml).toContain("localPort = 8080");
+    expect(() => runner.configure({ listen: { https: 0, http: 80 } })).toThrow(
+      /listen\.https/,
+    );
+    expect(() =>
+      runner.configure({ listen: { https: 8080, http: 8080 } }),
+    ).toThrow(/must differ/);
   });
 });
