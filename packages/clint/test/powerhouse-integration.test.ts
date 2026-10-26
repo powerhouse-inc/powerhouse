@@ -785,6 +785,7 @@ describe("buildDefaultReactor (real)", () => {
     if (reactorCtx) await reactorCtx.shutdown();
   });
 
+  // Same cold real-reactor boot as buildReactor above, plus a drive create.
   it("creates reactor context with client and driveId", async () => {
     const workspace = createMemoryWorkdirStore(testDir);
     const events: Array<{ event: string; data: unknown }> = [];
@@ -808,7 +809,7 @@ describe("buildDefaultReactor (real)", () => {
     expect(typeof reactorCtx.driveId).toBe("string");
     expect(typeof reactorCtx.shutdown).toBe("function");
     expect(events.some((e) => e.event === "powerhouse:ready")).toBe(true);
-  });
+  }, 30_000);
 });
 
 describe("defineCli + configureReactor", () => {

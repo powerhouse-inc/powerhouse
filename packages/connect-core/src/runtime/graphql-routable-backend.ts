@@ -138,8 +138,8 @@ export function createGraphQLRoutableBackend(
     subscribe: (search, callback, view) =>
       gql.subscribe(search, callback, view),
     getCreateSignaturePolicy: () => gql.getCreateSignaturePolicy(),
-    getCreateProtocolVersions: (parent, signal) =>
-      gql.getCreateProtocolVersions(parent, signal),
+    getCreateProtocolVersions: (options, signal) =>
+      gql.getCreateProtocolVersions(options, signal),
     create: async <TDocument extends PHDocument = PHDocument>(
       document: PHDocument,
       parent?: string,
