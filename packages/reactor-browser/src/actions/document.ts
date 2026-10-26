@@ -548,6 +548,11 @@ export async function addDocument(
   }
   await rememberDriveNode(driveId, newDoc.header.id);
 
+  // The throttled drive refresh can lag; cache the new node now.
+  await getDriveNode(driveId, newDoc.header.id, { refresh: true }).catch(
+    () => undefined,
+  );
+
   // Return a file node structure for compatibility
   return {
     id: newDoc.header.id,

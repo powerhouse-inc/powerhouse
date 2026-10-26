@@ -46,6 +46,7 @@ export {
   type RunnerBase,
   type RunnerKind,
 } from "./host-schemas.js";
+export { hostExportSchema, type HostExport } from "./host-export-schema.js";
 export {
   buildDriveDeclarationSchema,
   driveDeclarationSchema,

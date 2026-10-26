@@ -25,6 +25,7 @@ export {
   type ProjectedDescriptor,
   type ProjectedStorage,
 } from "./backend-projection.js";
+export { applyChildWrapper, type MemberDraft } from "./child-wrapper.js";
 export {
   mergeDefaultDrives,
   projectDrivesIntoConnect,

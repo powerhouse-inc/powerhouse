@@ -52,6 +52,8 @@ export type ReadinessGate = {
 
 export type API = {
   httpAdapter: IHttpAdapter;
+  /** The port the HTTP server bound; the ephemeral one when 0 was requested. */
+  port: number;
   /** The listening server, for host-side observers such as request load. */
   httpServer: http.Server;
   /** Hands each package a namespaced slice of the HTTP surface. */
