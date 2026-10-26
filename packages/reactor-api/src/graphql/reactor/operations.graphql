@@ -281,6 +281,54 @@ query GetCreateDefaults($parentIdOrSlug: String) {
   }
 }
 
+fragment DriveNodeFields on DriveNode {
+  ... on DriveFileNode {
+    id
+    driveId
+    name
+    parentFolder
+    documentType
+  }
+  ... on DriveFolderNode {
+    id
+    driveId
+    name
+    parentFolder
+  }
+}
+
+query GetDriveNodes(
+  $driveId: ID!
+  $parentFolder: ID
+  $paging: PagingInput
+  $kind: DriveNodeKind
+) {
+  driveNodes(
+    driveId: $driveId
+    parentFolder: $parentFolder
+    paging: $paging
+    kind: $kind
+  ) {
+    results {
+      ...DriveNodeFields
+    }
+    nextCursor
+    hasMore
+  }
+}
+
+query GetDriveNode($driveId: ID!, $id: ID!) {
+  driveNode(driveId: $driveId, id: $id) {
+    ...DriveNodeFields
+  }
+}
+
+query GetDriveDescendants($driveId: ID!, $root: ID!) {
+  driveDescendants(driveId: $driveId, root: $root) {
+    ...DriveNodeFields
+  }
+}
+
 query EvaluateActions(
   $documentIdentifier: String!
   $branch: String

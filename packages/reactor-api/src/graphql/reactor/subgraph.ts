@@ -19,6 +19,15 @@ import {
   toGqlDocumentChangeEvent,
 } from "./adapters.js";
 import { isDriveContainerType } from "./constants.js";
+import {
+  driveNodeTypeName,
+  getServedDescendants,
+  getServedNode,
+  listServedNodes,
+  requireDriveNodeSource,
+  SERVED_IDS_CHUNK,
+  type DriveNodeGate,
+} from "./drive-nodes.js";
 import type { Resolvers } from "./gen/graphql.js";
 import {
   DocumentChangeFeed,
@@ -75,6 +84,47 @@ export class ReactorSubgraph extends BaseSubgraph {
       );
     }
     return handle;
+  }
+
+  /**
+   * The read gate a drive node read passes, as the reactor-drive subgraph
+   * applies it: the drive is listed to the caller (reactor read gate, then the
+   * host's ACL), and a file node only with its own document.
+   */
+  #driveNodeGate(ctx: Context): DriveNodeGate {
+    return {
+      servesDrive: async (driveId) => {
+        try {
+          return await this.listsDocument(driveId, ctx);
+        } catch {
+          return false;
+        }
+      },
+      servedDocuments: async (ids) => {
+        const served: { id: string }[] = [];
+        for (let start = 0; start < ids.length; start += SERVED_IDS_CHUNK) {
+          const chunk = ids.slice(start, start + SERVED_IDS_CHUNK);
+          try {
+            const page = await this.clientsOf(ctx).read.find(
+              { ids: chunk },
+              { subject: this.viewSubject(ctx) },
+              { cursor: "", limit: chunk.length },
+            );
+            for (const document of page.results) {
+              served.push({ id: document.header.id });
+            }
+          } catch {
+            continue;
+          }
+        }
+        try {
+          const readable = await this.readableByHost(served, ctx);
+          return new Set(readable.map((item) => item.id));
+        } catch {
+          return new Set<string>();
+        }
+      },
+    };
   }
 
   /**
@@ -235,6 +285,10 @@ export class ReactorSubgraph extends BaseSubgraph {
   typeDefs = gql(schemaSource);
 
   resolvers: Resolvers = {
+    DriveNode: {
+      __resolveType: (node) => driveNodeTypeName(node),
+    },
+
     // Field resolver for PHDocument.operations - fetches operations on demand
     PHDocument: {
       operations: async (parent, args, ctx: Context) => {
@@ -499,6 +553,43 @@ export class ReactorSubgraph extends BaseSubgraph {
           this.logger.error("Error in documentServed: @Error", error);
           throw error;
         }
+      },
+
+      driveNodes: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveNodes(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return listServedNodes(
+          source,
+          this.#driveNodeGate(ctx),
+          args.driveId,
+          "parentFolder" in args ? (args.parentFolder ?? null) : undefined,
+          args.paging,
+          args.kind,
+        );
+      },
+
+      driveNode: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveNode(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return (
+          (await getServedNode(
+            source,
+            this.#driveNodeGate(ctx),
+            args.driveId,
+            args.id,
+          )) ?? null
+        );
+      },
+
+      driveDescendants: async (_parent, args, ctx: Context) => {
+        this.logger.debug("driveDescendants(@args)", args);
+        const source = requireDriveNodeSource(this.graphqlManager.driveNodes);
+        return getServedDescendants(
+          source,
+          this.#driveNodeGate(ctx),
+          args.driveId,
+          args.root,
+        );
       },
 
       createDefaults: async (_parent, args, ctx: Context) => {

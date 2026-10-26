@@ -7,6 +7,8 @@ import type {
   DocumentChangeType,
   DocumentRelationship,
   ExecutionJobPlan,
+  IDriveNodeSource,
+  IDriveReadClient,
   JobInfo,
   JobResultSummary,
   JobStatus,
@@ -72,6 +74,10 @@ import {
   makeAuthMiddleware,
   type BearerTokenProvider,
 } from "./auth.js";
+import {
+  GraphQLDriveNodeSource,
+  GraphQLDriveReadClient,
+} from "./drive-nodes.js";
 import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
@@ -235,6 +241,12 @@ type ChangeListener = {
  */
 const graphQLReactorClientBrand = "__powerhouseGraphQLReactorClient" as const;
 
+/** The read half of {@link GraphQLReactorClient}: the hooks' reads plus `drives`. */
+export interface GraphQLReactorReadClient extends IReactorBrowserReadClient {
+  /** A drive's nodes from the node queries, for every drive type. */
+  readonly drives: IDriveReadClient;
+}
+
 /**
  * A light implementation of {@link IReactorBrowserClient} that talks plain
  * GraphQL to a Switchboard, with no reactor in the bundle.
@@ -266,12 +278,13 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private jobRealtimeBroken = false;
   /** Set once the Switchboard refused the `document` query's `consistency` argument. */
   private consistencyUnsupported = false;
+  private readonly driveNodes: GraphQLDriveNodeSource;
 
   /**
    * The read half: the reads the hooks make. Every method is this client's
    * own; nothing that writes is reachable from it.
    */
-  readonly read: IReactorBrowserReadClient;
+  readonly read: GraphQLReactorReadClient;
 
   /**
    * The write half. `execute` submits through `executeAsync` and hands back a
@@ -312,7 +325,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
     this.subgraphs = new SubgraphSdkRegistry(options.url, middleware);
-    this.read = new GraphQLReadHalf(this);
+    this.driveNodes = new GraphQLDriveNodeSource(this.sdk, driveIdHeaders);
+    this.read = new GraphQLReadHalf(this, this.driveNodes);
     this.write = {
       execute: (documentIdentifier, branch, actions, signal) =>
         this.submitExecute(documentIdentifier, branch, actions, signal),
@@ -321,6 +335,14 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       deleteDocument: (identifier, propagate, signal) =>
         this.submitDeleteDocument(identifier, propagate, signal),
     };
+  }
+
+  /**
+   * The Switchboard's drive node queries as a node source, for every drive
+   * type. `read.drives` answers from it.
+   */
+  nodeSource(): IDriveNodeSource {
+    return this.driveNodes;
   }
 
   /**
@@ -1677,8 +1699,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
  * The read half of {@link GraphQLReactorClient}: every read is the client's
  * own, and nothing that writes is reachable from it.
  */
-class GraphQLReadHalf implements IReactorBrowserReadClient {
-  constructor(private readonly client: GraphQLReactorClient) {}
+class GraphQLReadHalf implements GraphQLReactorReadClient {
+  readonly drives: IDriveReadClient;
+
+  constructor(
+    private readonly client: GraphQLReactorClient,
+    nodes: IDriveNodeSource,
+  ) {
+    this.drives = new GraphQLDriveReadClient(nodes);
+  }
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -1801,6 +1830,13 @@ function refusesConsistencyArgument(error: unknown): boolean {
         message.includes('"ConsistencyTokenInput"'))
     );
   });
+}
+
+/** {@link GraphQLReactorClient.nodeSource}, as a function. */
+export function createGraphQLDriveNodeSource(
+  client: GraphQLReactorClient,
+): IDriveNodeSource {
+  return client.nodeSource();
 }
 
 /**
