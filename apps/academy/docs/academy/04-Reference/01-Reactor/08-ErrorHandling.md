@@ -6,7 +6,7 @@ toc_max_heading_level: 3
 
 Errors reach your code from the reactor through three channels:
 
-- **Mutations throw a plain `Error`.** When a job fails, [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) methods like `execute`, `create`, and `deleteDocument` reject with `new Error(job.error?.message)`. The typed error class, stack, and retry history are not preserved at this boundary.
+- **Failed writes reject with `JobFailedError`.** When a job fails, the `WriteHandle` that a [`client.write`](/academy/Reference/Reactor/ReactorClient) method such as `execute`, `create`, or `deleteDocument` returned rejects its stages with `JobFailedError`, carrying the job's message and its `JobInfo`. The original error class is not preserved at this boundary.
 - **Aborts throw an `AbortError`.** Any call that takes an `AbortSignal` rejects with an error whose `name` is `"AbortError"` when the signal fires.
 - **Subsystems export typed errors.** The registry, sync, and attachment layers throw named error classes you can discriminate with `instanceof` or a `name` check.
 
@@ -49,36 +49,35 @@ type JobInfo = {
 
 `errorHistory` holds one `ErrorInfo` per attempt, oldest first. A job that the queue retried carries every failure; `error` is the most recent. On failure the reactor also populates `job` with the full job object for debugging.
 
-### What `execute()` and `executeBatch()` throw
+### What a write handle rejects with
 
-Most [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) mutation methods do not surface the typed error. On a `FAILED` job they throw a bare `Error` carrying only the message string:
+[`client.write`](/academy/Reference/Reactor/ReactorClient#write-methods-clientwrite) methods resolve once the job is accepted and return a `WriteHandle`. When the job reaches `FAILED`, the handle's `written` and `readable` stages, and `document()`, reject with `JobFailedError`, exported from `@powerhousedao/reactor`:
 
-```typescript
-// inside ReactorClient, after the job reaches a terminal status
-if (job.status === JobStatus.FAILED) {
-  throw new Error(job.error?.message);
-}
-```
+- `message` is `job.error?.message`, which can be `undefined` if `error` was never set. Guard for that when you display it.
+- `job` is the failed `JobInfo`, so `job.error`, `job.errorHistory`, and `job.job` are on hand.
 
-The same pattern runs in `execute`, `create`, `deleteDocument`, `deleteDocuments`, `addRelationship`, and `removeRelationship`. `executeBatch` is the exception, below. Two consequences:
-
-- The thrown `Error.message` equals `job.error?.message`, which can be `undefined` if `error` was never set. Guard for that when you display it.
-- The original error class, stack, and `errorHistory` are lost at the client boundary. To inspect them, drop to the lower-level `IReactor.getJobStatus(jobId)` and read `JobInfo.error`, `JobInfo.errorHistory`, and `JobInfo.job`. See [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
+A reducer error is not a job failure. The operation is stored with its error, the job reaches `READ_READY`, and `receipt.job.result` says which actions erred. `executeBatch` is the exception, below.
 
 ```typescript
+import { JobFailedError } from "@powerhousedao/reactor";
+
 try {
-  await client.execute(documentId, "main", actions);
+  const handle = await client.write.execute(documentId, "main", actions);
+  await handle.readable;
 } catch (err) {
-  // err is a plain Error; err.message came from job.error?.message
-  console.error("mutation failed:", err instanceof Error ? err.message : err);
+  if (err instanceof JobFailedError) {
+    console.error("mutation failed:", err.message, err.job.errorHistory);
+  } else {
+    throw err;
+  }
 }
 ```
 
-Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
+Several internal write-path errors surface only as the `.message` string and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
 
-#### `executeBatch` throws `BatchJobFailedError`
+#### `executeBatch` rejects with `BatchJobFailedError`
 
-`executeBatch` waits for every job in the batch to settle. If any job is `FAILED`, it throws a `BatchJobFailedError` (exported from `@powerhousedao/reactor`) for the first failed job in plan order:
+`write.executeBatch` resolves once every job is accepted and returns a `BatchWriteHandle`. Its `written` and `readable` stages wait for every job in the batch. If any job is `FAILED`, they reject with a `BatchJobFailedError` (exported from `@powerhousedao/reactor`) for the first failed job in plan order:
 
 | Field        | Value                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------- |
@@ -93,7 +92,8 @@ A batch is not atomic: each job commits on its own, and a failed job still relea
 import { BatchJobFailedError, JobStatus } from "@powerhousedao/reactor";
 
 try {
-  await client.executeBatch({ jobs });
+  const batch = await client.write.executeBatch({ jobs });
+  await batch.readable;
 } catch (err) {
   if (BatchJobFailedError.isError(err)) {
     const committed = Object.keys(err.jobs).filter(
