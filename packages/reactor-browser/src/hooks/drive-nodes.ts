@@ -16,6 +16,9 @@ export type DriveNodesEntry = {
   /** The drive's nodes from the last full listing, kept while it refreshes. */
   readonly nodes?: Node[];
   readonly loading?: Promise<Node[]>;
+  /** The drive changed while `loading` was in flight: that listing may miss
+   * the change, so another one follows as soon as it lands. */
+  readonly stale?: true;
   /** The last full listing failed; hooks do not retry until invalidated. */
   readonly error?: unknown;
 };
@@ -86,7 +89,14 @@ export function loadDriveNodes(
 ): Promise<Node[]> {
   const store = options.store ?? getPHStore();
   const current = entryOf(store, driveId);
-  if (current?.loading) return current.loading;
+  if (current?.loading) {
+    // A refresh asked for during a listing lists again once it lands: the
+    // one in flight may predate the change that asked for it.
+    if (options.refresh && !current.stale) {
+      setEntry(store, driveId, { ...current, stale: true });
+    }
+    return current.loading;
+  }
   if (!options.refresh && current?.loaded === "all" && current.nodes) {
     return Promise.resolve(current.nodes);
   }
@@ -104,12 +114,23 @@ export function loadDriveNodes(
   });
   loading.then(
     (nodes) => {
-      if (entryOf(store, driveId)?.loading !== loading) return;
+      const settled = entryOf(store, driveId);
+      if (settled?.loading !== loading) return;
       setEntry(store, driveId, {
         byId: new Map(nodes.map((n) => [n.id, n])),
         nodes,
         loaded: "all",
       });
+      if (settled.stale) {
+        if (mounted.has(driveId)) {
+          loadDriveNodes(driveId, { store, refresh: true }).catch(
+            (error: unknown) =>
+              logger.error("Reloading drive nodes failed: @error", error),
+          );
+        } else {
+          setEntry(store, driveId, undefined);
+        }
+      }
     },
     (error: unknown) => {
       const entry = entryOf(store, driveId);
@@ -175,6 +196,11 @@ export function invalidateDriveNodes(
 ) {
   const current = entryOf(store, driveId);
   if (!current) return;
+  if (current.loading) {
+    // The listing in flight may predate this change; another follows it.
+    if (!current.stale) setEntry(store, driveId, { ...current, stale: true });
+    return;
+  }
   if (!mounted.has(driveId)) {
     setEntry(store, driveId, undefined);
     return;
@@ -187,6 +213,42 @@ export function invalidateDriveNodes(
   loadDriveNodes(driveId, { store }).catch((error: unknown) =>
     logger.error("Reloading drive nodes failed: @error", error),
   );
+}
+
+/** Drives this tab has just written to; their next change is read at once. */
+const localDriveWrites = new Set<string>();
+
+/**
+ * Notes that this tab wrote to a drive, so the drive change handler re-reads
+ * it on the change that follows instead of waiting out its interval: the
+ * person who added, renamed or removed a node expects to see it, while a
+ * drive being filled by someone else can wait.
+ */
+export function markLocalDriveWrite(driveId: string): void {
+  localDriveWrites.add(driveId);
+}
+
+/** Spends a drive's local-write mark; true when one was set. */
+export function takeLocalDriveWrite(driveId: string): boolean {
+  return localDriveWrites.delete(driveId);
+}
+
+/** Takes a node out of a drive's cache after this tab removed it, so the
+ * listing drops it at once instead of after the next drive refresh. */
+export function dropDriveNode(
+  driveId: string,
+  nodeId: string,
+  store: PHStore | undefined = getPHStore(),
+) {
+  const entry = entryOf(store, driveId);
+  if (!entry?.byId.has(nodeId)) return;
+  const byId = new Map(entry.byId);
+  byId.delete(nodeId);
+  setEntry(store, driveId, {
+    ...entry,
+    byId,
+    nodes: entry.nodes?.filter((n) => n.id !== nodeId),
+  });
 }
 
 function useDriveNodesEntry(driveId: string | null | undefined) {
