@@ -176,6 +176,16 @@ export interface IRoutableBackend {
   getJob(jobId: string, signal?: AbortSignal): Promise<JobInfo | undefined>;
   waitForJob(job: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
+  /**
+   * Reads several documents in as few requests as the backend can, in the
+   * order given; rejects if any is unavailable.
+   */
+  getMany?<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
   isDocumentIdTaken?(
     documentId: string,
     signal?: AbortSignal,
@@ -328,6 +338,20 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     waitForJob: (job, signal) => client.waitForJob(job, signal),
     isDocumentIdTaken: (documentId, signal) =>
       client.isDocumentIdTaken(documentId, signal),
+    getMany: <TDocument extends PHDocument>(
+      documentIds: string[],
+      view?: ViewFilter,
+      signal?: AbortSignal,
+      consistencyToken?: ConsistencyToken,
+    ) =>
+      consistencyToken === undefined
+        ? client.getMany<TDocument>(documentIds, view, signal)
+        : client.getMany<TDocument>(
+            documentIds,
+            view,
+            signal,
+            consistencyToken,
+          ),
     resolveIdOrSlug: (identifier, view, signal) =>
       client.resolveIdOrSlug(identifier, view, signal),
     evaluateActions: (identifier, branch, candidates, subject, signal) =>

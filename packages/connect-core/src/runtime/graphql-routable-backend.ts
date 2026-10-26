@@ -112,6 +112,14 @@ export function createGraphQLRoutableBackend(
       view?: ViewFilter,
       signal?: AbortSignal,
     ) => drives.learn(await gql.get<TDocument>(identifier, view, signal)),
+    getMany: async <TDocument extends PHDocument>(
+      ids: string[],
+      view?: ViewFilter,
+      signal?: AbortSignal,
+    ) =>
+      (await gql.getMany<TDocument>(ids, view, signal)).map((document) =>
+        drives.learn(document),
+      ),
     getOperations: (identifier, view, filter, paging, signal) =>
       gql.getOperations(identifier, view, filter, paging, signal),
     find: async (search, view, paging, signal) =>

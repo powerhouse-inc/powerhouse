@@ -41,13 +41,16 @@ import type {
   PHDocument,
 } from "document-model";
 import { logger } from "document-model";
+import { print } from "graphql";
 import type { Variables } from "graphql-request";
 import { createClient } from "../graphql/client.js";
 import {
   DocumentChangeType as GqlDocumentChangeType,
   PropagationMode as GqlPropagationMode,
+  PhDocumentFieldsFragmentDoc,
   type DocumentRelationshipFieldsFragment,
   type GetCreateDefaultsQuery,
+  type GetDocumentQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
   type PagingInput,
@@ -383,18 +386,104 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     );
   }
 
-  /** Reads documents by id, in the order given; throws if any is missing. */
+  /**
+   * Reads documents by id, in the order given; throws if any is missing. Each
+   * chunk of {@link GET_MANY_CHUNK_SIZE} ids is one request holding an aliased
+   * `document` field per id, with the selection and arguments `get` sends.
+   */
   async getMany<TDocument extends PHDocument>(
     documentIds: string[],
     view?: ViewFilter,
     signal?: AbortSignal,
     consistencyToken?: ConsistencyToken,
   ): Promise<TDocument[]> {
-    return Promise.all(
-      documentIds.map((id) =>
-        this.get<TDocument>(id, view, signal, consistencyToken),
+    const viewInput = viewFilterInputFromViewFilter(view);
+    const token =
+      consistencyToken && consistencyToken.coordinates.length > 0
+        ? consistencyToken
+        : undefined;
+    const chunks: string[][] = [];
+    for (let i = 0; i < documentIds.length; i += GET_MANY_CHUNK_SIZE) {
+      chunks.push(documentIds.slice(i, i + GET_MANY_CHUNK_SIZE));
+    }
+    const pages = await Promise.all(
+      chunks.map((chunk) =>
+        this.getDocumentChunk(chunk, viewInput, token, signal),
       ),
     );
+    return pages
+      .flat()
+      .map((document) =>
+        phDocumentFromGetDocument<TDocument>(document, view?.branch),
+      );
+  }
+
+  /** One chunk of `getMany`, with the `consistency` argument while the Switchboard accepts it. */
+  private async getDocumentChunk(
+    identifiers: string[],
+    view: ViewFilterInput | undefined,
+    token: ConsistencyToken | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PhDocumentFieldsFragment[]> {
+    if (token && !this.consistencyUnsupported) {
+      try {
+        return await this.runGetDocuments(
+          identifiers,
+          view,
+          consistencyInputFromToken(token),
+          signal,
+        );
+      } catch (error) {
+        if (!refusesConsistencyArgument(error)) {
+          throw error;
+        }
+        this.consistencyUnsupported = true;
+      }
+    }
+    return this.runGetDocuments(identifiers, view, undefined, signal);
+  }
+
+  private async runGetDocuments(
+    identifiers: string[],
+    view: ViewFilterInput | undefined,
+    consistency: GetDocumentAtConsistencyVariables["consistency"] | undefined,
+    signal: AbortSignal | undefined,
+  ): Promise<PhDocumentFieldsFragment[]> {
+    const variables: Record<string, unknown> = { view };
+    const definitions = ["$view: ViewFilterInput"];
+    let consistencyArgument = "";
+    if (consistency) {
+      variables.consistency = consistency;
+      definitions.push("$consistency: ConsistencyTokenInput");
+      consistencyArgument = ", consistency: $consistency";
+    }
+    const fields = identifiers.map((identifier, i) => {
+      variables[`id${i}`] = identifier;
+      definitions.push(`$id${i}: String!`);
+      return `d${i}: document(identifier: $id${i}, view: $view${consistencyArgument}) { document { ...PHDocumentFields } childIds }`;
+    });
+    const query = [
+      `query GetDocuments(${definitions.join(", ")}) {`,
+      ...fields,
+      "}",
+      PH_DOCUMENT_FIELDS_SOURCE,
+    ].join("\n");
+    const data = await this.sdk.RunDocument<
+      Record<string, GetDocumentQuery["document"]>
+    >({
+      operationName: "GetDocuments",
+      operationType: "query",
+      document: query,
+      variables,
+      signal,
+    });
+    return identifiers.map((identifier, i) => {
+      const result = data[`d${i}`];
+      if (!result) {
+        throw new Error(`Document not found: ${identifier}`);
+      }
+      return result.document;
+    });
   }
 
   /**
@@ -1508,16 +1597,7 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       const variables: GetDocumentAtConsistencyVariables = {
         identifier,
         view,
-        consistency: {
-          version: token.version,
-          createdAtUtcIso: token.createdAtUtcIso,
-          coordinates: token.coordinates.map((coordinate) => ({
-            documentId: coordinate.documentId,
-            scope: coordinate.scope,
-            branch: coordinate.branch,
-            operationIndex: coordinate.operationIndex,
-          })),
-        },
+        consistency: consistencyInputFromToken(token),
       };
       try {
         return await this.sdk.RunDocument<GetDocumentAtConsistencyResult>({
@@ -1816,6 +1896,26 @@ function sleepUntilWoken(
  * Whether a request failed because the Switchboard's `document` query has no
  * `consistency` argument, or its schema no `ConsistencyTokenInput`.
  */
+/** The most ids one `getMany` request reads. */
+const GET_MANY_CHUNK_SIZE = 50;
+
+const PH_DOCUMENT_FIELDS_SOURCE = print(PhDocumentFieldsFragmentDoc);
+
+function consistencyInputFromToken(
+  token: ConsistencyToken,
+): GetDocumentAtConsistencyVariables["consistency"] {
+  return {
+    version: token.version,
+    createdAtUtcIso: token.createdAtUtcIso,
+    coordinates: token.coordinates.map((coordinate) => ({
+      documentId: coordinate.documentId,
+      scope: coordinate.scope,
+      branch: coordinate.branch,
+      operationIndex: coordinate.operationIndex,
+    })),
+  };
+}
+
 function refusesConsistencyArgument(error: unknown): boolean {
   const errors = (error as { response?: { errors?: unknown } } | null)?.response
     ?.errors;

@@ -186,6 +186,10 @@ export class FakeBackend {
           [identifier],
           () => this.require(identifier, "get") as T,
         ),
+      getMany: <T extends PHDocument>(identifiers: string[]) =>
+        this.run("getMany", [identifiers], () =>
+          identifiers.map((id) => this.require(id, "getMany") as T),
+        ),
       getOperations: (identifier) =>
         this.run("getOperations", [identifier], () => {
           this.require(identifier, "getOperations");
