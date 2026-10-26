@@ -107,6 +107,13 @@ const operationValidators: OperationValidators = {
       CreateDefaultsDTO.parse(data.createDefaults);
     }
   },
+  GetCreateProtocolVersions: (data) => {
+    if (data.createDefaults) {
+      CreateDefaultsDTO.pick({ protocolVersions: true }).parse(
+        data.createDefaults,
+      );
+    }
+  },
   GetDriveNodes: (data) => {
     if (data.driveNodes) {
       DriveNodePageDTO.parse(data.driveNodes);

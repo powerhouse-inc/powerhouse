@@ -281,6 +281,15 @@ query GetCreateDefaults($parentIdOrSlug: String) {
   }
 }
 
+query GetCreateProtocolVersions(
+  $parentIdOrSlug: String
+  $documentType: String!
+) {
+  createDefaults(parentIdOrSlug: $parentIdOrSlug, documentType: $documentType) {
+    protocolVersions
+  }
+}
+
 fragment DriveNodeFields on DriveNode {
   ... on DriveFileNode {
     id
