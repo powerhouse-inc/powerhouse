@@ -424,7 +424,9 @@ export type TailBase = {
 /**
  * Whether `tail`, rows appended in index order after a derived base, applies
  * row by row. Not when a row rewinds, retracts, or is named by a retraction.
- * Admission refuses a repeated action id, so no tail row repeats one.
+ * It assumes no tail row repeats a stored action id, as a reactor's admission
+ * guarantees on a rule scope; a stream that holds such a repeat must be
+ * derived whole.
  */
 export function tailAppliesIncrementally(
   tail: readonly { skip: number; action: Action }[],

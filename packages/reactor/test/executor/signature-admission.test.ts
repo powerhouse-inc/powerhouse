@@ -587,6 +587,61 @@ describe("signature admission", () => {
         ]);
       });
 
+      it(`is dropped at load in ${mode} mode whatever its signature`, async () => {
+        await build(mode);
+        const action = await renownSigned(moduleAction("m", 0));
+        expect((await load([asOperation(action, 0)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        // A v2 operation stamped later than its action fails TIMESTAMP_MISMATCH.
+        const replay = await v2Signed({
+          ...moduleAction("x", 0),
+          id: action.id,
+        });
+        expect(
+          (
+            await load([
+              { ...asOperation(replay, 1), timestampUtcMs: at(5_000) },
+            ])
+          ).status,
+        ).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(refusals).toMatchObject([
+          { actionId: action.id, code: "DUPLICATE_ACTION", enforced: true },
+        ]);
+      });
+
+      it(`stores one of two operations sharing an id in one load in ${mode} mode`, async () => {
+        await build(mode);
+        const first = await renownSigned(moduleAction("a", 0));
+        const second = await renownSigned({
+          ...moduleAction("b", 10),
+          id: first.id,
+        });
+
+        expect(
+          (await load([asOperation(first, 0), asOperation(second, 1)])).status,
+        ).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([first.id]);
+      });
+
+      it(`fails a mutation in ${mode} mode whatever its signature`, async () => {
+        await build(mode);
+        const action = await renownSigned(moduleAction("m"));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+
+        const again = await execute([
+          { ...(await tampered(moduleAction("m"))), id: action.id },
+        ]);
+
+        expect(again.status).toBe(JobStatus.FAILED);
+        expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await storedActionIds()).toEqual([action.id]);
+      });
+
       it(`fails a mutation in ${mode} mode`, async () => {
         await build(mode);
         const action = await renownSigned(moduleAction("m"));

@@ -126,8 +126,8 @@ export class SignatureAdmission {
   async admitMutation(
     job: Job,
     stores: AdmissionStores,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
-    refuseRepeats = false,
   ): Promise<MutationAdmission> {
     const { operationStore } = stores;
     const candidates = job.actions.map((action) =>
@@ -162,6 +162,7 @@ export class SignatureAdmission {
         live,
         submitted,
         "mutation",
+        refuseRepeats,
         signal,
       );
       submitted.add(entry.opId);
@@ -190,8 +191,8 @@ export class SignatureAdmission {
     job: Job,
     operations: Operation[],
     stores: AdmissionStores,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
-    refuseRepeats = false,
   ): Promise<Set<Operation>> {
     const { operationStore } = stores;
     const stream = {
@@ -223,15 +224,18 @@ export class SignatureAdmission {
         storedPolicy(stores, this.policySource, documentId, branch, signal),
     );
     const dropped = new Set<Operation>();
+    const received = new Set<string>();
     for (let i = 0; i < candidates.length; i++) {
       const verdict = await this.verdict(
         candidates[i],
         live,
-        undefined,
+        received,
         "load",
+        refuseRepeats,
         signal,
         redelivered.has(candidates[i]),
       );
+      received.add(candidates[i].opId);
       if (verdict.ok) {
         continue;
       }
@@ -270,6 +274,7 @@ export class SignatureAdmission {
       new Set(),
       undefined,
       "load",
+      false,
       signal,
     );
     if (verdict.ok) {
@@ -278,11 +283,13 @@ export class SignatureAdmission {
     return this.record(job, entry, verdict, "load", true)!;
   }
 
+  /** With `refuseRepeats`, a repeated id is DUPLICATE_ACTION whatever the signature. */
   private async verdict(
     entry: Candidate,
     live: Set<string>,
     submitted: Set<string> | undefined,
     path: AdmissionPath,
+    refuseRepeats: boolean,
     signal?: AbortSignal,
     known = false,
   ): Promise<SignatureVerdict> {
@@ -296,10 +303,12 @@ export class SignatureAdmission {
       path,
       entry.operation,
     );
-    if (!verdict.ok) {
+    const repeated =
+      !known && (isLive(entry, live) || submitted?.has(entry.opId) === true);
+    if (!verdict.ok && !(repeated && refuseRepeats)) {
       return verdict;
     }
-    if (!known && (isLive(entry, live) || submitted?.has(entry.opId))) {
+    if (repeated) {
       return {
         ok: false,
         scheme: verdict.scheme,
