@@ -7,7 +7,7 @@ import type {
   CreateDocumentAction,
   PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
-import { createDocumentFromAction } from "../executor/util.js";
+import { documentFromCreation } from "@powerhousedao/shared/document-model";
 
 // The marker counts: a peer can receive a drive's marker without its delete.
 export function isDriveDeletion(op: OperationWithContext): boolean {
@@ -34,7 +34,7 @@ export function extractCreationHeader(
   if (op.operation.action.type !== "CREATE_DOCUMENT") return undefined;
   return (
     extractDriveHeader(op) ??
-    createDocumentFromAction(op.operation.action as CreateDocumentAction).header
+    documentFromCreation(op.operation.action as CreateDocumentAction).header
   );
 }
 

@@ -51,6 +51,7 @@ export default defineConfig({
       "document-model/action-transport.test.ts",
       "document-model/files.test.ts",
       "document-model/mock.test.ts",
+      "document-model/create-document.test.ts",
       "document-model/peer-agreement.test.ts",
       "document-model/purge.test.ts",
       "document-model/purge-replay.test.ts",

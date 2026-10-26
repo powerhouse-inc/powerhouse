@@ -1,11 +1,9 @@
 import type {
   Action,
   AddRelationshipActionInput,
-  CreateDocumentActionInput,
   DeleteDocumentActionInput,
   RemoveRelationshipActionInput,
   UpdateRelationshipActionInput,
-  UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
 import {
   actions as documentActions,
@@ -13,34 +11,10 @@ import {
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };
-
-/**
- * Creates a CREATE_DOCUMENT action for document creation.
- */
-export function createDocumentAction(input: CreateDocumentActionInput): Action {
-  return {
-    id: generateId(),
-    type: "CREATE_DOCUMENT",
-    scope: "document",
-    timestampUtcMs: new Date().toISOString(),
-    input,
-  };
-}
-
-/**
- * Creates an UPGRADE_DOCUMENT action to set initial document state.
- */
-export function upgradeDocumentAction(
-  input: UpgradeDocumentActionInput,
-): Action {
-  return {
-    id: generateId(),
-    type: "UPGRADE_DOCUMENT",
-    scope: "document",
-    timestampUtcMs: new Date().toISOString(),
-    input,
-  };
-}
+export {
+  createDocumentAction,
+  upgradeDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 /**
  * Creates a DELETE_DOCUMENT action for document deletion.
