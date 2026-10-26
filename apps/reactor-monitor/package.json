@@ -26,6 +26,7 @@
     "test": "vitest --run"
   },
   "dependencies": {
+    "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-monitor": "workspace:*",
