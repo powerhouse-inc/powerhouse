@@ -820,7 +820,10 @@ export class NodeProcessor extends BaseReadModel {
     const documentType = metadata.documentType;
 
     const requestedName =
-      (await this.lookupDocumentName(trx, input.targetId)) ?? "";
+      metadata.name ??
+      (await this.lookupDocumentName(trx, input.targetId)) ??
+      (await this.lookupSnapshotName(trx, input.targetId)) ??
+      "";
 
     const resolved = await this.resolveSiblingName(
       trx,
@@ -983,6 +986,22 @@ export class NodeProcessor extends BaseReadModel {
     return row?.name;
   }
 
+  /** The document view's name for a document, preferring its header row. */
+  private async lookupSnapshotName(
+    trx: Transaction<NodeProcessorDatabase>,
+    docId: string,
+  ): Promise<string | undefined> {
+    const rows = (await this.purgeLookup(trx)
+      .selectFrom("DocumentSnapshot")
+      .select(["scope", "name"])
+      .where("documentId", "=", docId)
+      .where("name", "is not", null)
+      .where("name", "!=", "")
+      .execute()) as { scope: string; name: string }[];
+    const header = rows.find((row) => row.scope === "header");
+    return (header ?? rows.at(0))?.name;
+  }
+
   private parseFileMetadata(
     input: AddRelationshipActionInput,
   ): DriveChildFileMetadata {
@@ -1002,6 +1021,9 @@ export class NodeProcessor extends BaseReadModel {
       kind: "file",
       parentFolderId: typed.parentFolderId ?? null,
       documentType: typed.documentType,
+      ...(typeof typed.name === "string" && typed.name !== ""
+        ? { name: typed.name }
+        : {}),
     };
   }
 

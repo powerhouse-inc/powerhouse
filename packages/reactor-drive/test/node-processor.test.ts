@@ -897,6 +897,105 @@ describe("NodeProcessor", () => {
     });
   });
 
+  describe("requested name of a linked file", () => {
+    async function headerSnapshot(documentId: string, name: string) {
+      await (db.withSchema(REACTOR_SCHEMA) as unknown as Kysely<any>)
+        .insertInto("DocumentSnapshot")
+        .values([
+          {
+            id: `${documentId}-global`,
+            documentId,
+            scope: "global",
+            branch: "main",
+            name: "Stale global name",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-model",
+            lastOperationIndex: 0,
+            lastOperationHash: "",
+          },
+          {
+            id: `${documentId}-header`,
+            documentId,
+            scope: "header",
+            branch: "main",
+            name,
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-model",
+            lastOperationIndex: 0,
+            lastOperationHash: "",
+          },
+        ])
+        .execute();
+    }
+
+    function linkWithName(fileId: string, name: string) {
+      return wrap(
+        addRelationshipAction(
+          "drive-1",
+          fileId,
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          {
+            kind: "file",
+            parentFolderId: null,
+            documentType: "powerhouse/document-model",
+            name,
+          },
+        ),
+        "drive-1",
+      );
+    }
+
+    async function nodeOf(id: string) {
+      return db
+        .selectFrom("DriveNode")
+        .select(["name", "requestedName"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+    }
+
+    it("takes the name carried on the relationship metadata", async () => {
+      await processor.indexOperations([
+        named("file-1", "Document name"),
+        linkWithName("file-1", "Mail subject"),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Mail subject",
+        requestedName: "Mail subject",
+      });
+    });
+
+    it("falls back to the document view's header name", async () => {
+      await headerSnapshot("file-1", "Header name");
+      await headerSnapshot("file-2", "Header name");
+      await processor.indexOperations([
+        fileRelationship("drive-1", "file-1"),
+        fileRelationship("drive-1", "file-2"),
+        linkWithName("file-3", ""),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Header name",
+        requestedName: "Header name",
+      });
+      expect(await nodeOf("file-2")).toEqual({
+        name: "Header name (2)",
+        requestedName: "Header name",
+      });
+      expect(await nodeOf("file-3")).toEqual({ name: "", requestedName: "" });
+    });
+
+    it("prefers the projected document name over the header snapshot", async () => {
+      await headerSnapshot("file-1", "Header name");
+      await processor.indexOperations([
+        named("file-1", "Projected name"),
+        fileRelationship("drive-1", "file-1"),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Projected name",
+        requestedName: "Projected name",
+      });
+    });
+  });
+
   describe("legacy document-drive", () => {
     const LEGACY = "legacy-1";
 
