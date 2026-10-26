@@ -703,6 +703,9 @@ importers:
 
   apps/reactor-monitor:
     dependencies:
+      '@powerhousedao/host-core':
+        specifier: workspace:*
+        version: link:../../packages/host-core
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
