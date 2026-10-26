@@ -6,12 +6,18 @@ import type {
 } from "@powerhousedao/reactor";
 import { DriveNodeKind } from "./gen/graphql.js";
 
-/** The gate a node read passes, decided as the caller. Each fails closed. */
+/**
+ * The gate a node read passes, decided as the caller; it fails closed. A
+ * drive's nodes are served to whoever may read the drive, as the legacy
+ * drive document's node list was: a node carries a name, a type and a
+ * parent, and the document behind a file node is still gated on its own
+ * when it is opened. Gating each file node on its document cost one view
+ * lookup per node, which made a listing of a large drive take seconds per
+ * page.
+ */
 export type DriveNodeGate = {
   /** Whether the caller may read the drive. */
   servesDrive(driveId: string): Promise<boolean>;
-  /** The documents among `ids` the caller may read. */
-  servedDocuments(ids: string[]): Promise<Set<string>>;
 };
 
 export type DriveNodePagingInput = {
@@ -26,12 +32,6 @@ export type DriveNodeListing = {
 };
 
 const DEFAULT_LIMIT = 100;
-
-/** A listing page stops scanning past this many times its limit once it serves a node. */
-const LIST_SCAN_CAP_MULTIPLIER = 4;
-
-/** Documents per read-gate call, keeping each `find` well under the bind limit. */
-export const SERVED_IDS_CHUNK = 1000;
 
 /** The node source, or the refusal a host without one answers with. */
 export function requireDriveNodeSource(
@@ -57,7 +57,7 @@ export function driveNodeTypeName(
   return "documentType" in node ? "DriveFileNode" : "DriveFolderNode";
 }
 
-/** One node; undefined when absent, or when the drive or its document is withheld. */
+/** One node; undefined when absent or when the drive is withheld. */
 export async function getServedNode(
   source: IDriveNodeSource,
   gate: DriveNodeGate,
@@ -67,15 +67,10 @@ export async function getServedNode(
   if (!(await gate.servesDrive(driveId))) {
     return undefined;
   }
-  const node = await source.getNode(driveId, nodeId);
-  if (!node) {
-    return undefined;
-  }
-  const [served] = await servesNodes(gate, [node]);
-  return served ? node : undefined;
+  return source.getNode(driveId, nodeId);
 }
 
-/** The descendants of `root` the caller may read; empty when the drive is withheld. */
+/** The descendants of `root`; empty when the drive is withheld. */
 export async function getServedDescendants(
   source: IDriveNodeSource,
   gate: DriveNodeGate,
@@ -85,17 +80,10 @@ export async function getServedDescendants(
   if (!(await gate.servesDrive(driveId))) {
     return [];
   }
-  const nodes = await source.getDescendants(driveId, root);
-  const served = await servesNodes(gate, nodes);
-  return nodes.filter((_, i) => served[i]);
+  return source.getDescendants(driveId, root);
 }
 
-/**
- * One page of served nodes. It scans until the page is full, the listing
- * ends, or the scan cap is reached with something served, and resumes after
- * the last served node so a withheld node never names the cursor. A source
- * that reports no per-node cursors is read one page at a time.
- */
+/** One page of nodes; empty when the drive is withheld. */
 export async function listServedNodes(
   source: IDriveNodeSource,
   gate: DriveNodeGate,
@@ -108,65 +96,21 @@ export async function listServedNodes(
     return { results: [], nextCursor: undefined, hasMore: false };
   }
   const limit = paging?.limit ?? DEFAULT_LIMIT;
-  const cap = limit * LIST_SCAN_CAP_MULTIPLIER;
   const wanted: DriveNodeRecordKind | undefined = !kind
     ? undefined
     : kind === DriveNodeKind.File
       ? "file"
       : "folder";
-  const results: DriveNodeRecord[] = [];
-  let anchor = paging?.cursor ?? "";
-  let scanFrom = anchor;
-  let scanned = 0;
-  let hasMore: boolean;
-  let advanced: boolean;
-  do {
-    const from = scanFrom;
-    const page = await source.listChildren(
-      driveId,
-      parentFolder,
-      { cursor: scanFrom, limit },
-      undefined,
-      wanted,
-    );
-    const served = await servesNodes(gate, page.results);
-    if (!page.cursors) {
-      return {
-        results: page.results.filter((_, i) => served[i]),
-        nextCursor: page.nextCursor,
-        hasMore: page.nextCursor !== undefined,
-      };
-    }
-    let i = 0;
-    for (; i < page.results.length && results.length < limit; i++) {
-      scanned++;
-      scanFrom = page.cursors[i];
-      if (served[i]) {
-        results.push(page.results[i]);
-        anchor = page.cursors[i];
-      }
-    }
-    hasMore = i < page.results.length || page.nextCursor !== undefined;
-    advanced = scanFrom !== from;
-  } while (
-    advanced &&
-    hasMore &&
-    results.length < limit &&
-    (scanned < cap || results.length === 0)
+  const page = await source.listChildren(
+    driveId,
+    parentFolder,
+    { cursor: paging?.cursor ?? "", limit },
+    undefined,
+    wanted,
   );
-  return { results, nextCursor: hasMore ? anchor : undefined, hasMore };
-}
-
-/** A file node names its document, so it is served only with that document. */
-async function servesNodes(
-  gate: DriveNodeGate,
-  nodes: DriveNodeRecord[],
-): Promise<boolean[]> {
-  const ids = [
-    ...new Set(
-      nodes.filter((node) => node.kind === "file").map((node) => node.id),
-    ),
-  ];
-  const served = ids.length > 0 ? await gate.servedDocuments(ids) : new Set();
-  return nodes.map((node) => node.kind === "folder" || served.has(node.id));
+  return {
+    results: page.results,
+    nextCursor: page.nextCursor,
+    hasMore: page.nextCursor !== undefined,
+  };
 }

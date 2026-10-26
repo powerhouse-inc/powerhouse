@@ -25,7 +25,6 @@ import {
   getServedNode,
   listServedNodes,
   requireDriveNodeSource,
-  SERVED_IDS_CHUNK,
   type DriveNodeGate,
 } from "./drive-nodes.js";
 import type { Resolvers } from "./gen/graphql.js";
@@ -89,7 +88,7 @@ export class ReactorSubgraph extends BaseSubgraph {
   /**
    * The read gate a drive node read passes, as the reactor-drive subgraph
    * applies it: the drive is listed to the caller (reactor read gate, then the
-   * host's ACL), and a file node only with its own document.
+   * host's ACL); its nodes are then served as the legacy node list was.
    */
   #driveNodeGate(ctx: Context): DriveNodeGate {
     return {
@@ -98,30 +97,6 @@ export class ReactorSubgraph extends BaseSubgraph {
           return await this.listsDocument(driveId, ctx);
         } catch {
           return false;
-        }
-      },
-      servedDocuments: async (ids) => {
-        const served: { id: string }[] = [];
-        for (let start = 0; start < ids.length; start += SERVED_IDS_CHUNK) {
-          const chunk = ids.slice(start, start + SERVED_IDS_CHUNK);
-          try {
-            const page = await this.clientsOf(ctx).read.find(
-              { ids: chunk },
-              { subject: this.viewSubject(ctx) },
-              { cursor: "", limit: chunk.length },
-            );
-            for (const document of page.results) {
-              served.push({ id: document.header.id });
-            }
-          } catch {
-            continue;
-          }
-        }
-        try {
-          const readable = await this.readableByHost(served, ctx);
-          return new Set(readable.map((item) => item.id));
-        } catch {
-          return new Set<string>();
         }
       },
     };

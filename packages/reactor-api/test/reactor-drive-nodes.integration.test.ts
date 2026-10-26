@@ -308,10 +308,10 @@ describe("reactor subgraph drive node queries", () => {
     expect([...ids(first), ...ids(second)].sort()).toEqual(["f1", "f2", "f3"]);
   });
 
-  it("withholds a file node whose document the caller may not read", async () => {
+  it("serves every node of a readable drive, as the legacy node list did, whatever the file's own policy", async () => {
     expect(
       ids(await list(server, { driveId: DRIVE, parentFolder: "f1" }, OUTSIDER)),
-    ).toEqual(["f1-sub", OPEN].sort());
+    ).toEqual(["f1-sub", OPEN, SECRET].sort());
     const outsider = await ask<{ driveNode: WireNode | null }>(
       server,
       NODE,
@@ -319,14 +319,7 @@ describe("reactor subgraph drive node queries", () => {
       OUTSIDER,
     );
     expect(outsider.errors).toBeUndefined();
-    expect(outsider.data?.driveNode).toBeNull();
-    const reader = await ask<{ driveNode: WireNode | null }>(
-      server,
-      NODE,
-      { driveId: DRIVE, id: SECRET },
-      READER,
-    );
-    expect(reader.data?.driveNode?.id).toBe(SECRET);
+    expect(outsider.data?.driveNode?.id).toBe(SECRET);
     const descendants = await ask<{ driveDescendants: WireNode[] }>(
       server,
       DESCENDANTS,
@@ -334,7 +327,7 @@ describe("reactor subgraph drive node queries", () => {
       OUTSIDER,
     );
     expect(ids(descendants.data!.driveDescendants)).toEqual(
-      ["f1", "f1-sub", OPEN].sort(),
+      ["f1", "f1-sub", OPEN, SECRET].sort(),
     );
   });
 
