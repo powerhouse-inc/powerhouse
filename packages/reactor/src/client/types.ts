@@ -1299,8 +1299,9 @@ export interface IReactorClient extends IReactorReadClient {
    * {@link undoRedoTargets} and submits a RETRACT of it signed by its own
    * signer; on 1 and 2 it submits UNDO. The RETRACT names the row this call
    * saw as latest, so an edit that lands in between is not undone. When the
-   * target is retracted or gone by the time the RETRACT runs, the write
-   * fails with `RetractionRefusedError` and nothing is re-resolved or retried.
+   * target is retracted or gone by the time the RETRACT runs, the job fails
+   * with `RetractionRefusedError` (rejected as a `JobFailedError` carrying
+   * it, as `execute` rejects) and nothing is re-resolved or retried.
    *
    * @param documentIdentifier - Target document id or slug
    * @param scope - Optional scope, defaults to "global"
