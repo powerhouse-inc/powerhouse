@@ -564,6 +564,29 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   positional read of revision 0 took the head keyframe (`targetRevision ||
   MAX_SAFE_INTEGER`); it now maps only a missing target to the head.
 
+## Merge with main, client halves (2026-10-26)
+
+Main split the reactor client into read and write halves (ADR 0006).
+
+- Migrations renumbered after main's 028 and 029:
+  `030_index_operation_retracts` and
+  `031_index_created_model_protocol_versions`. Earlier sections that name
+  028 or 029 for these mean 030 and 031.
+- `newDocument` sits on the read half beside `getCreateProtocolVersions`
+  and `getCreateSignaturePolicy`, where main put those. The write half's
+  headerless creates and the drive write half use the read half's
+  `CreateProtocolSelector` with `loadModel`.
+- `undo` and `redo` are write-half members returning a `WriteHandle`. A
+  call resolves after its write is readable, so the next call on the same
+  scope resolves against it. `undoRedoTargets` and
+  `undoRedoAvailability` are write-half reads, as `evaluateActions` is;
+  the GraphQL `undoRedoTargets` query is bound to the write half.
+- The facade keeps `undo`, `redo`, `undoRedoTargets` and
+  `undoRedoAvailability` without a deprecation warning: the browser
+  client's halves have no undo, so those callers have nothing to move to.
+- The router undoes through a backend's write half when it has one; a
+  backend without one needs its own `undo` members, as before.
+
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
@@ -606,7 +629,7 @@ The executor's repeated-id gap under `signatureVerification: "log"`.
   changes no revision, so its holds release only on the next restart.
 - Pieces and workflow refuse `undo`, `redo`, `undoRedoTargets` and
   `undoRedoAvailability`.
-- Plan text is stale on the migration number (027, now 028) and on the
+- Plan text is stale on the migration number (027, now 030) and on the
   DriveClient copy.
 - Academy `tsc --build` tooling issue, pre-existing.
 - Auth burst window: auth actions take strictly increasing stamps (t, t+1,
