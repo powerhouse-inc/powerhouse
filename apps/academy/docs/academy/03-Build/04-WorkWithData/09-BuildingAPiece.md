@@ -417,8 +417,8 @@ export const crmSyncRecordAction = createAction({
 
 `setName` comes from `@powerhousedao/shared/document-model`; your own model's
 action creators work the same way. `"read"` gives the action the read methods
-of `IReactorClient`, and `"write"` adds `create`, `createEmpty`, `execute` and
-`deleteDocument`. `false`, which the generators write by default, gives no
+of `IReactorClient`, and `"write"` adds `create`, `createEmpty`, `execute`,
+`executeAsync` and `deleteDocument`. `false`, which the generators write by default, gives no
 `ctx.reactor`. `ph generate piece-action <name> --require-reactor read|write`
 writes the declaration for you, as does `ph generate piece-trigger`. A step
 using the action needs a reactor connection, and its run acts as the user who
