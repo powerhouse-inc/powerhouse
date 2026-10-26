@@ -87,3 +87,4 @@ export * from "./attachment-service.js";
 export * from "./close-node.js";
 export * from "./link-props.js";
 export * from "./use-attachments.js";
+export * from "./backend-auth.js";

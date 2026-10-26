@@ -1,10 +1,12 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   getDrives,
+  getPHStore,
+  recordBackendAuthError,
   refreshReactorDataClient,
+  setBackendAuth,
   setDrives,
   setFullReactorClient,
-  getPHStore,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ISigner } from "@powerhousedao/shared/document-model";
@@ -133,21 +135,50 @@ function requireModule(params: AppReactorClientParams): LocalReactorModule {
   return params.module;
 }
 
-/** A Switchboard that cannot answer must not fail boot: list the tab's drives. */
+/**
+ * A Switchboard that cannot answer must not fail boot: list the tab's drives.
+ *
+ * A Switchboard that REFUSES the caller (401/403) must not fail boot either:
+ * the refusal is recorded (`backendAuth`) so the root view shows the sign-in
+ * gate, and the drive list is empty until the user is someone the backend
+ * accepts. A remote-only client has no local drives to fall back on.
+ */
 export async function getAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<DocumentDriveDocument[]> {
   if (client === local) {
-    return getDrives(local);
+    try {
+      const drives = await getDrives(local);
+      setBackendAuth(undefined);
+      return drives;
+    } catch (error) {
+      if (recordBackendAuthError(error, "switchboard")) {
+        logger.warn(
+          "The Switchboard refused this caller; showing the sign-in gate: @error",
+          error,
+        );
+        return [];
+      }
+      throw error;
+    }
   }
   try {
-    return await getDrives(client);
+    const drives = await getDrives(client);
+    setBackendAuth(undefined);
+    return drives;
   } catch (error) {
-    logger.warn(
-      "Could not list drives through the router; listing the local reactor's: @error",
-      error,
-    );
+    if (recordBackendAuthError(error, "switchboard")) {
+      logger.warn(
+        "A remote backend refused this caller; listing the local reactor's drives: @error",
+        error,
+      );
+    } else {
+      logger.warn(
+        "Could not list drives through the router; listing the local reactor's: @error",
+        error,
+      );
+    }
     return getDrives(local);
   }
 }
