@@ -26,13 +26,15 @@
     "test": "vitest --run"
   },
   "dependencies": {
+    "@powerhousedao/host-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-monitor": "workspace:*",
     "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",

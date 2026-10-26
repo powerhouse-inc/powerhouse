@@ -17,7 +17,7 @@
   "@powerhousedao/reactor-hypercore": 4,
   "@powerhousedao/reactor-mcp": 8,
   "@powerhousedao/reactor-monitor": 57,
-  "@powerhousedao/reactor-monitor-app": 8,
+  "@powerhousedao/reactor-monitor-app": 30,
   "@powerhousedao/reactor-router": 1,
   "@powerhousedao/reactor-workflow": 8,
   "@powerhousedao/registry": 4,

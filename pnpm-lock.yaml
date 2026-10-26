@@ -703,6 +703,9 @@ importers:
 
   apps/reactor-monitor:
     dependencies:
+      '@powerhousedao/host-core':
+        specifier: workspace:*
+        version: link:../../packages/host-core
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
@@ -724,6 +727,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.0
