@@ -196,7 +196,7 @@ export class RoutingReadClient implements IReactorReadClient {
       options?.documentModelVersion,
     );
     const [policy, versions] = await Promise.all([
-      this.getCreateSignaturePolicy(),
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
       this.getCreateProtocolVersions(
         {
           documentType: documentModelType,
