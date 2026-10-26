@@ -354,11 +354,11 @@ function memberRows(
       message: `Member "${member.name}": not projected into the monitor: ${ignored.join(", ")}.`,
     });
   }
-  if (reactor?.renown !== undefined || reactor?.auth !== undefined) {
+  if (reactor?.renown !== undefined) {
     issue(
       "info",
       [],
-      `Member "${member.name}": renown/auth are not projected. Monitor reactors sign with an ephemeral key, sync on the default gql scheme and hold no attachment bytes.`,
+      `Member "${member.name}": reactor.renown is not projected. Monitor reactors sign with an ephemeral key, sync on the default gql scheme and hold no attachment bytes.`,
     );
   }
 
