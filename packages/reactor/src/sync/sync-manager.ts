@@ -2267,6 +2267,27 @@ export class SyncManager
     });
   }
 
+  /**
+   * A stored refusal of a document this reactor now runs answers an earlier
+   * revision of it. The sender releases its hold on the new revision, and
+   * reporting the refusal again would re-hold the document.
+   */
+  private async isStaleRefusal(record: DeadLetterRecord): Promise<boolean> {
+    if (
+      record.errorSource !== ChannelErrorSource.Inbox ||
+      record.errorType !== "UNSUPPORTED_PROTOCOL"
+    ) {
+      return false;
+    }
+    const versions =
+      createdVersions(record.operations, record.documentId) ??
+      (await this.versionsOf(record.documentId, record.branch));
+    return (
+      versions !== undefined &&
+      holdReason(this.localSupport, versions, this.capabilities) === undefined
+    );
+  }
+
   private async loadDeadLetters(remote: Remote, strict = false): Promise<void> {
     let records: DeadLetterRecord[];
     try {
@@ -2285,13 +2306,10 @@ export class SyncManager
       return;
     }
 
-    // A refusal answers an earlier revision of this reactor, and the sender
-    // releases its hold on the new one; reporting it again would re-hold.
-    const stale = records.filter(
-      (record) =>
-        record.errorSource === ChannelErrorSource.Inbox &&
-        record.errorType === "UNSUPPORTED_PROTOCOL",
-    );
+    const stale: DeadLetterRecord[] = [];
+    for (const record of records) {
+      if (await this.isStaleRefusal(record)) stale.push(record);
+    }
     if (stale.length > 0) {
       records = records.filter((record) => !stale.includes(record));
       for (const record of stale) {

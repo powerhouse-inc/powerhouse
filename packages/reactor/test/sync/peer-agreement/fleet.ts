@@ -133,7 +133,12 @@ export class Fleet {
     return db;
   }
 
-  async node(name: string, versions: number[]): Promise<Node> {
+  /** `db`: the node's store, kept by the caller, so a later node can reopen it. */
+  async node(
+    name: string,
+    versions: number[],
+    db?: Kysely<Database>,
+  ): Promise<Node> {
     const factory: IChannelFactory = {
       instance: (
         remoteId: string,
@@ -186,7 +191,8 @@ export class Fleet {
       ])
       .withPeerCapabilities([testProtocol(versions)])
       .withSync(new SyncBuilder().withChannelFactory(factory));
-    if (this.config.postgres) builder.withKysely(await this.database());
+    if (db) builder.withKysely(db);
+    else if (this.config.postgres) builder.withKysely(await this.database());
 
     const built = await new ReactorClientBuilder()
       .withReactorBuilder(builder)
