@@ -44,6 +44,13 @@ export interface SiteSettings {
    * `server.allowedHosts`) refuse the public name otherwise.
    */
   rewriteHostHeader?: boolean;
+  /**
+   * Publish Connect and the switchboard on ONE origin: the `app` label also
+   * serves the switchboard's paths (proxied to the `api` upstream) and a
+   * runtime config in which the switchboard's local origin is replaced by
+   * the public one. Needs both the `app` and `api` labels. Default on.
+   */
+  sameOrigin?: boolean;
   /** Bring the tunnel up at boot when the gate passes. Set by start, cleared by stop. */
   autostart: boolean;
 }
@@ -111,6 +118,7 @@ export const DEFAULT_SITE_SETTINGS: Omit<SiteSettings, "controlPlaneUrl"> = {
   dns01Mode: "rfc2136",
   listen: { https: 443, http: 80 },
   rewriteHostHeader: false,
+  sameOrigin: true,
   autostart: false,
 };
 

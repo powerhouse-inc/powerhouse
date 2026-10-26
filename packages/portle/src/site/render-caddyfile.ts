@@ -57,7 +57,29 @@ export interface CaddyRenderInput {
    * public name, for dev servers that check it (Vite's allowedHosts).
    */
   rewriteHostHeader?: boolean | undefined;
+  /**
+   * Same-origin publication: on this label the switchboard's paths go to the
+   * API upstream and, when `configFile` is given, `/powerhouse.config.json`
+   * is served from it, so the SPA finds its backend on its own origin (no
+   * cross-origin calls, no local-network prompt). Everything else on the
+   * label goes to the label's own upstream.
+   */
+  appRoute?:
+    | { label: string; apiTarget: string; configFile?: string | undefined }
+    | undefined;
 }
+
+/** The switchboard's HTTP surface, as Caddy path matchers (`/x*` covers `/x` and below). */
+export const SWITCHBOARD_PATHS = [
+  "/graphql*",
+  "/d/*",
+  "/attachments*",
+  "/mcp*",
+  "/api/*",
+  "/ready",
+  "/health",
+  "/explorer*",
+] as const;
 
 function port(value: number, what: string): number {
   if (!Number.isInteger(value) || value < 1 || value > 65535) {
@@ -187,6 +209,40 @@ ${proxy(upstream, 1)}
 
   // With per-label upstreams the wildcard block routes by host: one matcher
   // per label, first match wins, and the bare `handle` takes everything else.
+  const appRoute = input.appRoute;
+  if (appRoute) {
+    if (!labelled.some((l) => l.label === appRoute.label)) {
+      throw new Error(
+        `appRoute names label ${JSON.stringify(appRoute.label)}, which has no upstream`,
+      );
+    }
+    token(appRoute.apiTarget, "appRoute.apiTarget");
+  }
+  /** The label's handle body: the plain proxy, or the same-origin split. */
+  const labelBody = (label: string, target: string): string => {
+    if (!appRoute || appRoute.label !== label) return proxy(target, 2);
+    const apiHandles = SWITCHBOARD_PATHS.map(
+      (path) => `		handle ${path} {
+${proxy(appRoute.apiTarget, 3)}
+		}`,
+    );
+    const configHandle = appRoute.configFile
+      ? [
+          `		handle /powerhouse.config.json {
+			root * ${q(appRoute.configFile.replace(/\\/g, "/").replace(/\/[^/]*$/, ""))}
+			file_server
+		}`,
+        ]
+      : [];
+    return [
+      ...apiHandles,
+      ...configHandle,
+      `		handle {
+${proxy(target, 3)}
+		}`,
+    ].join("\n");
+  };
+
   const routing =
     labelled.length === 0
       ? proxy(upstream, 1)
@@ -194,7 +250,7 @@ ${proxy(upstream, 1)}
           ...labelled.map(
             ({ label, target }) => `	@${label} host ${label}.${input.siteZone}
 	handle @${label} {
-${proxy(target, 2)}
+${labelBody(label, target)}
 	}`,
           ),
           `	handle {

@@ -59,7 +59,12 @@ export interface EnrolInput {
 export type SettingsPatch = Partial<
   Pick<
     SiteSettings,
-    "appUpstream" | "upstreams" | "dns01Mode" | "listen" | "rewriteHostHeader"
+    | "appUpstream"
+    | "upstreams"
+    | "dns01Mode"
+    | "listen"
+    | "rewriteHostHeader"
+    | "sameOrigin"
   >
 >;
 
@@ -195,7 +200,13 @@ export class PortleRunner implements PortleRunnerLike {
   }
 
   /** Writes the CA files, frpc.toml and the Caddyfile for the current enrolment and settings. */
-  render(): { frpcConfig: string; caddyfile: string; certsDir: string } {
+  async render(): Promise<{
+    frpcConfig: string;
+    caddyfile: string;
+    certsDir: string;
+    /** The rewritten runtime config served on the app label, when same-origin applies. */
+    publicConfig: string | null;
+  }> {
     const enrollment = this.#requireEnrollment();
     const settings = this.#settings();
     const dir = this.#deps.stateDir;
@@ -249,6 +260,7 @@ export class PortleRunner implements PortleRunnerLike {
           );
     const dnsHost =
       enrollment.dns.server.split(":")[0] ?? enrollment.dns.server;
+    const appRoute = await this.#appRoute(enrollment, settings);
     const caddyfile = join(dir, "Caddyfile");
     writeFileAtomic(
       caddyfile,
@@ -270,10 +282,16 @@ export class PortleRunner implements PortleRunnerLike {
         dns01,
         listen: settings.listen,
         rewriteHostHeader: settings.rewriteHostHeader ?? false,
+        appRoute,
       }),
       0o600,
     );
-    return { frpcConfig, caddyfile, certsDir };
+    return {
+      frpcConfig,
+      caddyfile,
+      certsDir,
+      publicConfig: appRoute?.configFile ?? null,
+    };
   }
 
   /**
@@ -290,10 +308,6 @@ export class PortleRunner implements PortleRunnerLike {
           .join("; ")} — then start again.`,
       );
     }
-    return this.#startNow();
-  }
-
-  #startNow(): TunnelStatus {
     const binaries = resolveBinaries(this.#deps);
     const missing = (["frpc", "caddy"] as const).filter(
       (name) => !binaries[name],
@@ -303,7 +317,17 @@ export class PortleRunner implements PortleRunnerLike {
         `cannot start: ${missing.join(" and ")} not found (set ${missing.map((n) => (n === "frpc" ? "PORTLE_FRPC_BIN" : "PORTLE_CADDY_BIN")).join(", ")} or install into ~/.ph/portle/bin). Looked at: ${binaries.searched.join(", ")}`,
       );
     }
-    const { frpcConfig, caddyfile } = this.render();
+    const { frpcConfig, caddyfile } = await this.render();
+    return this.#startNow(
+      { frpc: binaries.frpc!, caddy: binaries.caddy! },
+      { frpcConfig, caddyfile },
+    );
+  }
+
+  #startNow(
+    binaries: { frpc: string; caddy: string },
+    { frpcConfig, caddyfile }: { frpcConfig: string; caddyfile: string },
+  ): TunnelStatus {
     const dir = this.#deps.stateDir;
     const logs = join(dir, "logs");
     const create =
@@ -376,6 +400,68 @@ export class PortleRunner implements PortleRunnerLike {
       this.#enrollment() !== null &&
       readSiteSettings(this.#deps.stateDir)?.autostart === true
     );
+  }
+
+  /**
+   * Same-origin publication for the `app` label: its handle also proxies the
+   * switchboard's paths to the `api` upstream, and serves a copy of the
+   * app's runtime config in which the switchboard's local origin
+   * (`http://127.0.0.1:<port>`, `localhost`, `[::1]`) is replaced by the
+   * public `https://app.<zone>`. The SPA then calls its own origin: no
+   * cross-origin requests and no browser prompt for a local address. The
+   * config is fetched from the app upstream when the tunnel starts; if that
+   * fails (Connect not up yet) the paths are still split and the config
+   * passes through untouched, with a log line.
+   */
+  async #appRoute(
+    enrollment: EnrollmentResponse,
+    settings: SiteSettings,
+  ): Promise<
+    { label: string; apiTarget: string; configFile?: string } | undefined
+  > {
+    if (settings.sameOrigin === false) return undefined;
+    const app = settings.upstreams.app;
+    const api = settings.upstreams.api;
+    if (!app || !api) return undefined;
+    const route = { label: "app", apiTarget: api };
+    const publicOrigin = `https://app.${enrollment.siteZone}`;
+    const apiPort = api.split(":").pop() ?? "";
+    const fetchImpl = this.#deps.fetchImpl ?? fetch;
+    try {
+      const res = await fetchImpl(`http://${app}/powerhouse.config.json`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      JSON.parse(text); // a config, not an HTML fallback page
+      let rewritten = text;
+      for (const host of ["127.0.0.1", "localhost", "[::1]"]) {
+        rewritten = rewritten
+          .split(`http://${host}:${apiPort}`)
+          .join(publicOrigin);
+      }
+      const configFile = join(
+        this.#deps.stateDir,
+        "public",
+        "powerhouse.config.json",
+      );
+      writeFileAtomic(configFile, rewritten);
+      this.#deps.log?.("public runtime config rendered", {
+        from: `http://${app}/powerhouse.config.json`,
+        origin: publicOrigin,
+        file: configFile,
+      });
+      return { ...route, configFile };
+    } catch (error) {
+      this.#deps.log?.(
+        "public runtime config not rendered; the app's own config is served as is",
+        {
+          from: `http://${app}/powerhouse.config.json`,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return route;
+    }
   }
 
   #enrollment(): EnrollmentResponse | null {

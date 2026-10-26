@@ -66,6 +66,7 @@ describe("enrolment and settings files", () => {
       dns01Mode: "rfc2136",
       listen: { https: 443, http: 80 },
       rewriteHostHeader: false,
+      sameOrigin: true,
       autostart: false,
     });
   });

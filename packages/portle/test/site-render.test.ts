@@ -225,3 +225,69 @@ describe("rewriteHostHeader", () => {
     expect(out.match(/header_up Host/g)).toHaveLength(4);
   });
 });
+
+describe("appRoute (same-origin publication)", () => {
+  const withRoute = {
+    ...caddyInput,
+    appRoute: {
+      label: "app",
+      apiTarget: "127.0.0.1:7540",
+      configFile: "D:/p/.ph/portle/public/powerhouse.config.json",
+    },
+  };
+
+  it("sends the switchboard paths on the app label to the api upstream and the rest to the app", () => {
+    const out = renderCaddyfile(withRoute);
+    const appStart = out.indexOf("handle @app {");
+    const app = out.slice(appStart, out.indexOf("\n\t}\n", appStart));
+    for (const path of [
+      "/graphql*",
+      "/d/*",
+      "/attachments*",
+      "/mcp*",
+      "/api/*",
+      "/ready",
+      "/health",
+      "/explorer*",
+    ]) {
+      expect(app).toContain(
+        `\t\thandle ${path} {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}`,
+      );
+    }
+    expect(app).toContain(
+      'handle /powerhouse.config.json {\n\t\t\troot * "D:/p/.ph/portle/public"\n\t\t\tfile_server',
+    );
+    expect(app).toContain(
+      "\t\thandle {\n\t\t\treverse_proxy 127.0.0.1:2540\n\t\t}",
+    );
+    // the api label itself is untouched
+    expect(out).toContain(
+      "handle @api {\n\t\treverse_proxy 127.0.0.1:7540\n\t}",
+    );
+  });
+
+  it("omits the config handle without a config file, and composes with the host rewrite", () => {
+    const out = renderCaddyfile({
+      ...withRoute,
+      appRoute: { label: "app", apiTarget: "127.0.0.1:7540" },
+      rewriteHostHeader: true,
+    });
+    expect(out).not.toContain("powerhouse.config.json");
+    expect(out).toContain(
+      "\t\thandle {\n\t\t\treverse_proxy 127.0.0.1:2540 {\n\t\t\t\theader_up Host {upstream_hostport}\n\t\t\t}\n\t\t}",
+    );
+    expect(out).toContain(
+      "\t\thandle /graphql* {\n\t\t\treverse_proxy 127.0.0.1:7540 {\n\t\t\t\theader_up Host {upstream_hostport}",
+    );
+  });
+
+  it.each([
+    ["an unknown label", { appRoute: { label: "web", apiTarget: "x:1" } }],
+    [
+      "an injected api target",
+      { appRoute: { label: "app", apiTarget: "x:1 }\nrespond 200" } },
+    ],
+  ])("rejects %s", (_n, over) => {
+    expect(() => renderCaddyfile({ ...caddyInput, ...over })).toThrow();
+  });
+});

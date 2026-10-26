@@ -88,6 +88,7 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     dns01Mode: String!
     listen: PortleListen!
     rewriteHostHeader: Boolean!
+    sameOrigin: Boolean!
     autostart: Boolean!
   }
 
@@ -147,6 +148,11 @@ export const portleTypeDefs = parse(/* GraphQL */ `
       check it, such as Vite's allowedHosts).
       """
       rewriteHostHeader: Boolean
+      """
+      Serve Connect and the switchboard on the app label's origin, with a
+      runtime config that points the SPA at that origin (default on).
+      """
+      sameOrigin: Boolean
     ): PortleStatus!
     """
     Bring the tunnel up. Refused unless every readiness check passes for the caller.
@@ -228,6 +234,7 @@ export function toWireStatus(
     settings: status.settings && {
       ...status.settings,
       rewriteHostHeader: status.settings.rewriteHostHeader ?? false,
+      sameOrigin: status.settings.sameOrigin ?? true,
       upstreams: Object.entries(status.settings.upstreams).map(
         ([label, target]): WireUpstream => ({ label, target }),
       ),
@@ -290,6 +297,7 @@ export function createPortleSubgraph({
             listenHttps?: number | null;
             listenHttp?: number | null;
             rewriteHostHeader?: boolean | null;
+            sameOrigin?: boolean | null;
           }) =>
             toWireStatus(
               runner.configure({
@@ -317,6 +325,9 @@ export function createPortleSubgraph({
                   : {}),
                 ...(args.rewriteHostHeader != null
                   ? { rewriteHostHeader: args.rewriteHostHeader }
+                  : {}),
+                ...(args.sameOrigin != null
+                  ? { sameOrigin: args.sameOrigin }
                   : {}),
               }),
             ),
