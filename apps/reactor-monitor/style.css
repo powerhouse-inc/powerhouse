@@ -962,3 +962,141 @@ body {
   outline: 2px solid #3b82f6;
   outline-offset: 1px;
 }
+
+/* Host import (ph host export). The review opens over the page: the sidebar is
+   too narrow for its row table. */
+.rm-import {
+  width: 240px;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-right: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rm-import h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.rm-import__file {
+  font-size: 0.85rem;
+}
+
+.rm-import__file input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.rm-import textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.rm-import__review {
+  position: fixed;
+  top: 3.5rem;
+  right: 1rem;
+  z-index: 10;
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 5rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.rm-import__header {
+  margin: 0;
+}
+
+.rm-import__issues h3 {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+}
+
+.rm-import__issues ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.rm-import__issue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.rm-import__severity {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.rm-import__issue--error .rm-import__severity {
+  color: #b91c1c;
+}
+
+.rm-import__issue--warning .rm-import__severity {
+  color: #b45309;
+}
+
+.rm-import__issue--info .rm-import__severity {
+  color: #666;
+}
+
+.rm-import__rows {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.rm-import__rows th,
+.rm-import__rows td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.rm-import__rows input[type="text"],
+.rm-import__rows input[type="url"] {
+  width: 100%;
+  min-width: 10rem;
+}
+
+.rm-import__blocked {
+  margin: 0;
+  padding-left: 1rem;
+  color: #b91c1c;
+}
+
+.rm-import__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rm-import__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed #3b82f6;
+  background: rgb(59 130 246 / 0.08);
+  color: #1d4ed8;
+  font-size: 1.1rem;
+  pointer-events: none;
+}

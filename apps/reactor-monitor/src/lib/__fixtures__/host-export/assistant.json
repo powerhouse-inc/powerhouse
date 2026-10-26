@@ -1,0 +1,52 @@
+{
+  "format": "ph-host-export",
+  "version": 1,
+  "project": {
+    "name": "my-project",
+    "root": "/project"
+  },
+  "name": "assistant",
+  "host": {
+    "name": "my-project-assistant",
+    "runner": {
+      "module": "@powerhousedao/clint/mastra-runner",
+      "port": 4910
+    },
+    "profile": {
+      "appId": "inc.powerhouse.assistant.my-project",
+      "name": "my-project Assistant"
+    },
+    "reactor": {
+      "backends": {
+        "switchboard": {
+          "kind": "remote",
+          "remote": {
+            "url": {
+              "$output": {
+                "host": "switchboard",
+                "path": ["endpoints", "graphql"]
+              }
+            }
+          }
+        }
+      },
+      "protocol": {
+        "featureFlags": {
+          "documentDecisions": false,
+          "authEnforcement": false,
+          "authGroups": false,
+          "authConditions": false
+        },
+        "createSignaturePolicy": "v2-required",
+        "unsupportedStoredDocuments": "refuse"
+      }
+    },
+    "config": {
+      "prompts": {
+        "skillsDir": "agents",
+        "outDir": "dist/skills"
+      }
+    }
+  },
+  "members": {}
+}
