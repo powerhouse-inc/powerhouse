@@ -4,15 +4,15 @@ import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import { nextSkipNumber, sortOperations } from "./operation-order.js";
 import type { NOOPAction } from "./types.js";
-import { generateId } from "./utils.js";
+import { generateActionId } from "./utils.js";
 
 /**
- * Base-reducers 1 and 2 are frozen, so their undo marker keeps the wall-clock
- * stamp it had before createAction's stamps became strictly increasing.
+ * The NOOP base-reducers 1 and 2 synthesize for an undo. It takes the wall
+ * clock in every scope, never the auth clock.
  */
 function undoMarker(scope: string): NOOPAction {
   return {
-    id: generateId(),
+    id: generateActionId(),
     timestampUtcMs: new Date().toISOString(),
     type: "NOOP",
     input: {},
