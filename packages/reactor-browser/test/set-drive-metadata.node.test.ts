@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type { Action } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setDriveMetadata } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -12,7 +13,9 @@ describe("setDriveMetadata (issue #2659)", () => {
 
   beforeEach(() => {
     execute.mockClear();
-    window.ph = { reactorClient: { execute } } as unknown as PHGlobal;
+    window.ph = {
+      reactorClient: withHalves({ execute }),
+    } as unknown as PHGlobal;
   });
 
   afterEach(() => {

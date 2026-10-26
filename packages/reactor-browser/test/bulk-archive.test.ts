@@ -11,6 +11,7 @@ import {
   createZip,
   zipEntries,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { expandBulkArchive } from "../src/actions/bulk-archive.js";
 
@@ -55,7 +56,7 @@ function doc(id: string) {
 function stubClient(initialNodes: Node[]) {
   let drive = makeDrive(initialNodes);
   const calls: Array<{ type: string; input: Record<string, unknown> }> = [];
-  const client = {
+  const client = withHalves({
     get: (id: string) =>
       id === DRIVE_ID ? Promise.resolve(drive) : Promise.resolve(doc(id)),
     execute: (_driveId: string, _branch: string, actions: Action[]) => {
@@ -76,7 +77,7 @@ function stubClient(initialNodes: Node[]) {
       }
       return Promise.resolve(drive);
     },
-  };
+  });
   window.ph = {
     ...window.ph,
     reactorClientModule: { kind: "browser", client, reactorModule: undefined },

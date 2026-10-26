@@ -5,6 +5,7 @@ import {
   isDerivedDocumentId,
   signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addDrive } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -17,7 +18,9 @@ describe("addDrive (issue #2838)", () => {
     create.mockImplementation((doc: DocumentDriveDocument) =>
       Promise.resolve(doc),
     );
-    window.ph = { reactorClient: { create } } as unknown as PHGlobal;
+    window.ph = {
+      reactorClient: withHalves({ create }),
+    } as unknown as PHGlobal;
   });
 
   afterEach(() => {
@@ -62,13 +65,13 @@ describe("addDrive (issue #2838)", () => {
 
   it("creates a legacy drive under the full client's legacy creation default", async () => {
     window.ph = {
-      reactorClient: { create },
+      reactorClient: withHalves({ create }),
       reactorClientModule: {
-        client: {
+        client: withHalves({
           getCreateSignaturePolicy: () => Promise.resolve("legacy"),
           getCreateProtocolVersions: () =>
             Promise.resolve({ "base-reducer": 2 }),
-        },
+        }),
       },
     } as unknown as PHGlobal;
 

@@ -7,7 +7,10 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
-import type { IOperationStore } from "../storage/interfaces.js";
+import type {
+  IOperationStore,
+  IWriteIdentityStore,
+} from "../storage/interfaces.js";
 import type { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import {
@@ -15,6 +18,7 @@ import {
   findPurged,
 } from "../storage/kysely/document-purges.js";
 import { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
+import { KyselyWriteIdentityStore } from "../storage/kysely/write-identity-store.js";
 import type { Database } from "../storage/kysely/types.js";
 
 /** Per-document purge locks, held until the job's transaction ends. */
@@ -32,6 +36,14 @@ export const NOOP_DOCUMENT_LOCKS: DocumentLocks = {
   purged: () => Promise.resolve(new Set<string>()),
 };
 
+/** For scopes without a store to record identity in; resolves nothing. */
+export const NOOP_WRITE_IDENTITY_STORE: IWriteIdentityStore = {
+  upsert: () => Promise.resolve(),
+  resolve: () => Promise.resolve(undefined),
+  describe: () => Promise.resolve(undefined),
+  delete: () => Promise.resolve(),
+};
+
 export interface ExecutionStores {
   operationStore: IOperationStore;
   operationIndex: IOperationIndex;
@@ -39,6 +51,8 @@ export interface ExecutionStores {
   documentMetaCache: IDocumentMetaCache;
   collectionMembershipCache: ICollectionMembershipCache;
   documentLocks: DocumentLocks;
+  /** The write-side identity table, bound to the job's transaction. */
+  writeIdentity: IWriteIdentityStore;
   /** Absent without a transaction, which a purge cannot run outside of. */
   purger?: KyselyDocumentPurger;
 }
@@ -57,6 +71,7 @@ export class DefaultExecutionScope implements IExecutionScope {
     private writeCache: IWriteCache,
     private documentMetaCache: IDocumentMetaCache,
     private collectionMembershipCache: ICollectionMembershipCache,
+    private writeIdentity: IWriteIdentityStore = NOOP_WRITE_IDENTITY_STORE,
   ) {}
 
   async run<T>(
@@ -71,6 +86,7 @@ export class DefaultExecutionScope implements IExecutionScope {
       documentMetaCache: this.documentMetaCache,
       collectionMembershipCache: this.collectionMembershipCache,
       documentLocks: NOOP_DOCUMENT_LOCKS,
+      writeIdentity: this.writeIdentity,
     });
   }
 }
@@ -84,6 +100,9 @@ export class KyselyExecutionScope implements IExecutionScope {
     private writeCache: KyselyWriteCache,
     private documentMetaCache: DocumentMetaCache,
     private collectionMembershipCache: CollectionMembershipCache,
+    private writeIdentityStore: KyselyWriteIdentityStore = new KyselyWriteIdentityStore(
+      db,
+    ),
   ) {}
 
   async run<T>(
@@ -131,6 +150,7 @@ export class KyselyExecutionScope implements IExecutionScope {
             return found;
           },
         },
+        writeIdentity: this.writeIdentityStore.withTransaction(trx),
         purger: new KyselyDocumentPurger(trx),
       });
     });

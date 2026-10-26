@@ -1,10 +1,15 @@
 import { createRequire } from "node:module";
 import { ApolloGateway, LocalCompose } from "@apollo/gateway";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+} from "@powerhousedao/reactor";
 import type * as GraphQL from "graphql";
 import type { GraphQLError, GraphQLSchema } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import { AuthSubgraph } from "../src/graphql/auth/subgraph.js";
+import { RequestClientBinder } from "../src/graphql/request-clients.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   AuthorizationPolicy,
@@ -115,6 +120,24 @@ function buildSubgraph(calls: Call[]): AuthSubgraph {
 
 const ctx = { headers: {}, db: null } as unknown as Context;
 
+/**
+ * The schema as the manager builds it: each resolver gets the context for its
+ * operation, so a query resolves identifiers on the read half and a mutation
+ * on the write half.
+ */
+function boundSchema(calls: Call[]): GraphQLSchema {
+  const subgraph = buildSubgraph(calls);
+  const binder = new RequestClientBinder(
+    recorder<IReactorReadClient>(calls),
+    recorder<IReactorWriteClient>(calls),
+  );
+  return createSchema(
+    [],
+    binder.bindResolvers(subgraph.resolvers),
+    subgraph.typeDefs,
+  );
+}
+
 function aliasErrors(errors: readonly GraphQLError[] | undefined) {
   return (errors ?? []).filter(
     (error) => error.extensions.code === "BAD_USER_INPUT",
@@ -127,8 +150,7 @@ describe("auth subgraph argument names", () => {
 
   beforeEach(() => {
     calls = [];
-    const subgraph = buildSubgraph(calls);
-    schema = createSchema([], subgraph.resolvers, subgraph.typeDefs);
+    schema = boundSchema(calls);
   });
 
   function run(pair: Pair, args: string) {
@@ -146,10 +168,11 @@ describe("auth subgraph argument names", () => {
       const result = await run(pair, `${name}: ${literal}`);
 
       expect(aliasErrors(result.errors)).toEqual([]);
-      expect(calls).toContainEqual({
-        method: "resolveIdOrSlug",
-        args: [VALUE],
-      });
+      expect(calls).toContainEqual(
+        pair.kind === "query"
+          ? { method: "resolveIdOrSlug", args: [VALUE] }
+          : { method: "describe", args: [VALUE] },
+      );
     });
 
     it("refuses both with BAD_USER_INPUT", async () => {

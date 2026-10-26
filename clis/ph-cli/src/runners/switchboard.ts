@@ -22,6 +22,10 @@ import {
 } from "./reactor-env.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
+import {
+  inspectorProgressSource,
+  startProgressDisplay,
+} from "../services/run/catch-up-progress.js";
 import type { BuildArgs, SwitchboardArgs } from "../types.js";
 
 /**
@@ -345,6 +349,15 @@ async function start(
   };
 
   const switchboard = await startSwitchboard(serverArgs);
+  // Bars for processor and read-model catch-up, below the server's output;
+  // PH_CATCH_UP_PROGRESS=false leaves the output as it was.
+  const progress =
+    switchboard.inspector && process.env.PH_CATCH_UP_PROGRESS !== "false"
+      ? startProgressDisplay(inspectorProgressSource(switchboard.inspector), {
+          stdout: process.stdout,
+          stderr: process.stderr,
+        })
+      : undefined;
   // The port the server actually bound (it may move off a taken one).
   const port = switchboard.port;
   const origin = `http://localhost:${port}`;
@@ -411,7 +424,10 @@ async function start(
       drives,
     }),
     ready,
-    shutdown: () => (stopping ??= switchboard.shutdown()),
+    shutdown: () => {
+      progress?.stop();
+      return (stopping ??= switchboard.shutdown());
+    },
   };
 }
 

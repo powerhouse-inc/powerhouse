@@ -19,6 +19,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { mutationContextFor } from "./utils/read-gate-fixture.js";
 import { createTestSigner } from "./utils/test-signer.js";
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
@@ -27,7 +28,7 @@ type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
 describe("creating a document with a slug another document holds", () => {
   let module: InProcessReactorClientModule;
   let mutation: (name: string) => Resolver;
-  const ctx = { headers: {}, db: null } as unknown as Context;
+  let ctx: Context;
   let workflowsId: string;
 
   beforeEach(async () => {
@@ -40,6 +41,7 @@ describe("creating a document with a slug another document holds", () => {
         ]),
       )
       .buildModule();
+    ctx = mutationContextFor(module);
     const subgraph = new ReactorSubgraph({
       reactorClient: module.client,
       syncManager: {} as ISyncManager,

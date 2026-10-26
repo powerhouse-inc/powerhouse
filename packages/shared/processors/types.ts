@@ -1,7 +1,10 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Action } from "../document-model/actions.js";
 import type { IAnalyticsStore } from "../analytics/types.js";
-import type { PHDocumentHeader } from "../document-model/documents.js";
+import type {
+  PHDocument,
+  PHDocumentHeader,
+} from "../document-model/documents.js";
 import type { PROCESSOR_APPS } from "./constants.js";
 import type { IHttpScope } from "./http.js";
 import type { IRelationalDb } from "./relational/types.js";
@@ -11,6 +14,18 @@ export type ProcessorDispatchResult = {
   status: string;
 };
 
+/** A dispatched create: the job, and the id the new document carries. */
+export type ProcessorDispatchCreateResult = ProcessorDispatchResult & {
+  documentId: string;
+};
+
+/** How a dispatched delete treats children: "cascade" deletes orphans too. */
+export type ProcessorDeletePropagation = "none" | "cascade";
+
+/**
+ * How a processor writes. Each member resolves once the write is accepted and
+ * answers with the job's id and status; it does not wait for the commit.
+ */
 export interface IProcessorDispatch {
   execute(
     docId: string,
@@ -18,6 +33,25 @@ export interface IProcessorDispatch {
     actions: Action[],
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
+  ): Promise<ProcessorDispatchResult>;
+
+  /**
+   * Adds a document to a drive, under `parentFolder` when given. The
+   * document's own creation has completed when this resolves; the drive's
+   * file node has been accepted.
+   */
+  createInDrive(
+    driveId: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchCreateResult>;
+
+  /** Deletes a document, and with "cascade" its orphaned children. */
+  deleteDocument(
+    docId: string,
+    propagate?: ProcessorDeletePropagation,
+    signal?: AbortSignal,
   ): Promise<ProcessorDispatchResult>;
 }
 
@@ -76,6 +110,11 @@ export interface IProcessor {
    * PURGE_DOCUMENT, whatever the filter, as the last delivery before
    * `onDisconnect`. A purged document's operations other than its marker are
    * not delivered. Erase a document's data on either deletion action.
+   *
+   * `context.resultingState` is the executor's state after the operation on a
+   * live delivery. On a replay (first install, catch-up after a restart,
+   * rerun, retry) it is what the record's `replayState` says: by default the
+   * document's latest state, which can be newer than the operation.
    */
   onOperations(operations: OperationWithContext[]): Promise<void>;
 
@@ -104,10 +143,28 @@ export interface IProcessor {
 /**
  * Relates a processor to its filter configuration.
  */
+/**
+ * What a replayed operation carries. A replay (first install, catch-up after a
+ * restart, rerun, retry) reads operations from the index, which keeps no
+ * `resultingState`; a live delivery always carries the executor's.
+ *
+ * - `latest` (the default): every operation, with the document's latest state.
+ *   It can be newer than the operation, never older than a state already
+ *   delivered for that stream.
+ * - `collapse`: per document stream, one delivery with the latest state; the
+ *   operations it includes are skipped. Only for processors whose output
+ *   depends on the latest state alone.
+ * - `exact`: every operation, with its state at its own revision. Slower.
+ * - `operations`: every operation, without state.
+ */
+export type ReplayStateMode = "latest" | "collapse" | "exact" | "operations";
+
 export type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
   startFrom?: "beginning" | "current";
+  /** What a replayed operation carries; `latest` when omitted. */
+  replayState?: ReplayStateMode;
   // Stable cursor key within its factory and drive. Derived from the
   // processor's namespace or class name when omitted.
   id?: string;
@@ -137,6 +194,13 @@ export type ProcessorFactoryBuilder<
 
 export type ProcessorStatus = "active" | "errored";
 
+/**
+ * Where a processor stands: replaying towards the head while a backfill,
+ * retry or rerun is queued or running, keeping up with live operations, or
+ * stopped on an error.
+ */
+export type ProcessorPhase = "catching-up" | "live" | "errored";
+
 /** How {@link IProcessorManager.rerun} replays a processor. */
 export type ProcessorRerunOptions = {
   /** Erase what it derived first; `fromOrdinal` is then its floor. */
@@ -157,6 +221,13 @@ export type TrackedProcessor = {
   lastErrorTimestamp: Date | undefined;
   /** Ordinals at or below this are never delivered to it. */
   floor: number;
+  /**
+   * The cursor as its current backfill, retry or rerun began; equal to
+   * `lastOrdinal` once live, so `lastOrdinal - runFrom` is the replay's
+   * progress.
+   */
+  runFrom: number;
+  phase: ProcessorPhase;
   /**
    * Clears the error and resolves once the replay from the cursor completes.
    * Safe from anywhere, but awaiting it from this processor's own

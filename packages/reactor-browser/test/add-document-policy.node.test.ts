@@ -11,6 +11,7 @@ import {
   isDerivedDocumentId,
   signaturePolicyOf,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { addDocument } from "../src/actions/document.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -31,7 +32,7 @@ function install(policy: SignaturePolicy): PHDocument[] {
         ),
     },
   } as unknown as DocumentModelModule;
-  const client = {
+  const client = withHalves({
     getCreateSignaturePolicy: () => Promise.resolve(policy),
     getDocumentModelModule: () => Promise.resolve(module),
     drives: {
@@ -40,7 +41,7 @@ function install(policy: SignaturePolicy): PHDocument[] {
         return Promise.resolve(document);
       },
     },
-  };
+  });
   window.ph = {
     reactorClientModule: { kind: "browser", client, reactorModule: undefined },
   } as unknown as PHGlobal;

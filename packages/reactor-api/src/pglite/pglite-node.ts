@@ -8,7 +8,9 @@ export {
 export {
   DEFAULT_MAINTENANCE_INTERVAL_MS,
   DEFAULT_VACUUM_FULL_ABOVE_BYTES,
+  DEFAULT_VACUUM_FULL_QUIET_MS,
   PgliteMaintenance,
+  type MaintenanceGate,
   type MaintenanceLogger,
   type MaintenanceOptions,
   type MaintenanceOutcome,
@@ -38,3 +40,6 @@ export {
   preparePgliteDataDir,
   removeStalePgliteFiles,
 } from "./preflight.js";
+export { PGLITE_UTC_PARSERS } from "./parsers.js";
+export * from "./worker/index.js";
+export type { PGliteLike } from "./pglite-like.js";

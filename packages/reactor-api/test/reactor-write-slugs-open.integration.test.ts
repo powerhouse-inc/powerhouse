@@ -25,6 +25,7 @@ import {
   AuthorizationPolicy,
   createAuthorizationService,
 } from "../src/services/authorization.service.js";
+import { mutationContextFor } from "./utils/read-gate-fixture.js";
 import { createTestSigner } from "./utils/test-signer.js";
 
 type Resolver = (p: unknown, a: unknown, c: Context) => Promise<unknown>;
@@ -33,7 +34,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
   let module: InProcessReactorClientModule;
   let mutation: (name: string) => Resolver;
   let reactorDriveClient: ReactorDriveClient;
-  const ctx = { headers: {}, db: null } as unknown as Context;
+  let ctx: Context;
 
   beforeEach(async () => {
     module = await new ReactorClientBuilder()
@@ -46,6 +47,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
         ]),
       )
       .buildModule();
+    ctx = mutationContextFor(module);
     reactorDriveClient = new ReactorDriveClient({
       reactor: module.client,
       readModel: {} as IDriveReadModel,
@@ -255,7 +257,7 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
     const file = documentModelDocumentModelModule.utils.createDocument();
     file.header.slug = "file-slug";
     await module.client.drives.addFile(driveId, file);
-    const removeNode = vi.spyOn(module.client.drives, "removeNode");
+    const removeNode = vi.spyOn(module.write.drives, "removeNode");
 
     await mutation("deleteDocument")(
       undefined,

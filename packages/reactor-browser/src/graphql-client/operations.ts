@@ -4,6 +4,7 @@ import {
   type ActionInput,
   type PhDocumentFieldsFragment,
   type Scalars,
+  type ViewFilterInput,
 } from "../graphql/gen/schema.js";
 import type { RemoteOperation } from "../remote-controller/types.js";
 
@@ -110,4 +111,48 @@ export type MutateDocumentWithOperationsResult = {
       readonly items: ReadonlyArray<RemoteOperation>;
     } | null;
   };
+};
+
+/**
+ * `document`, bounded by a consistency token: the read waits until the
+ * Switchboard's read models hold every operation the token names. The
+ * `consistency` argument is additive on the Switchboard; one without it refuses
+ * this document, and the client falls back to the plain `GetDocument`.
+ */
+export const GetDocumentAtConsistencyDocument = gql`
+  query GetDocumentAtConsistency(
+    $identifier: String!
+    $view: ViewFilterInput
+    $consistency: ConsistencyTokenInput
+  ) {
+    document(identifier: $identifier, view: $view, consistency: $consistency) {
+      document {
+        ...PHDocumentFields
+      }
+      childIds
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
+
+export type GetDocumentAtConsistencyVariables = {
+  identifier: Scalars["String"]["input"];
+  view?: ViewFilterInput;
+  consistency: {
+    version: number;
+    createdAtUtcIso: string;
+    coordinates: ReadonlyArray<{
+      documentId: string;
+      scope: string;
+      branch: string;
+      operationIndex: number;
+    }>;
+  };
+};
+
+export type GetDocumentAtConsistencyResult = {
+  readonly document?: {
+    readonly document: PhDocumentFieldsFragment;
+    readonly childIds: ReadonlyArray<string>;
+  } | null;
 };

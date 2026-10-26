@@ -1,6 +1,7 @@
 // A dispatch always answers a caller that passed a callback: with the result,
 // the actions' errors, or why nothing was dispatched.
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDispatch } from "../src/hooks/dispatch.js";
 
@@ -20,7 +21,9 @@ const document = {
 type Execute = (id: string, branch: string, actions: Action[]) => unknown;
 
 function withReactor(execute: Execute) {
-  vi.stubGlobal("window", { ph: { reactorClient: { execute } } });
+  vi.stubGlobal("window", {
+    ph: { reactorClient: withHalves({ execute }) },
+  });
 }
 
 // Resolves with whichever callback the dispatch answered through.

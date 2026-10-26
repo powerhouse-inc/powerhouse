@@ -138,7 +138,7 @@ describe("Query.documentServed when the reactor cannot decide", () => {
 
   beforeAll(async () => {
     module = await buildReadGateReactor();
-    const failing = new Proxy(module.client, {
+    const failing = new Proxy(module.read, {
       get(target, property, receiver) {
         if (property === "isServed") {
           return () => Promise.reject(new Error("storage unavailable"));
@@ -146,8 +146,11 @@ describe("Query.documentServed when the reactor cannot decide", () => {
         const value: unknown = Reflect.get(target, property, receiver);
         return typeof value === "function" ? value.bind(target) : value;
       },
-    }) as IReactorClient;
-    server = await startReactorHttpServer(failing, openAuthorization);
+    });
+    server = await startReactorHttpServer(
+      { read: failing, write: module.write },
+      openAuthorization,
+    );
   });
 
   afterAll(async () => {

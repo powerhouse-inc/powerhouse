@@ -68,7 +68,9 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
 
   it("creates a local default drive with its configured id, metadata, and app", async () => {
     const isDocumentIdTaken = vi.fn().mockResolvedValue(false);
-    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
+    setPh({
+      reactorClientModule: { client: { write: { isDocumentIdTaken } } },
+    });
 
     await addDefaultDrivesForNewReactor([
       {
@@ -97,7 +99,9 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
 
   it("does not re-create a local drive whose id already exists", async () => {
     const isDocumentIdTaken = vi.fn().mockResolvedValue(true);
-    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
+    setPh({
+      reactorClientModule: { client: { write: { isDocumentIdTaken } } },
+    });
 
     await addDefaultDrivesForNewReactor([
       { local: true, id: "drive-1", name: "My Drive" },
@@ -114,7 +118,9 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
   it("does not re-create a local default drive the user deleted", async () => {
     const find = vi.fn().mockResolvedValue({ results: [] });
     const isDocumentIdTaken = vi.fn().mockResolvedValue(true);
-    setPh({ reactorClientModule: { client: { find, isDocumentIdTaken } } });
+    setPh({
+      reactorClientModule: { client: { find, write: { isDocumentIdTaken } } },
+    });
 
     await addDefaultDrivesForNewReactor([
       { local: true, id: "drive-1", name: "My Drive" },
@@ -127,7 +133,9 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
 
   it("treats omitted local-drive metadata as empty name, null icon, no app", async () => {
     const isDocumentIdTaken = vi.fn().mockResolvedValue(false);
-    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
+    setPh({
+      reactorClientModule: { client: { write: { isDocumentIdTaken } } },
+    });
 
     await addDefaultDrivesForNewReactor([{ local: true, id: "drive-1" }]);
 
@@ -143,7 +151,9 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
   // neither field reaches the local path with no id to create under.
   it("ignores a local default drive entry that carries no id", async () => {
     const isDocumentIdTaken = vi.fn();
-    setPh({ reactorClientModule: { client: { isDocumentIdTaken } } });
+    setPh({
+      reactorClientModule: { client: { write: { isDocumentIdTaken } } },
+    });
 
     await addDefaultDrivesForNewReactor([
       { name: "Foo" } as unknown as PHConnectDefaultDrive,
@@ -185,7 +195,7 @@ describe("addDefaultDrivesForNewReactor (issue #2838)", () => {
     (addRemoteDrive as Mock).mockResolvedValue("remote-drive-1");
     (setDriveMetadata as Mock).mockResolvedValue(undefined);
     (waitForDocumentReady as Mock).mockResolvedValue(undefined);
-    const client = { isDocumentIdTaken };
+    const client = { write: { isDocumentIdTaken } };
     setPh({ reactorClient: client, reactorClientModule: { client } });
 
     await addDefaultDrivesForNewReactor([

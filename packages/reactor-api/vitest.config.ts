@@ -7,7 +7,25 @@ if (process.env.RUN_HUB_SPOKE_INTEGRATION !== "1") {
   baseExclude.push("**/hub-spoke-catchup.integration.test.ts");
 }
 
+// The reactor is read from source, so a test never runs against a stale dist
+// of the client halves this package is wired to. Only the reactor: resolving
+// every package through its "source" condition breaks packages whose source
+// leans on their own build.
+const REACTOR_SOURCE = resolve(import.meta.dirname, "../reactor");
+
 export default defineConfig({
+  resolve: {
+    alias: [
+      {
+        find: /^@powerhousedao\/reactor$/,
+        replacement: resolve(REACTOR_SOURCE, "index.ts"),
+      },
+      {
+        find: /^@powerhousedao\/reactor\/rpc$/,
+        replacement: resolve(REACTOR_SOURCE, "src/rpc/index.ts"),
+      },
+    ],
+  },
   test: {
     exclude: baseExclude,
     // PGLite WASM cold boot plus initdb's fsync pass can exceed the default

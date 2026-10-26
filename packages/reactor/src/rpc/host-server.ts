@@ -3,6 +3,7 @@ import type { SearchFilter, ViewFilter } from "../shared/types.js";
 import { hostResponder, type IHostResponder } from "./host-reply.js";
 import { dehydratePage } from "./paging.js";
 import { SubscriptionStore } from "./subscription.js";
+import { writeResultToWire } from "./write-handles.js";
 import type {
   ClientMessage,
   RpcNextPage,
@@ -82,7 +83,10 @@ export class ReactorHostServer {
     try {
       const method = this.resolveMethod(message.method);
       const value = await method(...args);
-      this.reply.ok(message.id, this.prepareResult(value));
+      const result = message.method.startsWith("write.")
+        ? writeResultToWire(value)
+        : value;
+      this.reply.ok(message.id, this.prepareResult(result));
     } catch (error) {
       this.reply.err(message.id, error);
     } finally {
@@ -134,7 +138,24 @@ export class ReactorHostServer {
     });
   }
 
+  /**
+   * Resolves a method path against the client. `read.*` and `write.*` name the
+   * client's halves (`read.get`, `write.drives.addFile`); `drives.*` and bare
+   * names are the facade's, as before.
+   */
   private resolveMethod(path: string): AnyMethod {
+    const half = path.startsWith("read.")
+      ? "read"
+      : path.startsWith("write.")
+        ? "write"
+        : undefined;
+    if (half !== undefined) {
+      return this.resolveOn(
+        (this.client as unknown as Record<string, unknown>)[half],
+        path.slice(half.length + 1),
+        path,
+      );
+    }
     if (path.startsWith("drives.")) {
       const name = path.slice("drives.".length);
       const drives = this.client.drives as unknown as Record<string, AnyMethod>;
@@ -150,5 +171,19 @@ export class ReactorHostServer {
       throw new Error(`Unknown reactor method: ${path}`);
     }
     return fn.bind(this.client);
+  }
+
+  private resolveOn(target: unknown, rest: string, path: string): AnyMethod {
+    const [first, second] = rest.split(".");
+    const owner =
+      second === undefined
+        ? target
+        : (target as Record<string, unknown> | undefined)?.[first];
+    const name = second ?? first;
+    const fn = (owner as Record<string, unknown> | undefined)?.[name];
+    if (typeof fn !== "function" || rest.split(".").length > 2) {
+      throw new Error(`Unknown reactor method: ${path}`);
+    }
+    return (fn as AnyMethod).bind(owner);
   }
 }

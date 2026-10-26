@@ -14,6 +14,8 @@ import {
   deriveOperationId,
   DOCUMENT_DELETED_REASON,
   DOCUMENT_SCOPE_ACTION_TYPES,
+  isDenied,
+  isPurgeMarker,
   mentionedGroupIds,
   operationOutcome,
   targetDocumentId,
@@ -21,6 +23,11 @@ import {
 import type { SnapshotPosition } from "../cache/write-cache-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { Job } from "../queue/types.js";
+import {
+  identityFromDocumentState,
+  isDeletedDocumentState,
+  resolvableSlug,
+} from "../shared/document-identity.js";
 import {
   AuthorizationDeniedError,
   DocumentDeletedError,
@@ -32,6 +39,7 @@ import type {
   JobResultSummary,
   SubmittedActionResult,
 } from "../shared/types.js";
+import type { WriteIdentityUpsert } from "../storage/interfaces.js";
 import type { DocumentLocks } from "./execution-scope.js";
 import type { JobResult, TouchedStream } from "./types.js";
 
@@ -528,4 +536,46 @@ export function jobWriteIds(job: Job): string[] {
     }
   }
   return [...ids].sort();
+}
+
+/**
+ * The document-scope actions that can set a document's identity: creation and
+ * upgrade carry its header, deletion frees its slug. The identity itself is
+ * read from the operation's resulting state, not from the action.
+ */
+const IDENTITY_ACTIONS: ReadonlySet<string> = new Set([
+  "CREATE_DOCUMENT",
+  "UPGRADE_DOCUMENT",
+  "DELETE_DOCUMENT",
+]);
+
+/**
+ * The write-identity rows a job's committed operations imply, in operation
+ * order. Denied operations and purge markers change no identity; a purge
+ * removes the row with the document's other rows.
+ */
+export function writeIdentityRows(
+  operations: OperationWithContext[],
+): WriteIdentityUpsert[] {
+  const rows: WriteIdentityUpsert[] = [];
+  for (const { operation, context } of operations) {
+    if (context.scope !== "document") continue;
+    if (!IDENTITY_ACTIONS.has(operation.action.type)) continue;
+    if (isPurgeMarker(operation) || isDenied(operation)) continue;
+    if (!context.resultingState) continue;
+
+    const state = JSON.parse(context.resultingState) as Record<string, unknown>;
+    const identity = identityFromDocumentState(state);
+    const isDeleted = isDeletedDocumentState(state);
+    rows.push({
+      documentId: context.documentId,
+      branch: context.branch,
+      slug: isDeleted
+        ? null
+        : resolvableSlug(identity.slug, context.documentId),
+      documentType: identity.documentType ?? context.documentType,
+      isDeleted,
+    });
+  }
+  return rows;
 }

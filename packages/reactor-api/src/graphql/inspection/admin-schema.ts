@@ -8,6 +8,8 @@ export const inspectionAdminTypeDefs = gql`
   type InspectionAdmin {
     "Processor retry and rerun are served."
     processors: Boolean!
+    "The catch-up priority can be set."
+    catchUpPriority: Boolean!
   }
 
   type Query {
@@ -29,5 +31,10 @@ export const inspectionAdminTypeDefs = gql`
       clear: Boolean!
       fromOrdinal: Float!
     ): Boolean!
+    """
+    Sets the pace of processor backfills: mode dynamic hands the level to the
+    load controller (level must be absent); mode fixed holds level, 0-7.
+    """
+    inspectionSetCatchUpPriority(mode: String!, level: Int): Boolean!
   }
 `;

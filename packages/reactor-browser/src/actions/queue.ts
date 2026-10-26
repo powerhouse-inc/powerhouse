@@ -31,7 +31,12 @@ export async function queueActions(
     throw new Error("ReactorClient not initialized");
   }
 
-  return await reactorClient.execute(document.header.id, "main", actions);
+  const handle = await reactorClient.write.execute(
+    document.header.id,
+    "main",
+    actions,
+  );
+  return await handle.document();
 }
 
 export async function queueOperations(
@@ -58,7 +63,8 @@ export async function queueOperations(
   }
 
   const actions = operations.map((op) => op.action);
-  return await reactorClient.execute(documentId, "main", actions);
+  const handle = await reactorClient.write.execute(documentId, "main", actions);
+  return await handle.document();
 }
 
 export function deduplicateOperations(

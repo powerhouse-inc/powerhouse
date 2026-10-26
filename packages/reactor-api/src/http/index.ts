@@ -33,3 +33,10 @@ export {
   type WebhookSignatureEncoding,
   type WebhookVerification,
 } from "./webhook-verify.js";
+export {
+  isCountedRequest,
+  NodeEventLoopDelay,
+  RequestLoadRecorder,
+  type IEventLoopDelaySource,
+  type RequestLoadRecorderOptions,
+} from "./request-load.js";

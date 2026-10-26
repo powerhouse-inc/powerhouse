@@ -1,3 +1,4 @@
+import type { JobInfo } from "../shared/types.js";
 import type { RemoteFilter } from "../sync/types.js";
 
 export type CorrelationId = string;
@@ -47,8 +48,35 @@ export type RpcUnsub = { k: "unsub"; id: CorrelationId };
 export type RpcNextPage = { k: "page"; id: CorrelationId; token: string };
 
 // Bumped when the tab<->owner wire protocol changes incompatibly; a tab whose
-// version differs from the owner's baseline is told to reload.
-export const RPC_PROTOCOL_VERSION = 3;
+// version differs from the owner's baseline is told to reload. 4: the client
+// halves are served as `read.*` and `write.*` methods, and write results carry
+// handles in their wire form.
+export const RPC_PROTOCOL_VERSION = 4;
+
+/**
+ * A write handle as a `write.*` method returns it over the wire: what
+ * identifies the write. The tab rebuilds the stages and `document()` over the
+ * read half (see rpc/write-handles.ts). `jobIds` is empty for a write that
+ * needed no job.
+ */
+export type WireWriteHandle = {
+  kind: "write-handle";
+  jobId: string;
+  jobIds: string[];
+  documentId: string;
+  branch: string;
+  /** Present on a drive write that made or changed a node. */
+  nodeId?: string;
+};
+
+/** A batch write handle over the wire: the accepted jobs and one handle per key. */
+export type WireBatchWriteHandle = {
+  kind: "batch-write-handle";
+  jobs: Record<string, JobInfo>;
+  handles: Record<string, WireWriteHandle>;
+  /** The plan keys in request order, which decides the failure reported. */
+  planOrder: string[];
+};
 
 /**
  * A package the worker loads by URL rather than by registry spec: local

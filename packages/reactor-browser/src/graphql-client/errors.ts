@@ -75,3 +75,27 @@ export class BatchJobFailedError extends Error {
     );
   }
 }
+
+/**
+ * The reactor's `JobFailedError`, rebuilt from a job the Switchboard reported
+ * FAILED; this entry imports the reactor for types only. A write handle's
+ * stage rejects with it. The message is the job error's message, as the
+ * reactor's is.
+ */
+export class JobFailedError extends Error {
+  readonly name = "JobFailedError";
+  readonly job: JobInfo;
+
+  constructor(job: JobInfo) {
+    super(job.error?.message);
+    this.job = job;
+  }
+
+  static isError(error: unknown): error is JobFailedError {
+    return (
+      Error.isError(error) &&
+      error.name === "JobFailedError" &&
+      typeof (error as Partial<JobFailedError>).job === "object"
+    );
+  }
+}

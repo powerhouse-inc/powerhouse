@@ -327,7 +327,7 @@ export interface ManagedWorkerReactor extends ManagedReactorBase {
 /** The processor levers a remote can serve beside its read-only inspection. */
 export type ProcessorLevers = Pick<
   IInspectorAdmin,
-  "retryProcessor" | "rerunProcessor"
+  "retryProcessor" | "rerunProcessor" | "setCatchUpPriority"
 >;
 
 /** A running reactor reached over its host's inspection subgraph; read-only. */

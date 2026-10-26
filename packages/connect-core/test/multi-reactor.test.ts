@@ -5,9 +5,11 @@ import {
   GQL_CHANNEL_TYPE,
   LOCAL_CHANNEL_TYPE,
   LocalChannelFactory,
+  JobStatus,
   ReactorBuilder,
   type InProcessReactorModule,
   type IReactorClient,
+  type JobInfo,
   type ReactorInfo,
 } from "@powerhousedao/reactor";
 import type {
@@ -67,6 +69,17 @@ const signer = {
 
 type Local = { served: Set<string>; documents: Map<string, PHDocument> };
 
+function settledJob(documentId: string): JobInfo {
+  return {
+    id: `job-${documentId}`,
+    documentId,
+    status: JobStatus.READ_READY,
+    createdAtUtcIso: "",
+    consistencyToken: { version: 1, createdAtUtcIso: "", coordinates: [] },
+    meta: { batchId: "", batchJobIds: [] },
+  };
+}
+
 function localClient(local: Local) {
   const client = {
     isServed: vi.fn((id: string) => Promise.resolve(local.served.has(id))),
@@ -84,6 +97,16 @@ function localClient(local: Local) {
       local.documents.set(document.header.id, document);
       return Promise.resolve(document);
     }),
+    /** The router submits a create through this and waits through waitForJob. */
+    createAsync: vi.fn(async (document: PHDocument) => {
+      await client.create(document);
+      return { jobs: { create: settledJob(document.header.id) } };
+    }),
+    waitForJob: vi.fn((job: string | JobInfo) =>
+      Promise.resolve(
+        typeof job === "string" ? { ...settledJob(""), id: job } : job,
+      ),
+    ),
     execute: vi.fn((id: string, _branch: string, actions: Action[]) => {
       let document = local.documents.get(id);
       if (!document) {

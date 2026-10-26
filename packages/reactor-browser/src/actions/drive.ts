@@ -4,7 +4,7 @@ import {
   DriveCollectionId,
   isDriveAuthError,
   PropagationMode,
-  type IReactorClient,
+  type IReactorReadClient,
   type PollBehavior,
 } from "@powerhousedao/reactor";
 import {
@@ -58,7 +58,7 @@ export type AddRemoteDriveOptions = {
  * short-circuits if the document already exists.
  */
 export async function waitForDocumentReady(
-  reactorClient: IReactorClient,
+  reactorClient: IReactorReadClient,
   documentId: string,
   options?: { timeoutMs?: number; signal?: AbortSignal },
 ): Promise<void> {
@@ -127,13 +127,15 @@ export async function waitForDocumentReady(
 /** The full client's creation default, else the library's. */
 async function createSignaturePolicy(): Promise<SignaturePolicy> {
   const client = getFullReactorClient();
-  return client ? client.getCreateSignaturePolicy() : DEFAULT_SIGNATURE_POLICY;
+  return client
+    ? client.read.getCreateSignaturePolicy()
+    : DEFAULT_SIGNATURE_POLICY;
 }
 
 /** What the full client selects for a drive, which has no parent. */
 async function createProtocolVersions(): Promise<ProtocolVersions> {
   const client = getFullReactorClient();
-  return client ? client.getCreateProtocolVersions() : {};
+  return client ? client.read.getCreateProtocolVersions() : {};
 }
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
@@ -175,7 +177,8 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     driveDoc.header.meta = { preferredEditor };
   }
 
-  return await reactorClient.create<DocumentDriveDocument>(driveDoc);
+  const handle = await reactorClient.write.create(driveDoc);
+  return await handle.document<DocumentDriveDocument>();
 }
 
 export async function addRemoteDrive(
@@ -260,7 +263,7 @@ export async function addRemoteDrive(
   }
 
   if (options?.awaitInitialSync) {
-    await waitForDocumentReady(reactorClient, resolvedDriveId, {
+    await waitForDocumentReady(reactorClient.read, resolvedDriveId, {
       timeoutMs: options.initialSyncTimeoutMs,
       signal: options.signal,
     });
@@ -292,7 +295,11 @@ export async function deleteDrive(driveId: string) {
     }
   }
 
-  await reactorClient.deleteDocument(driveId, PropagationMode.Cascade);
+  const handle = await reactorClient.write.deleteDocument(
+    driveId,
+    PropagationMode.Cascade,
+  );
+  await handle.readable;
 }
 
 export async function renameDrive(
@@ -309,7 +316,8 @@ export async function renameDrive(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  return await reactorClient.rename(driveId, name);
+  const handle = await reactorClient.write.rename(driveId, name);
+  return await handle.document();
 }
 
 export async function setDriveAvailableOffline(
@@ -325,9 +333,10 @@ export async function setDriveAvailableOffline(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  return await reactorClient.execute(driveId, "main", [
+  const handle = await reactorClient.write.execute(driveId, "main", [
     setAvailableOffline({ availableOffline }),
   ]);
+  return await handle.document();
 }
 
 export async function setDriveSharingType(
@@ -343,9 +352,10 @@ export async function setDriveSharingType(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-  return await reactorClient.execute(driveId, "main", [
+  const handle = await reactorClient.write.execute(driveId, "main", [
     setSharingType({ type: sharingType }),
   ]);
+  return await handle.document();
 }
 
 export async function setDriveMetadata(
@@ -379,5 +389,6 @@ export async function setDriveMetadata(
     return undefined;
   }
 
-  return await reactorClient.execute(driveId, "main", actions);
+  const handle = await reactorClient.write.execute(driveId, "main", actions);
+  return await handle.document();
 }

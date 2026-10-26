@@ -31,6 +31,7 @@ const { SubgraphWsRouter } =
   await import("../../src/graphql/subgraph-ws-router.js");
 
 import type { Context } from "../../src/graphql/types.js";
+import { UNUSED_CLIENTS } from "../utils/client-halves.js";
 
 // ─── fixtures ────────────────────────────────────────────────────────────────
 
@@ -134,6 +135,7 @@ async function createHarness(auth: AuthOptions, routes = 1): Promise<Harness> {
       const context: Context = {
         headers: connectionParams as Record<string, string>,
         db: null,
+        clients: UNUSED_CLIENTS,
       };
       if (user) context.user = user;
       return context;

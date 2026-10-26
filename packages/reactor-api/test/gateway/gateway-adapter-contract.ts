@@ -29,6 +29,7 @@ import type {
   SubgraphDefinition,
 } from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
+import { UNUSED_CLIENTS } from "../utils/client-halves.js";
 
 // ─── harness type ────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ const noopCtx: GatewayContextFactory<Context> = () =>
   Promise.resolve({
     headers: {},
     db: null,
+    clients: UNUSED_CLIENTS,
   });
 
 /**
@@ -189,7 +191,11 @@ export function runGatewayAdapterContractTests(
       let capturedRequest: Request | undefined;
       const ctxFactory: GatewayContextFactory<Context> = (req) => {
         capturedRequest = req;
-        return Promise.resolve({ headers: {}, db: null });
+        return Promise.resolve({
+          headers: {},
+          db: null,
+          clients: UNUSED_CLIENTS,
+        });
       };
 
       const handler = await h.adapter.createHandler(makeSchema(), ctxFactory);
@@ -359,7 +365,11 @@ export function runGatewayAdapterContractTests(
       let capturedRequest: Request | undefined;
       const ctxFactory: GatewayContextFactory<Context> = (req) => {
         capturedRequest = req;
-        return Promise.resolve({ headers: {}, db: null });
+        return Promise.resolve({
+          headers: {},
+          db: null,
+          clients: UNUSED_CLIENTS,
+        });
       };
 
       const sub = await makeSubServer();

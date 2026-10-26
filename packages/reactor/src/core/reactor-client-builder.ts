@@ -297,9 +297,17 @@ export class ReactorClientBuilder {
       this.resolveActionEvaluation(reactorModule, decisionModel),
       this.createSignaturePolicy,
       this.resolveProtocolSelection(reactorModule),
+      reactorModule
+        ? {
+            identities: reactorModule.writeIdentityStore,
+            revisions: reactorModule.operationStore,
+          }
+        : undefined,
     );
 
     return {
+      read: client.read,
+      write: client.write,
       client,
       reactor,
       eventBus,

@@ -3,6 +3,7 @@ import {
   InvalidDeadLetterCursorError,
   toWireDeadLetter,
   type DeadLetterPage,
+  toWireCatchUpPriority,
   toWireQueueState,
   type INSPECTOR_OPS,
   type InspectorDocumentReader,
@@ -17,6 +18,7 @@ import {
   type SYNC_INSPECTION_OPS,
   type SyncInspectionReadOpKey,
   type ValidationResult,
+  type WireCatchUpPriority,
   type WireDeadLetterPage,
   type WireInspectorAttachmentInfo,
   type WireInspectorDocumentModel,
@@ -97,6 +99,8 @@ function toWireProcessor(info: InspectorProcessorInfo): WireInspectorProcessor {
       : null,
     floor: toOrdinal(info.floor),
     clearable: info.clearable,
+    runFrom: toOrdinal(info.runFrom),
+    phase: info.phase,
   };
 }
 
@@ -260,6 +264,10 @@ export function createInspectionResolvers(
     ),
 
     catchUpStatus: operator(() => inspector.getCatchUpStatus()),
+
+    catchUpPriority: operator(async (): Promise<WireCatchUpPriority> =>
+      toWireCatchUpPriority(await inspector.getCatchUpPriority()),
+    ),
 
     storageHealth: operator((): Promise<WireStorageHealth> =>
       inspector.getStorageHealth(),
