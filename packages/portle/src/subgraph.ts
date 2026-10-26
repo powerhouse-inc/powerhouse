@@ -7,6 +7,7 @@ import {
   type GateReport,
   type PortlePolicy,
 } from "./gate.js";
+import type { PortleRunnerLike, TunnelStatus } from "./runner.js";
 
 /** The slice of the switchboard's API object the subgraph reads. */
 export type PortleApi = Pick<
@@ -39,6 +40,69 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     me: PortleCaller!
   }
 
+  type PortleSupervised {
+    name: String!
+    command: String!
+    running: Boolean!
+    pid: Int
+    startedAt: String
+    restarts: Int!
+    lastExitCode: Int
+    lastExitSignal: String
+    lastExitAt: String
+  }
+
+  type PortleTunnel {
+    """
+    down, degraded (one of the two processes), or up
+    """
+    state: String!
+    frpc: PortleSupervised
+    caddy: PortleSupervised
+  }
+
+  type PortleDelegation {
+    zone: String!
+    nameservers: [String!]!
+  }
+
+  type PortleUpstream {
+    label: String!
+    target: String!
+  }
+
+  type PortleSettings {
+    controlPlaneUrl: String!
+    appUpstream: String!
+    upstreams: [PortleUpstream!]!
+    dns01Mode: String!
+    autostart: Boolean!
+  }
+
+  type PortleBinaries {
+    frpc: String
+    caddy: String
+    searched: [String!]!
+  }
+
+  type PortleStatus {
+    stateDir: String!
+    enrolled: Boolean!
+    siteId: String
+    siteZone: String
+    zoneKind: String
+    delegation: PortleDelegation
+    settings: PortleSettings
+    binaries: PortleBinaries!
+    tunnel: PortleTunnel!
+    urls: [String!]!
+  }
+
+  input PortleUpstreamInput {
+    label: String!
+    target: String!
+  }
+
   type Query {
     """
     Whether this host may be published through Portle, check by check.
@@ -46,6 +110,30 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     distinguish; under any other policy only a listed admin may ask.
     """
     portleReadiness: PortleReadiness!
+    """
+    The site's enrolment, settings, binaries and tunnel. Admins only.
+    """
+    portleStatus: PortleStatus!
+  }
+
+  type Mutation {
+    """
+    Enrol this project with a Portle control plane using a one-time token.
+    """
+    portleEnrol(controlPlaneUrl: String!, token: String!): PortleStatus!
+    """
+    What the tunnel exposes: the default upstream and per-label upstreams.
+    """
+    portleConfigure(
+      appUpstream: String
+      upstreams: [PortleUpstreamInput!]
+      dns01Mode: String
+    ): PortleStatus!
+    """
+    Bring the tunnel up. Refused unless every readiness check passes for the caller.
+    """
+    portleStart: PortleStatus!
+    portleStop: PortleStatus!
   }
 `);
 
@@ -65,14 +153,16 @@ export type PortleReadiness = GateReport & {
   me: { address: string | null; isAdmin: boolean };
 };
 
+function forbidden(message: string): GraphQLError {
+  return new GraphQLError(message, { extensions: { code: "FORBIDDEN" } });
+}
+
 export function readiness(api: PortleApi, ctx: Context): PortleReadiness {
   const facts = gateFactsOf(api);
   const address = ctx.user?.address;
   const isAdmin = isListedAdmin(facts.admins, address);
   if (facts.policy !== "OPEN" && !isAdmin) {
-    throw new GraphQLError("Portle readiness is for the host's admins.", {
-      extensions: { code: "FORBIDDEN" },
-    });
+    throw forbidden("Portle readiness is for the host's admins.");
   }
   return {
     ...evaluateGate(facts, ctx.user),
@@ -80,12 +170,71 @@ export function readiness(api: PortleApi, ctx: Context): PortleReadiness {
   };
 }
 
+/** Every other field: a listed admin on a host that is not OPEN. */
+export function requireAdmin(api: PortleApi, ctx: Context): GateFacts {
+  const facts = gateFactsOf(api);
+  if (facts.policy === "OPEN") {
+    throw forbidden(
+      "Portle is disabled while the host's authorization policy is OPEN; lock the host down first (see portleReadiness).",
+    );
+  }
+  if (!isListedAdmin(facts.admins, ctx.user?.address)) {
+    throw forbidden("Portle is for the host's admins.");
+  }
+  return facts;
+}
+
+type WireUpstream = { label: string; target: string };
+
+/** The GraphQL shape of a status: maps become lists, exits flatten. */
+export function toWireStatus(status: TunnelStatus) {
+  const supervised = (s: TunnelStatus["tunnel"]["frpc"]) =>
+    s && {
+      name: s.name,
+      command: s.command,
+      running: s.running,
+      pid: s.pid,
+      startedAt: s.startedAt,
+      restarts: s.restarts,
+      lastExitCode: s.lastExit?.code ?? null,
+      lastExitSignal: s.lastExit?.signal ?? null,
+      lastExitAt: s.lastExit?.at ?? null,
+    };
+  return {
+    ...status,
+    settings: status.settings && {
+      ...status.settings,
+      upstreams: Object.entries(status.settings.upstreams).map(
+        ([label, target]): WireUpstream => ({ label, target }),
+      ),
+    },
+    tunnel: {
+      state: status.tunnel.state,
+      frpc: supervised(status.tunnel.frpc),
+      caddy: supervised(status.tunnel.caddy),
+    },
+  };
+}
+
+export interface PortleSubgraphDeps {
+  api: PortleApi;
+  runner: PortleRunnerLike;
+}
+
 /**
  * The `portle` subgraph as a plain `ISubgraph`: no reactor reads, no setup,
  * so it needs none of `BaseSubgraph` and keeps the plugin free of runtime
  * imports from reactor-api.
  */
-export function createPortleSubgraph(api: PortleApi): ISubgraph {
+export function createPortleSubgraph({
+  api,
+  runner,
+}: PortleSubgraphDeps): ISubgraph {
+  const guarded =
+    <A, R>(run: (args: A, ctx: Context, facts: GateFacts) => R) =>
+    (_parent: unknown, args: A, ctx: Context): R =>
+      run(args, ctx, requireAdmin(api, ctx));
+
   return {
     name: PORTLE_SUBGRAPH_NAME,
     typeDefs: portleTypeDefs,
@@ -95,6 +244,58 @@ export function createPortleSubgraph(api: PortleApi): ISubgraph {
       Query: {
         portleReadiness: (_parent: unknown, _args: unknown, ctx: Context) =>
           readiness(api, ctx),
+        portleStatus: guarded(() => toWireStatus(runner.status())),
+      },
+      Mutation: {
+        portleEnrol: guarded(
+          async (args: { controlPlaneUrl: string; token: string }) =>
+            toWireStatus(
+              await runner.enrol({
+                controlPlaneUrl: args.controlPlaneUrl,
+                token: args.token,
+              }),
+            ),
+        ),
+        portleConfigure: guarded(
+          (args: {
+            appUpstream?: string | null;
+            upstreams?: WireUpstream[] | null;
+            dns01Mode?: string | null;
+          }) =>
+            toWireStatus(
+              runner.configure({
+                ...(args.appUpstream ? { appUpstream: args.appUpstream } : {}),
+                ...(args.upstreams
+                  ? {
+                      upstreams: Object.fromEntries(
+                        args.upstreams.map((u) => [
+                          u.label.toLowerCase(),
+                          u.target,
+                        ]),
+                      ),
+                    }
+                  : {}),
+                ...(args.dns01Mode
+                  ? { dns01Mode: args.dns01Mode as "rfc2136" | "acmedns" }
+                  : {}),
+              }),
+            ),
+        ),
+        portleStart: guarded(
+          async (_args: unknown, ctx: Context, facts: GateFacts) => {
+            const report = evaluateGate(facts, ctx.user);
+            if (!report.publishable) {
+              const failing = report.checks
+                .filter((c) => !c.ok)
+                .map((c) => c.id);
+              throw forbidden(
+                `The publication gate is not met (${failing.join(", ")}); see portleReadiness.`,
+              );
+            }
+            return toWireStatus(await runner.start());
+          },
+        ),
+        portleStop: guarded(async () => toWireStatus(await runner.stop())),
       },
     },
   };
