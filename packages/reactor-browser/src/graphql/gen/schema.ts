@@ -157,6 +157,14 @@ export type ConsistencyCoordinate = {
   readonly scope: Scalars["String"]["output"];
 };
 
+/** A consistency token's coordinate, as ConsistencyCoordinate reports it. */
+export type ConsistencyCoordinateInput = {
+  readonly branch: Scalars["String"]["input"];
+  readonly documentId: Scalars["String"]["input"];
+  readonly operationIndex: Scalars["Int"]["input"];
+  readonly scope: Scalars["String"]["input"];
+};
+
 /**
  * The write positions a job reached, for read-after-write. Only meaningful once
  * the job has completed.
@@ -165,6 +173,16 @@ export type ConsistencyToken = {
   readonly coordinates: ReadonlyArray<ConsistencyCoordinate>;
   readonly createdAtUtcIso: Scalars["String"]["output"];
   readonly version: Scalars["Int"]["output"];
+};
+
+/**
+ * A consistency token, as JobInfo.consistencyToken reports it. A read given one
+ * waits until the read models it reads from hold every coordinate it names.
+ */
+export type ConsistencyTokenInput = {
+  readonly coordinates: ReadonlyArray<ConsistencyCoordinateInput>;
+  readonly createdAtUtcIso: Scalars["String"]["input"];
+  readonly version: Scalars["Int"]["input"];
 };
 
 export type CreateDefaults = {
@@ -677,12 +695,14 @@ export type QueryCreateDefaultsArgs = {
 };
 
 export type QueryDocumentArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   idOrSlug?: InputMaybe<Scalars["String"]["input"]>;
   identifier?: InputMaybe<Scalars["String"]["input"]>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
 export type QueryDocumentIncomingRelationshipEdgesArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -691,6 +711,7 @@ export type QueryDocumentIncomingRelationshipEdgesArgs = {
 };
 
 export type QueryDocumentIncomingRelationshipsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
   targetIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -709,6 +730,7 @@ export type QueryDocumentOperationsArgs = {
 };
 
 export type QueryDocumentOutgoingRelationshipEdgesArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType?: InputMaybe<Scalars["String"]["input"]>;
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -717,6 +739,7 @@ export type QueryDocumentOutgoingRelationshipEdgesArgs = {
 };
 
 export type QueryDocumentOutgoingRelationshipsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   relationshipType: Scalars["String"]["input"];
   sourceIdOrSlug?: InputMaybe<Scalars["String"]["input"]>;
@@ -737,6 +760,7 @@ export type QueryEvaluateActionsArgs = {
 };
 
 export type QueryFindDocumentsArgs = {
+  consistency?: InputMaybe<ConsistencyTokenInput>;
   paging?: InputMaybe<PagingInput>;
   search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
