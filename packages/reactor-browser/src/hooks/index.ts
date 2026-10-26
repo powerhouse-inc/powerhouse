@@ -23,6 +23,7 @@ export * from "./download-document.js";
 export * from "./download-folder.js";
 export * from "./drive-by-id.js";
 export * from "./drive-context.js";
+export * from "./drive-nodes.js";
 export * from "./drives.js";
 export * from "./editor-context.js";
 export * from "./editor-modules.js";

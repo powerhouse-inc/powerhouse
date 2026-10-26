@@ -935,3 +935,148 @@ describe("findIsServableOverGraphQL (single-source servable predicate)", () => {
     );
   });
 });
+
+describe("GraphQLReactorClient.read.drives", () => {
+  const folderNode = {
+    id: "folder-1",
+    driveId: "drive-1",
+    name: "Folder",
+    parentFolder: null,
+  };
+  const fileNode = {
+    id: "file-1",
+    driveId: "drive-1",
+    name: "doc.md",
+    parentFolder: "folder-1",
+    documentType: "powerhouse/document-model",
+  };
+
+  function driveSdk(extra: Record<string, ReturnType<typeof vi.fn>>) {
+    return { ...createMockSdk(), ...extra } as unknown as MockSdk;
+  }
+
+  it("lists a page of nodes in the legacy shape and follows the cursor", async () => {
+    const GetDriveNodes = vi
+      .fn()
+      .mockResolvedValueOnce({
+        driveNodes: {
+          results: [folderNode],
+          nextCursor: "cursor-1",
+          hasMore: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        driveNodes: { results: [fileNode], nextCursor: null, hasMore: false },
+      });
+    const client = createClientWith(driveSdk({ GetDriveNodes }));
+
+    const first = await client.read.drives.listNodes("drive-1", undefined, {
+      cursor: "",
+      limit: 1,
+    });
+
+    expect(first.results).toEqual([
+      { id: "folder-1", kind: "folder", name: "Folder", parentFolder: null },
+    ]);
+    expect(first.options).toEqual({ cursor: "", limit: 1 });
+    expect(first.nextCursor).toBe("cursor-1");
+    const [variables, headers] = GetDriveNodes.mock.calls[0] as [
+      Record<string, unknown>,
+      Record<string, string> | undefined,
+    ];
+    expect(variables).toEqual({
+      driveId: "drive-1",
+      paging: { cursor: "", limit: 1 },
+      kind: undefined,
+    });
+    expect("parentFolder" in variables).toBe(false);
+    expect(Object.values(headers ?? {})).toEqual(["drive-1"]);
+
+    const second = await first.next!();
+
+    expect(GetDriveNodes.mock.calls[1][0]).toMatchObject({
+      paging: { cursor: "cursor-1", limit: 1 },
+    });
+    expect(second.results).toEqual([
+      {
+        id: "file-1",
+        kind: "file",
+        name: "doc.md",
+        parentFolder: "folder-1",
+        documentType: "powerhouse/document-model",
+      },
+    ]);
+    expect(second.nextCursor).toBeUndefined();
+    expect(second.next).toBeUndefined();
+  });
+
+  it("sends an explicit null parentFolder for the root level", async () => {
+    const GetDriveNodes = vi.fn().mockResolvedValue({
+      driveNodes: { results: [], nextCursor: null, hasMore: false },
+    });
+    const client = createClientWith(driveSdk({ GetDriveNodes }));
+
+    await client.read.drives.listNodes("drive-1", null);
+
+    expect(GetDriveNodes.mock.calls[0][0]).toEqual({
+      driveId: "drive-1",
+      parentFolder: null,
+      paging: undefined,
+      kind: undefined,
+    });
+  });
+
+  it("gets one node in the legacy shape", async () => {
+    const GetDriveNode = vi.fn().mockResolvedValue({ driveNode: fileNode });
+    const client = createClientWith(driveSdk({ GetDriveNode }));
+
+    const node = await client.read.drives.getNode("drive-1", "file-1");
+
+    expect(GetDriveNode.mock.calls[0][0]).toEqual({
+      driveId: "drive-1",
+      id: "file-1",
+    });
+    expect(node).toEqual({
+      id: "file-1",
+      kind: "file",
+      name: "doc.md",
+      parentFolder: "folder-1",
+      documentType: "powerhouse/document-model",
+    });
+  });
+
+  it("throws when the node is absent or withheld", async () => {
+    const GetDriveNode = vi.fn().mockResolvedValue({ driveNode: null });
+    const client = createClientWith(driveSdk({ GetDriveNode }));
+
+    await expect(
+      client.read.drives.getNode("drive-1", "missing"),
+    ).rejects.toThrow("Node missing not found in drive drive-1");
+  });
+
+  it("exposes the node queries as a node source that reads a whole drive", async () => {
+    const GetDriveNodes = vi
+      .fn()
+      .mockResolvedValueOnce({
+        driveNodes: {
+          results: [folderNode],
+          nextCursor: "cursor-1",
+          hasMore: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        driveNodes: { results: [fileNode], nextCursor: null, hasMore: false },
+      });
+    const client = createClientWith(driveSdk({ GetDriveNodes }));
+
+    const nodes = await client.nodeSource().listAll("drive-1");
+
+    expect(nodes.map((node) => [node.kind, node.id])).toEqual([
+      ["folder", "folder-1"],
+      ["file", "file-1"],
+    ]);
+    expect(GetDriveNodes.mock.calls[1][0]).toMatchObject({
+      paging: { cursor: "cursor-1" },
+    });
+  });
+});

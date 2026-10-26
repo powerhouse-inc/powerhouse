@@ -125,6 +125,10 @@ describe("NodeProcessor", () => {
       .addColumn("documentType", "text", (col) => col.notNull())
       .execute();
 
+    processor = await createProcessor();
+  });
+
+  async function createProcessor(): Promise<NodeProcessor> {
     const operationIndex = {
       getSinceOrdinal: vi.fn().mockResolvedValue({ results: [] }),
     } as unknown as IOperationIndex;
@@ -136,16 +140,16 @@ describe("NodeProcessor", () => {
       startup: vi.fn(),
       shutdown: vi.fn(),
     } as unknown as IWriteCache;
-    const tracker = new ConsistencyTracker();
-    processor = new NodeProcessor(
+    const created = new NodeProcessor(
       db as unknown as Kysely<unknown>,
       "public",
       operationIndex,
       writeCache,
-      tracker,
+      new ConsistencyTracker(),
     );
-    await processor.init();
-  });
+    await created.init();
+    return created;
+  }
 
   afterEach(async () => {
     await db.destroy();
@@ -244,6 +248,31 @@ describe("NodeProcessor", () => {
       "Notes",
       "Notes (2)",
       "Notes (3)",
+    ]);
+  });
+
+  it("falls back to a folder scan once every checked candidate is taken", async () => {
+    const batch = Array.from({ length: 52 }, (_, i) =>
+      wrap(
+        addFolderAction({
+          folderId: `dup-${String(i).padStart(2, "0")}`,
+          parentFolderId: null,
+          name: "Dup",
+        }),
+        "drive-1",
+      ),
+    );
+    await processor.indexOperations(batch);
+
+    const rows = await db
+      .selectFrom("DriveNode")
+      .select(["id", "name"])
+      .orderBy("id")
+      .execute();
+    expect(rows.slice(-3).map((r) => r.name)).toEqual([
+      "Dup (50)",
+      "Dup (51)",
+      "Dup (52)",
     ]);
   });
 
@@ -865,6 +894,647 @@ describe("NodeProcessor", () => {
 
       expect(await nodesOf("drive-a")).toHaveLength(0);
       expect(await nodesOf("drive-b")).toHaveLength(2);
+    });
+  });
+
+  describe("requested name of a linked file", () => {
+    async function headerSnapshot(documentId: string, name: string) {
+      await (db.withSchema(REACTOR_SCHEMA) as unknown as Kysely<any>)
+        .insertInto("DocumentSnapshot")
+        .values([
+          {
+            id: `${documentId}-global`,
+            documentId,
+            scope: "global",
+            branch: "main",
+            name: "Stale global name",
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-model",
+            lastOperationIndex: 0,
+            lastOperationHash: "",
+          },
+          {
+            id: `${documentId}-header`,
+            documentId,
+            scope: "header",
+            branch: "main",
+            name,
+            content: JSON.stringify({}),
+            documentType: "powerhouse/document-model",
+            lastOperationIndex: 0,
+            lastOperationHash: "",
+          },
+        ])
+        .execute();
+    }
+
+    function linkWithName(fileId: string, name: string) {
+      return wrap(
+        addRelationshipAction(
+          "drive-1",
+          fileId,
+          DRIVE_CHILD_RELATIONSHIP_TYPE,
+          {
+            kind: "file",
+            parentFolderId: null,
+            documentType: "powerhouse/document-model",
+            name,
+          },
+        ),
+        "drive-1",
+      );
+    }
+
+    async function nodeOf(id: string) {
+      return db
+        .selectFrom("DriveNode")
+        .select(["name", "requestedName"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+    }
+
+    it("takes the name carried on the relationship metadata", async () => {
+      await processor.indexOperations([
+        named("file-1", "Document name"),
+        linkWithName("file-1", "Mail subject"),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Mail subject",
+        requestedName: "Mail subject",
+      });
+    });
+
+    it("falls back to the document view's header name", async () => {
+      await headerSnapshot("file-1", "Header name");
+      await headerSnapshot("file-2", "Header name");
+      await processor.indexOperations([
+        fileRelationship("drive-1", "file-1"),
+        fileRelationship("drive-1", "file-2"),
+        linkWithName("file-3", ""),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Header name",
+        requestedName: "Header name",
+      });
+      expect(await nodeOf("file-2")).toEqual({
+        name: "Header name (2)",
+        requestedName: "Header name",
+      });
+      expect(await nodeOf("file-3")).toEqual({ name: "", requestedName: "" });
+    });
+
+    it("prefers the projected document name over the header snapshot", async () => {
+      await headerSnapshot("file-1", "Header name");
+      await processor.indexOperations([
+        named("file-1", "Projected name"),
+        fileRelationship("drive-1", "file-1"),
+      ]);
+      expect(await nodeOf("file-1")).toEqual({
+        name: "Projected name",
+        requestedName: "Projected name",
+      });
+    });
+  });
+
+  describe("legacy-shaped writes on a reactor-drive", () => {
+    function reactorLegacy(type: string, input: unknown) {
+      const item = wrap({ type, input }, "drive-1");
+      item.context.scope = "global";
+      return item;
+    }
+
+    async function rows() {
+      return db
+        .selectFrom("DriveNode")
+        .select([
+          "id",
+          "kind",
+          "name",
+          "requestedName",
+          "parentFolder",
+          "documentType",
+        ])
+        .where("driveId", "=", "drive-1")
+        .orderBy("id")
+        .execute();
+    }
+
+    it("projects a legacy-shaped ADD_FOLDER and ADD_FILE with the reactor-drive rule", async () => {
+      await processor.indexOperations([
+        reactorLegacy("ADD_FOLDER", { id: "f1", name: "Inbox" }),
+        reactorLegacy("ADD_FOLDER", { id: "f2", name: "Inbox" }),
+        reactorLegacy("ADD_FILE", {
+          id: "m1",
+          name: "Mail",
+          documentType: "powerhouse/email",
+          parentFolder: "f1",
+        }),
+      ]);
+      expect(await rows()).toEqual([
+        {
+          id: "f1",
+          kind: "folder",
+          name: "Inbox",
+          requestedName: "Inbox",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "f2",
+          kind: "folder",
+          name: "Inbox (2)",
+          requestedName: "Inbox",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "m1",
+          kind: "file",
+          name: "Mail",
+          requestedName: "Mail",
+          parentFolder: "f1",
+          documentType: "powerhouse/email",
+        },
+      ]);
+    });
+
+    it("skips an ADD_FOLDER without any id with a warning and continues the batch", async () => {
+      const warn = vi.spyOn(
+        (processor as unknown as { logger: { warn: () => void } }).logger,
+        "warn",
+      );
+      await processor.indexOperations([
+        reactorLegacy("ADD_FOLDER", { name: "No id" }),
+        reactorLegacy("ADD_FOLDER", { id: "", folderId: "", name: "Empty" }),
+        reactorLegacy("ADD_FILE", { name: "No id", documentType: "x/y" }),
+        wrap(
+          addFolderAction({ folderId: "ok", parentFolderId: null, name: "Ok" }),
+          "drive-1",
+        ),
+      ]);
+      expect((await rows()).map((r) => r.id)).toEqual(["ok"]);
+      expect(warn).toHaveBeenCalledTimes(3);
+      expect(warn.mock.calls[0]).toContain("ADD_FOLDER");
+      expect(warn.mock.calls[0]).toContain("drive-1");
+    });
+  });
+
+  describe("legacy document-drive", () => {
+    const LEGACY = "legacy-1";
+
+    function legacy(
+      type: string,
+      input: unknown,
+      overrides: Partial<Operation> = {},
+      driveId = LEGACY,
+    ): OperationWithContext {
+      const op: Operation = {
+        id: generateId(),
+        index: 0,
+        skip: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "",
+        action: {
+          id: generateId(),
+          type,
+          scope: "global",
+          timestampUtcMs: new Date().toISOString(),
+          input,
+        } as unknown as Operation["action"],
+        ...overrides,
+      };
+      return {
+        operation: op,
+        context: {
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          scope: "global",
+          branch: "main",
+          ordinal: nextOrdinal++,
+        },
+      };
+    }
+
+    async function rowsOf(driveId = LEGACY) {
+      return db
+        .selectFrom("DriveNode")
+        .select([
+          "id",
+          "kind",
+          "name",
+          "requestedName",
+          "parentFolder",
+          "documentType",
+        ])
+        .where("driveId", "=", driveId)
+        .orderBy("id")
+        .execute();
+    }
+
+    const DOC_TYPE = "powerhouse/budget-statement";
+
+    async function seedTree(): Promise<void> {
+      await processor.indexOperations([
+        legacy("ADD_FOLDER", { id: "a", name: "A" }),
+        legacy("ADD_FOLDER", { id: "b", name: "B", parentFolder: "a" }),
+        legacy("ADD_FILE", {
+          id: "f",
+          name: "File",
+          documentType: DOC_TYPE,
+          parentFolder: "b",
+        }),
+        legacy("ADD_FOLDER", { id: "c", name: "C" }),
+      ]);
+    }
+
+    it("upserts a file row on ADD_FILE", async () => {
+      await processor.indexOperations([
+        legacy("ADD_FILE", {
+          id: "f1",
+          name: "Report",
+          documentType: DOC_TYPE,
+        }),
+      ]);
+      expect(await rowsOf()).toEqual([
+        {
+          id: "f1",
+          kind: "file",
+          name: "Report",
+          requestedName: "Report",
+          parentFolder: null,
+          documentType: DOC_TYPE,
+        },
+      ]);
+    });
+
+    it("upserts a folder row on ADD_FOLDER and replays it as a no-op", async () => {
+      const add = { id: "d1", name: "Docs", parentFolder: null };
+      await processor.indexOperations([legacy("ADD_FOLDER", add)]);
+      await processor.indexOperations([legacy("ADD_FOLDER", add)]);
+      expect(await rowsOf()).toEqual([
+        {
+          id: "d1",
+          kind: "folder",
+          name: "Docs",
+          requestedName: "Docs",
+          parentFolder: null,
+          documentType: null,
+        },
+      ]);
+    });
+
+    it("names a legacy collision as the legacy reducer does, a reactor-drive one with its own rule", async () => {
+      await processor.indexOperations([
+        legacy("ADD_FOLDER", { id: "n1", name: "Notes" }),
+        legacy("ADD_FOLDER", { id: "n2", name: "Notes" }),
+        legacy("ADD_FOLDER", { id: "n3", name: "Notes" }),
+        legacy("ADD_FILE", { id: "n4", name: "Notes", documentType: DOC_TYPE }),
+        wrap(
+          addFolderAction({
+            folderId: "r1",
+            parentFolderId: null,
+            name: "Notes",
+          }),
+          "drive-r",
+        ),
+        wrap(
+          addFolderAction({
+            folderId: "r2",
+            parentFolderId: null,
+            name: "Notes",
+          }),
+          "drive-r",
+        ),
+      ]);
+      const legacyRows = await rowsOf();
+      expect(legacyRows.map((r) => [r.id, r.name, r.requestedName])).toEqual([
+        ["n1", "Notes", "Notes"],
+        ["n2", "Notes (copy) 1", "Notes (copy) 1"],
+        ["n3", "Notes (copy) 2", "Notes (copy) 2"],
+        ["n4", "Notes", "Notes"],
+      ]);
+      const reactorRows = await rowsOf("drive-r");
+      expect(reactorRows.map((r) => [r.id, r.name, r.requestedName])).toEqual([
+        ["r1", "Notes", "Notes"],
+        ["r2", "Notes (2)", "Notes"],
+      ]);
+    });
+
+    it("renames and retypes on UPDATE_FILE without moving the node", async () => {
+      await seedTree();
+      await processor.indexOperations([
+        legacy("UPDATE_FILE", {
+          id: "f",
+          name: "Renamed",
+          parentFolder: "c",
+          documentType: "powerhouse/invoice",
+        }),
+      ]);
+      const row = (await rowsOf()).find((r) => r.id === "f");
+      expect(row).toMatchObject({
+        name: "Renamed",
+        requestedName: "Renamed",
+        parentFolder: "b",
+        documentType: "powerhouse/invoice",
+      });
+    });
+
+    it("renames on UPDATE_NODE and moves only to the root on a null parentFolder", async () => {
+      await seedTree();
+      await processor.indexOperations([
+        legacy("UPDATE_NODE", { id: "b", name: "Bee", parentFolder: "c" }),
+      ]);
+      expect((await rowsOf()).find((r) => r.id === "b")).toMatchObject({
+        name: "Bee",
+        parentFolder: "a",
+      });
+
+      await processor.indexOperations([
+        legacy("UPDATE_NODE", { id: "b", parentFolder: null }),
+      ]);
+      expect((await rowsOf()).find((r) => r.id === "b")).toMatchObject({
+        name: "Bee",
+        parentFolder: null,
+      });
+    });
+
+    it("reparents on MOVE_NODE and ignores a move into the folder's own subtree", async () => {
+      await seedTree();
+      await processor.indexOperations([
+        legacy("MOVE_NODE", { srcFolder: "f", targetParentFolder: "c" }),
+        legacy("MOVE_NODE", { srcFolder: "a", targetParentFolder: "b" }),
+      ]);
+      const rows = await rowsOf();
+      expect(rows.find((r) => r.id === "f")?.parentFolder).toBe("c");
+      expect(rows.find((r) => r.id === "a")?.parentFolder).toBeNull();
+    });
+
+    it("inserts one row per COPY_NODE", async () => {
+      await seedTree();
+      await processor.indexOperations([
+        legacy("COPY_NODE", {
+          srcId: "f",
+          targetId: "f-copy",
+          targetName: "Copy",
+          targetParentFolder: "c",
+        }),
+        legacy("COPY_NODE", { srcId: "b", targetId: "b-copy" }),
+        legacy("COPY_NODE", { srcId: "c", targetId: "c-copy" }),
+      ]);
+      const rows = await rowsOf();
+      expect(rows.find((r) => r.id === "f-copy")).toEqual({
+        id: "f-copy",
+        kind: "file",
+        name: "Copy",
+        requestedName: "Copy",
+        parentFolder: "c",
+        documentType: DOC_TYPE,
+      });
+      expect(rows.find((r) => r.id === "b-copy")).toMatchObject({
+        kind: "folder",
+        name: "B",
+        parentFolder: null,
+      });
+      expect(rows.find((r) => r.id === "c-copy")).toMatchObject({
+        name: "C (copy) 1",
+        parentFolder: null,
+      });
+      expect(rows).toHaveLength(7);
+    });
+
+    it("deletes the node and its descendants on DELETE_NODE", async () => {
+      await seedTree();
+      await processor.indexOperations([
+        legacy("DELETE_NODE", { id: "a" }),
+        legacy("DELETE_NODE", { id: "missing" }),
+      ]);
+      expect((await rowsOf()).map((r) => r.id)).toEqual(["c"]);
+    });
+
+    it("writes no rows for denied or failed operations", async () => {
+      await processor.indexOperations([
+        legacy(
+          "ADD_FOLDER",
+          { id: "denied", name: "Denied" },
+          { deniedReason: "not allowed" },
+        ),
+        legacy("ADD_FOLDER", { id: "failed", name: "Failed" }, { error: "x" }),
+      ]);
+      expect(await rowsOf()).toHaveLength(0);
+    });
+
+    it("keeps a legacy node's name when its document is renamed or deleted", async () => {
+      const now = new Date().toISOString();
+      await (db.withSchema(REACTOR_SCHEMA) as unknown as Kysely<any>)
+        .insertInto("WriteIdentity")
+        .values({
+          documentId: LEGACY,
+          branch: "main",
+          slug: null,
+          documentType: "powerhouse/document-drive",
+          isDeleted: false,
+          createdAtUtcIso: now,
+          updatedAtUtcIso: now,
+        })
+        .execute();
+      await processor.indexOperations([
+        legacy("ADD_FILE", {
+          id: "doc-1",
+          name: "Node",
+          documentType: DOC_TYPE,
+        }),
+        wrap(documentModelActions.setName({ name: "Document title" }), "doc-1"),
+      ]);
+      expect((await rowsOf())[0]?.name).toBe("Node");
+
+      await processor.indexOperations([
+        wrap(deleteDocumentAction("doc-1"), "doc-1"),
+      ]);
+      expect((await rowsOf()).map((r) => r.id)).toEqual(["doc-1"]);
+    });
+
+    describe("backfill", () => {
+      async function snapshot(
+        documentId: string,
+        content: unknown,
+        overrides: {
+          scope?: string;
+          isDeleted?: boolean;
+          lastOperationOrdinal?: number;
+        } = {},
+      ): Promise<void> {
+        await (db.withSchema(REACTOR_SCHEMA) as unknown as Kysely<any>)
+          .insertInto("DocumentSnapshot")
+          .values({
+            id: `${documentId}-${overrides.scope ?? "global"}`,
+            documentId,
+            scope: "global",
+            branch: "main",
+            content: JSON.stringify(content),
+            documentType: "powerhouse/document-drive",
+            lastOperationIndex: 0,
+            lastOperationHash: "",
+            ...overrides,
+          })
+          .execute();
+      }
+
+      it("seeds rows from a legacy drive's global snapshot once", async () => {
+        await snapshot(LEGACY, {
+          name: "Legacy",
+          nodes: [
+            { id: "a", kind: "folder", name: "A", parentFolder: null },
+            {
+              id: "f",
+              kind: "file",
+              name: "File",
+              parentFolder: "a",
+              documentType: DOC_TYPE,
+            },
+          ],
+        });
+        await snapshot(
+          "deleted",
+          {
+            nodes: [{ id: "x", kind: "folder", name: "X", parentFolder: null }],
+          },
+          { isDeleted: true },
+        );
+        await snapshot(
+          "header-only",
+          {
+            nodes: [{ id: "y", kind: "folder", name: "Y", parentFolder: null }],
+          },
+          { scope: "header" },
+        );
+
+        const first = await createProcessor();
+        expect(await rowsOf()).toEqual([
+          {
+            id: "a",
+            kind: "folder",
+            name: "A",
+            requestedName: "A",
+            parentFolder: null,
+            documentType: null,
+          },
+          {
+            id: "f",
+            kind: "file",
+            name: "File",
+            requestedName: "File",
+            parentFolder: "a",
+            documentType: DOC_TYPE,
+          },
+        ]);
+        expect(await rowsOf("deleted")).toHaveLength(0);
+        expect(await rowsOf("header-only")).toHaveLength(0);
+
+        await first.indexOperations([legacy("DELETE_NODE", { id: "f" })]);
+        await createProcessor();
+        expect((await rowsOf()).map((r) => r.id)).toEqual(["a"]);
+      });
+
+      const HISTORY_NODES = [
+        { id: "a", kind: "folder", name: "A", parentFolder: null },
+        {
+          id: "f",
+          kind: "file",
+          name: "File",
+          parentFolder: "a",
+          documentType: DOC_TYPE,
+        },
+        { id: "a2", kind: "folder", name: "A (copy) 1", parentFolder: null },
+      ];
+
+      const HISTORY_ROWS = [
+        {
+          id: "a",
+          kind: "folder",
+          name: "A",
+          requestedName: "A",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "a2",
+          kind: "folder",
+          name: "A (copy) 1",
+          requestedName: "A (copy) 1",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "f",
+          kind: "file",
+          name: "File",
+          requestedName: "File",
+          parentFolder: "a",
+          documentType: DOC_TYPE,
+        },
+      ];
+
+      async function setCursor(lastOrdinal: number): Promise<void> {
+        await db
+          .updateTable("ViewState")
+          .set({ lastOrdinal })
+          .where("readModelId", "=", "reactor-drive-node-processor")
+          .execute();
+      }
+
+      it("seeds when the cursor is at or past the snapshot ordinal", async () => {
+        await setCursor(10);
+        await snapshot(
+          LEGACY,
+          { nodes: HISTORY_NODES },
+          { lastOperationOrdinal: 10 },
+        );
+        await createProcessor();
+        expect(await rowsOf()).toEqual(HISTORY_ROWS);
+      });
+
+      it("skips a snapshot past the cursor and lets replay build the drive", async () => {
+        await snapshot(
+          LEGACY,
+          { nodes: HISTORY_NODES },
+          { lastOperationOrdinal: 5 },
+        );
+        const replaying = await createProcessor();
+        expect(await rowsOf()).toHaveLength(0);
+
+        await replaying.indexOperations([
+          legacy("ADD_FOLDER", { id: "a", name: "A" }),
+          legacy("ADD_FILE", {
+            id: "f",
+            name: "File",
+            documentType: DOC_TYPE,
+            parentFolder: "a",
+          }),
+          legacy("ADD_FOLDER", { id: "a2", name: "A" }),
+        ]);
+        expect(await rowsOf()).toEqual(HISTORY_ROWS);
+      });
+
+      it("tolerates operations replayed over backfilled rows", async () => {
+        await snapshot(LEGACY, {
+          nodes: [{ id: "a", kind: "folder", name: "A", parentFolder: null }],
+        });
+        const replaying = await createProcessor();
+        await replaying.indexOperations([
+          legacy("ADD_FOLDER", { id: "a", name: "A" }),
+          legacy("DELETE_NODE", { id: "gone" }),
+        ]);
+        expect(await rowsOf()).toEqual([
+          {
+            id: "a",
+            kind: "folder",
+            name: "A",
+            requestedName: "A",
+            parentFolder: null,
+            documentType: null,
+          },
+        ]);
+      });
     });
   });
 });

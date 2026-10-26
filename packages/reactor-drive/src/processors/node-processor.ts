@@ -8,6 +8,17 @@ import {
   type DocumentViewDatabase,
   type IConsistencyTracker,
 } from "@powerhousedao/reactor";
+import {
+  getNextCopyNumber,
+  type AddFileInput,
+  type AddFolderInput,
+  type CopyNodeInput,
+  type DeleteNodeInput,
+  type MoveNodeInput,
+  type UpdateFileInput,
+  type UpdateNodeInput,
+} from "@powerhousedao/shared/document-drive";
+import { isDenied } from "@powerhousedao/shared/document-model";
 import type {
   AddRelationshipActionInput,
   CreateDocumentActionInput,
@@ -18,6 +29,7 @@ import type {
   SetNameActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
+import { childLogger, type ILogger } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import {
   DRIVE_CHILD_RELATIONSHIP_TYPE,
@@ -35,6 +47,8 @@ import { resolveCollision } from "./utils/collisions.js";
 
 export type NodeProcessorDatabase = ReactorDriveDatabase & DocumentViewDatabase;
 
+export const LEGACY_DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+
 const NAME_ACTION_TYPES = new Set([
   "CREATE_DOCUMENT",
   "UPGRADE_DOCUMENT",
@@ -49,8 +63,49 @@ const STRUCTURE_ACTION_TYPES = new Set([
   "REMOVE_FOLDER",
 ]);
 
+const LEGACY_NODE_ACTION_TYPES = new Set([
+  "ADD_FILE",
+  "ADD_FOLDER",
+  "UPDATE_FILE",
+  "UPDATE_NODE",
+  "MOVE_NODE",
+  "COPY_NODE",
+  "DELETE_NODE",
+]);
+
+/** Candidates the indexed sibling check tries before scanning the folder. */
+const SIBLING_NAME_CANDIDATES = 50;
+
+const BACKFILL_BATCH_SIZE = 500;
+
+type NodeKind = "file" | "folder";
+
+type CollisionRule = "legacy" | "reactor";
+
+interface LegacyNodeRow {
+  driveId: string;
+  id: string;
+  kind: NodeKind;
+  name: string;
+  requestedName: string;
+  parentFolder: string | null;
+  documentType: string | null;
+}
+
+interface LegacySnapshotNode {
+  id?: unknown;
+  kind?: unknown;
+  name?: unknown;
+  parentFolder?: unknown;
+  documentType?: unknown;
+}
+
 /**
  * Projects drive structure operations into the DriveNode tree.
+ *
+ * Reactor-drive rows get the per-folder collision rule. Legacy
+ * `powerhouse/document-drive` rows mirror the legacy node reducer, including
+ * its own `(copy) N` collision rule, so the rows equal the drive's state.
  *
  * Indexes a batch unchunked: a single job may carry one action per descendant
  * of a copied subtree, and a partially committed copy is a half-built tree that
@@ -64,6 +119,10 @@ export class NodeProcessor extends BaseReadModel {
   private readonly baseDb: Kysely<unknown>;
   private readonly schema: string;
   private readonly reactorSchema: string;
+  private readonly logger: ILogger = childLogger([
+    "reactor-drive",
+    "node-processor",
+  ]);
 
   constructor(
     baseDb: Kysely<unknown>,
@@ -105,6 +164,7 @@ export class NodeProcessor extends BaseReadModel {
         `Reactor drive migrations failed: ${result.error.message}`,
       );
     }
+    await this.backfillLegacyDrives();
     await super.init();
   }
 
@@ -131,10 +191,91 @@ export class NodeProcessor extends BaseReadModel {
       return (
         NAME_ACTION_TYPES.has(actionType) ||
         STRUCTURE_ACTION_TYPES.has(actionType) ||
+        LEGACY_NODE_ACTION_TYPES.has(actionType) ||
         actionType === "DELETE_DOCUMENT" ||
         isPurgeMarker(item.operation)
       );
     });
+  }
+
+  /**
+   * Seeds rows for every live legacy drive that has none, from its global
+   * snapshot. One transaction per drive; re-running skips drives with rows.
+   *
+   * Only a snapshot at or behind the resume cursor is seeded: catch-up
+   * replays every operation past the cursor, and replaying operations the
+   * snapshot already holds over its rows would rename and duplicate nodes.
+   */
+  private async backfillLegacyDrives(): Promise<void> {
+    const resumeFrom = (await this.loadState()) ?? 0;
+    const drives = (await this.purgeLookup(this.baseDb)
+      .selectFrom("DocumentSnapshot")
+      .select(["documentId", "lastOperationOrdinal"])
+      .where("documentType", "=", LEGACY_DRIVE_DOCUMENT_TYPE)
+      .where("scope", "=", "global")
+      .where("branch", "=", "main")
+      .where("isDeleted", "=", false)
+      .execute()) as { documentId: string; lastOperationOrdinal: number }[];
+
+    for (const { documentId: driveId, lastOperationOrdinal } of drives) {
+      if (lastOperationOrdinal > resumeFrom) {
+        const existing = await this.driveDb
+          .selectFrom("DriveNode")
+          .select("id")
+          .where("driveId", "=", driveId)
+          .limit(1)
+          .executeTakeFirst();
+        if (!existing) {
+          this.logger.info(
+            "legacy drive @driveId snapshot at ordinal @snapshot is past cursor @cursor; replay will build it",
+            driveId,
+            lastOperationOrdinal,
+            resumeFrom,
+          );
+        }
+        continue;
+      }
+      const count = await this.driveDb
+        .transaction()
+        .execute((trx) => this.backfillLegacyDrive(trx, driveId));
+      if (count > 0) {
+        this.logger.info(
+          "backfilled legacy drive @driveId with @count nodes",
+          driveId,
+          count,
+        );
+      }
+    }
+  }
+
+  private async backfillLegacyDrive(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+  ): Promise<number> {
+    const existing = await trx
+      .selectFrom("DriveNode")
+      .select("id")
+      .where("driveId", "=", driveId)
+      .limit(1)
+      .executeTakeFirst();
+    if (existing) return 0;
+
+    const snapshot = (await this.purgeLookup(trx)
+      .selectFrom("DocumentSnapshot")
+      .select("content")
+      .where("documentId", "=", driveId)
+      .where("scope", "=", "global")
+      .where("branch", "=", "main")
+      .executeTakeFirst()) as { content: unknown } | undefined;
+    const rows = legacySnapshotRows(driveId, snapshot?.content);
+    for (let i = 0; i < rows.length; i += BACKFILL_BATCH_SIZE) {
+      await trx
+        .insertInto("DriveNode")
+        .values(rows.slice(i, i + BACKFILL_BATCH_SIZE))
+        .onConflict((oc) => oc.columns(["driveId", "id"]).doNothing())
+        .execute();
+    }
+    return rows.length;
   }
 
   private async applyAll(
@@ -144,6 +285,12 @@ export class NodeProcessor extends BaseReadModel {
     const purgedTargets = await this.findPurgedTargets(trx, items);
     for (const item of items) {
       const actionType = item.operation.action.type;
+      const legacyRule = this.legacyShapeRule(item);
+      if (legacyRule) {
+        if (item.operation.error || isDenied(item.operation)) continue;
+        await this.applyLegacyNodeOperation(trx, item, legacyRule);
+        continue;
+      }
       if (isPurgeMarker(item.operation)) {
         const input = item.operation.action.input as PurgeDocumentActionInput;
         await this.eraseDocument(
@@ -236,7 +383,13 @@ export class NodeProcessor extends BaseReadModel {
       .where("kind", "=", "file")
       .execute();
 
+    // A legacy drive's node name does not follow its document's name.
+    const legacyDrives = await this.legacyDrivesAmong(
+      trx,
+      linkedRows.map((row) => row.driveId),
+    );
     for (const row of linkedRows) {
+      if (legacyDrives.has(row.driveId)) continue;
       const resolved = await this.resolveSiblingName(
         trx,
         row.driveId,
@@ -296,16 +449,15 @@ export class NodeProcessor extends BaseReadModel {
     }
 
     if (action.type === "UPDATE_FOLDER") {
-      await this.handleUpdateFolder(
-        trx,
-        driveId,
-        action.input as UpdateFolderActionInput,
-      );
+      const input = action.input as UpdateFolderActionInput;
+      if (!isNonEmptyString(input.folderId)) return;
+      await this.handleUpdateFolder(trx, driveId, input);
       return;
     }
 
     if (action.type === "REMOVE_FOLDER") {
       const input = action.input as RemoveFolderActionInput;
+      if (!isNonEmptyString(input.folderId)) return;
       await trx
         .deleteFrom("DriveNode")
         .where("driveId", "=", driveId)
@@ -314,12 +466,443 @@ export class NodeProcessor extends BaseReadModel {
     }
   }
 
+  /**
+   * The collision rule for an operation in the legacy node shape: a
+   * document-drive's own, or a reactor-drive's for a legacy-shaped write
+   * against one. Undefined for every other operation.
+   */
+  private legacyShapeRule(
+    item: OperationWithContext,
+  ): CollisionRule | undefined {
+    const action = item.operation.action;
+    if (!LEGACY_NODE_ACTION_TYPES.has(action.type)) return undefined;
+    if (item.context.documentType === LEGACY_DRIVE_DOCUMENT_TYPE) {
+      return "legacy";
+    }
+    if (item.context.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
+      return undefined;
+    }
+    if (action.type === "ADD_FOLDER") {
+      const input = action.input as { folderId?: unknown } | null | undefined;
+      if (isNonEmptyString(input?.folderId)) return undefined;
+    }
+    return "reactor";
+  }
+
+  /**
+   * Mirrors the legacy node reducer (document-drive src/reducers/node.ts).
+   * An add without a usable id is skipped with a warning: a read model never
+   * stops on an operation's shape.
+   */
+  private async applyLegacyNodeOperation(
+    trx: Transaction<NodeProcessorDatabase>,
+    item: OperationWithContext,
+    rule: CollisionRule,
+  ): Promise<void> {
+    const action = item.operation.action;
+    const driveId = item.context.documentId;
+    switch (action.type) {
+      case "ADD_FILE": {
+        const input = action.input as Partial<AddFileInput>;
+        if (
+          !isNonEmptyString(input.id) ||
+          !isNonEmptyString(input.documentType)
+        ) {
+          this.warnSkipped(item, "no usable id or documentType");
+          return;
+        }
+        await this.upsertLegacyNode(trx, driveId, rule, {
+          id: input.id,
+          kind: "file",
+          srcName: input.name ?? "",
+          collisionFolder: input.parentFolder || null,
+          parentFolder: input.parentFolder ?? null,
+          documentType: input.documentType,
+        });
+        return;
+      }
+      case "ADD_FOLDER": {
+        const input = action.input as Partial<AddFolderInput>;
+        if (!isNonEmptyString(input.id)) {
+          this.warnSkipped(item, "no usable id");
+          return;
+        }
+        await this.upsertLegacyNode(trx, driveId, rule, {
+          id: input.id,
+          kind: "folder",
+          srcName: input.name ?? "",
+          collisionFolder: input.parentFolder || null,
+          parentFolder: input.parentFolder ?? null,
+          documentType: null,
+        });
+        return;
+      }
+      case "UPDATE_FILE":
+      case "UPDATE_NODE": {
+        const input = action.input as UpdateFileInput | UpdateNodeInput;
+        if (!isNonEmptyString(input.id)) return;
+        await this.updateLegacyNode(trx, driveId, rule, action.type, input);
+        return;
+      }
+      case "MOVE_NODE": {
+        const input = action.input as MoveNodeInput;
+        if (!isNonEmptyString(input.srcFolder)) return;
+        await this.moveLegacyNode(trx, driveId, rule, input);
+        return;
+      }
+      case "COPY_NODE": {
+        const input = action.input as CopyNodeInput;
+        if (!isNonEmptyString(input.srcId)) return;
+        if (!isNonEmptyString(input.targetId)) {
+          this.warnSkipped(item, "no usable targetId");
+          return;
+        }
+        const src = await this.findNode(trx, driveId, input.srcId);
+        if (!src) return;
+        await this.upsertLegacyNode(trx, driveId, rule, {
+          id: input.targetId,
+          kind: src.kind,
+          srcName:
+            input.targetName ||
+            (rule === "legacy" ? src.name : src.requestedName),
+          collisionFolder: input.targetParentFolder || null,
+          parentFolder: input.targetParentFolder || null,
+          documentType: src.documentType,
+        });
+        return;
+      }
+      case "DELETE_NODE": {
+        const input = action.input as DeleteNodeInput;
+        if (!isNonEmptyString(input.id)) return;
+        const ids = await this.subtreeIds(trx, driveId, input.id);
+        if (ids.length === 0) return;
+        await trx
+          .deleteFrom("DriveNode")
+          .where("driveId", "=", driveId)
+          .where("id", "in", ids)
+          .execute();
+        return;
+      }
+    }
+  }
+
+  /**
+   * ADD_FILE, ADD_FOLDER and COPY_NODE. The reducer rejects an existing id, so
+   * the node itself is left out of the collision check and a replay over the
+   * same row is an upsert to the same values.
+   */
+  private async upsertLegacyNode(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    rule: CollisionRule,
+    node: {
+      id: string;
+      kind: NodeKind;
+      srcName: string;
+      collisionFolder: string | null;
+      parentFolder: string | null;
+      documentType: string | null;
+    },
+  ): Promise<void> {
+    const { name, requestedName } = await this.nodeName(trx, rule, {
+      driveId,
+      folder: rule === "legacy" ? node.collisionFolder : node.parentFolder,
+      srcName: node.srcName,
+      kind: node.kind,
+      excludeId: node.id,
+    });
+    const values = {
+      kind: node.kind,
+      name,
+      requestedName,
+      parentFolder: node.parentFolder,
+      documentType: node.kind === "file" ? node.documentType : null,
+    };
+    await trx
+      .insertInto("DriveNode")
+      .values({ driveId, id: node.id, ...values })
+      .onConflict((oc) =>
+        oc
+          .columns(["driveId", "id"])
+          .doUpdateSet({ ...values, updatedAt: new Date() }),
+      )
+      .execute();
+  }
+
+  /**
+   * UPDATE_FILE never moves the node (its parentFolder only picks the folder
+   * for the collision check); UPDATE_NODE moves it only to the root, on null.
+   */
+  private async updateLegacyNode(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    rule: CollisionRule,
+    actionType: "UPDATE_FILE" | "UPDATE_NODE",
+    input: UpdateFileInput | UpdateNodeInput,
+  ): Promise<void> {
+    const row = await this.findNode(trx, driveId, input.id);
+    if (!row) return;
+    const nextParentFolder =
+      actionType === "UPDATE_NODE" && input.parentFolder === null
+        ? null
+        : row.parentFolder;
+    const { name, requestedName } = await this.nodeName(trx, rule, {
+      driveId,
+      folder:
+        rule === "legacy"
+          ? (input.parentFolder ?? row.parentFolder)
+          : nextParentFolder,
+      srcName: input.name ?? (rule === "legacy" ? row.name : row.requestedName),
+      kind: actionType === "UPDATE_FILE" ? "file" : row.kind,
+      excludeId: input.id,
+    });
+    if (actionType === "UPDATE_FILE") {
+      const documentType = (input as UpdateFileInput).documentType;
+      await trx
+        .updateTable("DriveNode")
+        .set({
+          name,
+          requestedName,
+          documentType:
+            row.kind === "file" ? (documentType ?? row.documentType) : null,
+          updatedAt: new Date(),
+        })
+        .where("driveId", "=", driveId)
+        .where("id", "=", input.id)
+        .execute();
+      return;
+    }
+    await trx
+      .updateTable("DriveNode")
+      .set({
+        name,
+        requestedName,
+        parentFolder: nextParentFolder,
+        updatedAt: new Date(),
+      })
+      .where("driveId", "=", driveId)
+      .where("id", "=", input.id)
+      .execute();
+  }
+
+  private async moveLegacyNode(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    rule: CollisionRule,
+    input: MoveNodeInput,
+  ): Promise<void> {
+    if (input.srcFolder === input.targetParentFolder) return;
+    const row = await this.findNode(trx, driveId, input.srcFolder);
+    if (!row) return;
+    const target = input.targetParentFolder || null;
+    if (row.kind === "folder" && target !== null) {
+      const subtree = await this.subtreeIds(trx, driveId, row.id);
+      if (subtree.includes(target)) return;
+    }
+    // The legacy reducer's collision check sees the moved node itself.
+    const { name, requestedName } = await this.nodeName(trx, rule, {
+      driveId,
+      folder: target,
+      srcName: rule === "legacy" ? row.name : row.requestedName,
+      kind: row.kind,
+      excludeId: rule === "legacy" ? null : row.id,
+    });
+    await trx
+      .updateTable("DriveNode")
+      .set({
+        name,
+        requestedName,
+        parentFolder: target,
+        updatedAt: new Date(),
+      })
+      .where("driveId", "=", driveId)
+      .where("id", "=", row.id)
+      .execute();
+  }
+
+  /**
+   * A legacy row's name is whatever the legacy reducer would produce, and is
+   * also its requested name; a reactor-drive row keeps the requested name and
+   * resolves the displayed one with the reactor-drive rule.
+   */
+  private async nodeName(
+    trx: Transaction<NodeProcessorDatabase>,
+    rule: CollisionRule,
+    target: {
+      driveId: string;
+      folder: string | null;
+      srcName: string;
+      kind: NodeKind;
+      excludeId: string | null;
+    },
+  ): Promise<{ name: string; requestedName: string }> {
+    if (rule === "legacy") {
+      const name = await this.legacySiblingName(
+        trx,
+        target.driveId,
+        target.folder,
+        target.srcName,
+        target.kind,
+        target.excludeId,
+      );
+      return { name, requestedName: name };
+    }
+    const name = await this.resolveSiblingName(
+      trx,
+      target.driveId,
+      target.folder,
+      target.srcName,
+      target.excludeId ?? "",
+    );
+    return { name, requestedName: target.srcName };
+  }
+
+  private warnSkipped(item: OperationWithContext, reason: string): void {
+    this.logger.warn(
+      "skipped @actionType on drive @driveId at ordinal @ordinal (index @index): @reason",
+      item.operation.action.type,
+      item.context.documentId,
+      item.context.ordinal,
+      item.operation.index,
+      reason,
+    );
+  }
+
+  /**
+   * The legacy handleTargetNameCollisions: a same-kind sibling with the name
+   * gives `name (copy) N`, N one past the highest existing copy number.
+   */
+  private async legacySiblingName(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    targetFolder: string | null,
+    srcName: string,
+    kind: NodeKind,
+    excludeId: string | null,
+  ): Promise<string> {
+    const folder = targetFolder === "" ? null : targetFolder;
+    let siblings = trx
+      .selectFrom("DriveNode")
+      .select("name")
+      .where("driveId", "=", driveId)
+      .where("kind", "=", kind);
+    siblings =
+      folder === null
+        ? siblings.where("parentFolder", "is", null)
+        : siblings.where("parentFolder", "=", folder);
+    if (excludeId !== null) siblings = siblings.where("id", "!=", excludeId);
+
+    const taken = await siblings
+      .where("name", "=", srcName)
+      .limit(1)
+      .executeTakeFirst();
+    if (!taken) return srcName;
+
+    const copies = await siblings
+      .where("name", "like", `${escapeLike(srcName)} (copy)%`)
+      .execute();
+    const next = getNextCopyNumber(
+      copies.map((row) => row.name),
+      srcName,
+    );
+    return `${srcName} (copy) ${next}`;
+  }
+
+  private async findNode(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    id: string,
+  ) {
+    return trx
+      .selectFrom("DriveNode")
+      .select([
+        "id",
+        "kind",
+        "name",
+        "requestedName",
+        "parentFolder",
+        "documentType",
+      ])
+      .where("driveId", "=", driveId)
+      .where("id", "=", id)
+      .executeTakeFirst();
+  }
+
+  /** The node and its descendants; empty when the node does not exist. */
+  private async subtreeIds(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveId: string,
+    root: string,
+  ): Promise<string[]> {
+    const rows = await trx
+      .withRecursive("subtree", (qb) =>
+        qb
+          .selectFrom("DriveNode")
+          .select("id")
+          .where("driveId", "=", driveId)
+          .where("id", "=", root)
+          .union(
+            qb
+              .selectFrom("DriveNode")
+              .innerJoin("subtree", "DriveNode.parentFolder", "subtree.id")
+              .where("DriveNode.driveId", "=", driveId)
+              .select("DriveNode.id"),
+          ),
+      )
+      .selectFrom("subtree")
+      .select("id")
+      .execute();
+    return rows.map((row) => row.id);
+  }
+
   private async applyDeleteDocument(
     trx: Transaction<NodeProcessorDatabase>,
     item: OperationWithContext,
   ): Promise<void> {
     const input = item.operation.action.input as DeleteDocumentActionInput;
-    await this.eraseDocument(trx, input.documentId || item.context.documentId);
+    const docId = input.documentId || item.context.documentId;
+    const linked = await trx
+      .selectFrom("DriveNode")
+      .select("driveId")
+      .where("id", "=", docId)
+      .execute();
+    const legacyDrives = await this.legacyDrivesAmong(
+      trx,
+      linked.map((row) => row.driveId),
+    );
+    if (legacyDrives.size === 0) {
+      await this.eraseDocument(trx, docId);
+      return;
+    }
+    // The legacy reducer keeps the node of a deleted document.
+    await trx
+      .deleteFrom("DriveNode")
+      .where((eb) =>
+        eb.or([
+          eb.and([
+            eb("id", "=", docId),
+            eb("driveId", "not in", [...legacyDrives]),
+          ]),
+          eb("driveId", "=", docId),
+        ]),
+      )
+      .execute();
+    await trx.deleteFrom("DocumentName").where("docId", "=", docId).execute();
+  }
+
+  /** The legacy drives among the given ids, from the write identity table. */
+  private async legacyDrivesAmong(
+    trx: Transaction<NodeProcessorDatabase>,
+    driveIds: string[],
+  ): Promise<Set<string>> {
+    if (driveIds.length === 0) return new Set();
+    const rows = (await this.purgeLookup(trx)
+      .selectFrom("WriteIdentity")
+      .select("documentId")
+      .where("documentId", "in", [...new Set(driveIds)])
+      .where("documentType", "=", LEGACY_DRIVE_DOCUMENT_TYPE)
+      .execute()) as { documentId: string }[];
+    return new Set(rows.map((row) => row.documentId));
   }
 
   /** The id's nodes in every drive, a drive's own tree, and its name. */
@@ -344,7 +927,10 @@ export class NodeProcessor extends BaseReadModel {
     const documentType = metadata.documentType;
 
     const requestedName =
-      (await this.lookupDocumentName(trx, input.targetId)) ?? "";
+      metadata.name ??
+      (await this.lookupDocumentName(trx, input.targetId)) ??
+      (await this.lookupSnapshotName(trx, input.targetId)) ??
+      "";
 
     const resolved = await this.resolveSiblingName(
       trx,
@@ -457,6 +1043,10 @@ export class NodeProcessor extends BaseReadModel {
       .execute();
   }
 
+  /**
+   * The name resolveCollision would pick, from an indexed check of the first
+   * candidates it would try; a folder with all of them taken is scanned.
+   */
   private async resolveSiblingName(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
@@ -464,17 +1054,27 @@ export class NodeProcessor extends BaseReadModel {
     requested: string,
     excludeId: string,
   ): Promise<string> {
-    let query = trx
+    const candidates = [requested];
+    for (let suffix = 2; suffix <= SIBLING_NAME_CANDIDATES; suffix++) {
+      candidates.push(`${requested} (${suffix})`);
+    }
+
+    let siblings = trx
       .selectFrom("DriveNode")
       .select("name")
       .where("driveId", "=", driveId)
       .where("id", "!=", excludeId);
-    query =
+    siblings =
       parentFolder === null
-        ? query.where("parentFolder", "is", null)
-        : query.where("parentFolder", "=", parentFolder);
+        ? siblings.where("parentFolder", "is", null)
+        : siblings.where("parentFolder", "=", parentFolder);
 
-    const rows = await query.execute();
+    const takenRows = await siblings.where("name", "in", candidates).execute();
+    const taken = new Set(takenRows.map((r) => r.name));
+    const free = candidates.find((candidate) => !taken.has(candidate));
+    if (free !== undefined) return free;
+
+    const rows = await siblings.execute();
     return resolveCollision(
       requested,
       rows.map((r) => r.name),
@@ -491,6 +1091,22 @@ export class NodeProcessor extends BaseReadModel {
       .where("docId", "=", docId)
       .executeTakeFirst();
     return row?.name;
+  }
+
+  /** The document view's name for a document, preferring its header row. */
+  private async lookupSnapshotName(
+    trx: Transaction<NodeProcessorDatabase>,
+    docId: string,
+  ): Promise<string | undefined> {
+    const rows = (await this.purgeLookup(trx)
+      .selectFrom("DocumentSnapshot")
+      .select(["scope", "name"])
+      .where("documentId", "=", docId)
+      .where("name", "is not", null)
+      .where("name", "!=", "")
+      .execute()) as { scope: string; name: string }[];
+    const header = rows.find((row) => row.scope === "header");
+    return (header ?? rows.at(0))?.name;
   }
 
   private parseFileMetadata(
@@ -512,6 +1128,9 @@ export class NodeProcessor extends BaseReadModel {
       kind: "file",
       parentFolderId: typed.parentFolderId ?? null,
       documentType: typed.documentType,
+      ...(typeof typed.name === "string" && typed.name !== ""
+        ? { name: typed.name }
+        : {}),
     };
   }
 
@@ -528,4 +1147,39 @@ export class NodeProcessor extends BaseReadModel {
       )
       .execute();
   }
+}
+
+function legacySnapshotRows(
+  driveId: string,
+  content: unknown,
+): LegacyNodeRow[] {
+  const nodes = (content as { nodes?: unknown } | null | undefined)?.nodes;
+  if (!Array.isArray(nodes)) return [];
+  const rows: LegacyNodeRow[] = [];
+  for (const node of nodes as LegacySnapshotNode[]) {
+    if (typeof node.id !== "string" || typeof node.name !== "string") continue;
+    const parentFolder =
+      typeof node.parentFolder === "string" ? node.parentFolder : null;
+    const base = {
+      driveId,
+      id: node.id,
+      name: node.name,
+      requestedName: node.name,
+      parentFolder,
+    };
+    if (node.kind === "folder") {
+      rows.push({ ...base, kind: "folder", documentType: null });
+    } else if (node.kind === "file" && typeof node.documentType === "string") {
+      rows.push({ ...base, kind: "file", documentType: node.documentType });
+    }
+  }
+  return rows;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value !== "";
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }

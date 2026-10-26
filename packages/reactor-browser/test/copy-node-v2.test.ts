@@ -13,6 +13,8 @@ import {
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import { withHalves } from "./utils/client-halves.js";
+import type { Node } from "@powerhousedao/shared/document-drive";
+import { fakeDriveReader } from "./utils/drive-nodes.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { copyNode } from "../src/actions/document.js";
 
@@ -63,6 +65,7 @@ function install(
     getDocumentModelModules: () =>
       Promise.resolve({ results: [module], options: { cursor: "", limit: 1 } }),
     drives: {
+      ...fakeDriveReader(() => [node as Node]).reader,
       addFile: (_driveId: string, document: PHDocument) => {
         added.push(document.header);
         return Promise.resolve(document);

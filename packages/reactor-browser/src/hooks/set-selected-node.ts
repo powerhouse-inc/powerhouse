@@ -18,6 +18,7 @@ import {
 } from "./make-ph-event-functions.js";
 import { useCallback } from "react";
 import { useDriveContext } from "./drive-context.js";
+import { peekDriveNode } from "./drive-nodes.js";
 import {
   getCurrentPathname,
   hasHostNavigation,
@@ -25,7 +26,7 @@ import {
   preloadTarget,
 } from "./navigation.js";
 import type { PHStore } from "./ph-store.js";
-import { getPHStore } from "./ph-store.js";
+import { getPHStore, usePHStore } from "./ph-store.js";
 
 const selectedNodeIdEventFunctions = makePHEventFunctions("selectedNodeId");
 const useStoreSelectedNodeId = selectedNodeIdEventFunctions.useValue;
@@ -99,25 +100,30 @@ export function setSelectedNode(node: NodeRef, options?: PHNavigateOptions) {
   selectNode(node, options);
 }
 
-function findNode(drive: DocumentDriveDocument, node: NodeRef) {
+function findNode(
+  drive: DocumentDriveDocument,
+  node: NodeRef,
+  store: PHStore | undefined,
+) {
   if (typeof node !== "string") return node;
   const id = extractNodeIdFromSlug(node);
-  return drive.state.global.nodes.find((n) => n.id === id);
+  return id ? peekDriveNode(drive.header.id, id, store) : undefined;
 }
 
 /** Opens a node: through the drive app's `open` when it has one, else the
  * app's navigation in the drive app's drive. */
 export function useSetSelectedNode() {
   const context = useDriveContext();
+  const store = usePHStore() ?? getPHStore();
   return useCallback(
     (node: NodeRef, options?: PHNavigateOptions) => {
       if (context?.open) {
-        context.open(findNode(context.drive, node), options);
+        context.open(findNode(context.drive, node, store), options);
         return;
       }
       selectNode(node, options, context?.drive);
     },
-    [context],
+    [context, store],
   );
 }
 

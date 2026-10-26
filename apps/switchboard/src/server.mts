@@ -49,8 +49,10 @@ import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
 import {
+  createReactorDriveWriteStrategy,
   DriveNodeView,
   NodeProcessor,
+  REACTOR_DRIVE_DOCUMENT_TYPE,
   ReactorDriveClient,
   type ReactorDriveDatabase,
 } from "@powerhousedao/reactor-drive";
@@ -919,6 +921,18 @@ async function initServer(
       if (apiRef.current) await apiRef.current.dispose();
     });
 
+    const reactorDriveSchemaDb = baseKysely.withSchema(
+      REACTOR_SCHEMA,
+    ) as unknown as Kysely<ReactorDriveDatabase>;
+    const nodeView = new DriveNodeView(reactorDriveSchemaDb);
+    driveNodeView = nodeView;
+    clientBuilder
+      .withDriveNodeSource(nodeView)
+      .withDriveWriteStrategy(
+        REACTOR_DRIVE_DOCUMENT_TYPE,
+        createReactorDriveWriteStrategy,
+      );
+
     let module: InProcessReactorClientModule;
     try {
       module = await clientBuilder.buildModule();
@@ -943,14 +957,10 @@ async function initServer(
       reactorLogger.info("Reactor metrics instrumentation started");
     }
 
-    const reactorDriveSchemaDb = baseKysely.withSchema(
-      REACTOR_SCHEMA,
-    ) as unknown as Kysely<ReactorDriveDatabase>;
-    driveNodeView = new DriveNodeView(reactorDriveSchemaDb);
     const reactorDriveClient = new ReactorDriveClient({
       read: module.read,
       write: module.write,
-      readModel: driveNodeView,
+      readModel: nodeView,
     });
 
     ownedReactorModule = module;
@@ -991,6 +1001,7 @@ async function initServer(
     return {
       module,
       reactorDriveClient,
+      driveNodes: nodeView,
       attachmentReferenceProjection: { status: "available" as const },
       permissionsDb:
         permissionsDb as unknown as Kysely<DocumentPermissionDatabase>,

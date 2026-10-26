@@ -23,7 +23,7 @@ import {
   login,
   trackDriveArrival,
   untilDriveListed,
-  refreshReactorDataClient,
+  createDriveChangeHandler,
   RegistryClient,
   setAttachmentService,
   setDefaultPHGlobalConfig,
@@ -620,15 +620,18 @@ export async function createReactor(
   }
   setDrives(drives);
 
-  // Refresh the drive list on any drive-type change so async-added
-  // default/remote drives surface on first load without a manual reload.
+  // Keep the drive list in step with drive-type changes: an updated drive is
+  // re-read on its own (rate limited while it keeps changing, as a drive
+  // being filled does), a created or deleted drive refreshes the membership.
+  // Re-fetching the whole list carried every drive's node tree on each change.
   const reactorClient = appReactorClient;
+  const onDriveChange = createDriveChangeHandler(reactorClient.read, {
+    onError: (e) => logger.error("@error", e),
+  });
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
     reactorClient.read.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(appReactorClient).catch((e) =>
-        logger.error("@error", e),
-      );
+      onDriveChange(event);
     });
   }
 
