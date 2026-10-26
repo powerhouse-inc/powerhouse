@@ -81,6 +81,7 @@ import {
   type RetractionRefusalReason,
   UnsupportedProtocolVersionError,
 } from "../shared/errors.js";
+import { findReferencing } from "../storage/find-referencing.js";
 import type { KyselyDocumentPurger } from "../storage/kysely/document-purger.js";
 import {
   delay,
@@ -245,7 +246,8 @@ async function readRuleLookups(
   actionIds: string[],
   signal?: AbortSignal,
 ): Promise<RuleLookups> {
-  const targeted = await operationStore.findReferencing(
+  const targeted = await findReferencing(
+    operationStore,
     documentId,
     scope,
     branch,

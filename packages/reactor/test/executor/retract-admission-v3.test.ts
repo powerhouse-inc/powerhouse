@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InProcessReactorModule } from "../../src/core/types.js";
 import type { ReactorFeatureFlags } from "../../src/executor/types.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
+import { findReferencing } from "../../src/storage/find-referencing.js";
 import { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import {
   createBaseReducer3Document,
@@ -213,7 +214,8 @@ describe("base-reducer 3: RETRACT admission", () => {
     await executeOk([first]);
     await executeOk([retract(first.id)]);
     expect(await moduleIds()).toEqual(["a"]);
-    const named = await module!.operationStore.findReferencing(
+    const named = await findReferencing(
+      module!.operationStore,
       docId,
       "global",
       "main",

@@ -42,6 +42,7 @@ import type {
 } from "../signer/types.js";
 import { verifyActionSignature } from "../signer/verify-action-signature.js";
 import { SYNTHESIZING_TYPES } from "./synthesized-signing.js";
+import { findReferencing } from "../storage/find-referencing.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 
 type Stream = { documentId: string; scope: string; branch: string };
@@ -472,7 +473,8 @@ export class SignatureAdmission {
       return new Set();
     }
     const { operationStore } = stores;
-    const named = await operationStore.findReferencing(
+    const named = await findReferencing(
+      operationStore,
       stream.documentId,
       stream.scope,
       stream.branch,

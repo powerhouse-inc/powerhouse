@@ -33,6 +33,7 @@ import {
 } from "../derivation/index.js";
 import { stateReducerOrRefusal, type IProtocolGate } from "../protocol/gate.js";
 import { UnsupportedProtocolVersionError } from "../shared/errors.js";
+import { findReferencing } from "../storage/find-referencing.js";
 import type { IKeyframeStore, IOperationStore } from "../storage/interfaces.js";
 import { RingBuffer } from "./buffer/ring-buffer.js";
 import { LRUTracker } from "./lru/lru-tracker.js";
@@ -1215,7 +1216,8 @@ export class KyselyWriteCache implements IWriteCache {
     if (rows.length === 0) {
       return false;
     }
-    const named = await this.operationStore.findReferencing(
+    const named = await findReferencing(
+      this.operationStore,
       documentId,
       scope,
       branch,

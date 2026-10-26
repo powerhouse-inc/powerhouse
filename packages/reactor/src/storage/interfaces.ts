@@ -302,8 +302,12 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
-  /** The ids among `actionIds` that some stored action in the stream references (`actionReferences`). */
-  findReferencing(
+  /**
+   * The ids among `actionIds` that some stored action in the stream references
+   * (`actionReferences`), rewound rows included. Optional: without it the
+   * reactor scans the stream, so an implementation should index the references.
+   */
+  findReferencing?(
     documentId: string,
     scope: string,
     branch: string,
