@@ -101,7 +101,7 @@ None on the wire, and none at compile time for callers of `IReactorClient`. Beha
 
 1. **One place chooses a new document's versions** — `newDocument` heads a new, uncreated document with the protocol versions the client selects for its type and parent, and the client's create signature policy; every first-party create path goes through it
 2. **The reactor core takes a create's header as given** — `IReactor.create` refuses a header without `protocolVersions` instead of defaulting it
-3. **`RemoteDocumentController` still creates against a 6.2.3 Switchboard** — a host without `createDefaults` gets the old `createEmptyDocument` path
+3. **`RemoteDocumentController` falls back when a host has no `createDefaults`** — it creates through `createEmptyDocument`, as before. This client already needs a Switchboard that serves document `meta` and `protocolVersions`, which the released 6.2.3 does not, so the fallback does not make it work against 6.2.3
 
 ---
 
@@ -123,8 +123,8 @@ The `CREATE_DOCUMENT` codec (`createDocumentAction`, `upgradeDocumentAction`, `c
 - `IReactorReadClient`, `IReactorClient` and `IReactorBrowserClient` declare `newDocument`; out-of-repo implementations must add it.
 - `IReactor.create` refuses a document whose header has no `protocolVersions`. The clients (`create`, `write.create`, `write.drives.addFile`) still accept such a header and fill it with their selection, as before.
 - `ReactorWriteClient.emptyDocument` and `RoutingWriteClient.emptyDocument` are removed; use `newDocument`.
-- `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`. `RemoteDocumentController.pull` without a `documentId` heads the document with the host's `createDefaults`, and the first push creates the remote with `CreateDocument` from that header instead of `CreateEmptyDocument`. `undo(count)` is unchanged.
-- Importing a `.phd` file keeps the file's `protocolVersions`; a file without them is created at the client's selection (base-reducer 2).
+- `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`. `RemoteDocumentController.pull` without a `documentId` heads the document with the host's `createDefaults`, so `pull()` itself now queries the host and can reject; the first push creates the remote with `CreateDocument` from that header instead of `CreateEmptyDocument`. `RemoteDocumentController.from(controller)` without a `documentId` creates the remote from the wrapped controller's own header (its id, signature policy and versions) rather than under the host's create defaults; a controller built with `new XController()` is v2-required. `undo(count)` is unchanged.
+- Importing a `.phd` file keeps the file's `protocolVersions`. A file without them keeps the loader's legacy baseline, base-reducer 1 (legacy replay), as an import is not a create; before this release it was created at base-reducer 2.
 
 ### MIGRATION GUIDE
 
