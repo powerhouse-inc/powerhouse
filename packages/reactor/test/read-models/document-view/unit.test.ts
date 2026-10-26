@@ -698,7 +698,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(mockDb.limit).toHaveBeenCalledWith(11);
     });
 
-    it("should skip documents that fail to retrieve", async () => {
+    it("fetches the page in one getMany and leaves out a document gone since the listing", async () => {
       const snapshots = [
         {
           documentId: "doc-1",
@@ -713,11 +713,15 @@ describe("KyselyDocumentView Unit Tests", () => {
       ];
       mockDb.execute.mockResolvedValue(snapshots);
 
-      vi.spyOn(view, "get").mockRejectedValue(new Error("Document not found"));
+      const getMany = vi.spyOn(view, "getMany").mockResolvedValue([]);
+      const get = vi.spyOn(view, "get");
 
       const result = await view.findByType("test-type");
 
       expect(result.results).toHaveLength(0);
+      expect(getMany).toHaveBeenCalledTimes(1);
+      expect(getMany.mock.calls[0]?.[0]).toEqual(["doc-1"]);
+      expect(get).not.toHaveBeenCalled();
     });
 
     it("should handle default limit of 100", async () => {

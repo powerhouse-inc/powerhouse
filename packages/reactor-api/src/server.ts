@@ -5,6 +5,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
+  IDriveNodeSource,
   IInspectableAttachmentStore,
   InspectorAttachmentInfo,
   IReadModel,
@@ -522,6 +523,7 @@ type SetupGraphQLManagerOptions = {
   enableDocumentModelSubgraphs?: boolean;
   port?: number;
   reactorDriveClient?: IDriveClient;
+  driveNodes?: IDriveNodeSource;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
@@ -551,6 +553,7 @@ async function setupGraphQLManager({
   enableDocumentModelSubgraphs,
   port,
   reactorDriveClient,
+  driveNodes,
   syncServingGate,
   httpRoutes,
   attachments,
@@ -586,6 +589,7 @@ async function setupGraphQLManager({
     port,
     authorizationService,
     reactorDriveClient,
+    driveNodes,
     syncServingGate,
     httpRoutes,
     attachments,
@@ -1120,6 +1124,7 @@ async function _setupAPI(
   attachmentReadsFollowDocumentPolicy = false,
   inspection?: IReactorInspectionSource,
   driveStore?: DriveStore,
+  driveNodes?: IDriveNodeSource,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
@@ -1301,6 +1306,7 @@ async function _setupAPI(
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
     port: boundPort,
     reactorDriveClient,
+    driveNodes,
     syncServingGate,
     httpRoutes,
     attachments: attachmentClientProvider,
@@ -1466,6 +1472,8 @@ function buildApiDispose(args: {
 export interface ClientInitializerResult {
   module: InProcessReactorClientModule;
   reactorDriveClient?: IDriveClient;
+  /** Type-neutral drive node reads for the reactor subgraph's node queries. */
+  driveNodes?: IDriveNodeSource;
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
   /**
    * The reactor store, bound to the schema its migrations ran in, where the
@@ -1603,6 +1611,7 @@ export async function initializeAndStartAPI(
   const {
     module: reactorClientModule,
     reactorDriveClient,
+    driveNodes,
     attachmentReferenceProjection = {
       status: "unavailable",
       reason: "initializer-did-not-report",
@@ -1702,6 +1711,7 @@ export async function initializeAndStartAPI(
         })
       : undefined,
     reactorClientModule.reactorModule?.reactor,
+    driveNodes,
   );
 
   return {

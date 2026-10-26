@@ -1,8 +1,11 @@
 // ctx.reactor on the host: one ReactorHostServer per piece request, serving a
 // RunScopedReactorClient over the request's IPC transport (ADR 0005 §3).
 import type {
+  DriveReadMethods,
+  DriveWriteMethods,
   ReactorClient,
   ReadMethods,
+  RefusedDriveMethods,
   RefusedMethods,
   WriteMethods,
 } from "@powerhousedao/pieces-framework";
@@ -50,12 +53,25 @@ const SERVED: Record<
   deleteDocument: true,
 };
 
-// Refused by name, so a piece learns why. `drives`, `read` and `write` have no
-// methods to call.
-const REFUSED: Record<
-  Exclude<RefusedMethods, "drives" | "read" | "write">,
-  true
-> = {
+const SERVED_DRIVES: Record<DriveReadMethods | DriveWriteMethods, true> = {
+  getNode: true,
+  listNodes: true,
+  addFile: true,
+  addFolder: true,
+};
+
+const REFUSED_DRIVES: Record<RefusedDriveMethods, true> = {
+  create: true,
+  removeNode: true,
+  renameNode: true,
+  moveNode: true,
+  copyNode: true,
+  setPreferredEditorOnNode: true,
+};
+
+// Refused by name, so a piece learns why. `read` and `write` have no methods
+// to call.
+const REFUSED: Record<Exclude<RefusedMethods, "read" | "write">, true> = {
   getMany: true,
   createDocumentInDrive: true,
   executeBatch: true,
@@ -85,17 +101,37 @@ type AnyMethod = (...args: unknown[]) => unknown;
 // The server calls any method of the client it holds, so it holds only these:
 // no prototype, and none of the wrapper's internals.
 export function servedClient(client: ReactorClient): IReactorClient {
+  const facade = served(
+    client as unknown as Record<string, AnyMethod>,
+    SERVED,
+    REFUSED,
+    "",
+  ) as Record<string, unknown>;
+  facade.drives = served(
+    client.drives as unknown as Record<string, AnyMethod>,
+    SERVED_DRIVES,
+    REFUSED_DRIVES,
+    "drives.",
+  );
+  return facade as unknown as IReactorClient;
+}
+
+function served(
+  methods: Record<string, AnyMethod>,
+  serve: Record<string, true>,
+  refuse: Record<string, true>,
+  prefix: string,
+): Record<string, AnyMethod> {
   const facade = Object.create(null) as Record<string, AnyMethod>;
-  const methods = client as unknown as Record<string, AnyMethod>;
-  for (const name of Object.keys(SERVED)) {
+  for (const name of Object.keys(serve)) {
     facade[name] = (...args: unknown[]) => methods[name](...args);
   }
-  for (const name of Object.keys(REFUSED)) {
+  for (const name of Object.keys(refuse)) {
     facade[name] = () => {
-      throw refusedMethod(name);
+      throw refusedMethod(prefix + name);
     };
   }
-  return facade as unknown as IReactorClient;
+  return facade;
 }
 
 // The run's journal: documents a step reads or writes, and a write's
@@ -145,7 +181,7 @@ export function reactorTap(
       const parent = otelContext.active();
       const server = new ReactorHostServer(
         telemetry
-          ? tracedMethods(served, telemetry, "reactor", parent)
+          ? tracedMethods(served, telemetry, "reactor", parent, ["drives"])
           : served,
         transport as unknown as IRpcTransport,
       );

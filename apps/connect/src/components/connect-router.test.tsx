@@ -37,6 +37,7 @@ import {
   useSetSearchParams,
   DEFAULT_DRIVE_EDITOR_ID,
   getPHStoreSubscribe,
+  invalidateDriveNodes,
   PREFETCH_WAIT_MS,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -1087,15 +1088,15 @@ describe("Connect router", () => {
   it("shows a loader error and reports it to Sentry", async () => {
     const created = await createDrive("Broken");
     const { drive, node } = await createFile(created, "Lost");
-    // A drive without nodes makes the loader throw on the node lookup.
-    const broken = { ...drive, state: { ...drive.state, global: {} } };
-    store.drives = [broken as DocumentDriveDocument];
+    // A malformed node cache entry makes the loader throw on the node lookup.
+    store.drives = [drive];
+    store.driveNodes = new Map([[drive.header.id, { loaded: "all" } as never]]);
     const captureException = vi.fn();
     setSentryModule({ captureException } as never);
     try {
       mount(`/d/${drive.header.slug}/lost-${node.id}`);
       const message = await vi.waitFor(() =>
-        screen.getByRole("heading", { name: /reading 'find'/ }),
+        screen.getByRole("heading", { name: /reading 'get'/ }),
       );
       expect(message.tagName).toBe("H3");
       expect(captureException).toHaveBeenCalledWith(
@@ -1105,6 +1106,7 @@ describe("Connect router", () => {
       expect(selection()).toBe("-/-");
     } finally {
       setSentryModule(undefined);
+      store.driveNodes = undefined;
     }
   });
 
@@ -1737,8 +1739,10 @@ describe("Connect route titles", () => {
         }),
       ],
     );
+    // As the drive change handler does: the drive, then its nodes.
     act(() => {
       store.drives = [renamed];
+      invalidateDriveNodes(renamed.header.id, store);
     });
     await vi.waitFor(() =>
       expect(document.title).toBe("Minutes · Titles · Connect"),

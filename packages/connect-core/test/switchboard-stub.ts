@@ -149,6 +149,16 @@ export function switchboard(
             cursor: null,
           },
         });
+      // The router reads a drive's nodes through the node queries; the stub's
+      // drives hold no nodes.
+      case "GetDriveNodes":
+        return data({
+          driveNodes: { results: [], nextCursor: null, hasMore: false },
+        });
+      case "GetDriveNode":
+        return data({ driveNode: null });
+      case "GetDriveDescendants":
+        return data({ driveDescendants: [] });
       default:
         throw new Error(`unexpected operation ${received.body.operationName}`);
     }

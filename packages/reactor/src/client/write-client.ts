@@ -41,6 +41,7 @@ import {
   selectDocumentModelModule,
   upgradeDocumentJob,
 } from "./derivations.js";
+import type { IDriveWriteStrategy } from "./drive-nodes.js";
 import { DriveWriteClient } from "./drive-write-client.js";
 import {
   decideCandidate,
@@ -138,6 +139,11 @@ export class ReactorWriteClient implements IReactorWriteClient {
         this.targets.resolveReference(identifier, "main", signal),
       (identifier, signal) =>
         this.targets.lookupLiveDocument(identifier, "main", signal),
+      {
+        strategies: this.buildDriveStrategies(parts, read),
+        describe: (identifier, signal) =>
+          this.targets.describe(identifier, "main", signal),
+      },
     );
   }
 
@@ -951,6 +957,26 @@ export class ReactorWriteClient implements IReactorWriteClient {
    * always made: by id, on the job's own completion, gated as the writer. With
    * a view it reads through that view, bounded by the receipt's token.
    */
+  /** One strategy per registered drive type, built over this client's halves. */
+  private buildDriveStrategies(
+    parts: ReactorClientParts,
+    read: ReactorReadClient,
+  ): Map<string, IDriveWriteStrategy> {
+    const strategies = new Map<string, IDriveWriteStrategy>();
+    for (const [documentType, factory] of parts.drives.strategies) {
+      strategies.set(
+        documentType,
+        factory({
+          read,
+          write: this,
+          nodes: parts.drives.nodes,
+          signer: parts.signer,
+        }),
+      );
+    }
+    return strategies;
+  }
+
   private createReader(): HandleReader {
     return async <T extends PHDocument>(
       receipt: { documentId: string; token: ConsistencyToken },

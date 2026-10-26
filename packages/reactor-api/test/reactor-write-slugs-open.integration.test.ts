@@ -1,10 +1,13 @@
 import {
   ReactorBuilder,
   ReactorClientBuilder,
+  type IDriveNodeSource,
   type InProcessReactorClientModule,
   type ISyncManager,
 } from "@powerhousedao/reactor";
 import {
+  createReactorDriveWriteStrategy,
+  REACTOR_DRIVE_DOCUMENT_TYPE,
   ReactorDriveClient,
   reactorDriveCreateDocument,
   reactorDriveDocumentModelModule,
@@ -45,6 +48,11 @@ describe("reactor subgraph writes resolve slugs under OPEN", () => {
           documentModelDocumentModelModule as unknown as DocumentModelModule,
           reactorDriveDocumentModelModule as unknown as DocumentModelModule,
         ]),
+      )
+      .withDriveNodeSource({} as IDriveNodeSource)
+      .withDriveWriteStrategy(
+        REACTOR_DRIVE_DOCUMENT_TYPE,
+        createReactorDriveWriteStrategy,
       )
       .buildModule();
     ctx = mutationContextFor(module);

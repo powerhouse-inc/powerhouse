@@ -786,7 +786,7 @@ describe("ctx.reactor over the reactor RPC", () => {
           name: ReactorAccessDeniedError,
           message: "Cascade delete is not offered to pieces",
         },
-        drives: "undefined",
+        drives: "object",
         lifecycle: {
           name: ReactorAccessDeniedError,
           message:

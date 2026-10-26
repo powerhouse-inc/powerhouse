@@ -4,8 +4,11 @@ import {
   DocumentModelUnavailableError,
   ReactorAccessDeniedError,
   ReactorRequestClosedError,
+  type DriveReadMethods,
+  type DriveWriteMethods,
   type ReactorClient,
   type ReactorReadClient,
+  type RefusedDriveMethods,
   type RequireReactor,
 } from "@powerhousedao/pieces-framework";
 import type {
@@ -98,7 +101,7 @@ function isManifestMessage(value: unknown): value is ModelManifestMessage {
 
 // --- Reactor runtime, imported on first use ------------------------------
 
-interface Runtime {
+export interface Runtime {
   rpc: {
     MessageRouter: typeof MessageRouter;
     createReactorClientProxy: typeof createReactorClientProxy;
@@ -250,7 +253,7 @@ function requestClosed(): Error {
 type AnyMethod = (...args: unknown[]) => unknown;
 
 // Calls fail with ReactorRequestClosedError once the request settles, pages too.
-class RequestGuard {
+export class RequestGuard {
   private closed = false;
   private rejectClosed: (error: Error) => void = () => undefined;
   private readonly whenClosed = new Promise<never>((_, reject) => {
@@ -291,7 +294,45 @@ class RequestGuard {
   }
 }
 
-function sessionClient(
+const SERVED_DRIVES: Record<DriveReadMethods | DriveWriteMethods, true> = {
+  getNode: true,
+  listNodes: true,
+  addFile: true,
+  addFolder: true,
+};
+
+const REFUSED_DRIVES: Record<RefusedDriveMethods, true> = {
+  create: true,
+  removeNode: true,
+  renameNode: true,
+  moveNode: true,
+  copyNode: true,
+  setPreferredEditorOnNode: true,
+};
+
+// As the host's served facade: the served methods go over RPC as `drives.*`,
+// the refused ones throw here with the error the host would answer.
+function sessionDrives(
+  proxy: IReactorClient,
+  guard: RequestGuard,
+): ReactorClient["drives"] {
+  const remote = proxy.drives as unknown as Record<string, AnyMethod>;
+  const drives = Object.create(null) as Record<string, AnyMethod>;
+  for (const name of Object.keys(SERVED_DRIVES)) {
+    drives[name] = (...args) => guard.call(() => remote[name](...args));
+  }
+  for (const name of Object.keys(REFUSED_DRIVES)) {
+    drives[name] = () => {
+      throw named(
+        ReactorAccessDeniedError,
+        `drives.${name} is not available to workflow pieces`,
+      );
+    };
+  }
+  return drives as unknown as ReactorClient["drives"];
+}
+
+export function sessionClient(
   rt: Runtime,
   proxy: IReactorClient,
   guard: RequestGuard,
@@ -332,12 +373,12 @@ function sessionClient(
       );
     },
   };
+  const drives = sessionDrives(proxy, guard);
   // Every listed method resolves through `get`.
   return new Proxy({} as ReactorClient, {
     get: (_target, prop) => {
       if (typeof prop !== "string" || prop === "then") return undefined;
-      // Not on the piece surface; drive reads take no subject.
-      if (prop === "drives") return undefined;
+      if (prop === "drives") return drives;
       if (prop in local) return local[prop];
       return (...args: unknown[]) =>
         guard.call(() =>
