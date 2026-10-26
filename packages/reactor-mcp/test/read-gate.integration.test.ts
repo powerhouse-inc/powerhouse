@@ -4,7 +4,10 @@ import {
   type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  driveDocumentModelModule,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import {
   initializeAuth,
   withSignaturePolicy,
@@ -175,5 +178,101 @@ describe("MCP tools read as the caller under auth-scope policies", () => {
     expect((await read(anonymous)).state).not.toHaveProperty("global");
     expect((await read(outsider)).state).not.toHaveProperty("global");
     expect((await read(reader)).state).toHaveProperty("global");
+  });
+
+  it("addActions returns a write the policy denied as an error", async () => {
+    const { client, drive, policedDrive } = await fixture();
+    const { addActions } = await tools(client, reader);
+    const addFolder = {
+      type: "ADD_FOLDER",
+      input: { id: "f", name: "f" },
+      scope: "global",
+    };
+
+    const denied = await addActions.callback({
+      documentId: policedDrive,
+      actions: [addFolder],
+    });
+    expect(denied.isError).toBeUndefined();
+    expect(denied.structuredContent).toMatchObject({
+      success: false,
+      results: [
+        {
+          index: 0,
+          type: "ADD_FOLDER",
+          error: { kind: "denied", message: expect.any(String) },
+        },
+      ],
+    });
+
+    const allowed = await addActions.callback({
+      documentId: drive,
+      actions: [addFolder],
+    });
+    expect(allowed.structuredContent).toMatchObject({
+      success: true,
+      results: [{ index: 0, type: "ADD_FOLDER" }],
+    });
+  });
+
+  it("addActions names the denied action of a refused batch", async () => {
+    const client = await build();
+    const drive = await create(client, driveDocumentModelModule, "mcp-folders");
+    await client.execute(drive, "main", [
+      initializeAuth({
+        version: 1,
+        grants: [
+          {
+            id: "g-add",
+            description: "anyone adds folders",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: {
+              can: "execute",
+              scope: "global",
+              operation: ["ADD_FOLDER"],
+            },
+          },
+          {
+            id: "g-read",
+            description: "anyone reads",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "read", scope: "global" },
+          },
+          {
+            id: "g-admin",
+            description: "administration stays reachable",
+            effect: "allow",
+            principal: { anyone: true },
+            capability: { can: "execute", scope: "auth" },
+          },
+        ],
+      }),
+    ]);
+    const { addActions } = await tools(client, anonymous);
+
+    const result = await addActions.callback({
+      documentId: drive,
+      actions: [
+        { type: "ADD_FOLDER", input: { id: "a", name: "a" }, scope: "global" },
+        { type: "DELETE_NODE", input: { id: "a" }, scope: "global" },
+        { type: "ADD_FOLDER", input: { id: "b", name: "b" }, scope: "global" },
+      ],
+    });
+
+    expect(result.isError).toBeUndefined();
+    const { success, results } = result.structuredContent as {
+      success: boolean;
+      results: { index: number; error?: { kind: string } }[];
+    };
+    expect(success).toBe(false);
+    expect(results.map((r) => [r.index, r.error?.kind])).toEqual([
+      [0, "not-applied"],
+      [1, "denied"],
+      [2, "not-applied"],
+    ]);
+    const read = await client.get<DocumentDriveDocument>(drive);
+    expect(read.state.global.nodes).toEqual([]);
   });
 });

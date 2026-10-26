@@ -4,9 +4,18 @@ import type {
   InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import {
+  createReactorMcpProvider,
+  createServer,
+} from "@powerhousedao/reactor-mcp";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentModelDocument,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
@@ -127,7 +136,23 @@ describe("ReactorMcpProvider", () => {
       const result = await provider.tools.getDocument.callback({});
 
       expect(result.isError).toBe(true);
-      expect(getTextContent(result)).toContain("`id` (or `documentId`)");
+      expect(getTextContent(result)).toBe(
+        "Error: getDocument needs the target's ID in `documentId`",
+      );
+    });
+
+    it("refuses an alias that names a different document", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocument.callback({
+        documentId: document.header.id,
+        id: "another-id",
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain("pass only `documentId`");
     });
 
     it("should handle errors gracefully", async () => {
@@ -349,7 +374,19 @@ describe("ReactorMcpProvider", () => {
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toStrictEqual({
         success: true,
+        results: [
+          {
+            index: 0,
+            type: "SET_MODEL_NAME",
+            scope: "global",
+            operationIndex: expect.any(Number),
+          },
+        ],
       });
+      const updated = await client.get<DocumentModelDocument>(
+        document.header.id,
+      );
+      expect(updated.state.global.name).toBe("test-doc");
     });
 
     it("should add multiple actions to a document", async () => {
@@ -372,8 +409,138 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toStrictEqual({
+      expect(result.structuredContent).toMatchObject({
         success: true,
+        results: [
+          { index: 0, type: "SET_MODEL_NAME" },
+          { index: 1, type: "SET_MODEL_NAME" },
+        ],
+      });
+    });
+
+    it("returns the error of an action its reducer rejected", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+      const provider = await createReactorMcpProvider({ client });
+      const addFolder = (id: string) => ({
+        type: "ADD_FOLDER",
+        input: { id, name: id },
+        scope: "global",
+      });
+      await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [addFolder("taken")],
+      });
+
+      const result = await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [addFolder("taken")],
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toStrictEqual({
+        success: false,
+        results: [
+          {
+            index: 0,
+            type: "ADD_FOLDER",
+            scope: "global",
+            operationIndex: expect.any(Number),
+            error: {
+              kind: "reducer-error",
+              message: "Node with id taken already exists!",
+            },
+          },
+        ],
+      });
+    });
+
+    it("applies the rest of a batch around a rejected action", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+      const provider = await createReactorMcpProvider({ client });
+      const addFolder = (id: string) => ({
+        type: "ADD_FOLDER",
+        input: { id, name: id },
+        scope: "global",
+      });
+
+      const result = await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [addFolder("a"), addFolder("a"), addFolder("b")],
+      });
+
+      expect(result.isError).toBeUndefined();
+      const { success, results } = result.structuredContent as {
+        success: boolean;
+        results: { index: number; error?: { kind: string } }[];
+      };
+      expect(success).toBe(false);
+      expect(results.map((r) => [r.index, r.error?.kind])).toEqual([
+        [0, undefined],
+        [1, "reducer-error"],
+        [2, undefined],
+      ]);
+      const updated = await client.get<DocumentDriveDocument>(drive.header.id);
+      expect(updated.state.global.nodes.map((n) => n.id).sort()).toEqual([
+        "a",
+        "b",
+      ]);
+    });
+
+    it("reads the outcomes from the operations when the job carries no result", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+      // As a client whose job info has no result field, e.g. a remote one.
+      const write = new Proxy(client.write, {
+        get(target, key, receiver) {
+          if (key !== "execute") return Reflect.get(target, key, receiver);
+          return async (...args: Parameters<typeof target.execute>) => {
+            const handle = await target.execute(...args);
+            const readable = handle.readable.then((receipt) => ({
+              ...receipt,
+              job: { ...receipt.job, result: undefined },
+            }));
+            return { ...handle, readable };
+          };
+        },
+      });
+      const withoutResults = new Proxy(client, {
+        get: (target, key, receiver) =>
+          key === "write" ? write : Reflect.get(target, key, receiver),
+      });
+      const provider = await createReactorMcpProvider({
+        client: withoutResults,
+      });
+      const addFolder = (id: string) => ({
+        type: "ADD_FOLDER",
+        input: { id, name: id },
+        scope: "global",
+      });
+
+      const result = await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [addFolder("a"), addFolder("a")],
+      });
+
+      expect(result.structuredContent).toStrictEqual({
+        success: false,
+        results: [
+          { index: 0, type: "ADD_FOLDER", scope: "global", operationIndex: 0 },
+          {
+            index: 1,
+            type: "ADD_FOLDER",
+            scope: "global",
+            operationIndex: 1,
+            error: {
+              kind: "reducer-error",
+              message: "Node with id a already exists!",
+            },
+          },
+        ],
       });
     });
 
@@ -584,6 +751,65 @@ describe("ReactorMcpProvider", () => {
       expect(drive.state.global.name).toBe("With Pref");
     });
 
+    const readDrive = async (result: CallToolResult) => {
+      expect(result.isError).toBeUndefined();
+      return client.get<DocumentDriveDocument>(
+        (result.structuredContent as { driveId: string }).driveId,
+      );
+    };
+
+    it("takes name, icon and preferredEditor at the top level", async () => {
+      const { addDrive } = (await createReactorMcpProvider({ client })).tools;
+      const drive = await readDrive(
+        await addDrive.callback({
+          name: "Flat",
+          icon: "flat-icon",
+          preferredEditor: "stockroom",
+        }),
+      );
+
+      expect(drive.header.name).toBe("Flat");
+      expect(drive.header.meta?.preferredEditor).toBe("stockroom");
+      expect(drive.state.global.name).toBe("Flat");
+      expect(drive.state.global.icon).toBe("flat-icon");
+    });
+
+    it("takes the name inside driveInput without global", async () => {
+      const { addDrive } = (await createReactorMcpProvider({ client })).tools;
+      const drive = await readDrive(
+        await addDrive.callback({
+          driveInput: { name: "Flat Input", preferredEditor: "stockroom" },
+        }),
+      );
+
+      expect(drive.header.name).toBe("Flat Input");
+      expect(drive.header.meta?.preferredEditor).toBe("stockroom");
+      expect(drive.state.global.name).toBe("Flat Input");
+    });
+
+    it("needs a name", async () => {
+      const { addDrive } = (await createReactorMcpProvider({ client })).tools;
+      const result = await addDrive.callback({ preferredEditor: "stockroom" });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toBe(
+        "Error: addDrive needs the drive's `name`",
+      );
+    });
+
+    it("refuses two different names", async () => {
+      const { addDrive } = (await createReactorMcpProvider({ client })).tools;
+      const result = await addDrive.callback({
+        name: "One",
+        driveInput: { global: { name: "Other" } },
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain(
+        "addDrive got different values for `name`",
+      );
+    });
+
     it("should add a drive with minimal input", async () => {
       const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addDrive.callback({
@@ -735,6 +961,163 @@ describe("ReactorMcpProvider", () => {
 
       expect(result.isError).toBe(true);
       expect(getTextContent(result)).toContain("non-existent/model");
+    });
+  });
+
+  describe("target ID aliases", () => {
+    const idOf = (result: CallToolResult) =>
+      (
+        result.structuredContent as {
+          document?: PHDocument;
+          drive?: PHDocument;
+        }
+      )[result.structuredContent?.document ? "document" : "drive"]?.header.id;
+
+    it("getDrive takes documentId, driveId or id", async () => {
+      const drive = await client.createEmpty("powerhouse/document-drive");
+      const { getDrive } = (await createReactorMcpProvider({ client })).tools;
+
+      for (const name of ["documentId", "driveId", "id"]) {
+        const result = await getDrive.callback({ [name]: drive.header.id });
+        expect(result.isError, name).toBeUndefined();
+        expect(idOf(result), name).toBe(drive.header.id);
+      }
+    });
+
+    it("getDocuments takes documentId, driveId or parentId", async () => {
+      const drive = await client.createEmpty("powerhouse/document-drive");
+      const { createDocument, getDocuments } = (
+        await createReactorMcpProvider({ client })
+      ).tools;
+      const created = await createDocument.callback({
+        documentType: "powerhouse/document-model",
+        driveId: drive.header.id,
+      });
+      const { documentId } = created.structuredContent as {
+        documentId: string;
+      };
+
+      for (const name of ["documentId", "driveId", "parentId"]) {
+        const result = await getDocuments.callback({ [name]: drive.header.id });
+        expect(result.structuredContent, name).toStrictEqual({
+          documentIds: [documentId],
+        });
+      }
+    });
+
+    it("addActions takes documentId or id", async () => {
+      const document = documentModelCreateDocument();
+      await client.create(document);
+      const { addActions } = (await createReactorMcpProvider({ client })).tools;
+
+      for (const name of ["documentId", "id"]) {
+        const result = await addActions.callback({
+          [name]: document.header.id,
+          actions: [{ type: "SET_NAME", input: name, scope: "global" }],
+        });
+        expect(result.structuredContent, name).toMatchObject({
+          success: true,
+        });
+        expect((await client.get(document.header.id)).header.name).toBe(name);
+      }
+    });
+
+    it("deleteDocument takes documentId or id", async () => {
+      const { deleteDocument } = (await createReactorMcpProvider({ client }))
+        .tools;
+
+      for (const name of ["documentId", "id"]) {
+        const document = documentModelCreateDocument();
+        await client.create(document);
+        const result = await deleteDocument.callback({
+          [name]: document.header.id,
+        });
+        expect(result.structuredContent, name).toStrictEqual({
+          success: true,
+        });
+      }
+    });
+
+    it("deleteDrive takes documentId, driveId or id", async () => {
+      const { deleteDrive } = (await createReactorMcpProvider({ client }))
+        .tools;
+
+      for (const name of ["documentId", "driveId", "id"]) {
+        const drive = await client.createEmpty("powerhouse/document-drive");
+        const result = await deleteDrive.callback({ [name]: drive.header.id });
+        expect(result.structuredContent, name).toStrictEqual({
+          success: true,
+        });
+      }
+    });
+
+    it("keeps every alias and addDrive shape through the MCP schema", async () => {
+      const drive = await client.createEmpty("powerhouse/document-drive");
+      const server = await createServer({ client });
+      const mcp = new Client({ name: "test", version: "1.0.0" });
+      const [clientTransport, serverTransport] =
+        InMemoryTransport.createLinkedPair();
+      await Promise.all([
+        server.connect(serverTransport),
+        mcp.connect(clientTransport),
+      ]);
+
+      try {
+        const calls = [
+          ["getDocument", "documentId"],
+          ["getDocument", "id"],
+          ["getDrive", "documentId"],
+          ["getDrive", "driveId"],
+          ["getDrive", "id"],
+        ] as const;
+        for (const [tool, name] of calls) {
+          const result = (await mcp.callTool({
+            name: tool,
+            arguments: { [name]: drive.header.id },
+          })) as CallToolResult;
+          expect(result.isError, `${tool} ${name}`).toBeFalsy();
+          expect(idOf(result), `${tool} ${name}`).toBe(drive.header.id);
+        }
+
+        for (const args of [
+          { name: "Top", preferredEditor: "app" },
+          { driveInput: { name: "Inner", preferredEditor: "app" } },
+          {
+            driveInput: { global: { name: "Legacy" }, preferredEditor: "app" },
+          },
+        ]) {
+          const result = (await mcp.callTool({
+            name: "addDrive",
+            arguments: args,
+          })) as CallToolResult;
+          expect(result.isError, JSON.stringify(args)).toBeFalsy();
+          const created = await client.get(
+            (result.structuredContent as { driveId: string }).driveId,
+          );
+          expect(created.header.meta?.preferredEditor).toBe("app");
+        }
+
+        const folder = {
+          type: "ADD_FOLDER",
+          input: { id: "f", name: "f" },
+          scope: "global",
+        };
+        const added = (await mcp.callTool({
+          name: "addActions",
+          arguments: { id: drive.header.id, actions: [folder, folder] },
+        })) as CallToolResult;
+        expect(added.isError).toBeFalsy();
+        expect(added.structuredContent).toMatchObject({
+          success: false,
+          results: [
+            { index: 0, type: "ADD_FOLDER" },
+            { index: 1, type: "ADD_FOLDER", error: { kind: "reducer-error" } },
+          ],
+        });
+      } finally {
+        await mcp.close();
+        await server.close();
+      }
     });
   });
 });
