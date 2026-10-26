@@ -23,6 +23,7 @@
     "dev": "vite dev",
     "build": "vite build && node scripts/assert-worker-chunk.mjs",
     "preview": "vite preview",
+    "serve": "node src/server/serve.ts",
     "test": "vitest --run"
   },
   "dependencies": {
