@@ -13,6 +13,7 @@ export const PACKAGES_DEPENDENCIES = [
   "document-model",
   "@powerhousedao/opentelemetry-instrumentation-reactor",
   "@powerhousedao/pieces-framework",
+  "@powerhousedao/portle",
   "@powerhousedao/reactor",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-attachments",
