@@ -3,7 +3,6 @@ import {
   getDrives,
   getPHStore,
   recordBackendAuthError,
-  refreshReactorDataClient,
   setBackendAuth,
   setDrives,
   setFullReactorClient,
@@ -183,13 +182,17 @@ export async function getAppDrives(
   }
 }
 
+/**
+ * The boot refresh of the drives store. It lists through `getAppDrives`
+ * whichever client is in use, so a Switchboard that refuses the caller is
+ * recorded for the sign-in gate here too: the remote-only client is its own
+ * `local`, and a bare `refreshReactorDataClient` would let the 401 escape
+ * and fail the boot before the gate can render.
+ */
 export async function refreshAppDrives(
   client: IReactorClient,
   local: IReactorClient,
 ): Promise<void> {
-  if (client === local) {
-    return refreshReactorDataClient(client);
-  }
   setDrives(await getAppDrives(client, local));
 }
 

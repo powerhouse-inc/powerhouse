@@ -9,7 +9,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { getAppDrives } from "../src/runtime/index.js";
+import { getAppDrives, refreshAppDrives } from "../src/runtime/index.js";
 import { BackendAuthGate } from "../src/views/backend-auth-gate.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
@@ -70,6 +70,13 @@ describe("getAppDrives with a refusing backend", () => {
     );
     await expect(getAppDrives(client, client)).resolves.toEqual([drive]);
     expect(getPHStore()?.backendAuth).toBeUndefined();
+  });
+
+  it("the boot refresh of a remote-only client refused with 401 sets no drives and records it, instead of throwing", async () => {
+    const client = clientThat(refused401);
+    await expect(refreshAppDrives(client, client)).resolves.toBeUndefined();
+    expect(getPHStore()?.drives).toEqual([]);
+    expect(getPHStore()?.backendAuth?.status).toBe(401);
   });
 
   it("a router whose remote refuses falls back to the local drives and records it", async () => {
