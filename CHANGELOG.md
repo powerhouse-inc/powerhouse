@@ -1,3 +1,49 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **codegen:** custom resolvers read through the subgraph's read client ([af9a96f94b](https://github.com/powerhouse-inc/powerhouse/commit/af9a96f94b))
+- **connect:** processors and store subscriptions take the client halves ([e2247704c0](https://github.com/powerhouse-inc/powerhouse/commit/e2247704c0))
+- **connect:** default drives ask the write half whether an id is taken ([16a4a41d8c](https://github.com/powerhouse-inc/powerhouse/commit/16a4a41d8c))
+- **connect-core:** move the local id-check fallback into the router ([56fb81edb6](https://github.com/powerhouse-inc/powerhouse/commit/56fb81edb6))
+- **pieces-framework:** offer executeAsync to pieces, settled without a read-back ([67b03f4530](https://github.com/powerhouse-inc/powerhouse/commit/67b03f4530))
+- **reactor:** write-side identity table and store ([f1963c414a](https://github.com/powerhouse-inc/powerhouse/commit/f1963c414a))
+- **reactor:** write identity rows in the execution transaction ([5393c2d740](https://github.com/powerhouse-inc/powerhouse/commit/5393c2d740))
+- **reactor:** writes return WriteHandles; the facade reads back through them ([35d02fbcb6](https://github.com/powerhouse-inc/powerhouse/commit/35d02fbcb6))
+- **reactor:** permission tables in the reactor store (migration 029) ([bc61963b19](https://github.com/powerhouse-inc/powerhouse/commit/bc61963b19))
+- **reactor:** split the drive client into read and write halves ([0edbbcbbb1](https://github.com/powerhouse-inc/powerhouse/commit/0edbbcbbb1))
+- **reactor:** deprecate the facade's writes with a one-time warning ([2b98afc82f](https://github.com/powerhouse-inc/powerhouse/commit/2b98afc82f))
+- **reactor:** serve the client halves over RPC as read.* and write.* ([8dc7e13975](https://github.com/powerhouse-inc/powerhouse/commit/8dc7e13975))
+- **reactor:** module and processor host module carry the client halves ([a3722fa7da](https://github.com/powerhouse-inc/powerhouse/commit/a3722fa7da))
+- **reactor:** purge deletes a document's permission rows ([510db4ed80](https://github.com/powerhouse-inc/powerhouse/commit/510db4ed80))
+- **reactor:** drive writes stop reading the drive where the reducer decides ([25e496cef9](https://github.com/powerhouse-inc/powerhouse/commit/25e496cef9))
+- **reactor:** write targets and describe resolve on the identity table ([5a1e9ccfee](https://github.com/powerhouse-inc/powerhouse/commit/5a1e9ccfee))
+- **reactor:** export the handle building blocks and type fromWire ([fa1bffa505](https://github.com/powerhouse-inc/powerhouse/commit/fa1bffa505))
+- **reactor-api:** per-process permission cache behind DocumentPermissionService ([f6090bb09a](https://github.com/powerhouse-inc/powerhouse/commit/f6090bb09a))
+- **reactor-api:** permission service on the reactor store ([62eb1751ef](https://github.com/powerhouse-inc/powerhouse/commit/62eb1751ef))
+- **reactor-api:** document, findDocuments and relationship queries take a consistency token ([4f48c8fb7f](https://github.com/powerhouse-inc/powerhouse/commit/4f48c8fb7f))
+- **reactor-api:** resolvers get the client halves on the context, per operation ([58ac4b0f2a](https://github.com/powerhouse-inc/powerhouse/commit/58ac4b0f2a))
+- **reactor-browser:** browser client carries the read and write halves ([87ef091e51](https://github.com/powerhouse-inc/powerhouse/commit/87ef091e51))
+- **reactor-drive:** drive client reads and writes through the client halves ([f4f7dcc4c0](https://github.com/powerhouse-inc/powerhouse/commit/f4f7dcc4c0))
+- **reactor-monitor:** routing panel reads and writes through the halves ([742c1500de](https://github.com/powerhouse-inc/powerhouse/commit/742c1500de))
+- **reactor-router:** backends may carry client halves; router write handles ([137114058f](https://github.com/powerhouse-inc/powerhouse/commit/137114058f))
+- **reactor-router:** split the router into routing read and write clients ([7eb9a728db](https://github.com/powerhouse-inc/powerhouse/commit/7eb9a728db))
+- **reactor-router:** the write half answers a failed id check through a policy ([e682a12dd5](https://github.com/powerhouse-inc/powerhouse/commit/e682a12dd5))
+- **switchboard:** move permission rows to the reactor store at boot ([5fd8f83190](https://github.com/powerhouse-inc/powerhouse/commit/5fd8f83190))
+- **switchboard:** wire the reactor client halves ([73e52624a2](https://github.com/powerhouse-inc/powerhouse/commit/73e52624a2))
+
+### 🩹 Fixes
+
+- **connect:** prerender a project's custom shell without Connect's chrome ([bbab2b95f2](https://github.com/powerhouse-inc/powerhouse/commit/bbab2b95f2))
+- **ph-cli:** pass the connect runner's bind address through to vite ([d9b28dedce](https://github.com/powerhouse-inc/powerhouse/commit/d9b28dedce))
+- **ph-cli:** keep every catch-up bar line short of the last column and redraw on resize ([52245e43cb](https://github.com/powerhouse-inc/powerhouse/commit/52245e43cb))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

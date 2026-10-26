@@ -1,3 +1,14 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **pieces-framework:** offer executeAsync to pieces, settled without a read-back ([67b03f4530](https://github.com/powerhouse-inc/powerhouse/commit/67b03f4530))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/reactor-workflow to align it with other projects, there were no code changes.

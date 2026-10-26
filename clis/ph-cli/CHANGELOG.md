@@ -1,3 +1,16 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🩹 Fixes
+
+- **ph-cli:** keep every catch-up bar line short of the last column and redraw on resize ([52245e43cb](https://github.com/powerhouse-inc/powerhouse/commit/52245e43cb))
+- **ph-cli:** pass the connect runner's bind address through to vite ([d9b28dedce](https://github.com/powerhouse-inc/powerhouse/commit/d9b28dedce))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

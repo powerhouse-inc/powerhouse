@@ -1,3 +1,14 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **codegen:** custom resolvers read through the subgraph's read client ([af9a96f94b](https://github.com/powerhouse-inc/powerhouse/commit/af9a96f94b))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

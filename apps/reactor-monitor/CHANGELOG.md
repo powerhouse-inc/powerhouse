@@ -1,3 +1,14 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor-monitor:** routing panel reads and writes through the halves ([742c1500de](https://github.com/powerhouse-inc/powerhouse/commit/742c1500de))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

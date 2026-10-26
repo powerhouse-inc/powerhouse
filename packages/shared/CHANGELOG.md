@@ -1,3 +1,14 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor:** module and processor host module carry the client halves ([a3722fa7da](https://github.com/powerhouse-inc/powerhouse/commit/a3722fa7da))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

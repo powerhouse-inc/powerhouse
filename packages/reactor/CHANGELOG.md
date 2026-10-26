@@ -1,3 +1,25 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor:** export the handle building blocks and type fromWire ([fa1bffa505](https://github.com/powerhouse-inc/powerhouse/commit/fa1bffa505))
+- **reactor:** write targets and describe resolve on the identity table ([5a1e9ccfee](https://github.com/powerhouse-inc/powerhouse/commit/5a1e9ccfee))
+- **reactor:** drive writes stop reading the drive where the reducer decides ([25e496cef9](https://github.com/powerhouse-inc/powerhouse/commit/25e496cef9))
+- **reactor:** purge deletes a document's permission rows ([510db4ed80](https://github.com/powerhouse-inc/powerhouse/commit/510db4ed80))
+- **reactor:** module and processor host module carry the client halves ([a3722fa7da](https://github.com/powerhouse-inc/powerhouse/commit/a3722fa7da))
+- **reactor:** serve the client halves over RPC as read.* and write.* ([8dc7e13975](https://github.com/powerhouse-inc/powerhouse/commit/8dc7e13975))
+- **reactor:** deprecate the facade's writes with a one-time warning ([2b98afc82f](https://github.com/powerhouse-inc/powerhouse/commit/2b98afc82f))
+- **reactor:** split the drive client into read and write halves ([0edbbcbbb1](https://github.com/powerhouse-inc/powerhouse/commit/0edbbcbbb1))
+- **reactor:** permission tables in the reactor store (migration 029) ([bc61963b19](https://github.com/powerhouse-inc/powerhouse/commit/bc61963b19))
+- **reactor:** writes return WriteHandles; the facade reads back through them ([35d02fbcb6](https://github.com/powerhouse-inc/powerhouse/commit/35d02fbcb6))
+- **reactor:** write identity rows in the execution transaction ([5393c2d740](https://github.com/powerhouse-inc/powerhouse/commit/5393c2d740))
+- **reactor:** write-side identity table and store ([f1963c414a](https://github.com/powerhouse-inc/powerhouse/commit/f1963c414a))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

@@ -1,3 +1,14 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor-drive:** drive client reads and writes through the client halves ([f4f7dcc4c0](https://github.com/powerhouse-inc/powerhouse/commit/f4f7dcc4c0))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/reactor-drive to align it with other projects, there were no code changes.

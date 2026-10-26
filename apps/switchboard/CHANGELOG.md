@@ -1,3 +1,15 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **switchboard:** wire the reactor client halves ([73e52624a2](https://github.com/powerhouse-inc/powerhouse/commit/73e52624a2))
+- **switchboard:** move permission rows to the reactor store at boot ([5fd8f83190](https://github.com/powerhouse-inc/powerhouse/commit/5fd8f83190))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

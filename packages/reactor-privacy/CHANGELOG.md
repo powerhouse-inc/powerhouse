@@ -1,3 +1,7 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+This was a version bump only for @powerhousedao/reactor-privacy to align it with other projects, there were no code changes.
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/reactor-privacy to align it with other projects, there were no code changes.

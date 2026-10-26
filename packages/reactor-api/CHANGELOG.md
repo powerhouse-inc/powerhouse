@@ -1,3 +1,17 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor-api:** resolvers get the client halves on the context, per operation ([58ac4b0f2a](https://github.com/powerhouse-inc/powerhouse/commit/58ac4b0f2a))
+- **reactor-api:** document, findDocuments and relationship queries take a consistency token ([4f48c8fb7f](https://github.com/powerhouse-inc/powerhouse/commit/4f48c8fb7f))
+- **reactor-api:** permission service on the reactor store ([62eb1751ef](https://github.com/powerhouse-inc/powerhouse/commit/62eb1751ef))
+- **reactor-api:** per-process permission cache behind DocumentPermissionService ([f6090bb09a](https://github.com/powerhouse-inc/powerhouse/commit/f6090bb09a))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 ### 🚀 Features

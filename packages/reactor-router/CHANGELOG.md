@@ -1,3 +1,17 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor-router:** the write half answers a failed id check through a policy ([e682a12dd5](https://github.com/powerhouse-inc/powerhouse/commit/e682a12dd5))
+- **reactor-router:** split the router into routing read and write clients ([7eb9a728db](https://github.com/powerhouse-inc/powerhouse/commit/7eb9a728db))
+- **reactor-router:** backends may carry client halves; router write handles ([137114058f](https://github.com/powerhouse-inc/powerhouse/commit/137114058f))
+- **reactor:** writes return WriteHandles; the facade reads back through them ([35d02fbcb6](https://github.com/powerhouse-inc/powerhouse/commit/35d02fbcb6))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/reactor-router to align it with other projects, there were no code changes.

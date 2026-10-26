@@ -1,3 +1,21 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **connect:** default drives ask the write half whether an id is taken ([16a4a41d8c](https://github.com/powerhouse-inc/powerhouse/commit/16a4a41d8c))
+- **connect:** processors and store subscriptions take the client halves ([e2247704c0](https://github.com/powerhouse-inc/powerhouse/commit/e2247704c0))
+- **reactor:** module and processor host module carry the client halves ([a3722fa7da](https://github.com/powerhouse-inc/powerhouse/commit/a3722fa7da))
+
+### 🩹 Fixes
+
+- **connect:** prerender a project's custom shell without Connect's chrome ([bbab2b95f2](https://github.com/powerhouse-inc/powerhouse/commit/bbab2b95f2))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.76 (2026-10-25)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
