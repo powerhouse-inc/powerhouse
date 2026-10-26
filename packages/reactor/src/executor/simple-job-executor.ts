@@ -826,16 +826,16 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Put here because a re-eval pass writes through the same db transaction.
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope: job.scope, operations: actionResult.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         result: {
           job,
           success: false as const,
-          error: reevaluationError,
+          error: reevaluation.error,
           duration: Date.now() - startTime,
         },
       };
@@ -846,14 +846,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       ...indexTxn.getMembershipInvalidations(),
     );
 
-    for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
-      actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+    // The pass's rows follow the job's own in the index transaction.
+    const written = [
+      ...actionResult.operationsWithContext,
+      ...reevaluation.operationsWithContext,
+    ];
+    for (let i = 0; i < written.length; i++) {
+      written[i].context.ordinal = ordinals[i];
     }
     return this.committedOutcome(
       job,
       committed,
-      actionResult.operationsWithContext,
-      actionResult.generatedOperations,
+      written,
+      [
+        ...actionResult.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
       stores,
       startTime,
     );
@@ -2621,9 +2629,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   private async reevaluateIfCriteriaMet(
     criteria: EvaluationCriteria,
     executing: ExecutingJob,
-  ): Promise<Error | undefined> {
+  ): Promise<{ error?: Error; operationsWithContext: OperationWithContext[] }> {
+    const skipped = { operationsWithContext: [] };
     if (!this.featureFlags.documentDecisions) {
-      return undefined;
+      return skipped;
     }
 
     const { job, stores, signal } = executing;
@@ -2636,7 +2645,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         stream.query.branch === job.branch,
     );
     if (!inReadSet) {
-      return undefined;
+      return skipped;
     }
 
     const revisions = await stores.operationStore.getRevisions(
@@ -2650,11 +2659,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       (operation) => Date.parse(operation.timestampUtcMs) < latest,
     );
     if (!backdated) {
-      return undefined;
+      return skipped;
     }
 
-    const outcome = await this.reevaluateDocument(executing);
-    return outcome.error;
+    return this.reevaluateDocument(executing);
   }
 
   /**
@@ -3133,15 +3141,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
-    const reevaluationError = await this.reevaluateIfCriteriaMet(
+    const reevaluation = await this.reevaluateIfCriteriaMet(
       { scope, operations: result.generatedOperations },
       executing,
     );
-    if (reevaluationError) {
+    if (reevaluation.error) {
       return {
         job,
         success: false,
-        error: reevaluationError,
+        error: reevaluation.error,
         duration: Date.now() - startTime,
       };
     }
@@ -3149,8 +3157,14 @@ export class SimpleJobExecutor implements IJobExecutor {
     return {
       job,
       success: true,
-      operations: result.generatedOperations,
-      operationsWithContext: result.operationsWithContext,
+      operations: [
+        ...result.generatedOperations,
+        ...reevaluation.operationsWithContext.map((owc) => owc.operation),
+      ],
+      operationsWithContext: [
+        ...result.operationsWithContext,
+        ...reevaluation.operationsWithContext,
+      ],
       duration: Date.now() - startTime,
     };
   }
