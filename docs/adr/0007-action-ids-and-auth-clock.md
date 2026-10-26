@@ -60,12 +60,19 @@ Every other scope is stamped with `new Date().toISOString()`. Non-auth stamps ar
 at the last auth stamp. The undo marker that base-reducers 1 and 2 synthesize is also built
 with the wall clock, so undo does not advance the auth clock.
 
-### 4. A same-millisecond auth burst may deny content
+### 4. An auth burst may deny content
 
-A burst of N auth actions in one millisecond is stamped up to N−1 milliseconds ahead of the
-clock. Content built in that millisecond keeps the wall-clock stamp, sorts before the grants
-stamped ahead of it, and is denied under `documentDecisions` when it depends on those grants.
-This window is accepted.
+The auth clock is one per process, shared by every document. N auth actions built within one
+millisecond, on any mix of documents, are stamped up to N−1 milliseconds ahead of the clock.
+For example, `grantOnDocuments` with 3 grants on each of 500 documents mints 1,500 auth
+actions in one tick, so the last document's grants run about 1.5 s ahead. Content built before
+the clock catches up keeps the wall-clock stamp, sorts before the grants stamped ahead of it,
+and is denied under `documentDecisions` when it depends on those grants. This window is
+accepted.
+
+A wall clock that steps back after a run-ahead is followed, so the next stamps fall at or
+below the highest stamp already sent. The executor refuses this process's auth writes until
+the clock passes that stamp.
 
 ## Consequences
 
@@ -79,8 +86,12 @@ This window is accepted.
 
 ### Negative / risks
 
-- The window in Decision 4: content made in the millisecond of a grant burst may be denied.
-  The author resubmits it once the clock passes the burst.
+- The window in Decision 4: content made before the clock passes a grant burst may be denied,
+  and the window grows with every auth action the process builds in that time, across all
+  documents. Before this decision, one grant per document on many documents carried the same
+  wall-clock stamp and opened no window. The author resubmits once the clock passes the burst.
+- After a backward clock step, this process's auth writes are refused until the clock passes
+  the highest stamp it sent (Decision 4).
 - The id counter and the auth clock are per process. A Connect tab and its SharedWorker, or two
   workflow piece workers, each have their own. Their actions are not ordered within a
   millisecond, and an auth burst in one can push a later auth write from another below the
