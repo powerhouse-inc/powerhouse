@@ -129,7 +129,7 @@ describe("Local reducer", () => {
     document.header.protocolVersions = { "base-reducer": 1 };
     const newDocument = countReducer(document, setLocalName("test"));
     expect(newDocument.header.revision.local).toStrictEqual(1);
-    expect(document.header.revision.local).toBe(undefined);
+    expect(document.header.revision.local).toBe(0);
 
     expect(newDocument.operations).toMatchObject({
       global: [],
@@ -157,11 +157,13 @@ describe("Local reducer", () => {
 
     expect(newDocument.header.revision).toStrictEqual({
       document: 0,
+      global: 0,
       local: 1,
     });
     newDocument = countReducer(newDocument, undo(1, "local"));
     expect(newDocument.header.revision).toStrictEqual({
       document: 0,
+      global: 0,
       local: 2,
     });
     expect(newDocument.state).toStrictEqual(createCountState());
@@ -201,6 +203,7 @@ describe("Local reducer", () => {
     newDocument = countReducer(newDocument, redo(1, "local"));
     expect(newDocument.header.revision).toStrictEqual({
       document: 0,
+      global: 0,
       local: 3,
     });
     expect(newDocument.state).toStrictEqual(createCountState(0, "test"));

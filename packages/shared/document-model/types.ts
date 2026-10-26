@@ -5,6 +5,13 @@ import type { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { ActionSigningTarget } from "./action-signature.js";
 import type { Action } from "./actions.js";
+// By package path, so the declaration stays in its own file in dist.
+import type { DocumentDispatch } from "@powerhousedao/shared/document-model/dispatch";
+export type {
+  DispatchOutcome,
+  DocumentDispatch,
+  RejectedAction,
+} from "@powerhousedao/shared/document-model/dispatch";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
@@ -1493,21 +1500,6 @@ export type ActionErrorCallback = (error: unknown) => void;
 export type EditorDispatch = (
   action: Action,
   onErrorCallback?: ActionErrorCallback,
-) => void;
-
-/** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome.
- * In Connect, `onErrors` gets an `OperationRejectedError` per rejected action and runs
- * first; `onSuccess` then gets the document whether or not an action was rejected, so it
- * does not mean the actions applied. */
-export type DocumentDispatch<TAction extends Action = Action> = (
-  actionOrActions:
-    | TAction
-    | TAction[]
-    | DocumentAction
-    | DocumentAction[]
-    | undefined,
-  onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
 ) => void;
 
 type EditorBaseProps = {

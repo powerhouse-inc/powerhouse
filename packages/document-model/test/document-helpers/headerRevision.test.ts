@@ -3,6 +3,7 @@ import {
   baseCreateDocument,
   getDocumentLastModified,
   updateHeaderRevision,
+  withScopeRevisions,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPHDocumentCreateState, fakeOperation } from "../helpers.js";
@@ -309,5 +310,23 @@ describe("updateHeaderRevision", () => {
     );
 
     expect(updated.header.revision.local).toBe(0);
+  });
+});
+
+describe("withScopeRevisions", () => {
+  it("starts a new document at 0 for every model scope", () => {
+    const doc = createTestDocument();
+
+    expect(doc.header.revision).toEqual({ document: 0, global: 0, local: 0 });
+  });
+
+  it("keeps the counts a revision has and leaves auth out", () => {
+    const doc = createTestDocument();
+
+    expect(withScopeRevisions({ document: 2, global: 3 }, doc.state)).toEqual({
+      document: 2,
+      global: 3,
+      local: 0,
+    });
   });
 });

@@ -99,6 +99,8 @@ export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 export const VERSIONED_PEER_DEPENDENCIES = [
   "document-model",
   "@powerhousedao/reactor-browser",
+  // Offered routes import it; the Connect that loads the package provides it.
+  "@powerhousedao/connect-core",
 ];
 
 type PeerSpec = { peer: string; dev: string };
@@ -277,11 +279,12 @@ export const packageJsonExports = {
 
 export const packageScripts = {
   "test:watch": "vitest",
-  lint: "oxlint --type-aware --type-check",
-  "lint:fix": "oxlint --type-aware --type-check --fix",
+  // Routes type-check against the tree, which Vetra or a build would write.
+  lint: "ph-cli generate connect-routes && oxlint --type-aware --type-check",
+  "lint:fix":
+    "ph-cli generate connect-routes && oxlint --type-aware --type-check --fix",
   format: "oxfmt",
   "format:check": "oxfmt --check",
-  // Routes type-check against the tree, which Vetra or a build would write.
   tsc: "ph-cli generate connect-routes && tsc",
   "tsc:watch": "tsc --watch",
   generate: "ph-cli generate",
@@ -350,12 +353,11 @@ export const externalDevDependencies = {
   "@vitejs/plugin-react": "^6.0.1",
   "@vitest/coverage-v8": "5.0.3",
   oxfmt: "0.68.0",
-  oxlint: "1.70.0",
-  "oxlint-tsgolint": "0.23.0",
+  oxlint: "1.83.0",
+  "oxlint-tsgolint": "7.0.2001",
   tailwindcss: "^4.1.16",
   typescript: "~7.0.2",
   vite: "^8.0.10",
-  "vite-tsconfig-paths": "6.1.1",
   vitest: "5.0.3",
 } as const;
 
