@@ -1,40 +1,15 @@
 import {
   logout,
   openRenown,
-  setBackendAuth,
   useBackendAuth,
   useUser,
 } from "@powerhousedao/reactor-browser";
-import { useEffect } from "react";
+import type { BackendAuthGateMode } from "../runtime/backend-auth-gate.js";
 
-/** What the gate shows: nothing, a sign-in, or a "not allowed" notice. */
-export type BackendAuthGateMode = "login" | "unauthorized" | null;
-
-/**
- * The gate decision for the app's backend: "login" when the backend refused
- * an anonymous caller, "unauthorized" when it refused a signed-in one.
- *
- * A change of identity (a sign-in landing, a sign-out) clears the refusal:
- * the next boot or drive refresh asks the backend again as the new caller.
- */
-export function useBackendAuthGate(): BackendAuthGateMode {
-  const refusal = useBackendAuth();
-  const user = useUser();
-  const address = user?.address;
-  const refusedAt = refusal?.at;
-  useEffect(() => {
-    // Runs when the identity changes AFTER a refusal was recorded; the
-    // refusal itself does not change the identity, so this is not a loop.
-    return () => {
-      if (refusedAt) setBackendAuth(undefined);
-    };
-  }, [address, refusedAt]);
-  if (!refusal) return null;
-  // A 403 for a signed-in user is final until they switch account; a 401 for
-  // a signed-in user means the token did not reach the backend yet (a stale
-  // boot), which signing in again also fixes.
-  return address ? "unauthorized" : "login";
-}
+// The decision lives with the runtime, so a root view outside this chunk
+// (Connect's own) can take it without loading every core view.
+export { useBackendAuthGate } from "../runtime/backend-auth-gate.js";
+export type { BackendAuthGateMode } from "../runtime/backend-auth-gate.js";
 
 /**
  * Full-page gate rendered by the root view in place of the routes when the

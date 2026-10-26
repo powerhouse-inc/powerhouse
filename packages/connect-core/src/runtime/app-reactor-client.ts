@@ -1,6 +1,7 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   getDrives,
+  getFullReactorClient,
   getPHStore,
   recordBackendAuthError,
   setBackendAuth,
@@ -194,6 +195,18 @@ export async function refreshAppDrives(
   local: IReactorClient,
 ): Promise<void> {
   setDrives(await getAppDrives(client, local));
+}
+
+/**
+ * Lists the drives again as the caller the tab now is, through the clients
+ * boot left in the store: after a sign-in landing or a sign-out that followed
+ * a backend's refusal. Nothing to do before boot has set a client.
+ */
+export async function relistAppDrives(): Promise<void> {
+  const client = getFullReactorClient();
+  if (!client) return;
+  const local = getPHStore()?.reactorClientModule?.client ?? client;
+  await refreshAppDrives(client, local);
 }
 
 async function buildRouter(

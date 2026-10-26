@@ -4,12 +4,20 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   addBackendAuthEventHandler,
   addDrivesEventHandler,
+  addFullReactorClientEventHandler,
   getPHStore,
   setBackendAuth,
+  setFullReactorClient,
 } from "@powerhousedao/reactor-browser";
 import { render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { getAppDrives, refreshAppDrives } from "../src/runtime/index.js";
+import {
+  getAppDrives,
+  refreshAppDrives,
+  relistAppDrives,
+  useBackendAuthGate,
+} from "../src/runtime/index.js";
 import { BackendAuthGate } from "../src/views/backend-auth-gate.js";
 
 const DRIVE_TYPE = "powerhouse/document-drive";
@@ -18,6 +26,7 @@ beforeAll(() => {
   window.ph = {};
   addDrivesEventHandler();
   addBackendAuthEventHandler();
+  addFullReactorClientEventHandler();
 });
 
 afterEach(() => {
@@ -85,6 +94,45 @@ describe("getAppDrives with a refusing backend", () => {
     );
     const routed = clientThat(refused401);
     await expect(getAppDrives(routed, local)).resolves.toEqual([]);
+    expect(getPHStore()?.backendAuth?.status).toBe(401);
+  });
+});
+
+describe("useBackendAuthGate", () => {
+  function Probe() {
+    return <output>{String(useBackendAuthGate())}</output>;
+  }
+
+  it("keeps a refusal recorded before the root mounted, under StrictMode's double mount", () => {
+    setBackendAuth({ requiresAuth: true, status: 401, at: "t" });
+    render(
+      <StrictMode>
+        <Probe />
+      </StrictMode>,
+    );
+    expect(screen.getByRole("status").textContent).toBe("login");
+    expect(getPHStore()?.backendAuth?.status).toBe(401);
+  });
+
+  it("answers null without a refusal", () => {
+    render(<Probe />);
+    expect(screen.getByRole("status").textContent).toBe("null");
+  });
+});
+
+describe("relistAppDrives", () => {
+  afterEach(() => setFullReactorClient(undefined));
+
+  it("does nothing before boot set a client", async () => {
+    await expect(relistAppDrives()).resolves.toBeUndefined();
+    expect(getPHStore()?.drives).toBeUndefined();
+  });
+
+  it("lists through the store's client and records what it answers", async () => {
+    const client = clientThat(refused401);
+    setFullReactorClient(client);
+    await relistAppDrives();
+    expect(getPHStore()?.drives).toEqual([]);
     expect(getPHStore()?.backendAuth?.status).toBe(401);
   });
 });
