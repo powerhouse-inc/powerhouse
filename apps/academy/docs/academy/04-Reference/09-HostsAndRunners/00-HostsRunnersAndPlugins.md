@@ -346,7 +346,7 @@ const configSchema = z.strictObject({
 type AuditConfig = z.infer<typeof configSchema>;
 
 export function createAuditPlugin(config: AuditConfig): HostPlugin<{
-  onReactorReady: (ctx: { client: unknown }) => Promise<void>;
+  onReactorReady: (ctx: { read: unknown }) => Promise<void>;
   onShutdown: () => Promise<void>;
 }> {
   let flush: (() => Promise<void>) | undefined;
@@ -356,7 +356,7 @@ export function createAuditPlugin(config: AuditConfig): HostPlugin<{
     configSchema,
     hooks: {
       onReactorReady: async (ctx) => {
-        flush = startAuditPipeline(ctx.client, config.sink, config.batchSize);
+        flush = startAuditPipeline(ctx.read, config.sink, config.batchSize);
       },
       onShutdown: async () => {
         await flush?.();

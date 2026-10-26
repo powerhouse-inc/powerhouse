@@ -287,13 +287,14 @@ By default, new documents are created at the **latest version**. You can optiona
 
 ```typescript
 // Create at latest version (default)
-const doc = await client.createEmpty("my-org/todo");
+const doc = await (await client.write.createEmpty("my-org/todo")).document();
 // doc.state.document.version === 2 (latest)
 
 // Create at specific version
-const v1Doc = await client.createEmpty("my-org/todo", {
+const v1Handle = await client.write.createEmpty("my-org/todo", {
   documentModelVersion: 1,
 });
+const v1Doc = await v1Handle.document();
 // v1Doc.state.document.version === 1
 ```
 

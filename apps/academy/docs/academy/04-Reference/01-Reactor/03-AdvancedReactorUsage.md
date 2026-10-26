@@ -18,20 +18,18 @@ This page covers the low-level `IReactor` interface and the internal components 
 
 | Aspect                  | `IReactor`                                                 | `IReactorClient`                                                                                        |
 | ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | Waits for job completion, returns the final document                                                    |
+| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | `client.write` returns a `WriteHandle` once the job is accepted; await `written`, `readable`, or `document()` |
 | **Signing**             | `create`, `deleteDocument`, `addRelationship` and `removeRelationship` take an optional `signer`; `execute` and `load` take none — identity rides on each action's `context.signer` | Client manages signing internally                                                                       |
 | **Document lookup**     | Separate `get()`, `getBySlug()`, `getByIdOrSlug()` methods | Single `get(identifier)` that accepts either                                                            |
 | **Children/parents**    | Returns `string[]` (document IDs only)                     | Returns `PagedResults<PHDocument>` (full documents)                                                     |
-| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `rename()`, `moveRelationship()`, `deleteDocuments()`, and `client.drives.addFile()` |
+| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `rename()`, `moveRelationship()`, `deleteDocuments()`, and `client.write.drives.addFile()` |
 | **Subscriptions**       | Not available (use the event bus directly)                 | `subscribe(search, callback, view?)` for real-time document changes                                     |
-| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Handled internally by the client                                                                        |
+| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Each `WriteReceipt` carries a `token`; `client.read` methods take it as their last parameter, and `handle.document()` uses it for you |
 
 **When to use `IReactor` directly:**
 
-- You need fire-and-forget job submission without waiting for completion
-- You want explicit control over consistency tokens
 - You are building infrastructure that manages its own signing
-- You need access to `executeBatch()` for multi-document operations with dependency ordering
+- You need the raw `JobInfo` from every write and drive the job lifecycle yourself
 
 ## Building a reactor with ReactorBuilder
 
@@ -339,7 +337,7 @@ const token = job.consistencyToken;
 const doc = await reactor.get(docId, undefined, token);
 ```
 
-Without a consistency token, reads may return stale data if the read models have not yet indexed the latest operations. `IReactorClient` handles this automatically — it waits for `READ_READY` before returning — but when using `IReactor` directly, consistency tokens give you explicit control.
+Without a consistency token, reads may return stale data if the read models have not yet indexed the latest operations. On the client, `handle.document()` waits for `READ_READY` and reads with the receipt's token, and every `client.read` method that takes a `consistencyToken` accepts `receipt.token`. When using `IReactor` directly, you pass the job's token yourself.
 
 ## ReactorModule
 
@@ -483,7 +481,7 @@ Read models registered via `withReadModel()` run in the pre-ready phase — they
 
 A common use case for the low-level API is writing integration tests that need full control over the reactor lifecycle:
 
-`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`. It holds the `client`, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and the `reactorModule`. `reactorModule` is the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`, typed `InProcessReactorModule | undefined` because the `withReactor` path has none. Narrow it before use. Hand the builder a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
+`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`. It holds the `client`, its `read` and `write` halves, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and the `reactorModule`. `reactorModule` is the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`, typed `InProcessReactorModule | undefined` because the `withReactor` path has none. Narrow it before use. Hand the builder a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
 
 ```typescript
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
@@ -509,7 +507,8 @@ async function createTestReactor() {
 const { client, reactorModule } = await createTestReactor();
 
 // Use client for high-level operations
-const doc = await client.createEmpty("powerhouse/todo-list");
+const handle = await client.write.createEmpty("powerhouse/todo-list");
+const doc = await handle.document();
 
 // Use the reactor module for low-level inspection
 const ops = await reactorModule.operationStore.getSince(
