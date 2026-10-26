@@ -30,10 +30,10 @@ const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(?::(\d+))?$/;
 
 /** The Host header when it names loopback on the port this socket accepted on. */
 export function loopbackHost(req: IncomingMessage): string | undefined {
-  const host = req.headers.host?.toLowerCase();
-  const match = host ? LOOPBACK_HOST.exec(host) : null;
-  if (!host || !match) return undefined;
-  const port = match[2] === undefined ? 80 : Number(match[2]);
+  const host = req.headers.host?.toLowerCase() ?? "";
+  const match = LOOPBACK_HOST.exec(host);
+  if (!match) return undefined;
+  const port = Number(match.at(2) ?? 80);
   return port === req.socket.localPort ? host : undefined;
 }
 

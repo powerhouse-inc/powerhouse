@@ -156,7 +156,7 @@ describe("controller HTTP handler", () => {
       { origin: "null" },
       { "sec-fetch-site": "same-site" },
       { "sec-fetch-site": "cross-site" },
-    ]) {
+    ] as Record<string, string>[]) {
       const reply = await call("GET", "/__ph-monitor/projects", { headers });
       expect(reply.status).toBe(403);
       expect(codeOf(reply)).toBe("bad_origin");
