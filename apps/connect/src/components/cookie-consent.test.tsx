@@ -16,9 +16,13 @@ const OPENPANEL = "@powerhousedao/connect/plugins/openpanel";
 const SENTRY = "@powerhousedao/connect/plugins/sentry";
 
 // The served composition and its plugins' UI, as the app loads them at boot.
-async function serve(composition?: { module: string }[]) {
+async function serve(composition?: { module: string }[], cookieBanner = true) {
   primeRuntimeConfig({
-    connect: { ...DEFAULT_CONNECT_CONFIG, composition },
+    connect: {
+      ...DEFAULT_CONNECT_CONFIG,
+      app: { ...DEFAULT_CONNECT_CONFIG.app, cookieBanner },
+      composition,
+    },
   } as never);
   await loadConnectPluginUi(composition);
 }
@@ -65,5 +69,13 @@ describe("the cookie banner", () => {
     const { ACCEPTED_COOKIES_KEY_STORAGE } =
       await import("../hooks/preferences-store.js");
     expect(localStorage.getItem(ACCEPTED_COOKIES_KEY_STORAGE)).toBeNull();
+  });
+
+  // `ph vetra` turns it off for the local Studio.
+  it("never shows when the config turns it off", async () => {
+    await serve(undefined, false);
+    const { container } = render(<PluginRoots />);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(container.innerHTML).toBe("");
   });
 });
