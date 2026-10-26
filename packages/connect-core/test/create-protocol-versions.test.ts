@@ -189,13 +189,13 @@ async function quietly<T>(run: () => Promise<T>): Promise<T> {
 describe("remote Connect against a Switchboard that runs base-reducer 3", () => {
   const v3 = { "base-reducer": 3 };
 
-  it("creates a model whose reducer createReducer built at base-reducer 3", async () => {
+  it("creates a model whose reducer createReducer built at base-reducer 2, all this build runs", async () => {
     const { received } = await remoteConnect([tagged], v3);
 
     const node = await addDocument("drive-1", "Doc", MODEL_TYPE);
 
     expect(createdVersions(received)).toEqual({
-      "base-reducer": 3,
+      "base-reducer": 2,
       signature: 2,
     });
     expect(createInputs(received)[0].documentId).toBe(node.id);
@@ -213,13 +213,13 @@ describe("remote Connect against a Switchboard that runs base-reducer 3", () => 
     });
   });
 
-  it("creates a drive at base-reducer 3", async () => {
+  it("creates a drive at base-reducer 2, all this build runs", async () => {
     const { received } = await remoteConnect([tagged], v3);
 
     await addDrive({ global: { name: "Drive" } });
 
     expect(createdDriveVersions(received)).toEqual({
-      "base-reducer": 3,
+      "base-reducer": 2,
       signature: 2,
     });
   });
