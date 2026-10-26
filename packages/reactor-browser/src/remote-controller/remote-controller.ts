@@ -355,7 +355,7 @@ export class RemoteDocumentController<
         ),
       ]);
     } catch (error) {
-      if (!(error instanceof GraphQLOperationNotSupportedError)) throw error;
+      if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
       // A host without createDefaults heads the document itself.
       this.uncreated = undefined;
       return;
