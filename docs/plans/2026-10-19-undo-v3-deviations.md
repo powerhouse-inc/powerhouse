@@ -638,8 +638,9 @@ Other landing fixes.
   `undo-redo-batch` and `base-action-reducer` instead of `export *`;
   `rewritesScope`, `scopeDeriver` and `baseActionReducer` are internal.
 - `RELEASE-NOTES.md` carries the rollout: Switchboard first, the boot
-  refusal with `undoV3` off and its read-only escape, and reverting
-  migrations 030 and 031 before running the previous binary.
+  refusal with `undoV3` off and its read-only escape, and migrating down
+  to the previous release's last migration (030 and 031 among those
+  reverted) before running the previous binary.
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
