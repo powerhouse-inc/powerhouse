@@ -6,13 +6,10 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   capSelection,
-  fitCreateBaseReducer,
-  FLAGS_FOR_EVERY_VERSION,
   isSignaturePolicy,
   localSupports,
   PEER_CAPABILITIES,
 } from "@powerhousedao/shared/document-model";
-import { logger } from "document-model";
 import type { GetCreateDefaultsQuery } from "../graphql/gen/schema.js";
 import type { ReactorGraphQLClient } from "../graphql/types.js";
 import {
@@ -61,12 +58,12 @@ export async function readCreateProtocolVersions(
     parentIdentifier,
     signal,
   );
-  const selected = capSelection(
+  // Pinned: this build runs base-reducer 2 only, so the cap is the fit.
+  return capSelection(
     host,
     PEER_CAPABILITIES,
-    localSupports(PEER_CAPABILITIES, FLAGS_FOR_EVERY_VERSION),
+    localSupports(PEER_CAPABILITIES, {}),
   );
-  return fitCreateBaseReducer(selected, documentType, modules, logger);
 }
 
 /** The Switchboard's selection; undefined from a host without `createDefaults`. */

@@ -533,7 +533,7 @@ describe("ReactorDriveClient Integration", () => {
   describe("base-reducer at creation", () => {
     it("heads a new drive at the reactor's local preference", async () => {
       const drive = await driveClient.create({ global: { name: "V3 Drive" } });
-      expect(drive.header.protocolVersions?.["base-reducer"]).toBe(3);
+      expect(drive.header.protocolVersions?.["base-reducer"]).toBe(2);
     });
 
     it("gives a file header without versions the reactor's local preference", async () => {
@@ -541,7 +541,7 @@ describe("ReactorDriveClient Integration", () => {
       delete file.header.protocolVersions;
       await driveClient.addFile(driveId, file);
       const stored = await reactorClient.get(file.header.id);
-      expect(stored.header.protocolVersions).toEqual({ "base-reducer": 3 });
+      expect(stored.header.protocolVersions).toEqual({ "base-reducer": 2 });
     });
 
     it("refuses a copy that overrides its source's versions", async () => {
