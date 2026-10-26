@@ -210,18 +210,99 @@ export class RoutingReadClient implements IReactorReadClient {
 
   // Documents
 
-  /** Each id read as `get` reads it, in the order given. */
-  getMany<TDocument extends PHDocument>(
+  /**
+   * Reads ids grouped by holder: one `getMany` per backend that declares it.
+   * A routed id is not probed; with a single backend no id is, since every
+   * read lands there. Otherwise an unrouted id is resolved as `get` resolves
+   * it. A backend without `getMany`, or a group of one, reads each id as `get`
+   * does; so does a failed group when another backend could hold its ids.
+   * Results come back in the order given.
+   */
+  async getMany<TDocument extends PHDocument>(
     documentIds: string[],
     view?: ViewFilter,
     signal?: AbortSignal,
     consistencyToken?: ConsistencyToken,
   ): Promise<TDocument[]> {
-    return Promise.all(
-      documentIds.map((id) =>
-        this.get<TDocument>(id, view, signal, consistencyToken),
-      ),
+    const distinct = [...new Set(documentIds)];
+    const holders = await Promise.all(
+      distinct.map((id) => this.holderForMany(id)),
     );
+    const groups = new Map<RouterBackend, string[]>();
+    distinct.forEach((id, i) => {
+      const group = groups.get(holders[i]) ?? [];
+      group.push(id);
+      groups.set(holders[i], group);
+    });
+    const byId = new Map<string, TDocument>();
+    await Promise.all(
+      [...groups].map(async ([backend, ids]) => {
+        const documents = await this.getManyOn<TDocument>(
+          backend,
+          ids,
+          view,
+          signal,
+          consistencyToken,
+        );
+        ids.forEach((id, i) => byId.set(id, documents[i]));
+      }),
+    );
+    return documentIds.map((id) => {
+      const document = byId.get(id);
+      if (document === undefined) {
+        throw new Error(`getMany: no document read for ${JSON.stringify(id)}`);
+      }
+      return document;
+    });
+  }
+
+  private holderForMany(identifier: string): Promise<RouterBackend> {
+    const backends = this.dispatcher.backends;
+    if (backends.length === 1) {
+      return Promise.resolve(backends[0]);
+    }
+    return this.dispatcher.resolveDocumentBackend(identifier);
+  }
+
+  private async getManyOn<TDocument extends PHDocument>(
+    backend: RouterBackend,
+    ids: string[],
+    view: ViewFilter | undefined,
+    signal: AbortSignal | undefined,
+    consistencyToken: ConsistencyToken | undefined,
+  ): Promise<TDocument[]> {
+    const readEach = () =>
+      Promise.all(
+        ids.map((id) =>
+          this.get<TDocument>(id, view, signal, consistencyToken),
+        ),
+      );
+    const api = backend.api;
+    const read = api.read;
+    const getMany =
+      consistencyToken !== undefined && read !== undefined
+        ? read.getMany.bind(read)
+        : (api.getMany?.bind(api) ?? read?.getMany.bind(read));
+    if (getMany === undefined || ids.length === 1) {
+      return readEach();
+    }
+    assertView(backend, view, "getMany");
+    let documents: TDocument[];
+    try {
+      documents =
+        consistencyToken === undefined
+          ? await getMany<TDocument>(ids, view, signal)
+          : await getMany<TDocument>(ids, view, signal, consistencyToken);
+    } catch (error) {
+      if (this.dispatcher.backends.length > 1) {
+        return readEach();
+      }
+      throw error;
+    }
+    for (const id of ids) {
+      this.dispatcher.recordDocument(id, backend.name);
+    }
+    return documents;
   }
 
   get<TDocument extends PHDocument>(

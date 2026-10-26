@@ -294,6 +294,20 @@ describe("the stitched schema binds queries to the read half and mutations to th
         },
         setAdditionalContextFields: () => undefined,
         getAdditionalContextFields: () => ({}),
+        // The node queries read the drive's gate on the read half.
+        driveNodes: {
+          getNode: () =>
+            Promise.resolve({
+              kind: "folder",
+              id: "doc-1",
+              driveId: "doc-1",
+              parentFolder: null,
+              name: "stub",
+            }),
+          listChildren: () => Promise.resolve({ ...emptyPage, cursors: [] }),
+          getDescendants: () => Promise.resolve([]),
+          listAll: () => Promise.resolve([]),
+        },
       },
       http: {},
       path: "/",
@@ -441,6 +455,21 @@ describe("the stitched schema binds queries to the read half and mutations to th
     }
     expect(checked).toBeGreaterThan(20);
     expect(offenders).toEqual([]);
+  });
+
+  it("reads drive nodes through the read half", async () => {
+    const query = schema.getQueryType()!;
+    for (const name of ["driveNodes", "driveNode", "driveDescendants"]) {
+      const field = query.getFields()[name];
+      expect(field, name).toBeDefined();
+      const { touched: seen, error } = await run(query, field, "query");
+      expect(error, name).toBeUndefined();
+      expect(seen, name).toContain("read.isServed");
+      expect(
+        seen.filter((member) => member.startsWith("write.")),
+        name,
+      ).toEqual([]);
+    }
   });
 
   it("every mutation resolver writes through the write half", async () => {

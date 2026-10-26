@@ -18,6 +18,9 @@ import {
   DocumentRelationshipResultPageDTO,
   DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
+  DriveNodeDTO,
+  DriveNodeListDTO,
+  DriveNodePageDTO,
   JobChangeEventDTO,
   JobInfoFieldsDTO,
   MoveRelationshipResultDTO,
@@ -115,6 +118,21 @@ const operationValidators: OperationValidators = {
   GetUndoRedoTargets: (data) => {
     if (data.undoRedoTargets) {
       UndoRedoTargetsDTO.parse(data.undoRedoTargets);
+    }
+  },
+  GetDriveNodes: (data) => {
+    if (data.driveNodes) {
+      DriveNodePageDTO.parse(data.driveNodes);
+    }
+  },
+  GetDriveNode: (data) => {
+    if (data.driveNode) {
+      DriveNodeDTO.parse(data.driveNode);
+    }
+  },
+  GetDriveDescendants: (data) => {
+    if (data.driveDescendants) {
+      DriveNodeListDTO.parse(data.driveDescendants);
     }
   },
   EvaluateActions: (data) => {

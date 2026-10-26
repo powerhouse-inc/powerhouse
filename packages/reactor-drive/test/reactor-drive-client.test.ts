@@ -82,7 +82,12 @@ function createMockReactor() {
       );
       return {
         jobs: {},
-        handles: {},
+        handles: Object.fromEntries(
+          request.jobs.map((job) => [
+            job.key,
+            handleFor(job.documentId, undefined),
+          ]),
+        ),
         written: Promise.resolve(receipts),
         readable: Promise.resolve(receipts),
       };

@@ -40,6 +40,14 @@ const EXEMPT: Record<string, Record<string, string>> = {
   reactor: {
     "Query.documentModels":
       "Document model metadata, not document content (AUTH_REVIEW §4: low-sensitivity).",
+    "Query.driveNodes":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveNode":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveDescendants":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "DriveNode.__resolveType":
+      "Type resolution for an already-served node; reads nothing.",
   },
   auth: {
     "Query.userDocumentPermissions":

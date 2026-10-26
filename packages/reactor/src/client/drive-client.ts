@@ -266,6 +266,7 @@ export class DriveClient extends DriveClientFacade {
         signer,
         resolveReference,
         undefined,
+        undefined,
         createProtocolVersions,
       ),
     );

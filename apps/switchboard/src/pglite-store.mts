@@ -4,6 +4,7 @@ import {
   PGLITE_UTC_PARSERS,
   pgliteWorkerEntryPath,
   resolvePgliteFsync,
+  resolvePgliteMaintenance,
   resolvePgliteWorkerMemoryMb,
   ThreadedPGlite,
   type DurableNodeFs,
@@ -133,23 +134,8 @@ function pgliteFsyncFor(
   return wanted;
 }
 
-/** VACUUM FULL timing from the environment; unset or invalid keeps the defaults. */
-export function vacuumFullTimingFromEnv(env: NodeJS.ProcessEnv): {
-  vacuumFullQuietMs?: number;
-  vacuumFullMaxDeferMs?: number;
-} {
-  const ms = (value: string | undefined) => {
-    if (value === undefined || value.trim() === "") return undefined;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
-  };
-  const quiet = ms(env.PH_PGLITE_VACUUM_FULL_QUIET_MS);
-  const maxDefer = ms(env.PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS);
-  return {
-    ...(quiet === undefined ? {} : { vacuumFullQuietMs: quiet }),
-    ...(maxDefer === undefined ? {} : { vacuumFullMaxDeferMs: maxDefer }),
-  };
-}
+/** The VACUUM FULL settings from the environment; see `resolvePgliteMaintenance`. */
+export const vacuumFullTimingFromEnv = resolvePgliteMaintenance;
 
 /** Preloads the module's NodeFS so the returned factory can be synchronous. */
 export async function loadDurableFsFactory(

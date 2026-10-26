@@ -36,7 +36,7 @@ const ALLOWED = new Map<string, string>([
     "drives.create, copies and versionless legacy files",
   ],
   [
-    "packages/reactor-drive/src/client/reactor-drive-client.ts",
+    "packages/reactor-drive/src/client/reactor-drive-write-strategy.ts",
     "copies and versionless legacy files",
   ],
   [

@@ -1,18 +1,13 @@
-import {
-  addRelationshipAction,
-  removeRelationshipAction,
-  type BatchExecutionRequest,
-  type ConsistencyToken,
-  type ExecutionJobPlan,
-  type CopyNodeOptions,
-  type IDriveClient,
-  type IReactorClient,
-  type IReactorReadClient,
-  type IReactorWriteClient,
-  type PagedResults,
-  type PagingOptions,
-  type PropagationMode,
-  type WriteReceipt,
+import type {
+  CopyNodeOptions,
+  IDriveClient,
+  IDriveWriteStrategy,
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+  PagedResults,
+  PagingOptions,
+  WriteHandle,
 } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
@@ -21,40 +16,24 @@ import type {
   FolderNode,
   Node,
 } from "@powerhousedao/shared/document-drive";
-import {
-  assertAuthPreservedOnDuplicate,
-  createCopyHeader,
-  createVersionsOf,
-  creationActions,
-  generateId,
-  replayDocumentVersioned,
-  type Action,
-  type PHBaseState,
-  type PHDocument,
-  type ProtocolVersions,
-  type Reducer,
-  type VersionedReplayConfig,
+import type {
+  PHBaseState,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
+import { REACTOR_DRIVE_DOCUMENT_TYPE } from "../constants.js";
 import {
-  DRIVE_CHILD_RELATIONSHIP_TYPE,
-  REACTOR_DRIVE_DOCUMENT_TYPE,
-} from "../constants.js";
-import {
-  addFolderAction,
-  removeFolderAction,
   setAvailableOfflineAction,
   setDriveIconAction,
   setDriveNameAction,
   setSharingTypeAction,
-  updateFolderAction,
 } from "../actions.js";
 import type { IDriveReadModel } from "../read-model/interfaces.js";
 import type {
-  DriveChildFileMetadata,
   ReactorDriveFileNode,
   ReactorDriveFolderNode,
   ReactorDriveNode,
 } from "../types.js";
+import { createReactorDriveWriteStrategy } from "./reactor-drive-write-strategy.js";
 
 /** The client halves the drive client reads and writes through. */
 export interface ReactorDriveClientHalvesArgs {
@@ -87,6 +66,7 @@ export class ReactorDriveClient implements IDriveClient {
   private readonly read: IReactorReadClient;
   private readonly write: IReactorWriteClient;
   private readonly readModel: IDriveReadModel;
+  private readonly strategy: IDriveWriteStrategy;
 
   constructor(args: ReactorDriveClientArgs) {
     if ("reactor" in args) {
@@ -97,6 +77,11 @@ export class ReactorDriveClient implements IDriveClient {
       this.write = args.write;
     }
     this.readModel = args.readModel;
+    this.strategy = createReactorDriveWriteStrategy({
+      read: this.read,
+      write: this.write,
+      nodes: this.readModel,
+    });
   }
 
   async create(
@@ -142,55 +127,18 @@ export class ReactorDriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const documentId = document.header.id;
-
-    const protocolVersions = await createVersionsOf(
-      document,
-      (options) => this.read.getCreateProtocolVersions(options, signal),
+    const handle = await this.strategy.addFile(
       driveIdentifier,
+      document,
+      parentFolder,
+      signal,
     );
-
-    const metadata: DriveChildFileMetadata = {
-      kind: "file",
-      parentFolderId: parentFolder ?? null,
-      documentType: document.header.documentType,
-    };
-
-    const request: BatchExecutionRequest = {
-      jobs: [
-        {
-          key: "create",
-          documentId,
-          scope: "document",
-          branch: "main",
-          actions: creationActions(document, protocolVersions),
-          dependsOn: [],
-        },
-        {
-          key: "link",
-          documentId: driveIdentifier,
-          scope: "document",
-          branch: "main",
-          actions: [
-            addRelationshipAction(
-              driveIdentifier,
-              documentId,
-              DRIVE_CHILD_RELATIONSHIP_TYPE,
-              metadata,
-            ),
-          ],
-          dependsOn: ["create"],
-        },
-      ],
-    };
-
-    const batch = await this.write.executeBatch(request, signal);
-    const receipts = await batch.readable;
+    const receipt = await handle.readable;
     return this.read.get<TDocument>(
-      documentId,
+      document.header.id,
       undefined,
       signal,
-      receipts.create.token,
+      receipt.token,
     );
   }
 
@@ -200,21 +148,15 @@ export class ReactorDriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<FolderNode> {
-    const folderId = generateId();
-    await this.executed(
+    const handle = await this.strategy.addFolder(
       driveIdentifier,
-      "main",
-      [
-        addFolderAction({
-          folderId,
-          parentFolderId: parentFolder ?? null,
-          name,
-        }),
-      ],
+      name,
+      parentFolder,
       signal,
     );
+    await handle.readable;
     return {
-      id: folderId,
+      id: handle.nodeId,
       kind: "folder",
       name,
       parentFolder: parentFolder ?? null,
@@ -226,66 +168,12 @@ export class ReactorDriveClient implements IDriveClient {
     nodeId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    const node = await this.readModel.getNode(driveIdentifier, nodeId, signal);
-    if (!node) {
-      throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
-    }
-
-    if (node.kind === "folder") {
-      const subtree = await this.readModel.getDescendants(
-        driveIdentifier,
-        nodeId,
-        signal,
-      );
-      const fileDescendants = subtree.filter(
-        (n): n is ReactorDriveFileNode => n.kind === "file",
-      );
-      const subFolders = subtree
-        .filter((n): n is ReactorDriveFolderNode => n.kind === "folder")
-        .filter((f) => f.id !== nodeId);
-      const deepestFirstFolders = this.orderDeepestFirst(subFolders, nodeId);
-
-      const batch: Action[] = [
-        ...fileDescendants.map((f) =>
-          removeRelationshipAction(
-            driveIdentifier,
-            f.id,
-            DRIVE_CHILD_RELATIONSHIP_TYPE,
-          ),
-        ),
-        ...deepestFirstFolders.map((f) =>
-          removeFolderAction({ folderId: f.id }),
-        ),
-        removeFolderAction({ folderId: nodeId }),
-      ];
-
-      await this.executed(driveIdentifier, "main", batch, signal);
-
-      for (const file of fileDescendants) {
-        const deleted = await this.write.deleteDocument(
-          file.id,
-          "cascade" as PropagationMode,
-          signal,
-        );
-        await deleted.readable;
-      }
-      return;
-    }
-
-    await this.executed(
+    const handle = await this.strategy.removeNode(
       driveIdentifier,
-      "main",
-      [
-        removeRelationshipAction(
-          driveIdentifier,
-          nodeId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-        ),
-      ],
+      nodeId,
       signal,
     );
-    const deleted = await this.write.deleteDocument(nodeId, undefined, signal);
-    await deleted.readable;
+    await handle.readable;
   }
 
   async renameNode(
@@ -294,23 +182,13 @@ export class ReactorDriveClient implements IDriveClient {
     name: string,
     signal?: AbortSignal,
   ): Promise<Node> {
-    const node = await this.readModel.getNode(driveIdentifier, nodeId, signal);
-    if (!node) {
-      throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
-    }
-
-    if (node.kind === "file") {
-      const renamed = await this.write.rename(nodeId, name, "main", signal);
-      await renamed.readable;
-    } else {
-      await this.executed(
-        driveIdentifier,
-        "main",
-        [updateFolderAction({ folderId: nodeId, name })],
-        signal,
-      );
-    }
-
+    const handle = await this.strategy.renameNode(
+      driveIdentifier,
+      nodeId,
+      name,
+      signal,
+    );
+    await handle.readable;
     const updated = await this.readModel.getNode(
       driveIdentifier,
       nodeId,
@@ -327,10 +205,9 @@ export class ReactorDriveClient implements IDriveClient {
     preferredEditor: string | null,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    const handle = await this.write.setPreferredEditor(
+    const handle = await this.strategy.setPreferredEditorOnNode(
       nodeId,
       preferredEditor,
-      "main",
       signal,
     );
     return handle.document(undefined, signal);
@@ -342,63 +219,13 @@ export class ReactorDriveClient implements IDriveClient {
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    const node = await this.readModel.getNode(
+    const handle = await this.strategy.moveNode(
       driveIdentifier,
       srcNodeId,
+      targetParentFolderId,
       signal,
     );
-    if (!node) {
-      throw new Error(
-        `Node ${srcNodeId} not found in drive ${driveIdentifier}`,
-      );
-    }
-
-    let receipt: WriteReceipt;
-    if (node.kind === "folder") {
-      receipt = await this.executed(
-        driveIdentifier,
-        "main",
-        [
-          updateFolderAction({
-            folderId: srcNodeId,
-            parentFolderId: targetParentFolderId ?? null,
-          }),
-        ],
-        signal,
-      );
-    } else {
-      const metadata: DriveChildFileMetadata = {
-        kind: "file",
-        parentFolderId: targetParentFolderId ?? null,
-        documentType: node.documentType,
-      };
-      receipt = await this.executed(
-        driveIdentifier,
-        "main",
-        [
-          removeRelationshipAction(
-            driveIdentifier,
-            srcNodeId,
-            DRIVE_CHILD_RELATIONSHIP_TYPE,
-          ),
-          addRelationshipAction(
-            driveIdentifier,
-            srcNodeId,
-            DRIVE_CHILD_RELATIONSHIP_TYPE,
-            metadata,
-          ),
-        ],
-        signal,
-      );
-    }
-
-    const drive = await this.read.get<PHDocument>(
-      driveIdentifier,
-      undefined,
-      signal,
-      receipt.token,
-    );
-    return this.toLegacyDriveDocument(drive, driveIdentifier);
+    return this.readDriveAfter(handle, driveIdentifier, signal);
   }
 
   async copyNode(
@@ -408,186 +235,14 @@ export class ReactorDriveClient implements IDriveClient {
     signal?: AbortSignal,
     options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
-    if (options?.protocolVersions) {
-      throw new Error(
-        "ReactorDriveClient.copyNode replays the source's operations and cannot override its protocolVersions",
-      );
-    }
-    const srcNode = await this.readModel.getNode(
+    const handle = await this.strategy.copyNode(
       driveIdentifier,
       srcNodeId,
+      targetParentFolderId,
       signal,
+      options,
     );
-    if (!srcNode) {
-      throw new Error(
-        `Node ${srcNodeId} not found in drive ${driveIdentifier}`,
-      );
-    }
-
-    const subtree = await this.readModel.getDescendants(
-      driveIdentifier,
-      srcNodeId,
-      signal,
-    );
-
-    if (
-      targetParentFolderId !== undefined &&
-      subtree.some((n) => n.id === targetParentFolderId)
-    ) {
-      throw new Error(
-        `Cannot copy node ${srcNodeId} into itself or one of its descendants (target: ${targetParentFolderId})`,
-      );
-    }
-
-    const idMap = new Map<string, string>();
-    for (const node of subtree) {
-      idMap.set(node.id, generateId());
-    }
-    const policy = await this.read.getCreateSignaturePolicy();
-    const selectedByType = new Map<string, ProtocolVersions>();
-
-    const jobs: ExecutionJobPlan[] = [];
-    const driveActions: Action[] = [];
-    const fileCreateKeys: string[] = [];
-
-    for (const node of subtree) {
-      let newId = idMap.get(node.id)!;
-      let newParent: string | null;
-      if (node.id === srcNodeId) {
-        newParent = targetParentFolderId ?? null;
-      } else {
-        if (node.parentFolder == null) {
-          throw new Error(
-            `copyNode: descendant ${node.id} has no parentFolder`,
-          );
-        }
-        const mapped = idMap.get(node.parentFolder);
-        if (mapped === undefined) {
-          throw new Error(
-            `copyNode: descendant ${node.id} parent ${node.parentFolder} missing from idMap`,
-          );
-        }
-        newParent = mapped;
-      }
-
-      if (node.kind === "folder") {
-        driveActions.push(
-          addFolderAction({
-            folderId: newId,
-            parentFolderId: newParent,
-            name: node.name,
-          }),
-        );
-        continue;
-      }
-
-      const srcDoc = await this.read.get<PHDocument>(
-        node.id,
-        undefined,
-        signal,
-      );
-      const documentType = srcDoc.header.documentType;
-      const { results: allModules } = await this.read.getDocumentModelModules();
-      const modulesForType = allModules.filter(
-        (m) => m.documentModel.global.id === documentType,
-      );
-      if (modulesForType.length === 0) {
-        throw new Error(
-          `Document model module not found for type: ${documentType}`,
-        );
-      }
-      const reducers: VersionedReplayConfig["reducers"] = {};
-      for (const m of modulesForType) {
-        reducers[m.version ?? 1] = m.reducer as Reducer<PHBaseState>;
-      }
-      const config: VersionedReplayConfig = { reducers };
-      // A copy keeps its source's versions; selection fills the keys it lacks.
-      let selected = selectedByType.get(documentType);
-      if (selected === undefined) {
-        selected = await this.read.getCreateProtocolVersions(
-          { documentType, parentIdentifier: driveIdentifier },
-          signal,
-        );
-        selectedByType.set(documentType, selected);
-      }
-      const replayHeader = createCopyHeader(
-        {
-          documentType,
-          protocolVersions: { ...selected, ...srcDoc.header.protocolVersions },
-        },
-        newId,
-        policy,
-      );
-      // A v2-required copy takes a derived id; files head no subtree.
-      newId = replayHeader.id;
-      const duplicated: PHDocument = replayDocumentVersioned(
-        srcDoc.initialState,
-        srcDoc.operations,
-        config,
-        replayHeader,
-      );
-      assertAuthPreservedOnDuplicate(
-        node.id,
-        srcDoc.state.auth,
-        duplicated.state.auth,
-      );
-      duplicated.header.name = node.name;
-
-      const createKey = `create:${newId}`;
-      jobs.push({
-        key: createKey,
-        documentId: newId,
-        scope: "document",
-        branch: "main",
-        actions: creationActions(
-          duplicated,
-          duplicated.header.protocolVersions ?? selected,
-        ),
-        dependsOn: [],
-      });
-      fileCreateKeys.push(createKey);
-
-      const metadata: DriveChildFileMetadata = {
-        kind: "file",
-        parentFolderId: newParent,
-        documentType: duplicated.header.documentType,
-      };
-      driveActions.push(
-        addRelationshipAction(
-          driveIdentifier,
-          newId,
-          DRIVE_CHILD_RELATIONSHIP_TYPE,
-          metadata,
-        ),
-      );
-    }
-
-    if (driveActions.length > 0) {
-      jobs.push({
-        key: "drive",
-        documentId: driveIdentifier,
-        scope: "document",
-        branch: "main",
-        actions: driveActions,
-        dependsOn: fileCreateKeys,
-      });
-    }
-
-    let token: ConsistencyToken | undefined;
-    if (jobs.length > 0) {
-      const request: BatchExecutionRequest = { jobs };
-      const batch = await this.write.executeBatch(request, signal);
-      const receipts = await batch.readable;
-      token = receipts.drive?.token;
-    }
-
-    const drive = await this.read.get<PHDocument>(
-      driveIdentifier,
-      undefined,
-      signal,
-      token,
-    );
-    return this.toLegacyDriveDocument(drive, driveIdentifier);
+    return this.readDriveAfter(handle, driveIdentifier, signal);
   }
 
   async getNode(
@@ -621,20 +276,20 @@ export class ReactorDriveClient implements IDriveClient {
     };
   }
 
-  /** Submits actions and waits until every pre-ready read model holds them. */
-  private async executed(
-    documentIdentifier: string,
-    branch: string,
-    actions: Action[],
+  /** Waits for the write, then reads the drive back in the legacy shape. */
+  private async readDriveAfter(
+    handle: WriteHandle,
+    driveIdentifier: string,
     signal: AbortSignal | undefined,
-  ): Promise<WriteReceipt> {
-    const handle = await this.write.execute(
-      documentIdentifier,
-      branch,
-      actions,
+  ): Promise<DocumentDriveDocument> {
+    const receipt = await handle.readable;
+    const drive = await this.read.get<PHDocument>(
+      driveIdentifier,
+      undefined,
       signal,
+      receipt.token,
     );
-    return handle.readable;
+    return this.toLegacyDriveDocument(drive, driveIdentifier);
   }
 
   private toLegacyNode(node: ReactorDriveNode): Node {
@@ -679,25 +334,6 @@ export class ReactorDriveClient implements IDriveClient {
       nodes: allNodes.map((n) => this.toLegacyNode(n)),
     };
     return legacy;
-  }
-
-  private orderDeepestFirst(
-    folders: ReactorDriveFolderNode[],
-    rootId: string,
-  ): ReactorDriveFolderNode[] {
-    const depthById = new Map<string, number>();
-    const compute = (id: string): number => {
-      if (id === rootId) return 0;
-      const cached = depthById.get(id);
-      if (cached !== undefined) return cached;
-      const folder = folders.find((f) => f.id === id);
-      if (!folder) return 0;
-      const parent = folder.parentFolder ?? rootId;
-      const depth = compute(parent) + 1;
-      depthById.set(id, depth);
-      return depth;
-    };
-    return folders.slice().sort((a, b) => compute(b.id) - compute(a.id));
   }
 }
 

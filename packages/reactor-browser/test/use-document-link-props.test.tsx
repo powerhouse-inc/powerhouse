@@ -7,6 +7,9 @@ import { render } from "vitest-browser-react";
 import { ensurePHEventHandlers } from "../src/graphql-client/graphql-reactor-provider.js";
 import { useDocumentLinkProps } from "../src/hooks/document-link.js";
 import { setDrives } from "../src/hooks/drives.js";
+import { getPHStore } from "../src/hooks/ph-store.js";
+import type { IReactorBrowserClient } from "../src/types/reactor-browser-client.js";
+import { driveReaderFromDocuments } from "./utils/drive-nodes.js";
 
 function inventoryDrive(): DocumentDriveDocument {
   const drive = driveCreateDocument({
@@ -38,7 +41,11 @@ describe("useDocumentLinkProps", () => {
     window.ph = {};
     delete window.__phEventHandlersRegistered;
     ensurePHEventHandlers();
-    setDrives([inventoryDrive()]);
+    const drives = [inventoryDrive()];
+    setDrives(drives);
+    getPHStore()!.reactorClient = {
+      read: { drives: driveReaderFromDocuments(() => drives).reader },
+    } as unknown as IReactorBrowserClient;
   });
 
   afterEach(() => {

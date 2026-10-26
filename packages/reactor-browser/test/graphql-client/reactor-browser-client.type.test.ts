@@ -47,6 +47,7 @@ describe("IReactorBrowserClient", () => {
       | "subscribe"
       | "waitForJob"
       | "getJobStatus"
+      | "drives"
     >();
     expect(true).toBe(true);
   });

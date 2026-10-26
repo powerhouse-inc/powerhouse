@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   addPromiseState,
   DocumentCache,
+  GET_MANY_CHUNK_SIZE,
   IDLE_OPERATIONS_ENTRY,
   isOperationCache,
   readPromiseState,
@@ -510,6 +511,146 @@ describe("DocumentCache class", () => {
       // Wait for async re-throw from readPromiseState
       await new Promise((resolve) => setTimeout(resolve, 10));
       window.removeEventListener("unhandledrejection", handler);
+    });
+  });
+
+  describe("getBatch with a batched reader", () => {
+    function createBatchingClient(initialDocuments: PHDocument[]) {
+      const mock = createMockClient(initialDocuments);
+      const getManyMock = vi.fn((ids: string[]) => {
+        const found = ids.map((id) => mock.documents.get(id));
+        const missing = ids.filter((_id, i) => !found[i]);
+        if (missing.length > 0) {
+          return Promise.reject(
+            new Error(`Document not found: ${missing.join(",")}`),
+          );
+        }
+        return Promise.resolve(found as PHDocument[]);
+      });
+      (mock.client as unknown as { getMany: typeof getManyMock }).getMany =
+        getManyMock;
+      return { ...mock, getManyMock };
+    }
+
+    const ids = (count: number) =>
+      Array.from({ length: count }, (_, i) => `doc-${i}`);
+
+    it("reads 240 uncached ids in ceil(240 / chunk size) getMany calls and no get", async () => {
+      const all = ids(240);
+      const { client, getManyMock, getMock } = createBatchingClient(
+        all.map((id) => createMockDocument(id)),
+      );
+      const cache = new DocumentCache(client);
+
+      const docs = await cache.getBatch(all);
+
+      expect(docs.map((d) => d.header.id)).toEqual(all);
+      expect(getManyMock).toHaveBeenCalledTimes(
+        Math.ceil(240 / GET_MANY_CHUNK_SIZE),
+      );
+      expect(getManyMock.mock.calls.flatMap(([chunk]) => chunk)).toEqual(all);
+      expect(getMock).not.toHaveBeenCalled();
+    });
+
+    it("keeps a per-id entry that get serves without another read", async () => {
+      const { client, getManyMock, getMock } = createBatchingClient([
+        createMockDocument("a"),
+        createMockDocument("b"),
+      ]);
+      const cache = new DocumentCache(client);
+      await cache.getBatch(["a", "b"]);
+
+      await expect(cache.get("b")).resolves.toMatchObject({
+        header: { id: "b" },
+      });
+      expect(getManyMock).toHaveBeenCalledTimes(1);
+      expect(getMock).not.toHaveBeenCalled();
+    });
+
+    it("does not refetch cached ids, asking getMany only for the rest", async () => {
+      const all = ids(5);
+      const { client, getManyMock, getMock } = createBatchingClient(
+        all.map((id) => createMockDocument(id)),
+      );
+      const cache = new DocumentCache(client);
+      await cache.get("doc-0");
+      await cache.getBatch(["doc-1", "doc-2"]);
+
+      const docs = await cache.getBatch(all);
+
+      expect(docs.map((d) => d.header.id)).toEqual(all);
+      expect(getMock).toHaveBeenCalledTimes(1);
+      expect(getManyMock.mock.calls.map(([chunk]) => chunk)).toEqual([
+        ["doc-1", "doc-2"],
+        ["doc-3", "doc-4"],
+      ]);
+    });
+
+    it("shares the pending read between overlapping batches", async () => {
+      const { client, getManyMock } = createBatchingClient(
+        ids(3).map((id) => createMockDocument(id)),
+      );
+      const cache = new DocumentCache(client);
+
+      const first = cache.getBatch(["doc-0", "doc-1", "doc-2"]);
+      const second = cache.getBatch(["doc-2", "doc-1"]);
+      await Promise.all([first, second]);
+
+      expect(getManyMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("settles a missing id as a single get's not-found and serves the rest", async () => {
+      const present = ids(8);
+      const { client, getManyMock, getMock } = createBatchingClient(
+        present.map((id) => createMockDocument(id)),
+      );
+      const cache = new DocumentCache(client);
+      const handler = (e: PromiseRejectionEvent) => {
+        if ((e.reason as Error)?.message?.includes("missing")) {
+          e.preventDefault();
+        }
+      };
+      window.addEventListener("unhandledrejection", handler);
+
+      const docs = await cache.getBatch([...present, "missing"]);
+
+      expect(docs.map((d) => d.header.id)).toEqual(present);
+      await expect(cache.get("missing")).rejects.toThrow(
+        "Document not found: missing",
+      );
+      // 9 ids: the chunk fails, then halves narrow on the missing id
+      // (5 + 4, 2 + 2) until single ids, which are read with get.
+      expect(getManyMock).toHaveBeenCalledTimes(5);
+      expect(getMock.mock.calls.map(([id]) => id)).toEqual([
+        "doc-7",
+        "missing",
+      ]);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      window.removeEventListener("unhandledrejection", handler);
+    });
+
+    it("refetches only the changed id with get on an Updated event", async () => {
+      const all = ids(4);
+      const { client, getManyMock, getMock, emitEvent, updateDocument } =
+        createBatchingClient(all.map((id) => createMockDocument(id)));
+      const cache = new DocumentCache(client);
+      await cache.getBatch(all);
+      const listener = vi.fn();
+      cache.subscribe(all, listener);
+
+      const updated = createMockDocument("doc-2", "Updated");
+      updateDocument("doc-2", updated);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updated],
+      });
+
+      await vi.waitFor(() => expect(listener).toHaveBeenCalled());
+      expect(getMock.mock.calls.map(([id]) => id)).toEqual(["doc-2"]);
+      expect(getManyMock).toHaveBeenCalledTimes(1);
+      const docs = await cache.getBatch(all);
+      expect(docs[2].header.name).toBe("Updated");
     });
   });
 

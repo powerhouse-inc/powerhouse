@@ -398,16 +398,37 @@ export function failSpan(span: Span, error: unknown): void {
   });
 }
 
-// Every promise-returning method of `target` runs in a span parented on `parent`.
+// Every promise-returning method of `target` runs in a span parented on `parent`,
+// and so do the methods of each object `nested` names, as `prefix.name.method`.
 export function tracedMethods<T extends object>(
   target: T,
   telemetry: WorkflowTelemetry,
   prefix: string,
   parent: Context,
+  nested: readonly string[] = [],
 ): T {
+  const wrapped = new Map<string, object>();
   return new Proxy(target, {
     get(object, property, receiver) {
       const value = Reflect.get(object, property, receiver) as unknown;
+      if (
+        typeof property === "string" &&
+        nested.includes(property) &&
+        typeof value === "object" &&
+        value !== null
+      ) {
+        let inner = wrapped.get(property);
+        if (!inner) {
+          inner = tracedMethods(
+            value,
+            telemetry,
+            `${prefix}.${property}`,
+            parent,
+          );
+          wrapped.set(property, inner);
+        }
+        return inner;
+      }
       if (typeof value !== "function" || typeof property !== "string") {
         return value;
       }

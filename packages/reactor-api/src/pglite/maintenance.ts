@@ -5,8 +5,16 @@ import path from "node:path";
 export const DEFAULT_MAINTENANCE_INTERVAL_MS = 5 * 60 * 1000;
 export const DEFAULT_VACUUM_FULL_ABOVE_BYTES = 256 * 1024 * 1024;
 export const DEFAULT_VACUUM_FULL_QUIET_MS = 60 * 1000;
-/** A VACUUM FULL waits for a quiet store at most this long from open. */
-export const DEFAULT_VACUUM_FULL_MAX_DEFER_MS = 30 * 60_000;
+/**
+ * How long a pending VACUUM FULL waits for a quiet store before it runs
+ * anyway: by default it never does (0), because a forced rewrite of a large
+ * store under load holds the only connection for minutes, every caller times
+ * out, and the dir needs about twice its size in free space meanwhile.
+ * `PH_PGLITE_VACUUM_FULL=forced` restores a deadline.
+ */
+export const DEFAULT_VACUUM_FULL_MAX_DEFER_MS = 0;
+/** The deadline `PH_PGLITE_VACUUM_FULL=forced` sets. */
+export const FORCED_VACUUM_FULL_MAX_DEFER_MS = 30 * 60_000;
 const MAINTENANCE_RETRY_MS = 1000;
 
 export type MaintenanceOutcome =
@@ -19,6 +27,8 @@ export type MaintenanceOutcome =
 
 export interface MaintenanceLogger {
   warn(message: string): void;
+  /** A finished VACUUM FULL is reported here; `warn` when absent. */
+  info?(message: string): void;
 }
 
 /** Runs a maintenance pass in the owner's turn; see {@link MaintenanceOptions.gate}. */
@@ -38,8 +48,8 @@ export interface MaintenanceOptions {
   vacuumFullQuietMs?: number;
   /**
    * The longest a pending VACUUM FULL waits for that quiet window, counted
-   * from open; past it the next pass runs VACUUM FULL anyway. Default 30 min;
-   * 0 waits for the quiet window however long it takes.
+   * from open; past it the next pass runs VACUUM FULL anyway. Default 0,
+   * which waits for the quiet window however long it takes.
    */
   vacuumFullMaxDeferMs?: number;
   /**
@@ -161,6 +171,9 @@ export class PgliteMaintenance {
     if (!full && this.syncsSinceMaintenance === 0) {
       return "idle";
     }
+    const baseDir = path.join(this.label, "base");
+    const bytesBefore = full ? await dirBytes(baseDir) : 0;
+    const startedAt = this.now();
     let outcome: MaintenanceOutcome;
     try {
       outcome = await pg._runExclusiveQuery(async () => {
@@ -195,7 +208,13 @@ export class PgliteMaintenance {
     }
     if (outcome !== "vacuum" && outcome !== "vacuum-full") return outcome;
     this.syncsSinceMaintenance = 0;
-    if (full) this.vacuumFullPending = false;
+    if (full) {
+      this.vacuumFullPending = false;
+      const bytesAfter = await dirBytes(baseDir);
+      const message = `DurableNodeFs: ${this.label}/base VACUUM FULL finished in ${this.now() - startedAt} ms; ${bytesBefore} -> ${bytesAfter} bytes`;
+      if (this.logger?.info) this.logger.info(message);
+      else this.logger?.warn(message);
+    }
     return outcome;
   }
 

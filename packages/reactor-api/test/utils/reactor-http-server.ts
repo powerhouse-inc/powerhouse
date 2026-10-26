@@ -1,5 +1,6 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
+  IDriveNodeSource,
   IReactorReadClient,
   IReactorWriteClient,
   IRelationalDb,
@@ -59,6 +60,7 @@ export async function startReactorHttpServer(
   clients: { read: IReactorReadClient; write: IReactorWriteClient },
   authorizationService: IAuthorizationService,
   driveStore?: DriveStore,
+  driveNodes?: IDriveNodeSource,
 ): Promise<ReactorHttpServer> {
   const httpAdapter = new ExpressHttpAdapter();
   const server = (await httpAdapter.listen(
@@ -84,6 +86,7 @@ export async function startReactorHttpServer(
     port,
     authorizationService,
     driveStore,
+    driveNodes,
   });
   await manager.init(
     [ReactorSubgraph],

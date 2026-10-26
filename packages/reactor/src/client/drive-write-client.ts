@@ -42,6 +42,7 @@ import type {
   IReactor,
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type { ConsistencyToken, ViewFilter } from "../shared/types.js";
 import { createEmptyDocument } from "./derivations.js";
 import {
@@ -52,6 +53,7 @@ import {
   type JobSetHandle,
   type WriteHandleFactory,
 } from "./internal/handles.js";
+import type { IDriveWriteStrategy } from "./drive-nodes.js";
 import type {
   CopyNodeOptions,
   CreateProtocolVersionsOptions,
@@ -61,6 +63,7 @@ import type {
   NodeWriteHandle,
   WriteHandle,
   WriteReceipt,
+  WriteTargetDescription,
 } from "./types.js";
 
 export type BatchSubmitter = (
@@ -79,6 +82,30 @@ export type DriveWriteReads = Pick<
   IReactorReadClient,
   "get" | "getCreateSignaturePolicy" | "getCreateProtocolVersions"
 >;
+
+/**
+ * The drive write strategies a {@link DriveWriteClient} delegates to, keyed by
+ * drive document type, and the write-side lookup that tells a drive's type.
+ */
+export type DriveWriteStrategies = {
+  strategies: ReadonlyMap<string, IDriveWriteStrategy>;
+  describe: (
+    identifier: string,
+    signal?: AbortSignal,
+  ) => Promise<WriteTargetDescription>;
+};
+
+/** A drive whose document type has a registered strategy. */
+type StrategyTarget = {
+  driveId: string;
+  strategy: IDriveWriteStrategy;
+};
+
+const NO_STRATEGIES: DriveWriteStrategies = {
+  strategies: new Map(),
+  describe: (identifier) =>
+    Promise.reject(new DocumentNotFoundError(identifier)),
+};
 
 /** The source's versions under `override`; selection fills the keys both lack. */
 function withSelectedVersions(
@@ -111,9 +138,14 @@ export function asJobError(error: unknown): unknown {
  * A step a later step depends on is waited for here (a file's document exists
  * before the drive names it; a renamed document is checked before the node is
  * renamed); the last step is returned as a handle, not awaited.
+ *
+ * Node writes on a drive whose document type has a registered strategy are
+ * delegated to it; every other drive takes the document-drive path here. A
+ * drive's type never changes, so it is looked up once per drive id.
  */
 export class DriveWriteClient implements IDriveWriteClient {
   private readonly executeBatch: BatchSubmitter;
+  private readonly driveTypes = new Map<string, string>();
 
   /** `submitter` may still be an IReactor, whose executeBatch is used. */
   constructor(
@@ -131,6 +163,7 @@ export class DriveWriteClient implements IDriveWriteClient {
       identifier: string,
       signal?: AbortSignal,
     ) => Promise<string | undefined> = () => Promise.resolve(undefined),
+    private readonly routing: DriveWriteStrategies = NO_STRATEGIES,
     private readonly createProtocolVersions: (
       options: CreateProtocolVersionsOptions,
       signal?: AbortSignal,
@@ -185,6 +218,16 @@ export class DriveWriteClient implements IDriveWriteClient {
       document.header.id,
       parentFolder,
     );
+
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.addFile(
+        target.driveId,
+        document,
+        parentFolder,
+        signal,
+      );
+    }
 
     const documentId = document.header.id;
     const driveId = await this.resolveReference(driveIdentifier, signal);
@@ -281,6 +324,15 @@ export class DriveWriteClient implements IDriveWriteClient {
       name,
       parentFolder,
     );
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.addFolder(
+        target.driveId,
+        name,
+        parentFolder,
+        signal,
+      );
+    }
     const folderId = generateId();
     const handle = await this.write.execute(
       driveIdentifier,
@@ -301,6 +353,10 @@ export class DriveWriteClient implements IDriveWriteClient {
       driveIdentifier,
       nodeIdentifier,
     );
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.removeNode(target.driveId, nodeIdentifier, signal);
+    }
     const driveId = await this.resolveReference(driveIdentifier, signal);
 
     // A live document is a file node, or an orphan whose node never landed
@@ -374,6 +430,10 @@ export class DriveWriteClient implements IDriveWriteClient {
       nodeId,
       name,
     );
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.renameNode(target.driveId, nodeId, name, signal);
+    }
     const renameHandle = await this.write.execute(
       nodeId,
       "main",
@@ -428,6 +488,15 @@ export class DriveWriteClient implements IDriveWriteClient {
       srcNodeId,
       targetParentFolderId,
     );
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.moveNode(
+        target.driveId,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+      );
+    }
     return this.write.execute(
       driveIdentifier,
       "main",
@@ -454,6 +523,16 @@ export class DriveWriteClient implements IDriveWriteClient {
       srcNodeId,
       targetParentFolderId,
     );
+    const target = await this.strategyFor(driveIdentifier, signal);
+    if (target) {
+      return target.strategy.copyNode(
+        target.driveId,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+        options,
+      );
+    }
     // The one drive write that keeps reading through the read half: the copy
     // plan is built from the source subtree's nodes and names, and each copied
     // file is seeded from its source document's state. No token: it is a copy
@@ -546,6 +625,49 @@ export class DriveWriteClient implements IDriveWriteClient {
       copyPlan.map((entry) => copyNodeAction(entry)),
       signal,
     );
+  }
+
+  /**
+   * The strategy registered for the drive's document type, with the drive's
+   * resolved id, or undefined for a drive the document-drive path handles. A
+   * drive the write side does not know is left to that path, which reports it
+   * as it always has. No lookup is made while no strategy is registered.
+   */
+  private async strategyFor(
+    driveIdentifier: string,
+    signal: AbortSignal | undefined,
+  ): Promise<StrategyTarget | undefined> {
+    if (this.routing.strategies.size === 0) {
+      return undefined;
+    }
+    const driveId = await this.resolveReference(driveIdentifier, signal);
+    let documentType = this.driveTypes.get(driveId);
+    if (documentType === undefined) {
+      documentType = await this.lookupDriveType(driveId, signal);
+      if (documentType !== undefined) {
+        this.driveTypes.set(driveId, documentType);
+      }
+    }
+    const strategy =
+      documentType === undefined
+        ? undefined
+        : this.routing.strategies.get(documentType);
+    return strategy ? { driveId, strategy } : undefined;
+  }
+
+  private async lookupDriveType(
+    driveId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<string | undefined> {
+    try {
+      const described = await this.routing.describe(driveId, signal);
+      return described.documentType;
+    } catch (error) {
+      if (error instanceof DocumentNotFoundError) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   /**

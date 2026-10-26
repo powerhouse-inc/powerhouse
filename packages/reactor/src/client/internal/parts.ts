@@ -11,6 +11,7 @@ import type {
   IDocumentView,
 } from "../../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../subs/types.js";
+import type { DriveClientOptions } from "../drive-nodes.js";
 import type { ProtocolSelection } from "../types.js";
 import type { ActionEvaluationConfig } from "./evaluation.js";
 import type { WriteSideParts } from "./targets.js";
@@ -38,4 +39,10 @@ export type ReactorClientParts = {
    * view.
    */
   writeSide: WriteSideParts | undefined;
+  /**
+   * The drive node source `read.drives` answers from and the write strategies
+   * `write.drives` delegates to by drive type. Empty: every drive takes the
+   * document-drive path.
+   */
+  drives: DriveClientOptions;
 };

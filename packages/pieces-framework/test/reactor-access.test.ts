@@ -1,4 +1,4 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IDriveClient, IReactorClient } from "@powerhousedao/reactor";
 import { setName } from "@powerhousedao/shared/document-model";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
@@ -14,6 +14,8 @@ import {
   ReactorJobPendingError,
   ReactorRequestClosedError,
   TriggerStrategy,
+  type DriveReadMethods,
+  type DriveWriteMethods,
   type PropertyContext,
   type ReactorClient,
   type ReactorReadClient,
@@ -22,6 +24,7 @@ import {
 } from "../src/index.js";
 import type {
   Listed,
+  UnlistedDriveMethods,
   UnlistedMethods,
 } from "../src/powerhouse/reactor-client.js";
 
@@ -224,11 +227,30 @@ describe("reactor clients", () => {
     expectTypeOf<ReactorReadClient>().not.toHaveProperty("executeAsync");
     expectTypeOf<ReactorClient>().not.toHaveProperty("subscribe");
     expectTypeOf<ReactorClient>().not.toHaveProperty("rename");
-    expectTypeOf<ReactorClient>().not.toHaveProperty("drives");
+    expectTypeOf<ReactorClient["drives"]["addFile"]>().toEqualTypeOf<
+      IDriveClient["addFile"]
+    >();
+    expectTypeOf<ReactorClient["drives"]["listNodes"]>().toEqualTypeOf<
+      IDriveClient["listNodes"]
+    >();
+    expectTypeOf<
+      keyof ReactorReadClient["drives"]
+    >().toEqualTypeOf<DriveReadMethods>();
+    expectTypeOf<keyof ReactorClient["drives"]>().toEqualTypeOf<
+      DriveReadMethods | DriveWriteMethods
+    >();
   });
 
   it("name every method of the reactor's clients", () => {
     expectTypeOf<UnlistedMethods<IReactorClient>>().toEqualTypeOf<never>();
+    expectTypeOf<UnlistedDriveMethods<IDriveClient>>().toEqualTypeOf<never>();
+  });
+
+  it("fail to compile when the drive client gains an unlisted method", () => {
+    type Grown = IDriveClient & { frobnicate(): void };
+    expectTypeOf<UnlistedDriveMethods<Grown>>().toEqualTypeOf<"frobnicate">();
+    // @ts-expect-error the new method is in no list
+    type _Drives = Listed<UnlistedDriveMethods<Grown>>;
   });
 
   it("fail to compile when a client gains an unlisted method", () => {
@@ -249,7 +271,9 @@ describe("ctx.reactor follows the declaration", () => {
       requireReactor: "read",
       props: {},
       run(ctx) {
-        expectTypeOf<keyof typeof ctx.reactor>().toEqualTypeOf<ReadMethods>();
+        expectTypeOf<keyof typeof ctx.reactor>().toEqualTypeOf<
+          ReadMethods | "drives"
+        >();
         expectTypeOf<
           Extract<keyof typeof ctx.reactor, WriteMethods>
         >().toBeNever();

@@ -18,6 +18,7 @@ export interface IReactorBrowserReadClient extends Pick<
   | "subscribe"
   | "waitForJob"
   | "getJobStatus"
+  | "drives"
 > {}
 
 /**

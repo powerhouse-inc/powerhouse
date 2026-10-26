@@ -7,6 +7,10 @@ import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { ActionEvaluationConfig } from "../client/reactor-client.js";
 import { ReactorClient } from "../client/reactor-client.js";
+import type {
+  DriveWriteStrategyFactory,
+  IDriveNodeSource,
+} from "../client/drive-nodes.js";
 import type { ProtocolSelection } from "../client/types.js";
 import type { IReadGate } from "../decision/read-gate.js";
 import {
@@ -50,6 +54,11 @@ export class ReactorClientBuilder {
   private jobAwaiter?: IJobAwaiter;
   private documentModelLoader?: IDocumentModelLoader;
   private readGate?: IReadGate;
+  private driveNodeSource?: IDriveNodeSource;
+  private readonly driveWriteStrategies = new Map<
+    string,
+    DriveWriteStrategyFactory
+  >();
 
   /**
    * Sets the logger for the ReactorClient.
@@ -145,6 +154,29 @@ export class ReactorClientBuilder {
    */
   public withReadGate(readGate: IReadGate): this {
     this.readGate = readGate;
+    return this;
+  }
+
+  /**
+   * The projection `read.drives` answers node reads from, for every drive
+   * type, and that drive write strategies receive. Without one, node reads
+   * read the drive document.
+   */
+  public withDriveNodeSource(source: IDriveNodeSource): this {
+    this.driveNodeSource = source;
+    return this;
+  }
+
+  /**
+   * Registers the node writes for drives of `documentType`: `write.drives`
+   * delegates a node write on such a drive to the strategy the factory builds.
+   * Drives of an unregistered type take the document-drive path.
+   */
+  public withDriveWriteStrategy(
+    documentType: string,
+    factory: DriveWriteStrategyFactory,
+  ): this {
+    this.driveWriteStrategies.set(documentType, factory);
     return this;
   }
 
@@ -307,6 +339,10 @@ export class ReactorClientBuilder {
             revisions: reactorModule.operationStore,
           }
         : undefined,
+      {
+        nodes: this.driveNodeSource,
+        strategies: new Map(this.driveWriteStrategies),
+      },
     );
 
     return {

@@ -12,6 +12,7 @@ import {
   zipEntries,
 } from "@powerhousedao/shared/document-model";
 import { withHalves } from "./utils/client-halves.js";
+import { driveReaderFromDocuments } from "./utils/drive-nodes.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { expandBulkArchive } from "../src/actions/bulk-archive.js";
 
@@ -57,6 +58,7 @@ function stubClient(initialNodes: Node[]) {
   let drive = makeDrive(initialNodes);
   const calls: Array<{ type: string; input: Record<string, unknown> }> = [];
   const client = withHalves({
+    drives: driveReaderFromDocuments(() => [drive]).reader,
     get: (id: string) =>
       id === DRIVE_ID ? Promise.resolve(drive) : Promise.resolve(doc(id)),
     execute: (_driveId: string, _branch: string, actions: Action[]) => {

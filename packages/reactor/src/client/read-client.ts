@@ -101,7 +101,7 @@ export class ReactorReadClient implements IReactorReadClient {
           .results,
       logger: parts.logger,
     });
-    this.drives = new DriveReadClient(this, parts.logger);
+    this.drives = new DriveReadClient(this, parts.logger, parts.drives.nodes);
   }
 
   async getDocumentModelModules(

@@ -11,6 +11,7 @@ import {
   type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
+  type IDriveReadClient,
   type IReactorClient,
   type IReactorReadClient,
   type IReactorWriteClient,
@@ -85,6 +86,11 @@ export interface IRoutableBackend {
   readonly read?: IReactorReadClient;
   /** The write half, when the backend has one; the router's writes use it. */
   readonly write?: IReactorWriteClient;
+  /**
+   * Drive node reads served without reading the drive document. Drive reads
+   * prefer it over `read.drives` and over the drive's state.
+   */
+  readonly drives?: IDriveReadClient;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -179,6 +185,16 @@ export interface IRoutableBackend {
   getJob(jobId: string, signal?: AbortSignal): Promise<JobInfo | undefined>;
   waitForJob(job: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
+  /**
+   * Reads several documents in as few requests as the backend can, in the
+   * order given; rejects if any is unavailable.
+   */
+  getMany?<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
   isDocumentIdTaken?(
     documentId: string,
     signal?: AbortSignal,
@@ -307,6 +323,7 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
   return {
     supports: SUPPORTS_EVERYTHING,
     ...(read === undefined ? {} : { read }),
+    ...(read?.drives === undefined ? {} : { drives: read.drives }),
     ...(write === undefined ? {} : { write }),
     submit: {
       execute: (identifier, branch, actions, signal) =>
@@ -356,6 +373,20 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     waitForJob: (job, signal) => client.waitForJob(job, signal),
     isDocumentIdTaken: (documentId, signal) =>
       client.isDocumentIdTaken(documentId, signal),
+    getMany: <TDocument extends PHDocument>(
+      documentIds: string[],
+      view?: ViewFilter,
+      signal?: AbortSignal,
+      consistencyToken?: ConsistencyToken,
+    ) =>
+      consistencyToken === undefined
+        ? client.getMany<TDocument>(documentIds, view, signal)
+        : client.getMany<TDocument>(
+            documentIds,
+            view,
+            signal,
+            consistencyToken,
+          ),
     resolveIdOrSlug: (identifier, view, signal) =>
       client.resolveIdOrSlug(identifier, view, signal),
     evaluateActions: (identifier, branch, candidates, subject, signal) =>
