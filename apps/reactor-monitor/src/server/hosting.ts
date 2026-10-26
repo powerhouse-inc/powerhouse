@@ -19,6 +19,21 @@ export function projectRootsFromEnv(
     .map((root) => path.resolve(root));
 }
 
+/** Names of this process's env vars every child gets, comma-separated. */
+export const PASS_ENV = "PH_MONITOR_PASS_ENV";
+
+export function serverEnvFromEnv(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Record<string, string> {
+  const passed: Record<string, string> = {};
+  for (const name of (env[PASS_ENV] ?? "").split(",")) {
+    const key = name.trim();
+    const value = key ? env[key] : undefined;
+    if (value !== undefined) passed[key] = value;
+  }
+  return passed;
+}
+
 export function newToken(): string {
   return randomBytes(32).toString("hex");
 }

@@ -176,7 +176,7 @@ describe.skipIf(process.platform === "win32")(
       });
       expect(remote.endpoint).toBe(`${graphql}/inspection`);
       expect(remote.info).toBeDefined();
-      remote.kill();
+      await remote.kill();
 
       const stopped = await call("DELETE", `instances/${id}`);
       expect(instanceSchema.parse(stopped.body)).toMatchObject({

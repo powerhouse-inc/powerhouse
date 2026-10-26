@@ -7,23 +7,27 @@ import { parseArgs } from "node:util";
 import { createMonitorController } from "./controller.ts";
 import {
   newToken,
+  PASS_ENV,
   PROJECT_ROOTS_ENV,
   projectRootsFromEnv,
+  serverEnvFromEnv,
   shutdown,
   STOP_TIMEOUT_MS,
 } from "./hosting.ts";
-import { createControllerHandler, loopbackHost, sendJson } from "./http.ts";
+import { createAppHandler, createControllerHandler } from "./http.ts";
 import { createStaticHandler } from "./static.ts";
 
-const USAGE = `usage: node src/server/serve.ts --project <root> [--project <root>…] [--port <n>]
+const USAGE = `usage: node src/server/serve.ts --project <root>… [--env KEY=VALUE…] [--port <n>]
 Serves the built monitor (dist/) and its controller on 127.0.0.1.
-Project roots also come from ${PROJECT_ROOTS_ENV}.`;
+Project roots also come from ${PROJECT_ROOTS_ENV}. --env and ${PASS_ENV} (names of
+this process's vars) set env for every started host, code-loading keys included.`;
 
 let parsed: ReturnType<typeof parse>;
 function parse() {
   return parseArgs({
     options: {
       project: { type: "string", multiple: true },
+      env: { type: "string", multiple: true },
       port: { type: "string", default: "4180" },
       help: { type: "boolean", short: "h" },
     },
@@ -59,23 +63,32 @@ if (!fs.existsSync(path.join(dist, "index.html"))) {
   process.exit(1);
 }
 
-const controller = createMonitorController({
-  projectRoots: roots,
-  stopTimeoutMs: STOP_TIMEOUT_MS,
-});
+const serverEnv = serverEnvFromEnv();
+for (const pair of parsed.values.env ?? []) {
+  const eq = pair.indexOf("=");
+  if (eq <= 0) {
+    console.error(`--env expects KEY=VALUE, got ${JSON.stringify(pair)}`);
+    process.exit(2);
+  }
+  serverEnv[pair.slice(0, eq)] = pair.slice(eq + 1);
+}
+
+let controller: ReturnType<typeof createMonitorController>;
+try {
+  controller = createMonitorController({
+    projectRoots: roots,
+    serverEnv,
+    stopTimeoutMs: STOP_TIMEOUT_MS,
+  });
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(2);
+}
 const token = newToken();
 const api = createControllerHandler({ controller, token });
 const files = createStaticHandler({ root: dist, token });
 
-// index.html carries the token, so every path gets the Host check.
-const server = http.createServer((req, res) => {
-  if (!loopbackHost(req)) {
-    return sendJson(res, 403, {
-      error: { code: "bad_host", message: "Host is not loopback." },
-    });
-  }
-  api(req, res, () => files(req, res));
-});
+const server = http.createServer(createAppHandler(api, files));
 
 let closing = false;
 const close = (code: number) => {
