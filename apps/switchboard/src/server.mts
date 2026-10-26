@@ -1265,6 +1265,7 @@ async function initServer(
       auth: authSectionOf(config.auth),
       attachments: { storage: config.attachments.storage },
       mcp: options.mcp ?? true,
+      systemInfo: options.systemInfo,
       inspection:
         options.inspection === false
           ? false
@@ -1790,6 +1791,7 @@ async function initServer(
     })(),
     mcpEnabled: options.mcp !== false,
     inspectionEnabled: options.inspection !== false,
+    systemInfoEnabled: options.systemInfo !== false,
     inspector: api.inspection?.inspector,
     renown,
     port: serverPort,
@@ -1894,6 +1896,7 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: options.enableDocumentModelSubgraphs,
         MCP_ENABLED: options.mcp,
         INSPECTION_ENABLED: options.inspection,
+        SYSTEM_INFO_ENABLED: options.systemInfo,
         PH_PGLITE_WORKERS: options.pgliteWorkers,
         PH_WORKFLOWS_ENABLED: options.workflows?.enabled,
       },
@@ -1980,6 +1983,7 @@ function serverOptionsOf(
     identity: config.identity,
     attachmentServiceUrl: config.attachments.serviceUrl,
     mcp: config.features.mcp,
+    systemInfo: config.features.systemInfo,
     inspection: config.inspection.enabled,
     pgliteWorkers: config.storage.pglite.workers,
     workflows:

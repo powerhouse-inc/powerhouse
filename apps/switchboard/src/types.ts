@@ -151,6 +151,10 @@ export type StartServerOptions = {
   /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
    * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
   inspection?: boolean;
+  /** Mount `/graphql/system`, which answers the reactor's version, git hash
+   * and repository URL. On by default; `false` wins over SYSTEM_INFO_ENABLED,
+   * which can turn it off. */
+  systemInfo?: boolean;
   /** Open each PGlite store (reactor-storage, read-storage) in its own worker
    * thread. Wins either way over PH_PGLITE_WORKERS; unset, the env var
    * decides, then PGLITE_WORKERS_DEFAULT. */
@@ -280,6 +284,8 @@ export type SwitchboardReactor = {
   mcpEnabled: boolean;
   /** Whether `/graphql/inspection` is mounted, after the option and INSPECTION_ENABLED. */
   inspectionEnabled: boolean;
+  /** Whether `/graphql/system` is mounted, after the option and SYSTEM_INFO_ENABLED. */
+  systemInfoEnabled: boolean;
   /** The reactor's inspector, as the host reads it (processors, catch-up); undefined without inspection. */
   inspector: IInspector | undefined;
   /** The Renown instance if identity was initialized */

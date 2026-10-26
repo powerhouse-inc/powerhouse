@@ -112,6 +112,7 @@ pnpm add -g @powerhousedao/switchboard
 | `FEATURE_REACTORV2_ENABLED`      | Enable Reactor v2 subgraph feature                                             | `false`               |
 | `MCP_ENABLED`                    | `false` keeps `/mcp` unmounted                                                 | `true`                |
 | `INSPECTION_ENABLED`             | `false` keeps inspection unmounted                                             | `true`                |
+| `SYSTEM_INFO_ENABLED`            | `false` keeps `/graphql/system` (version, git hash, repository URL) unmounted  | `true`                |
 | `PH_INSPECTION_CALLS_PER_MINUTE` | `validateDocument`/`driveIntegrity` calls per caller per minute; admins exempt | `6`                   |
 
 See [Observability](#observability) below for Sentry and OpenTelemetry variables.

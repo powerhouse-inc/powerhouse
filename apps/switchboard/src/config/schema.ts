@@ -208,6 +208,9 @@ const privacySchema = z.object({
 const featuresSchema = z.object({
   /** Unset: on unless a plugin composition leaves it out. */
   mcp: z.boolean().optional(),
+  /** Mount `/graphql/system` (version, git hash, repository URL). Unset: on;
+   * `false` from the caller or SYSTEM_INFO_ENABLED keeps it unmounted. */
+  systemInfo: z.boolean().optional(),
   /** Unset: the config file's `workflows.enabled`, then off. */
   workflows: z.boolean().optional(),
   documentModelSubgraphs: z.boolean().default(true),
