@@ -2297,14 +2297,45 @@ export class SyncManager
     });
   }
 
+  /**
+   * A stored refusal of a document this reactor now runs answers an earlier
+   * revision of it. The sender releases its hold on the new revision, and
+   * reporting the refusal again would re-hold the document.
+   */
+  private async isStaleRefusal(record: DeadLetterRecord): Promise<boolean> {
+    if (
+      record.errorSource !== ChannelErrorSource.Inbox ||
+      record.errorType !== "UNSUPPORTED_PROTOCOL"
+    ) {
+      return false;
+    }
+    const versions =
+      createdVersions(record.operations, record.documentId) ??
+      (await this.versionsOf(record.documentId, record.branch));
+    return (
+      versions !== undefined &&
+      holdReason(this.localSupport, versions, this.capabilities) === undefined
+    );
+  }
+
+  /** Stale refusals are dropped before the limit, so they take no slot. */
   private async loadDeadLetters(remote: Remote, strict = false): Promise<void> {
-    let records: DeadLetterRecord[];
+    const limit = this.config.maxDeadLettersPerRemote;
+    const records: DeadLetterRecord[] = [];
+    const stale: DeadLetterRecord[] = [];
     try {
-      const page = await this.deadLetterStorage.list(remote.meta.name, {
-        cursor: "0",
-        limit: this.config.maxDeadLettersPerRemote,
-      });
-      records = page.results;
+      let cursor: string | undefined = "0";
+      while (cursor !== undefined && records.length < limit) {
+        const page = await this.deadLetterStorage.list(remote.meta.name, {
+          cursor,
+          limit,
+        });
+        for (const record of page.results) {
+          if (await this.isStaleRefusal(record)) stale.push(record);
+          else if (records.length < limit) records.push(record);
+        }
+        cursor = page.nextCursor;
+      }
     } catch (error) {
       if (strict) throw error;
       this.logger.error(
@@ -2315,25 +2346,17 @@ export class SyncManager
       return;
     }
 
-    // A refusal answers an earlier revision of this reactor, and the sender
-    // releases its hold on the new one; reporting it again would re-hold.
-    const stale = records.filter(
-      (record) =>
-        record.errorSource === ChannelErrorSource.Inbox &&
-        record.errorType === "UNSUPPORTED_PROTOCOL",
-    );
-    if (stale.length > 0) {
-      records = records.filter((record) => !stale.includes(record));
-      for (const record of stale) {
-        void this.deadLetterStorage.remove(record.id).catch((error) => {
+    await Promise.all(
+      stale.map((record) =>
+        this.deadLetterStorage.remove(record.id).catch((error: unknown) => {
           this.logger.error(
             "Failed to drop a stale refusal (@id, @error)",
             record.id,
             error instanceof Error ? error.message : String(error),
           );
-        });
-      }
-    }
+        }),
+      ),
+    );
 
     if (records.length === 0) {
       return;
