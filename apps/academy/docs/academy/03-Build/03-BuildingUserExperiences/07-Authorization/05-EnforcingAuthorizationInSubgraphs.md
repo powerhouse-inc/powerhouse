@@ -67,8 +67,6 @@ import type { Context } from "@powerhousedao/reactor-api";
 export const getResolvers = (
   subgraph: BaseSubgraph,
 ): Record<string, unknown> => {
-  const reactor = subgraph.reactorClient;
-
   return {
     Query: {
       document: async (
@@ -77,7 +75,7 @@ export const getResolvers = (
         ctx: Context,
       ) => {
         const handle = await subgraph.assertCanRead(args.identifier, ctx);
-        return reactor.get(handle.fetchIdentifier);
+        return ctx.clients.read.get(handle.fetchIdentifier);
       },
     },
   };
@@ -115,7 +113,7 @@ the check was skipped for a policy-wide caller (OPEN or a supreme admin):
 
 ```typescript
 const handle = await subgraph.assertCanRead(args.identifier, ctx); // throws if denied
-const doc = await subgraph.reactorClient.get(handle.fetchIdentifier); // never args.identifier
+const doc = await ctx.clients.read.get(handle.fetchIdentifier); // never args.identifier
 ```
 
 **Rule of thumb:** after any `assertCan*` that takes an identifier, perform the
@@ -159,7 +157,7 @@ to name them — `Context`, `CanonicalDocumentId`, `AuthorizationPolicy`,
 ```typescript
 document: async (_parent, args: { identifier: string }, ctx: Context) => {
   const handle = await subgraph.assertCanRead(args.identifier, ctx);
-  return subgraph.reactorClient.get(handle.fetchIdentifier);
+  return ctx.clients.read.get(handle.fetchIdentifier);
 };
 ```
 

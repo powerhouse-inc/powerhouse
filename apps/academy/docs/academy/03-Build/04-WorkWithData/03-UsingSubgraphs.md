@@ -112,19 +112,19 @@ export const schema: DocumentNode = gql`
 
 ```typescript
 // subgraphs/search-todos/resolvers.ts
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 import { type TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-
   return {
     Query: {
       searchTodos: async (
         parent: unknown,
         args: { driveId: string; searchTerm: string },
+        ctx: Context,
       ) => {
-        const children = await reactorClient.getOutgoingRelationships(
+        // Resolvers read through ctx.clients.read; ctx.clients.write exists only in mutations
+        const children = await ctx.clients.read.getOutgoingRelationships(
           args.driveId,
           "child",
         );
