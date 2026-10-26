@@ -20,8 +20,8 @@
         },
         "port": {
           "type": "integer",
-          "exclusiveMinimum": 0,
-          "maximum": 9007199254740991
+          "minimum": 0,
+          "maximum": 65535
         },
         "host": {
           "type": "string",
@@ -221,39 +221,6 @@
                 },
                 "required": ["url"],
                 "additionalProperties": false
-              },
-              "projection": {
-                "type": "object",
-                "properties": {
-                  "enabled": {
-                    "type": "boolean"
-                  },
-                  "dbPoolSize": {
-                    "type": "integer",
-                    "exclusiveMinimum": 0,
-                    "maximum": 9007199254740991
-                  }
-                },
-                "additionalProperties": false
-              },
-              "executors": {
-                "type": "object",
-                "properties": {
-                  "numWorkers": {
-                    "anyOf": [
-                      {
-                        "type": "integer",
-                        "exclusiveMinimum": 0,
-                        "maximum": 9007199254740991
-                      },
-                      {
-                        "type": "string",
-                        "const": "auto"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
               }
             },
             "required": ["kind"],
@@ -265,11 +232,6 @@
           "properties": {
             "primary": {
               "type": "string"
-            },
-            "default": {
-              "type": "object",
-              "properties": {},
-              "additionalProperties": {}
             }
           },
           "additionalProperties": false
@@ -329,38 +291,9 @@
           },
           "additionalProperties": false
         },
-        "packages": {
-          "type": "object",
-          "properties": {
-            "registryUrl": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
-        },
         "namespace": {
           "type": "string",
           "minLength": 1
-        },
-        "auth": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean"
-            },
-            "admins": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "renown": {
-              "type": "object",
-              "properties": {},
-              "additionalProperties": {}
-            }
-          },
-          "additionalProperties": false
         },
         "drives": {
           "anyOf": [

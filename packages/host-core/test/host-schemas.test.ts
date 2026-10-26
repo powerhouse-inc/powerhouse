@@ -132,4 +132,17 @@ describe("childrenSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("leaves port 0 on a wrapper to the member's runner", () => {
+    expect(
+      childrenSchema.safeParse({
+        member: { host: "switchboard", runner: { port: 0 } },
+      }).success,
+    ).toBe(true);
+    expect(
+      childrenSchema.safeParse({
+        member: { host: "switchboard", runner: { port: 65536 } },
+      }).success,
+    ).toBe(false);
+  });
 });

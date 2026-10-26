@@ -23,6 +23,10 @@ import {
   processorGateFor,
   sqlGateFor,
 } from "./components/AdminGate.js";
+import {
+  HostImportPanel,
+  type HostImportRequest,
+} from "./components/HostImportPanel.js";
 import { LinkLocalSyncPanel } from "./components/LinkLocalSyncPanel.js";
 import { MonitoringSetsPanel } from "./components/MonitoringSetsPanel.js";
 import {
@@ -263,6 +267,7 @@ type AppBodyProps = {
   readonly onSwitchSet: (name: string) => void;
   readonly onCreateSet: (name: string) => void;
   readonly onDeleteSet: (name: string) => void;
+  readonly onImport: (request: HostImportRequest) => void;
 };
 
 function AppBody({
@@ -275,6 +280,7 @@ function AppBody({
   onSwitchSet,
   onCreateSet,
   onDeleteSet,
+  onImport,
 }: AppBodyProps) {
   const entries = useManagedReactors();
   const entry = useManagedReactorEntry(selected ?? "");
@@ -308,6 +314,7 @@ function AppBody({
           onSwitch={onSwitchSet}
           setNames={setNames}
         />
+        <HostImportPanel onImport={onImport} />
         <ProvisionPanel
           entries={entries}
           onKill={onKill}
@@ -477,6 +484,21 @@ export function App({
     [store],
   );
 
+  const handleImport = useCallback(
+    (request: HostImportRequest) => {
+      const name = store.importSet(
+        request.setName,
+        request.descriptors,
+        request.source,
+      );
+      setSetNames(store.listSetNames());
+      if (request.activate) {
+        handleSwitchSet(name);
+      }
+    },
+    [store, handleSwitchSet],
+  );
+
   return (
     <div className="reactor-monitor">
       <header className="reactor-monitor__header">
@@ -495,6 +517,7 @@ export function App({
           activeSetName={activeSetName}
           onCreateSet={handleCreateSet}
           onDeleteSet={handleDeleteSet}
+          onImport={handleImport}
           onKill={handleKill}
           onProvision={handleProvision}
           onSelect={setSelected}

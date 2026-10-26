@@ -16,6 +16,7 @@ import { DRIVE_DOCUMENT_TYPES } from "../src/constants.js";
 import { addDrivesEventHandler, setDrives } from "../src/hooks/drives.js";
 import { getPHStore } from "../src/hooks/ph-store.js";
 import { DOCUMENT_CHANGE_TYPE } from "../src/reactor-interop.js";
+import { markLocalDriveWrite } from "../src/hooks/drive-nodes.js";
 import {
   createDriveChangeHandler,
   refreshDrive,
@@ -168,6 +169,36 @@ describe("drive refresh", () => {
     expect(get).toHaveBeenCalledTimes(2);
     expect(get.mock.calls.every((c) => c[0] === "mail")).toBe(true);
     expect(find).not.toHaveBeenCalled();
+  });
+
+  it("a write from this tab re-reads its drive at once, inside the interval", async () => {
+    const mail = makeDrive("mail", 1);
+    setDrives([mail]);
+    const { client, get } = readClient(
+      new Map([["mail", makeDrive("mail", 2)]]),
+    );
+    const handle = createDriveChangeHandler(client, { minIntervalMs: 10_000 });
+
+    handle(updated(mail));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(get).toHaveBeenCalledTimes(1);
+
+    // Someone else's change waits; then this tab writes.
+    handle(updated(mail));
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(get).toHaveBeenCalledTimes(1);
+    markLocalDriveWrite("mail");
+    handle(updated(mail));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(get).toHaveBeenCalledTimes(2);
+
+    // The mark is spent, and the deferred re-read was folded into that one:
+    // the next change waits out a fresh interval.
+    handle(updated(mail));
+    await vi.advanceTimersByTimeAsync(9_500);
+    expect(get).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(get).toHaveBeenCalledTimes(3);
   });
 
   it("an update invalidates that drive's node cache after the re-read", async () => {

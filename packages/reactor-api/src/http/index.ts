@@ -12,7 +12,11 @@ export {
   resolvePackageName,
 } from "./namespace.js";
 export type * from "./types.js";
-export { WebhookService, WEBHOOK_SEGMENT } from "./webhook-service.js";
+export {
+  WebhookService,
+  WEBHOOK_SEGMENT,
+  type PublicOrigin,
+} from "./webhook-service.js";
 export {
   MemoryWebhookStore,
   newWebhookToken,

@@ -16,12 +16,14 @@ import {
 import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { addDocument } from "../src/actions/document.js";
+import { peekDriveNode } from "../src/hooks/drive-nodes.js";
 import type { PHGlobal } from "../src/types/global.js";
 
 const DOCUMENT_TYPE = "test/policy";
 
 function install(
   policy: SignaturePolicy,
+  store: Partial<PHGlobal> = {},
 ): PHDocument[] & { selectedFor: (string | undefined)[] } {
   const added: PHDocument[] = [];
   const selectedFor: (string | undefined)[] = [];
@@ -52,6 +54,7 @@ function install(
     },
   });
   window.ph = {
+    ...store,
     reactorClientModule: { kind: "browser", client, reactorModule: undefined },
   } as unknown as PHGlobal;
   return Object.assign(added, { selectedFor });
@@ -92,5 +95,27 @@ describe("addDocument", () => {
       "base-reducer": 3,
       signature: 2,
     });
+  });
+
+  it("puts the new file in the drive's loaded node cache", async () => {
+    const getNode = (_driveId: string, id: string) =>
+      Promise.resolve({
+        id,
+        kind: "file",
+        name: "Doc",
+        documentType: DOCUMENT_TYPE,
+        parentFolder: null,
+      });
+    install("legacy", {
+      reactorClient: { read: { drives: { getNode } } },
+      driveNodes: new Map([
+        ["drive-1", { byId: new Map(), nodes: [], loaded: "all" }],
+      ]),
+    } as unknown as Partial<PHGlobal>);
+
+    const node = await addDocument("drive-1", "Doc", DOCUMENT_TYPE);
+
+    expect(peekDriveNode("drive-1", node.id)?.name).toBe("Doc");
+    expect(window.ph?.driveNodes?.get("drive-1")?.nodes).toHaveLength(1);
   });
 });

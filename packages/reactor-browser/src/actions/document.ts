@@ -1,4 +1,9 @@
-import { getDriveNode } from "../hooks/drive-nodes.js";
+import {
+  dropDriveNode,
+  getDriveNode,
+  invalidateDriveNodes,
+  markLocalDriveWrite,
+} from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type {
   IReactorReadClient,
@@ -69,6 +74,21 @@ import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
+
+/** Puts a node this tab just wrote into its drive's cache, so hooks show it
+ * before the drive change that follows the write is processed. Best effort:
+ * a client without a node reader is left to that change. */
+async function rememberDriveNode(driveId: string, nodeId: string) {
+  try {
+    await getDriveNode(driveId, nodeId, { refresh: true });
+  } catch (error) {
+    logger.verbose(
+      "Caching the written node @id failed: @error",
+      nodeId,
+      error,
+    );
+  }
+}
 
 /** An unreadable drive cannot be shown to hold no duplicate, so reads throw. */
 async function isDocumentInLocation(
@@ -476,7 +496,10 @@ export async function addDocument(
     };
   }
 
-  // Create document using ReactorClient
+  // Create document using ReactorClient. The new node shows at once: the
+  // drive change that follows this write re-reads the drive without waiting
+  // out the interval, and the node goes into the cache as soon as it exists.
+  markLocalDriveWrite(driveId);
   let newDoc: PHDocument;
   try {
     const added = await reactorClient.write.drives.addFile(
@@ -489,6 +512,12 @@ export async function addDocument(
     logger.error("Error adding document: @error", e);
     throw new Error("There was an error adding document", { cause: e });
   }
+  await rememberDriveNode(driveId, newDoc.header.id);
+
+  // The throttled drive refresh can lag; cache the new node now.
+  await getDriveNode(driveId, newDoc.header.id, { refresh: true }).catch(
+    () => undefined,
+  );
 
   // Return a file node structure for compatibility
   return {
@@ -746,6 +775,7 @@ export async function addFileWithProgress(
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
+    markLocalDriveWrite(driveId);
     const created = await createImportedDocument(
       reactor.write,
       document,
@@ -755,6 +785,7 @@ export async function addFileWithProgress(
     );
     const documentId = created.documentId;
     const fileNode = created.fileNode;
+    await rememberDriveNode(driveId, documentId);
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
@@ -863,6 +894,7 @@ export async function updateFile(
     throw new Error("User is not allowed to update files");
   }
   const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
+  markLocalDriveWrite(driveId);
   await queueActions(
     drive,
     baseUpdateFile({
@@ -898,6 +930,7 @@ export async function addFolder(
   // Get the drive document and add folder action
   const _drive = await reactorClient.read.get<DocumentDriveDocument>(driveId);
   const folderId = generateId();
+  markLocalDriveWrite(driveId);
   const added = await reactorClient.write.execute(driveId, "main", [
     baseAddFolder({
       id: folderId,
@@ -926,8 +959,10 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
+  markLocalDriveWrite(driveId);
   const removed = await reactorClient.write.drives.removeNode(driveId, nodeId);
   await removed.readable;
+  dropDriveNode(driveId, nodeId);
 }
 
 export async function renameNode(
@@ -955,6 +990,7 @@ export async function renameNode(
   }
 
   // Rename the node in the drive document using updateNode action
+  markLocalDriveWrite(driveId);
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
@@ -991,6 +1027,7 @@ export async function renameDriveNode(
     throw new Error("There was an error renaming the node");
   }
 
+  markLocalDriveWrite(driveId);
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
@@ -1044,13 +1081,16 @@ export async function moveNodeById(args: {
 
   if (isStrictEqual(targetParentFolder, srcId)) return;
 
+  markLocalDriveWrite(driveId);
   const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: srcId,
       targetParentFolder,
     }),
   ]);
-  return handle.document();
+  const moved = await handle.document();
+  await rememberDriveNode(driveId, srcId);
+  return moved;
 }
 
 export async function moveNode(
@@ -1067,13 +1107,16 @@ export async function moveNode(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
+  markLocalDriveWrite(driveId);
   const handle = await reactorClient.write.execute(driveId, "main", [
     baseMoveNode({
       srcFolder: src.id,
       targetParentFolder: target?.id,
     }),
   ]);
-  return handle.document();
+  const moved = await handle.document();
+  await rememberDriveNode(driveId, src.id);
+  return moved;
 }
 
 /**
@@ -1195,6 +1238,7 @@ export async function copyNode(
     return node !== undefined && isFileNode(node);
   });
 
+  markLocalDriveWrite(driveId);
   for (const fileNodeToCopy of fileNodesToCopy) {
     try {
       const document = await reactor.read.get(fileNodeToCopy.srcId);
@@ -1230,7 +1274,11 @@ export async function copyNode(
   const copyActions = copyNodesInput.map((copyNodeInput) =>
     baseCopyNode(copyNodeInput),
   );
-  return await queueActions(drive, copyActions);
+  // Many nodes land at once: re-list the drive rather than fetch each one.
+  markLocalDriveWrite(driveId);
+  const copied = await queueActions(drive, copyActions);
+  invalidateDriveNodes(driveId);
+  return copied;
 }
 
 /**

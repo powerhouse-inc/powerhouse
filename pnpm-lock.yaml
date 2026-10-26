@@ -364,6 +364,7 @@ overrides:
 patchedDependencies:
   '@electric-sql/pglite-tools@0.2.4': 3e823caceeee208b050028a08277c48de7f43d77bf2dc6788e79538937da5b51
   '@verdaccio/local-storage@14.0.0-next-9.31': 019f38e61031d2a70b1d2a10f42a7198cf15ffc380df17a1cb67aec7ffa6b9e3
+  '@verdaccio/store@9.0.0-next-9.31': 7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06
   cmd-ts@0.15.0: cf9842246eadd42e5eed711768b5cf97d9a90dc6b22f74c3f0d0b16f9ad199ea
 
 importers:
@@ -702,6 +703,9 @@ importers:
 
   apps/reactor-monitor:
     dependencies:
+      '@powerhousedao/host-core':
+        specifier: workspace:*
+        version: link:../../packages/host-core
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../../packages/reactor
@@ -31671,7 +31675,7 @@ snapshots:
       '@verdaccio/hooks': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/logger': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/middleware': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/store': 9.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/store': 9.0.0-next-9.31(patch_hash=7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06)(supports-color@8.1.1)
       debug: 4.4.3(supports-color@8.1.1)
       express: 5.2.1(supports-color@8.1.1)
       lodash-es: 4.18.1
@@ -31989,7 +31993,7 @@ snapshots:
       '@verdaccio/loaders': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/logger': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/middleware': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/store': 9.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/store': 9.0.0-next-9.31(patch_hash=7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06)(supports-color@8.1.1)
       '@verdaccio/web': 9.0.0-next-9.31(supports-color@8.1.1)
       compression: 1.8.1(supports-color@8.1.1)
       cors: 2.8.6
@@ -32021,7 +32025,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@verdaccio/store@9.0.0-next-9.31(supports-color@8.1.1)':
+  '@verdaccio/store@9.0.0-next-9.31(patch_hash=7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06)(supports-color@8.1.1)':
     dependencies:
       '@verdaccio/config': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/core': 9.0.0-next-9.31
@@ -32116,7 +32120,7 @@ snapshots:
       '@verdaccio/loaders': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/logger': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/middleware': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/store': 9.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/store': 9.0.0-next-9.31(patch_hash=7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06)(supports-color@8.1.1)
       '@verdaccio/tarball': 14.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/ui-theme': 9.0.0-next-9.31(supports-color@8.1.1)
       debug: 4.4.3(supports-color@8.1.1)
@@ -44176,7 +44180,7 @@ snapshots:
       '@verdaccio/node-api': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/proxy': 9.0.0-next-9.31(supports-color@8.1.1)
       '@verdaccio/server': 9.0.0-next-9.31(supports-color@8.1.1)
-      '@verdaccio/store': 9.0.0-next-9.31(supports-color@8.1.1)
+      '@verdaccio/store': 9.0.0-next-9.31(patch_hash=7ddcd0aebc85e37afe5f13ad2278d91fc1c0fef133c1df5acfc5e24fa6133f06)(supports-color@8.1.1)
       '@verdaccio/ui-theme': 9.0.0-next-9.31(supports-color@8.1.1)
       debug: 4.4.3(supports-color@8.1.1)
       express: 5.2.1(supports-color@8.1.1)

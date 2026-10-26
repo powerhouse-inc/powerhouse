@@ -48,7 +48,8 @@ const allPhCliHelpCommands = {
   host: helpCommand({
     name: "host",
     args: hostCheckArgs,
-    description: "Check a host from hosts/: `ph host check <host>`",
+    description:
+      "Check or export a host from hosts/: `ph host check|export <host>`",
     handler: () => {},
   }),
   generate: helpCommand({

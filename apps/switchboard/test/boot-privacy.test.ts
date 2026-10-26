@@ -1,5 +1,4 @@
 import { mkdtemp, rm } from "node:fs/promises";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ILogger } from "document-model";
@@ -56,17 +55,6 @@ async function withEnv<T>(
   }
 }
 
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const address = server.address();
-  await new Promise((resolve) => server.close(resolve));
-  if (address === null || typeof address === "string") {
-    throw new Error("no port");
-  }
-  return address.port;
-}
-
 async function boot(
   tempRoot: string,
   logger: ILogger = stubLogger(),
@@ -74,8 +62,7 @@ async function boot(
   return startSwitchboard({
     workflows: { enabled: false },
     dbPath: join(tempRoot, "read-model"),
-    port: await freePort(),
-    strictPort: true,
+    port: 0,
     mcp: false,
     disableLocalPackages: true,
     identity: { keypairPath: join(tempRoot, "identity.json") },
