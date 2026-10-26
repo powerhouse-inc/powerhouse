@@ -1,20 +1,49 @@
 import type {
   DocumentDriveDocument,
+  FileNode,
+  FolderNode,
   Node,
 } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import { parsePagingOptions } from "../shared/utils.js";
+import type { DriveNodeRecord, IDriveNodeSource } from "./drive-nodes.js";
 import type { IDriveReadClient, IReactorReadClient } from "./types.js";
 
 /** The read a {@link DriveReadClient} answers through. */
 export type DriveReadDeps = Pick<IReactorReadClient, "get">;
 
-/** Drive reads: a drive's nodes, served from the drive document as read. */
+/** A node record in the legacy `Node` shape the drive read client returns. */
+export function toLegacyNode(node: DriveNodeRecord): Node {
+  if (node.kind === "file") {
+    const file: FileNode = {
+      id: node.id,
+      kind: "file",
+      name: node.name,
+      parentFolder: node.parentFolder,
+      documentType: node.documentType ?? "",
+    };
+    return file;
+  }
+  const folder: FolderNode = {
+    id: node.id,
+    kind: "folder",
+    name: node.name,
+    parentFolder: node.parentFolder,
+  };
+  return folder;
+}
+
+/**
+ * Drive reads: a drive's nodes. With a node source, they are served from it
+ * for every drive type, and the drive is read only for its header (its id and
+ * its existence); without one, from the drive document as read.
+ */
 export class DriveReadClient implements IDriveReadClient {
   constructor(
     private readonly reads: DriveReadDeps,
     private readonly logger: ILogger,
+    private readonly nodes?: IDriveNodeSource,
   ) {}
 
   async getNode(
@@ -27,6 +56,14 @@ export class DriveReadClient implements IDriveReadClient {
       driveIdentifier,
       nodeId,
     );
+    if (this.nodes) {
+      const driveId = await this.resolveDriveId(driveIdentifier, signal);
+      const record = await this.nodes.getNode(driveId, nodeId, signal);
+      if (!record) {
+        throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
+      }
+      return toLegacyNode(record);
+    }
     const drive = await this.reads.get<DocumentDriveDocument>(
       driveIdentifier,
       undefined,
@@ -51,6 +88,22 @@ export class DriveReadClient implements IDriveReadClient {
       parentFolder,
       paging,
     );
+    if (this.nodes) {
+      const driveId = await this.resolveDriveId(driveIdentifier, signal);
+      const page = await this.nodes.listChildren(
+        driveId,
+        parentFolder,
+        paging,
+        signal,
+      );
+      return {
+        results: page.results.map(toLegacyNode),
+        options: page.options,
+        ...(page.nextCursor !== undefined
+          ? { nextCursor: page.nextCursor }
+          : {}),
+      };
+    }
     const drive = await this.reads.get<DocumentDriveDocument>(
       driveIdentifier,
       undefined,
@@ -76,5 +129,22 @@ export class DriveReadClient implements IDriveReadClient {
       options: effective,
       ...(hasMore ? { nextCursor: String(endIndex) } : {}),
     };
+  }
+
+  /**
+   * The drive's id, from a read of its document scope alone: a slug resolves,
+   * a missing drive throws as the state-reading path does, and the drive's
+   * global state (the legacy node tree) is never loaded.
+   */
+  private async resolveDriveId(
+    driveIdentifier: string,
+    signal: AbortSignal | undefined,
+  ): Promise<string> {
+    const drive = await this.reads.get(
+      driveIdentifier,
+      { scopes: ["document"] },
+      signal,
+    );
+    return drive.header.id;
   }
 }

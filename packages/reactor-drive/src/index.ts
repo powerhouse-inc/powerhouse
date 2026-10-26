@@ -63,6 +63,10 @@ export {
   type ReactorDriveClientArgs,
 } from "./client/reactor-drive-client.js";
 export {
+  createReactorDriveWriteStrategy,
+  type ReactorDriveWriteStrategyArgs,
+} from "./client/reactor-drive-write-strategy.js";
+export {
   migrateLegacyDriveState,
   type MigrateLegacyDriveStateArgs,
   type MigrateLegacyDriveStateResult,

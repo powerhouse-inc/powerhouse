@@ -41,6 +41,7 @@ import type {
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import { warnOnce } from "./deprecations.js";
 import { DriveClientFacade } from "./drive-client.js";
+import type { DriveClientOptions } from "./drive-nodes.js";
 import type { ActionEvaluationConfig } from "./internal/evaluation.js";
 import type { ReactorClientParts } from "./internal/parts.js";
 import type { WriteSideParts } from "./internal/targets.js";
@@ -128,6 +129,7 @@ export class ReactorClient implements IReactorClient {
       collectionsOf: () => Promise.resolve({}),
     },
     writeSide?: WriteSideParts,
+    drives: DriveClientOptions = { strategies: new Map() },
   ) {
     const parts: ReactorClientParts = {
       logger,
@@ -142,6 +144,7 @@ export class ReactorClient implements IReactorClient {
       createSignaturePolicy,
       protocolSelection,
       writeSide,
+      drives,
     };
     this.logger = logger;
     this.reactor = reactor;

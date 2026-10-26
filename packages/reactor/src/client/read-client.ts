@@ -89,7 +89,7 @@ export class ReactorReadClient implements IReactorReadClient {
     );
     this.createSignaturePolicy = parts.createSignaturePolicy;
     this.protocolSelection = parts.protocolSelection;
-    this.drives = new DriveReadClient(this, parts.logger);
+    this.drives = new DriveReadClient(this, parts.logger, parts.drives.nodes);
   }
 
   async getDocumentModelModules(
