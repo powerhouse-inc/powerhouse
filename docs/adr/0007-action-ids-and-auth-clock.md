@@ -33,13 +33,16 @@ rule are independent of undo v3, so they land first, for every document version.
 
 ## Decision
 
-### 1. Every action id is a UUIDv7
+### 1. Action ids are UUIDv7
 
 `generateActionId` (in `@powerhousedao/shared/document-model/action-id`) returns a UUIDv7
 (RFC 9562, method 1) that strictly increases per process: a 12-bit counter seeded from random
 bits orders ids within one millisecond, and a clock that steps back does not reorder them.
-`createAction`, the genesis `CREATE_DOCUMENT` and `UPGRADE_DOCUMENT` actions, the reactor and
-drive action builders, the workflow piece and the test harnesses use it.
+`createAction`, the genesis `CREATE_DOCUMENT` and `UPGRADE_DOCUMENT` actions,
+`purgeDocumentAction`, the base-reducer 1 and 2 undo marker, the reactor and drive action
+builders, the workflow piece and the test harnesses use it. The workflow editors' undo-group and
+redo ids keep UUIDv4 until undo v3 changes their grouping format; base-reducers 1 and 2 never
+order by action id, so this has no effect on them.
 
 This applies to base-reducer 1 and 2 documents too. Their code treats an action id as an opaque
 string. Document, node and folder ids stay UUIDv4.
@@ -57,8 +60,8 @@ backward stamp, for example an action stamped by hand or by another process.
 ### 3. Non-auth stamps keep the wall clock
 
 Every other scope is stamped with `new Date().toISOString()`. Non-auth stamps are never floored
-at the last auth stamp. The undo marker that base-reducers 1 and 2 synthesize is also built
-with the wall clock, so undo does not advance the auth clock.
+at the last auth stamp. The NOOP marker that base-reducers 1 and 2 synthesize for an undo also
+takes the wall clock.
 
 ### 4. An auth burst may deny content
 
