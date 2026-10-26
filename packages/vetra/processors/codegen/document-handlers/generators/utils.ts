@@ -1,3 +1,8 @@
+import {
+  type Feature,
+  installAddedDependencies,
+  syncFeatureDependencies,
+} from "@powerhousedao/codegen";
 import type {
   MinimalBackupData,
   PHBaseState,
@@ -99,4 +104,25 @@ export async function warnSubgraphTypeConflicts(
     return;
   }
   for (const warning of warnings) logger.warn(`⚠️ ${warning}`);
+}
+
+/** Adds and installs what `features` need before their files are written:
+ * the package loader reloads on those files, so their imports must resolve. */
+export async function installFeatureDependencies(
+  features: readonly Feature[],
+  projectDir: string,
+): Promise<void> {
+  let added: string[];
+  try {
+    added = await syncFeatureDependencies(features, projectDir);
+  } catch (error) {
+    logger.warn(
+      `⚠️ Could not add the dependencies of ${features.join(", ")}: ${(error as Error).message}`,
+    );
+    return;
+  }
+  await installAddedDependencies(added, projectDir, {
+    log: (message) => logger.info(message),
+    warn: (message) => logger.warn(`⚠️ ${message}`),
+  });
 }

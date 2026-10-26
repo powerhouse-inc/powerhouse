@@ -250,6 +250,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Piece Action](#piece-action)
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
+- [Connect Routes](#connect-routes)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -542,6 +543,19 @@ Generate a migration file
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
+
+
+
+### Flags
+**Skip Install** - Don't install the dependencies the command adds to package.json - Usage: `--skip-install`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Connect Routes
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against
 
 
 

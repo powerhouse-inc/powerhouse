@@ -10,8 +10,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Generator } from "@tanstack/router-generator";
 import type { Rolldown } from "vite";
-import { build } from "vite";
+import { build, createServer } from "vite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONNECT_ROUTES_GEN,
@@ -20,6 +21,7 @@ import {
   connectRoutes,
   connectRoutesGeneratorConfig,
   connectRoutesTreeOf,
+  connectRoutesWatcher,
   generateConnectRoutes,
   ignoreBuildOutput,
   ignoreDotPhButRouteTree,
@@ -175,6 +177,57 @@ describe("generateConnectRoutes", () => {
       /could not mount the routes in hosts\/connect\/routes\/[\s\S]*Conflicting/,
     );
   });
+});
+
+describe("the router plugin's generator", () => {
+  // As the dev server's router plugin regenerates on a route file's add or removal.
+  it("imports Connect's route files by package name", async () => {
+    const routesDir = join(project, HOST_ROUTES);
+    addRoute("hello.tsx", "/hello");
+    await generate();
+    addRoute("bye.tsx", "/bye");
+
+    await new Generator({
+      config: connectRoutesGeneratorConfig(connectDir, project, routesDir),
+      root: project,
+    }).run();
+
+    const tree = readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8");
+    expect(tree).toContain('"/bye": typeof ByeRoute');
+    expect(tree).toContain('from "@powerhousedao/connect/routes/__root"');
+    expect(tree).not.toContain("apps/connect/src/routes");
+  });
+});
+
+describe("connectRoutesWatcher", () => {
+  it("writes the tree when hosts/connect/routes/ appears, and drops it when it goes", async () => {
+    const server = await createServer({
+      root: project,
+      configFile: false,
+      logLevel: "silent",
+      plugins: [connectRoutesWatcher(project, connectDir)],
+      server: { middlewareMode: true, ws: false },
+    });
+    const tree = join(project, CONNECT_ROUTES_GEN);
+    try {
+      await vi.waitFor(() =>
+        expect(server.watcher.getWatched()).not.toEqual({}),
+      );
+      addRoute("hello.tsx", "/hello");
+      await vi.waitFor(
+        () => expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
+        { timeout: 15_000, interval: 100 },
+      );
+
+      rmSync(join(project, "hosts"), { recursive: true });
+      await vi.waitFor(() => expect(existsSync(tree)).toBe(false), {
+        timeout: 15_000,
+        interval: 100,
+      });
+    } finally {
+      await server.close();
+    }
+  }, 60_000);
 });
 
 describe("silent drops", () => {

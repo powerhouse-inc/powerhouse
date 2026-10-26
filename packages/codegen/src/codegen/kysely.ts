@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
+// Resolved from codegen's own install, which depends on kysely-pglite.
 function getKyselyPgLiteBin(): string {
   const require = createRequire(import.meta.url);
 
@@ -35,7 +36,6 @@ function runCommand(
     const child = spawn(command, args, {
       cwd,
       stdio: "inherit",
-      shell: true,
     });
 
     child.on("close", (code) => {
@@ -58,17 +58,17 @@ export async function generateDBSchema({
 }: IOptions) {
   const outFile = schemaFile ?? resolve(migrationFile, "../schema.ts");
 
-  try {
-    const kyselyBinPath = getKyselyPgLiteBin();
-    // Use kysely-pglite CLI to handle TypeScript compilation and module resolution
-    await runCommand(
-      "node",
-      [kyselyBinPath, migrationFile, "--outFile", outFile],
-      process.cwd(),
-    );
+  const kyselyBinPath = getKyselyPgLiteBin();
+  // Use kysely-pglite CLI to handle TypeScript compilation and module resolution
+  await runCommand(
+    process.execPath,
+    [kyselyBinPath, migrationFile, "--outFile", outFile],
+    process.cwd(),
+  ).catch((error: Error) => {
+    throw new Error(`Could not generate ${outFile}: ${error.message}`, {
+      cause: error,
+    });
+  });
 
-    console.log(`Schema types generated at ${outFile}`);
-  } catch (error) {
-    console.error("Error running migration:", error);
-  }
+  console.log(`Schema types generated at ${outFile}`);
 }

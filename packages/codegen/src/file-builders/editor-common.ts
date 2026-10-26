@@ -21,6 +21,7 @@ type MakeEditorModuleFileArgs = {
     actionTypeName: string;
     importPath: string;
   };
+  writtenOnce?: boolean;
 };
 /** Generates the `module.ts` file for a document editor or app */
 export async function makeEditorModuleFile({
@@ -31,6 +32,7 @@ export async function makeEditorModuleFile({
   editorId,
   legacyMultipleDocumentTypes,
   documentModel,
+  writtenOnce,
 }: MakeEditorModuleFileArgs) {
   if (documentModelId && !!legacyMultipleDocumentTypes) {
     throw new Error(
@@ -53,6 +55,7 @@ export async function makeEditorModuleFile({
     pascalCaseEditorName,
     documentTypes,
     documentModel,
+    writtenOnce,
   });
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);

@@ -109,6 +109,8 @@ export const ANALYTICS_ENGINE_CORE_PACKAGE =
 export const GRAPHQL_PACKAGE = "graphql";
 export const GRAPHQL_TAG_PACKAGE = "graphql-tag";
 export const PIECES_FRAMEWORK_PACKAGE = "@powerhousedao/pieces-framework";
+export const KYSELY_PACKAGE = "kysely";
+export const RELATIONAL_DB_PROCESSOR_CLASS = "RelationalDbProcessor";
 
 // External peerDependencies of every generated project.
 // `peer` is the consumer-facing range; `dev` is the exact build-tested pin.
@@ -134,6 +136,19 @@ export const FEATURE_DEPENDENCIES = {
     peerExternal: {},
     devVersioned: [],
   },
+  // The schema `ph generate migration-file` writes imports kysely's types, and
+  // queries import its `sql`; the host's kysely runs them.
+  relationalDbProcessor: {
+    peerVersioned: [],
+    peerExternal: { [KYSELY_PACKAGE]: { peer: "^0.28", dev: "0.28.16" } },
+    devVersioned: [],
+  },
+  // A subgraph's BaseSubgraph is the host's: the build leaves it external.
+  subgraph: {
+    peerVersioned: [REACTOR_API_PACKAGE],
+    peerExternal: {},
+    devVersioned: [],
+  },
   // Each piece is bundled whole (build-pieces.mts), framework included, so the
   // framework is only ever needed to compile the piece's own source.
   piece: {
@@ -153,6 +168,7 @@ export const FEATURE_DEPENDENCIES = {
 export const VERSIONED_DEPENDENCIES = [
   ...VERSIONED_PEER_DEPENDENCIES,
   ...FEATURE_DEPENDENCIES.analyticsProcessor.peerVersioned,
+  ...FEATURE_DEPENDENCIES.subgraph.peerVersioned,
 ];
 
 // Transitive dependencies whose postinstall scripts the generated project
@@ -265,7 +281,8 @@ export const packageScripts = {
   "lint:fix": "oxlint --type-aware --type-check --fix",
   format: "oxfmt",
   "format:check": "oxfmt --check",
-  tsc: "tsc",
+  // Routes type-check against the tree, which Vetra or a build would write.
+  tsc: "ph-cli generate connect-routes && tsc",
   "tsc:watch": "tsc --watch",
   generate: "ph-cli generate",
   connect: "ph-cli connect",

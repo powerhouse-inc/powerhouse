@@ -7,7 +7,11 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
+import {
+  installFeatureDependencies,
+  minimalBackupDocument,
+  warnSubgraphTypeConflicts,
+} from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -78,6 +82,10 @@ export class SubgraphGenerator extends BaseDocumentGen {
           logger.error(`❌ Skipping subgraph generation: ${conflict}`);
           return;
         }
+        await installFeatureDependencies(
+          ["subgraph"],
+          this.config.CURRENT_WORKING_DIR,
+        );
         await generateSubgraph(state.name, this.project);
         await this.project.save();
         logger.info(

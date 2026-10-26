@@ -13,6 +13,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Piece Action](#piece-action)
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
+- [Connect Routes](#connect-routes)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -376,6 +377,22 @@ Path to the output file. Defaults to './schema.ts'<br><br>
 **usage:** `--schema-file <str>`<br>
 
 
+### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Connect Routes
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against
 ### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
