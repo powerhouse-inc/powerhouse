@@ -50,6 +50,7 @@ export interface IReactorBrowserClient extends Pick<
   | "subscribe"
   | "execute"
   | "getOperations"
+  | "newDocument"
   | "create"
   | "deleteDocument"
 > {
@@ -73,6 +74,8 @@ the `jobChanges` subscription when realtime is on. Its `document()` runs the
 `write.deleteDocument` run synchronous mutations and hand back a handle that has
 already settled.
 
+`newDocument` is a top-level member only.
+
 Everything outside these members is deliberately excluded from the interface:
 `drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
 `createEmpty`, `rename`, `evaluateActions`, and the document-model module
@@ -85,7 +88,8 @@ getters. For the full-reactor versions of those, see
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
 | `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
-| `create(document, parentIdentifier?, signal?)`                | Creates the document and emits `Created`.                                                           |
+| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, and its create signature policy. |
+| `create(document, parentIdentifier?, signal?)`                | Creates the document as its header says and emits `Created`.                                        |
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
