@@ -2,7 +2,10 @@ import {
   hostExportSchema,
   type HostExport,
 } from "@powerhousedao/host-core/schema";
-import { readFileSync } from "node:fs";
+import {
+  HOST_EXPORTS,
+  type HostExportFixture,
+} from "./__fixtures__/host-export/index.js";
 import { describe, expect, it } from "vitest";
 import {
   EXPORT_FILE,
@@ -11,23 +14,13 @@ import {
   type ImportIssue,
 } from "./host-import.js";
 
-const FIXTURES = [
-  "switchboard",
-  "connect",
-  "cli",
-  "desktop",
-  "vetra",
-  "assistant",
-];
+const FIXTURES = Object.keys(HOST_EXPORTS) as HostExportFixture[];
 
-function fixtureText(name: string): string {
-  return readFileSync(
-    new URL(`./__fixtures__/host-export/${name}.json`, import.meta.url),
-    "utf8",
-  );
+function fixtureText(name: HostExportFixture): string {
+  return HOST_EXPORTS[name];
 }
 
-function fixture(name: string): HostExport {
+function fixture(name: HostExportFixture): HostExport {
   return JSON.parse(fixtureText(name)) as HostExport;
 }
 
