@@ -1,4 +1,5 @@
 import {
+  applyChildWrapper,
   collectTokenSites,
   compoundOutputSource,
   CONNECT_RUNNER,
@@ -123,15 +124,10 @@ async function loadView(
   );
   const members: MemberView[] = [];
   for (const [key, wrapper] of Object.entries(children)) {
-    const base = (await loadHost(projectRoot, wrapper.host)).host;
-    const reactor = wrapper.reactor ?? base.reactor;
-    const config = wrapper.config ?? base.config;
-    const host: ReactorView = {
-      name: base.name,
-      runner: { ...base.runner, ...wrapper.runner },
-      ...(config !== undefined ? { config } : {}),
-      ...(reactor !== undefined ? { reactor } : {}),
-    };
+    const host: ReactorView = applyChildWrapper(
+      (await loadHost(projectRoot, wrapper.host)).host,
+      wrapper,
+    );
     const memberSpecifier = host.runner.module;
     members.push({
       key,
