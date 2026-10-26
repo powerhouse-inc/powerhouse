@@ -25,6 +25,7 @@ import {
   withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
+import { compactDocumentModelSchema } from "./compact-schema.js";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import {
   createBaseAction,
@@ -451,9 +452,16 @@ export const addRemoteDriveTool = {
 
 export const getDocumentModelSchemaTool = {
   name: "getDocumentModelSchema",
-  description: "Get the schema of a document model",
+  description:
+    "Get the schema of a document model. Pass `compact: true` before addActions: it returns only each action's type, scope and GraphQL input definition, and the enums and types those inputs use. Omit it for the full model, with state schemas, descriptions, errors and examples.",
   inputSchema: {
     type: z.string().describe("Type of the document model"),
+    compact: z
+      .boolean()
+      .optional()
+      .describe(
+        "Return only the actions' types, scopes and input definitions. Defaults to false.",
+      ),
   },
   outputSchema: {
     schema: z.unknown().describe("Schema of the document model"),
@@ -867,7 +875,9 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
         }
-        return { schema };
+        return {
+          schema: params.compact ? compactDocumentModelSchema(schema) : schema,
+        };
       },
     ),
   } as const;
