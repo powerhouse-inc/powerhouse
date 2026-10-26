@@ -621,6 +621,26 @@ A repeated action id.
 - `retractedActionIds` still makes RETRACTs sharing an id inert, so a
   stream built outside a reactor derives as before.
 
+Other landing fixes.
+
+- An unreadable stored header fails every job kind as a returned result,
+  right after the read, so the result handler retries it unless it is
+  terminal. A mutation used to throw it out of `executeJob`, which failed
+  the job with no retry; a load whose second header read succeeded ran a
+  version 3 document as version 2.
+- MCP `addActions` derives undo targets from the document scope's creation
+  record (`creationState`), as `RemoteDocumentController` does, and from
+  the model default when there is none. The served document's
+  `initialState` is its head state.
+- `IOperationStore.findReferencing` is optional. Without it the reactor
+  scans the stream (`storage/find-referencing.ts`).
+- The shared document-model index names its exports from `retraction`,
+  `undo-redo-batch` and `base-action-reducer` instead of `export *`;
+  `rewritesScope`, `scopeDeriver` and `baseActionReducer` are internal.
+- `RELEASE-NOTES.md` carries the rollout: Switchboard first, the boot
+  refusal with `undoV3` off and its read-only escape, and reverting
+  migrations 030 and 031 before running the previous binary.
+
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
   (write cache and `replayOperation`), and same-millisecond ties can diverge.
