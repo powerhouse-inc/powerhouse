@@ -236,12 +236,16 @@ export class ReactorClientBuilder {
       return undefined;
     }
     const syncManager = reactorModule.syncModule?.syncManager;
+    const resolver = this.reactorBuilder.getModelResolver();
     return {
       capabilities: this.reactorBuilder.getPeerCapabilities(),
       flags: reactorModule.featureFlags,
       agreement: syncManager ? () => syncManager.agreement() : undefined,
       collectionsOf: (documentIds) =>
         reactorModule.operationIndex.getCollectionsForDocuments(documentIds),
+      loadModel: resolver
+        ? (documentType) => resolver.ensureModelLoaded(documentType)
+        : undefined,
     };
   }
 
