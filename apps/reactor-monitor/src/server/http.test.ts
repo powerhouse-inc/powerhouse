@@ -25,7 +25,11 @@ import {
   createMonitorController,
   type MonitorController,
 } from "./controller.ts";
-import { createControllerHandler } from "./http.ts";
+import {
+  createAppHandler,
+  createControllerHandler,
+  isLoopbackAddress,
+} from "./http.ts";
 
 const TOKEN = "a".repeat(64);
 
@@ -248,7 +252,11 @@ describe("controller HTTP handler", () => {
     );
     expect(hostsResponseSchema.parse(hosts.body).hosts).toEqual(["sb"]);
 
-    const body = JSON.stringify({ project, host: "sb", env: { A: "1" } });
+    const body = JSON.stringify({
+      project,
+      host: "sb",
+      env: { LOG_LEVEL: "debug" },
+    });
     const checked = await call("POST", "/__ph-monitor/check", { body });
     expect(checkResponseSchema.parse(checked.body)).toEqual({ issues: [] });
 
@@ -289,5 +297,53 @@ describe("controller HTTP handler", () => {
     );
     expect(all.instances.map((i) => i.status)).toEqual(["exited"]);
     expect(controller.list()).toEqual([]);
+  });
+
+  it("Host-checks every path of the built app, not only the API", async () => {
+    const api = createControllerHandler({ controller, token: TOKEN });
+    const app = createAppHandler(api, (_req, res) => {
+      res.statusCode = 200;
+      res.end("<html>token</html>");
+    });
+    const appServer = http.createServer(app);
+    await new Promise<void>((r) => appServer.listen(0, "127.0.0.1", r));
+    const appPort = (appServer.address() as AddressInfo).port;
+    const get = (host: string) =>
+      new Promise<number>((resolve, reject) => {
+        http
+          .get(
+            { host: "127.0.0.1", port: appPort, path: "/", headers: { host } },
+            (res) => {
+              res.resume();
+              resolve(res.statusCode ?? 0);
+            },
+          )
+          .on("error", reject);
+      });
+    try {
+      expect(await get(`evil.example:${appPort}`)).toBe(403);
+      expect(await get(`127.0.0.1:${appPort}`)).toBe(200);
+    } finally {
+      await new Promise((r) => appServer.close(r));
+    }
+  });
+});
+
+describe("isLoopbackAddress", () => {
+  it("accepts loopback socket addresses only", () => {
+    for (const a of ["127.0.0.1", "127.8.9.10", "::1", "::ffff:127.0.0.1"]) {
+      expect(isLoopbackAddress(a), a).toBe(true);
+    }
+    for (const a of [
+      undefined,
+      "",
+      "0.0.0.0",
+      "192.168.1.2",
+      "::",
+      "::ffff:10.0.0.1",
+      "fe80::1",
+    ]) {
+      expect(isLoopbackAddress(a), String(a)).toBe(false);
+    }
   });
 });

@@ -18,6 +18,7 @@ import { Worker } from "node:worker_threads";
 import { z } from "zod";
 import {
   ENV_KEY_PATTERN,
+  isBrowserEnvKey,
   type ErrorCode,
   type HostRequest,
   type Instance,
@@ -50,6 +51,8 @@ export type HostSpawn = (options: SpawnHostOptions) => Promise<SpawnedHost>;
 
 export interface MonitorControllerOptions {
   projectRoots: readonly string[];
+  /** Operator env, under the browser's; the only source of code-loading keys. */
+  serverEnv?: Record<string, string>;
   maxInstances?: number;
   spawn?: HostSpawn;
   check?: HostCheck;
@@ -82,14 +85,13 @@ const LOG_LINES = 512;
 const TAIL_LINES = 40;
 const CHECK_TIMEOUT_MS = 60_000;
 
-const DENIED_KEYS = new Set([
+/** Set by the controller itself; no config may override them. */
+const INJECTED_KEYS = [
+  "FEATURE_UNIFORM_RUNNERS_ENABLED",
   "PH_USER_DATA_DIR",
-  "PATH",
-  "HOME",
-  "BASH_ENV",
-  "ENV",
-]);
-const DENIED_PREFIXES = ["NODE_", "LD_", "DYLD_", "NPM_CONFIG_"];
+  "PH_NO_TELEMETRY",
+  "PH_NO_DOTENV",
+];
 
 // Mirrors spawnHost's childEnv (host-core spawn-host.ts); keep in step.
 const BASE_ENV_KEYS = ["PATH", "HOME", "TMPDIR"];
@@ -128,12 +130,19 @@ export function childEnv(
 }
 
 export function deniedEnvKeys(env: Record<string, string>): string[] {
-  return Object.keys(env).filter(
+  return Object.keys(env).filter((key) => !isBrowserEnvKey(key));
+}
+
+/** Operator env for every child; may set anything but the injected keys. */
+export function assertServerEnv(env: Record<string, string>): void {
+  const bad = Object.keys(env).filter(
     (key) =>
       !ENV_KEY_PATTERN.test(key) ||
-      DENIED_KEYS.has(key) ||
-      DENIED_PREFIXES.some((prefix) => key.startsWith(prefix)),
+      INJECTED_KEYS.some((k) => k.toUpperCase() === key.toUpperCase()),
   );
+  if (bad.length > 0) {
+    throw new Error(`Server env may not set: ${bad.join(", ")}.`);
+  }
 }
 
 /** checkHost in a one-shot worker, so each check imports host.js afresh. */
@@ -201,6 +210,21 @@ async function removeDir(dir: string): Promise<void> {
   }
 }
 
+/** A real directory (not a link) this user owns. */
+function ownDirectory(dir: string): boolean {
+  try {
+    const stat = fs.lstatSync(dir);
+    if (!stat.isDirectory()) return false;
+    return process.getuid === undefined || stat.uid === process.getuid();
+  } catch {
+    return false;
+  }
+}
+
+function signalable(pid: number): boolean {
+  return Number.isInteger(pid) && pid > 1 && pid !== process.pid;
+}
+
 /** Removes temp roots whose owning process is gone, SIGTERMing their hosts. */
 export function sweepTempRoots(parent: string): void {
   let names: string[];
@@ -215,15 +239,18 @@ export function sweepTempRoots(parent: string): void {
     const owner = Number(match[1]);
     if (owner === process.pid || isPidAlive(owner)) continue;
     const root = path.join(parent, name);
+    if (!ownDirectory(root)) continue;
     let instances: string[] = [];
     try {
       instances = fs.readdirSync(root);
     } catch {
-      // not a directory, or already gone
+      // already gone
     }
     for (const instance of instances) {
       const dir = path.join(root, instance);
+      if (!ownDirectory(dir)) continue;
       for (const record of listRunRecords(dir, { PH_USER_DATA_DIR: dir })) {
+        if (!signalable(record.pid)) continue;
         try {
           process.kill(record.pid, "SIGTERM");
         } catch {
@@ -271,6 +298,8 @@ export function createMonitorController(
   options: MonitorControllerOptions,
 ): MonitorController {
   const maxInstances = options.maxInstances ?? 8;
+  const serverEnv = options.serverEnv ?? {};
+  assertServerEnv(serverEnv);
   const spawn = options.spawn ?? spawnHost;
   const check =
     options.check ??
@@ -283,7 +312,9 @@ export function createMonitorController(
     path.join(parent, `${TEMP_PREFIX}${process.pid}-`),
   );
   const entries = new Map<string, Entry>();
-  let pending = 0;
+  // Starts still in their check: not yet entries, but stopAll waits for them.
+  const checking = new Set<Promise<unknown>>();
+  let disposing = false;
 
   const listProjects = (): Project[] => {
     const seen = new Set<string>();
@@ -308,8 +339,10 @@ export function createMonitorController(
         if (child.name.startsWith(".") || child.name === "node_modules") {
           continue;
         }
+        // A symlinked child could point outside the allowlisted root.
+        if (!child.isDirectory()) continue;
         const dir = path.join(root, child.name);
-        if (isDirectory(dir) && probeHostsFolder(dir).kind === "present") {
+        if (probeHostsFolder(dir).kind === "present") {
           add(dir);
         }
       }
@@ -344,10 +377,10 @@ export function createMonitorController(
     if (denied.length > 0) {
       throw new ControllerError(
         "env_denied",
-        `These env keys may not be set: ${denied.join(", ")}.`,
+        `Not on the browser env allowlist: ${denied.join(", ")}. Code-loading settings come only from the controller's own config.`,
       );
     }
-    return { root, host: request.host, env };
+    return { root, host: request.host, env: { ...serverEnv, ...env } };
   };
 
   const runCheck = async (
@@ -447,6 +480,11 @@ export function createMonitorController(
     return snapshot(entry);
   };
 
+  const stopAll = async (): Promise<Instance[]> => {
+    await Promise.allSettled([...checking]);
+    return Promise.all([...entries.keys()].map(stop));
+  };
+
   const stop = async (id: string): Promise<Instance> => {
     const entry = entryOf(id);
     entry.stopping ??= stopEntry(entry);
@@ -463,18 +501,25 @@ export function createMonitorController(
     },
     start: async (request) => {
       const { root, host, env } = resolve(request);
+      if (disposing) {
+        throw new ControllerError(
+          "shutting_down",
+          "The controller is stopping.",
+        );
+      }
       const live = [...entries.values()].filter((e) => LIVE.has(e.view.status));
-      if (live.length + pending >= maxInstances) {
+      if (live.length + checking.size >= maxInstances) {
         throw new ControllerError(
           "instance_limit",
           `At most ${maxInstances} instances may run at once.`,
         );
       }
-      pending++;
+      const id = randomUUID();
+      const dataDir = path.join(tempRoot, id);
+      const checked = runCheck(root, host, env, dataDir);
+      checking.add(checked);
       try {
-        const id = randomUUID();
-        const dataDir = path.join(tempRoot, id);
-        const issues = await runCheck(root, host, env, dataDir);
+        const issues = await checked;
         if (issues.length > 0) {
           throw new ControllerError(
             "check_failed",
@@ -498,16 +543,17 @@ export function createMonitorController(
         entry.starting = launch(entry, root, host, env);
         return snapshot(entry);
       } finally {
-        pending--;
+        checking.delete(checked);
       }
     },
     list: () => [...entries.values()].map(snapshot),
     get: (id) => snapshot(entryOf(id)),
     logs: (id, since) => entryOf(id).logs.since(since),
     stop,
-    stopAll: () => Promise.all([...entries.keys()].map(stop)),
+    stopAll,
     dispose: async () => {
-      await Promise.all([...entries.keys()].map(stop));
+      disposing = true;
+      await stopAll();
       await removeDir(tempRoot);
     },
   };

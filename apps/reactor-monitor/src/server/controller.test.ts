@@ -27,6 +27,11 @@ import {
   type MonitorControllerOptions,
 } from "./controller.ts";
 import { LogRing } from "./logs.ts";
+import {
+  BROWSER_ENV_ALLOWLIST,
+  CODE_LOADING_ENV,
+  isBrowserEnvKey,
+} from "../controller/api.ts";
 
 interface Launch {
   options: SpawnHostOptions;
@@ -173,30 +178,104 @@ describe("createMonitorController", () => {
     }
   });
 
-  it("refuses denied env keys", async () => {
-    const { controller, launches } = create();
-    for (const key of [
-      "PATH",
-      "HOME",
-      "PH_USER_DATA_DIR",
+  it("accepts only allowlisted env keys, naming the rest", async () => {
+    const { controller, launches, checks } = create();
+    const refused = [
+      // code from a registry or a package list
+      "PH_PACKAGES",
+      "PH_REGISTRY_URL",
+      "PH_REGISTRY_PACKAGES",
+      "DYNAMIC_MODEL_LOADING",
+      // Node and loader/preload hooks
       "NODE_OPTIONS",
+      "NODE_PATH",
       "LD_PRELOAD",
+      "LD_LIBRARY_PATH",
       "DYLD_INSERT_LIBRARIES",
+      // search paths, shells, npm
+      "PATH",
+      "PATHEXT",
       "BASH_ENV",
+      "ENV",
       "NPM_CONFIG_SCRIPT_SHELL",
+      // the controller's own keys
+      "PH_USER_DATA_DIR",
+      "PH_NO_DOTENV",
+      "PH_NO_TELEMETRY",
+      "FEATURE_UNIFORM_RUNNERS_ENABLED",
+      // base keys, any case
+      "HOME",
+      "TMPDIR",
+      "COMSPEC",
+      "SYSTEMROOT",
+      "USERPROFILE",
+      // allowed prefix, code-loading name
+      "REACTOR_PLUGIN_PATH",
+      "REACTOR_MODULE",
+      "INSPECTION_LOADER",
+      // unknown
+      "SOME_SETTING",
       "lower",
-    ]) {
-      expect(
-        await codeOf(
-          controller.check({
-            project: allowed,
-            host: "sb",
-            env: { [key]: "x" },
-          }),
-        ),
-      ).toBe("env_denied");
+    ];
+    for (const key of refused) {
+      const error = await controller
+        .check({ project: allowed, host: "sb", env: { [key]: "x" } })
+        .catch((e: unknown) => e);
+      expect(error, key).toMatchObject({ code: "env_denied" });
+      expect((error as Error).message).toContain(key);
     }
+    expect(checks).toHaveLength(0);
+
+    await controller.check({
+      project: allowed,
+      host: "sb",
+      env: {
+        AUTH_ENABLED: "true",
+        ADMINS: "0xabc",
+        INSPECTION_ADMIN_ENABLED: "true",
+        REACTOR_WORKERS: "2",
+        CREATE_SIGNATURE_POLICY: "require",
+        LOG_LEVEL: "debug",
+      },
+    });
+    expect(checks).toHaveLength(1);
     expect(launches).toHaveLength(0);
+  });
+
+  it("allowlist entries are themselves never code-loading", () => {
+    for (const key of BROWSER_ENV_ALLOWLIST.keys) {
+      expect(isBrowserEnvKey(key), key).toBe(true);
+      expect(CODE_LOADING_ENV.test(key), key).toBe(false);
+    }
+    for (const prefix of BROWSER_ENV_ALLOWLIST.prefixes) {
+      expect(isBrowserEnvKey(`${prefix}X`)).toBe(true);
+      expect(isBrowserEnvKey(`${prefix}X_PATH`)).toBe(false);
+    }
+  });
+
+  it("takes code-loading env from the server config only", async () => {
+    const { controller, launches, checks } = create({
+      serverEnv: { PH_REGISTRY_URL: "http://registry.local" },
+    });
+    const started = await controller.start({
+      project: allowed,
+      host: "sb",
+      env: { LOG_LEVEL: "debug" },
+    });
+    expect(checks[0].env).toMatchObject({
+      PH_REGISTRY_URL: "http://registry.local",
+      LOG_LEVEL: "debug",
+    });
+    expect(launches[0].options.env).toEqual({
+      PH_REGISTRY_URL: "http://registry.local",
+      LOG_LEVEL: "debug",
+    });
+    await controller.stop(started.id);
+    for (const key of ["PH_NO_DOTENV", "ph_user_data_dir", "bad-key"]) {
+      expect(() => create({ serverEnv: { [key]: "x" } }), key).toThrow(
+        /Server env may not set/,
+      );
+    }
   });
 
   it("checks against the env the child will see", async () => {
@@ -415,6 +494,92 @@ describe("createMonitorController", () => {
     } finally {
       orphan.kill("SIGKILL");
     }
+  });
+
+  it("never signals pid <= 1 or itself, and skips symlinked roots", async () => {
+    const deadOwner = spawnProcess(process.execPath, ["-e", ""]);
+    await new Promise((r) => deadOwner.once("exit", r));
+    const writeRecord = (dir: string, host: string, pid: number) => {
+      mkdirSync(path.join(dir, ".ph", "run"), { recursive: true });
+      writeFileSync(
+        path.join(dir, ".ph", "run", `${host}.json`),
+        JSON.stringify({
+          version: 2,
+          host,
+          projectName: "p",
+          kind: "reactor",
+          verb: "run",
+          pid,
+          startedAt: new Date().toISOString(),
+        }),
+      );
+    };
+    const stale = path.join(tmp, `ph-monitor-${deadOwner.pid}-bad`);
+    writeRecord(path.join(stale, "i1"), "a", -1);
+    writeRecord(path.join(stale, "i2"), "b", 0);
+    writeRecord(path.join(stale, "i3"), "c", 1);
+    writeRecord(path.join(stale, "i4"), "d", process.pid);
+    const target = path.join(base, "elsewhere");
+    writeRecord(path.join(target, "i1"), "e", 424242);
+    const link = path.join(tmp, `ph-monitor-${deadOwner.pid}-link`);
+    symlinkSync(target, link, "dir");
+
+    const original = process.kill.bind(process);
+    const signalled: number[] = [];
+    const kill = vi
+      .spyOn(process, "kill")
+      .mockImplementation((pid: number, signal?: string | number) => {
+        if (signal === "SIGTERM") {
+          signalled.push(pid);
+          return true;
+        }
+        return original(pid, signal);
+      });
+    try {
+      create();
+    } finally {
+      kill.mockRestore();
+    }
+    expect(signalled).toEqual([]);
+    expect(existsSync(stale)).toBe(false);
+    expect(existsSync(link)).toBe(true);
+    expect(existsSync(path.join(target, "i1", ".ph", "run", "e.json"))).toBe(
+      true,
+    );
+  });
+
+  it("does not list a symlinked child that leaves the root", () => {
+    const outside = path.join(base, "outside");
+    symlinkSync(outside, path.join(allowed, "link"), "dir");
+    const { controller } = create();
+    expect(controller.listProjects().map((p) => p.root)).not.toContain(outside);
+    expect(() => controller.hosts(path.join(allowed, "link"))).toThrow(
+      ControllerError,
+    );
+  });
+
+  it("stopAll waits for starts still in their check; dispose refuses new ones", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const { controller, launches } = create({
+      check: async () => {
+        await gate;
+        return [];
+      },
+    });
+    const starting = controller.start({ project: allowed, host: "sb" });
+    const stopping = controller.stopAll();
+    release();
+    await starting;
+    const stopped = await stopping;
+    expect(stopped.map((i) => i.status)).toEqual(["exited"]);
+    expect(launches[0].options.signal?.aborted).toBe(true);
+    expect(controller.list()).toEqual([]);
+
+    await controller.dispose();
+    expect(
+      await codeOf(controller.start({ project: allowed, host: "sb" })),
+    ).toBe("shutting_down");
   });
 
   it("dispose removes the temp root", async () => {

@@ -23,13 +23,22 @@ const STATUS: Record<ErrorCode, number> = {
   env_denied: 400,
   check_failed: 422,
   instance_limit: 409,
+  shutting_down: 503,
   internal: 500,
 };
 
 const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(?::(\d+))?$/;
 
+export function isLoopbackAddress(address: string | undefined): boolean {
+  if (!address) return false;
+  const v4 = address.startsWith("::ffff:") ? address.slice(7) : address;
+  return v4.startsWith("127.") || address === "::1";
+}
+
 /** The Host header when it names loopback on the port this socket accepted on. */
 export function loopbackHost(req: IncomingMessage): string | undefined {
+  // The socket, not the config: a server that also listens beyond loopback.
+  if (!isLoopbackAddress(req.socket.localAddress)) return undefined;
   const host = req.headers.host?.toLowerCase() ?? "";
   const match = LOOPBACK_HOST.exec(host);
   if (!match) return undefined;
@@ -178,5 +187,18 @@ export function createControllerHandler(options: {
         );
       }
     });
+  };
+}
+
+/** The built app's server: index.html carries the token, so every path is Host-checked. */
+export function createAppHandler(
+  api: ReturnType<typeof createControllerHandler>,
+  files: (req: IncomingMessage, res: ServerResponse) => void,
+): (req: IncomingMessage, res: ServerResponse) => void {
+  return (req, res) => {
+    if (!loopbackHost(req)) {
+      return sendError(res, "bad_host", "Host is not loopback.");
+    }
+    api(req, res, () => files(req, res));
   };
 }

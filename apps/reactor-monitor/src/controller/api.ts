@@ -11,6 +11,38 @@ export const ENV_KEY_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
 export const MAX_ENV_ENTRIES = 64;
 export const MAX_ENV_VALUE_LENGTH = 8192;
 
+/** Env keys a browser may set: flags and settings that load or run no code. */
+export const BROWSER_ENV_ALLOWLIST = {
+  keys: [
+    "ADMINS",
+    "ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY",
+    "AUTH_ENABLED",
+    "CREATE_SIGNATURE_POLICY",
+    "DEFAULT_PROTECTION",
+    "DOCUMENT_MODEL_SUBGRAPHS_ENABLED",
+    "DOCUMENT_PERMISSIONS_ENABLED",
+    "LOG_LEVEL",
+    "MCP_ENABLED",
+    "PH_INSPECTION_CALLS_PER_MINUTE",
+    "REQUIRE_AUTHENTICATED_CALLER",
+    "RESOLVE_CALLER_IDENTITY",
+  ],
+  prefixes: ["REACTOR_", "INSPECTION_"],
+} as const;
+
+/** Never browser-settable, even under an allowed prefix. */
+export const CODE_LOADING_ENV =
+  /PATH|PRELOAD|LOADER|PACKAGE|REGISTRY|MODULE|PLUGIN|DYNAMIC|^NODE_|^LD_|^DYLD_|^NPM_/;
+
+export function isBrowserEnvKey(key: string): boolean {
+  if (!ENV_KEY_PATTERN.test(key) || CODE_LOADING_ENV.test(key)) return false;
+  const { keys, prefixes } = BROWSER_ENV_ALLOWLIST;
+  return (
+    (keys as readonly string[]).includes(key) ||
+    prefixes.some((prefix) => key.startsWith(prefix))
+  );
+}
+
 export const envSchema = z
   .record(
     z.string().regex(ENV_KEY_PATTERN),
@@ -118,6 +150,7 @@ export const errorCodeSchema = z.enum([
   "env_denied",
   "check_failed",
   "instance_limit",
+  "shutting_down",
   "internal",
 ]);
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
@@ -127,7 +160,6 @@ export const errorResponseSchema = z.object({
     code: errorCodeSchema,
     message: z.string(),
     issues: z.array(hostIssueSchema).optional(),
-    tail: z.string().optional(),
   }),
 });
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
