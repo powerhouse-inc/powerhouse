@@ -130,8 +130,8 @@ export function fakeRunner(
       };
       return Promise.resolve(runner.status_);
     },
-    stop: () => {
-      runner.calls.push("stop");
+    stop: (options?: { keepAutostart?: boolean }) => {
+      runner.calls.push(options?.keepAutostart ? "stop keepAutostart" : "stop");
       runner.status_ = {
         ...runner.status_,
         tunnel: { ...runner.status_.tunnel, state: "down" },

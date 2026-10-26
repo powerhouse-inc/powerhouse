@@ -164,7 +164,7 @@ describe("portle switchboard plugin", () => {
     const p = createPortlePlugin(() => runner);
     await p.hooks!.onSubgraphsRegistering!(ctx);
     await p.hooks!.onShutdown!(ctx);
-    expect(runner.calls).toEqual(["stop", "configure {}"]);
+    expect(runner.calls).toEqual(["stop keepAutostart"]);
 
     const down = fakeRunner(statusOf({ enrolled: true }));
     const q = createPortlePlugin(() => down);

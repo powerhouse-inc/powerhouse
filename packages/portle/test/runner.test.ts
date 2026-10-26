@@ -333,3 +333,17 @@ describe("PortleRunner: delegation and listen ports", () => {
     ).toThrow(/must differ/);
   });
 });
+
+describe("PortleRunner: stop at a host shutdown", () => {
+  it("keeps autostart when asked, so the tunnel returns at the next boot", async () => {
+    const { runner } = runnerWith();
+    await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
+    await runner.start();
+    expect(runner.wantsAutostart()).toBe(true);
+    const status = await runner.stop({ keepAutostart: true });
+    expect(status.tunnel.state).toBe("down");
+    expect(runner.wantsAutostart()).toBe(true);
+    await runner.stop();
+    expect(runner.wantsAutostart()).toBe(false);
+  });
+});

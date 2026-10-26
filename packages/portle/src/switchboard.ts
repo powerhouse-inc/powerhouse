@@ -137,9 +137,9 @@ export function createPortlePlugin(
         if (!runner) return;
         const status = runner.status();
         if (status.tunnel.state === "down") return;
-        // Stop the processes, but keep `autostart` as the operator left it.
-        await runner.stop();
-        if (status.settings?.autostart) runner.configure({});
+        // The host is going down, not the operator's wish: the processes stop,
+        // `autostart` stays, so the tunnel returns with the next boot.
+        await runner.stop({ keepAutostart: true });
       },
     },
   };

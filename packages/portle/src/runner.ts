@@ -71,7 +71,13 @@ export interface PortleRunnerLike {
   enrol(input: EnrolInput): Promise<TunnelStatus>;
   configure(patch: SettingsPatch): TunnelStatus;
   start(): Promise<TunnelStatus>;
-  stop(): Promise<TunnelStatus>;
+  /** Stops both processes; clears `autostart` unless `keepAutostart` (a host shutdown). */
+  stop(options?: StopOptions): Promise<TunnelStatus>;
+}
+
+export interface StopOptions {
+  /** The host is going down, not the operator's wish: the tunnel comes back at the next boot. */
+  keepAutostart?: boolean;
 }
 
 export interface PortleRunnerDeps extends ResolveBinariesOptions {
@@ -343,18 +349,24 @@ export class PortleRunner implements PortleRunnerLike {
     return this.status();
   }
 
-  async stop(): Promise<TunnelStatus> {
+  async stop(options: StopOptions = {}): Promise<TunnelStatus> {
     await this.#frpc?.stop();
     await this.#caddy?.stop();
     this.#frpc = null;
     this.#caddy = null;
-    if (this.#enrollment() && readSiteSettings(this.#deps.stateDir)) {
+    if (
+      !options.keepAutostart &&
+      this.#enrollment() &&
+      readSiteSettings(this.#deps.stateDir)
+    ) {
       writeSiteSettings(this.#deps.stateDir, {
         ...this.#settings(),
         autostart: false,
       });
     }
-    this.#deps.log?.("tunnel stopped");
+    this.#deps.log?.("tunnel stopped", {
+      autostart: this.wantsAutostart(),
+    });
     return this.status();
   }
 
