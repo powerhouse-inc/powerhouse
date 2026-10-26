@@ -586,6 +586,11 @@ Main split the reactor client into read and write halves (ADR 0006).
   client's halves have no undo, so those callers have nothing to move to.
 - The router undoes through a backend's write half when it has one; a
   backend without one needs its own `undo` members, as before.
+- Main's per-drive-type write strategies follow the create rules: the
+  reactor-drive strategy files and copies through `createVersionsOf` and
+  `creationActions`, and `IDriveWriteStrategy.copyNode` takes
+  `CopyNodeOptions` (the reactor-drive strategy refuses an override, as its
+  client did).
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
