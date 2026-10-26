@@ -16,6 +16,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   createAction,
+  creationState,
   optionalBaseReducerCapabilities,
   stateReducerOf,
   undoNeedsTargets,
@@ -534,7 +535,15 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         for (const scope of new Set(undoSteps.map((step) => step.scope))) {
           operations[scope] = await scopeOperations(params.documentId, scope);
         }
-        const batch = undoRedoBatch({ ...document, operations }, caps, reducer);
+        // The served document's initialState is its head state; a scope re-derives from creation.
+        const initialState =
+          creationState(await scopeOperations(params.documentId, "document")) ??
+          (documentModel.utils.createDocument() as PHDocument).initialState;
+        const batch = undoRedoBatch(
+          { ...document, initialState, operations },
+          caps,
+          reducer,
+        );
         for (const paramAction of params.actions) {
           if (!isUndoRedo(paramAction)) {
             batch.add(buildAction(paramAction));

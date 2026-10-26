@@ -549,6 +549,39 @@ describe("ReactorMcpProvider", () => {
         expect(targetOf(redo)).toBe(undoSecond.id);
       });
 
+      it("resolves the target from the state the document was created with", async () => {
+        const documentId = await v3Document();
+        const { setModelDescription, addModule } =
+          documentModelDocumentModelModule.actions;
+        await client.execute(documentId, "main", [
+          setModelDescription({ description: "d" }),
+          addModule({ id: "m1", name: "m1" }),
+        ]);
+        const provider = await createReactorMcpProvider({ client });
+
+        // Re-applied over the head state, ADD_MODULE throws on its own module.
+        const result = await provider.tools.addActions.callback({
+          documentId,
+          actions: [{ type: "UNDO", input: {}, scope: "global" }],
+        });
+
+        expect(result.isError).toBeUndefined();
+        const [, added, undo] = (await globalRows(documentId)).map(
+          (row) => row.action,
+        );
+        expect(added.type).toBe("ADD_MODULE");
+        expect(targetOf(undo)).toBe(added.id);
+        const { global } = (await client.get<PHDocument>(documentId))
+          .state as unknown as {
+          global: {
+            description: string;
+            specifications: { modules: unknown[] }[];
+          };
+        };
+        expect(global.description).toBe("d");
+        expect(global.specifications[0].modules).toEqual([]);
+      });
+
       it("retracts an action from earlier in the same call", async () => {
         const documentId = await v3Document("stored");
         const provider = await createReactorMcpProvider({ client });
