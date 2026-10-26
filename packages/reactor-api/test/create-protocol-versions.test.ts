@@ -1,4 +1,3 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
 import {
   headNewDocument,
   type DocumentModelModule,
@@ -7,6 +6,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
+import type { RequestClients } from "../src/graphql/request-clients.js";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
 
 const DRIVE_ID = "drive-1";
@@ -28,7 +28,7 @@ function client() {
         ),
       ),
   );
-  const reactorClient = {
+  const read = {
     get: vi.fn((id: string) =>
       Promise.resolve(id === DRIVE_ID ? drive : added.at(-1)),
     ),
@@ -36,21 +36,29 @@ function client() {
       .fn()
       .mockResolvedValue(documentModelDocumentModelModule),
     newDocument,
+  };
+  const write = {
     drives: {
       addFile: vi.fn((_driveId: string, document: PHDocument) => {
         added.push(document);
-        return Promise.resolve(document);
+        return Promise.resolve({
+          readable: Promise.resolve({
+            documentId: document.header.id,
+            branch: "main",
+          }),
+        });
       }),
     },
-  } as unknown as IReactorClient;
-  return { reactorClient, added, newDocument };
+  };
+  const clients = { read, write } as unknown as RequestClients;
+  return { clients, added, newDocument };
 }
 
 describe("create resolvers head a new document with the client's newDocument", () => {
   it.each([
     [
       "createEmptyDocument",
-      (c: IReactorClient) =>
+      (c: RequestClients) =>
         resolvers.createEmptyDocument(c, {
           documentType: DOCUMENT_TYPE,
           parentIdOrSlug: DRIVE_ID,
@@ -58,7 +66,7 @@ describe("create resolvers head a new document with the client's newDocument", (
     ],
     [
       "createDocumentWithInitialState",
-      (c: IReactorClient) =>
+      (c: RequestClients) =>
         resolvers.createDocumentWithInitialState(c, {
           documentType: DOCUMENT_TYPE,
           parentIdOrSlug: DRIVE_ID,
@@ -66,9 +74,9 @@ describe("create resolvers head a new document with the client's newDocument", (
         }),
     ],
   ])("%s", async (_name, run) => {
-    const { reactorClient, added, newDocument } = client();
+    const { clients, added, newDocument } = client();
 
-    await run(reactorClient);
+    await run(clients);
 
     expect(newDocument).toHaveBeenCalledWith(
       DOCUMENT_TYPE,

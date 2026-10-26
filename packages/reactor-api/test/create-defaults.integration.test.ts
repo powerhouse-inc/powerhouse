@@ -111,7 +111,7 @@ describe("Query.createDefaults", () => {
   });
 
   it("fits the protocol versions to a named document type", async () => {
-    const select = vi.spyOn(module.client, "getCreateProtocolVersions");
+    const select = vi.spyOn(module.client.read, "getCreateProtocolVersions");
     try {
       const response = await createDefaults(
         server,
