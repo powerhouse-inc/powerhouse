@@ -15,6 +15,7 @@ export default defineConfig({
     include: [
       "src/codegen/features.test.ts",
       "src/codegen/generate-apps.test.ts",
+      "src/codegen/generate-processors.test.ts",
       "src/codegen/migrate-tsconfig.test.ts",
       "src/codegen/migrate.test.ts",
       "src/codegen/migrate-package-json.test.ts",

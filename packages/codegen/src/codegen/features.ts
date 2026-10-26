@@ -1,6 +1,8 @@
 import {
   ANALYTICS_ENGINE_CORE_PACKAGE,
   FEATURE_DEPENDENCIES,
+  REACTOR_API_PACKAGE,
+  RELATIONAL_DB_PROCESSOR_CLASS,
 } from "@powerhousedao/shared/clis";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join } from "path";
@@ -10,7 +12,7 @@ import { sortByKey } from "./utils.js";
 
 export type Feature = keyof typeof FEATURE_DEPENDENCIES;
 
-function hasAnalyticsProcessor(processorsDir: string): boolean {
+function hasProcessorWith(processorsDir: string, marker: string): boolean {
   const entries = readdirSync(processorsDir, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
@@ -19,7 +21,28 @@ function hasAnalyticsProcessor(processorsDir: string): boolean {
     for (const filename of ["processor.ts", "index.ts"]) {
       try {
         const contents = readFileSync(join(dir, filename), "utf-8");
-        if (contents.includes(ANALYTICS_ENGINE_CORE_PACKAGE)) return true;
+        if (contents.includes(marker)) return true;
+      } catch {
+        // file missing — try next candidate
+      }
+    }
+  }
+  return false;
+}
+
+// A subgraph is a subgraphs/<name>/ whose index.ts or resolvers.ts imports
+// reactor-api; the aggregate subgraphs/index.ts beside them is not one.
+function hasSubgraph(subgraphsDir: string): boolean {
+  const entries = readdirSync(subgraphsDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    for (const filename of ["index.ts", "resolvers.ts"]) {
+      try {
+        const contents = readFileSync(
+          join(subgraphsDir, entry.name, filename),
+          "utf-8",
+        );
+        if (contents.includes(REACTOR_API_PACKAGE)) return true;
       } catch {
         // file missing — try next candidate
       }
@@ -42,8 +65,18 @@ export function detectFeatures(projectDir: string): Feature[] {
   const features: Feature[] = [];
   const processorsDir = join(projectDir, "processors");
   const processorsStat = statSync(processorsDir, { throwIfNoEntry: false });
-  if (processorsStat?.isDirectory() && hasAnalyticsProcessor(processorsDir)) {
-    features.push("analyticsProcessor");
+  if (processorsStat?.isDirectory()) {
+    if (hasProcessorWith(processorsDir, ANALYTICS_ENGINE_CORE_PACKAGE)) {
+      features.push("analyticsProcessor");
+    }
+    if (hasProcessorWith(processorsDir, RELATIONAL_DB_PROCESSOR_CLASS)) {
+      features.push("relationalDbProcessor");
+    }
+  }
+  const subgraphsDir = join(projectDir, "subgraphs");
+  const subgraphsStat = statSync(subgraphsDir, { throwIfNoEntry: false });
+  if (subgraphsStat?.isDirectory() && hasSubgraph(subgraphsDir)) {
+    features.push("subgraph");
   }
   const piecesDir = join(projectDir, "pieces");
   const piecesStat = statSync(piecesDir, { throwIfNoEntry: false });
