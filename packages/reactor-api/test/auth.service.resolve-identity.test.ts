@@ -252,7 +252,7 @@ describe("resolveIdentity omitted (backwards compatibility)", () => {
 
     await expect(
       service.authenticateWebSocketConnection({ authorization: "Bearer" }),
-    ).rejects.toThrow(/Invalid authorization format/);
+    ).rejects.toThrow(/Unsupported authorization/);
   });
 });
 
