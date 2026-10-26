@@ -95,6 +95,12 @@ export type StartServerOptions = {
    */
   registryUrl?: string;
   configFile?: string;
+  /**
+   * 0 binds a port the OS picks, reported on the result's `port`: the only
+   * race-free choice when several instances start at once. A taken non-zero
+   * port falls back to the next free one, which another process can still
+   * claim between the probe and the bind.
+   */
   port?: number;
   /**
    * If true, fail immediately when the requested port is in use instead of
@@ -238,8 +244,8 @@ export type SwitchboardReactor = {
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**
-   * Port the HTTP server actually bound to. May differ from the requested
-   * port when the requested port was in use and fallback kicked in.
+   * Port the HTTP server actually bound to: the OS-picked one when 0 was
+   * requested, the next free one when the requested port was in use.
    */
   port: number;
   /**

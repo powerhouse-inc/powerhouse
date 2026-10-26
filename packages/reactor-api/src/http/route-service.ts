@@ -7,7 +7,11 @@ import type {
   IHttpAdapter,
 } from "../graphql/gateway/types.js";
 import type { AuthService } from "../services/auth.service.js";
-import type { WebhookService } from "./webhook-service.js";
+import {
+  readPublicOrigin,
+  type PublicOrigin,
+  type WebhookService,
+} from "./webhook-service.js";
 import {
   assertHostMountPath,
   assertRelativeRoutePath,
@@ -60,7 +64,7 @@ export interface HttpRouteServiceOptions {
   /** Absent when auth is disabled host-wide; every route then sees an anonymous actor. */
   authService?: AuthService;
   /** The host's public origin; empty when unknowable, the only case where advertised URLs degrade to paths. */
-  publicUrl?: string;
+  publicUrl?: PublicOrigin;
   /** Whether to believe the `X-Forwarded-*` headers that name the request's public origin.
    * Off by default: they are client-written, so with no proxy in front a caller could choose the origin a route advertises. */
   trustProxy?: boolean;
@@ -74,7 +78,7 @@ export class HttpRouteService {
   readonly #adapter: IHttpAdapter;
   readonly #authService: AuthService | undefined;
   readonly #prefix: string;
-  readonly #publicUrl: string;
+  readonly #publicUrl: PublicOrigin;
   readonly #trustProxy: boolean;
   readonly #scopes = new Map<string, HttpScope>();
 
@@ -91,7 +95,7 @@ export class HttpRouteService {
     this.#adapter = httpAdapter;
     this.#authService = authService;
     this.#webhooks = webhooks;
-    this.#publicUrl = publicUrl.replace(/\/+$/, "");
+    this.#publicUrl = publicUrl;
     this.#trustProxy = trustProxy;
     this.#prefix = posix.join("/", basePath, PACKAGE_ROUTE_SEGMENT);
   }
@@ -216,7 +220,7 @@ interface HttpScopeOptions {
   base: string;
   /** The same base with a scoped name's `@` percent-encoded, when it has one. */
   encodedBase: string | undefined;
-  publicUrl: string;
+  publicUrl: PublicOrigin;
   trustProxy: boolean;
   adapter: IHttpAdapter;
   authService: AuthService | undefined;
@@ -227,7 +231,7 @@ interface HttpScopeOptions {
 class HttpScope implements IHttpScope {
   readonly owner: string;
   readonly #base: string;
-  readonly #publicUrl: string;
+  readonly #publicUrl: PublicOrigin;
   readonly #trustProxy: boolean;
   readonly #encodedBase: string | undefined;
   readonly #adapter: IHttpAdapter;
@@ -249,7 +253,7 @@ class HttpScope implements IHttpScope {
   }
 
   get baseUrl(): string {
-    return `${this.#publicUrl}${this.#base}`;
+    return `${readPublicOrigin(this.#publicUrl)}${this.#base}`;
   }
 
   get webhooks(): IWebhookScope {
@@ -363,8 +367,11 @@ class HttpScope implements IHttpScope {
     this.#registrations.set(key, { path: routePath, handles });
     logger.debug("Registered @route for @package", key, this.owner);
 
+    const publicUrl = this.#publicUrl;
     return {
-      url: `${this.#publicUrl}${routePath}`,
+      get url() {
+        return `${readPublicOrigin(publicUrl)}${routePath}`;
+      },
       dispose: () => {
         const registration = this.#registrations.get(key);
         if (!registration) return;
