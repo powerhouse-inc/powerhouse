@@ -850,7 +850,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.refusal) {
       return { result: buildErrorResult(job, stored.refusal, startTime) };
     }
-    // Returned, not thrown: the result handler retries what is not terminal.
     if (stored.unreadable) {
       return { result: buildErrorResult(job, stored.unreadable, startTime) };
     }
@@ -948,8 +947,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       admission = await this.signatureAdmission.admitMutation(
         job,
         stores,
-        signal,
         derivesByRule(stored.caps, job.scope),
+        signal,
       );
     } catch (error) {
       return {
@@ -3381,8 +3380,8 @@ export class SimpleJobExecutor implements IJobExecutor {
           job,
           unadmitted,
           stores,
-          signal,
           derivesByRule(caps, scope),
+          signal,
         );
       } catch (error) {
         return buildErrorResult(
