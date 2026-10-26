@@ -1,5 +1,17 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — UUIDv7 action ids and same-millisecond auth bursts
+
+### ⚡ Action ids sort in creation order; auth bursts are admitted
+
+Every action id is now a UUIDv7 from `generateActionId` (`@powerhousedao/shared/document-model`), for every document version, including base-reducer 1 and 2 documents. Ids from one process strictly increase, so actions built in the same millisecond keep their creation order wherever the id breaks a tie. `createAction`, the genesis `CREATE_DOCUMENT`/`UPGRADE_DOCUMENT` actions, the reactor and drive action builders and the workflow piece's `plainAction` use it. Document, node and folder ids stay UUIDv4. Code that parsed action ids as v4 should treat them as opaque strings.
+
+Auth-scope actions are now stamped with `nextAuthTimestamp`, which strictly increases per process. A burst such as `initializeAuth` followed by `setGrant` built in one millisecond no longer fails with `AuthTimestampNotMonotonicError`. The error is still exported, and the executor still refuses an auth stamp at or below the stream's newest one, for example one set by hand or minted by another process. Every other scope keeps the wall clock. Content built in the millisecond of a grant burst sorts before the grants stamped ahead of it and may be denied under `documentDecisions`; resubmit it once the clock passes the burst. See ADR 0007.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, execute `[initializeAuth(...), setGrant(...), setGrant(...)]` built in one tick: the job succeeds and the three auth operations carry stamps one millisecond apart.
+
+---
+
 ## 🚀 **Unreleased** — PGlite maintenance no longer forces a VACUUM FULL under load
 
 ### ⚡ VACUUM FULL waits for a quiet store, by default
