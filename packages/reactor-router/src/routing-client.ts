@@ -7,7 +7,8 @@ import {
   type BatchLoadRequest,
   type BatchLoadResult,
   type ConsistencyToken,
-  type CreateDocumentOptions,
+  type CreateProtocolVersionsOptions,
+  type NewDocumentOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
@@ -169,10 +170,18 @@ export class RoutingReactorClient implements IReactorClient {
   }
 
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
+    return this.read.getCreateProtocolVersions(options, signal);
+  }
+
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentModelType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentModelType, options, signal);
   }
 
   getMany<TDocument extends PHDocument>(
@@ -354,7 +363,7 @@ export class RoutingReactorClient implements IReactorClient {
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
     warnOnce(
@@ -372,10 +381,10 @@ export class RoutingReactorClient implements IReactorClient {
 
   async createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.write.emptyDocument(
+    const document = await this.read.newDocument(
       documentModelType,
       options,
       signal,

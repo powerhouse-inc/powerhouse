@@ -10,6 +10,7 @@ import {
   type IReactorClient,
   type IWriteCache,
   type InProcessReactorModule,
+  type NewDocumentOptions,
 } from "@powerhousedao/reactor";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type {
@@ -122,10 +123,27 @@ describe("ReactorDriveClient Integration", () => {
   /** This suite's client, over a reactor client with another creation default. */
   function clientCreating(policy: SignaturePolicy): ReactorDriveClient {
     const read = new Proxy(reactorClient.read, {
-      get: (target, prop): unknown =>
-        prop === "getCreateSignaturePolicy"
-          ? () => Promise.resolve(policy)
-          : Reflect.get(target, prop, target),
+      get: (target, prop): unknown => {
+        if (prop === "getCreateSignaturePolicy") {
+          return () => Promise.resolve(policy);
+        }
+        if (prop === "newDocument") {
+          return (
+            type: string,
+            options: NewDocumentOptions | undefined,
+            signal?: AbortSignal,
+          ) =>
+            target.newDocument(
+              type,
+              {
+                ...options,
+                signaturePolicy: options?.signaturePolicy ?? policy,
+              },
+              signal,
+            );
+        }
+        return Reflect.get(target, prop, target);
+      },
     });
     return new ReactorDriveClient({
       read,
@@ -509,6 +527,33 @@ describe("ReactorDriveClient Integration", () => {
       expect(copy.header.protocolVersions).toEqual(
         v2RequiredProtocolVersions(),
       );
+    });
+  });
+
+  describe("base-reducer at creation", () => {
+    it("heads a new drive at the reactor's local preference", async () => {
+      const drive = await driveClient.create({ global: { name: "V3 Drive" } });
+      expect(drive.header.protocolVersions?.["base-reducer"]).toBe(3);
+    });
+
+    it("gives a file header without versions the reactor's local preference", async () => {
+      const file = withSignaturePolicy(makeChildDocument("Bare"), "legacy");
+      delete file.header.protocolVersions;
+      await driveClient.addFile(driveId, file);
+      const stored = await reactorClient.get(file.header.id);
+      expect(stored.header.protocolVersions).toEqual({ "base-reducer": 3 });
+    });
+
+    it("refuses a copy that overrides its source's versions", async () => {
+      const file = await driveClient.addFile(
+        driveId,
+        makeChildDocument("Source"),
+      );
+      await expect(
+        driveClient.copyNode(driveId, file.header.id, undefined, undefined, {
+          protocolVersions: { "base-reducer": 3 },
+        }),
+      ).rejects.toThrow(/cannot override its protocolVersions/);
     });
   });
 
