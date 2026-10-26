@@ -30,6 +30,8 @@ export const EXPORT_FILE = "export";
 
 const SWITCHBOARD_RUNNER = "/runners/switchboard";
 const MAIN_BACKEND = "main";
+/** A hostile export can share nested compounds to blow the walk up. */
+export const MAX_IMPORT_MEMBERS = 1000;
 
 export type ImportRow = {
   include: boolean;
@@ -45,6 +47,8 @@ export type ImportRow = {
 
 export type ImportPlan = {
   setName: string;
+  /** Member instances walked (a folder run by two children counts twice). */
+  memberCount: number;
   rows: ImportRow[];
   issues: ImportIssue[];
 };
@@ -124,19 +128,26 @@ export function parseHostExport(text: string): {
     }
     const issues: ImportIssue[] = [];
     const reparsed = new Set<string>();
+    const seen = new Set<string>();
     for (const [folder, body] of bodies) {
       const found = bodyIssues(folder, body);
       if (found.length > 0) reparsed.add(hostFile(folder));
+      for (const issue of found) {
+        seen.add(`${issue.file}\0${issue.path}\0${issue.message}`);
+      }
       issues.push(...found);
     }
     for (const issue of result.error.issues) {
       const at = locate(issue.path, name);
-      if (reparsed.has(at.file)) continue;
+      const path = pathOf(at.path);
+      // A body-root issue is the summary the re-parse replaced.
+      if (reparsed.has(at.file) && at.path.length === 0) continue;
+      if (seen.has(`${at.file}\0${path}\0${issue.message}`)) continue;
       issues.push({
         severity: "error",
         stage: "declared",
         file: at.file,
-        path: pathOf(at.path),
+        path,
         message: issue.message,
       });
     }
@@ -162,6 +173,8 @@ export function parseHostExport(text: string): {
   return issues.length > 0 ? { issues } : { export: exp, issues };
 }
 
+type Site = { file: string; path: string[] };
+
 type Member = {
   /** The child key (the host name standalone): what `$output.member` names. */
   key: string;
@@ -169,8 +182,14 @@ type Member = {
   name: string;
   folder: string;
   draft: MemberDraft;
+  /** The members of the compound this one sits in: `$output`'s scope. */
+  siblings: readonly { key: string; host: string }[];
+  /** Dotted key path of that compound ("" at the top). */
+  scope: string;
   /** Where the member's effective `reactor` block is written. */
-  reactorAt: { file: string; path: string[] };
+  reactorAt: Site;
+  /** Where its effective `runner.port` is written. */
+  portAt: Site;
 };
 
 function walkMembers(exp: HostExport, issues: ImportIssue[]): Member[] {
@@ -182,60 +201,105 @@ function walkMembers(exp: HostExport, issues: ImportIssue[]): Member[] {
         name: exp.name,
         folder: exp.name,
         draft: host as MemberDraft,
+        siblings: [{ key: exp.name, host: exp.name }],
+        scope: "",
         reactorAt: { file: hostFile(exp.name), path: ["reactor"] },
+        portAt: { file: hostFile(exp.name), path: ["runner", "port"] },
       },
     ];
   }
   const members: Member[] = [];
+  let visited = 0;
   const visit = (
     folder: string,
     children: Record<string, ChildWrapper>,
     ancestors: readonly string[],
     prefix: readonly string[],
-  ): void => {
+  ): boolean => {
+    const siblings = Object.entries(children).map(([key, wrapper]) => ({
+      key,
+      host: wrapper.host,
+    }));
     for (const [key, wrapper] of Object.entries(children)) {
+      visited += 1;
+      if (visited > MAX_IMPORT_MEMBERS) return false;
       const name = [...prefix, key].join(".");
-      const body = exp.members[wrapper.host] as HostDefinition;
-      if (ancestors.includes(wrapper.host)) {
+      const at = (path: string[], severity: ImportSeverity, message: string) =>
         issues.push({
-          severity: "warning",
+          severity,
           stage: "declared",
           file: hostFile(folder),
-          path: `children.${key}.host`,
-          message: `Member "${name}" runs "${wrapper.host}", which contains this compound; the cycle is not followed.`,
+          path: formatPath(["children", key, ...path]),
+          message,
         });
+      const body: unknown = Object.hasOwn(exp.members, wrapper.host)
+        ? exp.members[wrapper.host]
+        : undefined;
+      if (!isRecord(body)) {
+        at(
+          ["host"],
+          "error",
+          `Member "${name}" runs "${wrapper.host}", which is not in members.`,
+        );
         continue;
       }
-      if ("children" in body) {
-        visit(
+      if (ancestors.includes(wrapper.host)) {
+        at(
+          ["host"],
+          "warning",
+          `Member "${name}" runs "${wrapper.host}", which contains this compound; the cycle is not followed.`,
+        );
+        continue;
+      }
+      const definition = body as HostDefinition;
+      if ("children" in definition) {
+        const complete = visit(
           wrapper.host,
-          body.children as Record<string, ChildWrapper>,
+          definition.children as Record<string, ChildWrapper>,
           [...ancestors, wrapper.host],
           [...prefix, key],
         );
+        if (!complete) return false;
         continue;
       }
       members.push({
         key,
         name,
         folder: wrapper.host,
-        draft: applyChildWrapper(body, wrapper),
+        draft: applyChildWrapper(definition, wrapper),
+        siblings,
+        scope: prefix.join("."),
         reactorAt:
           wrapper.reactor === undefined
             ? { file: hostFile(wrapper.host), path: ["reactor"] }
+            : { file: hostFile(folder), path: ["children", key, "reactor"] },
+        portAt:
+          wrapper.runner?.port === undefined
+            ? { file: hostFile(wrapper.host), path: ["runner", "port"] }
             : {
                 file: hostFile(folder),
-                path: ["children", key, "reactor"],
+                path: ["children", key, "runner", "port"],
               },
       });
     }
+    return true;
   };
-  visit(
+  const complete = visit(
     exp.name,
     host.children as Record<string, ChildWrapper>,
     [exp.name],
     [],
   );
+  if (!complete) {
+    issues.push({
+      severity: "error",
+      stage: "declared",
+      file: hostFile(exp.name),
+      path: "children",
+      message: `The compound reaches more than ${MAX_IMPORT_MEMBERS} members; nothing is imported.`,
+    });
+    return [];
+  }
   return members;
 }
 
@@ -255,6 +319,7 @@ function graphqlUrl(port: number): string {
 /** A literal, a derived `$output`, or why the user must type one. */
 function remoteUrl(
   value: unknown,
+  consumer: Member,
   members: readonly Member[],
 ): { value?: string; derived: boolean; reason?: string } {
   if (typeof value === "string") return { value, derived: false };
@@ -273,14 +338,13 @@ function remoteUrl(
       reason: `$output path ${formatPath(ref.path)} is not endpoints.graphql`,
     };
   }
-  const found = memberForRef(
-    ref,
-    members.map((member) => ({ key: member.key, host: member.folder })),
-  );
+  const found = memberForRef(ref, consumer.siblings);
   if ("error" in found) {
     return { derived: false, reason: `the $output ${found.error}` };
   }
-  const producer = members.find((member) => member.key === found.key);
+  const producer = members.find(
+    (member) => member.scope === consumer.scope && member.key === found.key,
+  );
   const port = producer && switchboardPort(producer);
   if (port === undefined) {
     return {
@@ -291,7 +355,8 @@ function remoteUrl(
   return { value: graphqlUrl(port), derived: true };
 }
 
-const PROJECTED_REACTOR_KEYS = new Set(["backends", "protocol"]);
+// renown gets its own info issue.
+const LISTED_REACTOR_KEYS = new Set(["backends", "protocol", "renown"]);
 const PROJECTED_BACKEND_KEYS = new Set([
   "kind",
   "storage",
@@ -308,7 +373,7 @@ function ignoredFields(draft: MemberDraft): string[] {
   const reactor = draft.reactor as ReactorConfig | undefined;
   if (!reactor) return ignored;
   for (const key of Object.keys(reactor)) {
-    if (!PROJECTED_REACTOR_KEYS.has(key)) ignored.push(`reactor.${key}`);
+    if (!LISTED_REACTOR_KEYS.has(key)) ignored.push(`reactor.${key}`);
   }
   for (const key of Object.keys(reactor.protocol ?? {})) {
     if (key !== "featureFlags") ignored.push(`reactor.protocol.${key}`);
@@ -371,8 +436,8 @@ function memberRows(
         issues.push({
           severity: "warning",
           stage: "declared",
-          file: hostFile(member.folder),
-          path: "runner.port",
+          file: member.portAt.file,
+          path: formatPath(member.portAt.path),
           message: `Member "${member.name}" binds no fixed port; enter its GraphQL URL.`,
         });
       }
@@ -419,10 +484,8 @@ function memberRows(
       });
       continue;
     }
-    let backend = declared as ReactorBackend;
-    let url: ImportRow["url"];
     if (declared.kind === "remote") {
-      const resolved = remoteUrl(declared.remote?.url, members);
+      const resolved = remoteUrl(declared.remote?.url, member, members);
       if (resolved.reason) {
         issue(
           "warning",
@@ -430,10 +493,20 @@ function memberRows(
           `${name}: enter its GraphQL URL (${resolved.reason}).`,
         );
       }
-      url = { value: resolved.value, derived: resolved.derived };
-      // A placeholder: the row carries the real (possibly missing) URL.
-      backend = { ...declared, remote: { url: resolved.value ?? "unset:" } };
-    } else if (declared.storage?.kind === "path") {
+      rows.push({
+        ...base,
+        include: true,
+        descriptor: {
+          kind: "remote",
+          name,
+          remote: { url: resolved.value ?? "" },
+        },
+        url: { value: resolved.value, derived: resolved.derived },
+      });
+      continue;
+    }
+    let backend = declared as ReactorBackend;
+    if (declared.storage?.kind === "path") {
       issue(
         "warning",
         [...path, "storage"],
@@ -455,9 +528,6 @@ function memberRows(
       });
       continue;
     }
-    if (descriptor.kind === "remote" && descriptor.remote) {
-      descriptor.remote = { url: url?.value ?? "" };
-    }
     if (descriptor.packages?.dynamic !== undefined) {
       const { dynamic: _dynamic, ...packages } = descriptor.packages;
       issue(
@@ -468,7 +538,7 @@ function memberRows(
       if (Object.keys(packages).length > 0) descriptor.packages = packages;
       else delete descriptor.packages;
     }
-    rows.push({ ...base, include: true, descriptor, url });
+    rows.push({ ...base, include: true, descriptor });
   }
   return rows;
 }
@@ -497,5 +567,5 @@ export function planImport(exp: HostExport): ImportPlan {
       rows.push(row);
     }
   }
-  return { setName: exp.name, rows, issues };
+  return { setName: exp.name, memberCount: members.length, rows, issues };
 }

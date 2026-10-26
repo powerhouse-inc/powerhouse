@@ -123,6 +123,25 @@ describe("parseHostExport", () => {
     ]);
   });
 
+  it("keeps envelope issues beside a host file's schema issues", () => {
+    const cli = fixture("cli");
+    const host = cli.host as { children: Record<string, unknown> };
+    const { issues } = parseHostExport(
+      JSON.stringify({
+        ...cli,
+        host: {
+          ...host,
+          reactr: {},
+          children: { ...host.children, extra: { host: "nosuch" } },
+        },
+      }),
+    );
+    expect(issues.map((issue) => [issue.file, issue.path])).toEqual([
+      ["hosts/cli/host.js", ""],
+      ["hosts/cli/host.js", "children.extra.host"],
+    ]);
+  });
+
   it("refuses a malformed token", () => {
     const { export: exp, issues } = parseHostExport(
       JSON.stringify(
@@ -140,8 +159,9 @@ describe("parseHostExport", () => {
 
 describe("planImport", () => {
   it("derives the cli Connect's remote and keeps the switchboard row", () => {
-    const { setName, rows, issues } = plan(fixture("cli"));
+    const { setName, memberCount, rows, issues } = plan(fixture("cli"));
     expect(setName).toBe("cli");
+    expect(memberCount).toBe(2);
     expect(rows).toEqual([
       expect.objectContaining({
         include: true,
@@ -241,11 +261,19 @@ describe("planImport", () => {
       ...(cli.host as { children: Record<string, unknown> }).children,
       "cli-switchboard": { host: "switchboard", runner: { port: 0 } },
     };
-    const { rows } = plan({ ...cli, host: { ...cli.host, children } });
+    const { rows, issues } = plan({ ...cli, host: { ...cli.host, children } });
     expect(rows.map((row) => [row.descriptor.name, row.url])).toEqual([
       ["cli-switchboard.main", { value: undefined, derived: false }],
       ["cli-connect.sb", { value: undefined, derived: false }],
     ]);
+    // The 0 is the wrapper's, not the switchboard host's.
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        severity: "warning",
+        file: "hosts/cli/host.js",
+        path: "children.cli-switchboard.runner.port",
+      }),
+    );
   });
 
   it("keeps a literal remote URL as given", () => {
@@ -317,5 +345,130 @@ describe("planImport", () => {
         path: "children.back.host",
       }),
     );
+  });
+
+  const switchboard = (port: number) => ({
+    name: "sb",
+    runner: { module: "@powerhousedao/ph-cli/runners/switchboard", port },
+  });
+  const client = (host: string) => ({
+    name: "client",
+    runner: { module: "@powerhousedao/ph-cli/runners/connect" },
+    reactor: {
+      backends: {
+        r: {
+          kind: "remote",
+          remote: {
+            url: { $output: { host, path: ["endpoints", "graphql"] } },
+          },
+        },
+      },
+    },
+  });
+  const compound = (name: string, children: Record<string, unknown>) => ({
+    name,
+    runner: { module: "@powerhousedao/host-core/runners/compound" },
+    children,
+  });
+  const envelope = (host: unknown, members: Record<string, unknown>) => ({
+    format: "ph-host-export",
+    version: 1,
+    project: { name: "p", root: "/project" },
+    name: "outer",
+    host,
+    members,
+  });
+
+  it("resolves a nested $output within its own compound", () => {
+    const { rows } = plan(
+      envelope(
+        compound("outer", {
+          sb: { host: "switchboard" },
+          i: { host: "inner" },
+        }),
+        {
+          switchboard: switchboard(7000),
+          switchboard2: switchboard(8000),
+          client: client("switchboard2"),
+          inner: compound("inner", {
+            sb: { host: "switchboard2" },
+            c: { host: "client" },
+          }),
+        },
+      ),
+    );
+    expect(rows.map((row) => [row.descriptor.name, row.url?.value])).toEqual([
+      ["sb.main", "http://localhost:7000/graphql"],
+      ["i.sb.main", "http://localhost:8000/graphql"],
+    ]);
+  });
+
+  it("does not see a nested $output as ambiguous with the outer compound", () => {
+    const { rows } = plan(
+      envelope(
+        compound("outer", {
+          sb: { host: "switchboard" },
+          i: { host: "inner" },
+        }),
+        {
+          switchboard: switchboard(7000),
+          client: client("switchboard"),
+          inner: compound("inner", {
+            sb: { host: "switchboard", runner: { port: 8000 } },
+            c: { host: "client" },
+          }),
+        },
+      ),
+    );
+    expect(rows.map((row) => row.descriptor.name)).toEqual([
+      "sb.main",
+      "i.sb.main",
+    ]);
+    expect(rows[1].url?.value).toBe("http://localhost:8000/graphql");
+  });
+
+  it("reports a child naming an inherited property instead of throwing", () => {
+    const parsed = parseHostExport(
+      JSON.stringify(
+        envelope(compound("outer", { x: { host: "constructor" } }), {}),
+      ),
+    );
+    const { rows, issues } = planImport(parsed.export!);
+    expect(rows).toEqual([]);
+    expect(errors(issues)).toEqual([
+      expect.objectContaining({
+        file: "hosts/outer/host.js",
+        path: "children.x.host",
+      }),
+    ]);
+  });
+
+  it("stops walking a compound that fans out past the member cap", () => {
+    const members: Record<string, unknown> = { leaf: switchboard(7000) };
+    for (let level = 0; level < 12; level++) {
+      const next = level === 0 ? "leaf" : `c${level - 1}`;
+      members[`c${level}`] = compound(`c${level}`, {
+        a: { host: next },
+        b: { host: next },
+      });
+    }
+    const { rows, issues, memberCount } = plan(
+      envelope(compound("outer", { top: { host: "c11" } }), members),
+    );
+    expect(rows).toEqual([]);
+    expect(memberCount).toBe(0);
+    expect(errors(issues)[0].message).toMatch(/more than 1000 members/);
+  });
+
+  it("reports reactor.renown once", () => {
+    const { issues } = plan(
+      reactorHost({
+        renown: { url: "https://renown.example" },
+        backends: { main: { kind: "worker" } },
+      }),
+    );
+    expect(
+      issues.filter((issue) => issue.message.includes("renown")),
+    ).toHaveLength(1);
   });
 });
