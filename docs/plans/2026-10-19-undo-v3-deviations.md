@@ -620,12 +620,25 @@ A repeated action id.
   write and Hypercore's stream scan per write.
 - `retractedActionIds` still makes RETRACTs sharing an id inert, so a
   stream built outside a reactor derives as before.
+- The repeat refusal comes before the signature verdict, so a repeat with a
+  bad signature is refused as `DUPLICATE_ACTION` in log mode too. A load
+  also tracks the ids it admits within one batch; load selection already
+  kept only the first of a batch's repeats.
+- Not reconciled: a stream that already holds a repeat, stored by a
+  pre-release build of this branch in log mode. Incremental application
+  (write cache, undo-targets cache, the reducer's single-row path) no longer
+  re-derives for a row that repeats a stored RETRACT's id, while a full
+  derivation makes that RETRACT inert, so the two disagree. Agreeing without
+  a store lookup is not possible: only the stream knows the id is held.
+  6.2.3 has no base-reducer 3, so no released database holds one; an
+  affected pre-release database is recreated. The release notes say so.
 
 Other landing fixes.
 
-- An unreadable stored header fails every job kind as a returned result,
-  right after the read, so the result handler retries it unless it is
-  terminal. A mutation used to throw it out of `executeJob`, which failed
+- An unreadable stored header fails every job kind right after the read
+  by returning the read's error as the job's result. It is a plain
+  `Error`, so the result handler retries it up to `maxRetries` and then
+  fails the job; an error type on its terminal list fails at once. A mutation used to throw it out of `executeJob`, which failed
   the job with no retry; a load whose second header read succeeded ran a
   version 3 document as version 2.
 - MCP `addActions` derives undo targets from the document scope's creation
@@ -638,9 +651,10 @@ Other landing fixes.
   `undo-redo-batch` and `base-action-reducer` instead of `export *`;
   `rewritesScope`, `scopeDeriver` and `baseActionReducer` are internal.
 - `RELEASE-NOTES.md` carries the rollout: Switchboard first, the boot
-  refusal with `undoV3` off and its read-only escape, and migrating down
-  to the previous release's last migration (030 and 031 among those
-  reverted) before running the previous binary.
+  refusal with `undoV3` off and its read-only escape, and migrating the
+  reactor and reactor-drive down to the previous release's last migrations
+  before running the previous binary. `runReactorDriveMigrations` takes an
+  optional target for that.
 
 ## Known gaps
 - v2 defects left frozen: a cold rebuild ignores a denied row's skip
