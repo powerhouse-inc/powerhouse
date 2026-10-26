@@ -173,11 +173,11 @@ describe("create paths for a model whose reducer createReducer did not build", (
     const file = await client.drives.addFile(drive.header.id, unversioned());
     expect(file.header.protocolVersions).toEqual({ "base-reducer": 2 });
 
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("not built by createReducer"),
-      DOCUMENT_MODEL,
+    // The facade's deprecation warnings are not this test's subject.
+    const fitWarnings = warn.mock.calls.filter(([message]) =>
+      String(message).includes("not built by createReducer"),
     );
+    expect(fitWarnings).toEqual([[expect.any(String), DOCUMENT_MODEL]]);
   });
 
   it("selects base-reducer 2 for a type that is not registered, logging at debug only", async () => {

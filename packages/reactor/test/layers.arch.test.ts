@@ -96,6 +96,7 @@ const PINNED_EDGES = new Set([
   "inspector -> cache",
   "inspector -> catch-up",
   "inspector -> core",
+  "inspector -> processors",
   "inspector -> queue",
   "inspector -> registry",
   "inspector -> shared",

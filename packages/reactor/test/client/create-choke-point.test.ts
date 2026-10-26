@@ -26,16 +26,31 @@ const SELECTS = /\b(?:getCreateProtocolVersions|readCreateProtocolVersions)\(/;
 /** Why each file may ask; anywhere else, build the header with newDocument. */
 const ALLOWED = new Map<string, string>([
   ["packages/reactor/src/client/types.ts", "the interface"],
-  ["packages/reactor/src/client/reactor-client.ts", "newDocument"],
+  ["packages/reactor/src/client/read-client.ts", "newDocument"],
   [
-    "packages/reactor/src/client/drive-client.ts",
+    "packages/reactor/src/client/reactor-client.ts",
+    "forwards to the read half",
+  ],
+  [
+    "packages/reactor/src/client/drive-write-client.ts",
     "drives.create, copies and versionless legacy files",
   ],
   [
     "packages/reactor-drive/src/client/reactor-drive-client.ts",
     "copies and versionless legacy files",
   ],
-  ["packages/reactor-router/src/routing-client.ts", "delegates to a backend"],
+  [
+    "packages/reactor-router/src/routing-client.ts",
+    "forwards to the read half",
+  ],
+  [
+    "packages/reactor-router/src/routing-read-client.ts",
+    "delegates to a backend",
+  ],
+  [
+    "packages/reactor-router/src/routing-write-client.ts",
+    "versionless legacy headers, delegated to a backend",
+  ],
   ["packages/reactor-router/src/backend.ts", "delegates to a client"],
   [
     "packages/reactor-browser/src/graphql-client/graphql-reactor-client.ts",
