@@ -124,6 +124,25 @@ describe.each([
     expect(nodes.map((node) => node.id).sort()).toEqual(["f1", "f2"]);
   });
 
+  it("runs onErrors, then onSuccess with the document, on a rejection", async () => {
+    const current = await mode.client.get(drive.header.id);
+    const calls: string[] = [];
+
+    const result = await new Promise<PHDocument>((resolve) => {
+      createDispatch(() => current)(
+        addFolder({ id: "f1", name: "B" }),
+        () => calls.push("onErrors"),
+        (document) => {
+          calls.push("onSuccess");
+          resolve(document);
+        },
+      );
+    });
+
+    expect(calls).toEqual(["onErrors", "onSuccess"]);
+    expect(result.header.id).toBe(drive.header.id);
+  });
+
   it("does not call onErrors when every action applies", async () => {
     const current = await mode.client.get(drive.header.id);
 

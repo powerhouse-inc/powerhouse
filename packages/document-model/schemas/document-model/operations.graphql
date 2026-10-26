@@ -6,6 +6,7 @@ input AddOperationInput {
   description: String
   template: String
   reducer: String
+  scope: String
 }
 
 input SetOperationNameInput {
@@ -31,6 +32,11 @@ input SetOperationTemplateInput {
 input SetOperationReducerInput {
   id: ID!
   reducer: String
+}
+
+input SetOperationScopeInput {
+  id: ID!
+  scope: String
 }
 
 input MoveOperationInput {

@@ -9,11 +9,13 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import {
   createReactorMcpProvider,
   createServer,
+  type CompactDocumentModelSchema,
 } from "@powerhousedao/reactor-mcp";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelDocument,
+  DocumentModelGlobalState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -951,6 +953,77 @@ describe("ReactorMcpProvider", () => {
           id: "powerhouse/document-model",
         }),
       });
+    });
+
+    it("shows ADD_OPERATION's scope input", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocumentModelSchema.callback({
+        type: "powerhouse/document-model",
+      });
+
+      const { schema } = result.structuredContent as {
+        schema: DocumentModelGlobalState;
+      };
+      const addOperation = schema.specifications
+        .at(-1)!
+        .modules.flatMap((module) => module.operations)
+        .find((operation) => operation.name === "ADD_OPERATION");
+      expect(addOperation?.schema).toContain("scope: String");
+    });
+
+    it("returns only the actions with compact: true", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const full = await provider.tools.getDocumentModelSchema.callback({
+        type: "powerhouse/document-model",
+      });
+      const result = await provider.tools.getDocumentModelSchema.callback({
+        type: "powerhouse/document-model",
+        compact: true,
+      });
+
+      expect(result.isError).toBeUndefined();
+      const { schema } = result.structuredContent as {
+        schema: CompactDocumentModelSchema;
+      };
+      expect(schema).toMatchObject({
+        id: "powerhouse/document-model",
+        version: 1,
+      });
+      expect(schema.actions).toContainEqual({
+        type: "ADD_OPERATION",
+        scope: "global",
+        input:
+          "input AddOperationInput { moduleId: ID! id: ID! name: String! schema: String description: String template: String reducer: String scope: String }",
+      });
+      expect(schema.actions).toContainEqual({
+        type: "RELEASE_NEW_VERSION",
+        scope: "global",
+        input: null,
+      });
+      expect(getTextContent(result).length).toBeLessThan(
+        getTextContent(full).length / 2,
+      );
+    });
+
+    it("includes the enums a compact input references", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocumentModelSchema.callback({
+        type: "powerhouse/document-drive",
+        compact: true,
+      });
+
+      const { schema } = result.structuredContent as {
+        schema: CompactDocumentModelSchema;
+      };
+      expect(schema.actions).toContainEqual(
+        expect.objectContaining({ type: "ADD_TRIGGER", scope: "local" }),
+      );
+      expect(schema.types?.TriggerType).toMatch(/^enum TriggerType \{ .+ \}$/);
+      expect(schema.types?.TransmitterType).toMatch(/^enum TransmitterType /);
+      expect(Object.keys(schema.types ?? {}).sort()).toEqual([
+        "TransmitterType",
+        "TriggerType",
+      ]);
     });
 
     it("should return error for non-existent document model", async () => {

@@ -72,7 +72,7 @@ export type AddDocumentTypeInput = {
  * tree) and can opt into which document types they accept.
  */
 export type AppModuleState = {
-  /** Document type ids this app handles. `null` means the app accepts any document type; an empty list means it accepts none. */
+  /** Document type ids this app handles. `null` and an empty list both mean the app accepts every document type. */
   allowedDocumentTypes: Maybe<Array<Scalars["String"]["output"]>>;
   /** Whether the app surface accepts dropped files from the user. Defaults to true. */
   isDragAndDropEnabled: Scalars["Boolean"]["output"];

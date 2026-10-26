@@ -117,7 +117,9 @@ async function getActionErrors(
  * @param actionOrActions - The action or actions to dispatch.
  * @param document - The document to dispatch actions to.
  * @param onErrors - Callback invoked with an `OperationRejectedError` for each action the
- * document did not apply, or with why nothing was dispatched.
+ * document did not apply, or with why nothing was dispatched. Runs before `onSuccess`.
+ * @param onSuccess - Callback invoked with the updated document once the write lands, after
+ * `onErrors` and also when an action was rejected.
  * @returns The updated document, or undefined if the dispatch failed.
  */
 export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
@@ -131,7 +133,9 @@ export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
  * @param actionOrActions - The action or actions to dispatch.
  * @param documentId - The ID of the document to dispatch actions to.
  * @param onErrors - Callback invoked with an `OperationRejectedError` for each action the
- * document did not apply.
+ * document did not apply. Runs before `onSuccess`.
+ * @param onSuccess - Callback invoked with the updated document once the write lands, after
+ * `onErrors` and also when an action was rejected.
  * @returns The updated document, or undefined if the dispatch failed.
  */
 export async function dispatchActions(
