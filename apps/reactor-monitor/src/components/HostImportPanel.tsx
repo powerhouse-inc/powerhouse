@@ -189,31 +189,44 @@ export function HostImportPanel({ onImport }: HostImportPanelProps) {
   useEffect(() => {
     const hasFiles = (event: DragEvent) =>
       Array.from(event.dataTransfer?.types ?? []).includes("Files");
-    const onDragOver = (event: DragEvent) => {
+    // Enter/leave fire per element crossed; the page is left when they balance.
+    let depth = 0;
+    const onDragEnter = (event: DragEvent) => {
       if (hasFiles(event)) {
-        event.preventDefault();
+        depth += 1;
         setDragging(true);
       }
     };
+    const onDragOver = (event: DragEvent) => {
+      if (hasFiles(event)) {
+        event.preventDefault();
+      }
+    };
     const onDragLeave = (event: DragEvent) => {
-      if (event.relatedTarget === null) {
-        setDragging(false);
+      if (hasFiles(event)) {
+        depth = Math.max(0, depth - 1);
+        if (depth === 0) {
+          setDragging(false);
+        }
       }
     };
     const onDrop = async (event: DragEvent) => {
+      depth = 0;
+      setDragging(false);
       const file = event.dataTransfer?.files[0];
       if (!file) {
         return;
       }
       event.preventDefault();
-      setDragging(false);
       setLoaded(loadResult(await readHostFile(file)));
     };
     const drop = (event: DragEvent) => void onDrop(event);
+    window.addEventListener("dragenter", onDragEnter);
     window.addEventListener("dragover", onDragOver);
     window.addEventListener("dragleave", onDragLeave);
     window.addEventListener("drop", drop);
     return () => {
+      window.removeEventListener("dragenter", onDragEnter);
       window.removeEventListener("dragover", onDragOver);
       window.removeEventListener("dragleave", onDragLeave);
       window.removeEventListener("drop", drop);

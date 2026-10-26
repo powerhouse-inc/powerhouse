@@ -142,10 +142,14 @@ describe("HostImportPanel", () => {
   it("shows the drop overlay while files are dragged over the page", () => {
     const { view } = renderPanel();
 
-    fireEvent.dragOver(window, { dataTransfer: { types: ["Files"] } });
+    const files = { dataTransfer: { types: ["Files"] } };
+    fireEvent.dragEnter(window, files);
+    fireEvent.dragEnter(window, files);
     expect(view.getByText(/Drop an exported host/)).toBeTruthy();
 
-    fireEvent.dragLeave(window, { relatedTarget: null });
+    fireEvent.dragLeave(window, files);
+    expect(view.getByText(/Drop an exported host/)).toBeTruthy();
+    fireEvent.dragLeave(window, files);
     expect(view.queryByText(/Drop an exported host/)).toBeNull();
   });
 
