@@ -4370,7 +4370,7 @@ reactor and reads one expense report as four identities.
   though her grant names a single operation: the operation list restricts what
   she may execute, not what she may see. The converse does not hold, so Carol
   reads the expenses and still cannot submit one.
-- **A write hands back a read** — the document `client.execute()` returns is
+- **A write hands back a read** — the document a write handle's `document()` returns is
   gated exactly like `get()`, as the client's own identity. Alice sees the
   scope she wrote and not the notes her policy withholds from her.
 - **A `{ group }` read grant follows the roster** — offboarding Bob withdraws
