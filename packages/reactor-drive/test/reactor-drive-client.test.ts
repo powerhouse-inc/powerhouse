@@ -2,8 +2,11 @@ import { MemoryFS, PGlite } from "@electric-sql/pglite";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
-  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
   JobInfo,
+  WriteHandle,
+  WriteReceipt,
 } from "@powerhousedao/reactor";
 import type { Action } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
@@ -21,7 +24,33 @@ function createJobInfo(): JobInfo {
   } as unknown as JobInfo;
 }
 
-function createMockReactor(overrides: Partial<IReactorClient> = {}) {
+function receiptFor(documentId: string): WriteReceipt {
+  return {
+    job: createJobInfo(),
+    token: { version: 1, createdAtUtcIso: "", coordinates: [] },
+    documentId,
+    branch: "main",
+  };
+}
+
+/** A settled handle whose document is whatever the inner mock resolved. */
+function handleFor(documentId: string, document: unknown): WriteHandle {
+  const receipt = receiptFor(documentId);
+  return {
+    jobId: receipt.job.id,
+    documentId,
+    branch: "main",
+    written: Promise.resolve(receipt),
+    readable: Promise.resolve(receipt),
+    document: () => Promise.resolve(document as never),
+  };
+}
+
+/**
+ * The client halves over plain spies: each write spy keeps the arguments the
+ * client passes, and the write half wraps its result in a settled handle.
+ */
+function createMockReactor() {
   const execute = vi.fn().mockResolvedValue(createJobInfo());
   const rename = vi.fn().mockResolvedValue(createJobInfo());
   const deleteDocument = vi.fn().mockResolvedValue(createJobInfo());
@@ -34,19 +63,36 @@ function createMockReactor(overrides: Partial<IReactorClient> = {}) {
   const get = vi.fn();
   const setPreferredEditor = vi.fn().mockResolvedValue(createJobInfo());
 
-  const reactor = {
-    execute,
-    rename,
-    deleteDocument,
-    create,
-    executeBatch,
-    get,
-    setPreferredEditor,
-    ...overrides,
-  } as unknown as IReactorClient;
+  const wrap =
+    (spy: (...args: unknown[]) => Promise<unknown>) =>
+    async (documentId: string, ...rest: unknown[]) =>
+      handleFor(documentId, await spy(documentId, ...rest));
+
+  const write = {
+    execute: wrap(execute),
+    rename: wrap(rename),
+    deleteDocument: wrap(deleteDocument),
+    setPreferredEditor: wrap(setPreferredEditor),
+    create: async (doc: { header: { id: string } }, ...rest: unknown[]) =>
+      handleFor(doc.header.id, await create(doc, ...rest)),
+    executeBatch: async (request: BatchExecutionRequest, signal?: unknown) => {
+      await executeBatch(request, signal);
+      const receipts = Object.fromEntries(
+        request.jobs.map((job) => [job.key, receiptFor(job.documentId)]),
+      );
+      return {
+        jobs: {},
+        handles: {},
+        written: Promise.resolve(receipts),
+        readable: Promise.resolve(receipts),
+      };
+    },
+  } as unknown as IReactorWriteClient;
+
+  const read = { get } as unknown as IReactorReadClient;
 
   return {
-    reactor,
+    reactor: { read, write },
     execute,
     rename,
     deleteDocument,
@@ -129,7 +175,7 @@ describe("ReactorDriveClient", () => {
 
   it("addFolder issues a single ADD_FOLDER targeting the drive", async () => {
     const { reactor, execute } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const folder = await client.addFolder("drive-1", "Notes");
 
@@ -155,7 +201,7 @@ describe("ReactorDriveClient", () => {
 
   it("addFolder under a parentFolder carries the parent id in the action input", async () => {
     const { reactor, execute } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const folder = await client.addFolder("drive-1", "Sub", "parent-folder");
 
@@ -178,7 +224,7 @@ describe("ReactorDriveClient", () => {
     get.mockResolvedValue({
       header: { id: "file-1", documentType: "powerhouse/document-model" },
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
     const doc = makeFileDoc("file-1", "powerhouse/document-model");
 
     await client.addFile("drive-1", doc);
@@ -221,7 +267,7 @@ describe("ReactorDriveClient", () => {
     get.mockResolvedValue({
       header: { id: "file-1", documentType: "powerhouse/document-model" },
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
     const doc = makeFileDoc("file-1", "powerhouse/document-model");
 
     await client.addFile("drive-1", doc, "parent-folder");
@@ -261,7 +307,7 @@ describe("ReactorDriveClient", () => {
         .execute();
       return createJobInfo();
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const result = await client.renameNode(driveId, "file-1", "new");
 
@@ -285,7 +331,7 @@ describe("ReactorDriveClient", () => {
         .execute();
       return createJobInfo();
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const result = await client.renameNode(driveId, "folder-1", "new");
 
@@ -316,7 +362,7 @@ describe("ReactorDriveClient", () => {
       },
     ]);
     const { reactor, execute, deleteDocument } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await client.removeNode(driveId, "file-1");
 
@@ -351,7 +397,7 @@ describe("ReactorDriveClient", () => {
       },
     ]);
     const { reactor, execute, deleteDocument } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await client.removeNode(driveId, "folder");
 
@@ -404,7 +450,7 @@ describe("ReactorDriveClient", () => {
       header: { id: driveId, documentType: "powerhouse/reactor-drive" },
       state: { global: { name: "Drive", icon: null } },
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await client.moveNode(driveId, "folder", "target");
 
@@ -439,7 +485,7 @@ describe("ReactorDriveClient", () => {
       header: { id: driveId, documentType: "powerhouse/reactor-drive" },
       state: { global: { name: "Drive", icon: null } },
     });
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await client.moveNode(driveId, "file-1", "target");
 
@@ -466,7 +512,7 @@ describe("ReactorDriveClient", () => {
 
   it("setPreferredEditorOnNode delegates to reactor.setPreferredEditor on the main branch", async () => {
     const { reactor, setPreferredEditor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await client.setPreferredEditorOnNode("node-1", "editor-x");
 
@@ -481,7 +527,7 @@ describe("ReactorDriveClient", () => {
 
   it("setPreferredEditorOnNode forwards a null editor and the AbortSignal", async () => {
     const { reactor, setPreferredEditor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
     const controller = new AbortController();
 
     await client.setPreferredEditorOnNode("node-1", null, controller.signal);
@@ -520,7 +566,7 @@ describe("ReactorDriveClient", () => {
       },
     ]);
     const { reactor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const page = await client.listNodes(driveId);
 
@@ -544,7 +590,7 @@ describe("ReactorDriveClient", () => {
       },
     ]);
     const { reactor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const page = await client.listNodes(driveId, null);
 
@@ -564,7 +610,7 @@ describe("ReactorDriveClient", () => {
       },
     ]);
     const { reactor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     const page = await client.listNodes(driveId, null, {
       cursor: "",
@@ -584,7 +630,7 @@ describe("ReactorDriveClient", () => {
 
   it("getNode throws when the node is missing", async () => {
     const { reactor } = createMockReactor();
-    const client = new ReactorDriveClient({ reactor, readModel: view });
+    const client = new ReactorDriveClient({ ...reactor, readModel: view });
 
     await expect(client.getNode("drive-1", "missing")).rejects.toThrow(
       /not found/,
@@ -594,7 +640,7 @@ describe("ReactorDriveClient", () => {
   describe("listNodes paging validation", () => {
     it("rejects a non-integer cursor", async () => {
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       await expect(
         client.listNodes("drive-1", null, { cursor: "abc", limit: 10 }),
       ).rejects.toThrow(/cursor/i);
@@ -602,7 +648,7 @@ describe("ReactorDriveClient", () => {
 
     it("rejects a negative cursor", async () => {
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       await expect(
         client.listNodes("drive-1", null, { cursor: "-5", limit: 10 }),
       ).rejects.toThrow(/cursor/i);
@@ -610,7 +656,7 @@ describe("ReactorDriveClient", () => {
 
     it("rejects a fractional cursor", async () => {
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       await expect(
         client.listNodes("drive-1", null, { cursor: "1.5", limit: 10 }),
       ).rejects.toThrow(/cursor/i);
@@ -618,7 +664,7 @@ describe("ReactorDriveClient", () => {
 
     it("rejects a limit of zero", async () => {
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       await expect(
         client.listNodes("drive-1", null, { cursor: "", limit: 0 }),
       ).rejects.toThrow(/limit/i);
@@ -626,7 +672,7 @@ describe("ReactorDriveClient", () => {
 
     it("rejects a negative limit", async () => {
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       await expect(
         client.listNodes("drive-1", null, { cursor: "", limit: -1 }),
       ).rejects.toThrow(/limit/i);
@@ -638,7 +684,7 @@ describe("ReactorDriveClient", () => {
         { id: "folder", kind: "folder", name: "F", parentFolder: null },
       ]);
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       const page = await client.listNodes(driveId, null, {
         cursor: "",
         limit: 10,
@@ -654,7 +700,7 @@ describe("ReactorDriveClient", () => {
         { id: "f3", kind: "folder", name: "C", parentFolder: null },
       ]);
       const { reactor } = createMockReactor();
-      const client = new ReactorDriveClient({ reactor, readModel: view });
+      const client = new ReactorDriveClient({ ...reactor, readModel: view });
       const firstPage = await client.listNodes(driveId, null, {
         cursor: "",
         limit: 1,

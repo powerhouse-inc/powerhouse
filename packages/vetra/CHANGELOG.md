@@ -1,3 +1,52 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.76 (2026-10-25)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.2.3-dev.75 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **vetra:** app module descriptions point at the editors/ folder codegen writes ([b3b3a08ffa](https://github.com/powerhouse-inc/powerhouse/commit/b3b3a08ffa))
+- **vetra:** codegen checks vetra drive membership by node or child edge when the debounce fires ([8273b738d3](https://github.com/powerhouse-inc/powerhouse/commit/8273b738d3))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **vetra:** codegen only reacts to the vetra drive's documents and logs a batch once ([63ee8c52d9](https://github.com/powerhouse-inc/powerhouse/commit/63ee8c52d9))
+- **codegen,ph-cli,vetra:** generate --all, --dir and --extract find existing modules, and --all keeps entries it can't read ([0361260750](https://github.com/powerhouse-inc/powerhouse/commit/0361260750))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **vetra,ph-cli:** refuse to scaffold a subgraph under a name the server serves already ([511c655955](https://github.com/powerhouse-inc/powerhouse/commit/511c655955))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.73 (2026-10-23)
 
 ### 🩹 Fixes

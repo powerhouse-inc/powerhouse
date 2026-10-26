@@ -104,6 +104,15 @@ export type RoutingOptions = {
   readonly subscriptionDedupSize?: number;
   /** Defaults to `console.warn`. */
   readonly onDiagnostic?: RouterDiagnostic;
+  /**
+   * Answers an id check (`isDocumentIdTaken`) that failed because a backend
+   * could not answer: given the id and the failure, the answer to give, or
+   * `undefined` to throw the failure. Absent, every such failure is thrown.
+   */
+  readonly answerFailedIdCheck?: (
+    documentId: string,
+    error: unknown,
+  ) => boolean | undefined;
   /** Signs the actions the router builds itself. Defaults to no signature. */
   readonly signer?: ISigner;
   /** The module registry, or a getter read on each lookup; absent, the primary backend's is used. */

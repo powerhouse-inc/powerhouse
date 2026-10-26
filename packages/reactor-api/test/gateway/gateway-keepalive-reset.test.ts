@@ -9,12 +9,13 @@ import type {
   GatewayContextFactory,
 } from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
+import { UNUSED_CLIENTS } from "../utils/client-halves.js";
 
 // Node closes an idle keep-alive connection 5 s after the last response and says so in every
 // response (`Keep-Alive: timeout=5`); a pooled connection reused around that moment hits a closed socket.
 
 const noopCtx: GatewayContextFactory<Context> = () =>
-  Promise.resolve({ headers: {}, db: null });
+  Promise.resolve({ headers: {}, db: null, clients: UNUSED_CLIENTS });
 
 const silentLogger = {
   level: "error" as const,

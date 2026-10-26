@@ -395,6 +395,62 @@ export interface IKeyframeStore {
 }
 
 /**
+ * A document's identity on one branch, as the write side records it.
+ */
+export type WriteIdentityRecord = {
+  documentId: string;
+  branch: string;
+  /** The slug the document resolves by; null when it has none or is deleted. */
+  slug: string | null;
+  documentType: string;
+  isDeleted: boolean;
+  createdAtUtcIso: string;
+  updatedAtUtcIso: string;
+};
+
+/**
+ * The identity an execution writes for a document on one branch. A non-null
+ * slug moves to this document from any other document on the branch.
+ */
+export type WriteIdentityUpsert = {
+  documentId: string;
+  branch: string;
+  slug: string | null;
+  documentType: string;
+  isDeleted: boolean;
+};
+
+/**
+ * The write side's document identity: which document an id or slug names on a
+ * branch, and its document type. Written in the execution transaction, so a
+ * mutation can resolve its target and run its pre-checks without the document
+ * view.
+ */
+export interface IWriteIdentityStore {
+  /** Inserts or replaces the identity of each row's document and branch, in order. */
+  upsert(rows: WriteIdentityUpsert[]): Promise<void>;
+
+  /**
+   * Resolves an id or slug on a branch, id first. A deleted document matches
+   * by id only, with `isDeleted` set. Throws when the identifier is the id of
+   * one document and the slug of another; undefined when nothing matches.
+   */
+  resolve(
+    identifier: string,
+    branch: string,
+  ): Promise<WriteIdentityRecord | undefined>;
+
+  /** The identity of a document on a branch, or undefined when unknown. */
+  describe(
+    documentId: string,
+    branch: string,
+  ): Promise<WriteIdentityRecord | undefined>;
+
+  /** Removes the document's identity on every branch. */
+  delete(documentId: string): Promise<void>;
+}
+
+/**
  * Filters applied when reading document state from {@link IDocumentView}.
  */
 export interface ViewFilter {

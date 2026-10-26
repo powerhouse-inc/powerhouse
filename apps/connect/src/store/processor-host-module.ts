@@ -2,6 +2,7 @@ import type { PGliteWithLive } from "@electric-sql/pglite/live";
 import {
   createReactorHostModuleBase,
   type IReadModel,
+  type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import {
   createAttachmentClient,
@@ -44,8 +45,13 @@ class NullAttachmentService implements IAttachmentService {
   }
 }
 
+/**
+ * Builds the tab's processor host module over the reactor client module:
+ * processors read through its read half and `dispatch` writes through its
+ * write half; the facade stays on `client` for processors not yet moved.
+ */
 export async function createProcessorHostModule(
-  reactorClient: IReactorClient,
+  clients: Pick<ReactorClientModule, "client" | "read" | "write">,
   readModels: ReadonlyArray<Pick<IReadModel, "name">>,
   attachmentService?: IAttachmentService,
 ): Promise<IProcessorHostModule | undefined> {
@@ -64,7 +70,9 @@ export async function createProcessorHostModule(
     });
     return {
       ...createReactorHostModuleBase({
-        client: reactorClient,
+        client: clients.client,
+        read: clients.read,
+        write: clients.write,
         readModels,
         relationalDb,
         analyticsStore,

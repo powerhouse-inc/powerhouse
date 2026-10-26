@@ -3,6 +3,15 @@ import { join } from "node:path";
 
 let loadedFor: string | undefined;
 
+/** `PH_NO_DOTENV=1` (or `true`): no `.env` file is read, so a launcher's
+ * explicit environment is the whole environment. */
+export function isDotenvDisabled(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  const value = env.PH_NO_DOTENV?.trim().toLowerCase();
+  return value === "1" || value === "true";
+}
+
 /**
  * Load the project's `.env.local` and `.env` into `process.env`.
  *
@@ -16,6 +25,7 @@ let loadedFor: string | undefined;
  * call it more than once per process.
  */
 export function loadProjectEnv(cwd: string = process.cwd()): void {
+  if (isDotenvDisabled()) return;
   if (loadedFor === cwd) return;
   loadedFor = cwd;
   // dotenv 16 logs nothing for a missing file, so no suppression option is

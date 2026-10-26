@@ -21,6 +21,7 @@ import {
   connectRoutesGeneratorConfig,
   connectRoutesTreeOf,
   generateConnectRoutes,
+  ignoreBuildOutput,
   ignoreDotPhButRouteTree,
   PACKAGE_ROUTES_MODULE,
   resolveConnectRoutesDir,
@@ -584,5 +585,23 @@ describe("the dev watcher's .ph filter", () => {
     expect(ignoreDotPhButRouteTree(root, false)(at(CONNECT_ROUTES_GEN))).toBe(
       true,
     );
+  });
+});
+
+describe("the dev watcher's build-output filter", () => {
+  const root = join(tmpdir(), "ph-watch");
+  const at = (path: string) => join(root, path);
+
+  it("ignores the project's dist and a Tauri shell's target, nothing else", () => {
+    const ignored = ignoreBuildOutput(root);
+    expect(ignored(at("dist/assets/index-abc.js"))).toBe(true);
+    expect(ignored(at("hosts/desktop/tauri-shell/target/debug/app.exe"))).toBe(
+      true,
+    );
+    expect(ignored(at("src-tauri/target/release/x"))).toBe(true);
+    expect(ignored(at("dist"))).toBe(false);
+    expect(ignored(at("distro/notes.md"))).toBe(false);
+    expect(ignored(at("editors/dist-view/index.tsx"))).toBe(false);
+    expect(ignored(at("hosts/desktop/tauri-shell/src/main.rs"))).toBe(false);
   });
 });

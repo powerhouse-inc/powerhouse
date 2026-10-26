@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  isDotenvDisabled,
   loadProjectEnv,
   readPortEnv,
   resetProjectEnvForTests,
@@ -19,6 +20,7 @@ describe("loadProjectEnv", () => {
 
   afterEach(() => {
     delete process.env.PH_SWITCHBOARD_PORT;
+    delete process.env.PH_NO_DOTENV;
     resetProjectEnvForTests();
   });
 
@@ -43,9 +45,30 @@ describe("loadProjectEnv", () => {
     expect(process.env.PH_SWITCHBOARD_PORT).toBe("41003");
   });
 
+  it("reads neither file under PH_NO_DOTENV", () => {
+    process.env.PH_NO_DOTENV = "1";
+    writeFileSync(join(dir, ".env"), "PH_SWITCHBOARD_PORT=41001\n");
+    writeFileSync(join(dir, ".env.local"), "PH_SWITCHBOARD_PORT=41002\n");
+    loadProjectEnv(dir);
+    expect(process.env.PH_SWITCHBOARD_PORT).toBeUndefined();
+  });
+
   it("is a no-op when neither file exists", () => {
     loadProjectEnv(dir);
     expect(process.env.PH_SWITCHBOARD_PORT).toBeUndefined();
+  });
+});
+
+describe("isDotenvDisabled", () => {
+  it.each([
+    ["1", true],
+    ["true", true],
+    [" TRUE ", true],
+    ["0", false],
+    ["", false],
+    [undefined, false],
+  ])("PH_NO_DOTENV=%j is %s", (value, expected) => {
+    expect(isDotenvDisabled({ PH_NO_DOTENV: value })).toBe(expected);
   });
 });
 

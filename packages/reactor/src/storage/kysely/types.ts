@@ -167,6 +167,17 @@ export interface DocumentPurgeTable {
   requestId: string;
 }
 
+/** The write side's document identity (migration 028). */
+export interface WriteIdentityTable {
+  documentId: string;
+  branch: string;
+  slug: string | null;
+  documentType: string;
+  isDeleted: Generated<boolean>;
+  createdAtUtcIso: string;
+  updatedAtUtcIso: string;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
@@ -180,6 +191,7 @@ export interface Database {
   sync_received_markers: SyncReceivedMarkerTable;
   sync_purge_refusals: SyncPurgeRefusalTable;
   document_purges: DocumentPurgeTable;
+  WriteIdentity: WriteIdentityTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;

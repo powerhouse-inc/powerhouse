@@ -162,7 +162,7 @@ export async function downloadFolderZip(
     async (id: string) => {
       const doc = await reactorClient.get<PHDocument>(id);
       // includes auth: an export must carry the policy history
-      const operations = await fetchDocumentOperations(reactorClient, doc);
+      const operations = await fetchDocumentOperations(reactorClient.read, doc);
       const initialState = extractInitialState(operations["document"] ?? []);
       return { ...doc, operations, initialState };
     },

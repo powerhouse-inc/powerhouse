@@ -173,7 +173,8 @@ async function startHarness(db: Kysely<unknown>): Promise<Harness> {
     signer,
     bus,
     drives: new ReactorDriveClient({
-      reactor: built.client,
+      read: built.read,
+      write: built.write,
       readModel: new DriveNodeView(view),
     }),
     view,

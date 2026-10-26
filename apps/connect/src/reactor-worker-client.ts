@@ -242,6 +242,8 @@ export function createWorkerReactorClientModule(
 
   const reactorClientModule: WorkerReactorClientModule = {
     kind: "worker",
+    read: clientProxy.read,
+    write: clientProxy.write,
     client: clientProxy,
     adminClient: createWorkerAdminClient(router),
     inspector: createInspectorProxy(router),

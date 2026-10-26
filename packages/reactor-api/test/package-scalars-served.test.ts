@@ -171,7 +171,7 @@ function makeReactorClient(models: DocumentModelModule[], executed: unknown[]) {
       Promise.resolve({ results: [], options: { cursor: "", limit: 1 } }),
     get: (id: string) =>
       Promise.resolve({ header: { id, documentType: "test/ledger" } }),
-    execute: (_id: string, _branch: string, actions: unknown[]) => {
+    executeAsync: (_id: string, _branch: string, actions: unknown[]) => {
       executed.push(...actions);
       return Promise.reject(new Error("not stored"));
     },

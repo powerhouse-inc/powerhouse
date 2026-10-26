@@ -3,14 +3,21 @@
  * packages/design-system/src/connect/components/catch-up-inspector/catch-up-inspector.tsx
  * for the same reason as QueueTab.tsx (see its header comment).
  */
-import type { CatchUpStatus, IInspectorAdmin } from "@powerhousedao/reactor";
+import {
+  computeProgress,
+  type CatchUpStatus,
+  type IInspectorAdmin,
+  type ReadModelProgress,
+} from "@powerhousedao/reactor";
 import type { MonitorInspector } from "@powerhousedao/reactor-monitor";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ADMIN_ALLOWED,
   AdminGateNote,
   type AdminGate,
 } from "../components/AdminGate.js";
+import { percentOf, ProgressBar } from "../components/ProgressBar.js";
+import { withHead } from "../lib/catch-up.js";
 
 export type CatchUpTabProps = {
   readonly inspector: MonitorInspector;
@@ -33,6 +40,17 @@ function formatDuration(ms: number): string {
     return `${minutes}m ${seconds}s`;
   }
   return `${seconds}s`;
+}
+
+function readModelValue(row: ReadModelProgress): string {
+  if (row.blocked) return "blocked";
+  if (row.complete) return "done";
+  return `${percentOf(row.fraction)}%`;
+}
+
+function readModelDetail(row: ReadModelProgress): string {
+  const position = `applied through ${row.appliedThrough} of ${row.head}`;
+  return `${readModelValue(row)}, ${position}`;
 }
 
 export function CatchUpTab({
@@ -85,6 +103,11 @@ export function CatchUpTab({
   const consumers = status?.consumers ?? [];
   const settledThrough = watermark?.settledThrough ?? 0;
   const blockedCount = consumers.filter((c) => c.blockedAt).length;
+  const readModels = useMemo(() => {
+    const measurable = withHead(status);
+    const rows = measurable ? computeProgress([], measurable).readModels : [];
+    return new Map(rows.map((row) => [row.consumerId, row]));
+  }, [status]);
 
   return (
     <div className="rm-tab">
@@ -145,10 +168,11 @@ export function CatchUpTab({
       ) : null}
 
       <div className="rm-table-wrap">
-        <table className="rm-table">
+        <table className="rm-table" data-testid="read-model-progress">
           <thead>
             <tr>
               <th>Consumer</th>
+              <th>Progress</th>
               <th>Thread</th>
               <th>Applied Through</th>
               <th>Lag</th>
@@ -163,19 +187,45 @@ export function CatchUpTab({
           <tbody>
             {consumers.length === 0 ? (
               <tr>
-                <td className="rm-table-empty" colSpan={10}>
+                <td className="rm-table-empty" colSpan={11}>
                   {loading && !status ? "Loading..." : "No catch-up consumers"}
                 </td>
               </tr>
             ) : (
               consumers.map((consumer) => {
                 const blocked = consumer.blockedAt;
+                const row = readModels.get(consumer.consumerId);
                 return (
                   <tr
                     key={consumer.consumerId}
                     className={blocked ? "rm-row-error" : undefined}
                   >
                     <td title={consumer.consumerId}>{consumer.consumerId}</td>
+                    <td className="rm-progress-cell">
+                      {row ? (
+                        <ProgressBar
+                          detail={readModelDetail(row)}
+                          fraction={row.fraction}
+                          hideLabel
+                          label={row.consumerId}
+                          tone={
+                            row.blocked
+                              ? "error"
+                              : row.complete
+                                ? "done"
+                                : "active"
+                          }
+                          value={readModelValue(row)}
+                        />
+                      ) : (
+                        <span
+                          className="rm-note"
+                          title="Its processors have their own bars on the Processors tab"
+                        >
+                          per factory on Processors
+                        </span>
+                      )}
+                    </td>
                     <td>{consumer.thread}</td>
                     <td>{consumer.appliedThrough}</td>
                     <td>{settledThrough - consumer.appliedThrough}</td>

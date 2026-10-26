@@ -12,7 +12,13 @@ import {
   MAX_MERGED_OPERATIONS,
   ProcessorQueue,
   type ProcessorCursorState,
+  type ProcessorProgressState,
 } from "../../src/processors/processor-queue.js";
+import {
+  BackfillSlots,
+  type IBackfillSlots,
+} from "../../src/processors/backfill-slots.js";
+import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
 import type { PagedResults } from "../../src/shared/types.js";
 import { createMockLogger, deferred } from "../factories.js";
 
@@ -90,6 +96,7 @@ function pagedIndex(
 type Harness = {
   queue: ProcessorQueue;
   cursor: ProcessorCursorState;
+  progress: ProcessorProgressState;
   delivered: number[][];
   persisted: ProcessorCursorState[];
   processor: IProcessor & { onOperations: ReturnType<typeof vi.fn> };
@@ -103,6 +110,7 @@ function harness(
     index?: OperationWithContext[];
     readSince?: (
       ordinal: number,
+      limit: number,
     ) => Promise<PagedResults<OperationWithContext>>;
     onOperations?: (ops: OperationWithContext[]) => Promise<void>;
     onDisconnect?: () => Promise<void>;
@@ -111,6 +119,9 @@ function harness(
     purged?: (ids: string[]) => Promise<ReadonlySet<string>>;
     lookupRetryMs?: number;
     lookupRetries?: number;
+    backfillSlots?: IBackfillSlots;
+    betweenPages?: (closing: AbortSignal) => Promise<void>;
+    pageSize?: () => number;
   } = {},
 ): Harness {
   const delivered: number[][] = [];
@@ -120,6 +131,10 @@ function harness(
     status: "active",
     lastError: undefined,
     lastErrorTimestamp: undefined,
+  };
+  const progress: ProcessorProgressState = {
+    runFrom: cursor.lastOrdinal,
+    phase: "live",
   };
   const processor = {
     onOperations: vi.fn(async (ops: OperationWithContext[]) => {
@@ -133,6 +148,7 @@ function harness(
     processor,
     filter: options.filter ?? {},
     cursor,
+    progress,
     floor: options.floor ?? 0,
     readSince: options.readSince ?? pagedIndex(options.index ?? []),
     routedThrough: options.routedThrough ?? (() => Number.MAX_SAFE_INTEGER),
@@ -145,9 +161,12 @@ function harness(
     purged: options.purged ?? (() => Promise.resolve(new Set())),
     lookupRetryMs: options.lookupRetryMs ?? 1,
     lookupRetries: options.lookupRetries,
+    backfillSlots: options.backfillSlots,
+    betweenPages: options.betweenPages,
+    pageSize: options.pageSize,
     logger: createMockLogger(),
   });
-  return { queue, cursor, delivered, persisted, processor };
+  return { queue, cursor, progress, delivered, persisted, processor };
 }
 
 describe("ProcessorQueue", () => {
@@ -351,6 +370,7 @@ describe("ProcessorQueue", () => {
         },
         filter: {},
         cursor,
+        progress: { runFrom: 0, phase: "live" },
         floor: 0,
         readSince: pagedIndex([]),
         routedThrough: () => Number.MAX_SAFE_INTEGER,
@@ -418,6 +438,267 @@ describe("ProcessorQueue", () => {
 
       expect(cursor.status).toBe("active");
       expect(delivered).toEqual([[1, 2]]);
+    });
+  });
+
+  describe("backfill pages", () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, i) => op(i + 1));
+
+    it("runs its between-pages step after every page but the last", async () => {
+      const betweenPages = vi.fn(() => Promise.resolve());
+      const { queue, delivered } = harness({
+        readSince: pagedIndex(many(250), 100),
+        betweenPages,
+      });
+
+      await queue.backfill();
+
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 100, 50]);
+      expect(betweenPages).toHaveBeenCalledTimes(2);
+    });
+
+    it("lets a timer run in the middle of a backfill by default", async () => {
+      const events: string[] = [];
+      const { queue } = harness({
+        readSince: pagedIndex(many(300), 100),
+        onOperations: (ops) => {
+          events.push(`page ${ops[0]!.context.ordinal}`);
+          // Armed once the backfill runs, so it can only fire if a page gives way.
+          if (events.length === 1) {
+            setTimeout(() => events.push("timer"), 0);
+            // Past the timer's 1 ms, so it is due at the next turn.
+            const due = Date.now() + 2;
+            while (Date.now() < due);
+          }
+          return Promise.resolve();
+        },
+      });
+
+      await queue.backfill();
+
+      expect(events).toContain("timer");
+      expect(events.at(-1)).not.toBe("timer");
+    });
+
+    it("waits for a free backfill slot shared with other queues", async () => {
+      const slots = new BackfillSlots(1);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      const first = harness({
+        index: [op(1)],
+        backfillSlots: slots,
+        onOperations: () => held,
+      });
+      const second = harness({ index: [op(1)], backfillSlots: slots });
+
+      const firstDone = first.queue.backfill();
+      const secondDone = second.queue.backfill();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(second.processor.onOperations).not.toHaveBeenCalled();
+
+      release();
+      await firstDone;
+      await secondDone;
+      expect(second.delivered).toEqual([[1]]);
+    });
+  });
+
+  describe("catch-up priority", () => {
+    const many = (count: number) =>
+      Array.from({ length: count }, (_, i) => op(i + 1));
+
+    // Honours the limit each read asks for, as getSinceOrdinal does.
+    function limitedIndex(index: OperationWithContext[], reads: number[]) {
+      return (ordinal: number, limit: number) => {
+        reads.push(limit);
+        const after = index.filter((o) => o.context.ordinal > ordinal);
+        const results = after.slice(0, limit);
+        return Promise.resolve<PagedResults<OperationWithContext>>({
+          results,
+          options: { cursor: "", limit },
+          next:
+            after.length > limit
+              ? () => Promise.reject(new Error("next() is not used"))
+              : undefined,
+        });
+      };
+    }
+
+    function paced(priority: CatchUpPriority) {
+      return {
+        backfillSlots: priority.slots,
+        pageSize: () => priority.pageSize(),
+        betweenPages: (closing: AbortSignal) => priority.betweenPages(closing),
+      };
+    }
+
+    it("reads each page with the page size current at that page", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 1 });
+      const reads: number[] = [];
+      let pages = 0;
+      const { queue, delivered, cursor } = harness({
+        readSince: limitedIndex(many(1200), reads),
+        ...paced(priority),
+        onOperations: () => {
+          if (++pages === 1) priority.set({ mode: "fixed", level: 6 });
+          return Promise.resolve();
+        },
+      });
+
+      await queue.backfill();
+
+      expect(reads).toEqual([100, 1000, 1000]);
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 1000, 100]);
+      expect(cursor.lastOrdinal).toBe(1200);
+    });
+
+    it("never starts a scan at level 0, and starts it once the level rises", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({
+        index: many(3),
+        ...paced(priority),
+      });
+
+      const done = queue.backfill();
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(delivered).toEqual([]);
+
+      priority.set({ mode: "fixed", level: 4 });
+      await done;
+      expect(delivered).toEqual([[1, 2, 3]]);
+    });
+
+    it("stops a running scan after its page at level 0, holding its slot", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 1 });
+      const reads: number[] = [];
+      const { queue, delivered, cursor } = harness({
+        readSince: limitedIndex(many(250), reads),
+        ...paced(priority),
+        onOperations: () => {
+          if (delivered.length === 0) priority.set({ mode: "fixed", level: 0 });
+          return Promise.resolve();
+        },
+      });
+
+      const done = queue.backfill();
+      await vi.waitFor(() => expect(delivered).toHaveLength(1));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(delivered).toHaveLength(1);
+      expect(cursor.lastOrdinal).toBe(100);
+      expect(priority.slots.inUse).toBe(1);
+
+      priority.set({ mode: "fixed", level: 2 });
+      await done;
+      expect(delivered.map((batch) => batch.length)).toEqual([100, 150]);
+      expect(priority.slots.inUse).toBe(0);
+    });
+
+    it("keeps delivering live operations at level 0", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({ ...paced(priority) });
+
+      await queue.live([op(1), op(2)]);
+
+      expect(delivered).toEqual([[1, 2]]);
+    });
+
+    // Three scans of `count` each, all inside their first page's delivery.
+    async function threeScansMidPage(priority: CatchUpPriority, count: number) {
+      const gate = deferred();
+      let entered = 0;
+      const scans = [0, 1, 2].map(() => {
+        const scan = harness({
+          readSince: limitedIndex(many(count), []),
+          ...paced(priority),
+          onOperations: async () => {
+            if (scan.delivered.length > 0) return;
+            entered++;
+            await gate.promise;
+          },
+        });
+        return scan;
+      });
+      const done = scans.map((scan) => scan.queue.backfill());
+      await vi.waitFor(() => expect(entered).toBe(3));
+      return { scans, done, release: () => gate.resolve() };
+    }
+
+    it("takes slots back from running scans when the level drops", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 4 });
+      const { scans, done, release } = await threeScansMidPage(priority, 2000);
+
+      priority.set({ mode: "fixed", level: 1 });
+      release();
+      await vi.waitFor(() => expect(priority.slots.waiters).toBe(2));
+      expect(priority.slots.inUse).toBe(1);
+      const pagesAt = () => scans.map((scan) => scan.delivered.length);
+      const before = pagesAt();
+      await vi.waitFor(() =>
+        expect(pagesAt().reduce((a, b) => a + b)).toBeGreaterThanOrEqual(
+          before.reduce((a, b) => a + b) + 3,
+        ),
+      );
+      const moved = pagesAt().filter((pages, i) => pages > before[i]!);
+      expect(moved).toHaveLength(1);
+
+      priority.set({ mode: "fixed", level: 7 });
+      await Promise.all(done);
+      for (const scan of scans) expect(scan.cursor.lastOrdinal).toBe(2000);
+      expect(priority.slots.inUse).toBe(0);
+    });
+
+    it("resumes one scan of three when level 0 rises to 1", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 4 });
+      const { scans, done, release } = await threeScansMidPage(priority, 1000);
+
+      priority.set({ mode: "fixed", level: 0 });
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(scans.map((scan) => scan.delivered.length)).toEqual([1, 1, 1]);
+      expect(priority.slots.inUse).toBe(3);
+
+      priority.set({ mode: "fixed", level: 1 });
+      await vi.waitFor(() => expect(priority.slots.waiters).toBe(2));
+      expect(priority.slots.inUse).toBe(1);
+
+      priority.set({ mode: "fixed", level: 7 });
+      await Promise.all(done);
+      for (const scan of scans) expect(scan.cursor.lastOrdinal).toBe(1000);
+    });
+
+    it("reads no further page once closed during the pause", async () => {
+      const reads: number[] = [];
+      let close!: () => void;
+      const { queue, delivered } = harness({
+        readSince: limitedIndex(many(300), reads),
+        pageSize: () => 100,
+        betweenPages: () => {
+          close();
+          return Promise.resolve();
+        },
+      });
+      close = () => void queue.close();
+
+      await queue.backfill();
+
+      expect(reads).toEqual([100]);
+      expect(delivered).toEqual([Array.from({ length: 100 }, (_, i) => i + 1)]);
+    });
+
+    it("lets a closing queue leave a level-0 wait", async () => {
+      const priority = new CatchUpPriority({ mode: "fixed", level: 0 });
+      const { queue, delivered } = harness({
+        index: many(2),
+        ...paced(priority),
+      });
+
+      const done = queue.backfill();
+      await queue.close();
+      await done;
+
+      expect(delivered).toEqual([]);
+      expect(priority.slots.waiters).toBe(0);
     });
   });
 
@@ -551,13 +832,12 @@ describe("ProcessorQueue", () => {
 
     it("should mark errored when a later page read rejects", async () => {
       const index = [1, 2, 3].map((n) => op(n));
-      const first = await pagedIndex(index, 2)(0);
+      const read = pagedIndex(index, 2);
       const { queue, cursor, delivered } = harness({
-        readSince: () =>
-          Promise.resolve({
-            ...first,
-            next: () => Promise.reject(new Error("page 2 failed")),
-          }),
+        readSince: (ordinal) =>
+          ordinal === 0
+            ? read(ordinal)
+            : Promise.reject(new Error("page 2 failed")),
       });
 
       await queue.backfill();
@@ -977,6 +1257,82 @@ describe("ProcessorQueue", () => {
 
       expect(delivered).toEqual([[1, 2]]);
       expect(cursor).toMatchObject({ status: "active", lastOrdinal: 2 });
+    });
+  });
+
+  describe("progress", () => {
+    it("keeps the run start where a backfill began while the cursor climbs", async () => {
+      const index = [1, 2, 3, 4, 5, 6].map((n) => op(n));
+      const gate = deferred();
+      let calls = 0;
+      const { queue, cursor, progress } = harness({
+        lastOrdinal: 2,
+        readSince: pagedIndex(index, 2),
+        onOperations: () => (++calls === 2 ? gate.promise : Promise.resolve()),
+      });
+      expect(progress).toEqual({ runFrom: 2, phase: "live" });
+
+      const done = queue.backfill();
+      expect(progress.phase).toBe("catching-up");
+
+      await vi.waitFor(() => expect(calls).toBe(2));
+      expect(cursor.lastOrdinal).toBe(4);
+      expect(progress).toEqual({ runFrom: 2, phase: "catching-up" });
+
+      gate.resolve();
+      await done;
+      expect(cursor.lastOrdinal).toBe(6);
+      expect(progress).toEqual({ runFrom: 6, phase: "live" });
+    });
+
+    it("follows the cursor while live", async () => {
+      const { queue, progress } = harness();
+
+      await queue.live([op(1), op(2)]);
+      await queue.advance(5);
+
+      expect(progress).toEqual({ runFrom: 5, phase: "live" });
+    });
+
+    it("starts a rewind's run at its ordinal", async () => {
+      const index = [1, 2, 3, 4].map((n) => op(n));
+      const gate = deferred();
+      const runs: number[] = [];
+      const { queue, progress } = harness({
+        lastOrdinal: 4,
+        index,
+        onOperations: () => {
+          runs.push(progress.runFrom);
+          return gate.promise;
+        },
+      });
+
+      const rewound = queue.rewind(1, () => Promise.resolve());
+      await vi.waitFor(() => expect(runs).toEqual([1]));
+      expect(progress.phase).toBe("catching-up");
+
+      gate.resolve();
+      await rewound;
+      expect(progress).toEqual({ runFrom: 4, phase: "live" });
+    });
+
+    it("reads errored after a failure until a retry replays", async () => {
+      let fail = true;
+      const { queue, cursor, progress } = harness({
+        index: [op(1), op(2)],
+        onOperations: () =>
+          fail ? Promise.reject(new Error("boom")) : Promise.resolve(),
+      });
+
+      await queue.backfill();
+      expect(cursor.status).toBe("errored");
+      expect(progress).toEqual({ runFrom: 0, phase: "errored" });
+
+      fail = false;
+      const retried = queue.retry();
+      expect(progress.phase).toBe("errored");
+      await retried;
+      expect(progress).toEqual({ runFrom: 2, phase: "live" });
     });
   });
 });

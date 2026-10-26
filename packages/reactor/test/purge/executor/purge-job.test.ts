@@ -8,6 +8,7 @@ import {
 import { setModelName } from "document-model";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Kysely } from "kysely";
 import {
   addRelationshipAction,
   removeRelationshipAction,
@@ -31,6 +32,27 @@ import {
   type PurgeReactor,
   type TestDatabase,
 } from "./harness.js";
+
+/** The permission tables of migration 029, outside the storage types. */
+type PermissionTables = {
+  DocumentPermission: {
+    documentId: string;
+    userAddress: string;
+    permission: string;
+    grantedBy: string;
+  };
+  OperationUserPermission: {
+    documentId: string;
+    operationType: string;
+    userAddress: string;
+    grantedBy: string;
+  };
+  DocumentProtection: {
+    documentId: string;
+    protected: boolean;
+    ownerAddress: string;
+  };
+};
 
 const HOST_USER = { address: "0xhost", networkId: "eip155", chainId: 1 };
 
@@ -127,6 +149,29 @@ describe("purge job [Postgres]", () => {
         )
       ).id,
     );
+    const permissions = host.db as unknown as Kysely<PermissionTables>;
+    await permissions
+      .insertInto("DocumentPermission")
+      .values({
+        documentId,
+        userAddress: "0xreader",
+        permission: "READ",
+        grantedBy: "0xowner",
+      })
+      .execute();
+    await permissions
+      .insertInto("OperationUserPermission")
+      .values({
+        documentId,
+        operationType: "SET_NAME",
+        userAddress: "0xreader",
+        grantedBy: "0xowner",
+      })
+      .execute();
+    await permissions
+      .insertInto("DocumentProtection")
+      .values({ documentId, protected: true, ownerAddress: "0xowner" })
+      .execute();
     const before = await deleteListCounts(host.db, documentId);
     expect(before.Operation).toBeGreaterThan(0);
 
@@ -173,6 +218,9 @@ describe("purge job [Postgres]", () => {
       DocumentSnapshot: before.DocumentSnapshot,
       SlugMapping: before.SlugMapping,
       Document: before.Document,
+      DocumentPermission: 1,
+      OperationUserPermission: 1,
+      DocumentProtection: 1,
     });
 
     const memberships = await host.db

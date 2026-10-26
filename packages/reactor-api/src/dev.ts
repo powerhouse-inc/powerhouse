@@ -21,10 +21,11 @@ import {
 import type { DocumentModelModule } from "document-model";
 import { logger } from "document-model";
 import dotenv from "dotenv";
+import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
 import { initializeAndStartAPI } from "./server.js";
 import type { ClientInitializerDependencies } from "./server.js";
 
-dotenv.config();
+if (!isDotenvDisabled()) dotenv.config();
 
 const DEFAULT_PORT = 4001;
 

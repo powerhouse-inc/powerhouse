@@ -11,10 +11,12 @@ import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
+import type { RequestClients } from "../src/graphql/request-clients.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
+import { EMPTY_TOKEN, halvesOf } from "./utils/client-halves.js";
 import {
   buildReadGateReactor,
-  contextFor,
+  mutationContextFor,
   createFixture,
   holdsGlobal,
   openAuthorization,
@@ -64,7 +66,7 @@ describe("reactor subgraph mutations return documents read as the caller", () =>
   const as = async (
     run: (ctx: Context) => Promise<unknown>,
     address?: string,
-  ) => holdsGlobal((await run(contextFor(address))) as Served);
+  ) => holdsGlobal((await run(mutationContextFor(module!, address))) as Served);
 
   it("execute and mutateDocument", async () => {
     const { secret, mutation } = await fixture();
@@ -150,7 +152,7 @@ describe("reactor subgraph mutations return documents read as the caller", () =>
           targetIdentifier: target,
           relationshipType: "child",
         },
-        contextFor(address),
+        mutationContextFor(module!, address),
       )) as { source: Served; target: Served };
       const policed = to === secret ? result.target : result.source;
       expect(holdsGlobal(policed), String(address)).toBe(address === READER);
@@ -195,12 +197,12 @@ describe("create resolvers return the document read as the caller", () => {
   it.each([
     [
       "createDocument",
-      (c: IReactorClient) =>
+      (c: RequestClients) =>
         resolvers.createDocument(c, { document: created }, undefined, subject),
     ],
     [
       "createEmptyDocument",
-      (c: IReactorClient) =>
+      (c: RequestClients) =>
         resolvers.createEmptyDocument(
           c,
           { documentType: created.header.documentType },
@@ -210,7 +212,7 @@ describe("create resolvers return the document read as the caller", () => {
     ],
     [
       "createDocumentWithInitialState",
-      (c: IReactorClient) =>
+      (c: RequestClients) =>
         resolvers.createDocumentWithInitialState(
           c,
           { documentType: created.header.documentType, initialState: {} },
@@ -220,8 +222,13 @@ describe("create resolvers return the document read as the caller", () => {
     ],
   ])("%s", async (_name, run) => {
     const { client: c, get } = client();
-    const result = await run(c);
-    expect(get).toHaveBeenCalledWith("created", { subject, branch: undefined });
+    const result = await run(halvesOf(c));
+    expect(get).toHaveBeenCalledWith(
+      "created",
+      { subject, branch: "main" },
+      undefined,
+      EMPTY_TOKEN,
+    );
     expect(result.state).toEqual({});
   });
 });

@@ -120,6 +120,42 @@ export const inspectionTypeDefs = gql`
     lastErrorTimestampUtcMs: Float
     floor: Float!
     clearable: Boolean!
+    runFrom: Float!
+    phase: String!
+  }
+
+  """
+  What one catch-up priority level sets. giveWay is stop (level 0: no page is
+  read until the level rises), pause (pauseMs between pages), yield (one
+  event-loop turn) or none.
+  """
+  type InspectionCatchUpLevelSettings {
+    slots: Int!
+    pageSize: Int!
+    pauseMs: Int!
+    giveWay: String!
+  }
+
+  """
+  The host's load over its last window, as the dynamic controller read it.
+  """
+  type InspectionCatchUpLoadSample {
+    requests: Int!
+    p95LatencyMs: Float!
+    eventLoopDelayMs: Float!
+    idleForMs: Float!
+  }
+
+  """
+  The pace of processor backfills. mode is fixed or dynamic; level is 0-7.
+  sample is null until a dynamic tick has sampled the host's load.
+  """
+  type InspectionCatchUpPriority {
+    mode: String!
+    level: Int!
+    settings: InspectionCatchUpLevelSettings!
+    reason: String!
+    sample: InspectionCatchUpLoadSample
   }
 
   """
@@ -210,6 +246,7 @@ export const inspectionTypeDefs = gql`
     queueState: InspectionQueueState!
     processors: [InspectionProcessor!]!
     catchUpStatus: JSONObject!
+    catchUpPriority: InspectionCatchUpPriority!
     storageHealth: InspectionStorageHealth!
     """
     Replays the whole document; expensive. Throttled per caller.

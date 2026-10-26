@@ -1,9 +1,14 @@
 import type { Kysely } from "kysely";
-import { sql } from "kysely";
 import type {
   DocumentPermissionDatabase,
   DocumentPermissionLevel,
 } from "../utils/db.js";
+import {
+  DEFAULT_PERMISSION_CACHE_OPTIONS,
+  DocumentPermissionSnapshot,
+  PermissionCache,
+  type PermissionCacheOptions,
+} from "./permission-cache.js";
 
 export interface DocumentPermissionEntry {
   documentId: string;
@@ -48,12 +53,23 @@ export interface DocumentPermissionConfig {
  */
 export class DocumentPermissionService {
   readonly config: DocumentPermissionConfig;
+  /**
+   * Serves the reads authorization decisions make (protection, owner, grant
+   * level, operation grants). Every write through this service invalidates
+   * the document it touched.
+   */
+  readonly permissionCache: PermissionCache;
 
   constructor(
     private readonly db: Kysely<DocumentPermissionDatabase>,
     config: DocumentPermissionConfig = { defaultProtection: false },
+    cacheOptions: PermissionCacheOptions = DEFAULT_PERMISSION_CACHE_OPTIONS,
   ) {
     this.config = config;
+    this.permissionCache = new PermissionCache(
+      (documentIds) => this.loadPermissionSnapshots(documentIds),
+      cacheOptions,
+    );
   }
 
   // ============================================
@@ -68,14 +84,8 @@ export class DocumentPermissionService {
     documentId: string,
     userAddress: string,
   ): Promise<DocumentPermissionLevel | null> {
-    const result = await this.db
-      .selectFrom("DocumentPermission")
-      .select("permission")
-      .where("documentId", "=", documentId)
-      .where("userAddress", "=", userAddress.toLowerCase())
-      .executeTakeFirst();
-
-    return result?.permission ?? null;
+    const snapshot = await this.permissionCache.get(documentId);
+    return snapshot.grantLevel(userAddress);
   }
 
   /**
@@ -151,7 +161,8 @@ export class DocumentPermissionService {
           updatedAt: now,
         }),
       )
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
 
     const result = await this.db
       .selectFrom("DocumentPermission")
@@ -181,7 +192,8 @@ export class DocumentPermissionService {
       .deleteFrom("DocumentPermission")
       .where("documentId", "=", documentId)
       .where("userAddress", "=", userAddress.toLowerCase())
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
   }
 
   /**
@@ -196,13 +208,15 @@ export class DocumentPermissionService {
       .deleteFrom("DocumentPermission")
       .where("documentId", "=", documentId)
       .returning("id")
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
 
     const operations = await this.db
       .deleteFrom("OperationUserPermission")
       .where("documentId", "=", documentId)
       .returning("id")
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
 
     return {
       DocumentPermission: permissions.length,
@@ -216,7 +230,8 @@ export class DocumentPermissionService {
       .deleteFrom("DocumentProtection")
       .where("documentId", "=", documentId)
       .returning("documentId")
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
     return rows.length;
   }
 
@@ -297,7 +312,8 @@ export class DocumentPermissionService {
       .onConflict((oc) =>
         oc.columns(["documentId", "operationType", "userAddress"]).doNothing(),
       )
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
 
     const result = await this.db
       .selectFrom("OperationUserPermission")
@@ -329,7 +345,8 @@ export class DocumentPermissionService {
       .where("documentId", "=", documentId)
       .where("operationType", "=", operationType)
       .where("userAddress", "=", userAddress.toLowerCase())
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
   }
 
   /**
@@ -361,17 +378,8 @@ export class DocumentPermissionService {
     operationType: string,
     userAddress: string,
   ): Promise<boolean> {
-    const normalizedAddress = userAddress.toLowerCase();
-
-    const userPermission = await this.db
-      .selectFrom("OperationUserPermission")
-      .select("userAddress")
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .where("userAddress", "=", normalizedAddress)
-      .executeTakeFirst();
-
-    return !!userPermission;
+    const snapshot = await this.permissionCache.get(documentId);
+    return snapshot.hasOperationGrant(operationType, userAddress);
   }
 
   /**
@@ -381,14 +389,8 @@ export class DocumentPermissionService {
     documentId: string,
     operationType: string,
   ): Promise<boolean> {
-    const userPermCount = await this.db
-      .selectFrom("OperationUserPermission")
-      .select(sql<number>`count(*)`.as("count"))
-      .where("documentId", "=", documentId)
-      .where("operationType", "=", operationType)
-      .executeTakeFirst();
-
-    return userPermCount !== undefined && Number(userPermCount.count) > 0;
+    const snapshot = await this.permissionCache.get(documentId);
+    return snapshot.isOperationRestricted(operationType);
   }
 
   // ============================================
@@ -400,17 +402,8 @@ export class DocumentPermissionService {
    * Falls back to `config.defaultProtection` if no row exists.
    */
   async isDocumentProtected(documentId: string): Promise<boolean> {
-    const row = await this.db
-      .selectFrom("DocumentProtection")
-      .select("protected")
-      .where("documentId", "=", documentId)
-      .executeTakeFirst();
-
-    if (row === undefined) {
-      return this.config.defaultProtection;
-    }
-
-    return row.protected;
+    const snapshot = await this.permissionCache.get(documentId);
+    return snapshot.isProtected;
   }
 
   /**
@@ -429,23 +422,81 @@ export class DocumentPermissionService {
       return this.config.defaultProtection;
     }
 
-    const rows = await this.db
-      .selectFrom("DocumentProtection")
-      .select(["documentId", "protected"])
-      .where("documentId", "in", allIds)
-      .execute();
-
-    const protectionMap = new Map(rows.map((r) => [r.documentId, r.protected]));
-
-    for (const id of allIds) {
-      const isProtected = protectionMap.get(id);
-      // If no row exists, fall back to defaultProtection
-      if (isProtected ?? this.config.defaultProtection) {
+    const snapshots = await this.permissionCache.getMany(allIds);
+    for (const snapshot of snapshots.values()) {
+      if (snapshot.isProtected) {
         return true;
       }
     }
 
     return false;
+  }
+
+  /**
+   * Reads the permission rows of the given documents from the store, three
+   * queries for the whole batch. The permission cache's loader.
+   */
+  async loadPermissionSnapshots(
+    documentIds: string[],
+  ): Promise<Map<string, DocumentPermissionSnapshot>> {
+    const protections = await this.db
+      .selectFrom("DocumentProtection")
+      .select(["documentId", "protected", "ownerAddress"])
+      .where("documentId", "in", documentIds)
+      .execute();
+    const grants = await this.db
+      .selectFrom("DocumentPermission")
+      .select(["documentId", "userAddress", "permission"])
+      .where("documentId", "in", documentIds)
+      .execute();
+    const operationGrants = await this.db
+      .selectFrom("OperationUserPermission")
+      .select(["documentId", "operationType", "userAddress"])
+      .where("documentId", "in", documentIds)
+      .execute();
+
+    const protectionById = new Map(
+      protections.map((row) => [row.documentId, row]),
+    );
+    const grantsById = new Map<string, Map<string, DocumentPermissionLevel>>();
+    for (const row of grants) {
+      let byUser = grantsById.get(row.documentId);
+      if (!byUser) {
+        byUser = new Map();
+        grantsById.set(row.documentId, byUser);
+      }
+      byUser.set(row.userAddress, row.permission);
+    }
+    const operationsById = new Map<string, Map<string, Set<string>>>();
+    for (const row of operationGrants) {
+      let byOperation = operationsById.get(row.documentId);
+      if (!byOperation) {
+        byOperation = new Map();
+        operationsById.set(row.documentId, byOperation);
+      }
+      let users = byOperation.get(row.operationType);
+      if (!users) {
+        users = new Set();
+        byOperation.set(row.operationType, users);
+      }
+      users.add(row.userAddress);
+    }
+
+    const snapshots = new Map<string, DocumentPermissionSnapshot>();
+    for (const documentId of documentIds) {
+      const protection = protectionById.get(documentId);
+      snapshots.set(
+        documentId,
+        new DocumentPermissionSnapshot(
+          documentId,
+          protection?.protected ?? this.config.defaultProtection,
+          protection?.ownerAddress ?? null,
+          grantsById.get(documentId) ?? new Map(),
+          operationsById.get(documentId) ?? new Map(),
+        ),
+      );
+    }
+    return snapshots;
   }
 
   /**
@@ -498,20 +549,16 @@ export class DocumentPermissionService {
           updatedAt: now,
         }),
       )
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
   }
 
   /**
    * Get the owner address for a document, or null if not set.
    */
   async getDocumentOwner(documentId: string): Promise<string | null> {
-    const row = await this.db
-      .selectFrom("DocumentProtection")
-      .select("ownerAddress")
-      .where("documentId", "=", documentId)
-      .executeTakeFirst();
-
-    return row?.ownerAddress ?? null;
+    const snapshot = await this.permissionCache.get(documentId);
+    return snapshot.ownerAddress;
   }
 
   /**
@@ -539,7 +586,8 @@ export class DocumentPermissionService {
           updatedAt: now,
         }),
       )
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
   }
 
   /**
@@ -570,7 +618,8 @@ export class DocumentPermissionService {
           updatedAt: now,
         }),
       )
-      .execute();
+      .execute()
+      .finally(() => this.permissionCache.invalidate(documentId));
 
     // Grant ADMIN permission to the owner
     await this.grantPermission(

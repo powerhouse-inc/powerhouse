@@ -7,48 +7,31 @@ import type {
   PHDocument,
   ProtocolVersions,
   SignaturePolicy,
-  Supports,
 } from "@powerhousedao/shared/document-model";
 import {
-  actions,
   DEFAULT_SIGNATURE_POLICY,
   PEER_CAPABILITIES,
-  selectProtocolVersions,
-  normalizeDocumentModelVersion,
-  UnsupportedDocumentModelVersionError,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import {
-  deleteDocumentAction,
-  removeRelationshipAction,
-} from "../actions/index.js";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   BatchLoadRequest,
   BatchLoadResult,
-  ExecutionJobPlan,
   IReactor,
 } from "../core/types.js";
-import { signActions } from "../core/utils.js";
-import { type IJobAwaiter } from "../shared/awaiter.js";
-import {
-  AuthEnforcementDisabledError,
-  BatchJobFailedError,
-  RelationshipNotFoundError,
-} from "../shared/errors.js";
-import {
-  JobStatus,
+import type { IReadGate } from "../decision/read-gate.js";
+import { BareReadGate } from "../decision/read-gate.js";
+import type { IJobAwaiter } from "../shared/awaiter.js";
+import type {
+  ConsistencyToken,
+  JobInfo,
+  PagedResults,
+  PagingOptions,
   PropagationMode,
-  RelationshipChangeType,
-  type ConsistencyToken,
-  type JobInfo,
-  type PagedResults,
-  type PagingOptions,
-  type SearchFilter,
-  type ViewFilter,
+  SearchFilter,
+  ViewFilter,
 } from "../shared/types.js";
-import { DocumentExistence } from "../storage/interfaces.js";
 import type {
   DocumentRelationship,
   IDocumentIndexer,
@@ -56,130 +39,63 @@ import type {
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
-import {
-  decodeCompositeCursor,
-  encodeCompositeCursor,
-  isCompositeCursor,
-} from "./cursor.js";
-import {
-  buildCreateJobs,
-  createEmptyDocument,
-  selectDocumentModelModule,
-  upgradeDocumentWith,
-} from "./derivations.js";
-import { DriveClient } from "./drive-client.js";
-import {
-  DocumentChangeType,
-  type ActionCandidate,
-  type ActionEvaluations,
-  type CreateDocumentOptions,
-  type DocumentChangeEvent,
-  type IDriveClient,
-  type IReactorClient,
-  type ProtocolSelection,
-  type UpgradeDocumentOptions,
+import { warnOnce } from "./deprecations.js";
+import { DriveClientFacade } from "./drive-client.js";
+import type { ActionEvaluationConfig } from "./internal/evaluation.js";
+import type { ReactorClientParts } from "./internal/parts.js";
+import type { WriteSideParts } from "./internal/targets.js";
+import { ReactorReadClient } from "./read-client.js";
+import type {
+  ActionCandidate,
+  ActionEvaluations,
+  CreateDocumentOptions,
+  DocumentChangeEvent,
+  IDriveClient,
+  IReactorClient,
+  ProtocolSelection,
+  UpgradeDocumentOptions,
 } from "./types.js";
-import { DriveCollectionId } from "../cache/operation-index-types.js";
-import { buildDecisionModel } from "../decision/build-decision-model.js";
-import type { IReadGate } from "../decision/read-gate.js";
-import {
-  assertAbsent,
-  BareReadGate,
-  refusesEveryDomainScope,
-  SeededStateReader,
-  unheldScopesReadOnState,
-} from "../decision/read-gate.js";
-import type { DocumentDecisionModel } from "../decision/document-decision-model.js";
-import type { RegisteredDecisionModel } from "../decision/registered-model.js";
-import type { DecisionModel, Evaluation } from "../decision/types.js";
-import { GATED_DOCUMENT_ACTIONS, targetDocumentId } from "../executor/util.js";
-import { type EventReads, EventReadsSource } from "./event-reads.js";
-import type { ReactorFeatureFlags } from "../executor/types.js";
-import {
-  authSubjectFromSigner,
-  filterReadableScopes,
-  narrowedScopes,
-  withAllScopes,
-  withAuthScope,
-} from "./util.js";
+import { ReactorWriteClient } from "./write-client.js";
 
-/**
- * A decision model built for one target document, with what deciding a candidate
- * against it needs: the definition that decides, the built model it decides
- * over, and the scope states a condition reads.
- */
-type EvaluationTarget = {
-  definition: DecisionModel<DocumentDecisionModel>;
-  model: DocumentDecisionModel;
-  scopeStates: Record<string, unknown>;
-};
+export type { ActionEvaluationConfig } from "./internal/evaluation.js";
 
-function deletePlanKey(documentId: string): string {
-  return `delete:${documentId}`;
-}
-
-/**
- * The document a candidate is decided against. Routed on the action type alone,
- * which is what the executor routes on: every action the reactor reduces onto
- * the document scope carries that scope already, and the gate follows the
- * action's own target rather than the document the request named.
- */
-function evaluationTargetId(
-  candidate: ActionCandidate,
-  fallback: string,
-): string {
-  return GATED_DOCUMENT_ACTIONS.has(candidate.type)
-    ? targetDocumentId(
-        { type: candidate.type, input: candidate.input },
-        fallback,
-      )
-    : fallback;
-}
-
-/**
- * One candidate's verdict, decided exactly as admission decides it: the same
- * request, and a condition context populated only while authConditions is on,
- * so a conditional grant applies here precisely when it would apply there.
- * Groups need nothing added, because the selected model carries them.
- */
-function decideCandidate(
-  config: ActionEvaluationConfig,
-  target: EvaluationTarget,
-  subject: AuthSubject,
-  candidate: ActionCandidate,
-): Evaluation {
-  return target.definition.decide(
-    target.model,
-    subject,
-    { verb: "execute", scope: candidate.scope, operation: candidate.type },
-    config.flags.authConditions
-      ? {
-          scopeState: target.scopeStates[candidate.scope],
-          actionInput: candidate.input,
-        }
-      : { scopeState: undefined, actionInput: undefined },
-  );
-}
-
-/**
- * What {@link IReactorClient.evaluateActions} decides against: the decision
- * model this reactor enforces, and the flags that selected it.
- *
- * Both, because neither alone is enough. The flags say which of the model's
- * inputs a decision may read, and the model itself cannot be derived from them
- * here: selecting one needs the document model registry, which a client does not
- * hold. Absent, this client answers no preflight at all -- which is the whole of
- * the non-coexistence guarantee, since a client built without a reactor holding
- * a decision model has nothing to answer from.
- */
-export type ActionEvaluationConfig = {
-  model: RegisteredDecisionModel;
-  flags: ReactorFeatureFlags;
-};
+/** What each deprecated facade write points at, for its one-time warning. */
+const DEPRECATED_WRITES = {
+  create:
+    "Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  createEmpty:
+    "Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  upgradeDocument: "Use write.upgradeDocument(...), then handle.document().",
+  createDocumentInDrive:
+    "Use write.drives.addFile(...), then handle.document().",
+  execute:
+    "Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).",
+  executeBatch: "Use write.executeBatch(...) and await batch.readable.",
+  rename:
+    "Use write.rename(...); read back with handle.document() only if the document is needed.",
+  setPreferredEditor:
+    "Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.",
+  addRelationship:
+    "Use write.addRelationship(...), then handle.document() for the source.",
+  updateRelationship:
+    "Use write.updateRelationship(...), then handle.document() for the source.",
+  removeRelationship:
+    "Use write.removeRelationship(...), then handle.document() for the source.",
+  moveRelationship:
+    "Use write.moveRelationship(...), then removed.document() and added.document().",
+  deleteDocument: "Use write.deleteDocument(...) and await handle.readable.",
+  deleteDocuments:
+    "Use write.deleteDocuments(...) and await each handle's readable.",
+  loadBatch: "Use write.loadBatch(...).",
+} as const;
 
 /**
  * ReactorClient implementation that wraps lower-level APIs to provide
  * a simpler interface for document operations.
+ *
+ * It is the facade over {@link ReactorReadClient} and
+ * {@link ReactorWriteClient}: it builds both halves from the parts it is
+ * given and answers every method from one of them.
  *
  * Features:
  * - Wraps Jobs with Promises for easier async handling
@@ -188,20 +104,12 @@ export type ActionEvaluationConfig = {
  * - Wraps subscription interface with ViewFilters
  */
 export class ReactorClient implements IReactorClient {
-  private logger: ILogger;
-  private reactor: IReactor;
-  private signer: ISigner;
-  private subscriptionManager: IReactorSubscriptionManager;
-  private jobAwaiter: IJobAwaiter;
-  private documentIndexer: IDocumentIndexer;
-  private documentView: IDocumentView;
-  private readGate: IReadGate;
-  private eventReads: EventReadsSource;
-  private actionEvaluation: ActionEvaluationConfig | undefined;
-  private readonly createSignaturePolicy: SignaturePolicy;
-  private readonly protocolSelection: ProtocolSelection;
-
+  readonly read: ReactorReadClient;
+  readonly write: ReactorWriteClient;
   readonly drives: IDriveClient;
+
+  private readonly logger: ILogger;
+  private readonly reactor: IReactor;
 
   constructor(
     logger: ILogger,
@@ -219,623 +127,241 @@ export class ReactorClient implements IReactorClient {
       flags: {},
       collectionsOf: () => Promise.resolve({}),
     },
+    writeSide?: WriteSideParts,
   ) {
-    this.protocolSelection = protocolSelection;
+    const parts: ReactorClientParts = {
+      logger,
+      reactor,
+      signer,
+      subscriptionManager,
+      jobAwaiter,
+      documentIndexer,
+      documentView,
+      readGate,
+      actionEvaluation,
+      createSignaturePolicy,
+      protocolSelection,
+      writeSide,
+    };
     this.logger = logger;
     this.reactor = reactor;
-    this.signer = signer;
-    this.subscriptionManager = subscriptionManager;
-    this.jobAwaiter = jobAwaiter;
-    this.documentIndexer = documentIndexer;
-    this.documentView = documentView;
-    this.readGate = readGate;
-    this.eventReads = new EventReadsSource(reactor, documentView, readGate);
-    this.actionEvaluation = actionEvaluation;
-    this.createSignaturePolicy = createSignaturePolicy;
-    this.drives = new DriveClient(
-      this,
-      logger,
-      (request, signal) => reactor.executeBatch(request, signal),
-      signer,
-      (id, signal) => this.resolveReference(id, "main", signal),
-    );
+    this.read = new ReactorReadClient(parts);
+    this.write = new ReactorWriteClient(parts, this.read);
+    this.drives = new DriveClientFacade(this.read.drives, this.write.drives);
     this.logger.verbose("ReactorClient initialized");
   }
 
-  /**
-   * Retrieves a list of document model modules.
-   */
-  async getDocumentModelModules(
+  getDocumentModelModules(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>> {
-    this.logger.verbose(
-      "getDocumentModels(@namespace, @paging)",
-      namespace,
-      paging,
-    );
-    return this.reactor.getDocumentModels(namespace, paging, signal);
+    return this.read.getDocumentModelModules(namespace, paging, signal);
   }
 
-  /**
-   * Retrieves a specific document model module by document type.
-   *
-   * @param documentType - The document type identifier
-   * @returns The document model module
-   */
-  async getDocumentModelModule(
+  getDocumentModelModule(
     documentType: string,
   ): Promise<DocumentModelModule<any>> {
-    const modules = await this.reactor.getDocumentModels();
-
-    let latestModule: DocumentModelModule | undefined;
-    let latestVersion = -1;
-    for (const module of modules.results) {
-      if (module.documentModel.global.id !== documentType) {
-        continue;
-      }
-      const version = module.version ?? 1;
-      if (version > latestVersion) {
-        latestVersion = version;
-        latestModule = module;
-      }
-    }
-
-    if (!latestModule) {
-      throw new Error(
-        `Document model module not found for type: ${documentType}`,
-      );
-    }
-
-    return latestModule as DocumentModelModule<any>;
+    return this.read.getDocumentModelModule(documentType);
   }
 
-  /**
-   * Retrieves the document model module matching the version the document is
-   * stamped with, so not-yet-upgraded documents get the reducer their
-   * history was written with rather than the latest.
-   */
-  async getDocumentModelModuleForDocument(
+  getDocumentModelModuleForDocument(
     document: PHDocument,
   ): Promise<DocumentModelModule<any>> {
-    const documentType = document.header.documentType;
-    const version = normalizeDocumentModelVersion(
-      (document.state as Partial<typeof document.state>).document?.version,
-    );
-
-    const modules = await this.reactor.getDocumentModels();
-
-    const availableVersions: number[] = [];
-    for (const module of modules.results) {
-      if (module.documentModel.global.id !== documentType) {
-        continue;
-      }
-      const moduleVersion = normalizeDocumentModelVersion(module.version);
-      if (moduleVersion === version) {
-        return module as DocumentModelModule<any>;
-      }
-      availableVersions.push(moduleVersion);
-    }
-
-    throw new UnsupportedDocumentModelVersionError(
-      documentType,
-      version,
-      availableVersions.sort((a, b) => a - b),
-    );
+    return this.read.getDocumentModelModuleForDocument(document);
   }
 
-  /**
-   * Retrieves a specific PHDocument
-   */
-  async get<TDocument extends PHDocument>(
+  get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument> {
-    this.logger.verbose("get(@identifier, @view)", identifier, view);
-    const document = await this.reactor.getByIdOrSlug<TDocument>(
-      identifier,
-      withAuthScope(view),
-      undefined,
-      signal,
-    );
-    return this.gateDocument(document, view, signal);
+    return this.read.get<TDocument>(identifier, view, signal, consistencyToken);
   }
 
-  /**
-   * Resolves an identifier (id or slug) to the canonical document id, using the
-   * same lookup as the data path. Resolves against the "main" branch. Throws if
-   * the identifier cannot be resolved or is ambiguous.
-   */
-  async resolveIdOrSlug(
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]> {
+    return this.read.getMany<TDocument>(
+      documentIds,
+      view,
+      signal,
+      consistencyToken,
+    );
+  }
+
+  resolveIdOrSlug(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<string> {
-    return this.documentView.resolveIdOrSlug(
+    return this.read.resolveIdOrSlug(
       identifier,
       view,
-      undefined,
       signal,
+      consistencyToken,
     );
   }
 
-  /** True when the id is taken; a soft-deleted document's id is still taken. */
-  async isDocumentIdTaken(
+  isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    this.logger.verbose("isDocumentIdTaken(@documentId)", documentId);
-    const taken = await this.documentView.exists(
-      [documentId],
-      DocumentExistence.IncludingDeleted,
-      undefined,
-      signal,
-    );
-    return taken[0];
+    return this.write.isDocumentIdTaken(documentId, signal);
   }
 
-  /**
-   * Retrieves operations for a document
-   */
-  async getOperations(
+  getOperations(
     documentIdentifier: string,
     view?: ViewFilter,
     filter?: OperationFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
-    this.logger.verbose(
-      "getOperations(@documentIdentifier, @view, @filter, @paging)",
+    return this.read.getOperations(
       documentIdentifier,
       view,
       filter,
       paging,
-    );
-
-    const documentId = await this.documentView.resolveIdOrSlug(
-      documentIdentifier,
-      view,
-      undefined,
       signal,
     );
-
-    // Read gate: exclude operations in scopes the subject may not read. The
-    // fetch carries the scopes about to be paged, not the policy alone, because
-    // a conditional read grant reads the state of the scope it gates; a
-    // condition can name no other scope, so the scopes not paged are not owed.
-    const gated = await this.reactor.getByIdOrSlug<PHDocument>(
-      documentId,
-      withAuthScope(view),
-      undefined,
-      signal,
-    );
-    const canRead = await this.readableScopes(gated, view, signal);
-
-    if (paging?.cursor && isCompositeCursor(paging.cursor)) {
-      return this.getOperationsWithCompositeCursor(
-        documentId,
-        view,
-        filter,
-        paging,
-        signal,
-        canRead,
-      );
-    }
-
-    const operationsByScope = await this.reactor.getOperations(
-      documentId,
-      view,
-      filter,
-      paging,
-      undefined,
-      signal,
-    );
-
-    for (const scope of Object.keys(operationsByScope)) {
-      if (!canRead(scope)) {
-        delete operationsByScope[scope];
-      }
-    }
-
-    const scopeEntries = Object.entries(operationsByScope);
-    const effectivePaging = paging || { cursor: "0", limit: 100 };
-
-    if (scopeEntries.length <= 1) {
-      const allOperations =
-        scopeEntries.length === 1 ? [...scopeEntries[0][1].results] : [];
-      allOperations.sort((a, b) => a.index - b.index);
-      const nextCursor =
-        scopeEntries.length === 1 ? scopeEntries[0][1].nextCursor : undefined;
-      return { results: allOperations, options: effectivePaging, nextCursor };
-    }
-
-    const allOperations: Operation[] = [];
-    const activeCursors: Record<string, string> = {};
-
-    for (const [scopeName, scopeResults] of scopeEntries) {
-      allOperations.push(...scopeResults.results);
-      if (scopeResults.nextCursor) {
-        activeCursors[scopeName] = scopeResults.nextCursor;
-      }
-    }
-
-    allOperations.sort((a, b) => a.index - b.index);
-
-    const nextCursor =
-      Object.keys(activeCursors).length > 0
-        ? encodeCompositeCursor(activeCursors)
-        : undefined;
-
-    return { results: allOperations, options: effectivePaging, nextCursor };
   }
 
-  /**
-   * Retrieves outgoing relationships of a given type from a source document.
-   */
-  async getOutgoingRelationships(
+  getOutgoingRelationships(
     sourceIdentifier: string,
     relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>> {
-    this.logger.verbose(
-      "getOutgoingRelationships(@sourceIdentifier, @relationshipType, @view, @paging)",
+    return this.read.getOutgoingRelationships(
       sourceIdentifier,
       relationshipType,
       view,
       paging,
-    );
-
-    const sourceId = await this.documentView.resolveIdOrSlug(
-      sourceIdentifier,
-      view,
-      undefined,
       signal,
+      consistencyToken,
     );
-
-    const relationships = await this.documentIndexer.getOutgoing(
-      sourceId,
-      [relationshipType],
-      undefined,
-      undefined,
-      signal,
-    );
-
-    const targetIds = relationships.results.map((rel) => rel.targetId);
-
-    if (targetIds.length === 0) {
-      return {
-        results: [],
-        options: paging || { cursor: "0", limit: 0 },
-      };
-    }
-
-    return this.find({ ids: targetIds }, view, paging, signal);
   }
 
-  /**
-   * Retrieves incoming relationships of a given type to a target document.
-   */
-  async getIncomingRelationships(
+  getIncomingRelationships(
     targetIdentifier: string,
     relationshipType: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>> {
-    this.logger.verbose(
-      "getIncomingRelationships(@targetIdentifier, @relationshipType, @view, @paging)",
+    return this.read.getIncomingRelationships(
       targetIdentifier,
       relationshipType,
       view,
       paging,
-    );
-
-    const targetId = await this.documentView.resolveIdOrSlug(
-      targetIdentifier,
-      view,
-      undefined,
       signal,
+      consistencyToken,
     );
-
-    const relationships = await this.documentIndexer.getIncoming(
-      targetId,
-      [relationshipType],
-      undefined,
-      undefined,
-      signal,
-    );
-
-    const sourceIds = relationships.results.map((rel) => rel.sourceId);
-
-    if (sourceIds.length === 0) {
-      return {
-        results: [],
-        options: paging || { cursor: "0", limit: 0 },
-      };
-    }
-
-    return this.find({ ids: sourceIds }, view, paging, signal);
   }
 
-  /**
-   * Retrieves the outgoing relationship edges of a source document, carrying the
-   * metadata and timestamps the far-end documents do not.
-   */
-  async getOutgoingRelationshipEdges(
+  getOutgoingRelationshipEdges(
     sourceIdentifier: string,
     relationshipType?: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>> {
-    this.logger.verbose(
-      "getOutgoingRelationshipEdges(@sourceIdentifier, @relationshipType, @view, @paging)",
+    return this.read.getOutgoingRelationshipEdges(
       sourceIdentifier,
       relationshipType,
       view,
       paging,
-    );
-
-    const sourceId = await this.documentView.resolveIdOrSlug(
-      sourceIdentifier,
-      view,
-      undefined,
       signal,
+      consistencyToken,
     );
-
-    const edges = await this.reactor.getOutgoingRelationshipEdges(
-      sourceId,
-      relationshipType,
-      paging,
-      undefined,
-      signal,
-    );
-
-    return this.gateEdges(edges, "targetId", view, signal);
   }
 
-  /**
-   * Retrieves the incoming relationship edges of a target document, carrying the
-   * metadata and timestamps the far-end documents do not.
-   */
-  async getIncomingRelationshipEdges(
+  getIncomingRelationshipEdges(
     targetIdentifier: string,
     relationshipType?: string,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>> {
-    this.logger.verbose(
-      "getIncomingRelationshipEdges(@targetIdentifier, @relationshipType, @view, @paging)",
+    return this.read.getIncomingRelationshipEdges(
       targetIdentifier,
       relationshipType,
       view,
       paging,
-    );
-
-    const targetId = await this.documentView.resolveIdOrSlug(
-      targetIdentifier,
-      view,
-      undefined,
       signal,
+      consistencyToken,
     );
-
-    const edges = await this.reactor.getIncomingRelationshipEdges(
-      targetId,
-      relationshipType,
-      paging,
-      undefined,
-      signal,
-    );
-
-    return this.gateEdges(edges, "sourceId", view, signal);
   }
 
-  /**
-   * Filters documents by criteria and returns a list of them
-   */
-  async find(
+  find(
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>> {
-    this.logger.verbose("find(@search, @view, @paging)", search, view, paging);
-    const results = await this.reactor.find(
-      search,
-      withAuthScope(view),
-      paging,
-      undefined,
-      signal,
-    );
-    return this.gateListing(results, view, signal);
+    return this.read.find(search, view, paging, signal, consistencyToken);
   }
 
-  /** Whether `find` would serve the document; false when it is absent. */
-  async isServed(
+  isServed(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    this.logger.verbose("isServed(@identifier, @view)", identifier, view);
-    let document: PHDocument;
-    try {
-      document = await this.reactor.getByIdOrSlug(
-        identifier,
-        withAuthScope(view),
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      await assertAbsent(this.documentView, identifier, error, signal);
-      return false;
-    }
-    return (await this.gateListed(document, view, signal)) !== undefined;
+    return this.read.isServed(identifier, view, signal);
   }
 
-  /**
-   * Predicts the admission verdict for each candidate. See
-   * {@link IReactorClient.evaluateActions} for the contract and its caveats.
-   *
-   * Read-only throughout, and never through the write cache: that cache is
-   * invalidated by whichever process runs the executor, so a reactor running
-   * its executors in worker processes would answer here from state no commit
-   * ever invalidates.
-   */
-  async evaluateActions(
+  evaluateActions(
     documentIdentifier: string,
     branch: string,
     candidates: ActionCandidate[],
     subject?: AuthSubject,
     signal?: AbortSignal,
   ): Promise<ActionEvaluations> {
-    this.logger.verbose(
-      "evaluateActions(@documentIdentifier, @branch, @count candidates)",
+    return this.write.evaluateActions(
       documentIdentifier,
       branch,
-      candidates.length,
-    );
-
-    // No model, no answer. The legacy host-table permission system is not
-    // consulted and not composed with: see AuthEnforcementDisabledError.
-    const config = this.actionEvaluation;
-    if (config === undefined) {
-      throw new AuthEnforcementDisabledError();
-    }
-
-    const decidedSubject = this.readSubject(subject);
-    const resolvedId = await this.documentView.resolveIdOrSlug(
-      documentIdentifier,
-      { branch },
-      undefined,
+      candidates,
+      subject,
       signal,
     );
-
-    // Built once per distinct target rather than once per candidate, so a batch
-    // of candidates against one document reads its streams once.
-    const targets = new Map<string, EvaluationTarget>();
-    const evaluations: Evaluation[] = [];
-
-    for (const candidate of candidates) {
-      // CREATE_DOCUMENT is exempt from the executor's policy gate by necessity:
-      // it runs before the document exists, so there is no policy to decide
-      // against (see GATED_DOCUMENT_ACTIONS). Mirror the exemption rather than
-      // deciding the candidate against the named document's policy, which would
-      // predict a denial the submit path never issues.
-      if (candidate.type === "CREATE_DOCUMENT") {
-        evaluations.push({ decision: "allow" });
-        continue;
-      }
-
-      const targetId = evaluationTargetId(candidate, resolvedId);
-
-      let target = targets.get(targetId);
-      if (target === undefined) {
-        target = await this.buildEvaluationTarget(
-          config,
-          targetId,
-          branch,
-          signal,
-        );
-        targets.set(targetId, target);
-      }
-
-      evaluations.push(
-        decideCandidate(config, target, decidedSubject, candidate),
-      );
-    }
-
-    const allowed = evaluations.filter(
-      (evaluation) => evaluation.decision === "allow",
-    ).length;
-
-    return {
-      evaluations,
-      allAllowed: candidates.length > 0 && allowed === candidates.length,
-      anyAllowed: allowed > 0,
-      allDenied: candidates.length > 0 && allowed === 0,
-      anyDenied: allowed < candidates.length,
-    };
   }
 
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return Promise.resolve(this.createSignaturePolicy);
+    return this.read.getCreateSignaturePolicy();
   }
 
-  async getCreateProtocolVersions(
+  getCreateProtocolVersions(
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const { capabilities, flags, agreement, collectionsOf } =
-      this.protocolSelection;
-    let members: Supports[] = [];
-    if (parentIdentifier !== undefined && agreement) {
-      let parentId: string | undefined;
-      try {
-        parentId = await this.resolveIdOrSlug(
-          parentIdentifier,
-          undefined,
-          signal,
-        );
-      } catch {
-        parentId = undefined;
-      }
-      if (parentId !== undefined) {
-        const memberships = await collectionsOf([parentId]);
-        const collectionIds = [
-          ...(memberships[parentId] ?? []),
-          DriveCollectionId.forDrive(parentId).key,
-        ];
-        members = [...agreement().members(collectionIds).values()];
-      }
-    }
-    return selectProtocolVersions({ capabilities, flags, members });
+    return this.read.getCreateProtocolVersions(parentIdentifier, signal);
   }
 
   /**
-   * Creates a document and waits for completion
+   * @deprecated Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "create(@id, @parentIdentifier)",
-      document.header.id,
-      parentIdentifier,
-    );
-
-    const batchResult = await this.submitCreate(
-      document,
-      parentIdentifier,
-      signal,
-    );
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
-      ),
-    );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw new Error(job.error?.message);
-      }
-    }
-
-    const created = await this.reactor.get<TDocument>(document.header.id);
-    return this.gateDocument(created, undefined, signal);
+    warnOnce("IReactorClient.create", DEPRECATED_WRITES.create, this.logger);
+    const handle = await this.write.create(document, parentIdentifier, signal);
+    return handle.document<TDocument>(undefined, signal);
   }
 
-  /**
-   * Submits a document's create batch without waiting for it
-   */
-  async createAsync(
+  createAsync(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
@@ -845,45 +371,30 @@ export class ReactorClient implements IReactorClient {
       document.header.id,
       parentIdentifier,
     );
-    return this.submitCreate(document, parentIdentifier, signal);
-  }
-
-  private async submitCreate(
-    document: PHDocument,
-    parentIdentifier: string | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<BatchExecutionResult> {
-    const parentId = parentIdentifier
-      ? await this.resolveReference(parentIdentifier, "main", signal)
-      : undefined;
-    const jobs = await buildCreateJobs(document, parentId, this.signer, signal);
-    return this.reactor.executeBatch({ jobs }, signal);
+    return this.write.submitCreate(document, parentIdentifier, signal);
   }
 
   /**
-   * Creates an empty document and waits for completion
+   * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
     options?: CreateDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "createEmpty(@documentModelType, @options)",
-      documentModelType,
-      options,
+    warnOnce(
+      "IReactorClient.createEmpty",
+      DEPRECATED_WRITES.createEmpty,
+      this.logger,
     );
-    const document = await this.emptyDocument(
+    const handle = await this.write.createEmpty(
       documentModelType,
       options,
       signal,
     );
-    return this.create<TDocument>(document, options?.parentIdentifier, signal);
+    return handle.document<TDocument>(undefined, signal);
   }
 
-  /**
-   * Submits an empty document's create batch without waiting for it
-   */
   async createEmptyAsync(
     documentModelType: string,
     options?: CreateDocumentOptions,
@@ -894,51 +405,16 @@ export class ReactorClient implements IReactorClient {
       documentModelType,
       options,
     );
-    const document = await this.emptyDocument(
+    const document = await this.write.emptyDocument(
       documentModelType,
       options,
       signal,
     );
-    return this.submitCreate(document, options?.parentIdentifier, signal);
-  }
-
-  private async emptyDocument(
-    documentModelType: string,
-    options: CreateDocumentOptions | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument> {
-    const modulesResult = await this.reactor.getDocumentModels(
-      undefined,
-      undefined,
-      signal,
-    );
-    const module = selectDocumentModelModule(
-      modulesResult.results,
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const base = await this.getCreateProtocolVersions(
-      options?.parentIdentifier,
-      signal,
-    );
-    return createEmptyDocument(
-      module,
-      options,
-      this.createSignaturePolicy,
-      base,
-    );
+    return this.write.submitCreate(document, options?.parentIdentifier, signal);
   }
 
   /**
-   * Upgrades a document to a newer document model version by dispatching an
-   * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
-   * latest registered module version for the document's type. Returns the
-   * document unchanged when it is already at the target version.
-   *
-   * The executor validates the action's version and revision snapshot against
-   * the state the migration actually runs on. When a concurrent edit
-   * invalidates the snapshot, the upgrade is rebuilt from a fresh read and
-   * retried up to maxConflictRetries times before the conflict is surfaced.
+   * @deprecated Use write.upgradeDocument(...), then handle.document().
    */
   async upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
@@ -946,57 +422,38 @@ export class ReactorClient implements IReactorClient {
     options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "upgradeDocument(@documentIdentifier, @toVersion)",
-      documentIdentifier,
-      toVersion,
+    warnOnce(
+      "IReactorClient.upgradeDocument",
+      DEPRECATED_WRITES.upgradeDocument,
+      this.logger,
     );
-    const upgraded = await upgradeDocumentWith<TDocument>(
-      {
-        signer: this.signer,
-        read: <T extends PHDocument>(
-          identifier: string,
-          branch: string | undefined,
-          consistencyToken: ConsistencyToken | undefined,
-          readSignal?: AbortSignal,
-        ) =>
-          this.reactor.getByIdOrSlug<T>(
-            identifier,
-            branch === undefined ? undefined : { branch },
-            consistencyToken,
-            readSignal,
-          ),
-        getDocumentModelModule: (documentType) =>
-          this.getDocumentModelModule(documentType),
-        submit: (documentId, branch, actions, submitSignal) =>
-          this.reactor.execute(documentId, branch, actions, submitSignal),
-        waitForJob: (job, waitSignal) => this.waitForJob(job, waitSignal),
-      },
+    const handle = await this.write.upgradeDocument(
       documentIdentifier,
       toVersion,
       options,
       signal,
     );
-    return this.gateDocument(
-      upgraded,
-      { branch: upgraded.header.branch || "main" },
-      signal,
-    );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   /**
    * Creates an empty document in a drive as a single batched operation.
    * Delegates to {@link IDriveClient.addFile}.
    *
-   * @deprecated Use `client.drives.addFile` instead. This method will be
-   * removed in a future release.
+   * @deprecated Use write.drives.addFile(...), then handle.document(). This
+   * method will be removed in a future release.
    */
-  async createDocumentInDrive<TDocument extends PHDocument>(
+  createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,
     document: PHDocument,
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce(
+      "IReactorClient.createDocumentInDrive",
+      DEPRECATED_WRITES.createDocumentInDrive,
+      this.logger,
+    );
     return this.drives.addFile<TDocument>(
       driveId,
       document,
@@ -1006,10 +463,7 @@ export class ReactorClient implements IReactorClient {
   }
 
   /**
-   * Applies a list of actions to a document and waits for completion.
-   *
-   * `subject` names who the returned document is read as; see
-   * {@link IReactorClient.execute}.
+   * @deprecated Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).
    */
   async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
@@ -1018,51 +472,19 @@ export class ReactorClient implements IReactorClient {
     signal?: AbortSignal,
     subject?: AuthSubject,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "execute(@documentIdentifier, @branch, @count actions)",
-      documentIdentifier,
-      branch,
-      actions.length,
-    );
-    const documentId = await this.resolveWriteTarget(
+    warnOnce("IReactorClient.execute", DEPRECATED_WRITES.execute, this.logger);
+    const handle = await this.write.execute(
       documentIdentifier,
       branch,
       actions,
       signal,
     );
-    const signedActions = await signActions(
-      actions,
-      this.signer,
-      { documentId, branch },
+    return handle.document<TDocument>(
+      subject === undefined ? undefined : { subject },
       signal,
     );
-
-    const jobInfo = await this.reactor.execute(
-      documentId,
-      branch,
-      signedActions,
-      signal,
-    );
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    const view: ViewFilter = { branch, subject };
-    const result = await this.reactor.getByIdOrSlug<TDocument>(
-      documentIdentifier,
-      view,
-      completedJob.consistencyToken,
-      signal,
-    );
-    return this.gateDocument(result, view, signal);
   }
 
-  /**
-   * Submits a list of actions to a document
-   */
   async executeAsync(
     documentIdentifier: string,
     branch: string,
@@ -1075,1194 +497,256 @@ export class ReactorClient implements IReactorClient {
       branch,
       actions.length,
     );
-    const documentId = await this.resolveWriteTarget(
+    const submitted = await this.write.submitExecute(
       documentIdentifier,
       branch,
       actions,
       signal,
     );
-    const signedActions = await signActions(
-      actions,
-      this.signer,
-      { documentId, branch },
-      signal,
-    );
-
-    return this.reactor.execute(documentId, branch, signedActions, signal);
+    return submitted.job;
   }
 
+  /**
+   * @deprecated Use write.executeBatch(...) and await batch.readable.
+   */
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    this.logger.verbose("executeBatch(@count jobs)", request.jobs.length);
-
-    const signedJobs: ExecutionJobPlan[] = await Promise.all(
-      request.jobs.map(async (job) => {
-        const documentId = await this.resolveWriteTarget(
-          job.documentId,
-          job.branch,
-          job.actions,
-          signal,
-        );
-        return {
-          ...job,
-          documentId,
-          actions: await signActions(
-            job.actions,
-            this.signer,
-            { documentId, branch: job.branch },
-            signal,
-          ),
-        };
-      }),
+    warnOnce(
+      "IReactorClient.executeBatch",
+      DEPRECATED_WRITES.executeBatch,
+      this.logger,
     );
-
-    const batchResult = await this.reactor.executeBatch(
-      { jobs: signedJobs },
-      signal,
-    );
-
-    const settled = await Promise.all(
-      Object.entries(batchResult.jobs).map(
-        async ([key, job]) =>
-          [key, await this.waitForJob(job, signal)] as const,
-      ),
-    );
-    const jobs = Object.fromEntries(settled);
-
-    for (const job of signedJobs) {
-      if (jobs[job.key]?.status === JobStatus.FAILED) {
-        throw new BatchJobFailedError(job.key, jobs);
-      }
-    }
-
-    return batchResult;
+    const batch = await this.write.executeBatch(request, signal);
+    await batch.readable;
+    return { jobs: batch.jobs };
   }
 
   /**
-   * Renames a document and waits for completion
+   * @deprecated Use write.rename(...); read back with handle.document() only if the document is needed.
    */
   async rename(
     documentIdentifier: string,
     name: string,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "rename(@documentIdentifier, @name, @branch)",
+    warnOnce("IReactorClient.rename", DEPRECATED_WRITES.rename, this.logger);
+    const handle = await this.write.rename(
       documentIdentifier,
       name,
       branch,
-    );
-    return this.execute(
-      documentIdentifier,
-      branch,
-      [actions.setName(name)],
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
   /**
-   * Updates the preferred editor recorded in the document header meta.
-   * Pass `null` to clear it.
+   * @deprecated Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.
    */
   async setPreferredEditor(
     documentIdentifier: string,
     preferredEditor: string | null,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "setPreferredEditor(@documentIdentifier, @preferredEditor, @branch)",
+    warnOnce(
+      "IReactorClient.setPreferredEditor",
+      DEPRECATED_WRITES.setPreferredEditor,
+      this.logger,
+    );
+    const handle = await this.write.setPreferredEditor(
       documentIdentifier,
       preferredEditor,
       branch,
-    );
-    return this.execute(
-      documentIdentifier,
-      branch,
-      [actions.setPreferredEditor(preferredEditor)],
       signal,
     );
+    return handle.document(undefined, signal);
   }
 
   /**
-   * Adds multiple documents as children to another and waits for completion
+   * @deprecated Use write.addRelationship(...), then handle.document() for the source.
    */
   async addRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
     metadata?: Record<string, unknown>,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "addRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
+    warnOnce(
+      "IReactorClient.addRelationship",
+      DEPRECATED_WRITES.addRelationship,
+      this.logger,
+    );
+    const handle = await this.write.addRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
       metadata,
       branch,
-    );
-    const sourceId = await this.resolveReference(
-      sourceIdentifier,
-      branch,
       signal,
     );
-    const targetId = await this.resolveReference(
-      targetIdentifier,
-      branch,
-      signal,
-    );
-    const jobInfo = await this.reactor.addRelationship(
-      sourceId,
-      targetId,
-      relationshipType,
-      metadata,
-      branch,
-      this.signer,
-      signal,
-    );
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceId,
-      { branch },
-      completedJob.consistencyToken,
-      signal,
-    );
-    return this.gateDocument(result, { branch }, signal);
+    return handle.document(undefined, signal);
   }
 
   /**
-   * Replaces the metadata of an existing relationship and waits for completion.
+   * @deprecated Use write.updateRelationship(...), then handle.document() for the source.
    */
   async updateRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
     metadata: Record<string, unknown> | null,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "updateRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @metadata, @branch)",
+    warnOnce(
+      "IReactorClient.updateRelationship",
+      DEPRECATED_WRITES.updateRelationship,
+      this.logger,
+    );
+    const handle = await this.write.updateRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
       metadata,
       branch,
-    );
-    const sourceId = await this.resolveReference(
-      sourceIdentifier,
-      branch,
       signal,
     );
-    const targetId = await this.resolveReference(
-      targetIdentifier,
-      branch,
-      signal,
-    );
-
-    // The write matches the edge in SQL and reports no row count, so an update
-    // of an edge that is not there reaches READ_READY having stored nothing.
-    const existing = await this.readRelationshipEdge(
-      sourceId,
-      targetId,
-      relationshipType,
-      { branch },
-      signal,
-    );
-    if (!existing) {
-      throw new RelationshipNotFoundError(
-        sourceIdentifier,
-        targetIdentifier,
-        relationshipType,
-      );
-    }
-
-    const jobInfo = await this.reactor.updateRelationship(
-      sourceId,
-      targetId,
-      relationshipType,
-      metadata,
-      branch,
-      this.signer,
-      signal,
-    );
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceId,
-      { branch },
-      completedJob.consistencyToken,
-      signal,
-    );
-    return this.gateDocument(result, { branch }, signal);
+    return handle.document(undefined, signal);
   }
 
   /**
-   * Removes a relationship between two documents and waits for completion.
+   * @deprecated Use write.removeRelationship(...), then handle.document() for the source.
    */
   async removeRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "removeRelationship(@sourceIdentifier, @targetIdentifier, @relationshipType, @branch)",
+    warnOnce(
+      "IReactorClient.removeRelationship",
+      DEPRECATED_WRITES.removeRelationship,
+      this.logger,
+    );
+    const handle = await this.write.removeRelationship(
       sourceIdentifier,
       targetIdentifier,
       relationshipType,
       branch,
-    );
-    const sourceId = await this.resolveReference(
-      sourceIdentifier,
-      branch,
       signal,
     );
-    const targetId = await this.resolveReference(
-      targetIdentifier,
-      branch,
-      signal,
-    );
-    const jobInfo = await this.reactor.removeRelationship(
-      sourceId,
-      targetId,
-      relationshipType,
-      branch,
-      this.signer,
-      signal,
-    );
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
-
-    const result = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceId,
-      { branch },
-      completedJob.consistencyToken,
-      signal,
-    );
-    return this.gateDocument(result, { branch }, signal);
+    return handle.document(undefined, signal);
   }
 
   /**
-   * Moves a relationship from one source document to another and waits for completion.
+   * @deprecated Use write.moveRelationship(...), then removed.document() and added.document().
    */
   async moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
     targetIdentifier: string,
     relationshipType: string,
-    branch: string = "main",
+    branch?: string,
     signal?: AbortSignal,
   ): Promise<{
     source: PHDocument;
     target: PHDocument;
   }> {
-    this.logger.verbose(
-      "moveRelationship(@sourceParentIdentifier, @targetParentIdentifier, @targetIdentifier, @relationshipType, @branch)",
+    warnOnce(
+      "IReactorClient.moveRelationship",
+      DEPRECATED_WRITES.moveRelationship,
+      this.logger,
+    );
+    const moved = await this.write.moveRelationship(
       sourceParentIdentifier,
       targetParentIdentifier,
       targetIdentifier,
       relationshipType,
       branch,
-    );
-    const sourceParentId = await this.resolveReference(
-      sourceParentIdentifier,
-      branch,
       signal,
     );
-    const targetParentId = await this.resolveReference(
-      targetParentIdentifier,
-      branch,
-      signal,
-    );
-    const targetId = await this.resolveReference(
-      targetIdentifier,
-      branch,
-      signal,
-    );
-
-    // A move is a remove followed by an add, and the add would otherwise write a
-    // fresh edge with no metadata. Read the edge first so the move carries it.
-    // A failed read aborts the move: once the remove has run, "the edge carried
-    // no metadata" and "the read did not answer" are indistinguishable, and
-    // treating the second as the first rewrites the edge with no metadata for
-    // good.
-    const edge = await this.readRelationshipEdge(
-      sourceParentId,
-      targetId,
-      relationshipType,
-      { branch },
-      signal,
-    );
-    const metadata = edge?.metadata;
-
-    const removeJobInfo = await this.reactor.removeRelationship(
-      sourceParentId,
-      targetId,
-      relationshipType,
-      branch,
-      this.signer,
-      signal,
-    );
-
-    const removeCompletedJob = await this.waitForJob(removeJobInfo, signal);
-
-    if (removeCompletedJob.status === JobStatus.FAILED) {
-      throw new Error(removeCompletedJob.error?.message);
-    }
-
-    const addJobInfo = await this.reactor.addRelationship(
-      targetParentId,
-      targetId,
-      relationshipType,
-      metadata,
-      branch,
-      this.signer,
-      signal,
-    );
-
-    const addCompletedJob = await this.waitForJob(addJobInfo, signal);
-
-    if (addCompletedJob.status === JobStatus.FAILED) {
-      throw new Error(addCompletedJob.error?.message);
-    }
-
-    const sourceResult = await this.reactor.getByIdOrSlug<PHDocument>(
-      sourceParentId,
-      { branch },
-      removeCompletedJob.consistencyToken,
-      signal,
-    );
-
-    const targetResult = await this.reactor.getByIdOrSlug<PHDocument>(
-      targetParentId,
-      { branch },
-      addCompletedJob.consistencyToken,
-      signal,
-    );
-
-    return {
-      source: await this.gateDocument(sourceResult, { branch }, signal),
-      target: await this.gateDocument(targetResult, { branch }, signal),
-    };
-  }
-
-  async loadBatch(
-    request: BatchLoadRequest,
-    signal?: AbortSignal,
-  ): Promise<BatchLoadResult> {
-    this.logger.verbose("loadBatch(@count jobs)", request.jobs.length);
-    const result = await this.reactor.loadBatch(request, signal);
-
-    const completedJobs = await Promise.all(
-      Object.entries(result.jobs).map(async ([key, jobInfo]) => {
-        const completed = await this.waitForJob(jobInfo, signal);
-        return [key, completed] as const;
-      }),
-    );
-
-    for (const [, completedJob] of completedJobs) {
-      if (completedJob.status === JobStatus.FAILED) {
-        throw new Error(completedJob.error?.message);
-      }
-    }
-
-    return { jobs: Object.fromEntries(completedJobs) };
+    await moved.added.readable;
+    const source = await moved.removed.document(undefined, signal);
+    const target = await moved.added.document(undefined, signal);
+    return { source, target };
   }
 
   /**
-   * Deletes a document and waits for completion
+   * @deprecated Use write.loadBatch(...).
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult> {
+    warnOnce(
+      "IReactorClient.loadBatch",
+      DEPRECATED_WRITES.loadBatch,
+      this.logger,
+    );
+    return this.write.loadBatch(request, signal);
+  }
+
+  /**
+   * @deprecated Use write.deleteDocument(...) and await handle.readable.
    */
   async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    this.logger.verbose(
-      "deleteDocument(@identifier, @propagate)",
+    warnOnce(
+      "IReactorClient.deleteDocument",
+      DEPRECATED_WRITES.deleteDocument,
+      this.logger,
+    );
+    const handle = await this.write.deleteDocument(
       identifier,
       propagate,
-    );
-    const rootId = await this.resolveReference(identifier, "main", signal);
-    const toDelete = new Set([rootId]);
-
-    if (propagate === PropagationMode.Cascade) {
-      let changed = true;
-
-      while (changed) {
-        if (signal?.aborted) {
-          throw new Error("Operation aborted");
-        }
-        changed = false;
-        const orphans = await this.documentIndexer.getOrphanedChildren(
-          [...toDelete],
-          ["child"],
-          signal,
-        );
-        for (const id of orphans) {
-          if (!toDelete.has(id)) {
-            toDelete.add(id);
-            changed = true;
-          }
-        }
-      }
-    }
-
-    // Discovery puts sources before targets; reversed, children go first.
-    const order = [...toDelete].reverse();
-    const position = new Map(order.map((id, index) => [id, index]));
-    const incoming = new Map<string, DocumentRelationship[]>();
-    for (const documentId of order) {
-      const page = await this.documentIndexer.getIncoming(
-        documentId,
-        undefined,
-        undefined,
-        undefined,
-        signal,
-      );
-      incoming.set(documentId, page.results);
-    }
-    // An edge whose source is deleted no later than its target cannot wait.
-    const waitsForTarget = (rel: DocumentRelationship): boolean => {
-      const source = position.get(rel.sourceId);
-      return source === undefined || source > position.get(rel.targetId)!;
-    };
-    const leadingBySource = new Map<string, DocumentRelationship[]>();
-    for (const rels of incoming.values()) {
-      for (const rel of rels) {
-        if (waitsForTarget(rel)) continue;
-        const leading = leadingBySource.get(rel.sourceId) ?? [];
-        leading.push(rel);
-        leadingBySource.set(rel.sourceId, leading);
-      }
-    }
-
-    const plans: ExecutionJobPlan[] = [];
-    for (const documentId of order) {
-      for (const rel of leadingBySource.get(documentId) ?? []) {
-        plans.push(await this.planRemoval(rel, [], plans.length, signal));
-      }
-      plans.push(await this.planDelete(documentId, signal));
-      for (const rel of incoming.get(documentId)!) {
-        if (waitsForTarget(rel)) {
-          plans.push(
-            await this.planRemoval(
-              rel,
-              [deletePlanKey(documentId)],
-              plans.length,
-              signal,
-            ),
-          );
-        }
-      }
-    }
-
-    const batchResult = await this.reactor.executeBatch(
-      { jobs: plans },
       signal,
     );
-
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.waitForJob(job, signal),
-      ),
-    );
-
-    for (const completedJob of completedJobs) {
-      if (completedJob.status === JobStatus.FAILED) {
-        throw new Error(completedJob.error?.message);
-      }
-    }
+    await handle.readable;
   }
 
   /**
-   * Deletes documents and waits for completion
+   * @deprecated Use write.deleteDocuments(...) and await each handle's readable.
    */
   async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    this.logger.verbose(
-      "deleteDocuments(@count identifiers, @propagate)",
-      identifiers.length,
+    warnOnce(
+      "IReactorClient.deleteDocuments",
+      DEPRECATED_WRITES.deleteDocuments,
+      this.logger,
+    );
+    const handles = await this.write.deleteDocuments(
+      identifiers,
       propagate,
+      signal,
     );
-    const deletePromises = identifiers.map((identifier) =>
-      this.deleteDocument(identifier, propagate, signal),
-    );
-
-    await Promise.all(deletePromises);
+    await Promise.all(handles.map((handle) => handle.readable));
   }
 
-  /**
-   * Retrieves the status of a job
-   */
-  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
-    this.logger.verbose("getJobStatus(@jobId)", jobId);
-    return this.reactor.getJobStatus(jobId, signal);
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    return this.read.getJobStatus(jobId, signal);
   }
 
-  /**
-   * Waits for a job to complete
-   */
-  async waitForJob(
-    jobId: string | JobInfo,
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
-    const id = typeof jobId === "string" ? jobId : jobId.id;
-    this.logger.verbose("waitForJob(@id)", id);
-    return this.jobAwaiter.waitForJob(id, signal);
+  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo> {
+    return this.read.waitForJob(jobId, signal);
   }
 
-  /**
-   * Subscribes to changes for documents matching specified filters
-   */
   subscribe(
     search: SearchFilter,
     callback: (event: DocumentChangeEvent) => void,
     view?: ViewFilter,
   ): () => void {
-    this.logger.verbose("subscribe(@search, @view)", search, view);
-
-    // A subscription is a read, gated here because the subscription manager is
-    // a read model, which sees everything. It is gated as a listing is: an
-    // event for a document the subject can read no domain scope of is withheld.
-    const served = async (
-      type: DocumentChangeType,
-      documents: PHDocument[],
-      reads: EventReads,
-    ): Promise<DocumentChangeEvent | undefined> => {
-      const documentsServed = await this.gateServedAll(
-        documents,
-        view,
-        undefined,
-        reads,
-      );
-      return documentsServed.length > 0
-        ? { type, documents: documentsServed }
-        : undefined;
-    };
-
-    let disposed = false;
-    let delivering: Promise<void> = Promise.resolve();
-
-    /**
-     * Queues one event behind those already queued. Gating an event resolves
-     * asynchronously, so an event needing a group fetch would otherwise be
-     * overtaken by the one behind it, and one still in flight would reach a
-     * subscriber that has already unsubscribed. Only delivery is ordered, not
-     * the gating: a single subscription can cover every document in the
-     * reactor, so serializing that work would make its delivery rate the sum
-     * of every gate build rather than the slowest. An event that cannot be
-     * gated is withheld, because serving it unfiltered would leak the scopes
-     * the gate did not clear -- but it is logged rather than swallowed, since
-     * the gate rethrows a transient failure precisely so it is not read as a
-     * denial. An event that resolves to undefined was withheld.
-     */
-    const deliver = (event: Promise<DocumentChangeEvent | undefined>): void => {
-      // Attached now, or a rejection while the chain is parked on real I/O
-      // waits a full turn with no handler, which Node reports as unhandled.
-      void Promise.resolve(event).catch(() => undefined);
-
-      delivering = delivering
-        .then(async () => {
-          const built = await event;
-          if (disposed || !built) {
-            return;
-          }
-          callback(built);
-        })
-        .catch((error: unknown) => {
-          this.logger.error(
-            "Subscription delivery failed for @search: @Error",
-            { search },
-            error,
-          );
-        });
-    };
-
-    const unsubscribeCreated = this.subscriptionManager.onDocumentCreated(
-      (result) => {
-        const reads = this.eventReads.forEvent();
-        deliver(
-          (async () => {
-            // Unnarrowed: a narrowed fetch could omit the policy, which the
-            // gate reads as uninitialized, or every domain scope.
-            const documents = await Promise.all(
-              result.results.map((id) => reads.get(id, withAllScopes(view))),
-            );
-            return served(DocumentChangeType.Created, documents, reads);
-          })(),
-        );
-      },
-      search,
-    );
-
-    const unsubscribeDeleted = this.subscriptionManager.onDocumentDeleted(
-      (documentIds, info) => {
-        const reads = this.eventReads.forEvent();
-        const purged = info?.purged ? { purged: true as const } : {};
-        for (const childId of documentIds) {
-          deliver(
-            (async () =>
-              (await this.servesEvery([childId], view, reads))
-                ? {
-                    type: DocumentChangeType.Deleted,
-                    documents: [],
-                    context: { childId, ...purged },
-                  }
-                : undefined)(),
-          );
-        }
-      },
-      search,
-    );
-
-    const unsubscribeUpdated = this.subscriptionManager.onDocumentStateUpdated(
-      (result) => {
-        deliver(
-          served(
-            DocumentChangeType.Updated,
-            result.results,
-            this.eventReads.forEvent(),
-          ),
-        );
-      },
-      search,
-      view,
-    );
-
-    const unsubscribeRelationship =
-      this.subscriptionManager.onRelationshipChanged(
-        (parentId, childId, changeType) => {
-          const reads = this.eventReads.forEvent();
-          deliver(
-            (async () =>
-              (await this.servesEvery([parentId, childId], view, reads))
-                ? {
-                    type:
-                      changeType === RelationshipChangeType.Added
-                        ? DocumentChangeType.ChildAdded
-                        : DocumentChangeType.ChildRemoved,
-                    documents: [],
-                    context: { parentId, childId },
-                  }
-                : undefined)(),
-          );
-        },
-        search,
-      );
-
-    return () => {
-      disposed = true;
-      unsubscribeCreated();
-      unsubscribeDeleted();
-      unsubscribeUpdated();
-      unsubscribeRelationship();
-    };
-  }
-
-  private readSubject(subject?: AuthSubject): AuthSubject {
-    return subject ?? authSubjectFromSigner(this.signer);
-  }
-
-  /**
-   * Which scopes of one document the subject may read. Resolved once per
-   * document, so the gate builds its model once however many scopes are then
-   * tested, and the filtering itself stays synchronous.
-   */
-  private readableScopes(
-    document: PHDocument,
-    view?: ViewFilter,
-    signal?: AbortSignal,
-    reads?: EventReads,
-  ): Promise<(scope: string) => boolean> {
-    const subject = this.readSubject(view?.subject);
-    const branch = view?.branch ?? "main";
-    return reads
-      ? reads.scopePredicate(document, subject, branch)
-      : this.readGate.scopePredicate(document, subject, branch, signal);
-  }
-
-  /**
-   * One document, filtered to the scopes the subject may read. Every method
-   * that hands a document back goes through here, including the ones that
-   * follow a write: a document returned from a mutation is a read like any
-   * other, and returning it whole served scopes the same subject would be
-   * refused by `get`. Its author still sees what it wrote, because an allow on
-   * execute confers read of that scope.
-   */
-  private async gateDocument<TDocument extends PHDocument>(
-    document: TDocument,
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<TDocument> {
-    const readable = await this.readableScopes(document, view, signal);
-    return filterReadableScopes(document, readable);
-  }
-
-  /**
-   * One document as a listing or a feed serves it, or undefined when withheld.
-   * The document must hold every scope, or withholding is decided on a subset;
-   * a narrowing view is applied here instead.
-   */
-  private async gateServed<TDocument extends PHDocument>(
-    document: TDocument,
-    view: ViewFilter | undefined,
-    signal?: AbortSignal,
-    reads?: EventReads,
-  ): Promise<TDocument | undefined> {
-    const readable = await this.readableScopes(document, view, signal, reads);
-    if (refusesEveryDomainScope(document, readable)) {
-      return undefined;
-    }
-    const narrowed = narrowedScopes(view);
-    return filterReadableScopes(
-      document,
-      narrowed ? (scope) => readable(scope) && narrowed.has(scope) : readable,
-    );
-  }
-
-  private async gateServedAll(
-    documents: PHDocument[],
-    view: ViewFilter | undefined,
-    signal?: AbortSignal,
-    reads?: EventReads,
-  ): Promise<PHDocument[]> {
-    const served = await Promise.all(
-      documents.map((document) =>
-        this.gateServed(document, view, signal, reads),
-      ),
-    );
-    return served.filter((document) => document !== undefined);
-  }
-
-  /**
-   * Gates a page and every page after it. `nextCursor` is left as the stream
-   * reported it.
-   */
-  private async gateListing(
-    page: PagedResults<PHDocument>,
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PagedResults<PHDocument>> {
-    const listed = await Promise.all(
-      page.results.map((document) => this.gateListed(document, view, signal)),
-    );
-    const results = listed.filter((document) => document !== undefined);
-    const next = page.next;
-    return {
-      ...page,
-      results,
-      next: next
-        ? async () => this.gateListing(await next(), view, signal)
-        : undefined,
-    };
-  }
-
-  /**
-   * One document as a listing serves it, or undefined when withheld. It holds
-   * only the view's scopes; a domain scope it lacks is decided on its name, or
-   * on its state read now when a condition needs that.
-   */
-  private async gateListed(
-    document: PHDocument,
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PHDocument | undefined> {
-    const readable = await this.readableScopes(document, view, signal);
-    const unheld = unheldScopesReadOnState(document);
-    const decided =
-      unheld.length === 0
-        ? readable
-        : (scope: string) => !unheld.includes(scope) && readable(scope);
-    if (
-      refusesEveryDomainScope(document, decided) &&
-      !(await this.servesUnheld(document, unheld, view, signal))
-    ) {
-      return undefined;
-    }
-    return filterReadableScopes(document, readable);
-  }
-
-  private async servesUnheld(
-    document: PHDocument,
-    scopes: string[],
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<boolean> {
-    if (scopes.length === 0) {
-      return false;
-    }
-    const id = document.header.id;
-    let held: PHDocument;
-    try {
-      held = await this.reactor.get(
-        id,
-        withAuthScope({ ...view, scopes }),
-        undefined,
-        signal,
-      );
-    } catch (error) {
-      await assertAbsent(this.documentView, id, error, signal);
-      return false;
-    }
-    const readable = await this.readableScopes(held, view, signal);
-    return scopes.some(readable);
-  }
-
-  /**
-   * Whether an event naming only these ids may reach the subject. An id with no
-   * live document behind it has no content left to protect, so it does not
-   * withhold; a deleted document is read at its deletion boundary when
-   * deletion is positional, and gated like any other.
-   */
-  private async servesEvery(
-    ids: string[],
-    view: ViewFilter | undefined,
-    reads: EventReads,
-  ): Promise<boolean> {
-    const served = await Promise.all(
-      ids.map((id) => this.servesId(id, view, reads)),
-    );
-    return served.every(Boolean);
-  }
-
-  private async servesId(
-    id: string,
-    view: ViewFilter | undefined,
-    reads: EventReads,
-  ): Promise<boolean> {
-    let document: PHDocument;
-    try {
-      document = await reads.get(id, withAllScopes(view));
-    } catch (error) {
-      await assertAbsent(reads, id, error);
-      return true;
-    }
-    return !refusesEveryDomainScope(
-      document,
-      await this.readableScopes(document, view, undefined, reads),
-    );
-  }
-
-  private async getOperationsWithCompositeCursor(
-    documentId: string,
-    view: ViewFilter | undefined,
-    filter: OperationFilter | undefined,
-    paging: PagingOptions,
-    signal: AbortSignal | undefined,
-    canRead: (scope: string) => boolean,
-  ): Promise<PagedResults<Operation>> {
-    const scopeCursors = decodeCompositeCursor(paging.cursor);
-    const allOperations: Operation[] = [];
-    const activeCursors: Record<string, string> = {};
-
-    for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
-      if (!canRead(scopeName)) {
-        continue;
-      }
-      const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
-      const scopePaging: PagingOptions = { cursor, limit: paging.limit };
-
-      const operationsByScope = await this.reactor.getOperations(
-        documentId,
-        scopeView,
-        filter,
-        scopePaging,
-        undefined,
-        signal,
-      );
-
-      const scopeResult = operationsByScope[scopeName];
-      allOperations.push(...scopeResult.results);
-      if (scopeResult.nextCursor) {
-        activeCursors[scopeName] = scopeResult.nextCursor;
-      }
-    }
-
-    allOperations.sort((a, b) => a.index - b.index);
-
-    const nextCursor =
-      Object.keys(activeCursors).length > 0
-        ? encodeCompositeCursor(activeCursors)
-        : undefined;
-
-    return { results: allOperations, options: paging, nextCursor };
-  }
-
-  /**
-   * Drops the edges whose far-end document the subject may read no domain scope
-   * of. An edge is withheld whole rather than stripped of its metadata: the
-   * document-shaped relationship reads already answer with the far end stripped
-   * to the scopes the gate allows, so the far end's existence is disclosed
-   * either way, but an edge's metadata is content about the pair that the far
-   * end's own reads would refuse. An edge to a far end stripped to nothing
-   * therefore carries content past a refusal, and there is no useful shell to
-   * hand back in its place.
-   *
-   * `nextCursor` and `options` are left as the underlying stream reported them,
-   * because a caller must feed them back to resume from the right position. A
-   * gated page can therefore be shorter than the limit it asked for.
-   */
-  private async gateEdges(
-    page: PagedResults<DocumentRelationship>,
-    farEnd: "sourceId" | "targetId",
-    view: ViewFilter | undefined,
-    signal: AbortSignal | undefined,
-  ): Promise<PagedResults<DocumentRelationship>> {
-    const ids = [...new Set(page.results.map((edge) => edge[farEnd]))];
-    if (ids.length === 0) {
-      return page;
-    }
-
-    // No scopes: the gate must see every scope the document holds. Honouring a
-    // caller-supplied narrowing would let `scopes: ["auth"]` leave a document
-    // with no visible domain scope and switch the gate off. The explicit limit
-    // keeps the tail of a large page from paging out of sight and reading as
-    // absent.
-    const farEndView: ViewFilter = {
-      subject: view?.subject,
-      branch: view?.branch,
-    };
-    const documents = await this.reactor.find(
-      { ids },
-      farEndView,
-      { cursor: "0", limit: ids.length },
-      undefined,
-      signal,
-    );
-
-    const readable = new Map(
-      await Promise.all(
-        documents.results.map(async (doc) => {
-          const allows = await this.readableScopes(doc, view, signal);
-          return [
-            doc.header.id,
-            !refusesEveryDomainScope(doc, allows),
-          ] as const;
-        }),
-      ),
-    );
-
-    // A far end `find` did not return is readable. `addRelationship` tolerates a
-    // missing target, so a dangling edge is legitimate and failing closed would
-    // hide it; and `find` never drops a document for authorization, so absence
-    // here means genuinely absent and there is no content to protect.
-    const results = page.results.filter(
-      (edge) => readable.get(edge[farEnd]) !== false,
-    );
-    if (results.length === page.results.length) {
-      return page;
-    }
-
-    const nextPage = page.next;
-    return {
-      ...page,
-      results,
-      next: nextPage
-        ? async () => this.gateEdges(await nextPage(), farEnd, view, signal)
-        : undefined,
-    };
-  }
-
-  /**
-   * One relationship edge, or undefined when it does not exist. A point lookup:
-   * the pair is filtered in SQL rather than scanned out of the source's edge
-   * list, which on a drive with thousands of children is the difference between
-   * one query and dozens.
-   */
-  private async readRelationshipEdge(
-    sourceIdentifier: string,
-    targetIdentifier: string,
-    relationshipType: string,
-    view?: ViewFilter,
-    signal?: AbortSignal,
-  ): Promise<DocumentRelationship | undefined> {
-    const sourceId = await this.documentView.resolveIdOrSlug(
-      sourceIdentifier,
-      view,
-      undefined,
-      signal,
-    );
-    const targetId = await this.documentView.resolveIdOrSlug(
-      targetIdentifier,
-      view,
-      undefined,
-      signal,
-    );
-
-    const edges = await this.documentIndexer.getDirectedRelationships(
-      sourceId,
-      targetId,
-      [relationshipType],
-      { cursor: "0", limit: 1 },
-      undefined,
-      signal,
-    );
-
-    return edges.results[0];
-  }
-
-  /**
-   * The id a write on `identifier` is stored under, which its signatures bind.
-   * A create names its own id.
-   */
-  private async resolveWriteTarget(
-    identifier: string,
-    branch: string,
-    actions: readonly Action[],
-    signal?: AbortSignal,
-  ): Promise<string> {
-    if (actions.some((action) => action.type === "CREATE_DOCUMENT")) {
-      return identifier;
-    }
-    return this.resolveReference(identifier, branch, signal);
-  }
-
-  /**
-   * The id a document reference names. An id no slug maps to is taken as
-   * given, so a document still in flight resolves to itself; an id that is
-   * another document's slug is refused as ambiguous.
-   */
-  private async resolveReference(
-    identifier: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<string> {
-    const view = { branch };
-    const bySlug = await this.documentView.resolveSlug(
-      identifier,
-      view,
-      undefined,
-      signal,
-    );
-    if (bySlug === undefined || bySlug === identifier) {
-      return identifier;
-    }
-    return this.documentView.resolveIdOrSlug(
-      identifier,
-      view,
-      undefined,
-      signal,
-    );
-  }
-
-  /**
-   * The decision model for one target document, built at its stream heads.
-   *
-   * The document is fetched unfiltered, because the policy is what decides:
-   * reading it through the read gate would withhold the very scopes the
-   * decision is about. A deleted document is served at its deletion boundary,
-   * which is what lets the model refuse an execute against it -- authEnforcement
-   * requires documentDecisions, so that read is available whenever this runs.
-   *
-   * Reading past the gate discloses nothing a submit does not. The `auth` and
-   * `document` scopes are readable by every holder, so a verdict resting on the
-   * policy alone is one the caller could compute unaided; and a verdict resting
-   * on a conditional grant reads the executing scope's state exactly as
-   * admission reads it, so the answer here is what submitting and being refused
-   * would have revealed anyway.
-   *
-   * The append condition the build records is dropped. It guards a write, and
-   * this makes none; reproducing it is also what the preflight cannot do, which
-   * is why the answer is a prediction.
-   */
-  private async buildEvaluationTarget(
-    config: ActionEvaluationConfig,
-    documentId: string,
-    branch: string,
-    signal?: AbortSignal,
-  ): Promise<EvaluationTarget> {
-    const document = await this.documentView.get(
-      documentId,
-      { branch },
-      undefined,
-      signal,
-    );
-
-    const target = { documentId, branch };
-    const built = await buildDecisionModel(
-      new SeededStateReader(this.documentView, document, branch),
-      config.model,
-      target,
-      signal,
-    );
-
-    return {
-      definition: config.model(target),
-      model: built.model,
-      scopeStates: (document.state ?? {}) as Record<string, unknown>,
-    };
-  }
-
-  private async planDelete(
-    documentId: string,
-    signal?: AbortSignal,
-  ): Promise<ExecutionJobPlan> {
-    const signed = await signActions(
-      [deleteDocumentAction(documentId)],
-      this.signer,
-      { documentId, branch: "main" },
-      signal,
-    );
-    return {
-      key: deletePlanKey(documentId),
-      documentId,
-      scope: "document",
-      branch: "main",
-      actions: signed,
-      dependsOn: [],
-    };
-  }
-
-  private async planRemoval(
-    rel: DocumentRelationship,
-    dependsOn: string[],
-    index: number,
-    signal?: AbortSignal,
-  ): Promise<ExecutionJobPlan> {
-    const signed = await signActions(
-      [
-        removeRelationshipAction(
-          rel.sourceId,
-          rel.targetId,
-          rel.relationshipType,
-        ),
-      ],
-      this.signer,
-      { documentId: rel.sourceId, branch: "main" },
-      signal,
-    );
-    return {
-      key: `remove:${index}`,
-      documentId: rel.sourceId,
-      scope: "document",
-      branch: "main",
-      actions: signed,
-      dependsOn,
-    };
+    return this.read.subscribe(search, callback, view);
   }
 }

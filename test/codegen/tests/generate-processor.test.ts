@@ -455,6 +455,9 @@ describe("generate processor", () => {
       relationalDb,
       dispatch: {
         execute: () => Promise.resolve({ id: "mock", status: "mock" }),
+        createInDrive: () =>
+          Promise.resolve({ id: "mock", status: "mock", documentId: "mock" }),
+        deleteDocument: () => Promise.resolve({ id: "mock", status: "mock" }),
       },
       getReadModel: () => {
         throw new Error("No read models in test");
@@ -562,6 +565,9 @@ describe("generate processor", () => {
         relationalDb,
         dispatch: {
           execute: () => Promise.resolve({ id: "mock", status: "mock" }),
+          createInDrive: () =>
+            Promise.resolve({ id: "mock", status: "mock", documentId: "mock" }),
+          deleteDocument: () => Promise.resolve({ id: "mock", status: "mock" }),
         },
         getReadModel: () => {
           throw new Error("No read models in test");
@@ -917,6 +923,16 @@ describe("processor e2e integration", () => {
 
     const mockDispatch = {
       execute() {
+        return Promise.resolve({ id: "mock", status: "mock" });
+      },
+      createInDrive() {
+        return Promise.resolve({
+          id: "mock",
+          status: "mock",
+          documentId: "mock",
+        });
+      },
+      deleteDocument() {
         return Promise.resolve({ id: "mock", status: "mock" });
       },
     };

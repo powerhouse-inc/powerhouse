@@ -302,21 +302,27 @@ export function RoutingPanel() {
     const name = driveName.trim();
     try {
       if (driveTarget === "") {
-        const drive = await client.drives.create({ global: { name } });
+        const created = await client.write.drives.create({
+          global: { name },
+        });
+        await created.readable;
         const owner = client
           .describeRouting()
-          .documents.find((entry) => entry.identifier === drive.header.id);
+          .documents.find((entry) => entry.identifier === created.documentId);
         setCreateResult(
-          `router placed drive ${drive.header.id} on ${owner?.backend ?? "(unresolved)"}`,
+          `router placed drive ${created.documentId} on ${owner?.backend ?? "(unresolved)"}`,
         );
       } else {
         const target = topology.reactors.find((r) => r.name === driveTarget);
         if (!target) {
           return;
         }
-        const drive = await target.client.drives.create({ global: { name } });
+        const created = await target.client.write.drives.create({
+          global: { name },
+        });
+        await created.readable;
         setCreateResult(
-          `created drive ${drive.header.id} directly on ${driveTarget}; the router learns its owner on the next operation`,
+          `created drive ${created.documentId} directly on ${driveTarget}; the router learns its owner on the next operation`,
         );
       }
       setDriveName("");
@@ -333,7 +339,7 @@ export function RoutingPanel() {
     }
     setOpError("");
     try {
-      const page = await client.find({ type: findType.trim() });
+      const page = await client.read.find({ type: findType.trim() });
       // Provenance: ask each backend which one actually holds each hit. This
       // is what the router's own servingBackends does; done here only to label
       // a merged list that carries no backend of its own.
@@ -342,7 +348,7 @@ export function RoutingPanel() {
           const owners = await Promise.all(
             topology.reactors.map(async (reactor) => ({
               name: reactor.name,
-              serves: await reactor.client
+              serves: await reactor.client.read
                 .isServed(document.header.id)
                 .catch(() => false),
             })),
@@ -380,7 +386,8 @@ export function RoutingPanel() {
       jobs: [plan(batchA.trim()), plan(batchB.trim())],
     };
     try {
-      await client.executeBatch(request);
+      const batch = await client.write.executeBatch(request);
+      await batch.readable;
       setBatchError({
         name: "accepted",
         message:
@@ -401,7 +408,12 @@ export function RoutingPanel() {
     }
     setRelError(null);
     try {
-      await client.addRelationship(batchA.trim(), batchB.trim(), "child");
+      const added = await client.write.addRelationship(
+        batchA.trim(),
+        batchB.trim(),
+        "child",
+      );
+      await added.readable;
       setRelError({
         name: "accepted",
         message:

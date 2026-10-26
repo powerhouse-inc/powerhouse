@@ -2,6 +2,7 @@ import { accessToken } from "./access-token.js";
 import { build } from "./build.js";
 import { connect } from "./connect.js";
 import { generate } from "./generate.js";
+import { host } from "./host.js";
 import { init } from "./init.js";
 import { inspect } from "./inspect.js";
 import { install } from "./install.js";
@@ -38,10 +39,12 @@ const baseCommands = {
   uninstall,
 } as const;
 
-/** Exported for tests; the flag decides whether `run` is registered at all,
- * so flag-off keeps the command surface byte-identical to before. */
+/** Exported for tests; the flag decides whether `run` and `host` are
+ * registered at all, so flag-off keeps the command surface byte-identical. */
 export function buildPhCliCommands(uniformRunners: boolean) {
-  return uniformRunners ? { ...baseCommands, run: runHost } : baseCommands;
+  return uniformRunners
+    ? { ...baseCommands, run: runHost, host }
+    : baseCommands;
 }
 
 export const phCliCommands = buildPhCliCommands(isUniformRunnersEnabled());

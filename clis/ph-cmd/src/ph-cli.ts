@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
+import { CALLER_CWD_ENV } from "@powerhousedao/shared/clis/command-names";
 import spawn from "cross-spawn";
 import { resolveCommand } from "package-manager-detector";
 import { getVersion } from "./get-version.js";
@@ -61,6 +62,11 @@ export async function executePhCliCommand(phCliCommand: string) {
   const result = spawn.sync(command, args, {
     stdio: "inherit",
     cwd: projectPath ?? process.cwd(),
+    // Relative path arguments mean the caller's cwd, not the project root.
+    env: {
+      ...process.env,
+      [CALLER_CWD_ENV]: process.env[CALLER_CWD_ENV] ?? process.cwd(),
+    },
   });
   if (result.error) throw result.error;
   if (result.signal) {

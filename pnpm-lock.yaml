@@ -977,6 +977,9 @@ importers:
       document-model:
         specifier: workspace:*
         version: link:../../packages/document-model
+      dotenv:
+        specifier: 'catalog:'
+        version: 16.4.7
       enquirer:
         specifier: 'catalog:'
         version: 2.4.1

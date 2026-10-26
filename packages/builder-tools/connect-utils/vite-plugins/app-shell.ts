@@ -283,7 +283,10 @@ async function renderProjectAppShells(
     root: projectRoot,
     logLevel: "error",
     appType: "custom",
-    server: { middlewareMode: true, hmr: false, ws: false },
+    // No watcher: it renders once and closes, and chokidar would otherwise
+    // crawl the whole project (.ph stores and attachments included) meanwhile,
+    // one synchronous fs.watch per file on Windows.
+    server: { middlewareMode: true, hmr: false, ws: false, watch: null },
     // Vite's own JSX transform: React's plugin would pre-bundle React for a client.
     oxc: { jsx: { runtime: "automatic" } },
     resolve: {

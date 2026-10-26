@@ -19,7 +19,7 @@ let sentryClient: TelemetryClient | undefined = undefined;
 // Commands whose second positional is itself a subcommand (vs. a project
 // name / file path). Keeping this explicit avoids high-cardinality tag
 // values like `subcommand:my-package` polluting Sentry.
-const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra"]);
+const COMMANDS_WITH_SUBCOMMANDS = new Set(["connect", "vetra", "host"]);
 
 function detectPackageManager(): string | undefined {
   // npm, pnpm, yarn and bun all set npm_config_user_agent like

@@ -5,6 +5,7 @@ import {
   projectReactorToConnect,
   reactorClientMode,
   projectReactorToSwitchboard,
+  protocolConflicts,
   protocolEnv,
   type ReactorConfig,
 } from "../src/reactor-config.js";
@@ -203,5 +204,33 @@ describe("assertProtocolConsistency (the enforcement teeth)", () => {
         CREATE_SIGNATURE_POLICY: "v2-required",
       }),
     ).toThrow(/CREATE_SIGNATURE_POLICY/);
+  });
+});
+
+describe("protocolConflicts", () => {
+  it("is empty without a protocol, an env, or a contradiction", () => {
+    expect(protocolConflicts(undefined, { REACTOR_AUTH_GROUPS: "x" })).toEqual(
+      [],
+    );
+    expect(protocolConflicts(fullProtocol, {})).toEqual([]);
+    expect(
+      protocolConflicts(fullProtocol, { REACTOR_DOCUMENT_DECISIONS: "true" }),
+    ).toEqual([]);
+  });
+
+  it("reports every contradicting var, naming the host file", () => {
+    const conflicts = protocolConflicts(
+      fullProtocol,
+      {
+        REACTOR_AUTH_ENFORCEMENT: "false",
+        REACTOR_UNSUPPORTED_STORED_DOCUMENTS: "refuse",
+      },
+      "hosts/sb/host.js",
+    );
+    expect(conflicts).toHaveLength(2);
+    expect(conflicts[0]).toMatch(
+      /REACTOR_AUTH_ENFORCEMENT is "false" in the environment but "true" in hosts\/sb\/host\.js/,
+    );
+    expect(conflicts[1]).toMatch(/REACTOR_UNSUPPORTED_STORED_DOCUMENTS/);
   });
 });

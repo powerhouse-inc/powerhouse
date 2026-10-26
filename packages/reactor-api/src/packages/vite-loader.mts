@@ -443,6 +443,35 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 }
 
+const toSlashes = (file: string) => file.replaceAll("\\", "/");
+
+/**
+ * The project's build output, but for the built piece list `onPiecesChange`
+ * watches: its own `dist/` and a Tauri shell's Rust `target/`. On Windows
+ * every watched file costs a synchronous `fs.watch` at startup, over a
+ * minute for a built project with a built desktop shell.
+ */
+export function ignoreBuildOutputButPieces(root: string) {
+  const dist = `${toSlashes(path.resolve(root, "dist"))}/`;
+  const pieces = toSlashes(path.dirname(path.resolve(root, BUILT_PIECE_LIST)));
+  return (file: string) => {
+    const at = toSlashes(path.resolve(root, file));
+    if (
+      at.includes("/tauri-shell/target/") ||
+      at.includes("/src-tauri/target/")
+    ) {
+      return true;
+    }
+    if (!at.startsWith(dist)) return false;
+    // The piece list's folder, what is in it, and the folders leading to it stay watched.
+    return !(
+      at === pieces ||
+      at.startsWith(`${pieces}/`) ||
+      pieces.startsWith(`${at}/`)
+    );
+  };
+}
+
 export async function startViteServer(root: string, logger?: Logger) {
   const packageJson = await readPackage({ cwd: root });
 
@@ -455,7 +484,7 @@ export async function startViteServer(root: string, logger?: Logger) {
       // It loads modules, never serves a page: no HMR port to collide on.
       hmr: false,
       ws: false,
-      watch: { ignored: ["**/.ph/**"] },
+      watch: { ignored: ["**/.ph/**", ignoreBuildOutputButPieces(root)] },
     },
     appType: "custom",
     // Its own cache, and no client deps to optimize: Studio's cache is the

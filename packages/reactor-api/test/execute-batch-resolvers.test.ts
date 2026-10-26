@@ -1,9 +1,11 @@
 import {
   ReactorBuilder,
   ReactorClientBuilder,
+  type BatchWriteHandle,
   type InProcessReactorClientModule,
-  type IReactorClient,
+  type IReactorWriteClient,
   type JobInfo,
+  type WriteReceipt,
 } from "@powerhousedao/reactor";
 import {
   withSignaturePolicy,
@@ -77,29 +79,36 @@ const completedJob = (id: string, documentId: string): JobInfo =>
     meta: { batchId: "batch-1", batchJobIds: [id] },
   }) as unknown as JobInfo;
 
-/** A client that records the batch it was handed and returns completed jobs. */
-function recordingClient() {
-  const pending = {
-    jobs: {
-      drive: { id: "job-drive", documentId: "drive-1", status: "PENDING" },
-      delete: { id: "job-delete", documentId: "file-1", status: "PENDING" },
-    },
-  };
-  const executeBatchSpy = vi.fn().mockResolvedValue(pending);
-  const statuses: Record<string, JobInfo> = {
-    "job-drive": completedJob("job-drive", "drive-1"),
-    "job-delete": completedJob("job-delete", "file-1"),
-  };
-  const getJobStatusSpy = vi
-    .fn()
-    .mockImplementation((id: string) => Promise.resolve(statuses[id]));
+/** A batch handle whose stages settled with `settled`, keyed by plan key. */
+function settledBatch(settled: Record<string, JobInfo>): BatchWriteHandle {
+  const receipts: Record<string, WriteReceipt> = {};
+  for (const [key, job] of Object.entries(settled)) {
+    receipts[key] = {
+      job,
+      token: job.consistencyToken,
+      documentId: job.documentId,
+      branch: "main",
+    };
+  }
   return {
-    client: {
-      executeBatch: executeBatchSpy,
-      getJobStatus: getJobStatusSpy,
-    } as unknown as IReactorClient,
+    jobs: settled,
+    handles: {},
+    written: Promise.resolve(receipts),
+    readable: Promise.resolve(receipts),
+  };
+}
+
+/** A write half that records the batch it was handed and settles every job. */
+function recordingClient() {
+  const executeBatchSpy = vi.fn().mockResolvedValue(
+    settledBatch({
+      drive: completedJob("job-drive", "drive-1"),
+      delete: completedJob("job-delete", "file-1"),
+    }),
+  );
+  return {
+    client: { executeBatch: executeBatchSpy } as unknown as IReactorWriteClient,
     executeBatchSpy,
-    getJobStatusSpy,
   };
 }
 
@@ -183,7 +192,7 @@ describe("executeBatch", () => {
   });
 
   it("returns one completed job per plan key, keyed for rebuilding the record", async () => {
-    const { client, getJobStatusSpy } = recordingClient();
+    const { client } = recordingClient();
 
     const result = await executeBatch(client, {
       jobs: [deleteFileJob, deleteDocJob],
@@ -201,8 +210,6 @@ describe("executeBatch", () => {
       id: "job-delete",
       status: "READ_READY",
     });
-    expect(getJobStatusSpy).toHaveBeenCalledWith("job-drive");
-    expect(getJobStatusSpy).toHaveBeenCalledWith("job-delete");
   });
 
   it("reports a failure that happens before any job settles as an error", async () => {
@@ -210,8 +217,7 @@ describe("executeBatch", () => {
       executeBatch: vi
         .fn()
         .mockRejectedValue(new Error("drive refused the removal")),
-      getJobStatus: vi.fn(),
-    } as unknown as IReactorClient;
+    } as unknown as IReactorWriteClient;
 
     const run = executeBatch(client, { jobs: [deleteFileJob] });
 
@@ -221,13 +227,12 @@ describe("executeBatch", () => {
 
   it("raises a diagnosable error naming a plan key missing from the reactor result", async () => {
     const client = {
-      executeBatch: vi.fn().mockResolvedValue({
-        jobs: {
-          drive: { id: "job-drive", documentId: "drive-1", status: "PENDING" },
-        },
-      }),
-      getJobStatus: vi.fn(),
-    } as unknown as IReactorClient;
+      executeBatch: vi
+        .fn()
+        .mockResolvedValue(
+          settledBatch({ drive: completedJob("job-drive", "drive-1") }),
+        ),
+    } as unknown as IReactorWriteClient;
 
     const run = executeBatch(client, {
       jobs: [deleteFileJob, deleteDocJob],
@@ -295,7 +300,7 @@ describe("executeBatch against a real reactor client", () => {
     await module.client.create(existing);
     const { header } = existing;
 
-    const result = await executeBatch(module.client, {
+    const result = await executeBatch(module.write, {
       jobs: [
         {
           key: "rename",

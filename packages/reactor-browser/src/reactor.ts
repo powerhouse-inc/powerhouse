@@ -1,4 +1,4 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorReadClient } from "@powerhousedao/reactor";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
 
@@ -14,13 +14,15 @@ export type RefreshReactorDataConfig = {
 const DEFAULT_DEBOUNCE_DELAY_MS = 200;
 const DEFAULT_IMMEDIATE_THRESHOLD_MS = 1000;
 
-async function _refreshReactorData(reactor: IReactorClient) {
+async function _refreshReactorData(reactor: IReactorReadClient) {
   const drives = await getDrives(reactor);
 
   setDrives(drives);
 }
 
-async function _refreshReactorDataClient(reactor: IReactorClient | undefined) {
+async function _refreshReactorDataClient(
+  reactor: IReactorReadClient | undefined,
+) {
   if (!reactor) return;
 
   setDrives(await getDrives(reactor));
@@ -33,7 +35,7 @@ function createDebouncedRefreshReactorData(
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let lastRefreshTime = 0;
 
-  return (reactor: IReactorClient, immediate = false) => {
+  return (reactor: IReactorReadClient, immediate = false) => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
@@ -62,7 +64,7 @@ function createDebouncedRefreshReactorDataClient(
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let lastRefreshTime = 0;
 
-  return (reactor: IReactorClient | undefined, immediate = false) => {
+  return (reactor: IReactorReadClient | undefined, immediate = false) => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
