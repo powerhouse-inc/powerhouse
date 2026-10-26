@@ -64,6 +64,7 @@ describe("signature admission", () => {
       trustPolicy?: SignatureTrustPolicy;
       signer?: ISigner;
       jobTimeoutMs?: number;
+      protocolVersions?: { "base-reducer": number };
     } = {},
   ): Promise<InProcessReactorModule> {
     const builder = new ReactorBuilder()
@@ -89,7 +90,10 @@ describe("signature admission", () => {
     );
 
     // Legacy, so every scheme is admissible; signature-policy covers v2-required.
-    const document = createDocModelDocument({ signaturePolicy: "legacy" });
+    const document = createDocModelDocument({
+      signaturePolicy: "legacy",
+      protocolVersions: options.protocolVersions,
+    });
     docId = document.header.id;
     expect((await settle(await module.reactor.create(document))).status).toBe(
       JobStatus.READ_READY,
@@ -533,6 +537,88 @@ describe("signature admission", () => {
       expect(await storedActionIds()).toEqual([action.id]);
       expect(refusals).toMatchObject([
         { actionId: action.id, code: "DUPLICATE_ACTION", path: "load" },
+      ]);
+    });
+  });
+
+  describe("a repeated action id on a base-reducer 3 rule scope", () => {
+    for (const mode of ["enforce", "log"] as const) {
+      it(`is dropped at load in ${mode} mode`, async () => {
+        await build(mode);
+        const action = await renownSigned(moduleAction("m", 0));
+        expect((await load([asOperation(action, 0)])).status).toBe(
+          JobStatus.READ_READY,
+        );
+
+        const replay = { ...asOperation(action, 1), timestampUtcMs: at(5_000) };
+        expect((await load([replay])).status).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([action.id]);
+        expect(refusals).toMatchObject([
+          {
+            actionId: action.id,
+            code: "DUPLICATE_ACTION",
+            path: "load",
+            enforced: true,
+          },
+        ]);
+      });
+
+      it(`is dropped at load in ${mode} mode when it repeats a RETRACT`, async () => {
+        await build(mode);
+        const a = await renownSigned(moduleAction("a", 0));
+        const undo = await renownSigned({
+          ...retract(a.id, "global"),
+          timestampUtcMs: at(10),
+        });
+        expect(
+          (await load([asOperation(a, 0), asOperation(undo, 1)])).status,
+        ).toBe(JobStatus.READ_READY);
+
+        const repeat = asOperation(
+          await renownSigned({ ...moduleAction("b", 20), id: undo.id }),
+          2,
+        );
+        expect((await load([repeat])).status).toBe(JobStatus.READ_READY);
+
+        expect(await storedActionIds()).toEqual([a.id, undo.id]);
+        expect(refusals).toMatchObject([
+          { actionId: undo.id, code: "DUPLICATE_ACTION", enforced: true },
+        ]);
+      });
+
+      it(`fails a mutation in ${mode} mode`, async () => {
+        await build(mode);
+        const action = await renownSigned(moduleAction("m"));
+        expect((await execute([action])).status).toBe(JobStatus.READ_READY);
+
+        const again = await execute([
+          await renownSigned({
+            ...moduleAction("m"),
+            id: action.id,
+            input: { id: "m", name: "changed" },
+          }),
+        ]);
+
+        expect(again.status).toBe(JobStatus.FAILED);
+        expect(again.error?.message).toContain("[DUPLICATE_ACTION]");
+        expect(await storedActionIds()).toEqual([action.id]);
+      });
+    }
+
+    it("is still only logged on base-reducer 2 in log mode", async () => {
+      await build("log", {}, { protocolVersions: { "base-reducer": 2 } });
+      const action = await renownSigned(moduleAction("m", 0));
+      expect((await load([asOperation(action, 0)])).status).toBe(
+        JobStatus.READ_READY,
+      );
+
+      const replay = { ...asOperation(action, 1), timestampUtcMs: at(5_000) };
+      expect((await load([replay])).status).toBe(JobStatus.READ_READY);
+
+      expect(await storedActionIds()).toEqual([action.id, action.id]);
+      expect(refusals).toMatchObject([
+        { actionId: action.id, code: "DUPLICATE_ACTION", enforced: false },
       ]);
     });
   });

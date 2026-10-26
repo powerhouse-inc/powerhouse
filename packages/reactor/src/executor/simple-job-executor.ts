@@ -958,6 +958,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job,
         stores,
         signal,
+        derivesByRule(stored.caps, job.scope),
       );
     } catch (error) {
       return {
@@ -3398,6 +3399,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           unadmitted,
           stores,
           signal,
+          derivesByRule(caps, scope),
         );
       } catch (error) {
         return buildErrorResult(

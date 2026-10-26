@@ -118,11 +118,15 @@ export class SignatureAdmission {
     this.trustTimeoutMs = trust.timeoutMs;
   }
 
-  /** The first refusal of a mutation's submitted actions, when enforcing. */
+  /**
+   * The first refusal of a mutation's submitted actions, when enforcing.
+   * `refuseRepeats` refuses a repeated action id in every mode.
+   */
   async admitMutation(
     job: Job,
     stores: AdmissionStores,
     signal?: AbortSignal,
+    refuseRepeats = false,
   ): Promise<MutationAdmission> {
     const { operationStore } = stores;
     const candidates = job.actions.map((action) =>
@@ -163,7 +167,13 @@ export class SignatureAdmission {
       if (verdict.ok) {
         continue;
       }
-      const refusal = this.record(job, entry, verdict, "mutation");
+      const refusal = this.record(
+        job,
+        entry,
+        verdict,
+        "mutation",
+        this.enforces(verdict, refuseRepeats),
+      );
       if (refusal) {
         return { kind: "refused", error: refusal };
       }
@@ -171,12 +181,16 @@ export class SignatureAdmission {
     return { kind: "admitted", committed: [...committed.values()] };
   }
 
-  /** The incoming operations a load drops, empty unless enforcing. */
+  /**
+   * The incoming operations a load drops, empty unless enforcing.
+   * `refuseRepeats` drops a repeated action id in every mode.
+   */
   async admitLoad(
     job: Job,
     operations: Operation[],
     stores: AdmissionStores,
     signal?: AbortSignal,
+    refuseRepeats = false,
   ): Promise<Set<Operation>> {
     const { operationStore } = stores;
     const stream = {
@@ -220,7 +234,15 @@ export class SignatureAdmission {
       if (verdict.ok) {
         continue;
       }
-      if (this.record(job, candidates[i], verdict, "load")) {
+      if (
+        this.record(
+          job,
+          candidates[i],
+          verdict,
+          "load",
+          this.enforces(verdict, refuseRepeats),
+        )
+      ) {
         dropped.add(operations[i]);
       }
     }
@@ -531,6 +553,17 @@ export class SignatureAdmission {
       }
     }
     return live;
+  }
+
+  /**
+   * Whether a refusal is enforced. Base-reducer 3 derives by action id, so a
+   * rule scope refuses a repeated id whatever the mode.
+   */
+  private enforces(refusal: Refusal, refuseRepeats: boolean): boolean {
+    return (
+      this.mode === "enforce" ||
+      (refuseRepeats && refusal.code === "DUPLICATE_ACTION")
+    );
   }
 
   /** Logs and counts a refusal; returns the error only when enforcing. */
