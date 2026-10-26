@@ -85,18 +85,6 @@ describe("addDocument", () => {
     expect(isDerivedDocumentId(added[0].header.id)).toBe(false);
   });
 
-  it("heads a new document at the versions the client selects for the drive", async () => {
-    const added = install("v2-required");
-
-    await addDocument("drive-1", "Doc", DOCUMENT_TYPE);
-
-    expect(added.selectedFor).toEqual(["drive-1"]);
-    expect(added[0].header.protocolVersions).toEqual({
-      "base-reducer": 3,
-      signature: 2,
-    });
-  });
-
   it("puts the new file in the drive's loaded node cache", async () => {
     const getNode = (_driveId: string, id: string) =>
       Promise.resolve({
@@ -117,5 +105,17 @@ describe("addDocument", () => {
 
     expect(peekDriveNode("drive-1", node.id)?.name).toBe("Doc");
     expect(window.ph?.driveNodes?.get("drive-1")?.nodes).toHaveLength(1);
+  });
+
+  it("heads a new document at the versions the client selects for the drive", async () => {
+    const added = install("v2-required");
+
+    await addDocument("drive-1", "Doc", DOCUMENT_TYPE);
+
+    expect(added.selectedFor).toEqual(["drive-1"]);
+    expect(added[0].header.protocolVersions).toEqual({
+      "base-reducer": 3,
+      signature: 2,
+    });
   });
 });
