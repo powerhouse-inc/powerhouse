@@ -80,6 +80,8 @@ const BACKFILL_BATCH_SIZE = 500;
 
 type NodeKind = "file" | "folder";
 
+type CollisionRule = "legacy" | "reactor";
+
 interface LegacyNodeRow {
   driveId: string;
   id: string;
@@ -283,12 +285,10 @@ export class NodeProcessor extends BaseReadModel {
     const purgedTargets = await this.findPurgedTargets(trx, items);
     for (const item of items) {
       const actionType = item.operation.action.type;
-      if (
-        item.context.documentType === LEGACY_DRIVE_DOCUMENT_TYPE &&
-        LEGACY_NODE_ACTION_TYPES.has(actionType)
-      ) {
+      const legacyRule = this.legacyShapeRule(item);
+      if (legacyRule) {
         if (item.operation.error || isDenied(item.operation)) continue;
-        await this.applyLegacyNodeOperation(trx, item);
+        await this.applyLegacyNodeOperation(trx, item, legacyRule);
         continue;
       }
       if (isPurgeMarker(item.operation)) {
@@ -449,16 +449,15 @@ export class NodeProcessor extends BaseReadModel {
     }
 
     if (action.type === "UPDATE_FOLDER") {
-      await this.handleUpdateFolder(
-        trx,
-        driveId,
-        action.input as UpdateFolderActionInput,
-      );
+      const input = action.input as UpdateFolderActionInput;
+      if (!isNonEmptyString(input.folderId)) return;
+      await this.handleUpdateFolder(trx, driveId, input);
       return;
     }
 
     if (action.type === "REMOVE_FOLDER") {
       const input = action.input as RemoveFolderActionInput;
+      if (!isNonEmptyString(input.folderId)) return;
       await trx
         .deleteFrom("DriveNode")
         .where("driveId", "=", driveId)
@@ -467,20 +466,55 @@ export class NodeProcessor extends BaseReadModel {
     }
   }
 
-  /** Mirrors the legacy node reducer (document-drive src/reducers/node.ts). */
+  /**
+   * The collision rule for an operation in the legacy node shape: a
+   * document-drive's own, or a reactor-drive's for a legacy-shaped write
+   * against one. Undefined for every other operation.
+   */
+  private legacyShapeRule(
+    item: OperationWithContext,
+  ): CollisionRule | undefined {
+    const action = item.operation.action;
+    if (!LEGACY_NODE_ACTION_TYPES.has(action.type)) return undefined;
+    if (item.context.documentType === LEGACY_DRIVE_DOCUMENT_TYPE) {
+      return "legacy";
+    }
+    if (item.context.documentType !== REACTOR_DRIVE_DOCUMENT_TYPE) {
+      return undefined;
+    }
+    if (action.type === "ADD_FOLDER") {
+      const input = action.input as { folderId?: unknown } | null | undefined;
+      if (isNonEmptyString(input?.folderId)) return undefined;
+    }
+    return "reactor";
+  }
+
+  /**
+   * Mirrors the legacy node reducer (document-drive src/reducers/node.ts).
+   * An add without a usable id is skipped with a warning: a read model never
+   * stops on an operation's shape.
+   */
   private async applyLegacyNodeOperation(
     trx: Transaction<NodeProcessorDatabase>,
     item: OperationWithContext,
+    rule: CollisionRule,
   ): Promise<void> {
     const action = item.operation.action;
     const driveId = item.context.documentId;
     switch (action.type) {
       case "ADD_FILE": {
-        const input = action.input as AddFileInput;
-        await this.upsertLegacyNode(trx, driveId, {
+        const input = action.input as Partial<AddFileInput>;
+        if (
+          !isNonEmptyString(input.id) ||
+          !isNonEmptyString(input.documentType)
+        ) {
+          this.warnSkipped(item, "no usable id or documentType");
+          return;
+        }
+        await this.upsertLegacyNode(trx, driveId, rule, {
           id: input.id,
           kind: "file",
-          srcName: input.name,
+          srcName: input.name ?? "",
           collisionFolder: input.parentFolder || null,
           parentFolder: input.parentFolder ?? null,
           documentType: input.documentType,
@@ -488,11 +522,15 @@ export class NodeProcessor extends BaseReadModel {
         return;
       }
       case "ADD_FOLDER": {
-        const input = action.input as AddFolderInput;
-        await this.upsertLegacyNode(trx, driveId, {
+        const input = action.input as Partial<AddFolderInput>;
+        if (!isNonEmptyString(input.id)) {
+          this.warnSkipped(item, "no usable id");
+          return;
+        }
+        await this.upsertLegacyNode(trx, driveId, rule, {
           id: input.id,
           kind: "folder",
-          srcName: input.name,
+          srcName: input.name ?? "",
           collisionFolder: input.parentFolder || null,
           parentFolder: input.parentFolder ?? null,
           documentType: null,
@@ -501,26 +539,32 @@ export class NodeProcessor extends BaseReadModel {
       }
       case "UPDATE_FILE":
       case "UPDATE_NODE": {
-        await this.updateLegacyNode(
-          trx,
-          driveId,
-          action.type,
-          action.input as UpdateFileInput | UpdateNodeInput,
-        );
+        const input = action.input as UpdateFileInput | UpdateNodeInput;
+        if (!isNonEmptyString(input.id)) return;
+        await this.updateLegacyNode(trx, driveId, rule, action.type, input);
         return;
       }
       case "MOVE_NODE": {
-        await this.moveLegacyNode(trx, driveId, action.input as MoveNodeInput);
+        const input = action.input as MoveNodeInput;
+        if (!isNonEmptyString(input.srcFolder)) return;
+        await this.moveLegacyNode(trx, driveId, rule, input);
         return;
       }
       case "COPY_NODE": {
         const input = action.input as CopyNodeInput;
+        if (!isNonEmptyString(input.srcId)) return;
+        if (!isNonEmptyString(input.targetId)) {
+          this.warnSkipped(item, "no usable targetId");
+          return;
+        }
         const src = await this.findNode(trx, driveId, input.srcId);
         if (!src) return;
-        await this.upsertLegacyNode(trx, driveId, {
+        await this.upsertLegacyNode(trx, driveId, rule, {
           id: input.targetId,
           kind: src.kind,
-          srcName: input.targetName || src.name,
+          srcName:
+            input.targetName ||
+            (rule === "legacy" ? src.name : src.requestedName),
           collisionFolder: input.targetParentFolder || null,
           parentFolder: input.targetParentFolder || null,
           documentType: src.documentType,
@@ -529,6 +573,7 @@ export class NodeProcessor extends BaseReadModel {
       }
       case "DELETE_NODE": {
         const input = action.input as DeleteNodeInput;
+        if (!isNonEmptyString(input.id)) return;
         const ids = await this.subtreeIds(trx, driveId, input.id);
         if (ids.length === 0) return;
         await trx
@@ -549,6 +594,7 @@ export class NodeProcessor extends BaseReadModel {
   private async upsertLegacyNode(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
+    rule: CollisionRule,
     node: {
       id: string;
       kind: NodeKind;
@@ -558,18 +604,17 @@ export class NodeProcessor extends BaseReadModel {
       documentType: string | null;
     },
   ): Promise<void> {
-    const name = await this.legacySiblingName(
-      trx,
+    const { name, requestedName } = await this.nodeName(trx, rule, {
       driveId,
-      node.collisionFolder,
-      node.srcName,
-      node.kind,
-      node.id,
-    );
+      folder: rule === "legacy" ? node.collisionFolder : node.parentFolder,
+      srcName: node.srcName,
+      kind: node.kind,
+      excludeId: node.id,
+    });
     const values = {
       kind: node.kind,
       name,
-      requestedName: name,
+      requestedName,
       parentFolder: node.parentFolder,
       documentType: node.kind === "file" ? node.documentType : null,
     };
@@ -591,26 +636,33 @@ export class NodeProcessor extends BaseReadModel {
   private async updateLegacyNode(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
+    rule: CollisionRule,
     actionType: "UPDATE_FILE" | "UPDATE_NODE",
     input: UpdateFileInput | UpdateNodeInput,
   ): Promise<void> {
     const row = await this.findNode(trx, driveId, input.id);
     if (!row) return;
-    const name = await this.legacySiblingName(
-      trx,
+    const nextParentFolder =
+      actionType === "UPDATE_NODE" && input.parentFolder === null
+        ? null
+        : row.parentFolder;
+    const { name, requestedName } = await this.nodeName(trx, rule, {
       driveId,
-      input.parentFolder ?? row.parentFolder,
-      input.name ?? row.name,
-      actionType === "UPDATE_FILE" ? "file" : row.kind,
-      input.id,
-    );
+      folder:
+        rule === "legacy"
+          ? (input.parentFolder ?? row.parentFolder)
+          : nextParentFolder,
+      srcName: input.name ?? (rule === "legacy" ? row.name : row.requestedName),
+      kind: actionType === "UPDATE_FILE" ? "file" : row.kind,
+      excludeId: input.id,
+    });
     if (actionType === "UPDATE_FILE") {
       const documentType = (input as UpdateFileInput).documentType;
       await trx
         .updateTable("DriveNode")
         .set({
           name,
-          requestedName: name,
+          requestedName,
           documentType:
             row.kind === "file" ? (documentType ?? row.documentType) : null,
           updatedAt: new Date(),
@@ -624,8 +676,8 @@ export class NodeProcessor extends BaseReadModel {
       .updateTable("DriveNode")
       .set({
         name,
-        requestedName: name,
-        parentFolder: input.parentFolder === null ? null : row.parentFolder,
+        requestedName,
+        parentFolder: nextParentFolder,
         updatedAt: new Date(),
       })
       .where("driveId", "=", driveId)
@@ -636,6 +688,7 @@ export class NodeProcessor extends BaseReadModel {
   private async moveLegacyNode(
     trx: Transaction<NodeProcessorDatabase>,
     driveId: string,
+    rule: CollisionRule,
     input: MoveNodeInput,
   ): Promise<void> {
     if (input.srcFolder === input.targetParentFolder) return;
@@ -646,26 +699,73 @@ export class NodeProcessor extends BaseReadModel {
       const subtree = await this.subtreeIds(trx, driveId, row.id);
       if (subtree.includes(target)) return;
     }
-    // The reducer's collision check sees the moved node itself.
-    const name = await this.legacySiblingName(
-      trx,
+    // The legacy reducer's collision check sees the moved node itself.
+    const { name, requestedName } = await this.nodeName(trx, rule, {
       driveId,
-      target,
-      row.name,
-      row.kind,
-      null,
-    );
+      folder: target,
+      srcName: rule === "legacy" ? row.name : row.requestedName,
+      kind: row.kind,
+      excludeId: rule === "legacy" ? null : row.id,
+    });
     await trx
       .updateTable("DriveNode")
       .set({
         name,
-        requestedName: name,
+        requestedName,
         parentFolder: target,
         updatedAt: new Date(),
       })
       .where("driveId", "=", driveId)
       .where("id", "=", row.id)
       .execute();
+  }
+
+  /**
+   * A legacy row's name is whatever the legacy reducer would produce, and is
+   * also its requested name; a reactor-drive row keeps the requested name and
+   * resolves the displayed one with the reactor-drive rule.
+   */
+  private async nodeName(
+    trx: Transaction<NodeProcessorDatabase>,
+    rule: CollisionRule,
+    target: {
+      driveId: string;
+      folder: string | null;
+      srcName: string;
+      kind: NodeKind;
+      excludeId: string | null;
+    },
+  ): Promise<{ name: string; requestedName: string }> {
+    if (rule === "legacy") {
+      const name = await this.legacySiblingName(
+        trx,
+        target.driveId,
+        target.folder,
+        target.srcName,
+        target.kind,
+        target.excludeId,
+      );
+      return { name, requestedName: name };
+    }
+    const name = await this.resolveSiblingName(
+      trx,
+      target.driveId,
+      target.folder,
+      target.srcName,
+      target.excludeId ?? "",
+    );
+    return { name, requestedName: target.srcName };
+  }
+
+  private warnSkipped(item: OperationWithContext, reason: string): void {
+    this.logger.warn(
+      "skipped @actionType on drive @driveId at ordinal @ordinal (index @index): @reason",
+      item.operation.action.type,
+      item.context.documentId,
+      item.context.ordinal,
+      item.operation.index,
+      reason,
+    );
   }
 
   /**
@@ -715,7 +815,14 @@ export class NodeProcessor extends BaseReadModel {
   ) {
     return trx
       .selectFrom("DriveNode")
-      .select(["id", "kind", "name", "parentFolder", "documentType"])
+      .select([
+        "id",
+        "kind",
+        "name",
+        "requestedName",
+        "parentFolder",
+        "documentType",
+      ])
       .where("driveId", "=", driveId)
       .where("id", "=", id)
       .executeTakeFirst();
@@ -1067,6 +1174,10 @@ function legacySnapshotRows(
     }
   }
   return rows;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value !== "";
 }
 
 function escapeLike(value: string): string {

@@ -996,6 +996,89 @@ describe("NodeProcessor", () => {
     });
   });
 
+  describe("legacy-shaped writes on a reactor-drive", () => {
+    function reactorLegacy(type: string, input: unknown) {
+      const item = wrap({ type, input }, "drive-1");
+      item.context.scope = "global";
+      return item;
+    }
+
+    async function rows() {
+      return db
+        .selectFrom("DriveNode")
+        .select([
+          "id",
+          "kind",
+          "name",
+          "requestedName",
+          "parentFolder",
+          "documentType",
+        ])
+        .where("driveId", "=", "drive-1")
+        .orderBy("id")
+        .execute();
+    }
+
+    it("projects a legacy-shaped ADD_FOLDER and ADD_FILE with the reactor-drive rule", async () => {
+      await processor.indexOperations([
+        reactorLegacy("ADD_FOLDER", { id: "f1", name: "Inbox" }),
+        reactorLegacy("ADD_FOLDER", { id: "f2", name: "Inbox" }),
+        reactorLegacy("ADD_FILE", {
+          id: "m1",
+          name: "Mail",
+          documentType: "powerhouse/email",
+          parentFolder: "f1",
+        }),
+      ]);
+      expect(await rows()).toEqual([
+        {
+          id: "f1",
+          kind: "folder",
+          name: "Inbox",
+          requestedName: "Inbox",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "f2",
+          kind: "folder",
+          name: "Inbox (2)",
+          requestedName: "Inbox",
+          parentFolder: null,
+          documentType: null,
+        },
+        {
+          id: "m1",
+          kind: "file",
+          name: "Mail",
+          requestedName: "Mail",
+          parentFolder: "f1",
+          documentType: "powerhouse/email",
+        },
+      ]);
+    });
+
+    it("skips an ADD_FOLDER without any id with a warning and continues the batch", async () => {
+      const warn = vi.spyOn(
+        (processor as unknown as { logger: { warn: () => void } }).logger,
+        "warn",
+      );
+      await processor.indexOperations([
+        reactorLegacy("ADD_FOLDER", { name: "No id" }),
+        reactorLegacy("ADD_FOLDER", { id: "", folderId: "", name: "Empty" }),
+        reactorLegacy("ADD_FILE", { name: "No id", documentType: "x/y" }),
+        wrap(
+          addFolderAction({ folderId: "ok", parentFolderId: null, name: "Ok" }),
+          "drive-1",
+        ),
+      ]);
+      expect((await rows()).map((r) => r.id)).toEqual(["ok"]);
+      expect(warn).toHaveBeenCalledTimes(3);
+      expect(warn.mock.calls[0]).toContain("ADD_FOLDER");
+      expect(warn.mock.calls[0]).toContain("drive-1");
+    });
+  });
+
   describe("legacy document-drive", () => {
     const LEGACY = "legacy-1";
 
