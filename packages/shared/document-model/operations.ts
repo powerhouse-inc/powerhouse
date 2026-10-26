@@ -1,8 +1,24 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
-import { noop, type Action } from "./actions.js";
+import type { Action } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import { nextSkipNumber, sortOperations } from "./documents.js";
+import type { NOOPAction } from "./types.js";
+import { generateId } from "./utils.js";
+
+/**
+ * Base-reducers 1 and 2 are frozen, so their undo marker keeps the wall-clock
+ * stamp it had before createAction's stamps became strictly increasing.
+ */
+function undoMarker(scope: string): NOOPAction {
+  return {
+    id: generateId(),
+    timestampUtcMs: new Date().toISOString(),
+    type: "NOOP",
+    input: {},
+    scope,
+  };
+}
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
@@ -58,7 +74,7 @@ export function undoOperation<TDocument extends PHDocument>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = undoMarker(scope) as Draft<Action>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -143,7 +159,7 @@ export function undoOperationV2<TDocument extends PHDocument>(
       );
     }
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = undoMarker(scope) as Draft<Action>;
     draft.skip = 1;
   });
 }
