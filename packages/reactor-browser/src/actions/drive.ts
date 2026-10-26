@@ -21,7 +21,12 @@ import type {
   PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { requestedSignaturePolicy } from "@powerhousedao/shared/document-model";
+import {
+  DEFAULT_SIGNATURE_POLICY,
+  requestedSignaturePolicy,
+  type NewDocumentHeaderOptions,
+} from "@powerhousedao/shared/document-model";
+import { GraphQLOperationNotSupportedError } from "../graphql-client/errors.js";
 import { fetchDriveInfo } from "./drive-info.js";
 import { getUserPermissions } from "../utils/user.js";
 import { showPHModal } from "../hooks/modals.js";
@@ -135,23 +140,34 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   // A configured id (e.g. a local default drive) overrides the generated one,
   // and only a legacy drive can take a chosen id. Empty strings are the "not
   // provided" signal used by the Add Drive modal.
-  const driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
-    driveDocumentType,
-    {
-      initialState: {
-        global: {
-          name: input.global.name || "",
-          icon: input.global.icon ?? null,
-          nodes: [],
-        },
-      } as Partial<PHBaseState>,
-      signaturePolicy: input.id
-        ? requestedSignaturePolicy(input, "legacy")
-        : input.signaturePolicy,
-      id: input.id || undefined,
-      protocolVersions: input.protocolVersions,
-    },
-  );
+  const options: NewDocumentHeaderOptions = {
+    initialState: {
+      global: {
+        name: input.global.name || "",
+        icon: input.global.icon ?? null,
+        nodes: [],
+      },
+    } as Partial<PHBaseState>,
+    signaturePolicy: input.id
+      ? requestedSignaturePolicy(input, "legacy")
+      : input.signaturePolicy,
+    id: input.id || undefined,
+    protocolVersions: input.protocolVersions,
+  };
+  let driveDoc: DocumentDriveDocument;
+  try {
+    driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
+      driveDocumentType,
+      options,
+    );
+  } catch (error) {
+    if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
+    // A Switchboard without createDefaults: the library's default policy.
+    driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
+      driveDocumentType,
+      { ...options, signaturePolicy: DEFAULT_SIGNATURE_POLICY },
+    );
+  }
 
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
