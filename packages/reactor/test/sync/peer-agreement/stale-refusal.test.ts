@@ -54,9 +54,26 @@ async function storedRefusals(node: Node) {
   );
 }
 
+function pglite(): Kysely<Database> {
+  return new Kysely<Database>({
+    dialect: new HardenedPGliteDialect(new PGlite()),
+  });
+}
+
 describe("a stored refusal of a base-reducer 2 document", () => {
-  const fleet = new Fleet();
+  // Each node opens the store it is handed, so a node can restart on it.
+  const fleet = new Fleet({ postgres: true });
   const dbs: Kysely<Database>[] = [];
+  let nextStore: Kysely<Database> | undefined;
+  Object.assign(fleet, {
+    database: () => Promise.resolve(nextStore ?? pglite()),
+  });
+
+  function node(name: string, versions: number[], db = pglite()) {
+    if (!dbs.includes(db)) dbs.push(db);
+    nextStore = db;
+    return fleet.node(name, versions);
+  }
 
   afterEach(async () => {
     fleet.kill();
@@ -64,12 +81,9 @@ describe("a stored refusal of a base-reducer 2 document", () => {
   });
 
   it("is kept while this reactor cannot run the document, and dropped once it can", async () => {
-    const db = new Kysely<Database>({
-      dialect: new HardenedPGliteDialect(new PGlite()),
-    });
-    dbs.push(db);
-    const a = await fleet.node("a", WIDE);
-    const b = await fleet.node("b", NARROW, db);
+    const db = pglite();
+    const a = await node("a", WIDE);
+    const b = await node("b", NARROW, db);
     // B claims 2 without running it; A believes it.
     await fleet.link(a, b, "doc", {
       b: { announce: () => manifestFor(WIDE) },
@@ -102,7 +116,7 @@ describe("a stored refusal of a base-reducer 2 document", () => {
 
     // B restarts on the same store, now running 2, and announces it.
     await b.reactor.kill().completed;
-    const upgraded = await fleet.node("b", WIDE, db);
+    const upgraded = await node("b", WIDE, db);
     const channel = fleet.channels.get("b->a")!;
     channel.options.announce = undefined;
     channel.reannounce();
