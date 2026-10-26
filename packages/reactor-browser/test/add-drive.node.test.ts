@@ -14,6 +14,7 @@ import {
   type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { withHalves } from "./utils/client-halves.js";
+import { GraphQLOperationNotSupportedError } from "../src/graphql-client/errors.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addDrive } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -100,5 +101,28 @@ describe("addDrive (issue #2838)", () => {
     const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
     expect(signaturePolicyOf(doc.header)).toBe("legacy");
     expect(isDerivedDocumentId(doc.header.id)).toBe(false);
+  });
+
+  it("falls back to the default policy on a Switchboard without createDefaults", async () => {
+    const heads = newDocumentUnder("legacy", { "base-reducer": 2 });
+    window.ph = {
+      reactorClient: withHalves({
+        create,
+        newDocument: (type: string, options?: NewDocumentHeaderOptions) =>
+          options?.signaturePolicy === undefined
+            ? Promise.reject(
+                new GraphQLOperationNotSupportedError(
+                  "getCreateSignaturePolicy",
+                  "the Switchboard predates the createDefaults query",
+                ),
+              )
+            : heads(type, options),
+      }),
+    } as unknown as PHGlobal;
+
+    await addDrive({ global: { name: "Old host" } });
+
+    const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
+    expect(signaturePolicyOf(doc.header)).toBe("v2-required");
   });
 });
