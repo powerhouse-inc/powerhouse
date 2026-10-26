@@ -6,6 +6,7 @@ import type { PropsWithChildren } from "react";
 import { describe, expect, it } from "vitest";
 import { renderHook } from "vitest-browser-react";
 import {
+  dropDriveNode,
   getDriveNode,
   invalidateDriveNodes,
   loadDriveNodes,
@@ -111,6 +112,69 @@ describe("drive node cache", () => {
     expect(result.current?.length).toBe(2);
     await expect.poll(() => result.current?.length).toBe(3);
     expect(listNodes.mock.calls.length).toBe(before + 1);
+  });
+
+  it("a change during a listing lists again once that listing lands", async () => {
+    const nodesByDrive = new Map([["d", fileNodes(2)]]);
+    const { store, listNodes } = storeWith(nodesByDrive);
+    // The first page waits until released, as a slow switchboard would.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const answer = listNodes.getMockImplementation()!;
+    listNodes.mockImplementationOnce((...args) =>
+      gate.then(() => answer(...args)),
+    );
+
+    const { result } = await renderHook(() => useDriveNodes("d"), {
+      wrapper: wrapperFor(store),
+    });
+    await expect.poll(() => listNodes.mock.calls.length).toBe(1);
+    expect(result.current).toBeUndefined();
+
+    // The drive changes while that listing is still in flight.
+    nodesByDrive.set("d", fileNodes(3));
+    invalidateDriveNodes("d", store);
+    expect(store.driveNodes?.get("d")?.stale).toBe(true);
+    release();
+
+    // The stale listing shows first, then the one taken after the change.
+    await expect.poll(() => result.current?.length).toBe(3);
+    expect(listNodes).toHaveBeenCalledTimes(2);
+    expect(store.driveNodes?.get("d")?.stale).toBeUndefined();
+    expect(store.driveNodes?.get("d")?.loaded).toBe("all");
+  });
+
+  it("a change during a listing of an unwatched drive drops it once that listing lands", async () => {
+    const { store, listNodes } = storeWith(new Map([["d", fileNodes(2)]]));
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const answer = listNodes.getMockImplementation()!;
+    listNodes.mockImplementationOnce((...args) =>
+      gate.then(() => answer(...args)),
+    );
+
+    const loading = loadDriveNodes("d", { store });
+    invalidateDriveNodes("d", store);
+    release();
+    await loading;
+    await expect.poll(() => store.driveNodes?.has("d")).toBe(false);
+    expect(listNodes).toHaveBeenCalledTimes(1);
+  });
+
+  it("dropDriveNode takes a removed node out of the cache without a listing", async () => {
+    const { store, listNodes } = storeWith(new Map([["d", fileNodes(3)]]));
+    await loadDriveNodes("d", { store });
+
+    dropDriveNode("d", "n-1", store);
+
+    const entry = store.driveNodes?.get("d");
+    expect(entry?.byId.has("n-1")).toBe(false);
+    expect(entry?.nodes?.map((n) => n.id)).toEqual(["n-0", "n-2"]);
+    expect(entry?.loaded).toBe("all");
+    expect(listNodes).toHaveBeenCalledTimes(1);
+    // A node the cache never held is a no-op.
+    dropDriveNode("d", "missing", store);
+    expect(store.driveNodes?.get("d")).toBe(entry);
   });
 
   it("useNodesInSelectedDrive reads the selected drive's nodes from the cache", async () => {

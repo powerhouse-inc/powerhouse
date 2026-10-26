@@ -52,6 +52,9 @@ jobs:
       project_name: ${{ steps.params.outputs.project_name }}
       dry_run: ${{ steps.params.outputs.dry_run }}
       skip_docker: ${{ steps.params.outputs.skip_docker }}
+      # Secrets cannot be read in an if condition, so the jobs that need them read these.
+      npm_token_set: ${{ steps.params.outputs.npm_token_set }}
+      docker_credentials_set: ${{ steps.params.outputs.docker_credentials_set }}
     steps:
       - name: Determine parameters
         id: params
@@ -87,12 +90,26 @@ jobs:
             PROJECT_NAME="${GITHUB_REPOSITORY#*/}"
           fi
 
+          # Which optional secrets are configured; an if condition cannot read secrets
+          if [ -n "${{ secrets.NPM_ACCESS_TOKEN }}" ]; then
+            NPM_TOKEN_SET="true"
+          else
+            NPM_TOKEN_SET="false"
+          fi
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ] && [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            DOCKER_CREDENTIALS_SET="true"
+          else
+            DOCKER_CREDENTIALS_SET="false"
+          fi
+
           echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
           echo "dry_run=$DRY_RUN" >> $GITHUB_OUTPUT
           echo "skip_docker=$SKIP_DOCKER" >> $GITHUB_OUTPUT
+          echo "npm_token_set=$NPM_TOKEN_SET" >> $GITHUB_OUTPUT
+          echo "docker_credentials_set=$DOCKER_CREDENTIALS_SET" >> $GITHUB_OUTPUT
 
           echo "Channel: $CHANNEL"
           echo "Version: $VERSION"
@@ -191,14 +208,14 @@ jobs:
         run: git push
 
       - name: Setup npm for publishing
-        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
+        if: needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.npm_token_set == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish to npm with provenance
-        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
+        if: needs.prepare.outputs.dry_run != 'true' && needs.prepare.outputs.npm_token_set == 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -225,8 +242,7 @@ jobs:
     if: |
       needs.prepare.outputs.skip_docker != 'true' &&
       needs.prepare.outputs.dry_run != 'true' &&
-      secrets.DOCKER_USERNAME != '' &&
-      secrets.DOCKER_PASSWORD != ''
+      needs.prepare.outputs.docker_credentials_set == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
