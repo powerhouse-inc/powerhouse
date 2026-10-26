@@ -35,7 +35,7 @@ export function retractionRewrites(
 }
 
 /** Under the rule, appending `row` re-derives its scope from every row. */
-export function rewritesScope(
+function rewritesScope(
   row: { skip: number; action: Action },
   named: (actionId: string) => boolean,
 ): boolean {
