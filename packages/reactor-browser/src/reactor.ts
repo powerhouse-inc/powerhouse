@@ -3,7 +3,10 @@ import type {
   IReactorReadClient,
 } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import { invalidateDriveNodes } from "./hooks/drive-nodes.js";
+import {
+  invalidateDriveNodes,
+  takeLocalDriveWrite,
+} from "./hooks/drive-nodes.js";
 import { setDrives } from "./hooks/drives.js";
 import { getPHStore } from "./hooks/ph-store.js";
 import { DOCUMENT_CHANGE_TYPE } from "./reactor-interop.js";
@@ -163,8 +166,9 @@ export type DriveChangeHandlerOptions = {
 /**
  * Routes a drive-type document change to the smallest refresh: an update
  * re-reads that one drive and invalidates its node cache, at most once per
- * `minIntervalMs` while it keeps changing; a creation or deletion refreshes the membership and loads only
- * what is new.
+ * `minIntervalMs` while it keeps changing (at once after a write from this
+ * tab, see `markLocalDriveWrite`); a creation or deletion refreshes the
+ * membership and loads only what is new.
  */
 export function createDriveChangeHandler(
   reactor: IReactorReadClient,
@@ -178,12 +182,18 @@ export function createDriveChangeHandler(
 
   const run = (driveId: string) => {
     lastAt.set(driveId, Date.now());
+    const timer = pending.get(driveId);
+    if (timer !== undefined) clearTimeout(timer);
     pending.delete(driveId);
     refreshDrive(reactor, driveId)
       .then(() => invalidateDriveNodes(driveId))
       .catch(onError);
   };
   const schedule = (driveId: string) => {
+    if (takeLocalDriveWrite(driveId)) {
+      run(driveId);
+      return;
+    }
     if (pending.has(driveId)) return;
     const wait = (lastAt.get(driveId) ?? 0) + minIntervalMs - Date.now();
     if (wait <= 0) {
