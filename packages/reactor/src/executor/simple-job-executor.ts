@@ -850,6 +850,10 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (stored.refusal) {
       return { result: buildErrorResult(job, stored.refusal, startTime) };
     }
+    // Returned, not thrown: the result handler retries what is not terminal.
+    if (stored.unreadable) {
+      return { result: buildErrorResult(job, stored.unreadable, startTime) };
+    }
     const undoRefusal = undoRedoRefusal(job, stored.caps);
     if (undoRefusal) {
       return { result: buildErrorResult(job, undoRefusal, startTime) };
@@ -1576,7 +1580,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (UnsupportedProtocolVersionError.isError(error)) {
         return { refusal: error };
       }
-      // Not stored yet, or unreadable: the job's own reads decide.
+      // Not stored yet: the job's own reads decide.
       return DocumentNotFoundError.isError(error)
         ? {}
         : {
@@ -2707,11 +2711,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (!canonical && !this.featureFlags.documentDecisions) {
       return plain();
     }
-    // A create has nothing stored to order against.
-    if (storedProtocol.unreadable) {
-      throw storedProtocol.unreadable;
-    }
-
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
     // lexically though it is the earlier instant. Selecting the minimum by
