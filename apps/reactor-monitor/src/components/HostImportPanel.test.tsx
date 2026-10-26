@@ -5,11 +5,7 @@ import {
   type HostExportFixture,
 } from "../lib/__fixtures__/host-export/index.js";
 import { describe, expect, it, vi } from "vitest";
-import {
-  HostImportDropZone,
-  HostImportPanel,
-  MAX_IMPORT_BYTES,
-} from "./HostImportPanel.js";
+import { HostImportPanel, MAX_IMPORT_BYTES } from "./HostImportPanel.js";
 
 function fixtureText(name: HostExportFixture): string {
   return HOST_EXPORTS[name];
@@ -17,11 +13,7 @@ function fixtureText(name: HostExportFixture): string {
 
 function renderPanel() {
   const onImport = vi.fn();
-  const view = render(
-    <HostImportDropZone>
-      <HostImportPanel onImport={onImport} />
-    </HostImportDropZone>,
-  );
+  const view = render(<HostImportPanel onImport={onImport} />);
   const paste = (text: string) => {
     fireEvent.change(view.getByTestId("host-import-text"), {
       target: { value: text },
@@ -120,13 +112,13 @@ describe("HostImportPanel", () => {
     expect(view.getByText("Include at least one row.")).toBeTruthy();
   });
 
-  it("loads a dropped file and saves with provisioning", async () => {
+  it("loads a file dropped on the page and saves with provisioning", async () => {
     const { view, button, onImport } = renderPanel();
     const file = new File([fixtureText("connect")], "connect.json", {
       type: "application/json",
     });
 
-    fireEvent.drop(view.getByTestId("host-import-drop"), {
+    fireEvent.drop(window, {
       dataTransfer: { files: [file], types: ["Files"] },
     });
 
@@ -145,6 +137,16 @@ describe("HostImportPanel", () => {
       }),
     );
     expect(view.queryByTestId("host-import-review")).toBeNull();
+  });
+
+  it("shows the drop overlay while files are dragged over the page", () => {
+    const { view } = renderPanel();
+
+    fireEvent.dragOver(window, { dataTransfer: { types: ["Files"] } });
+    expect(view.getByText(/Drop an exported host/)).toBeTruthy();
+
+    fireEvent.dragLeave(window, { relatedTarget: null });
+    expect(view.queryByText(/Drop an exported host/)).toBeNull();
   });
 
   it("refuses a file over the size limit", async () => {

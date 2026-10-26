@@ -1087,11 +1087,7 @@ body {
   gap: 0.5rem;
 }
 
-.rm-import-drop {
-  display: contents;
-}
-
-.rm-import-drop__overlay {
+.rm-import__overlay {
   position: fixed;
   inset: 0;
   z-index: 20;

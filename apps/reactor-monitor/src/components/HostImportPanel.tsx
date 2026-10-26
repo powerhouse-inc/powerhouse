@@ -1,17 +1,6 @@
 import type { ReactorDescriptor } from "@powerhousedao/reactor-monitor";
 import type { HostExport } from "@powerhousedao/host-core/schema";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ChangeEvent,
-  type Dispatch,
-  type DragEvent,
-  type ReactNode,
-  type SetStateAction,
-} from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import {
   EXPORT_FILE,
   parseHostExport,
@@ -97,69 +86,8 @@ function load(text: string): Loaded {
   };
 }
 
-type ImportState = {
-  readonly loaded: Loaded | undefined;
-  readonly setLoaded: Dispatch<SetStateAction<Loaded | undefined>>;
-};
-
-const ImportStateContext = createContext<ImportState | undefined>(undefined);
-
 function loadResult(result: ReadResult): Loaded {
   return "error" in result ? readIssue(result.error) : load(result.text);
-}
-
-function hasFiles(event: DragEvent): boolean {
-  return Array.from(event.dataTransfer.types).includes("Files");
-}
-
-/** Accepts an exported host JSON dropped anywhere over its children. */
-export function HostImportDropZone({
-  children,
-}: {
-  readonly children: ReactNode;
-}) {
-  const [dragging, setDragging] = useState(false);
-  const [loaded, setLoaded] = useState<Loaded>();
-  const state = useMemo(() => ({ loaded, setLoaded }), [loaded]);
-
-  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDragging(false);
-    const file = event.dataTransfer.files[0] as File | undefined;
-    if (!file) {
-      return;
-    }
-    setLoaded(loadResult(await readHostFile(file)));
-  };
-
-  return (
-    <ImportStateContext.Provider value={state}>
-      <div
-        className="rm-import-drop"
-        data-dragging={dragging ? "true" : undefined}
-        data-testid="host-import-drop"
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-            setDragging(false);
-          }
-        }}
-        onDragOver={(event) => {
-          if (hasFiles(event)) {
-            event.preventDefault();
-            setDragging(true);
-          }
-        }}
-        onDrop={(event) => void handleDrop(event)}
-      >
-        {children}
-        {dragging ? (
-          <div className="rm-import-drop__overlay">
-            Drop an exported host (ph host export) to import it
-          </div>
-        ) : null}
-      </div>
-    </ImportStateContext.Provider>
-  );
 }
 
 function isUrl(value: string): boolean {
@@ -253,11 +181,44 @@ export type HostImportPanelProps = {
 
 /** Loads a `ph host export` (file, paste or drop) and saves it as a set. */
 export function HostImportPanel({ onImport }: HostImportPanelProps) {
-  const shared = useContext(ImportStateContext);
-  const [own, setOwn] = useState<Loaded>();
-  const loaded = shared ? shared.loaded : own;
-  const setLoaded = shared ? shared.setLoaded : setOwn;
+  const [loaded, setLoaded] = useState<Loaded>();
   const [text, setText] = useState("");
+  const [dragging, setDragging] = useState(false);
+
+  // A file dropped anywhere on the page.
+  useEffect(() => {
+    const hasFiles = (event: DragEvent) =>
+      Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const onDragOver = (event: DragEvent) => {
+      if (hasFiles(event)) {
+        event.preventDefault();
+        setDragging(true);
+      }
+    };
+    const onDragLeave = (event: DragEvent) => {
+      if (event.relatedTarget === null) {
+        setDragging(false);
+      }
+    };
+    const onDrop = async (event: DragEvent) => {
+      const file = event.dataTransfer?.files[0];
+      if (!file) {
+        return;
+      }
+      event.preventDefault();
+      setDragging(false);
+      setLoaded(loadResult(await readHostFile(file)));
+    };
+    const drop = (event: DragEvent) => void onDrop(event);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", drop);
+    return () => {
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", drop);
+    };
+  }, []);
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
@@ -284,7 +245,7 @@ export function HostImportPanel({ onImport }: HostImportPanelProps) {
         return { ...current, review: { ...current.review, rows } };
       });
     },
-    [setLoaded],
+    [],
   );
 
   const review = loaded?.review;
@@ -309,6 +270,11 @@ export function HostImportPanel({ onImport }: HostImportPanelProps) {
   return (
     <section aria-label="Import host" className="rm-import">
       <h2>Import host</h2>
+      {dragging ? (
+        <div className="rm-import__overlay">
+          Drop an exported host (ph host export) to import it
+        </div>
+      ) : null}
       <label className="rm-import__file">
         Import host…
         <input
