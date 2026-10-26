@@ -4,7 +4,7 @@ A drive app is the view Connect shows for a drive: its own listing, forms and to
 
 ## Make one
 
-Create a `powerhouse/app` document in the Vetra drive, the way `AGENTS.md` makes an editor: give it a name and the document types it holds, then set it to CONFIRMED. Codegen writes `editors/<app-id>/`:
+Create a `powerhouse/app` document in the Vetra drive, the way the powerhouse-editors skill makes an editor: give it a name and the document types it holds, then set it to CONFIRMED. Codegen writes `editors/<app-id>/`:
 
 - `editor.tsx`, the app's root. Codegen writes it once and never again, so edit it.
 - `components/`, a folder tree, folder contents and a create button to start from; it too stays yours.
@@ -22,7 +22,8 @@ Inside it, the `@powerhousedao/reactor-browser` hooks read the route it is shown
 
 - `useSelectedDrive()` (a `[drive, dispatch]` pair), `useSelectedFolder()`, `useSelectedNode()` and `useNodesInSelectedDrive()`.
 - `useNodesInSelectedDriveOrFolder()` lists the open folder, or the drive's root when no folder is open. `useNodesInSelectedFolder()` and the generated `use<Model>DocumentsInSelectedFolder()` give `undefined` at the root.
-- `setSelectedNode(id)` opens a folder or document; `setSelectedNode(undefined)` goes back to the drive's root. Both are router navigations, so Back, Forward and reloads land on the same node.
+- The drive view sizes the app to its content: give the app's root element `w-full` (and `h-full` for a full-height layout).
+- `const setSelectedNode = useSetSelectedNode()` inside a drive app: `setSelectedNode(id)` opens a folder or document; `setSelectedNode(undefined)` goes back to the drive's root. Both are router navigations, so Back, Forward and reloads land on the same node.
 - `useLinkProps(useNodeTarget(node))` makes a row a real link.
 - `getDriveName(drive)` is the drive's display name; drives made in the UI leave `header.name` empty.
 - `showCreateDocumentModal(type)` opens Connect's create modal, which adds the document to the open folder and opens it.
@@ -36,7 +37,8 @@ A drive shows the app its `header.meta.preferredEditor` names. With none, or an 
 
 - **A new drive in the UI:** Create Drive's "Drive App" picker. Package apps are listed first, so a project's app is preselected.
 - **A new drive in code:** `addDrive(input, appId)` from `@powerhousedao/reactor-browser`, or `driveInput.preferredEditor` in the MCP `addDrive` tool.
-- **A drive every user gets:** a local entry in `connect.drives.defaultDrives` with `"app": "<app-id>"` ([RUNTIME-CONFIG.md](../../RUNTIME-CONFIG.md)). Connect creates it on first boot and opens it in that app.
+- **A drive every user gets:** a local entry in `connect.drives.defaultDrives` with `"app": "<app-id>"` ([runtime-config.md](./runtime-config.md)). Connect creates it on first boot and opens it in that app.
+- **The Vetra Preview drive:** `"vetra": { "previewDrive": { "app": "<app-id>" } }` in `powerhouse.config.json`. `ph vetra --watch` sets that app on the drive each time it starts, so a fresh clone gets it too.
 - **An existing drive:** `setPreferredEditorOnNode(driveId, appId)` from `@powerhousedao/reactor-browser`, which dispatches `setPreferredEditor`. Connect has no UI for this yet, so a project that needs it adds a button, e.g. on a page that lists the drives. The change syncs like any other drive operation.
 
 The home cards and `useAppModuleById(drive.header.meta?.preferredEditor)` show which app a drive uses.

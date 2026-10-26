@@ -730,22 +730,22 @@ First, ensure Vetra Studio is running in your project directory:
 ph vetra --interactive --watch
 ```
 
-### Step 2: Configure the MCP Server (one-time setup)
+### Step 2: Check the MCP Server Configuration
 
-Add the Reactor MCP server to your Claude configuration. For Claude Code, add it to `~/.claude/mcp.json`; for Claude Desktop, add it under MCP Servers in settings:
+`ph init` writes the Reactor MCP server into the project's `.mcp.json`, which Claude Code reads when it starts in the project directory and asks you to approve the first time:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
     }
   }
 }
 ```
 
-This tells Claude how to reach the Reactor MCP endpoint. You only need to do this once per machine.
+The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves.
 
 ### Step 3: Open a New Terminal and Navigate to Your Project
 
@@ -787,7 +787,7 @@ running and ready for document model operations.
 ### Common issues and solutions
 
 - **Issue**: MCP connection fails
-  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude. Restart both Vetra and Claude if needed.
+  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude, and that the port in `.mcp.json` is the one `ph vetra` prints for the Switchboard. Run `/mcp` in Claude to reconnect after Vetra starts.
 - **Issue**: Claude doesn't recognize reactor commands
   - **Solution**: Make sure you're in the correct project directory when starting Claude.
 - **Issue**: Drive not visible in Claude
