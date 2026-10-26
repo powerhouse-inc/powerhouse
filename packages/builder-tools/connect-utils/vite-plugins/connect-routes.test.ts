@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Generator } from "@tanstack/router-generator";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import type { Rolldown } from "vite";
 import { build, createServer } from "vite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -200,30 +201,65 @@ describe("the router plugin's generator", () => {
 });
 
 describe("connectRoutesWatcher", () => {
-  it("writes the tree when hosts/connect/routes/ appears, and drops it when it goes", async () => {
+  // Else a run that crawled before the folder existed writes the tree last, without it.
+  it("has the router plugin's generator follow a folder its last crawl lacked", async () => {
+    const routesDir = join(project, HOST_ROUTES);
+    const generator = new Generator({
+      config: connectRoutesGeneratorConfig(connectDir, project, routesDir),
+      root: project,
+    });
+    await generator.run();
+    addRoute("hello.tsx", "/hello");
+
+    await generator.run({ type: "create", path: join(routesDir, "hello.tsx") });
+
+    expect(readFileSync(join(project, CONNECT_ROUTES_GEN), "utf8")).toContain(
+      '"/hello"',
+    );
+  });
+
+  it("mounts hosts/connect/routes/ before it exists, and follows it as it comes and goes", async () => {
+    const routesDir = join(project, HOST_ROUTES);
+    const config = connectRoutesGeneratorConfig(connectDir, project, routesDir);
     const server = await createServer({
       root: project,
       configFile: false,
       logLevel: "silent",
-      plugins: [connectRoutesWatcher(project, connectDir)],
+      plugins: [
+        tanstackRouter(config),
+        connectRoutesWatcher(project, routesDir, config),
+      ],
       server: { middlewareMode: true, ws: false },
     });
     const tree = join(project, CONNECT_ROUTES_GEN);
+    const wait = { timeout: 15_000, interval: 100 };
     try {
-      await vi.waitFor(() =>
-        expect(server.watcher.getWatched()).not.toEqual({}),
+      await vi.waitFor(
+        () => expect(server.watcher.getWatched()).not.toEqual({}),
+        wait,
+      );
+      // Connect's routes alone until the folder appears.
+      await vi.waitFor(
+        () => expect(readFileSync(tree, "utf8")).toContain('"/d/$driveSlug"'),
+        wait,
       );
       addRoute("hello.tsx", "/hello");
       await vi.waitFor(
         () => expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
-        { timeout: 15_000, interval: 100 },
+        wait,
+      );
+      addRoute("bye.tsx", "/bye");
+      await vi.waitFor(
+        () => expect(readFileSync(tree, "utf8")).toContain('"/bye"'),
+        wait,
       );
 
       rmSync(join(project, "hosts"), { recursive: true });
-      await vi.waitFor(() => expect(existsSync(tree)).toBe(false), {
-        timeout: 15_000,
-        interval: 100,
-      });
+      await vi.waitFor(
+        () => expect(readFileSync(tree, "utf8")).not.toContain('"/hello"'),
+        wait,
+      );
+      expect(readFileSync(tree, "utf8")).toContain('"/d/$driveSlug"');
     } finally {
       await server.close();
     }
