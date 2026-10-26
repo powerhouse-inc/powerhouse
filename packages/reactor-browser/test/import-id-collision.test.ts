@@ -148,6 +148,22 @@ describe("importing a .phd whose id may be taken", () => {
     expect(headers[0].protocolVersions).toEqual({ "base-reducer": 2 });
   });
 
+  // An import is not a create: the loader replays a versionless file as base-reducer 1.
+  it("imports a file without protocol versions at base-reducer 1, not a create's selection", async () => {
+    const legacy = sourceDocument();
+    delete legacy.header.protocolVersions;
+    const data = await createZip(legacy);
+    const { client, headers } = stubReactorClient(() => Promise.resolve(false));
+    installClient(client);
+
+    await addFileWithProgress(
+      new File([new Uint8Array(data)], "legacy.phd"),
+      DRIVE_ID,
+    );
+
+    expect(headers[0].protocolVersions).toEqual({ "base-reducer": 1 });
+  });
+
   it("mints a new id when the id is taken", async () => {
     const { client, claimed } = stubReactorClient(() => Promise.resolve(true));
     installClient(client);
