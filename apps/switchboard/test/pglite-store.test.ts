@@ -300,7 +300,7 @@ describe("vacuumFullTimingFromEnv", () => {
         PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "600000",
       }),
     ).toEqual({ vacuumFullQuietMs: 0, vacuumFullMaxDeferMs: 600_000 });
-    expect(vacuumFullTimingFromEnv({})).toEqual({});
+    expect(vacuumFullTimingFromEnv({})).toEqual({ vacuumFullAboveBytes: 0 });
     expect(
       vacuumFullTimingFromEnv({
         PH_PGLITE_VACUUM_FULL_QUIET_MS: "soon",

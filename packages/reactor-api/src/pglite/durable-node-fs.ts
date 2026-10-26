@@ -63,19 +63,24 @@ export type PgliteMaintenanceSettings = Pick<
 >;
 
 /**
- * Reads the VACUUM FULL knobs. `PH_PGLITE_VACUUM_FULL` is `off` (never),
- * `quiet` (the default: only after the quiet window, however long that
- * takes) or `forced` (today's deadline of 30 min from open, after which it
- * runs under load). `PH_PGLITE_VACUUM_FULL_ABOVE_MB` sets the size that makes
- * a store eligible; `PH_PGLITE_VACUUM_FULL_QUIET_MS` and
+ * Reads the VACUUM FULL knobs. `PH_PGLITE_VACUUM_FULL` is `off` (the
+ * default: never), `quiet` (only after the quiet window, however long that
+ * takes) or `forced` (a deadline of 30 min from open, after which it runs
+ * under load). Off is the default because a full rewrite of a large store
+ * needs about twice its size in free disk and holds the only connection for
+ * minutes, and on a store that is live data rather than bloat it reclaims
+ * nothing; a quiet window of a minute arrives naturally between jobs, so
+ * `quiet` is an opt-in for stores known to be small or bloated.
+ * `PH_PGLITE_VACUUM_FULL_ABOVE_MB` sets the size that makes a store
+ * eligible; `PH_PGLITE_VACUUM_FULL_QUIET_MS` and
  * `PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS` override the mode's timings. A value
  * that is not a non-negative number is left to the default; an unknown mode
- * throws, since silently running the forced mode is what this guards against.
+ * throws, since silently running a rewrite is what this guards against.
  */
 export function resolvePgliteMaintenance(
   env: Record<string, string | undefined>,
 ): PgliteMaintenanceSettings {
-  const rawMode = env.PH_PGLITE_VACUUM_FULL?.trim().toLowerCase() || "quiet";
+  const rawMode = env.PH_PGLITE_VACUUM_FULL?.trim().toLowerCase() || "off";
   if (!isVacuumFullMode(rawMode)) {
     throw new Error(
       `Invalid PH_PGLITE_VACUUM_FULL: ${String(env.PH_PGLITE_VACUUM_FULL)}. Expected "off", "quiet" or "forced".`,

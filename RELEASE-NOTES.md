@@ -4,12 +4,12 @@
 
 ### ⚡ VACUUM FULL waits for a quiet store, by default
 
-A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The rewrite now waits for the quiet window (60 s without writes) however long that takes, and the new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
+A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The one-time rewrite is now off by default: on a store that is live data rather than bloat it reclaims nothing, a minute of quiet arrives naturally between jobs, and the copies it writes need about twice the store's size in free disk. The new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
 
 ```bash
-PH_PGLITE_VACUUM_FULL=quiet     # default: only after the quiet window
+PH_PGLITE_VACUUM_FULL=off       # default: never (a rewrite needs twice the store's size in free disk)
+PH_PGLITE_VACUUM_FULL=quiet     # only after the quiet window, however long that takes
 PH_PGLITE_VACUUM_FULL=forced    # the previous behaviour: also 30 min after open, under load
-PH_PGLITE_VACUUM_FULL=off       # never
 PH_PGLITE_VACUUM_FULL_ABOVE_MB=256        # the size that makes a store eligible
 PH_PGLITE_VACUUM_FULL_QUIET_MS=60000      # the quiet window
 PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the mode
@@ -17,7 +17,7 @@ PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the m
 
 `resolvePgliteMaintenance(env)` in `@powerhousedao/reactor-api/pglite-node` reads them, and both the switchboard's stores and `getDbClient`'s read store apply them. A finished `VACUUM FULL` now logs its duration and the `base/` size before and after; before, only a failure was logged. An unknown mode refuses to boot, since the point is never to run the forced rewrite by accident.
 
-✅ **What to try:** boot a switchboard on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
+✅ **What to try:** boot a switchboard with `PH_PGLITE_VACUUM_FULL=quiet` on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
 
 ---
 

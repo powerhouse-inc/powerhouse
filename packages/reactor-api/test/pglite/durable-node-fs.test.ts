@@ -347,11 +347,11 @@ describe("createDurableNodeFs", () => {
   });
 
   describe("resolvePgliteMaintenance", () => {
-    it("defaults to the quiet mode, which keeps every DurableNodeFs default", () => {
-      expect(resolvePgliteMaintenance({})).toEqual({});
-      expect(resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: "" })).toEqual(
-        {},
-      );
+    it("defaults to off; quiet keeps every DurableNodeFs default", () => {
+      expect(resolvePgliteMaintenance({})).toEqual({ vacuumFullAboveBytes: 0 });
+      expect(resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: "" })).toEqual({
+        vacuumFullAboveBytes: 0,
+      });
       expect(
         resolvePgliteMaintenance({ PH_PGLITE_VACUUM_FULL: " Quiet " }),
       ).toEqual({});
