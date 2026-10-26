@@ -3,9 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-20
 - **Deciders:** Benjamin Jordan
-- **Implements:** branch `feat/action-ids-auth-clock` (40806a0090 through 75039f788f),
-  extracted from `feat/undo-v3` (PR #3259). Design notes: `docs/plans/2026-09-25-undo-v3.md`
-  and `docs/plans/2026-10-19-undo-v3-deviations.md` on that branch.
+- **Implements:** branch `feat/action-ids-auth-clock`, extracted from undo v3 (PR #3259)
 
 ## Context
 
@@ -23,8 +21,9 @@ same-millisecond burst.
   the stream's newest one. The executor refuses a violation with
   `AuthTimestampNotMonotonicError`, also within one batch. A client that built
   `initializeAuth` and `setGrant` in one millisecond had its write refused.
-- Base-reducer 3 (undo v3) orders a job's actions by timestamp, then action id, then operation
-  id, comparing ids by code unit. Its same-millisecond order is the action id order.
+- Undo v3 (PR #3259, not yet on main) adds base-reducer 3, which orders a job's actions by
+  timestamp, then action id, then operation id, comparing ids by code unit. Its
+  same-millisecond order is the action id order.
 
 ### Why now
 
