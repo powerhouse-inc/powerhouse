@@ -37,6 +37,16 @@ Document-model subgraphs are auto-generated for each registered document model a
 - Per-operation mutations (e.g. `addTodoItem(documentIdOrSlug, input)`)
 - Async variants of each mutation (e.g. `addTodoItemAsync(documentIdOrSlug, input)`)
 
+On the reactor subgraph, `document`, `findDocuments`, `documentOutgoingRelationships`, `documentIncomingRelationships`, `documentOutgoingRelationshipEdges`, and `documentIncomingRelationshipEdges` take an optional `consistency: ConsistencyTokenInput`. Pass the `consistencyToken` a job reports (`JobInfo.consistencyToken`) and the read waits until the read models hold every operation it names, so a client can read its own write:
+
+```graphql
+query ($id: String!, $c: ConsistencyTokenInput!) {
+  document(idOrSlug: $id, consistency: $c) {
+    document { id lastModifiedAtUtcIso }
+  }
+}
+```
+
 ### Getting a drive and its contents
 
 **Legacy:**
@@ -532,19 +542,21 @@ export const resolvers: GraphQLResolverMap<Context> = {
 
 ### v6 pattern
 
-Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through `subgraph.reactorClient`:
+Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through the reactor client halves on the resolver context: `ctx.clients.read` in every resolver, `ctx.clients.write` in Mutation fields only:
 
 ```typescript
 // v6 custom subgraph — subgraphs/my-custom/resolvers.ts
-import type { BaseSubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-
   return {
     Query: {
-      myCustomQuery: async (_parent: unknown, args: { driveId: string }) => {
-        const children = await reactorClient.getOutgoingRelationships(
+      myCustomQuery: async (
+        _parent: unknown,
+        args: { driveId: string },
+        ctx: Context,
+      ) => {
+        const children = await ctx.clients.read.getOutgoingRelationships(
           args.driveId,
           "child",
         );
@@ -578,7 +590,7 @@ ph generate --subgraph my-custom
 
 | Aspect               | Legacy                          | v6                                              |
 | -------------------- | ------------------------------- | ----------------------------------------------- |
-| Data access          | `ctx.driveServer`               | `subgraph.reactorClient`                        |
+| Data access          | `ctx.driveServer`               | `ctx.clients.read` / `ctx.clients.write`        |
 | Schema format        | Template literal string         | `gql` tagged template (`DocumentNode`)          |
 | Resolver export      | `export const resolvers`        | `export const getResolvers = (subgraph) => ...` |
 | Relational DB access | Not available                   | `subgraph.relationalDb`                         |
@@ -593,6 +605,6 @@ ph generate --subgraph my-custom
 - [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
 - [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
 - [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
-- [ ] Replace `ctx.driveServer` calls with `subgraph.reactorClient` methods
+- [ ] Replace `ctx.driveServer` calls with `ctx.clients.read` (queries) and `ctx.clients.write` (mutations) methods
 - [ ] Update schema files from plain strings to `gql` tagged templates
 - [ ] Regenerate custom subgraph scaffolding with `ph generate --subgraph <name>`

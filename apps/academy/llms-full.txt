@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-26T14:49:01.220Z
+> Generated: 2026-10-26T14:45:06.599Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -2893,9 +2893,11 @@ ph generate piece-action archive-invoice --require-reactor write
 | Access | Methods                                                                                                                                                                                                                                                             |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Read   | `get`, `resolveIdOrSlug`, `find`, `getOperations`, `getOutgoingRelationships`, `getIncomingRelationships`, `getOutgoingRelationshipEdges`, `getIncomingRelationshipEdges`, `getDocumentModelModules`, `getDocumentModelModule`, `getDocumentModelModuleForDocument` |
-| Write  | `create`, `createEmpty`, `execute`, `deleteDocument`                                                                                                                                                                                                                |
+| Write  | `create`, `createEmpty`, `execute`, `executeAsync`, `deleteDocument`                                                                                                                                                                                                |
 
-A piece changes a document by building actions with the document model's action creators and passing them to `execute`, as reactor-browser code calls `reactorClient.execute`. The creators come from the model's package, from `@powerhousedao/shared/document-model` (`setName`) and `@powerhousedao/shared/document-drive` (`addFile`, `deleteNode`), or from the module `getDocumentModelModuleForDocument` returns.
+For a piece, `executeAsync` writes as `execute` does and answers at the same point, once every action is applied or the write throws. It returns the settled `JobInfo` instead of reading the document back. Use it when the step has no use for the document, such as adding a file to a large drive, where the read-back would be the drive's whole state.
+
+A piece changes a document by building actions with the document model's action creators and passing them to `execute`. The creators come from the model's package, from `@powerhousedao/shared/document-model` (`setName`) and `@powerhousedao/shared/document-drive` (`addFile`, `deleteNode`), or from the module `getDocumentModelModuleForDocument` returns.
 
 A drive file is a document created under the drive plus the drive's node for it:
 
@@ -2921,7 +2923,7 @@ Not offered to any piece:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `createDocumentInDrive`, `executeBatch`, `rename`, `setPreferredEditor`, `addRelationship`, `updateRelationship`, `removeRelationship`, `moveRelationship`, `upgradeDocument`, `deleteDocuments` | Each would have to be rebuilt on the host to check it as the run user. Build the actions and call `execute`.                |
 | `drives`                                                                                                                                                                                        | Its reads take no subject, and its writes are conveniences. `get` the drive, and `execute` drive actions.                   |
-| `executeAsync`, `createAsync`, `createEmptyAsync`, `getJobStatus`, `waitForJob`                                                                                                                 | A job must finish within its step, with its outcome checked.                                                                |
+| `createAsync`, `createEmptyAsync`, `getJobStatus`, `waitForJob`                                                                                                                                 | A job must finish within its step, with its outcome checked.                                                                |
 | `subscribe`                                                                                                                                                                                     | Triggers cover document events.                                                                                             |
 | `loadBatch`                                                                                                                                                                                     | It loads operations other principals signed, which the host can neither sign nor check as the run user.                     |
 | `evaluateActions`, `isDocumentIdTaken`, `isServed`, `getCreateSignaturePolicy`, `getCreateProtocolVersions`                                                                                     | Host internals. `isDocumentIdTaken` would answer for documents the user cannot read.                                        |
@@ -3264,21 +3266,23 @@ By acting as the backbone for document models in the Powerhouse framework, they 
 Reactors provide the foundation for advanced features like real-time collaboration, history tracking, and decentralized audits.
 This modular, flexible infrastructure enables organizations to build efficient and robust decentralized systems, tailored for modern network organizations
 
-## Getting an IReactorClient
+## Getting a reactor client
 
-There are a few ways to obtain an `IReactorClient`, depending on where your code runs.
+Whichever host you run in, the client comes in two halves: reads go through `read` (`IReactorReadClient`) and writes through `write` (`IReactorWriteClient`), whose writes return a handle to wait on. `IReactorClient` is the single object that carries both. How you obtain them depends on where your code runs.
 
-**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the `IReactorClient` for the running reactor.
+**In an app (React).** Call the `useReactorClient()` hook from `@powerhousedao/reactor-browser`. It returns the browser client for the running reactor, with `client.read` and `client.write`. `useReactorHalves()` returns `{ read, write }` alone, and `window.ph.reactor` holds the same pair. The browser halves carry a subset: `read` has `get`, `getMany`, `find`, `getOperations`, `subscribe`, `waitForJob`, and `getJobStatus`; `write` has `execute`, `create`, and `deleteDocument`.
 
 ```typescript
 
 
 const client = useReactorClient();
+const handle = await client.write.execute(docId, "main", actions);
+const updated = await handle.document();
 ```
 
 The same module exposes sibling hooks: `useSync` (the `ISyncManager`), `useSyncList` (its remotes), `useModelRegistry` (the document-model registry), `useDatabase` (the Kysely database), and `usePGlite` (the PGlite instance).
 
-**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client plus the wired module).
+**Standalone (scripts, tests, servers).** Build a client with `ReactorClientBuilder`. Wire a reactor with either `.withReactorBuilder(builder)` or `.withReactor(reactor, eventBus, documentIndexer, documentView)`, add `.withSigner(...)` and `.withDocumentModelLoader(...)` as needed, then call `.build()` (returns the client) or `.buildModule()` (returns the client, its `read` and `write` halves, and the wired module).
 
 ```typescript
 
@@ -3291,35 +3295,42 @@ const client = await new ReactorClientBuilder()
 
 `buildModule()` throws if neither `withReactorBuilder` nor `withReactor` was set. For the low-level builder detail, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
 
-**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`, which holds the client as the `reactorClient` property. The generated `getResolvers(subgraph)` reads it off the instance; inside a method on the subgraph class, use `this.reactorClient`. The GraphQL resolver `context` does not carry the reactor.
+**In a generated subgraph (server-side).** A generated subgraph extends `BaseSubgraph`. Resolvers get the halves on the GraphQL context as `ctx.clients`: `ctx.clients.read` is always there, and `ctx.clients.write` exists only while a Mutation field runs. Reaching for `ctx.clients.write` in a query or subscription throws `WriteClientUnavailableError` naming the field. For setup-time lookups outside a resolver, use `subgraph.readClient` (`this.readClient` inside the subgraph class).
 
 ```typescript
 
 
-// resolvers.ts (generated scaffold)
-export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactor = subgraph.reactorClient; // IReactorClient
-
-  return {
-    Query: {
-      todoList: (_parent: unknown, args: { id: string }) => reactor.get(args.id),
+// resolvers.ts
+export const getResolvers = (subgraph: BaseSubgraph) => ({
+  Query: {
+    todoList: (_parent: unknown, args: { id: string }, ctx: Context) =>
+      ctx.clients.read.get(args.id),
+  },
+  Mutation: {
+    renameTodoList: async (
+      _parent: unknown,
+      args: { id: string; name: string },
+      ctx: Context,
+    ) => {
+      const handle = await ctx.clients.write.rename(args.id, args.name);
+      return handle.document();
     },
-  };
-};
+  },
+});
 ```
 
 For attachments, a resolver calls `subgraph.attachmentsFor(ctx)`, which returns an `IAttachmentClient` bound to the request's caller. See [Attachment service](/academy/Reference/Reactor/AttachmentService#inside-the-switchboard).
 
-**In a generated processor (server-side).** The processor factory builder receives the host module; the client is `module.client`. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `client`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
+**In a generated processor (server-side).** The processor factory builder receives the host module. A processor reads through `module.read` and writes through `module.dispatch` (`execute`, `createInDrive`, `deleteDocument`), so it never needs the write client. `IProcessorHostModule` from `@powerhousedao/reactor-browser` (or `@powerhousedao/reactor-api`) exposes `relationalDb`, `analyticsStore`, `dispatch`, `getReadModel`, `read`, and `attachments`. See [Processors](/academy/Reference/Reactor/Processors) for the full registration flow.
 
 ```typescript
 
 
 // factory.ts (generated scaffold)
 export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
-  const { client } = module; // client: IReactorClient
+  const { read, dispatch } = module;
   return async () => {
-    // use client.get(...), client.drives, client.execute(...)
+    // use read.get(...), read.drives, dispatch.execute(...)
     return [];
   };
 };
@@ -3327,7 +3338,7 @@ export const factoryBuilder: ProcessorFactoryBuilder = (module) => {
 
 ## The ReactorClient API
 
-The `IReactorClient` is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
+The reactor client is the primary interface for interacting with a reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations, split into a read half and a write half.
 
 How the client and the reactor's components fit together:
 
@@ -3341,7 +3352,9 @@ How the client and the reactor's components fit together:
 `@powerhousedao/reactor-browser` re-exports a curated subset of reactor types for browser environments (editors, drive-apps, subgraphs) — including `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder`. Other types used on these pages (`ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, `OperationFilter`, `IReactor`, `ReactorEventTypes`, `SyncEventTypes`, `QueueEventTypes`) are not re-exported; import them from `@powerhousedao/reactor`. Outside the browser, import everything from `@powerhousedao/reactor`.
 
 
-### Reading documents
+### Reading documents (`client.read`)
+
+Reads never enqueue. `get`, `getMany`, `find`, `resolveIdOrSlug`, and the relationship reads take an optional `consistencyToken` as their last parameter, which makes the read wait until the read models hold a write you made.
 
 | Method                                                                         | Description                                       |
 | ------------------------------------------------------------------------------ | ------------------------------------------------- |
@@ -3378,27 +3391,33 @@ type SearchFilter = {
 
 All list methods support pagination via `PagingOptions` (`{ cursor, limit }`) and return `PagedResults<T>` with a `next()` helper for fetching the next page.
 
-### Writing documents
+### Writing documents (`client.write`)
+
+Every write resolves once its job is accepted and returns a `WriteHandle`. Await `handle.written` (operations are in the log), `handle.readable` (read models hold the write), or `handle.document()` (the updated document). Each receipt carries a `token` to pass to a read.
 
 | Method                                                                                      | Description                                                        |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `create(document, parentIdentifier?)`                                                       | Create a document from a full `PHDocument` object                  |
 | `createEmpty(documentModelType, options?)`                                                  | Create an empty document of a given type                           |
-| `createAsync(document, parentIdentifier?)`                                                  | Submit a create and return immediately with its jobs (`create`, `parent`) |
-| `createEmptyAsync(documentModelType, options?)`                                             | Submit an empty-document create and return immediately with its jobs |
-| `execute(documentIdentifier, branch, actions)`                                              | Apply actions and wait for completion                              |
-| `executeAsync(documentIdentifier, branch, actions)`                                         | Submit actions and return immediately with a `JobInfo`             |
-| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order and wait for all to settle |
+| `execute(documentIdentifier, branch, actions)`                                              | Sign and submit actions on one document                            |
+| `executeBatch(request)`                                                                     | Submit multiple jobs in dependency order; returns a `BatchWriteHandle` |
 | `loadBatch(request)`                                                                        | Load batches of pre-existing operations across documents          |
 | `rename(documentIdentifier, name, branch?)`                                                 | Rename a document                                                  |
 | `setPreferredEditor(documentIdentifier, preferredEditor, branch?)`                          | Set the document's preferred editor (`null` clears it)            |
-| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`            | Add a typed relationship between two documents                     |
+| `addRelationship(sourceIdentifier, targetIdentifier, relationshipType, metadata?, branch?)` | Add a typed relationship between two documents                     |
+| `updateRelationship(sourceIdentifier, targetIdentifier, relationshipType, metadata, branch?)` | Replace an existing relationship's metadata                      |
 | `removeRelationship(sourceIdentifier, targetIdentifier, relationshipType, branch?)`         | Remove a typed relationship between two documents                  |
 | `moveRelationship(sourceParent, targetParent, targetIdentifier, relationshipType, branch?)` | Move a relationship from one source to another                     |
 | `deleteDocument(identifier, propagate?)`                                                    | Delete a document (`PropagationMode.Cascade` deletes children too) |
 | `deleteDocuments(identifiers, propagate?)`                                                  | Bulk delete                                                        |
 
-To create a document inside a drive, use `client.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives-clientdrives) section on the IReactorClient reference page.
+```typescript
+const handle = await client.write.execute(docId, "main", actions);
+const { token } = await handle.written;
+const doc = await client.read.get(docId, undefined, undefined, token);
+```
+
+To create a document inside a drive, use `client.write.drives.addFile`. See the [Drives](/academy/Reference/Reactor/ReactorClient#drives) section on the IReactorClient reference page.
 
 ### Subscribing to changes
 
@@ -3415,14 +3434,14 @@ const unsubscribe = reactorClient.subscribe(
 
 ### Job tracking
 
-Write operations return `JobInfo` objects. A job tracks the lifecycle of a set of actions as they move through the reactor.
+Every write creates a job. A job tracks the lifecycle of a set of actions as they move through the reactor. A handle's stages wait on the job for you; to get the raw `JobInfo`, pass `handle.jobId` to the read half.
 
 ```typescript
-const job = await reactorClient.executeAsync(docId, "main", actions);
-const completed = await reactorClient.waitForJob(job.id);
+const handle = await reactorClient.write.execute(docId, "main", actions);
+const completed = await reactorClient.read.waitForJob(handle.jobId);
 ```
 
-You can also poll with `getJobStatus(jobId)`.
+You can also poll with `read.getJobStatus(jobId)`.
 
 For the full API reference, see [IReactorClient API Reference](/academy/Reference/Reactor/ReactorClient).
 
@@ -3443,7 +3462,7 @@ PENDING → RUNNING → WRITE_READY → READ_READY
 | `READ_READY`  | All read models have finished processing — document is fully readable |
 | `FAILED`      | Job encountered an unrecoverable error                                |
 
-Only `READ_READY` and `FAILED` are terminal statuses. The `execute()` method on `IReactorClient` waits until `READ_READY` before resolving; `executeAsync()` returns immediately with a `JobInfo` at `PENDING`.
+Only `READ_READY` and `FAILED` are terminal statuses. `write.execute()` resolves as soon as the job is accepted; `handle.written` resolves at `WRITE_READY` and `handle.readable` at `READ_READY`. Both reject with `JobFailedError` when the job reaches `FAILED`.
 
 The path a job takes from the queue to `READ_READY`:
 
@@ -3527,14 +3546,24 @@ If you are working with the Reactor directly or need additional information rega
 
 > Source: https://academy.vetra.io/academy/Reference/Reactor/ReactorClient
 
-The `IReactorClient` interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
+The reactor client is the primary way to interact with a Powerhouse reactor programmatically. It comes in two halves:
+
+- **`client.read`** (`IReactorReadClient`) answers from read models and never enqueues a job.
+- **`client.write`** (`IReactorWriteClient`) enqueues jobs. Every write resolves once its job is accepted and returns a [`WriteHandle`](#writehandle) you await for the commit or the updated document.
+
+`IReactorClient` carries both as `read` and `write`. It also exposes the read methods directly, so `client.get(...)` and `client.read.get(...)` are the same call. Write through `client.write`.
 
 ```typescript
 
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+  WriteHandle,
+} from "@powerhousedao/reactor";
 ```
 
 **INFO:**
-`@powerhousedao/reactor-browser` re-exports a curated subset of reactor values and types for browser environments (editors, drive-apps, subgraphs). `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder` are re-exported there. Most other types on this page are not re-exported and must come from `@powerhousedao/reactor`: `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, and `OperationFilter`. Outside the browser (a standalone Node.js script, CLI tool, or server-side processor), import everything from `@powerhousedao/reactor`.
+`@powerhousedao/reactor-browser` re-exports a curated subset of reactor values and types for browser environments (editors, drive-apps, subgraphs). `IReactorClient`, `IReactorReadClient`, `IReactorWriteClient`, `WriteHandle`, `WriteReceipt`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder` are re-exported there. Most other types on this page are not re-exported and must come from `@powerhousedao/reactor`: `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, and `OperationFilter`. Outside the browser (a standalone Node.js script, CLI tool, or server-side processor), import everything from `@powerhousedao/reactor`.
 
 
 For an architectural overview of the reactor, see [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor). For the low-level `IReactor` interface and access to internal components, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
@@ -3728,7 +3757,7 @@ const result = await reactorClient.get(
 );
 ```
 
-**Cancel long-running writes.** Write methods like `execute()` wait for the job to reach `READ_READY`. If this takes too long, an abort signal lets you bail out:
+**Bound a write's stage waits.** A write resolves once its job is accepted, but awaiting `handle.readable` or `handle.document()` waits for `READ_READY`. Those waits are bounded by the signal the write was called with:
 
 ```typescript
 const controller = new AbortController();
@@ -3736,19 +3765,22 @@ const controller = new AbortController();
 // Set a 10-second deadline
 setTimeout(() => controller.abort(), 10_000);
 
-const updated = await reactorClient.execute(
+const handle = await reactorClient.write.execute(
   docId,
   "main",
   actions,
   controller.signal,
 );
+const updated = await handle.document();
 ```
 
 When a request is aborted, the method throws an `AbortError`. Detect it with `isAbortError(err)` from `@powerhousedao/reactor` rather than matching `err.name`. The underlying reactor job may still complete; aborting only cancels the client-side wait, not the server-side processing.
 
 ---
 
-## Read methods
+## Read methods (`client.read`)
+
+Reads that accept a `consistencyToken` wait until the read models they read from hold every operation the token names. Pass the `token` from a write's [`WriteReceipt`](#writehandle) to read your own write on any instance serving the same store. The token is always the last parameter.
 
 ### `get`
 
@@ -3759,16 +3791,20 @@ get<TDocument extends PHDocument>(
   identifier: string,
   view?: ViewFilter,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<TDocument>
 ```
 
 **Parameters:**
 
-| Name         | Type          | Required | Description                        |
-| ------------ | ------------- | -------- | ---------------------------------- |
-| `identifier` | `string`      | Yes      | Document id or slug                |
-| `view`       | `ViewFilter`  | No       | Branch, scopes, or revision filter |
-| `signal`     | `AbortSignal` | No       | Cancel the request                 |
+| Name               | Type               | Required | Description                         |
+| ------------------ | ------------------ | -------- | ----------------------------------- |
+| `identifier`       | `string`           | Yes      | Document id or slug                 |
+| `view`             | `ViewFilter`       | No       | Branch, scopes, or revision filter  |
+| `signal`           | `AbortSignal`      | No       | Cancel the request                  |
+| `consistencyToken` | `ConsistencyToken` | No       | Wait until the read models hold it  |
+
+`getMany(documentIds, view?, signal?, consistencyToken?)` reads several documents by id in one call.
 
 **Example:**
 
@@ -3786,16 +3822,20 @@ Resolve an id or slug to the canonical document id. Resolution runs against the 
 ```typescript
 resolveIdOrSlug(
   identifier: string,
+  view?: ViewFilter,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<string>
 ```
 
 **Parameters:**
 
-| Name         | Type          | Required | Description         |
-| ------------ | ------------- | -------- | ------------------- |
-| `identifier` | `string`      | Yes      | Document id or slug |
-| `signal`     | `AbortSignal` | No       | Cancel the request  |
+| Name               | Type               | Required | Description                        |
+| ------------------ | ------------------ | -------- | ---------------------------------- |
+| `identifier`       | `string`           | Yes      | Document id or slug                |
+| `view`             | `ViewFilter`       | No       | Branch/scopes filter               |
+| `signal`           | `AbortSignal`      | No       | Cancel the request                 |
+| `consistencyToken` | `ConsistencyToken` | No       | Wait until the read models hold it |
 
 ---
 
@@ -3810,6 +3850,7 @@ getOutgoingRelationships(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -3822,6 +3863,7 @@ getOutgoingRelationships(
 | `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
 | `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
 | `signal`           | `AbortSignal`   | No       | Cancel the request                              |
+| `consistencyToken` | `ConsistencyToken` | No    | Wait until the read models hold it              |
 
 ---
 
@@ -3836,6 +3878,7 @@ getIncomingRelationships(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -3848,6 +3891,7 @@ getIncomingRelationships(
 | `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
 | `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
 | `signal`           | `AbortSignal`   | No       | Cancel the request                              |
+| `consistencyToken` | `ConsistencyToken` | No    | Wait until the read models hold it              |
 
 ---
 
@@ -3861,6 +3905,7 @@ find(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -3872,6 +3917,7 @@ find(
 | `view`   | `ViewFilter`    | No       | Branch/scopes filter                    |
 | `paging` | `PagingOptions` | No       | Pagination cursor and limit             |
 | `signal` | `AbortSignal`   | No       | Cancel the request                      |
+| `consistencyToken` | `ConsistencyToken` | No | Wait until the read models hold it |
 
 **Example:**
 
@@ -3969,7 +4015,7 @@ getDocumentModelModule(
 
 ### `evaluateActions`
 
-Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
+On `client.write`: it is a write-side read that decides through the same model that admits a write. Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
 
 ```typescript
 evaluateActions(
@@ -4016,7 +4062,7 @@ type Evaluation =
 A denial's `reason` is the same string the reactor would record on the refused operation, so a control can explain itself rather than going grey with no reason. Over an empty candidate list every aggregate is `false`: nothing asked about is nothing allowed *and* nothing denied.
 
 ```typescript
-const answer = await client.evaluateActions(documentId, "main", [
+const answer = await client.write.evaluateActions(documentId, "main", [
   { scope: "global", type: "SUBMIT_EXPENSE", input: { amountCents: 900 } },
   { scope: "global", type: "APPROVE_EXPENSE", input: { id: "e1" } },
 ]);
@@ -4048,20 +4094,54 @@ In React, prefer the [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) 
 
 ---
 
-## Write methods
+## Write methods (`client.write`)
 
-All write methods internally create jobs and wait for them to reach `READ_READY` before resolving (except `executeAsync` which returns immediately).
+The write half is `IReactorWriteClient`. Every write resolves once its job is accepted (validated, signed and enqueued) and returns a [`WriteHandle`](#writehandle). Nothing waits for the commit unless you await one of the handle's stages.
+
+```typescript
+const handle = await client.write.execute(docId, "main", actions);
+const { token } = await handle.written; // operations are in the log
+const doc = await client.read.get(docId, undefined, undefined, token);
+const same = await handle.document(); // readable, then the gated read-back
+```
+
+### `WriteHandle`
+
+```typescript
+interface WriteHandle {
+  readonly jobId: string;
+  readonly documentId: string; // for a create, the id the new document carries
+  readonly branch: string;
+  readonly written: Promise<WriteReceipt>; // job reached WRITE_READY
+  readonly readable: Promise<WriteReceipt>; // job reached READ_READY
+  document<TDocument extends PHDocument = PHDocument>(
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+}
+
+type WriteReceipt = {
+  job: JobInfo;
+  token: ConsistencyToken; // pass to a read to bound it
+  documentId: string;
+  branch: string;
+};
+```
+
+`written` and `readable` reject with `JobFailedError` (exported from `@powerhousedao/reactor`, with the failed `JobInfo` on `job`) only when the job itself failed. A reducer error is not a job failure: the operation is stored with its error, the job reaches `READ_READY`, and `receipt.job.result` says which actions erred. `document()` awaits `readable`, then reads the target with the receipt's token, gated as the writer or as `view.subject` when given. Stage waits are bounded by the signal the write was called with.
+
+---
 
 ### `create`
 
-Create a document from a full `PHDocument` object.
+Create a document from a full `PHDocument` object. With a parent, the handle's stages also wait for the relationship job on the parent.
 
 ```typescript
-create<TDocument extends PHDocument = PHDocument>(
+create(
   document: PHDocument,
   parentIdentifier?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4079,11 +4159,11 @@ create<TDocument extends PHDocument = PHDocument>(
 Create an empty document of a given type.
 
 ```typescript
-createEmpty<TDocument extends PHDocument>(
+createEmpty(
   documentModelType: string,
   options?: CreateDocumentOptions,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4098,21 +4178,21 @@ createEmpty<TDocument extends PHDocument>(
 
 ### Creating a document in a drive
 
-To create a document inside a drive, use `client.drives.addFile`. It issues the CREATE_DOCUMENT, UPGRADE_DOCUMENT, ADD_RELATIONSHIP, and ADD_FILE actions in a single dependent batch. See [Drives (`client.drives`)](#drives-clientdrives) for the full signature.
+To create a document inside a drive, use `client.write.drives.addFile`. It submits the document's CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP batch, waits for it to complete, then submits the drive's ADD_FILE. See [Drives](#drives) for the full signature.
 
 ---
 
 ### `execute`
 
-Apply actions to a document and wait for completion.
+Sign and submit actions on one document.
 
 ```typescript
-execute<TDocument extends PHDocument>(
+execute(
   documentIdentifier: string,
   branch: string,
   actions: Action[],
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4124,35 +4204,19 @@ execute<TDocument extends PHDocument>(
 | `actions`            | `Action[]`    | Yes      | List of actions to apply                   |
 | `signal`             | `AbortSignal` | No       | Cancel the request                         |
 
-**Returns** the updated document after all actions are applied and read models are updated.
-
 **Example:**
 
 ```typescript
 
 
-const updated = await reactorClient.execute(docId, "main", [
+const handle = await client.write.execute(docId, "main", [
   actions.addTodoItem({ text: "Buy groceries" }),
   actions.addTodoItem({ text: "Walk the dog" }),
 ]);
+const updated = await handle.document();
 ```
 
----
-
-### `executeAsync`
-
-Submit actions without waiting for completion. Returns a `JobInfo` at `PENDING` status.
-
-```typescript
-executeAsync(
-  documentIdentifier: string,
-  branch: string,
-  actions: Action[],
-  signal?: AbortSignal,
-): Promise<JobInfo>
-```
-
-Use `waitForJob()` or `getJobStatus()` to track progress.
+The write half has no `executeAsync`: `execute` already returns as soon as the job is accepted. Use `handle.jobId` with `waitForJob()` or `getJobStatus()` when you need the raw `JobInfo`.
 
 ---
 
@@ -4166,7 +4230,7 @@ rename(
   name: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4190,7 +4254,7 @@ setPreferredEditor(
   preferredEditor: string | null,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4206,33 +4270,52 @@ setPreferredEditor(
 
 ### `addRelationship`
 
-Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`.
+Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`. The handle's document is the source.
 
 ```typescript
 addRelationship(
   sourceIdentifier: string,
   targetIdentifier: string,
   relationshipType: string,
+  metadata?: Record<string, unknown>,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
 
-| Name               | Type          | Required | Description                        |
-| ------------------ | ------------- | -------- | ---------------------------------- |
-| `sourceIdentifier` | `string`      | Yes      | Source document id or slug         |
-| `targetIdentifier` | `string`      | Yes      | Target document id or slug         |
-| `relationshipType` | `string`      | Yes      | Relationship type (e.g. `"child"`) |
-| `branch`           | `string`      | No       | Defaults to `"main"`               |
-| `signal`           | `AbortSignal` | No       | Cancel the request                 |
+| Name               | Type                      | Required | Description                        |
+| ------------------ | ------------------------- | -------- | ---------------------------------- |
+| `sourceIdentifier` | `string`                  | Yes      | Source document id or slug         |
+| `targetIdentifier` | `string`                  | Yes      | Target document id or slug         |
+| `relationshipType` | `string`                  | Yes      | Relationship type (e.g. `"child"`) |
+| `metadata`         | `Record<string, unknown>` | No       | Metadata stored on the edge        |
+| `branch`           | `string`                  | No       | Defaults to `"main"`               |
+| `signal`           | `AbortSignal`             | No       | Cancel the request                 |
+
+---
+
+### `updateRelationship`
+
+Replace the metadata on an existing edge. Pass `null` to clear it. Throws `RelationshipNotFoundError` before submitting when the edge does not exist. The handle's document is the source.
+
+```typescript
+updateRelationship(
+  sourceIdentifier: string,
+  targetIdentifier: string,
+  relationshipType: string,
+  metadata: Record<string, unknown> | null,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<WriteHandle>
+```
 
 ---
 
 ### `removeRelationship`
 
-Remove a typed relationship from a source document to a target document.
+Remove a typed relationship from a source document to a target document. The handle's document is the source.
 
 ```typescript
 removeRelationship(
@@ -4241,7 +4324,7 @@ removeRelationship(
   relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4258,7 +4341,7 @@ removeRelationship(
 
 ### `moveRelationship`
 
-Move a typed relationship from one source document to another, keeping the same target.
+Move a typed relationship from one source document to another, keeping the same target. A move is a remove followed by an add. The remove has reached `READ_READY` when the call resolves; the add has only been accepted.
 
 ```typescript
 moveRelationship(
@@ -4268,7 +4351,7 @@ moveRelationship(
   relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<{ source: PHDocument; target: PHDocument }>
+): Promise<{ removed: WriteHandle; added: WriteHandle }>
 ```
 
 **Parameters:**
@@ -4282,18 +4365,20 @@ moveRelationship(
 | `branch`                 | `string`      | No       | Defaults to `"main"`               |
 | `signal`                 | `AbortSignal` | No       | Cancel the request                 |
 
+`removed.document()` reads the old parent; `added.document()` reads the new one.
+
 ---
 
 ### `deleteDocument`
 
-Delete a single document.
+Delete a single document. The delete, its incoming relationship removals and, with `Cascade`, every orphaned descendant go in one batch. The handle's stages wait for the whole batch.
 
 ```typescript
 deleteDocument(
   identifier: string,
   propagate?: PropagationMode,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4308,27 +4393,27 @@ deleteDocument(
 
 ### `deleteDocuments`
 
-Bulk delete multiple documents.
+Bulk delete multiple documents. Returns one handle per identifier.
 
 ```typescript
 deleteDocuments(
   identifiers: string[],
   propagate?: PropagationMode,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle[]>
 ```
 
 ---
 
 ### `executeBatch`
 
-Apply multiple mutation jobs in dependency order. The client signs each job's actions, dispatches them, and waits for every job to settle. If a job fails, `executeBatch` throws a `BatchJobFailedError` naming the first failed job's plan key (`key`), carrying every job's final `JobInfo` (`jobs`) and the failed job's own error name (`cause.name`). The batch is not atomic: other jobs, including ones that depend on the failed job, may still have committed. See [Error Handling](/academy/Reference/Reactor/ErrorHandling).
+Sign and submit multiple mutation jobs in dependency order. The call resolves once every job is accepted. Each batch stage waits for every job, then rejects with a `BatchJobFailedError` naming the first failed job's plan key (`key`), carrying every job's final `JobInfo` (`jobs`) and the failed job's own error name (`cause.name`). The batch is not atomic: other jobs, including ones that depend on the failed job, may still have committed. See [Error Handling](/academy/Reference/Reactor/ErrorHandling).
 
 ```typescript
 executeBatch(
   request: BatchExecutionRequest,
   signal?: AbortSignal,
-): Promise<BatchExecutionResult>
+): Promise<BatchWriteHandle>
 ```
 
 Each job carries a `key` (used to express dependencies) and a `dependsOn` list of other job keys.
@@ -4347,18 +4432,21 @@ type BatchExecutionRequest = {
   jobs: ExecutionJobPlan[];
 };
 
-type BatchExecutionResult = {
-  jobs: Record<string, JobInfo>;
-};
+interface BatchWriteHandle {
+  readonly jobs: Record<string, JobInfo>; // the accepted jobs
+  readonly handles: Record<string, WriteHandle>;
+  readonly written: Promise<Record<string, WriteReceipt>>;
+  readonly readable: Promise<Record<string, WriteReceipt>>;
+}
 ```
 
-The result's `jobs` record is keyed by each plan's `key`.
+Every record is keyed by each plan's `key`.
 
 ---
 
 ### `loadBatch`
 
-Submit multiple batches of pre-existing operations across documents, with dependency ordering, and wait for all jobs to complete. Use this to load operations that already exist (for example from sync), as opposed to `executeBatch`, which signs and applies new actions.
+Submit multiple batches of pre-existing operations across documents, with dependency ordering, and wait for all jobs to complete. Use this to load operations that already exist (for example from sync), as opposed to `executeBatch`, which signs and applies new actions. Unlike the other writes, it keeps its job-map result.
 
 ```typescript
 loadBatch(
@@ -4393,23 +4481,23 @@ The result's `jobs` record is keyed by each plan's `key`. If a job fails, `loadB
 
 ---
 
-## Drives (`client.drives`)
+## Drives
 
-`client.drives` is a `readonly` `IDriveClient` namespace for drive-aware operations. These methods orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Use the flat `IReactorClient` methods (`get`, `execute`, `find`) for everything that is not drive-aware.
+Drive-aware operations orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Reads live on `client.read.drives` (`IDriveReadClient`); writes live on `client.write.drives` (`IDriveWriteClient`). Use the flat methods (`read.get`, `write.execute`, `read.find`) for everything that is not drive-aware.
 
-Every method takes a trailing optional `signal?: AbortSignal`.
+Every method takes a trailing optional `signal?: AbortSignal`. Each write resolves once its last step is accepted. A step a later step depends on (a file's document before the drive names it, a document rename before the node rename) has completed by then; if it failed, the call throws the job's own error, by name.
 
-### `addFile`
+### `write.drives.addFile`
 
-Create a document inside a drive as a single dependent batch. This issues CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP on the new document, plus ADD_FILE on the drive. This is the way to create a document in a drive.
+Add a document to a drive. The document's CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP batch completes first, then the drive's ADD_FILE is submitted. This is the way to create a document in a drive. The handle's document is the new file; its stages span both batches.
 
 ```typescript
-addFile<TDocument extends PHDocument = PHDocument>(
+addFile(
   driveIdentifier: string,
   document: PHDocument,
   parentFolder?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -4421,20 +4509,20 @@ addFile<TDocument extends PHDocument = PHDocument>(
 | `parentFolder`    | `string`      | No       | Folder id within the drive |
 | `signal`          | `AbortSignal` | No       | Cancel the request         |
 
-### `create`
+### `write.drives.create`
 
-Create a new drive document and wait for completion.
+Create a new drive document. The handle's document is the drive.
 
 ```typescript
 create(
   input: DriveInput,
   signal?: AbortSignal,
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `addFolder`
+### `write.drives.addFolder`
 
-Add a folder node to a drive.
+Add a folder node to a drive. `nodeId` on the returned handle is the new folder's id.
 
 ```typescript
 addFolder(
@@ -4442,24 +4530,24 @@ addFolder(
   name: string,
   parentFolder?: string,
   signal?: AbortSignal,
-): Promise<FolderNode>
+): Promise<NodeWriteHandle> // WriteHandle & { nodeId: string }
 ```
 
-### `removeNode`
+### `write.drives.removeNode`
 
-Remove a node from a drive. Folder nodes cascade: descendant file documents are deleted first, then the folder node entry.
+Remove a node from a drive. Folder nodes cascade: descendant file documents are deleted first (each completed), then the folder node entry. The handle is the last step; its document is the drive.
 
 ```typescript
 removeNode(
   driveIdentifier: string,
   nodeId: string,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle>
 ```
 
-### `renameNode`
+### `write.drives.renameNode`
 
-Rename a node. Updates both the underlying document header and the drive's node entry.
+Rename a node. Renames the underlying document (completed and checked), then the drive's node entry. The handle's document is the drive.
 
 ```typescript
 renameNode(
@@ -4467,24 +4555,24 @@ renameNode(
   nodeId: string,
   name: string,
   signal?: AbortSignal,
-): Promise<Node>
+): Promise<NodeWriteHandle>
 ```
 
-### `setPreferredEditorOnNode`
+### `write.drives.setPreferredEditorOnNode`
 
-Update the preferred editor recorded in the node's document header meta. Pass `null` to clear it.
+Update the preferred editor recorded in the node's document header meta. Pass `null` to clear it. The handle's document is the node's document.
 
 ```typescript
 setPreferredEditorOnNode(
   nodeId: string,
   preferredEditor: string | null,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
-### `moveNode`
+### `write.drives.moveNode`
 
-Move a node to a different parent folder within the same drive. Pass `undefined` as `targetParentFolderId` to move the node to the drive root.
+Move a node to a different parent folder within the same drive. Pass `undefined` as `targetParentFolderId` to move the node to the drive root. The handle's document is the drive.
 
 ```typescript
 moveNode(
@@ -4492,12 +4580,12 @@ moveNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `copyNode`
+### `write.drives.copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document.
+Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive.
 
 ```typescript
 copyNode(
@@ -4505,10 +4593,10 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `getNode`
+### `read.drives.getNode`
 
 Return a single node from the drive's `state.global.nodes` array.
 
@@ -4520,7 +4608,7 @@ getNode(
 ): Promise<Node>
 ```
 
-### `listNodes`
+### `read.drives.listNodes`
 
 Return nodes in the drive, optionally filtered by parent folder. Returns a paged result so you can stream through drives with large node counts.
 
@@ -4641,10 +4729,9 @@ waitForJob(
 **Example:**
 
 ```typescript
-const job = await reactorClient.executeAsync(docId, "main", actions);
-console.log(job.status); // "PENDING"
+const handle = await reactorClient.write.execute(docId, "main", actions);
 
-const completed = await reactorClient.waitForJob(job);
+const completed = await reactorClient.read.waitForJob(handle.jobId);
 console.log(completed.status); // "READ_READY" or "FAILED"
 ```
 
@@ -4669,20 +4756,18 @@ This page covers the low-level `IReactor` interface and the internal components 
 
 | Aspect                  | `IReactor`                                                 | `IReactorClient`                                                                                        |
 | ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | Waits for job completion, returns the final document                                                    |
+| **Write return values** | Returns `JobInfo` immediately (fire-and-forget)            | `client.write` returns a `WriteHandle` once the job is accepted; await `written`, `readable`, or `document()` |
 | **Signing**             | `create`, `deleteDocument`, `addRelationship` and `removeRelationship` take an optional `signer`; `execute` and `load` take none — identity rides on each action's `context.signer` | Client manages signing internally                                                                       |
 | **Document lookup**     | Separate `get()`, `getBySlug()`, `getByIdOrSlug()` methods | Single `get(identifier)` that accepts either                                                            |
 | **Children/parents**    | Returns `string[]` (document IDs only)                     | Returns `PagedResults<PHDocument>` (full documents)                                                     |
-| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `rename()`, `moveRelationship()`, `deleteDocuments()`, and `client.drives.addFile()` |
+| **Convenience methods** | Basic CRUD                                                 | Plus: `createEmpty()`, `rename()`, `moveRelationship()`, `deleteDocuments()`, and `client.write.drives.addFile()` |
 | **Subscriptions**       | Not available (use the event bus directly)                 | `subscribe(search, callback, view?)` for real-time document changes                                     |
-| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Handled internally by the client                                                                        |
+| **Consistency tokens**  | Explicit — pass tokens to reads after writes               | Each `WriteReceipt` carries a `token`; `client.read` methods take it as their last parameter, and `handle.document()` uses it for you |
 
 **When to use `IReactor` directly:**
 
-- You need fire-and-forget job submission without waiting for completion
-- You want explicit control over consistency tokens
 - You are building infrastructure that manages its own signing
-- You need access to `executeBatch()` for multi-document operations with dependency ordering
+- You need the raw `JobInfo` from every write and drive the job lifecycle yourself
 
 ## Building a reactor with ReactorBuilder
 
@@ -4986,7 +5071,7 @@ const token = job.consistencyToken;
 const doc = await reactor.get(docId, undefined, token);
 ```
 
-Without a consistency token, reads may return stale data if the read models have not yet indexed the latest operations. `IReactorClient` handles this automatically — it waits for `READ_READY` before returning — but when using `IReactor` directly, consistency tokens give you explicit control.
+Without a consistency token, reads may return stale data if the read models have not yet indexed the latest operations. On the client, `handle.document()` waits for `READ_READY` and reads with the receipt's token, and every `client.read` method that takes a `consistencyToken` accepts `receipt.token`. When using `IReactor` directly, you pass the job's token yourself.
 
 ## ReactorModule
 
@@ -5130,7 +5215,7 @@ Read models registered via `withReadModel()` run in the pre-ready phase — they
 
 A common use case for the low-level API is writing integration tests that need full control over the reactor lifecycle:
 
-`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`. It holds the `client`, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and the `reactorModule`. `reactorModule` is the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`, typed `InProcessReactorModule | undefined` because the `withReactor` path has none. Narrow it before use. Hand the builder a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
+`ReactorClientBuilder.buildModule()` returns an `InProcessReactorClientModule`. It holds the `client`, its `read` and `write` halves, direct references to `reactor`, `eventBus`, `documentIndexer`, `documentView`, `signer`, `subscriptionManager` and `jobAwaiter`, and the `reactorModule`. `reactorModule` is the same `InProcessReactorModule` you get from `ReactorBuilder.buildModule()`, typed `InProcessReactorModule | undefined` because the `withReactor` path has none. Narrow it before use. Hand the builder a `ReactorBuilder` via `withReactorBuilder` and it builds the reactor for you:
 
 ```typescript
 
@@ -5155,7 +5240,8 @@ async function createTestReactor() {
 const { client, reactorModule } = await createTestReactor();
 
 // Use client for high-level operations
-const doc = await client.createEmpty("powerhouse/todo-list");
+const handle = await client.write.createEmpty("powerhouse/todo-list");
+const doc = await handle.document();
 
 // Use the reactor module for low-level inspection
 const ops = await reactorModule.operationStore.getSince(
@@ -5691,10 +5777,21 @@ type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
   startFrom?: "beginning" | "current";
+  replayState?: "latest" | "collapse" | "exact" | "operations";
+  id?: string; // stable cursor key; derived from the processor's namespace or class name when omitted
 };
 ```
 
 `processor` and `filter` are required. `startFrom` is covered under [catch-up and ordering](#catch-up-and-ordering).
+
+`replayState` sets what a replayed operation carries. A replay (first install, catch-up after a restart, rerun, retry) reads operations from the index, which keeps no `resultingState`; a live delivery always carries the executor's state after the operation.
+
+| `replayState`      | A replayed operation carries                                                                                               |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `latest` (default) | Every operation, with the document's latest state. It can be newer than the operation, never older than a state already delivered for that stream. |
+| `collapse`         | Per document stream, one delivery with the latest state; the operations it includes are skipped. Only for processors whose output depends on the latest state alone. |
+| `exact`            | Every operation, with its state at its own revision. Slower.                                                               |
+| `operations`       | Every operation, without state.                                                                                            |
 
 ### The IProcessor interface
 
@@ -5705,7 +5802,7 @@ interface IProcessor {
 }
 ```
 
-`onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`.
+`onOperations` is called post-ready with the operations that matched this processor's filter, during both live routing and backfill. Each `OperationWithContext` is `{ operation, context }`; `context` carries `documentId`, `documentType`, `scope`, `branch`, the global `ordinal`, and optionally `resultingState`. On a replay, `resultingState` is what the record's `replayState` says.
 
 `onDisconnect` runs when the factory is unregistered or its drive is deleted. The manager wraps this call: a throw is caught and logged, never propagated. It is not a deletion signal; see [Deletion and erasure](#deletion-and-erasure).
 
@@ -5811,13 +5908,18 @@ interface IProcessorHostModuleBase {
 - **`analyticsStore`** — the analytics store for time-series rollups.
 - **`relationalDb`** — an `IRelationalDb` (a Kysely instance plus `createNamespace` / `queryNamespace`) for relational indexing. See [Storage and scaling](/academy/Reference/Reactor/StorageAndScaling).
 - **`processorApp`** — `"connect" | "switchboard"`. How a processor learns which app hosts it. Read this rather than the factory's `processorApp?` argument.
-- **`dispatch`** — writes back to the reactor via `dispatch.execute(docId, branch, actions, signal?, meta?)`, returning `{ id, status }`. In Connect this is wired to the reactor client's async execute. Do not `await client.execute()` from inside `onOperations`. The promise resolves only at `READ_READY`, which the current batch cannot reach while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
+- **`dispatch`** — how a processor writes. Each member resolves once the write is accepted, answers with the job's `{ id, status }`, and does not wait for the commit:
+  - `execute(docId, branch, actions, signal?, meta?)` submits actions on one document.
+  - `createInDrive(driveId, document, parentFolder?, signal?)` adds a document to a drive and also returns its `documentId`. The document's own creation has completed when it resolves; the drive's file node has been accepted.
+  - `deleteDocument(docId, propagate?, signal?)` deletes a document; pass `"cascade"` to delete its orphaned children too.
+
+  Do not wait for a write to reach `READ_READY` from inside `onOperations`: the current batch cannot get there while your callback is still running. Use `dispatch` and handle the result in a later `onOperations` call (see [Processor best practices](/academy/Build/WorkWithData/ProcessorBestPractices)).
 - **`getReadModel(name)`** — looks up a registered read model by its `name`. Reactor-registered names are typed: `getReadModel("document-view")` returns `IDocumentView` and `"document-indexer"` returns `IDocumentIndexer`; other names take an explicit type argument. Connect's implementation throws `Read model "<name>" not found` when there is no match.
 - **`config?`** — optional `Map<string, unknown>` of host config.
-- **`client`** — the `IReactorClient` for reading documents and drives. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
+- **`read`** — the `IReactorReadClient` for reading documents, relationships, operations, and drives (`read.drives`). Reads are gated. See [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 - **`attachments`** — the `IAttachmentClient` for uploading and downloading attachments. In Switchboard it makes no caller check, because a processor acts for no caller. See the [Attachment service](/academy/Reference/Reactor/AttachmentService).
 
-These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `client` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
+These six core fields are `IProcessorHostModuleBase` in `@powerhousedao/shared`. `@powerhousedao/reactor` adds `read` and the typed `getReadModel` as `IReactorProcessorHostModuleBase`; `@powerhousedao/reactor-browser` and `@powerhousedao/reactor-api` add `attachments` as `IProcessorHostModule`, since neither shared nor reactor can depend on reactor-attachments. Connect sets `processorApp: "connect"`.
 
 `IProcessorDispatch` and `ProcessorDispatchResult` are defined in shared but are not part of the public reactor export surface; treat the `dispatch` handle on the module as the supported entry point.
 
@@ -6596,7 +6698,7 @@ For the full list of builder methods, see the builder table on [Advanced Reactor
 
 Errors reach your code from the reactor through three channels:
 
-- **Mutations throw a plain `Error`.** When a job fails, [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) methods like `execute`, `create`, and `deleteDocument` reject with `new Error(job.error?.message)`. The typed error class, stack, and retry history are not preserved at this boundary.
+- **Failed writes reject with `JobFailedError`.** When a job fails, the `WriteHandle` that a [`client.write`](/academy/Reference/Reactor/ReactorClient) method such as `execute`, `create`, or `deleteDocument` returned rejects its stages with `JobFailedError`, carrying the job's message and its `JobInfo`. The original error class is not preserved at this boundary.
 - **Aborts throw an `AbortError`.** Any call that takes an `AbortSignal` rejects with an error whose `name` is `"AbortError"` when the signal fires.
 - **Subsystems export typed errors.** The registry, sync, and attachment layers throw named error classes you can discriminate with `instanceof` or a `name` check.
 
@@ -6639,36 +6741,35 @@ type JobInfo = {
 
 `errorHistory` holds one `ErrorInfo` per attempt, oldest first. A job that the queue retried carries every failure; `error` is the most recent. On failure the reactor also populates `job` with the full job object for debugging.
 
-### What `execute()` and `executeBatch()` throw
+### What a write handle rejects with
 
-Most [`IReactorClient`](/academy/Reference/Reactor/ReactorClient) mutation methods do not surface the typed error. On a `FAILED` job they throw a bare `Error` carrying only the message string:
+[`client.write`](/academy/Reference/Reactor/ReactorClient#write-methods-clientwrite) methods resolve once the job is accepted and return a `WriteHandle`. When the job reaches `FAILED`, the handle's `written` and `readable` stages, and `document()`, reject with `JobFailedError`, exported from `@powerhousedao/reactor`:
 
-```typescript
-// inside ReactorClient, after the job reaches a terminal status
-if (job.status === JobStatus.FAILED) {
-  throw new Error(job.error?.message);
-}
-```
+- `message` is `job.error?.message`, which can be `undefined` if `error` was never set. Guard for that when you display it.
+- `job` is the failed `JobInfo`, so `job.error`, `job.errorHistory`, and `job.job` are on hand.
 
-The same pattern runs in `execute`, `create`, `deleteDocument`, `deleteDocuments`, `addRelationship`, and `removeRelationship`. `executeBatch` is the exception, below. Two consequences:
-
-- The thrown `Error.message` equals `job.error?.message`, which can be `undefined` if `error` was never set. Guard for that when you display it.
-- The original error class, stack, and `errorHistory` are lost at the client boundary. To inspect them, drop to the lower-level `IReactor.getJobStatus(jobId)` and read `JobInfo.error`, `JobInfo.errorHistory`, and `JobInfo.job`. See [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
+A reducer error is not a job failure. The operation is stored with its error, the job reaches `READ_READY`, and `receipt.job.result` says which actions erred. `executeBatch` is the exception, below.
 
 ```typescript
+
+
 try {
-  await client.execute(documentId, "main", actions);
+  const handle = await client.write.execute(documentId, "main", actions);
+  await handle.readable;
 } catch (err) {
-  // err is a plain Error; err.message came from job.error?.message
-  console.error("mutation failed:", err instanceof Error ? err.message : err);
+  if (err instanceof JobFailedError) {
+    console.error("mutation failed:", err.message, err.job.errorHistory);
+  } else {
+    throw err;
+  }
 }
 ```
 
-Several internal write-path errors surface only as the `.message` string here and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
+Several internal write-path errors surface only as the `.message` string and lose their typed identity at this edge: `DocumentDeletedError`, `DocumentNotFoundError`, `CreateDocumentRequiredError`, `InvalidSignatureError`, and `UpgradeManifestNotFoundError`. None are exported. Match on `err.message` if you need to branch on them, and expect that to be brittle.
 
-#### `executeBatch` throws `BatchJobFailedError`
+#### `executeBatch` rejects with `BatchJobFailedError`
 
-`executeBatch` waits for every job in the batch to settle. If any job is `FAILED`, it throws a `BatchJobFailedError` (exported from `@powerhousedao/reactor`) for the first failed job in plan order:
+`write.executeBatch` resolves once every job is accepted and returns a `BatchWriteHandle`. Its `written` and `readable` stages wait for every job in the batch. If any job is `FAILED`, they reject with a `BatchJobFailedError` (exported from `@powerhousedao/reactor`) for the first failed job in plan order:
 
 | Field        | Value                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------- |
@@ -6683,7 +6784,8 @@ A batch is not atomic: each job commits on its own, and a failed job still relea
 
 
 try {
-  await client.executeBatch({ jobs });
+  const batch = await client.write.executeBatch({ jobs });
+  await batch.readable;
 } catch (err) {
   if (BatchJobFailedError.isError(err)) {
     const committed = Object.keys(err.jobs).filter(
@@ -7060,7 +7162,7 @@ const { ref } = await upload.send(stream);
 Store `result.ref` in document state through a normal action — there are no special "attach" actions. The reducer treats the ref like any other string field.
 
 ```typescript
-await reactor.client.execute(documentId, "main", [
+await reactor.write.execute(documentId, "main", [
   setAgentImage({ attachment: ref }),
 ]);
 ```
@@ -7103,7 +7205,7 @@ const results = await attachments.preprocess(file);
 With the ref in hand you can write it into document state through a normal action, then upload the bytes:
 
 ```typescript
-await client.execute(documentId, "main", [
+await client.write.execute(documentId, "main", [
   attachInvoice({ scan: results.ref, vendorName: "Acme" }),
 ]);
 
@@ -7118,7 +7220,7 @@ Execute and reserve are awaited separately so each failure is handled on its own
 
 ```typescript
 await Promise.all([
-  client.execute(documentId, "main", [
+  client.write.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]),
   attachments.reserve(results.options, (handle) =>
@@ -7143,7 +7245,7 @@ const submit = useCallback(async () => {
 
   // Execute with the generated ref. `scan` is just a string here; the action
   // and codegen never see the file or the attachments package.
-  await client.execute(documentId, "main", [
+  await client.write.execute(documentId, "main", [
     attachInvoice({ scan: results.ref, vendorName: "Acme" }),
   ]);
 
@@ -7327,7 +7429,7 @@ Upload bytes are only observable through an `uploadTransport` that can see them;
 If a document model previously inlined binary content, the migration is small and mechanical:
 
 - **Schema** — replace `data: String` (or composite fields like `{ image, imageMediaType, imageUrl }`) with a single `attachment: AttachmentRef` field on the input and the state type.
-- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
+- **Write path** — replace the base64-encoding step with a reservation and upload. Either reserve on the service directly (`attachments.reserve({ mimeType, fileName })` then `upload.send(stream)`, dispatching with `result.ref`), or use the client (`attachments.preprocess(file)` then `client.write.execute(...)` with `results.ref` and `attachments.reserve(results.options, ...)`). In the browser, `useAttachmentUpload()` wraps the client flow and reports byte progress.
 - **Read path** — replace data-URI assembly with `attachments.get(ref, { documentId })`. In a browser, drain the stream into a `Blob` and use `URL.createObjectURL` (remember to `revokeObjectURL` on cleanup).
 - **Graceful degradation** — code paths that may run without an attachment service (mock environments, tests, off-line previews) should branch on `if (!attachments)`. Writers should surface a clear error to the user; readers should skip the attachment and render a placeholder.
 
@@ -7694,8 +7796,8 @@ const admin: Grant = {
   capability: { can: "execute", scope: "auth" },
 };
 
-await client.execute(documentId, "main", [initializeAuth({ version: 1, grants: [admin] })]);
-await client.execute(documentId, "main", [setGrant({ grant: readers })]);
+await client.write.execute(documentId, "main", [initializeAuth({ version: 1, grants: [admin] })]);
+await client.write.execute(documentId, "main", [setGrant({ grant: readers })]);
 ```
 
 ### Grants
@@ -9200,6 +9302,16 @@ Document-model subgraphs are auto-generated for each registered document model a
 - Per-operation mutations (e.g. `addTodoItem(documentIdOrSlug, input)`)
 - Async variants of each mutation (e.g. `addTodoItemAsync(documentIdOrSlug, input)`)
 
+On the reactor subgraph, `document`, `findDocuments`, `documentOutgoingRelationships`, `documentIncomingRelationships`, `documentOutgoingRelationshipEdges`, and `documentIncomingRelationshipEdges` take an optional `consistency: ConsistencyTokenInput`. Pass the `consistencyToken` a job reports (`JobInfo.consistencyToken`) and the read waits until the read models hold every operation it names, so a client can read its own write:
+
+```graphql
+query ($id: String!, $c: ConsistencyTokenInput!) {
+  document(idOrSlug: $id, consistency: $c) {
+    document { id lastModifiedAtUtcIso }
+  }
+}
+```
+
 ### Getting a drive and its contents
 
 **Legacy:**
@@ -9694,19 +9806,21 @@ export const resolvers: GraphQLResolverMap<Context> = {
 
 ### v6 pattern
 
-Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through `subgraph.reactorClient`:
+Custom subgraphs now use `getResolvers(subgraph: BaseSubgraph)` and access data through the reactor client halves on the resolver context: `ctx.clients.read` in every resolver, `ctx.clients.write` in Mutation fields only:
 
 ```typescript
 // v6 custom subgraph — subgraphs/my-custom/resolvers.ts
 
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-
   return {
     Query: {
-      myCustomQuery: async (_parent: unknown, args: { driveId: string }) => {
-        const children = await reactorClient.getOutgoingRelationships(
+      myCustomQuery: async (
+        _parent: unknown,
+        args: { driveId: string },
+        ctx: Context,
+      ) => {
+        const children = await ctx.clients.read.getOutgoingRelationships(
           args.driveId,
           "child",
         );
@@ -9739,7 +9853,7 @@ ph generate --subgraph my-custom
 
 | Aspect               | Legacy                          | v6                                              |
 | -------------------- | ------------------------------- | ----------------------------------------------- |
-| Data access          | `ctx.driveServer`               | `subgraph.reactorClient`                        |
+| Data access          | `ctx.driveServer`               | `ctx.clients.read` / `ctx.clients.write`        |
 | Schema format        | Template literal string         | `gql` tagged template (`DocumentNode`)          |
 | Resolver export      | `export const resolvers`        | `export const getResolvers = (subgraph) => ...` |
 | Relational DB access | Not available                   | `subgraph.relationalDb`                         |
@@ -9754,7 +9868,7 @@ ph generate --subgraph my-custom
 - [ ] Replace strand-based sync (`registerPullResponderListener`, `system.sync.strands`) with `touchChannel` + `pollSyncEnvelopes`
 - [ ] For real-time updates, use `documentChanges` subscription instead of polling strands
 - [ ] Migrate custom subgraphs to `getResolvers(subgraph: BaseSubgraph)` pattern
-- [ ] Replace `ctx.driveServer` calls with `subgraph.reactorClient` methods
+- [ ] Replace `ctx.driveServer` calls with `ctx.clients.read` (queries) and `ctx.clients.write` (mutations) methods
 - [ ] Update schema files from plain strings to `gql` tagged templates
 - [ ] Regenerate custom subgraph scaffolding with `ph generate --subgraph <name>`
 
@@ -16415,8 +16529,8 @@ export function TodoDemo() {
 
   async function create() {
     if (!client) return;
-    const created = await client.create(createTodoDocument());
-    setDocumentId(created.header.id);
+    const handle = await client.write.create(createTodoDocument());
+    setDocumentId(handle.documentId);
   }
 
   return (
@@ -16565,29 +16679,60 @@ For the quickstart and how the entry stays browser-bundlable, see
 ## `IReactorBrowserClient`
 
 The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
-the reactor's own `IReactorClient`, so the six member signatures cannot drift
-from the reactor's:
+the reactor's own interfaces, so the member signatures cannot drift from the
+reactor's:
 
 ```typescript
+export interface IReactorBrowserReadClient extends Pick<
+  IReactorReadClient,
+  | "get"
+  | "getMany"
+  | "find"
+  | "getOperations"
+  | "subscribe"
+  | "waitForJob"
+  | "getJobStatus"
+> {}
+
+export interface IReactorBrowserWriteClient extends Pick<
+  IReactorWriteClient,
+  "execute" | "create" | "deleteDocument"
+> {}
+
 export interface IReactorBrowserClient extends Pick<
   IReactorClient,
   | "get"
+  | "find"
   | "subscribe"
   | "execute"
   | "getOperations"
   | "create"
   | "deleteDocument"
-> {}
+> {
+  readonly read: IReactorBrowserReadClient;
+  readonly write: IReactorBrowserWriteClient;
+}
 ```
+
+`read` and `write` are the client halves the hooks use. Each `write` method
+resolves once its job is accepted and returns a `WriteHandle`; read the
+document back with `handle.document()`. Write through `write`; the picked
+top-level methods remain for callers that have not moved to the halves.
 
 Two implementations satisfy it: the full in-browser reactor client, which gets it
 for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
-Everything outside those six members is deliberately excluded and not
-implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
-`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
-`evaluateActions`, and the document-model module getters. For the
-full-reactor versions of those, see
+On `GraphQLReactorClient`, `write.execute` submits the job and hands back a
+handle whose `written` and `readable` resolve from the job's status, woken by
+the `jobChanges` subscription when realtime is on. Its `document()` runs the
+`document` query bounded by the receipt's consistency token. `write.create` and
+`write.deleteDocument` run synchronous mutations and hand back a handle that has
+already settled.
+
+Everything outside these members is deliberately excluded from the interface:
+`drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
+`createEmpty`, `rename`, `evaluateActions`, and the document-model module
+getters. For the full-reactor versions of those, see
 [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 
 ### Methods
@@ -16601,9 +16746,10 @@ full-reactor versions of those, see
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
 
-`execute` returns the updated document with the operations this call appended,
-which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
-returned operations for the action it sent and reads its `error` field.
+`useDispatch` writes through `write.execute` and reads the result back with
+`handle.document()`. That is how it reports per-action errors: `dispatchActions`
+scans the read-back document's operations for the action it sent and reads its
+`error` field.
 
 ## `GraphQLReactorClient`
 
@@ -17363,7 +17509,7 @@ const configSchema = z.strictObject({
 type AuditConfig = z.infer<typeof configSchema>;
 
 export function createAuditPlugin(config: AuditConfig): HostPlugin<{
-  onReactorReady: (ctx: { client: unknown }) => Promise<void>;
+  onReactorReady: (ctx: { read: unknown }) => Promise<void>;
   onShutdown: () => Promise<void>;
 }> {
   let flush: (() => Promise<void>) | undefined;
@@ -17373,7 +17519,7 @@ export function createAuditPlugin(config: AuditConfig): HostPlugin<{
     configSchema,
     hooks: {
       onReactorReady: async (ctx) => {
-        flush = startAuditPipeline(ctx.client, config.sink, config.batchSize);
+        flush = startAuditPipeline(ctx.read, config.sink, config.batchSize);
       },
       onShutdown: async () => {
         await flush?.();
@@ -23321,13 +23467,14 @@ By default, new documents are created at the **latest version**. You can optiona
 
 ```typescript
 // Create at latest version (default)
-const doc = await client.createEmpty("my-org/todo");
+const doc = await (await client.write.createEmpty("my-org/todo")).document();
 // doc.state.document.version === 2 (latest)
 
 // Create at specific version
-const v1Doc = await client.createEmpty("my-org/todo", {
+const v1Handle = await client.write.createEmpty("my-org/todo", {
   documentModelVersion: 1,
 });
+const v1Doc = await v1Handle.document();
 // v1Doc.state.document.version === 1
 ```
 
@@ -27698,7 +27845,7 @@ The `ReactorClient` automatically signs all actions before submitting them to th
 
 `ReactorClient` holds an `ISigner` instance. Every mutation method -- `execute()`, `create()`, `createChild()`, `add()`, `remove()`, `move()` -- calls `signActions()` internally before submitting to the reactor. If an action already has valid signatures, it is passed through unchanged.
 
-`execute()`, `executeAsync()` and `executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
+`write.execute()` and `write.executeBatch()` resolve a slug to the document id before signing, because the signature is bound to the id the write is stored under.
 
 A `RemoteDocumentController` built with a slug does the same. Before it signs a push, it asks the remote for the document's id. If the id cannot be resolved, the push fails and nothing is signed.
 
@@ -27826,26 +27973,26 @@ The id of a v2-required document is `base64url(sha256(canonicalJson({ documentTy
 
 // v2-required, under a derived id
 const document = module.utils.createDocument();
-await client.create(document);
-await client.createEmpty("powerhouse/document-model");
-await client.drives.create({ global: { name: "Drive" } });
+await client.write.create(document);
+await client.write.createEmpty("powerhouse/document-model");
+await client.write.drives.create({ global: { name: "Drive" } });
 
 // legacy, for one document
-await client.createEmpty("powerhouse/document-model", {
+await client.write.createEmpty("powerhouse/document-model", {
   signaturePolicy: "legacy",
 });
-await client.drives.create({
+await client.write.drives.create({
   global: { name: "Drive" },
   signaturePolicy: "legacy",
 });
-await client.create(
+await client.write.create(
   withSignaturePolicy(module.utils.createDocument(), "legacy", {
     id: "my-document",
   }),
 );
 ```
 
-`client.create()` and `client.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
+`client.write.create()` and `client.write.drives.addFile()` create the document under the header it carries. `withSignaturePolicy(document, policy, { id })` gives a document that has not been created a fresh header under `policy`; only a legacy header takes `id`.
 Under `v2-required` a given `id` is ignored and the id is derived, so code that needs a fixed id must ask for `legacy`.
 
 A `CREATE_DOCUMENT` whose id does not recompute from its own input is refused as `ID_MISMATCH`, and so is a legacy `CREATE_DOCUMENT` that takes an id of that shape. A copy of a v2-required document is v2-required, under a new derived id. A copy of a legacy document is created under the creation default below. An imported `.phd` keeps the policy it was exported with.
@@ -28291,8 +28438,6 @@ parameter of `getResolvers`, so call them directly as `subgraph.assertCanRead(..
 export const getResolvers = (
   subgraph: BaseSubgraph,
 ): Record<string, unknown> => {
-  const reactor = subgraph.reactorClient;
-
   return {
     Query: {
       document: async (
@@ -28301,7 +28446,7 @@ export const getResolvers = (
         ctx: Context,
       ) => {
         const handle = await subgraph.assertCanRead(args.identifier, ctx);
-        return reactor.get(handle.fetchIdentifier);
+        return ctx.clients.read.get(handle.fetchIdentifier);
       },
     },
   };
@@ -28339,7 +28484,7 @@ the check was skipped for a policy-wide caller (OPEN or a supreme admin):
 
 ```typescript
 const handle = await subgraph.assertCanRead(args.identifier, ctx); // throws if denied
-const doc = await subgraph.reactorClient.get(handle.fetchIdentifier); // never args.identifier
+const doc = await ctx.clients.read.get(handle.fetchIdentifier); // never args.identifier
 ```
 
 **Rule of thumb:** after any `assertCan*` that takes an identifier, perform the
@@ -28383,7 +28528,7 @@ to name them — `Context`, `CanonicalDocumentId`, `AuthorizationPolicy`,
 ```typescript
 document: async (_parent, args: { identifier: string }, ctx: Context) => {
   const handle = await subgraph.assertCanRead(args.identifier, ctx);
-  return subgraph.reactorClient.get(handle.fetchIdentifier);
+  return ctx.clients.read.get(handle.fetchIdentifier);
 };
 ```
 
@@ -29305,15 +29450,15 @@ export const schema: DocumentNode = gql`
 
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
-
   return {
     Query: {
       searchTodos: async (
         parent: unknown,
         args: { driveId: string; searchTerm: string },
+        ctx: Context,
       ) => {
-        const children = await reactorClient.getOutgoingRelationships(
+        // Resolvers read through ctx.clients.read; ctx.clients.write exists only in mutations
+        const children = await ctx.clients.read.getOutgoingRelationships(
           args.driveId,
           "child",
         );
@@ -29895,6 +30040,17 @@ interface IProcessorDispatch {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<ProcessorDispatchResult>;
+  createInDrive(
+    driveId: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchResult & { documentId: string }>;
+  deleteDocument(
+    docId: string,
+    propagate?: "none" | "cascade",
+    signal?: AbortSignal,
+  ): Promise<ProcessorDispatchResult>;
 }
 
 type ProcessorDispatchResult = {
@@ -29903,7 +30059,7 @@ type ProcessorDispatchResult = {
 };
 ```
 
-Under the hood, `dispatch.execute()` calls `reactorClient.executeAsync()` — it submits the job to the reactor and returns immediately with the job info. The processor does not wait for the job to complete.
+`dispatch.execute()` submits the job to the reactor and returns as soon as it is accepted, with the job's id and status. The processor does not wait for the job to complete. `createInDrive` adds a document to a drive; the document's own creation has completed when it resolves, and the drive's file node has been accepted. `deleteDocument` deletes a document, and with `"cascade"` its orphaned children.
 
 ### Accessing `dispatch` in a factory
 
@@ -29988,14 +30144,14 @@ The processor dispatches the `CREATE_PAYMENT` action and moves on. It does not w
 | `signal`  | `AbortSignal`             | No       | Cancellation signal                           |
 | `meta`    | `Record<string, unknown>` | No       | Additional metadata for the job               |
 
-### Why not `reactorClient`?
+### Why not wait for the write?
 
 **WARNING:**
-Do not use `reactorClient` methods directly from inside a processor. Use `dispatch` instead.
+A processor writes through `dispatch` and reads through `module.read`. Do not wait for a write to reach `READ_READY` (or read the written document back) from inside a processor.
 
 **Why:**
 
-1. **Potential blocking.** Methods like `reactorClient.execute()` wait for the job to reach `READ_READY` status before returning. This means the call could potentially wait on processors to finish their current batch — including the very processor making the call.
+1. **Potential blocking.** `READ_READY` waits on processors to finish their current batch — including the very processor making the call.
 
 2. **Unnecessary round-trip.** The processor will receive the resulting operations through `onOperations` anyway. Waiting for the result synchronously adds latency without benefit.
 
@@ -30004,8 +30160,9 @@ Do not use `reactorClient` methods directly from inside a processor. Use `dispat
 **Instead of:**
 
 ```typescript
-// Bad: blocks until job completes
-const doc = await reactorClient.execute(docId, "main", actions);
+// Bad: blocks until the job is READ_READY
+const result = await this.dispatch.execute(docId, "main", actions);
+await module.read.waitForJob(result.id); // module: the host module
 ```
 
 **Use:**
@@ -30513,7 +30670,6 @@ Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
 
 export const getResolvers = (subgraph: BaseSubgraph) => {
-  const reactorClient = subgraph.reactorClient;
   const relationalDb = subgraph.relationalDb;
 
   return {
@@ -30933,7 +31089,7 @@ export class ReportsSubgraph extends BaseSubgraph {
   async onSetup(): Promise<void> {
     this.http.get("reports/:id", async (_request, ctx) => {
       try {
-        const document = await this.reactorClient.get<PHDocument>(
+        const document = await this.readClient.get<PHDocument>(
           ctx.params.id,
           undefined,
           ctx.signal,
