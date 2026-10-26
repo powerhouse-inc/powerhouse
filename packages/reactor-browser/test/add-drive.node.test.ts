@@ -103,7 +103,7 @@ describe("addDrive (issue #2838)", () => {
     expect(isDerivedDocumentId(doc.header.id)).toBe(false);
   });
 
-  it("falls back to the default policy on a Switchboard without createDefaults", async () => {
+  it("falls back to the default policy for a bare light client on a Switchboard without createDefaults", async () => {
     const heads = newDocumentUnder("legacy", { "base-reducer": 2 });
     window.ph = {
       reactorClient: withHalves({
@@ -124,5 +124,24 @@ describe("addDrive (issue #2838)", () => {
 
     const doc = create.mock.calls[0]![0] as DocumentDriveDocument;
     expect(signaturePolicyOf(doc.header)).toBe("v2-required");
+  });
+
+  it("refuses, rather than guess the policy, when a full client's Switchboard lacks createDefaults", async () => {
+    const notSupported = new GraphQLOperationNotSupportedError(
+      "getCreateSignaturePolicy",
+      "the Switchboard predates the createDefaults query",
+    );
+    window.ph = {
+      reactorClient: withHalves({
+        create,
+        newDocument: () => Promise.reject(notSupported),
+      }),
+      fullReactorClient: withHalves({}),
+    } as unknown as PHGlobal;
+
+    await expect(addDrive({ global: { name: "Old host" } })).rejects.toBe(
+      notSupported,
+    );
+    expect(create).not.toHaveBeenCalled();
   });
 });

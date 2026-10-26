@@ -161,8 +161,14 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
       options,
     );
   } catch (error) {
-    if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
-    // A Switchboard without createDefaults: the library's default policy.
+    // A full client's host must name the policy; a bare light client against
+    // a Switchboard without createDefaults takes the library's default.
+    if (
+      getFullReactorClient() ||
+      !GraphQLOperationNotSupportedError.isError(error)
+    ) {
+      throw error;
+    }
     driveDoc = await reactorClient.newDocument<DocumentDriveDocument>(
       driveDocumentType,
       { ...options, signaturePolicy: DEFAULT_SIGNATURE_POLICY },
