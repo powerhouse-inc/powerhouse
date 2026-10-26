@@ -32,6 +32,7 @@ function specification(schema: string): DocumentSpecification {
 }
 
 describe("scalar generated files", () => {
+  const originalCwd = process.cwd();
   const workDir = mkdtempSync(join(tmpdir(), "scalar-codegen-"));
   const versionDir = join(workDir, "document-models", "scalar-fixture", "v1");
 
@@ -87,6 +88,7 @@ describe("scalar generated files", () => {
   }, 60_000);
 
   afterAll(() => {
+    process.chdir(originalCwd);
     rmSync(workDir, { recursive: true, force: true });
   });
 

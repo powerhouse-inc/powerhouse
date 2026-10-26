@@ -72,6 +72,12 @@ jobs:
       - name: Build packages that depend on generated binaries
         run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
+      # Academy is outside the workspace; lint needs its Docusaurus tsconfig.
+      - name: Install Academy dependencies for lint
+        if: contains(steps.diff.outputs.files, 'apps/academy/')
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/academy
+
       - name: Run oxlint
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm exec oxlint --quiet --no-error-on-unmatched-pattern ${{ steps.diff.outputs.files }}
