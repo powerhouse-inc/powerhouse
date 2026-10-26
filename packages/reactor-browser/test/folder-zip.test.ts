@@ -11,6 +11,7 @@ import {
   createBaseState,
   createPresignedHeader,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildFolderZip } from "../src/actions/folder-zip.js";
 import { unzipAsync } from "./utils/unzip.js";
@@ -91,7 +92,7 @@ function upgradeOps(document: PHDocument): DocumentOperations {
 }
 
 function stubClient(documents: Record<string, PHDocument | undefined>) {
-  const client = {
+  const client = withHalves({
     get: (identifier: string) => {
       if (identifier === DRIVE_ID) return Promise.resolve(driveDocument());
       const doc = documents[identifier];
@@ -116,7 +117,7 @@ function stubClient(documents: Record<string, PHDocument | undefined>) {
         ],
         options: { cursor: "", limit: 10 },
       }),
-  };
+  });
   window.ph = {
     ...window.ph,
     reactorClientModule: {

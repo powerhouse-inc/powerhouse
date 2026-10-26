@@ -2,6 +2,8 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
   type InProcessReactorClientModule,
+  type JobInfo,
+  type WriteHandle,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
@@ -181,9 +183,24 @@ describe("router copyNode", () => {
       const drive = await module.client.drives.create({
         global: { name: "Drive" },
       });
+      const receipt = {
+        job: {} as JobInfo,
+        token: { version: 1 as const, createdAtUtcIso: "", coordinates: [] },
+        documentId: drive.header.id,
+        branch: "main",
+      };
+      const handle: WriteHandle = {
+        jobId: "",
+        documentId: drive.header.id,
+        branch: "main",
+        written: Promise.resolve(receipt),
+        readable: Promise.resolve(receipt),
+        document: <T extends PHDocument>() =>
+          Promise.resolve(drive as unknown as T),
+      };
       const copy = vi
-        .spyOn(client.drives.on(client.backends[0]), "copyNode")
-        .mockResolvedValue(drive);
+        .spyOn(module.client.write.drives, "copyNode")
+        .mockResolvedValue(handle);
       const signal = new AbortController().signal;
       const options = { protocolVersions: { "base-reducer": 3 } };
 

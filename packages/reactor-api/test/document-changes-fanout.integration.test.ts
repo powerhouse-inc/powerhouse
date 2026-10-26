@@ -93,7 +93,9 @@ describe("documentChanges read cost per distinct subject", () => {
   };
 
   function spies(m: InProcessReactorClientModule) {
-    const gate = (m.client as unknown as { readGate: IReadGate }).readGate;
+    // The read half holds the gate; its gating and event reads share it.
+    const gate = (m.read as unknown as { gating: { readGate: IReadGate } })
+      .gating.readGate;
     const all: Record<keyof Counts, MockInstance> = {
       viewGet: vi.spyOn(m.documentView, "get"),
       viewExists: vi.spyOn(m.documentView, "exists"),

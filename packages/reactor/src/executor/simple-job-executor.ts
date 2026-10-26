@@ -151,6 +151,7 @@ import {
   submittedActionIds,
   targetDocumentId,
   TouchedStreams,
+  writeIdentityRows,
 } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
@@ -637,6 +638,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         if (!scoped.result.success) {
           throw new JobRollbackSignal(scoped.result);
         }
+
+        await stores.writeIdentity.upsert(
+          writeIdentityRows(scoped.pendingEvent?.operations ?? []),
+        );
 
         // The point of no return: one tick, so a timeout and the COMMIT are exclusive.
         signal?.throwIfAborted();

@@ -12,7 +12,7 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DriveClient } from "../../src/client/drive-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -295,7 +295,85 @@ describe("DriveClient Integration Tests", () => {
     });
   });
 
+  describe("removeNode without reading the drive", () => {
+    function driveReads(driveId: string) {
+      const get = vi.spyOn(client.read, "get");
+      return () => get.mock.calls.filter(([id]) => id === driveId).length;
+    }
+
+    it("removes a file named by id with no read of the drive", async () => {
+      const drive = await createDrive();
+      const doc = await createDocInDrive(drive, "Doomed");
+      const reads = driveReads(drive.header.id);
+
+      const handle = await client.write.drives.removeNode(
+        drive.header.id,
+        doc.header.id,
+      );
+      await handle.readable;
+
+      expect(reads()).toBe(0);
+      const reloaded = await client.get<DocumentDriveDocument>(drive.header.id);
+      expect(reloaded.state.global.nodes).toEqual([]);
+      await expect(client.get(doc.header.id)).rejects.toThrow();
+    });
+
+    it("cleans up an orphan whose node never landed, from the reducer's refusal", async () => {
+      const drive = await createDrive();
+      const orphan = documentModelDocumentModelModule.utils.createDocument();
+      await client.create(orphan, drive.header.id);
+      const reads = driveReads(drive.header.id);
+
+      const handle = await client.write.drives.removeNode(
+        drive.header.id,
+        orphan.header.id,
+      );
+      await handle.readable;
+
+      expect(reads()).toBe(0);
+      await expect(client.get(orphan.header.id)).rejects.toThrow();
+      const edges = await client.getOutgoingRelationshipEdges(
+        drive.header.id,
+        "child",
+      );
+      expect(edges.results).toEqual([]);
+    });
+
+    it("still reads the drive for a folder, whose files it must delete", async () => {
+      const drive = await createDrive();
+      const folder = await client.drives.addFolder(drive.header.id, "Box");
+      const doc = await createDocInDrive(drive, "Inside", folder.id);
+      const reads = driveReads(drive.header.id);
+
+      const handle = await client.write.drives.removeNode(
+        drive.header.id,
+        folder.id,
+      );
+      await handle.readable;
+
+      expect(reads()).toBe(1);
+      await expect(client.get(doc.header.id)).rejects.toThrow();
+    });
+  });
+
   describe("renameNode", () => {
+    it("checks the rename from the job outcome, not a read-back", async () => {
+      const drive = await createDrive();
+      const doc = await createDocInDrive(drive, "Original");
+      const get = vi.spyOn(client.read, "get");
+
+      const handle = await client.write.drives.renameNode(
+        drive.header.id,
+        doc.header.id,
+        "Renamed",
+      );
+      await handle.readable;
+
+      expect(get).not.toHaveBeenCalled();
+      const reloaded = await client.get(doc.header.id);
+      expect(reloaded.header.name).toBe("Renamed");
+    });
+
     it("updates both the document header and the drive node entry", async () => {
       const drive = await createDrive();
       const doc = await createDocInDrive(drive, "Original");

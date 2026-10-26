@@ -7,8 +7,14 @@ import { getAdminUsers } from "./getters.js";
 // (`process.cwd` is not a function). Calling it there throws
 // "process.cwd is not a function" and aborts package loading. Guard it: only
 // load a .env file in a real Node context — elsewhere env already lives in
-// `process.env`, so there is nothing to load.
-if (typeof process !== "undefined" && typeof process.cwd === "function") {
+// `process.env`, so there is nothing to load. PH_NO_DOTENV skips it (same
+// predicate as shared's isDotenvDisabled, inlined to keep this module free
+// of node imports).
+if (
+  typeof process !== "undefined" &&
+  typeof process.cwd === "function" &&
+  !["1", "true"].includes(process.env.PH_NO_DOTENV?.trim().toLowerCase() ?? "")
+) {
   dotenv.config();
 }
 

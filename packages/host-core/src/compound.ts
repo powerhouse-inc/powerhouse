@@ -68,12 +68,12 @@ interface StartedMember {
 
 /** A member host before its runner validates it: the member's host.js with
  * the wrapper applied (tokens still in place). */
-type MemberDraft = Record<string, unknown> & {
+export type MemberDraft = Record<string, unknown> & {
   name: string;
   runner: HostDefinition["runner"];
 };
 
-interface PreparedMember {
+export interface PreparedMember {
   key: string;
   member: ChildWrapper;
   draft: MemberDraft;
@@ -86,7 +86,7 @@ interface PreparedMember {
  * host.js with the wrapper applied. A wrapper SECTION is a FULL STATEMENT —
  * `reactor` and `config`, when present on the wrapper, replace the member's
  * wholesale; `runner` key-merges (wrappers override port, host, plugins…). */
-async function memberDraft(
+export async function memberDraft(
   projectRoot: string,
   member: ChildWrapper,
 ): Promise<MemberDraft> {
@@ -105,7 +105,7 @@ async function memberDraft(
  * `runner.cspRegistrySync`): its runner declares that option (any specifier
  * that reaches the Connect runner), or it names the Connect runner. A
  * member's role is its runner, not its folder. */
-function takesCspRegistrySync(m: PreparedMember): boolean {
+export function takesCspRegistrySync(m: PreparedMember): boolean {
   return (
     m.specifier === CONNECT_RUNNER ||
     declaresKey(m.runner.hostSchema, ["runner"], "cspRegistrySync")
@@ -135,10 +135,19 @@ export interface RunCompoundResult {
   handleSignal: (signal: "SIGINT" | "SIGTERM") => Promise<void>;
 }
 
+/** The verb the generic compound starts its members at for its own `verb`:
+ * `run` follows the compound's defaultVerb. */
+export function compoundStartVerb(
+  verb: string,
+  runner: { defaultVerb?: string },
+): string {
+  return verb === "run" ? (runner.defaultVerb ?? "run") : verb;
+}
+
 /** At compound verb "run" each member runs its own (merged) defaultVerb —
  * what lets a desktop compound pair a switchboard at `run` with a connect at
  * `serve`. An explicit forwarded verb stays uniform across members. */
-function memberVerbOf(
+export function memberVerbOf(
   compoundVerb: string,
   runner: { defaultVerb?: string },
 ): string {
@@ -381,16 +390,25 @@ async function prepareMembers(
 ): Promise<PreparedMember[]> {
   const out: PreparedMember[] = [];
   for (const [key, member] of Object.entries(children)) {
-    const draft = await memberDraft(projectRoot, member);
-    const specifier = draft.runner.module;
-    out.push({
-      key,
-      member,
-      draft,
-      specifier,
-      runner: await resolveRunnerModule(projectRoot, specifier),
-      file: `hosts/${member.host}/host.js`,
-    });
+    out.push(await prepareMember(projectRoot, key, member));
   }
   return out;
+}
+
+/** One member's draft and runner. */
+export async function prepareMember(
+  projectRoot: string,
+  key: string,
+  member: ChildWrapper,
+): Promise<PreparedMember> {
+  const draft = await memberDraft(projectRoot, member);
+  const specifier = draft.runner.module;
+  return {
+    key,
+    member,
+    draft,
+    specifier,
+    runner: await resolveRunnerModule(projectRoot, specifier),
+    file: `hosts/${member.host}/host.js`,
+  };
 }

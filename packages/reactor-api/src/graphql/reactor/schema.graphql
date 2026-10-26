@@ -32,6 +32,24 @@ input OperationsFilterInput {
   timestampTo: String
 }
 
+"A consistency token's coordinate, as ConsistencyCoordinate reports it."
+input ConsistencyCoordinateInput {
+  documentId: String!
+  scope: String!
+  branch: String!
+  operationIndex: Int!
+}
+
+"""
+A consistency token, as JobInfo.consistencyToken reports it. A read given one
+waits until the read models it reads from hold every coordinate it names.
+"""
+input ConsistencyTokenInput {
+  version: Int!
+  createdAtUtcIso: String!
+  coordinates: [ConsistencyCoordinateInput!]!
+}
+
 input DocumentOperationsFilterInput {
   branch: String
   scopes: [String!]
@@ -596,6 +614,7 @@ type Query {
     idOrSlug: String
     identifier: String @deprecated(reason: "Use idOrSlug.")
     view: ViewFilterInput
+    consistency: ConsistencyTokenInput
   ): DocumentWithChildren
 
   # Get outgoing relationships of a given type from a source document
@@ -605,6 +624,7 @@ type Query {
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
+    consistency: ConsistencyTokenInput
   ): PHDocumentResultPage!
 
   # Get incoming relationships of a given type to a target document
@@ -614,6 +634,7 @@ type Query {
     relationshipType: String!
     view: ViewFilterInput
     paging: PagingInput
+    consistency: ConsistencyTokenInput
   ): PHDocumentResultPage!
 
   # Get the outgoing relationship edges of a source document. Unlike
@@ -626,6 +647,7 @@ type Query {
     relationshipType: String
     view: ViewFilterInput
     paging: PagingInput
+    consistency: ConsistencyTokenInput
   ): DocumentRelationshipResultPage!
 
   # Get the incoming relationship edges of a target document. Unlike
@@ -638,6 +660,7 @@ type Query {
     relationshipType: String
     view: ViewFilterInput
     paging: PagingInput
+    consistency: ConsistencyTokenInput
   ): DocumentRelationshipResultPage!
 
   # Find documents by search criteria
@@ -645,6 +668,7 @@ type Query {
     search: SearchFilterInput
     view: ViewFilterInput
     paging: PagingInput
+    consistency: ConsistencyTokenInput
   ): PHDocumentResultPage!
 
   # Get job status

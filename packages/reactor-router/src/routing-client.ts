@@ -1,22 +1,18 @@
 import {
-  buildCreateJobs,
-  createEmptyDocument,
-  JOB_NOT_FOUND_ERROR_NAME,
-  JobStatus,
-  selectDocumentModelModule,
-  upgradeDocumentWith,
+  warnOnce,
   type ActionCandidate,
   type ActionEvaluations,
   type BatchExecutionRequest,
   type BatchExecutionResult,
   type BatchLoadRequest,
   type BatchLoadResult,
-  type NewDocumentOptions,
+  type ConsistencyToken,
   type CreateProtocolVersionsOptions,
   type DocumentChangeEvent,
   type DocumentRelationship,
   type IReactorClient,
   type JobInfo,
+  type NewDocumentOptions,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
@@ -27,211 +23,70 @@ import {
   type UpgradeDocumentOptions,
   type ViewFilter,
 } from "@powerhousedao/reactor";
-import {
-  actions as documentActions,
-  createVersionsOf,
-  normalizeDocumentModelVersion,
-  UnsupportedDocumentModelVersionError,
-  type Action,
-  type AuthSubject,
-  type DocumentModelModule,
-  type ISigner,
-  type Operation,
-  type PHDocument,
-  type ProtocolVersions,
-  type Signature,
-  type SignaturePolicy,
+import type {
+  Action,
+  AuthSubject,
+  DocumentModelModule,
+  Operation,
+  PHDocument,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
-import {
-  RouterBackend,
-  UnsupportedByBackendError,
-  type IRoutableBackend,
-  type RoutableBackendConfig,
-} from "./backend.js";
-import { ATTEMPT, RouteDispatcher, type BeforeSubmit } from "./dispatcher.js";
-import {
-  CrossBackendBatchError,
-  CrossBackendRelationshipError,
-  messageOf,
-  rethrow,
-} from "./errors.js";
-import {
-  fanInExistence,
-  mergePaged,
-  pagedParticipants,
-  supportingBackends,
-} from "./fan-in.js";
-import { resolveOn, RoutingDriveClient } from "./routing-drive-client.js";
-import { subscribeAll } from "./subscribe-mux.js";
+import { RouterBackend, type RoutableBackendConfig } from "./backend.js";
+import { RouteDispatcher } from "./dispatcher.js";
+import { UnsignedSigner, type RoutingContext } from "./routing-context.js";
+import { BackendDrives, RoutingDriveClient } from "./routing-drive-client.js";
+import { RoutingReadClient } from "./routing-read-client.js";
+import { RoutingWriteClient } from "./routing-write-client.js";
 import {
   DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
   type RouterTableSnapshot,
   type RoutingOptions,
 } from "./types.js";
 
-/** Members a backend may leave out; calling one it left out is refused. */
-type OptionalMember =
-  | "isDocumentIdTaken"
-  | "resolveIdOrSlug"
-  | "evaluateActions"
-  | "loadBatch"
-  | "addRelationship"
-  | "updateRelationship"
-  | "removeRelationship"
-  | "moveRelationship"
-  | "getDocumentModelModules"
-  | "getDocumentModelModule"
-  | "undo"
-  | "redo"
-  | "undoRedoTargets"
-  | "undoRedoAvailability";
-
-function declared<K extends OptionalMember>(
-  backend: RouterBackend,
-  member: K,
-): NonNullable<IRoutableBackend[K]> {
-  const value = backend.api[member];
-  if (value === undefined) {
-    throw new UnsupportedByBackendError(
-      backend.name,
-      member,
-      "the backend does not declare it",
-    );
-  }
-  return value.bind(backend.api) as NonNullable<IRoutableBackend[K]>;
-}
-
-/** Refuses a point-in-time read on a backend that does not declare them. */
-function assertView(
-  backend: RouterBackend,
-  view: ViewFilter | undefined,
-  member: string,
-): void {
-  if (view?.revision === undefined || backend.api.supports.pointInTimeViews) {
-    return;
-  }
-  throw new UnsupportedByBackendError(
-    backend.name,
-    member,
-    "the backend does not serve point-in-time views",
-  );
-}
-
-function sharedScope(actions: readonly Action[]): string {
-  const scope = actions[0]?.scope ?? "";
-  if (actions.some((action) => action.scope !== scope)) {
-    throw new Error("All actions of one job must share a scope");
-  }
-  return scope;
-}
-
-/** The jobs a batch error carries, when it carries them. */
-function failedBatchJobs(
-  error: unknown,
-): Readonly<Record<string, JobInfo>> | undefined {
-  if (typeof error !== "object" || error === null) {
-    return undefined;
-  }
-  const candidate = error as {
-    name?: unknown;
-    jobs?: Record<string, JobInfo>;
-  };
-  if (candidate.name !== "BatchJobFailedError") {
-    return undefined;
-  }
-  return candidate.jobs;
-}
-
-/** executeBatch, for a backend without submit; failed jobs are answered, not thrown. */
-async function submitAndWait(
-  backend: RouterBackend,
-  request: BatchExecutionRequest,
-  signal: AbortSignal | undefined,
-): Promise<BatchExecutionResult> {
-  let result: BatchExecutionResult;
-  try {
-    result = await backend.api.executeBatch(request, signal);
-  } catch (error) {
-    const jobs = failedBatchJobs(error);
-    if (jobs === undefined) {
-      throw error;
-    }
-    return { jobs: { ...jobs } };
-  }
-  const settled = await Promise.all(
-    Object.entries(result.jobs).map(
-      async ([key, job]) =>
-        [key, await backend.api.waitForJob(job, signal)] as const,
-    ),
-  );
-  return { jobs: Object.fromEntries(settled) };
-}
-
-const CREATE_DOCUMENT = "CREATE_DOCUMENT";
-
-/** Ids a job of the batch creates; they follow the batch's backend. */
-function createdByExecution(request: BatchExecutionRequest): Set<string> {
-  return new Set(
-    request.jobs
-      .filter((job) =>
-        job.actions.some((action) => action.type === CREATE_DOCUMENT),
-      )
-      .map((job) => job.documentId),
-  );
-}
-
-function createdByLoad(request: BatchLoadRequest): Set<string> {
-  return new Set(
-    request.jobs
-      .filter((job) => job.operations[0]?.action.type === CREATE_DOCUMENT)
-      .map((job) => job.documentId),
-  );
-}
-
-const documentIdentity = (document: PHDocument): string => document.header.id;
-
-/** The reactor's answer for a job no backend knows. */
-function unknownJob(jobId: string): JobInfo {
-  const now = new Date().toISOString();
-  return {
-    id: jobId,
-    documentId: "",
-    status: JobStatus.FAILED,
-    createdAtUtcIso: now,
-    completedAtUtcIso: now,
-    error: {
-      name: JOB_NOT_FOUND_ERROR_NAME,
-      message: "Job not found",
-      stack: "",
-    },
-    consistencyToken: { version: 1, createdAtUtcIso: now, coordinates: [] },
-    meta: { batchId: jobId, batchJobIds: [jobId] },
-  };
-}
-
-class UnsignedSigner implements ISigner {
-  publicKey = {} as CryptoKey;
-
-  sign(): Promise<Uint8Array> {
-    return Promise.resolve(new Uint8Array(0));
-  }
-
-  verify(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  signAction(): Promise<Signature> {
-    return Promise.resolve(["", "", "", "", ""]);
-  }
-}
-
 export type RoutingClientOptions = RoutingOptions & {
   readonly logger?: ILogger;
 };
 
+/** What each deprecated facade write points at, for its one-time warning. */
+const DEPRECATED_WRITES = {
+  create:
+    "Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  createEmpty:
+    "Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).",
+  upgradeDocument: "Use write.upgradeDocument(...), then handle.document().",
+  createDocumentInDrive:
+    "Use write.drives.addFile(...), then handle.document().",
+  execute:
+    "Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).",
+  executeBatch: "Use write.executeBatch(...) and await batch.readable.",
+  rename:
+    "Use write.rename(...); read back with handle.document() only if the document is needed.",
+  setPreferredEditor:
+    "Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.",
+  addRelationship:
+    "Use write.addRelationship(...), then handle.document() for the source.",
+  updateRelationship:
+    "Use write.updateRelationship(...), then handle.document() for the source.",
+  removeRelationship:
+    "Use write.removeRelationship(...), then handle.document() for the source.",
+  moveRelationship:
+    "Use write.moveRelationship(...), then removed.document() and added.document().",
+  deleteDocument: "Use write.deleteDocument(...) and await handle.readable.",
+  deleteDocuments:
+    "Use write.deleteDocuments(...) and await each handle's readable.",
+  loadBatch: "Use write.loadBatch(...).",
+} as const;
+
 /**
  * One IReactorClient over many backends; spanning writes are refused.
+ *
+ * It is the facade over {@link RoutingReadClient} and
+ * {@link RoutingWriteClient}, which share one route dispatcher: every read is
+ * the read half's, and every write that returns a document is the write
+ * half's, then `handle.document()`, with the same one-time deprecation warning
+ * as the reactor's own facade.
  *
  * executeAsync, createAsync and createEmptyAsync submit through a backend's
  * `submit` and do not wait. On a backend without `submit` they fall back to
@@ -240,11 +95,11 @@ export type RoutingClientOptions = RoutingOptions & {
  * and rethrow a failure that carries no job.
  */
 export class RoutingReactorClient implements IReactorClient {
+  readonly read: RoutingReadClient;
+  readonly write: RoutingWriteClient;
   readonly drives: RoutingDriveClient;
   private readonly dispatcher: RouteDispatcher;
-  private readonly dedupSize: number;
-  private readonly signer: ISigner;
-  private readonly modules: (() => readonly DocumentModelModule[]) | undefined;
+  private readonly logger: ILogger;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
@@ -254,18 +109,28 @@ export class RoutingReactorClient implements IReactorClient {
       backends.map((config) => new RouterBackend(config)),
       options,
     );
-    this.signer = options.signer ?? new UnsignedSigner();
+    this.logger = options.logger ?? childLogger(["reactor-router"]);
+    const signer = options.signer ?? new UnsignedSigner();
     const registry = options.documentModelModules;
-    this.modules =
-      typeof registry === "function"
-        ? registry
-        : registry && ((): readonly DocumentModelModule[] => registry);
-    this.dedupSize =
-      options.subscriptionDedupSize ?? DEFAULT_SUBSCRIPTION_DEDUP_SIZE;
+    const context: RoutingContext = {
+      dispatcher: this.dispatcher,
+      signer,
+      logger: this.logger,
+      modules:
+        typeof registry === "function"
+          ? registry
+          : registry && ((): readonly DocumentModelModule[] => registry),
+      dedupSize:
+        options.subscriptionDedupSize ?? DEFAULT_SUBSCRIPTION_DEDUP_SIZE,
+      answerFailedIdCheck: options.answerFailedIdCheck,
+    };
+    const drives = new BackendDrives(this.logger, signer);
+    this.read = new RoutingReadClient(context, drives);
+    this.write = new RoutingWriteClient(context, this.read, drives);
     this.drives = new RoutingDriveClient(
+      this.read.drives,
+      this.write.drives,
       this.dispatcher,
-      options.logger ?? childLogger(["reactor-router"]),
-      this.signer,
     );
   }
 
@@ -282,136 +147,66 @@ export class RoutingReactorClient implements IReactorClient {
     return this.dispatcher.refreshFacts(name);
   }
 
-  // Registry and creation defaults: no collection owns these.
+  // Reads
 
-  async getDocumentModelModules(
+  getDocumentModelModules(
     namespace?: string,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentModelModule>> {
-    if (this.modules === undefined) {
-      const primary = this.dispatcher.primary;
-      return declared(primary, "getDocumentModelModules")(
-        namespace,
-        paging,
-        signal,
-      );
-    }
-    const matching = this.modules().filter(
-      (module) =>
-        !namespace || module.documentModel.global.id.startsWith(namespace),
-    );
-    const start = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || matching.length;
-    const results = matching.slice(start, start + limit);
-    const more = start + limit < matching.length;
-    return {
-      results,
-      options: paging ?? { cursor: "0", limit: matching.length },
-      nextCursor: more ? String(start + limit) : undefined,
-    };
+    return this.read.getDocumentModelModules(namespace, paging, signal);
   }
 
-  /** The latest registered module; without a registry, the first backend's. */
-  async getDocumentModelModule(
-    documentType: string,
-  ): Promise<DocumentModelModule> {
-    if (this.modules !== undefined) {
-      return selectDocumentModelModule(this.modules(), documentType);
-    }
-    let first: unknown = undefined;
-    for (const backend of this.primaryFirst()) {
-      if (backend.api.getDocumentModelModule === undefined) {
-        continue;
-      }
-      try {
-        return await backend.api.getDocumentModelModule(documentType);
-      } catch (error) {
-        first = first ?? error;
-      }
-    }
-    if (first !== undefined) {
-      rethrow(first);
-    }
-    throw new UnsupportedByBackendError(
-      this.dispatcher.primary.name,
-      "getDocumentModelModule",
-      "no backend declares it",
-    );
+  getDocumentModelModule(documentType: string): Promise<DocumentModelModule> {
+    return this.read.getDocumentModelModule(documentType);
   }
 
-  async getDocumentModelModuleForDocument(
+  getDocumentModelModuleForDocument(
     document: PHDocument,
   ): Promise<DocumentModelModule> {
-    const documentType = document.header.documentType;
-    const version = normalizeDocumentModelVersion(
-      (document.state as Partial<typeof document.state>).document?.version,
-    );
-    const available: number[] = [];
-    for (const module of await this.allModules()) {
-      if (module.documentModel.global.id !== documentType) {
-        continue;
-      }
-      const moduleVersion = normalizeDocumentModelVersion(module.version);
-      if (moduleVersion === version) {
-        return module;
-      }
-      available.push(moduleVersion);
-    }
-    throw new UnsupportedDocumentModelVersionError(
-      documentType,
-      version,
-      available.sort((a, b) => a - b),
-    );
+    return this.read.getDocumentModelModuleForDocument(document);
   }
 
   getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    return this.dispatcher.onBackend(
-      "getCreateSignaturePolicy",
-      this.dispatcher.primary,
-      (backend) => backend.api.getCreateSignaturePolicy(),
-      ATTEMPT.read,
-    );
+    return this.read.getCreateSignaturePolicy();
   }
 
-  /** Asked of the parent's backend: the answer is about its collections. */
   getCreateProtocolVersions(
     options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const parentIdentifier = options.parentIdentifier;
-    if (parentIdentifier === undefined) {
-      return this.dispatcher.onBackend(
-        "getCreateProtocolVersions",
-        this.dispatcher.primary,
-        (backend) => backend.api.getCreateProtocolVersions(options, signal),
-        ATTEMPT.read,
-      );
-    }
-    return this.dispatcher.onDocument(
-      "getCreateProtocolVersions",
-      parentIdentifier,
-      (backend) => backend.api.getCreateProtocolVersions(options, signal),
-      ATTEMPT.read,
-    );
+    return this.read.getCreateProtocolVersions(options, signal);
   }
 
-  // Reads
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentModelType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    return this.read.newDocument<TDocument>(documentModelType, options, signal);
+  }
+
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]> {
+    return this.read.getMany<TDocument>(
+      documentIds,
+      view,
+      signal,
+      consistencyToken,
+    );
+  }
 
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument> {
-    return this.dispatcher.onDocument(
-      "get",
-      identifier,
-      (backend) => {
-        assertView(backend, view, "get");
-        return backend.api.get<TDocument>(identifier, view, signal);
-      },
-      ATTEMPT.read,
-    );
+    return this.read.get<TDocument>(identifier, view, signal, consistencyToken);
   }
 
   resolveIdOrSlug(
@@ -419,39 +214,14 @@ export class RoutingReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<string> {
-    return this.dispatcher.onDocument(
-      "resolveIdOrSlug",
-      identifier,
-      (backend) => {
-        assertView(backend, view, "resolveIdOrSlug");
-        return resolveOn(backend, identifier, signal, view);
-      },
-      ATTEMPT.read,
-    );
+    return this.read.resolveIdOrSlug(identifier, view, signal);
   }
 
-  /**
-   * True when any backend serves or has taken the id; false only when every
-   * backend answered. A backend without isDocumentIdTaken answers by isServed.
-   */
   isDocumentIdTaken(
     documentId: string,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    return fanInExistence(
-      "isDocumentIdTaken",
-      this.dispatcher.backends,
-      async (backend) => {
-        if (await backend.api.isServed(documentId, undefined, signal)) {
-          return true;
-        }
-        const api = backend.api;
-        return api.isDocumentIdTaken === undefined
-          ? false
-          : api.isDocumentIdTaken(documentId, signal);
-      },
-      this.dispatcher.onDiagnostic,
-    );
+    return this.write.isDocumentIdTaken(documentId, signal);
   }
 
   getOperations(
@@ -461,24 +231,15 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>> {
-    return this.dispatcher.onDocument(
-      "getOperations",
+    return this.read.getOperations(
       documentIdentifier,
-      (backend) => {
-        assertView(backend, view, "getOperations");
-        return backend.api.getOperations(
-          documentIdentifier,
-          view,
-          filter,
-          paging,
-          signal,
-        );
-      },
-      ATTEMPT.read,
+      view,
+      filter,
+      paging,
+      signal,
     );
   }
 
-  /** Edges are written on their document, so they are read from its owner. */
   getOutgoingRelationships(
     sourceIdentifier: string,
     relationshipType: string,
@@ -486,20 +247,12 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.dispatcher.onDocument(
-      "getOutgoingRelationships",
+    return this.read.getOutgoingRelationships(
       sourceIdentifier,
-      (backend) => {
-        assertView(backend, view, "getOutgoingRelationships");
-        return backend.api.getOutgoingRelationships(
-          sourceIdentifier,
-          relationshipType,
-          view,
-          paging,
-          signal,
-        );
-      },
-      ATTEMPT.read,
+      relationshipType,
+      view,
+      paging,
+      signal,
     );
   }
 
@@ -510,20 +263,12 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    return this.dispatcher.onDocument(
-      "getIncomingRelationships",
+    return this.read.getIncomingRelationships(
       targetIdentifier,
-      (backend) => {
-        assertView(backend, view, "getIncomingRelationships");
-        return backend.api.getIncomingRelationships(
-          targetIdentifier,
-          relationshipType,
-          view,
-          paging,
-          signal,
-        );
-      },
-      ATTEMPT.read,
+      relationshipType,
+      view,
+      paging,
+      signal,
     );
   }
 
@@ -534,20 +279,12 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentRelationship>> {
-    return this.dispatcher.onDocument(
-      "getOutgoingRelationshipEdges",
+    return this.read.getOutgoingRelationshipEdges(
       sourceIdentifier,
-      (backend) => {
-        assertView(backend, view, "getOutgoingRelationshipEdges");
-        return backend.api.getOutgoingRelationshipEdges(
-          sourceIdentifier,
-          relationshipType,
-          view,
-          paging,
-          signal,
-        );
-      },
-      ATTEMPT.read,
+      relationshipType,
+      view,
+      paging,
+      signal,
     );
   }
 
@@ -558,80 +295,30 @@ export class RoutingReactorClient implements IReactorClient {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<DocumentRelationship>> {
-    return this.dispatcher.onDocument(
-      "getIncomingRelationshipEdges",
+    return this.read.getIncomingRelationshipEdges(
       targetIdentifier,
-      (backend) => {
-        assertView(backend, view, "getIncomingRelationshipEdges");
-        return backend.api.getIncomingRelationshipEdges(
-          targetIdentifier,
-          relationshipType,
-          view,
-          paging,
-          signal,
-        );
-      },
-      ATTEMPT.read,
+      relationshipType,
+      view,
+      paging,
+      signal,
     );
   }
 
-  /** Strict: a backend that fails would leave the page silently short. */
-  async find(
+  find(
     search: SearchFilter,
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
-    const onDiagnostic = this.dispatcher.onDiagnostic;
-    const backends = supportingBackends(
-      "find",
-      this.dispatcher.backends,
-      (backend) => {
-        if (!backend.api.supports.find(search, view)) {
-          return "the backend does not serve this search";
-        }
-        if (
-          view?.revision !== undefined &&
-          !backend.api.supports.pointInTimeViews
-        ) {
-          return "the backend does not serve point-in-time views";
-        }
-        return "";
-      },
-      onDiagnostic,
-    );
-    const options = { mode: "strict", onDiagnostic } as const;
-    return await mergePaged(
-      pagedParticipants("find", backends, paging, options),
-      (backend, backendPaging) =>
-        backend.api.find(search, view, backendPaging, signal),
-      { ...options, operation: "find", identify: documentIdentity, paging },
-    );
+    return this.read.find(search, view, paging, signal);
   }
 
-  /** True when any backend serves it; false only when every one answered. */
   isServed(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<boolean> {
-    const asked: RouterBackend[] = [];
-    const gaps: { backend: string; error: unknown }[] = [];
-    for (const backend of this.dispatcher.backends) {
-      try {
-        assertView(backend, view, "isServed");
-        asked.push(backend);
-      } catch (error) {
-        gaps.push({ backend: backend.name, error });
-      }
-    }
-    return fanInExistence(
-      "isServed",
-      asked,
-      (backend) => backend.api.isServed(identifier, view, signal),
-      this.dispatcher.onDiagnostic,
-      gaps,
-    );
+    return this.read.isServed(identifier, view, signal);
   }
 
   evaluateActions(
@@ -641,90 +328,57 @@ export class RoutingReactorClient implements IReactorClient {
     subject?: AuthSubject,
     signal?: AbortSignal,
   ): Promise<ActionEvaluations> {
-    return this.dispatcher.onDocument(
-      "evaluateActions",
+    return this.write.evaluateActions(
       documentIdentifier,
-      (backend) =>
-        declared(backend, "evaluateActions")(
-          documentIdentifier,
-          branch,
-          candidates,
-          subject,
-          signal,
-        ),
-      ATTEMPT.read,
+      branch,
+      candidates,
+      subject,
+      signal,
     );
   }
 
   // Creation
 
-  /** On the parent's backend; parentless, placed as the collection of its id. */
+  /**
+   * @deprecated Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
+   */
   async create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const { value: created, backend } = await this.onNewDocument(
-      "create",
-      document.header.id,
-      parentIdentifier,
-      (target) =>
-        target.api.create<TDocument>(document, parentIdentifier, signal),
-    );
-    this.dispatcher.recordDocument(created.header.id, backend.name);
-    return created;
+    warnOnce("IReactorClient.create", DEPRECATED_WRITES.create, this.logger);
+    const handle = await this.write.create(document, parentIdentifier, signal);
+    return handle.document<TDocument>(undefined, signal);
   }
 
-  async createAsync(
+  createAsync(
     document: PHDocument,
     parentIdentifier?: string,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const { value: result, backend } = await this.onNewDocument(
-      "createAsync",
-      document.header.id,
-      parentIdentifier,
-      async (target, beforeSubmit) => {
-        const submit = target.api.submit;
-        if (submit !== undefined) {
-          return submit.create(document, parentIdentifier, signal);
-        }
-        const parentId =
-          parentIdentifier === undefined || parentIdentifier === ""
-            ? undefined
-            : await beforeSubmit(() =>
-                resolveOn(target, parentIdentifier, signal),
-              );
-        const protocolVersions = await createVersionsOf(
-          document,
-          (options) =>
-            beforeSubmit(() =>
-              target.api.getCreateProtocolVersions(options, signal),
-            ),
-          parentId,
-        );
-        const jobs = await buildCreateJobs(
-          document,
-          protocolVersions,
-          parentId,
-          this.signer,
-          signal,
-        );
-        return submitAndWait(target, { jobs }, signal);
-      },
-    );
-    this.dispatcher.recordDocument(document.header.id, backend.name);
-    this.recordBatchJobs(result.jobs, backend.name);
-    return result;
+    return this.write.submitCreate(document, parentIdentifier, signal);
   }
 
+  /**
+   * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
+   */
   async createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
     options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    const document = await this.newDocument(documentModelType, options, signal);
-    return this.create<TDocument>(document, options?.parentIdentifier, signal);
+    warnOnce(
+      "IReactorClient.createEmpty",
+      DEPRECATED_WRITES.createEmpty,
+      this.logger,
+    );
+    const handle = await this.write.createEmpty(
+      documentModelType,
+      options,
+      signal,
+    );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   async createEmptyAsync(
@@ -732,17 +386,29 @@ export class RoutingReactorClient implements IReactorClient {
     options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const document = await this.newDocument(documentModelType, options, signal);
-    return this.createAsync(document, options?.parentIdentifier, signal);
+    const document = await this.read.newDocument(
+      documentModelType,
+      options,
+      signal,
+    );
+    return this.write.submitCreate(document, options?.parentIdentifier, signal);
   }
 
-  /** @deprecated Use `drives.addFile`. */
+  /**
+   * @deprecated Use write.drives.addFile(...), then handle.document(). This
+   * method will be removed in a future release.
+   */
   createDocumentInDrive<TDocument extends PHDocument>(
     driveId: string,
     document: PHDocument,
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
+    warnOnce(
+      "IReactorClient.createDocumentInDrive",
+      DEPRECATED_WRITES.createDocumentInDrive,
+      this.logger,
+    );
     return this.drives.addFile<TDocument>(
       driveId,
       document,
@@ -753,67 +419,49 @@ export class RoutingReactorClient implements IReactorClient {
 
   // Mutations
 
-  upgradeDocument<TDocument extends PHDocument = PHDocument>(
+  /**
+   * @deprecated Use write.upgradeDocument(...), then handle.document().
+   */
+  async upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     toVersion?: number,
     options?: UpgradeDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return upgradeDocumentWith<TDocument>(
-      {
-        signer: this.signer,
-        read: <T extends PHDocument>(
-          identifier: string,
-          branch: string | undefined,
-          _token: unknown,
-          readSignal?: AbortSignal,
-        ) =>
-          this.get<T>(
-            identifier,
-            branch === undefined ? undefined : { branch },
-            readSignal,
-          ),
-        getDocumentModelModule: (documentType) =>
-          this.getDocumentModelModule(documentType),
-        submit: (documentId, branch, actions, submitSignal) =>
-          this.submitJob(
-            "upgradeDocument",
-            documentId,
-            branch,
-            actions,
-            submitSignal,
-          ),
-        waitForJob: (job, waitSignal) =>
-          job.status === JobStatus.FAILED || job.status === JobStatus.READ_READY
-            ? Promise.resolve(job)
-            : this.waitForJob(job, waitSignal),
-      },
+    warnOnce(
+      "IReactorClient.upgradeDocument",
+      DEPRECATED_WRITES.upgradeDocument,
+      this.logger,
+    );
+    const handle = await this.write.upgradeDocument(
       documentIdentifier,
       toVersion,
       options,
       signal,
     );
+    return handle.document<TDocument>(undefined, signal);
   }
 
-  execute<TDocument extends PHDocument>(
+  /**
+   * @deprecated Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).
+   */
+  async execute<TDocument extends PHDocument>(
     documentIdentifier: string,
     branch: string,
     actions: Action[],
     signal?: AbortSignal,
     subject?: AuthSubject,
   ): Promise<TDocument> {
-    return this.dispatcher.onDocument(
-      "execute",
+    warnOnce("IReactorClient.execute", DEPRECATED_WRITES.execute, this.logger);
+    const handle = await this.write.execute(
       documentIdentifier,
-      (backend) =>
-        backend.api.execute<TDocument>(
-          documentIdentifier,
-          branch,
-          actions,
-          signal,
-          subject,
-        ),
-      ATTEMPT.write,
+      branch,
+      actions,
+      signal,
+    );
+    return handle.document<TDocument>(
+      subject === undefined ? undefined : { subject },
+      signal,
     );
   }
 
@@ -823,7 +471,7 @@ export class RoutingReactorClient implements IReactorClient {
     actions: Action[],
     signal?: AbortSignal,
   ): Promise<JobInfo> {
-    return this.submitJob(
+    return this.write.submitJob(
       "executeAsync",
       documentIdentifier,
       branch,
@@ -832,77 +480,55 @@ export class RoutingReactorClient implements IReactorClient {
     );
   }
 
-  /** Every job's document must resolve to one backend; nothing is sent otherwise. */
+  /**
+   * Every job's document must resolve to one backend; nothing is sent otherwise.
+   *
+   * @deprecated Use write.executeBatch(...) and await batch.readable.
+   */
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult> {
-    const identifiers = request.jobs.map((job) => job.documentId);
-    const { value: result, backend } = await this.dispatcher.onDocuments(
-      "executeBatch",
-      identifiers,
-      (target) => target.api.executeBatch(request, signal),
-      createdByExecution(request),
+    warnOnce(
+      "IReactorClient.executeBatch",
+      DEPRECATED_WRITES.executeBatch,
+      this.logger,
     );
-    this.recordBatchJobs(result.jobs, backend.name);
-    return result;
-  }
-
-  async loadBatch(
-    request: BatchLoadRequest,
-    signal?: AbortSignal,
-  ): Promise<BatchLoadResult> {
-    const identifiers = request.jobs.map((job) => job.documentId);
-    const { value: result, backend } = await this.dispatcher.onDocuments(
-      "loadBatch",
-      identifiers,
-      (target) => declared(target, "loadBatch")(request, signal),
-      createdByLoad(request),
-    );
-    this.recordBatchJobs(result.jobs, backend.name);
-    return result;
+    const batch = await this.write.executeBatch(request, signal);
+    await batch.readable;
+    return { jobs: batch.jobs };
   }
 
   /** The owning backend resolves the target and signs the write. */
-  undo<TDocument extends PHDocument = PHDocument>(
+  async undo<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     scope?: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return this.dispatcher.onDocument(
-      "undo",
+    const handle = await this.write.undo(
       documentIdentifier,
-      (backend) =>
-        declared(backend, "undo")<TDocument>(
-          documentIdentifier,
-          scope,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
+      scope,
+      branch,
+      signal,
     );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   /** See {@link undo}. */
-  redo<TDocument extends PHDocument = PHDocument>(
+  async redo<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
     scope?: string,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    return this.dispatcher.onDocument(
-      "redo",
+    const handle = await this.write.redo(
       documentIdentifier,
-      (backend) =>
-        declared(backend, "redo")<TDocument>(
-          documentIdentifier,
-          scope,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
+      scope,
+      branch,
+      signal,
     );
+    return handle.document<TDocument>(undefined, signal);
   }
 
   undoRedoTargets(
@@ -911,18 +537,7 @@ export class RoutingReactorClient implements IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<UndoRedoTargets> {
-    return this.dispatcher.onDocument(
-      "undoRedoTargets",
-      documentIdentifier,
-      (backend) =>
-        declared(backend, "undoRedoTargets")(
-          documentIdentifier,
-          scope,
-          view,
-          signal,
-        ),
-      ATTEMPT.read,
-    );
+    return this.write.undoRedoTargets(documentIdentifier, scope, view, signal);
   }
 
   undoRedoAvailability(
@@ -931,54 +546,74 @@ export class RoutingReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<UndoRedoAvailability> {
-    return this.dispatcher.onDocument(
-      "undoRedoAvailability",
+    return this.write.undoRedoAvailability(
       documentIdentifier,
-      (backend) =>
-        declared(backend, "undoRedoAvailability")(
-          documentIdentifier,
-          scope,
-          branch,
-          signal,
-        ),
-      ATTEMPT.read,
-    );
-  }
-
-  rename(
-    documentIdentifier: string,
-    name: string,
-    branch: string = "main",
-    signal?: AbortSignal,
-  ): Promise<PHDocument> {
-    return this.execute(
-      documentIdentifier,
+      scope,
       branch,
-      [documentActions.setName(name)],
       signal,
     );
   }
 
-  setPreferredEditor(
+  /**
+   * @deprecated Use write.loadBatch(...).
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult> {
+    warnOnce(
+      "IReactorClient.loadBatch",
+      DEPRECATED_WRITES.loadBatch,
+      this.logger,
+    );
+    return this.write.loadBatch(request, signal);
+  }
+
+  /**
+   * @deprecated Use write.rename(...); read back with handle.document() only if the document is needed.
+   */
+  async rename(
+    documentIdentifier: string,
+    name: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<PHDocument> {
+    warnOnce("IReactorClient.rename", DEPRECATED_WRITES.rename, this.logger);
+    const handle = await this.write.rename(
+      documentIdentifier,
+      name,
+      branch,
+      signal,
+    );
+    return handle.document(undefined, signal);
+  }
+
+  /**
+   * @deprecated Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.
+   */
+  async setPreferredEditor(
     documentIdentifier: string,
     preferredEditor: string | null,
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    return this.dispatcher.onDocument(
-      "setPreferredEditor",
-      documentIdentifier,
-      (backend) =>
-        backend.api.setPreferredEditor(
-          documentIdentifier,
-          preferredEditor,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
+    warnOnce(
+      "IReactorClient.setPreferredEditor",
+      DEPRECATED_WRITES.setPreferredEditor,
+      this.logger,
     );
+    const handle = await this.write.setPreferredEditor(
+      documentIdentifier,
+      preferredEditor,
+      branch,
+      signal,
+    );
+    return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.addRelationship(...), then handle.document() for the source.
+   */
   async addRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -987,27 +622,25 @@ export class RoutingReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    await this.assertSameBackend(
-      "addRelationship",
+    warnOnce(
+      "IReactorClient.addRelationship",
+      DEPRECATED_WRITES.addRelationship,
+      this.logger,
+    );
+    const handle = await this.write.addRelationship(
       sourceIdentifier,
       targetIdentifier,
+      relationshipType,
+      metadata,
+      branch,
+      signal,
     );
-    return this.dispatcher.onDocument(
-      "addRelationship",
-      sourceIdentifier,
-      (backend) =>
-        declared(backend, "addRelationship")(
-          sourceIdentifier,
-          targetIdentifier,
-          relationshipType,
-          metadata,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
+    return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.updateRelationship(...), then handle.document() for the source.
+   */
   async updateRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -1016,27 +649,25 @@ export class RoutingReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    await this.assertSameBackend(
-      "updateRelationship",
+    warnOnce(
+      "IReactorClient.updateRelationship",
+      DEPRECATED_WRITES.updateRelationship,
+      this.logger,
+    );
+    const handle = await this.write.updateRelationship(
       sourceIdentifier,
       targetIdentifier,
+      relationshipType,
+      metadata,
+      branch,
+      signal,
     );
-    return this.dispatcher.onDocument(
-      "updateRelationship",
-      sourceIdentifier,
-      (backend) =>
-        declared(backend, "updateRelationship")(
-          sourceIdentifier,
-          targetIdentifier,
-          relationshipType,
-          metadata,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
+    return handle.document(undefined, signal);
   }
 
+  /**
+   * @deprecated Use write.removeRelationship(...), then handle.document() for the source.
+   */
   async removeRelationship(
     sourceIdentifier: string,
     targetIdentifier: string,
@@ -1044,27 +675,26 @@ export class RoutingReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    await this.assertSameBackend(
-      "removeRelationship",
+    warnOnce(
+      "IReactorClient.removeRelationship",
+      DEPRECATED_WRITES.removeRelationship,
+      this.logger,
+    );
+    const handle = await this.write.removeRelationship(
       sourceIdentifier,
       targetIdentifier,
+      relationshipType,
+      branch,
+      signal,
     );
-    return this.dispatcher.onDocument(
-      "removeRelationship",
-      sourceIdentifier,
-      (backend) =>
-        declared(backend, "removeRelationship")(
-          sourceIdentifier,
-          targetIdentifier,
-          relationshipType,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
+    return handle.document(undefined, signal);
   }
 
-  /** Both parents and the target share a backend: it is one write. */
+  /**
+   * Both parents and the target share a backend: it is one write.
+   *
+   * @deprecated Use write.moveRelationship(...), then removed.document() and added.document().
+   */
   async moveRelationship(
     sourceParentIdentifier: string,
     targetParentIdentifier: string,
@@ -1073,86 +703,77 @@ export class RoutingReactorClient implements IReactorClient {
     branch?: string,
     signal?: AbortSignal,
   ): Promise<{ source: PHDocument; target: PHDocument }> {
-    await this.assertSameBackend(
-      "moveRelationship",
+    warnOnce(
+      "IReactorClient.moveRelationship",
+      DEPRECATED_WRITES.moveRelationship,
+      this.logger,
+    );
+    const moved = await this.write.moveRelationship(
       sourceParentIdentifier,
       targetParentIdentifier,
       targetIdentifier,
+      relationshipType,
+      branch,
+      signal,
     );
-    return this.dispatcher.onDocument(
-      "moveRelationship",
-      sourceParentIdentifier,
-      (backend) =>
-        declared(backend, "moveRelationship")(
-          sourceParentIdentifier,
-          targetParentIdentifier,
-          targetIdentifier,
-          relationshipType,
-          branch,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
+    await moved.added.readable;
+    const source = await moved.removed.document(undefined, signal);
+    const target = await moved.added.document(undefined, signal);
+    return { source, target };
   }
 
-  deleteDocument(
+  /**
+   * @deprecated Use write.deleteDocument(...) and await handle.readable.
+   */
+  async deleteDocument(
     identifier: string,
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    return this.dispatcher.onDocument(
-      "deleteDocument",
-      identifier,
-      (backend) => backend.api.deleteDocument(identifier, propagate, signal),
-      ATTEMPT.write,
+    warnOnce(
+      "IReactorClient.deleteDocument",
+      DEPRECATED_WRITES.deleteDocument,
+      this.logger,
     );
+    const handle = await this.write.deleteDocument(
+      identifier,
+      propagate,
+      signal,
+    );
+    await handle.readable;
   }
 
   /**
    * Every identifier must resolve to one backend; nothing is deleted otherwise.
-   * Each delete then routes as its own write, so a stale entry is corrected.
+   *
+   * @deprecated Use write.deleteDocuments(...) and await each handle's readable.
    */
   async deleteDocuments(
     identifiers: string[],
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.dispatcher.verifyBatchBackend("deleteDocuments", identifiers);
-    await Promise.all(
-      identifiers.map((identifier) =>
-        this.dispatcher.onDocument(
-          "deleteDocuments",
-          identifier,
-          (backend) =>
-            backend.api.deleteDocument(identifier, propagate, signal),
-          ATTEMPT.write,
-        ),
-      ),
+    warnOnce(
+      "IReactorClient.deleteDocuments",
+      DEPRECATED_WRITES.deleteDocuments,
+      this.logger,
     );
+    const handles = await this.write.deleteDocuments(
+      identifiers,
+      propagate,
+      signal,
+    );
+    await Promise.all(handles.map((handle) => handle.readable));
   }
 
   // Jobs
 
-  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
-    const found = await this.findJob(jobId, signal);
-    return found?.job ?? unknownJob(jobId);
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    return this.read.getJobStatus(jobId, signal);
   }
 
-  async waitForJob(
-    job: string | JobInfo,
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
-    const jobId = typeof job === "string" ? job : job.id;
-    const remembered = this.dispatcher.table.jobBackend(jobId);
-    if (remembered !== "" && this.dispatcher.table.has(remembered)) {
-      const backend = this.dispatcher.table.backend(remembered, `job ${jobId}`);
-      return backend.api.waitForJob(job, signal);
-    }
-    const found = await this.findJob(jobId, signal);
-    if (found === undefined) {
-      return unknownJob(jobId);
-    }
-    return found.backend.api.waitForJob(job, signal);
+  waitForJob(job: string | JobInfo, signal?: AbortSignal): Promise<JobInfo> {
+    return this.read.waitForJob(job, signal);
   }
 
   subscribe(
@@ -1160,188 +781,7 @@ export class RoutingReactorClient implements IReactorClient {
     callback: (event: DocumentChangeEvent) => void,
     view?: ViewFilter,
   ): () => void {
-    return subscribeAll(
-      this.dispatcher.backends,
-      search,
-      callback,
-      view,
-      this.dedupSize,
-      this.dispatcher.onDiagnostic,
-    );
-  }
-
-  // Internals
-
-  /** The recorded backend first, then each backend, until one knows the job. */
-  private async findJob(
-    jobId: string,
-    signal?: AbortSignal,
-  ): Promise<{ backend: RouterBackend; job: JobInfo } | undefined> {
-    const remembered = this.dispatcher.table.jobBackend(jobId);
-    const ordered = [...this.dispatcher.backends].sort(
-      (a, b) => Number(b.name === remembered) - Number(a.name === remembered),
-    );
-    let first: unknown = undefined;
-    for (const backend of ordered) {
-      try {
-        const job = await backend.api.getJob(jobId, signal);
-        if (job !== undefined) {
-          this.dispatcher.recordJob(jobId, backend.name);
-          return { backend, job };
-        }
-      } catch (error) {
-        first = first ?? error;
-        this.dispatcher.onDiagnostic(
-          `job ${jobId}: backend ${backend.name} could not answer (${messageOf(error)})`,
-          error,
-        );
-      }
-    }
-    if (first !== undefined) {
-      rethrow(first);
-    }
-    return undefined;
-  }
-
-  /** Submits one job on the document's backend and records where it went. */
-  private async submitJob(
-    operation: string,
-    documentIdentifier: string,
-    branch: string,
-    actions: Action[],
-    signal?: AbortSignal,
-  ): Promise<JobInfo> {
-    const key = "job";
-    let owner = "";
-    const job = await this.dispatcher.onDocument(
-      operation,
-      documentIdentifier,
-      async (backend) => {
-        owner = backend.name;
-        const submit = backend.api.submit;
-        if (submit !== undefined) {
-          return submit.execute(documentIdentifier, branch, actions, signal);
-        }
-        const request: BatchExecutionRequest = {
-          jobs: [
-            {
-              key,
-              documentId: documentIdentifier,
-              scope: sharedScope(actions),
-              branch,
-              actions,
-              dependsOn: [],
-            },
-          ],
-        };
-        const result = await submitAndWait(backend, request, signal);
-        return result.jobs[key];
-      },
-      ATTEMPT.write,
-    );
-    this.dispatcher.recordJob(job.id, owner);
-    return job;
-  }
-
-  /** Versions from the parent's backend, the module from this client's models. */
-  async newDocument<TDocument extends PHDocument = PHDocument>(
-    documentModelType: string,
-    options?: NewDocumentOptions,
-    signal?: AbortSignal,
-  ): Promise<TDocument> {
-    const module = selectDocumentModelModule(
-      await this.allModules(signal),
-      documentModelType,
-      options?.documentModelVersion,
-    );
-    const [policy, versions] = await Promise.all([
-      this.getCreateSignaturePolicy(),
-      this.getCreateProtocolVersions(
-        {
-          documentType: documentModelType,
-          parentIdentifier: options?.parentIdentifier,
-        },
-        signal,
-      ),
-    ]);
-    return createEmptyDocument(module, options, policy, versions) as TDocument;
-  }
-
-  private async allModules(
-    signal?: AbortSignal,
-  ): Promise<readonly DocumentModelModule[]> {
-    if (this.modules !== undefined) {
-      return this.modules();
-    }
-    const page = await this.getDocumentModelModules(
-      undefined,
-      undefined,
-      signal,
-    );
-    return page.results;
-  }
-
-  private primaryFirst(): readonly RouterBackend[] {
-    const primary = this.dispatcher.primary;
-    return [
-      primary,
-      ...this.dispatcher.backends.filter((backend) => backend !== primary),
-    ];
-  }
-
-  /** Resolved as a batch creating the id, beside its parent when given. */
-  private onNewDocument<T>(
-    label: string,
-    documentId: string,
-    parentIdentifier: string | undefined,
-    run: (backend: RouterBackend, beforeSubmit: BeforeSubmit) => Promise<T>,
-  ): Promise<{ readonly value: T; readonly backend: RouterBackend }> {
-    const identifiers =
-      parentIdentifier === undefined || parentIdentifier === ""
-        ? [documentId]
-        : [documentId, parentIdentifier];
-    return this.dispatcher.onDocuments(
-      label,
-      identifiers,
-      run,
-      new Set([documentId]),
-    );
-  }
-
-  private recordBatchJobs(
-    jobs: Record<string, JobInfo>,
-    backend: string,
-  ): void {
-    for (const job of Object.values(jobs)) {
-      this.dispatcher.recordJob(job.id, backend);
-    }
-  }
-
-  private async assertSameBackend(
-    operation: string,
-    source: string,
-    ...targets: string[]
-  ): Promise<void> {
-    try {
-      await this.dispatcher.verifyBatchBackend(operation, [source, ...targets]);
-    } catch (error) {
-      if (!(error instanceof CrossBackendBatchError)) {
-        throw error;
-      }
-      const backendOf = new Map(
-        error.placement.map((entry) => [entry.documentId, entry.backend]),
-      );
-      const sourceBackend = backendOf.get(source) ?? "";
-      const target =
-        targets.find((id) => backendOf.get(id) !== sourceBackend) ?? targets[0];
-      throw new CrossBackendRelationshipError(
-        operation,
-        source,
-        sourceBackend,
-        target,
-        backendOf.get(target) ?? "",
-      );
-    }
+    return this.read.subscribe(search, callback, view);
   }
 }
 

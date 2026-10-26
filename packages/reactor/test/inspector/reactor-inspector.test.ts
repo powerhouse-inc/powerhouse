@@ -5,11 +5,16 @@ import {
 } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGlite } from "@electric-sql/pglite";
+import type {
+  IProcessorManager,
+  TrackedProcessor,
+} from "@powerhousedao/shared/processors";
 import { afterEach, describe, expect, it } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { Database, InProcessReactorModule } from "../../src/core/types.js";
 import { createReactorInspector } from "../../src/inspector/from-module.js";
 import { ReactorInspector } from "../../src/inspector/reactor-inspector.js";
+import { CatchUpPriority } from "../../src/processors/catch-up-priority.js";
 import { HardenedPGliteDialect } from "../../src/storage/kysely/pglite-dialect.js";
 import { GqlRequestChannelFactory } from "../../src/sync/channels/gql-request-channel-factory.js";
 import { channelFactoryTypes } from "../../src/sync/channels/channel-factory-types.js";
@@ -116,6 +121,43 @@ describe("ReactorInspector", () => {
     await expect(inspector.getStorageHealth()).resolves.toEqual(tracked);
   });
 
+  it("reports each processor's run start and phase", async () => {
+    const tracked: TrackedProcessor = {
+      processorId: "f:drive:0",
+      factoryId: "f",
+      driveId: "drive",
+      processorIndex: 0,
+      record: {
+        processor: {
+          onOperations: () => Promise.resolve(),
+          onDisconnect: () => Promise.resolve(),
+        },
+        filter: {},
+      },
+      lastOrdinal: 40,
+      status: "active",
+      lastError: undefined,
+      lastErrorTimestamp: undefined,
+      floor: 0,
+      runFrom: 10,
+      phase: "catching-up",
+      retry: () => Promise.resolve(),
+    };
+    const processorManager = {
+      getAll: () => [tracked],
+    } as unknown as IProcessorManager;
+    const inspector = new ReactorInspector({ processorManager });
+
+    await expect(inspector.getProcessors()).resolves.toEqual([
+      expect.objectContaining({
+        lastOrdinal: 40,
+        runFrom: 10,
+        phase: "catching-up",
+        clearable: false,
+      }),
+    ]);
+  });
+
   it("refuses levers on missing components rather than acknowledging them", async () => {
     const inspector = new ReactorInspector({});
     await expect(inspector.pauseQueue()).rejects.toThrow(/unsupported/);
@@ -128,6 +170,47 @@ describe("ReactorInspector", () => {
     await expect(inspector.getQueueState()).resolves.toMatchObject({
       totalPending: 0,
     });
+  });
+
+  it("reads and sets the catch-up priority it was given", async () => {
+    const catchUpPriority = new CatchUpPriority();
+    const inspector = new ReactorInspector({ catchUpPriority });
+
+    await inspector.setCatchUpPriority({ mode: "fixed", level: 6 });
+    await expect(inspector.getCatchUpPriority()).resolves.toEqual({
+      mode: "fixed",
+      level: 6,
+      settings: { slots: 6, pageSize: 1000, pauseMs: 0, giveWay: "yield" },
+      reason: "fixed",
+      sample: undefined,
+    });
+    await expect(
+      inspector.setCatchUpPriority({ mode: "fixed", level: 9 }),
+    ).rejects.toThrow("integer from 0 to 7");
+    expect(catchUpPriority.get().level).toBe(6);
+  });
+
+  it("reads a default priority and refuses to set one without a processor manager", async () => {
+    const inspector = new ReactorInspector({});
+    await expect(inspector.getCatchUpPriority()).resolves.toMatchObject({
+      mode: "dynamic",
+      level: 4,
+    });
+    await expect(
+      inspector.setCatchUpPriority({ mode: "dynamic" }),
+    ).rejects.toThrow(/unsupported/);
+  });
+
+  it("serves the built module's catch-up priority", async () => {
+    const priority = new CatchUpPriority({ mode: "fixed", level: 2 });
+    module = await new ReactorBuilder()
+      .withCatchUpPriority(priority)
+      .buildModule();
+    const inspector = createReactorInspector(module);
+
+    expect(module.catchUpPriority).toBe(priority);
+    await inspector.setCatchUpPriority({ mode: "fixed", level: 5 });
+    expect(priority.get().level).toBe(5);
   });
 
   it("lists drives and checks their integrity on the drive's branch", async () => {

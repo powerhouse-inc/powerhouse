@@ -69,6 +69,7 @@ import {
   addFullReactorClientEventHandler,
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
+  addReactorHalvesEventHandler,
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
@@ -102,6 +103,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   ...commonGlobalEventHandlerFunctions,
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
+  reactor: addReactorHalvesEventHandler,
   fullReactorClient: addFullReactorClientEventHandler,
   attachmentService: addAttachmentServiceEventHandler,
   features: addFeaturesEventHandler,

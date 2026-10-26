@@ -10,17 +10,15 @@ import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { SubgraphArgs } from "../src/graphql/types.js";
-import { runMigrations } from "../src/migrations/index.js";
+import { withHalves } from "./utils/client-halves.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import {
   AuthorizationPolicy,
   createAuthorizationService,
   type IAuthorizationService,
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
-import {
-  getDbClient,
-  type DocumentPermissionDatabase,
-} from "../src/utils/db.js";
+import { type DocumentPermissionDatabase } from "../src/utils/db.js";
 
 describe("ReactorSubgraph Permission Checks", () => {
   let mockAuthorizationService: Partial<IAuthorizationService>;
@@ -61,19 +59,20 @@ describe("ReactorSubgraph Permission Checks", () => {
   );
 
   // Helper to create context with different user states
-  const createContext = (options: {
-    userAddress?: string;
-    appKey?: string;
-  }) => ({
-    user: options.userAddress
-      ? {
-          address: options.userAddress,
-          appKey: options.appKey ?? "did:key:zCallerApp",
-        }
-      : undefined,
-    headers: {},
-    db: {},
-  });
+  const createContext = (options: { userAddress?: string; appKey?: string }) =>
+    withHalves(
+      {
+        user: options.userAddress
+          ? {
+              address: options.userAddress,
+              appKey: options.appKey ?? "did:key:zCallerApp",
+            }
+          : undefined,
+        headers: {},
+        db: {},
+      },
+      mockReactorClient,
+    );
 
   const buildSubgraph = (
     authSvc: Partial<IAuthorizationService>,
@@ -2439,9 +2438,7 @@ describe("ReactorSubgraph Permission Checks", () => {
       let inboxAdd: ReturnType<typeof vi.fn>;
 
       beforeEach(async () => {
-        const { db: dbClient } = getDbClient();
-        db = dbClient as Kysely<DocumentPermissionDatabase>;
-        await runMigrations(db as Kysely<unknown>);
+        db = await openReactorPermissionStore();
         permissions = new DocumentPermissionService(db);
         await permissions.setDocumentOwner("doc-123", "0xowner");
         await permissions.setDocumentProtection("doc-123", false);

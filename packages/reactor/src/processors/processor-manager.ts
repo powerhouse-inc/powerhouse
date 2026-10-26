@@ -10,6 +10,8 @@ import type {
   ProcessorRerunOptions,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
+import { CatchUpPriority } from "./catch-up-priority.js";
+import { startReplayState, type ReplaySnapshotRow } from "./replay-state.js";
 import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -78,6 +80,11 @@ export type ProcessorManagerOptions = {
   // Key cursors by array position (default). Off derives stable keys from
   // record id, namespace or class name, so reordering factories is safe.
   legacyProcessorIds?: boolean;
+  /**
+   * Paces every processor's backfills: slots, page size and pause. Defaults
+   * to a dynamic priority with no load source, which holds level 4.
+   */
+  catchUpPriority?: CatchUpPriority;
 };
 
 // Routing tables are only read or written synchronously; everything that
@@ -114,6 +121,7 @@ export class ProcessorManager
   private logger: ILogger;
   private driveContainerTypes: ReadonlySet<string>;
   private legacyProcessorIds: boolean;
+  private catchUpPriority: CatchUpPriority;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
@@ -134,6 +142,7 @@ export class ProcessorManager
     this.logger = logger;
     this.driveContainerTypes = driveContainerTypes;
     this.legacyProcessorIds = options.legacyProcessorIds ?? true;
+    this.catchUpPriority = options.catchUpPriority ?? new CatchUpPriority();
   }
 
   override async init(): Promise<void> {
@@ -525,6 +534,8 @@ export class ProcessorManager
       lastError: state.lastError,
       lastErrorTimestamp: state.lastErrorTimestamp,
       floor: 0,
+      runFrom: state.lastOrdinal,
+      phase: "errored",
       retry: () => this.retryOwed(factoryId, driveId),
     });
   }
@@ -790,9 +801,9 @@ export class ProcessorManager
       const missed =
         tracked.lastOrdinal < slot.reservedAt ||
         lowestRoutedOrdinal !== undefined;
-      if (tracked.status === "active" && missed) {
-        deliveries.push(queue.backfill());
-      }
+      // Not awaited: a replay paced by the catch-up priority, stopped at
+      // level 0, would hold up the commit and every processor's projection.
+      if (tracked.status === "active" && missed) void queue.backfill();
       const matching = creationItems?.filter((op) =>
         matchesFilter(op, tracked.record.filter),
       );
@@ -1068,6 +1079,8 @@ export class ProcessorManager
       record,
       ...cursor,
       floor,
+      runFrom: cursor.lastOrdinal,
+      phase: cursor.status === "errored" ? "errored" : "live",
       retry: () => queue.retry(),
     };
     const queue = new ProcessorQueue({
@@ -1075,8 +1088,18 @@ export class ProcessorManager
       processor: record.processor,
       filter: record.filter,
       cursor: tracked,
+      progress: tracked,
       floor,
-      readSince: (ordinal) => this.operationIndex.getSinceOrdinal(ordinal),
+      readSince: (ordinal, limit) =>
+        this.operationIndex.getSinceOrdinal(ordinal, { cursor: "", limit }),
+      backfillSlots: this.catchUpPriority.slots,
+      pageSize: () => this.catchUpPriority.pageSize(),
+      betweenPages: (closing) => this.catchUpPriority.betweenPages(closing),
+      replayState: () =>
+        startReplayState(record.replayState ?? "latest", {
+          snapshots: (ids, branches) => this.readSnapshots(ids, branches),
+          exact: (operations) => this.rebuildStateForOperations(operations),
+        }),
       routedThrough: () => this.highWater(),
       confirmedThrough: () => this.lastOrdinal,
       persist: (state) => this.writeCursor(tracked, state),
@@ -1138,6 +1161,25 @@ export class ProcessorManager
       op.operation.action.type === "CREATE_DOCUMENT" &&
       this.driveContainerTypes.has(op.context.documentType)
     );
+  }
+
+  private readSnapshots(
+    documentIds: string[],
+    branches: string[],
+  ): Promise<ReplaySnapshotRow[]> {
+    return this.db
+      .selectFrom("DocumentSnapshot")
+      .select([
+        "documentId",
+        "scope",
+        "branch",
+        "content",
+        "lastOperationIndex",
+        "isDeleted",
+      ])
+      .where("documentId", "in", documentIds)
+      .where("branch", "in", branches)
+      .execute();
   }
 
   private async discoverExistingDrives(): Promise<void> {

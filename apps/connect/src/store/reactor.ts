@@ -624,7 +624,7 @@ export async function createReactor(
   // default/remote drives surface on first load without a manual reload.
   const reactorClient = appReactorClient;
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
-    reactorClient.subscribe({ type: driveType }, (event) => {
+    reactorClient.read.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
       refreshReactorDataClient(appReactorClient).catch((e) =>
         logger.error("@error", e),
@@ -633,7 +633,7 @@ export async function createReactor(
   }
 
   // Redirect when a currently-viewed document or drive is deleted remotely
-  reactorClient.subscribe({}, (event) => {
+  reactorClient.read.subscribe({}, (event) => {
     closeDeletedSelection(event, {
       selectedDriveId: store.selectedDriveId,
       selectedNodeId: store.selectedNodeId,
@@ -679,7 +679,7 @@ export async function createReactor(
   ) {
     const readModels = reactorModule.readModelCoordinator.readModels;
     const processorHostModule = await createProcessorHostModule(
-      reactorClientModule.client,
+      reactorClientModule,
       readModels,
       store.attachmentService,
     );

@@ -10,6 +10,7 @@ import {
   runGatewayAdapterContractTests,
   type GatewayAdapterHarness,
 } from "./gateway-adapter-contract.js";
+import { UNUSED_CLIENTS } from "../utils/client-halves.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ const noopCtx: GatewayContextFactory<Context> = () =>
   Promise.resolve({
     headers: {},
     db: null,
+    clients: UNUSED_CLIENTS,
   });
 
 /** A stub ILogger that satisfies the interface without printing anything. */
@@ -162,7 +164,11 @@ describe("createApolloFetchHandler - request conversion", () => {
     let capturedRequest: Request | undefined;
     const ctxFactory: GatewayContextFactory<Context> = (req) => {
       capturedRequest = req;
-      return Promise.resolve({ headers: {}, db: null });
+      return Promise.resolve({
+        headers: {},
+        db: null,
+        clients: UNUSED_CLIENTS,
+      });
     };
 
     const { server, executeHTTPGraphQLRequest } = makeMockServer();

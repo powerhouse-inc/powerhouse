@@ -82,6 +82,24 @@ export function ignoreDotPhButRouteTree(
   };
 }
 
+/**
+ * The dev watcher's filter for the project's build output: its own `dist/`
+ * and a Tauri shell's Rust `target/`. Nothing the dev server serves lives
+ * there, and on Windows every watched file costs a synchronous `fs.watch`
+ * at startup (over a minute for a built project with a built desktop shell).
+ */
+export function ignoreBuildOutput(projectRoot: string) {
+  const dist = `${normalizePath(resolve(projectRoot, "dist"))}/`;
+  return (file: string) => {
+    const path = normalizePath(resolve(projectRoot, file));
+    return (
+      path.startsWith(dist) ||
+      path.includes("/tauri-shell/target/") ||
+      path.includes("/src-tauri/target/")
+    );
+  };
+}
+
 /** Connect's pathless sidebar layout; a project's routes in `_app/` render in it. */
 export const APP_LAYOUT = "_app";
 

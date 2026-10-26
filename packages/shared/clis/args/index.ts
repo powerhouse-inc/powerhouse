@@ -3,6 +3,7 @@ export * from "./common.js";
 export * from "./connect.js";
 export * from "./generate.js";
 export * from "./help.js";
+export * from "./host.js";
 export * from "./init.js";
 export * from "./inspect.js";
 export * from "./install.js";

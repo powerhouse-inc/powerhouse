@@ -217,8 +217,11 @@ describe("reactor clients", () => {
     expectTypeOf<ReactorClient["execute"]>().toEqualTypeOf<
       IReactorClient["execute"]
     >();
+    expectTypeOf<ReactorClient["executeAsync"]>().toEqualTypeOf<
+      IReactorClient["executeAsync"]
+    >();
     expectTypeOf<ReactorReadClient>().not.toHaveProperty("execute");
-    expectTypeOf<ReactorClient>().not.toHaveProperty("executeAsync");
+    expectTypeOf<ReactorReadClient>().not.toHaveProperty("executeAsync");
     expectTypeOf<ReactorClient>().not.toHaveProperty("subscribe");
     expectTypeOf<ReactorClient>().not.toHaveProperty("rename");
     expectTypeOf<ReactorClient>().not.toHaveProperty("drives");

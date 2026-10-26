@@ -252,7 +252,7 @@ async function addLocalDefaultDrive(
     // re-created (and rejected) on every boot.
     const reactorClient = getFullReactorClient();
     if (reactorClient) {
-      const taken = await reactorClient.isDocumentIdTaken(drive.id);
+      const taken = await reactorClient.write.isDocumentIdTaken(drive.id);
       if (taken) {
         return; // created on an earlier boot, or deleted since
       }

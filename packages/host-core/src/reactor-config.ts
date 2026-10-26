@@ -169,34 +169,46 @@ export function projectReactorToConnect(
   return { connect };
 }
 
+/** Each pre-set env var that CONTRADICTS the host's protocol block, as a
+ * message naming the var, the host value and the env value. An env var that
+ * merely matches, or is unset, is fine. */
+export function protocolConflicts(
+  protocol: ReactorProtocol | undefined,
+  env: Readonly<Record<string, string | undefined>>,
+  hostFile = "the host file",
+): string[] {
+  if (!protocol) return [];
+  return Object.entries(protocolEnv(protocol)).flatMap(
+    ([varName, hostValue]) => {
+      const envValue = env[varName];
+      if (envValue === undefined) return [];
+      // The switchboard reads undoV3 as on unless the value is exactly "false".
+      const agrees =
+        varName === FLAG_ENV.undoV3
+          ? (envValue !== "false") === (hostValue === "true")
+          : envValue === hostValue;
+      if (agrees) return [];
+      return [
+        `reactor.protocol conflict: ${varName} is "${envValue}" in the environment ` +
+          `but "${hostValue}" in ${hostFile}. These are fleet-consensus settings — ` +
+          `a mismatch would diverge replay. Remove the env override or align the host.`,
+      ];
+    },
+  );
+}
+
 /**
  * The enforcement teeth of single-sourcing: if a pre-set env var CONTRADICTS
  * the host's protocol block, fail loudly naming the var, the host value, and
- * the env value. An env var that merely matches, or is unset, is fine (phase-2
- * transition keeps an operator's explicit env as an escape hatch unless it
- * disagrees with the protocol — see the WBS precedence note).
+ * the env value (phase-2 transition keeps an operator's explicit env as an
+ * escape hatch unless it disagrees with the protocol — see the WBS
+ * precedence note).
  */
 export function assertProtocolConsistency(
   protocol: ReactorProtocol | undefined,
   env: Record<string, string | undefined>,
   hostFile = "the host file",
 ): void {
-  if (!protocol) return;
-  const expected = protocolEnv(protocol);
-  for (const [varName, hostValue] of Object.entries(expected)) {
-    const envValue = env[varName];
-    if (envValue === undefined) continue;
-    // The switchboard reads undoV3 as on unless the value is exactly "false".
-    const agrees =
-      varName === FLAG_ENV.undoV3
-        ? (envValue !== "false") === (hostValue === "true")
-        : envValue === hostValue;
-    if (!agrees) {
-      throw new Error(
-        `reactor.protocol conflict: ${varName} is "${envValue}" in the environment ` +
-          `but "${hostValue}" in ${hostFile}. These are fleet-consensus settings — ` +
-          `a mismatch would diverge replay. Remove the env override or align the host.`,
-      );
-    }
-  }
+  const conflict = protocolConflicts(protocol, env, hostFile).at(0);
+  if (conflict) throw new Error(conflict);
 }

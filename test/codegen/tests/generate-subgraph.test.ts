@@ -60,7 +60,7 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(resolversContent).toContain("BaseSubgraph");
-    expect(resolversContent).toContain("subgraph.reactorClient");
+    expect(resolversContent).toContain("subgraph.readClient");
     expect(resolversContent).toContain("MyCustomSubgraphQueries");
     expect(resolversContent).not.toContain("document-drive");
   });

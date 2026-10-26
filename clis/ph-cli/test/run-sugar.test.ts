@@ -96,14 +96,16 @@ describe("applyRunSugar", () => {
 });
 
 describe("buildPhCliCommands", () => {
-  it("registers `run` only when uniform-runners is enabled", () => {
-    expect(Object.keys(buildPhCliCommands(false))).not.toContain("run");
-    expect(Object.keys(buildPhCliCommands(true))).toContain("run");
+  it("registers `run` and `host` only when uniform-runners is enabled", () => {
+    for (const name of ["run", "host"]) {
+      expect(Object.keys(buildPhCliCommands(false))).not.toContain(name);
+      expect(Object.keys(buildPhCliCommands(true))).toContain(name);
+    }
   });
 
   it("keeps the flag-off command surface identical to the base set", () => {
     const off = Object.keys(buildPhCliCommands(false)).sort();
     const on = Object.keys(buildPhCliCommands(true)).sort();
-    expect(on.filter((c) => c !== "run")).toEqual(off);
+    expect(on.filter((c) => c !== "run" && c !== "host")).toEqual(off);
   });
 });

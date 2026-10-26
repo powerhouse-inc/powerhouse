@@ -1,3 +1,7 @@
+import type {
+  WriteReceipt,
+  WriteTargetDescription,
+} from "@powerhousedao/reactor";
 import { camelCase } from "change-case";
 import {
   setName,
@@ -24,7 +28,9 @@ import {
   documentOutgoingRelationships as documentOutgoingRelationshipsResolver,
   document as documentResolver,
   findDocuments as findDocumentsResolver,
+  readAsCaller,
 } from "./reactor/resolvers.js";
+import type { RequestClients } from "./request-clients.js";
 import type { Context, SubgraphArgs } from "./types.js";
 
 /** A resolver function that lives inside a document-model subgraph. */
@@ -140,8 +146,9 @@ export interface DocumentModelSubgraphResolvers<
 }
 
 /**
- * New document model subgraph that uses reactorClient instead of legacy reactor.
- * This class auto-generates GraphQL queries and mutations for a document model.
+ * Auto-generates GraphQL queries and mutations for a document model. Queries
+ * read through `ctx.clients.read`; mutations write through `ctx.clients.write`
+ * and read their document back with the write's token.
  */
 export class DocumentModelSubgraph extends BaseSubgraph {
   declare resolvers: DocumentModelSubgraphResolvers;
@@ -183,6 +190,31 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     return this.resolvers[
       `${documentName}Mutations`
     ] as DocumentModelMutationResolvers;
+  }
+
+  /**
+   * Refuses a model operation on a document of another type. Asked of the
+   * write half (`describe`), which answers for what the write path sees.
+   */
+  async #assertDocumentType(
+    clients: RequestClients,
+    documentId: string,
+    requested: string,
+    documentType: string,
+  ): Promise<void> {
+    let target: WriteTargetDescription;
+    try {
+      target = await clients.write.describe(documentId);
+    } catch (error) {
+      throw new GraphQLError(
+        error instanceof Error ? error.message : "Document not found",
+      );
+    }
+    if (target.documentType !== documentType) {
+      throw new GraphQLError(
+        `Document with id ${requested} is not of type ${documentType}`,
+      );
+    }
   }
 
   /** Drops the items the host's own ACL refuses the caller. */
@@ -310,7 +342,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           }
 
           const result = await documentResolver(
-            this.reactorClient,
+            this.clientsOf(ctx).read,
             { idOrSlug, view },
             this.viewSubject(ctx),
           );
@@ -339,7 +371,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const { paging } = args;
 
           const result = await findDocumentsResolver(
-            this.reactorClient,
+            this.clientsOf(ctx).read,
             { search: { type: documentType }, paging },
             this.viewSubject(ctx),
           );
@@ -360,7 +392,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const { search, view, paging } = args;
 
           const result = await findDocumentsResolver(
-            this.reactorClient,
+            this.clientsOf(ctx).read,
             {
               search: { type: documentType, parentId: search?.parentId },
               view,
@@ -393,7 +425,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const handle = await this.assertCanRead(sourceIdOrSlug, ctx);
 
           const result = await documentOutgoingRelationshipsResolver(
-            this.reactorClient,
+            this.clientsOf(ctx).read,
             {
               sourceIdOrSlug: handle.fetchIdentifier,
               relationshipType,
@@ -432,7 +464,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const handle = await this.assertCanRead(targetIdOrSlug, ctx);
 
           const result = await documentIncomingRelationshipsResolver(
-            this.reactorClient,
+            this.clientsOf(ctx).read,
             {
               targetIdOrSlug: handle.fetchIdentifier,
               relationshipType,
@@ -481,7 +513,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           let createdDoc;
           if (withHeader) {
             createdDoc = await createDocumentWithInitialStateResolver(
-              this.reactorClient,
+              this.clientsOf(ctx),
               {
                 documentType,
                 parentIdOrSlug,
@@ -495,7 +527,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           } else {
             createdDoc = await createEmptyDocumentResolver(
-              this.reactorClient,
+              this.clientsOf(ctx),
               {
                 documentType,
                 parentIdOrSlug,
@@ -518,11 +550,13 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           // Name fallback via SET_NAME (only for the empty-document path,
           // since the other sets name on the header before creation)
           if (!withHeader && name && createdDoc.name !== name) {
-            const updatedDoc = await this.reactorClient.execute(
-              createdDoc.id,
-              "main",
-              [setName(name)],
-              undefined,
+            const clients = this.clientsOf(ctx);
+            const renamed = await clients.write.execute(createdDoc.id, "main", [
+              setName(name),
+            ]);
+            const updatedDoc = await readAsCaller(
+              clients.read,
+              await renamed.readable,
               this.viewSubject(ctx),
             );
             return toGqlPhDocument(updatedDoc);
@@ -551,7 +585,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           }
 
           const result = await createEmptyDocumentResolver(
-            this.reactorClient,
+            this.clientsOf(ctx),
             {
               documentType,
               parentIdOrSlug,
@@ -596,35 +630,39 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
+            const clients = this.clientsOf(ctx);
 
-            const doc = await this.reactorClient.get(effectiveDocId, {
-              subject: this.viewSubject(ctx),
-            });
-            if (doc.header.documentType !== documentType) {
-              throw new GraphQLError(
-                `Document with id ${documentIdOrSlug} is not of type ${documentType}`,
-              );
-            }
+            await this.#assertDocumentType(
+              clients,
+              effectiveDocId,
+              documentIdOrSlug,
+              documentType,
+            );
 
             const action = this.documentModel.actions[camelCase(op.name!)];
             if (!action) {
               throw new GraphQLError(`Action ${op.name} not found`);
             }
 
+            let receipt: WriteReceipt;
             try {
-              const updatedDoc = await this.reactorClient.execute(
+              const written = await clients.write.execute(
                 effectiveDocId,
                 "main",
                 [action(input)],
-                undefined,
-                this.viewSubject(ctx),
               );
-              return toGqlPhDocument(updatedDoc);
+              receipt = await written.readable;
             } catch (error) {
               throw new GraphQLError(
                 error instanceof Error ? error.message : `Failed to ${op.name}`,
               );
             }
+            const updatedDoc = await readAsCaller(
+              clients.read,
+              receipt,
+              this.viewSubject(ctx),
+            );
+            return toGqlPhDocument(updatedDoc);
           };
 
           // Async mutation - returns job ID
@@ -650,15 +688,14 @@ export class DocumentModelSubgraph extends BaseSubgraph {
               ctx,
             );
             const effectiveDocId = handle.fetchIdentifier;
+            const clients = this.clientsOf(ctx);
 
-            const doc = await this.reactorClient.get(effectiveDocId, {
-              subject: this.viewSubject(ctx),
-            });
-            if (doc.header.documentType !== documentType) {
-              throw new GraphQLError(
-                `Document with id ${documentIdOrSlug} is not of type ${documentType}`,
-              );
-            }
+            await this.#assertDocumentType(
+              clients,
+              effectiveDocId,
+              documentIdOrSlug,
+              documentType,
+            );
 
             const action = this.documentModel.actions[camelCase(op.name!)];
             if (!action) {
@@ -666,12 +703,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             }
 
             try {
-              const jobInfo = await this.reactorClient.executeAsync(
+              const written = await clients.write.execute(
                 effectiveDocId,
                 "main",
                 [action(input)],
               );
-              return jobInfo.id;
+              return written.jobId;
             } catch (error) {
               throw new GraphQLError(
                 error instanceof Error ? error.message : `Failed to ${op.name}`,

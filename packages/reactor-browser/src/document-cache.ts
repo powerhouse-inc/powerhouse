@@ -17,7 +17,16 @@ import type {
   PromiseWithState,
   RejectedPromise,
 } from "./types/documents.js";
-import type { IReactorBrowserClient } from "./types/reactor-browser-client.js";
+import type {
+  IReactorBrowserClient,
+  IReactorBrowserReadClient,
+} from "./types/reactor-browser-client.js";
+
+/** The reads a {@link DocumentCache} makes. */
+export interface IDocumentCacheReader extends Pick<
+  IReactorBrowserReadClient,
+  "get" | "find" | "getOperations" | "subscribe"
+> {}
 
 export function addPromiseState<T>(promise: Promise<T>): PromiseWithState<T> {
   if ("status" in promise) {
@@ -170,8 +179,10 @@ type OperationsRequest = {
 /**
  * Document cache implementation that uses the new ReactorClient API.
  *
- * This cache subscribes to document change events via IReactorBrowserClient.subscribe()
+ * This cache subscribes to document change events through the client's read half
  * and automatically updates the cache when documents are created, updated, or deleted.
+ * It is built over a browser client, whose `read` half it uses, or over a read
+ * half directly.
  * It also holds paginated operation history per document scope (see `IOperationCache`),
  * which is dropped for a document whenever a change event for it arrives.
  */
@@ -220,11 +231,16 @@ export class DocumentCache
   private typeListeners = new Map<string, (() => void)[]>();
 
   private unsubscribe: (() => void) | null = null;
+  private readonly client: IDocumentCacheReader;
 
-  constructor(private client: IReactorBrowserClient) {
-    this.unsubscribe = client.subscribe({}, (event: DocumentChangeEvent) => {
-      this.handleDocumentChange(event);
-    });
+  constructor(client: IReactorBrowserClient | IDocumentCacheReader) {
+    this.client = readerOf(client);
+    this.unsubscribe = this.client.subscribe(
+      {},
+      (event: DocumentChangeEvent) => {
+        this.handleDocumentChange(event);
+      },
+    );
   }
 
   private handleDocumentChange(event: DocumentChangeEvent): void {
@@ -831,3 +847,11 @@ export class DocumentCache
 }
 
 export { IDLE_REFETCH_STATE } from "./document-refetcher.js";
+
+/** The read half of a browser client, or the reader itself. */
+function readerOf(
+  client: IReactorBrowserClient | IDocumentCacheReader,
+): IDocumentCacheReader {
+  const read = (client as Partial<IReactorBrowserClient>).read;
+  return read ?? client;
+}

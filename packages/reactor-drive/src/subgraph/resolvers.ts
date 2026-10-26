@@ -1,4 +1,4 @@
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorReadClient } from "@powerhousedao/reactor";
 import type {
   AuthSubject,
   PHDocument,
@@ -8,7 +8,7 @@ import type { IDriveReadModel } from "../read-model/interfaces.js";
 import type { ReactorDrivePHState, ReactorDriveNode } from "../types.js";
 
 export interface ReactorDriveResolverContext {
-  reactorClient: IReactorClient;
+  reactorClient: IReactorReadClient;
   readModel: IDriveReadModel;
   /** The authenticated caller; absent reads as anonymous, never the host. */
   user?: { address?: string; appKey?: string };

@@ -12,6 +12,7 @@ import {
   signaturePolicyOf,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addFileWithProgress } from "../src/actions/document.js";
 
@@ -75,7 +76,7 @@ function stubReactorClient(
   const claimed: string[] = [];
   const headers: PHDocumentHeader[] = [];
   const modules = [documentModelModule()];
-  const client = {
+  const client = withHalves({
     get: (identifier: string) => {
       if (identifier === DRIVE_ID) {
         return Promise.resolve(driveDocument());
@@ -99,7 +100,7 @@ function stubReactorClient(
         return Promise.resolve(document);
       },
     },
-  };
+  });
   return { client, claimed, headers };
 }
 

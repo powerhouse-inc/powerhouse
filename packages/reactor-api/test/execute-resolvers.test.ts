@@ -1,4 +1,8 @@
-import type { IReactorClient, JobInfo } from "@powerhousedao/reactor";
+import type {
+  IReactorReadClient,
+  IReactorWriteClient,
+  JobInfo,
+} from "@powerhousedao/reactor";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,6 +12,7 @@ import { buildSchema, parse, validate } from "graphql";
 import { describe, expect, it, vi } from "vitest";
 import { execute, executeAsync } from "../src/graphql/reactor/resolvers.js";
 import type { ActionInput } from "../src/graphql/reactor/gen/graphql.js";
+import { clientsFor, settledHandle } from "./utils/client-halves.js";
 
 const SDL = readFileSync(
   join(
@@ -51,17 +56,23 @@ const job = {
   meta: { batchId: "job-1", batchJobIds: ["job-1"] },
 } as unknown as JobInfo;
 
-/** Captures what the client was asked to do. */
+/**
+ * Captures what the write half was asked to do; the read half reads the
+ * document back and reports the submitted job.
+ */
 function recordingClient() {
-  const executeSpy = vi.fn().mockResolvedValue(document);
-  const executeAsyncSpy = vi.fn().mockResolvedValue(job);
+  const executeSpy = vi.fn().mockResolvedValue(settledHandle("doc-1"));
+  const getSpy = vi.fn().mockResolvedValue(document);
+  const read = {
+    get: getSpy,
+    getJobStatus: vi.fn().mockResolvedValue(job),
+  } as unknown as IReactorReadClient;
+  const write = { execute: executeSpy } as unknown as IReactorWriteClient;
   return {
-    client: {
-      execute: executeSpy,
-      executeAsync: executeAsyncSpy,
-    } as unknown as IReactorClient,
+    client: clientsFor({ read, write }),
     executeSpy,
-    executeAsyncSpy,
+    executeAsyncSpy: executeSpy,
+    getSpy,
   };
 }
 
@@ -84,6 +95,23 @@ describe("execute", () => {
     expect(actions).toHaveLength(1);
     expect(actions[0].id).toBe("act-1");
     expect(result.id).toBe("doc-1");
+  });
+
+  it("reads the document back on the read half with the write's token", async () => {
+    const { client, getSpy } = recordingClient();
+
+    await execute(client, {
+      documentIdOrSlug: "doc-1",
+      actions: [action],
+      branch: "feature",
+    });
+
+    expect(getSpy).toHaveBeenCalledWith(
+      "doc-1",
+      { subject: undefined, branch: "feature" },
+      undefined,
+      job.consistencyToken,
+    );
   });
 
   it("applies to main when no branch is named", async () => {
@@ -146,9 +174,12 @@ describe("execute", () => {
   });
 
   it("reports a refusal from the reactor as an error", async () => {
-    const client = {
-      execute: vi.fn().mockRejectedValue(new Error("locked by permissions")),
-    } as unknown as IReactorClient;
+    const client = clientsFor({
+      read: {} as IReactorReadClient,
+      write: {
+        execute: vi.fn().mockRejectedValue(new Error("locked by permissions")),
+      } as unknown as IReactorWriteClient,
+    });
 
     await expect(
       execute(client, { documentIdOrSlug: "doc-1", actions: [action] }),

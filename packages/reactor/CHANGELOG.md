@@ -1,3 +1,103 @@
+## 6.2.3-dev.77 (2026-10-26)
+
+### 🚀 Features
+
+- **reactor:** export the handle building blocks and type fromWire ([fa1bffa505](https://github.com/powerhouse-inc/powerhouse/commit/fa1bffa505))
+- **reactor:** write targets and describe resolve on the identity table ([5a1e9ccfee](https://github.com/powerhouse-inc/powerhouse/commit/5a1e9ccfee))
+- **reactor:** drive writes stop reading the drive where the reducer decides ([25e496cef9](https://github.com/powerhouse-inc/powerhouse/commit/25e496cef9))
+- **reactor:** purge deletes a document's permission rows ([510db4ed80](https://github.com/powerhouse-inc/powerhouse/commit/510db4ed80))
+- **reactor:** module and processor host module carry the client halves ([a3722fa7da](https://github.com/powerhouse-inc/powerhouse/commit/a3722fa7da))
+- **reactor:** serve the client halves over RPC as read.* and write.* ([8dc7e13975](https://github.com/powerhouse-inc/powerhouse/commit/8dc7e13975))
+- **reactor:** deprecate the facade's writes with a one-time warning ([2b98afc82f](https://github.com/powerhouse-inc/powerhouse/commit/2b98afc82f))
+- **reactor:** split the drive client into read and write halves ([0edbbcbbb1](https://github.com/powerhouse-inc/powerhouse/commit/0edbbcbbb1))
+- **reactor:** permission tables in the reactor store (migration 029) ([bc61963b19](https://github.com/powerhouse-inc/powerhouse/commit/bc61963b19))
+- **reactor:** writes return WriteHandles; the facade reads back through them ([35d02fbcb6](https://github.com/powerhouse-inc/powerhouse/commit/35d02fbcb6))
+- **reactor:** write identity rows in the execution transaction ([5393c2d740](https://github.com/powerhouse-inc/powerhouse/commit/5393c2d740))
+- **reactor:** write-side identity table and store ([f1963c414a](https://github.com/powerhouse-inc/powerhouse/commit/f1963c414a))
+
+### ❤️ Thank You
+
+- Claude Fable 5.1
+- Wouter Kampmann
+
+## 6.2.3-dev.76 (2026-10-25)
+
+### 🚀 Features
+
+- **reactor:** replayed operations carry document state ([e7e2801532](https://github.com/powerhouse-inc/powerhouse/commit/e7e2801532))
+- **reactor:** runtime-adjustable catch-up priority for processor backfills ([86eddfc64a](https://github.com/powerhouse-inc/powerhouse/commit/86eddfc64a))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **reactor:** processor backfills give way between pages and share three slots ([230f4a04ef](https://github.com/powerhouse-inc/powerhouse/commit/230f4a04ef))
+- **reactor:** compute replay progress per processor factory and read model ([c42ed86d21](https://github.com/powerhouse-inc/powerhouse/commit/c42ed86d21))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+
+### 🩹 Fixes
+
+- **reactor:** never hold a new drive's commit for its processors' backfill ([845fb2f3be](https://github.com/powerhouse-inc/powerhouse/commit/845fb2f3be))
+- **reactor:** take backfill slots back from running scans when the level drops ([99aad1f41b](https://github.com/powerhouse-inc/powerhouse/commit/99aad1f41b))
+- **reactor:** stop catch-up waits from collecting listeners on close ([f06c7f8ee1](https://github.com/powerhouse-inc/powerhouse/commit/f06c7f8ee1))
+- **reactor:** drop the catch-up level once per pressure spike ([5e307e107d](https://github.com/powerhouse-inc/powerhouse/commit/5e307e107d))
+- **reactor:** a replay queued at the head reads as not started, not as done ([7fb655e524](https://github.com/powerhouse-inc/powerhouse/commit/7fb655e524))
+
+### ❤️ Thank You
+
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.75 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+- **reactor:** replayed operations carry document state ([e7e2801532](https://github.com/powerhouse-inc/powerhouse/commit/e7e2801532))
+- **reactor:** runtime-adjustable catch-up priority for processor backfills ([86eddfc64a](https://github.com/powerhouse-inc/powerhouse/commit/86eddfc64a))
+- **reactor,reactor-monitor-app:** a factory's bar averages all its processors, projects first, rows collapse ([67017e5f73](https://github.com/powerhouse-inc/powerhouse/commit/67017e5f73))
+- **reactor,ph-cli,reactor-monitor-app:** one short name per processor factory ([bc865c2a85](https://github.com/powerhouse-inc/powerhouse/commit/bc865c2a85))
+- **reactor:** processor backfills give way between pages and share three slots ([230f4a04ef](https://github.com/powerhouse-inc/powerhouse/commit/230f4a04ef))
+- **reactor:** compute replay progress per processor factory and read model ([c42ed86d21](https://github.com/powerhouse-inc/powerhouse/commit/c42ed86d21))
+- **reactor,reactor-api,reactor-monitor:** record each processor's run start and phase ([14bb78ea51](https://github.com/powerhouse-inc/powerhouse/commit/14bb78ea51))
+- **reactor,reactor-api,reactor-monitor:** rerun a processor, cleared or from an ordinal ([279342d614](https://github.com/powerhouse-inc/powerhouse/commit/279342d614))
+
+### 🩹 Fixes
+
+- **reactor,reactor-browser:** documents read from a reactor carry an empty operation list per scope ([e90ca68bb8](https://github.com/powerhouse-inc/powerhouse/commit/e90ca68bb8))
+- **reactor:** never hold a new drive's commit for its processors' backfill ([845fb2f3be](https://github.com/powerhouse-inc/powerhouse/commit/845fb2f3be))
+- **reactor:** take backfill slots back from running scans when the level drops ([99aad1f41b](https://github.com/powerhouse-inc/powerhouse/commit/99aad1f41b))
+- **reactor:** stop catch-up waits from collecting listeners on close ([f06c7f8ee1](https://github.com/powerhouse-inc/powerhouse/commit/f06c7f8ee1))
+- **reactor:** drop the catch-up level once per pressure spike ([5e307e107d](https://github.com/powerhouse-inc/powerhouse/commit/5e307e107d))
+- **reactor:** a create job that can't load its model fails with the loader's reason ([958631d53d](https://github.com/powerhouse-inc/powerhouse/commit/958631d53d))
+- **builder-tools:** the worker-safe vendor check parses imports, so import-like text in strings and comments no longer counts ([9d3e167f4b](https://github.com/powerhouse-inc/powerhouse/commit/9d3e167f4b))
+- **reactor-browser,connect,reactor-monitor:** the worker reactor loads a registry package's module graph, and packages added or updated after boot ([5348ffa792](https://github.com/powerhouse-inc/powerhouse/commit/5348ffa792))
+- **reactor:** document view keeps the name when a non-global op echoes a stale header ([25f7e91726](https://github.com/powerhouse-inc/powerhouse/commit/25f7e91726))
+- **powerhouse-vetra-packages:** the document-model editor writes nothing on open unless the model is blank ([f5dc33dd0a](https://github.com/powerhouse-inc/powerhouse/commit/f5dc33dd0a))
+- **reactor:** a replay queued at the head reads as not started, not as done ([7fb655e524](https://github.com/powerhouse-inc/powerhouse/commit/7fb655e524))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+- Wouter Kampmann
+
+## 6.2.3-dev.74 (2026-10-24)
+
+### 🚀 Features
+
+- **ph-cli,ph-cmd,shared:** ph host check behind FEATURE_UNIFORM_RUNNERS_ENABLED ([3a41a17991](https://github.com/powerhouse-inc/powerhouse/commit/3a41a17991))
+- **codegen:** ph migrate moves connect's theme overrides from style.css to the host stylesheet ([b113414352](https://github.com/powerhouse-inc/powerhouse/commit/b113414352))
+
+### 🩹 Fixes
+
+- **reactor,reactor-browser:** documents read from a reactor carry an empty operation list per scope ([e90ca68bb8](https://github.com/powerhouse-inc/powerhouse/commit/e90ca68bb8))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Claude Opus 5.5
+
 ## 6.2.3-dev.73 (2026-10-23)
 
 ### 🚀 Features

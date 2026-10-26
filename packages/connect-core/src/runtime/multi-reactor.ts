@@ -107,10 +107,30 @@ export type MultiReactorParams = {
  * requirement must NOT apply, or no backend would be eligible.) */
 export const PLACE_ON_REMOTE: CollectionRequirementsInput = Object.freeze({});
 
+/**
+ * The local answer stands when only the Switchboard could not answer -- but
+ * only when there IS a local backend. Remote-only has nothing to fall back to,
+ * so its errors surface. Installed as the router's `answerFailedIdCheck`, so
+ * the facade and `write.isDocumentIdTaken` both apply it.
+ */
+function localIdCheckAnswer(
+  documentId: string,
+  error: unknown,
+): boolean | undefined {
+  if (!failedOnlyOnRemote(error)) {
+    return undefined;
+  }
+  logger.warn(
+    "The Switchboard could not say whether @id is taken; using the local reactor's answer: @error",
+    documentId,
+    error,
+  );
+  return false;
+}
+
 /** The router Connect installs, with Connect's handling of credentials and id checks. */
 export class ConnectRoutingClient extends RoutingReactorClient {
   private readonly remote: GraphQLRoutableBackend;
-  private readonly hasLocal: boolean;
 
   constructor(
     backends: readonly RoutableBackendConfig[],
@@ -118,36 +138,18 @@ export class ConnectRoutingClient extends RoutingReactorClient {
     remote: GraphQLRoutableBackend,
     hasLocal: boolean,
   ) {
-    super(backends, options);
+    super(backends, {
+      ...options,
+      answerFailedIdCheck: hasLocal
+        ? localIdCheckAnswer
+        : options.answerFailedIdCheck,
+    });
     this.remote = remote;
-    this.hasLocal = hasLocal;
   }
 
   /** Renown's sign-in and sign-out call this on whatever client is installed. */
   notifyCredentialsChanged(): void {
     this.remote.notifyCredentialsChanged();
-  }
-
-  /** The local answer stands when only the Switchboard could not answer — but
-   * only when there IS a local backend. Remote-only has nothing to fall back
-   * to, so its errors surface. */
-  override async isDocumentIdTaken(
-    documentId: string,
-    signal?: AbortSignal,
-  ): Promise<boolean> {
-    try {
-      return await super.isDocumentIdTaken(documentId, signal);
-    } catch (error) {
-      if (!this.hasLocal || !failedOnlyOnRemote(error)) {
-        throw error;
-      }
-      logger.warn(
-        "The Switchboard could not say whether @id is taken; using the local reactor's answer: @error",
-        documentId,
-        error,
-      );
-      return false;
-    }
   }
 }
 

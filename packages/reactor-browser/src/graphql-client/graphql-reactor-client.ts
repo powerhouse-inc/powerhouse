@@ -3,6 +3,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
+  ConsistencyToken,
   CreateProtocolVersionsOptions,
   DocumentChangeEvent,
   NewDocumentOptions,
@@ -20,6 +21,8 @@ import type {
   UndoRedoAvailability,
   UndoRedoTargets,
   ViewFilter,
+  WriteHandle,
+  WriteReceipt,
 } from "@powerhousedao/reactor";
 import type {
   BaseReducerCapabilities,
@@ -68,7 +71,11 @@ import type { ReactorGraphQLClient } from "../graphql/types.js";
 import { DRIVE_DOCUMENT_TYPES } from "../constants.js";
 import { DOCUMENT_CHANGE_TYPE } from "../reactor-interop.js";
 import { remoteOperationToLocal } from "../remote-controller/utils.js";
-import type { IReactorBrowserClient } from "../types/reactor-browser-client.js";
+import type {
+  IReactorBrowserClient,
+  IReactorBrowserReadClient,
+  IReactorBrowserWriteClient,
+} from "../types/reactor-browser-client.js";
 import {
   isoStringFromDateTime,
   phDocumentFromGetDocument,
@@ -90,7 +97,10 @@ import {
   queriesUnknownField,
 } from "./errors.js";
 import {
+  GetDocumentAtConsistencyDocument,
   MutateDocumentWithOperationsDocument,
+  type GetDocumentAtConsistencyResult,
+  type GetDocumentAtConsistencyVariables,
   type MutateDocumentWithOperationsResult,
   type MutateDocumentWithOperationsVariables,
 } from "./operations.js";
@@ -104,12 +114,21 @@ import {
   type TypedGraphQLDocument,
 } from "./subgraph.js";
 import {
+  createJobChangesSocket,
   isAuthRefusalClose,
   makeAuthConnectionParams,
   startDocumentChangesSubscription,
   subscriptionsUrlFromGraphqlUrl,
   type DocumentChangesEventPayload,
+  type IJobChangesSocket,
 } from "./subscriptions.js";
+import {
+  GraphQLJobWriteHandle,
+  GraphQLSettledWriteHandle,
+  settlesGraphQLJobStage,
+  type GraphQLHandleReader,
+  type GraphQLJobStage,
+} from "./write-handles.js";
 
 /** A call the client asks {@link GraphQLReactorClientOptions.driveIdFor} about. */
 export type DriveIdCall = {
@@ -214,6 +233,16 @@ const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
 
 const JOB_POLL_INTERVAL_MS = 250;
 
+/** The first `jobStatus` poll of a write handle's stage wait, doubling from here. */
+const STAGE_POLL_START_MS = 25;
+
+/**
+ * The longest a stage wait sleeps between `jobStatus` polls while the
+ * `jobChanges` subscription is up: the subscription wakes it early, and the
+ * poll is the safety net for an event that raced the subscription.
+ */
+const STAGE_POLL_REALTIME_MAX_MS = 1000;
+
 /** A registered `subscribe` call. */
 type ChangeListener = {
   search: SearchFilter;
@@ -256,6 +285,28 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
   private realtimeErrorLogged = false;
   /** Whether the last socket died because the Switchboard refused its credentials. */
   private realtimeRefusedCredentials = false;
+  /** The socket write handles wait on; opened by the first stage wait. */
+  private jobSocket: IJobChangesSocket | undefined;
+  /** Set once the `jobChanges` subscription failed; stage waits then only poll. */
+  private jobRealtimeBroken = false;
+  /** Set once the Switchboard refused the `document` query's `consistency` argument. */
+  private consistencyUnsupported = false;
+
+  /**
+   * The read half: the reads the hooks make. Every method is this client's
+   * own; nothing that writes is reachable from it.
+   */
+  readonly read: IReactorBrowserReadClient;
+
+  /**
+   * The write half. `execute` submits through `executeAsync` and hands back a
+   * handle whose `written` and `readable` resolve from `jobStatus`, woken by
+   * the `jobChanges` subscription when realtime is on, and whose `document()`
+   * runs the `document` query bounded by the receipt's token. `create` and
+   * `deleteDocument` have no asynchronous mutation: they run the synchronous
+   * ones and hand back a settled handle.
+   */
+  readonly write: IReactorBrowserWriteClient;
 
   constructor(options: GraphQLReactorClientOptions) {
     this.tokenProvider = options.tokenProvider ?? ambientRenownTokenProvider;
@@ -286,19 +337,43 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     // including when the reactor SDK above was injected: an injected SDK is a
     // test seam that owns its own transport, not a second endpoint.
     this.subgraphs = new SubgraphSdkRegistry(options.url, middleware);
+    this.read = new GraphQLReadHalf(this);
+    this.write = {
+      execute: (documentIdentifier, branch, actions, signal) =>
+        this.submitExecute(documentIdentifier, branch, actions, signal),
+      create: (document, parentIdentifier, signal) =>
+        this.submitCreate(document, parentIdentifier, signal),
+      deleteDocument: (identifier, propagate, signal) =>
+        this.submitDeleteDocument(identifier, propagate, signal),
+    };
   }
 
+  /**
+   * Reads a document. With a consistency token that names any coordinate, the
+   * Switchboard waits until its read models hold them; one without the
+   * `document` query's `consistency` argument is read without it, which after
+   * a write's `readable` stage still sees the write on a single node.
+   */
   async get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument> {
     const viewInput = viewFilterInputFromViewFilter(view);
-    const result = await this.sdk.GetDocument(
-      { identifier, view: viewInput },
-      undefined,
-      signal,
-    );
+    const result =
+      consistencyToken && consistencyToken.coordinates.length > 0
+        ? await this.getDocumentAtConsistency(
+            identifier,
+            viewInput,
+            consistencyToken,
+            signal,
+          )
+        : await this.sdk.GetDocument(
+            { identifier, view: viewInput },
+            undefined,
+            signal,
+          );
 
     const document = result.document;
     if (!document) {
@@ -308,6 +383,20 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     return phDocumentFromGetDocument<TDocument>(
       document.document,
       view?.branch,
+    );
+  }
+
+  /** Reads documents by id, in the order given; throws if any is missing. */
+  async getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]> {
+    return Promise.all(
+      documentIds.map((id) =>
+        this.get<TDocument>(id, view, signal, consistencyToken),
+      ),
     );
   }
 
@@ -919,6 +1008,15 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     return result.jobStatus ? jobInfoFromGql(result.jobStatus) : undefined;
   }
 
+  /** The job as `jobStatus` reports it now; throws when it reports none. */
+  async getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    const job = await this.getJob(jobId, signal);
+    if (!job) {
+      throw new Error(`Job not found: ${jobId}`);
+    }
+    return job;
+  }
+
   /** Polls `jobStatus` until the job is READ_READY or FAILED. */
   async waitForJob(
     jobOrId: string | JobInfo,
@@ -1254,6 +1352,8 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
    */
   dispose(): void {
     this.teardownRealtime();
+    this.jobSocket?.dispose();
+    this.jobSocket = undefined;
   }
 
   /**
@@ -1357,6 +1457,226 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
         ? () => next(nextCursor, effectivePaging.limit)
         : undefined,
     };
+  }
+
+  /**
+   * The write half's `execute`: signs as the facade's `execute` does, submits
+   * through `executeAsync` and returns once the job is accepted. When anyone
+   * subscribes, the document is read back once the job is readable and
+   * announced as `Updated`, as the facade's `execute` announces it; the handle
+   * shares that read with its own `document()`.
+   */
+  private async submitExecute(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const document = await this.get(documentIdentifier, { branch }, signal);
+    const preparedActions = await prepareActionsForPush(
+      actions,
+      document,
+      this.documentModels(),
+      this.signer,
+      signal,
+    );
+    const result = await this.sdk.MutateDocumentAsync(
+      {
+        documentIdentifier,
+        actions: preparedActions.map(toTransportAction),
+        branch,
+      },
+      this.driveIdHeaders(
+        { method: "execute", documentId: documentIdentifier },
+        isDrive(document) ? document.header.id : undefined,
+      ),
+      signal,
+    );
+    const job = jobInfoFromGql(result.mutateDocumentAsync);
+    const handle = new GraphQLJobWriteHandle(
+      job,
+      document.header.id,
+      branch,
+      (jobId, stage, stageSignal) =>
+        this.waitForStage(jobId, stage, stageSignal),
+      this.handleReader(document.header.id),
+      signal,
+    );
+    if (this.listeners.length > 0) {
+      void this.announceWrite(handle);
+    }
+    return handle;
+  }
+
+  /** The write half's `create`: the synchronous mutation, a settled handle. */
+  private async submitCreate(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    const created = await this.create(document, parentIdentifier, signal);
+    return new GraphQLSettledWriteHandle(
+      created.header.id,
+      created.header.branch || "main",
+      this.handleReader(created.header.id),
+    );
+  }
+
+  /** The write half's `deleteDocument`: the synchronous mutation, a settled handle. */
+  private async submitDeleteDocument(
+    identifier: string,
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    await this.deleteDocument(identifier, propagate, signal);
+    return new GraphQLSettledWriteHandle(
+      identifier,
+      "main",
+      this.handleReader(identifier),
+    );
+  }
+
+  /** Reads a write's document back, bounded by its receipt's token. */
+  private handleReader(documentId: string): GraphQLHandleReader {
+    return <TDocument extends PHDocument>(
+      receipt: WriteReceipt,
+      view: ViewFilter | undefined,
+      signal: AbortSignal | undefined,
+    ) =>
+      this.get<TDocument>(
+        documentId,
+        { ...view, branch: receipt.branch },
+        signal,
+        receipt.token,
+      );
+  }
+
+  /** Announces a write's document as `Updated` once it is readable. */
+  private async announceWrite(handle: GraphQLJobWriteHandle): Promise<void> {
+    let document: PHDocument;
+    try {
+      document = await handle.document();
+    } catch (error) {
+      logger.warn(
+        "GraphQLReactorClient: could not read @documentId back to announce a write: @error",
+        handle.documentId,
+        error,
+      );
+      return;
+    }
+    this.emitChange({
+      type: DOCUMENT_CHANGE_TYPE.Updated,
+      documents: [document],
+    });
+  }
+
+  /**
+   * Waits for a job to settle a stage, resolving with a FAILED job too. Polls
+   * `jobStatus` with a doubling interval; with realtime on, a `jobChanges`
+   * event for the job wakes the wait early and the interval is only a safety
+   * net. A failed subscription is logged once and the wait keeps polling.
+   */
+  private async waitForStage(
+    jobId: string,
+    stage: GraphQLJobStage,
+    signal: AbortSignal | undefined,
+  ): Promise<JobInfo> {
+    const wakers = new Set<() => void>();
+    const stopWatching = this.watchJob(jobId, () => {
+      for (const wake of [...wakers]) wake();
+    });
+    try {
+      let interval = STAGE_POLL_START_MS;
+      for (;;) {
+        const job = await this.getJobStatus(jobId, signal);
+        if (settlesGraphQLJobStage(job.status, stage)) {
+          return job;
+        }
+        await sleepUntilWoken(interval, wakers, signal);
+        const max =
+          stopWatching && !this.jobRealtimeBroken
+            ? STAGE_POLL_REALTIME_MAX_MS
+            : JOB_POLL_INTERVAL_MS;
+        interval = Math.min(interval * 2, max);
+      }
+    } finally {
+      stopWatching?.();
+    }
+  }
+
+  /**
+   * Subscribes to one job's `jobChanges` when realtime is on and the
+   * subscription has not failed before. Returns the stop function, or
+   * undefined when nothing was subscribed.
+   */
+  private watchJob(
+    jobId: string,
+    onChange: () => void,
+  ): (() => void) | undefined {
+    if (!this.subscriptionsUrl || this.jobRealtimeBroken) {
+      return undefined;
+    }
+    this.jobSocket ??= createJobChangesSocket({
+      wsUrl: this.subscriptionsUrl,
+      connectionParams: makeAuthConnectionParams(this.tokenProvider),
+    });
+    return this.jobSocket.watch(
+      jobId,
+      () => onChange(),
+      (error) => {
+        if (this.jobRealtimeBroken) {
+          return;
+        }
+        this.jobRealtimeBroken = true;
+        logger.warn(
+          "GraphQLReactorClient: realtime job changes are unavailable, write handles fall back to polling jobStatus",
+          error,
+        );
+      },
+    );
+  }
+
+  /**
+   * The `document` query with the `consistency` argument, or without it once
+   * the Switchboard has refused the argument.
+   */
+  private async getDocumentAtConsistency(
+    identifier: string,
+    view: ViewFilterInput | undefined,
+    token: ConsistencyToken,
+    signal: AbortSignal | undefined,
+  ): Promise<GetDocumentAtConsistencyResult> {
+    if (!this.consistencyUnsupported) {
+      const variables: GetDocumentAtConsistencyVariables = {
+        identifier,
+        view,
+        consistency: {
+          version: token.version,
+          createdAtUtcIso: token.createdAtUtcIso,
+          coordinates: token.coordinates.map((coordinate) => ({
+            documentId: coordinate.documentId,
+            scope: coordinate.scope,
+            branch: coordinate.branch,
+            operationIndex: coordinate.operationIndex,
+          })),
+        },
+      };
+      try {
+        return await this.sdk.RunDocument<GetDocumentAtConsistencyResult>({
+          operationName: "GetDocumentAtConsistency",
+          operationType: "query",
+          document: GetDocumentAtConsistencyDocument,
+          variables,
+          signal,
+        });
+      } catch (error) {
+        if (!refusesConsistencyArgument(error)) {
+          throw error;
+        }
+        this.consistencyUnsupported = true;
+      }
+    }
+    return this.sdk.GetDocument({ identifier, view }, undefined, signal);
   }
 
   /**
@@ -1515,6 +1835,136 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
       }
     }
   }
+}
+
+/**
+ * The read half of {@link GraphQLReactorClient}: every read is the client's
+ * own, and nothing that writes is reachable from it.
+ */
+class GraphQLReadHalf implements IReactorBrowserReadClient {
+  constructor(private readonly client: GraphQLReactorClient) {}
+
+  get<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument> {
+    return this.client.get<TDocument>(
+      identifier,
+      view,
+      signal,
+      consistencyToken,
+    );
+  }
+
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]> {
+    return this.client.getMany<TDocument>(
+      documentIds,
+      view,
+      signal,
+      consistencyToken,
+    );
+  }
+
+  find(
+    search: SearchFilter,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<PHDocument>> {
+    return this.client.find(search, view, paging, signal);
+  }
+
+  getOperations(
+    documentIdentifier: string,
+    view?: ViewFilter,
+    filter?: OperationFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Operation>> {
+    return this.client.getOperations(
+      documentIdentifier,
+      view,
+      filter,
+      paging,
+      signal,
+    );
+  }
+
+  subscribe(
+    search: SearchFilter,
+    callback: (event: DocumentChangeEvent) => void,
+    view?: ViewFilter,
+  ): () => void {
+    return this.client.subscribe(search, callback, view);
+  }
+
+  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo> {
+    return this.client.waitForJob(jobId, signal);
+  }
+
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    return this.client.getJobStatus(jobId, signal);
+  }
+}
+
+/**
+ * Sleeps for `ms`, or less when a waker in `wakers` fires first. Each sleep
+ * adds its own waker and removes it when it ends.
+ */
+function sleepUntilWoken(
+  ms: number,
+  wakers: Set<() => void>,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortReason(signal));
+      return;
+    }
+    const finish = () => {
+      clearTimeout(timer);
+      wakers.delete(finish);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const wake = () => {
+      finish();
+      resolve();
+    };
+    const onAbort = () => {
+      finish();
+      if (signal) reject(abortReason(signal));
+    };
+    const timer = setTimeout(wake, ms);
+    wakers.add(wake);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/**
+ * Whether a request failed because the Switchboard's `document` query has no
+ * `consistency` argument, or its schema no `ConsistencyTokenInput`.
+ */
+function refusesConsistencyArgument(error: unknown): boolean {
+  const errors = (error as { response?: { errors?: unknown } } | null)?.response
+    ?.errors;
+  if (!Array.isArray(errors)) {
+    return false;
+  }
+  return errors.some((entry) => {
+    const message = (entry as { message?: unknown } | null)?.message;
+    return (
+      typeof message === "string" &&
+      (message.includes('"consistency"') ||
+        message.includes('"ConsistencyTokenInput"'))
+    );
+  });
 }
 
 /**

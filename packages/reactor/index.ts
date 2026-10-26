@@ -15,20 +15,62 @@ export {
 // Reactor Interface and Implementation
 export {
   DriveClient,
+  DriveClientFacade,
   type BatchSubmitter,
   type DriveClientDeps,
 } from "./src/client/drive-client.js";
+export { warnOnce } from "./src/client/deprecations.js";
+export {
+  DriveReadClient,
+  type DriveReadDeps,
+} from "./src/client/drive-read-client.js";
+export {
+  DriveWriteClient,
+  type DriveWriteHalf,
+  type DriveWriteReads,
+} from "./src/client/drive-write-client.js";
 export {
   buildCreateJobs,
   createEmptyDocument,
   selectDocumentModelModule,
+  upgradeDocumentJob,
   upgradeDocumentWith,
   type UpgradeDocumentDeps,
+  type UpgradeOutcome,
 } from "./src/client/derivations.js";
 export {
   ReactorClient,
   type ActionEvaluationConfig,
 } from "./src/client/reactor-client.js";
+export { ReactorReadClient } from "./src/client/read-client.js";
+export {
+  ReactorWriteClient,
+  type SubmittedExecution,
+} from "./src/client/write-client.js";
+export {
+  FacadeWriteClient,
+  type ReactorClientSurface,
+} from "./src/client/facade-write-client.js";
+export {
+  JobFailedError,
+  JobBatchHandle,
+  JobSetHandle,
+  mergeConsistencyTokens,
+  WriteHandleFactory,
+  type HandleReader,
+  type IJobStagePort,
+} from "./src/client/internal/handles.js";
+export type { ReactorClientParts } from "./src/client/internal/parts.js";
+export type { WriteSideParts } from "./src/client/internal/targets.js";
+export type {
+  WireBatchWriteHandle,
+  WireWriteHandle,
+} from "./src/rpc/protocol.js";
+export {
+  RemoteWriteHandles,
+  remoteStagePort,
+  type RemoteReads,
+} from "./src/rpc/write-handles.js";
 export {
   DocumentChangeType,
   type ActionCandidate,
@@ -39,7 +81,17 @@ export {
   type DocumentChangeEvent,
   type CopyNodeOptions,
   type IDriveClient,
+  type IDriveReadClient,
+  type IDriveWriteClient,
+  type NodeWriteHandle,
   type IReactorClient,
+  type BatchWriteHandle,
+  type IReactorReadClient,
+  type IReactorWriteClient,
+  type MoveRelationshipHandles,
+  type WriteHandle,
+  type WriteReceipt,
+  type WriteTargetDescription,
   type ProtocolSelection,
   type UndoRedoAvailability,
   type UpgradeDocumentOptions,
@@ -93,7 +145,13 @@ export {
   type SyncModule,
   type UndoRedoTargets,
 } from "./src/core/types.js";
-export { JobAwaiter, type IJobAwaiter } from "./src/shared/awaiter.js";
+export {
+  JobAwaiter,
+  settlesStage,
+  type IJobAwaiter,
+  type IJobStageAwaiter,
+  type JobStage,
+} from "./src/shared/awaiter.js";
 export {
   ConsistencyTracker,
   makeConsistencyKey,
@@ -306,7 +364,10 @@ export {
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
+  type IWriteIdentityStore,
   type OperationFilter,
+  type WriteIdentityRecord,
+  type WriteIdentityUpsert,
 } from "./src/storage/interfaces.js";
 
 // Decision Models
@@ -352,6 +413,7 @@ export {
 } from "./src/decision/stream-order.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export { KyselyWriteIdentityStore } from "./src/storage/kysely/write-identity-store.js";
 export {
   DEFAULT_LONG_STATEMENT_TIMEOUT_MS,
   DEFAULT_RECOVERY_TIMEOUT_MS,
@@ -610,6 +672,7 @@ export type {
   ProcessorFactoryBuilder,
   ProcessorFilter,
   ProcessorRecord,
+  ProcessorPhase,
   ProcessorStatus,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
@@ -627,7 +690,7 @@ export type {
   StreamOrderIssue,
   ValidationResult,
 } from "./src/admin/types.js";
-export { ProcessorManager } from "./src/processors/index.js";
+export * from "./src/processors/index.js";
 export * from "./src/catch-up/index.js";
 export * from "./src/inspector/index.js";
 

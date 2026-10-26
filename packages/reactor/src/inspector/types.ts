@@ -1,9 +1,14 @@
 import type {
+  ProcessorPhase,
   ProcessorRerunOptions,
   ProcessorStatus,
 } from "@powerhousedao/shared/processors";
 import type { RebuildResult, ValidationResult } from "../admin/types.js";
 import type { CatchUpStatus, SweepResult } from "../catch-up/types.js";
+import type {
+  CatchUpPrioritySetting,
+  CatchUpPriorityState,
+} from "../processors/catch-up-priority.js";
 import type { Job } from "../queue/types.js";
 
 /** Where the reactor's store keeps its bytes. */
@@ -149,6 +154,9 @@ export type InspectorProcessorInfo = {
   floor: number;
   /** Whether a rerun can clear what it derived first. */
   clearable: boolean;
+  /** The cursor as the current replay began; `lastOrdinal` once live. */
+  runFrom: number;
+  phase: ProcessorPhase;
 };
 
 /** The in-memory queue's debugging surface; not part of `IQueue`. */
@@ -174,6 +182,8 @@ export interface IInspector {
   getQueueState(): Promise<QueueStateSnapshot>;
   getProcessors(): Promise<InspectorProcessorInfo[]>;
   getCatchUpStatus(): Promise<CatchUpStatus>;
+  /** The processor backfills' pace: mode, level, its settings, why, last load. */
+  getCatchUpPriority(): Promise<CatchUpPriorityState>;
   getStorageHealth(): Promise<InspectorStorageHealth>;
   /** Replays the whole document; read-only but expensive. */
   validateDocument(
@@ -192,6 +202,8 @@ export interface IInspectorAdmin {
     options: ProcessorRerunOptions,
   ): Promise<void>;
   sweepCatchUp(): Promise<SweepResult[]>;
+  /** Fixes the level (0-7) or hands it to the load controller. */
+  setCatchUpPriority(setting: CatchUpPrioritySetting): Promise<void>;
   rebuildKeyframes(documentId: string, branch?: string): Promise<RebuildResult>;
   rebuildSnapshots(documentId: string, branch?: string): Promise<RebuildResult>;
 }

@@ -21,12 +21,12 @@ import {
   useDocuments,
   useDocumentSafe,
 } from "../src/hooks/document-cache.js";
-import type { IReactorBrowserClient } from "../src/types/reactor-browser-client.js";
+import type { IReactorBrowserReadClient } from "../src/types/reactor-browser-client.js";
 import { createP256Signer } from "./utils/p256-signer.js";
 
-// A real client whose `get` can be held open (the SharedWorker round trip) or
-// made to fail once. Every other member goes to the real client.
-function withGatedGet(client: IReactorBrowserClient) {
+// A real read half whose `get` can be held open (the SharedWorker round trip)
+// or made to fail once. Every other member goes to the real read half.
+function withGatedGet(client: IReactorBrowserReadClient) {
   let gate: Promise<void> | undefined;
   let release: () => void = () => undefined;
   const held = new Map<string, number>();
@@ -234,7 +234,7 @@ describe("useDocument under an outer Suspense boundary", () => {
         ]),
       )
       .buildModule();
-    gated = withGatedGet(module.client);
+    gated = withGatedGet(module.client.read);
     cache = new DocumentCache(gated.client);
     setDocumentCache(cache);
   });

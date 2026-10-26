@@ -373,8 +373,47 @@ export class RunScopedReactorClient implements ReactorClient {
     if (subject !== undefined) {
       throw accessDenied("A piece may not choose the subject it reads as");
     }
-    this.assertWritable("execute");
     const abort = this.signal(signal);
+    const { id } = await this.apply(
+      "execute",
+      documentIdentifier,
+      branch,
+      actions,
+      abort,
+    );
+    return this.readBack<TDocument>(id, branch, abort);
+  }
+
+  // As `execute`, and answered at the same point (every action applied, or a
+  // throw), but with the settled job and no read of the document: a drive's
+  // read-back is its whole state, every node, for a caller that drops it.
+  async executeAsync(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    const abort = this.signal(signal);
+    const { job } = await this.apply(
+      "executeAsync",
+      documentIdentifier,
+      branch,
+      actions,
+      abort,
+    );
+    return job;
+  }
+
+  // The write `execute` and `executeAsync` share: the checks, the gate, the
+  // job, settled. Answers the resolved document id and the settled job.
+  private async apply(
+    method: string,
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    abort: AbortSignal,
+  ): Promise<{ id: string; job: JobInfo }> {
+    this.assertWritable(method);
     for (const action of actions) {
       if (action.context?.signer) {
         throw accessDenied(
@@ -390,8 +429,8 @@ export class RunScopedReactorClient implements ReactorClient {
     }
     const id = await this.resolveReference(documentIdentifier, branch, abort);
     await this.gate(id, branch, actions, abort);
-    await this.run(id, branch, actions, abort);
-    return this.readBack<TDocument>(id, branch, abort);
+    const job = await this.run(id, branch, actions, abort);
+    return { id, job };
   }
 
   // The run user's DELETE_DOCUMENT passes the gate; the client's parent edge
@@ -515,12 +554,13 @@ export class RunScopedReactorClient implements ReactorClient {
   // --- Write path ----------------------------------------------------------
 
   // Submits actions and journals the job; throws unless every action applied.
+  // Answers the settled job.
   private async run(
     documentId: string,
     branch: string,
     actions: Action[],
     signal: AbortSignal,
-  ): Promise<void> {
+  ): Promise<JobInfo> {
     this.assertTimeLeft(`${actions.length} action(s)`);
     const info = await this.inner.executeAsync(
       documentId,
@@ -532,6 +572,7 @@ export class RunScopedReactorClient implements ReactorClient {
     const settled = await this.settle(info.id, signal);
     if (settled.status === JobStatus.FAILED) throw jobFailed(settled);
     assertActionsApplied(settled, actions);
+    return settled;
   }
 
   private assertTimeLeft(what: string): void {

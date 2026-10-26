@@ -115,6 +115,53 @@ export async function upgradeDocumentWith<TDocument extends PHDocument>(
   options?: UpgradeDocumentOptions,
   signal?: AbortSignal,
 ): Promise<TDocument> {
+  const outcome = await upgradeDocumentJob<TDocument>(
+    deps,
+    documentIdentifier,
+    toVersion,
+    options,
+    signal,
+  );
+  if (outcome.kind === "unchanged") {
+    return outcome.document;
+  }
+  return deps.read<TDocument>(
+    outcome.documentId,
+    outcome.branch,
+    outcome.job.consistencyToken,
+    signal,
+  );
+}
+
+/** What an upgrade came to: nothing to do, or a job that settled. */
+export type UpgradeOutcome<TDocument extends PHDocument> =
+  | {
+      kind: "unchanged";
+      /** The document as read, already at the target version. */
+      document: TDocument;
+      documentId: string;
+      branch: string;
+    }
+  | {
+      kind: "upgraded";
+      /** The upgrade's job, settled and not FAILED. */
+      job: JobInfo;
+      documentId: string;
+      branch: string;
+    };
+
+/**
+ * {@link upgradeDocumentWith} up to the read-back: retries from a fresh read
+ * when a concurrent edit invalidates the snapshot, and returns the settled job
+ * rather than the upgraded document.
+ */
+export async function upgradeDocumentJob<TDocument extends PHDocument>(
+  deps: UpgradeDocumentDeps,
+  documentIdentifier: string,
+  toVersion?: number,
+  options?: UpgradeDocumentOptions,
+  signal?: AbortSignal,
+): Promise<UpgradeOutcome<TDocument>> {
   const maxConflictRetries =
     options?.maxConflictRetries ?? DEFAULT_UPGRADE_CONFLICT_RETRIES;
 
@@ -141,7 +188,7 @@ export async function upgradeDocumentWith<TDocument extends PHDocument>(
     }
 
     if (targetVersion === fromVersion) {
-      return document;
+      return { kind: "unchanged", document, documentId, branch };
     }
     if (targetVersion < fromVersion) {
       throw new DowngradeNotSupportedError(
@@ -174,12 +221,7 @@ export async function upgradeDocumentWith<TDocument extends PHDocument>(
     const completedJob = await deps.waitForJob(jobInfo, signal);
 
     if (completedJob.status !== JobStatus.FAILED) {
-      return deps.read<TDocument>(
-        documentId,
-        branch,
-        completedJob.consistencyToken,
-        signal,
-      );
+      return { kind: "upgraded", job: completedJob, documentId, branch };
     }
 
     if (completedJob.error?.name !== "UpgradePreconditionFailedError") {

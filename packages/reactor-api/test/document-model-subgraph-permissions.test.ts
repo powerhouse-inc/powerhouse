@@ -5,6 +5,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { withHalves } from "./utils/client-halves.js";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
@@ -83,9 +84,14 @@ describe("DocumentModelSubgraph Permission Checks", () => {
   const asAdmin = { subject: { address: "0xadmin", key: undefined } };
 
   const createContext = (options: { userAddress?: string }): Context =>
-    ({
-      user: options.userAddress ? { address: options.userAddress } : undefined,
-    }) as unknown as Context;
+    withHalves(
+      {
+        user: options.userAddress
+          ? { address: options.userAddress }
+          : undefined,
+      },
+      mockReactorClient,
+    ) as unknown as Context;
 
   /**
    * Build a SubgraphArgs-shaped object with the given authorizationService.
@@ -134,7 +140,13 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      get: vi.fn().mockResolvedValue(mockDocument),
+      // The read half serves what the last write produced, so a mutation's
+      // read-back sees its own write.
+      get: vi.fn(async () => {
+        const writes = vi.mocked(mockReactorClient.execute!).mock.results;
+        const last = writes.at(-1);
+        return last ? ((await last.value) as PHDocument) : mockDocument;
+      }) as unknown as IReactorClient["get"],
       find: vi.fn().mockResolvedValue({
         results: [mockDocument],
         options: { limit: 10, cursor: "" },
@@ -250,7 +262,12 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         await callGetDocument(ctx, "doc-123");
 
-        expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123", asAdmin);
+        expect(mockReactorClient.get).toHaveBeenCalledWith(
+          "doc-123",
+          asAdmin,
+          undefined,
+          undefined,
+        );
       });
     });
   });
@@ -359,6 +376,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           expect.objectContaining({
             limit: 10,
           }),
+          undefined,
+          undefined,
         );
       });
     });
@@ -453,6 +472,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           expect.objectContaining({
             limit: 10,
           }),
+          undefined,
+          undefined,
         );
       });
 
@@ -615,8 +636,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "main",
           [expect.objectContaining({ type: "SET_NAME" })],
-          undefined,
-          asAdmin.subject,
         );
       });
 
@@ -767,13 +786,14 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     describe("reactorClient integration", () => {
-      it("should use reactorClient.get to verify document", async () => {
+      it("checks the document type on the write half before writing", async () => {
         vi.mocked(mockAuthorizationService.canMutate!).mockResolvedValue(true);
         const ctx = createContext({ userAddress: "0xadmin" });
+        const describe = vi.spyOn(ctx.clients.write, "describe");
 
         await callMutation(ctx, "setName", "doc-123", { name: "New Name" });
 
-        expect(mockReactorClient.get).toHaveBeenCalledWith("doc-123", asAdmin);
+        expect(describe).toHaveBeenCalledWith("doc-123");
       });
 
       it("should use reactorClient.execute to apply action", async () => {
@@ -786,8 +806,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           "doc-123",
           "main",
           [expect.objectContaining({ type: "SET_NAME" })],
-          undefined,
-          asAdmin.subject,
         );
       });
 

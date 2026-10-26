@@ -13,6 +13,7 @@ import { createProtocolGate } from "../../../src/protocol/gate.js";
 import { selectDecisionModel } from "../../../src/decision/registered-model.js";
 import {
   NOOP_DOCUMENT_LOCKS,
+  NOOP_WRITE_IDENTITY_STORE,
   type ExecutionStores,
 } from "../../../src/executor/execution-scope.js";
 import {
@@ -96,6 +97,7 @@ function createHarness(
     documentMetaCache,
     collectionMembershipCache,
     documentLocks: NOOP_DOCUMENT_LOCKS,
+    writeIdentity: NOOP_WRITE_IDENTITY_STORE,
   };
   const flags = {
     documentDecisions: false,

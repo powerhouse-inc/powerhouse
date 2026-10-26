@@ -24,26 +24,67 @@ export interface IJobAwaiter {
   shutdown(): void;
 }
 
+/**
+ * A stage of a job a caller can wait for.
+ *
+ * - `written`: the operations are in the log (WRITE_READY).
+ * - `readable`: every pre-ready read model holds them (READ_READY).
+ *
+ * FAILED settles either stage. A job that reached READ_READY has passed
+ * WRITE_READY, so `readable` also settles `written`.
+ */
+export type JobStage = "written" | "readable";
+
+/** An awaiter that can also wait for the `written` stage. */
+export interface IJobStageAwaiter extends IJobAwaiter {
+  /**
+   * Waits until the job reaches the stage, or FAILED. Resolves with the job in
+   * either case; a FAILED job is not a rejection here.
+   *
+   * @param jobId - The job id
+   * @param stage - The stage to wait for
+   * @param signal - Optional abort signal to cancel the wait
+   * @returns The job as it stood when the stage settled
+   */
+  waitForStage(
+    jobId: string,
+    stage: JobStage,
+    signal?: AbortSignal,
+  ): Promise<JobInfo>;
+}
+
+/** Whether the awaiter can wait for a stage short of READ_READY. */
+export function isJobStageAwaiter(
+  awaiter: IJobAwaiter,
+): awaiter is IJobStageAwaiter {
+  return (
+    typeof (awaiter as Partial<IJobStageAwaiter>).waitForStage === "function"
+  );
+}
+
 type JobWaiter = {
+  stage: JobStage;
   resolve: (value: JobInfo) => void;
   reject: (reason: Error) => void;
   signal?: AbortSignal;
 };
 
 /**
- * Checks if a job status is terminal (job has finished).
- * WRITE_READY is not terminal - it's an intermediate state.
- * Only READ_READY and FAILED are truly terminal.
+ * Whether a job in `status` has settled the stage. WRITE_READY settles only
+ * `written`; READ_READY and FAILED settle both.
  */
-function isTerminalStatus(status: JobStatus): boolean {
-  return status === JobStatus.READ_READY || status === JobStatus.FAILED;
+export function settlesStage(status: JobStatus, stage: JobStage): boolean {
+  if (status === JobStatus.READ_READY || status === JobStatus.FAILED) {
+    return true;
+  }
+  return stage === "written" && status === JobStatus.WRITE_READY;
 }
 
 /**
  * Event-driven implementation of IJobAwaiter.
  * Subscribes to operation events to detect job completion without polling.
  */
-export class JobAwaiter implements IJobAwaiter {
+export class JobAwaiter implements IJobStageAwaiter {
   private pendingJobs = new Map<string, JobWaiter[]>();
   private unsubscribers: Unsubscribe[] = [];
 
@@ -101,17 +142,25 @@ export class JobAwaiter implements IJobAwaiter {
   }
 
   async waitForJob(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
+    return this.waitForStage(jobId, "readable", signal);
+  }
+
+  async waitForStage(
+    jobId: string,
+    stage: JobStage,
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
     const currentStatus = await this.getJobStatus(jobId, signal);
-    if (isTerminalStatus(currentStatus.status)) {
+    if (settlesStage(currentStatus.status, stage)) {
       return currentStatus;
     }
 
     const promise = new Promise<JobInfo>((resolve, reject) => {
-      const waiter: JobWaiter = { resolve, reject, signal };
+      const waiter: JobWaiter = { stage, resolve, reject, signal };
 
       const existingWaiters = this.pendingJobs.get(jobId) || [];
       existingWaiters.push(waiter);
@@ -169,17 +218,28 @@ export class JobAwaiter implements IJobAwaiter {
 
       const jobInfo = await this.getJobStatus(jobId, activeWaiters[0].signal);
 
-      if (isTerminalStatus(jobInfo.status)) {
-        this.pendingJobs.delete(jobId);
+      const remaining = activeWaiters.filter(
+        (waiter) => !settlesStage(jobInfo.status, waiter.stage),
+      );
+      if (remaining.length === activeWaiters.length) {
+        return;
+      }
 
-        for (const waiter of activeWaiters) {
+      if (remaining.length === 0) {
+        this.pendingJobs.delete(jobId);
+      } else {
+        this.pendingJobs.set(jobId, remaining);
+      }
+
+      for (const waiter of activeWaiters) {
+        if (!remaining.includes(waiter)) {
           waiter.resolve(jobInfo);
         }
+      }
 
-        for (const waiter of waiters) {
-          if (waiter.signal?.aborted) {
-            waiter.reject(new Error("Operation aborted"));
-          }
+      for (const waiter of waiters) {
+        if (waiter.signal?.aborted) {
+          waiter.reject(new Error("Operation aborted"));
         }
       }
     } catch (error) {

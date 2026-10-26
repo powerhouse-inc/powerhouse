@@ -9,7 +9,10 @@ export const customSubgraphResolversTemplate = (v: {
 import { type BaseSubgraph } from "${REACTOR_API_PACKAGE}";
 
 export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
-  const reactor = subgraph.reactorClient;
+  // Reads go through the read client. Mutations take the write client from
+  // the resolver context, \`ctx.clients.write\`, which a query never gets.
+  // \`subgraph.reactorClient\` (the deprecated facade) still works meanwhile.
+  const read = subgraph.readClient;
 
   return ({
     Query: {

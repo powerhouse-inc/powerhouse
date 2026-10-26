@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.2.3-dev.73",
+  "version": "6.2.3-dev.77",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -18,6 +18,11 @@
       "source": "./src/utils.mts",
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
+    },
+    "./boot": {
+      "source": "./src/boot.mts",
+      "types": "./dist/boot.d.mts",
+      "import": "./dist/boot.mjs"
     },
     "./plugins/mcp": {
       "source": "./src/plugins/mcp.mts",

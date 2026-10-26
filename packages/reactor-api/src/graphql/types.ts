@@ -1,6 +1,7 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   IReactorClient,
+  IReactorReadClient,
   IRelationalDb,
   ISyncManager,
   SyncScopeGate,
@@ -17,6 +18,9 @@ import type { ICredentialInvalidator } from "../services/auth.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
+import type { RequestClients } from "./request-clients.js";
+
+export type { RequestClients } from "./request-clients.js";
 
 export type SubgraphClass = typeof BaseSubgraph;
 
@@ -33,6 +37,12 @@ export type Context = {
     /** The did:key of the app instance that issued this request's token. */
     appKey: string;
   };
+  /**
+   * The reactor client halves this operation may use. `read` is always there;
+   * `write` only while a mutation executes, and reading it anywhere else
+   * throws an error naming the field.
+   */
+  clients: RequestClients;
 };
 
 export type ISubgraph = {
@@ -47,15 +57,34 @@ export type ISubgraph = {
   path?: string;
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
-  reactorClient: IReactorClient;
+  /** The read half, for setup-time lookups; resolvers read through `ctx.clients.read`. */
+  readClient?: IReactorReadClient;
+  /** @deprecated Resolvers use `ctx.clients`; setup-time code uses `readClient`. */
+  reactorClient?: IReactorClient;
   relationalDb: IRelationalDb;
+  /**
+   * Query fields of this subgraph that read write-side state and so are handed
+   * `ctx.clients.write` although they run in a query. Honoured for the host's
+   * core subgraphs only.
+   */
+  writeSideQueries?: readonly string[];
   hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;
   onDisconnect?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
-  reactorClient: IReactorClient;
+  /**
+   * The read half, for setup-time lookups (schema building, model lookup).
+   * Resolvers read through `ctx.clients.read` and write through
+   * `ctx.clients.write`. Derived from `reactorClient` when absent.
+   */
+  readClient?: IReactorReadClient;
+  /**
+   * @deprecated The facade over both halves, kept for one release for
+   * subgraphs that still call it. Use `readClient` and `ctx.clients`.
+   */
+  reactorClient?: IReactorClient;
   /**
    * The subgraph's package's slice of the HTTP surface, for serving REST
    * routes and webhooks alongside the GraphQL API. Already bound to the

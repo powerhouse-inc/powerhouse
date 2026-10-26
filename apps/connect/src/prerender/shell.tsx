@@ -63,11 +63,13 @@ export async function renderShell(
 ): Promise<string> {
   await loadDefaultConfig(variant);
   // After the config: these modules read it as they evaluate.
-  const [{ routeTree }, { RouterChrome }, routerModule] = await Promise.all([
-    import("@powerhousedao/connect/route-tree"),
-    import("../components/route-views.js"),
-    import("@powerhousedao/connect-core/router"),
-  ]);
+  const [{ routeTree }, { RouterChrome }, routerModule, skeleton] =
+    await Promise.all([
+      import("@powerhousedao/connect/route-tree"),
+      import("../components/route-views.js"),
+      import("@powerhousedao/connect-core/router"),
+      import("../components/app-skeleton.js"),
+    ]);
   // No reactor and no drives, as the app is until the reactor is up.
   const store = createPHStore();
   // A server router reuses the tree processed for the last variant; plugins' routes change it.
@@ -97,20 +99,28 @@ export async function renderShell(
 
   const errors: unknown[] = [];
   const causes: string[] = [];
-  const { prelude } = await prerender(
-    <PHStoreProvider store={store}>
-      <RouterProvider router={connectRouter.router} />
-      <Loader />
-    </PHStoreProvider>,
-    {
-      // Inline every boundary; outlined ones need React's runtime to reveal.
-      progressiveChunkSize: Number.POSITIVE_INFINITY,
-      onError: (error, info) => {
-        errors.push(error);
-        causes.push(describeRenderError(error, info?.componentStack));
+  // A project's own layout loads with the loader alone, as the browser's
+  // skeleton does once it sees the project's meta tag: not Connect's sidebar.
+  skeleton.setPrerenderingCustomShell(kind === "project");
+  let prelude: ReadableStream<Uint8Array>;
+  try {
+    ({ prelude } = await prerender(
+      <PHStoreProvider store={store}>
+        <RouterProvider router={connectRouter.router} />
+        <Loader />
+      </PHStoreProvider>,
+      {
+        // Inline every boundary; outlined ones need React's runtime to reveal.
+        progressiveChunkSize: Number.POSITIVE_INFINITY,
+        onError: (error, info) => {
+          errors.push(error);
+          causes.push(describeRenderError(error, info?.componentStack));
+        },
       },
-    },
-  );
+    ));
+  } finally {
+    skeleton.setPrerenderingCustomShell(false);
+  }
   // The next variant renders the tree with its own plugins' UI.
   resetConnectPluginUi(routeTree as AnyRoute);
   // A boundary that errored renders its fallback, which is not the shell.

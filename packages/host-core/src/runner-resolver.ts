@@ -11,7 +11,7 @@ import {
 } from "./resolve/declared.js";
 import { findRemovedForms } from "./resolve/removed-forms.js";
 import { describeMapElements } from "./resolve/resolve.js";
-import { unwrapEscapes } from "./resolve/walk.js";
+import { formatPath, unwrapEscapes } from "./resolve/walk.js";
 import { findToken, tokenKeyOf, type TokenMode } from "./tokens.js";
 
 /**
@@ -90,7 +90,29 @@ export interface RunnerModule<O = unknown> {
   /** The verb names, when the module exports functions that are not verbs
    * (helpers). Absent: every exported function is a verb. */
   verbs?: readonly string[];
+  /** What the verb would refuse at boot, given the parsed host and an
+   * environment (`ph host check`). Starts nothing. */
+  checkBoot?: (
+    host: O,
+    ctx: BootCheckContext,
+  ) => readonly BootIssue[] | Promise<readonly BootIssue[]>;
   [key: string]: unknown;
+}
+
+export interface BootCheckContext {
+  projectRoot: string;
+  /** The verb the host would run at (a compound member's own verb). */
+  verb: string;
+  /** The environment the verb would see; never `process.env` implicitly. */
+  env: Readonly<Record<string, string | undefined>>;
+  /** The host file, for messages (`hosts/switchboard/host.js`). */
+  file: string;
+}
+
+export interface BootIssue {
+  path?: string;
+  message: string;
+  hint?: string;
 }
 
 /** Exports that are part of the contract but are not verbs. */
@@ -100,6 +122,7 @@ const NON_VERB_EXPORTS = new Set([
   "outputsSchema",
   "verbs",
   "kind",
+  "checkBoot",
   "default",
 ]);
 
@@ -140,6 +163,14 @@ export async function resolveRunnerModule(
   if (declared !== undefined && typeof declared.safeParse !== "function") {
     throw new RunnerError(
       `Runner "${specifier}" exports a \`declaredHostSchema\` without safeParse.`,
+    );
+  }
+  if (
+    module.checkBoot !== undefined &&
+    typeof module.checkBoot !== "function"
+  ) {
+    throw new RunnerError(
+      `Runner "${specifier}" exports a \`checkBoot\` that is not a function.`,
     );
   }
   const verbs = module.verbs;
@@ -204,58 +235,84 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** A contract violation found while validating a host, without the file
+ * prefix the throwing validators add. */
+export interface RunnerIssue {
+  path: string;
+  message: string;
+  hint?: string;
+}
+
 /** reactor XOR children, decided by the runner's declared `kind`. */
+export function kindShapeIssues(
+  kind: RunnerKind,
+  specifier: string,
+  host: Record<string, unknown>,
+): RunnerIssue[] {
+  if (kind === "reactor" && host.children !== undefined) {
+    return [
+      {
+        path: "children",
+        message: `"${specifier}" is a reactor runner, so the host must not declare \`children\`.`,
+        hint: "`children` belongs to compound hosts; a reactor host configures its own `reactor` block.",
+      },
+    ];
+  }
+  if (kind === "compound" && host.reactor !== undefined) {
+    return [
+      {
+        path: "reactor",
+        message: `"${specifier}" is a compound runner, so the host must not declare \`reactor\`.`,
+        hint: "A compound's reactors are its members': configure them in the member host or a wrapper's `reactor` override.",
+      },
+    ];
+  }
+  return [];
+}
+
 function assertKindShape(
   kind: RunnerKind,
   specifier: string,
   host: Record<string, unknown>,
   file: string,
 ): void {
-  if (kind === "reactor" && host.children !== undefined) {
-    throw new RunnerError(
-      `${file}: "${specifier}" is a reactor runner, so the host must not declare \`children\`.`,
-      "`children` belongs to compound hosts; a reactor host configures its own `reactor` block.",
-    );
-  }
-  if (kind === "compound" && host.reactor !== undefined) {
-    throw new RunnerError(
-      `${file}: "${specifier}" is a compound runner, so the host must not declare \`reactor\`.`,
-      "A compound's reactors are its members': configure them in the member host or a wrapper's `reactor` override.",
-    );
-  }
+  const issue = kindShapeIssues(kind, specifier, host).at(0);
+  if (issue) throw new RunnerError(`${file}: ${issue.message}`, issue.hint);
 }
 
 /** `runner.defaultVerb` and every plugin entry's `verbs` must name verbs
  * this runner exports. */
-function assertKnownVerbs<O>(
+export function knownVerbIssues<O>(
   runner: RunnerModule<O>,
   specifier: string,
   host: Record<string, unknown>,
-  file: string,
-): void {
+): RunnerIssue[] {
   const options = host.runner;
-  if (!isRecord(options)) return;
+  if (!isRecord(options)) return [];
   const verbs = listVerbs(runner);
   const unknownVerb = (verb: unknown): verb is string =>
     typeof verb === "string" && !verbs.includes(verb);
+  const issues: RunnerIssue[] = [];
   if (unknownVerb(options.defaultVerb)) {
-    throw new RunnerError(
-      `${file}: runner.defaultVerb "${options.defaultVerb}" is not a verb of "${specifier}". Supported verbs: ${verbs.join(", ")}.`,
-    );
+    issues.push({
+      path: "runner.defaultVerb",
+      message: `runner.defaultVerb "${options.defaultVerb}" is not a verb of "${specifier}". Supported verbs: ${verbs.join(", ")}.`,
+    });
   }
   const plugins: unknown[] = Array.isArray(options.plugins)
     ? options.plugins
     : [];
-  for (const entry of plugins) {
-    if (!isRecord(entry) || !Array.isArray(entry.verbs)) continue;
+  plugins.forEach((entry, index) => {
+    if (!isRecord(entry) || !Array.isArray(entry.verbs)) return;
     const scoped: unknown[] = entry.verbs;
-    const bad = scoped.find(unknownVerb);
-    if (bad !== undefined) {
-      throw new RunnerError(
-        `${file}: plugin "${String(entry.module)}" is scoped to verb "${bad}", which "${specifier}" does not export. Supported verbs: ${verbs.join(", ")}.`,
-      );
+    for (const bad of scoped.filter(unknownVerb)) {
+      issues.push({
+        path: `runner.plugins[${index}].verbs`,
+        message: `plugin "${String(entry.module)}" is scoped to verb "${bad}", which "${specifier}" does not export. Supported verbs: ${verbs.join(", ")}.`,
+      });
     }
-  }
+  });
+  return issues;
 }
 
 function formatIssues(issues: readonly DeclaredIssue[]): string {
@@ -313,6 +370,72 @@ export function validateHost<O>(
   );
 }
 
+export interface SchemaIssue extends RunnerIssue {
+  /** The line `validateHost` prints: zod's dotted path (other runners' tests
+   * match on it), then the message. */
+  printed: string;
+}
+
+export interface HostSchemaIssues<O> {
+  /** Kind shape, an unresolved token (forbid mode) and unknown verbs, in
+   * the order the throwing validator checks them. */
+  issues: RunnerIssue[];
+  /** The schema's own issues; absent when the host parsed. */
+  schemaIssues?: SchemaIssue[];
+  data?: O;
+}
+
+/** What `validateHost` checks, as data: nothing throws. */
+export function hostSchemaIssues<O>(
+  runner: RunnerModule<O>,
+  schema: HostSchemaLike<O>,
+  specifier: string,
+  host: unknown,
+  options: ValidateHostOptions = {},
+): HostSchemaIssues<O> {
+  const issues: RunnerIssue[] = [];
+  if (isRecord(host)) {
+    issues.push(...kindShapeIssues(runner.kind, specifier, host));
+    if (options.tokens !== "allow") {
+      const token = findToken(host);
+      if (token) {
+        issues.push({
+          path: token.path,
+          message: `\`${token.path}\` is an unresolved output token (${token.key}).`,
+          hint: "Resolve the host (resolveHostOutputs) before validating it for a verb; `ph run` does this.",
+        });
+      }
+    }
+    issues.push(...knownVerbIssues(runner, specifier, host));
+  }
+  // `$$` escapes protect literal `$`-keyed objects through the token walk;
+  // the schema (and the verb) see the literal.
+  const result = schema.safeParse(unwrapEscapes(host));
+  if (result.success) return { issues, data: result.data };
+  const schemaIssues = result.error.issues.map((issue): SchemaIssue => {
+    const element = describeMapElements(host, issue.path);
+    const dotted =
+      (issue.path.map(String).join(".") || "<root>") +
+      (element ? ` (${element})` : "");
+    // A token in a field that does not take one: say so, rather than
+    // the field type's own "expected string".
+    const message = tokenKeyOf(valueAt(host, issue.path))
+      ? "this field does not take an output token (it is not token-able); spell the value literally."
+      : issue.message;
+    return {
+      path: formatPath(
+        issue.path.filter(
+          (key): key is string | number =>
+            typeof key === "string" || typeof key === "number",
+        ),
+      ),
+      message: element ? `${message} (${element})` : message,
+      printed: `${dotted}: ${message}`,
+    };
+  });
+  return { issues, schemaIssues };
+}
+
 function parseHost<O>(
   runner: RunnerModule<O>,
   schema: HostSchemaLike<O>,
@@ -321,43 +444,18 @@ function parseHost<O>(
   file: string,
   options: ValidateHostOptions,
 ): O {
-  if (isRecord(host)) {
-    assertKindShape(runner.kind, specifier, host, file);
-    if (options.tokens !== "allow") {
-      const token = findToken(host);
-      if (token) {
-        throw new RunnerError(
-          `${file}: \`${token.path}\` is an unresolved output token (${token.key}).`,
-          "Resolve the host (resolveHostOutputs) before validating it for a verb; `ph run` does this.",
-        );
-      }
-    }
-    assertKnownVerbs(runner, specifier, host, file);
-  }
-  // `$$` escapes protect literal `$`-keyed objects through the token walk;
-  // the schema (and the verb) see the literal.
-  const result = schema.safeParse(unwrapEscapes(host));
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((issue) => {
-        // Dotted, as before T3 (other runners' tests match on it).
-        const element = describeMapElements(host, issue.path);
-        const where =
-          (issue.path.map(String).join(".") || "<root>") +
-          (element ? ` (${element})` : "");
-        // A token in a field that does not take one: say so, rather than
-        // the field type's own "expected string".
-        const message = tokenKeyOf(valueAt(host, issue.path))
-          ? "this field does not take an output token (it is not token-able); spell the value literally."
-          : issue.message;
-        return `  - ${where}: ${message}`;
-      })
+  const checked = hostSchemaIssues(runner, schema, specifier, host, options);
+  const first = checked.issues.at(0);
+  if (first) throw new RunnerError(`${file}: ${first.message}`, first.hint);
+  if (checked.schemaIssues) {
+    const issues = checked.schemaIssues
+      .map((issue) => `  - ${issue.printed}`)
       .join("\n");
     throw new RunnerError(
       `${file} failed validation against the hostSchema of "${specifier}":\n${issues || "  (no details reported)"}`,
     );
   }
-  return result.data;
+  return checked.data as O;
 }
 
 export interface DeclaredHostOptions {

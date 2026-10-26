@@ -26,6 +26,14 @@ export {
   type SyncInspectionReadOpKey,
 } from "./ops.js";
 export {
+  computeProgress,
+  PROCESSOR_MANAGER_CONSUMER_ID,
+  type FactoryProgress,
+  type ProcessorProgress,
+  type ReactorProgress,
+  type ReadModelProgress,
+} from "./progress.js";
+export {
   ReactorInspector,
   type ReactorInspectorComponents,
   type ReactorInspectorFacts,
@@ -63,8 +71,12 @@ export {
   INSPECTION_ORDINAL_FIELDS,
   INSPECTION_ROOT_FIELDS,
   INSPECTION_WIRE_FIELDS,
+  toWireCatchUpPriority,
   toWireDeadLetter,
   toWireQueueState,
+  type WireCatchUpLevelSettings,
+  type WireCatchUpLoadSample,
+  type WireCatchUpPriority,
   type WireChannelConfig,
   type WireDeadLetter,
   type WireDeadLetterPage,

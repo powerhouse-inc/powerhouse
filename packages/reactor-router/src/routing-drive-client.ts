@@ -1,21 +1,25 @@
 import {
   DriveClient,
+  DriveClientFacade,
   type CopyNodeOptions,
-  type IDriveClient,
+  type IDriveReadClient,
+  type IDriveWriteClient,
+  type NodeWriteHandle,
   type PagedResults,
   type PagingOptions,
   type ViewFilter,
+  type WriteHandle,
 } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   DriveInput,
-  FolderNode,
   Node,
 } from "@powerhousedao/shared/document-drive";
 import type { ISigner, PHDocument } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { RouterBackend } from "./backend.js";
 import { ATTEMPT, type RouteDispatcher } from "./dispatcher.js";
+import { jobIdsOfHandle } from "./routing-handles.js";
 import { DEFAULT_BRANCH } from "./types.js";
 
 /** An identifier's id on one backend: its resolver when declared, else a read. */
@@ -33,202 +37,60 @@ export async function resolveOn(
   return document.header.id;
 }
 
-/** Routes a drive call to the DriveClient of the backend holding the drive. */
-export class RoutingDriveClient implements IDriveClient {
-  private readonly clients = new Map<string, IDriveClient>();
-
-  constructor(
-    private readonly dispatcher: RouteDispatcher,
-    logger: ILogger,
-    signer: ISigner,
-  ) {
-    for (const backend of dispatcher.backends) {
-      this.clients.set(
-        backend.name,
-        new DriveClient(
-          backend.api,
-          logger,
-          (request, signal) => backend.api.executeBatch(request, signal),
-          signer,
-          (identifier, signal) => resolveOn(backend, identifier, signal),
-        ),
-      );
-    }
+/** The drive client over a backend's facade members, with its halves exposed. */
+class FacadeDriveClient extends DriveClient {
+  get readHalf(): IDriveReadClient {
+    return this.reads;
   }
 
-  /** The drive client of one backend. */
-  on(backend: RouterBackend): IDriveClient {
-    const client = this.clients.get(backend.name);
+  get writeHalf(): IDriveWriteClient {
+    return this.writes;
+  }
+}
+
+/**
+ * Each backend's drive halves: the backend's own `read.drives` and
+ * `write.drives` when it has client halves, otherwise the drive client over
+ * its facade members, built once on first use.
+ */
+export class BackendDrives {
+  private readonly facades = new Map<string, FacadeDriveClient>();
+
+  constructor(
+    private readonly logger: ILogger,
+    private readonly signer: ISigner,
+  ) {}
+
+  readOn(backend: RouterBackend): IDriveReadClient {
+    return backend.api.read?.drives ?? this.facadeOf(backend).readHalf;
+  }
+
+  writeOn(backend: RouterBackend): IDriveWriteClient {
+    return backend.api.write?.drives ?? this.facadeOf(backend).writeHalf;
+  }
+
+  private facadeOf(backend: RouterBackend): FacadeDriveClient {
+    let client = this.facades.get(backend.name);
     if (client === undefined) {
-      throw new Error(`No drive client for backend ${backend.name}`);
+      client = new FacadeDriveClient(
+        backend.api,
+        this.logger,
+        (request, signal) => backend.api.executeBatch(request, signal),
+        this.signer,
+        (identifier, signal) => resolveOn(backend, identifier, signal),
+      );
+      this.facades.set(backend.name, client);
     }
     return client;
   }
+}
 
-  /** Placed by the input's id or slug; with neither, on the primary. */
-  async create(
-    input: DriveInput,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument> {
-    const backend = await this.placeNewDrive(input);
-    const drive = await this.dispatcher.onBackend(
-      "drives.create",
-      backend,
-      (target) => this.on(target).create(input, signal),
-      ATTEMPT.write,
-    );
-    this.dispatcher.recordDocument(drive.header.id, backend.name);
-    if (drive.header.slug !== "") {
-      this.dispatcher.recordDocument(drive.header.slug, backend.name);
-    }
-    this.dispatcher.table.recordCollection(
-      this.dispatcher.collectionFor(drive.header.id, drive.header.branch),
-      backend.name,
-      "accepted",
-    );
-    return drive;
-  }
-
-  async addFile<TDocument extends PHDocument = PHDocument>(
-    driveIdentifier: string,
-    document: PHDocument,
-    parentFolder?: string,
-    signal?: AbortSignal,
-  ): Promise<TDocument> {
-    let owner = "";
-    const created = await this.dispatcher.onCollection(
-      "drives.addFile",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      async (backend) => {
-        owner = backend.name;
-        await this.dispatcher.assertCreatableBeside(
-          "drives.addFile",
-          backend,
-          document.header.id,
-          driveIdentifier,
-        );
-        return this.on(backend).addFile<TDocument>(
-          driveIdentifier,
-          document,
-          parentFolder,
-          signal,
-        );
-      },
-      ATTEMPT.write,
-    );
-    this.dispatcher.recordDocument(created.header.id, owner);
-    return created;
-  }
-
-  addFolder(
-    driveIdentifier: string,
-    name: string,
-    parentFolder?: string,
-    signal?: AbortSignal,
-  ): Promise<FolderNode> {
-    return this.dispatcher.onCollection(
-      "drives.addFolder",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      (backend) =>
-        this.on(backend).addFolder(driveIdentifier, name, parentFolder, signal),
-      ATTEMPT.write,
-    );
-  }
-
-  removeNode(
-    driveIdentifier: string,
-    nodeId: string,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    return this.dispatcher.onCollection(
-      "drives.removeNode",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      (backend) => this.on(backend).removeNode(driveIdentifier, nodeId, signal),
-      ATTEMPT.write,
-    );
-  }
-
-  renameNode(
-    driveIdentifier: string,
-    nodeId: string,
-    name: string,
-    signal?: AbortSignal,
-  ): Promise<Node> {
-    return this.dispatcher.onCollection(
-      "drives.renameNode",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      (backend) =>
-        this.on(backend).renameNode(driveIdentifier, nodeId, name, signal),
-      ATTEMPT.write,
-    );
-  }
-
-  /** Names a node and no drive, so it routes as a document. */
-  setPreferredEditorOnNode(
-    nodeId: string,
-    preferredEditor: string | null,
-    signal?: AbortSignal,
-  ): Promise<PHDocument> {
-    return this.dispatcher.onDocument(
-      "drives.setPreferredEditorOnNode",
-      nodeId,
-      (backend) =>
-        this.on(backend).setPreferredEditorOnNode(
-          nodeId,
-          preferredEditor,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
-  }
-
-  moveNode(
-    driveIdentifier: string,
-    srcNodeId: string,
-    targetParentFolderId: string | undefined,
-    signal?: AbortSignal,
-  ): Promise<DocumentDriveDocument> {
-    return this.dispatcher.onCollection(
-      "drives.moveNode",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      (backend) =>
-        this.on(backend).moveNode(
-          driveIdentifier,
-          srcNodeId,
-          targetParentFolderId,
-          signal,
-        ),
-      ATTEMPT.write,
-    );
-  }
-
-  copyNode(
-    driveIdentifier: string,
-    srcNodeId: string,
-    targetParentFolderId: string | undefined,
-    signal?: AbortSignal,
-    options?: CopyNodeOptions,
-  ): Promise<DocumentDriveDocument> {
-    return this.dispatcher.onCollection(
-      "drives.copyNode",
-      driveIdentifier,
-      DEFAULT_BRANCH,
-      (backend) =>
-        this.on(backend).copyNode(
-          driveIdentifier,
-          srcNodeId,
-          targetParentFolderId,
-          signal,
-          options,
-        ),
-      ATTEMPT.write,
-    );
-  }
+/** Routes a drive read to the drive halves of the backend holding the drive. */
+export class RoutingDriveReadClient implements IDriveReadClient {
+  constructor(
+    private readonly dispatcher: RouteDispatcher,
+    private readonly drives: BackendDrives,
+  ) {}
 
   getNode(
     driveIdentifier: string,
@@ -239,7 +101,8 @@ export class RoutingDriveClient implements IDriveClient {
       "drives.getNode",
       driveIdentifier,
       DEFAULT_BRANCH,
-      (backend) => this.on(backend).getNode(driveIdentifier, nodeId, signal),
+      (backend) =>
+        this.drives.readOn(backend).getNode(driveIdentifier, nodeId, signal),
       ATTEMPT.read,
     );
   }
@@ -256,14 +119,180 @@ export class RoutingDriveClient implements IDriveClient {
       driveIdentifier,
       DEFAULT_BRANCH,
       (backend) =>
-        this.on(backend).listNodes(
-          driveIdentifier,
-          parentFolder,
-          paging,
-          signal,
-        ),
+        this.drives
+          .readOn(backend)
+          .listNodes(driveIdentifier, parentFolder, paging, signal),
       ATTEMPT.read,
     );
+  }
+}
+
+/**
+ * Routes a drive write to the drive halves of the backend holding the drive
+ * and hands back that backend's handle, recording where its jobs went.
+ */
+export class RoutingDriveWriteClient implements IDriveWriteClient {
+  constructor(
+    private readonly dispatcher: RouteDispatcher,
+    private readonly drives: BackendDrives,
+  ) {}
+
+  /** Placed by the input's id or slug; with neither, on the primary. */
+  async create(input: DriveInput, signal?: AbortSignal): Promise<WriteHandle> {
+    const backend = await this.placeNewDrive(input);
+    const handle = await this.dispatcher.onBackend(
+      "drives.create",
+      backend,
+      (target) => this.drives.writeOn(target).create(input, signal),
+      ATTEMPT.write,
+    );
+    this.recordJobs(handle, backend.name);
+    this.dispatcher.recordDocument(handle.documentId, backend.name);
+    this.dispatcher.table.recordCollection(
+      this.dispatcher.collectionFor(handle.documentId, handle.branch),
+      backend.name,
+      "accepted",
+    );
+    return handle;
+  }
+
+  async addFile(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    let owner = "";
+    const handle = await this.dispatcher.onCollection(
+      "drives.addFile",
+      driveIdentifier,
+      DEFAULT_BRANCH,
+      async (backend) => {
+        owner = backend.name;
+        await this.dispatcher.assertCreatableBeside(
+          "drives.addFile",
+          backend,
+          document.header.id,
+          driveIdentifier,
+        );
+        return this.drives
+          .writeOn(backend)
+          .addFile(driveIdentifier, document, parentFolder, signal);
+      },
+      ATTEMPT.write,
+    );
+    this.recordJobs(handle, owner);
+    this.dispatcher.recordDocument(handle.documentId, owner);
+    return handle;
+  }
+
+  addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle> {
+    return this.onDrive("drives.addFolder", driveIdentifier, (drives) =>
+      drives.addFolder(driveIdentifier, name, parentFolder, signal),
+    );
+  }
+
+  removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.onDrive("drives.removeNode", driveIdentifier, (drives) =>
+      drives.removeNode(driveIdentifier, nodeId, signal),
+    );
+  }
+
+  renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle> {
+    return this.onDrive("drives.renameNode", driveIdentifier, (drives) =>
+      drives.renameNode(driveIdentifier, nodeId, name, signal),
+    );
+  }
+
+  /** Names a node and no drive, so it routes as a document. */
+  async setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    let owner = "";
+    const handle = await this.dispatcher.onDocument(
+      "drives.setPreferredEditorOnNode",
+      nodeId,
+      (backend) => {
+        owner = backend.name;
+        return this.drives
+          .writeOn(backend)
+          .setPreferredEditorOnNode(nodeId, preferredEditor, signal);
+      },
+      ATTEMPT.write,
+    );
+    this.recordJobs(handle, owner);
+    return handle;
+  }
+
+  moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle> {
+    return this.onDrive("drives.moveNode", driveIdentifier, (drives) =>
+      drives.moveNode(driveIdentifier, srcNodeId, targetParentFolderId, signal),
+    );
+  }
+
+  copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+    options?: CopyNodeOptions,
+  ): Promise<WriteHandle> {
+    return this.onDrive("drives.copyNode", driveIdentifier, (drives) =>
+      drives.copyNode(
+        driveIdentifier,
+        srcNodeId,
+        targetParentFolderId,
+        signal,
+        options,
+      ),
+    );
+  }
+
+  private async onDrive<T extends WriteHandle>(
+    label: string,
+    driveIdentifier: string,
+    run: (drives: IDriveWriteClient) => Promise<T>,
+  ): Promise<T> {
+    let owner = "";
+    const handle = await this.dispatcher.onCollection(
+      label,
+      driveIdentifier,
+      DEFAULT_BRANCH,
+      (backend) => {
+        owner = backend.name;
+        return run(this.drives.writeOn(backend));
+      },
+      ATTEMPT.write,
+    );
+    this.recordJobs(handle, owner);
+    return handle;
+  }
+
+  private recordJobs(handle: WriteHandle, backend: string): void {
+    for (const jobId of jobIdsOfHandle(handle)) {
+      this.dispatcher.recordJob(jobId, backend);
+    }
   }
 
   private async placeNewDrive(input: DriveInput): Promise<RouterBackend> {
@@ -279,5 +308,33 @@ export class RoutingDriveClient implements IDriveClient {
       route.backend,
       `placement for a new drive keyed ${JSON.stringify(key)}`,
     );
+  }
+}
+
+/**
+ * The routing drive facade: each write is the routing drive write half's,
+ * then the document its handle names, read back once readable, as the
+ * reactor's own drive facade does.
+ */
+export class RoutingDriveClient extends DriveClientFacade {
+  constructor(
+    reads: RoutingDriveReadClient,
+    writes: RoutingDriveWriteClient,
+    private readonly dispatcher: RouteDispatcher,
+  ) {
+    super(reads, writes);
+  }
+
+  /** Also routes the new drive's slug to the backend that holds it. */
+  override async create(
+    input: DriveInput,
+    signal?: AbortSignal,
+  ): Promise<DocumentDriveDocument> {
+    const drive = await super.create(input, signal);
+    const owner = this.dispatcher.table.documentBackend(drive.header.id);
+    if (drive.header.slug !== "" && owner !== "") {
+      this.dispatcher.recordDocument(drive.header.slug, owner);
+    }
+    return drive;
   }
 }

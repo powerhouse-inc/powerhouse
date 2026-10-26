@@ -1,5 +1,6 @@
 import type {
   IReactorClient,
+  IReactorReadClient,
   IRelationalDb,
   ISyncManager,
   SyncScopeGate,
@@ -21,17 +22,37 @@ import {
   type CanonicalDocumentId,
   type IAuthorizationService,
 } from "../services/authorization.service.js";
-import {
-  createCanonicalDocumentIdResolver,
-  type CanonicalDocumentIdResolver,
-} from "../services/canonical-document-id.js";
+import { createCanonicalDocumentIdResolver } from "../services/canonical-document-id.js";
 import type { IAttachmentClientProvider } from "../services/authorized-attachment.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   createCredentialInvalidator,
   type ICredentialInvalidator,
 } from "../services/auth.service.js";
+import {
+  operationOfClients,
+  readOnlyClients,
+  type RequestClients,
+} from "./request-clients.js";
 import type { Context } from "./types.js";
+
+/**
+ * Stands in for a client the subgraph was not given: any use names what to
+ * use instead rather than failing on `undefined`.
+ */
+function missingClient<TClient extends object>(
+  name: string,
+  hint: string,
+): TClient {
+  return new Proxy({} as TClient, {
+    get(_target, property) {
+      if (property === "then" || typeof property === "symbol") {
+        return undefined;
+      }
+      throw new Error(`${name}.${String(property)}: ${hint}`);
+    },
+  });
+}
 
 /**
  * The subject a request reads as: its address and the app key its token
@@ -56,6 +77,16 @@ export class BaseSubgraph implements ISubgraph {
       hello: String
     }
   `;
+  /**
+   * The read half, for setup-time use (schema building, model lookup).
+   * Resolvers read through `ctx.clients.read` instead.
+   */
+  readonly readClient: IReactorReadClient;
+  /**
+   * @deprecated The facade over both halves, for subgraphs that have not
+   * moved. Resolvers use `ctx.clients.read` and, in a mutation,
+   * `ctx.clients.write`; setup-time code uses {@link readClient}.
+   */
   reactorClient: IReactorClient;
   /** This package's namespaced slice of the HTTP surface. */
   readonly http: SubgraphArgs["http"];
@@ -84,18 +115,35 @@ export class BaseSubgraph implements ISubgraph {
     Map<string, CanonicalDocumentId>
   >();
 
-  readonly #resolveCanonical: CanonicalDocumentIdResolver;
+  readonly #unboundClients: RequestClients;
 
   readonly #attachments?: IAttachmentClientProvider;
 
   readonly #attachmentClientMemo = new WeakMap<object, IAttachmentClient>();
 
   constructor(args: SubgraphArgs) {
-    this.#resolveCanonical = createCanonicalDocumentIdResolver(
-      args.reactorClient,
-    );
+    // A facade without halves (an older implementation, a mock) is itself a
+    // read client.
+    const facadeRead = args.reactorClient?.read as
+      | Partial<IReactorReadClient>
+      | undefined;
+    this.readClient =
+      args.readClient ??
+      (typeof facadeRead?.get === "function"
+        ? (facadeRead as IReactorReadClient)
+        : args.reactorClient) ??
+      missingClient<IReactorReadClient>(
+        "BaseSubgraph.readClient",
+        "this subgraph was constructed without a readClient.",
+      );
+    this.reactorClient =
+      args.reactorClient ??
+      missingClient<IReactorClient>(
+        "BaseSubgraph.reactorClient",
+        "this host passes no reactorClient facade. Read through ctx.clients.read (or this.readClient at setup) and write through ctx.clients.write in a mutation.",
+      );
+    this.#unboundClients = readOnlyClients(this.readClient);
     this.http = args.http;
-    this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;
     this.syncManager = args.syncManager;
@@ -125,6 +173,15 @@ export class BaseSubgraph implements ISubgraph {
     return client;
   }
 
+  /**
+   * The clients this request's operation may use: those the GraphQL layer put
+   * on the context. A context it never saw (a resolver called directly) reads
+   * through {@link readClient} and may not write.
+   */
+  clientsOf(ctx: Context | undefined): RequestClients {
+    return ctx?.clients ?? this.#unboundClients;
+  }
+
   async onSetup() {
     // noop
   }
@@ -140,8 +197,9 @@ export class BaseSubgraph implements ISubgraph {
   /**
    * Resolves a caller-supplied identifier (id or slug) to its canonical
    * document id, memoized per request. Both the decision layer and the data
-   * layer must agree on the subject, so this runs the same resolveIdOrSlug
-   * lookup the data path uses. A resolution failure (not found, ambiguous, or
+   * layer must agree on the subject, so this runs the lookup the data path
+   * uses: `resolveIdOrSlug` on the read half for a query, `describe` on the
+   * write half for a mutation. A resolution failure (not found, ambiguous, or
    * transient) surfaces as a generic Forbidden, fail-closed, so a bad
    * identifier cannot be used as a document-existence oracle.
    */
@@ -158,9 +216,17 @@ export class BaseSubgraph implements ISubgraph {
     const cached = cache.get(identifier);
     if (cached !== undefined) return cached;
 
+    const clients = this.clientsOf(requestKey as Context);
+    const resolve =
+      operationOfClients(clients) === "mutation"
+        ? createCanonicalDocumentIdResolver(
+            { read: clients.read, write: clients.write },
+            "mutation",
+          )
+        : createCanonicalDocumentIdResolver({ read: clients.read }, "query");
     let canonical: CanonicalDocumentId;
     try {
-      canonical = await this.#resolveCanonical(identifier);
+      canonical = await resolve(identifier);
     } catch {
       throw new ForbiddenError();
     }
@@ -269,7 +335,7 @@ export class BaseSubgraph implements ISubgraph {
     ctx: Context,
     view?: Pick<ViewFilter, "branch" | "scopes">,
   ): Promise<boolean> {
-    return this.reactorClient.isServed(identifier, {
+    return this.clientsOf(ctx).read.isServed(identifier, {
       ...view,
       subject: this.viewSubject(ctx),
     });

@@ -37,6 +37,7 @@ import {
   connectRouterChunkGroups,
   connectRoutes,
   hasProjectAppLayout,
+  ignoreBuildOutput,
   ignoreDotPhButRouteTree,
   resolveConnectRoutesDir,
 } from "./vite-plugins/connect-routes.js";
@@ -519,6 +520,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
           // Test coverage reports: rewritten by every test run.
           "**/coverage/**",
           ignoreDotPhButRouteTree(options.dirname, routesDir),
+          ignoreBuildOutput(options.dirname),
         ],
       },
       fs: {

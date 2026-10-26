@@ -1,59 +1,43 @@
 import {
-  addFolder as addFolderAction,
-  copyNode as copyNodeAction,
-  deleteNode as deleteNodeAction,
-  driveDocumentModelModule,
-  driveDocumentType,
-  generateNodesCopy,
-  getDescendants,
-  handleTargetNameCollisions,
-  isFileNode,
   isFolderNode,
-  moveNode as moveNodeAction,
-  updateNode as updateNodeAction,
   type DocumentDriveDocument,
   type DriveInput,
   type FolderNode,
   type Node,
 } from "@powerhousedao/shared/document-drive";
-import { addFile as addFileAction } from "@powerhousedao/shared/document-drive";
-import {
-  creationActions,
-  createVersionsOf,
-  actions,
-  createCopyHeader,
-  generateId,
-  type Action,
-  type DocumentModelModule,
-  type ISigner,
-  type PHBaseState,
-  type PHDocument,
-  type PHDocumentHeader,
-  type ProtocolVersions,
+import type {
+  Action,
+  ISigner,
+  PHDocument,
+  ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import {
-  addRelationshipAction,
-  deleteDocumentAction,
-  removeRelationshipAction,
-} from "../actions/index.js";
-import { createEmptyDocument } from "./derivations.js";
+import type { IReactor } from "../core/types.js";
 import type {
-  BatchExecutionRequest,
-  BatchExecutionResult,
-  ExecutionJobPlan,
-  IReactor,
-} from "../core/types.js";
-import { getSharedActionScope, signActions } from "../core/utils.js";
-import type { JobInfo, PagedResults, PagingOptions } from "../shared/types.js";
-import { JobStatus } from "../shared/types.js";
-import { parsePagingOptions } from "../shared/utils.js";
+  ConsistencyToken,
+  PagedResults,
+  PagingOptions,
+  ViewFilter,
+} from "../shared/types.js";
+import { DriveReadClient } from "./drive-read-client.js";
+import {
+  asJobError,
+  DriveWriteClient,
+  type BatchSubmitter,
+  type DriveWriteHalf,
+} from "./drive-write-client.js";
+import { WriteHandleFactory, type HandleReader } from "./internal/handles.js";
 import type {
   CopyNodeOptions,
   CreateProtocolVersionsOptions,
   IDriveClient,
+  IDriveReadClient,
+  IDriveWriteClient,
   IReactorClient,
+  WriteHandle,
 } from "./types.js";
+
+export type { BatchSubmitter } from "./drive-write-client.js";
 
 /** The client members a {@link DriveClient} reads and writes through. */
 export type DriveClientDeps = Pick<
@@ -67,86 +51,24 @@ export type DriveClientDeps = Pick<
   | "waitForJob"
 >;
 
-export type BatchSubmitter = (
-  request: BatchExecutionRequest,
-  signal?: AbortSignal,
-) => Promise<BatchExecutionResult>;
-
-/** The source's versions under `override`; selection fills the keys both lack. */
-function withSelectedVersions(
-  header: PHDocumentHeader,
-  selected: ProtocolVersions,
-  override: ProtocolVersions | undefined,
-): Pick<PHDocumentHeader, "documentType" | "protocolVersions"> {
-  return {
-    documentType: header.documentType,
-    protocolVersions:
-      header.protocolVersions || override
-        ? { ...selected, ...header.protocolVersions, ...override }
-        : undefined,
-  };
-}
-
-export class DriveClient implements IDriveClient {
-  private readonly executeBatch: BatchSubmitter;
-
-  /** `submitter` may still be an IReactor, whose executeBatch is used. */
+/**
+ * The drive facade: today's {@link IDriveClient} over a drive read half and a
+ * drive write half. Each write is the write half's, then the document its
+ * handle names, read back once readable; a FAILED job is thrown as the job's
+ * own error, by name, as the drive client has always thrown it.
+ */
+export class DriveClientFacade implements IDriveClient {
   constructor(
-    private readonly client: DriveClientDeps,
-    private readonly logger: ILogger,
-    submitter: BatchSubmitter | IReactor,
-    private readonly signer: ISigner,
-    private readonly resolveReference: (
-      identifier: string,
-      signal?: AbortSignal,
-    ) => Promise<string>,
-    private readonly createProtocolVersions: (
-      options: CreateProtocolVersionsOptions,
-      signal?: AbortSignal,
-    ) => Promise<ProtocolVersions> = (options, signal) =>
-      client.getCreateProtocolVersions(options, signal),
-  ) {
-    this.executeBatch =
-      typeof submitter === "function"
-        ? submitter
-        : (request, signal) => submitter.executeBatch(request, signal);
-  }
+    protected readonly reads: IDriveReadClient,
+    protected readonly writes: IDriveWriteClient,
+  ) {}
 
   async create(
     input: DriveInput,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    this.logger.verbose("drives.create(@input)", input);
-    const driveDoc = createEmptyDocument(
-      driveDocumentModelModule as unknown as DocumentModelModule,
-      {
-        initialState: {
-          global: {
-            name: input.global.name || "",
-            icon: input.global.icon ?? null,
-            nodes: [],
-          },
-        } as Partial<PHBaseState>,
-        signaturePolicy: input.signaturePolicy,
-        protocolVersions: input.protocolVersions,
-      },
-      await this.client.getCreateSignaturePolicy(),
-      await this.client.getCreateProtocolVersions(
-        { documentType: driveDocumentType },
-        signal,
-      ),
-    ) as DocumentDriveDocument;
-    if (input.preferredEditor) {
-      driveDoc.header.meta = {
-        ...driveDoc.header.meta,
-        preferredEditor: input.preferredEditor,
-      };
-    }
-    return this.client.create<DocumentDriveDocument>(
-      driveDoc,
-      undefined,
-      signal,
-    );
+    const handle = await this.writes.create(input, signal);
+    return this.documentOf<DocumentDriveDocument>(handle, signal);
   }
 
   async addFile<TDocument extends PHDocument = PHDocument>(
@@ -155,81 +77,15 @@ export class DriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    this.logger.verbose(
-      "drives.addFile(@driveIdentifier, @document, @parentFolder)",
+    const handle = await this.writes.addFile(
       driveIdentifier,
-      document.header.id,
-      parentFolder,
-    );
-
-    const documentId = document.header.id;
-    const driveId = await this.resolveReference(driveIdentifier, signal);
-
-    const protocolVersions = await createVersionsOf(
       document,
-      (options) => this.createProtocolVersions(options, signal),
-      driveId,
-    );
-    const documentActions: Action[] = await signActions(
-      [
-        ...creationActions(document, protocolVersions),
-        addRelationshipAction(driveId, documentId, "child"),
-      ],
-      this.signer,
-      { documentId, branch: "main" },
+      parentFolder,
       signal,
     );
-
-    const driveActions: Action[] = await signActions(
-      [
-        addFileAction({
-          id: documentId,
-          name: document.header.name || documentId,
-          documentType: document.header.documentType,
-          parentFolder,
-        }),
-      ],
-      this.signer,
-      { documentId: driveId, branch: "main" },
-      signal,
-    );
-
-    // Two batches, not one with a dependsOn edge. A batch's edges are ordering
-    // only: a failed job still releases its dependents (see IQueue.failJob), so
-    // batching these would add the file node on top of a create that never
-    // landed, pointing the drive at whoever already owns that id. Waiting for
-    // the document to exist costs a round trip and makes that unrepresentable.
-    await this.runJobs(
-      [
-        {
-          key: "document",
-          documentId,
-          scope: getSharedActionScope(documentActions),
-          branch: "main",
-          actions: documentActions,
-          dependsOn: [],
-        },
-      ],
-      signal,
-    );
-
-    await this.runJobs(
-      [
-        {
-          key: "drive",
-          documentId: driveId,
-          scope: getSharedActionScope(driveActions),
-          branch: "main",
-          actions: driveActions,
-          dependsOn: [],
-        },
-      ],
-      signal,
-    );
-
-    // Through the client, not the reactor: this one holds the read gate, and a
+    // Through the read half, not the reactor: it holds the read gate, and a
     // document handed back from a write is a read like any other.
-    return this.client.get<TDocument>(documentId, undefined, signal);
+    return this.documentOf<TDocument>(handle, signal);
   }
 
   async addFolder(
@@ -238,24 +94,21 @@ export class DriveClient implements IDriveClient {
     parentFolder?: string,
     signal?: AbortSignal,
   ): Promise<FolderNode> {
-    this.logger.verbose(
-      "drives.addFolder(@driveIdentifier, @name, @parentFolder)",
+    const handle = await this.writes.addFolder(
       driveIdentifier,
       name,
       parentFolder,
+      signal,
     );
-    const folderId = generateId();
-    const updated = await this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      [addFolderAction({ id: folderId, name, parentFolder })],
+    const updated = await this.documentOf<DocumentDriveDocument>(
+      handle,
       signal,
     );
     // A denied action still completes its job, so a caller with no grant gets
     // the document back without the scope it tried to write.
     const node = (
       updated.state as Partial<typeof updated.state>
-    ).global?.nodes.find((n) => n.id === folderId);
+    ).global?.nodes.find((n) => n.id === handle.nodeId);
     if (!node || !isFolderNode(node)) {
       throw new Error("Folder creation failed");
     }
@@ -264,59 +117,15 @@ export class DriveClient implements IDriveClient {
 
   async removeNode(
     driveIdentifier: string,
-    nodeIdentifier: string,
+    nodeId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    this.logger.verbose(
-      "drives.removeNode(@driveIdentifier, @nodeIdentifier)",
+    const handle = await this.writes.removeNode(
       driveIdentifier,
-      nodeIdentifier,
-    );
-    const driveId = await this.resolveReference(driveIdentifier, signal);
-    const drive = await this.client.get<DocumentDriveDocument>(
-      driveId,
-      undefined,
+      nodeId,
       signal,
     );
-    // A folder is a node, not a document: a resolver that reads documents
-    // cannot resolve its id. Only an identifier that is no node's id is
-    // resolved, as a file's slug.
-    const nodes = drive.state.global.nodes;
-    const nodeId = nodes.some((n) => n.id === nodeIdentifier)
-      ? nodeIdentifier
-      : await this.resolveReference(nodeIdentifier, signal);
-    const node = nodes.find((n) => n.id === nodeId);
-
-    if (!node) {
-      // No FileNode, but the document may still exist as an orphan (relationship
-      // and document persisted, node never added — e.g. ADD_FILE rejected the
-      // name). Clean it up if so; otherwise it is genuinely unknown.
-      const exists = await this.documentExists(nodeId, signal);
-      if (!exists) {
-        throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
-      }
-      await this.removeFileNode(driveId, nodeId, signal);
-      return;
-    }
-
-    if (isFolderNode(node)) {
-      const fileDescendants = getDescendants(
-        node,
-        drive.state.global.nodes,
-      ).filter(isFileNode);
-      for (const file of fileDescendants) {
-        await this.removeFileNode(driveId, file.id, signal);
-      }
-      await this.client.execute(
-        driveId,
-        "main",
-        [deleteNodeAction({ id: nodeId })],
-        signal,
-      );
-      return;
-    }
-
-    await this.removeFileNode(driveId, nodeId, signal);
+    await this.completed(handle);
   }
 
   async renameNode(
@@ -325,30 +134,16 @@ export class DriveClient implements IDriveClient {
     name: string,
     signal?: AbortSignal,
   ): Promise<Node> {
-    this.logger.verbose(
-      "drives.renameNode(@driveIdentifier, @nodeId, @name)",
+    const handle = await this.writes.renameNode(
       driveIdentifier,
       nodeId,
       name,
-    );
-    const renamed = await this.client.execute(
-      nodeId,
-      "main",
-      [actions.setName({ name })],
       signal,
     );
-    if (renamed.header.name !== name) {
-      throw new Error("Document rename did not apply");
-    }
-    const drive = await this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      [updateNodeAction({ id: nodeId, name })],
-      signal,
-    );
+    const drive = await this.documentOf<DocumentDriveDocument>(handle, signal);
     const node = (
       drive.state as Partial<typeof drive.state>
-    ).global?.nodes.find((n) => n.id === nodeId);
+    ).global?.nodes.find((n) => n.id === handle.nodeId);
     if (!node) {
       throw new Error("Node missing from drive after rename");
     }
@@ -360,17 +155,12 @@ export class DriveClient implements IDriveClient {
     preferredEditor: string | null,
     signal?: AbortSignal,
   ): Promise<PHDocument> {
-    this.logger.verbose(
-      "drives.setPreferredEditorOnNode(@nodeId, @preferredEditor)",
+    const handle = await this.writes.setPreferredEditorOnNode(
       nodeId,
       preferredEditor,
-    );
-    return this.client.setPreferredEditor(
-      nodeId,
-      preferredEditor,
-      "main",
       signal,
     );
+    return this.documentOf(handle, signal);
   }
 
   async moveNode(
@@ -379,23 +169,13 @@ export class DriveClient implements IDriveClient {
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
   ): Promise<DocumentDriveDocument> {
-    this.logger.verbose(
-      "drives.moveNode(@driveIdentifier, @srcNodeId, @targetParentFolderId)",
+    const handle = await this.writes.moveNode(
       driveIdentifier,
       srcNodeId,
       targetParentFolderId,
-    );
-    return this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      [
-        moveNodeAction({
-          srcFolder: srcNodeId,
-          targetParentFolder: targetParentFolderId,
-        }),
-      ],
       signal,
     );
+    return this.documentOf<DocumentDriveDocument>(handle, signal);
   }
 
   async copyNode(
@@ -405,266 +185,156 @@ export class DriveClient implements IDriveClient {
     signal?: AbortSignal,
     options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument> {
-    this.logger.verbose(
-      "drives.copyNode(@driveIdentifier, @srcNodeId, @targetParentFolderId)",
+    const handle = await this.writes.copyNode(
       driveIdentifier,
       srcNodeId,
       targetParentFolderId,
-    );
-    const drive = await this.client.get<DocumentDriveDocument>(
-      driveIdentifier,
-      undefined,
       signal,
+      options,
     );
-    const srcNode = drive.state.global.nodes.find((n) => n.id === srcNodeId);
-    if (!srcNode) {
-      throw new Error(
-        `Node ${srcNodeId} not found in drive ${driveIdentifier}`,
-      );
-    }
-
-    const copyPlan = generateNodesCopy(
-      {
-        srcId: srcNodeId,
-        targetParentFolder: targetParentFolderId,
-        targetName: srcNode.name,
-      },
-      () => generateId(),
-      drive.state.global.nodes,
-    );
-
-    const resolvedNamesByTargetId = new Map<string, string>();
-    for (const entry of copyPlan) {
-      const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
-      if (!node) continue;
-      const resolved = handleTargetNameCollisions({
-        nodes: drive.state.global.nodes,
-        srcName: entry.targetName || node.name,
-        srcKind: isFileNode(node) ? "file" : "folder",
-        targetParentFolder: entry.targetParentFolder ?? null,
-      });
-      resolvedNamesByTargetId.set(entry.targetId, resolved);
-    }
-
-    const policy = await this.client.getCreateSignaturePolicy();
-    const selectedByType = new Map<string, ProtocolVersions>();
-    for (const entry of copyPlan) {
-      const node = drive.state.global.nodes.find((n) => n.id === entry.srcId);
-      if (!node || !isFileNode(node)) continue;
-      const srcDoc = await this.client.get(entry.srcId, undefined, signal);
-      const documentType = srcDoc.header.documentType;
-      let base = selectedByType.get(documentType);
-      if (base === undefined) {
-        base = await this.createProtocolVersions(
-          { documentType, parentIdentifier: drive.header.id },
-          signal,
-        );
-        selectedByType.set(documentType, base);
-      }
-
-      // Read snapshots carry no operations, so the copy is seeded from the
-      // source's current state rather than replayed. Replaying here would also
-      // pick a reducer by document type alone and apply it to state that is
-      // already current.
-      const duplicated: PHDocument = {
-        ...srcDoc,
-        header: createCopyHeader(
-          withSelectedVersions(srcDoc.header, base, options?.protocolVersions),
-          entry.targetId,
-          policy,
-        ),
-        initialState: srcDoc.state,
-        operations: {},
-      };
-
-      const resolvedName = resolvedNamesByTargetId.get(entry.targetId);
-      if (resolvedName) {
-        duplicated.header.name = resolvedName;
-      }
-      // A v2-required copy takes a derived id, which the drive's node must name.
-      entry.targetId = duplicated.header.id;
-      await this.addFile(
-        driveIdentifier,
-        duplicated,
-        entry.targetParentFolder ?? undefined,
-        signal,
-      );
-    }
-
-    return this.client.execute<DocumentDriveDocument>(
-      driveIdentifier,
-      "main",
-      copyPlan.map((entry) => copyNodeAction(entry)),
-      signal,
-    );
+    return this.documentOf<DocumentDriveDocument>(handle, signal);
   }
 
-  async getNode(
+  getNode(
     driveIdentifier: string,
     nodeId: string,
     signal?: AbortSignal,
   ): Promise<Node> {
-    this.logger.verbose(
-      "drives.getNode(@driveIdentifier, @nodeId)",
-      driveIdentifier,
-      nodeId,
-    );
-    const drive = await this.client.get<DocumentDriveDocument>(
-      driveIdentifier,
-      undefined,
-      signal,
-    );
-    const node = drive.state.global.nodes.find((n) => n.id === nodeId);
-    if (!node) {
-      throw new Error(`Node ${nodeId} not found in drive ${driveIdentifier}`);
-    }
-    return node;
+    return this.reads.getNode(driveIdentifier, nodeId, signal);
   }
 
-  async listNodes(
+  listNodes(
     driveIdentifier: string,
     parentFolder?: string | null,
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<Node>> {
-    this.logger.verbose(
-      "drives.listNodes(@driveIdentifier, @parentFolder, @paging)",
-      driveIdentifier,
-      parentFolder,
-      paging,
-    );
-    const drive = await this.client.get<DocumentDriveDocument>(
-      driveIdentifier,
-      undefined,
-      signal,
-    );
-    const allNodes = drive.state.global.nodes;
-    const filtered =
-      parentFolder === undefined
-        ? [...allNodes]
-        : allNodes.filter((n) => (n.parentFolder ?? null) === parentFolder);
-
-    const { offset: startIndex, limit } = parsePagingOptions(
-      paging,
-      filtered.length,
-    );
-    const effective: PagingOptions = paging ?? { cursor: "", limit };
-    const endIndex = startIndex + limit;
-    const slice = filtered.slice(startIndex, endIndex);
-    const hasMore = endIndex < filtered.length;
-
-    return {
-      results: slice,
-      options: effective,
-      ...(hasMore ? { nextCursor: String(endIndex) } : {}),
-    };
+    return this.reads.listNodes(driveIdentifier, parentFolder, paging, signal);
   }
 
-  /**
-   * Runs one batch to completion, throwing the first failure. The thrown error
-   * carries the job error's name, which is what callers classify on: an id
-   * collision has to be told apart from a transient failure.
-   */
-  private async runJobs(
-    jobs: ExecutionJobPlan[],
-    signal?: AbortSignal,
-  ): Promise<JobInfo[]> {
-    const batchResult = await this.executeBatch({ jobs }, signal);
+  private async completed(handle: WriteHandle): Promise<void> {
+    try {
+      await handle.readable;
+    } catch (error) {
+      throw asJobError(error);
+    }
+  }
 
-    const completedJobs = await Promise.all(
-      Object.values(batchResult.jobs).map((job) =>
-        this.client.waitForJob(job, signal),
+  private async documentOf<TDocument extends PHDocument = PHDocument>(
+    handle: WriteHandle,
+    signal: AbortSignal | undefined,
+  ): Promise<TDocument> {
+    await this.completed(handle);
+    return handle.document<TDocument>(undefined, signal);
+  }
+}
+
+/**
+ * The drive facade built from a client that has only the facade surface, as
+ * the drive client was constructed before the halves existed (the router
+ * builds one per backend). The client's writes wait for their jobs, so the
+ * handles they make are already settled and carry the document the write
+ * returned; batches go through `submitter` and wait through `waitForJob`.
+ */
+export class DriveClient extends DriveClientFacade {
+  /** `submitter` may still be an IReactor, whose executeBatch is used. */
+  constructor(
+    client: DriveClientDeps,
+    logger: ILogger,
+    submitter: BatchSubmitter | IReactor,
+    signer: ISigner,
+    resolveReference: (
+      identifier: string,
+      signal?: AbortSignal,
+    ) => Promise<string>,
+    createProtocolVersions?: (
+      options: CreateProtocolVersionsOptions,
+      signal?: AbortSignal,
+    ) => Promise<ProtocolVersions>,
+  ) {
+    const handles = new WriteHandleFactory({
+      waitForStage: (jobId, _stage, signal) => client.waitForJob(jobId, signal),
+    });
+    super(
+      new DriveReadClient(client, logger),
+      new DriveWriteClient(
+        facadeWriteHalf(client, handles),
+        client,
+        handles,
+        logger,
+        submitter,
+        signer,
+        resolveReference,
+        undefined,
+        createProtocolVersions,
       ),
     );
-
-    for (const job of completedJobs) {
-      if (job.status === JobStatus.FAILED) {
-        throw this.toError(job);
-      }
-    }
-
-    return completedJobs;
   }
+}
 
-  private toError(job: JobInfo): Error {
-    const error = new Error(job.error?.message ?? "Job failed");
-    if (job.error?.name) {
-      error.name = job.error.name;
-    }
-    return error;
-  }
+/** The drive write half's submissions, over a facade-only client. */
+function facadeWriteHalf(
+  client: DriveClientDeps,
+  handles: WriteHandleFactory,
+): DriveWriteHalf {
+  /**
+   * A settled handle carrying the document the write returned: read back
+   * without a view, it is that document; with one, it is read again.
+   */
+  const carrying = (document: PHDocument, branch: string): WriteHandle => {
+    const documentId = document.header.id;
+    const reader: HandleReader = <T extends PHDocument>(
+      receipt: { branch: string; token: ConsistencyToken },
+      view: ViewFilter | undefined,
+      signal: AbortSignal | undefined,
+    ): Promise<T> =>
+      view === undefined
+        ? Promise.resolve(document as T)
+        : client.get<T>(
+            documentId,
+            { ...view, branch: receipt.branch },
+            signal,
+            receipt.token,
+          );
+    return handles.settled(documentId, branch, reader);
+  };
 
-  private async documentExists(
-    documentId: string,
-    signal?: AbortSignal,
-  ): Promise<boolean> {
-    try {
-      await this.client.get(documentId, undefined, signal);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private async removeFileNode(
-    driveId: string,
-    fileId: string,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    const driveActions: Action[] = await signActions(
-      [deleteNodeAction({ id: fileId })],
-      this.signer,
-      { documentId: driveId, branch: "main" },
-      signal,
-    );
-    // Alone, so a drive that refuses the removal leaves the file untouched.
-    await this.runJobs(
-      [
-        {
-          key: "drive",
-          documentId: driveId,
-          scope: getSharedActionScope(driveActions),
-          branch: "main",
-          actions: driveActions,
-          dependsOn: [],
-        },
-      ],
-      signal,
-    );
-
-    const deleteActions: Action[] = await signActions(
-      [deleteDocumentAction(fileId)],
-      this.signer,
-      { documentId: fileId, branch: "main" },
-      signal,
-    );
-    const relationshipActions: Action[] = await signActions(
-      [removeRelationshipAction(driveId, fileId, "child")],
-      this.signer,
-      { documentId: driveId, branch: "main" },
-      signal,
-    );
-    // The drive's remotes are served the delete while the file is a member.
-    await this.runJobs(
-      [
-        {
-          key: "delete",
-          documentId: fileId,
-          scope: getSharedActionScope(deleteActions),
-          branch: "main",
-          actions: deleteActions,
-          dependsOn: [],
-        },
-        {
-          key: "relationship",
-          documentId: driveId,
-          scope: getSharedActionScope(relationshipActions),
-          branch: "main",
-          actions: relationshipActions,
-          dependsOn: ["delete"],
-        },
-      ],
-      signal,
-    );
-  }
+  return {
+    async execute(
+      documentIdentifier: string,
+      branch: string,
+      actionsToRun: Action[],
+      signal?: AbortSignal,
+    ): Promise<WriteHandle> {
+      const document = await client.execute(
+        documentIdentifier,
+        branch,
+        actionsToRun,
+        signal,
+      );
+      return carrying(document, branch);
+    },
+    async create(
+      document: PHDocument,
+      parentIdentifier?: string,
+      signal?: AbortSignal,
+    ): Promise<WriteHandle> {
+      const created = await client.create(document, parentIdentifier, signal);
+      return carrying(created, created.header.branch || "main");
+    },
+    async setPreferredEditor(
+      documentIdentifier: string,
+      preferredEditor: string | null,
+      branch: string = "main",
+      signal?: AbortSignal,
+    ): Promise<WriteHandle> {
+      const document = await client.setPreferredEditor(
+        documentIdentifier,
+        preferredEditor,
+        branch,
+        signal,
+      );
+      return carrying(document, branch);
+    },
+  };
 }

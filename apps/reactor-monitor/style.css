@@ -311,7 +311,30 @@ body {
 
 .rm-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.rm-priority-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.rm-priority-control select {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.rm-priority-status {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: #374151;
+  font-variant-numeric: tabular-nums;
 }
 
 .rm-stat-bar {
@@ -826,4 +849,116 @@ body {
   flex-direction: row;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* Progress bars. The track derives from the text colour and the fills are
+   mid-tone, so a bar reads on a light or a dark page alike. */
+
+.rm-progress-cell {
+  --rm-progress-track: color-mix(in srgb, currentColor 14%, transparent);
+  --rm-progress-active: #3b82f6;
+  --rm-progress-done: #10b981;
+  --rm-progress-error: #dc2626;
+}
+
+.rm-progress-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 16rem) minmax(4rem, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rm-progress-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rm-progress {
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--rm-progress-track);
+  overflow: hidden;
+}
+
+.rm-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.rm-progress-active .rm-progress-fill {
+  background: var(--rm-progress-active);
+}
+
+.rm-progress-done .rm-progress-fill {
+  background: var(--rm-progress-done);
+}
+
+.rm-progress-error .rm-progress-fill {
+  background: var(--rm-progress-error);
+}
+
+.rm-progress-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-progress-fill {
+    transition: none;
+  }
+}
+
+/* Bars inside a table cell: the row names them, so no label column. The
+   cell takes a fixed share of the table, past the usual cell cap. */
+.rm-table td.rm-progress-cell {
+  width: 16rem;
+  min-width: 11rem;
+  max-width: none;
+}
+
+/* A factory's name is never cut short. */
+.rm-factory-row td {
+  max-width: none;
+}
+
+/* A checkbox keeps its own size, not a text field's. */
+.rm-form input[type="checkbox"] {
+  min-width: 0;
+  padding: 0;
+}
+
+.rm-progress-row-bare {
+  grid-template-columns: minmax(4rem, 1fr) 4.5rem;
+}
+
+/* A factory's row heads its processors' rows. */
+.rm-factory-row td {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+
+.rm-processor-name {
+  padding-left: 1.25rem;
+}
+
+.rm-rerun-form {
+  margin-block: 0.5rem;
+}
+
+.rm-factory-toggle {
+  width: 1.4rem;
+  padding: 0;
+  margin-right: 0.25rem;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.rm-factory-toggle:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
 }

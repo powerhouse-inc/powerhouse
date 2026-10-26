@@ -17,6 +17,10 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  identityFromDocumentState,
+  resolvableSlug,
+} from "../shared/document-identity.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -370,15 +374,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           let name: string | null = existingSnapshot?.name ?? null;
 
           if (scopeName === "header") {
-            const headerSlug = newState.slug;
-            const headerName = newState.name;
-
-            if (typeof headerSlug === "string") {
-              slug = headerSlug;
-            }
-            if (typeof headerName === "string" && !preserveHeaderName) {
-              name = headerName;
-            }
+            ({ slug, name } = identityFromDocumentState(
+              { header: newState },
+              { slug, name },
+              { preserveName: preserveHeaderName },
+            ));
 
             if (needsExistingContent && existingSnapshot) {
               const existingHeader = existingSnapshot.content as Record<
@@ -398,11 +398,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             // from reaching one: re-inserting here would make the document
             // resolvable by slug again, and the upsert would take the slug from
             // a live document that has since claimed it.
-            if (slug && slug !== documentId && !existingSnapshot?.isDeleted) {
+            const mappedSlug = resolvableSlug(slug, documentId);
+            if (mappedSlug && !existingSnapshot?.isDeleted) {
               await trx
                 .insertInto("SlugMapping")
                 .values({
-                  slug,
+                  slug: mappedSlug,
                   documentId,
                   scope: scopeName,
                   branch,

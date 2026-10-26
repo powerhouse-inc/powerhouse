@@ -66,7 +66,12 @@ export interface SwitchboardHostContext {
   workflows?: unknown;
   workflowsRetry?: unknown;
   api?: unknown;
+  /** @deprecated The facade; plugins that have moved take `read` and `write`. */
   client?: unknown;
+  /** The reactor's read half (IReactorReadClient), set at onReactorReady. */
+  read?: unknown;
+  /** The reactor's write half (IReactorWriteClient), set at onReactorReady. */
+  write?: unknown;
   graphqlManager?: unknown;
   reactorClientModule?: unknown;
   /** Late subgraph registrations drain before the readiness router update. */

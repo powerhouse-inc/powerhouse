@@ -47,11 +47,17 @@ const SERVED: Record<
   create: true,
   createEmpty: true,
   execute: true,
+  executeAsync: true,
   deleteDocument: true,
 };
 
-// Refused by name, so a piece learns why. `drives` has no methods to call.
-const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
+// Refused by name, so a piece learns why. `drives`, `read` and `write` have no
+// methods to call.
+const REFUSED: Record<
+  Exclude<RefusedMethods, "drives" | "read" | "write">,
+  true
+> = {
+  getMany: true,
   createDocumentInDrive: true,
   executeBatch: true,
   rename: true,
@@ -62,7 +68,6 @@ const REFUSED: Record<Exclude<RefusedMethods, "drives">, true> = {
   moveRelationship: true,
   upgradeDocument: true,
   deleteDocuments: true,
-  executeAsync: true,
   createAsync: true,
   createEmptyAsync: true,
   getJobStatus: true,

@@ -1,10 +1,14 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type {
-  IDriveClient,
-  IReactorClient,
-  IRelationalDb,
-  ISyncManager,
-  SyncScopeGate,
+import {
+  FacadeWriteClient,
+  warnOnce,
+  type IDriveClient,
+  type IReactorClient,
+  type IReactorReadClient,
+  type IReactorWriteClient,
+  type IRelationalDb,
+  type ISyncManager,
+  type SyncScopeGate,
 } from "@powerhousedao/reactor";
 import type {
   Context,
@@ -69,6 +73,7 @@ import {
 import { callerSubject } from "./base-subgraph.js";
 import type { IReactorInspectionSource } from "./inspection/source.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import { RequestClientBinder, type RequestClients } from "./request-clients.js";
 import {
   admitDocumentModels,
   byClaimPriority,
@@ -150,7 +155,19 @@ export type GraphQLManagerOptions = {
   path: string;
   httpServer: http.Server;
   wsServer: WebSocketServer;
-  reactorClient: IReactorClient;
+  /**
+   * The read half: every query reads through it (as `ctx.clients.read`), and
+   * so do setup-time lookups, drive discovery and the drive ownership cache.
+   */
+  readClient?: IReactorReadClient;
+  /** The write half, handed to mutation resolvers as `ctx.clients.write`. */
+  writeClient?: IReactorWriteClient;
+  /**
+   * @deprecated Pass `readClient` and `writeClient`. Accepted for one release:
+   * the halves are taken from its `read` and `write`, and it is still handed
+   * to subgraphs as their deprecated `reactorClient`.
+   */
+  reactorClient?: IReactorClient;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   syncManager: ISyncManager;
@@ -172,7 +189,7 @@ export type GraphQLManagerOptions = {
   inspection?: IReactorInspectionSource;
   /**
    * Where drive ownership is looked up, past the read gate. Defaults to the
-   * reactor client, which withholds a drive the host's own key may not read.
+   * read client, which withholds a drive the host's own key may not read.
    */
   driveStore?: DriveStore;
   reportError?: ReportError;
@@ -405,7 +422,11 @@ export class GraphQLManager {
   private readonly path: string;
   private readonly httpServer: http.Server;
   private readonly wsServer: WebSocketServer;
-  private readonly reactorClient: IReactorClient;
+  readonly #readClient: IReactorReadClient;
+  readonly #facade: IReactorClient | undefined;
+  readonly #clients: RequestClientBinder;
+  /** What a context carries before its operation is known: no write. */
+  readonly #unboundClients: RequestClients;
   private readonly relationalDb: IRelationalDb;
   private readonly analyticsStore: IAnalyticsStore;
   private readonly syncManager: ISyncManager;
@@ -427,7 +448,11 @@ export class GraphQLManager {
     this.path = options.path;
     this.httpServer = options.httpServer;
     this.wsServer = options.wsServer;
-    this.reactorClient = options.reactorClient;
+    const { read, write } = resolveClientHalves(options);
+    this.#readClient = read;
+    this.#facade = options.reactorClient;
+    this.#clients = new RequestClientBinder(read, write);
+    this.#unboundClients = this.#clients.unboundClients();
     this.relationalDb = options.relationalDb;
     this.analyticsStore = options.analyticsStore;
     this.syncManager = options.syncManager;
@@ -461,7 +486,7 @@ export class GraphQLManager {
     this.#reporting = { logger: options.logger, report: options.reportError };
 
     this.driveOwnershipCache = new DriveOwnershipCache(
-      options.driveStore ?? this.reactorClient,
+      options.driveStore ?? this.#readClient,
     );
     this.#wsRouter = new SubgraphWsRouter({
       order: (subgraphs) => this.#byClaimPriority(subgraphs),
@@ -487,7 +512,7 @@ export class GraphQLManager {
     );
 
     // check if Document Drive model is available
-    const modulesResult = await this.reactorClient.getDocumentModelModules();
+    const modulesResult = await this.#readClient.getDocumentModelModules();
     const models = modulesResult.results;
 
     const driveModel = models.find(
@@ -524,7 +549,7 @@ export class GraphQLManager {
       try {
         // Read as the caller, so a drive whose domain it may not read serves
         // its header alone; discovery must still reach graphqlEndpoint.
-        const driveDoc = await this.reactorClient.get<DocumentDriveDocument>(
+        const driveDoc = await this.#readClient.get<DocumentDriveDocument>(
           driveIdOrSlug,
           { subject: callerSubject(user) },
         );
@@ -630,7 +655,7 @@ export class GraphQLManager {
 
   async #regenerateDocumentModelSubgraphs(): Promise<void> {
     try {
-      const modulesResult = await this.reactorClient.getDocumentModelModules();
+      const modulesResult = await this.#readClient.getDocumentModelModules();
       const models = modulesResult.results;
       this.cachedDocumentModels = this.#admitModels(models);
 
@@ -729,7 +754,8 @@ export class GraphQLManager {
             http: this.scopeForPackage(CORE_PACKAGE_NAME),
             relationalDb: this.relationalDb,
             analyticsStore: this.analyticsStore,
-            reactorClient: this.reactorClient,
+            readClient: this.#readClient,
+            reactorClient: this.#facade,
             graphqlManager: this,
             syncManager: this.syncManager,
             path: this.path,
@@ -1312,7 +1338,8 @@ export class GraphQLManager {
       http: this.scopeForPackage(packageName ?? CORE_PACKAGE_NAME),
       relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
-      reactorClient: this.reactorClient,
+      readClient: this.#readClient,
+      reactorClient: this.#facade,
       graphqlManager: this,
       syncManager: this.syncManager,
       path: this.path,
@@ -1617,6 +1644,7 @@ export class GraphQLManager {
         ...this.getAdditionalContextFields(),
         driveId,
         user: authCtx?.user,
+        clients: this.#unboundClients,
       });
     };
   }
@@ -1636,6 +1664,7 @@ export class GraphQLManager {
         db: this.relationalDb,
         ...this.getAdditionalContextFields(),
         user,
+        clients: this.#unboundClients,
       }),
     });
   }
@@ -1750,7 +1779,7 @@ export class GraphQLManager {
           const generated = this.#generated();
           const schema = createSchema(
             this.cachedDocumentModels,
-            subgraph.resolvers,
+            this.#boundResolvers(subgraph),
             subgraph.typeDefs,
             this.#schemaOptions(subgraph),
           );
@@ -1946,10 +1975,30 @@ export class GraphQLManager {
     return claims;
   }
 
+  /**
+   * The subgraph's resolvers, each handed the context for the operation it runs
+   * in: `ctx.clients.write` only in a mutation, or in a query field a core
+   * subgraph declares in `writeSideQueries`.
+   */
+  #boundResolvers(subgraph: ISubgraph): ISubgraph["resolvers"] {
+    const writeSide =
+      subgraph.writeSideQueries && this.#isCore(subgraph)
+        ? new Set(subgraph.writeSideQueries)
+        : undefined;
+    return this.#clients.bindResolvers(subgraph.resolvers, writeSide);
+  }
+
+  #isCore(subgraph: ISubgraph): boolean {
+    for (const subgraphs of this.coreSubgraphsMap.values()) {
+      if (subgraphs.includes(subgraph)) return true;
+    }
+    return false;
+  }
+
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {
     return buildSubgraphSchemaModule(
       this.cachedDocumentModels,
-      subgraph.resolvers,
+      this.#boundResolvers(subgraph),
       subgraph.typeDefs,
       this.#schemaOptions(subgraph),
     );
@@ -2173,5 +2222,41 @@ function subscriptionOwners(
       if (owner !== undefined) tags.add(owner);
     }
     return tags;
+  };
+}
+
+/**
+ * The client halves a manager runs on: the ones passed, or, from a deprecated
+ * facade, its own halves. A facade without halves (an older implementation)
+ * is itself the read half and is adapted for writes.
+ */
+function resolveClientHalves(options: GraphQLManagerOptions): {
+  read: IReactorReadClient;
+  write: IReactorWriteClient;
+} {
+  if (options.readClient && options.writeClient) {
+    return { read: options.readClient, write: options.writeClient };
+  }
+  const facade = options.reactorClient;
+  if (!facade) {
+    throw new Error(
+      "GraphQLManager needs readClient and writeClient (or a reactorClient)",
+    );
+  }
+  warnOnce(
+    "GraphQLManagerOptions.reactorClient",
+    "Pass readClient and writeClient; the facade is kept for subgraphs only.",
+  );
+  const read = facade.read as Partial<IReactorReadClient> | undefined;
+  const write = facade.write as Partial<IReactorWriteClient> | undefined;
+  return {
+    read:
+      options.readClient ??
+      (typeof read?.get === "function" ? (read as IReactorReadClient) : facade),
+    write:
+      options.writeClient ??
+      (typeof write?.execute === "function"
+        ? (write as IReactorWriteClient)
+        : new FacadeWriteClient(facade)),
   };
 }

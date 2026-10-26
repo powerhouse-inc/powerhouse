@@ -47,6 +47,7 @@ export function createReactorInspector(
     queue: module.queue instanceof InMemoryQueue ? module.queue : undefined,
     processorManager: module.processorManager,
     catchUp: module.catchUp,
+    catchUpPriority: module.catchUpPriority,
     integrity: new DocumentIntegrityService(
       module.keyframeStore,
       module.operationStore,

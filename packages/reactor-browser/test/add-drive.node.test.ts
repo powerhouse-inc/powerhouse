@@ -13,6 +13,7 @@ import {
   type ProtocolVersions,
   type SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addDrive } from "../src/actions/drive.js";
 import type { PHGlobal } from "../src/types/global.js";
@@ -39,10 +40,10 @@ describe("addDrive (issue #2838)", () => {
       Promise.resolve(doc),
     );
     window.ph = {
-      reactorClient: {
+      reactorClient: withHalves({
         create,
         newDocument: newDocumentUnder("v2-required", { "base-reducer": 3 }),
-      },
+      }),
     } as unknown as PHGlobal;
   });
 
@@ -88,10 +89,10 @@ describe("addDrive (issue #2838)", () => {
 
   it("creates a legacy drive under the client's legacy creation default", async () => {
     window.ph = {
-      reactorClient: {
+      reactorClient: withHalves({
         create,
         newDocument: newDocumentUnder("legacy", { "base-reducer": 2 }),
-      },
+      }),
     } as unknown as PHGlobal;
 
     await addDrive({ global: { name: "Legacy" } });
