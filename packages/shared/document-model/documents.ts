@@ -865,7 +865,7 @@ export function addUndo(sortedOperations: Operation[]) {
         ...latestOperation.action,
 
         // TODO: this will break the signature...
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
       },
@@ -878,7 +878,7 @@ export function addUndo(sortedOperations: Operation[]) {
       skip: 1,
       hash: latestOperation.hash,
       action: {
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
         input: {},
