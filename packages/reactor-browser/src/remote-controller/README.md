@@ -48,7 +48,7 @@ const client = createClient("https://switchboard.example.com/graphql");
 
 ### Create a new document
 
-Omit `documentId` and pass a `parentIdentifier` (the drive to create in). `pull` heads the new document with the host's signature policy and protocol versions for its type, read from `createDefaults`, as `GraphQLReactorClient.newDocument` does. The first push creates the remote from that header, so the document runs the same versions before and after it:
+Omit `documentId` and pass a `parentIdentifier` (the drive to create in). `pull` heads the new document with the host's signature policy and protocol versions for its type, read from `createDefaults`, as `GraphQLReactorClient.newDocument` does. The first push creates the remote from that header, so the document runs the same versions before and after it. A Switchboard without `createDefaults` (6.2.3 and earlier) creates it with `CreateEmptyDocument` instead, at the versions it chooses:
 
 ```typescript
 const controller = await RemoteDocumentController.pull(
@@ -366,7 +366,7 @@ type SyncStatus = {
 ### Push flow
 
 1. Flush pending actions from the tracker.
-2. If this is a new document (no `documentId`), create it on the remote via `CreateDocument` from the local header and initial state.
+2. If this is a new document (no `documentId`), create it on the remote via `CreateDocument` from the local header and initial state, or via `CreateEmptyDocument` on a Switchboard without `createDefaults`.
 3. If `onConflict` is set, check if the remote has new operations since the last pull. Handle conflicts according to the strategy (reject, rebase, or custom merge).
 4. If a signer is configured, sign each action with its `prevOpHash`.
 5. Send all actions in a single `MutateDocument` call.

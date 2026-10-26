@@ -1221,4 +1221,120 @@ describe("RemoteDocumentController", () => {
       expect(controller.status.pendingActionCount).toBe(1);
     });
   });
+
+  describe("new documents", () => {
+    /** Apollo's answer to a query on a Switchboard that predates createDefaults (6.2.3). */
+    const noCreateDefaults = () =>
+      Object.assign(new Error("validation failed"), {
+        response: {
+          status: 400,
+          errors: [
+            {
+              message: 'Cannot query field "createDefaults" on type "Query".',
+              extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+            },
+          ],
+        },
+      });
+
+    it("heads a new document with the host's versions for its type", async () => {
+      const client = createMockClient();
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, parentIdentifier: "drive-1" },
+      );
+
+      expect(controller.header.protocolVersions).toEqual({
+        "base-reducer": 2,
+        signature: 2,
+      });
+      expect(client.GetCreateProtocolVersions).toHaveBeenCalledWith(
+        {
+          documentType: "powerhouse/document-model",
+          parentIdOrSlug: "drive-1",
+        },
+        undefined,
+        undefined,
+      );
+
+      const headed = controller.header;
+      controller.setName({ name: "New Doc" });
+      await controller.push();
+
+      const created = createdDocument(client).header;
+      expect(created.id).toBe(headed.id);
+      expect(created.protocolVersions).toEqual(headed.protocolVersions);
+    });
+
+    it("creates through CreateEmptyDocument on a Switchboard without createDefaults", async () => {
+      const client = createMockClient({
+        GetCreateDefaults: vi.fn().mockRejectedValue(noCreateDefaults()),
+        GetCreateProtocolVersions: vi
+          .fn()
+          .mockRejectedValue(noCreateDefaults()),
+      });
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, parentIdentifier: "drive-1" },
+      );
+
+      controller.setName({ name: "New Doc" });
+      const result = await controller.push();
+
+      expect(client.CreateEmptyDocument).toHaveBeenCalledExactlyOnceWith({
+        documentType: "powerhouse/document-model",
+        parentIdentifier: "drive-1",
+      });
+      expect(client.CreateDocument).not.toHaveBeenCalled();
+      expect(result.actionCount).toBe(1);
+      expect(controller.status.documentId).toBe("new-doc-1");
+    });
+
+    it("passes on any other createDefaults failure", async () => {
+      const refused = Object.assign(new Error("forbidden"), {
+        response: {
+          status: 200,
+          errors: [{ message: "Forbidden", extensions: { code: "FORBIDDEN" } }],
+        },
+      });
+      const client = createMockClient({
+        GetCreateDefaults: vi.fn().mockRejectedValue(refused),
+      });
+
+      await expect(
+        RemoteDocumentController.pull(DocumentModelController, { client }),
+      ).rejects.toBe(refused);
+    });
+
+    it("creates a wrapped new document under its own header", async () => {
+      const client = createMockClient();
+      const local = new DocumentModelController();
+      const controller = RemoteDocumentController.from(local, { client });
+
+      controller.setName({ name: "local" });
+      await controller.push();
+
+      expect(createdDocument(client).header.protocolVersions).toEqual(
+        local.header.protocolVersions,
+      );
+      expect(client.GetCreateProtocolVersions).not.toHaveBeenCalled();
+    });
+
+    it("pulls the remote header's protocol versions", async () => {
+      const client = createMockClient({
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse({
+            ...makeDocData(),
+            protocolVersions: { "base-reducer": 1 },
+          } as never),
+        ),
+      });
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        { client, documentId: "doc-1" },
+      );
+
+      expect(controller.header.protocolVersions).toEqual({ "base-reducer": 1 });
+    });
+  });
 });

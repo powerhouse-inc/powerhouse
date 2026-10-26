@@ -5,6 +5,8 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
@@ -17,6 +19,7 @@ import {
   readCreateProtocolVersions,
   readCreateSignaturePolicy,
 } from "../graphql-client/create-defaults.js";
+import { GraphQLOperationNotSupportedError } from "../graphql-client/errors.js";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
 import type {
@@ -292,20 +295,29 @@ export class RemoteDocumentController<
 
   // --- Private methods ---
 
-  /** Heads the new document with the host's versions for its type, as `newDocument` does. */
+  /** Heads the new document with the host's versions for its type, as `newDocument` does; a host without `createDefaults` creates it with `createEmptyDocument`. */
   private async headNewDocument(): Promise<void> {
     const module = this.inner.module;
-    const [policy, versions] = await Promise.all([
-      readCreateSignaturePolicy(this.options.client),
-      readCreateProtocolVersions(
-        this.options.client,
-        {
-          documentType: this.inner.header.documentType,
-          parentIdentifier: this.options.parentIdentifier,
-        },
-        [module],
-      ),
-    ]);
+    let policy: SignaturePolicy;
+    let versions: ProtocolVersions;
+    try {
+      [policy, versions] = await Promise.all([
+        readCreateSignaturePolicy(this.options.client),
+        readCreateProtocolVersions(
+          this.options.client,
+          {
+            documentType: this.inner.header.documentType,
+            parentIdentifier: this.options.parentIdentifier,
+          },
+          [module],
+        ),
+      ]);
+    } catch (error) {
+      if (!(error instanceof GraphQLOperationNotSupportedError)) throw error;
+      // A host without createDefaults heads the document itself.
+      this.uncreated = undefined;
+      return;
+    }
     const document = headNewDocument(module, undefined, policy, versions);
     this.uncreated = structuredClone(document);
     this.replaceInner(document);
@@ -314,13 +326,16 @@ export class RemoteDocumentController<
   /** Creates the remote from the local header, so both run the versions its creator chose. */
   private async ensureRemoteDocument(): Promise<void> {
     if (this.documentId !== "") return;
-    if (this.uncreated === undefined) {
-      throw new Error("Cannot create: the new document was not kept");
-    }
-    const remoteDoc = await this.remoteClient.createDocument(
-      this.uncreated,
-      this.options.parentIdentifier,
-    );
+    const remoteDoc =
+      this.uncreated === undefined
+        ? await this.remoteClient.createEmptyDocument(
+            this.inner.header.documentType,
+            this.options.parentIdentifier,
+          )
+        : await this.remoteClient.createDocument(
+            this.uncreated,
+            this.options.parentIdentifier,
+          );
     this.documentId = remoteDoc.id;
     this.canonicalDocumentId = remoteDoc.id;
     this.uncreated = undefined;
