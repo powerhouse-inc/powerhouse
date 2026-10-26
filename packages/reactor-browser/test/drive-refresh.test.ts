@@ -21,6 +21,7 @@ import {
   refreshDrive,
   refreshDriveMembership,
 } from "../src/reactor.js";
+import { driveNodesCacheOf } from "./utils/drive-nodes.js";
 
 function makeDrive(id: string, nodes = 0): DocumentDriveDocument {
   return {
@@ -167,6 +168,26 @@ describe("drive refresh", () => {
     expect(get).toHaveBeenCalledTimes(2);
     expect(get.mock.calls.every((c) => c[0] === "mail")).toBe(true);
     expect(find).not.toHaveBeenCalled();
+  });
+
+  it("an update invalidates that drive's node cache after the re-read", async () => {
+    const mail = makeDrive("mail", 1);
+    const sektar = makeDrive("sektar", 1);
+    setDrives([mail, sektar]);
+    getPHStore()!.driveNodes = driveNodesCacheOf(mail, sektar);
+    const { client } = readClient(
+      new Map([
+        ["mail", makeDrive("mail", 2)],
+        ["sektar", sektar],
+      ]),
+    );
+    const handle = createDriveChangeHandler(client, { minIntervalMs: 10_000 });
+
+    handle(updated(mail));
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(getPHStore()?.driveNodes?.has("mail")).toBe(false);
+    expect(getPHStore()?.driveNodes?.has("sektar")).toBe(true);
   });
 
   it("a creation or deletion refreshes the membership, not every drive", async () => {

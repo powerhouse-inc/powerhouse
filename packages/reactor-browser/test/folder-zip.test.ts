@@ -14,6 +14,7 @@ import {
 import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildFolderZip } from "../src/actions/folder-zip.js";
+import { driveReaderFromDocuments } from "./utils/drive-nodes.js";
 import { unzipAsync } from "./utils/unzip.js";
 
 const DRIVE_ID = "drive-1";
@@ -91,8 +92,12 @@ function upgradeOps(document: PHDocument): DocumentOperations {
   };
 }
 
-function stubClient(documents: Record<string, PHDocument | undefined>) {
+function stubClient(
+  documents: Record<string, PHDocument | undefined>,
+  drive: DocumentDriveDocument = driveDocument(),
+) {
   const client = withHalves({
+    drives: driveReaderFromDocuments(() => [drive]).reader,
     get: (identifier: string) => {
       if (identifier === DRIVE_ID) return Promise.resolve(driveDocument());
       const doc = documents[identifier];
@@ -210,10 +215,13 @@ describe("buildFolderZip", () => {
       },
       state: { global: { nodes }, local: {} },
     } as unknown as DocumentDriveDocument;
-    const client = stubClient({
-      r1: sourceDocument("r1", "report"),
-      r2: sourceDocument("r2", "report"),
-    });
+    const client = stubClient(
+      {
+        r1: sourceDocument("r1", "report"),
+        r2: sourceDocument("r2", "report"),
+      },
+      drive,
+    );
 
     const { zip } = await buildFolderZip(drive, undefined, fakeFetch(client));
 

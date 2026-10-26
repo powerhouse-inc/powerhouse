@@ -1,3 +1,4 @@
+import { getDriveNode } from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type {
   IReactorReadClient,
@@ -63,6 +64,7 @@ import {
 import { showPHModal } from "../hooks/modals.js";
 import { getFullReactorClient } from "../hooks/reactor.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
+import { listAllDriveNodes } from "../utils/nodes.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
 
@@ -79,14 +81,14 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const siblings = await listAllDriveNodes(reactorClient.drives, driveId, {
+    parentFolder: parentFolder ?? null,
+  });
 
   // Case 1: Check for duplicate by ID
-  const nodeById = drive.state.global.nodes.find(
-    (node: { id: string }) => node.id === document.header.id,
-  );
+  const nodeById = siblings.find((node) => node.id === document.header.id);
 
-  if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
+  if (nodeById) {
     return {
       isDuplicate: true,
       duplicateType: "id",
@@ -95,12 +97,11 @@ async function isDocumentInLocation(
   }
 
   // Case 2: Check for duplicate by name + type in same parent folder
-  const nodeByNameAndType = drive.state.global.nodes.find(
+  const nodeByNameAndType = siblings.find(
     (node: Node) =>
       isFileNode(node) &&
       node.name === document.header.name &&
-      node.documentType === document.header.documentType &&
-      node.parentFolder === (parentFolder ?? null),
+      node.documentType === document.header.documentType,
   );
 
   if (nodeByNameAndType) {
@@ -892,7 +893,7 @@ export async function updateFile(
     throw new Error("User is not allowed to update files");
   }
   const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
-  const unsafeCastAsDrive = (await queueActions(
+  await queueActions(
     drive,
     baseUpdateFile({
       id: nodeId,
@@ -900,11 +901,9 @@ export async function updateFile(
       parentFolder,
       documentType,
     }),
-  )) as DocumentDriveDocument;
-
-  const node = unsafeCastAsDrive.state.global.nodes.find(
-    (node) => node.id === nodeId,
   );
+
+  const node = await getDriveNode(driveId, nodeId, { refresh: true });
   if (!node || !isFileNode(node)) {
     throw new Error("There was an error updating document");
   }
@@ -936,11 +935,9 @@ export async function addFolder(
       parentFolder,
     }),
   ]);
-  const updatedDrive = await added.document<DocumentDriveDocument>();
+  await added.readable;
 
-  const node = updatedDrive.state.global.nodes.find(
-    (node) => node.id === folderId,
-  );
+  const node = await getDriveNode(driveId, folderId, { refresh: true });
   if (!node || !isFolderNode(node)) {
     throw new Error("There was an error adding folder");
   }
@@ -991,9 +988,9 @@ export async function renameNode(
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
-  const drive = await updated.document<DocumentDriveDocument>();
+  await updated.readable;
 
-  const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+  const node = await getDriveNode(driveId, nodeId, { refresh: true });
   if (!node) {
     throw new Error("There was an error renaming node in the drive");
   }
@@ -1027,8 +1024,8 @@ export async function renameDriveNode(
   const updated = await reactorClient.write.execute(driveId, "main", [
     updateNode({ id: nodeId, name }),
   ]);
-  const drive = await updated.document<DocumentDriveDocument>();
-  return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+  await updated.readable;
+  return getDriveNode(driveId, nodeId, { refresh: true });
 }
 
 export async function setPreferredEditorOnNode(
@@ -1193,6 +1190,7 @@ export async function copyNode(
   }
 
   const drive = await reactor.read.get<DocumentDriveDocument>(driveId);
+  const driveNodes = await listAllDriveNodes(reactor.read.drives, driveId);
 
   const copyNodesInput = generateNodesCopy(
     {
@@ -1201,18 +1199,16 @@ export async function copyNode(
       targetName: src.name,
     },
     () => generateId(),
-    drive.state.global.nodes,
+    driveNodes,
   );
 
   // Pre-calculate collision-resolved names for all nodes to be copied
   const resolvedNamesMap = new Map<string, string>();
   for (const copyNodeInput of copyNodesInput) {
-    const node = drive.state.global.nodes.find(
-      (n) => n.id === copyNodeInput.srcId,
-    );
+    const node = driveNodes.find((n) => n.id === copyNodeInput.srcId);
     if (node) {
       const resolvedName = handleTargetNameCollisions({
-        nodes: drive.state.global.nodes,
+        nodes: driveNodes,
         srcName: copyNodeInput.targetName || node.name,
         srcKind: isFileNode(node) ? "file" : "folder",
         targetParentFolder: copyNodeInput.targetParentFolder || null,
@@ -1222,9 +1218,7 @@ export async function copyNode(
   }
 
   const fileNodesToCopy = copyNodesInput.filter((copyNodeInput) => {
-    const node = drive.state.global.nodes.find(
-      (node) => node.id === copyNodeInput.srcId,
-    );
+    const node = driveNodes.find((node) => node.id === copyNodeInput.srcId);
     return node !== undefined && isFileNode(node);
   });
 
