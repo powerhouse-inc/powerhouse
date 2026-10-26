@@ -201,3 +201,27 @@ describe("listen ports", () => {
     );
   });
 });
+
+describe("rewriteHostHeader", () => {
+  it("is off by default: the public name reaches the upstream", () => {
+    expect(renderCaddyfile(caddyInput)).not.toContain("header_up");
+  });
+
+  it("hands every upstream its own host:port when on, labels, fallback and vanity alike", () => {
+    const out = renderCaddyfile({
+      ...caddyInput,
+      rewriteHostHeader: true,
+      vanityDomains: ["portal.sektar.be"],
+    });
+    expect(out).toContain(
+      "\t\treverse_proxy 127.0.0.1:7540 {\n\t\t\theader_up Host {upstream_hostport}\n\t\t}",
+    );
+    expect(out).toContain(
+      "\thandle {\n\t\treverse_proxy 127.0.0.1:2540 {\n\t\t\theader_up Host {upstream_hostport}\n\t\t}\n\t}",
+    );
+    expect(out.slice(out.indexOf("https:// {"))).toContain(
+      "\treverse_proxy 127.0.0.1:2540 {\n\t\theader_up Host {upstream_hostport}\n\t}",
+    );
+    expect(out.match(/header_up Host/g)).toHaveLength(4);
+  });
+});

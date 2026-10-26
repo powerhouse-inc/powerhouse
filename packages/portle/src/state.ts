@@ -38,6 +38,12 @@ export interface SiteSettings {
    * can use high ports and still be reached through the relay.
    */
   listen: { https: number; http: number };
+  /**
+   * Send the upstream's own host:port as the Host header instead of the
+   * public name. Dev servers that check the Host header (Vite's
+   * `server.allowedHosts`) refuse the public name otherwise.
+   */
+  rewriteHostHeader?: boolean;
   /** Bring the tunnel up at boot when the gate passes. Set by start, cleared by stop. */
   autostart: boolean;
 }
@@ -104,6 +110,7 @@ export const DEFAULT_SITE_SETTINGS: Omit<SiteSettings, "controlPlaneUrl"> = {
   upstreams: {},
   dns01Mode: "rfc2136",
   listen: { https: 443, http: 80 },
+  rewriteHostHeader: false,
   autostart: false,
 };
 

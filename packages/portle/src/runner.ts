@@ -57,7 +57,10 @@ export interface EnrolInput {
 }
 
 export type SettingsPatch = Partial<
-  Pick<SiteSettings, "appUpstream" | "upstreams" | "dns01Mode" | "listen">
+  Pick<
+    SiteSettings,
+    "appUpstream" | "upstreams" | "dns01Mode" | "listen" | "rewriteHostHeader"
+  >
 >;
 
 /** What the subgraph and the hooks drive; the class below is the real one. */
@@ -260,6 +263,7 @@ export class PortleRunner implements PortleRunnerLike {
           : [dnsHost],
         dns01,
         listen: settings.listen,
+        rewriteHostHeader: settings.rewriteHostHeader ?? false,
       }),
       0o600,
     );

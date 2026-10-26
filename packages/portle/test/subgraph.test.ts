@@ -297,3 +297,44 @@ describe("portle subgraph: delegation and listen ports", () => {
     ]);
   });
 });
+
+describe("portle subgraph: host header rewrite", () => {
+  it("portleConfigure passes the flag through and the status reports it, defaulting to false", async () => {
+    const runner = fakeRunner(
+      statusOf({
+        enrolled: true,
+        settings: {
+          controlPlaneUrl: "c",
+          appUpstream: "x",
+          upstreams: {},
+          dns01Mode: "rfc2136",
+          listen: { https: 443, http: 80 },
+          autostart: false,
+        },
+      }),
+    );
+    const { Query, Mutation } = resolversOf(
+      createPortleSubgraph({ api: apiOf(), runner }),
+    );
+    Mutation.portleConfigure(
+      undefined,
+      { rewriteHostHeader: true },
+      ctxOf(ADMIN),
+    );
+    Mutation.portleConfigure(
+      undefined,
+      { rewriteHostHeader: null },
+      ctxOf(ADMIN),
+    );
+    expect(runner.calls).toEqual([
+      'configure {"rewriteHostHeader":true}',
+      "configure {}",
+    ]);
+    const status = (await Query.portleStatus(
+      undefined,
+      {},
+      ctxOf(ADMIN),
+    )) as ReturnType<typeof toWireStatus>;
+    expect(status.settings?.rewriteHostHeader).toBe(false);
+  });
+});

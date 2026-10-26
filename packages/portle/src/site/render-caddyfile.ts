@@ -52,6 +52,11 @@ export interface CaddyRenderInput {
   dns01: Dns01;
   /** Local listen ports; 443/80 unless the machine cannot bind them. */
   listen?: { https: number; http: number } | undefined;
+  /**
+   * Send the upstream's own host:port as the Host header instead of the
+   * public name, for dev servers that check it (Vite's allowedHosts).
+   */
+  rewriteHostHeader?: boolean | undefined;
 }
 
 function port(value: number, what: string): number {
@@ -113,6 +118,14 @@ export function renderCaddyfile(input: CaddyRenderInput): string {
 			server_url ${q(input.dns01.serverUrl)}
 		}`;
 
+  /** One reverse_proxy directive at the given tab depth. */
+  const proxy = (target: string, depth: number): string => {
+    const t = "\t".repeat(depth);
+    return input.rewriteHostHeader
+      ? `${t}reverse_proxy ${target} {\n${t}\theader_up Host {upstream_hostport}\n${t}}`
+      : `${t}reverse_proxy ${target}`;
+  };
+
   const https = port(input.listen?.https ?? 443, "HTTPS port");
   const http = port(input.listen?.http ?? 80, "HTTP port");
   if (https === http) throw new Error("HTTPS and HTTP ports must differ");
@@ -167,7 +180,7 @@ https:// {
 	tls {
 		on_demand
 	}
-	reverse_proxy ${upstream}
+${proxy(upstream, 1)}
 }
 `
       : "";
@@ -176,16 +189,16 @@ https:// {
   // per label, first match wins, and the bare `handle` takes everything else.
   const routing =
     labelled.length === 0
-      ? `	reverse_proxy ${upstream}`
+      ? proxy(upstream, 1)
       : [
           ...labelled.map(
             ({ label, target }) => `	@${label} host ${label}.${input.siteZone}
 	handle @${label} {
-		reverse_proxy ${target}
+${proxy(target, 2)}
 	}`,
           ),
           `	handle {
-		reverse_proxy ${upstream}
+${proxy(upstream, 2)}
 	}`,
         ].join("\n");
 

@@ -87,6 +87,7 @@ export const portleTypeDefs = parse(/* GraphQL */ `
     upstreams: [PortleUpstream!]!
     dns01Mode: String!
     listen: PortleListen!
+    rewriteHostHeader: Boolean!
     autostart: Boolean!
   }
 
@@ -141,6 +142,11 @@ export const portleTypeDefs = parse(/* GraphQL */ `
       dns01Mode: String
       listenHttps: Int
       listenHttp: Int
+      """
+      Send the upstream's host:port as the Host header (for dev servers that
+      check it, such as Vite's allowedHosts).
+      """
+      rewriteHostHeader: Boolean
     ): PortleStatus!
     """
     Bring the tunnel up. Refused unless every readiness check passes for the caller.
@@ -221,6 +227,7 @@ export function toWireStatus(
     delegation: status.delegation && { ...status.delegation, delegated },
     settings: status.settings && {
       ...status.settings,
+      rewriteHostHeader: status.settings.rewriteHostHeader ?? false,
       upstreams: Object.entries(status.settings.upstreams).map(
         ([label, target]): WireUpstream => ({ label, target }),
       ),
@@ -282,6 +289,7 @@ export function createPortleSubgraph({
             dns01Mode?: string | null;
             listenHttps?: number | null;
             listenHttp?: number | null;
+            rewriteHostHeader?: boolean | null;
           }) =>
             toWireStatus(
               runner.configure({
@@ -306,6 +314,9 @@ export function createPortleSubgraph({
                         http: args.listenHttp ?? 80,
                       },
                     }
+                  : {}),
+                ...(args.rewriteHostHeader != null
+                  ? { rewriteHostHeader: args.rewriteHostHeader }
                   : {}),
               }),
             ),
