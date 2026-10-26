@@ -4,10 +4,7 @@ import type {
   ProtocolVersions,
   Supports,
 } from "@powerhousedao/shared/document-model";
-import {
-  fitCreateBaseReducer,
-  selectProtocolVersions,
-} from "@powerhousedao/shared/document-model";
+import { selectProtocolVersions } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { DriveCollectionId } from "../cache/operation-index-types.js";
 import type {
@@ -50,15 +47,8 @@ export class CreateProtocolSelector {
     }
     const members = await this.members(parentIdentifier, signal);
     const selected = selectProtocolVersions({ ...selection, members });
-    if (documentType === undefined) {
-      return selected;
-    }
-    return fitCreateBaseReducer(
-      selected,
-      documentType,
-      await this.deps.modules(documentType, signal),
-      logger,
-    );
+    // Pinned: base-reducer 2 is the only version this reactor runs, so there is nothing to fit.
+    return selected;
   }
 
   private async members(

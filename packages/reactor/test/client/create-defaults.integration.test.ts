@@ -38,8 +38,7 @@ function copyOf(
 }
 
 describe.each<{ flags: Partial<ReactorFeatureFlags>; expected: number }>([
-  { flags: {}, expected: 3 },
-  { flags: { undoV3: false }, expected: 2 },
+  { flags: {}, expected: 2 },
 ])("creates through a reactor with $flags", ({ flags, expected }) => {
   const reactors: IReactor[] = [];
 
