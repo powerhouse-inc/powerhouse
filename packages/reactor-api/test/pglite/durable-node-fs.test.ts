@@ -381,6 +381,7 @@ describe("createDurableNodeFs", () => {
     it("reads the threshold in MB and the timings in ms, ignoring invalid values", () => {
       expect(
         resolvePgliteMaintenance({
+          PH_PGLITE_VACUUM_FULL: "quiet",
           PH_PGLITE_VACUUM_FULL_ABOVE_MB: "512",
           PH_PGLITE_VACUUM_FULL_QUIET_MS: "0",
           PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "-5",

@@ -296,6 +296,7 @@ describe("vacuumFullTimingFromEnv", () => {
   it("reads both timings, and leaves unset or invalid values to the defaults", () => {
     expect(
       vacuumFullTimingFromEnv({
+        PH_PGLITE_VACUUM_FULL: "quiet",
         PH_PGLITE_VACUUM_FULL_QUIET_MS: "0",
         PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "600000",
       }),
@@ -303,6 +304,7 @@ describe("vacuumFullTimingFromEnv", () => {
     expect(vacuumFullTimingFromEnv({})).toEqual({ vacuumFullAboveBytes: 0 });
     expect(
       vacuumFullTimingFromEnv({
+        PH_PGLITE_VACUUM_FULL: "quiet",
         PH_PGLITE_VACUUM_FULL_QUIET_MS: "soon",
         PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS: "-5",
       }),
