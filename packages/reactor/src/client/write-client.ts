@@ -101,8 +101,6 @@ export class ReactorWriteClient implements IReactorWriteClient {
   private readonly handles: WriteHandleFactory;
   private readonly actionEvaluation: ActionEvaluationConfig | undefined;
   private readonly read: ReactorReadClient;
-  // Tail of each (document, scope, branch) undo/redo chain.
-  private readonly undoRedoChains = new Map<string, Promise<unknown>>();
 
   constructor(parts: ReactorClientParts, read: ReactorReadClient) {
     this.logger = parts.logger;

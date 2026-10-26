@@ -371,13 +371,6 @@ export class RemoteDocumentController<
     }
   }
 
-  /** Applies `action` locally through the model's reducer and tracks it. */
-  private applyAction(action: Action): this {
-    return this.applyAndTrack(() => {
-      this.replaceInner(this.inner.module.reducer(this.inner.document, action));
-    });
-  }
-
   /** Runs `apply`, then tracks the operation it added for push. */
   private applyAndTrack(apply: () => void): this {
     // Snapshot operation counts per scope BEFORE applying
