@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { SyncManager } from "../../../src/sync/sync-manager.js";
 import { ChannelErrorSource } from "../../../src/sync/types.js";
 import { syncOperationErrorType } from "../../../src/sync/utils.js";
 import { create, Fleet, manifestFor, NARROW, WIDE } from "./fleet.js";
@@ -34,7 +35,7 @@ describe("a stored refusal of a base-reducer 2 document", () => {
     );
 
     // Reloads the channel's dead letters from storage, as a restart does.
-    await b.sync.resetChannel("b->a");
+    await (b.sync as SyncManager).resetChannel("b->a");
 
     const reloaded = b.sync.getByName("b->a").channel.deadLetter.items;
     expect(
