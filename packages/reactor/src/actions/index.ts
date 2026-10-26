@@ -10,6 +10,7 @@ import type {
 import {
   actions as documentActions,
   generateActionId,
+  generateId,
 } from "@powerhousedao/shared/document-model";
 
 export { documentActions };
@@ -19,7 +20,7 @@ export { documentActions };
  */
 export function createDocumentAction(input: CreateDocumentActionInput): Action {
   return {
-    id: generateActionId(),
+    id: generateId(),
     type: "CREATE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -34,7 +35,7 @@ export function upgradeDocumentAction(
   input: UpgradeDocumentActionInput,
 ): Action {
   return {
-    id: generateActionId(),
+    id: generateId(),
     type: "UPGRADE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
