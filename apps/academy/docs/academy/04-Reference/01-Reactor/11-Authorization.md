@@ -75,8 +75,8 @@ const admin: Grant = {
   capability: { can: "execute", scope: "auth" },
 };
 
-await client.execute(documentId, "main", [initializeAuth({ version: 1, grants: [admin] })]);
-await client.execute(documentId, "main", [setGrant({ grant: readers })]);
+await client.write.execute(documentId, "main", [initializeAuth({ version: 1, grants: [admin] })]);
+await client.write.execute(documentId, "main", [setGrant({ grant: readers })]);
 ```
 
 ### Grants

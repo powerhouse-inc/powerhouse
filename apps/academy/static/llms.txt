@@ -42,7 +42,7 @@
 
 - [Powerhouse Architecture](https://academy.vetra.io/academy/Reference/Architecture/PowerhouseArchitecture): Vetra is part of the Powerhouse Ecosystem and acts as the builder platform for creating an independent, open-source and decentralized back-end for any
 - [Working with the Reactor](https://academy.vetra.io/academy/Reference/Reactor/WorkingWithTheReactor): Document models are the common design pattern that is used for all documents and files. DocSync is a decentralized synchronization protocol that is st
-- [IReactorClient](https://academy.vetra.io/academy/Reference/Reactor/ReactorClient): The IReactorClient interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler
+- [IReactorClient](https://academy.vetra.io/academy/Reference/Reactor/ReactorClient): The reactor client is the primary way to interact with a Powerhouse reactor programmatically. It comes in two halves:
 - [Advanced reactor usage](https://academy.vetra.io/academy/Reference/Reactor/AdvancedReactorUsage): This page covers the low-level IReactor interface and the internal components you can access through ReactorModule. Most developers should use IReacto
 - [Synchronization and remote drives](https://academy.vetra.io/academy/Reference/Reactor/Synchronization): Sync makes one reactor mirror operations with a remote drive. The local reactor pushes operations it produces and pulls operations the remote produces
 - [Processors](https://academy.vetra.io/academy/Reference/Reactor/Processors): A processor receives operations after the write phase and performs side effects: analytics rollups, relational indexing, webhooks, dispatching follow-

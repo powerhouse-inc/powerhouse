@@ -4,14 +4,24 @@ toc_max_heading_level: 3
 
 # IReactorClient
 
-The `IReactorClient` interface is the primary way to interact with a Powerhouse reactor programmatically. It wraps lower-level APIs to provide a simpler, Promise-based interface for document operations.
+The reactor client is the primary way to interact with a Powerhouse reactor programmatically. It comes in two halves:
+
+- **`client.read`** (`IReactorReadClient`) answers from read models and never enqueues a job.
+- **`client.write`** (`IReactorWriteClient`) enqueues jobs. Every write resolves once its job is accepted and returns a [`WriteHandle`](#writehandle) you await for the commit or the updated document.
+
+`IReactorClient` carries both as `read` and `write`. It also exposes the read methods directly, so `client.get(...)` and `client.read.get(...)` are the same call. Write through `client.write`.
 
 ```typescript
-import type { IReactorClient } from "@powerhousedao/reactor-browser";
+import type {
+  IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
+  WriteHandle,
+} from "@powerhousedao/reactor";
 ```
 
 :::info[Import paths]
-`@powerhousedao/reactor-browser` re-exports a curated subset of reactor values and types for browser environments (editors, drive-apps, subgraphs). `IReactorClient`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder` are re-exported there. Most other types on this page are not re-exported and must come from `@powerhousedao/reactor`: `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, and `OperationFilter`. Outside the browser (a standalone Node.js script, CLI tool, or server-side processor), import everything from `@powerhousedao/reactor`.
+`@powerhousedao/reactor-browser` re-exports a curated subset of reactor values and types for browser environments (editors, drive-apps, subgraphs). `IReactorClient`, `IReactorReadClient`, `IReactorWriteClient`, `WriteHandle`, `WriteReceipt`, `DocumentChangeType`, `ReactorBuilder`, and `ReactorClientBuilder` are re-exported there. Most other types on this page are not re-exported and must come from `@powerhousedao/reactor`: `ViewFilter`, `SearchFilter`, `PagingOptions`, `PagedResults`, `PropagationMode`, `JobInfo`, `JobStatus`, `DocumentChangeEvent`, and `OperationFilter`. Outside the browser (a standalone Node.js script, CLI tool, or server-side processor), import everything from `@powerhousedao/reactor`.
 :::
 
 For an architectural overview of the reactor, see [Working with the Reactor](/academy/Reference/Reactor/WorkingWithTheReactor). For the low-level `IReactor` interface and access to internal components, see [Advanced Reactor Usage](/academy/Reference/Reactor/AdvancedReactorUsage).
@@ -210,7 +220,7 @@ const result = await reactorClient.get(
 );
 ```
 
-**Cancel long-running writes.** Write methods like `execute()` wait for the job to reach `READ_READY`. If this takes too long, an abort signal lets you bail out:
+**Bound a write's stage waits.** A write resolves once its job is accepted, but awaiting `handle.readable` or `handle.document()` waits for `READ_READY`. Those waits are bounded by the signal the write was called with:
 
 ```typescript
 const controller = new AbortController();
@@ -218,19 +228,22 @@ const controller = new AbortController();
 // Set a 10-second deadline
 setTimeout(() => controller.abort(), 10_000);
 
-const updated = await reactorClient.execute(
+const handle = await reactorClient.write.execute(
   docId,
   "main",
   actions,
   controller.signal,
 );
+const updated = await handle.document();
 ```
 
 When a request is aborted, the method throws an `AbortError`. Detect it with `isAbortError(err)` from `@powerhousedao/reactor` rather than matching `err.name`. The underlying reactor job may still complete; aborting only cancels the client-side wait, not the server-side processing.
 
 ---
 
-## Read methods
+## Read methods (`client.read`)
+
+Reads that accept a `consistencyToken` wait until the read models they read from hold every operation the token names. Pass the `token` from a write's [`WriteReceipt`](#writehandle) to read your own write on any instance serving the same store. The token is always the last parameter.
 
 ### `get`
 
@@ -241,16 +254,20 @@ get<TDocument extends PHDocument>(
   identifier: string,
   view?: ViewFilter,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<TDocument>
 ```
 
 **Parameters:**
 
-| Name         | Type          | Required | Description                        |
-| ------------ | ------------- | -------- | ---------------------------------- |
-| `identifier` | `string`      | Yes      | Document id or slug                |
-| `view`       | `ViewFilter`  | No       | Branch, scopes, or revision filter |
-| `signal`     | `AbortSignal` | No       | Cancel the request                 |
+| Name               | Type               | Required | Description                         |
+| ------------------ | ------------------ | -------- | ----------------------------------- |
+| `identifier`       | `string`           | Yes      | Document id or slug                 |
+| `view`             | `ViewFilter`       | No       | Branch, scopes, or revision filter  |
+| `signal`           | `AbortSignal`      | No       | Cancel the request                  |
+| `consistencyToken` | `ConsistencyToken` | No       | Wait until the read models hold it  |
+
+`getMany(documentIds, view?, signal?, consistencyToken?)` reads several documents by id in one call.
 
 **Example:**
 
@@ -268,16 +285,20 @@ Resolve an id or slug to the canonical document id. Resolution runs against the 
 ```typescript
 resolveIdOrSlug(
   identifier: string,
+  view?: ViewFilter,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<string>
 ```
 
 **Parameters:**
 
-| Name         | Type          | Required | Description         |
-| ------------ | ------------- | -------- | ------------------- |
-| `identifier` | `string`      | Yes      | Document id or slug |
-| `signal`     | `AbortSignal` | No       | Cancel the request  |
+| Name               | Type               | Required | Description                        |
+| ------------------ | ------------------ | -------- | ---------------------------------- |
+| `identifier`       | `string`           | Yes      | Document id or slug                |
+| `view`             | `ViewFilter`       | No       | Branch/scopes filter               |
+| `signal`           | `AbortSignal`      | No       | Cancel the request                 |
+| `consistencyToken` | `ConsistencyToken` | No       | Wait until the read models hold it |
 
 ---
 
@@ -292,6 +313,7 @@ getOutgoingRelationships(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -304,6 +326,7 @@ getOutgoingRelationships(
 | `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
 | `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
 | `signal`           | `AbortSignal`   | No       | Cancel the request                              |
+| `consistencyToken` | `ConsistencyToken` | No    | Wait until the read models hold it              |
 
 ---
 
@@ -318,6 +341,7 @@ getIncomingRelationships(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -330,6 +354,7 @@ getIncomingRelationships(
 | `view`             | `ViewFilter`    | No       | Branch/scopes filter                            |
 | `paging`           | `PagingOptions` | No       | Pagination cursor and limit                     |
 | `signal`           | `AbortSignal`   | No       | Cancel the request                              |
+| `consistencyToken` | `ConsistencyToken` | No    | Wait until the read models hold it              |
 
 ---
 
@@ -343,6 +368,7 @@ find(
   view?: ViewFilter,
   paging?: PagingOptions,
   signal?: AbortSignal,
+  consistencyToken?: ConsistencyToken,
 ): Promise<PagedResults<PHDocument>>
 ```
 
@@ -354,6 +380,7 @@ find(
 | `view`   | `ViewFilter`    | No       | Branch/scopes filter                    |
 | `paging` | `PagingOptions` | No       | Pagination cursor and limit             |
 | `signal` | `AbortSignal`   | No       | Cancel the request                      |
+| `consistencyToken` | `ConsistencyToken` | No | Wait until the read models hold it |
 
 **Example:**
 
@@ -449,9 +476,23 @@ getDocumentModelModule(
 
 ---
 
+### `newDocument`
+
+Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `client.write.create` or `client.write.drives.addFile`. It builds the header and enqueues nothing, so it is on the read half: `client.read.newDocument(...)`, or `client.newDocument(...)`.
+
+```typescript
+newDocument<TDocument extends PHDocument = PHDocument>(
+  documentType: string,
+  options?: NewDocumentOptions,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+---
+
 ### `evaluateActions`
 
-Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
+On `client.write`: it is a write-side read that decides through the same model that admits a write. Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
 
 ```typescript
 evaluateActions(
@@ -498,7 +539,7 @@ type Evaluation =
 A denial's `reason` is the same string the reactor would record on the refused operation, so a control can explain itself rather than going grey with no reason. Over an empty candidate list every aggregate is `false`: nothing asked about is nothing allowed *and* nothing denied.
 
 ```typescript
-const answer = await client.evaluateActions(documentId, "main", [
+const answer = await client.write.evaluateActions(documentId, "main", [
   { scope: "global", type: "SUBMIT_EXPENSE", input: { amountCents: 900 } },
   { scope: "global", type: "APPROVE_EXPENSE", input: { id: "e1" } },
 ]);
@@ -530,34 +571,54 @@ In React, prefer the [`useCanExecute`](/academy/Reference/EditorsUI/ReactHooks) 
 
 ---
 
-## Write methods
+## Write methods (`client.write`)
 
-All write methods internally create jobs and wait for them to reach `READ_READY` before resolving (except `executeAsync` which returns immediately).
-
-### `newDocument`
-
-Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `create` or `drives.addFile`.
+The write half is `IReactorWriteClient`. Every write resolves once its job is accepted (validated, signed and enqueued) and returns a [`WriteHandle`](#writehandle). Nothing waits for the commit unless you await one of the handle's stages.
 
 ```typescript
-newDocument<TDocument extends PHDocument = PHDocument>(
-  documentType: string,
-  options?: NewDocumentOptions,
-  signal?: AbortSignal,
-): Promise<TDocument>
+const handle = await client.write.execute(docId, "main", actions);
+const { token } = await handle.written; // operations are in the log
+const doc = await client.read.get(docId, undefined, undefined, token);
+const same = await handle.document(); // readable, then the gated read-back
 ```
+
+### `WriteHandle`
+
+```typescript
+interface WriteHandle {
+  readonly jobId: string;
+  readonly documentId: string; // for a create, the id the new document carries
+  readonly branch: string;
+  readonly written: Promise<WriteReceipt>; // job reached WRITE_READY
+  readonly readable: Promise<WriteReceipt>; // job reached READ_READY
+  document<TDocument extends PHDocument = PHDocument>(
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+}
+
+type WriteReceipt = {
+  job: JobInfo;
+  token: ConsistencyToken; // pass to a read to bound it
+  documentId: string;
+  branch: string;
+};
+```
+
+`written` and `readable` reject with `JobFailedError` (exported from `@powerhousedao/reactor`, with the failed `JobInfo` on `job`) only when the job itself failed. A reducer error is not a job failure: the operation is stored with its error, the job reaches `READ_READY`, and `receipt.job.result` says which actions erred. `document()` awaits `readable`, then reads the target with the receipt's token, gated as the writer or as `view.subject` when given. Stage waits are bounded by the signal the write was called with.
 
 ---
 
 ### `create`
 
-Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument).
+Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument). With a parent, the handle's stages also wait for the relationship job on the parent.
 
 ```typescript
-create<TDocument extends PHDocument = PHDocument>(
+create(
   document: PHDocument,
   parentIdentifier?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -575,11 +636,11 @@ create<TDocument extends PHDocument = PHDocument>(
 Create the document [`newDocument`](#newdocument) builds.
 
 ```typescript
-createEmpty<TDocument extends PHDocument>(
+createEmpty(
   documentModelType: string,
   options?: NewDocumentOptions,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -594,21 +655,21 @@ createEmpty<TDocument extends PHDocument>(
 
 ### Creating a document in a drive
 
-To create a document inside a drive, use `client.drives.addFile`. It issues the CREATE_DOCUMENT, UPGRADE_DOCUMENT, ADD_RELATIONSHIP, and ADD_FILE actions in a single dependent batch. See [Drives (`client.drives`)](#drives-clientdrives) for the full signature.
+To create a document inside a drive, use `client.write.drives.addFile`. It submits the document's CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP batch, waits for it to complete, then submits the drive's ADD_FILE. See [Drives](#drives) for the full signature.
 
 ---
 
 ### `execute`
 
-Apply actions to a document and wait for completion.
+Sign and submit actions on one document.
 
 ```typescript
-execute<TDocument extends PHDocument>(
+execute(
   documentIdentifier: string,
   branch: string,
   actions: Action[],
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -620,37 +681,21 @@ execute<TDocument extends PHDocument>(
 | `actions`            | `Action[]`    | Yes      | List of actions to apply                   |
 | `signal`             | `AbortSignal` | No       | Cancel the request                         |
 
-**Returns** the updated document after all actions are applied and read models are updated.
-
-On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond.
+On a version 3 document the actions run in canonical order, not array order: by timestamp, then by action id. Action creators give ids that sort in creation order within one process, so actions created in sequence keep that order. An action built with another id, such as `crypto.randomUUID()`, can run before an action listed ahead of it in the same millisecond. A submitted `UNDO` or `REDO` on base-reducer 3 is refused with `SubmittedUndoRefusedError`; use [`undo`](#undo) and [`redo`](#redo).
 
 **Example:**
 
 ```typescript
 import { actions } from "my-package/document-models/todo-list";
 
-const updated = await reactorClient.execute(docId, "main", [
+const handle = await client.write.execute(docId, "main", [
   actions.addTodoItem({ text: "Buy groceries" }),
   actions.addTodoItem({ text: "Walk the dog" }),
 ]);
+const updated = await handle.document();
 ```
 
----
-
-### `executeAsync`
-
-Submit actions without waiting for completion. Returns a `JobInfo` at `PENDING` status.
-
-```typescript
-executeAsync(
-  documentIdentifier: string,
-  branch: string,
-  actions: Action[],
-  signal?: AbortSignal,
-): Promise<JobInfo>
-```
-
-Use `waitForJob()` or `getJobStatus()` to track progress.
+The write half has no `executeAsync`: `execute` already returns as soon as the job is accepted. Use `handle.jobId` with `waitForJob()` or `getJobStatus()` when you need the raw `JobInfo`.
 
 ---
 
@@ -664,7 +709,7 @@ rename(
   name: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -688,7 +733,7 @@ setPreferredEditor(
   preferredEditor: string | null,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -704,15 +749,15 @@ setPreferredEditor(
 
 ### `undo`
 
-Undo the last applied operation of a scope and wait for completion.
+Submit the undo of a scope's last applied operation.
 
 ```typescript
-undo<TDocument extends PHDocument = PHDocument>(
+undo(
   documentIdentifier: string,
   scope?: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -724,21 +769,23 @@ undo<TDocument extends PHDocument = PHDocument>(
 | `branch`             | `string`      | No       | Defaults to `"main"`   |
 | `signal`             | `AbortSignal` | No       | Cancel the request     |
 
-On a base-reducer 3 document the client resolves the target with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer; with nothing to undo it throws before submitting. The `RETRACT` names the row the call saw, so an edit landing in between is not undone, and a target retracted or gone by then fails the write with `RetractionRefusedError` without resolving again. On base-reducer 1 and 2 it submits `UNDO`. A submitted `UNDO` or `REDO` on base-reducer 3 is refused with `SubmittedUndoRefusedError`. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
+On a base-reducer 3 document the client resolves the target with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer. With nothing to undo it throws `NoUndoRedoTargetError` before submitting. The `RETRACT` names the row the call saw, so an edit landing in between is not undone. A target retracted or gone by then fails the job with `RetractionRefusedError`, and nothing is resolved again: the handle's stages reject with `JobFailedError`, whose `job.error.name` is `RetractionRefusedError`. On base-reducer 1 and 2 it submits `UNDO`.
+
+Calls on one document, scope and branch run one at a time: each resolves once its write is readable, so the next resolves against it. `handle.document()` is the updated document. See [Undo and redo](/academy/Reference/Reactor/UndoRedo).
 
 ---
 
 ### `redo`
 
-Redo the last undo of a scope and wait for completion. Same parameters as [`undo`](#undo).
+Submit the redo of a scope's last undo. Same parameters as [`undo`](#undo).
 
 ```typescript
-redo<TDocument extends PHDocument = PHDocument>(
+redo(
   documentIdentifier: string,
   scope?: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 On base-reducer 3 the client resolves the last live retraction with [`undoRedoTargets`](#undoredotargets) and submits a `RETRACT` of it signed by its own signer, under `undo`'s race rule. Content applied after the undo leaves nothing to redo. On base-reducer 1 and 2 it submits `REDO`.
@@ -747,7 +794,7 @@ On base-reducer 3 the client resolves the last live retraction with [`undoRedoTa
 
 ### `undoRedoTargets`
 
-The rows a base-reducer 3 `undo` and `redo` of a scope would retract now, resolved by the reactor through the read gate. A scope the subject may not read has none; below base-reducer 3 there are none.
+The rows a base-reducer 3 `undo` and `redo` of a scope would retract now, resolved by the reactor through the read gate. A scope the subject may not read has none, nor does the `auth` or `document` scope; below base-reducer 3 there are none. It reads the operation log, so it is on the write half, as `evaluateActions` is.
 
 ```typescript
 undoRedoTargets(
@@ -764,7 +811,7 @@ type UndoRedoTargets = { undoTarget?: string; redoTarget?: string };
 
 ### `undoRedoAvailability`
 
-Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo).
+Report whether `undo` and `redo` would find a target in a scope now. Same parameters as [`undo`](#undo); a write-side read like [`undoRedoTargets`](#undoredotargets).
 
 ```typescript
 undoRedoAvailability(
@@ -783,33 +830,52 @@ Exact on base-reducer 3. On base-reducer 1 and 2, `canUndo` is whether the scope
 
 ### `addRelationship`
 
-Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`.
+Add a typed relationship from a source document to a target document. To add a child, pass `"child"` as the `relationshipType`. The handle's document is the source.
 
 ```typescript
 addRelationship(
   sourceIdentifier: string,
   targetIdentifier: string,
   relationshipType: string,
+  metadata?: Record<string, unknown>,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
 
-| Name               | Type          | Required | Description                        |
-| ------------------ | ------------- | -------- | ---------------------------------- |
-| `sourceIdentifier` | `string`      | Yes      | Source document id or slug         |
-| `targetIdentifier` | `string`      | Yes      | Target document id or slug         |
-| `relationshipType` | `string`      | Yes      | Relationship type (e.g. `"child"`) |
-| `branch`           | `string`      | No       | Defaults to `"main"`               |
-| `signal`           | `AbortSignal` | No       | Cancel the request                 |
+| Name               | Type                      | Required | Description                        |
+| ------------------ | ------------------------- | -------- | ---------------------------------- |
+| `sourceIdentifier` | `string`                  | Yes      | Source document id or slug         |
+| `targetIdentifier` | `string`                  | Yes      | Target document id or slug         |
+| `relationshipType` | `string`                  | Yes      | Relationship type (e.g. `"child"`) |
+| `metadata`         | `Record<string, unknown>` | No       | Metadata stored on the edge        |
+| `branch`           | `string`                  | No       | Defaults to `"main"`               |
+| `signal`           | `AbortSignal`             | No       | Cancel the request                 |
+
+---
+
+### `updateRelationship`
+
+Replace the metadata on an existing edge. Pass `null` to clear it. Throws `RelationshipNotFoundError` before submitting when the edge does not exist. The handle's document is the source.
+
+```typescript
+updateRelationship(
+  sourceIdentifier: string,
+  targetIdentifier: string,
+  relationshipType: string,
+  metadata: Record<string, unknown> | null,
+  branch?: string,
+  signal?: AbortSignal,
+): Promise<WriteHandle>
+```
 
 ---
 
 ### `removeRelationship`
 
-Remove a typed relationship from a source document to a target document.
+Remove a typed relationship from a source document to a target document. The handle's document is the source.
 
 ```typescript
 removeRelationship(
@@ -818,7 +884,7 @@ removeRelationship(
   relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -835,7 +901,7 @@ removeRelationship(
 
 ### `moveRelationship`
 
-Move a typed relationship from one source document to another, keeping the same target.
+Move a typed relationship from one source document to another, keeping the same target. A move is a remove followed by an add. The remove has reached `READ_READY` when the call resolves; the add has only been accepted.
 
 ```typescript
 moveRelationship(
@@ -845,7 +911,7 @@ moveRelationship(
   relationshipType: string,
   branch?: string,
   signal?: AbortSignal,
-): Promise<{ source: PHDocument; target: PHDocument }>
+): Promise<{ removed: WriteHandle; added: WriteHandle }>
 ```
 
 **Parameters:**
@@ -859,18 +925,20 @@ moveRelationship(
 | `branch`                 | `string`      | No       | Defaults to `"main"`               |
 | `signal`                 | `AbortSignal` | No       | Cancel the request                 |
 
+`removed.document()` reads the old parent; `added.document()` reads the new one.
+
 ---
 
 ### `deleteDocument`
 
-Delete a single document.
+Delete a single document. The delete, its incoming relationship removals and, with `Cascade`, every orphaned descendant go in one batch. The handle's stages wait for the whole batch.
 
 ```typescript
 deleteDocument(
   identifier: string,
   propagate?: PropagationMode,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -885,27 +953,27 @@ deleteDocument(
 
 ### `deleteDocuments`
 
-Bulk delete multiple documents.
+Bulk delete multiple documents. Returns one handle per identifier.
 
 ```typescript
 deleteDocuments(
   identifiers: string[],
   propagate?: PropagationMode,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle[]>
 ```
 
 ---
 
 ### `executeBatch`
 
-Apply multiple mutation jobs in dependency order. The client signs each job's actions, dispatches them, and waits for every job to settle. If a job fails, `executeBatch` throws a `BatchJobFailedError` naming the first failed job's plan key (`key`), carrying every job's final `JobInfo` (`jobs`) and the failed job's own error name (`cause.name`). The batch is not atomic: other jobs, including ones that depend on the failed job, may still have committed. See [Error Handling](/academy/Reference/Reactor/ErrorHandling).
+Sign and submit multiple mutation jobs in dependency order. The call resolves once every job is accepted. Each batch stage waits for every job, then rejects with a `BatchJobFailedError` naming the first failed job's plan key (`key`), carrying every job's final `JobInfo` (`jobs`) and the failed job's own error name (`cause.name`). The batch is not atomic: other jobs, including ones that depend on the failed job, may still have committed. See [Error Handling](/academy/Reference/Reactor/ErrorHandling).
 
 ```typescript
 executeBatch(
   request: BatchExecutionRequest,
   signal?: AbortSignal,
-): Promise<BatchExecutionResult>
+): Promise<BatchWriteHandle>
 ```
 
 Each job carries a `key` (used to express dependencies) and a `dependsOn` list of other job keys.
@@ -924,18 +992,21 @@ type BatchExecutionRequest = {
   jobs: ExecutionJobPlan[];
 };
 
-type BatchExecutionResult = {
-  jobs: Record<string, JobInfo>;
-};
+interface BatchWriteHandle {
+  readonly jobs: Record<string, JobInfo>; // the accepted jobs
+  readonly handles: Record<string, WriteHandle>;
+  readonly written: Promise<Record<string, WriteReceipt>>;
+  readonly readable: Promise<Record<string, WriteReceipt>>;
+}
 ```
 
-The result's `jobs` record is keyed by each plan's `key`.
+Every record is keyed by each plan's `key`.
 
 ---
 
 ### `loadBatch`
 
-Submit multiple batches of pre-existing operations across documents, with dependency ordering, and wait for all jobs to complete. Use this to load operations that already exist (for example from sync), as opposed to `executeBatch`, which signs and applies new actions.
+Submit multiple batches of pre-existing operations across documents, with dependency ordering, and wait for all jobs to complete. Use this to load operations that already exist (for example from sync), as opposed to `executeBatch`, which signs and applies new actions. Unlike the other writes, it keeps its job-map result.
 
 ```typescript
 loadBatch(
@@ -970,23 +1041,23 @@ The result's `jobs` record is keyed by each plan's `key`. If a job fails, `loadB
 
 ---
 
-## Drives (`client.drives`)
+## Drives
 
-`client.drives` is a `readonly` `IDriveClient` namespace for drive-aware operations. These methods orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Use the flat `IReactorClient` methods (`get`, `execute`, `find`) for everything that is not drive-aware.
+Drive-aware operations orchestrate the multi-action, multi-document work needed to keep a drive's `state.global.nodes` array consistent with the relationship index and the underlying documents. Reads live on `client.read.drives` (`IDriveReadClient`); writes live on `client.write.drives` (`IDriveWriteClient`). Use the flat methods (`read.get`, `write.execute`, `read.find`) for everything that is not drive-aware.
 
-Every method takes a trailing optional `signal?: AbortSignal`.
+Every method takes a trailing optional `signal?: AbortSignal`. Each write resolves once its last step is accepted. A step a later step depends on (a file's document before the drive names it, a document rename before the node rename) has completed by then; if it failed, the call throws the job's own error, by name.
 
-### `addFile`
+### `write.drives.addFile`
 
-Create a document inside a drive as a single dependent batch. This issues CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP on the new document, plus ADD_FILE on the drive. This is the way to create a document in a drive.
+Add a document to a drive. The document's CREATE_DOCUMENT, UPGRADE_DOCUMENT, and ADD_RELATIONSHIP batch completes first, then the drive's ADD_FILE is submitted. This is the way to create a document in a drive. The handle's document is the new file; its stages span both batches.
 
 ```typescript
-addFile<TDocument extends PHDocument = PHDocument>(
+addFile(
   driveIdentifier: string,
   document: PHDocument,
   parentFolder?: string,
   signal?: AbortSignal,
-): Promise<TDocument>
+): Promise<WriteHandle>
 ```
 
 **Parameters:**
@@ -998,20 +1069,20 @@ addFile<TDocument extends PHDocument = PHDocument>(
 | `parentFolder`    | `string`      | No       | Folder id within the drive |
 | `signal`          | `AbortSignal` | No       | Cancel the request         |
 
-### `create`
+### `write.drives.create`
 
-Create a new drive document and wait for completion.
+Create a new drive document. The handle's document is the drive.
 
 ```typescript
 create(
   input: DriveInput,
   signal?: AbortSignal,
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `addFolder`
+### `write.drives.addFolder`
 
-Add a folder node to a drive.
+Add a folder node to a drive. `nodeId` on the returned handle is the new folder's id.
 
 ```typescript
 addFolder(
@@ -1019,24 +1090,24 @@ addFolder(
   name: string,
   parentFolder?: string,
   signal?: AbortSignal,
-): Promise<FolderNode>
+): Promise<NodeWriteHandle> // WriteHandle & { nodeId: string }
 ```
 
-### `removeNode`
+### `write.drives.removeNode`
 
-Remove a node from a drive. Folder nodes cascade: descendant file documents are deleted first, then the folder node entry.
+Remove a node from a drive. Folder nodes cascade: descendant file documents are deleted first (each completed), then the folder node entry. The handle is the last step; its document is the drive.
 
 ```typescript
 removeNode(
   driveIdentifier: string,
   nodeId: string,
   signal?: AbortSignal,
-): Promise<void>
+): Promise<WriteHandle>
 ```
 
-### `renameNode`
+### `write.drives.renameNode`
 
-Rename a node. Updates both the underlying document header and the drive's node entry.
+Rename a node. Renames the underlying document (completed and checked), then the drive's node entry. The handle's document is the drive.
 
 ```typescript
 renameNode(
@@ -1044,24 +1115,24 @@ renameNode(
   nodeId: string,
   name: string,
   signal?: AbortSignal,
-): Promise<Node>
+): Promise<NodeWriteHandle>
 ```
 
-### `setPreferredEditorOnNode`
+### `write.drives.setPreferredEditorOnNode`
 
-Update the preferred editor recorded in the node's document header meta. Pass `null` to clear it.
+Update the preferred editor recorded in the node's document header meta. Pass `null` to clear it. The handle's document is the node's document.
 
 ```typescript
 setPreferredEditorOnNode(
   nodeId: string,
   preferredEditor: string | null,
   signal?: AbortSignal,
-): Promise<PHDocument>
+): Promise<WriteHandle>
 ```
 
-### `moveNode`
+### `write.drives.moveNode`
 
-Move a node to a different parent folder within the same drive. Pass `undefined` as `targetParentFolderId` to move the node to the drive root.
+Move a node to a different parent folder within the same drive. Pass `undefined` as `targetParentFolderId` to move the node to the drive root. The handle's document is the drive.
 
 ```typescript
 moveNode(
@@ -1069,12 +1140,12 @@ moveNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `copyNode`
+### `write.drives.copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each copied file gets a new id and a duplicated document, which keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
+Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive. A copied file keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them; a reactor-drive refuses the override. See [Undo and redo](/academy/Reference/Reactor/UndoRedo) for copying a document to base-reducer 3.
 
 ```typescript
 copyNode(
@@ -1083,10 +1154,10 @@ copyNode(
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
   options?: { protocolVersions?: ProtocolVersions },
-): Promise<DocumentDriveDocument>
+): Promise<WriteHandle>
 ```
 
-### `getNode`
+### `read.drives.getNode`
 
 Return a single node from the drive's `state.global.nodes` array.
 
@@ -1098,7 +1169,7 @@ getNode(
 ): Promise<Node>
 ```
 
-### `listNodes`
+### `read.drives.listNodes`
 
 Return nodes in the drive, optionally filtered by parent folder. Returns a paged result so you can stream through drives with large node counts.
 
@@ -1219,9 +1290,8 @@ waitForJob(
 **Example:**
 
 ```typescript
-const job = await reactorClient.executeAsync(docId, "main", actions);
-console.log(job.status); // "PENDING"
+const handle = await reactorClient.write.execute(docId, "main", actions);
 
-const completed = await reactorClient.waitForJob(job);
+const completed = await reactorClient.read.waitForJob(handle.jobId);
 console.log(completed.status); // "READ_READY" or "FAILED"
 ```

@@ -23,13 +23,30 @@ For the quickstart and how the entry stays browser-bundlable, see
 ## `IReactorBrowserClient`
 
 The contract the reactor-browser hooks depend on. It is declared as a `Pick` of
-the reactor's own `IReactorClient`, so the member signatures cannot drift
-from the reactor's:
+the reactor's own interfaces, so the member signatures cannot drift from the
+reactor's:
 
 ```typescript
+export interface IReactorBrowserReadClient extends Pick<
+  IReactorReadClient,
+  | "get"
+  | "getMany"
+  | "find"
+  | "getOperations"
+  | "subscribe"
+  | "waitForJob"
+  | "getJobStatus"
+> {}
+
+export interface IReactorBrowserWriteClient extends Pick<
+  IReactorWriteClient,
+  "execute" | "create" | "deleteDocument"
+> {}
+
 export interface IReactorBrowserClient extends Pick<
   IReactorClient,
   | "get"
+  | "find"
   | "subscribe"
   | "execute"
   | "getOperations"
@@ -40,17 +57,34 @@ export interface IReactorBrowserClient extends Pick<
   | "redo"
   | "undoRedoTargets"
   | "undoRedoAvailability"
-> {}
+> {
+  readonly read: IReactorBrowserReadClient;
+  readonly write: IReactorBrowserWriteClient;
+}
 ```
+
+`read` and `write` are the client halves the hooks use. Each `write` method
+resolves once its job is accepted and returns a `WriteHandle`; read the
+document back with `handle.document()`. Write through `write`; the picked
+top-level methods remain for callers that have not moved to the halves.
 
 Two implementations satisfy it: the full in-browser reactor client, which gets it
 for free by implementing `IReactorClient`, and `GraphQLReactorClient`.
 
-Everything outside those members is deliberately excluded and not
-implemented here: `drives`, `find`, `resolveIdOrSlug`, relationships,
-`executeAsync`, `executeBatch`, jobs, `createEmpty`, `rename`,
-`evaluateActions`, and the document-model module getters. For the
-full-reactor versions of those, see
+On `GraphQLReactorClient`, `write.execute` submits the job and hands back a
+handle whose `written` and `readable` resolve from the job's status, woken by
+the `jobChanges` subscription when realtime is on. Its `document()` runs the
+`document` query bounded by the receipt's consistency token. `write.create` and
+`write.deleteDocument` run synchronous mutations and hand back a handle that has
+already settled.
+
+`newDocument`, `undo`, `redo`, `undoRedoTargets` and `undoRedoAvailability` are
+top-level members only: the browser halves carry no undo.
+
+Everything outside these members is deliberately excluded from the interface:
+`drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
+`createEmpty`, `rename`, `evaluateActions`, and the document-model module
+getters. For the full-reactor versions of those, see
 [IReactorClient](/academy/Reference/Reactor/ReactorClient).
 
 ### Methods
@@ -69,9 +103,10 @@ full-reactor versions of those, see
 | `undoRedoTargets(identifier, scope?, view?, signal?)`         | The rows a base-reducer 3 undo and redo would retract, resolved by the Switchboard as the caller.   |
 | `undoRedoAvailability(identifier, scope?, branch?, signal?)`  | On base-reducer 3, read from `undoRedoTargets`; below it, from the scope's revision.               |
 
-`execute` returns the updated document with the operations this call appended,
-which is how `useDispatch` reports per-action errors: `dispatchActions` scans the
-returned operations for the action it sent and reads its `error` field.
+`useDispatch` writes through `write.execute` and reads the result back with
+`handle.document()`. That is how it reports per-action errors: `dispatchActions`
+scans the read-back document's operations for the action it sent and reads its
+`error` field.
 
 ## `GraphQLReactorClient`
 

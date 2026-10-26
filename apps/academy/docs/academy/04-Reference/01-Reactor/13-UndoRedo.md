@@ -34,24 +34,24 @@ A reactor that stores version 3 documents of a model it cannot run refuses to st
 
 ## Which version a document takes
 
-A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `IReactorClient.newDocument`, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. The members of the parent drive do not narrow the base-reducer version: a peer that cannot run it is held from the document until it upgrades. A reactor that does not run the chosen version refuses the document. A call can name a version:
+A document's version is fixed when it is created, and its creator chooses it. A client chooses in one place, `newDocument` on the read half, which heads an uncreated document with the versions `getCreateProtocolVersions` selects: version 3 when `undoV3` is on and the model's reducer is built by `createReducer`, otherwise version 2. `createEmpty` is `newDocument` then `create`, and `create` takes the header as given. The members of the parent drive do not narrow the base-reducer version: a peer that cannot run it is held from the document until it upgrades. A reactor that does not run the chosen version refuses the document. A call can name a version:
 
 ```typescript
-const document = await client.newDocument("powerhouse/todo-list", {
+const document = await client.read.newDocument("powerhouse/todo-list", {
   parentIdentifier: driveId,
   protocolVersions: { "base-reducer": 2 },
 });
-await client.drives.addFile(driveId, document);
+await client.write.drives.addFile(driveId, document);
 ```
 
 A document headed outside a client, such as one from a model's `utils.createDocument()`, takes version 2, and keeps it when it is created or added to a drive. `IReactor.create` refuses a header without protocol versions.
 
 The GraphQL light client takes the Switchboard's `createDefaults` answer for the document's type and parent as given, so a remote document's version follows the Switchboard's `undoV3`. It caps the answer at the versions its own build runs, so a newer Switchboard's base-reducer 4 becomes 3, and refuses a malformed answer or a version of another known protocol it does not run. It then fits base-reducer down to what its own `documentModels` can run. A Switchboard from before per-type selection answers for every type; against one without the query the client picks version 2, but cannot create there: it also reads the signature policy from that query.
 
-An existing document keeps its version. To move one to version 3, copy it through `IDriveClient.copyNode` with the version to take:
+An existing document keeps its version. To move one to version 3, copy it through `client.write.drives.copyNode` with the version to take:
 
 ```typescript
-await client.drives.copyNode(driveId, nodeId, targetFolderId, undefined, {
+await client.write.drives.copyNode(driveId, nodeId, targetFolderId, undefined, {
   protocolVersions: { "base-reducer": 3 },
 });
 ```
@@ -60,20 +60,20 @@ The copy starts from the source's current state, so the source's history cannot 
 
 ## Undoing from a client
 
-Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on `IReactorClient`. They work on every version.
+Call [`undo`, `redo` and `undoRedoAvailability`](/academy/Reference/Reactor/ReactorClient#undo) on the write half, `client.write`. They work on every version; `undo` and `redo` return a `WriteHandle`.
 
 On version 3 the client resolves the target with `undoRedoTargets` and submits a `RETRACT` of it signed by the client's own signer. On versions 1 and 2 it submits `UNDO` or `REDO`. The GraphQL light client does the same, resolving the target through the Switchboard's `undoRedoTargets` query; see [the light client's methods](/academy/Reference/ReactorBrowserClient/ApiReference#methods). Either way the author signs, so a policy must grant the author `RETRACT` for undo on version 3.
 
 `RemoteDocumentController` from `@powerhousedao/reactor-browser` runs the version the remote document's header names. Its `undo(scope)` and `redo(scope)` resolve the target from the controller's own log, including actions not yet pushed, and apply a `RETRACT` that its signer signs on push. On versions 1 and 2 they apply `UNDO` or `REDO` locally, as before. A new document is headed with the host's versions for its type and created from that header on its first push, so undo before the push follows the same version.
 
-The `RETRACT` names the row the call saw as the latest, so an edit that lands in between is not undone. If the target is retracted or gone by the time the `RETRACT` runs, the write fails with `RetractionRefusedError`; the client does not resolve again or retry.
+The `RETRACT` names the row the call saw as the latest, so an edit that lands in between is not undone. If the target is retracted or gone by the time the `RETRACT` runs, the job fails with `RetractionRefusedError`, and the handle's stages reject with a `JobFailedError` naming it; the client does not resolve again or retry.
 
 To retract a specific action, submit `retract` yourself. It is exported from `document-model` and `@powerhousedao/shared/document-model`:
 
 ```typescript
 import { retract } from "document-model";
 
-await client.execute(documentId, "main", [retract(actionId, "global")]);
+await client.write.execute(documentId, "main", [retract(actionId, "global")]);
 ```
 
 A submitted `UNDO` or `REDO` on version 3 fails with `SubmittedUndoRefusedError`. The model's reducer refuses one the same way, so `reducer(document, undo())` on a version 3 document throws `SubmittedUndoRefusedError` rather than retracting anything. On versions 1 and 2 the reactor still resolves one and signs the `NOOP` it stores with its own signer.
@@ -102,6 +102,6 @@ The rules do not run in the `auth` and `document` scopes, or in version 1 and 2 
 | `ReservedActionError`    | `documentId`, `actionType`       | A write carries an action type the client may not submit, such as a `RETRACT` to a version 1 or 2 document or to the `auth` or `document` scope |
 | `SubmittedUndoRefusedError` | `documentId`, `actionType`    | A write, or a peer's load, carries `UNDO` or `REDO` to a version 3 document |
 
-All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through `IReactorClient` they reach you as a plain `Error` carrying the message; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
+All three are exported from `@powerhousedao/reactor` and are terminal: the job fails without a retry. Through the write half they reach you as a `JobFailedError` whose `job.error.name` names the class; see [Error handling](/academy/Reference/Reactor/ErrorHandling).
 
-`undo` and `redo` on version 3 throw `Cannot undo: nothing to undo in scope history` (or `redo`) before submitting anything when there is no target.
+`undo` and `redo` on version 3 throw `NoUndoRedoTargetError` (from `document-model`, message `Cannot undo: nothing to undo in scope history`, or `redo`) before submitting anything when there is no target.
