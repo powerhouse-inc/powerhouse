@@ -91,6 +91,35 @@ describe("HostImportPanel", () => {
     });
   });
 
+  it("accepts only an http(s) URL", () => {
+    const { view, paste, button } = renderPanel();
+
+    paste(fixtureText("assistant"));
+    const url = view.getByTestId("host-import-url-assistant.switchboard");
+    fireEvent.change(url, { target: { value: "foo:bar" } });
+
+    expect(button("Save set").disabled).toBe(true);
+
+    fireEvent.change(url, { target: { value: "https://sb.example/graphql" } });
+
+    expect(button("Save set").disabled).toBe(false);
+  });
+
+  it("shows an export too deep to check as an issue", () => {
+    const { view, paste } = renderPanel();
+    const exported = JSON.parse(fixtureText("connect")) as {
+      host: Record<string, unknown>;
+    };
+    exported.host.config = "DEEP";
+    const deep = `${'{"a":'.repeat(20_000)}{}${"}".repeat(20_000)}`;
+
+    paste(JSON.stringify(exported).replace('"DEEP"', deep));
+
+    expect(view.getByTestId("host-import-issues").textContent).toMatch(
+      /Could not read the export/,
+    );
+  });
+
   it("blocks duplicate names and an empty selection", () => {
     const { view, paste, button } = renderPanel();
 
@@ -118,9 +147,16 @@ describe("HostImportPanel", () => {
       type: "application/json",
     });
 
-    fireEvent.drop(window, {
-      dataTransfer: { files: [file], types: ["Files"] },
-    });
+    // false: the default was prevented, so the browser neither refuses
+    // the drop nor navigates to the file.
+    expect(
+      fireEvent.dragOver(window, { dataTransfer: { types: ["Files"] } }),
+    ).toBe(false);
+    expect(
+      fireEvent.drop(window, {
+        dataTransfer: { files: [file], types: ["Files"] },
+      }),
+    ).toBe(false);
 
     await waitFor(() =>
       expect(view.getByTestId("host-import-name-connect.main")).toBeTruthy(),

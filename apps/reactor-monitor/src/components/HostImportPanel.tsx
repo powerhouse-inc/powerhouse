@@ -46,6 +46,7 @@ type RowState = {
 type Review = {
   readonly exp: HostExport;
   readonly setName: string;
+  readonly memberCount: number;
   rows: RowState[];
 };
 
@@ -66,6 +67,16 @@ function readIssue(message: string): Loaded {
 }
 
 function load(text: string): Loaded {
+  try {
+    return parseAndPlan(text);
+  } catch (error) {
+    return readIssue(
+      `Could not read the export: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function parseAndPlan(text: string): Loaded {
   const parsed = parseHostExport(text);
   if (!parsed.export) {
     return { issues: parsed.issues };
@@ -76,6 +87,7 @@ function load(text: string): Loaded {
     review: {
       exp: parsed.export,
       setName: plan.setName,
+      memberCount: plan.memberCount,
       rows: plan.rows.map((row) => ({
         row,
         include: row.include,
@@ -90,10 +102,10 @@ function loadResult(result: ReadResult): Loaded {
   return "error" in result ? readIssue(result.error) : load(result.text);
 }
 
-function isUrl(value: string): boolean {
+function isHttpUrl(value: string): boolean {
   try {
-    new URL(value);
-    return true;
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
   } catch {
     return false;
   }
@@ -114,7 +126,10 @@ function blockers(rows: readonly RowState[]): string[] {
       reasons.push(`Two rows are named "${name}".`);
     }
     seen.add(name);
-    if (state.row.descriptor.kind === "remote" && !isUrl(state.url.trim())) {
+    if (
+      state.row.descriptor.kind === "remote" &&
+      !isHttpUrl(state.url.trim())
+    ) {
       reasons.push(`${name || state.row.member} needs a GraphQL URL.`);
     }
   }
@@ -318,9 +333,8 @@ export function HostImportPanel({ onImport }: HostImportPanelProps) {
           {review ? (
             <p className="rm-import__header">
               <strong>{review.exp.project.name}</strong> · host{" "}
-              <strong>{review.exp.name}</strong> ·{" "}
-              {Object.keys(review.exp.members).length || 1} member(s). Checked
-              in the browser only; run{" "}
+              <strong>{review.exp.name}</strong> · {review.memberCount}{" "}
+              member(s). Checked in the browser only; run{" "}
               <code>ph host check {review.exp.name}</code> for runner options,
               env values and boot rules.
             </p>
