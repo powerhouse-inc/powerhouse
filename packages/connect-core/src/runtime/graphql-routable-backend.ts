@@ -107,6 +107,7 @@ export function createGraphQLRoutableBackend(
   });
   const backend: IRoutableBackend = {
     supports: { find: findIsServableOverGraphQL, pointInTimeViews: false },
+    drives: gql.read.drives,
     get: async <TDocument extends PHDocument>(
       identifier: string,
       view?: ViewFilter,

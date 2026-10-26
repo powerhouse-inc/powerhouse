@@ -10,6 +10,7 @@ import {
   type ConsistencyToken,
   type DocumentChangeEvent,
   type DocumentRelationship,
+  type IDriveReadClient,
   type IReactorClient,
   type IReactorReadClient,
   type IReactorWriteClient,
@@ -82,6 +83,11 @@ export interface IRoutableBackend {
   readonly read?: IReactorReadClient;
   /** The write half, when the backend has one; the router's writes use it. */
   readonly write?: IReactorWriteClient;
+  /**
+   * Drive node reads served without reading the drive document. Drive reads
+   * prefer it over `read.drives` and over the drive's state.
+   */
+  readonly drives?: IDriveReadClient;
 
   get<TDocument extends PHDocument>(
     identifier: string,
@@ -289,6 +295,7 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
   return {
     supports: SUPPORTS_EVERYTHING,
     ...(read === undefined ? {} : { read }),
+    ...(read?.drives === undefined ? {} : { drives: read.drives }),
     ...(write === undefined ? {} : { write }),
     submit: {
       execute: (identifier, branch, actions, signal) =>
