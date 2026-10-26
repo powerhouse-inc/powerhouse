@@ -308,4 +308,16 @@ describe("vacuumFullTimingFromEnv", () => {
       }),
     ).toEqual({});
   });
+
+  it("turns the mode into the settings the stores open with", () => {
+    expect(vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "off" })).toEqual({
+      vacuumFullAboveBytes: 0,
+    });
+    expect(
+      vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "forced" }),
+    ).toEqual({ vacuumFullMaxDeferMs: 1_800_000 });
+    expect(() =>
+      vacuumFullTimingFromEnv({ PH_PGLITE_VACUUM_FULL: "sometimes" }),
+    ).toThrow(/PH_PGLITE_VACUUM_FULL/);
+  });
 });

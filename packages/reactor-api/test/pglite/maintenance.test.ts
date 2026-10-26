@@ -204,7 +204,13 @@ describe("durable NodeFS maintenance", () => {
       const before = await tableBytes(big.pg);
       await expect(big.maintain()).resolves.toBe("vacuum-full");
       expect(big.warn).toHaveBeenCalledWith(
-        expect.stringContaining("VACUUM FULL"),
+        expect.stringContaining("running VACUUM FULL"),
+      );
+      // The logger here has no info, so the completion report lands on warn.
+      expect(big.warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /VACUUM FULL finished in \d+ ms; \d+ -> \d+ bytes/,
+        ),
       );
       expect(await tableBytes(big.pg)).toBeLessThan(before / 4);
       await big.pg.query("SELECT 1");
@@ -253,6 +259,43 @@ describe("durable NodeFS maintenance", () => {
       now += 1_000;
       await expect(maintain()).resolves.toBe("vacuum-full");
       await expect(maintain()).resolves.toBe("idle");
+    },
+    LONG,
+  );
+
+  it(
+    "never forces a VACUUM FULL on a busy store unless a deadline is set",
+    async () => {
+      const seed = await start({ maintenanceIntervalMs: 0 });
+      await seed.pg.exec("CREATE TABLE t (v int)");
+      await seed.pg.close();
+
+      let now = 1_000_000;
+      const { pg, warn, maintain } = await start(
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: 1,
+          vacuumFullQuietMs: 60_000,
+          now: () => now,
+        },
+        seed.dir,
+      );
+      // Writes every 30 s for 35 min, past the old deadline: no quiet window, no deadline.
+      for (let halfMinute = 0; halfMinute < 70; halfMinute++) {
+        await pg.query("INSERT INTO t VALUES (1)");
+        now += 30_000;
+        await expect(maintain()).resolves.toBe("vacuum");
+      }
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "VACUUM FULL waits until the store has had no writes for 60000 ms",
+        ),
+      );
+      expect(warn).not.toHaveBeenCalledWith(
+        expect.stringContaining("from open"),
+      );
+      now += 60_000;
+      await expect(maintain()).resolves.toBe("vacuum-full");
     },
     LONG,
   );

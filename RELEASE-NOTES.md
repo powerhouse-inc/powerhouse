@@ -1,5 +1,26 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — PGlite maintenance no longer forces a VACUUM FULL under load
+
+### ⚡ VACUUM FULL waits for a quiet store, by default
+
+A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The rewrite now waits for the quiet window (60 s without writes) however long that takes, and the new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
+
+```bash
+PH_PGLITE_VACUUM_FULL=quiet     # default: only after the quiet window
+PH_PGLITE_VACUUM_FULL=forced    # the previous behaviour: also 30 min after open, under load
+PH_PGLITE_VACUUM_FULL=off       # never
+PH_PGLITE_VACUUM_FULL_ABOVE_MB=256        # the size that makes a store eligible
+PH_PGLITE_VACUUM_FULL_QUIET_MS=60000      # the quiet window
+PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the mode
+```
+
+`resolvePgliteMaintenance(env)` in `@powerhousedao/reactor-api/pglite-node` reads them, and both the switchboard's stores and `getDbClient`'s read store apply them. A finished `VACUUM FULL` now logs its duration and the `base/` size before and after; before, only a failure was logged. An unknown mode refuses to boot, since the point is never to run the forced rewrite by accident.
+
+✅ **What to try:** boot a switchboard on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
+
+---
+
 ## 🚀 **Unreleased** — reactor client halves
 
 ### ✨ Highlights
@@ -18,9 +39,9 @@
 
 ```typescript
 const handle = await module.write.execute(invoiceId, "main", actions);
-const { token } = await handle.written;                 // operations are in the log
+const { token } = await handle.written; // operations are in the log
 const invoice = await module.read.get(invoiceId, undefined, undefined, token);
-const same = await handle.document();                   // readable, then the gated read-back
+const same = await handle.document(); // readable, then the gated read-back
 ```
 
 `written` and `readable` reject with `JobFailedError` only when the job itself failed; a reducer error stays on `receipt.job.result`. Over RPC the halves are `read.*` and `write.*` (protocol version 4); the router (`@powerhousedao/reactor-router`) exposes `RoutingReadClient` and `RoutingWriteClient`; `@powerhousedao/reactor-browser` and the GraphQL browser client carry `read` and `write` too, and `window.ph.reactor = { read, write }` sits beside `window.ph.reactorClient`.
@@ -33,7 +54,12 @@ const same = await handle.document();                   // readable, then the ga
 
 ```graphql
 query ($id: String!, $c: ConsistencyTokenInput!) {
-  document(idOrSlug: $id, consistency: $c) { document { id lastModifiedAtUtcIso } }
+  document(idOrSlug: $id, consistency: $c) {
+    document {
+      id
+      lastModifiedAtUtcIso
+    }
+  }
 }
 ```
 

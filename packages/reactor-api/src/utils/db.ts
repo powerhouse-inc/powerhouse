@@ -13,6 +13,7 @@ import type { PGliteLike } from "../pglite/pglite-like.js";
 import {
   createDurableNodeFs,
   resolvePgliteFsync,
+  resolvePgliteMaintenance,
 } from "../pglite/pglite-node.js";
 
 const logger = childLogger(["reactor-api", "db"]);
@@ -112,6 +113,7 @@ export function getDbClient(
         ? new PGlite({
             fs: createDurableNodeFs(NodeFS, connectionString, {
               fsync: resolvePgliteFsync(process.env),
+              ...resolvePgliteMaintenance(process.env),
               logger,
             }),
             parsers: PGLITE_UTC_PARSERS,
