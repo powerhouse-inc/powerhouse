@@ -394,8 +394,6 @@ export type UndoTargetsBase = {
   targets: UndoRedoTargets;
   /** Every id a RETRACT in the stream names, present or not. */
   named: ReadonlySet<string>;
-  /** Every action id in the stream. */
-  ids: ReadonlySet<string>;
 };
 
 /** The targets of a fully derived stream, with what advancing them needs. */
@@ -404,9 +402,7 @@ export function undoTargetsBase(
   applied: ReadonlySet<string>,
 ): UndoTargetsBase {
   const named = new Set<string>();
-  const ids = new Set<string>();
   for (const operation of stream) {
-    ids.add(operation.action.id);
     const target = retractionTarget(operation);
     if (target !== undefined) named.add(target);
   }
@@ -416,48 +412,25 @@ export function undoTargetsBase(
       redoTarget: redoTarget(stream, applied),
     },
     named,
-    ids,
   };
-}
-
-/** The action ids that RETRACT rows among `rows` carry. */
-export function retractIds(rows: readonly { action: Action }[]): Set<string> {
-  const ids = new Set<string>();
-  for (const row of rows) {
-    if (row.action.type === "RETRACT") ids.add(row.action.id);
-  }
-  return ids;
 }
 
 /** What a stream holds before a tail appended to it. */
 export type TailBase = {
   /** Whether a stored RETRACT names `actionId`, present or not. */
   readonly named: (actionId: string) => boolean;
-  /**
-   * Whether a stored row repeats `actionId` in a way that matters. It must
-   * cover every id a stored RETRACT carries, rewound rows included: only that
-   * repeat changes what applies. A superset only costs a re-derive.
-   */
-  readonly holds: (actionId: string) => boolean;
 };
 
 /**
  * Whether `tail`, rows appended in index order after a derived base, applies
- * row by row. Not when a row rewinds, retracts, is named by a retraction, or
- * repeats an action id: a RETRACT whose id repeats retracts nothing.
+ * row by row. Not when a row rewinds, retracts, or is named by a retraction.
+ * Admission refuses a repeated action id, so no tail row repeats one.
  */
 export function tailAppliesIncrementally(
   tail: readonly { skip: number; action: Action }[],
   base: TailBase,
 ): boolean {
-  const seen = new Set<string>();
-  for (const row of tail) {
-    const id = row.action.id;
-    if (base.holds(id) || seen.has(id)) return false;
-    if (rewritesScope(row, base.named)) return false;
-    seen.add(id);
-  }
-  return true;
+  return !tail.some((row) => rewritesScope(row, base.named));
 }
 
 /**
@@ -466,12 +439,11 @@ export function tailAppliesIncrementally(
  * `error` says whether it applied.
  */
 export function advanceUndoTargets(
-  base: Pick<UndoTargetsBase, "targets" | "named" | "ids">,
+  base: Pick<UndoTargetsBase, "targets" | "named">,
   appended: readonly Operation[],
 ): UndoRedoTargets | "rederive" {
   const applies = tailAppliesIncrementally(appended, {
     named: (id) => base.named.has(id),
-    holds: (id) => base.ids.has(id),
   });
   if (!applies) return "rederive";
   let { undoTarget: undo, redoTarget: redo } = base.targets;

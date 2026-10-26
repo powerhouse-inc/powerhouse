@@ -13,7 +13,6 @@ import {
   baseReducerVersion,
   deriveScopeVersioned,
   documentDerivesByRule,
-  retractIds,
   tailAppliesIncrementally,
   isDenied,
   PURGE_DOCUMENT,
@@ -1216,28 +1215,15 @@ export class KyselyWriteCache implements IWriteCache {
     if (rows.length === 0) {
       return false;
     }
-    // An op id derives from its action id, so the stored rows of these op ids
-    // include every stored RETRACT carrying a tail row's action id.
-    const [named, stored] = await Promise.all([
-      this.operationStore.findReferencing(
-        documentId,
-        scope,
-        branch,
-        rows.map((operation) => operation.action.id),
-        signal,
-      ),
-      this.operationStore.getAllOperationsByIds(
-        documentId,
-        scope,
-        branch,
-        rows.map((operation) => operation.id),
-        signal,
-      ),
-    ]);
-    const held = retractIds(stored);
+    const named = await this.operationStore.findReferencing(
+      documentId,
+      scope,
+      branch,
+      rows.map((operation) => operation.action.id),
+      signal,
+    );
     return !tailAppliesIncrementally(rows, {
       named: (id) => named.has(id),
-      holds: (id) => held.has(id),
     });
   }
 

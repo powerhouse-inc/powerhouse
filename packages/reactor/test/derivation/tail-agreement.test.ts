@@ -64,8 +64,6 @@ type Scenario = {
   base: (ids: Ids) => Row[];
   tail: (ids: Ids) => Row[];
   rederives: boolean;
-  /** The undo cache's `holds` is every stored id, so it may re-derive where the write cache need not. */
-  undoRederives?: boolean;
 };
 
 function add(id: string, actionId?: string): Row {
@@ -79,7 +77,6 @@ function retractOf(target: string, actionId: string): Row {
   return { action: { ...retract(target), id: actionId } };
 }
 
-// The repeated-id rows are what signatureVerification "log" admits.
 const scenarios: Scenario[] = [
   {
     name: "content only",
@@ -109,36 +106,6 @@ const scenarios: Scenario[] = [
     name: "a row a base RETRACT names before it exists",
     base: (ids) => [add("a"), retractOf(ids.late, ids.r)],
     tail: (ids) => [add("late", ids.late)],
-    rederives: true,
-  },
-  {
-    name: "a row repeating a base RETRACT's id (log mode)",
-    base: (ids) => [add("a", ids.a), retractOf(ids.a, ids.r)],
-    tail: (ids) => [add("x", ids.r)],
-    rederives: true,
-  },
-  {
-    name: "a row repeating a base content id (log mode)",
-    base: (ids) => [add("a", ids.a), add("b")],
-    tail: (ids) => [add("x", ids.a)],
-    rederives: false,
-    undoRederives: true,
-  },
-  {
-    name: "a row repeating a rewound copy of a RETRACT's id (log mode)",
-    base: (ids) => [
-      add("a", ids.a),
-      retractOf(ids.a, ids.r),
-      add("x", ids.r),
-      { ...add("y"), skip: 1 },
-    ],
-    tail: (ids) => [add("z", ids.r)],
-    rederives: true,
-  },
-  {
-    name: "two tail rows sharing an id (log mode)",
-    base: () => [add("a")],
-    tail: (ids) => [add("x", ids.d), add("y", ids.d)],
     rederives: true,
   },
 ];
@@ -236,7 +203,7 @@ describe.each(backends)("tail predicate agreement on %s", (_name, create) => {
 
   it.each(scenarios)(
     "both caches agree on $name",
-    async ({ base, tail, rederives, undoRederives = rederives }) => {
+    async ({ base, tail, rederives }) => {
       const ids: Ids = new Proxy({} as Ids, {
         get: (known, key: string) => (known[key] ??= generateId()),
       });
@@ -285,7 +252,7 @@ describe.each(backends)("tail predicate agreement on %s", (_name, create) => {
       });
       expect({ writeRederived, undoRederived }).toEqual({
         writeRederived: rederives,
-        undoRederived: undoRederives,
+        undoRederived: rederives,
       });
       await writeCache.shutdown();
     },

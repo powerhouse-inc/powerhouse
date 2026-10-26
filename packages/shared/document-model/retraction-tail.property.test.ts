@@ -3,11 +3,9 @@ import { retract, type Action } from "./actions.js";
 import { isDenied } from "./denied.js";
 import { baseCreateDocument, type PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
-import { createReducer } from "./reducer.js";
 import {
   deriveScope,
   reduceOne,
-  retractIds,
   retractionTarget,
   tailAppliesIncrementally,
   type ReducerFor,
@@ -85,7 +83,7 @@ const content = (id: string, type: "PUSH" | "POP" = "PUSH"): Action =>
     scope: "global",
   }) as never;
 
-/** Ids from a small pool, so repeats of every kind are common. */
+/** Ids from a small pool, so RETRACTs often name stored and future rows. */
 function stream(random: () => number, length: number): Operation[] {
   const rows: Operation[] = [];
   const id = () => `a${Math.floor(random() * POOL)}`;
@@ -114,17 +112,27 @@ function stream(random: () => number, length: number): Operation[] {
   return rows;
 }
 
-function tail(random: () => number, from: number, length: number) {
+/** Rows after `base` whose action ids are new: admission refuses a repeat. */
+function tail(
+  random: () => number,
+  base: readonly Operation[],
+  length: number,
+) {
+  const used = new Set(base.map((operation) => operation.action.id));
   const rows: Operation[] = [];
   for (let i = 0; i < length; i++) {
-    const id = `a${Math.floor(random() * (POOL + 2))}`;
+    // From the pool, so a stored RETRACT may name it, else fresh.
+    let id = `a${Math.floor(random() * (POOL + 2))}`;
+    if (used.has(id)) id = `t${base.length + i}`;
+    used.add(id);
     const roll = random();
+    const index = base.length + i;
     rows.push(
       roll < 0.7
-        ? row(content(id), from + i)
+        ? row(content(id), index)
         : roll < 0.85
-          ? row(content(id, "POP"), from + i)
-          : row(content(id), from + i, 0, "denied"),
+          ? row(content(id, "POP"), index)
+          : row(content(id), index, 0, "denied"),
     );
   }
   return rows;
@@ -167,116 +175,28 @@ const named = (rows: readonly Operation[]) =>
       .filter((target): target is string => target !== undefined),
   );
 
-/** The id of each op id's latest stored row that is a RETRACT. */
-function latestRetractIds(rows: readonly Operation[]): Set<string> {
-  const latest = new Map<string, Operation>();
-  for (const operation of [...rows].sort((a, b) => a.index - b.index)) {
-    latest.set(operation.id, operation);
-  }
-  return retractIds([...latest.values()]);
-}
-
-describe("a repeated action id under the rule", () => {
-  it("changes the derived state only when it repeats a stored RETRACT's id", () => {
-    let contentRepeats = 0;
-    let retractRepeats = 0;
-    let retractRepeatsThatDiffer = 0;
-    for (let seed = 1; seed <= 2000; seed++) {
-      const random = mulberry32(seed);
-      const base = stream(random, 2 + Math.floor(random() * 14));
-      const [appended] = tail(random, base.length, 1);
-      const id = appended.action.id;
-      if (named(base).has(id)) continue;
-      const same =
-        JSON.stringify(full([...base, appended])) ===
-        JSON.stringify(incremental(base, [appended]));
-      if (retractIds(base).has(id)) {
-        retractRepeats++;
-        if (!same) retractRepeatsThatDiffer++;
-        continue;
-      }
-      if (base.some((operation) => operation.action.id === id)) {
-        contentRepeats++;
-      }
-      expect(same, `seed ${seed}`).toBe(true);
-    }
-    expect(contentRepeats).toBeGreaterThan(200);
-    expect(retractRepeats).toBeGreaterThan(50);
-    expect(retractRepeatsThatDiffer).toBeGreaterThan(0);
-  });
-
-  it("applies a tail row by row whenever the predicate says so, given stored RETRACT ids as holds", () => {
+describe("a tail of new action ids under the rule", () => {
+  it("applies row by row whenever the predicate says so", () => {
     let incrementalTails = 0;
-    let repeatingTails = 0;
+    let rederivedTails = 0;
     for (let seed = 1; seed <= 2000; seed++) {
       const random = mulberry32(seed);
       const base = stream(random, 2 + Math.floor(random() * 14));
-      const appended = tail(random, base.length, 1 + Math.floor(random() * 3));
+      const appended = tail(random, base, 1 + Math.floor(random() * 3));
       const targets = named(base);
-      const carried = retractIds(base);
       const applies = tailAppliesIncrementally(appended, {
         named: (id) => targets.has(id),
-        holds: (id) => carried.has(id),
       });
-      if (!applies) continue;
-      incrementalTails++;
-      if (
-        appended.some((operation) =>
-          base.some((stored) => stored.action.id === operation.action.id),
-        )
-      ) {
-        repeatingTails++;
+      if (!applies) {
+        rederivedTails++;
+        continue;
       }
+      incrementalTails++;
       expect(full([...base, ...appended]), `seed ${seed}`).toEqual(
         incremental(base, appended),
       );
     }
     expect(incrementalTails).toBeGreaterThan(500);
-    expect(repeatingTails).toBeGreaterThan(100);
-  });
-
-  // Op id r's latest stored row is the rewound repeat, not the live RETRACT.
-  it("needs every stored row's type, not each op id's latest row", () => {
-    const base = [
-      row(content("a"), 0),
-      row({ ...retract("a", "global"), id: "r" }, 1),
-      row(content("r"), 2),
-      row(content("y"), 3, 1),
-    ];
-    const appended = row(content("r"), 4);
-    const targets = named(base);
-
-    expect(full([...base, appended])).toEqual(["a", "y", "r"]);
-    expect(incremental(base, [appended])).toEqual(["y", "r"]);
-    expect(
-      tailAppliesIncrementally([appended], {
-        named: (id) => targets.has(id),
-        holds: (id) => latestRetractIds(base).has(id),
-      }),
-    ).toBe(true);
-    expect(
-      tailAppliesIncrementally([appended], {
-        named: (id) => targets.has(id),
-        holds: (id) => retractIds(base).has(id),
-      }),
-    ).toBe(false);
-  });
-
-  it("re-derives in the shared reducer when the appended action repeats a RETRACT's id", () => {
-    const reducer = createReducer(listReducer);
-    const stamp = (action: Action): Action => ({
-      ...action,
-      timestampUtcMs: new Date().toISOString(),
-    });
-    const a = stamp(content("a"));
-    const undo = stamp({ ...retract("a", "global"), id: "r" });
-    let document = reducer(emptyDocument(), a);
-    document = reducer(document, undo);
-    expect(items(document)).toEqual([]);
-
-    document = reducer(document, stamp(content("r")));
-
-    expect(items(document)).toEqual(["a", "r"]);
-    expect(items(document)).toEqual(full(document.operations.global ?? []));
+    expect(rederivedTails).toBeGreaterThan(100);
   });
 });

@@ -1429,12 +1429,6 @@ export type ReducerOptions = {
   targeted?: ReadonlySet<string>;
 
   /**
-   * Base-reducer 3: the appended action's id when a stored RETRACT row carries
-   * it. Computed from the document's operations when absent.
-   */
-  retractIds?: ReadonlySet<string>;
-
-  /**
    * Base-reducer 3: derives a scope from every row, each with its own model
    * version's reducer and the upgrades applied at their boundaries. Without
    * it, every row takes the reducer this one wraps.

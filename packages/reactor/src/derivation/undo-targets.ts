@@ -25,8 +25,6 @@ export type DeriveScopeForTargets = (
 type Entry = {
   targets: UndoRedoTargets;
   named: ReadonlySet<string>;
-  // Grows in place; a superset only costs a spurious re-derive.
-  ids: Set<string>;
   last?: { index: number; id: string };
 };
 
@@ -94,7 +92,6 @@ export class UndoTargetsCache {
     }
     const targets = advanceUndoTargets(entry, appended);
     if (targets === "rederive") return undefined;
-    for (const row of appended) entry.ids.add(row.action.id);
     const last = appended.at(-1);
     return {
       ...entry,
@@ -120,7 +117,6 @@ export class UndoTargetsCache {
     return {
       targets: base.targets,
       named: base.named,
-      ids: new Set(base.ids),
       last: last ? { index: last.index, id: last.id } : undefined,
     };
   }

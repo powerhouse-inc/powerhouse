@@ -20,7 +20,6 @@ import {
   conflictWindowMovesEveryRow,
   createdCapabilities,
   decide,
-  deriveOperationId,
   derivesByRule,
   documentDerivesByRule,
   garbageCollect,
@@ -37,7 +36,6 @@ import {
   PEER_CAPABILITIES,
   positionalOperations,
   retractedActionIds,
-  retractIds,
   RULE_EXEMPT_SCOPES,
   skipMayUndo,
   sortOperations,
@@ -233,13 +231,10 @@ type CarriedState = {
 type RuleLookups = {
   /** The ids a stored RETRACT names. */
   targeted: ReadonlySet<string>;
-  /** The ids a stored RETRACT row carries, rewound rows included. */
-  retractIds: ReadonlySet<string>;
 };
 
 const NO_RULE_LOOKUPS: RuleLookups = {
   targeted: new Set(),
-  retractIds: new Set(),
 };
 
 async function readRuleLookups(
@@ -250,23 +245,14 @@ async function readRuleLookups(
   actionIds: string[],
   signal?: AbortSignal,
 ): Promise<RuleLookups> {
-  const [targeted, rows] = await Promise.all([
-    operationStore.findReferencing(
-      documentId,
-      scope,
-      branch,
-      actionIds,
-      signal,
-    ),
-    operationStore.getAllOperationsByIds(
-      documentId,
-      scope,
-      branch,
-      actionIds.map((id) => deriveOperationId(documentId, scope, branch, id)),
-      signal,
-    ),
-  ]);
-  return { targeted, retractIds: retractIds(rows) };
+  const targeted = await operationStore.findReferencing(
+    documentId,
+    scope,
+    branch,
+    actionIds,
+    signal,
+  );
+  return { targeted };
 }
 
 /** Whether `writes`, appended after what `lookups` read, apply row by row. */
@@ -276,7 +262,6 @@ function appliesIncrementally(
 ): boolean {
   return tailAppliesIncrementally(writes, {
     named: (id) => lookups.targeted.has(id),
-    holds: (id) => lookups.retractIds.has(id),
   });
 }
 
@@ -2078,9 +2063,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     // Base-reducer 3 re-derives the scope from every row for a write that
-    // retracts, that a stored RETRACT names, or that repeats a stored
-    // RETRACT's id. Only the version says whether the rule runs, so such a
-    // write reads again once the slice is dropped.
+    // retracts or that a stored RETRACT names. Only the version says whether
+    // the rule runs, so such a write reads again once the slice is dropped.
     let lookups = carried?.lookups;
     if (
       carried === undefined &&
@@ -2236,9 +2220,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         const caps = baseReducerCapabilities(document.header);
         const protocolVersion = caps.version;
         const ruleOptions = {
-          ...(lookups === undefined
-            ? {}
-            : { targeted: lookups.targeted, retractIds: lookups.retractIds }),
+          ...(lookups === undefined ? {} : { targeted: lookups.targeted }),
           ...(deriveScope === undefined ? {} : { deriveScope }),
         };
         const reducerOptions = sourceOperation

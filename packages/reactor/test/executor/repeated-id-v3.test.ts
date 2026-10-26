@@ -141,36 +141,41 @@ describe("base-reducer 3: a write repeating a stored row's action id", () => {
     await assertOneRuleAgreement({ module: module!, document });
   });
 
-  // The re-appended repeat's latest stored copy is content, not the RETRACT.
-  it("re-derives a re-appended repeat of a RETRACT's id (log mode)", async () => {
+  it("refuses a write repeating a RETRACT's id in log mode", async () => {
     await build({ log: true });
     const a = add("a", 10);
     const undo = retractAt(a.id, 20);
     await execute([a]);
     await execute([undo]);
-    await execute([add("r", 40, undo.id)]);
-    expect(await modules()).toEqual(["a", "r"]);
 
-    await load([asOperation(add("y", 30), 3)]);
-
-    expect(shape(await storedRows(module!, docId))).toBe(
-      `0:a/0 1:R(${a.id})/0 2:r/0 3:y/1 4:r/0`,
+    const job = await settle(
+      await module!.reactor.execute(docId, "main", [add("r", 40, undo.id)]),
     );
-    expect(await modules()).toEqual(["a", "y", "r"]);
-    await assertOneRuleAgreement({ module: module!, document });
+
+    expect(job.status).toBe(JobStatus.FAILED);
+    expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
+    expect(shape(await storedRows(module!, docId))).toBe(
+      `0:a/0 1:R(${a.id})/0`,
+    );
+    expect(await modules()).toEqual([]);
   });
 
-  it("falls back from a batch whose later write repeats a RETRACT's id (log mode)", async () => {
+  it("refuses a batch whose later write repeats a RETRACT's id in log mode", async () => {
     await build({ log: true });
     const a = add("a", 10);
     const undo = retractAt(a.id, 20);
     await execute([a]);
     await execute([undo]);
+
+    const job = await settle(
+      await module!.reactor.execute(docId, "main", [
+        add("b", 30),
+        add("x", 40, undo.id),
+      ]),
+    );
+
+    expect(job.status).toBe(JobStatus.FAILED);
+    expect(job.error?.message).toContain("[DUPLICATE_ACTION]");
     expect(await modules()).toEqual([]);
-
-    await execute([add("b", 30), add("x", 40, undo.id)]);
-
-    expect(await modules()).toEqual(["a", "b", "x"]);
-    await assertOneRuleAgreement({ module: module!, document });
   });
 });

@@ -101,9 +101,6 @@ function stream(random: () => number, length: number): Operation[] {
       // A reshuffle's rewind.
       action = { id, type: "PUSH", input: { v: id }, scope: "global" } as never;
       skip = 1 + Math.floor(random() * Math.min(3, index));
-    } else if (roll < 0.96 && rows.length > 0) {
-      // A repeated action id.
-      action = { ...pick(rows).action };
     } else {
       action = { id, type: "PUSH", input: { v: id }, scope: "global" } as never;
     }
@@ -181,7 +178,7 @@ describe("advanceUndoTargets", () => {
       timestampUtcMs: "2026-01-01T00:00:00.000Z",
     }) as Action;
 
-  it("re-derives on a rewind, a RETRACT, a named row or a repeated id", () => {
+  it("re-derives on a rewind, a RETRACT or a named row", () => {
     const a = row(0, push("a"));
     const base = undoTargetsBase([a], applied([a]));
     const inert = row(1, { ...retract("x", "global"), id: "r" });
@@ -191,10 +188,6 @@ describe("advanceUndoTargets", () => {
     );
     expect(advanceUndoTargets(base, [inert])).toBe("rederive");
     expect(advanceUndoTargets(withInert, [row(2, push("x"))])).toBe("rederive");
-    expect(advanceUndoTargets(base, [row(1, push("a"))])).toBe("rederive");
-    expect(
-      advanceUndoTargets(base, [row(1, push("b")), row(2, push("b"))]),
-    ).toBe("rederive");
   });
 
   it("moves undo to the last applied content row and clears redo", () => {

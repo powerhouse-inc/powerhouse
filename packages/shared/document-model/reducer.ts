@@ -41,7 +41,6 @@ import {
   positionalOperations,
   reduceOne,
   retractedActionIds,
-  retractIds,
   tailAppliesIncrementally,
   type ReducerFor,
 } from "./retraction.js";
@@ -672,9 +671,8 @@ export function baseReducer<TState extends PHBaseState = PHBaseState>(
 
 /**
  * Base-reducer 3: applies the appended row, or re-derives the scope when the
- * row rewinds, retracts, is named by a retraction, or repeats a stored
- * RETRACT's id. A stored `error` is diagnostic: it is written only on the
- * appended row.
+ * row rewinds, retracts, or is named by a retraction. A stored `error` is
+ * diagnostic: it is written only on the appended row.
  */
 function applyByRule<TState extends PHBaseState>(
   document: PHDocument<TState>,
@@ -698,10 +696,9 @@ function applyByRule<TState extends PHBaseState>(
 
   const targeted =
     options.targeted ?? retractedActionIds(positionalOperations(operations));
-  const carried = options.retractIds ?? retractIds(operations.slice(0, -1));
   const rebuild = !tailAppliesIncrementally(
     [{ skip, action: appended.action }],
-    { named: (id) => targeted.has(id), holds: (id) => carried.has(id) },
+    { named: (id) => targeted.has(id) },
   );
 
   let next = document;

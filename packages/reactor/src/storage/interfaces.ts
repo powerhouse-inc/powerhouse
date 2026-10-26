@@ -311,15 +311,6 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<Set<string>>;
 
-  /** Every row of each of `opIds` stored in one stream, rewound rows included, in index order. */
-  getAllOperationsByIds(
-    documentId: string,
-    scope: string,
-    branch: string,
-    opIds: string[],
-    signal?: AbortSignal,
-  ): Promise<Operation[]>;
-
   /** The latest row of each of `opIds` stored in one stream. */
   getOperationsByIds(
     documentId: string,

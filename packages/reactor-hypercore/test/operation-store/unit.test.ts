@@ -566,66 +566,6 @@ describe("HypercoreOperationStore", () => {
     });
   });
 
-  describe("getAllOperationsByIds", () => {
-    const documentType = "powerhouse/test-doc";
-
-    async function append(
-      documentId: string,
-      operations: Operation[],
-      scope = "global",
-      branch = "main",
-    ): Promise<void> {
-      const { revision } = await store.getRevisions(documentId, branch);
-      const from = revision[scope] ?? 0;
-      await store.apply(
-        documentId,
-        documentType,
-        scope,
-        branch,
-        from,
-        (txn) => {
-          txn.addOperations(
-            ...operations.map((operation, i) => ({
-              ...operation,
-              index: from + i,
-            })),
-          );
-        },
-      );
-    }
-
-    it("returns nothing for no ids", async () => {
-      expect(
-        await store.getAllOperationsByIds(generateId(), "global", "main", []),
-      ).toEqual([]);
-    });
-
-    it("returns every row of each op id in index order", async () => {
-      const documentId = generateId();
-      const once = makeOp(0);
-      const twice = makeOp(1);
-      await append(documentId, [once, twice]);
-      await append(documentId, [{ ...twice, skip: 1 }]);
-
-      expect(
-        (
-          await store.getAllOperationsByIds(documentId, "global", "main", [
-            twice.id,
-            once.id,
-            "absent",
-          ])
-        ).map((operation) => [operation.id, operation.index]),
-      ).toEqual([
-        [once.id, 0],
-        [twice.id, 1],
-        [twice.id, 2],
-      ]);
-      expect(
-        await store.getAllOperationsByIds(documentId, "global", "main", []),
-      ).toEqual([]);
-    });
-  });
-
   describe("getSince", () => {
     it("should get operations since a given revision", async () => {
       const documentId = generateId();
