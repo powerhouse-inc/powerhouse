@@ -195,7 +195,14 @@ function InstanceRow({
         </button>
       </div>
       {logs ? (
-        <pre className="rm-switchboards__log" data-testid="switchboard-logs">
+        <pre
+          className="rm-switchboards__log"
+          data-testid="switchboard-logs"
+          ref={(pre) => {
+            // A tail: keep the newest lines in view.
+            if (pre) pre.scrollTop = pre.scrollHeight;
+          }}
+        >
           {logs.lines.length === 0
             ? "(no output yet)"
             : logs.lines.map((line) => line.text).join("\n")}
@@ -315,14 +322,24 @@ function ControllerSection({
 
   useEffect(() => {
     const abort = new AbortController();
+    const aborted = () => abort.signal.aborted;
     void (async () => {
       try {
         const listed = await client.projects();
-        if (abort.signal.aborted) return;
+        if (aborted()) return;
         setProjects(listed);
-        setProject((current) => current || (listed.at(0)?.root ?? ""));
+        // An allowlisted parent is listed too, usually without hosts/ of its own.
+        let first = listed.at(0)?.root ?? "";
+        for (const candidate of listed) {
+          if ((await client.hosts(candidate.root)).length > 0) {
+            first = candidate.root;
+            break;
+          }
+        }
+        if (aborted()) return;
+        setProject((current) => current || first);
       } catch (e) {
-        if (!abort.signal.aborted) setError(messageOf(e));
+        if (!aborted()) setError(messageOf(e));
       }
     })();
     return () => abort.abort();
@@ -541,6 +558,11 @@ function ControllerSection({
           ))}
         </select>
       </label>
+      {project && hosts.length === 0 ? (
+        <p className="rm-note">
+          This project has no hosts/&lt;name&gt;/host.js.
+        </p>
+      ) : null}
       <fieldset className="rm-switchboards__env">
         <legend>Env</legend>
         {rows.map((row, index) => (

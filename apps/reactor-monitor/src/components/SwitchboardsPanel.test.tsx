@@ -288,6 +288,28 @@ describe("SwitchboardsPanel", () => {
     expect(managed.attach).toHaveBeenCalledTimes(1);
   });
 
+  it("defaults to the first project that has hosts", async () => {
+    const { client } = fakeClient({
+      projects: () =>
+        Promise.resolve([
+          { root: "/work", name: "work" },
+          { root: ROOT, name: "proj" },
+        ]),
+      hosts: (project) => Promise.resolve(project === ROOT ? ["sb"] : []),
+    });
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(client)} pollMs={POLL} />,
+    );
+    await ready(view);
+    expect((view.getByLabelText("Project") as HTMLSelectElement).value).toBe(
+      ROOT,
+    );
+    fireEvent.change(view.getByLabelText("Project"), {
+      target: { value: "/work" },
+    });
+    await view.findByText("This project has no hosts/<name>/host.js.");
+  });
+
   it("offers to start the host an imported set came from", async () => {
     const fake = fakeClient();
     const view = render(
