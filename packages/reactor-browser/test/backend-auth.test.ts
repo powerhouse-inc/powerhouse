@@ -84,3 +84,15 @@ describe("recordBackendAuthError", () => {
     expect(getPHStore()?.backendAuth).toBeUndefined();
   });
 });
+
+describe("backendAuthStatusOf: GraphQL refusals without a status", () => {
+  it("maps the switchboard's Forbidden messages", () => {
+    expect(
+      backendAuthStatusOf(new Error("Forbidden: insufficient permissions")),
+    ).toBe(403);
+    expect(
+      backendAuthStatusOf(new Error("Forbidden: authentication required")),
+    ).toBe(401);
+    expect(backendAuthStatusOf(new Error("Authentication required"))).toBe(401);
+  });
+});

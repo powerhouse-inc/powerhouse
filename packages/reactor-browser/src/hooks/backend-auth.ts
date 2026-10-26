@@ -1,4 +1,3 @@
-import { isDriveAuthError } from "@powerhousedao/reactor";
 import type {
   BackendAuthState,
   SetPHGlobalValue,
@@ -20,6 +19,18 @@ export const addBackendAuthEventHandler =
   backendAuthEventFunctions.addEventHandler;
 
 const STATUS_IN_MESSAGE = /\(Code: (401|403)\)/;
+
+/**
+ * The messages a Switchboard's GraphQL layer refuses with, without an HTTP
+ * status (the sync layer's `DRIVE_AUTH_ERROR_MESSAGES`). Inlined: this file
+ * is reachable from the browser entry, which must not import the reactor
+ * package as a value.
+ */
+const GRAPHQL_REFUSALS = [
+  "Forbidden: insufficient permissions",
+  "Forbidden: authentication required",
+  "Authentication required",
+] as const;
 
 /**
  * The HTTP status with which a backend refused the caller, or null when the
@@ -53,8 +64,13 @@ export function backendAuthStatusOf(error: unknown): 401 | 403 | null {
       if (status) return status;
     }
   }
-  // Forbidden/Unauthorized GraphQL errors without a status: the sync layer's rule.
-  if (isDriveAuthError(error)) return 403;
+  // A Forbidden/authentication GraphQL error without a status.
+  if (
+    typeof e.message === "string" &&
+    GRAPHQL_REFUSALS.some((m) => (e.message as string).includes(m))
+  ) {
+    return /authentication required/i.test(e.message) ? 401 : 403;
+  }
   return null;
 }
 
