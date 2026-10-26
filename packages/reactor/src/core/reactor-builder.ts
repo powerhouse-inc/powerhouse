@@ -109,6 +109,7 @@ import {
   type IndexerDatabase,
 } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import { KyselyWriteIdentityStore } from "../storage/kysely/write-identity-store.js";
 import { DEFAULT_FLUSH_SYNC_TIMEOUT_MS } from "../storage/kysely/group-commit-pglite-client.js";
 import {
   createGroupCommitStorage,
@@ -153,6 +154,7 @@ import {
   UNKNOWN_STORAGE_FACTS,
 } from "../inspector/storage-facts.js";
 import type { ReactorStorageFacts } from "../inspector/types.js";
+import { CatchUpPriority } from "../processors/catch-up-priority.js";
 import { DEFAULT_DRIVE_CONTAINER_TYPES } from "./drive-container-types.js";
 import { resolveModelSources } from "./model-sources.js";
 import type { DocumentModelSource } from "./model-sources.js";
@@ -427,6 +429,7 @@ export class ReactorBuilder {
   private projectionWorkerFactory?: ProjectionWorkerFactory;
   private instrumentedPools: PoolInstrumentation[] = [];
   private catchUpConfig: CatchUpConfig = defaultCatchUpConfig;
+  private catchUpPriority: CatchUpPriority = new CatchUpPriority();
   private extraPeerCapabilities: PeerCapability[] = [];
 
   withLogger(logger: ILogger): this {
@@ -546,6 +549,16 @@ export class ReactorBuilder {
   /** Tunes the read-side catch-up sweep. */
   withCatchUp(config: Partial<CatchUpConfig>): this {
     this.catchUpConfig = { ...this.catchUpConfig, ...config };
+    return this;
+  }
+
+  /**
+   * Paces processor backfills against requests. Defaults to dynamic with no
+   * load source, which holds level 4; a host feeds load through the
+   * priority's `setLoadSource` and ticks it.
+   */
+  withCatchUpPriority(priority: CatchUpPriority): this {
+    this.catchUpPriority = priority;
     return this;
   }
 
@@ -1075,6 +1088,10 @@ export class ReactorBuilder {
       operationIndex,
     );
 
+    const writeIdentityStore = new KyselyWriteIdentityStore(
+      database as unknown as Kysely<StorageDatabase>,
+    );
+
     const executionScope: IExecutionScope = new KyselyExecutionScope(
       database as unknown as Kysely<StorageDatabase>,
       operationStore,
@@ -1083,6 +1100,7 @@ export class ReactorBuilder {
       writeCache,
       documentMetaCache,
       collectionMembershipCache,
+      writeIdentityStore,
     );
 
     let executorManager = this.executorManager;
@@ -1253,7 +1271,10 @@ export class ReactorBuilder {
       processorManagerConsistencyTracker,
       this.logger!,
       this.driveContainerTypes,
-      { legacyProcessorIds: this.features.legacyProcessorIds !== false },
+      {
+        legacyProcessorIds: this.features.legacyProcessorIds !== false,
+        catchUpPriority: this.catchUpPriority,
+      },
     );
     processorManager.attachCatchUp(
       settledWatermark,
@@ -1452,6 +1473,7 @@ export class ReactorBuilder {
       database,
       operationStore,
       keyframeStore,
+      writeIdentityStore,
       writeCache,
       operationIndex,
       documentView,
@@ -1468,6 +1490,7 @@ export class ReactorBuilder {
       pools: this.instrumentedPools,
       degradedComponents,
       catchUp,
+      catchUpPriority: this.catchUpPriority,
       settledWatermark,
       documentPurgeService: new DocumentPurgeService(
         queue,

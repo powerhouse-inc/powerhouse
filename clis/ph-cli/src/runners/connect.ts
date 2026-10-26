@@ -127,6 +127,8 @@ function toStudioArgs(host: ConnectHostParsed): ConnectStudioArgs {
   const runner = host.runner;
   const args: Partial<ConnectStudioArgs> = {
     port: runner.port ?? DEFAULT_CONNECT_STUDIO_PORT,
+    // The bind address (runnerBaseSchema `host`); unset keeps vite's default.
+    ...(runner.host ? { host: runner.host } : {}),
     open: runner.openBrowser === true,
     strictPort: runner.strictPort === true,
     printUrls: true,

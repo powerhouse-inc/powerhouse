@@ -3,7 +3,12 @@ import { ERRNO_CODES } from "@electric-sql/pglite/basefs";
 import type { NodeFS } from "@electric-sql/pglite/nodefs";
 import nodeFs from "node:fs";
 import path from "node:path";
-import { dirBytes, PgliteMaintenance } from "./maintenance.js";
+import {
+  dirBytes,
+  FORCED_VACUUM_FULL_MAX_DEFER_MS,
+  PgliteMaintenance,
+  type MaintenanceGate,
+} from "./maintenance.js";
 import { syncTree } from "./sync-tree.js";
 
 export type NodeFsClass = typeof NodeFS;
@@ -18,7 +23,15 @@ export interface DurableNodeFsOptions {
   maintenanceIntervalMs?: number;
   /** `base/` size at open; default 256 MB; 0 disables. */
   vacuumFullAboveBytes?: number;
-  logger?: { warn(message: string): void };
+  /** See `MaintenanceOptions.vacuumFullQuietMs`; default 60 s. */
+  vacuumFullQuietMs?: number;
+  /** See `MaintenanceOptions.vacuumFullMaxDeferMs`; default 0 (quiet window only). */
+  vacuumFullMaxDeferMs?: number;
+  /** See `MaintenanceOptions.gate`. */
+  maintenanceGate?: MaintenanceGate;
+  /** Clock for the maintenance quiet window; tests pass their own. */
+  now?: () => number;
+  logger?: { warn(message: string): void; info?(message: string): void };
   /** Emscripten abort (a Postgres PANIC, e.g. ENOSPC on WAL). */
   onAbort?: (what: unknown) => void;
   hostFs?: Pick<typeof nodeFs, "fsyncSync" | "fdatasyncSync">;
@@ -32,6 +45,72 @@ export function resolvePgliteFsync(
   env: Record<string, string | undefined>,
 ): boolean {
   return env.PH_PGLITE_FSYNC !== "0";
+}
+
+/** `PH_PGLITE_VACUUM_FULL`: when an oversized store's one-time VACUUM FULL may run. */
+export type PgliteVacuumFullMode = "off" | "quiet" | "forced";
+
+const VACUUM_FULL_MODES: readonly PgliteVacuumFullMode[] = [
+  "off",
+  "quiet",
+  "forced",
+];
+
+/** The VACUUM FULL settings an environment selects; see {@link resolvePgliteMaintenance}. */
+export type PgliteMaintenanceSettings = Pick<
+  DurableNodeFsOptions,
+  "vacuumFullAboveBytes" | "vacuumFullQuietMs" | "vacuumFullMaxDeferMs"
+>;
+
+/**
+ * Reads the VACUUM FULL knobs. `PH_PGLITE_VACUUM_FULL` is `off` (the
+ * default: never), `quiet` (only after the quiet window, however long that
+ * takes) or `forced` (a deadline of 30 min from open, after which it runs
+ * under load). Off is the default because a full rewrite of a large store
+ * needs about twice its size in free disk and holds the only connection for
+ * minutes, and on a store that is live data rather than bloat it reclaims
+ * nothing; a quiet window of a minute arrives naturally between jobs, so
+ * `quiet` is an opt-in for stores known to be small or bloated.
+ * `PH_PGLITE_VACUUM_FULL_ABOVE_MB` sets the size that makes a store
+ * eligible; `PH_PGLITE_VACUUM_FULL_QUIET_MS` and
+ * `PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS` override the mode's timings. A value
+ * that is not a non-negative number is left to the default; an unknown mode
+ * throws, since silently running a rewrite is what this guards against.
+ */
+export function resolvePgliteMaintenance(
+  env: Record<string, string | undefined>,
+): PgliteMaintenanceSettings {
+  const rawMode = env.PH_PGLITE_VACUUM_FULL?.trim().toLowerCase() || "off";
+  if (!isVacuumFullMode(rawMode)) {
+    throw new Error(
+      `Invalid PH_PGLITE_VACUUM_FULL: ${String(env.PH_PGLITE_VACUUM_FULL)}. Expected "off", "quiet" or "forced".`,
+    );
+  }
+  const mode: PgliteVacuumFullMode = rawMode;
+  const settings: PgliteMaintenanceSettings = {};
+  if (mode === "off") settings.vacuumFullAboveBytes = 0;
+  if (mode === "forced") {
+    settings.vacuumFullMaxDeferMs = FORCED_VACUUM_FULL_MAX_DEFER_MS;
+  }
+  const aboveMb = nonNegative(env.PH_PGLITE_VACUUM_FULL_ABOVE_MB);
+  if (aboveMb !== undefined && mode !== "off") {
+    settings.vacuumFullAboveBytes = aboveMb * 1024 * 1024;
+  }
+  const quiet = nonNegative(env.PH_PGLITE_VACUUM_FULL_QUIET_MS);
+  if (quiet !== undefined) settings.vacuumFullQuietMs = quiet;
+  const maxDefer = nonNegative(env.PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS);
+  if (maxDefer !== undefined) settings.vacuumFullMaxDeferMs = maxDefer;
+  return settings;
+}
+
+function isVacuumFullMode(value: string): value is PgliteVacuumFullMode {
+  return (VACUUM_FULL_MODES as readonly string[]).includes(value);
+}
+
+function nonNegative(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 interface NodeFsStream {
@@ -118,6 +197,10 @@ export function createDurableNodeFs(
   const maintenance = new PgliteMaintenance({
     intervalMs: options.maintenanceIntervalMs,
     vacuumFullAboveBytes: options.vacuumFullAboveBytes,
+    vacuumFullQuietMs: options.vacuumFullQuietMs,
+    vacuumFullMaxDeferMs: options.vacuumFullMaxDeferMs,
+    gate: options.maintenanceGate,
+    now: options.now,
     logger,
   });
 

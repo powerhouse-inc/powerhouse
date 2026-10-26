@@ -10,6 +10,7 @@ import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import {
   buildReadGateReactor,
   contextFor,
+  mutationContextFor,
   createFixture,
   holdsGlobal,
   openAuthorization,
@@ -123,7 +124,7 @@ describe("generated document-model subgraph reads as the caller", () => {
         (await mutation("setModelName")(
           undefined,
           { docId: secret, input: { name: "touched" } },
-          contextFor(address),
+          mutationContextFor(module!, address),
         )) as Served,
       );
 
@@ -133,24 +134,25 @@ describe("generated document-model subgraph reads as the caller", () => {
   });
 
   it("createDocument renames and reads back as the caller", async () => {
-    const { client, mutation } = await fixture();
-    const execute = vi.spyOn(client, "execute");
-    const get = vi.spyOn(client, "get");
+    const { mutation } = await fixture();
+    const execute = vi.spyOn(module!.write, "execute");
+    const get = vi.spyOn(module!.read, "get");
 
     const created = (await mutation("createDocument")(
       undefined,
       { name: "named" },
-      contextFor(OUTSIDER),
+      mutationContextFor(module!, OUTSIDER),
     )) as Served;
 
     const subject = { address: OUTSIDER, key: undefined };
-    expect(get).toHaveBeenCalledWith(created.id, { subject });
-    expect(execute).toHaveBeenLastCalledWith(
+    expect(get).toHaveBeenLastCalledWith(
       created.id,
-      "main",
-      [expect.objectContaining({ type: "SET_NAME" })],
+      { subject, branch: "main" },
       undefined,
-      subject,
+      expect.objectContaining({ version: 1 }),
     );
+    expect(execute).toHaveBeenLastCalledWith(created.id, "main", [
+      expect.objectContaining({ type: "SET_NAME" }),
+    ]);
   });
 });

@@ -9,7 +9,7 @@ import {
   createDurableNodeFs,
   type DurableNodeFsOptions,
 } from "../../src/pglite/durable-node-fs.js";
-import { dirBytes } from "../../src/pglite/maintenance.js";
+import { dirBytes, PgliteMaintenance } from "../../src/pglite/maintenance.js";
 
 // Waits span real VACUUM passes, which slow under load.
 const IO_WAIT = { timeout: 60_000 };
@@ -194,13 +194,23 @@ describe("durable NodeFS maintenance", () => {
       const bloated = await baseBytes(seed.dir);
 
       const big = await start(
-        { maintenanceIntervalMs: 0, vacuumFullAboveBytes: bloated - 1 },
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: bloated - 1,
+          vacuumFullQuietMs: 0,
+        },
         seed.dir,
       );
       const before = await tableBytes(big.pg);
       await expect(big.maintain()).resolves.toBe("vacuum-full");
       expect(big.warn).toHaveBeenCalledWith(
-        expect.stringContaining("VACUUM FULL"),
+        expect.stringContaining("running VACUUM FULL"),
+      );
+      // The logger here has no info, so the completion report lands on warn.
+      expect(big.warn).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /VACUUM FULL finished in \d+ ms; \d+ -> \d+ bytes/,
+        ),
       );
       expect(await tableBytes(big.pg)).toBeLessThan(before / 4);
       await big.pg.query("SELECT 1");
@@ -217,6 +227,131 @@ describe("durable NodeFS maintenance", () => {
     },
     LONG,
   );
+
+  it(
+    "defers VACUUM FULL until the store has been quiet",
+    async () => {
+      const seed = await start({ maintenanceIntervalMs: 0 });
+      await seed.pg.exec("CREATE TABLE t (v int)");
+      await seed.pg.close();
+
+      let now = 1_000_000;
+      const { pg, warn, maintain } = await start(
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: 1,
+          vacuumFullQuietMs: 60_000,
+          now: () => now,
+        },
+        seed.dir,
+      );
+      await pg.query("INSERT INTO t VALUES (0)");
+      await expect(maintain()).resolves.toBe("vacuum");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "VACUUM FULL waits until the store has had no writes for 60000 ms",
+        ),
+      );
+      now += 30_000;
+      await pg.query("INSERT INTO t VALUES (1)");
+      now += 59_000;
+      await expect(maintain()).resolves.toBe("vacuum");
+      now += 1_000;
+      await expect(maintain()).resolves.toBe("vacuum-full");
+      await expect(maintain()).resolves.toBe("idle");
+    },
+    LONG,
+  );
+
+  it(
+    "never forces a VACUUM FULL on a busy store unless a deadline is set",
+    async () => {
+      const seed = await start({ maintenanceIntervalMs: 0 });
+      await seed.pg.exec("CREATE TABLE t (v int)");
+      await seed.pg.close();
+
+      let now = 1_000_000;
+      const { pg, warn, maintain } = await start(
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: 1,
+          vacuumFullQuietMs: 60_000,
+          now: () => now,
+        },
+        seed.dir,
+      );
+      // Writes every 30 s for 35 min, past the old deadline: no quiet window, no deadline.
+      for (let halfMinute = 0; halfMinute < 70; halfMinute++) {
+        await pg.query("INSERT INTO t VALUES (1)");
+        now += 30_000;
+        await expect(maintain()).resolves.toBe("vacuum");
+      }
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "VACUUM FULL waits until the store has had no writes for 60000 ms",
+        ),
+      );
+      expect(warn).not.toHaveBeenCalledWith(
+        expect.stringContaining("from open"),
+      );
+      now += 60_000;
+      await expect(maintain()).resolves.toBe("vacuum-full");
+    },
+    LONG,
+  );
+
+  it(
+    "runs a deferred VACUUM FULL once it is overdue, even on a store that is never quiet",
+    async () => {
+      const seed = await start({ maintenanceIntervalMs: 0 });
+      await seed.pg.exec("CREATE TABLE t (v int)");
+      await seed.pg.close();
+
+      let now = 1_000_000;
+      const { pg, warn, maintain } = await start(
+        {
+          maintenanceIntervalMs: 0,
+          vacuumFullAboveBytes: 1,
+          vacuumFullQuietMs: 60_000,
+          vacuumFullMaxDeferMs: 300_000,
+          now: () => now,
+        },
+        seed.dir,
+      );
+      for (let minute = 0; minute < 4; minute++) {
+        await pg.query("INSERT INTO t VALUES (1)");
+        now += 30_000;
+        await expect(maintain()).resolves.toBe("vacuum");
+        now += 30_000;
+      }
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("or at most 300000 ms from open"),
+      );
+      await pg.query("INSERT INTO t VALUES (2)");
+      now += 60_000;
+      await expect(maintain()).resolves.toBe("vacuum-full");
+    },
+    LONG,
+  );
+
+  it("queues a pass at the gate and does not wait for it on stop", async () => {
+    let open = (): void => undefined;
+    const gateOpen = new Promise<void>((resolve) => {
+      open = resolve;
+    });
+    let gated = 0;
+    const gate = async <T>(task: () => Promise<T>): Promise<T> => {
+      gated++;
+      await gateOpen;
+      return task();
+    };
+    const maintenance = new PgliteMaintenance({ intervalMs: 0, gate });
+    const queued = maintenance.run();
+    expect(gated).toBe(1);
+    await maintenance.stop();
+    open();
+    await expect(queued).resolves.toBe("not-ready");
+  });
 
   it(
     "reports idle when nothing was written since the last pass",

@@ -189,6 +189,7 @@ export function bindConnectRouter(
     }),
     router.subscribe("onResolved", syncModal),
     getPHStoreSubscribe(store, "drives")(retitle),
+    getPHStoreSubscribe(store, "driveNodes")(retitle),
     markRouterNavigations(router),
   ];
   const unbindScroll = bindConnectScroll(router, CONTENT_VIEW_ID);

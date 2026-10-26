@@ -1,10 +1,13 @@
 import type * as CurrentPGliteModuleNs from "@electric-sql/pglite";
 import type {
   NodeFsClass,
+  PGliteModuleSpec,
   VerifyHandle,
 } from "@powerhousedao/reactor-api/pglite-node";
 import { promises as fs } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 export const CURRENT_PG_MAJOR = 17;
 export const SUPPORTED_PG_MAJORS = [16, 17] as const;
@@ -52,6 +55,28 @@ export async function loadPGliteModule(
     return (await import("pglite-legacy-02")) as unknown as CurrentPGliteModule;
   }
   return import("@electric-sql/pglite");
+}
+
+/**
+ * Where a PGlite worker imports the module that opens `major` dirs from,
+ * resolved here because the worker's own package cannot see the
+ * `pglite-legacy-02` alias.
+ */
+export function pgliteModuleSpec(major: SupportedPgMajor): PGliteModuleSpec {
+  const base = major === 16 ? "pglite-legacy-02" : "@electric-sql/pglite";
+  return {
+    pglite: resolveModuleUrl(base),
+    nodefs: resolveModuleUrl(`${base}/nodefs`),
+  };
+}
+
+function resolveModuleUrl(specifier: string): string {
+  try {
+    return import.meta.resolve(specifier);
+  } catch {
+    return pathToFileURL(createRequire(import.meta.url).resolve(specifier))
+      .href;
+  }
 }
 
 /** The stock NodeFS class of the PGlite module that opens `major` dirs. */

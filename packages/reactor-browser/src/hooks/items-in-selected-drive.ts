@@ -1,6 +1,7 @@
 import type {
   FileNode,
   FolderNode,
+  Node,
 } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelDocument,
@@ -8,12 +9,12 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { isFileNodeKind, isFolderNodeKind } from "../utils/nodes.js";
 import { useDocumentsByIds } from "./document-by-id.js";
-import { useSelectedDriveSafe } from "./selected-drive.js";
+import { useDriveNodes } from "./drive-nodes.js";
+import { useSelectedDriveId } from "./selected-drive.js";
 
 /** Returns the nodes in the selected drive. */
-export function useNodesInSelectedDrive() {
-  const [selectedDrive] = useSelectedDriveSafe();
-  return selectedDrive?.state.global.nodes;
+export function useNodesInSelectedDrive(): Node[] | undefined {
+  return useDriveNodes(useSelectedDriveId());
 }
 
 /** Returns the file nodes in the selected drive. */

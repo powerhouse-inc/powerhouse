@@ -80,6 +80,13 @@ remote drive** keeps a local replica and therefore needs PGlite by design.
 The \`in-process\` mode (main-thread reactor) is the fourth option — set one
 \`in-process\` backend instead of \`worker\`.
 
+Whichever client a host runs, it comes in two halves: reads go through
+\`read\` and writes through \`write\`, whose writes hand back a handle to wait
+on (\`window.ph.reactor\` in the browser, \`module.read\` / \`module.write\` on
+a host, \`ctx.clients\` in a subgraph resolver). The single client object
+(\`window.ph.reactorClient\`, \`module.client\`) is the facade over both, kept
+for code that has not moved.
+
 The single project drive (\`powerhouse\`) is OWNED by the switchboard; standalone
 Connect has its own local copy; the \`cli\`/\`desktop\` compounds re-point Connect
 at the switchboard's — every drive it serves, plugin-created ones (Workflows)

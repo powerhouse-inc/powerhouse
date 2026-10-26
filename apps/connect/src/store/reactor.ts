@@ -23,7 +23,7 @@ import {
   login,
   trackDriveArrival,
   untilDriveListed,
-  refreshReactorDataClient,
+  createDriveChangeHandler,
   RegistryClient,
   setAttachmentService,
   setDefaultPHGlobalConfig,
@@ -620,20 +620,23 @@ export async function createReactor(
   }
   setDrives(drives);
 
-  // Refresh the drive list on any drive-type change so async-added
-  // default/remote drives surface on first load without a manual reload.
+  // Keep the drive list in step with drive-type changes: an updated drive is
+  // re-read on its own (rate limited while it keeps changing, as a drive
+  // being filled does), a created or deleted drive refreshes the membership.
+  // Re-fetching the whole list carried every drive's node tree on each change.
   const reactorClient = appReactorClient;
+  const onDriveChange = createDriveChangeHandler(reactorClient.read, {
+    onError: (e) => logger.error("@error", e),
+  });
   for (const driveType of DRIVE_DOCUMENT_TYPES) {
-    reactorClient.subscribe({ type: driveType }, (event) => {
+    reactorClient.read.subscribe({ type: driveType }, (event) => {
       logger.verbose("ReactorClient subscription event: @event", event);
-      refreshReactorDataClient(appReactorClient).catch((e) =>
-        logger.error("@error", e),
-      );
+      onDriveChange(event);
     });
   }
 
   // Redirect when a currently-viewed document or drive is deleted remotely
-  reactorClient.subscribe({}, (event) => {
+  reactorClient.read.subscribe({}, (event) => {
     closeDeletedSelection(event, {
       selectedDriveId: store.selectedDriveId,
       selectedNodeId: store.selectedNodeId,
@@ -679,7 +682,7 @@ export async function createReactor(
   ) {
     const readModels = reactorModule.readModelCoordinator.readModels;
     const processorHostModule = await createProcessorHostModule(
-      reactorClientModule.client,
+      reactorClientModule,
       readModels,
       store.attachmentService,
     );

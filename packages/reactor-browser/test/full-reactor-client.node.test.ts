@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type { IReactorClient } from "@powerhousedao/reactor";
+import { withHalves } from "./utils/client-halves.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renameDrive } from "../src/actions/drive.js";
 import { upgradeDocument } from "../src/actions/document.js";
@@ -11,11 +12,11 @@ import {
 import type { PHGlobal } from "../src/types/global.js";
 
 function client(name: string) {
-  return {
+  return withHalves({
     name,
     rename: vi.fn(() => Promise.resolve({ id: "drive-1" })),
     upgradeDocument: vi.fn(() => Promise.resolve({ id: "doc-1" })),
-  };
+  });
 }
 
 afterEach(() => {

@@ -1,6 +1,11 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import type { IReactorBrowserClient } from "../../src/types/reactor-browser-client.js";
+import type { GraphQLReactorClient } from "../../src/graphql-client/graphql-reactor-client.js";
+import type {
+  IReactorBrowserClient,
+  IReactorBrowserReadClient,
+  IReactorBrowserWriteClient,
+} from "../../src/types/reactor-browser-client.js";
 
 describe("IReactorBrowserClient", () => {
   it("is satisfied by the full IReactorClient", () => {
@@ -8,7 +13,12 @@ describe("IReactorBrowserClient", () => {
     expect(true).toBe(true);
   });
 
-  it("exposes exactly the seven agreed members", () => {
+  it("is satisfied by the GraphQL client", () => {
+    expectTypeOf<GraphQLReactorClient>().toExtend<IReactorBrowserClient>();
+    expect(true).toBe(true);
+  });
+
+  it("exposes the seven agreed facade members and the two halves", () => {
     expectTypeOf<keyof IReactorBrowserClient>().toEqualTypeOf<
       | "get"
       | "find"
@@ -17,6 +27,29 @@ describe("IReactorBrowserClient", () => {
       | "getOperations"
       | "create"
       | "deleteDocument"
+      | "read"
+      | "write"
+    >();
+    expect(true).toBe(true);
+  });
+
+  it("reads through the agreed read members", () => {
+    expectTypeOf<keyof IReactorBrowserReadClient>().toEqualTypeOf<
+      | "get"
+      | "getMany"
+      | "find"
+      | "getOperations"
+      | "subscribe"
+      | "waitForJob"
+      | "getJobStatus"
+      | "drives"
+    >();
+    expect(true).toBe(true);
+  });
+
+  it("writes through the agreed write members", () => {
+    expectTypeOf<keyof IReactorBrowserWriteClient>().toEqualTypeOf<
+      "execute" | "create" | "deleteDocument"
     >();
     expect(true).toBe(true);
   });

@@ -11,6 +11,7 @@ export default defineConfig({
     "src/packages/vite-loader.mts",
     "src/packages/https-hooks.mts",
     "src/pglite/pglite-node.ts",
+    "src/pglite/worker/entry.ts",
     "src/graphql/subgraph-types.ts",
   ],
   platform: "node",

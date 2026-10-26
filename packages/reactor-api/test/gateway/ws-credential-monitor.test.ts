@@ -9,6 +9,7 @@ import { createWsAuthHandlers } from "../../src/graphql/graphql-manager.js";
 import { WS_CLOSE_REASON_CREDENTIAL_REVOKED } from "../../src/graphql/gateway/types.js";
 import { WsCredentialMonitor } from "../../src/graphql/ws-credential-monitor.js";
 import { AuthService, type User } from "../../src/services/auth.service.js";
+import { UNUSED_CLIENTS } from "../utils/client-halves.js";
 
 const mockVerifyAuthBearerToken = vi.fn();
 vi.mock("@renown/sdk", () => ({
@@ -203,6 +204,7 @@ describe("createWsAuthHandlers with a credential monitor", () => {
         headers: headers as never,
         db: null,
         user: u,
+        clients: UNUSED_CLIENTS,
       }),
     });
 

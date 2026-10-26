@@ -26,11 +26,18 @@ export const WEBHOOK_SEGMENT = "webhooks";
 const DEFAULT_MAX_BODY_BYTES = 1_048_576;
 const DEFAULT_DEDUPE_TTL_SECONDS = 300;
 
+/** An origin, or a read of one only known once the server listens. */
+export type PublicOrigin = string | (() => string);
+
+export function readPublicOrigin(origin: PublicOrigin): string {
+  return (typeof origin === "function" ? origin() : origin).replace(/\/+$/, "");
+}
+
 export interface WebhookServiceOptions {
   store: IWebhookStore;
   basePath?: string;
   /** Public origin to advertise, e.g. https://switchboard.example. */
-  publicUrl?: string;
+  publicUrl?: PublicOrigin;
 }
 
 type Registration = { namespace: string; spec: WebhookSpec };
@@ -40,7 +47,7 @@ type Registration = { namespace: string; spec: WebhookSpec };
 export class WebhookService {
   readonly #store: IWebhookStore;
   readonly #path: string;
-  readonly #publicUrl: string | undefined;
+  readonly #publicUrl: PublicOrigin | undefined;
   // Layer 1, not the adapter: same dispatch, refusal and disposal path every package
   // route gets, so the two cannot drift on what a request means.
   #scope: IHttpScope | undefined;
@@ -50,7 +57,7 @@ export class WebhookService {
   constructor({ store, basePath = "/", publicUrl }: WebhookServiceOptions) {
     this.#store = store;
     this.#path = posix.join("/", basePath, WEBHOOK_SEGMENT);
-    this.#publicUrl = publicUrl?.replace(/\/+$/, "");
+    this.#publicUrl = publicUrl;
   }
 
   /** The scope the endpoint family serves from, handed over once the route service exists;
@@ -137,7 +144,9 @@ export class WebhookService {
    * relative path is useless to the third party that has to call it. */
   urlFor(token: string): string {
     const path = posix.join(this.#path, token);
-    return this.#publicUrl ? `${this.#publicUrl}${path}` : path;
+    return this.#publicUrl === undefined
+      ? path
+      : `${readPublicOrigin(this.#publicUrl)}${path}`;
   }
 
   /** Whether `urlFor` can produce something a provider could call. */

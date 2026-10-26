@@ -21,6 +21,7 @@ import {
 import { documentModelDocumentModelModule } from "document-model";
 import { GraphQLError } from "graphql";
 import { afterEach, describe, expect, it } from "vitest";
+import { withHalves } from "./utils/client-halves.js";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
 import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
@@ -339,17 +340,21 @@ describe("the creator carve-out over GraphQL", () => {
     } as SubgraphArgs);
   }
 
+  /** Both halves: evaluateActions reads write-side state although it is a query. */
   function contextFor(appKey: string): Context {
-    return {
-      user: {
-        address: CREATOR_ADDRESS,
-        chainId: 1,
-        networkId: "eip155",
-        appKey,
+    return withHalves(
+      {
+        user: {
+          address: CREATOR_ADDRESS,
+          chainId: 1,
+          networkId: "eip155",
+          appKey,
+        },
+        headers: {},
+        db: {},
       },
-      headers: {},
-      db: {},
-    };
+      module!,
+    );
   }
 
   /**

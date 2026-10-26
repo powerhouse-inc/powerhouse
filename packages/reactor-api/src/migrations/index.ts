@@ -1,5 +1,6 @@
 import {
   Migrator,
+  sql,
   type Kysely,
   type Migration,
   type MigrationProvider,
@@ -22,12 +23,26 @@ class StaticMigrationProvider implements MigrationProvider {
 }
 
 /**
+ * The schema unqualified names resolve to, where these migrations have always
+ * kept their bookkeeping tables. Named explicitly because Kysely, given no
+ * schema, treats a lock table in any schema (the attachment store creates
+ * one in its own) as present and then fails to find it unqualified.
+ */
+async function currentSchema(db: Kysely<unknown>): Promise<string> {
+  const result = await sql<{
+    schema: string;
+  }>`select current_schema() as schema`.execute(db);
+  return result.rows[0]?.schema ?? "public";
+}
+
+/**
  * Run all pending migrations
  */
 export async function runMigrations(db: Kysely<unknown>): Promise<void> {
   const migrator = new Migrator({
     db,
     provider: new StaticMigrationProvider(),
+    migrationTableSchema: await currentSchema(db),
   });
 
   const { error, results } = await migrator.migrateToLatest();
@@ -53,6 +68,7 @@ export async function rollbackMigration(db: Kysely<unknown>): Promise<void> {
   const migrator = new Migrator({
     db,
     provider: new StaticMigrationProvider(),
+    migrationTableSchema: await currentSchema(db),
   });
 
   const { error, results } = await migrator.migrateDown();

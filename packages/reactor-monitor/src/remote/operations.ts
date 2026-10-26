@@ -25,6 +25,10 @@ const NESTED: Partial<
     connection: "InspectionConnectionHealth",
   },
   InspectionDeadLetterPage: { results: "InspectionDeadLetter" },
+  InspectionCatchUpPriority: {
+    settings: "InspectionCatchUpLevelSettings",
+    sample: "InspectionCatchUpLoadSample",
+  },
 };
 
 /** `{ ... }` selecting every field of `type`, nested records included. */
@@ -74,6 +78,10 @@ export const INSPECTION_OPERATIONS = {
   }`,
 
   catchUpStatus: `query ReactorInspectionCatchUp { inspection { catchUpStatus } }`,
+
+  catchUpPriority: `query ReactorInspectionCatchUpPriority {
+    inspection { catchUpPriority ${selectionOf("InspectionCatchUpPriority")} }
+  }`,
 
   storageHealth: `query ReactorInspectionStorageHealth {
     inspection { storageHealth ${selectionOf("InspectionStorageHealth")} }

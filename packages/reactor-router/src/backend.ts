@@ -7,9 +7,13 @@ import {
   type BatchSubmitter,
   type BatchLoadRequest,
   type BatchLoadResult,
+  type ConsistencyToken,
   type DocumentChangeEvent,
   type DocumentRelationship,
+  type IDriveReadClient,
   type IReactorClient,
+  type IReactorReadClient,
+  type IReactorWriteClient,
   type JobInfo,
   type OperationFilter,
   type PagedResults,
@@ -60,16 +64,36 @@ export type BackendSubmit = {
   ): Promise<BatchExecutionResult>;
 };
 
-/** An absent optional member declares non-support; never use a catch-all Proxy. */
+/**
+ * A reactor as the router reaches it. An absent optional member declares
+ * non-support; never use a catch-all Proxy.
+ *
+ * A backend writes through one of three shapes, in the router's order of
+ * preference: client halves (`write`, whose handles the router hands back
+ * as they are), a non-waiting `submit` (handles built from the job it
+ * returns, waited through the router's job reads), or only the waiting
+ * facade members (handles already settled, carrying what the write returned).
+ * The flat read members are required in every shape.
+ */
 export interface IRoutableBackend {
   readonly supports: BackendSupports;
   /** Absent, the router's async variants wait through executeBatch. */
   readonly submit?: BackendSubmit;
+  /** The read half, when the backend has one; token-bound reads use it. */
+  readonly read?: IReactorReadClient;
+  /** The write half, when the backend has one; the router's writes use it. */
+  readonly write?: IReactorWriteClient;
+  /**
+   * Drive node reads served without reading the drive document. Drive reads
+   * prefer it over `read.drives` and over the drive's state.
+   */
+  readonly drives?: IDriveReadClient;
 
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument>;
   getOperations(
     documentIdentifier: string,
@@ -158,6 +182,16 @@ export interface IRoutableBackend {
   getJob(jobId: string, signal?: AbortSignal): Promise<JobInfo | undefined>;
   waitForJob(job: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
 
+  /**
+   * Reads several documents in as few requests as the backend can, in the
+   * order given; rejects if any is unavailable.
+   */
+  getMany?<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
   isDocumentIdTaken?(
     documentId: string,
     signal?: AbortSignal,
@@ -246,17 +280,33 @@ const SUPPORTS_EVERYTHING: BackendSupports = Object.freeze({
   pointInTimeViews: true,
 });
 
-/** An explicit adapter, so it stays honest over a worker RPC proxy. */
+/** A client half, or undefined where the client has none (or invents one). */
+function halfOf<T extends object>(value: unknown): T | undefined {
+  return typeof value === "object" && value !== null ? (value as T) : undefined;
+}
+
+/**
+ * An explicit adapter, so it stays honest over a worker RPC proxy. The
+ * client's `read` and `write` halves are carried when it has them.
+ */
 export function fromReactorClient(client: IReactorClient): IRoutableBackend {
+  const read = halfOf<IReactorReadClient>(client.read);
+  const write = halfOf<IReactorWriteClient>(client.write);
   return {
     supports: SUPPORTS_EVERYTHING,
+    ...(read === undefined ? {} : { read }),
+    ...(read?.drives === undefined ? {} : { drives: read.drives }),
+    ...(write === undefined ? {} : { write }),
     submit: {
       execute: (identifier, branch, actions, signal) =>
         client.executeAsync(identifier, branch, actions, signal),
       create: (document, parent, signal) =>
         client.createAsync(document, parent, signal),
     },
-    get: (identifier, view, signal) => client.get(identifier, view, signal),
+    get: (identifier, view, signal, consistencyToken) =>
+      consistencyToken === undefined
+        ? client.get(identifier, view, signal)
+        : client.get(identifier, view, signal, consistencyToken),
     getOperations: (identifier, view, filter, paging, signal) =>
       client.getOperations(identifier, view, filter, paging, signal),
     find: (search, view, paging, signal) =>
@@ -295,6 +345,20 @@ export function fromReactorClient(client: IReactorClient): IRoutableBackend {
     waitForJob: (job, signal) => client.waitForJob(job, signal),
     isDocumentIdTaken: (documentId, signal) =>
       client.isDocumentIdTaken(documentId, signal),
+    getMany: <TDocument extends PHDocument>(
+      documentIds: string[],
+      view?: ViewFilter,
+      signal?: AbortSignal,
+      consistencyToken?: ConsistencyToken,
+    ) =>
+      consistencyToken === undefined
+        ? client.getMany<TDocument>(documentIds, view, signal)
+        : client.getMany<TDocument>(
+            documentIds,
+            view,
+            signal,
+            consistencyToken,
+          ),
     resolveIdOrSlug: (identifier, view, signal) =>
       client.resolveIdOrSlug(identifier, view, signal),
     evaluateActions: (identifier, branch, candidates, subject, signal) =>

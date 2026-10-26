@@ -1,5 +1,5 @@
 import { getPHStore } from "../hooks/ph-store.js";
-import type { IReactorClient } from "@powerhousedao/reactor";
+import type { IReactorReadClient } from "@powerhousedao/reactor";
 import { SyncStatus } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
@@ -24,13 +24,42 @@ const syncStatusToUI: Record<SyncStatus, UISyncStatus> = {
 };
 
 export async function getDrives(
-  reactor: IReactorClient,
+  reactor: IReactorReadClient,
 ): Promise<DocumentDriveDocument[]> {
   // SearchFilter.type takes one string, so query each drive type and merge.
   const perType = await Promise.all(
     DRIVE_DOCUMENT_TYPES.map((type) => reactor.find({ type })),
   );
   return perType.flatMap((r) => r.results) as DocumentDriveDocument[];
+}
+
+/**
+ * The id of every drive, from a listing that carries headers only: a drive's
+ * node tree can be megabytes (a mail drive with tens of thousands of files),
+ * so membership is learned without it and a new drive is then loaded on its
+ * own.
+ */
+export async function listDriveIds(
+  reactor: IReactorReadClient,
+): Promise<string[]> {
+  const perType = await Promise.all(
+    DRIVE_DOCUMENT_TYPES.map((type) =>
+      reactor.find({ type }, { scopes: ["header"] }),
+    ),
+  );
+  return perType.flatMap((r) => r.results.map((d) => d.header.id));
+}
+
+/** One drive in full, or undefined once it is gone. */
+export async function getDrive(
+  reactor: IReactorReadClient,
+  driveId: string,
+): Promise<DocumentDriveDocument | undefined> {
+  try {
+    return await reactor.get<DocumentDriveDocument>(driveId);
+  } catch {
+    return undefined;
+  }
 }
 
 export function getSyncStatus(

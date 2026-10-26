@@ -12,6 +12,9 @@ import {
   signaturePolicyOf,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
+import type { Node } from "@powerhousedao/shared/document-drive";
+import { fakeDriveReader } from "./utils/drive-nodes.js";
 import { afterEach, describe, expect, it } from "vitest";
 import { copyNode } from "../src/actions/document.js";
 
@@ -55,28 +58,29 @@ function install(
     documentModel: { global: { id: DOCUMENT_TYPE } },
     reducer: (document: PHDocument) => document,
   } as unknown as DocumentModelModule;
-  const client = {
+  const client = withHalves({
     get: (id: string) => Promise.resolve(id === DRIVE_ID ? drive : source),
     getCreateSignaturePolicy: () => Promise.resolve(createPolicy),
     getCreateProtocolVersions: () => Promise.resolve({ "base-reducer": 2 }),
     getDocumentModelModules: () =>
       Promise.resolve({ results: [module], options: { cursor: "", limit: 1 } }),
     drives: {
+      ...fakeDriveReader(() => [node as Node]).reader,
       addFile: (_driveId: string, document: PHDocument) => {
         added.push(document.header);
         return Promise.resolve(document);
       },
     },
-  };
+  });
   window.ph = {
     ...window.ph,
     reactorClientModule: { kind: "browser", client, reactorModule: undefined },
-    reactorClient: {
+    reactorClient: withHalves({
       execute: (_id: string, _branch: string, actions: Action[]) => {
         executed.push(...actions);
         return Promise.resolve(drive);
       },
-    },
+    }),
   } as unknown as typeof window.ph;
   return { node, added, executed };
 }

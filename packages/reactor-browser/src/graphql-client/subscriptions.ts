@@ -2,7 +2,9 @@ import { print } from "graphql";
 import { createClient } from "graphql-ws/client";
 import {
   DocumentChangesDocument,
+  JobChangesDocument,
   type DocumentChangesSubscription,
+  type JobChangesSubscription,
 } from "../graphql/gen/schema.js";
 import type { BearerTokenProvider } from "./auth.js";
 
@@ -124,6 +126,87 @@ export function startDocumentChangesSubscription(
     stopped = true;
     unsubscribe();
     void client.dispose();
+  };
+}
+
+/** The `jobChanges` payload, exactly as the Switchboard sends it. */
+export type JobChangesEventPayload = JobChangesSubscription["jobChanges"];
+
+/**
+ * One socket carrying `jobChanges` subscriptions, one per watched job. The
+ * socket opens on the first watch and closes when nothing is watched.
+ */
+export interface IJobChangesSocket {
+  /**
+   * Watches one job. `onEvent` is called per status change the Switchboard
+   * reports; `onError` once if the subscription fails. Returns the stop
+   * function, safe to call more than once.
+   */
+  watch(
+    jobId: string,
+    onEvent: (event: JobChangesEventPayload) => void,
+    onError: (error: unknown) => void,
+  ): () => void;
+  /** Closes the socket; a later watch opens a new one. */
+  dispose(): void;
+}
+
+export type JobChangesSocketOptions = {
+  /** The websocket endpoint, e.g. `ws://localhost:4001/graphql/subscriptions`. */
+  wsUrl: string;
+  /** Resolves the `ConnectionInit` payload, per connect. */
+  connectionParams?: () => Promise<ConnectionParams>;
+};
+
+/**
+ * Opens the socket write handles wait on. `graphql-ws` multiplexes every
+ * watched job over it and closes it once the last watch stops.
+ */
+export function createJobChangesSocket(
+  options: JobChangesSocketOptions,
+): IJobChangesSocket {
+  let client: ReturnType<typeof createClient> | undefined;
+  const clientOf = () =>
+    (client ??= createClient({
+      url: options.wsUrl,
+      connectionParams: options.connectionParams,
+      shouldRetry: (errOrCloseEvent) =>
+        isLikeCloseEvent(errOrCloseEvent) &&
+        !isAuthRefusalClose(errOrCloseEvent),
+    }));
+  return {
+    watch(jobId, onEvent, onError) {
+      const unsubscribe = clientOf().subscribe<JobChangesSubscription>(
+        {
+          operationName: "JobChanges",
+          query: print(JobChangesDocument),
+          variables: { jobId },
+        },
+        {
+          next: (result) => {
+            const event = result.data?.jobChanges;
+            if (event) {
+              onEvent(event);
+            }
+          },
+          error: (error) => onError(error),
+          complete: () => undefined,
+        },
+      );
+      let stopped = false;
+      return () => {
+        if (stopped) {
+          return;
+        }
+        stopped = true;
+        unsubscribe();
+      };
+    },
+    dispose() {
+      const current = client;
+      client = undefined;
+      void current?.dispose();
+    },
   };
 }
 

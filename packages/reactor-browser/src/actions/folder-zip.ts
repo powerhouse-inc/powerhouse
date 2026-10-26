@@ -1,3 +1,4 @@
+import { loadDriveNodes } from "../hooks/drive-nodes.js";
 import { getPHStore } from "../hooks/ph-store.js";
 import type {
   DocumentDriveDocument,
@@ -63,7 +64,7 @@ export async function buildFolderZip(
   fetchDocument: (id: string) => Promise<PHDocument>,
   onProgress?: (done: number, total: number) => void,
 ): Promise<FolderZipResult> {
-  const allNodes = drive.state.global.nodes;
+  const allNodes = await loadDriveNodes(drive.header.id, { refresh: true });
   const topName = sanitize(
     folderNode?.name ?? (drive.state.global.name || drive.header.name),
   );
@@ -162,7 +163,7 @@ export async function downloadFolderZip(
     async (id: string) => {
       const doc = await reactorClient.get<PHDocument>(id);
       // includes auth: an export must carry the policy history
-      const operations = await fetchDocumentOperations(reactorClient, doc);
+      const operations = await fetchDocumentOperations(reactorClient.read, doc);
       const initialState = extractInitialState(operations["document"] ?? []);
       return { ...doc, operations, initialState };
     },

@@ -1,10 +1,9 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { runMigrations } from "../src/migrations/index.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import { PrivacyPermissionAdapter } from "../src/services/privacy-permissions.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
-import { getDbClient } from "../src/utils/db.js";
 
 const SUBJECT = "0xAbCd00000000000000000000000000000000aBcD";
 const ADMIN = "0xadad00000000000000000000000000000000adad";
@@ -15,8 +14,7 @@ describe("PrivacyPermissionAdapter", () => {
   let adapter: PrivacyPermissionAdapter;
 
   beforeEach(async () => {
-    db = getDbClient().db as Kysely<DocumentPermissionDatabase>;
-    await runMigrations(db as Kysely<unknown>);
+    db = await openReactorPermissionStore();
     service = new DocumentPermissionService(db);
     adapter = new PrivacyPermissionAdapter(service);
 

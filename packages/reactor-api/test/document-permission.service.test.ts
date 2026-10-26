@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { runMigrations } from "../src/migrations/index.js";
+import { openReactorPermissionStore } from "./utils/reactor-permission-store.js";
 import type {
   CanonicalDocumentId,
   IAuthorizationService,
@@ -11,7 +11,6 @@ import {
 } from "../src/services/authorization.service.js";
 import { DocumentPermissionService } from "../src/services/document-permission.service.js";
 import type { DocumentPermissionDatabase } from "../src/utils/db.js";
-import { getDbClient } from "../src/utils/db.js";
 
 describe("DocumentPermissionService", () => {
   let service: DocumentPermissionService;
@@ -19,9 +18,7 @@ describe("DocumentPermissionService", () => {
 
   beforeEach(async () => {
     // Create in-memory PGlite database for testing
-    const { db: dbClient } = getDbClient();
-    db = dbClient as Kysely<DocumentPermissionDatabase>;
-    await runMigrations(db as Kysely<unknown>);
+    db = await openReactorPermissionStore();
     service = new DocumentPermissionService(db);
   });
 

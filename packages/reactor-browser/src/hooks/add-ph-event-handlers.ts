@@ -61,6 +61,7 @@ import {
 import { addDocumentCacheEventHandler } from "./document-cache.js";
 import { addDraggingNodeEventHandler } from "./node-drag-and-drop.js";
 import { addDrivesEventHandler } from "./drives.js";
+import { addDriveNodesEventHandler } from "./drive-nodes.js";
 import { addGraphQLReactorClientEventHandler } from "./graphql-reactor-client.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
@@ -69,6 +70,7 @@ import {
   addFullReactorClientEventHandler,
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
+  addReactorHalvesEventHandler,
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addSelectedDriveIdEventHandler } from "./selected-drive.js";
@@ -85,6 +87,7 @@ import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 export const commonGlobalEventHandlerFunctions = {
   loading: addLoadingEventHandler,
   drives: addDrivesEventHandler,
+  driveNodes: addDriveNodesEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();
     addSyncSelectionOnPopStateEventHandler();
@@ -102,6 +105,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   ...commonGlobalEventHandlerFunctions,
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
+  reactor: addReactorHalvesEventHandler,
   fullReactorClient: addFullReactorClientEventHandler,
   attachmentService: addAttachmentServiceEventHandler,
   features: addFeaturesEventHandler,

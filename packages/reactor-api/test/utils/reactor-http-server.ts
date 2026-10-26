@@ -1,6 +1,8 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
-  IReactorClient,
+  IDriveNodeSource,
+  IReactorReadClient,
+  IReactorWriteClient,
   IRelationalDb,
   ISyncManager,
 } from "@powerhousedao/reactor";
@@ -52,11 +54,13 @@ export type ReactorHttpServer = {
 /**
  * The reactor subgraph served the way a Switchboard serves it: a real HTTP
  * adapter, the Apollo gateway, and the auth and drive middleware in front.
+ * `clients` is anything carrying the halves: a client module, or the facade.
  */
 export async function startReactorHttpServer(
-  reactorClient: IReactorClient,
+  clients: { read: IReactorReadClient; write: IReactorWriteClient },
   authorizationService: IAuthorizationService,
   driveStore?: DriveStore,
+  driveNodes?: IDriveNodeSource,
 ): Promise<ReactorHttpServer> {
   const httpAdapter = new ExpressHttpAdapter();
   const server = (await httpAdapter.listen(
@@ -70,7 +74,8 @@ export async function startReactorHttpServer(
     path: "/",
     httpServer: server,
     wsServer: new WebSocketServer({ noServer: true }),
-    reactorClient,
+    readClient: clients.read,
+    writeClient: clients.write,
     relationalDb: {} as IRelationalDb,
     analyticsStore: {} as IAnalyticsStore,
     syncManager: {} as ISyncManager,
@@ -81,6 +86,7 @@ export async function startReactorHttpServer(
     port,
     authorizationService,
     driveStore,
+    driveNodes,
   });
   await manager.init(
     [ReactorSubgraph],

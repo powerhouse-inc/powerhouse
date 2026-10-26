@@ -17,6 +17,10 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  identityFromDocumentState,
+  resolvableSlug,
+} from "../shared/document-identity.js";
 import { DOCUMENT_VIEW_READ_MODEL } from "./names.js";
 import type {
   ConsistencyToken,
@@ -369,15 +373,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           let name: string | null = existingSnapshot?.name ?? null;
 
           if (scopeName === "header") {
-            const headerSlug = newState.slug;
-            const headerName = newState.name;
-
-            if (typeof headerSlug === "string") {
-              slug = headerSlug;
-            }
-            if (typeof headerName === "string" && !preserveHeaderName) {
-              name = headerName;
-            }
+            ({ slug, name } = identityFromDocumentState(
+              { header: newState },
+              { slug, name },
+              { preserveName: preserveHeaderName },
+            ));
 
             if (needsExistingContent && existingSnapshot) {
               const existingHeader = existingSnapshot.content as Record<
@@ -397,11 +397,12 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
             // from reaching one: re-inserting here would make the document
             // resolvable by slug again, and the upsert would take the slug from
             // a live document that has since claimed it.
-            if (slug && slug !== documentId && !existingSnapshot?.isDeleted) {
+            const mappedSlug = resolvableSlug(slug, documentId);
+            if (mappedSlug && !existingSnapshot?.isDeleted) {
               await trx
                 .insertInto("SlugMapping")
                 .values({
-                  slug,
+                  slug: mappedSlug,
                   documentId,
                   scope: scopeName,
                   branch,
@@ -754,24 +755,16 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const hasMore = rows.length > limit;
     const docsToFetch = rows.slice(0, limit).map((row) => row.documentId);
 
-    const documents: PHDocument[] = [];
-    for (const documentId of docsToFetch) {
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      try {
-        const document = await this.get<PHDocument>(
-          documentId,
-          view,
-          undefined,
-          signal,
-        );
-        documents.push(document);
-      } catch {
-        continue;
-      }
-    }
+    // One snapshot query for the page instead of one get per document: a
+    // drive listing of eight documents was 1 + 2N queries on the write lane.
+    // getMany keeps the page's order and skips a document deleted since the
+    // listing, as the per-document get did.
+    const documents = await this.getMany<PHDocument>(
+      docsToFetch,
+      view,
+      undefined,
+      signal,
+    );
 
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 

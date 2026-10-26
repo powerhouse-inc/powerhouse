@@ -1,6 +1,6 @@
 import type {
   DocumentChangeEvent,
-  IReactorClient,
+  IReactorReadClient,
   JobResultSummary,
   SearchFilter,
   ViewFilter,
@@ -61,7 +61,7 @@ export class DocumentChangeFeed {
   readonly #pubSub = new PubSub();
   readonly #feeds = new Map<string, Feed>();
 
-  constructor(private readonly reactorClient: IReactorClient) {}
+  constructor(private readonly read: IReactorReadClient) {}
 
   subscribe(
     subject: AuthSubject,
@@ -104,7 +104,7 @@ export class DocumentChangeFeed {
     }
 
     const view: ViewFilter = { subject };
-    const unsubscribe = this.reactorClient.subscribe(
+    const unsubscribe = this.read.subscribe(
       {},
       (event: DocumentChangeEvent) => {
         const payload: DocumentChangesPayload = {
@@ -141,7 +141,7 @@ const activeJobSubscriptions = new Map<
 >();
 
 export function ensureJobSubscription(
-  reactorClient: IReactorClient,
+  read: Pick<IReactorReadClient, "getJobStatus">,
   jobId: string,
 ): () => void {
   let subscription = activeJobSubscriptions.get(jobId);
@@ -155,7 +155,7 @@ export function ensureJobSubscription(
         return;
       }
 
-      const jobInfo = await reactorClient.getJobStatus(jobId);
+      const jobInfo = await read.getJobStatus(jobId);
       const payload: JobChangesPayload = {
         jobChanges: {
           jobId: jobInfo.id,

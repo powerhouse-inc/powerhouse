@@ -9,12 +9,15 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
+import { sql, type Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";
+import type { ReactorWriteClient } from "../../src/client/write-client.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { PropagationMode } from "../../src/shared/types.js";
+import { REACTOR_SCHEMA } from "../../src/storage/migrations/migrator.js";
 import { createDocModelDocument } from "../factories.js";
 import { TestP256Signer } from "../utils/p256-signer.js";
 
@@ -22,11 +25,13 @@ describe("ReactorClient resolves slugs on every write target", () => {
   let client: IReactorClient;
   let reactor: IReactor;
   let targets: ActionSigningTarget[];
+  let write: ReactorWriteClient;
+  let db: Kysely<unknown>;
 
   beforeEach(async () => {
     targets = [];
     const signer = (await TestP256Signer.create()).asISigner(targets);
-    client = await new ReactorClientBuilder()
+    const module = await new ReactorClientBuilder()
       .withReactorBuilder(
         new ReactorBuilder()
           .withDocumentModelSources([
@@ -36,13 +41,21 @@ describe("ReactorClient resolves slugs on every write target", () => {
           .withExecutorConfig({ signatureVerification: "enforce" }),
       )
       .withSigner(signer)
-      .build();
+      .buildModule();
+    client = module.client;
+    write = module.write as ReactorWriteClient;
+    db = module.reactorModule!.database as unknown as Kysely<unknown>;
     reactor = (client as unknown as { reactor: IReactor }).reactor;
   });
 
   afterEach(() => {
     reactor.kill();
   });
+
+  /** Every case that does not simulate a missing identity row resolves on the table. */
+  function expectNoViewFallback(): void {
+    expect(write.viewFallbackCount).toBe(0);
+  }
 
   async function createWithSlug(slug: string): Promise<string> {
     const document = createDocModelDocument({ slug });
@@ -205,6 +218,58 @@ describe("ReactorClient resolves slugs on every write target", () => {
     await client.deleteDocument("doomed-slug");
 
     await expect(client.get(id)).rejects.toThrow("Document not found");
+  });
+
+  it("resolves a slug the view has no SlugMapping for, from the identity table", async () => {
+    const id = await createWithSlug("identity-only");
+    await sql`DELETE FROM ${sql.table(`${REACTOR_SCHEMA}.SlugMapping`)} WHERE slug = ${"identity-only"}`.execute(
+      db,
+    );
+    targets.length = 0;
+
+    const receipt = await (
+      await write.execute("identity-only", "main", [
+        documentModelDocumentModelModule.actions.setModelName({
+          name: "renamed",
+        }),
+      ])
+    ).readable;
+
+    expect(receipt.documentId).toBe(id);
+    expect(targets.at(-1)).toEqual({ documentId: id, branch: "main" });
+    expect((await write.describe("identity-only")).documentId).toBe(id);
+    expectNoViewFallback();
+  });
+
+  it("falls back to the view, counted, for a slug with no identity row", async () => {
+    const id = await createWithSlug("view-only");
+    await sql`DELETE FROM ${sql.table(`${REACTOR_SCHEMA}.WriteIdentity`)} WHERE "documentId" = ${id}`.execute(
+      db,
+    );
+
+    const receipt = await (
+      await write.execute("view-only", "main", [
+        documentModelDocumentModelModule.actions.setModelName({
+          name: "renamed",
+        }),
+      ])
+    ).readable;
+
+    expect(receipt.documentId).toBe(id);
+    expect(write.viewFallbackCount).toBe(1);
+  });
+
+  it("resolves every slug write above on the identity table", async () => {
+    const parentId = await createWithSlug("parent-slug");
+    const driveId = await createDriveWithSlug("drive-slug");
+    const child = createDocModelDocument();
+    await client.create(child, "parent-slug");
+    await client.drives.addFile("drive-slug", createDocModelDocument());
+    await client.addRelationship("parent-slug", "drive-slug", "related");
+    await client.deleteDocument("parent-slug", PropagationMode.Cascade);
+
+    expect(parentId).not.toBe(driveId);
+    expectNoViewFallback();
   });
 
   it("cascades a delete from a slug root", async () => {

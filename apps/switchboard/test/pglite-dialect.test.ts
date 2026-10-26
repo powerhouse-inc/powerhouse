@@ -139,27 +139,34 @@ describe("ClosablePGliteDialect", () => {
 });
 
 describe("switchboard's reactor storage factory", () => {
-  it("builds a PGlite kysely with the commit guard", async () => {
-    const storage = await createReactorKysely({
-      reactorDbUrl: undefined,
-      reactorPgliteDir: ".ph/unused-by-the-in-memory-branch",
-      reactorPgliteMajor: 17,
-      inMemory: true,
-      hostPoolSize: () => {
-        throw new Error("the PGlite branch must not read the host pool size");
-      },
-      logger: stubLogger(),
-    });
+  it.each([
+    ["in the main thread", false],
+    ["in a worker thread", true],
+  ])(
+    "builds a PGlite kysely with the commit guard %s",
+    async (_where, pgliteWorkers) => {
+      const storage = await createReactorKysely({
+        reactorDbUrl: undefined,
+        reactorPgliteDir: ".ph/unused-by-the-in-memory-branch",
+        reactorPgliteMajor: 17,
+        inMemory: true,
+        hostPoolSize: () => {
+          throw new Error("the PGlite branch must not read the host pool size");
+        },
+        pgliteWorkers,
+        logger: stubLogger(),
+      });
 
-    const { outcome, rows } = await commitOfAnAbortedTransaction(
-      storage.kysely as unknown as Kysely<Schema>,
-    );
-    expect(outcome).not.toBe("JOB-SUCCEEDED");
-    expect(rows).toEqual([]);
-    expect(storage.poolInstrumentation).toBeUndefined();
+      const { outcome, rows } = await commitOfAnAbortedTransaction(
+        storage.kysely as unknown as Kysely<Schema>,
+      );
+      expect(outcome).not.toBe("JOB-SUCCEEDED");
+      expect(rows).toEqual([]);
+      expect(storage.poolInstrumentation).toBeUndefined();
 
-    await storage.kysely.destroy();
-  });
+      await storage.kysely.destroy();
+    },
+  );
 
   describe("storage facts", () => {
     let dataDir: string | undefined;
@@ -176,6 +183,7 @@ describe("switchboard's reactor storage factory", () => {
         reactorPgliteMajor: 17,
         inMemory: false,
         hostPoolSize: () => 1,
+        pgliteWorkers: false,
         logger: stubLogger(),
         ...opts,
       });
@@ -201,6 +209,18 @@ describe("switchboard's reactor storage factory", () => {
       expect(storage.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
       await openAndDestroy(storage.kysely);
     }, 30_000);
+
+    it("closes a worker-backed PGlite data directory on destroy", async () => {
+      dataDir = await mkdtemp(join(tmpdir(), "sb-facts-"));
+      const storage = await open({
+        reactorPgliteDir: dataDir,
+        pgliteWorkers: true,
+      });
+      expect(storage.storageFacts).toEqual(PGLITE_PATH_STORAGE_FACTS);
+      await openAndDestroy(storage.kysely);
+      const reopened = await open({ reactorPgliteDir: dataDir });
+      await openAndDestroy(reopened.kysely);
+    }, 60_000);
 
     it("reports a Postgres url as a durable server", async () => {
       const storage = await open({

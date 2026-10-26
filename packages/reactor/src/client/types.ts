@@ -34,6 +34,7 @@ import type {
 } from "../core/types.js";
 import type { Evaluation } from "../decision/types.js";
 import type {
+  ConsistencyToken,
   JobInfo,
   PagedResults,
   PagingOptions,
@@ -101,6 +102,116 @@ export type UpgradeDocumentOptions = {
    */
   maxConflictRetries?: number;
 };
+
+/** Drive reads: a drive's nodes. Grouped under `read.drives`. */
+export interface IDriveReadClient {
+  /**
+   * Returns a single node from the drive's `state.global.nodes` array.
+   */
+  getNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node>;
+
+  /**
+   * Returns nodes in the drive, optionally filtered by parent folder:
+   * - omit `parentFolder` (or pass `undefined`) to list every node in the drive.
+   * - pass `null` to list only root-level nodes.
+   * - pass a folder id to list only the direct children of that folder.
+   */
+  listNodes(
+    driveIdentifier: string,
+    parentFolder?: string | null,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Node>>;
+}
+
+/** A write handle that also names the drive node the write made or changed. */
+export interface NodeWriteHandle extends WriteHandle {
+  readonly nodeId: string;
+}
+
+/**
+ * Drive writes, grouped under `write.drives`. Each resolves once its last step
+ * is accepted; a step a later step depends on (a file's document before the
+ * drive names it, a document rename before the node rename) has completed by
+ * then. A step that had to complete and FAILED throws the job's own error, by
+ * name.
+ */
+export interface IDriveWriteClient {
+  /** Creates a drive; the handle's document is the drive. */
+  create(input: DriveInput, signal?: AbortSignal): Promise<WriteHandle>;
+
+  /**
+   * Adds a document to a drive: the document batch (create, upgrade,
+   * relationship), completed, then the drive's ADD_FILE. The handle's document
+   * is the new file; its stages span both batches.
+   */
+  addFile(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Adds a folder node; `nodeId` is the new folder's id. */
+  addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle>;
+
+  /**
+   * Removes a node. Folder nodes cascade: descendant file documents are
+   * deleted first (each completed), then the folder node. The handle is the
+   * last step; its document is the drive.
+   */
+  removeNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Renames the node's document (completed and checked), then the drive's
+   * node entry. The handle's document is the drive.
+   */
+  renameNode(
+    driveIdentifier: string,
+    nodeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<NodeWriteHandle>;
+
+  /** The handle's document is the node's document. */
+  setPreferredEditorOnNode(
+    nodeId: string,
+    preferredEditor: string | null,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the drive. */
+  moveNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Copies a node and its subtree: each file is duplicated (completed), then
+   * the drive's nodes are copied. The handle's document is the drive.
+   */
+  copyNode(
+    driveIdentifier: string,
+    srcNodeId: string,
+    targetParentFolderId: string | undefined,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+}
 
 /**
  * Drive-aware operations grouped under `client.drives`.
@@ -252,20 +363,277 @@ export type ActionEvaluations = {
 };
 
 /**
- * The ReactorClient interface that wraps lower-level APIs to provide
- * a simpler interface for document operations.
+ * What a write hands back at a stage: the job as it stood, the token naming
+ * every operation it committed, and the document it targeted.
  *
- * Features:
- * - Wraps Jobs with Promises for easier async handling
- * - Manages signing of submitted Action objects
- * - Provides quality-of-life functions for common tasks
- * - Wraps subscription interface with ViewFilters
+ * A reducer error is not a failure: the operation is stored with its error,
+ * the job reaches READ_READY, and `job.result` says which actions erred.
  */
-export interface IReactorClient {
+export type WriteReceipt = {
+  /** The job's state when the stage settled; status, error, result summary. */
+  job: JobInfo;
+  /** One coordinate per committed operation; pass it to a read to bound it. */
+  token: ConsistencyToken;
+  /** The canonical target; for a create, the id the document carries. */
+  documentId: string;
+  branch: string;
+};
+
+/**
+ * What a write hands back once its job is accepted: validated, signed and
+ * enqueued. Nothing waits for the commit unless the caller awaits a stage.
+ *
+ * Stage promises are created on first access, so a caller that stops at the
+ * handle (fire and forget) never owns an unhandled rejection. Stage waits are
+ * bounded by the signal the write was called with.
+ */
+export interface WriteHandle {
+  readonly jobId: string;
+  /** The canonical target; for a create, the id the document carries. */
+  readonly documentId: string;
+  readonly branch: string;
   /**
-   * Drive-aware operations. See {@link IDriveClient}.
+   * The operations are in the log (job WRITE_READY). Rejects with
+   * `JobFailedError` when the job FAILED.
    */
-  readonly drives: IDriveClient;
+  readonly written: Promise<WriteReceipt>;
+  /**
+   * Every pre-ready read model holds the write (job READ_READY). Rejects with
+   * `JobFailedError` when the job FAILED.
+   */
+  readonly readable: Promise<WriteReceipt>;
+  /**
+   * `readable`, then the targeted document read with the receipt's token and
+   * gated as the writer, or as `view.subject` when given.
+   */
+  document<TDocument extends PHDocument = PHDocument>(
+    view?: ViewFilter,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
+}
+
+/**
+ * What `executeBatch` hands back once every job is accepted: a handle per
+ * plan key and stages over the whole batch. A batch stage waits for every
+ * job, then rejects with a `BatchJobFailedError` naming the first failed job
+ * in plan order and carrying every job's state.
+ */
+export interface BatchWriteHandle {
+  /** The accepted jobs, keyed by plan key. */
+  readonly jobs: Record<string, JobInfo>;
+  readonly handles: Record<string, WriteHandle>;
+  readonly written: Promise<Record<string, WriteReceipt>>;
+  readonly readable: Promise<Record<string, WriteReceipt>>;
+}
+
+/**
+ * A relationship move is a remove followed by an add. The remove has settled
+ * (READ_READY) by the time the move resolves, because the add must not run on
+ * top of a remove that failed; the add has only been accepted.
+ */
+export type MoveRelationshipHandles = {
+  /** The remove from the old parent; its document is that parent. */
+  removed: WriteHandle;
+  /** The add to the new parent; its document is that parent. */
+  added: WriteHandle;
+};
+
+/** A document's write-side identity, as a mutation resolves its target. */
+export type WriteTargetDescription = {
+  documentId: string;
+  documentType: string;
+  slug: string;
+  branch: string;
+  /** The operation count per scope at the time of the lookup. */
+  revision: Record<string, number>;
+};
+
+/**
+ * The write half of the reactor client: everything that enqueues. Every write
+ * resolves when its job is accepted and returns a {@link WriteHandle}; the
+ * `*Async` variants of the facade are this half's plain form, so it has none.
+ */
+export interface IReactorWriteClient {
+  /** Drive writes. See {@link IDriveWriteClient}. */
+  readonly drives: IDriveWriteClient;
+
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
+
+  /**
+   * Resolves a document reference the way a mutation does and describes the
+   * document it names. A write-side read: it answers for what the write path
+   * sees, which may be ahead of the read models.
+   *
+   * @param identifier - Document id or slug
+   * @param branch - Optional branch, defaults to "main"
+   * @param signal - Optional abort signal to cancel the request
+   */
+  describe(
+    identifier: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteTargetDescription>;
+
+  /**
+   * Predicts whether the subject would be admitted to execute each candidate.
+   * A write-side read by design; see {@link IReactorClient.evaluateActions}.
+   */
+  evaluateActions(
+    documentIdentifier: string,
+    branch: string,
+    candidates: ActionCandidate[],
+    subject?: AuthSubject,
+    signal?: AbortSignal,
+  ): Promise<ActionEvaluations>;
+
+  /**
+   * Submits a document's creation: a `create` job and, with a parent, a
+   * relationship job on the parent. The handle's job is the create; its stages
+   * wait for both, and its document is the new one.
+   */
+  create(
+    document: PHDocument,
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** {@link create} for a new empty document of the type. */
+  createEmpty(
+    documentModelType: string,
+    options?: CreateDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * Upgrades a document to a newer document model version. The upgrade is
+   * retried against concurrent edits, which needs each attempt's outcome, so
+   * this resolves once the upgrade has settled: the handle's stages are
+   * already satisfied. A document already at the target version gets a
+   * handle with no job (`jobId` empty).
+   *
+   * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   */
+  upgradeDocument(
+    documentIdentifier: string,
+    toVersion?: number,
+    options?: UpgradeDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Signs and submits actions on one document. */
+  execute(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** Signs and submits dependent jobs; see {@link BatchWriteHandle}. */
+  executeBatch(
+    request: BatchExecutionRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchWriteHandle>;
+
+  rename(
+    documentIdentifier: string,
+    name: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  setPreferredEditor(
+    documentIdentifier: string,
+    preferredEditor: string | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the source. */
+  addRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata?: Record<string, unknown>,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /**
+   * The handle's document is the source.
+   *
+   * @throws RelationshipNotFoundError, before submitting, when the edge does not exist
+   */
+  updateRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    metadata: Record<string, unknown> | null,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** The handle's document is the source. */
+  removeRelationship(
+    sourceIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** See {@link MoveRelationshipHandles}. */
+  moveRelationship(
+    sourceParentIdentifier: string,
+    targetParentIdentifier: string,
+    targetIdentifier: string,
+    relationshipType: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<MoveRelationshipHandles>;
+
+  /**
+   * Submits a document's deletion as one batch: the delete, its incoming
+   * relationship removals and, with CASCADE, every orphaned descendant. The
+   * handle's job is the root's delete; its stages wait for the whole batch.
+   */
+  deleteDocument(
+    identifier: string,
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle>;
+
+  /** {@link deleteDocument} for each identifier, one handle each. */
+  deleteDocuments(
+    identifiers: string[],
+    propagate?: PropagationMode,
+    signal?: AbortSignal,
+  ): Promise<WriteHandle[]>;
+
+  /**
+   * Loads batches of pre-existing operations (sync) and waits for every job,
+   * as the facade always has. Load jobs carry no client-side actions to hand
+   * back, so this keeps its job-map result.
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult>;
+}
+
+/**
+ * The read half of the reactor client: everything that answers from read
+ * models and never enqueues a job.
+ *
+ * Reads that accept a `consistencyToken` wait until the read models they read
+ * from hold every coordinate the token names, so a token from a write receipt
+ * bounds a read-after-write on any instance serving the same store. The token
+ * is the last parameter so that callers written before it existed keep their
+ * positional arguments.
+ */
+export interface IReactorReadClient {
+  /** Drive reads. See {@link IDriveReadClient}. */
+  readonly drives: IDriveReadClient;
 
   /**
    * Retrieves a list of document model modules.
@@ -292,18 +660,51 @@ export interface IReactorClient {
   ): Promise<DocumentModelModule<any>>;
 
   /**
+   * Retrieves the document model module matching the version a document is
+   * stamped with. Use this instead of {@link getDocumentModelModule}
+   * whenever a specific document is in hand: the latest-wins lookup feeds
+   * not-yet-upgraded documents the wrong reducer, diverging from replay.
+   *
+   * @param document - The document whose stamped version selects the module
+   * @returns The document model module registered for that version
+   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
+   */
+  getDocumentModelModuleForDocument(
+    document: PHDocument,
+  ): Promise<DocumentModelModule<any>>;
+
+  /**
    * Retrieves a specific document by identifier (either id or slug).
    *
    * @param identifier - Required, this is the document id or slug
    * @param view - Optional filter containing branch and scopes information
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The up-to-date PHDocument with scopes and list of child document ids
    */
   get<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<TDocument>;
+
+  /**
+   * Retrieves documents by id, in the order given, each gated as {@link get}
+   * gates one. Throws if any id names no document.
+   *
+   * @param documentIds - Document ids (not slugs)
+   * @param view - Optional filter containing branch and scopes information
+   * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
+   * @returns The documents, in the order of `documentIds`
+   */
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
+  ): Promise<TDocument[]>;
 
   /**
    * Resolves an identifier (either an id or a slug) to the canonical document
@@ -313,16 +714,15 @@ export interface IReactorClient {
    *
    * @param identifier - Required, this is the document id or slug
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the lookup waits for
    * @returns The canonical document id
    */
   resolveIdOrSlug(
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<string>;
-
-  /** True when the id is taken; a soft-deleted document's id is still taken. */
-  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
 
   /**
    * Retrieves operations for a document.
@@ -350,6 +750,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The target documents and paging cursor
    */
   getOutgoingRelationships(
@@ -358,6 +759,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
@@ -368,6 +770,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The source documents and paging cursor
    */
   getIncomingRelationships(
@@ -376,20 +779,22 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /**
    * Retrieves the outgoing relationship edges of a source document.
    *
-   * Unlike {@link IReactorClient.getOutgoingRelationships}, which returns the
-   * documents at the far end, this returns the edges themselves, carrying the
-   * metadata and timestamps recorded against each relationship.
+   * Unlike {@link IReactorReadClient.getOutgoingRelationships}, which returns
+   * the documents at the far end, this returns the edges themselves, carrying
+   * the metadata and timestamps recorded against each relationship.
    *
    * @param sourceIdentifier - Required, this is either a document "id" field or a "slug"
    * @param relationshipType - Optional relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The matching relationship edges and paging cursor
    */
   getOutgoingRelationshipEdges(
@@ -398,20 +803,22 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>>;
 
   /**
    * Retrieves the incoming relationship edges of a target document.
    *
-   * Unlike {@link IReactorClient.getIncomingRelationships}, which returns the
-   * documents at the far end, this returns the edges themselves, carrying the
-   * metadata and timestamps recorded against each relationship.
+   * Unlike {@link IReactorReadClient.getIncomingRelationships}, which returns
+   * the documents at the far end, this returns the edges themselves, carrying
+   * the metadata and timestamps recorded against each relationship.
    *
    * @param targetIdentifier - Required, this is either a document "id" field or a "slug"
    * @param relationshipType - Optional relationship type to filter by
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns The matching relationship edges and paging cursor
    */
   getIncomingRelationshipEdges(
@@ -420,6 +827,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<DocumentRelationship>>;
 
   /**
@@ -431,6 +839,7 @@ export interface IReactorClient {
    * @param view - Optional filter containing branch and scopes information
    * @param paging - Optional pagination options
    * @param signal - Optional abort signal to cancel the request
+   * @param consistencyToken - Optional token the read waits for
    * @returns List of documents matching criteria and pagination cursor
    */
   find(
@@ -438,6 +847,7 @@ export interface IReactorClient {
     view?: ViewFilter,
     paging?: PagingOptions,
     signal?: AbortSignal,
+    consistencyToken?: ConsistencyToken,
   ): Promise<PagedResults<PHDocument>>;
 
   /** Whether {@link find} would serve the document; false when it is absent. */
@@ -446,6 +856,86 @@ export interface IReactorClient {
     view?: ViewFilter,
     signal?: AbortSignal,
   ): Promise<boolean>;
+
+  /**
+   * The signature policy this client gives the documents it creates when the
+   * caller does not choose one. It never changes an existing document.
+   */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
+
+  /**
+   * protocolVersions for a new document under `parentIdentifier`, before the
+   * signature policy: what this reactor and the direct peers of the parent's
+   * collections agree on. Without a parent, the local preference.
+   */
+  getCreateProtocolVersions(
+    parentIdentifier?: string,
+    signal?: AbortSignal,
+  ): Promise<ProtocolVersions>;
+
+  /**
+   * Retrieves the status of a job
+   *
+   * @param jobId - The job id
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The job status
+   */
+  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
+
+  /**
+   * Waits for a job to reach READ_READY or FAILED. Resolves with the job in
+   * either case; a FAILED job is not a rejection here.
+   *
+   * @param jobId - The job id or job object
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The result of the job
+   */
+  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
+
+  /**
+   * Subscribes to changes for documents matching specified filters, gated as
+   * `find` is: an event naming a document the view's subject may read no domain
+   * scope of is withheld.
+   *
+   * @param search - Search filter options (type, parentId, identifiers)
+   * @param callback - Function called when documents change with the change event details
+   * @param view - Optional filter containing branch and scopes information
+   * @returns A function that unsubscribes from the changes
+   */
+  subscribe(
+    search: SearchFilter,
+    callback: (event: DocumentChangeEvent) => void,
+    view?: ViewFilter,
+  ): () => void;
+}
+
+/**
+ * The ReactorClient interface that wraps lower-level APIs to provide
+ * a simpler interface for document operations.
+ *
+ * It is the facade over the read and write halves: every read is the read
+ * half's, and `read` exposes that half directly.
+ *
+ * Features:
+ * - Wraps Jobs with Promises for easier async handling
+ * - Manages signing of submitted Action objects
+ * - Provides quality-of-life functions for common tasks
+ * - Wraps subscription interface with ViewFilters
+ */
+export interface IReactorClient extends IReactorReadClient {
+  /** The read half this facade answers its reads from. */
+  readonly read: IReactorReadClient;
+
+  /** The write half this facade submits its writes through. */
+  readonly write: IReactorWriteClient;
+
+  /**
+   * Drive-aware operations. See {@link IDriveClient}.
+   */
+  readonly drives: IDriveClient;
+
+  /** True when the id is taken; a soft-deleted document's id is still taken. */
+  isDocumentIdTaken(documentId: string, signal?: AbortSignal): Promise<boolean>;
 
   /**
    * Predicts whether the subject would be admitted to execute each of a set of
@@ -493,22 +983,6 @@ export interface IReactorClient {
   ): Promise<ActionEvaluations>;
 
   /**
-   * The signature policy this client gives the documents it creates when the
-   * caller does not choose one. It never changes an existing document.
-   */
-  getCreateSignaturePolicy(): Promise<SignaturePolicy>;
-
-  /**
-   * protocolVersions for a new document under `parentIdentifier`, before the
-   * signature policy: what this reactor and the direct peers of the parent's
-   * collections agree on. Without a parent, the local preference.
-   */
-  getCreateProtocolVersions(
-    parentIdentifier?: string,
-    signal?: AbortSignal,
-  ): Promise<ProtocolVersions>;
-
-  /**
    * Creates a document and waits for completion. The document keeps the
    * signature policy and id its header carries.
    *
@@ -516,6 +990,8 @@ export interface IReactorClient {
    * @param parentIdentifier - Optional "id" or "slug" of parent document
    * @param signal - Optional abort signal to cancel the request
    * @returns The created document
+   *
+   * @deprecated Use write.create(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   create<TDocument extends PHDocument = PHDocument>(
     document: PHDocument,
@@ -545,6 +1021,8 @@ export interface IReactorClient {
    * @param documentModelType - Type of document to create
    * @param options - Optional creation options (parentIdentifier, documentModelVersion)
    * @param signal - Optional abort signal to cancel the request
+   *
+   * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
@@ -568,20 +1046,6 @@ export interface IReactorClient {
   ): Promise<BatchExecutionResult>;
 
   /**
-   * Retrieves the document model module matching the version a document is
-   * stamped with. Use this instead of {@link getDocumentModelModule}
-   * whenever a specific document is in hand: the latest-wins lookup feeds
-   * not-yet-upgraded documents the wrong reducer, diverging from replay.
-   *
-   * @param document - The document whose stamped version selects the module
-   * @returns The document model module registered for that version
-   * @throws UnsupportedDocumentModelVersionError if no module is registered for the stamped version
-   */
-  getDocumentModelModuleForDocument(
-    document: PHDocument,
-  ): Promise<DocumentModelModule<any>>;
-
-  /**
    * Upgrades a document to a newer document model version by dispatching an
    * UPGRADE_DOCUMENT action. When toVersion is omitted, upgrades to the
    * latest registered module version for the document's type. Returns the
@@ -600,6 +1064,8 @@ export interface IReactorClient {
    * @param signal - Optional abort signal to cancel the request
    * @returns The upgraded document
    * @throws DowngradeNotSupportedError if toVersion is less than the document's current version
+   *
+   * @deprecated Use write.upgradeDocument(...), then handle.document().
    */
   upgradeDocument<TDocument extends PHDocument = PHDocument>(
     documentIdentifier: string,
@@ -613,8 +1079,8 @@ export interface IReactorClient {
    * This is more efficient than createEmpty + addFile as it batches all
    * actions into dependent jobs and waits for them to complete together.
    *
-   * @deprecated Use {@link IDriveClient.addFile} via `client.drives.addFile`
-   * instead. This method will be removed in a future release.
+   * @deprecated Use write.drives.addFile(...), then handle.document(). This
+   * method will be removed in a future release.
    * @param driveId - The drive document id or slug
    * @param document - The document to create
    * @param parentFolder - Optional folder id within the drive
@@ -646,6 +1112,8 @@ export interface IReactorClient {
    * @param subject - Optional read subject for the returned document; defaults
    *   to the client's signer
    * @returns The updated document
+   *
+   * @deprecated Use write.execute(...), then handle.document(view) or read.get(receipt.documentId, view, signal, receipt.token).
    */
   execute<TDocument extends PHDocument>(
     documentIdentifier: string,
@@ -681,6 +1149,8 @@ export interface IReactorClient {
    * @param request - Batch mutation request with per-job actions and dependsOn keys
    * @param signal - Optional abort signal to cancel the request
    * @returns The completed batch result (job ids keyed by plan key)
+   *
+   * @deprecated Use write.executeBatch(...) and await batch.readable.
    */
   executeBatch(
     request: BatchExecutionRequest,
@@ -695,6 +1165,8 @@ export interface IReactorClient {
    * @param branch - Optional branch to rename the document, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
+   *
+   * @deprecated Use write.rename(...); read back with handle.document() only if the document is needed.
    */
   rename(
     documentIdentifier: string,
@@ -711,6 +1183,8 @@ export interface IReactorClient {
    * @param branch - Optional branch, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated document.
+   *
+   * @deprecated Use write.setPreferredEditor(...); read back with handle.document() only if the document is needed.
    */
   setPreferredEditor(
     documentIdentifier: string,
@@ -732,6 +1206,8 @@ export interface IReactorClient {
    * @param branch - Optional branch to add the relationship to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.addRelationship(...), then handle.document() for the source.
    */
   addRelationship(
     sourceIdentifier: string,
@@ -753,6 +1229,8 @@ export interface IReactorClient {
    * @param branch - Optional branch holding the relationship, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.updateRelationship(...), then handle.document() for the source.
    */
   updateRelationship(
     sourceIdentifier: string,
@@ -772,6 +1250,8 @@ export interface IReactorClient {
    * @param branch - Optional branch to remove the relationship from, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source document
+   *
+   * @deprecated Use write.removeRelationship(...), then handle.document() for the source.
    */
   removeRelationship(
     sourceIdentifier: string,
@@ -791,6 +1271,8 @@ export interface IReactorClient {
    * @param branch - Optional branch to apply the move to, defaults to "main"
    * @param signal - Optional abort signal to cancel the request
    * @returns The updated source and target documents
+   *
+   * @deprecated Use write.moveRelationship(...), then removed.document() and added.document().
    */
   moveRelationship(
     sourceParentIdentifier: string,
@@ -811,6 +1293,8 @@ export interface IReactorClient {
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
+   *
+   * @deprecated Use write.deleteDocument(...) and await handle.readable.
    */
   deleteDocument(
     identifier: string,
@@ -825,6 +1309,8 @@ export interface IReactorClient {
    * @param propagate - Optional mode for handling children, CASCADE deletes child documents
    * @param signal - Optional abort signal to cancel the request
    * @returns a promise, resolving on deletion confirmation
+   *
+   * @deprecated Use write.deleteDocuments(...) and await each handle's readable.
    */
   deleteDocuments(
     identifiers: string[],
@@ -839,43 +1325,11 @@ export interface IReactorClient {
    * @param request - Batch load request containing jobs with dependencies
    * @param signal - Optional abort signal to cancel the request
    * @returns Map of job keys to completed job information
+   *
+   * @deprecated Use write.loadBatch(...).
    */
   loadBatch(
     request: BatchLoadRequest,
     signal?: AbortSignal,
   ): Promise<BatchLoadResult>;
-
-  /**
-   * Retrieves the status of a job
-   *
-   * @param jobId - The job id
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The job status
-   */
-  getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo>;
-
-  /**
-   * Waits for a job to complete
-   *
-   * @param jobId - The job id or job object
-   * @param signal - Optional abort signal to cancel the request
-   * @returns The result of the job
-   */
-  waitForJob(jobId: string | JobInfo, signal?: AbortSignal): Promise<JobInfo>;
-
-  /**
-   * Subscribes to changes for documents matching specified filters, gated as
-   * `find` is: an event naming a document the view's subject may read no domain
-   * scope of is withheld.
-   *
-   * @param search - Search filter options (type, parentId, identifiers)
-   * @param callback - Function called when documents change with the change event details
-   * @param view - Optional filter containing branch and scopes information
-   * @returns A function that unsubscribes from the changes
-   */
-  subscribe(
-    search: SearchFilter,
-    callback: (event: DocumentChangeEvent) => void,
-    view?: ViewFilter,
-  ): () => void;
 }

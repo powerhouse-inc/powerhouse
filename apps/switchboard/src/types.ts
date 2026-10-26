@@ -1,5 +1,6 @@
 import type { ResolvedPlugin } from "@powerhousedao/host-core";
 import type {
+  IInspector,
   InProcessReactorClientModule,
   IReactorClient,
   ModelManifestEntry,
@@ -94,6 +95,12 @@ export type StartServerOptions = {
    */
   registryUrl?: string;
   configFile?: string;
+  /**
+   * 0 binds a port the OS picks, reported on the result's `port`: the only
+   * race-free choice when several instances start at once. A taken non-zero
+   * port falls back to the next free one, which another process can still
+   * claim between the probe and the bind.
+   */
   port?: number;
   /**
    * If true, fail immediately when the requested port is in use instead of
@@ -133,6 +140,10 @@ export type StartServerOptions = {
   /** Mount the read-only inspection subgraph at `/graphql/inspection`. On by
    * default; `false` wins over INSPECTION_ENABLED, which can turn it off. */
   inspection?: boolean;
+  /** Open each PGlite store (reactor-storage, read-storage) in its own worker
+   * thread. Wins either way over PH_PGLITE_WORKERS; unset, the env var
+   * decides, then PGLITE_WORKERS_DEFAULT. */
+  pgliteWorkers?: boolean;
   /** Powerhouse workflows: the runtime, its subgraph, its webhooks and its
    * document models. Wins over PH_WORKFLOWS_ENABLED and the config file. */
   workflows?: {
@@ -228,11 +239,13 @@ export type SwitchboardReactor = {
   mcpEnabled: boolean;
   /** Whether `/graphql/inspection` is mounted, after the option and INSPECTION_ENABLED. */
   inspectionEnabled: boolean;
+  /** The reactor's inspector, as the host reads it (processors, catch-up); undefined without inspection. */
+  inspector: IInspector | undefined;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
   /**
-   * Port the HTTP server actually bound to. May differ from the requested
-   * port when the requested port was in use and fallback kicked in.
+   * Port the HTTP server actually bound to: the OS-picked one when 0 was
+   * requested, the next free one when the requested port was in use.
    */
   port: number;
   /**

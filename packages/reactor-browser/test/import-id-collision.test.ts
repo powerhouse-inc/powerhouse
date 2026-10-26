@@ -12,6 +12,8 @@ import {
   signaturePolicyOf,
   v2RequiredProtocolVersions,
 } from "@powerhousedao/shared/document-model";
+import { withHalves } from "./utils/client-halves.js";
+import { fakeDriveReader } from "./utils/drive-nodes.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addFileWithProgress } from "../src/actions/document.js";
 
@@ -75,7 +77,7 @@ function stubReactorClient(
   const claimed: string[] = [];
   const headers: PHDocumentHeader[] = [];
   const modules = [documentModelModule()];
-  const client = {
+  const client = withHalves({
     get: (identifier: string) => {
       if (identifier === DRIVE_ID) {
         return Promise.resolve(driveDocument());
@@ -90,6 +92,7 @@ function stubReactorClient(
     getDocumentModelModule: () => Promise.resolve(modules[0]),
     isDocumentIdTaken: vi.fn(isDocumentIdTaken),
     drives: {
+      ...fakeDriveReader(() => []).reader,
       addFile: (_driveId: string, document: PHDocument) => {
         claimed.push(document.header.id);
         headers.push(document.header);
@@ -99,7 +102,7 @@ function stubReactorClient(
         return Promise.resolve(document);
       },
     },
-  };
+  });
   return { client, claimed, headers };
 }
 
@@ -204,7 +207,8 @@ describe("importing a .phd whose id may be taken", () => {
 
   it("fails the import when the drive cannot be read", async () => {
     const { client, claimed } = stubReactorClient(() => Promise.resolve(false));
-    client.get = () => Promise.reject(new Error("drive read failed"));
+    client.drives.listNodes = () =>
+      Promise.reject(new Error("drive read failed"));
     installClient(client);
 
     await expect(addFileWithProgress(file, DRIVE_ID)).rejects.toThrow(

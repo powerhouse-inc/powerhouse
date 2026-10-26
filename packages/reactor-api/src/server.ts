@@ -5,10 +5,13 @@ import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
   IDriveClient,
+  IDriveNodeSource,
   IInspectableAttachmentStore,
   InspectorAttachmentInfo,
   IReadModel,
   IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
   InProcessReactorModule,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
@@ -81,6 +84,7 @@ import {
   RelationalWebhookStore,
   WEBHOOK_SEGMENT,
   WebhookService,
+  type PublicOrigin,
 } from "./http/index.js";
 import {
   decodeExplorerUrlState,
@@ -110,6 +114,10 @@ import {
   createAuthorizationService,
 } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import {
+  DEFAULT_PERMISSION_CACHE_OPTIONS,
+  DEFAULT_PERMISSION_CACHE_TTL_MS,
+} from "./services/permission-cache.js";
 import { createGetParentIdsFn } from "./services/get-parent-ids.js";
 import { createMcpRequestAuthorizer } from "./services/mcp-request-authorizer.js";
 import { buildSyncServingGate } from "./services/sync-serving-gate.js";
@@ -137,6 +145,7 @@ import {
   type PgliteFactory,
 } from "./utils/db.js";
 import type { ReportError } from "./utils/detached.js";
+import type { PGliteLike } from "./pglite/pglite-like.js";
 import {
   openCurrentPgliteForVerify,
   preparePgliteDataDir,
@@ -451,7 +460,7 @@ async function initializeDatabaseAndAnalytics(
  */
 function makeDbClosers(
   knexInstance: { destroy: () => Promise<void> },
-  pglite: PGlite | undefined,
+  pglite: PGliteLike | undefined,
   logger: ILogger,
 ): Array<() => Promise<void>> {
   const closers: Array<() => Promise<void>> = [() => knexInstance.destroy()];
@@ -499,7 +508,7 @@ type SetupGraphQLManagerOptions = {
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
   httpServer: http.Server;
   wsServer: WebSocketServer;
-  client: IReactorClient;
+  clients: ApiClients;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   syncManager: ISyncManager;
@@ -514,6 +523,7 @@ type SetupGraphQLManagerOptions = {
   enableDocumentModelSubgraphs?: boolean;
   port?: number;
   reactorDriveClient?: IDriveClient;
+  driveNodes?: IDriveNodeSource;
   syncServingGate?: SyncScopeGate;
   httpRoutes?: HttpRouteService;
   attachments?: IAttachmentClientProvider;
@@ -531,7 +541,7 @@ async function setupGraphQLManager({
   requireAuthFetchMiddleware,
   httpServer,
   wsServer,
-  client,
+  clients,
   relationalDb,
   analyticsStore,
   syncManager,
@@ -543,6 +553,7 @@ async function setupGraphQLManager({
   enableDocumentModelSubgraphs,
   port,
   reactorDriveClient,
+  driveNodes,
   syncServingGate,
   httpRoutes,
   attachments,
@@ -558,7 +569,9 @@ async function setupGraphQLManager({
     path: config.basePath,
     httpServer,
     wsServer,
-    reactorClient: client,
+    readClient: clients.read,
+    writeClient: clients.write,
+    reactorClient: clients.client,
     relationalDb,
     analyticsStore,
     syncManager,
@@ -576,6 +589,7 @@ async function setupGraphQLManager({
     port,
     authorizationService,
     reactorDriveClient,
+    driveNodes,
     syncServingGate,
     httpRoutes,
     attachments,
@@ -624,12 +638,25 @@ async function startServer(
   return { httpServer, wsServer };
 }
 
+/** The requested port until the server listens, the bound one after. */
+type ListenPort = { current: number };
+
+function boundPortOf(httpServer: http.Server): number {
+  const address = httpServer.address();
+  if (address === null || typeof address === "string") {
+    throw new Error(
+      `The HTTP server is not bound to a TCP port: ${String(address)}`,
+    );
+  }
+  return address.port;
+}
+
 /**
  * Private helper function that sets up common infrastructure before API initialization.
  * This includes auth configuration, database setup, and package manager initialization.
  */
 async function _setupCommonInfrastructure(options: Options): Promise<{
-  port: number;
+  listenPort: ListenPort;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined;
@@ -638,6 +665,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
+  ownDocumentPermissions: OwnDocumentPermissions | null;
   authorizationConfig: AuthorizationConfig;
   attachments: AttachmentBuildResult;
   attachmentReferenceIndex: AttachmentReferenceIndexBuildResult;
@@ -926,33 +954,31 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
   dbClosers.push(...analyticsClosers);
 
-  // Use provided document permission service, or create one if env var is set
-  let documentPermissionService = options.documentPermissionService;
-  if (!documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true") {
-    const { db, knex, pglite } = getDbClient(
-      options.dbPath,
-      options.pgliteFactory,
-    );
-    dbClosers.push(...makeDbClosers(knex, pglite, logger));
-    // Run document permission migrations
-    await runMigrations(db as Kysely<unknown>);
-    logger.info("Document permission migrations completed");
-    documentPermissionService = new DocumentPermissionService(
-      db as Kysely<DocumentPermissionDatabase>,
-      { defaultProtection },
-    );
-    logger.info("Document permission service initialized");
-  }
+  // Use the provided document permission service, or build one when the env
+  // var is set. Building waits for the client initializer, which may hand
+  // over the reactor store the permission tables live in.
+  const documentPermissionService = options.documentPermissionService;
+  const ownDocumentPermissions: OwnDocumentPermissions | null =
+    !documentPermissionService && DOCUMENT_PERMISSIONS_ENABLED === "true"
+      ? {
+          defaultProtection,
+          cacheTtlMs: resolvePermissionCacheTtlMs(
+            process.env.DOCUMENT_PERMISSION_CACHE_TTL_MS,
+            logger,
+          ),
+        }
+      : null;
 
   // The authorization policy collapses the prior dual enforcement paths into
   // one. Document permissions imply authentication (guaranteed by the boot
   // gate above). The service itself is created in _setupAPI, where the
   // reactor client needed for the parent-document resolver exists.
-  const policy = documentPermissionService
-    ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
-    : authEnabled
-      ? AuthorizationPolicy.ADMIN_ONLY
-      : AuthorizationPolicy.OPEN;
+  const policy =
+    documentPermissionService || ownDocumentPermissions
+      ? AuthorizationPolicy.DOCUMENT_PERMISSIONS
+      : authEnabled
+        ? AuthorizationPolicy.ADMIN_ONLY
+        : AuthorizationPolicy.OPEN;
   const authorizationConfig: AuthorizationConfig = {
     admins,
     defaultProtection,
@@ -1005,7 +1031,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // Webhook tokens live in the reactor's own database rather than per host, so
   // a URL a provider has registered keeps working across a restart and any
   // replica can serve it.
-  const publicUrl = resolvePublicOrigin(port);
+  const listenPort: ListenPort = { current: port };
+  const publicUrl = resolvePublicOrigin(listenPort);
   const webhooks = new WebhookService({
     store: new RelationalWebhookStore(relationalDb),
     basePath: config.basePath,
@@ -1031,7 +1058,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   );
 
   return {
-    port,
+    listenPort,
     httpAdapter,
     httpRoutes,
     authFetchMiddleware,
@@ -1041,6 +1068,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     relationalDb,
     analyticsStore,
     documentPermissionService,
+    ownDocumentPermissions,
     authorizationConfig,
     attachments,
     attachmentReferenceIndex,
@@ -1052,10 +1080,21 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 }
 
 /**
+ * The reactor clients the API runs on: the halves the framework wires, and the
+ * facade kept for consumers that have not moved (MCP, subgraphs that still
+ * call `reactorClient`).
+ */
+type ApiClients = {
+  read: IReactorReadClient;
+  write: IReactorWriteClient;
+  client: IReactorClient;
+};
+
+/**
  * Private helper function containing common setup logic for API initialization
  */
 async function _setupAPI(
-  reactorClient: IReactorClient,
+  clients: ApiClients,
   syncManager: ISyncManager,
   reactorProcessorManager: IReactorProcessorManager,
   httpAdapter: IHttpAdapter,
@@ -1063,7 +1102,7 @@ async function _setupAPI(
   requireAuthFetchMiddleware: RequireAuthFetchMiddleware | undefined,
   authEnabled: boolean,
   authService: AuthService | undefined,
-  port: number,
+  listenPort: ListenPort,
   packages: PackageManager,
   relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
@@ -1085,10 +1124,13 @@ async function _setupAPI(
   attachmentReadsFollowDocumentPolicy = false,
   inspection?: IReactorInspectionSource,
   driveStore?: DriveStore,
+  driveNodes?: IDriveNodeSource,
 ): Promise<API> {
   const hostModuleBase: IProcessorHostModule = {
     ...createReactorHostModuleBase({
-      client: reactorClient,
+      client: clients.client,
+      read: clients.read,
+      write: clients.write,
       readModels,
       relationalDb,
       analyticsStore,
@@ -1175,18 +1217,20 @@ async function _setupAPI(
   // Start the server
   const { httpServer, wsServer } = await startServer(
     httpAdapter,
-    port,
+    listenPort.current,
     options.https,
     logger,
   );
+  const boundPort = boundPortOf(httpServer);
+  listenPort.current = boundPort;
 
   // Authorization service is always present; created here because the
   // parent-document resolver used for permission inheritance needs the
-  // reactor client.
+  // read client.
   const authorizationService = createAuthorizationService(
     authorizationConfig,
     documentPermissionService,
-    createGetParentIdsFn(reactorClient),
+    createGetParentIdsFn(clients.read),
   );
   logger.info(
     `Authorization service initialized (policy: ${authorizationConfig.policy})`,
@@ -1214,11 +1258,11 @@ async function _setupAPI(
   const floor = requireAuthFetchMiddleware !== undefined;
   const attachmentAccess: IAttachmentAccessService =
     new AttachmentAccessService(
-      createCanonicalDocumentIdResolver(reactorClient),
+      createCanonicalDocumentIdResolver({ read: clients.read }),
       authorizationService,
       attachmentReferenceIndex.store,
       attachmentReferenceProjection,
-      reactorClient,
+      clients.read,
       attachmentReadsFollowDocumentPolicy ? syncServingGate : undefined,
       {
         refuseAnonymousWrites: authEnabled || floor,
@@ -1247,7 +1291,7 @@ async function _setupAPI(
     requireAuthFetchMiddleware,
     httpServer,
     wsServer,
-    client: reactorClient,
+    clients,
     relationalDb,
     analyticsStore,
     syncManager,
@@ -1260,8 +1304,9 @@ async function _setupAPI(
     authService,
     documentPermissionService,
     enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-    port,
+    port: boundPort,
     reactorDriveClient,
+    driveNodes,
     syncServingGate,
     httpRoutes,
     attachments: attachmentClientProvider,
@@ -1283,7 +1328,7 @@ async function _setupAPI(
   if (mcpServerEnabled) {
     await setupMcpServer(
       {
-        client: reactorClient,
+        client: clients.client,
         syncManager,
         authorizeRequest: createMcpRequestAuthorizer(
           authService,
@@ -1292,7 +1337,7 @@ async function _setupAPI(
       },
       httpAdapter,
     );
-    logger.info(`MCP server available at http://localhost:${port}/mcp`);
+    logger.info(`MCP server available at http://localhost:${boundPort}/mcp`);
   }
 
   const dispose = buildApiDispose({
@@ -1306,6 +1351,8 @@ async function _setupAPI(
 
   return {
     httpAdapter,
+    port: boundPort,
+    httpServer,
     httpRoutes: httpRoutes ?? new HttpRouteService({ httpAdapter }),
     graphqlManager,
     packages,
@@ -1425,13 +1472,92 @@ function buildApiDispose(args: {
 export interface ClientInitializerResult {
   module: InProcessReactorClientModule;
   reactorDriveClient?: IDriveClient;
+  /** Type-neutral drive node reads for the reactor subgraph's node queries. */
+  driveNodes?: IDriveNodeSource;
   attachmentReferenceProjection?: AttachmentReferenceProjectionCapability;
+  /**
+   * The reactor store, bound to the schema its migrations ran in, where the
+   * document permission tables live (reactor migration 029). When absent the
+   * permission service keeps the legacy tables on the read-model store.
+   */
+  permissionsDb?: Kysely<DocumentPermissionDatabase>;
 }
 
 export interface ClientInitializerDependencies {
   attachmentReferenceWriter: IAttachmentReferenceWriter;
   /** Upgrade manifests exported by the loaded packages, one per type. */
   upgradeManifests: UpgradeManifest<readonly number[]>[];
+  /** The read-model store, for moving data that used to live there. */
+  readModelDb: Kysely<unknown>;
+}
+
+/** Settings for the permission service the host builds itself. */
+type OwnDocumentPermissions = {
+  defaultProtection: boolean;
+  cacheTtlMs: number;
+};
+
+/**
+ * Builds the host's own permission service: on the reactor store when the
+ * client initializer handed it over, otherwise on the read-model store after
+ * running reactor-api's legacy permission migrations there.
+ */
+async function createOwnDocumentPermissionService(
+  settings: OwnDocumentPermissions,
+  permissionsDb: Kysely<DocumentPermissionDatabase> | undefined,
+  options: Options,
+  dbClosers: Array<() => Promise<void>>,
+  logger: ILogger,
+): Promise<DocumentPermissionService> {
+  const cacheOptions = {
+    ...DEFAULT_PERMISSION_CACHE_OPTIONS,
+    ttlMs: settings.cacheTtlMs,
+  };
+  const config = { defaultProtection: settings.defaultProtection };
+  if (permissionsDb) {
+    logger.info(
+      `Document permission service initialized on the reactor store (cache TTL ${settings.cacheTtlMs} ms)`,
+    );
+    return new DocumentPermissionService(permissionsDb, config, cacheOptions);
+  }
+
+  const { db, knex, pglite } = getDbClient(
+    options.dbPath,
+    options.pgliteFactory,
+  );
+  dbClosers.push(...makeDbClosers(knex, pglite, logger));
+  await runMigrations(db as Kysely<unknown>);
+  logger.info("Document permission migrations completed");
+  logger.info(
+    `Document permission service initialized on the read-model store (cache TTL ${settings.cacheTtlMs} ms)`,
+  );
+  return new DocumentPermissionService(
+    db as Kysely<DocumentPermissionDatabase>,
+    config,
+    cacheOptions,
+  );
+}
+
+/**
+ * The permission cache TTL from `DOCUMENT_PERMISSION_CACHE_TTL_MS`: a
+ * non-negative integer of milliseconds, 0 disabling the cache. Anything else
+ * falls back to the default with a warning.
+ */
+export function resolvePermissionCacheTtlMs(
+  raw: string | undefined,
+  logger: ILogger,
+): number {
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_PERMISSION_CACHE_TTL_MS;
+  }
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    logger.warn(
+      `Ignoring DOCUMENT_PERMISSION_CACHE_TTL_MS=${raw}: expected a non-negative integer; using ${DEFAULT_PERMISSION_CACHE_TTL_MS} ms`,
+    );
+    return DEFAULT_PERMISSION_CACHE_TTL_MS;
+  }
+  return parsed;
 }
 
 export type { AttachmentReferenceProjectionCapability } from "./services/attachment-access.service.js";
@@ -1445,7 +1571,10 @@ export async function initializeAndStartAPI(
   processorApp: ProcessorApp,
 ): Promise<
   API & {
+    /** @deprecated Use `read` and `write`. */
     client: IReactorClient;
+    read: IReactorReadClient;
+    write: IReactorWriteClient;
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
     readiness: ReadinessGate;
@@ -1456,7 +1585,7 @@ export async function initializeAndStartAPI(
   }
 > {
   const {
-    port,
+    listenPort,
     httpAdapter,
     httpRoutes,
     authFetchMiddleware,
@@ -1465,7 +1594,8 @@ export async function initializeAndStartAPI(
     authService,
     relationalDb,
     analyticsStore,
-    documentPermissionService,
+    documentPermissionService: providedDocumentPermissionService,
+    ownDocumentPermissions,
     authorizationConfig,
     attachments,
     attachmentReferenceIndex,
@@ -1481,14 +1611,29 @@ export async function initializeAndStartAPI(
   const {
     module: reactorClientModule,
     reactorDriveClient,
+    driveNodes,
     attachmentReferenceProjection = {
       status: "unavailable",
       reason: "initializer-did-not-report",
     },
+    permissionsDb,
   } = await clientInitializer(documentModels, {
     attachmentReferenceWriter: attachmentReferenceIndex.store,
     upgradeManifests,
+    readModelDb: getDbClient(options.dbPath, options.pgliteFactory).db,
   });
+
+  const documentPermissionService =
+    providedDocumentPermissionService ??
+    (ownDocumentPermissions
+      ? await createOwnDocumentPermissionService(
+          ownDocumentPermissions,
+          permissionsDb,
+          options,
+          dbClosers,
+          options.logger ?? defaultLogger,
+        )
+      : undefined);
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
@@ -1522,7 +1667,11 @@ export async function initializeAndStartAPI(
   const readModels = readModelCoordinator?.readModels ?? [];
 
   const api = await _setupAPI(
-    reactorClient,
+    {
+      read: reactorClientModule.read,
+      write: reactorClientModule.write,
+      client: reactorClient,
+    },
     syncManager,
     reactorProcessorManager,
     httpAdapter,
@@ -1530,7 +1679,7 @@ export async function initializeAndStartAPI(
     requireAuthFetchMiddleware,
     authEnabled,
     authService,
-    port,
+    listenPort,
     packages,
     relationalDb,
     analyticsStore,
@@ -1562,11 +1711,14 @@ export async function initializeAndStartAPI(
         })
       : undefined,
     reactorClientModule.reactorModule?.reactor,
+    driveNodes,
   );
 
   return {
     ...api,
     client: reactorClient,
+    read: reactorClientModule.read,
+    write: reactorClientModule.write,
     syncManager,
     documentModelRegistry,
     readiness,
@@ -1585,12 +1737,13 @@ export async function initializeAndStartAPI(
  * dev` behind a tunnel and, at worst, obviously wrong rather than silently
  * unusable.
  */
-function resolvePublicOrigin(port: number): string {
+function resolvePublicOrigin(listenPort: ListenPort): PublicOrigin {
   const explicit = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL;
   if (explicit) return withScheme(explicit);
   const domain = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME;
   if (domain) return withScheme(domain);
-  return `http://localhost:${port}`;
+  // Read on use: the port is only known once the server listens.
+  return () => `http://localhost:${listenPort.current}`;
 }
 
 function withScheme(origin: string): string {

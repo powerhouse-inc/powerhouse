@@ -42,6 +42,7 @@ describe("inspection op tables", () => {
         "queueState",
         "processors",
         "catchUpStatus",
+        "catchUpPriority",
         "storageHealth",
         "validateDocument",
         "remote",
@@ -58,6 +59,7 @@ describe("inspection op tables", () => {
       "resumeQueue",
       "retryProcessor",
       "sweepCatchUp",
+      "setCatchUpPriority",
       "rebuildKeyframes",
       "rebuildSnapshots",
     ] as const) {

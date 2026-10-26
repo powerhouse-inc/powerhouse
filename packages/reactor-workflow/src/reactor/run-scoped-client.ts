@@ -16,6 +16,7 @@ import {
   type SearchFilter,
   type ViewFilter,
 } from "@powerhousedao/reactor";
+import type { FolderNode, Node } from "@powerhousedao/shared/document-drive";
 import {
   DOCUMENT_SCOPE_ACTION_TYPES,
   initializeAuth,
@@ -122,6 +123,62 @@ function assertActionsApplied(job: JobInfo, actions?: readonly Action[]): void {
   if (failed.length > 0) {
     throw new ReactorError(ReactorActionsFailedError, failed.join("; "));
   }
+}
+
+const DOCUMENT_DRIVE = "powerhouse/document-drive";
+const REACTOR_DRIVE = "powerhouse/reactor-drive";
+
+type DriveType = typeof DOCUMENT_DRIVE | typeof REACTOR_DRIVE;
+
+type DriveTarget = { id: string; documentType: DriveType };
+
+function isDriveType(documentType: string): documentType is DriveType {
+  return documentType === DOCUMENT_DRIVE || documentType === REACTOR_DRIVE;
+}
+
+// The drive-side action of a file added: a document drive's ADD_FILE, or a
+// reactor drive's child relationship.
+function fileCandidate(
+  drive: DriveTarget,
+  document: PHDocument,
+  parentFolder: string | undefined,
+): ActionCandidate {
+  const { id, documentType, name } = document.header;
+  if (drive.documentType === DOCUMENT_DRIVE) {
+    return {
+      scope: "global",
+      type: "ADD_FILE",
+      input: { id, name: name || id, documentType, parentFolder },
+    };
+  }
+  return {
+    scope: "document",
+    type: "ADD_RELATIONSHIP",
+    input: {
+      sourceId: drive.id,
+      targetId: id,
+      relationshipType: "drive/child",
+      metadata: {
+        kind: "file",
+        parentFolderId: parentFolder ?? null,
+        documentType,
+      },
+    },
+  };
+}
+
+function folderCandidate(
+  drive: DriveTarget,
+  name: string,
+  parentFolder: string | undefined,
+): ActionCandidate {
+  return drive.documentType === DOCUMENT_DRIVE
+    ? { scope: "global", type: "ADD_FOLDER", input: { name, parentFolder } }
+    : {
+        scope: "document",
+        type: "ADD_FOLDER",
+        input: { name, parentFolderId: parentFolder ?? null },
+      };
 }
 
 // The piece surface; `servedClient` refuses every other method. Reads pass
@@ -357,8 +414,47 @@ export class RunScopedReactorClient implements ReactorClient {
     if (subject !== undefined) {
       throw accessDenied("A piece may not choose the subject it reads as");
     }
-    this.assertWritable("execute");
     const abort = this.signal(signal);
+    const { id } = await this.apply(
+      "execute",
+      documentIdentifier,
+      branch,
+      actions,
+      abort,
+    );
+    return this.readBack<TDocument>(id, branch, abort);
+  }
+
+  // As `execute`, and answered at the same point (every action applied, or a
+  // throw), but with the settled job and no read of the document: a drive's
+  // read-back is its whole state, every node, for a caller that drops it.
+  async executeAsync(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<JobInfo> {
+    const abort = this.signal(signal);
+    const { job } = await this.apply(
+      "executeAsync",
+      documentIdentifier,
+      branch,
+      actions,
+      abort,
+    );
+    return job;
+  }
+
+  // The write `execute` and `executeAsync` share: the checks, the gate, the
+  // job, settled. Answers the resolved document id and the settled job.
+  private async apply(
+    method: string,
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    abort: AbortSignal,
+  ): Promise<{ id: string; job: JobInfo }> {
+    this.assertWritable(method);
     for (const action of actions) {
       if (action.context?.signer) {
         throw accessDenied(
@@ -374,8 +470,8 @@ export class RunScopedReactorClient implements ReactorClient {
     }
     const id = await this.resolveReference(documentIdentifier, branch, abort);
     await this.gate(id, branch, actions, abort);
-    await this.run(id, branch, actions, abort);
-    return this.readBack<TDocument>(id, branch, abort);
+    const job = await this.run(id, branch, actions, abort);
+    return { id, job };
   }
 
   // The run user's DELETE_DOCUMENT passes the gate; the client's parent edge
@@ -406,6 +502,126 @@ export class RunScopedReactorClient implements ReactorClient {
       }
       throw error;
     }
+  }
+
+  // --- Drives ------------------------------------------------------------
+
+  // The inner client's drive writes sign as the host and submit their own
+  // batches, so each is checked here first: the drive is read as the run user,
+  // the drive-side action is gated for the run user, both documents are
+  // journaled, and a new file gets the run user's grant, as `create` does.
+  readonly drives: ReactorClient["drives"] = {
+    getNode: (driveIdentifier, nodeId, signal) =>
+      this.getNode(driveIdentifier, nodeId, signal),
+    listNodes: (driveIdentifier, parentFolder, paging, signal) =>
+      this.listNodes(driveIdentifier, parentFolder, paging, signal),
+    addFile: (driveIdentifier, document, parentFolder, signal) =>
+      this.addFile(driveIdentifier, document, parentFolder, signal),
+    addFolder: (driveIdentifier, name, parentFolder, signal) =>
+      this.addFolder(driveIdentifier, name, parentFolder, signal),
+  };
+
+  private async getNode(
+    driveIdentifier: string,
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Node> {
+    const abort = this.signal(signal);
+    const drive = await this.readDrive(driveIdentifier, abort);
+    return this.inner.drives.getNode(drive.id, nodeId, abort);
+  }
+
+  private async listNodes(
+    driveIdentifier: string,
+    parentFolder?: string | null,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<Node>> {
+    const abort = this.signal(signal);
+    const drive = await this.readDrive(driveIdentifier, abort);
+    return this.inner.drives.listNodes(
+      drive.id,
+      parentFolder,
+      this.paging(paging),
+      abort,
+    );
+  }
+
+  private async addFile<TDocument extends PHDocument = PHDocument>(
+    driveIdentifier: string,
+    document: PHDocument,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    this.assertWritable("drives.addFile");
+    const abort = this.signal(signal);
+    const drive = await this.readDrive(driveIdentifier, abort);
+    const prepared = withSignaturePolicy(
+      document,
+      await this.inner.getCreateSignaturePolicy(),
+    );
+    const documentId = prepared.header.id;
+    await this.gateCandidates(
+      drive.id,
+      "main",
+      [fileCandidate(drive, prepared, parentFolder)],
+      abort,
+    );
+    this.assertTimeLeft(`a ${prepared.header.documentType} document`);
+    await this.scope.journal.recordDocuments([drive.id, documentId]);
+    await this.inner.drives.addFile(drive.id, prepared, parentFolder, abort);
+    try {
+      await this.grantRunUser(documentId, abort);
+      return await this.readBack<TDocument>(
+        documentId,
+        prepared.header.branch || "main",
+        abort,
+      );
+    } catch (error) {
+      if (error instanceof Error) {
+        error.message = `Document ${documentId} was created, but: ${error.message}`;
+      }
+      throw error;
+    }
+  }
+
+  private async addFolder(
+    driveIdentifier: string,
+    name: string,
+    parentFolder?: string,
+    signal?: AbortSignal,
+  ): Promise<FolderNode> {
+    this.assertWritable("drives.addFolder");
+    const abort = this.signal(signal);
+    const drive = await this.readDrive(driveIdentifier, abort);
+    await this.gateCandidates(
+      drive.id,
+      "main",
+      [folderCandidate(drive, name, parentFolder)],
+      abort,
+    );
+    this.assertTimeLeft("a folder");
+    await this.scope.journal.recordDocuments([drive.id]);
+    return this.inner.drives.addFolder(drive.id, name, parentFolder, abort);
+  }
+
+  // The drive's header, read as the run user; a type with no known node
+  // write is refused before anything is submitted.
+  private async readDrive(
+    driveIdentifier: string,
+    signal: AbortSignal,
+  ): Promise<DriveTarget> {
+    const drive = await this.inner.get(
+      driveIdentifier,
+      this.readView({ scopes: ["document"] }),
+      signal,
+    );
+    const { id, documentType } = drive.header;
+    if (!isDriveType(documentType)) {
+      throw accessDenied(`Document ${id} is a ${documentType}, not a drive`);
+    }
+    await this.scope.journal.recordDocuments([id]);
+    return { id, documentType };
   }
 
   // --- Access ------------------------------------------------------------
@@ -464,12 +680,25 @@ export class RunScopedReactorClient implements ReactorClient {
     actions: readonly Action[],
     signal: AbortSignal,
   ): Promise<void> {
-    if (!authEnforced(this.host) || actions.length === 0) return;
-    const candidates: ActionCandidate[] = actions.map((action) => ({
-      scope: action.scope,
-      type: action.type,
-      input: action.input,
-    }));
+    await this.gateCandidates(
+      documentId,
+      branch,
+      actions.map((action) => ({
+        scope: action.scope,
+        type: action.type,
+        input: action.input,
+      })),
+      signal,
+    );
+  }
+
+  private async gateCandidates(
+    documentId: string,
+    branch: string,
+    candidates: ActionCandidate[],
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (!authEnforced(this.host) || candidates.length === 0) return;
     let answer: ActionEvaluations;
     try {
       answer = await this.inner.evaluateActions(
@@ -499,12 +728,13 @@ export class RunScopedReactorClient implements ReactorClient {
   // --- Write path ----------------------------------------------------------
 
   // Submits actions and journals the job; throws unless every action applied.
+  // Answers the settled job.
   private async run(
     documentId: string,
     branch: string,
     actions: Action[],
     signal: AbortSignal,
-  ): Promise<void> {
+  ): Promise<JobInfo> {
     this.assertTimeLeft(`${actions.length} action(s)`);
     const info = await this.inner.executeAsync(
       documentId,
@@ -516,6 +746,7 @@ export class RunScopedReactorClient implements ReactorClient {
     const settled = await this.settle(info.id, signal);
     if (settled.status === JobStatus.FAILED) throw jobFailed(settled);
     assertActionsApplied(settled, actions);
+    return settled;
   }
 
   private assertTimeLeft(what: string): void {

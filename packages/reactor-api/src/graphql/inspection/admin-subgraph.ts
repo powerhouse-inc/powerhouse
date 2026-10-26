@@ -1,4 +1,8 @@
-import type { IInspectorAdmin } from "@powerhousedao/reactor";
+import {
+  isCatchUpLevel,
+  type CatchUpPrioritySetting,
+  type IInspectorAdmin,
+} from "@powerhousedao/reactor";
 import { ConsoleLogger } from "document-model";
 import { GraphQLError, type DocumentNode } from "graphql";
 import { BaseSubgraph } from "../base-subgraph.js";
@@ -8,6 +12,35 @@ import { inspectionAdminTypeDefs } from "./admin-schema.js";
 import { isListedAdmin } from "./subgraph.js";
 
 type RerunArgs = { processorId: string; clear: boolean; fromOrdinal: number };
+type PriorityArgs = { mode: string; level?: number | null };
+
+function badInput(message: string): GraphQLError {
+  return new GraphQLError(message, { extensions: { code: "BAD_USER_INPUT" } });
+}
+
+/** The setting `args` name; throws BAD_USER_INPUT for anything else. */
+export function catchUpPrioritySettingOf(
+  args: PriorityArgs,
+): CatchUpPrioritySetting {
+  const level = args.level ?? undefined;
+  if (args.mode === "dynamic") {
+    if (level !== undefined) {
+      throw badInput("A dynamic catch-up priority takes no level");
+    }
+    return { mode: "dynamic" };
+  }
+  if (args.mode !== "fixed") {
+    throw badInput(
+      `Catch-up priority mode must be "fixed" or "dynamic", not ${JSON.stringify(args.mode)}`,
+    );
+  }
+  if (!isCatchUpLevel(level)) {
+    throw badInput(
+      `A fixed catch-up priority needs a level from 0 to 7, not ${JSON.stringify(level ?? null)}`,
+    );
+  }
+  return { mode: "fixed", level };
+}
 
 /** How long a mutation waits on its lever before answering that it started. */
 export const LEVER_ANSWER_WINDOW_MS = 2_000;
@@ -76,7 +109,10 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
       };
     return {
       Query: {
-        inspectionAdmin: listed(() => ({ processors: true })),
+        inspectionAdmin: listed(() => ({
+          processors: true,
+          catchUpPriority: true,
+        })),
       },
       Mutation: {
         inspectionRetryProcessor: listed(({ processorId }: RerunArgs) =>
@@ -94,6 +130,18 @@ export class InspectionAdminSubgraph extends BaseSubgraph {
               this.answerWindowMs,
             ),
         ),
+        inspectionSetCatchUpPriority: listed(async (args: PriorityArgs) => {
+          const setting = catchUpPrioritySettingOf(args);
+          try {
+            await admin.setCatchUpPriority(setting);
+          } catch (error) {
+            throw new GraphQLError(
+              error instanceof Error ? error.message : String(error),
+              { extensions: { code: "LEVER_REFUSED" } },
+            );
+          }
+          return true;
+        }),
       },
     };
   }

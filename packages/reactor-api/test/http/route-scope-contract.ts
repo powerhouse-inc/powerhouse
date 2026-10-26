@@ -6,7 +6,7 @@
 import type { IncomingMessage } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IHttpAdapter } from "../../src/graphql/gateway/types.js";
-import { HttpRouteService } from "../../src/http/index.js";
+import { HttpRouteService, type PublicOrigin } from "../../src/http/index.js";
 import type { AuthService } from "../../src/services/auth.service.js";
 
 export type ScopeHarness = {
@@ -53,7 +53,7 @@ export function runRouteScopeTests(
     function service(options?: {
       basePath?: string;
       authService?: AuthService;
-      publicUrl?: string;
+      publicUrl?: PublicOrigin;
       trustProxy?: boolean;
     }) {
       return new HttpRouteService({
@@ -327,6 +327,24 @@ export function runRouteScopeTests(
         expect(scope.baseUrl).toBe(
           "https://switchboard.example/api/document-model",
         );
+      });
+
+      it("reads a late-bound origin when the URL is read", () => {
+        // A scope is claimed before the server listens, when an ephemeral
+        // port is not known yet.
+        let origin = "http://localhost:0";
+        const scope = service({ publicUrl: () => origin }).scopeFor(
+          "document-model",
+        );
+        const route = scope.get(
+          "x",
+          { auth: "public" },
+          () => new Response(""),
+        );
+        origin = "http://localhost:4123";
+
+        expect(scope.baseUrl).toBe("http://localhost:4123/api/document-model");
+        expect(route.url).toBe("http://localhost:4123/api/document-model/x");
       });
 
       it("degrades to a path when the host knows no public origin", () => {

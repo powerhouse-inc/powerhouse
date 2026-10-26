@@ -3,6 +3,7 @@ import {
   makeDriveSlug,
   makeNodeSlug,
   useDocumentById,
+  useDriveNodes,
   useLinkProps,
 } from "@powerhousedao/reactor-browser";
 import type {
@@ -83,7 +84,17 @@ const byKindThenName = (a: Node, b: Node) =>
 /** Core's drive fallback: a listing of the open folder; an open document shows instead. */
 export function DirectoryListing({ drive, folder, children }: DriveViewProps) {
   if (children) return children;
-  const nodes = drive.state.global.nodes;
+  return <FolderListing drive={drive} folder={folder} />;
+}
+
+function FolderListing({
+  drive,
+  folder,
+}: {
+  drive: DocumentDriveDocument;
+  folder: FolderNode | undefined;
+}) {
+  const nodes = useDriveNodes(drive.header.id) ?? [];
   const path = folderPath(nodes, folder);
   const parent = path.at(-2);
   const entries = nodes

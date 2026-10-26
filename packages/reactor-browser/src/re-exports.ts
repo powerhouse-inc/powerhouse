@@ -25,6 +25,8 @@ export type {
   IProcessorHostModuleBase,
   IQueue,
   IReactorClient,
+  IReactorReadClient,
+  IReactorWriteClient,
   IRelationalDb,
   Job,
   JwtHandler,
@@ -45,4 +47,6 @@ export type {
   SyncHold,
   SyncOperation,
   ValidationResult,
+  WriteHandle,
+  WriteReceipt,
 } from "@powerhousedao/reactor";

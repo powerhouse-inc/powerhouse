@@ -1,5 +1,100 @@
 # Release Changelog
 
+## 🚀 **Unreleased** — PGlite maintenance no longer forces a VACUUM FULL under load
+
+### ⚡ VACUUM FULL waits for a quiet store, by default
+
+A PGlite store whose `base/` exceeds 256 MB at open gets a one-time `VACUUM FULL`. It used to run 30 minutes after open whether or not the store had gone quiet; on a 20 GB store that held the only connection for a quarter of an hour, every processor batch, workflow tick and request hit Knex's 60 s acquire timeout, and the directory needed about twice its size in free disk meanwhile. The one-time rewrite is now off by default: on a store that is live data rather than bloat it reclaims nothing, a minute of quiet arrives naturally between jobs, and the copies it writes need about twice the store's size in free disk. The new `PH_PGLITE_VACUUM_FULL` setting chooses the policy:
+
+```bash
+PH_PGLITE_VACUUM_FULL=off       # default: never (a rewrite needs twice the store's size in free disk)
+PH_PGLITE_VACUUM_FULL=quiet     # only after the quiet window, however long that takes
+PH_PGLITE_VACUUM_FULL=forced    # the previous behaviour: also 30 min after open, under load
+PH_PGLITE_VACUUM_FULL_ABOVE_MB=256        # the size that makes a store eligible
+PH_PGLITE_VACUUM_FULL_QUIET_MS=60000      # the quiet window
+PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the mode
+```
+
+`resolvePgliteMaintenance(env)` in `@powerhousedao/reactor-api/pglite-node` reads them, and both the switchboard's stores and `getDbClient`'s read store apply them. A finished `VACUUM FULL` now logs its duration and the `base/` size before and after; before, only a failure was logged. An unknown mode refuses to boot, since the point is never to run the forced rewrite by accident.
+
+✅ **What to try:** boot a switchboard with `PH_PGLITE_VACUUM_FULL=quiet` on a store over 256 MB and watch the log: `VACUUM FULL waits until the store has had no writes for 60000 ms` with no `or at most ... from open` clause, then `VACUUM FULL finished in N ms; A -> B bytes` once the store has been idle a minute.
+
+---
+
+## 🚀 **Unreleased** — reactor client halves
+
+### ✨ Highlights
+
+1. **The reactor client is split into a read half and a write half** — `IReactorReadClient` answers from read models, `IReactorWriteClient` enqueues; every write returns a `WriteHandle` with `written`, `readable` and `document()`
+2. **`IReactorClient` stays as a deprecated facade** — every old method and return type keeps working for several releases; each facade write logs one deprecation warning per process
+3. **Mutations no longer read the document view** — a write-side identity table resolves targets, and the permission tables move into the reactor store with a one-time backfill
+
+---
+
+### NEW FEATURES
+
+#### 🔀 Read and write halves (`@powerhousedao/reactor`)
+
+`ReactorClientModule` now carries `read` and `write` beside `client`. The read half (`get`, `getMany`, `find`, relationships, `getOperations`, `subscribe`, `waitForJob`, `getJobStatus`, `drives`) never enqueues; reads that can wait for a consistency token take it as their last parameter. The write half (`create`, `createEmpty`, `upgradeDocument`, `execute`, `executeBatch`, `rename`, `setPreferredEditor`, relationship writes, `deleteDocument(s)`, `loadBatch`, `isDocumentIdTaken`, `evaluateActions`, `describe`, `drives`) resolves when the job is accepted and returns a handle.
+
+```typescript
+const handle = await module.write.execute(invoiceId, "main", actions);
+const { token } = await handle.written; // operations are in the log
+const invoice = await module.read.get(invoiceId, undefined, undefined, token);
+const same = await handle.document(); // readable, then the gated read-back
+```
+
+`written` and `readable` reject with `JobFailedError` only when the job itself failed; a reducer error stays on `receipt.job.result`. Over RPC the halves are `read.*` and `write.*` (protocol version 4); the router (`@powerhousedao/reactor-router`) exposes `RoutingReadClient` and `RoutingWriteClient`; `@powerhousedao/reactor-browser` and the GraphQL browser client carry `read` and `write` too, and `window.ph.reactor = { read, write }` sits beside `window.ph.reactorClient`.
+
+✅ **What to try:** call `module.write.execute(...)` without awaiting it, then `await handle.readable` where you need the result.
+
+#### 🧭 GraphQL resolvers get the halves on the request context
+
+`GraphQLManager` takes `readClient` and `writeClient`. Every resolver context carries `ctx.clients.read`; `ctx.clients.write` exists only for Mutation fields, and a query that reaches for it fails with `WriteClientUnavailableError` naming the field. Package subgraphs get `subgraph.readClient`; `subgraph.reactorClient` stays as the deprecated facade. `document`, `findDocuments` and the four relationship queries accept an optional `consistency: ConsistencyTokenInput` (the shape `JobInfo.consistencyToken` reports), so a client can bound a read after its own write.
+
+```graphql
+query ($id: String!, $c: ConsistencyTokenInput!) {
+  document(idOrSlug: $id, consistency: $c) {
+    document {
+      id
+      lastModifiedAtUtcIso
+    }
+  }
+}
+```
+
+#### 🗂️ Write-side identity (reactor migration 028)
+
+`WriteIdentity` (documentId, branch, slug, documentType, isDeleted) is written inside the executor's transaction for every document-scope create, upgrade and delete. Write-target resolution and `write.describe` read it instead of the document view; rows missing for documents created before the migration fall back to the view once.
+
+#### 🛡️ Permission tables in the reactor store (reactor migration 029)
+
+`DocumentPermission`, `OperationUserPermission` and `DocumentProtection` are created in the reactor store, read through a per-process `PermissionCache` (TTL `DOCUMENT_PERMISSION_CACHE_TTL_MS`, default 30 s; 0 disables), and invalidated by the service's own writes. A purge deletes the purged document's permission rows.
+
+#### 🧩 Processors read through `module.read`
+
+`IProcessorHostModule` gains `read`; `dispatch` gains `createInDrive(driveId, document, parent?)` and `deleteDocument(docId, propagate?)`, so a processor never needs the write client.
+
+### BREAKING CHANGES
+
+None on the wire, and none at compile time for callers of `IReactorClient`. Behaviour that changed:
+
+- Facade writes now wait for `readable` and read back through the read half with the receipt's token (a no-op wait on one store).
+- `ReactorDriveClient` takes `{ read, write, readModel }`; passing `{ reactor }` still works and is deprecated.
+- The RPC protocol version is 4: a tab and a worker on different versions reload instead of calling missing methods.
+
+### MIGRATION GUIDE
+
+1. Nothing is required this release. Each facade write logs one `[reactor-client] IReactorClient.<method> is deprecated` line per process; set `PH_SILENCE_DEPRECATIONS=1` to silence it.
+2. Move writes to `module.write.<method>(...)` and read back with `handle.document()` or `module.read.get(id, view, signal, receipt.token)`; move reads to `module.read.*`; in processors use `module.read` and `module.dispatch`; in custom subgraph resolvers use `ctx.clients.read` for queries and `ctx.clients.write` for mutations.
+3. Ship `@powerhousedao/reactor`, `@powerhousedao/reactor-api` and `@powerhousedao/switchboard` together. On the first boot the switchboard copies the permission rows from the read-model store into the reactor store and renames the old tables to `*_migrated_2026_10_25`; the log reports `Permission tables backfill: copied ...` or `... nothing to copy`. A mismatched pair keeps the tables on the read-model store.
+
+### DOCUMENTATION
+
+- `docs/adr/0006-reactor-client-halves.md` records the decision, the alternatives and the consequences.
+
+---
+
 ## 🚀 **Unreleased** — PGlite storage on NodeFS
 
 ### ✨ Highlights

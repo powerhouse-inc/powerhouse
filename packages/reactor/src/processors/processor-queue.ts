@@ -5,10 +5,17 @@ import {
 import type {
   IProcessor,
   ProcessorFilter,
+  ProcessorPhase,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 import type { ILogger } from "document-model";
 import type { PagedResults } from "../shared/types.js";
+import {
+  UNLIMITED_BACKFILL_SLOTS,
+  yieldToEventLoop,
+  type IBackfillSlots,
+} from "./backfill-slots.js";
+import type { ReplayPage } from "./replay-state.js";
 import { matchesFilter } from "./utils.js";
 
 export type ProcessorCursorState = Pick<
@@ -16,15 +23,27 @@ export type ProcessorCursorState = Pick<
   "lastOrdinal" | "status" | "lastError" | "lastErrorTimestamp"
 >;
 
+/** Where the current replay began and the phase it leaves the processor in. */
+export type ProcessorProgressState = {
+  runFrom: number;
+  phase: ProcessorPhase;
+};
+
 export type ProcessorQueueOptions = {
   processorId: string;
   processor: IProcessor;
   filter: ProcessorFilter;
   /** Mutated in place: the tracked processor the manager exposes. */
   cursor: ProcessorCursorState;
+  /** Mutated in place, like `cursor`. */
+  progress: ProcessorProgressState;
   /** Ordinals at or below this are never delivered. */
   floor: number;
-  readSince: (ordinal: number) => Promise<PagedResults<OperationWithContext>>;
+  /** Up to `limit` operations above `ordinal`; `next` set when more remain. */
+  readSince: (
+    ordinal: number,
+    limit: number,
+  ) => Promise<PagedResults<OperationWithContext>>;
   /** Highest ordinal routed so far; anything above it has yet to arrive live. */
   routedThrough: () => number;
   /** The manager's appliedThrough; the cursor never passes it. */
@@ -36,6 +55,17 @@ export type ProcessorQueueOptions = {
   lookupRetryMs?: number;
   /** Retries of a failed tombstone lookup before the processor parks. */
   lookupRetries?: number;
+  /** Shared across a manager's queues; defaults to no limit. */
+  backfillSlots?: IBackfillSlots;
+  /** Starts one backfill scan's state filling; without it a replay delivers as read. */
+  replayState?: () => ReplayPage | undefined;
+  /**
+   * Runs between backfill pages; defaults to yielding to the event loop.
+   * `closing` aborts once the queue closes, so a long wait can end early.
+   */
+  betweenPages?: (closing: AbortSignal) => Promise<void>;
+  /** Read before every backfill page; defaults to the index's page size. */
+  pageSize?: () => number;
   logger: ILogger;
 };
 
@@ -122,6 +152,9 @@ function highestOf(ops: OperationWithContext[]): number {
 /** Largest merged live call, matching the operation index's page size. */
 export const MAX_MERGED_OPERATIONS = 500;
 
+/** The operation index's default page size. */
+export const DEFAULT_BACKFILL_PAGE_SIZE = 500;
+
 const LOOKUP_RETRY_MS = 100;
 const MAX_LOOKUP_RETRY_MS = 30_000;
 const LOOKUP_RETRIES = 10;
@@ -138,6 +171,8 @@ export class ProcessorQueue {
   private wake: (() => void) | undefined;
   // Set once a lookup exhausts its retries; nothing moves until one answers.
   private parked = false;
+  // Aborted on close; waits listen on it and stop listening as they settle.
+  private readonly closing = new AbortController();
 
   constructor(private readonly options: ProcessorQueueOptions) {}
 
@@ -150,7 +185,12 @@ export class ProcessorQueue {
     return this.replaysAhead > 0;
   }
 
-  /** Resolves at once behind a replay, so a pass never waits out a backfill. */
+  /**
+   * Resolves at once behind a replay, so a pass never waits out a backfill.
+   * Batches queued behind it wait in memory until it ends, which at level 0
+   * is until the level rises; they are kept, not folded into the replay, so
+   * each still arrives once and in order.
+   */
   live(ops: OperationWithContext[], check?: LiveCheck): Promise<void> {
     const delivered = this.push((done) => ({ kind: "live", ops, check, done }));
     return this.replaysAhead > 0 ? Promise.resolve() : delivered;
@@ -262,6 +302,7 @@ export class ProcessorQueue {
       }
     });
     this.closed = true;
+    this.closing.abort();
     this.wake?.();
     return disconnect;
   }
@@ -272,11 +313,13 @@ export class ProcessorQueue {
   ): Promise<void> {
     if (this.closed) return Promise.resolve();
     this.replaysAhead++;
+    this.syncProgress();
     return this.enqueue(kind, async () => {
       try {
         await run();
       } finally {
         this.replaysAhead--;
+        this.syncProgress();
       }
     });
   }
@@ -520,12 +563,37 @@ export class ProcessorQueue {
   }
 
   private async runBackfill(): Promise<void> {
+    const { cursor } = this.options;
+    if (cursor.status !== "active" || this.parked) return;
+    const slots = this.options.backfillSlots ?? UNLIMITED_BACKFILL_SLOTS;
+    // Replaced when the scan gives its slot back between pages.
+    const slot = { release: await slots.acquire(this.closing.signal) };
+    if (this.closed) {
+      slot.release();
+      return;
+    }
+    try {
+      await this.scanBackfill(slots, slot);
+    } finally {
+      slot.release();
+    }
+  }
+
+  private async scanBackfill(
+    slots: IBackfillSlots,
+    slot: { release: () => void },
+  ): Promise<void> {
     const { cursor, filter, floor } = this.options;
     if (cursor.status !== "active" || this.parked) return;
+    this.options.progress.runFrom = cursor.lastOrdinal;
+    const betweenPages = this.options.betweenPages ?? yieldToEventLoop;
+    const pageSize =
+      this.options.pageSize ?? (() => DEFAULT_BACKFILL_PAGE_SIZE);
+    const fill = this.options.replayState?.();
 
     let page: PagedResults<OperationWithContext>;
     try {
-      page = await this.options.readSince(cursor.lastOrdinal);
+      page = await this.options.readSince(cursor.lastOrdinal, pageSize());
     } catch (error) {
       await this.fail(error, "reading backfill");
       return;
@@ -552,6 +620,14 @@ export class ProcessorQueue {
         }
         live = withoutPurged(matching, purged);
       }
+      if (fill && live.length > 0) {
+        try {
+          live = await fill(live);
+        } catch (error) {
+          await this.fail(error, "reading replay state");
+          return;
+        }
+      }
       if (live.length > 0) {
         if (!(await this.deliver(live))) {
           await this.persist();
@@ -563,8 +639,18 @@ export class ProcessorQueue {
       await this.raiseCursor(highestOf(page.results));
 
       if (!page.next) break;
+      // Re-read from where this page ended, so a new page size applies now.
+      const scanned = highestOf(page.results);
+      await betweenPages(this.closing.signal);
+      if (this.closed) return;
+      // After a lower, scans over the new count queue again for a slot.
+      if (slots.oversubscribed()) {
+        slot.release();
+        slot.release = await slots.acquire(this.closing.signal);
+        if (this.closed) return;
+      }
       try {
-        page = await page.next();
+        page = await this.options.readSince(scanned, pageSize());
       } catch (error) {
         await this.fail(error, "reading backfill");
         return;
@@ -627,6 +713,15 @@ export class ProcessorQueue {
     cursor.status = "errored";
     cursor.lastError = errorMessage(error);
     cursor.lastErrorTimestamp = new Date();
+    this.syncProgress();
+  }
+
+  // Outside a replay the run start follows the cursor, so a live processor reads as done.
+  private syncProgress(): void {
+    const { cursor, progress } = this.options;
+    if (cursor.status === "errored") progress.phase = "errored";
+    else progress.phase = this.replaysAhead > 0 ? "catching-up" : "live";
+    if (this.replaysAhead === 0) progress.runFrom = cursor.lastOrdinal;
   }
 
   private async raiseCursor(through: number): Promise<void> {
@@ -646,6 +741,7 @@ export class ProcessorQueue {
   }
 
   private async persist(): Promise<void> {
+    this.syncProgress();
     if (this.closed) return;
     const { cursor } = this.options;
     try {

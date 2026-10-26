@@ -3,16 +3,18 @@ import {
   type ActionEvaluations,
   AuthEnforcementDisabledError,
   BatchJobFailedError,
-  type BatchExecutionResult,
+  type BatchWriteHandle,
   ChannelError,
   ChannelErrorSource,
   consolidateSyncOperations,
+  type ConsistencyToken,
   type DocumentRelationship,
   DriveCollectionId,
   envelopesToSyncOperations,
   type ExecutionJobPlan,
   type IDriveClient,
-  type IReactorClient,
+  type IReactorReadClient,
+  type IReactorWriteClient,
   type ISyncManager,
   type JobInfo,
   JOB_NOT_FOUND_ERROR_NAME,
@@ -27,6 +29,7 @@ import {
   SyncOperation,
   type SyncScopeGate,
   type ViewFilter,
+  type WriteReceipt,
 } from "@powerhousedao/reactor";
 import type {
   AuthSubject,
@@ -46,51 +49,143 @@ import {
   AuthEvaluationUnsupportedError,
   RefusalNotRecordedError,
 } from "../errors.js";
+import type { RequestClients } from "../request-clients.js";
 import { isDriveContainerType } from "./constants.js";
 
-const REACTOR_DRIVE_DOCUMENT_TYPE = "powerhouse/reactor-drive";
+/** The branch a mutation applies to when the caller names none. */
+const DEFAULT_BRANCH = "main";
 
 /**
- * Returns the drive client to use for the given drive-container parent type.
- * Throws when the parent is a reactor-drive container but no
- * `reactorDriveClient` was provided.
+ * Fields of the reactor subgraph's Query type that read write-side state, and
+ * what each reads it through. A blanket "queries read the read half" rule is
+ * wrong for exactly these, so they are bound here, by name, rather than left
+ * to whatever the resolver happens to reach for:
+ *
+ * - `evaluateActions` decides on the write side's own log ("never through the
+ *   write cache", by design), so it is handed `ctx.clients.write` although it
+ *   runs in a query.
+ * - `pollSyncEnvelopes`, `syncHolds` and `peerAgreement` serve peers from the
+ *   operation index and the sync tables through the sync manager; they touch
+ *   neither client.
+ * - `jobStatus` answers from the job tracker, which the read half exposes.
+ *
+ * `documentServed` is not one of them: it is the read gate over the read
+ * models, like every other query.
  */
-function pickDriveClient(
-  reactorClient: IReactorClient,
-  driveContainerType: string,
-  reactorDriveClient: IDriveClient | undefined,
-): IDriveClient {
-  if (driveContainerType === REACTOR_DRIVE_DOCUMENT_TYPE) {
-    if (!reactorDriveClient) {
-      throw new GraphQLError(
-        "Reactor-drive parent encountered but no reactorDriveClient is configured on this switchboard",
-      );
-    }
-    return reactorDriveClient;
-  }
-  return reactorClient.drives;
+export const WRITE_SIDE_QUERIES = {
+  evaluateActions: "write",
+  pollSyncEnvelopes: "syncManager",
+  syncHolds: "syncManager",
+  peerAgreement: "syncManager",
+  jobStatus: "read",
+} as const satisfies Record<string, "write" | "read" | "syncManager">;
+
+/** The `Query.<field>` coordinates handed the write client outside a mutation. */
+export const WRITE_CLIENT_QUERIES: readonly string[] = Object.entries(
+  WRITE_SIDE_QUERIES,
+)
+  .filter(([, binding]) => binding === "write")
+  .map(([field]) => field);
+
+/**
+ * What a document-returning mutation reads back: the document its write
+ * targeted, on a branch, and the token bounding the read. A write receipt is
+ * one; a write through the reactor-drive facade, which waited for its jobs and
+ * hands back no token, is one without a token.
+ */
+export type ReadBackTarget = {
+  documentId: string;
+  branch: string;
+  token?: ConsistencyToken;
+};
+
+/**
+ * Adds a document to a drive parent and returns what to read back once the
+ * write is readable. `write.drives` picks the drive type's strategy.
+ */
+async function addFileToDrive(
+  clients: RequestClients,
+  driveId: string,
+  document: PHDocument,
+): Promise<ReadBackTarget> {
+  const handle = await clients.write.drives.addFile(driveId, document);
+  return handle.readable;
+}
+
+/** Removes a drive parent's node, waiting until the removal is readable. */
+async function removeNodeFromDrive(
+  clients: RequestClients,
+  driveId: string,
+  nodeId: string,
+): Promise<void> {
+  const handle = await clients.write.drives.removeNode(driveId, nodeId);
+  await handle.readable;
 }
 
 /**
- * A mutation's document re-read as the caller, since the client reads it back
- * as its signer. A caller who may write but not read gets it stripped.
+ * A mutation's document read back on the read half, as the caller, bounded by
+ * the write's token: `read.get(receipt.documentId, { subject, branch },
+ * undefined, receipt.token)`. A caller who may write but not read gets it
+ * stripped.
  */
-async function readAsCaller(
-  reactorClient: IReactorClient,
-  document: PHDocument,
+export async function readAsCaller(
+  read: IReactorReadClient,
+  receipt: ReadBackTarget,
   subject: AuthSubject | undefined,
   branch?: string,
 ): Promise<PHDocument> {
-  if (!subject) {
-    return document;
-  }
   try {
-    return await reactorClient.get(document.header.id, { subject, branch });
+    return await read.get(
+      receipt.documentId,
+      { subject, branch: branch ?? receipt.branch },
+      undefined,
+      receipt.token,
+    );
   } catch (error) {
     throw new GraphQLError(
       `Failed to read the document back: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+}
+
+/** The wire form of a consistency token, as a query's `consistency` argument. */
+export type ConsistencyTokenArg =
+  | {
+      version: number;
+      createdAtUtcIso: string;
+      coordinates: ReadonlyArray<{
+        documentId: string;
+        scope: string;
+        branch: string;
+        operationIndex: number;
+      }>;
+    }
+  | null
+  | undefined;
+
+/** The token a read waits for, or none; only version 1 tokens exist. */
+export function toConsistencyToken(
+  input: ConsistencyTokenArg,
+): ConsistencyToken | undefined {
+  if (!input) {
+    return undefined;
+  }
+  if (input.version !== 1) {
+    throw new GraphQLError(
+      `Unsupported consistency token version ${input.version}`,
+      { extensions: { code: "BAD_USER_INPUT" } },
+    );
+  }
+  return {
+    version: 1,
+    createdAtUtcIso: input.createdAtUtcIso,
+    coordinates: input.coordinates.map((coordinate) => ({
+      documentId: coordinate.documentId,
+      scope: coordinate.scope,
+      branch: coordinate.branch,
+      operationIndex: coordinate.operationIndex,
+    })),
+  };
 }
 
 export const MAX_OPERATIONS_PER_ENVELOPE = 25;
@@ -125,18 +220,18 @@ import type {
 
 /** The defaults `create` gives a new document; the parent must already be gated. */
 export async function createDefaults(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   parentIdOrSlug: string | undefined,
 ): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
   const [signaturePolicy, protocolVersions] = await Promise.all([
-    reactorClient.getCreateSignaturePolicy(),
-    reactorClient.getCreateProtocolVersions(parentIdOrSlug),
+    read.getCreateSignaturePolicy(),
+    read.getCreateProtocolVersions(parentIdOrSlug),
   ]);
   return { signaturePolicy, protocolVersions };
 }
 
 export async function documentModels(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     namespace?: string | null;
     paging?: {
@@ -161,7 +256,7 @@ export async function documentModels(
 
   let result: PagedResults<DocumentModelModule>;
   try {
-    result = await reactorClient.getDocumentModelModules(namespace, paging);
+    result = await read.getDocumentModelModules(namespace, paging);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document models: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -178,13 +273,14 @@ export async function documentModels(
 }
 
 export async function document(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     idOrSlug: string;
     view?: {
       branch?: string | null;
       scopes?: readonly string[] | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<{
@@ -200,9 +296,10 @@ export async function document(
     };
   }
 
+  const token = toConsistencyToken(args.consistency);
   let result: PHDocument;
   try {
-    result = await reactorClient.get(args.idOrSlug, view);
+    result = await read.get(args.idOrSlug, view, undefined, token);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -211,10 +308,13 @@ export async function document(
 
   let children: PagedResults<PHDocument>;
   try {
-    children = await reactorClient.getOutgoingRelationships(
+    children = await read.getOutgoingRelationships(
       args.idOrSlug,
       "child",
       view,
+      undefined,
+      undefined,
+      token,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -235,7 +335,7 @@ export async function document(
 }
 
 export async function documentOutgoingRelationships(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     sourceIdOrSlug: string;
     relationshipType: string;
@@ -247,6 +347,7 @@ export async function documentOutgoingRelationships(
       cursor?: string | null;
       limit?: number | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
@@ -273,11 +374,13 @@ export async function documentOutgoingRelationships(
 
   let result: PagedResults<PHDocument>;
   try {
-    result = await reactorClient.getOutgoingRelationships(
+    result = await read.getOutgoingRelationships(
       args.sourceIdOrSlug,
       args.relationshipType,
       view,
       paging,
+      undefined,
+      toConsistencyToken(args.consistency),
     );
   } catch (error) {
     throw new GraphQLError(
@@ -295,7 +398,7 @@ export async function documentOutgoingRelationships(
 }
 
 export async function documentIncomingRelationships(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     targetIdOrSlug: string;
     relationshipType: string;
@@ -307,6 +410,7 @@ export async function documentIncomingRelationships(
       cursor?: string | null;
       limit?: number | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
@@ -333,11 +437,13 @@ export async function documentIncomingRelationships(
 
   let result: PagedResults<PHDocument>;
   try {
-    result = await reactorClient.getIncomingRelationships(
+    result = await read.getIncomingRelationships(
       args.targetIdOrSlug,
       args.relationshipType,
       view,
       paging,
+      undefined,
+      toConsistencyToken(args.consistency),
     );
   } catch (error) {
     throw new GraphQLError(
@@ -355,7 +461,7 @@ export async function documentIncomingRelationships(
 }
 
 export async function documentOutgoingRelationshipEdges(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     sourceIdOrSlug: string;
     relationshipType?: string | null;
@@ -367,6 +473,7 @@ export async function documentOutgoingRelationshipEdges(
       cursor?: string | null;
       limit?: number | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<DocumentRelationshipResultPage> {
@@ -375,11 +482,13 @@ export async function documentOutgoingRelationshipEdges(
 
   let result: PagedResults<DocumentRelationship>;
   try {
-    result = await reactorClient.getOutgoingRelationshipEdges(
+    result = await read.getOutgoingRelationshipEdges(
       args.sourceIdOrSlug,
       fromInputMaybe(args.relationshipType),
       view,
       paging,
+      undefined,
+      toConsistencyToken(args.consistency),
     );
   } catch (error) {
     throw new GraphQLError(
@@ -397,7 +506,7 @@ export async function documentOutgoingRelationshipEdges(
 }
 
 export async function documentIncomingRelationshipEdges(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     targetIdOrSlug: string;
     relationshipType?: string | null;
@@ -409,6 +518,7 @@ export async function documentIncomingRelationshipEdges(
       cursor?: string | null;
       limit?: number | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<DocumentRelationshipResultPage> {
@@ -417,11 +527,13 @@ export async function documentIncomingRelationshipEdges(
 
   let result: PagedResults<DocumentRelationship>;
   try {
-    result = await reactorClient.getIncomingRelationshipEdges(
+    result = await read.getIncomingRelationshipEdges(
       args.targetIdOrSlug,
       fromInputMaybe(args.relationshipType),
       view,
       paging,
+      undefined,
+      toConsistencyToken(args.consistency),
     );
   } catch (error) {
     throw new GraphQLError(
@@ -482,7 +594,7 @@ function toRelationshipPagingOptions(
 }
 
 export async function findDocuments(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     search: {
       type?: string | null;
@@ -496,6 +608,7 @@ export async function findDocuments(
       cursor?: string | null;
       limit?: number | null;
     } | null;
+    consistency?: ConsistencyTokenArg;
   },
   subject?: AuthSubject,
 ): Promise<PhDocumentResultPage> {
@@ -527,7 +640,13 @@ export async function findDocuments(
 
   let result: PagedResults<PHDocument>;
   try {
-    result = await reactorClient.find(search, view, paging);
+    result = await read.find(
+      search,
+      view,
+      paging,
+      undefined,
+      toConsistencyToken(args.consistency),
+    );
   } catch (error) {
     throw new GraphQLError(
       `Failed to find documents: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -566,7 +685,7 @@ function unknownJob(jobId: string): JobInfo {
 }
 
 export async function jobStatus(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     jobId: string;
   },
@@ -575,7 +694,7 @@ export async function jobStatus(
 ): Promise<GqlJobInfo> {
   let result: JobInfo;
   try {
-    result = await reactorClient.getJobStatus(args.jobId);
+    result = await read.getJobStatus(args.jobId);
   } catch (error) {
     throw new GraphQLError(
       `Failed to fetch job status: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -607,7 +726,7 @@ export async function jobStatus(
 }
 
 export async function documentOperations(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   args: {
     filter: {
       documentIdOrSlug: string;
@@ -667,7 +786,7 @@ export async function documentOperations(
 
   let result: PagedResults<Operation>;
   try {
-    result = await reactorClient.getOperations(
+    result = await read.getOperations(
       args.filter.documentIdOrSlug,
       view,
       operationFilter,
@@ -702,7 +821,7 @@ export async function documentOperations(
  * "unsupported" code rather than a denial.
  */
 export async function evaluateActions(
-  reactorClient: IReactorClient,
+  write: Pick<IReactorWriteClient, "evaluateActions">,
   args: {
     documentIdOrSlug: string;
     branch?: string | null;
@@ -723,7 +842,7 @@ export async function evaluateActions(
 
   let result: ActionEvaluations;
   try {
-    result = await reactorClient.evaluateActions(
+    result = await write.evaluateActions(
       args.documentIdOrSlug,
       branch,
       candidates,
@@ -752,14 +871,14 @@ const isDocumentNotFound = (error: unknown) =>
 
 /** Refuses a slug another document holds: the reactor would move it to the new one. */
 async function assertSlugAvailable(
-  reactorClient: IReactorClient,
+  read: IReactorReadClient,
   slug: string | undefined,
   documentId?: string,
 ): Promise<void> {
   if (!slug || slug === documentId) return;
   let holder: string;
   try {
-    const id = await reactorClient.resolveIdOrSlug(slug);
+    const id = await read.resolveIdOrSlug(slug);
     if (id === documentId) return;
     holder = `document ${id}`;
   } catch (error) {
@@ -773,12 +892,13 @@ async function assertSlugAvailable(
 }
 
 export async function createDocument(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     document: unknown;
     parentIdOrSlug?: string | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   // Validate that document is a PHDocument
@@ -795,30 +915,27 @@ export async function createDocument(
 
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   await assertSlugAvailable(
-    reactorClient,
+    clients.read,
     document.header.slug,
     document.header.id,
   );
 
-  let result: PHDocument;
+  let receipt: ReadBackTarget;
   try {
     if (parentIdOrSlug) {
-      const parent = await reactorClient.get(
+      const parent = await clients.read.get(
         parentIdOrSlug,
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        const driveClient = pickDriveClient(
-          reactorClient,
-          parent.header.documentType,
-          reactorDriveClient,
-        );
-        result = await driveClient.addFile(parent.header.id, document);
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } else {
-        result = await reactorClient.create(document, parentIdOrSlug);
+        const handle = await clients.write.create(document, parentIdOrSlug);
+        receipt = await handle.readable;
       }
     } else {
-      result = await reactorClient.create(document);
+      const handle = await clients.write.create(document);
+      receipt = await handle.readable;
     }
   } catch (error) {
     throw new GraphQLError(
@@ -826,7 +943,7 @@ export async function createDocument(
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject);
+  const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -838,49 +955,47 @@ export async function createDocument(
 }
 
 export async function createEmptyDocument(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentType: string;
     parentIdOrSlug?: string | null;
     name?: string | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
   const name = fromInputMaybe(args.name);
 
-  let result: PHDocument;
+  let receipt: ReadBackTarget;
   try {
     if (parentIdOrSlug) {
-      const parent = await reactorClient.get(
+      const parent = await clients.read.get(
         parentIdOrSlug,
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        const module = await reactorClient.getDocumentModelModule(
+        const module = await clients.read.getDocumentModelModule(
           args.documentType,
         );
         const document = withSignaturePolicy(
           module.utils.createDocument(),
-          await reactorClient.getCreateSignaturePolicy(),
+          await clients.read.getCreateSignaturePolicy(),
         );
         if (name) {
           document.header.name = name;
         }
-        const driveClient = pickDriveClient(
-          reactorClient,
-          parent.header.documentType,
-          reactorDriveClient,
-        );
-        result = await driveClient.addFile(parent.header.id, document);
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } else {
-        result = await reactorClient.createEmpty(args.documentType, {
+        const handle = await clients.write.createEmpty(args.documentType, {
           parentIdentifier: parentIdOrSlug,
         });
+        receipt = await handle.readable;
       }
     } else {
-      result = await reactorClient.createEmpty(args.documentType, {});
+      const handle = await clients.write.createEmpty(args.documentType, {});
+      receipt = await handle.readable;
     }
   } catch (error) {
     throw new GraphQLError(
@@ -888,7 +1003,7 @@ export async function createEmptyDocument(
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject);
+  const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -900,7 +1015,7 @@ export async function createEmptyDocument(
 }
 
 export async function createDocumentWithInitialState(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentType: string;
     parentIdOrSlug?: string | null;
@@ -909,7 +1024,8 @@ export async function createDocumentWithInitialState(
     preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
   subject?: AuthSubject,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdOrSlug = fromInputMaybe(args.parentIdOrSlug);
@@ -919,7 +1035,7 @@ export async function createDocumentWithInitialState(
 
   let module: DocumentModelModule;
   try {
-    module = await reactorClient.getDocumentModelModule(args.documentType);
+    module = await clients.read.getDocumentModelModule(args.documentType);
   } catch (error) {
     throw new GraphQLError(
       `Document model not found for type ${args.documentType}: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -928,7 +1044,7 @@ export async function createDocumentWithInitialState(
 
   const document = withSignaturePolicy(
     module.utils.createDocument(),
-    await reactorClient.getCreateSignaturePolicy(),
+    await clients.read.getCreateSignaturePolicy(),
   );
 
   // Only merge specification-defined scopes (e.g., global, local).
@@ -947,18 +1063,18 @@ export async function createDocumentWithInitialState(
     document.header.name = name;
   }
   if (slug) {
-    await assertSlugAvailable(reactorClient, slug);
+    await assertSlugAvailable(clients.read, slug);
     document.header.slug = slug;
   }
   if (preferredEditor) {
     document.header.meta = { ...document.header.meta, preferredEditor };
   }
 
-  let result: PHDocument;
+  let receipt: ReadBackTarget;
   if (parentIdOrSlug) {
     let parent: PHDocument;
     try {
-      parent = await reactorClient.get(parentIdOrSlug, subject && { subject });
+      parent = await clients.read.get(parentIdOrSlug, subject && { subject });
     } catch (error) {
       throw new GraphQLError(
         `Parent document not found: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -966,13 +1082,8 @@ export async function createDocumentWithInitialState(
     }
 
     if (isDriveContainerType(parent.header.documentType)) {
-      const driveClient = pickDriveClient(
-        reactorClient,
-        parent.header.documentType,
-        reactorDriveClient,
-      );
       try {
-        result = await driveClient.addFile(parent.header.id, document);
+        receipt = await addFileToDrive(clients, parent.header.id, document);
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -980,7 +1091,8 @@ export async function createDocumentWithInitialState(
       }
     } else {
       try {
-        result = await reactorClient.create(document, parentIdOrSlug);
+        const handle = await clients.write.create(document, parentIdOrSlug);
+        receipt = await handle.readable;
       } catch (error) {
         throw new GraphQLError(
           `Failed to create document with parent: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -989,7 +1101,8 @@ export async function createDocumentWithInitialState(
     }
   } else {
     try {
-      result = await reactorClient.create(document);
+      const handle = await clients.write.create(document);
+      receipt = await handle.readable;
     } catch (error) {
       throw new GraphQLError(
         `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -997,7 +1110,7 @@ export async function createDocumentWithInitialState(
     }
   }
 
-  result = await readAsCaller(reactorClient, result, subject);
+  const result = await readAsCaller(clients.read, receipt, subject);
 
   try {
     return toGqlPhDocument(result);
@@ -1008,11 +1121,9 @@ export async function createDocumentWithInitialState(
   }
 }
 
-/** The branch a mutation applies to when the caller names none. */
-const DEFAULT_BRANCH = "main";
-
 /**
- * Applies actions to a document and waits for the result.
+ * Applies actions to a document and waits for the result: the write half
+ * submits, the read half reads the document back with the write's token.
  *
  * The wire form of `IReactorClient.execute`, and named for it. Takes the actions
  * already coerced against `ActionInput`, so the only conversion left is the one
@@ -1020,7 +1131,7 @@ const DEFAULT_BRANCH = "main";
  * reads it as the tuple it was.
  */
 export async function execute(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentIdOrSlug: string;
     actions: readonly ActionInput[];
@@ -1031,20 +1142,20 @@ export async function execute(
   const actions = toSubmittableActions(args.actions);
   const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.execute(
+    const handle = await clients.write.execute(
       args.documentIdOrSlug,
       branch,
       actions,
-      undefined,
-      subject,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to execute actions: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1063,7 +1174,7 @@ export async function execute(
  * result yet, which is why `JobInfo.result` is nullable.
  */
 export async function executeAsync(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentIdOrSlug: string;
     actions: readonly ActionInput[];
@@ -1073,16 +1184,26 @@ export async function executeAsync(
   const actions = toSubmittableActions(args.actions);
   const branch = fromInputMaybe(args.branch) ?? DEFAULT_BRANCH;
 
-  let job: JobInfo;
+  let jobId: string;
   try {
-    job = await reactorClient.executeAsync(
+    const handle = await clients.write.execute(
       args.documentIdOrSlug,
       branch,
       actions,
     );
+    jobId = handle.jobId;
   } catch (error) {
     throw new GraphQLError(
       `Failed to submit actions: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  let job: JobInfo;
+  try {
+    job = await clients.read.getJobStatus(jobId);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to read the submitted job: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
@@ -1172,7 +1293,7 @@ export function batchCreationOf(
  * thrown error, which would lose what did commit.
  */
 export async function executeBatch(
-  reactorClient: IReactorClient,
+  write: Pick<IReactorWriteClient, "executeBatch">,
   args: {
     jobs: readonly ExecutionJobInput[];
   },
@@ -1186,21 +1307,7 @@ export async function executeBatch(
     dependsOn: [...job.dependsOn],
   }));
 
-  let outcome: BatchExecutionResult | BatchJobFailedError;
-  try {
-    outcome = await reactorClient.executeBatch({ jobs });
-  } catch (error) {
-    if (!BatchJobFailedError.isError(error)) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      throw new GraphQLError(
-        `Failed to execute batch: ${message}. Jobs dispatched before the failure may have committed.`,
-      );
-    }
-    outcome = error;
-  }
-  const settled = BatchJobFailedError.isError(outcome)
-    ? outcome.jobs
-    : await readBackJobs(reactorClient, jobs, outcome);
+  const settled = await settleBatch(write, jobs);
 
   try {
     return {
@@ -1219,36 +1326,52 @@ export async function executeBatch(
   }
 }
 
-/** The client hands back submission receipts; read each job's final state. */
-async function readBackJobs(
-  reactorClient: IReactorClient,
-  jobs: readonly ExecutionJobPlan[],
-  result: BatchExecutionResult,
+/**
+ * Submits the batch and waits for every job to settle, handing back each job's
+ * final state by plan key: from the receipts when all reached READ_READY, from
+ * the failure when one FAILED (which carries every job's state).
+ */
+async function settleBatch(
+  write: Pick<IReactorWriteClient, "executeBatch">,
+  jobs: ExecutionJobPlan[],
 ): Promise<Record<string, JobInfo>> {
-  const entries = await Promise.all(
-    jobs.map(async (job) => {
-      if (!Object.hasOwn(result.jobs, job.key)) {
-        throw new GraphQLError(
-          `Batch result is missing plan key "${job.key}"; the reactor returned jobs for [${Object.keys(result.jobs).join(", ")}]`,
-        );
-      }
-      try {
-        return [
-          job.key,
-          await reactorClient.getJobStatus(result.jobs[job.key].id),
-        ] as const;
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        throw new GraphQLError(`Failed to read batch job status: ${message}`);
-      }
-    }),
-  );
-  return Object.fromEntries(entries);
+  const failed = (error: unknown): never => {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new GraphQLError(
+      `Failed to execute batch: ${message}. Jobs dispatched before the failure may have committed.`,
+    );
+  };
+
+  let batch: BatchWriteHandle;
+  try {
+    batch = await write.executeBatch({ jobs });
+  } catch (error) {
+    if (BatchJobFailedError.isError(error)) return error.jobs;
+    return failed(error);
+  }
+
+  let receipts: Record<string, WriteReceipt>;
+  try {
+    receipts = await batch.readable;
+  } catch (error) {
+    if (BatchJobFailedError.isError(error)) return error.jobs;
+    return failed(error);
+  }
+
+  const settled: Record<string, JobInfo> = {};
+  for (const job of jobs) {
+    if (!Object.hasOwn(receipts, job.key)) {
+      throw new GraphQLError(
+        `Batch result is missing plan key "${job.key}"; the reactor returned jobs for [${Object.keys(receipts).join(", ")}]`,
+      );
+    }
+    settled[job.key] = receipts[job.key].job;
+  }
+  return settled;
 }
 
 export async function mutateDocument(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentIdentifier: string;
     actions: readonly unknown[];
@@ -1275,20 +1398,20 @@ export async function mutateDocument(
   // Extract branch from view filter (default to "main")
   const branch = args.view?.branch ?? "main";
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.execute(
+    const handle = await clients.write.execute(
       args.documentIdentifier,
       branch,
       validatedActions,
-      undefined,
-      subject,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to mutate document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1300,7 +1423,7 @@ export async function mutateDocument(
 }
 
 export async function mutateDocumentAsync(
-  reactorClient: IReactorClient,
+  write: Pick<IReactorWriteClient, "execute">,
   args: {
     documentIdentifier: string;
     actions: readonly unknown[];
@@ -1326,24 +1449,22 @@ export async function mutateDocumentAsync(
   // Extract branch from view filter (default to "main")
   const branch = args.view?.branch ?? "main";
 
-  let result: JobInfo;
   try {
-    result = await reactorClient.executeAsync(
+    const handle = await write.execute(
       args.documentIdentifier,
       branch,
       validatedActions,
     );
+    return handle.jobId;
   } catch (error) {
     throw new GraphQLError(
       `Failed to submit document mutation: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
-
-  return result.id;
 }
 
 export async function renameDocument(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentIdOrSlug: string;
     name: string;
@@ -1354,21 +1475,22 @@ export async function renameDocument(
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.rename(
+    const handle = await clients.write.rename(
       args.documentIdOrSlug,
       args.name,
       branch,
       signal,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to rename document: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject, branch);
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1380,7 +1502,7 @@ export async function renameDocument(
 }
 
 export async function setPreferredEditor(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     documentIdOrSlug: string;
     preferredEditor?: string | null;
@@ -1392,21 +1514,22 @@ export async function setPreferredEditor(
   const branch = fromInputMaybe(args.branch);
   const preferredEditor = fromInputMaybe(args.preferredEditor) ?? null;
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.setPreferredEditor(
+    const handle = await clients.write.setPreferredEditor(
       args.documentIdOrSlug,
       preferredEditor,
       branch,
       signal,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to set preferred editor: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject, branch);
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1418,7 +1541,7 @@ export async function setPreferredEditor(
 }
 
 export async function addRelationship(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     sourceIdOrSlug: string;
     targetIdOrSlug: string;
@@ -1431,22 +1554,23 @@ export async function addRelationship(
   const branch = fromInputMaybe(args.branch);
   const metadata = fromInputMaybe(args.metadata);
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.addRelationship(
+    const handle = await clients.write.addRelationship(
       args.sourceIdOrSlug,
       args.targetIdOrSlug,
       args.relationshipType,
       metadata,
       branch,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to add relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject, branch);
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1458,7 +1582,7 @@ export async function addRelationship(
 }
 
 export async function updateRelationship(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     sourceIdOrSlug: string;
     targetIdOrSlug: string;
@@ -1472,22 +1596,23 @@ export async function updateRelationship(
   // The action's metadata is required and nullable: omitting it clears the edge.
   const metadata = fromInputMaybe(args.metadata) ?? null;
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.updateRelationship(
+    const handle = await clients.write.updateRelationship(
       args.sourceIdOrSlug,
       args.targetIdOrSlug,
       args.relationshipType,
       metadata,
       branch,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to update relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject, branch);
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1499,7 +1624,7 @@ export async function updateRelationship(
 }
 
 export async function removeRelationship(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     sourceIdOrSlug: string;
     targetIdOrSlug: string;
@@ -1510,21 +1635,22 @@ export async function removeRelationship(
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
-  let result: PHDocument;
+  let receipt: WriteReceipt;
   try {
-    result = await reactorClient.removeRelationship(
+    const handle = await clients.write.removeRelationship(
       args.sourceIdOrSlug,
       args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
+    receipt = await handle.readable;
   } catch (error) {
     throw new GraphQLError(
       `Failed to remove relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = await readAsCaller(reactorClient, result, subject, branch);
+  const result = await readAsCaller(clients.read, receipt, subject, branch);
 
   try {
     return toGqlPhDocument(result);
@@ -1536,7 +1662,7 @@ export async function removeRelationship(
 }
 
 export async function moveRelationship(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     sourceParentIdOrSlug: string;
     targetParentIdOrSlug: string;
@@ -1551,24 +1677,29 @@ export async function moveRelationship(
 }> {
   const branch = fromInputMaybe(args.branch);
 
-  let result: { source: PHDocument; target: PHDocument };
+  let removed: WriteReceipt;
+  let added: WriteReceipt;
   try {
-    result = await reactorClient.moveRelationship(
+    const handles = await clients.write.moveRelationship(
       args.sourceParentIdOrSlug,
       args.targetParentIdOrSlug,
       args.targetIdOrSlug,
       args.relationshipType,
       branch,
     );
+    [removed, added] = await Promise.all([
+      handles.removed.readable,
+      handles.added.readable,
+    ]);
   } catch (error) {
     throw new GraphQLError(
       `Failed to move relationship: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
 
-  result = {
-    source: await readAsCaller(reactorClient, result.source, subject, branch),
-    target: await readAsCaller(reactorClient, result.target, subject, branch),
+  const result = {
+    source: await readAsCaller(clients.read, removed, subject, branch),
+    target: await readAsCaller(clients.read, added, subject, branch),
   };
 
   try {
@@ -1584,17 +1715,19 @@ export async function moveRelationship(
 }
 
 export async function deleteDocument(
-  reactorClient: IReactorClient,
+  clients: RequestClients,
   args: {
     idOrSlug: string;
     propagate?: GqlPropagationMode | null;
   },
-  reactorDriveClient?: IDriveClient,
+  /** @deprecated Unused: drive writes go through `clients.write.drives`. */
+  _reactorDriveClient?: IDriveClient,
 ): Promise<boolean> {
   const propagate = toReactorPropagationMode(args.propagate);
 
   try {
-    const incoming = await reactorClient.getIncomingRelationships(
+    // Cascade discovery reads the relationship graph, as it always has.
+    const incoming = await clients.read.getIncomingRelationships(
       args.idOrSlug,
       "child",
     );
@@ -1602,15 +1735,14 @@ export async function deleteDocument(
       isDriveContainerType(p.header.documentType),
     );
     if (driveParent) {
-      const driveClient = pickDriveClient(
-        reactorClient,
-        driveParent.header.documentType,
-        reactorDriveClient,
-      );
-      const documentId = await reactorClient.resolveIdOrSlug(args.idOrSlug);
-      await driveClient.removeNode(driveParent.header.id, documentId);
+      const documentId = await clients.read.resolveIdOrSlug(args.idOrSlug);
+      await removeNodeFromDrive(clients, driveParent.header.id, documentId);
     } else {
-      await reactorClient.deleteDocument(args.idOrSlug, propagate);
+      const handle = await clients.write.deleteDocument(
+        args.idOrSlug,
+        propagate,
+      );
+      await handle.readable;
     }
     return true;
   } catch (error) {
@@ -1621,7 +1753,7 @@ export async function deleteDocument(
 }
 
 export async function deleteDocuments(
-  reactorClient: IReactorClient,
+  write: Pick<IReactorWriteClient, "deleteDocuments">,
   args: {
     idsOrSlugs: readonly string[];
     propagate?: GqlPropagationMode | null;
@@ -1631,7 +1763,8 @@ export async function deleteDocuments(
   const idsOrSlugs = [...args.idsOrSlugs];
 
   try {
-    await reactorClient.deleteDocuments(idsOrSlugs, propagate);
+    const handles = await write.deleteDocuments(idsOrSlugs, propagate);
+    await Promise.all(handles.map((handle) => handle.readable));
     return true;
   } catch (error) {
     throw new GraphQLError(

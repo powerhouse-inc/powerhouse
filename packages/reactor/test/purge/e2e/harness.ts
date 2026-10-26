@@ -377,6 +377,20 @@ async function countOf(query: {
   return Number((await query.executeTakeFirst())?.n ?? 0);
 }
 
+/** The permission tables (migration 029), outside the storage types. */
+function permissionRowCheck(table: string): RowCheck {
+  return {
+    table,
+    count: (db, id) =>
+      countOf(
+        (db as unknown as Kysely<Record<string, { documentId: string }>>)
+          .selectFrom(table)
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .where("documentId", "=", id),
+      ),
+  };
+}
+
 /** Every table the purge deletes from, with the predicate it deletes by. */
 export const DELETE_LIST: RowCheck[] = [
   {
@@ -431,6 +445,19 @@ export const DELETE_LIST: RowCheck[] = [
           .where("documentId", "=", id),
       ),
   },
+  {
+    table: "WriteIdentity",
+    count: (db, id) =>
+      countOf(
+        db
+          .selectFrom("WriteIdentity")
+          .select((eb) => eb.fn.countAll<number>().as("n"))
+          .where("documentId", "=", id),
+      ),
+  },
+  permissionRowCheck("DocumentPermission"),
+  permissionRowCheck("OperationUserPermission"),
+  permissionRowCheck("DocumentProtection"),
   {
     table: "Document",
     count: (db, id) =>

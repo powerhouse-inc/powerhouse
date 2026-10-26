@@ -65,8 +65,8 @@ export class InspectionSubgraph extends BaseSubgraph {
     const subject = this.viewSubject(ctx);
     return {
       find: (search, view, paging) =>
-        this.reactorClient.find(search, { ...view, subject }, paging),
-      get: (id, view) => this.reactorClient.get(id, { ...view, subject }),
+        this.clientsOf(ctx).read.find(search, { ...view, subject }, paging),
+      get: (id, view) => this.clientsOf(ctx).read.get(id, { ...view, subject }),
     };
   }
 
@@ -78,14 +78,14 @@ export class InspectionSubgraph extends BaseSubgraph {
     const view = { branch, subject: this.viewSubject(ctx) };
     let served: boolean;
     try {
-      served = await this.reactorClient.isServed(identifier, view);
+      served = await this.clientsOf(ctx).read.isServed(identifier, view);
     } catch {
       return undefined;
     }
     if (!served) {
       return undefined;
     }
-    const document = await this.reactorClient.get(identifier, view);
+    const document = await this.clientsOf(ctx).read.get(identifier, view);
     return {
       id: document.header.id,
       scopes: new Set(Object.keys(document.state ?? {})),

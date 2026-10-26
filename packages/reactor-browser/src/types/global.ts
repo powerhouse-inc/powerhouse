@@ -17,11 +17,15 @@ import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { IPackageDiscoveryService } from "./package-discovery.js";
-import type { IReactorBrowserClient } from "./reactor-browser-client.js";
+import type {
+  IReactorBrowserClient,
+  ReactorBrowserHalves,
+} from "./reactor-browser-client.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
 import type { IPackageManager } from "./vetra.js";
 import type { DraggingNode } from "../hooks/node-drag-and-drop.js";
+import type { DriveNodesCache } from "../hooks/drive-nodes.js";
 import type { IWorkerAdminClient } from "../rpc/admin-client.js";
 import type { IInspectorProxy } from "../rpc/inspector-proxy.js";
 import type { WorkerPackageSource } from "@powerhousedao/reactor/rpc";
@@ -118,6 +122,8 @@ export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule | WorkerReactorClientModule;
   reactorClient?: IReactorBrowserClient;
+  /** The client halves of `reactorClient`, set with it: reads and writes. */
+  reactor?: ReactorBrowserHalves;
   /** Replaces `reactorClientModule.client` in full-client actions; Connect's router. */
   fullReactorClient?: IReactorClient;
   attachmentService?: IAttachmentService;
@@ -125,6 +131,8 @@ export type PHGlobal = PHGlobalConfig & {
   renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
+  /** Per-drive node caches; see `hooks/drive-nodes.ts`. */
+  driveNodes?: DriveNodesCache;
   documentCache?: IDocumentCache;
   selectedDriveId?: string;
   selectedNodeId?: string;

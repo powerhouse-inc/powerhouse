@@ -40,6 +40,14 @@ const EXEMPT: Record<string, Record<string, string>> = {
   reactor: {
     "Query.documentModels":
       "Document model metadata, not document content (AUTH_REVIEW §4: low-sensitivity).",
+    "Query.driveNodes":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveNode":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "Query.driveDescendants":
+      "Gated by #driveNodeGate: listsDocument on the drive, then find as the caller and readableByHost for each file node's document.",
+    "DriveNode.__resolveType":
+      "Type resolution for an already-served node; reads nothing.",
   },
   auth: {
     "Query.userDocumentPermissions":
@@ -97,11 +105,33 @@ const NOT_A_READ: Record<string, Record<string, string>> = {
   },
 };
 
+/**
+ * {@link NOT_A_READ} for generated resolvers, whose names depend on the model:
+ * `TypeName.fieldName` pattern -> reason.
+ */
+const NOT_A_READ_PATTERNS: Record<string, { field: RegExp; reason: string }[]> =
+  {
+    "document-model": [
+      {
+        field: /^\w+Mutations\.\w+Async$/,
+        reason:
+          "Checks the type on the write half (describe) and returns a job id, not a document.",
+      },
+    ],
+  };
+
+function exemptByPattern(name: string, field: string): boolean {
+  return (NOT_A_READ_PATTERNS[name] ?? []).some((entry) =>
+    entry.field.test(field),
+  );
+}
+
 /** Each way a resolver reaches document content, and its proof of reading as the caller. */
 const READ_RULES: { reads: RegExp; asCaller: RegExp }[] = [
-  // The reactor client, itself or handed on.
+  // The reactor client, itself or handed on: the deprecated facade, or the
+  // halves on the context.
   {
-    reads: /\breactorClient\b/,
+    reads: /\breactorClient\b|\bclientsOf\(|\bctx\.clients\b/,
     asCaller: /\bviewSubject\b|\bservesDocument\b|\blistsDocument\b/,
   },
   // Inspection drive reads; the host's own inspector reads as the host.
@@ -254,7 +284,8 @@ describe("resolver authorization coverage (default-deny backstop)", () => {
         const asHost = fields
           .filter(({ source }) => readsAsHost(source))
           .map(({ field }) => field)
-          .filter((field) => !(field in exempt));
+          .filter((field) => !(field in exempt))
+          .filter((field) => !exemptByPattern(name, field));
 
         expect(
           asHost,
