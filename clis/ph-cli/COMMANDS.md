@@ -1229,7 +1229,7 @@ Port to host the api<br><br>
 **usage:** `--port <number>`<br>
 **default**: `4001`
 #### Base Path <br>
-base path for the API endpoints (sets the BASE_PATH environment variable)<br><br>
+base path for the API endpoints (overrides BASE_PATH)<br><br>
 **usage:** `--base-path <str>`<br>
 
 #### Keypair Path <br>

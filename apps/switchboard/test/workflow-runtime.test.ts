@@ -30,10 +30,9 @@ import type { ILogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { initFeatureFlags } from "../src/feature-flags.js";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 import {
-  PH_WORKFLOWS_ENABLED,
   bindPackagePieces,
   attachmentReadPolicy,
   composeWorkflowRuntime,
@@ -43,8 +42,6 @@ import {
   retryWorkflowSingleton,
   workflowSingletonLossHandler,
   reactorAccessOf,
-  resolveWorkflowsEnabled,
-  type BooleanFlagSource,
   type ComposedWorkflowRuntime,
 } from "../src/workflow-runtime.mjs";
 
@@ -66,61 +63,6 @@ function stubLogger(): ILogger & {
     error: ReturnType<typeof vi.fn>;
   };
 }
-
-describe("resolveWorkflowsEnabled", () => {
-  let featureFlags: BooleanFlagSource;
-
-  beforeAll(async () => {
-    featureFlags = await initFeatureFlags();
-  });
-
-  afterEach(() => {
-    delete process.env[PH_WORKFLOWS_ENABLED];
-  });
-
-  it("defaults to off", async () => {
-    await expect(resolveWorkflowsEnabled({ featureFlags })).resolves.toBe(
-      false,
-    );
-  });
-
-  it("lets the host's option win over the env var", async () => {
-    process.env[PH_WORKFLOWS_ENABLED] = "false";
-
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, override: true }),
-    ).resolves.toBe(true);
-
-    process.env[PH_WORKFLOWS_ENABLED] = "true";
-
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, override: false }),
-    ).resolves.toBe(false);
-  });
-
-  it("reads the env var in every form reactor-api accepted", async () => {
-    for (const [raw, expected] of [
-      ["true", true],
-      ["1", true],
-      ["false", false],
-      ["0", false],
-    ] as const) {
-      process.env[PH_WORKFLOWS_ENABLED] = raw;
-      await expect(
-        resolveWorkflowsEnabled({ featureFlags, configEnabled: !expected }),
-      ).resolves.toBe(expected);
-    }
-  });
-
-  it("falls back to the config file, then off", async () => {
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, configEnabled: true }),
-    ).resolves.toBe(true);
-    await expect(
-      resolveWorkflowsEnabled({ featureFlags, configEnabled: false }),
-    ).resolves.toBe(false);
-  });
-});
 
 describe("assertWorkflowPackageLoadable", () => {
   it("passes when the package resolves", async () => {
@@ -1000,15 +942,16 @@ describe("booting Switchboard with workflows on", () => {
     let switchboard: Awaited<ReturnType<typeof startSwitchboard>> | undefined;
 
     try {
-      switchboard = await startSwitchboard({
-        workflows: { enabled: true },
-        dbPath: join(tempRoot, "read-model"),
-        port: 0,
-        mcp: false,
-        disableLocalPackages: true,
-        identity: { keypairPath: join(tempRoot, "identity.json") },
-        logger: stubLogger(),
-      });
+      switchboard = await bootSwitchboard(
+        {
+          server: { port: 0 },
+          storage: { readModel: { url: join(tempRoot, "read-model") } },
+          features: { workflows: true, mcp: false },
+          packages: { disableLocal: true },
+          identity: { keypairPath: join(tempRoot, "identity.json") },
+        },
+        { logger: stubLogger() },
+      );
 
       expect(switchboard.workflowTriggers).toEqual({ status: "available" });
       const { results } = await switchboard.reactor.getDocumentModelModules();

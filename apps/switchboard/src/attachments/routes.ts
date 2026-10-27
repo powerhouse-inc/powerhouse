@@ -531,7 +531,7 @@ const DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS = 300;
  * Anything unparseable falls back to the default rather than to the maximum:
  * a typo must not quietly widen the window it was meant to narrow.
  */
-function downloadTargetTtlCapSeconds(): number {
+function downloadTargetTtlCapSecondsFromEnv(): number {
   const configured = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
   if (configured === undefined) return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
   const parsed = Number(configured);
@@ -542,6 +542,15 @@ function downloadTargetTtlCapSeconds(): number {
     return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
   }
   return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
+}
+
+/** A configured ceiling, bounded by the signing maximum; unset is the default. */
+export function downloadTargetTtlCapSeconds(
+  configured: number | undefined,
+): number {
+  return configured === undefined
+    ? DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS
+    : Math.min(configured, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
 }
 
 /**
@@ -575,8 +584,10 @@ function extractSingleDocumentId(req: IncomingMessage): string | null {
  * configured with, which would make the ceiling something a client opts out of
  * by saying nothing.
  */
-function extractExpiresIn(req: IncomingMessage): number | "invalid" {
-  const cap = downloadTargetTtlCapSeconds();
+function extractExpiresIn(
+  req: IncomingMessage,
+  cap: number,
+): number | "invalid" {
   if (!req.url) return cap;
   let url: URL;
   try {
@@ -702,6 +713,8 @@ export function makeDownloadTargetHandler(
   attachments: AttachmentBuildResult,
   attachmentAccess: IAttachmentAccessService,
   urlSigner: AttachmentUrlSigner | null,
+  /** Unset: ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS, read per request. */
+  ttlCapSeconds?: number,
 ) {
   return async (
     req: IncomingMessage,
@@ -727,7 +740,10 @@ export function makeDownloadTargetHandler(
       );
       return;
     }
-    const expiresIn = extractExpiresIn(req);
+    const expiresIn = extractExpiresIn(
+      req,
+      ttlCapSeconds ?? downloadTargetTtlCapSecondsFromEnv(),
+    );
     if (expiresIn === "invalid") {
       sendError(
         res,

@@ -12,6 +12,7 @@ import {
   type MergedContribution,
   type ResolvedPlugin,
 } from "@powerhousedao/host-core";
+import type { SwitchboardConfig } from "./config/schema.js";
 
 /**
  * R2 — SwitchboardCore's plugin pipeline (rewire plan, carve map:
@@ -44,6 +45,8 @@ export interface SwitchboardHostContext {
    * logger package in the scaffold — subsystem carves use it as-is. */
   logger: unknown;
   options: Record<string, unknown>;
+  /** The parsed config the switchboard booted with. */
+  config?: SwitchboardConfig;
   renown: unknown;
   serverPort?: number;
   /** Set by the attachments plugin at onHttpMounting; the boot reads it for

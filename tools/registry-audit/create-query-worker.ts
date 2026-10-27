@@ -22,9 +22,7 @@
  * worker with cwd set to the package's install scaffold so the Switchboard's
  * package loader resolves the named package (and its deps) from that scaffold.
  */
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { REPO_ROOT, SWITCHBOARD_SERVER } from "./lib.js";
+import { startLocalSwitchboard } from "./lib.js";
 
 type DocModule = {
   documentModel?: { global?: { id?: string; name?: string } };
@@ -38,10 +36,6 @@ type SwitchboardHandle = {
   };
   shutdown: () => Promise<void>;
 };
-type StartSwitchboard = (
-  opts: Record<string, unknown>,
-) => Promise<SwitchboardHandle>;
-
 type ModelResult = {
   id: string;
   name: string;
@@ -201,18 +195,10 @@ async function main(): Promise<void> {
   );
   const t0 = Date.now();
 
-  const serverUrl = pathToFileURL(SWITCHBOARD_SERVER).href;
-  const mod = (await import(serverUrl)) as {
-    startSwitchboard: StartSwitchboard;
-  };
-
-  const sb = await mod.startSwitchboard({
-    port: PORT,
-    strictPort: true,
-    packages: [ext],
-    disableLocalPackages: true,
-    mcp: false,
-    enableDocumentModelSubgraphs: true,
+  const sb = await startLocalSwitchboard<SwitchboardHandle>({
+    server: { port: PORT, strictPort: true },
+    packages: { list: [ext], disableLocal: true },
+    features: { mcp: false, documentModelSubgraphs: true },
   });
 
   const res = await sb.reactor.getDocumentModelModules();

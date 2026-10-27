@@ -293,3 +293,5 @@ export type ReactorApiSectionsMatch = [
     Same<SwitchboardConfig["attachments"]["storage"], AttachmentStorageConfig>
   >,
 ];
+
+export { callerOverEnv, mergeSwitchboardConfig } from "./merge.js";

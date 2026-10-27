@@ -170,9 +170,9 @@ type Options = {
   packages?: string[];
   /** Route prefix, gateway and public origin; each key wins over its env var. */
   server?: ReactorApiConfig["server"];
-  /** `enabled`, `admins` and the identity keys are ignored when `configFile`
-   *  is set, and their env vars override them. The remaining keys are read
-   *  regardless of `configFile` and win over their env vars. */
+  /** `enabled` and `admins` win over the `configFile`'s; their env vars, and
+   *  the identity keys' env vars, override them. The remaining keys win over
+   *  their env vars. */
   auth?: {
     enabled?: boolean;
     admins?: string[];
@@ -689,27 +689,21 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   };
 
   // Setup auth configuration
-  let admins: string[] = [];
-  let authEnabled = false;
-  let configuredResolveIdentity: boolean | undefined;
-  let configuredRequireAuth: boolean | undefined;
-  let configuredExemptPaths: string[] | undefined;
-  let configuredAttachmentPolicyReads: boolean | undefined;
-  let configuredRenown: RenownConfig | undefined;
-  if (options.configFile) {
-    const config = getConfig(options.configFile);
-    admins = config.auth?.admins.map((a) => a.toLowerCase()) ?? [];
-    authEnabled = config.auth?.enabled ?? false;
-    configuredRenown = config.auth?.renown;
-  } else if (options.auth) {
-    admins = (options.auth.admins ?? []).map((a) => a.toLowerCase());
-    authEnabled = options.auth.enabled ?? false;
-    configuredResolveIdentity = options.auth.resolveIdentity;
-    configuredRequireAuth = options.auth.requireAuthenticatedCaller;
-    configuredExemptPaths = options.auth.requireAuthenticatedCallerExemptPaths;
-    configuredAttachmentPolicyReads =
-      options.auth.attachmentReadsFollowDocumentPolicy;
-  }
+  // A set option wins over the config file; the env below wins over both.
+  const fileAuth = options.configFile
+    ? getConfig(options.configFile).auth
+    : undefined;
+  let admins = (optionAuth.admins ?? fileAuth?.admins ?? []).map((a) =>
+    a.toLowerCase(),
+  );
+  let authEnabled = optionAuth.enabled ?? fileAuth?.enabled ?? false;
+  const configuredRenown: RenownConfig | undefined = fileAuth?.renown;
+  const configuredResolveIdentity = optionAuth.resolveIdentity;
+  const configuredRequireAuth = optionAuth.requireAuthenticatedCaller;
+  const configuredExemptPaths =
+    optionAuth.requireAuthenticatedCallerExemptPaths;
+  const configuredAttachmentPolicyReads =
+    optionAuth.attachmentReadsFollowDocumentPolicy;
   if (envAuth.enabled !== undefined) {
     authEnabled = envAuth.enabled;
   }

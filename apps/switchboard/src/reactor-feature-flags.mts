@@ -15,13 +15,18 @@ export type ResolvedReactorFeatureFlags = {
 export function resolveReactorFeatureFlags(
   env: NodeJS.ProcessEnv,
 ): ResolvedReactorFeatureFlags {
-  const flags: Partial<ReactorFeatureFlags> = {
+  return reactorFeatureFlagsOf({
     documentDecisions: env.REACTOR_DOCUMENT_DECISIONS === "true",
     authEnforcement: env.REACTOR_AUTH_ENFORCEMENT === "true",
     authGroups: env.REACTOR_AUTH_GROUPS === "true",
     authConditions: env.REACTOR_AUTH_CONDITIONS === "true",
-  };
+  });
+}
 
+/** The flags as configured, with the names of those set to true. */
+export function reactorFeatureFlagsOf(
+  flags: Partial<ReactorFeatureFlags>,
+): ResolvedReactorFeatureFlags {
   const enabled = Object.entries(flags)
     .filter(([, isEnabled]) => isEnabled)
     .map(([name]) => name);

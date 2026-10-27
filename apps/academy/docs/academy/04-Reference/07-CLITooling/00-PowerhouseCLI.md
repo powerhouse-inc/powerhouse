@@ -1216,7 +1216,7 @@ models, processors, and real-time updates.
 **Port** - Port to host the api - Usage: `--port <number>`
 
 **Default:** `4001`
-**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
+**Base Path** - base path for the API endpoints (overrides BASE_PATH) - Usage: `--base-path <str>`
 
 **Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
 

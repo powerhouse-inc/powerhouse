@@ -16,7 +16,8 @@ import type { ILogger } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 import { describe, expect, it, vi } from "vitest";
-import { startSwitchboard } from "../src/server.mjs";
+import type { startSwitchboard } from "../src/server.mjs";
+import { bootSwitchboard } from "./boot-helpers.js";
 
 const PG_URL = process.env.REACTOR_TEST_PG_URL;
 const DATABASE = "switchboard_workflow_retry";
@@ -74,15 +75,16 @@ describe.skipIf(!PG_URL)(
           owner: "the-other-host",
         });
 
-        switchboard = await startSwitchboard({
-          workflows: { enabled: true },
-          dbPath: readModelUrl,
-          port: 0,
-          mcp: false,
-          disableLocalPackages: true,
-          identity: { keypairPath: join(tempRoot, "identity.json") },
-          logger: stubLogger(),
-        });
+        switchboard = await bootSwitchboard(
+          {
+            server: { port: 0 },
+            storage: { readModel: { url: readModelUrl } },
+            features: { workflows: true, mcp: false },
+            packages: { disableLocal: true },
+            identity: { keypairPath: join(tempRoot, "identity.json") },
+          },
+          { logger: stubLogger() },
+        );
         expect(switchboard.workflowTriggers).toBeUndefined();
         expect(await queryHealth(switchboard.port)).toBeUndefined();
 

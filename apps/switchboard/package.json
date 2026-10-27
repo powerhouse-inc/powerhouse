@@ -88,9 +88,6 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
-    "@openfeature/core": "catalog:",
-    "@openfeature/env-var-provider": "catalog:",
-    "@openfeature/server-sdk": "catalog:",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.218.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
@@ -135,6 +132,9 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@openfeature/core": "catalog:",
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",

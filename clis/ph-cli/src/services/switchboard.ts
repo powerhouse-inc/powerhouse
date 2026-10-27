@@ -1,9 +1,16 @@
-import type {
-  IdentityOptions,
-  StartServerOptions,
-} from "@powerhousedao/switchboard/server";
+import type { ResolvedPlugin } from "@powerhousedao/host-core";
 import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
-import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
+import {
+  callerOverEnv,
+  type SwitchboardConfigInput,
+} from "@powerhousedao/switchboard/config";
+import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
+import {
+  initSwitchboardProcess,
+  startSwitchboard as startSwitchboardServer,
+  type IdentityOptions,
+  type StartServerOptions,
+} from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import type { SwitchboardArgs } from "../types.js";
 import { POWERHOUSE_DRIVE_ICON } from "../utils/drive-icons.js";
@@ -82,6 +89,8 @@ export async function startSwitchboard(
     processorConfig?: Map<string, unknown>;
     /** False under a supervising compound, which owns SIGINT/SIGTERM. */
     signalHandlers?: boolean;
+    /** A declared composition (R2), resolved by the runner. */
+    pluginComposition?: ResolvedPlugin[];
   },
   logger?: ILogger,
 ) {
@@ -93,6 +102,7 @@ export async function startSwitchboard(
     useIdentity,
     keypairPath,
     requireIdentity,
+    basePath,
     ...serverOptions
   } = options;
 
@@ -136,10 +146,49 @@ export async function startSwitchboard(
           logger,
         };
 
-  const reactor = await startSwitchboardServer({
-    ...finalOptions,
+  // This process's env under the command's own options, as the server read them.
+  const config = callerOverEnv(
+    switchboardConfigFromEnv(process.env, { logger }),
+    configLayerOf(finalOptions, basePath),
+  );
+  initSwitchboardProcess(config);
+  const reactor = await startSwitchboardServer(config, {
+    logger,
+    pluginComposition: finalOptions.pluginComposition,
+    signalHandlers: finalOptions.signalHandlers,
     fatalErrorShutdown: true,
   });
 
   return reactor;
+}
+
+/** The keys of the server's options view this command sets, as a config layer. */
+function configLayerOf(
+  options: StartServerOptions,
+  basePath: string | undefined,
+): SwitchboardConfigInput {
+  const dbPath = options.dbPath || undefined;
+  return {
+    server: {
+      basePath: basePath || undefined,
+      port: options.port,
+      strictPort: options.strictPort,
+      dev: options.dev,
+      https: options.https,
+    },
+    storage: {
+      // `dbPath` names both stores, over the env, as it did as an option.
+      readModel: { url: dbPath },
+      reactor: { url: dbPath },
+    },
+    features: { mcp: options.mcp },
+    packages: {
+      list: options.packages,
+      disableLocal: options.disableLocalPackages,
+    },
+    identity: options.identity,
+    drive: options.drive,
+    remoteDrives: options.remoteDrives,
+    processorConfig: options.processorConfig,
+  };
 }
