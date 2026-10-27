@@ -124,13 +124,14 @@ The `CREATE_DOCUMENT` codec (`createDocumentAction`, `upgradeDocumentAction`, `c
 - `IReactor.create` fills a header without `protocolVersions` with the reactor's selection for the document type instead of a fixed `{ "base-reducer": 2 }`; the clients (`create`, `write.create`, `write.drives.addFile`) do the same with their selection. A `Reactor` constructed by hand, outside `ReactorBuilder`, has no selector and refuses such a header.
 - `ReactorWriteClient.emptyDocument` and `RoutingWriteClient.emptyDocument` are removed; use `newDocument`.
 - `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`. `RemoteDocumentController.pull` without a `documentId` heads the document with the host's `createDefaults`, so `pull()` itself now queries the host and can reject; the first push creates the remote with `CreateDocument` from that header instead of `CreateEmptyDocument`. `undo(count)` is unchanged.
+- `RemoteDocumentController.from(controller)` without a `documentId` reads the host's `createDefaults` at its first push, so that push can now reject on a failed read. It then creates the remote with `CreateDocument` from the wrapped document's id, initial state and protocol versions, under the host's signature policy, instead of `CreateEmptyDocument`. A legacy header under a v2-required host takes a new, derived id. A Switchboard without `createDefaults` still gets `CreateEmptyDocument`.
 - Importing a `.phd` file keeps the file's `protocolVersions`. A file without them keeps the loader's legacy baseline, base-reducer 1 (legacy replay), as an import is not a create; before this release it was created at base-reducer 2.
 
 ### MIGRATION GUIDE
 
 1. Replace `getCreateProtocolVersions(parentId)` with `getCreateProtocolVersions({ documentType, parentIdentifier: parentId })`.
 2. Build new documents with `client.newDocument(type, options)` rather than `module.utils.createDocument()` plus `withSignaturePolicy`, and hand the result to `create` or `drives.addFile`.
-3. Code that constructs a `Reactor` by hand and creates versionless headers through it should build it with `ReactorBuilder`, or give the header `protocolVersions`.
+3. Code that constructs a `Reactor` by hand and creates versionless headers through it should build it with `ReactorBuilder`, call `reactor.setCreateProtocol(selector)` with a `CreateVersionSelector`, or give the header `protocolVersions`.
 4. A hand-built `RemoteControllerGraphQLClient` adds `GetCreateDefaults` and `GetCreateProtocolVersions`; one from the generated SDK has them.
 
 ---
