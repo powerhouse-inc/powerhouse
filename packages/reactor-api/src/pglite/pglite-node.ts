@@ -46,5 +46,9 @@ export {
   removeStalePgliteFiles,
 } from "./preflight.js";
 export { PGLITE_UTC_PARSERS } from "./parsers.js";
+export {
+  disableWasmWrapperTiering,
+  WASM_WRAPPER_TIERING_FLAG,
+} from "./wasm-wrapper-tiering.js";
 export * from "./worker/index.js";
 export type { PGliteLike } from "./pglite-like.js";
