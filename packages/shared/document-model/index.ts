@@ -5,6 +5,13 @@ export * from "./auth.js";
 export * from "./auth-v1.js";
 export * from "./constants.js";
 export * from "./crypto.js";
+export {
+  createDocumentAction,
+  creationActions,
+  creationState,
+  documentFromCreation,
+  upgradeDocumentAction,
+} from "./create-document.js";
 export * from "./denied.js";
 // By package path, so dist/document-model/dispatch.d.ts holds the declaration.
 export type * from "@powerhousedao/shared/document-model/dispatch";
@@ -14,6 +21,7 @@ export * from "./documents.js";
 export * from "./errors.js";
 export * from "./files.js";
 export * from "./header.js";
+export * from "./new-document.js";
 export * from "./operations.js";
 export * from "./peer-agreement.js";
 export * from "./purge.js";

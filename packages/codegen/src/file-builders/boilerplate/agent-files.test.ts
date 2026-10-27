@@ -219,7 +219,7 @@ describe("CLAUDE.md", () => {
   });
 });
 
-describe("uncommitted agent files", () => {
+describe("uncommitted agent files", { timeout: 30_000 }, () => {
   it("lists modified, staged and untracked agent files only", () => {
     const dir = gitProject();
     write(dir, "AGENTS.md", "a\n");

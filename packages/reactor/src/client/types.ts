@@ -7,10 +7,12 @@ import type {
 import type {
   Action,
   AuthSubject,
+  CreateProtocolVersionsOptions,
   DocumentModelModule,
   Operation,
   PeerCapability,
   PeerCapabilityFlags,
+  NewDocumentHeaderOptions,
   PHDocument,
   ProtocolVersions,
   SignaturePolicy,
@@ -24,6 +26,8 @@ export type ProtocolSelection = {
   /** Absent without sync: no members, so the local preference. */
   agreement?: () => IPeerAgreement;
   collectionsOf: (documentIds: string[]) => Promise<Record<string, string[]>>;
+  /** Loads a model the registry lacks, as the CREATE gate does; create writes only. */
+  loadModel?: (documentType: string) => Promise<void>;
 };
 
 import type {
@@ -88,6 +92,10 @@ export type CreateDocumentOptions = {
   signaturePolicy?: SignaturePolicy;
 };
 
+/** What `newDocument` builds the header and state from. */
+export type NewDocumentOptions = CreateDocumentOptions &
+  NewDocumentHeaderOptions;
+
 /** Retries taken when an upgrade conflicts with concurrent edits. */
 export const DEFAULT_UPGRADE_CONFLICT_RETRIES = 3;
 
@@ -101,6 +109,14 @@ export type UpgradeDocumentOptions = {
    * {@link DEFAULT_UPGRADE_CONFLICT_RETRIES}.
    */
   maxConflictRetries?: number;
+};
+
+/** Where and what a new document is created, to select its protocolVersions. */
+export type { CreateProtocolVersionsOptions } from "@powerhousedao/shared/document-model";
+
+export type CopyNodeOptions = {
+  /** Merged over each source's versions, e.g. `{ "base-reducer": 3 }` to copy to v3. */
+  protocolVersions?: ProtocolVersions;
 };
 
 /** Drive reads: a drive's nodes. Grouped under `read.drives`. */
@@ -203,13 +219,15 @@ export interface IDriveWriteClient {
 
   /**
    * Copies a node and its subtree: each file is duplicated (completed), then
-   * the drive's nodes are copied. The handle's document is the drive.
+   * the drive's nodes are copied. The handle's document is the drive. A copy
+   * keeps its source's protocolVersions unless `options` overrides them.
    */
   copyNode(
     driveIdentifier: string,
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<WriteHandle>;
 }
 
@@ -298,13 +316,15 @@ export interface IDriveClient {
 
   /**
    * Copies a node (and its subtree, if it is a folder) within a drive.
-   * Each copied file gets a new id and a duplicated document.
+   * Each copied file gets a new id and a duplicated document, which keeps its
+   * source's protocolVersions unless `options.protocolVersions` overrides them.
    */
   copyNode(
     driveIdentifier: string,
     srcNodeId: string,
     targetParentFolderId: string | undefined,
     signal?: AbortSignal,
+    options?: CopyNodeOptions,
   ): Promise<DocumentDriveDocument>;
 
   /**
@@ -498,10 +518,10 @@ export interface IReactorWriteClient {
     signal?: AbortSignal,
   ): Promise<WriteHandle>;
 
-  /** {@link create} for a new empty document of the type. */
+  /** {@link create} for the document {@link IReactorReadClient.newDocument} builds. */
   createEmpty(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<WriteHandle>;
 
@@ -864,14 +884,35 @@ export interface IReactorReadClient {
   getCreateSignaturePolicy(): Promise<SignaturePolicy>;
 
   /**
-   * protocolVersions for a new document under `parentIdentifier`, before the
-   * signature policy: what this reactor and the direct peers of the parent's
-   * collections agree on. Without a parent, the local preference.
+   * protocolVersions for a new document of `documentType` under
+   * `parentIdentifier`, before the signature policy. base-reducer is the
+   * local preference, except 2 for a `documentType` that is not registered or
+   * has a registered reducer not built by `createReducer`. A remote client
+   * also caps it at what its host selects. Every other
+   * negotiated protocol is what this reactor and the direct peers of the
+   * parent's collections agree on, or the local preference without a parent.
    */
   getCreateProtocolVersions(
-    parentIdentifier?: string,
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions>;
+
+  /**
+   * A new, uncreated document of `documentType`, headed with the protocol
+   * versions {@link getCreateProtocolVersions} selects for it and its parent,
+   * and this client's create signature policy unless `options` choose
+   * others. The one place a client chooses a new document's versions; pass
+   * the result to {@link create}, which takes its header as given.
+   *
+   * @param documentType - Type of document to build
+   * @param options - Parent, model version, protocol versions, policy, initial state, name
+   * @param signal - Optional abort signal to cancel the request
+   */
+  newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
+    signal?: AbortSignal,
+  ): Promise<TDocument>;
 
   /**
    * Retrieves the status of a job
@@ -984,7 +1025,10 @@ export interface IReactorClient extends IReactorReadClient {
 
   /**
    * Creates a document and waits for completion. The document keeps the
-   * signature policy and id its header carries.
+   * signature policy, id and protocol versions its header carries: the
+   * creator chose them, and the reactor only refuses what it cannot run. Build
+   * the header with {@link newDocument}; a header from
+   * `module.utils.createDocument()` is created at base-reducer 2.
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param parentIdentifier - Optional "id" or "slug" of parent document
@@ -1016,17 +1060,17 @@ export interface IReactorClient extends IReactorReadClient {
   ): Promise<BatchExecutionResult>;
 
   /**
-   * Creates an empty document and waits for completion
+   * Creates the document {@link newDocument} builds and waits for completion.
    *
    * @param documentModelType - Type of document to create
-   * @param options - Optional creation options (parentIdentifier, documentModelVersion)
+   * @param options - Optional creation options; see {@link newDocument}
    * @param signal - Optional abort signal to cancel the request
    *
    * @deprecated Use write.createEmpty(...), then handle.document() or read.get(receipt.documentId, view, signal, receipt.token).
    */
   createEmpty<TDocument extends PHDocument>(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<TDocument>;
 
@@ -1041,7 +1085,7 @@ export interface IReactorClient extends IReactorReadClient {
    */
   createEmptyAsync(
     documentModelType: string,
-    options?: CreateDocumentOptions,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
   ): Promise<BatchExecutionResult>;
 

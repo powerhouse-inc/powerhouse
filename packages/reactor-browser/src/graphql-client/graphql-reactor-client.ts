@@ -1,9 +1,12 @@
 import { getPHStore } from "../hooks/ph-store.js";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
   ConsistencyToken,
+  CreateProtocolVersionsOptions,
   DocumentChangeEvent,
+  NewDocumentOptions,
   DocumentChangeType,
   DocumentRelationship,
   ExecutionJobPlan,
@@ -30,8 +33,9 @@ import type {
 import {
   actions,
   actionSigningTarget,
-  isSignaturePolicy,
+  headNewDocument,
   normalizeDocumentModelVersion,
+  selectDocumentModelModule,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import type {
@@ -49,7 +53,6 @@ import {
   PropagationMode as GqlPropagationMode,
   PhDocumentFieldsFragmentDoc,
   type DocumentRelationshipFieldsFragment,
-  type GetCreateDefaultsQuery,
   type GetDocumentQuery,
   type JobInfoFieldsFragment,
   type OperationsFilterInput,
@@ -78,6 +81,10 @@ import {
   type BearerTokenProvider,
 } from "./auth.js";
 import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "./create-defaults.js";
+import {
   GraphQLDriveNodeSource,
   GraphQLDriveReadClient,
 } from "./drive-nodes.js";
@@ -85,6 +92,7 @@ import {
   BatchJobFailedError,
   GraphQLOperationNotSupportedError,
   GraphQLWrongBackendError,
+  queriesUnknownField,
 } from "./errors.js";
 import {
   GetDocumentAtConsistencyDocument,
@@ -212,6 +220,11 @@ export type GraphQLReactorClientOptions = {
    */
   driveIdFor?: (call: DriveIdCall) => string | undefined;
 };
+
+// Always known here, so a light client can head a drive without registering it.
+const BUILT_IN_MODELS = [
+  driveDocumentModelModule as unknown as DocumentModelModule,
+];
 
 /** Paging defaults, matching the reactor's own client. */
 const defaultPaging: PagingOptions = { cursor: "0", limit: 100 };
@@ -959,70 +972,43 @@ export class GraphQLReactorClient implements IReactorBrowserClient {
     }
   }
 
-  /**
-   * The policy the Switchboard gives a new document, read from its
-   * `createDefaults` query. A Switchboard without that query is refused with
-   * {@link GraphQLOperationNotSupportedError}: a guessed default would
-   * under-sign on a stricter host.
-   */
-  async getCreateSignaturePolicy(): Promise<SignaturePolicy> {
-    const defaults = await this.createDefaults("getCreateSignaturePolicy");
-    return defaults.signaturePolicy;
+  /** See {@link readCreateSignaturePolicy}. */
+  getCreateSignaturePolicy(): Promise<SignaturePolicy> {
+    return readCreateSignaturePolicy(this.sdk);
   }
 
-  /**
-   * The protocol versions the Switchboard selects for a new document under
-   * `parentIdentifier`, read from its `createDefaults` query. A parent the
-   * caller may not read is refused by the server, never answered as if none
-   * was named; a Switchboard without the query is refused with
-   * {@link GraphQLOperationNotSupportedError}.
-   */
-  async getCreateProtocolVersions(
-    parentIdentifier?: string,
+  /** See {@link readCreateProtocolVersions}; fitted to `documentModels`. */
+  getCreateProtocolVersions(
+    options: CreateProtocolVersionsOptions,
     signal?: AbortSignal,
   ): Promise<ProtocolVersions> {
-    const defaults = await this.createDefaults(
-      "getCreateProtocolVersions",
-      parentIdentifier,
+    return readCreateProtocolVersions(
+      this.sdk,
+      options,
+      this.documentModels(),
       signal,
     );
-    return defaults.protocolVersions;
   }
 
-  private async createDefaults(
-    operation: string,
-    parentIdOrSlug?: string,
+  /** See {@link IReactorClient.newDocument}; the module comes from `documentModels`. */
+  async newDocument<TDocument extends PHDocument = PHDocument>(
+    documentType: string,
+    options?: NewDocumentOptions,
     signal?: AbortSignal,
-  ): Promise<{
-    signaturePolicy: SignaturePolicy;
-    protocolVersions: ProtocolVersions;
-  }> {
-    let result: GetCreateDefaultsQuery;
-    try {
-      result = await this.sdk.GetCreateDefaults(
-        { parentIdOrSlug },
-        undefined,
+  ): Promise<TDocument> {
+    const module = selectDocumentModelModule(
+      [...this.documentModels(), ...BUILT_IN_MODELS],
+      documentType,
+      options?.documentModelVersion,
+    );
+    const [policy, versions] = await Promise.all([
+      options?.signaturePolicy ?? this.getCreateSignaturePolicy(),
+      this.getCreateProtocolVersions(
+        { documentType, parentIdentifier: options?.parentIdentifier },
         signal,
-      );
-    } catch (error) {
-      if (queriesUnknownField(error, "createDefaults")) {
-        throw new GraphQLOperationNotSupportedError(
-          operation,
-          "the Switchboard predates the createDefaults query",
-        );
-      }
-      throw error;
-    }
-    const { signaturePolicy, protocolVersions } = result.createDefaults;
-    if (!isSignaturePolicy(signaturePolicy)) {
-      throw new Error(
-        `The Switchboard answered an unknown create signature policy: ${signaturePolicy}`,
-      );
-    }
-    return {
-      signaturePolicy,
-      protocolVersions: protocolVersionsFrom(protocolVersions),
-    };
+      ),
+    ]);
+    return headNewDocument(module, options, policy, versions) as TDocument;
   }
 
   /**
@@ -2249,25 +2235,6 @@ function jobInfoFromGql(job: JobInfoFieldsFragment): JobInfo {
 }
 
 /**
- * Whether a request failed because the server's schema has no such root field:
- * a Switchboard older than the field. graphql-js validation words this the same
- * under every gateway the Switchboard can run.
- */
-function queriesUnknownField(error: unknown, field: string): boolean {
-  const errors = (error as { response?: { errors?: unknown } } | null)?.response
-    ?.errors;
-  if (!Array.isArray(errors)) {
-    return false;
-  }
-  const prefix = `Cannot query field "${field}" on type "`;
-  return errors.some(
-    (entry) =>
-      typeof (entry as { message?: unknown } | null)?.message === "string" &&
-      (entry as { message: string }).message.startsWith(prefix),
-  );
-}
-
-/**
  * The header a Switchboard's drive middleware and load balancer key on. A
  * request carries it only when it is known to belong to that one drive: the
  * server answers any drive it does not own with 421.
@@ -2325,25 +2292,6 @@ function wrongBackendErrorOf(
     payload,
     { cause: error },
   );
-}
-
-/** Protocol versions as the server sent them; anything but a version map throws. */
-function protocolVersionsFrom(value: unknown): ProtocolVersions {
-  if (!isPlainObject(value)) {
-    throw new Error(
-      "The Switchboard answered malformed create protocol versions",
-    );
-  }
-  const versions: ProtocolVersions = {};
-  for (const [protocol, version] of Object.entries(value)) {
-    if (typeof version !== "number" || !Number.isInteger(version)) {
-      throw new Error(
-        `The Switchboard answered a malformed version for protocol ${protocol}`,
-      );
-    }
-    versions[protocol] = version;
-  }
-  return versions;
 }
 
 function isSettled(job: JobInfo): boolean {

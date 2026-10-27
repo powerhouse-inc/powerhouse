@@ -24,7 +24,6 @@ import type {
 import {
   createAction,
   operationOutcome,
-  withSignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   type CodegenStatusRegistry,
@@ -765,19 +764,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
       if (params.driveId) {
-        const module = await getDocumentModelModule(params.documentType);
-        if (!module) {
-          throw new Error(
-            `Document model for type '${params.documentType}' not found`,
-          );
-        }
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await client.getCreateSignaturePolicy(),
-        );
-        if (params.name) {
-          document.header.name = params.name;
-        }
+        const document = await client.newDocument(params.documentType, {
+          parentIdentifier: params.driveId,
+          name: params.name || undefined,
+        });
         const created = await client.drives.addFile(
           params.driveId,
           document,

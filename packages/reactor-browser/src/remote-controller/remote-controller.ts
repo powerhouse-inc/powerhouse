@@ -5,13 +5,21 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
+  ProtocolVersions,
+  SignaturePolicy,
 } from "@powerhousedao/shared/document-model";
 import {
   actionSignerIdentity,
   actionSigningTarget,
+  headNewDocument,
   toTransportAction,
 } from "@powerhousedao/shared/document-model";
 import type { PHDocumentController } from "document-model";
+import {
+  readCreateProtocolVersions,
+  readCreateSignaturePolicy,
+} from "../graphql-client/create-defaults.js";
+import { GraphQLOperationNotSupportedError } from "../graphql-client/errors.js";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
 import type {
@@ -35,6 +43,8 @@ import {
   extractRevisionMap,
   hasRevisionConflict,
   screamingSnakeToCamel,
+  uncreatedDocument,
+  underSignaturePolicy,
 } from "./utils.js";
 
 /** Extract TState from a PHDocumentController subclass. */
@@ -71,6 +81,10 @@ export class RemoteDocumentController<
   /** The remote's id for the document; `documentId` may be a slug. */
   private canonicalDocumentId?: string;
   private remoteRevision: Record<string, number> = {};
+  /** What the first push creates the remote from, until it has. */
+  private uncreated?: PHDocument;
+  /** A wrapped new document takes the host's signature policy at its first push. */
+  private takesHostPolicy = false;
   private hasPulled = false;
   private pushScheduled = false;
   private pushQueue: Promise<void> = Promise.resolve();
@@ -80,6 +94,9 @@ export class RemoteDocumentController<
     this.inner = inner;
     this.options = options;
     this.documentId = options.documentId ?? "";
+    if (this.documentId === "") {
+      this.uncreated = uncreatedDocument(inner.document);
+    }
     this.remoteClient = new RemoteClient(
       options.client,
       options.operationsPageSize,
@@ -227,14 +244,7 @@ export class RemoteDocumentController<
       this.options.branch ?? "main",
     );
 
-    // Recreate inner controller with pulled document
-    const ControllerClass = this.inner.constructor as new (
-      doc?: PHDocument<PHBaseState>,
-    ) => TController;
-    this.inner = new ControllerClass(pulledDocument);
-
-    // Re-setup interceptors on the new inner instance
-    this.setupActionInterceptors();
+    this.replaceInner(pulledDocument);
 
     // Clear tracker (remote is source of truth)
     this.tracker.clear();
@@ -262,6 +272,8 @@ export class RemoteDocumentController<
 
     if (options.documentId) {
       await remote.pull();
+    } else {
+      await remote.headNewDocument();
     }
 
     return remote as RemoteDocumentControllerWith<C>;
@@ -271,28 +283,82 @@ export class RemoteDocumentController<
    * Wrap an existing controller instance with remote capabilities.
    * Pending local actions on the inner controller are NOT tracked
    * (only new actions through the remote controller are tracked).
+   * Without a `documentId`, the first push creates the remote from the
+   * wrapped document's header, under the host's create signature policy.
    */
   static from<C extends PHDocumentController<any>>(
     controller: C,
     options: RemoteControllerOptions,
   ): RemoteDocumentControllerWith<C> {
-    return new RemoteDocumentController(
-      controller,
-      options,
-    ) as RemoteDocumentControllerWith<C>;
+    const remote = new RemoteDocumentController(controller, options);
+    remote.takesHostPolicy = remote.documentId === "";
+    return remote as RemoteDocumentControllerWith<C>;
   }
 
   // --- Private methods ---
 
-  /** Create the document on the remote if it doesn't exist yet. */
+  /** Heads the new document with the host's versions for its type, as `newDocument` does; a host without `createDefaults` creates it with `createEmptyDocument`. */
+  private async headNewDocument(): Promise<void> {
+    const module = this.inner.module;
+    let policy: SignaturePolicy;
+    let versions: ProtocolVersions;
+    try {
+      [policy, versions] = await Promise.all([
+        readCreateSignaturePolicy(this.options.client),
+        readCreateProtocolVersions(
+          this.options.client,
+          {
+            documentType: this.inner.header.documentType,
+            parentIdentifier: this.options.parentIdentifier,
+          },
+          [module],
+        ),
+      ]);
+    } catch (error) {
+      if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
+      // A host without createDefaults heads the document itself.
+      this.uncreated = undefined;
+      return;
+    }
+    const document = headNewDocument(module, undefined, policy, versions);
+    this.uncreated = structuredClone(document);
+    this.replaceInner(document);
+  }
+
+  /** Creates the remote from the local header, so both run the versions its creator chose. */
   private async ensureRemoteDocument(): Promise<void> {
     if (this.documentId !== "") return;
-    const remoteDoc = await this.remoteClient.createEmptyDocument(
-      this.inner.header.documentType,
-      this.options.parentIdentifier,
-    );
+    if (this.takesHostPolicy) {
+      await this.takeHostSignaturePolicy();
+      this.takesHostPolicy = false;
+    }
+    const remoteDoc =
+      this.uncreated === undefined
+        ? await this.remoteClient.createEmptyDocument(
+            this.inner.header.documentType,
+            this.options.parentIdentifier,
+          )
+        : await this.remoteClient.createDocument(
+            this.uncreated,
+            this.options.parentIdentifier,
+          );
     this.documentId = remoteDoc.id;
     this.canonicalDocumentId = remoteDoc.id;
+    this.uncreated = undefined;
+  }
+
+  /** Puts the uncreated document under the host's policy; a host without `createDefaults` creates it with `createEmptyDocument`. */
+  private async takeHostSignaturePolicy(): Promise<void> {
+    if (this.uncreated === undefined) return;
+    let policy: SignaturePolicy;
+    try {
+      policy = await readCreateSignaturePolicy(this.options.client);
+    } catch (error) {
+      if (!GraphQLOperationNotSupportedError.isError(error)) throw error;
+      this.uncreated = undefined;
+      return;
+    }
+    this.uncreated = underSignaturePolicy(this.uncreated, policy);
   }
 
   /** Set up interceptors for all action methods on the inner controller. */
@@ -309,47 +375,65 @@ export class RemoteDocumentController<
       }
 
       Object.defineProperty(this, actionType, {
-        value: (input: unknown) => {
-          // Snapshot operation counts per scope BEFORE applying
-          const opCountsBefore: Record<string, number> = {};
-          for (const scope in this.inner.operations) {
-            opCountsBefore[scope] = this.inner.operations[scope].length;
-          }
-
-          // Apply locally via inner controller
-          (
-            this.inner as unknown as Record<string, (input: unknown) => unknown>
-          )[actionType](input);
-
-          // Find which scope got the new operation
-          const newOp = this.findNewOperation(opCountsBefore);
-
-          // Get prevOp in the SAME scope as the new operation
-          const prevOp = newOp
-            ? this.getLastOperationInScope(newOp.action.scope, newOp)
-            : undefined;
-          const prevOpHash = prevOp?.hash ?? "";
-          const prevOpIndex = prevOp?.index ?? -1;
-
-          if (!newOp) {
-            // Action produced no operation (NOOP) — nothing to track
-            return this;
-          }
-
-          // Track the action for push
-          this.tracker.track(newOp.action, prevOpHash, prevOpIndex);
-          this.notifyListeners("action");
-
-          if (this.options.mode === "streaming") {
-            this.schedulePush();
-          }
-
-          return this;
-        },
+        value: (input: unknown) =>
+          this.applyAndTrack(() => {
+            // Apply locally via inner controller
+            (
+              this.inner as unknown as Record<
+                string,
+                (input: unknown) => unknown
+              >
+            )[actionType](input);
+          }),
         enumerable: true,
         configurable: true,
       });
     }
+  }
+
+  /** Runs `apply`, then tracks the operation it added for push. */
+  private applyAndTrack(apply: () => void): this {
+    // Snapshot operation counts per scope BEFORE applying
+    const opCountsBefore: Record<string, number> = {};
+    for (const scope in this.inner.operations) {
+      opCountsBefore[scope] = this.inner.operations[scope].length;
+    }
+
+    apply();
+
+    // Find which scope got the new operation
+    const newOp = this.findNewOperation(opCountsBefore);
+
+    // Get prevOp in the SAME scope as the new operation
+    const prevOp = newOp
+      ? this.getLastOperationInScope(newOp.action.scope, newOp)
+      : undefined;
+    const prevOpHash = prevOp?.hash ?? "";
+    const prevOpIndex = prevOp?.index ?? -1;
+
+    if (!newOp) {
+      // Action produced no operation (NOOP) — nothing to track
+      return this;
+    }
+
+    // Track the action for push
+    this.tracker.track(newOp.action, prevOpHash, prevOpIndex);
+    this.notifyListeners("action");
+
+    if (this.options.mode === "streaming") {
+      this.schedulePush();
+    }
+
+    return this;
+  }
+
+  /** Recreates the inner controller over `document` and re-intercepts it. */
+  private replaceInner(document: PHDocument<PHBaseState>): void {
+    const ControllerClass = this.inner.constructor as new (
+      doc?: PHDocument<PHBaseState>,
+    ) => TController;
+    this.inner = new ControllerClass(document);
+    this.setupActionInterceptors();
   }
 
   /**

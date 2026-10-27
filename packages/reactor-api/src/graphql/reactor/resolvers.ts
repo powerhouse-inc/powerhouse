@@ -39,10 +39,7 @@ import type {
   PHDocument,
   ProtocolVersions,
 } from "@powerhousedao/shared/document-model";
-import {
-  readPeerManifest,
-  withSignaturePolicy,
-} from "@powerhousedao/shared/document-model";
+import { readPeerManifest } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 import {
@@ -218,14 +215,22 @@ import type {
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
-/** The defaults `create` gives a new document; the parent must already be gated. */
+/**
+ * The defaults `create` gives a new document; the parent must already be
+ * gated. A request without `documentType` predates it and gets the host's
+ * selection unfitted.
+ */
 export async function createDefaults(
   read: IReactorReadClient,
   parentIdOrSlug: string | undefined,
+  documentType: string | undefined,
 ): Promise<{ signaturePolicy: string; protocolVersions: ProtocolVersions }> {
   const [signaturePolicy, protocolVersions] = await Promise.all([
     read.getCreateSignaturePolicy(),
-    read.getCreateProtocolVersions(parentIdOrSlug),
+    read.getCreateProtocolVersions({
+      documentType,
+      parentIdentifier: parentIdOrSlug,
+    }),
   ]);
   return { signaturePolicy, protocolVersions };
 }
@@ -976,16 +981,10 @@ export async function createEmptyDocument(
         subject && { subject },
       );
       if (isDriveContainerType(parent.header.documentType)) {
-        const module = await clients.read.getDocumentModelModule(
-          args.documentType,
-        );
-        const document = withSignaturePolicy(
-          module.utils.createDocument(),
-          await clients.read.getCreateSignaturePolicy(),
-        );
-        if (name) {
-          document.header.name = name;
-        }
+        const document = await clients.read.newDocument(args.documentType, {
+          parentIdentifier: parent.header.id,
+          name: name || undefined,
+        });
         receipt = await addFileToDrive(clients, parent.header.id, document);
       } else {
         const handle = await clients.write.createEmpty(args.documentType, {
@@ -1042,10 +1041,9 @@ export async function createDocumentWithInitialState(
     );
   }
 
-  const document = withSignaturePolicy(
-    module.utils.createDocument(),
-    await clients.read.getCreateSignaturePolicy(),
-  );
+  const document = await clients.read.newDocument(args.documentType, {
+    parentIdentifier: parentIdOrSlug ?? undefined,
+  });
 
   // Only merge specification-defined scopes (e.g., global, local).
   // Protected scopes like "auth" and "document" are excluded.

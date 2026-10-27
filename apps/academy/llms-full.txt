@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-27T19:14:13.245Z
+> Generated: 2026-10-27T20:14:11.854Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -3642,14 +3642,19 @@ enum PropagationMode {
 }
 ```
 
-### `CreateDocumentOptions`
+### `NewDocumentOptions`
 
-Options for `createEmpty()`.
+Options for `newDocument()` and `createEmpty()`.
 
 ```typescript
-type CreateDocumentOptions = {
+type NewDocumentOptions = {
   parentIdentifier?: string; // id or slug of parent document
   documentModelVersion?: number; // defaults to latest
+  protocolVersions?: { [protocol: string]: number }; // merged over the selection
+  signaturePolicy?: SignaturePolicy; // overrides the client's default
+  initialState?: Partial<PHBaseState>; // passed to the model's createDocument
+  name?: string;
+  id?: string; // kept only under the legacy policy
 };
 ```
 
@@ -4013,6 +4018,20 @@ getDocumentModelModule(
 
 ---
 
+### `newDocument`
+
+Head a new, uncreated document of a type with the protocol versions this client selects for it and its parent, and the client's create signature policy. It is the one place a client chooses a new document's versions; pass the result to `client.write.create` or `client.write.drives.addFile`. It builds the header and enqueues nothing, so it is on the read half: `client.read.newDocument(...)`, or `client.newDocument(...)`.
+
+```typescript
+newDocument<TDocument extends PHDocument = PHDocument>(
+  documentType: string,
+  options?: NewDocumentOptions,
+  signal?: AbortSignal,
+): Promise<TDocument>
+```
+
+---
+
 ### `evaluateActions`
 
 On `client.write`: it is a write-side read that decides through the same model that admits a write. Ask what the reactor **would** decide about a set of candidate operations, without submitting any of them. Use it to disable a control rather than offer an action that fails on submit.
@@ -4134,7 +4153,7 @@ type WriteReceipt = {
 
 ### `create`
 
-Create a document from a full `PHDocument` object. With a parent, the handle's stages also wait for the relationship job on the parent.
+Create a document from a full `PHDocument` object. Its header's signature policy, id and protocol versions are taken as given; a header from a model's `utils.createDocument()` is created at base-reducer 2. Build the header with [`newDocument`](#newdocument). With a parent, the handle's stages also wait for the relationship job on the parent.
 
 ```typescript
 create(
@@ -4156,12 +4175,12 @@ create(
 
 ### `createEmpty`
 
-Create an empty document of a given type.
+Create the document [`newDocument`](#newdocument) builds.
 
 ```typescript
 createEmpty(
   documentModelType: string,
-  options?: CreateDocumentOptions,
+  options?: NewDocumentOptions,
   signal?: AbortSignal,
 ): Promise<WriteHandle>
 ```
@@ -4171,7 +4190,7 @@ createEmpty(
 | Name                | Type                    | Required | Description                            |
 | ------------------- | ----------------------- | -------- | -------------------------------------- |
 | `documentModelType` | `string`                | Yes      | e.g. `"powerhouse/todo-list"`          |
-| `options`           | `CreateDocumentOptions` | No       | Parent identifier and/or model version |
+| `options`           | `NewDocumentOptions`    | No       | Parent identifier, model version and the rest of `newDocument`'s options |
 | `signal`            | `AbortSignal`           | No       | Cancel the request                     |
 
 ---
@@ -4585,7 +4604,7 @@ moveNode(
 
 ### `write.drives.copyNode`
 
-Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive.
+Copy a node, and its subtree if it is a folder, within a drive. Each file is duplicated (completed), then the drive's nodes are copied. The handle's document is the drive. A copied file keeps its source's `protocolVersions` unless `options.protocolVersions` overrides them; a reactor-drive refuses the override.
 
 ```typescript
 copyNode(
@@ -4593,6 +4612,7 @@ copyNode(
   srcNodeId: string,
   targetParentFolderId: string | undefined,
   signal?: AbortSignal,
+  options?: { protocolVersions?: ProtocolVersions },
 ): Promise<WriteHandle>
 ```
 
@@ -16775,6 +16795,7 @@ export interface IReactorBrowserClient extends Pick<
   | "subscribe"
   | "execute"
   | "getOperations"
+  | "newDocument"
   | "create"
   | "deleteDocument"
 > {
@@ -16798,6 +16819,8 @@ the `jobChanges` subscription when realtime is on. Its `document()` runs the
 `write.deleteDocument` run synchronous mutations and hand back a handle that has
 already settled.
 
+`newDocument` is a top-level member only.
+
 Everything outside these members is deliberately excluded from the interface:
 `drives`, `resolveIdOrSlug`, relationships, `executeAsync`, `executeBatch`,
 `createEmpty`, `rename`, `evaluateActions`, and the document-model module
@@ -16810,7 +16833,8 @@ getters. For the full-reactor versions of those, see
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `get(identifier, view?, signal?)`                             | Reads by id or slug. A `view.revision` throws: the GraphQL read API has no point-in-time reads.     |
 | `getOperations(identifier, view?, filter?, paging?, signal?)` | Paged. `next()` follows the returned cursor; the default page is `{ cursor: "0", limit: 100 }`.     |
-| `create(document, parentIdentifier?, signal?)`                | Creates the document and emits `Created`.                                                           |
+| `newDocument(documentType, options?, signal?)`                | Heads a new, uncreated document with the versions the Switchboard selects for the type and parent, and its create signature policy. |
+| `create(document, parentIdentifier?, signal?)`                | Creates the document as its header says and emits `Created`.                                        |
 | `execute(identifier, branch, actions, signal?)`               | Reads the document, stamps and signs a single action, pushes it, emits `Updated`. Two round trips.  |
 | `deleteDocument(identifier, propagate?, signal?)`             | Deletes and emits `Deleted` carrying the identifier it was called with.                             |
 | `subscribe(search, callback, view?)`                          | Registers a change subscriber and returns its unsubscribe function. `view` is accepted and ignored. |
