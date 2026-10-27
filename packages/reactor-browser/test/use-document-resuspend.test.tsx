@@ -268,8 +268,17 @@ describe("useDocument under an outer Suspense boundary", () => {
     return module.client.execute(id, "main", [setModelName({ name })]);
   }
 
+  // Loads the documents into the cache before mounting, so the first render
+  // shows them instead of suspending. A first-load reveal is held back by
+  // React's fallback throttle and takes several main-thread tasks, which a
+  // loaded CI runner can delay past a `waitFor` deadline.
+  async function preload(...ids: string[]) {
+    await Promise.all(ids.map((id) => cache.get(id)));
+  }
+
   it("keeps revealed content mounted while an update refetches", async () => {
     const document = await createModel("Before");
+    await preload(document.header.id);
     const log: RenderEntry[] = [];
     let fallbackRenders = 0;
     const view = show(
@@ -374,6 +383,7 @@ describe("useDocument under an outer Suspense boundary", () => {
   it("lands on the latest of two updates made during one refetch", async () => {
     const document = await createModel("Zero");
     const id = document.header.id;
+    await preload(id);
     const log: RenderEntry[] = [];
     let fallbackRenders = 0;
     const names: string[] = [];
@@ -423,6 +433,7 @@ describe("useDocument under an outer Suspense boundary", () => {
   it("does not suspend useDocuments on an update of a loaded id", async () => {
     const a = await createModel("A");
     const b = await createModel("B");
+    await preload(a.header.id, b.header.id);
     const names: string[] = [];
     let fallbackRenders = 0;
     const view = show(
@@ -538,6 +549,7 @@ describe("useDocument under an outer Suspense boundary", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const document = await createModel("Kept");
     const id = document.header.id;
+    await preload(id);
     const states: SafeState[] = [];
     const log: RenderEntry[] = [];
     let fallbackRenders = 0;
