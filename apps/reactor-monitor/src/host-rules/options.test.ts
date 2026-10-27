@@ -9,6 +9,7 @@ import {
   hostOptionList,
   hostOptions,
   type OptionStatus,
+  SETTING_REASONS,
   WORKER_COUNTS,
 } from "./options.js";
 import { checkSetter } from "./policy.js";
@@ -146,44 +147,108 @@ describe("hostOptions", () => {
   });
 
   it("disables background workers until they can run", () => {
-    expect(statuses({ envelope: stack() })(`host:workers:2`)).toEqual(
+    expect(statuses({ envelope: stack() })(`${SB}:workers:2`)).toEqual(
       off(REASONS.workersStorage),
     );
-    expect(statuses({ envelope: stack() })(`host:workers:0`)).toEqual(SELECTED);
+    expect(statuses({ envelope: stack() })(`${SB}:workers:0`)).toEqual(
+      SELECTED,
+    );
     const pg = { envelope: withSetters(postgres) };
-    expect(statuses(pg)(`host:workers:4`)).toEqual(ON);
-    expect(statuses(pg, { ...FULL, verb: "dev" })(`host:workers:4`)).toEqual(
+    expect(statuses(pg)(`${SB}:workers:4`)).toEqual(ON);
+    expect(statuses(pg, { ...FULL, verb: "dev" })(`${SB}:workers:4`)).toEqual(
       off(REASONS.workersDev),
     );
-    expect(statuses({ envelope: stack() })(`host:projectionWorker:on`)).toEqual(
-      off(REASONS.projectionStorage),
-    );
-    expect(statuses(pg)(`host:projectionWorker:on`)).toEqual(ON);
+    expect(
+      statuses({ envelope: stack() })(`${SB}:projectionWorker:on`),
+    ).toEqual(off(REASONS.projectionStorage));
+    expect(statuses(pg)(`${SB}:projectionWorker:on`)).toEqual(ON);
   });
 
-  it("selects workers and the search thread by what the switchboard reads", () => {
+  it("selects workers and the search thread from the switchboard's own settings", () => {
     const draft = {
-      envelope: withSetters(postgres),
+      envelope: withSetters({
+        ...postgres,
+        "members.switchboard.config.switchboard.workers": {
+          executor: { count: 2 },
+          projection: { enabled: true },
+        },
+      }),
+    };
+    const status = statuses(draft);
+    expect(status(`${SB}:workers:2`)).toEqual(SELECTED);
+    expect(status(`${SB}:workers:0`)).toEqual(ON);
+    expect(status(`${SB}:projectionWorker:on`)).toEqual(SELECTED);
+  });
+
+  it("follows the host's env, which wins over each switchboard's choice", () => {
+    const draft = {
+      envelope: withSetters({
+        ...postgres,
+        "members.switchboard.config.switchboard.workers.executor.count": 4,
+      }),
       env: {
         REACTOR_WORKERS: " 2 ",
         REACTOR_PROJECTION_WORKER: "false",
       },
     };
     const status = statuses(draft);
-    expect(status(`host:workers:2`)).toEqual(SELECTED);
-    expect(status(`host:projectionWorker:off`)).toEqual(SELECTED);
-    expect(status(`host:projectionWorker:on`)).toEqual(ON);
+    expect(status(`${SB}:workers:2`)).toEqual(SELECTED);
+    expect(status(`${SB}:workers:4`)).toEqual(off(SETTING_REASONS.fromEnv));
+    expect(status(`${SB}:projectionWorker:off`)).toEqual(SELECTED);
+    expect(status(`${SB}:projectionWorker:on`)).toEqual(
+      off(SETTING_REASONS.fromEnv),
+    );
   });
 
-  it("offers workers for the whole host, and only with a switchboard", () => {
+  it("offers workers per switchboard, and only for a switchboard", () => {
     const ids = (envelope: HostExport) =>
       hostOptionList({ envelope })
         .filter((candidate) => candidate.group === "workers")
         .map((candidate) => [candidate.id, candidate.member]);
     expect(ids(stack())).toEqual(
-      WORKER_COUNTS.map((count) => [`host:workers:${count}`, undefined]),
+      WORKER_COUNTS.map((count) => [`${SB}:workers:${count}`, SB]),
     );
     expect(ids(hostExport("connect"))).toEqual([]);
+  });
+
+  it("writes a switchboard's own settings where only it reads them", () => {
+    const own = {
+      kind: "in-process",
+      storage: { kind: "path", dataDir: ".ph/sb2/reactor-storage" },
+      readModel: { url: ".ph/sb2/read-storage" },
+    };
+    const envelope = withSetters({
+      ...postgres,
+      "members.switchboard.config": {
+        switchboard: { inspection: { admin: true } },
+      },
+      "host.children.sb2": {
+        host: "switchboard",
+        runner: { port: 0 },
+        reactor: { backends: { main: own } },
+      },
+    });
+    expect(option({ envelope }, `${SB}:workers:2`).setters).toEqual([
+      {
+        path: `${SB}.config`,
+        value: {
+          switchboard: {
+            inspection: { admin: true },
+            workers: { executor: { count: 2 } },
+          },
+        },
+      },
+    ]);
+    const draft = { envelope };
+    const next = applyOption(draft, option(draft, `${SB}:workers:2`)).draft;
+    expect(validateDraft(next, FULL).issues).toEqual([]);
+    const status = statuses(next);
+    expect(status(`${SB}:workers:2`)).toEqual(SELECTED);
+    expect(status("host.children.sb2:workers:0")).toEqual(SELECTED);
+    // Its own config now: the change stays with sb.
+    expect(option(next, `${SB}:workers:4`).setters).toEqual([
+      { path: `${SB}.config.switchboard.workers.executor.count`, value: 4 },
+    ]);
   });
 
   it("disables Postgres storage while workers need it", () => {
@@ -260,7 +325,48 @@ describe("hostOptions", () => {
 });
 
 describe("adding and removing reactors", () => {
-  it("adds a switchboard from its folder", () => {
+  it("adds a switchboard with its own folders and port", () => {
+    const draft = { envelope: stack() };
+    expect(statuses(draft)("host:add:switchboard")).toEqual(ON);
+    const added = applyOption(draft, option(draft, "host:add:switchboard"));
+    expect(added.refused).toBeUndefined();
+    expect(validateDraft(added.draft, FULL).issues).toEqual([]);
+    expect(
+      (added.draft.envelope.host as { children: Record<string, unknown> })
+        .children.switchboard,
+    ).toEqual({
+      host: "switchboard",
+      runner: { port: 0 },
+      reactor: {
+        protocol: (
+          stack().members as Record<string, { reactor: { protocol: unknown } }>
+        ).switchboard.reactor.protocol,
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: {
+              kind: "path",
+              dataDir: ".ph/switchboard/reactor-storage",
+            },
+            readModel: { url: ".ph/switchboard/read-storage" },
+          },
+        },
+      },
+    });
+    const third = applyOption(
+      added.draft,
+      option(added.draft, "host:add:switchboard"),
+    );
+    expect(validateDraft(third.draft, FULL).issues).toEqual([]);
+    expect(
+      Object.keys(
+        (third.draft.envelope.host as { children: Record<string, unknown> })
+          .children,
+      ),
+    ).toEqual(["sb", "ui", "switchboard", "switchboard-2"]);
+  });
+
+  it("adds the first switchboard from its folder", () => {
     const connectOnly = {
       envelope: withSetters({
         [SB]: { $delete: true },
@@ -375,14 +481,22 @@ describe("option setters", () => {
     }
   });
 
-  it("apply setters and env, and the result validates clean", () => {
+  it("apply setters, and the result validates clean", () => {
     const draft = { envelope: withSetters(postgres) };
     let next = applyOption(draft, option(draft, "host:access:3")).draft;
-    next = applyOption(next, option(next, `host:workers:2`)).draft;
-    expect(next.env).toEqual({ REACTOR_WORKERS: "2" });
+    next = applyOption(next, option(next, `${SB}:workers:2`)).draft;
+    const settings = () =>
+      (next.envelope.members as Record<string, Record<string, unknown>>)
+        .switchboard.config;
+    expect(settings()).toMatchObject({
+      switchboard: { workers: { executor: { count: 2 } } },
+    });
+    expect(next.env).toBeUndefined();
     expect(validateDraft(next, FULL).issues).toEqual([]);
-    next = applyOption(next, option(next, `host:workers:0`)).draft;
-    expect(next.env).toEqual({});
+    next = applyOption(next, option(next, `${SB}:workers:0`)).draft;
+    expect(settings()).toMatchObject({
+      switchboard: { workers: { executor: { count: 0 } } },
+    });
   });
 
   it("refuse an option the policy forbids", () => {
