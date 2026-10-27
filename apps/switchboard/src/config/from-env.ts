@@ -1,4 +1,8 @@
 import { parseCatchUpPriority } from "@powerhousedao/reactor";
+import {
+  reactorApiConfigFromEnv,
+  resolveRenownConfig,
+} from "@powerhousedao/reactor-api";
 import { resolvePgliteMaintenance } from "@powerhousedao/reactor-api/pglite-node";
 import { resolvePgliteWorkerMemoryMb } from "@powerhousedao/reactor-api/pglite-node";
 import { isSignaturePolicy } from "@powerhousedao/shared/document-model";
@@ -17,14 +21,13 @@ import { parseOnOff } from "../projection-worker.mjs";
 import { resolveUnsupportedStoredDocuments } from "../unsupported-stored-documents.mjs";
 import { parseWorkerCount, resolveHostPoolSize } from "../worker-pool.mjs";
 import { parseDriveType } from "./drive-type.js";
-import { reactorApiSectionsFromEnv } from "./from-env-reactor-api.js";
 import {
   SWITCHBOARD_LOG_LEVELS,
   type SwitchboardConfigInput,
 } from "./schema.js";
 
 type Env = Readonly<Record<string, string | undefined>>;
-type Logger = Pick<ILogger, "warn">;
+type Logger = ILogger;
 
 export interface SwitchboardConfigFromEnvOptions {
   /** The bin's own keys (sb/config.ts) instead of PORT. */
@@ -38,7 +41,7 @@ export function switchboardConfigFromEnv(
   options: SwitchboardConfigFromEnvOptions = {},
 ): SwitchboardConfigInput {
   const logger = options.logger ?? childLogger(["switchboard", "config"]);
-  const api = reactorApiSectionsFromEnv(env, logger);
+  const api = reactorApiConfigFromEnv(env, logger);
   const reactorUrl = urlFromEnv(
     env.PH_REACTOR_DATABASE_URL ?? env.PH_SWITCHBOARD_DATABASE_URL,
   );
@@ -105,7 +108,14 @@ export function switchboardConfigFromEnv(
       maxSkipThreshold: maxSkipThresholdFromEnv(env.MAX_SKIP_THRESHOLD),
       catchUpPriority: catchUpPriorityFromEnv(env.PH_CATCH_UP_PRIORITY, logger),
     },
-    auth: api.auth,
+    auth: {
+      ...api.auth,
+      renown: {
+        source: renownSourceFromEnv(env, logger),
+        url: blankAsUnset(env.RENOWN_URL),
+        switchboardUrl: blankAsUnset(env.SWITCHBOARD_URL),
+      },
+    },
     inspection: {
       ...api.inspection,
       enabled: openFeatureFlag(env.INSPECTION_ENABLED),
@@ -190,6 +200,20 @@ function openFeatureFlag(raw: string | undefined): boolean | undefined {
   if (raw === "true") return true;
   if (raw === "false") return false;
   return undefined;
+}
+
+function blankAsUnset(raw: string | undefined): string | undefined {
+  const trimmed = raw?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+// A set but invalid RENOWN_SOURCE still overrides the config file, as "remote".
+function renownSourceFromEnv(
+  env: Env,
+  logger: Logger,
+): "self" | "remote" | undefined {
+  if (blankAsUnset(env.RENOWN_SOURCE) === undefined) return undefined;
+  return resolveRenownConfig(undefined, env, logger).source;
 }
 
 function isBlank(raw: string | undefined): boolean {

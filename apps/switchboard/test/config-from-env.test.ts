@@ -1,5 +1,6 @@
 import { parseCatchUpPriority } from "@powerhousedao/reactor";
 import {
+  reactorApiConfigFromEnv,
   resolveCredentialCacheTtlMs,
   resolveRenownConfig,
 } from "@powerhousedao/reactor-api";
@@ -419,32 +420,21 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
     });
   });
 
-  it("maps the reactor-api auth keys as reactor-api reads them", () => {
-    expect(mapped(ROWS["auth on"]).auth).toEqual({
-      enabled: true,
-      requireAuthenticatedCaller: true,
-      exemptPaths: ["/health", "/ready"],
-      admins: ["0xabc", "0xdef"],
-      defaultProtection: true,
-      attachmentReadsFollowDocumentPolicy: false,
-      documentPermissions: { enabled: true, cacheTtlMs: 1000 },
-      skipCredentialVerification: false,
-      allowInsecureSkipCredentialVerification: false,
-      credentialCacheTtlMs: 500,
-      wsRecheckMs: 0,
-      renown: { source: "self", url: "https://renown.example" },
-    });
-    expect(
-      switchboardConfigFromEnv({ ADMINS: " 0xA, 0xB" }, { logger: silent })
-        .auth,
-    ).toEqual({ admins: [" 0xa", " 0xb"] });
-    expect(
-      switchboardConfigFromEnv(
-        { AUTH_ENABLED: "false", RESOLVE_CALLER_IDENTITY: "true" },
-        { logger: silent },
-      ).auth,
-    ).toEqual({ enabled: false, resolveCallerIdentity: true });
-  });
+  it.each(Object.entries(ROWS))(
+    "takes the reactor-api sections from reactorApiConfigFromEnv: %s",
+    (_name, row) => {
+      const layer = switchboardConfigFromEnv(row, { logger: silent });
+      const api = reactorApiConfigFromEnv(row, silent);
+      const { renown: _renown, ...auth } = layer.auth ?? {};
+      expect(Object.keys(auth).length > 0 ? auth : undefined).toEqual(api.auth);
+      expect(layer.inspection?.admin).toBe(api.inspection?.admin);
+      expect(layer.attachments?.storage).toEqual(api.attachments?.storage);
+      const { port: _port, ...server } = layer.server ?? {};
+      expect(Object.keys(server).length > 0 ? server : undefined).toEqual(
+        api.server,
+      );
+    },
+  );
 
   it("names only the keys the env sets", () => {
     expect(switchboardConfigFromEnv({}, { logger: silent })).toEqual({});
@@ -457,23 +447,6 @@ describe("switchboardConfigFromEnv matches today's env reads", () => {
       storage: { pglite: { vacuumFull: { mode: "quiet" } } },
       protocol: { featureFlags: { authGroups: true } },
     });
-  });
-
-  it("reads the webhook origin as reactor-api does", () => {
-    const origin = (env: Env) =>
-      switchboardConfigFromEnv(env, { logger: silent }).server?.publicUrl;
-    expect(
-      origin({ PUBLIC_URL: "a.example", RENDER_EXTERNAL_URL: "b.example" }),
-    ).toBe("a.example");
-    expect(origin({ RENDER_EXTERNAL_URL: "b.example" })).toBe("b.example");
-    expect(
-      origin({
-        PUBLIC_URL: "",
-        RENDER_EXTERNAL_URL: "b.example",
-        HEROKU_APP_DEFAULT_DOMAIN_NAME: "c.example",
-      }),
-    ).toBe("c.example");
-    expect(origin({})).toBeUndefined();
   });
 });
 
@@ -648,18 +621,8 @@ describe("switchboardConfigFromEnv warnings", () => {
     ["LOG_LEVEL", { LOG_LEVEL: "INFO" }, (l) => l.logLevel],
     ["PORT", { PORT: "http" }, (l) => l.server],
     [
-      "WS_CREDENTIAL_RECHECK_INTERVAL_MS",
-      { WS_CREDENTIAL_RECHECK_INTERVAL_MS: "soon" },
-      (l) => l.auth,
-    ],
-    [
       "CREDENTIAL_VERIFICATION_CACHE_TTL_MS",
       { CREDENTIAL_VERIFICATION_CACHE_TTL_MS: "-1" },
-      (l) => l.auth,
-    ],
-    [
-      "DOCUMENT_PERMISSION_CACHE_TTL_MS",
-      { DOCUMENT_PERMISSION_CACHE_TTL_MS: "1.5" },
       (l) => l.auth,
     ],
     [

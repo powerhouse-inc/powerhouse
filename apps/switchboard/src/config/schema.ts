@@ -1,6 +1,8 @@
+import type { ReactorApiConfig } from "@powerhousedao/reactor-api";
+import type { AttachmentStorageConfig } from "@powerhousedao/reactor-attachments";
 import { z } from "zod";
 
-// Zod only: the monitor, workers and host validation load this without the server.
+// Zod at runtime only: the monitor, workers and host validation load this without the server.
 
 export const SWITCHBOARD_LOG_LEVELS = [
   "verbose",
@@ -15,8 +17,6 @@ export const SWITCHBOARD_DRIVE_DOCUMENT_TYPES = [
   "powerhouse/reactor-drive",
 ] as const;
 
-export const GATEWAY_ADAPTERS = ["apollo", "mercurius", "stitching"] as const;
-
 const port = z.number().int().min(0).max(65535);
 const nonNegativeInt = z.number().int().min(0);
 const positiveInt = z.number().int().min(1);
@@ -29,7 +29,9 @@ const serverSchema = z.object({
   basePath: z.string().default("/"),
   /** Origin advertised in webhook URLs; a bare domain gets a scheme at use. */
   publicUrl: z.string().optional(),
-  gatewayAdapter: z.enum(GATEWAY_ADAPTERS).default("apollo"),
+  gatewayAdapter: z
+    .enum(["apollo", "mercurius", "stitching"])
+    .default("apollo"),
   https: z
     .union([
       z.boolean(),
@@ -90,9 +92,9 @@ const protocolSchema = z.object({
 const authSchema = z.object({
   enabled: z.boolean().default(false),
   /** Unset follows `enabled`. */
-  resolveCallerIdentity: z.boolean().optional(),
+  resolveIdentity: z.boolean().optional(),
   requireAuthenticatedCaller: z.boolean().default(false),
-  exemptPaths: z.array(z.string()).default([]),
+  requireAuthenticatedCallerExemptPaths: z.array(z.string()).default([]),
   admins: z.array(z.string()).default([]),
   defaultProtection: z.boolean().default(false),
   attachmentReadsFollowDocumentPolicy: z.boolean().default(false),
@@ -103,7 +105,6 @@ const authSchema = z.object({
     })
     .prefault({}),
   skipCredentialVerification: z.boolean().default(false),
-  allowInsecureSkipCredentialVerification: z.boolean().default(false),
   /** Unset: 0 with a "self" renown source, else the AuthService default. */
   credentialCacheTtlMs: nonNegative.optional(),
   wsRecheckMs: nonNegative.optional(),
@@ -227,3 +228,68 @@ export type SwitchboardConfig = z.output<typeof switchboardConfigSchema>;
 
 /** One configuration layer: any subset of {@link SwitchboardConfig}. */
 export type SwitchboardConfigInput = z.input<typeof switchboardConfigSchema>;
+
+// The sections reactor-api reads are ReactorApiConfig's, under its names.
+type Section<T> = NonNullable<T>;
+type MissingKeys<Api, Ours> = Exclude<keyof Section<Api>, keyof Ours>;
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Assert<T extends true> = T;
+export type ReactorApiSectionsMatch = [
+  Assert<
+    Same<
+      MissingKeys<ReactorApiConfig["server"], SwitchboardConfig["server"]>,
+      never
+    >
+  >,
+  Assert<
+    Same<
+      MissingKeys<ReactorApiConfig["auth"], SwitchboardConfig["auth"]>,
+      never
+    >
+  >,
+  Assert<
+    Same<
+      MissingKeys<
+        Section<ReactorApiConfig["auth"]>["documentPermissions"],
+        SwitchboardConfig["auth"]["documentPermissions"]
+      >,
+      never
+    >
+  >,
+  Assert<
+    Same<
+      MissingKeys<
+        ReactorApiConfig["inspection"],
+        SwitchboardConfig["inspection"]
+      >,
+      never
+    >
+  >,
+  Assert<
+    Same<
+      MissingKeys<
+        ReactorApiConfig["attachments"],
+        SwitchboardConfig["attachments"]
+      >,
+      never
+    >
+  >,
+  Assert<ReactorApiConfig extends SwitchboardConfigInput ? true : false>,
+  Assert<
+    Pick<
+      SwitchboardConfig,
+      "server" | "auth" | "inspection" | "attachments"
+    > extends ReactorApiConfig
+      ? true
+      : false
+  >,
+  Assert<
+    Same<
+      SwitchboardConfig["server"]["gatewayAdapter"],
+      NonNullable<Section<ReactorApiConfig["server"]>["gatewayAdapter"]>
+    >
+  >,
+  Assert<
+    Same<SwitchboardConfig["attachments"]["storage"], AttachmentStorageConfig>
+  >,
+];
