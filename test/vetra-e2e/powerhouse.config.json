@@ -14,9 +14,6 @@
   "packages": [],
   "packageRegistryUrl": "http://localhost:8080",
   "connect": {
-    "instance": {
-      "multiReactor": false
-    },
     "branding": {
       "appName": "Vetra E2E"
     },

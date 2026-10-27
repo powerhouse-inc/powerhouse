@@ -53,10 +53,11 @@ beforeEach(() => {
 afterEach(() => {
   process.chdir(originalCwd);
   process.env = { ...originalEnv };
-  rmSync(root, { recursive: true, force: true });
+  rmSync(root, { recursive: true, force: true, maxRetries: 10 });
 });
 
-describe("commitInitialProject", () => {
+// Real git runs, slow on Windows runners.
+describe("commitInitialProject", { timeout: 30_000 }, () => {
   it("commits every file that is not ignored", () => {
     useGitIdentity({ name: "Ada", email: "ada@example.com" });
     const dir = join(root, "project");

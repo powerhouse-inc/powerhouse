@@ -14,7 +14,7 @@ const temporary: string[] = [];
 afterEach(() => {
   process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10 });
   }
 });
 
@@ -61,7 +61,8 @@ function lint(root: string): Diagnostic[] {
     .diagnostics;
 }
 
-describe("generated processors", () => {
+// Each test runs codegen and lint on a project, slow on Windows runners.
+describe("generated processors", { timeout: 60_000 }, () => {
   it("lint without unused variables", async () => {
     const root = await makeProject();
 
