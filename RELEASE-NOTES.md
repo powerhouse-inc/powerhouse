@@ -258,11 +258,11 @@ With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, 
 
 - A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
 - Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
-- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order every peer places it in. Actions with equal timestamps keep their batch order.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order.
 
 With `documentDecisions` off, loads decide exactly as before.
 
-**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already did on every peer.
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already could on any peer that received the batch split or reshuffled it.
 
 ---
 
