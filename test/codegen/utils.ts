@@ -62,12 +62,18 @@ export async function cpForce(source: string | URL, destination: string | URL) {
   });
 }
 
-export async function rmForce(path: PathLike) {
-  // Windows can hold a just-written folder briefly (EBUSY).
-  await rm(path, {
+export async function rmForce(target: PathLike) {
+  // buildTsMorphProject chdirs into the project, and Windows can't remove the cwd (EBUSY).
+  const dir = path.resolve(
+    target instanceof URL ? fileURLToPath(target) : target.toString(),
+  );
+  const fromDir = path.relative(dir, process.cwd());
+  if (!fromDir.startsWith("..") && !path.isAbsolute(fromDir)) {
+    process.chdir(path.dirname(dir));
+  }
+  await rm(target, {
     recursive: true,
     force: true,
-    maxRetries: 10,
   });
 }
 
