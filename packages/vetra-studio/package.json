@@ -34,11 +34,17 @@
     "test": "vitest --run --passWithNoTests"
   },
   "dependencies": {
-    "@powerhousedao/host-core": "workspace:*"
+    "@powerhousedao/host-core": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "graphql": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/reactor-api": "workspace:*",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@powerhousedao/reactor-api": "workspace:*"
   }
 }

@@ -3463,7 +3463,16 @@ importers:
       '@powerhousedao/host-core':
         specifier: workspace:*
         version: link:../host-core
+      '@renown/sdk':
+        specifier: workspace:*
+        version: link:../renown
+      graphql:
+        specifier: 'catalog:'
+        version: 16.12.0
     devDependencies:
+      '@powerhousedao/reactor-api':
+        specifier: workspace:*
+        version: link:../reactor-api
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(@tsdown/css@0.23.0)(oxc-resolver@11.19.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(tsx@4.23.13)(typescript@7.0.2)
