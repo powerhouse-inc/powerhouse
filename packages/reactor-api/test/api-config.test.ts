@@ -13,7 +13,6 @@ import {
 import { ADMIN_USERS } from "../src/graphql/system/env/index.js";
 import { initializeAndStartAPI } from "../src/server.js";
 import { DEFAULT_PERMISSION_CACHE_TTL_MS } from "../src/services/permission-cache.js";
-import { DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS } from "../src/graphql/ws-credential-monitor.js";
 
 function recordingLogger(): ILogger & { warnings: string[] } {
   const warnings: string[] = [];
@@ -189,27 +188,22 @@ describe("reactorApiConfigFromEnv", () => {
 
   it.each([
     ["GATEWAY_ADAPTER", "graphql-mesh", {}],
-    [
-      "DOCUMENT_PERMISSION_CACHE_TTL_MS",
-      "soon",
-      {
-        auth: {
-          documentPermissions: { cacheTtlMs: DEFAULT_PERMISSION_CACHE_TTL_MS },
-        },
-      },
-    ],
+    ["DOCUMENT_PERMISSION_CACHE_TTL_MS", "soon", {}],
+    ["DOCUMENT_PERMISSION_CACHE_TTL_MS", "-5", {}],
     ["CREDENTIAL_VERIFICATION_CACHE_TTL_MS", "-1", {}],
-    [
-      "WS_CREDENTIAL_RECHECK_INTERVAL_MS",
-      "often",
-      { auth: { wsRecheckMs: DEFAULT_WS_CREDENTIAL_RECHECK_INTERVAL_MS } },
-    ],
-  ])("warns on an invalid %s and keeps the default", (key, value, expected) => {
-    const logger = recordingLogger();
-    expect(reactorApiConfigFromEnv({ [key]: value }, logger)).toEqual(expected);
-    expect(logger.warnings).toHaveLength(1);
-    expect(logger.warnings[0]).toContain(key);
-  });
+    ["WS_CREDENTIAL_RECHECK_INTERVAL_MS", "often", {}],
+    ["WS_CREDENTIAL_RECHECK_INTERVAL_MS", " ", {}],
+  ])(
+    "warns on an invalid %s=%j and leaves it unset",
+    (key, value, expected) => {
+      const logger = recordingLogger();
+      expect(reactorApiConfigFromEnv({ [key]: value }, logger)).toEqual(
+        expected,
+      );
+      expect(logger.warnings).toHaveLength(1);
+      expect(logger.warnings[0]).toContain(key);
+    },
+  );
 
   it("throws on an invalid attachment storage, as the boot did", () => {
     expect(() =>
@@ -323,5 +317,19 @@ describe("server settings from options and env", () => {
       auth: { documentPermissions: { enabled: false } },
     });
     expect(api.authorizationService.config.policy).toBe("ADMIN_ONLY");
+  });
+
+  it("falls back to the default cache TTL for an invalid DOCUMENT_PERMISSION_CACHE_TTL_MS", async () => {
+    vi.stubEnv("AUTH_ENABLED", "true");
+    vi.stubEnv("DOCUMENT_PERMISSIONS_ENABLED", "true");
+    vi.stubEnv("DOCUMENT_PERMISSION_CACHE_TTL_MS", "soon");
+    const infos: string[] = [];
+    const logger = recordingLogger();
+    logger.info = (message: string) => void infos.push(message);
+    await boot({ logger });
+    expect(logger.warnings.some((w) => w.includes("soon"))).toBe(true);
+    expect(infos.join("\n")).toContain(
+      `cache TTL ${DEFAULT_PERMISSION_CACHE_TTL_MS} ms`,
+    );
   });
 });

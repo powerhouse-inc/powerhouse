@@ -70,9 +70,10 @@ export function reactorApiConfigFromEnv(
       documentPermissions: pruned({
         enabled: exactlyTrue(env.DOCUMENT_PERMISSIONS_ENABLED),
         cacheTtlMs: env.DOCUMENT_PERMISSION_CACHE_TTL_MS?.trim()
-          ? resolvePermissionCacheTtlMs(
+          ? validOrUnset(
               env.DOCUMENT_PERMISSION_CACHE_TTL_MS,
-              logger,
+              (raw) => resolvePermissionCacheTtlMs(raw, logger),
+              isPermissionCacheTtlMs,
             )
           : undefined,
       }),
@@ -84,9 +85,10 @@ export function reactorApiConfigFromEnv(
       wsRecheckMs:
         env.WS_CREDENTIAL_RECHECK_INTERVAL_MS === undefined
           ? undefined
-          : resolveWsCredentialRecheckIntervalMs(
+          : validOrUnset(
               env.WS_CREDENTIAL_RECHECK_INTERVAL_MS,
-              logger,
+              (raw) => resolveWsCredentialRecheckIntervalMs(raw, logger),
+              isWsRecheckMs,
             ),
     }),
     inspection: pruned({ admin: exactlyTrue(env.INSPECTION_ADMIN_ENABLED) }),
@@ -103,6 +105,26 @@ export function reactorApiConfigFromEnv(
 function pruned<T extends object>(value: T): T | undefined {
   const entries = Object.entries(value).filter(([, v]) => v !== undefined);
   return entries.length > 0 ? (Object.fromEntries(entries) as T) : undefined;
+}
+
+// Invalid warns through `resolve` and stays unset, so a lower layer still applies.
+function validOrUnset(
+  raw: string,
+  resolve: (raw: string) => number,
+  isValid: (raw: string) => boolean,
+): number | undefined {
+  const resolved = resolve(raw);
+  return isValid(raw) ? resolved : undefined;
+}
+
+function isPermissionCacheTtlMs(raw: string): boolean {
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed >= 0;
+}
+
+function isWsRecheckMs(raw: string): boolean {
+  const parsed = Number(raw);
+  return raw.trim() !== "" && Number.isFinite(parsed) && parsed >= 0;
 }
 
 function exactlyTrue(value: string | undefined): boolean | undefined {
