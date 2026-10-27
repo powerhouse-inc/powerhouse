@@ -19,6 +19,11 @@
       "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
     },
+    "./config": {
+      "source": "./src/config/schema.ts",
+      "types": "./dist/config/schema.d.mts",
+      "import": "./dist/config/schema.mjs"
+    },
     "./boot": {
       "source": "./src/boot.mts",
       "types": "./dist/boot.d.mts",
