@@ -2289,10 +2289,11 @@ export class SimpleJobExecutor implements IJobExecutor {
    * would overwrite the verdict every other replica computes for it.
    */
   private async positionByTimestamp(
-    job: Job,
+    submitted: Job,
     stores: ExecutionStores,
     signal?: AbortSignal,
   ): Promise<PositionedWrites> {
+    let job = submitted;
     const plain = (): PositionedWrites => ({
       writes: job.actions.map((action) => ({
         action,
@@ -2305,6 +2306,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (!this.featureFlags.documentDecisions || job.actions.length === 0) {
       return plain();
     }
+
+    job = {
+      ...job,
+      actions: [...job.actions].sort(
+        (a, b) => Date.parse(a.timestampUtcMs) - Date.parse(b.timestampUtcMs),
+      ),
+    };
 
     // Parsed, not compared as strings, here and below: a submitted timestamp
     // may carry second precision, and "…:00Z" sorts after "…:00.000Z"
@@ -2339,7 +2347,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
       );
       const violation = this.firstNonMonotonicTimestamp(
-        job.actions,
+        submitted.actions,
         newest,
         job.documentId,
         job.branch,
@@ -3255,6 +3263,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     // Held only in superseded rows: undone stays undone, rewound is re-applied.
     const undoneActionIds = new Set<string>();
+    const minIncomingTime = Date.parse(minIncomingTimestamp);
     let predecessorBound = minIncomingIndex;
     const rowsByActionId = new Map<string, Operation[]>();
     for (const op of conflictingOps) {
@@ -3286,14 +3295,20 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const nonSupersededOps = conflictingOps.filter((op) => {
-      // A local op at an index below the incoming batch's lowest index with no
-      // overlapping action.id is a predecessor of the incoming ops, not a
-      // concurrent conflict. Including it would force a reshuffle that
-      // re-inserts identical history at new indices, which cascades when many
-      // ops share timestamps (bulk imports). Local ops whose action.id matches
-      // an incoming op are kept so dedup + reshuffle can remap them correctly
-      // (e.g. cross-reactor reshuffle rebroadcast).
-      if (op.index < predecessorBound && !incomingActionIds.has(op.action.id)) {
+      // A local op below the batch's lowest index with no overlapping
+      // action.id is a predecessor; reshuffling it would re-insert identical
+      // history, which cascades when many ops share a timestamp. With
+      // documentDecisions on, every replica places its own writes by
+      // timestamp, so a local op stamped after the batch's earliest op is
+      // concurrent whatever its index: the sender's indexes are its own.
+      // Local ops matching an incoming action.id stay so a rebroadcast can
+      // remap them.
+      if (
+        !incomingActionIds.has(op.action.id) &&
+        (!this.featureFlags.documentDecisions ||
+          Date.parse(op.timestampUtcMs) === minIncomingTime) &&
+        op.index < predecessorBound
+      ) {
         return false;
       }
       return liveOps.has(op);
