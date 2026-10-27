@@ -286,6 +286,47 @@ describe("PortleRunner: delegation and listen ports", () => {
     expect(runner.status().tunnel.state).toBe("down");
   });
 
+  it("retries a resolver that cannot answer, then says so rather than 'not delegated'", async () => {
+    const timeout = Object.assign(new Error("queryNs ETIMEOUT dev.sektar.be"), {
+      code: "ETIMEOUT",
+    });
+    const resolveNs = vi.fn(() => Promise.reject(timeout));
+    const log = vi.fn();
+    const { runner, created } = runnerWith({
+      log,
+      resolveNs,
+      delegationCheck: { attempts: 3, sleep: () => Promise.resolve() },
+    });
+    await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
+    await expect(runner.start()).rejects.toThrow(
+      /could not check whether dev\.sektar\.be is delegated: the resolver failed \(queryNs ETIMEOUT/,
+    );
+    expect(resolveNs).toHaveBeenCalledTimes(3);
+    expect(created).toHaveLength(0);
+    // Status reads it as not delegated (yet), without throwing.
+    expect(await runner.checkDelegation()).toBe(false);
+  });
+
+  it("starts when a resolver blip clears within the retries", async () => {
+    let calls = 0;
+    const { runner, created } = runnerWith({
+      log: vi.fn(),
+      resolveNs: () =>
+        ++calls === 1
+          ? Promise.reject(
+              Object.assign(new Error("ECONNREFUSED"), {
+                code: "ECONNREFUSED",
+              }),
+            )
+          : Promise.resolve(["ns1.relaytest.portle.host"]),
+      delegationCheck: { sleep: () => Promise.resolve() },
+    });
+    await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
+    await runner.start();
+    expect(created.map((s) => s.options.name)).toEqual(["caddy", "frpc"]);
+    await runner.stop();
+  });
+
   it("starts once the resolver sees the relay's nameserver", async () => {
     const { runner, created } = await seeded(() =>
       Promise.resolve(["NS1.relaytest.portle.host"]),

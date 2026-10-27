@@ -5,7 +5,12 @@ import {
   type BinaryLocations,
   type ResolveBinariesOptions,
 } from "./binaries.js";
-import { isDelegated, type ResolveNs } from "./delegation.js";
+import {
+  DelegationCheckError,
+  isDelegated,
+  type DelegationCheckOptions,
+  type ResolveNs,
+} from "./delegation.js";
 import { enrolWithControlPlane } from "./site/enrol.js";
 import { LABEL_RE } from "./site/hostnames.js";
 import {
@@ -89,6 +94,8 @@ export interface PortleRunnerDeps extends ResolveBinariesOptions {
   stateDir: string;
   fetchImpl?: typeof fetch;
   resolveNs?: ResolveNs;
+  /** Retry policy of the delegation check (tests shorten it). */
+  delegationCheck?: DelegationCheckOptions;
   createSupervised?: (options: SupervisedOptions) => SupervisedLike;
   log?: (msg: string, detail?: Record<string, unknown>) => void;
 }
@@ -135,10 +142,20 @@ export class PortleRunner implements PortleRunnerLike {
     };
   }
 
+  /** For status: a resolver that cannot answer reads as not delegated (yet). */
   async checkDelegation(): Promise<boolean | null> {
     const delegation = this.#enrollment()?.delegation;
     if (!delegation) return null;
-    return isDelegated(delegation, this.#deps.resolveNs);
+    try {
+      return await isDelegated(
+        delegation,
+        this.#deps.resolveNs,
+        this.#deps.delegationCheck,
+      );
+    } catch (error) {
+      if (error instanceof DelegationCheckError) return false;
+      throw error;
+    }
   }
 
   async enrol(input: EnrolInput): Promise<TunnelStatus> {
@@ -294,7 +311,25 @@ export class PortleRunner implements PortleRunnerLike {
    */
   async start(): Promise<TunnelStatus> {
     const delegation = this.#requireEnrollment().delegation;
-    if (delegation && !(await this.checkDelegation())) {
+    let delegated = true;
+    if (delegation) {
+      try {
+        delegated = await isDelegated(
+          delegation,
+          this.#deps.resolveNs,
+          this.#deps.delegationCheck,
+        );
+      } catch (error) {
+        if (error instanceof DelegationCheckError) {
+          throw new Error(
+            `cannot start: ${error.message}. This is a DNS lookup failure, not a missing delegation: start again once DNS answers.`,
+            { cause: error },
+          );
+        }
+        throw error;
+      }
+    }
+    if (delegation && !delegated) {
       throw new Error(
         `cannot start: ${delegation.zone} is not delegated yet. Create at your DNS provider: ${delegation.nameservers
           .map((ns) => `${delegation.zone} NS ${ns}`)
