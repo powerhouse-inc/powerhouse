@@ -199,6 +199,11 @@ describe("SwitchboardsPanel", () => {
     );
     await ready(view);
     fireEvent.click(view.getByRole("button", { name: "Admin preset" }));
+    expect(view.getByText("ADMINS: needs an admin address")).toBeTruthy();
+    expect(
+      (view.getByRole("button", { name: "Check" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     fireEvent.change(view.getByLabelText("Value of ADMINS"), {
       target: { value: "0xabc" },
     });

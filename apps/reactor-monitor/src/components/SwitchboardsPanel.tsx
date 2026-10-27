@@ -39,6 +39,7 @@ export function envRowProblem(
   const key = row.key.trim();
   if (!key) return row.value ? "key is required" : undefined;
   if (!isBrowserEnvKey(key)) return "not on the browser env allowlist";
+  if (key === "ADMINS" && !row.value.trim()) return "needs an admin address";
   if (rows.some((other) => other.id !== row.id && other.key.trim() === key)) {
     return "duplicate key";
   }
