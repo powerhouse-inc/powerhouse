@@ -1671,6 +1671,7 @@ export const startSwitchboard = async (
   input: SwitchboardConfigInput = {},
   deps: SwitchboardDeps = {},
 ): Promise<SwitchboardReactor> => {
+  assertConfigShape(input);
   const config = switchboardConfigSchema.parse(input);
   const logger = deps.logger ?? defaultLogger;
   // Here as well as in index.mts, so a host embedding the server is profiled.
@@ -1776,6 +1777,19 @@ export const startSwitchboard = async (
     throw e;
   }
 };
+
+// Parsing strips unknown keys, so a caller still passing the old options would boot on defaults.
+function assertConfigShape(input: SwitchboardConfigInput): void {
+  const unknown = Object.keys(input).filter(
+    (key) => !(key in switchboardConfigSchema.shape),
+  );
+  if (unknown.length > 0) {
+    throw new Error(
+      `startSwitchboard(config, deps) got unknown config keys: ${unknown.join(", ")}. ` +
+        "It takes the @powerhousedao/switchboard/config shape; runtime objects go in deps.",
+    );
+  }
+}
 
 /** The options view plugins transform, from the config and deps. */
 function serverOptionsOf(

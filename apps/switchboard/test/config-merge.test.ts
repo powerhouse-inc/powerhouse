@@ -204,3 +204,12 @@ describe("callerOverEnv keeps each key's precedence", () => {
     ).toBe(false);
   });
 });
+
+describe("startSwitchboard", () => {
+  it("refuses the old options shape instead of booting on defaults", async () => {
+    const { startSwitchboard } = await import("../src/server.mjs");
+    await expect(
+      startSwitchboard({ port: 0, dbPath: "x" } as SwitchboardConfigInput),
+    ).rejects.toThrow("unknown config keys: port, dbPath");
+  });
+});
