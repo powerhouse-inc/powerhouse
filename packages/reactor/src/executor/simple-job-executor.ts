@@ -2339,7 +2339,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         signal,
       );
       const violation = this.firstNonMonotonicTimestamp(
-        job.actions,
+        submitted.actions,
         newest,
         job.documentId,
         job.branch,

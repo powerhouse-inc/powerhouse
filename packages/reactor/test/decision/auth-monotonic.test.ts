@@ -157,6 +157,38 @@ describe("the monotonic auth timestamp rule", () => {
     );
   });
 
+  it.each([true, false])(
+    "with authEnforcement %s, a batch whose own auth actions run backwards is rejected only under enforcement",
+    async (authEnforcement) => {
+      reactor = await build(authEnforcement);
+      const docId = await authInitializedDocument(
+        reactor,
+        `monotonic-backwards-${authEnforcement}`,
+      );
+
+      const at = (offsetMs: number) =>
+        new Date(Date.now() + offsetMs).toISOString();
+      const batch = await reactor.execute(docId, "main", [
+        {
+          ...setGrant({ grant: { ...GLOBAL_GRANT, description: "second" } }),
+          timestampUtcMs: at(2_000),
+        },
+        {
+          ...setGrant({ grant: { ...GLOBAL_GRANT, description: "first" } }),
+          timestampUtcMs: at(1_000),
+        },
+      ]);
+
+      if (authEnforcement) {
+        await expect(settle(reactor, batch.id)).rejects.toThrow(
+          /Auth timestamp not monotonic/,
+        );
+      } else {
+        await settle(reactor, batch.id);
+      }
+    },
+  );
+
   it("accepts an auth write that strictly exceeds the newest", async () => {
     reactor = await build(true);
     const docId = await authInitializedDocument(reactor, "monotonic-forward");
