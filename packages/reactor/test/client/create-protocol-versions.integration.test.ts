@@ -304,6 +304,27 @@ describe("create paths for a model the loader brings in after boot", () => {
     expect(created.header.protocolVersions?.["base-reducer"]).toBe(2);
   });
 
+  it("creates a versionless header through the reactor core at 3 for a createReducer model", async () => {
+    const { client, reactor, load } = await build(tagged);
+    const document = unversioned();
+
+    await client.waitForJob(await reactor.create(document));
+
+    const created = await client.get(document.header.id);
+    expect(created.header.protocolVersions?.["base-reducer"]).toBe(3);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a versionless header through the reactor core at 2 for a model whose reducer createReducer did not build", async () => {
+    const { client, reactor } = await build(untaggedDocumentModel());
+    const document = unversioned();
+
+    await client.waitForJob(await reactor.create(document));
+
+    const created = await client.get(document.header.id);
+    expect(created.header.protocolVersions?.["base-reducer"]).toBe(2);
+  });
+
   it("leaves a failed load to the CREATE gate without loading again", async () => {
     const { client, load } = await build(undefined);
 
