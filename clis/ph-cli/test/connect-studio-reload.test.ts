@@ -2,8 +2,9 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { removeDir, stopProcess } from "./processes.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,21 @@ function writeConfig(dir: string, appName: string) {
   );
 }
 
-function startStudio(dir: string, port: number): ChildProcess {
+const OUTPUT_TAIL_CHARS = 16_384;
+const WAIT_MS = 60_000;
+const POLL_MS = 250;
+const FETCH_TIMEOUT_MS = 2_000;
+
+type Studio = {
+  child: ChildProcess;
+  closed: Promise<void>;
+  output: () => string;
+  /** Why the last check did not pass. */
+  lastProbe: string;
+  spawnError?: Error;
+};
+
+function startStudio(dir: string, port: number): Studio {
   const child = spawn(
     process.execPath,
     [
@@ -55,43 +70,128 @@ function startStudio(dir: string, port: number): ChildProcess {
       "--print-urls=false",
       "--bind-cli-shortcuts=false",
     ],
-    { cwd: dir, stdio: "ignore" },
+    { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );
-  cleanups.push(() =>
-    stopProcess(child.exitCode === null ? child.pid : undefined),
-  );
-  return child;
+  const closed = new Promise<void>((resolve) => {
+    child.once("close", () => resolve());
+  });
+  let tail = "";
+  const keep = (chunk: string) => {
+    tail = (tail + chunk).slice(-OUTPUT_TAIL_CHARS);
+  };
+  child.stdout.setEncoding("utf8").on("data", keep);
+  child.stderr.setEncoding("utf8").on("data", keep);
+  const studio: Studio = {
+    child,
+    closed,
+    output: () => tail,
+    lastProbe: "no request yet",
+  };
+  child.once("error", (error) => {
+    studio.spawnError = error;
+  });
+  cleanups.push(async () => {
+    // First: grandchildren (Vite's esbuild) can hold the pipes open, and the hook may time out in stopProcess.
+    child.stdout.destroy();
+    child.stderr.destroy();
+    await stopProcess(hasExited(studio) ? undefined : child.pid);
+  });
+  return studio;
 }
 
-async function servedAppName(port: number): Promise<string | undefined> {
+function hasExited({ child, spawnError }: Studio): boolean {
+  return (
+    spawnError !== undefined ||
+    child.exitCode !== null ||
+    child.signalCode !== null
+  );
+}
+
+/** Polls until `assertion` passes; fails at once if the studio exits. */
+async function waitFor(studio: Studio, assertion: () => unknown) {
+  const deadline = Date.now() + WAIT_MS;
+  for (;;) {
+    try {
+      await assertion();
+      return;
+    } catch (error) {
+      if (hasExited(studio) || Date.now() >= deadline) {
+        throw await withStudioReport(error, studio);
+      }
+    }
+    await sleep(POLL_MS);
+  }
+}
+
+async function withStudioReport(error: unknown, studio: Studio) {
+  const { child, spawnError } = studio;
+  let status = "running";
+  if (spawnError) {
+    status = `failed to spawn (${spawnError.message})`;
+  } else if (hasExited(studio)) {
+    // The last stderr chunk can land after 'exit'.
+    await Promise.race([studio.closed, sleep(2_000)]);
+    status = `exited (code ${child.exitCode}, signal ${child.signalCode})`;
+  }
+  const report = `\n\nstudio ${status}; last check: ${studio.lastProbe}; output tail:\n${studio.output() || "(none)"}`;
+  if (error instanceof Error) {
+    error.message += report;
+    return error;
+  }
+  return new Error(String(error) + report, { cause: error });
+}
+
+function describeFetchError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  if (error.name === "TimeoutError") {
+    return `aborted after ${FETCH_TIMEOUT_MS} ms`;
+  }
+  const code = (error.cause as { code?: unknown } | undefined)?.code;
+  return typeof code === "string"
+    ? `${error.message} (${code})`
+    : error.message;
+}
+
+async function servedAppName(studio: Studio, port: number) {
+  let body: string;
   try {
     const response = await fetch(
       `http://localhost:${port}/powerhouse.config.json`,
+      { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) },
     );
-    const config = (await response.json()) as {
-      connect?: { branding?: { appName?: string } };
-    };
-    return config.connect?.branding?.appName;
-  } catch {
+    body = await response.text();
+    if (!response.ok) {
+      studio.lastProbe = `HTTP ${response.status}`;
+      return undefined;
+    }
+  } catch (error) {
+    studio.lastProbe = describeFetchError(error);
     return undefined;
   }
+  let config: { connect?: { branding?: { appName?: string } } };
+  try {
+    config = JSON.parse(body) as typeof config;
+  } catch {
+    studio.lastProbe = `non-JSON body: ${body.slice(0, 200)}`;
+    return undefined;
+  }
+  const appName = config.connect?.branding?.appName;
+  studio.lastProbe = `appName ${JSON.stringify(appName)}`;
+  return appName;
 }
 
 describe("ph connect studio", () => {
   it("serves a changed powerhouse.config.json and a routes folder added after it started", async () => {
     const dir = makeProject("Before");
     const port = await freePort();
-    startStudio(dir, port);
-    const wait = { timeout: 60_000, interval: 250 };
+    const studio = startStudio(dir, port);
 
-    await vi.waitFor(
-      async () => expect(await servedAppName(port)).toBe("Before"),
-      wait,
+    await waitFor(studio, async () =>
+      expect(await servedAppName(studio, port)).toBe("Before"),
     );
     writeConfig(dir, "After");
-    await vi.waitFor(
-      async () => expect(await servedAppName(port)).toBe("After"),
-      wait,
+    await waitFor(studio, async () =>
+      expect(await servedAppName(studio, port)).toBe("After"),
     );
 
     const routes = path.join(dir, "hosts/connect/routes");
@@ -101,9 +201,17 @@ describe("ph connect studio", () => {
       `import { createFileRoute } from "@tanstack/react-router";\nexport const Route = createFileRoute("/hello")({});\n`,
     );
     const tree = path.join(dir, ".ph/connect-routes.gen.ts");
-    await vi.waitFor(
-      () => expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
-      wait,
-    );
-  }, 180_000);
+    await waitFor(studio, () => {
+      let content: string;
+      try {
+        content = readFileSync(tree, "utf8");
+      } catch (error) {
+        studio.lastProbe = `route tree unreadable: ${error instanceof Error ? error.message : String(error)}`;
+        throw error;
+      }
+      studio.lastProbe = 'route tree lacks "/hello"';
+      expect(content).toContain('"/hello"');
+    });
+    // Three waits, each up to WAIT_MS plus a request and the report.
+  }, 240_000);
 });
