@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   reactorDbUrlOf,
   switchboardBootFactsFromEnv,
+  switchboardBootFactsOf,
   switchboardBootIssues,
   type SwitchboardBootFacts,
 } from "../src/boot.mjs";
@@ -63,6 +64,56 @@ describe("switchboardBootIssues", () => {
         /REACTOR_PROJECTION_WORKER\) requires a Postgres reactor database/,
       ),
     ]);
+  });
+});
+
+describe("switchboardBootFactsOf", () => {
+  it("reads the facts from a config", async () => {
+    expect(
+      await switchboardBootFactsOf(
+        {
+          storage: {
+            reactor: { url: POSTGRES },
+            readModel: { url: "./read" },
+          },
+          workers: { executor: { count: 3 }, projection: { enabled: true } },
+          protocol: { featureFlags: { authEnforcement: true } },
+          auth: { renown: { source: "self" } },
+        },
+        { dev: false },
+      ),
+    ).toEqual({
+      dev: false,
+      workers: 3,
+      projectionWorker: true,
+      reactorDbUrl: POSTGRES,
+      authEnforcement: true,
+      renownSource: "self",
+    });
+  });
+
+  it("never takes the reactor database from the read model", async () => {
+    const facts = await switchboardBootFactsOf(
+      { storage: { readModel: { url: POSTGRES } } },
+      { dev: false },
+    );
+    expect(facts.reactorDbUrl).toBeUndefined();
+  });
+
+  it("lets the config's renown source win over the configured one", async () => {
+    const configuredRenown = { source: "self" as const };
+    expect(
+      (await switchboardBootFactsOf({}, { dev: false, configuredRenown }))
+        .renownSource,
+    ).toBe("self");
+    expect(
+      (
+        await switchboardBootFactsOf(
+          { auth: { renown: { source: "remote" } } },
+          { dev: false, configuredRenown },
+        )
+      ).renownSource,
+    ).toBe("remote");
   });
 });
 

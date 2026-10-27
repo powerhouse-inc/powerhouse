@@ -16,10 +16,14 @@ import {
 } from "@powerhousedao/host-core";
 import path from "node:path";
 import {
-  applyReactorEnvProjection,
-  switchboardBootProjection,
+  memberEnvOf,
+  memberSwitchboardConfig,
+  memberSwitchboardConfigSchema,
+  prepareMemberStorage,
+  reactorBlockConflicts,
+  readModelAsReactorStore,
   switchboardDevMode,
-} from "./reactor-env.js";
+} from "./member-config.js";
 import { z } from "zod";
 import { classicSwitchboardArgs } from "../services/classic-args.js";
 import {
@@ -38,25 +42,38 @@ import type { BuildArgs, SwitchboardArgs } from "../types.js";
 export const kind = "reactor";
 
 /** The switchboard host: the host-core reactor host with every runner option
- * this module reads declared (strict: an unknown runner key fails). The
- * runner reads nothing from `config`, so only an empty one is accepted.
+ * this module reads declared (strict: an unknown runner key fails).
+ * `config.switchboard` is this member's own switchboard config (auth,
+ * inspection, workers, ...); a key the reactor block also sets is refused.
  * One definition, two schemas: `declaredHostSchema` (token-able fields take
  * output tokens; types host files) and `hostSchema` (resolved; checked
  * right before the verb). */
 const schemas = defineHostSchemas((s) =>
-  s.reactorHostSchema.extend({
-    runner: s.runnerBaseSchema
-      .extend({
-        /** 0 binds a port the OS picks; `origin` reports it. */
-        port: z.number().int().min(0).max(65535).optional(),
-        /** Dev mode without the `dev` verb (the Vite package loader). */
-        dev: z.boolean().optional(),
-        /** The project package output dir `build` writes (default "dist"). */
-        outDir: z.string().min(1).optional(),
-      })
-      .strict(),
-    config: z.strictObject({}).optional(),
-  }),
+  s.reactorHostSchema
+    .extend({
+      runner: s.runnerBaseSchema
+        .extend({
+          /** 0 binds a port the OS picks; `origin` reports it. */
+          port: z.number().int().min(0).max(65535).optional(),
+          /** Dev mode without the `dev` verb (the Vite package loader). */
+          dev: z.boolean().optional(),
+          /** The project package output dir `build` writes (default "dist"). */
+          outDir: z.string().min(1).optional(),
+        })
+        .strict(),
+      config: z
+        .strictObject({ switchboard: memberSwitchboardConfigSchema.optional() })
+        .optional(),
+    })
+    .superRefine((host, ctx) => {
+      for (const message of reactorBlockConflicts(host)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["config", "switchboard"],
+          message,
+        });
+      }
+    }),
 );
 export const declaredHostSchema = schemas.declaredHostSchema;
 export const hostSchema = schemas.hostSchema;
@@ -112,7 +129,6 @@ export type SwitchboardRunnerArgs = Omit<SwitchboardArgs, "mcp"> & {
 async function toSwitchboardArgs(
   host: SwitchboardHostParsed,
   devMode: boolean,
-  dbPath: string | undefined,
   composed: boolean,
 ): Promise<SwitchboardRunnerArgs> {
   const classic = await classicSwitchboardArgs();
@@ -124,12 +140,6 @@ async function toSwitchboardArgs(
     // A declared composition owns the carved switches (R2): the mcp plugin's
     // presence sets it, its absence must deactivate. Classic path: classic.
     mcp: composed ? undefined : classic.mcp,
-    // The host file's readModel.url. Absent, the key stays present and
-    // undefined exactly as the classic command carries it, so the server's
-    // own split defaults (.ph/reactor-storage + .ph/read-storage) apply.
-    // Omitting the key resurrected a dead service default and put the
-    // reactor and the read model on ONE PGlite dir (two writers, one PGDATA).
-    dbPath: dbPath ?? classic.dbPath,
   };
 }
 
@@ -283,26 +293,32 @@ async function start(
   ctx: RunnerContext,
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
-  const options = applyReactorEnvProjection(
+  const hostFile = `hosts/${host.name}/host.js`;
+  // Split before the server import loads the project .env into the env.
+  const env = memberEnvOf(ctx.env);
+  prepareMemberStorage(host.reactor, env.shell, hostFile);
+  const legacyStore = readModelAsReactorStore(
     host.reactor,
-    `hosts/${host.name}/host.js`,
+    env.shell,
+    hostFile,
   );
+  if (legacyStore) console.warn(legacyStore.warning);
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
   const entriesDeclared = entries !== undefined;
-  const args = await toSwitchboardArgs(
-    host,
-    devMode,
-    options.dbPath,
-    entriesDeclared,
-  );
+  const args = await toSwitchboardArgs(host, devMode, entriesDeclared);
+  // This member's own config, under the args: nothing is written to the
+  // process env, so compound members do not see each other's settings.
+  const memberConfig = await memberSwitchboardConfig(host, env, {
+    pluginHost: entriesDeclared,
+  });
 
   // R2 step 2: a declared composition activates the plugin pipeline — the
-  // runner resolves the entries against the PROJECT dependency tree and the
-  // flag drives server-side activation. No plugins key = classic path.
+  // runner resolves the entries against the PROJECT dependency tree and
+  // `features.pluginHost` drives server-side activation. No plugins key =
+  // classic path.
   let pluginComposition;
   if (entries !== undefined) {
-    process.env.FEATURE_PLUGIN_HOST_ENABLED = "1";
     pluginComposition = await resolveHostPlugins(
       ctx.projectRoot,
       "switchboard",
@@ -348,7 +364,11 @@ async function start(
     ...(ctx.parent ? { signalHandlers: false } : {}),
   };
 
-  const switchboard = await startSwitchboard(serverArgs);
+  const switchboard = await startSwitchboard(
+    serverArgs,
+    undefined,
+    memberConfig,
+  );
   // Bars for processor and read-model catch-up, below the server's output;
   // PH_CATCH_UP_PROGRESS=false leaves the output as it was.
   const progress =
@@ -463,27 +483,45 @@ export async function checkBoot(
   host: SwitchboardHostParsed,
   ctx: BootCheckContext,
 ): Promise<BootIssue[]> {
+  // As `start` splits it: the project .env sits under the host file.
+  const env = memberEnvOf(ctx.env, ctx.projectRoot);
   const issues: BootIssue[] = protocolConflicts(
     host.reactor?.protocol,
-    ctx.env,
+    env.shell,
     ctx.file,
   ).map((message) => ({ path: "reactor.protocol", message }));
-  const { getConfig } = await import("@powerhousedao/config/node");
-  const { switchboardBootFactsFromEnv, switchboardBootIssues } =
-    await import("@powerhousedao/switchboard/boot");
-  const projection = switchboardBootProjection(host.reactor, ctx.env);
-  const { facts, issues: parseIssues } = await switchboardBootFactsFromEnv(
-    { ...ctx.env, ...projection.env },
-    {
-      // As the `dev` verb starts it.
-      dev: switchboardDevMode(ctx.verb === "dev", host.runner),
-      ...(projection.dbPath !== undefined ? { dbPath: projection.dbPath } : {}),
-      configuredRenown: getConfig(
-        path.join(ctx.projectRoot, "powerhouse.config.json"),
-      ).auth?.renown,
-    },
+  const legacyStore = readModelAsReactorStore(
+    host.reactor,
+    env.shell,
+    ctx.file,
   );
-  for (const message of [...parseIssues, ...switchboardBootIssues(facts)]) {
+  if (legacyStore) {
+    issues.push({ path: "reactor.backends", message: legacyStore.warning });
+  }
+  const { getConfig } = await import("@powerhousedao/config/node");
+  const { switchboardBootFactsOf, switchboardBootIssues } =
+    await import("@powerhousedao/switchboard/boot");
+  let config;
+  try {
+    // As `start` builds it; an env parse error becomes the issue.
+    config = await memberSwitchboardConfig(host, env, {
+      pluginHost: host.runner.plugins !== undefined,
+    });
+  } catch (error) {
+    issues.push({
+      path: "",
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return issues;
+  }
+  const facts = await switchboardBootFactsOf(config, {
+    // As the `dev` verb starts it.
+    dev: switchboardDevMode(ctx.verb === "dev", host.runner),
+    configuredRenown: getConfig(
+      path.join(ctx.projectRoot, "powerhouse.config.json"),
+    ).auth?.renown,
+  });
+  for (const message of switchboardBootIssues(facts)) {
     issues.push({ path: "", message });
   }
   return issues;

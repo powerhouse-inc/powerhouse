@@ -1,6 +1,6 @@
 /**
- * The shared `reactor` host-config block and its projections onto today's
- * Switchboard env / Connect runtime config. Phase 2 of uniform-runners: makes
+ * The shared `reactor` host-config block and its projections onto the
+ * Switchboard config / Connect runtime config. Phase 2 of uniform-runners: makes
  * the reactor block live through the bridge runners, BEFORE track R replaces
  * the projection with reactor-monitor's provision(). The headline is
  * single-sourced `reactor.protocol` — both projections read the same block, so
@@ -74,32 +74,38 @@ export function protocolEnv(
   return env;
 }
 
-export interface SwitchboardReactorProjection {
-  /** Env the switchboard server reads at boot. Only keys the block sets. */
-  env: Record<string, string>;
-  /** Options passed to startSwitchboard (DB path). */
-  options: { dbPath?: string };
+/** The switchboard config layer a reactor block maps to (the shape of
+ * `@powerhousedao/switchboard/config`'s input). Only keys the block sets. */
+export interface SwitchboardReactorLayer {
+  storage?: { reactor?: { url: string }; readModel?: { url: string } };
+  protocol?: ReactorProtocol;
+  packages?: { dynamic: true };
+  features?: { workflows: boolean };
 }
 
-/** Project the reactor block onto the switchboard's env + options. */
-export function projectReactorToSwitchboard(
+/** The reactor block as a switchboard config layer. The reactor store and the
+ * read model are separate fields: `readModel.url` never moves the reactor. */
+export function reactorBlockToSwitchboardConfig(
   reactor: ReactorConfig | undefined,
-): SwitchboardReactorProjection {
-  const env = protocolEnv(reactor?.protocol);
+): SwitchboardReactorLayer {
+  const layer: SwitchboardReactorLayer = {};
   const backend = primaryBackend(reactor);
-  const options: { dbPath?: string } = {};
-
-  if (backend?.storage) {
-    const s = backend.storage;
-    const dbUrl = s.kind === "postgres" ? s.url : s.dataDir;
-    if (dbUrl) env.PH_REACTOR_DATABASE_URL = dbUrl;
+  const storage = backend?.storage;
+  const reactorUrl =
+    storage?.kind === "postgres" ? storage.url : storage?.dataDir;
+  const readModelUrl = backend?.readModel?.url;
+  if (reactorUrl || readModelUrl) {
+    layer.storage = {
+      ...(reactorUrl ? { reactor: { url: reactorUrl } } : {}),
+      ...(readModelUrl ? { readModel: { url: readModelUrl } } : {}),
+    };
   }
-  if (backend?.readModel?.url) options.dbPath = backend.readModel.url;
-  if (backend?.packages?.dynamic) env.DYNAMIC_MODEL_LOADING = "true";
+  if (reactor?.protocol) layer.protocol = reactor.protocol;
+  if (backend?.packages?.dynamic) layer.packages = { dynamic: true };
   if (reactor?.workflows !== undefined) {
-    env.PH_WORKFLOWS_ENABLED = reactor.workflows ? "1" : "0";
+    layer.features = { workflows: reactor.workflows };
   }
-  return { env, options };
+  return layer;
 }
 
 /** The four reactor-client shapes a Connect host can select (mirrors the

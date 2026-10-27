@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import {
+  switchboardConfigLayerSchema,
   switchboardConfigSchema,
   type SwitchboardConfigInput,
 } from "../src/config/schema.js";
@@ -90,5 +92,37 @@ describe("the config modules", () => {
     });
     await expect(import("../src/config/from-env.js")).resolves.toBeDefined();
     vi.doUnmock("../src/server.mjs");
+  });
+});
+
+describe("switchboardConfigLayerSchema", () => {
+  const layer = switchboardConfigLayerSchema(["server.port", "drive"]);
+
+  it("keeps a layer as written, without defaults", () => {
+    expect(layer.parse({})).toEqual({});
+    expect(layer.parse({ auth: { enabled: true } })).toEqual({
+      auth: { enabled: true },
+    });
+  });
+
+  it("validates values and refuses unknown or omitted keys", () => {
+    expect(
+      layer.safeParse({ workers: { executor: { count: "auto" } } }),
+    ).toMatchObject({ success: true });
+    expect(
+      layer.safeParse({ workers: { executor: { count: -1 } } }).success,
+    ).toBe(false);
+    expect(layer.safeParse({ auth: { enabeld: true } }).success).toBe(false);
+    expect(layer.safeParse({ server: { port: 1 } }).success).toBe(false);
+    expect(layer.safeParse({ drive: {} }).success).toBe(false);
+    expect(layer.safeParse({ server: { basePath: "/x" } }).success).toBe(true);
+  });
+
+  it("emits a JSON Schema once the map key is omitted", () => {
+    const schema = z.toJSONSchema(
+      switchboardConfigLayerSchema(["processorConfig"]),
+      { io: "input" },
+    );
+    expect(schema).toMatchObject({ additionalProperties: false });
   });
 });

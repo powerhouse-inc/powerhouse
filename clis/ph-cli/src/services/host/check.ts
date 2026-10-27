@@ -2,8 +2,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { checkHost, type HostIssue } from "@powerhousedao/host-core";
 import { CALLER_CWD_ENV } from "@powerhousedao/shared/clis/command-names";
-import { loadProjectEnv } from "@powerhousedao/shared/clis/project-env";
+import {
+  envNamesBeforeProjectEnv,
+  loadProjectEnv,
+} from "@powerhousedao/shared/clis/project-env";
 import dotenv from "dotenv";
+import { rememberShellNames } from "../../runners/member-config.js";
 
 export interface HostCheckArgs {
   host: string;
@@ -20,7 +24,10 @@ async function checkEnv(
   if (envFile === undefined) {
     loadProjectEnv(projectRoot);
     // A snapshot: a .env a runner's checkBoot loads later never reaches it.
-    return { ...process.env };
+    const env = { ...process.env };
+    // The switchboard's checkBoot puts the .env's values under the host file.
+    rememberShellNames(env, envNamesBeforeProjectEnv() ?? Object.keys(env));
+    return env;
   }
   const from = process.env[CALLER_CWD_ENV] ?? process.cwd();
   try {
