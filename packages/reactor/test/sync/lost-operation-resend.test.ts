@@ -576,34 +576,38 @@ describe("a sender's same-millisecond batches", () => {
     h = undefined;
   });
 
-  it("keep the sender's order across batches", async () => {
-    h = await buildHarness();
-    const drive = driveDocumentModelModule.utils.createDocument();
-    const id = drive.header.id;
-    await connect(h, id);
-    await h.a.client.create(drive);
-    await eventually(() =>
-      h!.b.reactor.get(id, { branch: "main" }).then(
-        () => true,
-        () => false,
-      ),
-    );
-    await quiesce(h, id);
-    const t = new Date(Date.now() + 1_000).toISOString();
-    const named = (actionId: string) => ({
-      ...driveDocumentModelModule.actions.setDriveName({ name: actionId }),
-      id: actionId,
-      timestampUtcMs: t,
-    });
-    await h.a.client.execute(id, "main", [named("m-1"), named("z-1")]);
-    await quiesce(h, id);
-    await h.a.client.execute(id, "main", [named("a-2"), named("n-2")]);
-    await quiesce(h, id);
+  it.each([false, true])(
+    "keep the sender's order across batches with documentDecisions %s",
+    async (documentDecisions) => {
+      h = await buildHarness({ documentDecisions });
+      const drive = driveDocumentModelModule.utils.createDocument();
+      const id = drive.header.id;
+      await connect(h, id);
+      await h.a.client.create(drive);
+      await eventually(() =>
+        h!.b.reactor.get(id, { branch: "main" }).then(
+          () => true,
+          () => false,
+        ),
+      );
+      await quiesce(h, id);
+      const t = new Date(Date.now() + 1_000).toISOString();
+      const named = (actionId: string) => ({
+        ...driveDocumentModelModule.actions.setDriveName({ name: actionId }),
+        id: actionId,
+        timestampUtcMs: t,
+      });
+      await h.a.client.execute(id, "main", [named("m-1"), named("z-1")]);
+      await quiesce(h, id);
+      await h.a.client.execute(id, "main", [named("a-2"), named("n-2")]);
+      await quiesce(h, id);
 
-    const a = await live(h.a, id);
-    expect(a.slice(-4)).toEqual(["m-1", "z-1", "a-2", "n-2"]);
-    expect(await live(h.b, id)).toEqual(a);
-  }, 30_000);
+      const a = await live(h.a, id);
+      expect(a.slice(-4)).toEqual(["m-1", "z-1", "a-2", "n-2"]);
+      expect(await live(h.b, id)).toEqual(a);
+    },
+    30_000,
+  );
 });
 
 describe("an author's backdated execute", () => {
