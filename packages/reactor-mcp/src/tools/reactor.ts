@@ -3,6 +3,8 @@ import type {
   ISyncManager,
   JobFailedError,
   PagingOptions,
+  WriteHandle,
+  WriteReceipt,
 } from "@powerhousedao/reactor";
 import { DriveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
@@ -23,6 +25,11 @@ import {
   createAction,
   operationOutcome,
 } from "@powerhousedao/shared/document-model";
+import {
+  type CodegenStatusRegistry,
+  getCodegenStatusRegistry,
+} from "@powerhousedao/shared/processors";
+import { pascalCase } from "change-case";
 import { z } from "zod";
 import { compactDocumentModelSchema } from "./compact-schema.js";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
@@ -87,10 +94,17 @@ type StoredOutcome = { index: number } & OperationOutcome;
 type ActionError = {
   kind: "reducer-error" | "denied" | "not-applied";
   message: string;
+  name?: string;
+  code?: string;
 };
 
 function outcomeError(
   outcome: StoredOutcome | undefined,
+  modelErrors: (
+    name?: string,
+    code?: string,
+    message?: string,
+  ) => ModelError | undefined,
 ): ActionError | undefined {
   if (!outcome) {
     return {
@@ -101,11 +115,56 @@ function outcomeError(
   switch (outcome.kind) {
     case "applied":
       return undefined;
-    case "reducer-error":
-      return { kind: outcome.kind, message: outcome.message };
+    case "reducer-error": {
+      const known = modelErrors(outcome.name, outcome.code, outcome.message);
+      const name = known?.name ?? outcome.name;
+      const code = known?.code ?? outcome.code;
+      return {
+        kind: outcome.kind,
+        message: outcome.message,
+        ...(name !== undefined && { name }),
+        ...(code !== undefined && { code }),
+      };
+    }
     case "denied":
       return { kind: outcome.kind, message: outcome.reason };
   }
+}
+
+/** An error a document model declares, as codegen names its class and code. */
+type ModelError = { name: string; code: string };
+
+/** Finds the declared error a reducer error was, by its code, class name or default message. */
+function modelErrorFinder(
+  module: DocumentModelModule,
+  actionType: string,
+): (name?: string, code?: string, message?: string) => ModelError | undefined {
+  const specification = module.documentModel.global.specifications.at(-1);
+  const operations = (specification?.modules ?? []).flatMap(
+    (m) => m.operations,
+  );
+  const declared = (errors: { name: string | null; code: string | null }[]) =>
+    errors.flatMap(({ name, code }) => {
+      if (!name) return [];
+      const className = pascalCase(name);
+      return [{ name: className, code: code?.trim() || className }];
+    });
+  // The action's own operation first, as two operations may share a name.
+  const candidates = [
+    ...declared(operations.find((o) => o.name === actionType)?.errors ?? []),
+    ...declared(operations.flatMap((o) => o.errors)),
+  ];
+  // By code, then class name (code generated before the model set one), then
+  // the default message, which is the class name.
+  return (name, code, message) =>
+    candidates.find((e) => code !== undefined && e.code === code) ??
+    candidates.find((e) => name !== undefined && e.name === name) ??
+    candidates.find((e) => e.name === message);
+}
+
+/** Waits until a write can be read back. */
+async function written(handle: Promise<WriteHandle>): Promise<WriteReceipt> {
+  return (await handle).readable;
 }
 
 /** A job the auth policy refused at admission; such a job writes nothing. */
@@ -126,6 +185,8 @@ export type ReactorMcpProviderOptions = {
    * client's signer, which only a single-user local reactor should rely on.
    */
   subject?: AuthSubject;
+  /** Vetra's codegen status; the process's registry by default. */
+  codegenStatus?: CodegenStatusRegistry;
 };
 
 export const createDocumentTool = {
@@ -204,6 +265,18 @@ const actionErrorSchema = z
         "reducer-error: the reducer threw; denied: an auth policy refused it; not-applied: it was not written, e.g. because another action of the batch was denied",
       ),
     message: z.string().describe("Why the action was not applied"),
+    name: z
+      .string()
+      .optional()
+      .describe(
+        "For a reducer-error: the error class the reducer threw, e.g. BookNotStartedError",
+      ),
+    code: z
+      .string()
+      .optional()
+      .describe(
+        "For a reducer-error: the error's code in the document model, e.g. BOOK_NOT_STARTED",
+      ),
   })
   .describe("Present when the action was not applied");
 
@@ -246,6 +319,12 @@ export const addActionsTool = {
         }),
       )
       .describe("One result per action, in the order they were given"),
+    codegen: z
+      .string()
+      .optional()
+      .describe(
+        "Present when Vetra generates code from this document: how to follow that generation",
+      ),
   },
 } as const satisfies ToolSchema;
 
@@ -294,6 +373,77 @@ export const addActionsTool = {
 //       .describe("Operation result"),
 //   },
 // } as const satisfies ToolSchema;
+
+const codegenStatusSchema = z.object({
+  documentId: z.string(),
+  documentType: z.string(),
+  name: z.string().optional().describe("The module's name"),
+  state: z
+    .enum([
+      "queued",
+      "running",
+      "waiting-for-install",
+      "done",
+      "failed",
+      "skipped",
+    ])
+    .describe(
+      "queued: waiting for the changes to settle or for another job; running: writing code; waiting-for-install: a dependency install runs first; done: the code is written; failed: generation threw, see message; skipped: nothing was generated, see message",
+    ),
+  message: z
+    .string()
+    .optional()
+    .describe("Why it failed or was skipped, or what it waits for"),
+  files: z
+    .array(z.string())
+    .optional()
+    .describe("Project files the job wrote, relative to the project"),
+  updatedAt: z.string().describe("ISO timestamp of the last change"),
+});
+
+export const getCodegenStatusTool = {
+  name: "getCodegenStatus",
+  description:
+    "Vetra's code generation for its documents (document models, editors, apps, processors, subgraphs and the package): each one's state, why it failed or was skipped, and the files it wrote. Vetra regenerates a document's code a few seconds after it changes; call this after addActions on such a document, with `waitSeconds` to wait until it settles, before reading or editing the generated code. `loadFailures` lists the project modules Vetra could not load, e.g. generated code that throws on import.",
+  inputSchema: {
+    documentId: z
+      .string()
+      .optional()
+      .describe("ID of a Vetra document; omitted, every document's status"),
+    waitSeconds: z
+      .number()
+      .min(0)
+      .max(60)
+      .optional()
+      .describe(
+        "Wait up to this many seconds for the job, or every job without `documentId`, to be done, failed or skipped. Defaults to 0.",
+      ),
+  },
+  outputSchema: {
+    active: z
+      .boolean()
+      .describe("False when no Vetra codegen runs on this reactor"),
+    settled: z
+      .boolean()
+      .describe("True when every listed job is done, failed or skipped"),
+    documents: z
+      .array(codegenStatusSchema)
+      .describe("One status per document, most recently updated first"),
+    loadFailures: z
+      .array(
+        z.object({
+          package: z.string(),
+          kind: z
+            .string()
+            .describe('What failed to load, e.g. "document models"'),
+          message: z.string(),
+          updatedAt: z.string(),
+        }),
+      )
+      .describe("Project modules that failed to load"),
+    message: z.string().optional(),
+  },
+} as const satisfies ToolSchema;
 
 // Drive Operation Tools
 
@@ -508,6 +658,7 @@ const _allTools = [
   addRemoteDriveTool,
   getDocumentModelSchemaTool,
   getDocumentModelsTool,
+  getCodegenStatusTool,
 ] as const;
 
 // Inferred interface from tools
@@ -516,6 +667,29 @@ export type ReactorMcpTools = ToolRecord<typeof _allTools>;
 export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
   const { client, syncManager, subject } = options;
   const view = subject ? { subject } : undefined;
+  const codegen = options.codegenStatus ?? getCodegenStatusRegistry();
+
+  /** Marks a Vetra document's codegen queued once a global change is written. */
+  function codegenHint(
+    document: PHDocument,
+    results: { scope: string; operationIndex?: number }[],
+  ): string | undefined {
+    const { id, documentType } = document.header;
+    if (!codegen.active || !codegen.watches(documentType)) return undefined;
+    const written = results.some(
+      (result) =>
+        result.scope === "global" && result.operationIndex !== undefined,
+    );
+    if (written) {
+      codegen.set({
+        documentId: id,
+        documentType,
+        state: "queued",
+        message: "Waiting for Vetra's codegen processor to pick up the change",
+      });
+    }
+    return `Vetra generates code from this document a few seconds after a change. Call getCodegenStatus with documentId "${id}" and waitSeconds to see when it is done, and why it failed or was skipped.`;
+  }
 
   function getDocumentModelModule(documentType: string) {
     return client.getDocumentModelModule(documentType);
@@ -602,8 +776,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         return { documentId: created.header.id };
       }
 
-      const created = await client.createEmpty(params.documentType, {});
-      return { documentId: created.header.id };
+      const created = await written(
+        client.write.createEmpty(params.documentType, {}),
+      );
+      return { documentId: created.documentId };
     }),
 
     getDocuments: toolWithCallback(getDocumentsTool, async (params) => {
@@ -631,7 +807,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         if (driveParent) {
           await client.drives.removeNode(driveParent.header.id, documentId);
         } else {
-          await client.deleteDocument(documentId);
+          await written(client.write.deleteDocument(documentId));
         }
         return { success: true };
       } catch {
@@ -698,7 +874,10 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           : await readOutcomes(receipt.documentId, document, actions);
         results = actions.map((action, index) => {
           const outcome = outcomes.get(action.id);
-          const error = outcomeError(outcome);
+          const error = outcomeError(
+            outcome,
+            modelErrorFinder(documentModel, action.type),
+          );
           return {
             index,
             type: action.type,
@@ -717,9 +896,11 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           error: errors[index],
         }));
       }
+      const hint = codegenHint(document, results);
       return {
         success: results.every((result) => !result.error),
         results,
+        ...(hint && { codegen: hint }),
       };
     }),
 
@@ -751,17 +932,17 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
         driveInput?.preferredEditor,
       ]);
 
-      const drive = await client.createEmpty<DocumentDriveDocument>(
-        DRIVE_DOCUMENT_TYPE,
-        {},
+      const { documentId: driveId } = await written(
+        client.write.createEmpty(DRIVE_DOCUMENT_TYPE, {}),
       );
-      const driveId = drive.header.id;
 
       // Before the rename, so reactors without the document-view name fix keep it.
       if (preferredEditor) {
-        await client.setPreferredEditor(driveId, preferredEditor);
+        await written(
+          client.write.setPreferredEditor(driveId, preferredEditor),
+        );
       }
-      await client.rename(driveId, name);
+      await written(client.write.rename(driveId, name));
 
       const actions: Action[] = [setDriveName({ name })];
       if (icon) {
@@ -777,7 +958,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
           }),
         );
       }
-      await client.execute(driveId, "main", actions, undefined, subject);
+      await written(client.write.execute(driveId, "main", actions));
 
       return { driveId };
     }),
@@ -792,7 +973,7 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
       const driveId = targetId("deleteDrive", params, ["driveId", "id"]);
       try {
         // Use CASCADE to delete the drive and all its contents
-        await client.deleteDocument(driveId);
+        await written(client.write.deleteDocument(driveId));
         return { success: true };
       } catch {
         return { success: false };
@@ -854,6 +1035,48 @@ export function createReactorMcpProvider(options: ReactorMcpProviderOptions) {
             authorWebsite: schemaGlobal.author.website ?? "",
           };
         }),
+      };
+    }),
+
+    getCodegenStatus: toolWithCallback(getCodegenStatusTool, async (params) => {
+      if (!codegen.active) {
+        return {
+          active: false,
+          settled: true,
+          documents: [],
+          loadFailures: codegen.loadFailures(),
+          message:
+            "No Vetra codegen runs on this reactor; `ph vetra` runs it for the project's Vetra drive",
+        };
+      }
+      let documentId = params.documentId;
+      if (documentId !== undefined && !codegen.get(documentId)) {
+        // A slug names the document as well as its ID.
+        try {
+          documentId = (await client.get<PHDocument>(documentId, view)).header
+            .id;
+        } catch {
+          // Reported below as a document without a status.
+        }
+      }
+      const waitMs = (params.waitSeconds ?? 0) * 1000;
+      const settled =
+        waitMs > 0
+          ? await codegen.waitUntilSettled(documentId, waitMs)
+          : codegen.settled(documentId);
+      const documents =
+        documentId === undefined
+          ? codegen.list()
+          : [codegen.get(documentId)].filter((status) => status !== undefined);
+      return {
+        active: true,
+        settled,
+        documents,
+        loadFailures: codegen.loadFailures(),
+        ...(documentId !== undefined &&
+          documents.length === 0 && {
+            message: `No codegen recorded for ${params.documentId}. Vetra generates code for documents of type ${codegen.documentTypes.join(", ")} in its drive, once they change.`,
+          }),
       };
     }),
 

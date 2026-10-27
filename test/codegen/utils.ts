@@ -3,9 +3,10 @@ import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { $ } from "bun";
 import { DocumentModelGlobalStateSchema } from "document-model";
 import { loadJsonFileSync } from "load-json-file";
-import { readdirSync, statSync, type PathLike } from "node:fs";
+import { existsSync, readdirSync, statSync, type PathLike } from "node:fs";
 import { cp, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import path from "path";
 import { filter, map, pipe } from "remeda";
 export function getDocumentModelJsonFilePath(
@@ -49,6 +50,12 @@ export async function loadDocumentModelsInDir(inDir: string, outDir: string) {
 }
 
 export async function cpForce(source: string | URL, destination: string | URL) {
+  // git writes its objects read-only, so a copy over a copy replaces .git whole.
+  const toPath = (p: string | URL) =>
+    typeof p === "string" ? p : fileURLToPath(p);
+  if (existsSync(join(toPath(source), ".git"))) {
+    await rmForce(join(toPath(destination), ".git"));
+  }
   await cp(source, destination, {
     recursive: true,
     force: true,
@@ -72,4 +79,21 @@ export async function runTsc(cwd = process.cwd()) {
 
 export async function runEslint(cwd = process.cwd()) {
   await $`bun run --cwd ${cwd} eslint . --fix --quiet`;
+}
+
+/** Commits everything in `dir` to its own repo, as a project is before `ph migrate`. */
+export async function commitProject(dir: string) {
+  const git = [
+    "-C",
+    dir,
+    "-c",
+    "user.name=codegen-tests",
+    "-c",
+    "user.email=codegen-tests@powerhouse.invalid",
+    "-c",
+    "commit.gpgsign=false",
+  ];
+  await $`git ${git} init --quiet`;
+  await $`git ${git} add --all`;
+  await $`git ${git} commit --quiet --no-verify --allow-empty --message fixture`;
 }

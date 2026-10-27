@@ -37,7 +37,7 @@ function NewTodoListLink() {
 
 ## Replace a modal's view
 
-A route's `staticData.modals` replaces the host's view of a modal while the route matches; the deepest matched route wins. The view reads the modal with `usePHModal()`:
+A route's `staticData.modals` replaces the host's view of a modal while the route matches; the deepest matched route wins. The view reads the modal with `usePHModal()`. In `_app.tsx` and overrides, `ModalDialog` comes from `@powerhousedao/connect/layout`, as below; in any other route (an offered one), import it from `@powerhousedao/connect-core/router`:
 
 ```tsx
 // hosts/connect/routes/_app.tsx

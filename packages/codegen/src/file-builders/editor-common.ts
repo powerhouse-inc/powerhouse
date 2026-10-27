@@ -1,7 +1,11 @@
 import { pascalCase } from "change-case";
 import path from "path";
 import { filter, forEach, isTruthy, map, pipe, uniqueBy } from "remeda";
-import { documentEditorModuleFileTemplate, editorsTemplate } from "templates";
+import {
+  documentEditorModuleFileTemplate,
+  editorsIndexTemplate,
+  editorsTemplate,
+} from "templates";
 import { SyntaxKind, type Project } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
@@ -119,7 +123,7 @@ export async function makeEditorsIndexFile(args: {
   project.addSourceFilesAtPaths(path.join(editorsDirPath, "**", "module.ts"));
   const sourceFile = project.createSourceFile(
     path.join(editorsDirPath, "index.ts"),
-    "",
+    editorsIndexTemplate,
     { overwrite: true },
   );
 

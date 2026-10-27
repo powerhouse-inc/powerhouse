@@ -2,6 +2,7 @@ import { getPHStore } from "../hooks/ph-store.js";
 import type { PagingOptions } from "@powerhousedao/reactor";
 import type {
   Action,
+  DispatchOutcome,
   DocumentOperations,
   Operation,
   PHDocument,
@@ -112,6 +113,12 @@ async function getActionErrors(
   return errors;
 }
 
+/** Called once the write lands; `outcome.rejected` is empty when every action applied. */
+export type DispatchSuccessCallback = (
+  result: PHDocument,
+  outcome: DispatchOutcome,
+) => void;
+
 /**
  * Dispatches actions to a document.
  * @param actionOrActions - The action or actions to dispatch.
@@ -119,14 +126,14 @@ async function getActionErrors(
  * @param onErrors - Callback invoked with an `OperationRejectedError` for each action the
  * document did not apply, or with why nothing was dispatched. Runs before `onSuccess`.
  * @param onSuccess - Callback invoked with the updated document once the write lands, after
- * `onErrors` and also when an action was rejected.
+ * `onErrors` and also when an action was rejected; `outcome.rejected` lists the rejections.
  * @returns The updated document, or undefined if the dispatch failed.
  */
 export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
   actionOrActions: TAction[] | TAction | undefined,
   document: TDocument | undefined,
   onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
+  onSuccess?: DispatchSuccessCallback,
 ): Promise<PHDocument | undefined>;
 /**
  * Dispatches actions to a document.
@@ -135,20 +142,20 @@ export async function dispatchActions<TDocument = PHDocument, TAction = Action>(
  * @param onErrors - Callback invoked with an `OperationRejectedError` for each action the
  * document did not apply. Runs before `onSuccess`.
  * @param onSuccess - Callback invoked with the updated document once the write lands, after
- * `onErrors` and also when an action was rejected.
+ * `onErrors` and also when an action was rejected; `outcome.rejected` lists the rejections.
  * @returns The updated document, or undefined if the dispatch failed.
  */
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
   documentId: string,
   onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
+  onSuccess?: DispatchSuccessCallback,
 ): Promise<PHDocument | undefined>;
 export async function dispatchActions(
   actionOrActions: Action[] | Action | undefined,
   documentOrDocumentId: PHDocument | string | undefined,
   onErrors?: (errors: Error[]) => void,
-  onSuccess?: (result: PHDocument) => void,
+  onSuccess?: DispatchSuccessCallback,
 ): Promise<PHDocument | undefined> {
   const document =
     typeof documentOrDocumentId === "string"
@@ -174,20 +181,14 @@ export async function dispatchActions(
   }
   const result = await queueActions(document, signedActionsWithContext);
 
-  if (onErrors && result) {
-    const errors = await getActionErrors(
-      document,
-      result,
-      signedActionsWithContext,
-    );
-    if (errors.length) {
-      onErrors(errors);
-    }
+  const rejected =
+    onErrors || onSuccess
+      ? await getActionErrors(document, result, signedActionsWithContext)
+      : [];
+  if (onErrors && rejected.length) {
+    onErrors(rejected);
   }
-
-  if (onSuccess && result) {
-    onSuccess(result);
-  }
+  onSuccess?.(result, { rejected });
 
   return result;
 }

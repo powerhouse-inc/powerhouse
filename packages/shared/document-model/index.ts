@@ -13,6 +13,8 @@ export {
   upgradeDocumentAction,
 } from "./create-document.js";
 export * from "./denied.js";
+// By package path, so dist/document-model/dispatch.d.ts holds the declaration.
+export type * from "@powerhousedao/shared/document-model/dispatch";
 export * from "./document-schema.js";
 export * from "./document-type.js";
 export * from "./documents.js";

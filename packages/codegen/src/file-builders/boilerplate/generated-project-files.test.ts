@@ -16,6 +16,7 @@ import {
   writeAiConfigFiles,
   writeModuleFiles,
 } from "./generated-project-files.js";
+import { mergedJsonSettings } from "./merge-project-config.js";
 
 const temporary: string[] = [];
 
@@ -131,66 +132,190 @@ describe("writeModuleFiles over an existing project", () => {
 });
 
 // `ph init` scaffolds the AI configs into a directory it just created, while
-// `ph migrate` runs the same writer over a live project (src/codegen/
-// migrate.ts → writeAllGeneratedProjectFiles). An AI config is user-owned the
-// moment it exists — the bug this pins: a migrate reset CLAUDE.md, AGENTS.md,
-// the MCP configs and the editor settings to the pristine templates,
-// discarding user instructions, hand-added MCP servers, accumulated Claude
-// Code permission grants, and the project's name-derived switchboard port.
+// `ph migrate` runs the same writer over a live project.
 describe("writeAiConfigFiles", () => {
-  const aiConfigFiles = [
-    "CLAUDE.md",
-    "AGENTS.md",
-    ".mcp.json",
-    join(".cursor", "mcp.json"),
-    join(".gemini", "settings.json"),
-    join(".claude", "settings.local.json"),
-  ];
+  const read = (dir: string, rel: string) =>
+    readFileSync(join(dir, rel), "utf-8");
+  const readJson = (dir: string, rel: string) =>
+    JSON.parse(read(dir, rel)) as unknown;
+  const write = (dir: string, rel: string, contents: unknown) => {
+    mkdirSync(join(dir, rel, ".."), { recursive: true });
+    writeFileSync(
+      join(dir, rel),
+      typeof contents === "string"
+        ? contents
+        : `${JSON.stringify(contents, null, 2)}\n`,
+    );
+  };
 
   it("writes the full set into a fresh scaffold", async () => {
     const dir = makeTempProject("ph-init-ai-configs-");
 
     await writeAiConfigFiles(dir);
 
-    for (const rel of aiConfigFiles) {
-      expect(readFileSync(join(dir, rel), "utf-8")).not.toBe("");
-    }
-    // Spot-check content, not just existence: the scaffold's .mcp.json
-    // registers the reactor MCP server.
-    const mcp = JSON.parse(readFileSync(join(dir, ".mcp.json"), "utf-8")) as {
-      mcpServers: Record<string, unknown>;
+    expect(read(dir, "AGENTS.md")).toContain("ph vetra");
+    expect(read(dir, "CLAUDE.md")).toMatch(/^@AGENTS\.md\n/);
+    const reactorMcp = {
+      mcpServers: {
+        "reactor-mcp": { type: "http", url: "http://localhost:4001/mcp" },
+      },
     };
-    expect(mcp.mcpServers["reactor-mcp"]).toBeDefined();
+    expect(readJson(dir, ".mcp.json")).toMatchObject(reactorMcp);
+    expect(readJson(dir, ".cursor/mcp.json")).toMatchObject(reactorMcp);
+    expect(readJson(dir, ".claude/settings.json")).toMatchObject({
+      permissions: {
+        allow: ["Bash(npm run tsc:*)", "Bash(npm run lint:*)"],
+        deny: ["Edit(/document-models/**/gen/**)", "Edit(/.ph/**)"],
+      },
+    });
+    expect(readJson(dir, ".claude/settings.local.json")).toEqual({
+      $schema: "https://json.schemastore.org/claude-code-settings.json",
+      enableAllProjectMcpServers: true,
+      enabledMcpjsonServers: ["reactor-mcp"],
+    });
+    expect(readJson(dir, ".cursor/cli.json")).toEqual({
+      permissions: {
+        deny: ["Write(document-models/**/gen/**)", "Write(.ph/**)"],
+      },
+    });
+    expect(readJson(dir, ".gemini/settings.json")).toEqual({
+      context: { fileName: ["AGENTS.md", "GEMINI.md"] },
+      ...reactorMcp,
+    });
   });
 
-  it("leaves every existing config byte-identical", async () => {
+  it("leaves existing MCP configs byte-identical", async () => {
     const dir = makeTempProject("ph-migrate-ai-configs-");
-    const customized: [string, string][] = aiConfigFiles.map((rel) => [
-      rel,
-      `user-customized content of ${rel}\n`,
-    ]);
-    for (const [rel, contents] of customized) {
-      mkdirSync(join(dir, rel, ".."), { recursive: true });
-      writeFileSync(join(dir, rel), contents);
-    }
+    const kept = [".mcp.json", ".cursor/mcp.json"];
+    for (const rel of kept) write(dir, rel, `user content of ${rel}\n`);
 
     await writeAiConfigFiles(dir);
 
-    for (const [rel, contents] of customized) {
-      expect(readFileSync(join(dir, rel), "utf-8")).toBe(contents);
+    for (const rel of kept) {
+      expect(read(dir, rel)).toBe(`user content of ${rel}\n`);
     }
   });
 
-  it("supplies a missing config without touching the rest", async () => {
-    const dir = makeTempProject("ph-migrate-ai-missing-");
-    const claude = "# My project instructions\n\nNever touch prod.\n";
-    writeFileSync(join(dir, "CLAUDE.md"), claude);
+  it("moves an old project's rules out of settings.local.json", async () => {
+    const dir = makeTempProject("ph-migrate-claude-settings-");
+    // The template every project before this change was scaffolded with,
+    // plus a grant Claude Code appended.
+    write(dir, ".claude/settings.local.json", {
+      $schema: "https://json.schemastore.org/claude-code-settings.json",
+      permissions: {
+        allow: [
+          "Bash(npm run tsc:*)",
+          "Bash(npm run lint:*)",
+          "Bash(git log:*)",
+        ],
+        deny: [
+          "Write(./document-models/**/gen/**)",
+          "Write(./.ph/**)",
+          "Edit(./document-models/**/gen/**)",
+          "Edit(./.ph/**)",
+        ],
+      },
+      enableAllProjectMcpServers: true,
+      enabledMcpjsonServers: ["reactor-mcp"],
+    });
 
     await writeAiConfigFiles(dir);
 
-    expect(readFileSync(join(dir, "CLAUDE.md"), "utf-8")).toBe(claude);
-    // The absent files arrive from the templates.
-    expect(readFileSync(join(dir, "AGENTS.md"), "utf-8")).toContain("ph vetra");
-    expect(existsSync(join(dir, ".claude", "settings.local.json"))).toBe(true);
+    expect(readJson(dir, ".claude/settings.local.json")).toEqual({
+      $schema: "https://json.schemastore.org/claude-code-settings.json",
+      permissions: { allow: ["Bash(git log:*)"] },
+      enableAllProjectMcpServers: true,
+      enabledMcpjsonServers: ["reactor-mcp"],
+    });
+    expect(readJson(dir, ".claude/settings.json")).toMatchObject({
+      permissions: {
+        deny: ["Edit(/document-models/**/gen/**)", "Edit(/.ph/**)"],
+      },
+    });
+  });
+
+  it("adds its entries to the project's settings and keeps the rest", async () => {
+    const dir = makeTempProject("ph-migrate-agent-settings-");
+    write(dir, ".claude/settings.json", {
+      permissions: { deny: ["Edit(/secrets/**)"], ask: ["Bash(git push:*)"] },
+      model: "opus",
+    });
+    write(dir, ".cursor/cli.json", { permissions: { allow: ["Shell(ls)"] } });
+    write(dir, ".gemini/settings.json", {
+      context: { fileName: "CONTEXT.md" },
+      mcpServers: {
+        "reactor-mcp": { type: "http", url: "http://localhost:4123/mcp" },
+      },
+      theme: "dark",
+    });
+
+    const results = await writeAiConfigFiles(dir);
+
+    expect(results).toContainEqual({
+      path: ".gemini/settings.json",
+      action: "updated",
+    });
+    expect(readJson(dir, ".claude/settings.json")).toEqual({
+      permissions: {
+        deny: [
+          "Edit(/secrets/**)",
+          "Edit(/document-models/**/gen/**)",
+          "Edit(/.ph/**)",
+        ],
+        ask: ["Bash(git push:*)"],
+        allow: ["Bash(npm run tsc:*)", "Bash(npm run lint:*)"],
+      },
+      model: "opus",
+      $schema: "https://json.schemastore.org/claude-code-settings.json",
+    });
+    expect(readJson(dir, ".cursor/cli.json")).toEqual({
+      permissions: {
+        allow: ["Shell(ls)"],
+        deny: ["Write(document-models/**/gen/**)", "Write(.ph/**)"],
+      },
+    });
+    expect(readJson(dir, ".gemini/settings.json")).toEqual({
+      context: { fileName: ["CONTEXT.md", "AGENTS.md", "GEMINI.md"] },
+      mcpServers: {
+        "reactor-mcp": { type: "http", url: "http://localhost:4123/mcp" },
+      },
+      theme: "dark",
+    });
+  });
+
+  it("changes nothing on a second run", async () => {
+    const dir = makeTempProject("ph-migrate-ai-twice-");
+    write(dir, ".gemini/settings.json", { theme: "dark" });
+    await writeAiConfigFiles(dir);
+    const files = [
+      ".claude/settings.json",
+      ".claude/settings.local.json",
+      ".cursor/cli.json",
+      ".gemini/settings.json",
+    ];
+    const first = files.map((rel) => read(dir, rel));
+
+    await writeAiConfigFiles(dir);
+
+    expect(files.map((rel) => read(dir, rel))).toEqual(first);
+    // Gemini's MCP server is the project's to add back.
+    expect(readJson(dir, ".gemini/settings.json")).not.toHaveProperty(
+      "mcpServers",
+    );
+  });
+
+  it("leaves a settings file it can't parse alone", async () => {
+    const dir = makeTempProject("ph-migrate-ai-broken-");
+    write(dir, ".claude/settings.json", "{ not json\n");
+
+    await writeAiConfigFiles(dir);
+
+    expect(read(dir, ".claude/settings.json")).toBe("{ not json\n");
+  });
+
+  it("reads settings at a Windows path", () => {
+    const file = "C:\\project\\.claude\\settings.json";
+    expect(mergedJsonSettings(file, "{ not json\n", {})).toBeUndefined();
+    expect(mergedJsonSettings(file, "{}\n", { a: 1 })).toBe('{\n  "a": 1\n}\n');
   });
 });

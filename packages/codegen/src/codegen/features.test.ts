@@ -18,12 +18,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { detectFeatures, syncFeatureDependencies } from "./features.js";
 import { generateProcessor, generateSubgraph } from "./generate.js";
-import { resolveManagedDependencies } from "./migrate.js";
+import { migratedPackageJson, resolveManagedDependencies } from "./migrate.js";
 
 const PIN = "6.2.3-dev.13";
 
 type Deps = Record<string, string> | undefined;
-type Manifest = { peerDependencies?: Deps; devDependencies?: Deps };
+type Manifest = {
+  dependencies?: Deps;
+  peerDependencies?: Deps;
+  devDependencies?: Deps;
+};
 
 const created: string[] = [];
 const initialCwd = process.cwd();
@@ -193,6 +197,22 @@ describe("migrate and the piece feature", () => {
   });
 });
 
+describe("migrate and connect-core", () => {
+  it("adds connect-core as a peer and dev dependency to a project without it", () => {
+    const { peerDependencies, devDependencies } = resolveManagedDependencies({
+      packageJson: {
+        peerDependencies: { "document-model": "6.0.0" },
+        devDependencies: { "@powerhousedao/connect": "6.0.0" },
+      },
+      features: [],
+      fullyQualifiedVersion: "6.3.0-dev.1",
+      workspacePackageNames: [],
+    });
+    expect(peerDependencies["@powerhousedao/connect-core"]).toBe("6.3.0-dev.1");
+    expect(devDependencies["@powerhousedao/connect-core"]).toBe("6.3.0-dev.1");
+  });
+});
+
 async function scaffoldSubgraph(dir: string, name: string) {
   writeFileSync(
     join(dir, "tsconfig.json"),
@@ -227,6 +247,43 @@ describe("subgraph feature", () => {
     const manifest = readManifest(dir);
     expect(manifest.peerDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
     expect(manifest.devDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
+  });
+
+  it("moves a reactor-api in dependencies to a peer and dev pin", async () => {
+    const dir = makeProject({
+      dependencies: { [REACTOR_API_PACKAGE]: PIN, luxon: "^3.0.0" },
+    });
+    await scaffoldSubgraph(dir, "Stock");
+
+    expect(await syncFeatureDependencies(detectFeatures(dir), dir)).toEqual([
+      REACTOR_API_PACKAGE,
+    ]);
+
+    const manifest = readManifest(dir);
+    expect(manifest.dependencies).toEqual({ luxon: "^3.0.0" });
+    expect(manifest.peerDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
+    expect(manifest.devDependencies?.[REACTOR_API_PACKAGE]).toBe(PIN);
+  });
+
+  it("migrates a reactor-api in dependencies to a peer and dev pin", () => {
+    const managed = resolveManagedDependencies({
+      packageJson: {
+        dependencies: { [REACTOR_API_PACKAGE]: "6.0.0" },
+        peerDependencies: { [REACTOR_API_PACKAGE]: "6.0.0" },
+      },
+      features: ["subgraph"],
+      fullyQualifiedVersion: "6.3.0-dev.1",
+      workspacePackageNames: [],
+    });
+    const migrated = migratedPackageJson(
+      { dependencies: { [REACTOR_API_PACKAGE]: "6.0.0" } },
+      managed,
+    );
+    expect(migrated.dependencies).toBeUndefined();
+    expect(migrated.peerDependencies?.[REACTOR_API_PACKAGE]).toBe(
+      "6.3.0-dev.1",
+    );
+    expect(migrated.devDependencies?.[REACTOR_API_PACKAGE]).toBe("6.3.0-dev.1");
   });
 
   it("moves reactor-api to the migrated version", () => {

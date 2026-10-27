@@ -54,6 +54,7 @@ export default defineConfig({
       "document-model/create-document.test.ts",
       "document-model/peer-agreement.test.ts",
       "document-model/purge.test.ts",
+      "document-model/reducer-errors.test.ts",
       "document-model/purge-replay.test.ts",
       "document-model/signature-policy.test.ts",
       "document-model/signature-transport.test.ts",

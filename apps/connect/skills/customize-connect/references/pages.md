@@ -2,6 +2,14 @@
 
 A project adds pages to Connect with file routes in `hosts/connect/routes/`. A route lists itself in the sidebar, changes the sidebar on its page, adds a settings tab and sets its title through its own options.
 
+## Contents
+
+- [Add a page](#add-a-page)
+- [Add a sidebar link](#add-a-sidebar-link)
+- [Hide or collapse the sidebar on a page](#hide-or-collapse-the-sidebar-on-a-page)
+- [Add a settings tab](#add-a-settings-tab)
+- [Set the page title](#set-the-page-title)
+
 ## Add a page
 
 Routes import `@tanstack/react-router`. A project from `ph init` has it as a `peerDependency`, and as a `devDependency` at the version Connect is built with; `ph migrate` adds it to an older project. Connect uses the project's copy, so keep that version rather than adding another.
@@ -23,7 +31,7 @@ Routes import `@tanstack/react-router`. A project from `ph init` has it as a `pe
    }
    ```
 
-2. Open `/inventory` in Studio: `ph vetra` if it's running, else `ph connect studio`. Run only one: each has its own reactor.
+2. Open `/inventory` in Vetra Studio, at the `connectUrl` in `.ph/vetra-runtime.json`.
 
 A file outside `_app/` is a full page, without Connect's layout:
 

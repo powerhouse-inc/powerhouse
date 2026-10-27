@@ -22,7 +22,11 @@ import {
   startViteServer,
 } from "../src/packages/vite-loader.mjs";
 import { ConsoleLogger } from "document-model";
-import { isExpectedLoaderMiss } from "../src/packages/package-manager.js";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
+import {
+  PackageManager,
+  isExpectedLoaderMiss,
+} from "../src/packages/package-manager.js";
 import { PACKAGE_MODULE_FAILED } from "../src/packages/util.js";
 
 const PROJECT = "@acme/dev-project";
@@ -212,5 +216,63 @@ describe("VitePackageLoader resolution", () => {
 
     expect(error).toMatchObject({ code: PACKAGE_MODULE_FAILED });
     expect(isExpectedLoaderMiss(error, STALE, "document-models")).toBe(false);
+  });
+
+  // Vetra's getCodegenStatus reports it, e.g. for generated code that throws.
+  it("reports a module that fails to load as a load failure, until it loads", async () => {
+    const status = getCodegenStatusRegistry();
+    status.clear();
+    const loader = VitePackageLoader.build(vite, { resolveFrom: [hostEntry] });
+
+    await new PackageManager([loader], { packages: [BROKEN, HOSTED] }).init();
+
+    expect(status.loadFailures()).toEqual([
+      {
+        package: BROKEN,
+        kind: "document models",
+        message: expect.stringContaining("boom in broken"),
+        updatedAt: expect.any(String),
+      },
+    ]);
+    status.reportLoad(HOSTED, "document models", "an earlier failure");
+    await new PackageManager([loader], { packages: [HOSTED] }).init();
+    expect(status.loadFailures().map((failure) => failure.package)).toEqual([
+      BROKEN,
+    ]);
+  });
+
+  it("reports a reload that fails to load as a load failure, until a reload loads", async () => {
+    const status = getCodegenStatusRegistry();
+    status.clear();
+    const project = join(base, "watched-project");
+    const index = join(project, "document-models", "index.ts");
+    await write(join(project, "package.json"), '{"name":"@acme/watched"}');
+    await write(
+      index,
+      "const schema = undefined as unknown as () => unknown;\nexport const broken = schema();\n",
+    );
+    const loader = VitePackageLoader.build(vite);
+    const reloads: unknown[] = [];
+    const unsubscribe = loader.onDocumentModelsChange(project, (models) =>
+      reloads.push(models),
+    );
+
+    vite.watcher.emit("change", index);
+    await vi.waitFor(() =>
+      expect(status.loadFailures()).toEqual([
+        {
+          package: project,
+          kind: "document models",
+          message: expect.stringContaining("schema is not a function"),
+          updatedAt: expect.any(String),
+        },
+      ]),
+    );
+
+    await write(index, "export const fixed = true;\n");
+    vite.watcher.emit("change", index);
+    await vi.waitFor(() => expect(reloads).toHaveLength(1));
+    expect(status.loadFailures()).toEqual([]);
+    unsubscribe();
   });
 });
