@@ -22,7 +22,7 @@ const logger = childLogger(["switchboard", "attachments"]);
 export type RegisterAttachmentRoutesOptions = {
   /** Overrides the signer resolved from the environment; null disables signing. */
   urlSigner?: AttachmentUrlSigner | null;
-  /** The switchboard's settings; unset reads their env vars. */
+  /** The switchboard's settings; unset means their defaults. */
   config?: {
     urlSigningSecret?: string;
     downloadTargetMaxTtlSeconds?: number;
@@ -37,19 +37,14 @@ export function registerAttachmentRoutes(
   const { config } = options;
   const urlSigner =
     options.urlSigner === undefined
-      ? signerFromEnvironment(
-          attachments.backend?.kind ?? "filesystem",
-          config
-            ? {
-                [ATTACHMENT_URL_SIGNING_SECRET_ENV]: config.urlSigningSecret,
-                NODE_ENV: process.env.NODE_ENV,
-              }
-            : process.env,
-        )
+      ? signerFromEnvironment(attachments.backend?.kind ?? "filesystem", {
+          [ATTACHMENT_URL_SIGNING_SECRET_ENV]: config?.urlSigningSecret,
+          NODE_ENV: process.env.NODE_ENV,
+        })
       : options.urlSigner;
-  const ttlCapSeconds = config
-    ? downloadTargetTtlCapSeconds(config.downloadTargetMaxTtlSeconds)
-    : undefined;
+  const ttlCapSeconds = downloadTargetTtlCapSeconds(
+    config?.downloadTargetMaxTtlSeconds,
+  );
 
   mountAuthenticatedNodeRoute(
     api,
