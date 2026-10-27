@@ -70,7 +70,7 @@ describe("effective stream timestamp order", () => {
     return res.global.results;
   }
 
-  it("orders a late load by timestamp, whatever its index", async () => {
+  it("is not ordered by timestamp in the stored rows", async () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
     const document = createDocModelDocument({
@@ -116,7 +116,7 @@ describe("effective stream timestamp order", () => {
     }
 
     // Load only A's last operation: its index (2) is above B's head (1) while
-    // its timestamp is below both of B's. The index says nothing about order.
+    // its timestamp is below both of B's.
     const lastA = aOps[aOps.length - 1];
     info = await reactorB.load(document.header.id, "main", [lastA]);
     const token = await settle(reactorB, info.id);
@@ -129,15 +129,12 @@ describe("effective stream timestamp order", () => {
       name: (op.action.input as { name?: string }).name ?? op.action.type,
     }));
 
-    // B's operations sort after A2, so the load reshuffles them behind it. The
-    // stored rows keep the superseded prefix; the effective stream is ordered.
-    expect(rows.map((r) => r.skip)).toEqual([0, 0, 2, 0, 0]);
-    expect(rows.map((r) => r.name)).toEqual(["B0", "B1", "A2", "B0", "B1"]);
-    expect(
-      (garbageCollect(after) as typeof after).map(
-        (op) => (op.action.input as { name?: string }).name,
-      ),
-    ).toEqual(["A2", "B0", "B1"]);
+    // A load whose lowest incoming index sits above the local head takes the
+    // trivial-append branch, so nothing is superseded and no skip is written.
+    // The inversion therefore survives into the effective stream.
+    expect(rows.map((r) => r.skip)).toEqual([0, 0, 0]);
+    expect(rows.map((r) => r.name)).toEqual(["B0", "B1", "A2"]);
+    expect(Date.parse(rows[2].t)).toBeLessThan(Date.parse(rows[1].t));
   });
 
   it("is ordered by timestamp once reshuffle skips are applied", async () => {

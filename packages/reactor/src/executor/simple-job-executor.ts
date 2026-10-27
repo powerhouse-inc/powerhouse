@@ -3267,15 +3267,18 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     const nonSupersededOps = conflictingOps.filter((op) => {
-      // A local op stamped after the batch's earliest op is concurrent, whatever
-      // its index: the sender's indexes are its own. On that earliest
-      // timestamp, a local op below the batch's lowest index is a predecessor;
-      // reshuffling it would re-insert identical history, which cascades when
-      // many ops share a timestamp (one execute batch, bulk imports). Local ops
-      // matching an incoming action.id stay so a rebroadcast can remap them.
+      // A local op below the batch's lowest index with no overlapping
+      // action.id is a predecessor; reshuffling it would re-insert identical
+      // history, which cascades when many ops share a timestamp. With
+      // documentDecisions on, every replica places its own writes by
+      // timestamp, so a local op stamped after the batch's earliest op is
+      // concurrent whatever its index: the sender's indexes are its own.
+      // Local ops matching an incoming action.id stay so a rebroadcast can
+      // remap them.
       if (
         !incomingActionIds.has(op.action.id) &&
-        Date.parse(op.timestampUtcMs) === minIncomingTime &&
+        (!this.featureFlags.documentDecisions ||
+          Date.parse(op.timestampUtcMs) === minIncomingTime) &&
         op.index < predecessorBound
       ) {
         return false;
