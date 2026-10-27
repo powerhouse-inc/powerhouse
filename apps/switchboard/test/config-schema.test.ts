@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   switchboardConfigSchema,
   type SwitchboardConfigInput,
@@ -80,5 +80,15 @@ describe("switchboardConfigSchema", () => {
     ["a PG major it does not ship", { storage: { forcePgVersion: 15 as 16 } }],
   ])("refuses %s", (_name, layer) => {
     expect(switchboardConfigSchema.safeParse(layer).success).toBe(false);
+  });
+});
+
+describe("the config modules", () => {
+  it("load without the server", async () => {
+    vi.doMock("../src/server.mjs", () => {
+      throw new Error("the server was loaded");
+    });
+    await expect(import("../src/config/from-env.js")).resolves.toBeDefined();
+    vi.doUnmock("../src/server.mjs");
   });
 });

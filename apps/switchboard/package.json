@@ -24,6 +24,11 @@
       "types": "./dist/config/schema.d.mts",
       "import": "./dist/config/schema.mjs"
     },
+    "./config/env": {
+      "source": "./src/config/from-env.ts",
+      "types": "./dist/config/from-env.d.mts",
+      "import": "./dist/config/from-env.mjs"
+    },
     "./boot": {
       "source": "./src/boot.mts",
       "types": "./dist/boot.d.mts",
