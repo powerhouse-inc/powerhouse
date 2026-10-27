@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { TOKEN_HEADER, TOKEN_META_NAME, type Instance } from "./api.js";
 import {
+  backoffMs,
   ControllerRequestError,
   controllerFromDocument,
   createControllerClient,
@@ -95,6 +96,12 @@ describe("controller client", () => {
     const error = await down.list().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ControllerRequestError);
     expect((error as ControllerRequestError).code).toBe("network");
+  });
+
+  it("backs off by doubling up to 30 s", () => {
+    expect([0, 1, 2, 3, 4, 10].map((n) => backoffMs(3000, n))).toEqual([
+      3000, 6000, 12000, 24000, 30000, 30000,
+    ]);
   });
 
   it("exists only when the page carries the controller meta tag", () => {

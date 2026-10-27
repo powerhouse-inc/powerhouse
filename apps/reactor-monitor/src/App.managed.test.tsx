@@ -16,6 +16,7 @@ import {
   type Instance,
 } from "./controller/api.js";
 import { MonitoringSetsStore } from "./monitoring-sets.js";
+import { REMOTE_BEARER_KEY_PREFIX } from "./provisioning.js";
 
 const TOKEN = "test-token";
 const ROOT = "/work/proj";
@@ -174,6 +175,9 @@ function storeWith(...descriptors: ReactorDescriptor[]): MonitoringSetsStore {
   return store;
 }
 
+const bearerOf = (port: number) =>
+  window.sessionStorage.getItem(REMOTE_BEARER_KEY_PREFIX + graphqlOf(port));
+
 const reactorList = (view: ReturnType<typeof render>) =>
   view.getByLabelText("Reactor list");
 
@@ -194,6 +198,7 @@ describe("App with controller-managed switchboards", () => {
       .querySelectorAll(`meta[name="${TOKEN_META_NAME}"]`)
       .forEach((meta) => meta.remove());
     vi.unstubAllGlobals();
+    window.sessionStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -227,6 +232,10 @@ describe("App with controller-managed switchboards", () => {
       },
     ]);
 
+    window.sessionStorage.setItem(
+      REMOTE_BEARER_KEY_PREFIX + graphqlOf(5101),
+      "admin-token",
+    );
     controller.answerDeleteWith404();
     const item = within(reactorList(view)).getByText(name).closest("li")!;
     fireEvent.click(within(item).getByRole("button", { name: "Kill" }));
@@ -240,6 +249,7 @@ describe("App with controller-managed switchboards", () => {
     );
     expect(store.getActiveDescriptors()).toEqual([]);
     expect(view.queryByTestId("switchboards-notices")).toBeNull();
+    expect(bearerOf(5101)).toBeNull();
   });
 
   it("withholds a rehydrated managed descriptor until the controller confirms it", async () => {
@@ -348,6 +358,10 @@ describe("App with controller-managed switchboards", () => {
       WAIT,
     );
 
+    window.sessionStorage.setItem(
+      REMOTE_BEARER_KEY_PREFIX + graphqlOf(5108),
+      "admin-token",
+    );
     controller.instances.set("run", instance("run", "exited"));
     await waitFor(
       () => expect(within(reactorList(view)).queryByText("sb-run")).toBeNull(),
@@ -356,6 +370,39 @@ describe("App with controller-managed switchboards", () => {
     expect(store.getActiveDescriptors()).toEqual([]);
     expect(view.getByTestId("switchboards-notices").textContent).toMatch(
       /sb-run: its switchboard exited/,
+    );
+    expect(bearerOf(5108)).toBeNull();
+  });
+
+  it("re-probes a released managed descriptor when its set is switched back to", async () => {
+    mountController();
+    controller.instances.set("back", instance("back", "running", 5110));
+    const store = storeWith(managedDescriptor("sb-back", "back", 5110));
+    store.importSet("other", []);
+    const view = render(<App store={store} />);
+    await waitFor(
+      () => expect(within(reactorList(view)).getByText("sb-back")).toBeTruthy(),
+      WAIT,
+    );
+    const sets = view.getByTestId("monitor-set-select");
+    fireEvent.change(sets, { target: { value: "other" } });
+    await waitFor(() =>
+      expect(within(reactorList(view)).queryByText("sb-back")).toBeNull(),
+    );
+
+    controller.instances.set("back", instance("back", "exited"));
+    const inspection = `NET ${graphqlOf(5110)}/inspection`;
+    const attachesBefore = controller.calls.filter((c) => c === inspection);
+    fireEvent.change(sets, { target: { value: "default" } });
+    expect(within(reactorList(view)).queryByText("sb-back")).toBeNull();
+    await waitFor(() =>
+      expect(view.getByTestId("switchboards-notices").textContent).toMatch(
+        /sb-back: its switchboard is exited/,
+      ),
+    );
+    expect(store.getActiveDescriptors()).toEqual([]);
+    expect(controller.calls.filter((c) => c === inspection)).toEqual(
+      attachesBefore,
     );
   });
 });

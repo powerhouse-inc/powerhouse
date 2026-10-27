@@ -33,6 +33,17 @@ export class ControllerRequestError extends Error {
   }
 }
 
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+const MAX_BACKOFF_MS = 30_000;
+
+/** `base` doubled per consecutive failure, capped at 30 s. */
+export function backoffMs(base: number, failures: number): number {
+  return Math.min(base * 2 ** failures, Math.max(base, MAX_BACKOFF_MS));
+}
+
 export function isNotFound(error: unknown): boolean {
   return error instanceof ControllerRequestError && error.code === "not_found";
 }
@@ -80,7 +91,7 @@ export function createControllerClient(
     } catch (error) {
       throw new ControllerRequestError(
         "network",
-        `Controller unreachable: ${error instanceof Error ? error.message : String(error)}`,
+        `Controller unreachable: ${errorMessage(error)}`,
       );
     }
     let body: unknown;

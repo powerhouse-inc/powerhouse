@@ -12,7 +12,10 @@ import type { MonitoringSetsStore } from "../monitoring-sets.js";
 import { setRemoteBearer } from "../provisioning.js";
 import type { Instance } from "./api.js";
 import {
+  backoffMs,
+  ControllerRequestError,
   controllerFromDocument,
+  errorMessage,
   isNotFound,
   type ControllerClient,
 } from "./client.js";
@@ -88,6 +91,10 @@ export function useManagedDescriptors(
   latest.current = descriptors;
   const mounted = useRef(true);
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  /** Consecutive failed probes per key, for backoff. */
+  const failures = useRef(new Map<string, number>());
+  /** Instances with a stop in flight: never released or attached. */
+  const stopping = useRef(new Set<string>());
   useEffect(() => {
     mounted.current = true;
     const pending = timers.current;
@@ -151,14 +158,28 @@ export function useManagedDescriptors(
   );
 
   useEffect(() => {
+    // A descriptor that left the active set is probed afresh when it returns.
+    const present = new Set(descriptors.filter(isManaged).map(keyOf));
+    for (const key of probes.current.keys()) {
+      if (!present.has(key)) {
+        probes.current.delete(key);
+        failures.current.delete(key);
+      }
+    }
     if (!client) return;
-    const reprobe = (descriptor: ManagedDescriptor) => {
-      const timer = setTimeout(() => {
-        timers.current.delete(timer);
-        if (probes.current.get(keyOf(descriptor))?.state === "withheld") {
-          settle(descriptor, undefined);
-        }
-      }, reprobeMs);
+    const reprobe = (descriptor: ManagedDescriptor, failed: boolean) => {
+      const key = keyOf(descriptor);
+      const count = failed ? (failures.current.get(key) ?? 0) + 1 : 0;
+      failures.current.set(key, count);
+      const timer = setTimeout(
+        () => {
+          timers.current.delete(timer);
+          if (probes.current.get(key)?.state === "withheld") {
+            settle(descriptor, undefined);
+          }
+        },
+        backoffMs(reprobeMs, count),
+      );
       timers.current.add(timer);
     };
     for (const descriptor of descriptors.filter(isManaged)) {
@@ -169,10 +190,13 @@ export function useManagedDescriptors(
         keyOf(d) === keyOf(descriptor);
       void (async () => {
         let outcome: Probe | { drop: string };
+        let failed = false;
+        let fatal = false;
         try {
           const instance = await client.get(instanceId);
-          outcome =
-            instance.status === "starting"
+          outcome = stopping.current.has(instanceId)
+            ? { state: "withheld", reason: "stopping" }
+            : instance.status === "starting"
               ? { state: "withheld", reason: "still starting" }
               : instance.status !== "running"
                 ? { drop: `its switchboard is ${instance.status}` }
@@ -180,12 +204,13 @@ export function useManagedDescriptors(
                   ? { drop: "its switchboard now serves another URL" }
                   : { state: "released" };
         } catch (error) {
+          failed = true;
+          fatal =
+            error instanceof ControllerRequestError &&
+            error.code === "bad_token";
           outcome = isNotFound(error)
             ? { drop: "the controller no longer runs it" }
-            : {
-                state: "withheld",
-                reason: error instanceof Error ? error.message : String(error),
-              };
+            : { state: "withheld", reason: errorMessage(error) };
         }
         if (!mounted.current) return;
         // The active set may have changed while the probe was in flight.
@@ -198,7 +223,7 @@ export function useManagedDescriptors(
           return;
         }
         settle(descriptor, outcome);
-        if (outcome.state === "withheld") reprobe(descriptor);
+        if (outcome.state === "withheld" && !fatal) reprobe(descriptor, failed);
       })();
     }
   }, [client, descriptors, version, drop, settle, reprobeMs]);
@@ -229,7 +254,10 @@ export function useManagedDescriptors(
   const attach = useCallback(
     (instance: Instance) => {
       const current = latest.current;
-      if (current.some((d) => managedByOf(d)?.instanceId === instance.id)) {
+      if (
+        stopping.current.has(instance.id) ||
+        current.some((d) => managedByOf(d)?.instanceId === instance.id)
+      ) {
         return;
       }
       const descriptor = managedDescriptor(
@@ -253,11 +281,16 @@ export function useManagedDescriptors(
       probes.current.delete(keyOf(descriptor));
       setRemoteBearer(descriptor.remote.url, "");
       if (!client) return;
-      client.stop(descriptor.managedBy.instanceId).catch((error: unknown) => {
-        notify(
-          `${name}: could not stop its switchboard: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
+      const id = descriptor.managedBy.instanceId;
+      stopping.current.add(id);
+      client
+        .stop(id)
+        .catch((error: unknown) => {
+          notify(
+            `${name}: could not stop its switchboard: ${errorMessage(error)}`,
+          );
+        })
+        .finally(() => stopping.current.delete(id));
     },
     [client, notify],
   );
@@ -265,16 +298,29 @@ export function useManagedDescriptors(
   const stopInstance = useCallback(
     async (id: string) => {
       if (!client) return;
-      await client.stop(id);
-      drop((d) => d.managedBy.instanceId === id);
+      stopping.current.add(id);
+      try {
+        await client.stop(id);
+        drop((d) => d.managedBy.instanceId === id);
+      } finally {
+        stopping.current.delete(id);
+      }
     },
     [client, drop],
   );
 
   const stopAll = useCallback(async () => {
     if (!client) return;
-    const stopped = new Set((await client.stopAll()).map((i) => i.id));
-    drop((d) => stopped.has(d.managedBy.instanceId));
+    const attached = latest.current
+      .filter(isManaged)
+      .map((d) => d.managedBy.instanceId);
+    for (const id of attached) stopping.current.add(id);
+    try {
+      const stopped = new Set((await client.stopAll()).map((i) => i.id));
+      drop((d) => stopped.has(d.managedBy.instanceId));
+    } finally {
+      for (const id of attached) stopping.current.delete(id);
+    }
   }, [client, drop]);
 
   const reconcile = useCallback(
