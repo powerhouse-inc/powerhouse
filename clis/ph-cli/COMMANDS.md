@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.2.3-dev.77)<br>
+# Powerhouse CLI Commands (6.2.3-dev.78)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -13,6 +13,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Piece Action](#piece-action)
 - [Piece Trigger](#piece-trigger)
 - [Migration File](#migration-file)
+- [Connect Routes](#connect-routes)
 - [Vetra](#vetra)
 - [Build](#build)
 - [Connect](#connect)
@@ -22,6 +23,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
+- [Mcp](#mcp)
 - [Migrate](#migrate)
 - [Switchboard](#switchboard)
 - [Login](#login)
@@ -377,6 +379,22 @@ Path to the output file. Defaults to './schema.ts'<br><br>
 
 
 ### flags
+#### Skip Install <br>
+Don't install the dependencies the command adds to package.json<br><br>
+**usage:** `--skip-install`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Connect Routes
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against, and fail if a route the package offers imports @powerhousedao/connect
+### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
@@ -405,6 +423,26 @@ connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
 URL, so configuring project drives does not cost you the Vetra drive.
 An explicit --default-drives-url is appended to that list (de-duplicated);
 it never replaces the Vetra drive.
+
+Every drive on the local Switchboard:
+Studio has no reactor of its own: it reads and writes on the local
+Switchboard (connect.instance.reactorClient "remote"), so it lists every
+drive there, such as one an agent adds through MCP, and a drive created in
+Studio lands there too. Not with --remote-drive, or when the project sets
+connect.instance.multiReactor or reactorClient itself.
+
+Preview drive app:
+Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
+app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
+the drive's app when it creates the drive and each time it starts. Without
+the field the drive keeps the app it has.
+
+One Vetra per project:
+A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
+Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
+exits. --restart stops the recorded Vetra first, then starts this one; the
+`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
+by itself when powerhouse.config.json changes.
 
 ### options
 #### Switchboard Port <br>
@@ -484,6 +522,10 @@ Enable dynamic loading for document-models and editors in connect-studio and swi
 #### Logs <br>
 Show additional logs<br><br>
 **usage:** `--logs`<br>
+**default**: `false`
+#### Restart <br>
+Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start<br><br>
+**usage:** `--restart`<br>
 **default**: `false`
 #### Disable Connect <br>
 Skip Connect initialization (only start switchboard and reactor)<br><br>
@@ -1023,6 +1065,43 @@ This command:
 2. Lists all installed Powerhouse packages
 3. Provides a clear overview of your project's dependencies
 4. Helps you manage and track your Powerhouse components
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Mcp
+
+Serve the project's reactor-mcp tools to a coding agent over stdio.
+
+Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
+.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
+The first tool call connects to the project's running Vetra (found through
+.ph/vetra-runtime.json), or starts `ph vetra --strictPort --watch` in the
+background and waits for it to be ready, reporting how the start goes as MCP
+progress notifications when the client sent a progressToken, else on stderr.
+Startup failures come back as tool errors carrying Vetra's output, which is
+also written to .ph/vetra.log.
+
+Beside reactor-mcp's tools it serves restartVetra, which stops the project's
+Vetra, starts it again and returns its URLs. When Vetra restarts some other
+way (`ph vetra --restart`), the next tool call connects to the new one.
+
+### options
+#### Project Dir <br>
+Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json.<br><br>
+**usage:** `--project-dir <str>`<br>
+
+#### Start Timeout <br>
+Seconds to wait for Vetra to answer /ready after starting it on the first tool call<br><br>
+**usage:** `--start-timeout <number>`<br>
+**default**: `120`
 
 ### flags
 #### Debug <br>

@@ -6,8 +6,12 @@ import type {
 } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
+import type { CodegenInput, CodegenJob, GenerateResult } from "../types.js";
+import {
+  installFeatureDependencies,
+  minimalBackupDocument,
+  warnSubgraphTypeConflicts,
+} from "./utils.js";
 
 /**
  * Generator for subgraph documents
@@ -15,9 +19,6 @@ import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
 export class SubgraphGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/subgraph";
 
-  /**
-   * Parse and extract the global state from the serialized state string
-   */
   private extractGlobalState(
     input: CodegenInput,
   ): SubgraphModuleState | undefined {
@@ -28,93 +29,70 @@ export class SubgraphGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  /**
-   * Validate if this subgraph strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
 
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.debug(`No state found for subgraph: ${input.documentId}`);
-      return false;
+    let reason: string | undefined;
+    if (!state) reason = "The subgraph has no state";
+    else if (!state.name) reason = "The subgraph has no name";
+    else if (state.status !== "CONFIRMED") {
+      reason = `Subgraph "${state.name}" is not confirmed (status: ${state.status}); codegen runs once it is CONFIRMED`;
     }
-
-    // Check if we have a valid subgraph name and it's confirmed
-    if (!state.name) {
-      logger.debug(`No name found for subgraph: ${input.documentId}`);
-      return false;
-    }
-
-    if (state.status !== "CONFIRMED") {
-      logger.debug(
-        `Subgraph not confirmed: ${state.name} (status: ${state.status})`,
-      );
-      return false;
-    }
-
-    return true;
+    if (reason) logger.debug(reason);
+    return reason;
   }
 
-  async generate(input: CodegenInput): Promise<void> {
+  async generate(
+    input: CodegenInput,
+    job?: CodegenJob,
+  ): Promise<GenerateResult> {
     const state = this.extractGlobalState(input);
-    if (!state) {
-      logger.error(`No state found for subgraph: ${input.documentId}`);
-      return;
+    const reason = this.skipReason(input);
+    if (!state || reason) {
+      return { skipped: reason ?? "The subgraph has no state" };
     }
 
-    // Check if we have a valid subgraph name and it's confirmed
-    if (state.name && state.status === "CONFIRMED") {
-      logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
-      try {
-        const conflict = await findSubgraphNameConflict(
-          this.config.CURRENT_WORKING_DIR,
-          state.name,
-        );
-        if (conflict) {
-          logger.error(`❌ Skipping subgraph generation: ${conflict}`);
-          return;
-        }
-        await generateSubgraph(state.name, this.project);
-        await this.project.save();
-        logger.info(
-          `✅ Subgraph generation completed successfully for: ${state.name}`,
-        );
-        await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
-
-        // Backup the document
-        const fullState = input.state as SubgraphModulePHState;
-        await minimalBackupDocument(
-          {
-            documentId: input.documentId,
-            documentType: input.documentType,
-            branch: input.branch,
-            state: fullState,
-            name: state.name,
-          },
-          this.config.CURRENT_WORKING_DIR,
-        );
-      } catch (error) {
-        logger.error(
-          `❌ Error during subgraph generation for ${state.name}:`,
-          error,
-        );
+    logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
+    try {
+      const conflict = await findSubgraphNameConflict(
+        this.config.CURRENT_WORKING_DIR,
+        state.name,
+      );
+      if (conflict) {
+        logger.error(`❌ Skipping subgraph generation: ${conflict}`);
+        return { skipped: conflict };
       }
-    } else {
-      if (!state.name) {
-        logger.error(
-          `❌ Skipping subgraph generation - missing name for subgraph`,
-        );
-        return;
-      } else if (state.status !== "CONFIRMED") {
-        logger.error(
-          `❌ Skipping subgraph generation - subgraph "${state.name}" is not confirmed (status: ${state.status})`,
-        );
-        return;
-      }
+      await installFeatureDependencies(
+        ["subgraph"],
+        this.config.CURRENT_WORKING_DIR,
+        `subgraph "${state.name}"`,
+        job,
+      );
+      await generateSubgraph(state.name, this.project);
+      await this.project.save();
+    } catch (error) {
+      logger.error(
+        `❌ Error during subgraph generation for ${state.name}:`,
+        error,
+      );
+      throw error;
     }
+    logger.info(
+      `✅ Subgraph generation completed successfully for: ${state.name}`,
+    );
+    await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
+
+    await minimalBackupDocument(
+      {
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: input.state as SubgraphModulePHState,
+        name: state.name,
+      },
+      this.config.CURRENT_WORKING_DIR,
+    );
   }
 }

@@ -16,6 +16,7 @@ import {
   setSelectedDrive,
   useAppModules,
   usePHModal,
+  useVetraPackages,
   waitForDocumentReady,
   getPHStore,
 } from "@powerhousedao/reactor-browser";
@@ -30,6 +31,7 @@ export function AddDriveModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "addDrive";
   const appModules = useAppModules();
+  const packages = useVetraPackages();
   const onAddLocalDrive = async (data: AppOptions) => {
     try {
       const app = appModules?.find((a) => a.config.id === data.id);
@@ -128,7 +130,7 @@ export function AddDriveModal() {
       onOpenChange={(status) => {
         if (!status) return closePHModal();
       }}
-      appOptions={getCreateDriveAppOptions(appModules)}
+      appOptions={getCreateDriveAppOptions(appModules, packages)}
     />
   );
 }

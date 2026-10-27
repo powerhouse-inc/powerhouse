@@ -399,6 +399,19 @@ describe("ph-cli generate processor", () => {
 });
 
 describe("ph-cli generate subgraph", () => {
+  it("adds reactor-api, which the subgraph imports, to package.json", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(root, "package.json"), "utf8"),
+    ) as Record<"peerDependencies" | "devDependencies", Record<string, string>>;
+
+    expect(manifest.peerDependencies["@powerhousedao/reactor-api"]).toBe(
+      "6.0.0",
+    );
+    expect(manifest.devDependencies["@powerhousedao/reactor-api"]).toBe(
+      "6.0.0",
+    );
+  });
+
   it("--all keeps the manifest's subgraphs", async () => {
     await startGenerateSubgraph(subgraphArgs({ all: true }), root);
 

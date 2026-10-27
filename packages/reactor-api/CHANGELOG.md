@@ -1,3 +1,30 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-api,reactor-browser,switchboard:** type-neutral drive node queries and read.drives on the remote client ([b8a09950c0](https://github.com/powerhouse-inc/powerhouse/commit/b8a09950c0))
+- **reactor,reactor-drive,reactor-api:** drive clients pick the write path by drive type and read nodes from one source ([3f9bee0c2b](https://github.com/powerhouse-inc/powerhouse/commit/3f9bee0c2b))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+- **reactor-api:** report the bound port on the API ([fe28d4c64e](https://github.com/powerhouse-inc/powerhouse/commit/fe28d4c64e))
+
+### 🩹 Fixes
+
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+- **reactor-api:** public origin follows the bound port ([919c2bd2d1](https://github.com/powerhouse-inc/powerhouse/commit/919c2bd2d1))
+
+### 🔥 Performance
+
+- **reactor-api:** gate drive node reads on the drive, not on every file's document ([0203ff2b6a](https://github.com/powerhouse-inc/powerhouse/commit/0203ff2b6a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 ### 🚀 Features

@@ -85,6 +85,9 @@
     "pieces-framework": {
       "paths": ["packages/pieces-framework/**"]
     },
+    "portle": {
+      "paths": ["packages/portle/**"]
+    },
     "powerhouse-vetra-packages": {
       "paths": ["packages/powerhouse-vetra-packages/**"]
     },

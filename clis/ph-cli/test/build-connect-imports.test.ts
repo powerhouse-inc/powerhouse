@@ -3,7 +3,7 @@
 
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { noConnectImports } from "../src/services/build.js";
+import { noConnectImports } from "../src/utils/offered-routes-imports.js";
 
 const root = join("/", "project");
 const routesDir = join(root, "hosts", "connect", "routes");

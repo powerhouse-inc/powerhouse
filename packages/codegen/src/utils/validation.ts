@@ -1,4 +1,5 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { pascalCase } from "change-case";
 
 /**
  * Validation result for DocumentModelGlobalState code generation requirements
@@ -129,6 +130,10 @@ export function validateDocumentModelState(
     }
   }
 
+  if (typeof documentModelState.name === "string") {
+    errors.push(...stateTypeNameErrors(documentModelState.name, latestSpec));
+  }
+
   // Validate modules array (required but can be empty)
   if (!Array.isArray(latestSpec.modules)) {
     errors.push('Latest specification must have a "modules" array');
@@ -211,4 +216,44 @@ export function validateDocumentModelState(
     isValid: errors.length === 0,
     errors,
   };
+}
+
+type SpecificationState = DocumentModelGlobalState["specifications"][number];
+
+/** The types a GraphQL schema declares with `type Name`. */
+function declaredTypes(schema: string): string[] {
+  return [...schema.matchAll(/\btype\s+([A-Za-z_]\w*)/g)].map((m) => m[1]);
+}
+
+/** Codegen imports `<Name>State` and `<Name>LocalState` from the generated schema. */
+function stateTypeNameErrors(
+  modelName: string,
+  specification: SpecificationState,
+): string[] {
+  const pascalName = pascalCase(modelName);
+  const scopes = [
+    {
+      scope: "Global",
+      typeName: `${pascalName}State`,
+      state: specification.state.global,
+    },
+    {
+      scope: "Local",
+      typeName: `${pascalName}LocalState`,
+      state: specification.state.local,
+    },
+  ];
+  const errors: string[] = [];
+  for (const { scope, typeName, state } of scopes) {
+    // Codegen reads a scope's schema whenever it is not empty.
+    if (typeof state?.schema !== "string" || state.schema.trim() === "") {
+      continue;
+    }
+    const types = declaredTypes(state.schema);
+    if (types.includes(typeName)) continue;
+    errors.push(
+      `${scope} state schema must define \`type ${typeName}\`: codegen names the ${scope.toLowerCase()} state of model "${modelName}" ${typeName}, but the schema defines ${types.length ? types.join(", ") : "no type"}. Rename the type in SET_STATE_SCHEMA, or rename the model.`,
+    );
+  }
+  return errors;
 }

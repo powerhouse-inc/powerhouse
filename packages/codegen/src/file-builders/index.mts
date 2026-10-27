@@ -1,4 +1,6 @@
 export * from "./app.js";
+export * from "./boilerplate/agent-files.js";
+export * from "./boilerplate/agent-skills.js";
 export * from "./boilerplate/generated-project-files.js";
 export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
