@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-27T21:17:35.381Z
+> Generated: 2026-10-27T21:38:59.135Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -17443,8 +17443,8 @@ ph run switchboard --explain drives
 A switchboard host sets the rest of its server config, such as auth,
 inspection and workers, under `config.switchboard`. It takes the keys of
 `@powerhousedao/switchboard/config`, except the ones the host file already
-sets elsewhere (`runner.port`, the `dev` verb, `reactor.drives`,
-`runner.plugins`):
+sets elsewhere: storage, protocol and dynamic packages in `reactor`, and
+`runner.port`, the `dev` verb, `reactor.drives` and `runner.plugins`:
 
 ```js
 config: {
@@ -17462,9 +17462,12 @@ use different stores, ports and settings. A key set in both `reactor` and
 
 An environment variable the operator sets still wins over both blocks, for
 example `PH_REACTOR_DATABASE_URL` over the reactor's storage. A
-`DATABASE_URL` does not override `reactor.backends.*.readModel.url`, and
-`readModel.url` names only the read model, never the reactor store. An
+`DATABASE_URL` does not override `reactor.backends.*.readModel.url`. An
 environment variable that contradicts `reactor.protocol` fails the boot.
+
+A backend with a `readModel.url` and no `storage` still keeps its reactor
+store on that url when no environment variable names one. This is
+deprecated, and the switchboard warns at boot: set `storage` explicitly.
 
 ## The plugin shape
 
