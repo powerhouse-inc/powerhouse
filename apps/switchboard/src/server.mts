@@ -170,10 +170,11 @@ import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
 
 const defaultLogger = childLogger(["switchboard"]);
 
+// reactor-api no longer loads .env on import, so load it before reading LOG_LEVEL.
+if (!isDotenvDisabled()) dotenv.config();
+
 const LogLevel = (process.env.LOG_LEVEL as ILogger["level"] | "") || "info";
 setLogLevel(LogLevel);
-
-if (!isDotenvDisabled()) dotenv.config();
 
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
