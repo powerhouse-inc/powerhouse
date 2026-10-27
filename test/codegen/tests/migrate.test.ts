@@ -44,6 +44,16 @@ describe("migrate", () => {
     await rmForce(
       join(legacyDocumentModelsDir, "node_modules", "@powerhousedao", "shared"),
     );
+    // The same for ph-cli: the tsc script runs `ph-cli generate connect-routes`,
+    // which the registry version may not have yet.
+    await rmForce(
+      join(legacyDocumentModelsDir, "node_modules", "@powerhousedao", "ph-cli"),
+    );
+    for (const shim of ["ph-cli", "ph-cli.cmd", "ph-cli.ps1"]) {
+      await rmForce(
+        join(legacyDocumentModelsDir, "node_modules", ".bin", shim),
+      );
+    }
     await runTsc(legacyDocumentModelsDir);
   });
 });

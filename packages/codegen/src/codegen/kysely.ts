@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
+// Resolved from codegen's own install, which depends on kysely-pglite.
 function getKyselyPgLiteBin(): string {
   const require = createRequire(import.meta.url);
 
@@ -35,7 +36,6 @@ function runCommand(
     const child = spawn(command, args, {
       cwd,
       stdio: "inherit",
-      shell: true,
     });
 
     child.on("close", (code) => {
@@ -56,19 +56,22 @@ export async function generateDBSchema({
   migrationFile,
   schemaFile,
 }: IOptions) {
-  const outFile = schemaFile ?? resolve(migrationFile, "../schema.ts");
+  const outFile = resolve(schemaFile ?? resolve(migrationFile, "../schema.ts"));
 
-  try {
-    const kyselyBinPath = getKyselyPgLiteBin();
-    // Use kysely-pglite CLI to handle TypeScript compilation and module resolution
-    await runCommand(
-      "node",
-      [kyselyBinPath, migrationFile, "--outFile", outFile],
-      process.cwd(),
-    );
+  const kyselyBinPath = getKyselyPgLiteBin();
+  // Use kysely-pglite CLI to handle TypeScript compilation and module resolution.
+  // It globs the path it is given, and a glob reads a Windows path's
+  // backslashes as escapes, matches nothing and exits 0. So it runs in the
+  // migration file's directory and gets only the file name.
+  await runCommand(
+    process.execPath,
+    [kyselyBinPath, basename(migrationFile), "--outFile", outFile],
+    dirname(migrationFile),
+  ).catch((error: Error) => {
+    throw new Error(`Could not generate ${outFile}: ${error.message}`, {
+      cause: error,
+    });
+  });
 
-    console.log(`Schema types generated at ${outFile}`);
-  } catch (error) {
-    console.error("Error running migration:", error);
-  }
+  console.log(`Schema types generated at ${outFile}`);
 }

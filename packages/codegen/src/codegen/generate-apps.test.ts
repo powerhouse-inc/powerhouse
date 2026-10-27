@@ -3,6 +3,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { documentEditorModuleFileTemplate } from "templates";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildTsMorphProject } from "../utils/ts-morph-project.js";
 import { generateAllApps, generateApp } from "./generate.js";
@@ -112,5 +113,34 @@ describe("generateAllApps", () => {
         .map((app) => app.id)
         .sort(),
     ).toEqual(["ledger-app", "stockroom-app"]);
+  });
+});
+
+describe("an app's module.ts", () => {
+  it("says codegen writes it once, and keeps an edit on regenerate", async () => {
+    const root = await makeProject([{ name: "Stockroom App" }]);
+    const modulePath = join(root, "editors", "stockroom-app", "module.ts");
+    const scaffolded = readFileSync(modulePath, "utf8");
+    expect(scaffolded).not.toContain("DO NOT EDIT");
+    expect(scaffolded).toContain("Codegen does not update it");
+
+    const edited = scaffolded.replace(
+      'name: "Stockroom App"',
+      'name: "Stockroom"',
+    );
+    writeFileSync(modulePath, edited);
+    await regenerateAll(root);
+
+    expect(readFileSync(modulePath, "utf8")).toBe(edited);
+  });
+
+  it("differs from an editor's, which codegen rewrites", () => {
+    const editorModule = documentEditorModuleFileTemplate({
+      editorName: "Stock Editor",
+      pascalCaseEditorName: "StockEditor",
+      editorId: "stock-editor",
+      documentTypes: ["acme/stock-item"],
+    });
+    expect(editorModule).toContain("WARNING: DO NOT EDIT");
   });
 });

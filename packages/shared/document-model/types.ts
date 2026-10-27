@@ -1529,7 +1529,9 @@ export type EditorDispatch = (
 ) => void;
 
 /** Dispatches actions to a document; `onErrors`/`onSuccess` report the outcome.
- * In Connect, `onErrors` gets an `OperationRejectedError` per rejected action. */
+ * In Connect, `onErrors` gets an `OperationRejectedError` per rejected action and runs
+ * first; `onSuccess` then gets the document whether or not an action was rejected, so it
+ * does not mean the actions applied. */
 export type DocumentDispatch<TAction extends Action = Action> = (
   actionOrActions:
     | TAction

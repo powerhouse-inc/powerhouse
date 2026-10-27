@@ -36,6 +36,7 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
+  connectRoutesWatcher,
   hasProjectAppLayout,
   ignoreBuildOutput,
   ignoreDotPhButRouteTree,
@@ -578,6 +579,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       reactorWorkerDevPlugin(options.dirname),
       // The project's routes beside Connect's; ahead of react().
       ...routes.plugins,
+      ...(options.routes === undefined && !routesDir
+        ? [connectRoutesWatcher(options.dirname)]
+        : []),
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().

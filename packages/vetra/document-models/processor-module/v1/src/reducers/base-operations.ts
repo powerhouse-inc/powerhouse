@@ -3,6 +3,8 @@ import {
   type ProcessorApp,
 } from "@powerhousedao/shared/processors";
 import type { ProcessorModuleBaseOperationsOperations } from "document-models/processor-module/v1";
+import { UnsupportedProcessorTypeError } from "../../gen/base-operations/error.js";
+import { isProcessorType, PROCESSOR_TYPES } from "../utils.js";
 
 export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperationsOperations =
   {
@@ -17,6 +19,11 @@ export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperati
       const trimmedType = action.input.type.trim();
       if (trimmedType === "") {
         throw new Error("Processor type cannot be empty");
+      }
+      if (!isProcessorType(trimmedType)) {
+        throw new UnsupportedProcessorTypeError(
+          `UnsupportedProcessorTypeError: "${trimmedType}" is not a processor type. Use one of: ${PROCESSOR_TYPES.join(", ")}.`,
+        );
       }
       state.type = trimmedType;
     },

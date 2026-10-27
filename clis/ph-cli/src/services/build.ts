@@ -45,6 +45,11 @@ import { detect, resolveCommand, type Agent } from "package-manager-detector";
 import { readPackage } from "read-pkg";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
+import {
+  HOST_ROUTES_DIR,
+  OFFERED_ROUTES_MODULE,
+  syncProjectConnectRoutes,
+} from "../utils/sync-connect-routes.js";
 
 // nft reports paths relative to its base; from "/" that is every path minus its root.
 // One cache per build: the traces of a project's packages share most files.
@@ -105,11 +110,6 @@ export async function assertManifestNameMatchesPackage(projectPath: string) {
     );
   }
 }
-
-// builder-tools' PACKAGE_ROUTES_MODULE and HOST_ROUTES_DIR, without loading it
-// for packages with no routes.
-const OFFERED_ROUTES_MODULE = ".ph/connect-routes.package.ts";
-const HOST_ROUTES_DIR = "hosts/connect/routes";
 
 // The manifest with `connectRoutes` set when the package offers routes; as it
 // is, byte for byte, when the flag is already right.
@@ -236,18 +236,8 @@ export async function runBuild(args: BuildArgs) {
   const detectResult = await detect();
   const agent = detectResult?.agent ?? "npm";
 
-  // Project routes type-check against the tree generated from them. The
-  // probes mirror resolveConnectRoutesDir, so builder-tools loads only when needed.
-  const routeProbes = [
-    HOST_ROUTES_DIR,
-    ".ph/connect-routes.gen.ts",
-    OFFERED_ROUTES_MODULE,
-  ];
-  if (routeProbes.some((p) => existsSync(join(projectRoot, p)))) {
-    const { resolveConnectRoutesDir, syncConnectRoutes } =
-      await import("@powerhousedao/builder-tools");
-    await syncConnectRoutes(projectRoot, resolveConnectRoutesDir(projectRoot));
-  }
+  // Project routes type-check against the tree generated from them.
+  await syncProjectConnectRoutes(projectRoot);
   // Connect reads the manifest's flag to load the package's routes.
   const offersRoutes = existsSync(join(projectRoot, OFFERED_ROUTES_MODULE));
 

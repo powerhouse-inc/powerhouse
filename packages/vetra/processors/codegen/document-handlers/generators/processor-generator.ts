@@ -1,4 +1,4 @@
-import { generateProcessor } from "@powerhousedao/codegen";
+import { type Feature, generateProcessor } from "@powerhousedao/codegen";
 import {
   PROCESSOR_APPS,
   type ProcessorApp,
@@ -11,7 +11,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { minimalBackupDocument } from "./utils.js";
+import { installFeatureDependencies, minimalBackupDocument } from "./utils.js";
 
 /**
  * Generator for processor documents
@@ -117,6 +117,15 @@ export class ProcessorGenerator extends BaseDocumentGen {
           );
           return;
         }
+
+        const features: Feature[] =
+          processorType === "analytics"
+            ? ["analyticsProcessor"]
+            : ["relationalDbProcessor"];
+        await installFeatureDependencies(
+          features,
+          this.config.CURRENT_WORKING_DIR,
+        );
 
         // Generate the processor using the codegen function
         await generateProcessor(

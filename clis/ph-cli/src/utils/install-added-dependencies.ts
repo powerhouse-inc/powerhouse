@@ -1,6 +1,5 @@
+import { installAddedDependencies as install } from "@powerhousedao/codegen";
 import { boolean, flag, optional } from "cmd-ts";
-import { spawnSync } from "node:child_process";
-import { detect, resolveCommand } from "package-manager-detector";
 
 export const skipInstallArgs = {
   skipInstall: flag({
@@ -18,24 +17,5 @@ export async function installAddedDependencies(
   projectDir: string,
   skipInstall?: boolean,
 ) {
-  if (added.length === 0) return;
-  const agent = (await detect({ cwd: projectDir }))?.agent ?? "npm";
-  const resolved = resolveCommand(agent, "install", []);
-  if (!resolved) return;
-  const printed = [resolved.command, ...resolved.args].join(" ");
-  if (skipInstall) {
-    console.log(`Run \`${printed}\` to install them.`);
-    return;
-  }
-  console.log(`Installing with \`${printed}\`...`);
-  const result = spawnSync(resolved.command, resolved.args, {
-    cwd: projectDir,
-    stdio: "inherit",
-    shell: process.platform === "win32",
-  });
-  if (result.status !== 0) {
-    console.warn(
-      `Install failed. Run \`${printed}\` in ${projectDir} to install them.`,
-    );
-  }
+  await install(added, projectDir, { skipInstall });
 }

@@ -19,6 +19,7 @@ There are 5 main concepts to know of:
 - Operation: A change done to a document. It contains the action object plus additional metadata such as the index of the operation in the document history, the timestamp it was added, the hash of the resulting document data, the number of operations skipped, and the error message if the operation failed. Actions dispatched with "addActions" get converted into an operation.
 
 When planning to add multiple actions to a document, try to reduce the number of "addActions" calls to a minimum by adding multiple actions at once.
+"addActions" returns one result per action. When "success" is false, the results with an "error" say which actions were not applied and why.
 Unless the user specifies otherwise, and a drive with slug "vetra" is available, create new documents inside it by passing its ID as the "driveId" parameter to "createDocument".
 
 Examples:

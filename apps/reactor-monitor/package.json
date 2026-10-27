@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-monitor-app",
-  "version": "6.2.3-dev.77",
+  "version": "6.2.3-dev.78",
   "description": "Observable lab bench SPA for provisioning and inspecting reactors outside Connect.",
   "keywords": [],
   "author": "",
@@ -23,6 +23,7 @@
     "dev": "vite dev",
     "build": "vite build && node scripts/assert-worker-chunk.mjs",
     "preview": "vite preview",
+    "serve": "node src/server/serve.ts",
     "test": "vitest --run"
   },
   "dependencies": {
@@ -33,7 +34,8 @@
     "@powerhousedao/reactor-router": "workspace:*",
     "@powerhousedao/workflow": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
