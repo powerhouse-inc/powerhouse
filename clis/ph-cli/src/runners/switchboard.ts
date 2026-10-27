@@ -16,6 +16,7 @@ import {
 } from "@powerhousedao/host-core";
 import path from "node:path";
 import {
+  memberEnvOf,
   memberSwitchboardConfig,
   memberSwitchboardConfigSchema,
   prepareMemberStorage,
@@ -293,8 +294,14 @@ async function start(
   devMode: boolean,
 ): Promise<SwitchboardHandle> {
   const hostFile = `hosts/${host.name}/host.js`;
-  prepareMemberStorage(host.reactor, ctx.env, hostFile);
-  const legacyStore = readModelAsReactorStore(host.reactor, ctx.env, hostFile);
+  // Split before the server import loads the project .env into the env.
+  const env = memberEnvOf(ctx.env);
+  prepareMemberStorage(host.reactor, env.shell, hostFile);
+  const legacyStore = readModelAsReactorStore(
+    host.reactor,
+    env.shell,
+    hostFile,
+  );
   if (legacyStore) console.warn(legacyStore.warning);
   const { startSwitchboard } = await import("../services/switchboard.js");
   const entries = host.runner.plugins;
@@ -302,7 +309,7 @@ async function start(
   const args = await toSwitchboardArgs(host, devMode, entriesDeclared);
   // This member's own config, under the args: nothing is written to the
   // process env, so compound members do not see each other's settings.
-  const memberConfig = await memberSwitchboardConfig(host, ctx.env, {
+  const memberConfig = await memberSwitchboardConfig(host, env, {
     pluginHost: entriesDeclared,
   });
 
@@ -476,12 +483,18 @@ export async function checkBoot(
   host: SwitchboardHostParsed,
   ctx: BootCheckContext,
 ): Promise<BootIssue[]> {
+  // As `start` splits it: the project .env sits under the host file.
+  const env = memberEnvOf(ctx.env, ctx.projectRoot);
   const issues: BootIssue[] = protocolConflicts(
     host.reactor?.protocol,
-    ctx.env,
+    env.shell,
     ctx.file,
   ).map((message) => ({ path: "reactor.protocol", message }));
-  const legacyStore = readModelAsReactorStore(host.reactor, ctx.env, ctx.file);
+  const legacyStore = readModelAsReactorStore(
+    host.reactor,
+    env.shell,
+    ctx.file,
+  );
   if (legacyStore) {
     issues.push({ path: "reactor.backends", message: legacyStore.warning });
   }
@@ -491,7 +504,7 @@ export async function checkBoot(
   let config;
   try {
     // As `start` builds it; an env parse error becomes the issue.
-    config = await memberSwitchboardConfig(host, ctx.env, {
+    config = await memberSwitchboardConfig(host, env, {
       pluginHost: host.runner.plugins !== undefined,
     });
   } catch (error) {

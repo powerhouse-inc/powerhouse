@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -453,6 +453,58 @@ describe("switchboard bridge runner", () => {
       expect(warn).not.toHaveBeenCalled();
     } finally {
       warn.mockRestore();
+    }
+  });
+
+  it("puts a project .env under reactor.protocol and the block's storage, as on main", async () => {
+    const runner = await import("../src/runners/switchboard.js");
+    const { startSwitchboard } = await import("../src/services/switchboard.js");
+    const dir = mkdtempSync(join(tmpdir(), "ph-bridge-dotenv-"));
+    writeFileSync(
+      join(dir, ".env"),
+      [
+        "REACTOR_AUTH_ENFORCEMENT=false",
+        "PH_REACTOR_DATABASE_URL=postgres://host/dotenv",
+        "PH_INSPECTION_CALLS_PER_MINUTE=4",
+      ].join("\n"),
+    );
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
+    const host = switchboard({
+      name: "lab-switchboard",
+      runner: { module: "m" },
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            storage: { kind: "postgres", url: "postgres://host/block" },
+          },
+        },
+        protocol: { featureFlags: { authEnforcement: true } },
+      },
+    });
+    try {
+      // Before the server import loads the .env, and after (env holds its values).
+      for (const env of [{}, { REACTOR_AUTH_ENFORCEMENT: "false" }]) {
+        vi.mocked(startSwitchboard).mockClear();
+        await runner.run(host, { ...ctx, env });
+        expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+          storage: { reactor: { url: "postgres://host/block" } },
+          protocol: { featureFlags: { authEnforcement: true } },
+          inspection: { callsPerMinute: 4 },
+        });
+      }
+      // The shell still wins over the block's store.
+      vi.mocked(startSwitchboard).mockClear();
+      await runner.run(host, {
+        ...ctx,
+        env: { PH_REACTOR_DATABASE_URL: "postgres://host/shell" },
+      });
+      expect(vi.mocked(startSwitchboard).mock.calls[0][2]).toMatchObject({
+        storage: { reactor: { url: "postgres://host/shell" } },
+      });
+    } finally {
+      cwd.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import {
   assertProtocolConsistency,
   primaryBackend,
@@ -10,9 +11,46 @@ import {
   switchboardConfigLayerSchema,
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
+import { isDotenvDisabled } from "@powerhousedao/shared/clis/project-env";
 import type { ILogger } from "document-model";
+import dotenv from "dotenv";
 
 type Env = Readonly<Record<string, string | undefined>>;
+
+/** The operator's env, split by where each value came from. */
+export interface MemberEnv {
+  /** Set by the shell: wins over the host file. */
+  shell: Env;
+  /** Only in the project `.env`: under the host file. */
+  dotenv: Env;
+}
+
+function readDotenv(cwd: string): Record<string, string> {
+  try {
+    return dotenv.parse(fs.readFileSync(path.join(cwd, ".env")));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
+  }
+}
+
+/**
+ * Splits `env` into the shell's values and the `.env` the switchboard server
+ * loads from `cwd` (the same file). A value equal to the file's counts as the
+ * file's: once the server is imported, `env` holds the file's values too.
+ */
+export function memberEnvOf(env: Env, cwd: string = process.cwd()): MemberEnv {
+  const file = isDotenvDisabled({ ...env }) ? {} : readDotenv(cwd);
+  const shell: Record<string, string | undefined> = {};
+  for (const [name, value] of Object.entries(env)) {
+    if (file[name] === undefined || file[name] !== value) shell[name] = value;
+  }
+  const fromFile: Record<string, string> = {};
+  for (const [name, value] of Object.entries(file)) {
+    if (shell[name] === undefined) fromFile[name] = value;
+  }
+  return { shell, dotenv: fromFile };
+}
 
 /** `config.switchboard`: a member's own switchboard config. The omitted keys
  * live in the reactor block (storage, protocol, dynamic packages) or the
@@ -102,32 +140,38 @@ export function readModelAsReactorStore(
 }
 
 /**
- * The member's switchboard config under the runner's own arguments: its
- * reactor block, then `config.switchboard`, then the operator's env over both.
- * The block keeps the precedence it had as set-if-absent env and `dbPath`:
- * only PH_REACTOR_DATABASE_URL overrides its store, and no env var overrides
- * its read model. Reads `env`; writes nothing.
+ * The member's switchboard config under the runner's own arguments: the
+ * project `.env`, then its reactor block, then `config.switchboard`, then the
+ * shell's env over all three. The block keeps the precedence it had as
+ * set-if-absent env and `dbPath`: only a shell PH_REACTOR_DATABASE_URL
+ * overrides its store, and no env var overrides its read model. Writes nothing.
  */
 export async function memberSwitchboardConfig(
   member: SwitchboardMember,
-  env: Env,
+  env: MemberEnv,
   options: { pluginHost: boolean; logger?: ILogger },
 ): Promise<SwitchboardConfigInput> {
   // Lazy: the env mapping loads reactor-api, which the runner module must not.
   const { switchboardConfigFromEnv } =
     await import("@powerhousedao/switchboard/config/env");
   const block = reactorBlockToSwitchboardConfig(member.reactor);
-  const legacy = readModelAsReactorStore(member.reactor, env, "");
+  const legacy = readModelAsReactorStore(member.reactor, env.shell, "");
   if (legacy) {
     block.storage = { ...block.storage, reactor: { url: legacy.url } };
   }
-  const fromEnv = switchboardConfigFromEnv(env, { logger: options.logger });
+  const fromEnv = switchboardConfigFromEnv(env.shell, {
+    logger: options.logger,
+  });
   const storage = { ...fromEnv.storage };
-  if (block.storage?.reactor && env.PH_REACTOR_DATABASE_URL === undefined) {
+  if (
+    block.storage?.reactor &&
+    env.shell.PH_REACTOR_DATABASE_URL === undefined
+  ) {
     delete storage.reactor;
   }
   if (block.storage?.readModel) delete storage.readModel;
   return mergeSwitchboardConfig(
+    switchboardConfigFromEnv(env.dotenv, { logger: options.logger }),
     block,
     member.config?.switchboard ?? {},
     { ...fromEnv, storage },

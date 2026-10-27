@@ -199,6 +199,25 @@ describe("switchboard runner checkBoot", () => {
     ]);
   });
 
+  it("puts the project .env under reactor.protocol", async () => {
+    const root = projectRoot();
+    writeFileSync(path.join(root, ".env"), "REACTOR_AUTH_ENFORCEMENT=false\n");
+    const protocolHost = host({
+      reactor: { protocol: { featureFlags: { authEnforcement: true } } },
+    });
+    // `ph host check` has loaded the .env into its env snapshot.
+    expect(
+      await issuesOf(
+        protocolHost,
+        { REACTOR_AUTH_ENFORCEMENT: "false" },
+        { root },
+      ),
+    ).toEqual([]);
+    expect(
+      await issuesOf(protocolHost, { REACTOR_AUTH_ENFORCEMENT: "0" }, { root }),
+    ).toEqual([expect.stringMatching(/reactor\.protocol conflict/)]);
+  });
+
   it("turns an env parse error into an issue", async () => {
     expect(
       await issuesOf(host(), { REACTOR_PROJECTION_WORKER: "maybe" }),

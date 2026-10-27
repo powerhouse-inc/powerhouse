@@ -9,15 +9,23 @@ import {
   type SwitchboardConfigInput,
 } from "@powerhousedao/switchboard/config";
 import { switchboardConfigFromEnv } from "@powerhousedao/switchboard/config/env";
-import { describe, expect, it } from "vitest";
-import { memberSwitchboardConfig } from "../src/runners/member-config.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  memberEnvOf,
+  memberSwitchboardConfig,
+} from "../src/runners/member-config.js";
 
 type Env = Record<string, string | undefined>;
 
-// The removed path: the block as set-if-absent env, readModel.url as dbPath.
+// The removed path: the block as set-if-absent env, readModel.url as dbPath,
+// then the server's .env load, which sets only what is still unset.
 function envProjectionConfig(
   reactor: ReactorConfig | undefined,
   env: Env,
+  dotenv: Env = {},
 ): SwitchboardConfigInput {
   const projected: Env = { ...protocolEnv(reactor?.protocol) };
   const backend = primaryBackend(reactor);
@@ -28,7 +36,7 @@ function envProjectionConfig(
   if (reactor?.workflows !== undefined) {
     projected.PH_WORKFLOWS_ENABLED = reactor.workflows ? "1" : "0";
   }
-  const layer = switchboardConfigFromEnv({ ...projected, ...env });
+  const layer = switchboardConfigFromEnv({ ...dotenv, ...projected, ...env });
   const dbPath = backend?.readModel?.url || undefined;
   return dbPath
     ? mergeSwitchboardConfig(layer, {
@@ -70,6 +78,7 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
     name: string;
     reactor: ReactorConfig | undefined;
     env: Env;
+    dotenv?: Env;
     /** The reactor store, where it differs from the removed path. */
     reactorStore?: string;
   }[] = [
@@ -104,6 +113,33 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
         REACTOR_UNSUPPORTED_STORED_DOCUMENTS: "read-only",
       },
       reactorStore: "/env/reactor",
+    },
+    {
+      name: "block over a .env that sets the same keys",
+      reactor: pathBlock,
+      env: {},
+      dotenv: {
+        PH_REACTOR_DATABASE_URL: "/dotenv/reactor",
+        DATABASE_URL: "/dotenv/read",
+        DYNAMIC_MODEL_LOADING: "false",
+        PH_WORKFLOWS_ENABLED: "0",
+        REACTOR_DOCUMENT_DECISIONS: "false",
+        AUTH_ENABLED: "true",
+      },
+      reactorStore: "/data/reactor",
+    },
+    {
+      name: "readModel-only block over a .env that names a store",
+      reactor: {
+        backends: {
+          main: {
+            kind: "in-process",
+            readModel: { url: "postgres://host/db" },
+          },
+        },
+      },
+      env: {},
+      dotenv: { PH_SWITCHBOARD_DATABASE_URL: "postgres://host/dotenv" },
     },
     {
       name: "postgres block under PH_SWITCHBOARD_DATABASE_URL",
@@ -144,11 +180,15 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
 
   for (const row of rows) {
     it(row.name, async () => {
-      const before = parse(envProjectionConfig(row.reactor, row.env));
+      const before = parse(
+        envProjectionConfig(row.reactor, row.env, row.dotenv),
+      );
       const after = parse(
-        await memberSwitchboardConfig({ reactor: row.reactor }, row.env, {
-          pluginHost: false,
-        }),
+        await memberSwitchboardConfig(
+          { reactor: row.reactor },
+          { shell: row.env, dotenv: row.dotenv ?? {} },
+          { pluginHost: false },
+        ),
       );
       const expected = row.reactorStore
         ? {
@@ -171,12 +211,45 @@ describe("memberSwitchboardConfig keeps a single host's config (D1)", () => {
             },
           },
         },
-        { ADMINS: "0xenv", REACTOR_WORKERS: "0" },
+        { shell: { ADMINS: "0xenv", REACTOR_WORKERS: "0" }, dotenv: {} },
         { pluginHost: false },
       ),
     );
     expect(config.auth.admins).toEqual(["0xenv"]);
     expect(config.auth.defaultProtection).toBe(true);
     expect(config.workers.executor.count).toBe(0);
+  });
+});
+
+describe("memberEnvOf", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "ph-member-env-"));
+    writeFileSync(
+      path.join(dir, ".env"),
+      "REACTOR_AUTH_ENFORCEMENT=false\nDATABASE_URL=/dotenv/read\n",
+    );
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it("puts .env-only values, and values equal to the file's, in the .env layer", () => {
+    expect(
+      memberEnvOf(
+        { REACTOR_AUTH_ENFORCEMENT: "false", DATABASE_URL: "/shell/read" },
+        dir,
+      ),
+    ).toEqual({
+      shell: { DATABASE_URL: "/shell/read" },
+      dotenv: { REACTOR_AUTH_ENFORCEMENT: "false" },
+    });
+  });
+
+  it("reads no .env under PH_NO_DOTENV or without a file", () => {
+    expect(memberEnvOf({ PH_NO_DOTENV: "1" }, dir)).toEqual({
+      shell: { PH_NO_DOTENV: "1" },
+      dotenv: {},
+    });
+    rmSync(path.join(dir, ".env"));
+    expect(memberEnvOf({}, dir)).toEqual({ shell: {}, dotenv: {} });
   });
 });
