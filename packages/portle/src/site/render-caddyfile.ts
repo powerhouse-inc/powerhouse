@@ -1,3 +1,4 @@
+import { SWITCHBOARD_PROXY_PATHS } from "@powerhousedao/host-core";
 import {
   LABEL_RE,
   isSiteId,
@@ -59,28 +60,25 @@ export interface CaddyRenderInput {
   rewriteHostHeader?: boolean | undefined;
   /**
    * Same-origin publication: on this label the switchboard's paths go to the
-   * API upstream and, when `configPath` is given, `/powerhouse.config.json`
-   * is rewritten to that path on the API upstream (the switchboard's
-   * public-config route), so the SPA finds its backend on its own origin (no
-   * cross-origin calls, no local-network prompt). Everything else on the
-   * label goes to the label's own upstream.
+   * API upstream, so the SPA finds its backend on its own origin (no
+   * cross-origin calls, no local-network prompt); its config names the
+   * switchboard as `${origin}`, which the browser resolves to this label.
+   * Everything else on the label goes to the label's own upstream.
    */
-  appRoute?:
-    | { label: string; apiTarget: string; configPath?: string | undefined }
-    | undefined;
+  appRoute?: { label: string; apiTarget: string } | undefined;
 }
 
-/** The switchboard's HTTP surface, as Caddy path matchers (`/x*` covers `/x` and below). */
-export const SWITCHBOARD_PATHS = [
-  "/graphql*",
-  "/d/*",
-  "/attachments*",
-  "/mcp*",
-  "/api/*",
-  "/ready",
-  "/health",
-  "/explorer*",
-] as const;
+/**
+ * The switchboard's HTTP surface as Caddy path matchers, from the one list
+ * Connect's own servers proxy (`SWITCHBOARD_PROXY_PATHS`): `/x` and `/x/*`
+ * for a bare prefix, `/x/*` for one that ends in a slash. `/d/*` is listed
+ * apart: a browser navigation there is one of Connect's routes.
+ */
+export const SWITCHBOARD_PATHS: readonly string[] =
+  SWITCHBOARD_PROXY_PATHS.filter((prefix) => prefix !== "/d/").flatMap(
+    (prefix) =>
+      prefix.endsWith("/") ? [`${prefix}*`] : [prefix, `${prefix}/*`],
+  );
 
 function port(value: number, what: string): number {
   if (!Number.isInteger(value) || value < 1 || value > 65535) {
@@ -219,25 +217,26 @@ ${proxy(upstream, 1)}
     }
     token(appRoute.apiTarget, "appRoute.apiTarget");
   }
-  /** The label's handle body: the plain proxy, or the same-origin split. */
+  /**
+   * The label's handle body: the plain proxy, or the same-origin split (the
+   * same rules as Connect's own dev and preview servers): the switchboard's
+   * paths go to the API upstream, `/d/*` too unless the request is a browser
+   * navigation (it accepts HTML), which is one of Connect's routes.
+   */
   const labelBody = (label: string, target: string): string => {
     if (!appRoute || appRoute.label !== label) return proxy(target, 2);
-    const apiHandles = SWITCHBOARD_PATHS.map(
-      (path) => `		handle ${path} {
-${proxy(appRoute.apiTarget, 3)}
-		}`,
-    );
-    const configHandle = appRoute.configPath
-      ? [
-          `		handle /powerhouse.config.json {
-			rewrite * ${token(appRoute.configPath, "appRoute.configPath")}
-${proxy(appRoute.apiTarget, 3)}
-		}`,
-        ]
-      : [];
     return [
-      ...apiHandles,
-      ...configHandle,
+      `		@switchboard path ${SWITCHBOARD_PATHS.join(" ")}
+		handle @switchboard {
+${proxy(appRoute.apiTarget, 3)}
+		}
+		@drive {
+			path /d/*
+			not header Accept *text/html*
+		}
+		handle @drive {
+${proxy(appRoute.apiTarget, 3)}
+		}`,
       `		handle {
 ${proxy(target, 3)}
 		}`,

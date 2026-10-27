@@ -1,5 +1,4 @@
 import type { Context } from "@powerhousedao/reactor-api";
-import type { PublicConfigSource } from "../src/public-config.js";
 import type { PortleRunnerLike, TunnelStatus } from "../src/runner.js";
 import type { EnrollmentResponse } from "../src/site/types.js";
 import type { PortleApi } from "../src/subgraph.js";
@@ -107,16 +106,13 @@ export function fakeRunner(
   calls: string[];
   status_: TunnelStatus;
   delegated: boolean | null;
-  source_: PublicConfigSource | null;
 } {
   const runner = {
     calls: [] as string[],
     status_: status,
     delegated: null as boolean | null,
-    source_: null as PublicConfigSource | null,
     checkDelegation: () => Promise.resolve(runner.delegated),
     status: () => runner.status_,
-    publicConfigSource: () => runner.source_,
     enrol: (input: { controlPlaneUrl: string; token: string }) => {
       runner.calls.push(`enrol ${input.controlPlaneUrl} ${input.token}`);
       runner.status_ = { ...runner.status_, enrolled: true };

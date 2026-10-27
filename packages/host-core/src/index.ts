@@ -141,6 +141,7 @@ export {
   makeHostSchemas,
   profileSchema,
   reactorBackendKindSchema,
+  originOrUrlSchema,
   reactorBackendSchema,
   reactorHostSchema,
   reactorProtocolSchema,
@@ -312,3 +313,17 @@ export {
   type MemberExpectation,
   type MemberInput,
 } from "./expect-host.js";
+
+// The origin placeholder (`${origin}`) a proxied member's served config
+// carries, and the switchboard paths a fronting server proxies; defined in
+// shared (browser-safe), re-exported for Node consumers.
+export {
+  isHtmlNavigation,
+  isOriginPlaceholderUrl,
+  isSwitchboardProxyPath,
+  ORIGIN_PLACEHOLDER,
+  resolveOriginPlaceholders,
+  SWITCHBOARD_PROXY_PATHS,
+  toOriginPlaceholder,
+  withOriginPlaceholders,
+} from "@powerhousedao/shared/connect/origin-placeholder";

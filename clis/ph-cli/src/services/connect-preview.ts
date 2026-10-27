@@ -9,6 +9,7 @@ import type { InlineConfig, Plugin } from "vite";
 import { preview } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { PRECOMPRESS_EXTENSIONS } from "../utils/precompress.js";
+import { switchboardProxy } from "../utils/switchboard-proxy.js";
 
 /**
  * Runtime shaping for a served (built) Connect, desktop shape: the compound
@@ -318,6 +319,12 @@ export async function runConnectPreview(
   args: ConnectPreviewArgs,
   serveOverride?: ConnectServeOverride,
   dirname = process.cwd(),
+  {
+    proxy,
+  }: {
+    /** The switchboard origin whose paths this server proxies (runner.proxy). */
+    proxy?: string;
+  } = {},
 ) {
   // A supervisor can drive the preview via env when no explicit override is
   // passed (the classic `ph connect preview` command path).
@@ -356,6 +363,7 @@ export async function runConnectPreview(
       strictPort,
       host,
       open,
+      ...(proxy ? { proxy: switchboardProxy(proxy) } : {}),
     },
     plugins: [
       previewCacheHeadersPlugin(outDirAbs, base),

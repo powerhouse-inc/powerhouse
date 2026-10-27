@@ -15,13 +15,6 @@ export {
   type PortlePolicy,
 } from "./gate.js";
 export {
-  createPublicConfigHandler,
-  PUBLIC_CONFIG_PATH,
-  rewritePublicConfig,
-  type PublicConfigHandlerOptions,
-  type PublicConfigSource,
-} from "./public-config.js";
-export {
   PortleRunner,
   type EnrolInput,
   type PortleRunnerDeps,

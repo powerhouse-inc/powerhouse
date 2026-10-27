@@ -6,10 +6,6 @@ import {
   type ResolveBinariesOptions,
 } from "./binaries.js";
 import { isDelegated, type ResolveNs } from "./delegation.js";
-import {
-  PUBLIC_CONFIG_PATH,
-  type PublicConfigSource,
-} from "./public-config.js";
 import { enrolWithControlPlane } from "./site/enrol.js";
 import { LABEL_RE } from "./site/hostnames.js";
 import {
@@ -82,8 +78,6 @@ export interface PortleRunnerLike {
   start(): Promise<TunnelStatus>;
   /** Stops both processes; clears `autostart` unless `keepAutostart` (a host shutdown). */
   stop(options?: StopOptions): Promise<TunnelStatus>;
-  /** What the public-config route serves; null while not published same-origin. */
-  publicConfigSource(): PublicConfigSource | null;
 }
 
 export interface StopOptions {
@@ -403,50 +397,21 @@ export class PortleRunner implements PortleRunnerLike {
 
   /**
    * Same-origin publication for the `app` label: its handle also proxies the
-   * switchboard's paths to the `api` upstream, and sends
-   * `/powerhouse.config.json` to the switchboard's public-config route, which
-   * answers with the app's own config rewritten to the public origin (see
-   * `public-config.ts`). The SPA then calls its own origin: no cross-origin
-   * requests and no browser prompt for a local address. Nothing is fetched
-   * here: the route reads the app's config when a browser asks, so it does
-   * not matter which of the two came up first.
+   * switchboard's paths to the `api` upstream, the same split Connect's own
+   * dev and preview servers make (the connect runner's `runner.proxy`), so
+   * the SPA calls its own origin for everything and its served config, which
+   * names the switchboard as `${origin}`, resolves to this label in the
+   * browser. No cross-origin requests, no browser prompt for a local
+   * address, and nothing rendered or fetched from the app at start.
    */
   #appRoute(
     settings: SiteSettings,
-  ): { label: string; apiTarget: string; configPath: string } | undefined {
-    if (!this.#sameOrigin(settings)) return undefined;
-    return {
-      label: "app",
-      apiTarget: settings.upstreams.api!,
-      configPath: PUBLIC_CONFIG_PATH,
-    };
-  }
-
-  /** Same-origin applies: both labels exist and the operator did not switch it off. */
-  #sameOrigin(settings: SiteSettings): boolean {
-    return (
-      settings.sameOrigin !== false &&
-      !!settings.upstreams.app &&
-      !!settings.upstreams.api
-    );
-  }
-
-  /**
-   * What the public-config route rewrites and from where, or null while the
-   * site is not published same-origin (not enrolled, a label missing, or
-   * switched off).
-   */
-  publicConfigSource(): PublicConfigSource | null {
-    const enrollment = this.#enrollment();
-    if (!enrollment) return null;
-    const settings = this.#settings();
-    if (!this.#sameOrigin(settings)) return null;
-    const api = settings.upstreams.api!;
-    return {
-      appUrl: `http://${settings.upstreams.app!}`,
-      apiPort: api.split(":").pop() ?? "",
-      publicOrigin: `https://app.${enrollment.siteZone}`,
-    };
+  ): { label: string; apiTarget: string } | undefined {
+    if (settings.sameOrigin === false) return undefined;
+    const app = settings.upstreams.app;
+    const api = settings.upstreams.api;
+    if (!app || !api) return undefined;
+    return { label: "app", apiTarget: api };
   }
 
   #enrollment(): EnrollmentResponse | null {

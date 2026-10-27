@@ -349,45 +349,40 @@ describe("PortleRunner: stop at a host shutdown", () => {
 });
 
 describe("PortleRunner: same-origin publication", () => {
-  it("routes the app label's config path to the switchboard's public-config route and says what that route rewrites", async () => {
+  it("splits the switchboard's paths off the app label, and nothing is rendered or fetched for the config", async () => {
     const { runner } = runnerWith();
     await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
     runner.configure({
       appUpstream: "localhost:2540",
       upstreams: { api: "127.0.0.1:7540", app: "localhost:2540" },
     });
-    expect(runner.publicConfigSource()).toEqual({
-      appUrl: "http://localhost:2540",
-      apiPort: "7540",
-      publicOrigin: "https://app.dev.sektar.be",
-    });
     const out = runner.render();
     const caddyfile = readFileSync(out.caddyfile, "utf8");
-    expect(caddyfile).toContain("handle /graphql* {");
     expect(caddyfile).toContain(
-      "\t\thandle /powerhouse.config.json {\n\t\t\trewrite * /portle/public/powerhouse.config.json\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
+    expect(caddyfile).toContain(
+      "\t\t@drive {\n\t\t\tpath /d/*\n\t\t\tnot header Accept *text/html*\n\t\t}\n\t\thandle @drive {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+    );
+    expect(caddyfile).not.toContain("powerhouse.config.json");
     expect(existsSync(join(stateDir, "public"))).toBe(false);
   });
 
-  it("has no source and splits nothing without both labels, when switched off, or before enrolment", async () => {
+  it("splits nothing without both labels, or when switched off", async () => {
     const { runner } = runnerWith();
-    expect(runner.publicConfigSource()).toBeNull();
     await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
     runner.configure({ upstreams: { api: "127.0.0.1:7540" } });
-    expect(runner.publicConfigSource()).toBeNull();
     runner.render();
     expect(readFileSync(join(stateDir, "Caddyfile"), "utf8")).not.toContain(
-      "handle /graphql*",
+      "@switchboard",
     );
     runner.configure({
       upstreams: { api: "127.0.0.1:7540", app: "localhost:2540" },
       sameOrigin: false,
     });
-    expect(runner.publicConfigSource()).toBeNull();
     runner.render();
     expect(readFileSync(join(stateDir, "Caddyfile"), "utf8")).not.toContain(
-      "powerhouse.config.json",
+      "@switchboard",
     );
   });
 });

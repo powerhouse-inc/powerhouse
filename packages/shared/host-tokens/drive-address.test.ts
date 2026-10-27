@@ -10,6 +10,18 @@ describe("switchboardOfDrive", () => {
     });
   });
 
+  it("takes a drive on the switchboard the page origin proxies", () => {
+    expect(switchboardOfDrive("${origin}/d/powerhouse")).toEqual({
+      base: "${origin}",
+      graphql: "${origin}/graphql",
+      slug: "powerhouse",
+    });
+    expect(switchboardOfDrive("${origin}/graphql")).toBeUndefined();
+    expect(
+      switchboardOfDrive("${origin}//elsewhere.example/d/x"),
+    ).toBeUndefined();
+  });
+
   it("keeps a path prefix in the base", () => {
     expect(switchboardOfDrive("https://sb.example/api/v1/d/b")).toEqual({
       base: "https://sb.example/api/v1",
@@ -45,6 +57,12 @@ describe("driveAddressMessage", () => {
   it("names the drive address that replaces a GraphQL url", () => {
     expect(driveAddressMessage("http://localhost:4001/graphql")).toBe(
       "http://localhost:4001/graphql is not a switchboard drive address (<switchboard>/d/<slug>): use http://localhost:4001/d/<slug>, one of the switchboard's drives.",
+    );
+  });
+
+  it("names the proxied drive address that replaces ${origin}/graphql", () => {
+    expect(driveAddressMessage("${origin}/graphql")).toBe(
+      "${origin}/graphql is not a switchboard drive address (<switchboard>/d/<slug>): use ${origin}/d/<slug>, one of the switchboard's drives.",
     );
   });
 

@@ -5,7 +5,11 @@ import {
   isWellFormedHostname,
   siteWildcard,
 } from "../src/site/hostnames.js";
-import { renderCaddyfile, rfc2136Dns } from "../src/site/render-caddyfile.js";
+import {
+  renderCaddyfile,
+  rfc2136Dns,
+  SWITCHBOARD_PATHS,
+} from "../src/site/render-caddyfile.js";
 import { renderFrpcToml } from "../src/site/render-frpc.js";
 
 const ZONE = "dev.sektar.be";
@@ -229,36 +233,37 @@ describe("rewriteHostHeader", () => {
 describe("appRoute (same-origin publication)", () => {
   const withRoute = {
     ...caddyInput,
-    appRoute: {
-      label: "app",
-      apiTarget: "127.0.0.1:7540",
-      configPath: "/portle/public/powerhouse.config.json",
-    },
+    appRoute: { label: "app", apiTarget: "127.0.0.1:7540" },
   };
 
-  it("sends the switchboard paths on the app label to the api upstream and the rest to the app", () => {
+  it("lists the switchboard's paths from the shared list, without the drives, the probes or the config", () => {
+    expect(SWITCHBOARD_PATHS).toEqual([
+      "/graphql",
+      "/graphql/*",
+      "/attachments",
+      "/attachments/*",
+      "/mcp",
+      "/mcp/*",
+      "/api/*",
+    ]);
+  });
+
+  it("sends the switchboard paths on the app label to the api upstream, drive navigations and the rest to the app", () => {
     const out = renderCaddyfile(withRoute);
     const appStart = out.indexOf("handle @app {");
     const app = out.slice(appStart, out.indexOf("\n\t}\n", appStart));
-    for (const path of [
-      "/graphql*",
-      "/d/*",
-      "/attachments*",
-      "/mcp*",
-      "/api/*",
-      "/ready",
-      "/health",
-      "/explorer*",
-    ]) {
-      expect(app).toContain(
-        `\t\thandle ${path} {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}`,
-      );
-    }
     expect(app).toContain(
-      "\t\thandle /powerhouse.config.json {\n\t\t\trewrite * /portle/public/powerhouse.config.json\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+      "\t\t@switchboard path /graphql /graphql/* /attachments /attachments/* /mcp /mcp/* /api/*\n\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
     expect(app).toContain(
+      "\t\t@drive {\n\t\t\tpath /d/*\n\t\t\tnot header Accept *text/html*\n\t\t}\n\t\thandle @drive {\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
+    );
+    expect(app).not.toContain("powerhouse.config.json");
+    expect(app).toContain(
       "\t\thandle {\n\t\t\treverse_proxy 127.0.0.1:2540\n\t\t}",
+    );
+    expect(app.lastIndexOf("handle {")).toBeGreaterThan(
+      app.lastIndexOf("handle @drive"),
     );
     // the api label itself is untouched
     expect(out).toContain(
@@ -266,18 +271,13 @@ describe("appRoute (same-origin publication)", () => {
     );
   });
 
-  it("omits the config handle without a config path, and composes with the host rewrite", () => {
-    const out = renderCaddyfile({
-      ...withRoute,
-      appRoute: { label: "app", apiTarget: "127.0.0.1:7540" },
-      rewriteHostHeader: true,
-    });
-    expect(out).not.toContain("powerhouse.config.json");
+  it("composes with the host rewrite", () => {
+    const out = renderCaddyfile({ ...withRoute, rewriteHostHeader: true });
     expect(out).toContain(
       "\t\thandle {\n\t\t\treverse_proxy 127.0.0.1:2540 {\n\t\t\t\theader_up Host {upstream_hostport}\n\t\t\t}\n\t\t}",
     );
     expect(out).toContain(
-      "\t\thandle /graphql* {\n\t\t\treverse_proxy 127.0.0.1:7540 {\n\t\t\t\theader_up Host {upstream_hostport}",
+      "\t\thandle @switchboard {\n\t\t\treverse_proxy 127.0.0.1:7540 {\n\t\t\t\theader_up Host {upstream_hostport}",
     );
   });
 
@@ -286,16 +286,6 @@ describe("appRoute (same-origin publication)", () => {
     [
       "an injected api target",
       { appRoute: { label: "app", apiTarget: "x:1 }\nrespond 200" } },
-    ],
-    [
-      "an injected config path",
-      {
-        appRoute: {
-          label: "app",
-          apiTarget: "x:1",
-          configPath: "/p }\nrespond 200",
-        },
-      },
     ],
   ])("rejects %s", (_n, over) => {
     expect(() => renderCaddyfile({ ...caddyInput, ...over })).toThrow();

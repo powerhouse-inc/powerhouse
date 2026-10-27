@@ -1,10 +1,6 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
 import type { ISubgraph } from "@powerhousedao/reactor-api";
 import { bootGatePasses } from "./gate.js";
-import {
-  createPublicConfigHandler,
-  PUBLIC_CONFIG_PATH,
-} from "./public-config.js";
 import { PortleRunner, type PortleRunnerLike } from "./runner.js";
 import { projectRootOf, stateDirOf } from "./state.js";
 import {
@@ -69,16 +65,7 @@ function loggerOf(ctx: PortleHostContext): LoggerLike {
   };
 }
 
-/** The HTTP adapter's slice this plugin mounts on (reactor-api's `IHttpAdapter.mount`). */
-interface HttpMounter {
-  mount(
-    path: string,
-    handler: (request: Request) => Promise<Response>,
-  ): unknown;
-}
-
 export interface PortleHooks {
-  onHttpMounting: (ctx: PortleHostContext) => Promise<void>;
   onSubgraphsRegistering: (ctx: PortleHostContext) => Promise<void>;
   onDrivesReady: (ctx: PortleHostContext) => Promise<void>;
   onShutdown: (ctx: PortleHostContext) => Promise<void>;
@@ -112,32 +99,6 @@ export function createPortlePlugin(
     name: PORTLE_PLUGIN_NAME,
     appliesTo: "switchboard",
     hooks: {
-      // The public runtime config: the app's own, rewritten to the public
-      // origin, read from the app when a browser asks (see public-config.ts).
-      // Mounted straight on the adapter, outside the authenticated-caller
-      // floor: the SPA fetches it before anyone is signed in, and it holds
-      // nothing the app does not already serve to the world.
-      onHttpMounting: async (ctx) => {
-        const api = ctx.api as { httpAdapter?: HttpMounter } | undefined;
-        if (!api?.httpAdapter) {
-          throw new Error(
-            "The portle plugin needs the switchboard's HTTP adapter at onHttpMounting; the host handed none.",
-          );
-        }
-        const runner = ensureRunner(ctx);
-        const log = loggerOf(ctx);
-        api.httpAdapter.mount(
-          PUBLIC_CONFIG_PATH,
-          createPublicConfigHandler({
-            source: () => runner.publicConfigSource(),
-            log: (msg, detail) =>
-              log.warn(
-                `[portle] ${msg} ${detail ? JSON.stringify(detail) : ""}`,
-              ),
-          }),
-        );
-        await Promise.resolve();
-      },
       onSubgraphsRegistering: async (ctx) => {
         const api = ctx.api as PortleApi | undefined;
         const registry = ctx.graphqlManager as SubgraphRegistry | undefined;
