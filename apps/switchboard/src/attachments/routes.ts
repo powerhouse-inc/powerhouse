@@ -520,29 +520,11 @@ const MAX_DOWNLOAD_TARGET_TTL_SECONDS = 7 * 24 * 60 * 60;
  * fetchable by anyone holding the link. Minutes are enough to open a file;
  * days are only enough to lose control of it.
  *
- * A deployment that needs longer sets ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS,
- * still bounded by the signing ceiling above.
+ * A deployment that needs longer sets `attachments.downloadTargetMaxTtlSeconds`
+ * (ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS at the edge), still bounded by the
+ * signing ceiling above.
  */
 const DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS = 300;
-
-/**
- * The ceiling in force, read per call so a deployment can set it without the
- * value being frozen at import — which is also what lets a test cover it.
- * Anything unparseable falls back to the default rather than to the maximum:
- * a typo must not quietly widen the window it was meant to narrow.
- */
-function downloadTargetTtlCapSecondsFromEnv(): number {
-  const configured = process.env.ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS;
-  if (configured === undefined) return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
-  const parsed = Number(configured);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    logger.warn(
-      `Ignoring invalid ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS="${configured}" (expected a positive integer number of seconds) — using ${DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS}`,
-    );
-    return DEFAULT_DOWNLOAD_TARGET_TTL_SECONDS;
-  }
-  return Math.min(parsed, MAX_DOWNLOAD_TARGET_TTL_SECONDS);
-}
 
 /** A configured ceiling, bounded by the signing maximum; unset is the default. */
 export function downloadTargetTtlCapSeconds(
@@ -713,8 +695,7 @@ export function makeDownloadTargetHandler(
   attachments: AttachmentBuildResult,
   attachmentAccess: IAttachmentAccessService,
   urlSigner: AttachmentUrlSigner | null,
-  /** Unset: ATTACHMENT_DOWNLOAD_TARGET_MAX_TTL_SECONDS, read per request. */
-  ttlCapSeconds?: number,
+  ttlCapSeconds = downloadTargetTtlCapSeconds(undefined),
 ) {
   return async (
     req: IncomingMessage,
@@ -740,10 +721,7 @@ export function makeDownloadTargetHandler(
       );
       return;
     }
-    const expiresIn = extractExpiresIn(
-      req,
-      ttlCapSeconds ?? downloadTargetTtlCapSecondsFromEnv(),
-    );
+    const expiresIn = extractExpiresIn(req, ttlCapSeconds);
     if (expiresIn === "invalid") {
       sendError(
         res,

@@ -50,10 +50,7 @@ import {
   type ProcessorFactory,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
-import {
-  reactorApiConfigFromEnv,
-  type ReactorApiConfig,
-} from "./api-config.js";
+import type { ReactorApiConfig } from "./api-config.js";
 import { coreSubgraphClasses } from "./config.js";
 import { createStartupAttachmentBackend } from "./attachment-backend.js";
 import {
@@ -168,31 +165,28 @@ type Options = {
   pgliteFactory?: PgliteFactory;
   configFile?: string;
   packages?: string[];
-  /** Route prefix, gateway and public origin; each key wins over its env var. */
+  /** Route prefix, gateway and public origin. Env is not read: map it at the
+   *  edge with `reactorApiConfigFromEnv`. */
   server?: ReactorApiConfig["server"];
-  /** `enabled` and `admins` win over the `configFile`'s; their env vars, and
-   *  the identity keys' env vars, override them. The remaining keys win over
-   *  their env vars. */
+  /** `enabled` and `admins` win over the `configFile`'s. Env is not read. */
   auth?: {
     enabled?: boolean;
     admins?: string[];
     /** Read the bearer and populate `ctx.user` independently of `enabled`.
-     *  Defaults to `enabled`; `RESOLVE_CALLER_IDENTITY` overrides either. */
+     *  Defaults to `enabled`. */
     resolveIdentity?: boolean;
     /** Reject anonymous callers with a 401 before any subgraph sees the
-     *  request. Off by default; `REQUIRE_AUTHENTICATED_CALLER` overrides.
-     *  Requires identity resolution to be on — refused at boot without it. */
+     *  request. Off by default. Requires identity resolution to be on —
+     *  refused at boot without it. */
     requireAuthenticatedCaller?: boolean;
     /** Mounted paths that stay reachable anonymously while
      *  `requireAuthenticatedCaller` is on, for a flow that runs before
      *  sign-in. Matched against the request's pathname in full, never as a
-     *  prefix. `REQUIRE_AUTHENTICATED_CALLER_EXEMPT_PATHS` overrides, as a
-     *  comma-separated list. Each entry is a hole in the floor: only ever name
+     *  prefix. Each entry is a hole in the floor: only ever name
      *  a path serving operations that are safe without a caller. */
     requireAuthenticatedCallerExemptPaths?: string[];
     /** Decide an attachment read with the referencing document's own policy
-     *  instead of the host permission tables. Off by default;
-     *  `ATTACHMENT_READS_FOLLOW_DOCUMENT_POLICY` overrides. Requires auth
+     *  instead of the host permission tables. Off by default. Requires auth
      *  enforcement, which is what supplies the model — refused at boot
      *  without it. */
     attachmentReadsFollowDocumentPolicy?: boolean;
@@ -203,7 +197,7 @@ type Options = {
     wsRecheckMs?: number;
   };
   /** Renown coordinates the host already resolved, used verbatim instead of
-   * resolving `auth.renown` and the env again (which would warn twice). */
+   * resolving the config file's `auth.renown` again (which would warn twice). */
   renown?: ResolvedRenownConfig;
   /** Credential check replacing the built-in remote Renown one; required when
    * the resolved source is "self" (see assertCredentialVerifierForSource). */
@@ -223,8 +217,7 @@ type Options = {
    * Document permission service instance.
    * When provided, the Auth subgraph is registered and document permission
    * checks are enforced on document operations.
-   * If not provided, can be auto-created by setting DOCUMENT_PERMISSIONS_ENABLED=true
-   * environment variable.
+   * If not provided, `auth.documentPermissions.enabled` creates one.
    */
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
@@ -237,7 +230,7 @@ type Options = {
    * or os.tmpdir() for in-memory DB deployments.
    */
   attachmentStoragePath?: string;
-  /** Wins over `PH_ATTACHMENT_STORAGE`; filesystem when neither is set. */
+  /** Filesystem when unset. */
   attachments?: ReactorApiConfig["attachments"];
   /** Storage health and workflow facts for the inspection subgraph; `false`
    * leaves it unmounted and `api.inspection` undefined. On by default. */
@@ -637,13 +630,11 @@ function boundPortOf(httpServer: http.Server): number {
   return address.port;
 }
 
-/** Per-server settings resolved once from options and env. */
+/** Per-server settings resolved once from options. */
 type ServerSettings = {
   basePath: string;
   gatewayAdapter: GatewayAdapterType;
   wsCredentialRecheckIntervalMs: number | undefined;
-  /** The env layer only: `options.inspection.admin` is applied over it. */
-  inspectionAdmin: boolean;
 };
 
 /**
@@ -674,39 +665,23 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const port = options.port ?? DEFAULT_PORT;
   const { adapter: httpAdapter } = await createHttpAdapter("express");
   const logger = options.logger ?? defaultLogger;
-  const fromEnv = reactorApiConfigFromEnv(process.env, logger);
-  const envAuth = fromEnv.auth ?? {};
   const optionAuth = options.auth ?? {};
   const settings: ServerSettings = {
-    basePath: options.server?.basePath ?? fromEnv.server?.basePath ?? "/",
-    gatewayAdapter:
-      options.server?.gatewayAdapter ??
-      fromEnv.server?.gatewayAdapter ??
-      "apollo",
-    wsCredentialRecheckIntervalMs:
-      optionAuth.wsRecheckMs ?? envAuth.wsRecheckMs,
-    inspectionAdmin: fromEnv.inspection?.admin ?? false,
+    basePath: options.server?.basePath ?? "/",
+    gatewayAdapter: options.server?.gatewayAdapter ?? "apollo",
+    wsCredentialRecheckIntervalMs: optionAuth.wsRecheckMs,
   };
 
   // Setup auth configuration
-  // A set option wins over the config file; the env below wins over both.
+  // A set option wins over the config file.
   const fileAuth = options.configFile
     ? getConfig(options.configFile).auth
     : undefined;
-  let admins = (optionAuth.admins ?? fileAuth?.admins ?? []).map((a) =>
+  const admins = (optionAuth.admins ?? fileAuth?.admins ?? []).map((a) =>
     a.toLowerCase(),
   );
-  let authEnabled = optionAuth.enabled ?? fileAuth?.enabled ?? false;
+  const authEnabled = optionAuth.enabled ?? fileAuth?.enabled ?? false;
   const configuredRenown: RenownConfig | undefined = fileAuth?.renown;
-  const configuredResolveIdentity = optionAuth.resolveIdentity;
-  const configuredRequireAuth = optionAuth.requireAuthenticatedCaller;
-  const configuredExemptPaths =
-    optionAuth.requireAuthenticatedCallerExemptPaths;
-  const configuredAttachmentPolicyReads =
-    optionAuth.attachmentReadsFollowDocumentPolicy;
-  if (envAuth.enabled !== undefined) {
-    authEnabled = envAuth.enabled;
-  }
 
   /**
    * Whether the auth middleware reads the bearer and populates `ctx.user`,
@@ -719,8 +694,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * stays `OPEN`, which is the combination custom subgraphs need and the one
    * `AUTH_ENABLED` alone cannot express.
    */
-  const resolveCallerIdentity =
-    envAuth.resolveIdentity ?? configuredResolveIdentity ?? authEnabled;
+  const resolveCallerIdentity = optionAuth.resolveIdentity ?? authEnabled;
 
   /**
    * Whether the require-authenticated-caller middleware is active: anonymous
@@ -737,7 +711,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * anonymous not".
    */
   const requireAuthenticatedCaller =
-    envAuth.requireAuthenticatedCaller ?? configuredRequireAuth ?? false;
+    optionAuth.requireAuthenticatedCaller ?? false;
 
   /**
    * The paths the floor above does not apply to. Comma-separated, like
@@ -750,9 +724,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * {@link assertRequireAuthenticatedCallerAllowed}.
    */
   const requireAuthenticatedCallerExemptPaths =
-    envAuth.requireAuthenticatedCallerExemptPaths ??
-    configuredExemptPaths ??
-    [];
+    optionAuth.requireAuthenticatedCallerExemptPaths ?? [];
 
   /**
    * Whether an attachment read is decided by the referencing document's own
@@ -765,24 +737,13 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
    * asks for it and can take it back without disturbing anything else.
    */
   const attachmentReadsFollowDocumentPolicy =
-    envAuth.attachmentReadsFollowDocumentPolicy ??
-    configuredAttachmentPolicyReads ??
-    false;
+    optionAuth.attachmentReadsFollowDocumentPolicy ?? false;
 
-  if (envAuth.admins !== undefined) {
-    admins = envAuth.admins;
-  }
-
-  const defaultProtection =
-    optionAuth.defaultProtection ?? envAuth.defaultProtection ?? false;
+  const defaultProtection = optionAuth.defaultProtection ?? false;
   const skipCredentialVerification =
-    optionAuth.skipCredentialVerification ??
-    envAuth.skipCredentialVerification ??
-    false;
+    optionAuth.skipCredentialVerification ?? false;
   const documentPermissionsEnabled =
-    optionAuth.documentPermissions?.enabled ??
-    envAuth.documentPermissions?.enabled ??
-    false;
+    optionAuth.documentPermissions?.enabled ?? false;
 
   const documentPermissionsRequested =
     options.documentPermissionService !== undefined ||
@@ -860,8 +821,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       resolveCallerIdentity,
     );
     const renown =
-      options.renown ??
-      resolveRenownConfig(configuredRenown, process.env, logger);
+      options.renown ?? resolveRenownConfig(configuredRenown, {}, logger);
     assertCredentialVerifierForSource(
       renown.source,
       options.verifyCredential !== undefined,
@@ -881,7 +841,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       skipCredentialVerification,
       credentialVerificationCacheTtlMs:
         optionAuth.credentialCacheTtlMs ??
-        envAuth.credentialCacheTtlMs ??
         (renown.source === "self" ? 0 : undefined),
       verifyCredential:
         options.verifyCredential ??
@@ -946,7 +905,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
           defaultProtection,
           cacheTtlMs:
             optionAuth.documentPermissions?.cacheTtlMs ??
-            envAuth.documentPermissions?.cacheTtlMs ??
             DEFAULT_PERMISSION_CACHE_TTL_MS,
         }
       : null;
@@ -979,8 +937,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   const ATTACHMENT_SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
   const attachmentBackend = await createStartupAttachmentBackend({
     db: attachmentDb as Kysely<AttachmentDatabase>,
-    storage: options.attachments?.storage ??
-      fromEnv.attachments?.storage ?? { kind: "filesystem" },
+    storage: options.attachments?.storage ?? { kind: "filesystem" },
   });
   const attachmentBuilder = new AttachmentBuilder(
     attachmentDb,
@@ -1016,10 +973,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // a URL a provider has registered keeps working across a restart and any
   // replica can serve it.
   const listenPort: ListenPort = { current: port };
-  const publicUrl = resolvePublicOrigin(
-    options.server?.publicUrl ?? fromEnv.server?.publicUrl,
-    listenPort,
-  );
+  const publicUrl = resolvePublicOrigin(options.server?.publicUrl, listenPort);
   const webhooks = new WebhookService({
     store: new RelationalWebhookStore(relationalDb),
     basePath: settings.basePath,
@@ -1677,7 +1631,6 @@ export async function initializeAndStartAPI(
     attachmentReadsFollowDocumentPolicy,
     reactorClientModule.reactorModule && options.inspection !== false
       ? createReactorInspectionSource(reactorClientModule.reactorModule, {
-          admin: settings.inspectionAdmin,
           ...options.inspection,
           attachmentStore: attachmentInspectionStore(attachments),
         })
