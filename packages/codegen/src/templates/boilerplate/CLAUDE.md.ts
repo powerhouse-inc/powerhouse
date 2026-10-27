@@ -7,5 +7,4 @@ export const claudeTemplate = md`
 ## Claude Code
 
 - reactor-mcp tools are named \`mcp__reactor-mcp__<tool>\`.
-- If they are missing while Vetra runs, ask the user to reconnect them with \`/mcp\`.
 `.raw;

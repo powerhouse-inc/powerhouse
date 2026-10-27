@@ -202,14 +202,15 @@ A specialized AI agent that guides users through document model creation with re
 {
   "mcpServers": {
     "reactor-mcp": {
-      "type": "http",
-      "url": "http://localhost:4001/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 #### 1. Start the Reactor MCP:
 

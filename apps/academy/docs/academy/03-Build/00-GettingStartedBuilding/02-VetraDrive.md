@@ -101,14 +101,17 @@ Claude can connect directly to your project's Reactor via the [Model Context Pro
 {
   "mcpServers": {
     "reactor-mcp": {
-      "type": "http",
-      "url": "http://localhost:4001/mcp"
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-The URL is Vetra Switchboard's `/mcp` endpoint on the project's Switchboard port (`reactor.port` in `powerhouse.config.json`), and `ph vetra` updates it if that port moves. The tools work while Vetra runs: start `ph vetra --watch` before a Claude session that uses them.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first.
+
+For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 → See [Connecting Claude with Reactor MCP](/academy/Lookup/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 
