@@ -111,8 +111,7 @@ export async function createProject({
     packageManager,
   });
   await writeAllGeneratedProjectFiles();
-  // Must run last: it rewrites `.mcp.json` / `.cursor/mcp.json`, which
-  // `writeAllGeneratedProjectFiles` has only just created.
+  // Must run last: it edits files `writeAllGeneratedProjectFiles` just created.
   await applyProjectCustomizations({ name, projectDir: appPath, remoteDrive });
   if (uniformRunners) {
     await writeGeneratedHostsFiles(appPath, name);

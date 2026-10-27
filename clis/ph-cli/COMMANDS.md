@@ -23,6 +23,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
+- [Mcp](#mcp)
 - [Migrate](#migrate)
 - [Switchboard](#switchboard)
 - [Login](#login)
@@ -439,8 +440,9 @@ the field the drive keeps the app it has.
 One Vetra per project:
 A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
 Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
-exits. --restart stops the recorded Vetra first, then starts this one.
-Studio restarts by itself when powerhouse.config.json changes.
+exits. --restart stops the recorded Vetra first, then starts this one; the
+`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
+by itself when powerhouse.config.json changes.
 
 ### options
 #### Switchboard Port <br>
@@ -1063,6 +1065,43 @@ This command:
 2. Lists all installed Powerhouse packages
 3. Provides a clear overview of your project's dependencies
 4. Helps you manage and track your Powerhouse components
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Mcp
+
+Serve the project's reactor-mcp tools to a coding agent over stdio.
+
+Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
+.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
+The first tool call connects to the project's running Vetra (found through
+.ph/vetra-runtime.json), or starts `ph vetra --strictPort --watch` in the
+background and waits for it to be ready, reporting how the start goes as MCP
+progress notifications when the client sent a progressToken, else on stderr.
+Startup failures come back as tool errors carrying Vetra's output, which is
+also written to .ph/vetra.log.
+
+Beside reactor-mcp's tools it serves restartVetra, which stops the project's
+Vetra, starts it again and returns its URLs. When Vetra restarts some other
+way (`ph vetra --restart`), the next tool call connects to the new one.
+
+### options
+#### Project Dir <br>
+Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json.<br><br>
+**usage:** `--project-dir <str>`<br>
+
+#### Start Timeout <br>
+Seconds to wait for Vetra to answer /ready after starting it on the first tool call<br><br>
+**usage:** `--start-timeout <number>`<br>
+**default**: `120`
 
 ### flags
 #### Debug <br>

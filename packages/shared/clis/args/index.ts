@@ -9,6 +9,7 @@ export * from "./inspect.js";
 export * from "./install.js";
 export * from "./list.js";
 export * from "./login.js";
+export * from "./mcp.js";
 export * from "./migrate.js";
 export * from "./publish.js";
 export * from "./registry.js";

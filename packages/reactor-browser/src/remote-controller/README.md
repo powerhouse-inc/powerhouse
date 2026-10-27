@@ -273,16 +273,10 @@ const controller = await RemoteDocumentController.pull(
       console.log(conflict.remoteOperations);
       console.log(conflict.localActions);
 
-      // Return the actions you want to push
-      return [
-        {
-          type: "SET_NAME",
-          input: { name: "Merged result" },
-          scope: "global",
-          id: crypto.randomUUID(),
-          timestampUtcMs: Date.now().toString(),
-        },
-      ];
+      // Return the actions you want to push. Build them with an action
+      // creator (here `setName` from `document-model`), which gives a
+      // creation-ordered id and an ISO timestamp.
+      return [setName("Merged result")];
     },
   },
 );

@@ -1,4 +1,5 @@
 import type { Action } from "@powerhousedao/shared/document-model";
+import { generateActionId } from "@powerhousedao/shared/document-model";
 import type { TestDocument } from "../types.js";
 
 let moduleCounter = 0;
@@ -17,7 +18,7 @@ function randomString(length: number): string {
 
 function createAction(type: string, input: unknown, scope = "global"): Action {
   return {
-    id: generateId(),
+    id: generateActionId(),
     type,
     timestampUtcMs: new Date().toISOString(),
     input,

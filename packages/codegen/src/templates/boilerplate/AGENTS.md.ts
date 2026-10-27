@@ -17,14 +17,9 @@ This repository is a Powerhouse reactor package: document models, editors, drive
 
 ## Start Vetra
 
-Use \`reactor-mcp\` for all document and document-model work. If it is unreachable, start Vetra yourself:
+Use \`reactor-mcp\` for all document and document-model work. Its tools are there from the start of the session: the first tool call connects to the project's Vetra, or starts \`ph vetra --strictPort --watch\` in the background and waits for it, so that call can take a while and reports its progress. Don't start Vetra yourself. **Never start a second reactor**: two reactors share \`.ph/\` storage and their drives diverge.
 
-1. If \`.ph/vetra-runtime.json\` describes a live instance, use it. **Never start a second reactor**: two reactors share \`.ph/\` storage and their drives diverge.
-2. Run \`ph vetra --strictPort --watch\` in the background, with no port flags. The project's ports are in \`powerhouse.config.json\`.
-3. Poll \`GET http://localhost:<port>/ready\` for up to 60 seconds, with the port from \`.mcp.json\`.
-4. Give the user the \`connectUrl\` from \`.ph/vetra-runtime.json\` and reconnect to the MCP server. A session that started while Vetra was down may keep the tools off; then ask the user to reconnect them.
-
-Ask the user only when startup fails, and include the error output. Vetra picks up new routes and \`powerhouse.config.json\` changes by itself; for a change it reads at startup, such as installed packages, run \`ph vetra --strictPort --watch --restart\` in the background. Don't edit \`.mcp.json\` to follow a port; \`ph vetra\` rewrites it when the port moves. To stop Vetra, stop the process whose pid \`.ph/vetra-runtime.json\` names; other \`ph vetra\` processes on the machine belong to other projects.
+Once a call succeeds, give the user the \`connectUrl\` from \`.ph/vetra-runtime.json\`. Vetra picks up new routes and \`powerhouse.config.json\` changes by itself; call the \`restartVetra\` tool only for a change it reads at startup, such as installed packages. If a tool call returns a startup error, report it to the user with the output it carries (the full log is \`.ph/vetra.log\`). To stop Vetra, stop the process whose pid \`.ph/vetra-runtime.json\` names; other \`ph vetra\` processes on the machine belong to other projects.
 
 ## reactor-mcp
 

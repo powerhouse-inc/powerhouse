@@ -9,6 +9,7 @@ import { install } from "./install.js";
 import { list } from "./list.js";
 import { login } from "./login.js";
 import { logout } from "./logout.js";
+import { mcp } from "./mcp.js";
 import { migrate } from "./migrate.js";
 import { publish } from "./publish.js";
 import { registryLogin } from "./registry-login.js";
@@ -31,6 +32,7 @@ const baseCommands = {
   "registry-login": registryLogin,
   inspect,
   list,
+  mcp,
   migrate,
   switchboard,
   login,
