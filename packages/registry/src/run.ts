@@ -57,7 +57,7 @@ import {
   abortTarballOnClose,
   ignoreLateContentLength,
 } from "./late-header-guard.js";
-import { installUplinkMissCache } from "./uplink-miss-cache.js";
+import { installUplinkWrappers } from "./uplink-miss-cache.js";
 import { buildVerdaccioConfig, S3_STORAGE_PLUGIN } from "./verdaccio-config.js";
 import { parseRenownUrls } from "./auth/renown-verifier.js";
 import {
@@ -346,7 +346,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     await seedVerdaccioSecret(databaseUrl, verdaccioSecret);
   }
 
-  await installUplinkMissCache();
+  await installUplinkWrappers();
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
   const verdaccioConfig = buildVerdaccioConfig(config);
   const verdaccioServer = (await runServer(verdaccioConfig as never)) as Server;

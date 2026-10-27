@@ -33,6 +33,19 @@ PH_PGLITE_VACUUM_FULL_MAX_DEFER_MS=0      # an explicit deadline overrides the m
 
 ---
 
+## 🚀 **Unreleased** — reactor fixes for base-reducer 1 and 2 documents
+
+### 🐛 Bug fixes (`@powerhousedao/reactor`)
+
+- **A cold read of revision 0 no longer serves a later keyframe's state.** `writeCache.getState(id, scope, branch, 0)` treated `0` as "no target", resumed from the newest keyframe and returned the head.
+- **A held document reaches the peer once that peer can run it.** A document held from a peer that could not run its protocol version was released with its original ordinals, below the peer's ack, and the next ack trim dropped it unsent. Release backfills now stay in the outbox until a push succeeds. This covers GraphQL peers. A local or worker peer (`LocalChannel`) still drops a push at or below its inbox ack, so a document released toward it never loads there yet.
+- **A stored refusal no longer re-holds a document after the peer restarts.** A receiver's `UNSUPPORTED_PROTOCOL` dead letter answered the reactor revision that wrote it; reloading it on restart reported it again and the sender held the document for good. Loading dead letters now drops and deletes those rows once this reactor can run the document; a refusal of a document it still cannot run is kept.
+- **Re-evaluated rows reach `reactor.get`.** With `documentDecisions` on, a write or load whose backdated auth change re-evaluated the document wrote the re-appended rows but left them out of the job result and `JOB_WRITE_READY`, so the document view kept serving the state from before the pass.
+
+✅ **What to try:** with `documentDecisions` and `authEnforcement` on, grant a writer, let it write, then remove the grant with an earlier timestamp: `reactor.get` now serves the document without the denied write.
+
+---
+
 ## 🚀 **Unreleased** — reactor client halves
 
 ### ✨ Highlights
@@ -158,6 +171,14 @@ The durable NodeFS subclass and the conversion live in `@powerhousedao/reactor-a
 - First boot of a new store and the one-time conversion sync the written tree once instead of after every file: a fresh store is ready in under a second instead of 8 s, and a 45 MB snapshot converts in 0.3 s instead of 5 s, with the same bytes on disk before the first write is acknowledged.
 
 ---
+## 🚀 **Unreleased** — a failed action with a skip keeps the rewind
+
+### BUG FIXES AND IMPROVEMENTS
+
+- When an action with a skip throws, the base reducer now keeps the rewound state and the skip, for every base-reducer version. It used to restore the pre-skip state and zero the skip while the stored operation kept it, so replicas holding the same log could end with different states after a load reshuffle.
+- Existing documents whose stored history has a failed operation with a skip keep their old state while a write-cache keyframe at or after that operation exists. They converge once those keyframes are rebuilt (inspector admin op `rebuildKeyframes`, then the next cold rebuild) or the document is synced fresh. The document view catches up on the next write to that scope.
+
+---
 
 ## 🚀 **Unreleased** — action signature integrity (#2894)
 
@@ -257,6 +278,24 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 3. Make sure every host that writes documents has a signer: switchboard needs a Renown identity (`ph login`), and a library host needs `withSigner`.
 4. Remove `REQUIRE_SIGNATURES` from deployments.
 5. Once the whole fleet runs this release, drop the legacy override; new documents are then v2-required.
+
+---
+
+## 🚀 **Unreleased** — with documentDecisions on, a load places a late operation by timestamp, not by the sender's index
+
+### 🔁 Fewer permanent divergences when a late operation arrives (documentDecisions on)
+
+When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
+
+With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, and every replica that shares a document needs it, since each must place its own writes by timestamp):
+
+- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
+- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order unless the load reshuffles, which orders same-millisecond operations by action id, as before this change. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order on the author; a peer whose load reshuffles them still orders them by action id, as before this change.
+
+With `documentDecisions` off, loads decide exactly as before.
+
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already could on any peer that received the batch split or reshuffled it.
 
 ---
 

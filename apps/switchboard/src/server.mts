@@ -43,7 +43,10 @@ import {
   type ResolvedRenownConfig,
 } from "@powerhousedao/reactor-api";
 import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
-import { ThreadedPGlite } from "@powerhousedao/reactor-api/pglite-node";
+import {
+  disableWasmWrapperTiering,
+  ThreadedPGlite,
+} from "@powerhousedao/reactor-api/pglite-node";
 import type { VitePackageLoader } from "@powerhousedao/reactor-api/vite";
 import { createRemoteAttachmentService } from "@powerhousedao/reactor-attachments";
 import { createAttachmentClient } from "@powerhousedao/reactor-attachments/client";
@@ -1674,6 +1677,9 @@ export const startSwitchboard = async (
   assertConfigShape(input);
   const config = switchboardConfigSchema.parse(input);
   const logger = deps.logger ?? defaultLogger;
+  if (disableWasmWrapperTiering()) {
+    logger.info("Wasm wrapper tier-up off on Node 24 (nodejs/node#66366)");
+  }
   // Here as well as in index.mts, so a host embedding the server is profiled.
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     await initProfilerFromEnv(process.env).catch((error: unknown) =>

@@ -78,6 +78,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         // can opt in via --uplink-maxage / PH_REGISTRY_UPLINK_MAXAGE.
         maxage: config.uplinkMaxage ?? "2m",
         timeout: "30s",
+        // An offline uplink 404s every uncached package, which clients never retry
+        fail_timeout: "0s",
         cache: true,
       },
     },
