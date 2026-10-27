@@ -6,11 +6,16 @@ import type { ConnectSelectItem } from "../../select/select.js";
 import { ConnectSelect } from "../../select/select.js";
 
 export function appToInputOption(app: AppOptions): ConnectSelectItem<string> {
+  const builtBy = app.builtBy ?? "Powerhouse";
   return {
     value: app.id,
     displayValue: app.name,
-    icon: <Icon name="PowerhouseLogoSmall" />,
-    description: "Built by Powerhouse",
+    icon: (
+      <Icon
+        name={builtBy === "Powerhouse" ? "PowerhouseLogoSmall" : "AppModule"}
+      />
+    ),
+    description: `Built by ${builtBy}`,
   };
 }
 type AppFormInputProps<T extends AppOptions> = Omit<

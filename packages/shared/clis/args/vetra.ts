@@ -81,6 +81,14 @@ export const vetraArgs = {
     defaultValue: () => false,
     defaultValueIsSerializable: true,
   }),
+  restart: flag({
+    type: boolean,
+    long: "restart",
+    description:
+      "Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
+  }),
   disableConnect: flag({
     type: boolean,
     long: "disable-connect",

@@ -11,31 +11,55 @@ const FORMAT_OPTIONS = { printWidth: 80 } as const;
 export async function formatSourceFileWithPrettier(sourceFile: SourceFile) {
   sourceFile.organizeImports();
   const sourceText = sourceFile.getFullText();
-  const formattedText = await formatSafe(sourceText);
+  const formattedText = await formatFileText(
+    sourceFile.getBaseName(),
+    sourceText,
+  );
   sourceFile.replaceWithText(formattedText);
 }
 
 const EXT_MAP: Record<string, string> = {
   typescript: ".ts",
+  tsx: ".tsx",
   json: ".json",
   html: ".html",
   css: ".css",
   babel: ".js",
   markdown: ".md",
+  graphql: ".graphql",
 };
 
 export async function formatSafe(
   sourceText: string,
   parser = "typescript",
 ): Promise<string> {
+  return formatFileText(`file${EXT_MAP[parser] ?? ".ts"}`, sourceText);
+}
+
+/** Formats text as oxfmt formats a file of that name; a .tsx file must not parse as .ts. */
+export async function formatFileText(
+  fileName: string,
+  sourceText: string,
+): Promise<string> {
   try {
-    const ext = EXT_MAP[parser] ?? ".ts";
-    const result = await oxfmtFormat(`file${ext}`, sourceText, FORMAT_OPTIONS);
+    const result = await oxfmtFormat(fileName, sourceText, FORMAT_OPTIONS);
+    if (result.errors.length > 0) {
+      console.error(
+        `[codegen] could not format ${fileName}:`,
+        result.errors.map((error) => error.message).join("\n"),
+      );
+      return sourceText;
+    }
     return result.code;
   } catch (error) {
     console.error(error);
     return sourceText;
   }
+}
+
+/** JSON text as the project's formatter writes `fileName`. */
+export async function formatJson(fileName: string, value: unknown) {
+  return formatFileText(fileName, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 /**

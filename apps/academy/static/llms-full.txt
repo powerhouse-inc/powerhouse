@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-26T17:00:44.228Z
+> Generated: 2026-10-26T17:00:16.288Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -15250,6 +15250,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
+- [Mcp](#mcp)
 - [Migrate](#migrate)
 - [Switchboard](#switchboard)
 - [Login](#login)
@@ -15511,7 +15512,7 @@ Generate a migration file
 
 
 ## Connect Routes
-Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against, and fail if a route the package offers imports @powerhousedao/connect
 
 
 ### Flags
@@ -15539,6 +15540,26 @@ connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
 URL, so configuring project drives does not cost you the Vetra drive.
 An explicit --default-drives-url is appended to that list (de-duplicated);
 it never replaces the Vetra drive.
+
+Every drive on the local Switchboard:
+Studio has no reactor of its own: it reads and writes on the local
+Switchboard (connect.instance.reactorClient "remote"), so it lists every
+drive there, such as one an agent adds through MCP, and a drive created in
+Studio lands there too. Not with --remote-drive, or when the project sets
+connect.instance.multiReactor or reactorClient itself.
+
+Preview drive app:
+Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
+app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
+the drive's app when it creates the drive and each time it starts. Without
+the field the drive keeps the app it has.
+
+One Vetra per project:
+A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
+Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
+exits. --restart stops the recorded Vetra first, then starts this one; the
+`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
+by itself when powerhouse.config.json changes.
 
 
 ### Options
@@ -15588,6 +15609,9 @@ it never replaces the Vetra drive.
 
 **Default:** `false`
 **Logs** - Show additional logs - Usage: `--logs`
+
+**Default:** `false`
+**Restart** - Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start - Usage: `--restart`
 
 **Default:** `false`
 **Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`
@@ -15984,6 +16008,38 @@ It reads the powerhouse.config.json file and shows the packages that are current
 - 2. Lists all installed Powerhouse packages
 - 3. Provides a clear overview of your project's dependencies
 - 4. Helps you manage and track your Powerhouse components
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Mcp
+
+Serve the project's reactor-mcp tools to a coding agent over stdio.
+
+Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
+.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
+The first tool call connects to the project's running Vetra (found through
+.ph/vetra-runtime.json), or starts `ph vetra --strictPort --watch` in the
+background and waits for it to be ready, reporting how the start goes as MCP
+progress notifications when the client sent a progressToken, else on stderr.
+Startup failures come back as tool errors carrying Vetra's output, which is
+also written to .ph/vetra.log.
+
+Beside reactor-mcp's tools it serves restartVetra, which stops the project's
+Vetra, starts it again and returns its URLs. When Vetra restarts some other
+way (`ph vetra --restart`), the next tool call connects to the new one.
+
+
+### Options
+**Project Dir** - Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json. - Usage: `--project-dir <str>`
+
+**Start Timeout** - Seconds to wait for Vetra to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
+
+**Default:** `120`
 
 
 ### Flags
@@ -18782,22 +18838,25 @@ An example of a builder team building on the Powerhouse Vetra Ecosystem and its 
 
 ### Connect Claude to the Reactor MCP
 
-Claude can connect directly to your running Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
+Claude can connect directly to your project's Reactor via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), giving it live access to your drives, documents, and document model operations.
 
-Add the following configuration to your Claude MCP settings (e.g. `~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` writes the configuration into the project: `.mcp.json` for Claude Code, `.cursor/mcp.json` for Cursor and `.gemini/settings.json` for Gemini CLI. The `.mcp.json` it writes is:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-This connects Claude to the Reactor running at `http://localhost:4001`. Make sure `ph vetra --watch` (or `ph reactor`) is running before starting a Claude session that uses the MCP.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first.
+
+For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 → See [Connecting Claude with Reactor MCP](/academy/Lookup/Cookbook#connecting-claude-with-reactor-mcp) for a step-by-step walkthrough.
 
@@ -19033,22 +19092,23 @@ A specialized AI agent that guides users through document model creation with re
 </details>
 
 
-#### 0. Configure the Reactor MCP
+#### 0. Check the Reactor MCP configuration
 
-Add the following to your Claude MCP settings (`~/.claude/mcp.json` for Claude Code, or the MCP servers section in Claude Desktop):
+`ph init` already wrote the Reactor MCP configuration into your project's `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-This only needs to be done once. Make sure `ph vetra` is running before starting a Claude session that uses the MCP.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
 
 #### 1. Start the Reactor MCP:
 
@@ -28515,6 +28575,7 @@ All of the following are public methods on `BaseSubgraph`, called on the
 | `assertCanExecuteOperation(identifier, type, ctx)` | Executing a specific operation type on a document.                         | throws `Forbidden` |
 | `assertCanCreate(ctx)`                             | Creating a new top-level document (no parent to check write against).      | throws `Forbidden` |
 | `canReadDocument(canonicalId, ctx)`                | Filtering a list — a non-throwing read check on an id from the data layer. | returns `boolean`  |
+| `filterReadableDocumentIds(ids, ctx)`              | Filtering plain string ids or slugs, e.g. ones a processor stored.          | drops them         |
 | `authorizationService.isSupremeAdmin(address)`     | Short-circuiting per-item filtering for policy-wide callers.               | returns `boolean`  |
 | `attachmentsFor(ctx)`                              | Reading or uploading attachments as the caller; returns an `IAttachmentClient`. | its reads throw `AttachmentNotFound` |
 
@@ -28603,7 +28664,26 @@ createTodoList: async (
 
 A resolver that returns _many_ documents must not throw on the first forbidden
 one — it must drop the documents the caller cannot read and return the rest.
-Supreme admins (and OPEN) see everything, so skip the per-item work for them:
+
+When the ids are plain strings, such as the document ids a processor wrote to
+its own table, pass them to `filterReadableDocumentIds`. It resolves and
+checks each one as `assertCanRead` does, keeps the ones it admits in their
+order, and drops the rest:
+
+```typescript
+searchTodos: async (
+  _parent,
+  args: { driveId: string; searchTerm: string },
+  ctx: Context,
+) => {
+  const matches = await runSearch(args.driveId, args.searchTerm); // returns document ids
+  return subgraph.filterReadableDocumentIds(matches, ctx);
+};
+```
+
+With ids that are already canonical, `canReadDocument` checks one at a time
+without resolving it. Supreme admins (and OPEN) see everything, so skip the
+per-item work for them:
 
 ```typescript
 
@@ -28642,8 +28722,8 @@ document through a list endpoint.
 2. **Fetch with `handle.fetchIdentifier`.** Never re-use the raw identifier the
    caller passed in after an `assertCan*` check.
 3. **Trust only `ctx.user`.** Do not read identity from arguments or headers.
-4. **Filter lists, don't throw on them.** Use `canReadDocument` + `isSupremeAdmin`
-   for collection resolvers; reserve the throwing asserts for single-target
+4. **Filter lists, don't throw on them.** Use `filterReadableDocumentIds`, or
+   `canReadDocument` + `isSupremeAdmin`, for collection resolvers; reserve the throwing asserts for single-target
    resolvers.
 5. **Pick the tightest check.** Read endpoints use `assertCanRead`; mutations use
    `assertCanWrite`; operation-restricted mutations use `assertCanExecuteOperation`.
@@ -37088,50 +37168,44 @@ You want to use AI-assisted development in Vetra Studio by connecting Claude to 
 
 - Powerhouse CLI (`ph-cmd`) installed
 - A Powerhouse project initialized (`ph init`)
-- Vetra Studio running (`ph vetra --watch`)
 - Claude CLI installed and configured
 - Terminal or command prompt access
 
 ### Solution
 
-### Step 1: Start Vetra Studio
+### Step 1: Check the MCP Server Configuration
 
-First, ensure Vetra Studio is running in your project directory:
-
-```bash
-ph vetra --interactive --watch
-```
-
-### Step 2: Configure the MCP Server (one-time setup)
-
-Add the Reactor MCP server to your Claude configuration. For Claude Code, add it to `~/.claude/mcp.json`; for Claude Desktop, add it under MCP Servers in settings:
+`ph init` writes the Reactor MCP server into the project's `.mcp.json`, which Claude Code reads when it starts in the project directory and asks you to approve the first time:
 
 ```json
 {
   "mcpServers": {
     "reactor-mcp": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+      "type": "stdio",
+      "command": "node",
+      "args": ["--run", "mcp"]
     }
   }
 }
 ```
 
-This tells Claude how to reach the Reactor MCP endpoint. You only need to do this once per machine.
+`ph mcp` serves the reactor-mcp tools over stdio from the project's own `ph-cli`. `node --run mcp` runs the project's `mcp` script (`ph-cli mcp`), which works on every platform. On the first tool call it connects to the project's running Vetra, or starts `ph vetra --watch` in the background and writes its output to `.ph/vetra.log`, so you don't need to start Vetra first. To watch Vetra Studio yourself, start it first with `ph vetra --interactive --watch`; the launcher connects to it.
 
-### Step 3: Open a New Terminal and Navigate to Your Project
+For a client that doesn't start in the project directory, such as Claude Desktop, copy the entry from `.cursor/mcp.json` and replace `${workspaceFolder}` with the project's path. A project created before `ph mcp` points reactor-mcp at `http://localhost:4001/mcp`; run `ph migrate` to switch it to the launcher.
+
+### Step 2: Open a Terminal and Navigate to Your Project
 
 ```bash
 cd <yourprojectname>
 ```
 
-### Step 4: Start Claude CLI
+### Step 3: Start Claude CLI
 
 ```bash
 claude
 ```
 
-### Step 5: Connect to Reactor MCP
+### Step 4: Connect to Reactor MCP
 
 In the Claude CLI, request connection to the reactor:
 
@@ -37139,7 +37213,7 @@ In the Claude CLI, request connection to the reactor:
 connect to the reactor mcp
 ```
 
-### Step 6: Verify the Connection
+### Step 5: Verify the Connection
 
 You should see a confirmation message like:
 
@@ -37159,7 +37233,7 @@ running and ready for document model operations.
 ### Common issues and solutions
 
 - **Issue**: MCP connection fails
-  - **Solution**: Ensure Vetra Studio is running before attempting to connect Claude. Restart both Vetra and Claude if needed.
+  - **Solution**: Read `.ph/vetra.log`, where the launcher writes the output of the Vetra it starts. Check that `.mcp.json` runs `node --run mcp` and `package.json` has the `mcp` script, and run `ph migrate` if it still points at a URL.
 - **Issue**: Claude doesn't recognize reactor commands
   - **Solution**: Make sure you're in the correct project directory when starting Claude.
 - **Issue**: Drive not visible in Claude

@@ -19,4 +19,7 @@ declare module "virtual:ph-sw-config" {
 
   /** Extra SPA navigate-fallback denylist patterns. */
   export const NAVIGATE_FALLBACK_DENYLIST_EXTRA: PHConnectPwaUrlPattern[];
+
+  /** The project's public/ files, by path: a navigation to one is not the shell's. */
+  export const STATIC_FILES: string[];
 }

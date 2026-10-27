@@ -176,6 +176,8 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   if (preferredEditor) {
     driveDoc.header.meta = { preferredEditor };
   }
+  // The document's name too, as a rename sets it: what reads header.name sees the drive's.
+  if (input.global.name) driveDoc.header.name = input.global.name;
 
   const handle = await reactorClient.write.create(driveDoc);
   return await handle.document<DocumentDriveDocument>();

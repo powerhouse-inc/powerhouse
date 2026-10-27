@@ -59,7 +59,7 @@ A project's styles are in two files, which the page builds as one Tailwind build
 
 ## Name and icon per host
 
-`connect.branding.appName` and `connect.branding.favicon` in `powerhouse.config.json` name the app and set its tab icon for every host. The app name also names the installed app (the PWA manifest), unless `connect.pwa.manifest` sets `name` or `short_name`; its icons, and the tab's when there's no `favicon`, come from `connect.branding.icon` (see [RUNTIME-CONFIG.md](../../RUNTIME-CONFIG.md)). A running `ph vetra` or `ph connect studio` reads `connect.branding` at startup: restart it after changing it. A host overrides either in its `config`:
+`connect.branding.appName` and `connect.branding.favicon` in `powerhouse.config.json` name the app and set its tab icon for every host. The app name also names the installed app (the PWA manifest), unless `connect.pwa.manifest` sets `name` or `short_name`; its icons, and the tab's when there's no `favicon`, come from `connect.branding.icon` (see [runtime-config.md](./runtime-config.md)). A running `ph vetra` or `ph connect studio` restarts Studio when `powerhouse.config.json` changes, and the open tab reloads. Inside an editor, the `ph-default-styles` wrapper styles inputs, buttons, selects, checkboxes and radios; utility classes on an element win. A host overrides either in its `config`:
 
 ```js
 // hosts/lab/host.js

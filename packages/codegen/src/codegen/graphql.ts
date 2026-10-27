@@ -18,6 +18,7 @@ import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { formatFileText } from "utils";
 import { format as oxfmtFormat } from "oxfmt";
 
 /* Resolve graphql-codegen plugins from this package's own install rather than
@@ -307,5 +308,8 @@ export async function generateDocumentModelZodSchemas(
     schema,
   });
 
-  await fs.writeFile(path.join(versionDirPath, "schema.graphql"), schema);
+  await fs.writeFile(
+    path.join(versionDirPath, "schema.graphql"),
+    await formatFileText("schema.graphql", schema),
+  );
 }

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -52,6 +52,29 @@ function runCommand(
   });
 }
 
+/** Renames the table interfaces `DB` maps to `<Name>Table`, so they don't share the processor class's name. */
+export function suffixTableTypes(source: string): string {
+  const db = /export interface DB \{([^}]*)\}/.exec(source);
+  if (!db) return source;
+  const names = new Set(
+    [...db[1].matchAll(/:\s*(\w+);/g)]
+      .map(([, name]) => name)
+      .filter((name) => !name.endsWith("Table")),
+  );
+  let result = source.replace(/export interface DB \{[^}]*\}/, (body) =>
+    body.replace(/:\s*(\w+);/g, (field, name: string) =>
+      names.has(name) ? field.replace(name, `${name}Table`) : field,
+    ),
+  );
+  for (const name of names) {
+    result = result.replace(
+      new RegExp(`export interface ${name} \\{`),
+      `export interface ${name}Table {`,
+    );
+  }
+  return result;
+}
+
 export async function generateDBSchema({
   migrationFile,
   schemaFile,
@@ -73,5 +96,6 @@ export async function generateDBSchema({
     });
   });
 
+  writeFileSync(outFile, suffixTableTypes(readFileSync(outFile, "utf8")));
   console.log(`Schema types generated at ${outFile}`);
 }

@@ -240,7 +240,8 @@ These change replay outcomes, which are consensus outcomes, so **a flag flips
 for a whole document-sharing fleet, never per node**. Two nodes that share
 documents and disagree on the flags diverge, exactly as two nodes on
 incompatible versions would. Connect carries the same flags in
-`connect.reactor.featureFlags` (see `apps/connect/RUNTIME-CONFIG.md`); a fleet
+`connect.reactor.featureFlags` (see
+`apps/connect/skills/customize-connect/references/runtime-config.md`); a fleet
 that includes browser replicas has to set them there too.
 
 Sweep the store before enabling either auth flag — neither unsafe condition is

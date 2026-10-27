@@ -57,8 +57,8 @@ export const packageJsonTemplate = (
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --passWithNoTests",
-    "lint": "oxlint --type-aware --type-check",
-    "lint:fix": "oxlint --type-aware --type-check --fix",
+    "lint": "ph-cli generate connect-routes && oxlint --type-aware --type-check",
+    "lint:fix": "ph-cli generate connect-routes && oxlint --type-aware --type-check --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "tsc": "ph-cli generate connect-routes && tsc",
@@ -70,6 +70,7 @@ export const packageJsonTemplate = (
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "vetra": "ph-cli vetra",
+    "mcp": "ph-cli mcp",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
