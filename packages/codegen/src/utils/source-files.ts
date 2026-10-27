@@ -101,6 +101,14 @@ export async function ensureDirectoriesExist(
   }
 }
 
+// Either separator: path.join writes backslashes on Windows
+export function previousVersionPath(filePath: string, version: number) {
+  return filePath.replace(
+    new RegExp(`([\\\\/])v${version}([\\\\/])`),
+    `$1v${version - 1}$2`,
+  );
+}
+
 export function getPreviousVersionSourceFile(args: {
   project: Project;
   version: number;
@@ -109,10 +117,7 @@ export function getPreviousVersionSourceFile(args: {
   const { project, version, filePath } = args;
   const previousVersion = version - 1;
   if (previousVersion < 1) return;
-  const previousVersionFilePath = filePath.replace(
-    `/v${version}/`,
-    `/v${previousVersion}/`,
-  );
+  const previousVersionFilePath = previousVersionPath(filePath, version);
 
   // With skipAddingFilesFromTsConfig, the file isn't in the project yet;
   // add it from disk so getSourceFile can find it instead of returning undefined.
