@@ -349,7 +349,8 @@ export interface IReactor {
   ): Promise<PagedResults<PHDocument>>;
 
   /**
-   * Creates a document
+   * Creates a document. A header without protocolVersions takes the versions
+   * this reactor selects for its type, as a client's create does.
    *
    * @param document - Document with optional id, slug, parent, model type, and initial state
    * @param signer - Optional signer to sign the actions

@@ -18,6 +18,7 @@ import {
 } from "../derivation/index.js";
 import type { IProtocolGate } from "../protocol/gate.js";
 import type { CatchUpScheduler } from "../catch-up/scheduler.js";
+import type { CreateProtocolSelector } from "../client/create-protocol.js";
 import {
   addRelationshipAction,
   deleteDocumentAction,
@@ -104,6 +105,7 @@ export class Reactor implements IReactor {
   private eventBus: IEventBus;
   private executorManager: IJobExecutorManager;
   private catchUp: CatchUpScheduler | undefined;
+  private createProtocol: Pick<CreateProtocolSelector, "select"> | undefined;
 
   constructor(
     logger: ILogger,
@@ -594,6 +596,28 @@ export class Reactor implements IReactor {
     return results;
   }
 
+  /** Where `create` selects versions for a header that carries none. */
+  setCreateProtocol(selector: Pick<CreateProtocolSelector, "select">): void {
+    this.createProtocol = selector;
+  }
+
+  /** A versionless header is a create: it takes this reactor's selection for its type. */
+  private selectCreateVersions(
+    document: PHDocument,
+    signal: AbortSignal | undefined,
+  ) {
+    if (!this.createProtocol) {
+      throw new Error(
+        `Document ${document.header.id} carries no protocolVersions and this reactor has no create protocol to select them`,
+      );
+    }
+    return this.createProtocol.select(
+      { documentType: document.header.documentType },
+      { loadModel: true },
+      signal,
+    );
+  }
+
   async create(
     document: PHDocument,
     signer?: ISigner,
@@ -610,18 +634,12 @@ export class Reactor implements IReactor {
 
     throwIfAborted(signal, () => new AbortError());
 
-    // Choosing versions is the creating client's job, not the reactor's.
-    if (!document.header.protocolVersions) {
-      throw new Error(
-        `Document ${document.header.id} carries no protocolVersions: build it with IReactorClient.newDocument, or create it through IReactorClient`,
-      );
-    }
+    const protocolVersions =
+      document.header.protocolVersions ??
+      (await this.selectCreateVersions(document, signal));
 
     const branch = document.header.branch || "main";
-    let actions: Action[] = creationActions(
-      document,
-      document.header.protocolVersions,
-    );
+    let actions: Action[] = creationActions(document, protocolVersions);
     if (signer) {
       actions = await signActions(
         actions,
