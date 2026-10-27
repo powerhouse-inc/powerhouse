@@ -15,7 +15,9 @@ export {
 } from "./flags.js";
 export {
   fileOf,
+  hostVerb,
   membersOf,
+  nestedChildren,
   primaryBackendName,
   type BackendMode,
   type Member,
@@ -26,8 +28,8 @@ export {
   applyOption,
   hostOptionList,
   hostOptions,
-  NEEDS_OWNER,
-  SINGLE_HOST,
+  ADD_REASONS,
+  HOT_RELOAD_REASONS,
   WORKER_COUNTS,
   type HostOption,
   type OptionGroup,
@@ -37,6 +39,8 @@ export {
   checkEnvKey,
   checkSetter,
   checkSetterValue,
+  FOLDER_REASONS,
+  isContainedPath,
   parsePath,
   type PolicyVerdict,
 } from "./policy.js";
@@ -56,7 +60,9 @@ export {
 } from "./schema.js";
 export { applySetters } from "./setters.js";
 export {
+  onOff,
   REASONS,
+  shapeWording,
   validateDraft,
   workerCount,
   type Validation,

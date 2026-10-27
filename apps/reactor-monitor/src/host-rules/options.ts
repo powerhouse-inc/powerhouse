@@ -1,5 +1,6 @@
-import { FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
-import { isRecord, membersOf, type Member } from "./members.js";
+import type { HostExport } from "@powerhousedao/host-core/schema";
+import { effectiveFlags, FLAG_LABELS, LADDER, ladderFlags } from "./flags.js";
+import { hostVerb, isRecord, membersOf, type Member } from "./members.js";
 import { checkSetter } from "./policy.js";
 import {
   hostRulesContextSchema,
@@ -10,25 +11,26 @@ import {
   type Setter,
 } from "./schema.js";
 import { applySetters } from "./setters.js";
-import { REASONS, validateDraft } from "./validate.js";
+import { onOff, REASONS, validateDraft, workerCount } from "./validate.js";
 
 export type OptionGroup =
   | "access"
   | "storage"
   | "backendKind"
+  | "hotReload"
   | "workers"
   | "projectionWorker"
   | "add";
 
 export type HostOption = {
-  /** Stable: `<group>:<value>`, prefixed by the member or backend path. */
+  /** Unique per draft: `<member path>:<group>:[<backend>:]<value>`. */
   id: string;
   group: OptionGroup;
   value: string;
   label: string;
   member?: string;
+  /** Envelope path of the backend the option changes. */
   backend?: string;
-  /** What choosing it writes; empty for `add`, which the builder performs. */
   setters: Setter[];
   /** Env per member path; null removes the key. */
   env?: Record<string, Record<string, string | null>>;
@@ -52,15 +54,27 @@ const STORAGE_LABELS: Record<string, string> = {
   idb: "Browser storage",
 };
 
-export const SINGLE_HOST =
-  "This host runs one reactor. Make it a host with several reactors to add more.";
-export const NEEDS_OWNER =
-  "Add a switchboard or Connect first. An in-browser reactor is saved with one of them.";
+export const ADD_REASONS = {
+  single:
+    "This host runs one reactor. Make it a host with several reactors to add more.",
+  owner:
+    "Add a switchboard or Connect first. An in-browser reactor is saved with one of them.",
+  noSwitchboard: "This project has no switchboard to add.",
+  noConnect: "This project has no Connect to add.",
+} as const;
+
+export const HOT_RELOAD_REASONS = {
+  hostWide:
+    "The whole host runs with hot reload. Start it with run instead of dev to turn it off here.",
+  workers: "Background workers can't run with hot reload. Turn them off first.",
+  projection:
+    "The separate thread for search data can't run with hot reload. Turn it off first.",
+} as const;
 
 function accessOptions(members: Member[]): HostOption[] {
   const sites = [...new Set(members.map((member) => member.reactorAt))];
   return [0, 1, 2, 3, 4].map((level) => ({
-    id: `access:${level}`,
+    id: `host:access:${level}`,
     group: "access",
     value: String(level),
     label:
@@ -91,56 +105,72 @@ function storageSetters(
   return setters;
 }
 
-function memberOptions(member: Member): HostOption[] {
+function switchboardOptions(member: Member): HostOption[] {
   const options: HostOption[] = [];
-  if (member.role === "switchboard") {
-    const primary = member.backends.find((backend) => backend.primary);
-    const at = primary?.at ?? `${member.reactorAt}.backends.main`;
-    for (const kind of ["path", "memory", "postgres"]) {
-      options.push({
-        id: `${at}:storage:${kind}`,
-        group: "storage",
-        value: kind,
-        label: STORAGE_LABELS[kind],
-        member: member.path,
-        backend: at,
-        setters: storageSetters(at, kind, primary ? undefined : "in-process"),
-      });
-    }
-    for (const count of WORKER_COUNTS) {
-      options.push({
-        id: `${member.path}:workers:${count}`,
-        group: "workers",
-        value: String(count),
-        label: count === 0 ? "Off" : String(count),
-        member: member.path,
-        setters: [],
-        env: {
-          [member.path]: {
-            REACTOR_WORKERS: count === 0 ? null : String(count),
-          },
-        },
-      });
-    }
-    for (const on of [false, true]) {
-      options.push({
-        id: `${member.path}:projectionWorker:${on ? "on" : "off"}`,
-        group: "projectionWorker",
-        value: on ? "on" : "off",
-        label: on ? "On" : "Off",
-        member: member.path,
-        setters: [],
-        env: {
-          [member.path]: { REACTOR_PROJECTION_WORKER: on ? "true" : null },
-        },
-      });
-    }
+  const primary = member.backends.find((backend) => backend.primary);
+  const name = primary?.name ?? "main";
+  const at = primary?.at ?? `${member.reactorAt}.backends.main`;
+  for (const kind of ["path", "memory", "postgres"]) {
+    options.push({
+      id: `${member.path}:storage:${name}:${kind}`,
+      group: "storage",
+      value: kind,
+      label: STORAGE_LABELS[kind],
+      member: member.path,
+      backend: at,
+      setters: storageSetters(at, kind, primary ? undefined : "in-process"),
+    });
   }
+  for (const on of [false, true]) {
+    options.push({
+      id: `${member.path}:hotReload:${on ? "on" : "off"}`,
+      group: "hotReload",
+      value: on ? "on" : "off",
+      label: on ? "On" : "Off",
+      member: member.path,
+      setters: [
+        { path: `${member.path}.runner.dev`, value: on ? true : DELETE },
+      ],
+    });
+  }
+  for (const count of WORKER_COUNTS) {
+    options.push({
+      id: `${member.path}:workers:${count}`,
+      group: "workers",
+      value: String(count),
+      label: count === 0 ? "Off" : String(count),
+      member: member.path,
+      setters: [],
+      env: {
+        [member.path]: { REACTOR_WORKERS: count === 0 ? null : String(count) },
+      },
+    });
+  }
+  for (const on of [false, true]) {
+    options.push({
+      id: `${member.path}:projectionWorker:${on ? "on" : "off"}`,
+      group: "projectionWorker",
+      value: on ? "on" : "off",
+      label: on ? "On" : "Off",
+      member: member.path,
+      setters: [],
+      env: {
+        [member.path]: { REACTOR_PROJECTION_WORKER: on ? "true" : null },
+      },
+    });
+  }
+  return options;
+}
+
+function memberOptions(member: Member): HostOption[] {
+  const options =
+    member.role === "switchboard" ? switchboardOptions(member) : [];
   for (const backend of member.backends) {
     if (backend.mode !== "browser") continue;
+    const prefix = `${member.path}:storage:${backend.name}`;
     for (const kind of ["idb", "memory", "path", "postgres"]) {
       options.push({
-        id: `${backend.at}:storage:${kind}`,
+        id: `${prefix}:${kind}`,
         group: "storage",
         value: kind,
         label: STORAGE_LABELS[kind],
@@ -151,7 +181,7 @@ function memberOptions(member: Member): HostOption[] {
     }
     for (const kind of ["in-process", "worker"]) {
       options.push({
-        id: `${backend.at}:backendKind:${kind}`,
+        id: `${member.path}:backendKind:${backend.name}:${kind}`,
         group: "backendKind",
         value: kind,
         label: kind === "worker" ? "In a background worker" : "In the page",
@@ -164,29 +194,97 @@ function memberOptions(member: Member): HostOption[] {
   return options;
 }
 
-const ADD_OPTIONS: HostOption[] = [
-  {
-    id: "add:switchboard",
+function freshKey(taken: readonly string[], base: string): string {
+  if (!taken.includes(base)) return base;
+  let index = 2;
+  while (taken.includes(`${base}-${index}`)) index += 1;
+  return `${base}-${index}`;
+}
+
+/** The first member folder run by this kind of runner, if the project has one. */
+function folderFor(envelope: HostExport, role: "switchboard" | "connect") {
+  const members = isRecord(envelope.members) ? envelope.members : {};
+  const suffix =
+    role === "switchboard" ? "/runners/switchboard" : "/runners/connect";
+  return Object.keys(members).find((folder) => {
+    const body = members[folder];
+    if (!isRecord(body) || isRecord(body.children)) return false;
+    const runner: Record<string, unknown> = isRecord(body.runner)
+      ? body.runner
+      : {};
+    return typeof runner.module === "string" && runner.module.endsWith(suffix);
+  });
+}
+
+/**
+ * A new child of a compound. A second child of one folder gets its own
+ * reactor block (with the host's protocol) so the two don't share a store.
+ */
+function addMemberOption(
+  draft: HostDraft,
+  members: Member[],
+  role: "switchboard" | "connect",
+): HostOption {
+  const option: HostOption = {
+    id: `host:add:${role}`,
     group: "add",
-    value: "switchboard",
-    label: "Switchboard",
+    value: role,
+    label: role === "switchboard" ? "Switchboard" : "Connect",
     setters: [],
-  },
-  {
-    id: "add:connect",
-    group: "add",
-    value: "connect",
-    label: "Connect",
-    setters: [],
-  },
-  {
-    id: "add:browser",
+  };
+  const host = draft.envelope.host as unknown;
+  const folder = folderFor(draft.envelope, role);
+  if (!isRecord(host) || !isRecord(host.children) || folder === undefined) {
+    return option;
+  }
+  const key = freshKey(Object.keys(host.children), role);
+  const wrapper: Record<string, unknown> = { host: folder };
+  if (members.some((member) => member.folder === folder)) {
+    const protocol = members[0]?.reactor?.protocol;
+    const backend =
+      role === "switchboard"
+        ? {
+            kind: "in-process",
+            storage: { kind: "path", dataDir: `.ph/${key}/reactor-storage` },
+          }
+        : { kind: "worker", storage: { kind: "idb" } };
+    wrapper.reactor = {
+      protocol: isRecord(protocol)
+        ? structuredClone(protocol)
+        : { featureFlags: effectiveFlags(undefined).flags },
+      backends: { main: backend },
+    };
+  }
+  option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
+  return option;
+}
+
+/** A browser reactor saved beside Connect, else beside the first member. */
+function addBrowserOption(members: Member[]): HostOption {
+  const option: HostOption = {
+    id: "host:add:browser",
     group: "add",
     value: "browser",
     label: "Reactor in the browser",
     setters: [],
-  },
-];
+  };
+  const owner =
+    members.find((member) => member.role === "connect") ??
+    members.find((member) => member.role === "switchboard");
+  if (!owner) return option;
+  const taken = owner.backends.map((backend) => backend.name);
+  const at = `${owner.reactorAt}.backends`;
+  // A switchboard without backends would take the new one as its own store.
+  if (owner.role === "switchboard" && taken.length === 0) {
+    option.setters.push({ path: `${at}.main`, value: { kind: "in-process" } });
+    taken.push("main");
+  }
+  option.setters.push({
+    path: `${at}.${freshKey(taken, "tab")}`,
+    value: { kind: "in-process", storage: { kind: "memory" } },
+  });
+  return option;
+}
 
 /** Every option the builder can offer for this draft, not yet judged. */
 export function hostOptionList(
@@ -197,7 +295,9 @@ export function hostOptionList(
   return [
     ...accessOptions(members),
     ...members.flatMap(memberOptions),
-    ...ADD_OPTIONS,
+    addMemberOption(draft, members, "switchboard"),
+    addMemberOption(draft, members, "connect"),
+    addBrowserOption(members),
   ];
 }
 
@@ -237,6 +337,9 @@ export function applyOption(
 
 function isSelected(option: HostOption, members: Member[]): boolean {
   const member = members.find((candidate) => candidate.path === option.member);
+  const backend = member?.backends.find(
+    (candidate) => candidate.at === option.backend,
+  );
   switch (option.group) {
     case "access":
       return (
@@ -254,28 +357,23 @@ function isSelected(option: HostOption, members: Member[]): boolean {
         })
       );
     case "storage": {
-      const backend = member?.backends.find(
-        (candidate) => candidate.at === option.backend,
-      );
-      const kind = backend
-        ? (backend.storage ??
-          (backend.mode === "controller" ? "path" : undefined))
-        : member?.role === "switchboard"
+      const fallback =
+        member?.role === "switchboard" && (!backend || backend.primary)
           ? "path"
           : undefined;
-      return kind === option.value;
+      return (backend?.storage ?? fallback) === option.value;
     }
     case "backendKind":
-      return (
-        member?.backends.find((candidate) => candidate.at === option.backend)
-          ?.kind === option.value
-      );
-    case "workers":
-      return (member?.env.REACTOR_WORKERS ?? "0") === option.value;
+      return backend?.kind === option.value;
+    case "hotReload":
+      return member?.dev === (option.value === "on");
+    case "workers": {
+      const raw = member?.env.REACTOR_WORKERS;
+      return workerCount(raw ?? "") === Number(option.value);
+    }
     case "projectionWorker":
       return (
-        (member?.env.REACTOR_PROJECTION_WORKER !== undefined) ===
-        (option.value === "on")
+        onOff(member?.env.REACTOR_PROJECTION_WORKER) === (option.value === "on")
       );
     case "add":
       return false;
@@ -285,24 +383,39 @@ function isSelected(option: HostOption, members: Member[]): boolean {
 function addReason(
   option: HostOption,
   draft: HostDraft,
-  members: Member[],
   controller: boolean,
 ): string | undefined {
   const host = draft.envelope.host as unknown;
   const compound = isRecord(host) && isRecord(host.children);
   if (option.value === "browser") {
-    return members.some((member) => member.role !== "other")
-      ? undefined
-      : NEEDS_OWNER;
+    return option.setters.length > 0 ? undefined : ADD_REASONS.owner;
   }
-  if (!compound && members.length > 0) return SINGLE_HOST;
-  if (option.value === "switchboard" && !controller)
+  if (!compound) return ADD_REASONS.single;
+  if (option.value === "switchboard" && !controller) {
     return REASONS.noController;
+  }
+  if (option.setters.length === 0) {
+    return option.value === "switchboard"
+      ? ADD_REASONS.noSwitchboard
+      : ADD_REASONS.noConnect;
+  }
   return undefined;
 }
 
 function issueKey(issue: HostRuleIssue): string {
   return `${issue.path}\0${issue.message}`;
+}
+
+const HOT_RELOAD_WORDING: Record<string, string> = {
+  [REASONS.workersDev]: HOT_RELOAD_REASONS.workers,
+  [REASONS.projectionDev]: HOT_RELOAD_REASONS.projection,
+};
+
+function reasonFor(option: HostOption, issue: HostRuleIssue): string {
+  if (option.group === "hotReload") {
+    return HOT_RELOAD_WORDING[issue.message] ?? issue.message;
+  }
+  return issue.message;
 }
 
 /** Each option, enabled or not; `reason` names the first new problem it causes. */
@@ -313,15 +426,17 @@ export function hostOptions(
   const context = hostRulesContextSchema.parse(contextInput);
   const base = validateDraft(draft, context);
   const before = new Set(base.issues.map(issueKey));
+  const devHost = hostVerb(draft.envelope, context) === "dev";
   return hostOptionList(draft, context).map((option): OptionStatus => {
     const selected = isSelected(option, base.members);
-    if (option.group === "add") {
-      const reason = addReason(option, draft, base.members, context.controller);
-      return reason
-        ? { ...option, selected, enabled: false, reason }
-        : { ...option, selected, enabled: true };
-    }
     if (selected) return { ...option, selected, enabled: true };
+    const ruled =
+      option.group === "add"
+        ? addReason(option, draft, context.controller)
+        : option.group === "hotReload" && option.value === "off" && devHost
+          ? HOT_RELOAD_REASONS.hostWide
+          : undefined;
+    if (ruled) return { ...option, selected, enabled: false, reason: ruled };
     const candidate = applyOption(draft, option);
     if (candidate.refused) {
       return { ...option, selected, enabled: false, reason: candidate.refused };
@@ -330,7 +445,12 @@ export function hostOptions(
       (issue) => !before.has(issueKey(issue)),
     );
     return added.length > 0
-      ? { ...option, selected, enabled: false, reason: added[0].message }
+      ? {
+          ...option,
+          selected,
+          enabled: false,
+          reason: reasonFor(option, added[0]),
+        }
       : { ...option, selected, enabled: true };
   });
 }
