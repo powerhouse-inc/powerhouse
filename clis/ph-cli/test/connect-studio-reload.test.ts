@@ -41,7 +41,11 @@ function writeConfig(dir: string, appName: string) {
   );
 }
 
-function startStudio(dir: string, port: number): ChildProcess {
+const OUTPUT_TAIL_CHARS = 16_384;
+
+type Studio = { child: ChildProcess; output: () => string };
+
+function startStudio(dir: string, port: number): Studio {
   const child = spawn(
     process.execPath,
     [
@@ -55,18 +59,44 @@ function startStudio(dir: string, port: number): ChildProcess {
       "--print-urls=false",
       "--bind-cli-shortcuts=false",
     ],
-    { cwd: dir, stdio: "ignore" },
+    { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
   );
   cleanups.push(() =>
     stopProcess(child.exitCode === null ? child.pid : undefined),
   );
-  return child;
+  let tail = "";
+  const keep = (chunk: string) => {
+    tail = (tail + chunk).slice(-OUTPUT_TAIL_CHARS);
+  };
+  child.stdout.setEncoding("utf8").on("data", keep);
+  child.stderr.setEncoding("utf8").on("data", keep);
+  return { child, output: () => tail };
+}
+
+/** vi.waitFor, with the studio's exit status and output tail on failure. */
+async function waitFor(studio: Studio, assertion: () => unknown) {
+  try {
+    await vi.waitFor(assertion, { timeout: 60_000, interval: 250 });
+  } catch (error) {
+    const { exitCode, signalCode } = studio.child;
+    const status =
+      exitCode === null && signalCode === null
+        ? "running"
+        : `exited (code ${exitCode}, signal ${signalCode})`;
+    const report = `\n\nstudio ${status}; output tail:\n${studio.output() || "(none)"}`;
+    if (error instanceof Error) {
+      error.message += report;
+      throw error;
+    }
+    throw new Error(String(error) + report, { cause: error });
+  }
 }
 
 async function servedAppName(port: number): Promise<string | undefined> {
   try {
     const response = await fetch(
       `http://localhost:${port}/powerhouse.config.json`,
+      { signal: AbortSignal.timeout(2_000) },
     );
     const config = (await response.json()) as {
       connect?: { branding?: { appName?: string } };
@@ -81,17 +111,14 @@ describe("ph connect studio", () => {
   it("serves a changed powerhouse.config.json and a routes folder added after it started", async () => {
     const dir = makeProject("Before");
     const port = await freePort();
-    startStudio(dir, port);
-    const wait = { timeout: 60_000, interval: 250 };
+    const studio = startStudio(dir, port);
 
-    await vi.waitFor(
-      async () => expect(await servedAppName(port)).toBe("Before"),
-      wait,
+    await waitFor(studio, async () =>
+      expect(await servedAppName(port)).toBe("Before"),
     );
     writeConfig(dir, "After");
-    await vi.waitFor(
-      async () => expect(await servedAppName(port)).toBe("After"),
-      wait,
+    await waitFor(studio, async () =>
+      expect(await servedAppName(port)).toBe("After"),
     );
 
     const routes = path.join(dir, "hosts/connect/routes");
@@ -101,9 +128,8 @@ describe("ph connect studio", () => {
       `import { createFileRoute } from "@tanstack/react-router";\nexport const Route = createFileRoute("/hello")({});\n`,
     );
     const tree = path.join(dir, ".ph/connect-routes.gen.ts");
-    await vi.waitFor(
-      () => expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
-      wait,
+    await waitFor(studio, () =>
+      expect(readFileSync(tree, "utf8")).toContain('"/hello"'),
     );
   }, 180_000);
 });
