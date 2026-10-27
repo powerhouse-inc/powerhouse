@@ -4,6 +4,7 @@ import {
   checkEnvKey,
   checkSetter,
   checkSetterValue,
+  isContainedPath,
   parsePath,
 } from "./policy.js";
 import type { Setter } from "./schema.js";
@@ -24,7 +25,7 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.backends.main.kind", "worker"],
   ["reactor.backends.main.storage.kind", "idb"],
   ["reactor.backends.main.storage.dataDir", { $env: "REACTOR_DATA_DIR" }],
-  ["reactor.backends.main.readModel.url", "/tmp/read"],
+  ["reactor.backends.main.readModel.url", ".ph/read-storage"],
   ["reactor.namespace", "ns"],
   ["reactor.placement.primary", "main"],
   ["runner.port", 4001],
@@ -179,21 +180,65 @@ describe("checkSetter", () => {
   });
 
   it.each([
-    ["host.reactor.renown.url", "can't change reactor.renown.url"],
-    ["host.reactor", "can't change reactor"],
-    ["host.name", "can't change name"],
-    ["host.children", "can't change children"],
-  ])("refuses the unlisted path %s", (path, message) => {
-    expect(reason({ path, value: "x" })).toContain(message);
-  });
+    ["host.reactor.renown.url", "reactor.renown.url"],
+    ["host.reactor", "reactor"],
+    ["host.name", "name"],
+    ["host.children", "children"],
+  ])(
+    "refuses the unlisted path %s, naming it only in the hint",
+    (path, hint) => {
+      expect(checkSetter({ path, value: "x" }, ENVELOPE)).toEqual({
+        ok: false,
+        reason: "The monitor can't change this setting.",
+        hint,
+      });
+    },
+  );
 
-  it("never replaces or removes a whole host file", () => {
+  it("removes a member folder but never the host", () => {
+    expect(
+      reason({ path: "members.switchboard", value: DELETE }),
+    ).toBeUndefined();
     expect(reason({ path: "members.sb", value: {} })).toBe(
       "The monitor can't replace a whole host file.",
     );
-    expect(reason({ path: "members.sb", value: DELETE })).toBe(
-      "The monitor can't remove a whole host file.",
+    expect(reason({ path: "host", value: DELETE })).toBe(
+      "The monitor can't remove the host itself.",
     );
+  });
+
+  it.each<[string, unknown, boolean]>([
+    ["reactor.backends.main.storage.dataDir", ".ph/reactor-storage", true],
+    [
+      "reactor.backends.main.storage.dataDir",
+      "${userData}/.ph/reactor-storage",
+      true,
+    ],
+    [
+      "reactor.backends.main.storage.dataDir",
+      { $env: "REACTOR_DATA_DIR" },
+      true,
+    ],
+    [
+      "reactor.backends.main.storage.dataDir",
+      "/Users/someone/repo/.ph/reactor-storage",
+      false,
+    ],
+    ["reactor.backends.main.storage.dataDir", "../../elsewhere", false],
+    ["reactor.backends.main.storage.dataDir", "${userData}/../x", false],
+    ["reactor.backends.main.storage.dataDir", "C:\\data", false],
+    ["reactor.backends.main.storage.dataDir", 42, false],
+    ["reactor.backends.main.readModel.url", ".ph/read-storage", true],
+    [
+      "reactor.backends.main.readModel.url",
+      "postgres://evil.example:5432/x",
+      false,
+    ],
+    ["reactor.backends.main.readModel.url", { $env: "REACTOR_READ" }, false],
+  ])("keeps %s = %j inside the project: %s", (rest, value, ok) => {
+    expect(
+      checkSetter({ path: `host.${rest}`, value: value as Setter["value"] }).ok,
+    ).toBe(ok);
   });
 
   it("checks the value's size and $env names", () => {
@@ -278,5 +323,21 @@ describe("checkEnvKey", () => {
     ],
   ])("refuses %s", (key, reason) => {
     expect(checkEnvKey(key)).toEqual({ ok: false, reason });
+  });
+});
+
+describe("isContainedPath", () => {
+  it.each<[string, boolean]>([
+    [".ph/reactor-storage", true],
+    ["./data", true],
+    ["${userData}/.ph/x", true],
+    ["", false],
+    ["/abs", false],
+    ["\\\\share\\x", false],
+    ["a/../../b", false],
+    ["https://x", false],
+    ["${HOME}/x", false],
+  ])("%s → %s", (path, ok) => {
+    expect(isContainedPath(path)).toBe(ok);
   });
 });

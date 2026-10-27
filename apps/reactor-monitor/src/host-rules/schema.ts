@@ -68,6 +68,7 @@ export const RULES = [
   "postgres",
   "capability",
   "workers",
+  "scope",
 ] as const;
 export type RuleName = (typeof RULES)[number];
 
@@ -77,4 +78,6 @@ export type HostRuleIssue = {
   path: string;
   message: string;
   file?: string;
+  /** Technical detail for a secondary line. */
+  hint?: string;
 };

@@ -69,6 +69,42 @@ function matches(pattern: Pattern, rest: readonly string[]): boolean {
 }
 
 const REMOTE_URL: Pattern = ["reactor", "backends", "*", "remote", "url"];
+const DATA_DIR: Pattern = ["reactor", "backends", "*", "storage", "dataDir"];
+const READ_MODEL_URL: Pattern = [
+  "reactor",
+  "backends",
+  "*",
+  "readModel",
+  "url",
+];
+
+const USER_DATA = "${userData}/";
+
+/** A folder inside the project (or the instance's user data), never elsewhere. */
+export function isContainedPath(value: string): boolean {
+  const rest = value.startsWith(USER_DATA)
+    ? value.slice(USER_DATA.length)
+    : value;
+  if (rest.trim() === "" || rest.includes("://") || rest.includes("$"))
+    return false;
+  if (/^([/\\]|[A-Za-z]:)/.test(rest)) return false;
+  return !rest.split(/[/\\]/).includes("..");
+}
+
+export const FOLDER_REASONS = {
+  dataDir:
+    "The storage folder has to be inside the project, like .ph/reactor-storage.",
+  readModel:
+    "The search and list data folder has to be inside the project. Its database can't be somewhere else.",
+} as const;
+
+function folderVerdict(value: unknown, reason: string): PolicyVerdict {
+  if (typeof value === "string") {
+    return isContainedPath(value) ? OK : { ok: false, reason, hint: value };
+  }
+  // An `$env` token resolves later; checkSetterValue vetted its name.
+  return tokenKeyOf(value) === "$env" ? OK : { ok: false, reason };
+}
 
 /** Leaf paths a value may be written at. */
 const SETTABLE: Pattern[] = [
@@ -121,7 +157,9 @@ const DENIED_FAMILIES: [Pattern, string][] = [
   ],
 ];
 
-export type PolicyVerdict = { ok: true } | { ok: false; reason: string };
+export type PolicyVerdict =
+  | { ok: true }
+  | { ok: false; reason: string; hint?: string };
 
 const OK: PolicyVerdict = { ok: true };
 
@@ -176,11 +214,22 @@ function leafVerdict(
     if (matches(pattern, rest)) return { ok: false, reason };
   }
   if (matches(REMOTE_URL, rest)) return remoteUrlVerdict(value, envelope);
+  if (matches(DATA_DIR, rest))
+    return folderVerdict(value, FOLDER_REASONS.dataDir);
+  if (matches(READ_MODEL_URL, rest)) {
+    return typeof value === "string"
+      ? folderVerdict(value, FOLDER_REASONS.readModel)
+      : { ok: false, reason: FOLDER_REASONS.readModel };
+  }
   if (SETTABLE.some((pattern) => matches(pattern, rest))) return OK;
-  const where = rest.join(".");
+  const hint = rest.join(".");
   return DELETABLE.some((pattern) => matches(pattern, rest))
-    ? { ok: false, reason: `The monitor can only remove ${where}, not set it.` }
-    : { ok: false, reason: `The monitor can't change ${where}.` };
+    ? {
+        ok: false,
+        reason: "The monitor can only remove this setting, not set it.",
+        hint,
+      }
+    : { ok: false, reason: "The monitor can't change this setting.", hint };
 }
 
 /** Each written leaf; a token, an array or an empty object is one leaf. */
@@ -206,17 +255,22 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
   if ("error" in parsed) return { ok: false, reason: parsed.error };
   const { subject, rest } = parsed;
   if (isDelete(setter.value)) {
+    // A member, or a member folder no child runs any more; never the host.
     if (rest.length === 0) {
-      return isChild(subject)
+      return subject[0] === "members" || isChild(subject)
         ? OK
-        : { ok: false, reason: "The monitor can't remove a whole host file." };
+        : { ok: false, reason: "The monitor can't remove the host itself." };
     }
     for (const [pattern, reason] of DENIED_FAMILIES) {
       if (matches(pattern, rest)) return { ok: false, reason };
     }
     return DELETABLE.some((pattern) => matches(pattern, rest))
       ? OK
-      : { ok: false, reason: `The monitor can't remove ${rest.join(".")}.` };
+      : {
+          ok: false,
+          reason: "The monitor can't remove this setting.",
+          hint: rest.join("."),
+        };
   }
   if (rest.length === 0 && !isChild(subject)) {
     return {
