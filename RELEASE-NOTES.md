@@ -257,8 +257,8 @@ When a reactor loaded operations from a peer, it treated a local operation as pr
 With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, and every replica that shares a document needs it, since each must place its own writes by timestamp):
 
 - A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
-- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
-- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order.
+- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order unless the load reshuffles, which orders same-millisecond operations by action id, as before this change. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order a peer that receives it split or reshuffles it places it in. Actions with equal timestamps keep their batch order on the author; a peer whose load reshuffles them still orders them by action id, as before this change.
 
 With `documentDecisions` off, loads decide exactly as before.
 
