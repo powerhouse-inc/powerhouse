@@ -168,31 +168,37 @@ export function useManagedDescriptors(
       const sameDescriptor = (d: ManagedDescriptor) =>
         keyOf(d) === keyOf(descriptor);
       void (async () => {
-        let instance: Instance;
+        let outcome: Probe | { drop: string };
         try {
-          instance = await client.get(instanceId);
+          const instance = await client.get(instanceId);
+          outcome =
+            instance.status === "starting"
+              ? { state: "withheld", reason: "still starting" }
+              : instance.status !== "running"
+                ? { drop: `its switchboard is ${instance.status}` }
+                : instance.outputs?.graphql !== descriptor.remote.url
+                  ? { drop: "its switchboard now serves another URL" }
+                  : { state: "released" };
         } catch (error) {
-          if (!mounted.current) return;
-          if (isNotFound(error)) {
-            drop(sameDescriptor, "the controller no longer runs it");
-            return;
-          }
-          const reason = error instanceof Error ? error.message : String(error);
-          settle(descriptor, { state: "withheld", reason });
-          reprobe(descriptor);
-          return;
+          outcome = isNotFound(error)
+            ? { drop: "the controller no longer runs it" }
+            : {
+                state: "withheld",
+                reason: error instanceof Error ? error.message : String(error),
+              };
         }
         if (!mounted.current) return;
-        if (instance.status === "starting") {
-          settle(descriptor, { state: "withheld", reason: "still starting" });
-          reprobe(descriptor);
-        } else if (instance.status !== "running") {
-          drop(sameDescriptor, `its switchboard is ${instance.status}`);
-        } else if (instance.outputs?.graphql !== descriptor.remote.url) {
-          drop(sameDescriptor, "its switchboard now serves another URL");
-        } else {
-          settle(descriptor, { state: "released" });
+        // The active set may have changed while the probe was in flight.
+        if (!latest.current.filter(isManaged).some(sameDescriptor)) {
+          probes.current.delete(keyOf(descriptor));
+          return;
         }
+        if ("drop" in outcome) {
+          drop(sameDescriptor, outcome.drop);
+          return;
+        }
+        settle(descriptor, outcome);
+        if (outcome.state === "withheld") reprobe(descriptor);
       })();
     }
   }, [client, descriptors, version, drop, settle, reprobeMs]);

@@ -269,6 +269,34 @@ describe("App with controller-managed switchboards", () => {
     expect(controller.calls).toContain(`NET ${graphqlOf(5102)}/inspection`);
   });
 
+  it("re-probes a managed descriptor whose probe answered after its set was switched away", async () => {
+    mountController();
+    const store = storeWith(managedDescriptor("sb-away", "away", 5109));
+    store.importSet("other", []);
+    const open = controller.hold();
+    const view = render(<App store={store} />);
+    await waitFor(() =>
+      expect(controller.calls).toContain("GET instances/away"),
+    );
+
+    const sets = view.getByTestId("monitor-set-select");
+    fireEvent.change(sets, { target: { value: "other" } });
+    open();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(view.queryByTestId("switchboards-notices")).toBeNull();
+
+    fireEvent.change(sets, { target: { value: "default" } });
+    await waitFor(() =>
+      expect(
+        controller.calls.filter((call) => call === "GET instances/away"),
+      ).toHaveLength(2),
+    );
+    await waitFor(() => expect(store.getActiveDescriptors()).toEqual([]));
+    expect(view.getByTestId("switchboards-notices").textContent).toMatch(
+      /sb-away: the controller no longer runs it/,
+    );
+  });
+
   it("drops rehydrated managed descriptors whose switchboard is gone, exited or moved", async () => {
     mountController();
     controller.instances.set("done", instance("done", "exited"));
