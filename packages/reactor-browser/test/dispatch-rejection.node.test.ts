@@ -6,7 +6,12 @@ import {
   addFolder,
   type DocumentDriveDocument,
 } from "@powerhousedao/shared/document-drive";
-import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  DocumentDispatch,
+  PHDocument,
+  RejectedAction,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OperationRejectedError } from "../src/errors.js";
 import { createDispatch } from "../src/hooks/dispatch.js";
@@ -141,6 +146,37 @@ describe.each([
 
     expect(calls).toEqual(["onErrors", "onSuccess"]);
     expect(result.header.id).toBe(drive.header.id);
+  });
+
+  it("tells onSuccess which actions were rejected", async () => {
+    const rejectedBy = (actions: Action[]) =>
+      new Promise<RejectedAction[]>((resolve) => {
+        createDispatch(() => drive)(actions, undefined, (_, outcome) =>
+          resolve(outcome.rejected),
+        );
+      });
+    const rejected = addFolder({ id: "f1", name: "F" });
+
+    const rejection = await rejectedBy([
+      addFolder({ id: "f4", name: "E" }),
+      rejected,
+    ]);
+    // An editor's `dispatch: DocumentDispatch` gets the same outcome.
+    const dispatch: DocumentDispatch = createDispatch<PHDocument, Action>(
+      () => drive,
+    );
+    const success = await new Promise<RejectedAction[]>((resolve) => {
+      dispatch(addFolder({ id: "f5", name: "G" }), undefined, (_, outcome) =>
+        resolve(outcome.rejected),
+      );
+    });
+
+    expect(rejection.map((error) => error.actionId)).toEqual([rejected.id]);
+    expect(rejection[0]).toMatchObject({
+      kind: "reducer-error",
+      message: "Node with id f1 already exists!",
+    });
+    expect(success).toEqual([]);
   });
 
   it("does not call onErrors when every action applies", async () => {

@@ -20,10 +20,16 @@ import {
   unique,
   uniqueBy,
 } from "remeda";
-import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
+import {
+  documentModelsIndexTemplate,
+  documentModelsTemplate,
+  resolveModuleErrors,
+  upgradeManifestsTemplate,
+} from "templates";
 import { SyntaxKind, type Project } from "ts-morph";
 import {
   ensureDirectoriesExist,
+  formatJson,
   formatSourceFileWithPrettier,
   getInitialStates,
   getOrCreateDirectory,
@@ -122,6 +128,14 @@ export async function tsMorphGenerateDocumentModel(
       "Document model has incorrect version at the latest version index",
     );
   }
+
+  // Throws on an error name defined with two codes, before anything is written.
+  const errorWarnings = new Set(
+    specifications.flatMap(({ modules }) =>
+      modules.flatMap((module) => resolveModuleErrors(module).warnings),
+    ),
+  );
+  for (const warning of errorWarnings) console.warn(`⚠ ${warning}`);
 
   await writeDocumentModelStateJsonFile({
     documentModelState,
@@ -374,7 +388,7 @@ async function makeDocumentModelsIndexFile(args: {
   const { project, documentModelsDirPath } = args;
   const sourceFile = project.createSourceFile(
     join(documentModelsDirPath, "index.ts"),
-    "",
+    documentModelsIndexTemplate,
     { overwrite: true },
   );
   pipe(
@@ -430,8 +444,10 @@ async function writeDocumentModelStateJsonFile({
   documentModelDirName: string;
 }) {
   const filePath = join(documentModelDirPath, `${documentModelDirName}.json`);
-  const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
-  await writeFile(filePath, documentModelStateJson);
+  await writeFile(
+    filePath,
+    await formatJson(`${documentModelDirName}.json`, documentModelState),
+  );
 }
 
 async function makeDocumentModelIndexFile(args: {

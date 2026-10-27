@@ -8,6 +8,7 @@ import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import { getCodegenStatusRegistry } from "@powerhousedao/shared/processors";
 import { childLogger } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
@@ -334,14 +335,24 @@ export class PackageManager implements IPackageManager {
 
       this.maybeWarnAllLoadersFailed(kind, pkg, loaded !== undefined, failures);
 
-      loads.set(
-        pkg,
+      const outcome: PackageLoad<T> =
         loaded ??
-          (failures.every(({ error }) =>
-            isExpectedLoaderMiss(error, pkg, subPath),
-          )
-            ? { status: "absent" }
-            : { status: "failed" }),
+        (failures.every(({ error }) =>
+          isExpectedLoaderMiss(error, pkg, subPath),
+        )
+          ? { status: "absent" }
+          : { status: "failed" });
+      loads.set(pkg, outcome);
+      // Read by reactor-mcp's getCodegenStatus, e.g. for broken generated code.
+      getCodegenStatusRegistry().reportLoad(
+        pkg,
+        kind,
+        outcome.status === "failed"
+          ? failures
+              .filter(({ error }) => !isExpectedLoaderMiss(error, pkg, subPath))
+              .map(({ loader, error }) => `[${loader}] ${errorText(error)}`)
+              .join("\n")
+          : undefined,
       );
     }
 
@@ -807,4 +818,8 @@ export class PackageManager implements IPackageManager {
       );
     });
   }
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

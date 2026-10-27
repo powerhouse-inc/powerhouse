@@ -73,8 +73,8 @@ describe("ph-cli generate migration-file", () => {
     writeFileSync(
       join(root, MIGRATIONS),
       readFileSync(join(root, MIGRATIONS), "utf8").replace(
-        '.addColumn("status", "boolean")',
-        '.addColumn("status", "boolean")\n    .addColumn("created_at", "timestamp", (col) => col.defaultTo("now()"))',
+        '.addColumn("updated_at", "varchar(32)", (col) => col.notNull())',
+        '.addColumn("updated_at", "varchar(32)", (col) => col.notNull())\n    .addColumn("created_at", "timestamp", (col) => col.defaultTo("now()"))',
       ),
     );
 
@@ -86,7 +86,7 @@ describe("ph-cli generate migration-file", () => {
     const schema = readFileSync(join(root, SCHEMA), "utf8");
     expect(schema).toContain('import type { ColumnType } from "kysely";');
     expect(schema).toContain("created_at: Generated<Timestamp | null>;");
-    expect(schema).toContain("todo: Todo;");
+    expect(schema).toContain("documents: DocumentsTable;");
   }, 60_000);
 
   it("adds kysely, which the schema imports, to package.json", async () => {

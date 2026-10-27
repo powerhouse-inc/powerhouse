@@ -31,7 +31,7 @@ import type {
   UndoRedoAction,
   UpgradeDocumentActionInput,
 } from "./types.js";
-import { deriveOperationId, generateId } from "./utils.js";
+import { deriveOperationId, generateActionId, generateId } from "./utils.js";
 
 /** Meta information about the document. */
 export type PHDocumentMeta = {
@@ -215,14 +215,14 @@ function createDocumentScopeOperations<TState extends PHBaseState>(
 
   const actions: Action[] = [
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "CREATE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
       input: createInput,
     },
     {
-      id: generateId(),
+      id: generateActionId(),
       type: "UPGRADE_DOCUMENT",
       scope: "document",
       timestampUtcMs: header.createdAtUtcIso,
@@ -266,6 +266,8 @@ export function baseCreateDocument<TState extends PHBaseState = PHBaseState>(
       ? protocolVersionsFor("v2-required")
       : { "base-reducer": 2, ...protocolVersions },
   );
+
+  header.revision = withScopeRevisions(header.revision, state);
 
   const phDocument: PHDocument<TState> = {
     header,
@@ -865,7 +867,7 @@ export function addUndo(sortedOperations: Operation[]) {
         ...latestOperation.action,
 
         // TODO: this will break the signature...
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
       },
@@ -878,7 +880,7 @@ export function addUndo(sortedOperations: Operation[]) {
       skip: 1,
       hash: latestOperation.hash,
       action: {
-        id: generateId(),
+        id: generateActionId(),
         timestampUtcMs: new Date().toISOString(),
         type: "NOOP",
         input: {},
@@ -1430,6 +1432,20 @@ export function getDocumentLastModified(document: PHDocument) {
   }
 
   return latest?.timestampUtcMs || document.header.lastModifiedAtUtcIso;
+}
+
+/** `revision` with a 0 for each scope of `state` it lacks; auth is not a model scope, so it is left out. */
+export function withScopeRevisions(
+  revision: PHDocumentHeader["revision"],
+  state: object,
+): PHDocumentHeader["revision"] {
+  const seeded: PHDocumentHeader["revision"] = {};
+  for (const scope of Object.keys(state)) {
+    if (scope !== "auth") {
+      seeded[scope] = 0;
+    }
+  }
+  return { ...seeded, ...revision };
 }
 
 /**

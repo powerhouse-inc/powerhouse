@@ -10,6 +10,7 @@ import { inspectArgs } from "./inspect.js";
 import { installArgs } from "./install.js";
 import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
+import { mcpArgs } from "./mcp.js";
 import { migrateArgs } from "./migrate.js";
 import { publishArgs } from "./publish.js";
 import { registryLoginArgs } from "./registry.js";
@@ -108,6 +109,13 @@ const allPhCliHelpCommands = {
     aliases: ["is"],
     args: inspectArgs,
     description: "Inspect a package",
+    handler: () => {},
+  }),
+  mcp: helpCommand({
+    name: "mcp",
+    args: mcpArgs,
+    description:
+      "Serve the project's reactor-mcp tools over stdio, starting Vetra on the first tool call",
     handler: () => {},
   }),
   migrate: helpCommand({

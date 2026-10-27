@@ -1,11 +1,11 @@
 import type { DocumentModelModuleFileMakerArgs } from "@powerhousedao/codegen";
 import type {
+  ModuleSpecification,
   OperationErrorSpecification,
   OperationSpecification,
 } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { pascalCase } from "change-case";
-import { flatMap, prop } from "remeda";
 
 function getErrorName(error: OperationErrorSpecification) {
   if (!error.name) return;
@@ -16,54 +16,74 @@ function getErrorName(error: OperationErrorSpecification) {
 function getErrorNames(errors: OperationErrorSpecification[]) {
   return errors.map(getErrorName).filter((name) => name !== undefined);
 }
-function getErrorCodeType(errors: OperationErrorSpecification[]) {
-  const errorNames = getErrorNames(errors)
-    .map((name) => `"${name}"`)
-    .join(" |\n");
+export type ModuleError = { name: string; code: string };
 
-  return ts`export type ErrorCode = ${errorNames};`.raw;
+/** A module's error classes, one per name; the code falls back to the name. */
+export function resolveModuleErrors(module: ModuleSpecification) {
+  const byName = new Map<
+    string,
+    ModuleError & { description: string; operation: string }
+  >();
+  const warnings: string[] = [];
+  for (const operation of module.operations) {
+    for (const error of operation.errors) {
+      const name = getErrorName(error);
+      if (!name) continue;
+      const code = error.code?.trim() || name;
+      const description = error.description?.trim() ?? "";
+      const operationName = operation.name ?? "";
+      const first = byName.get(name);
+      if (!first) {
+        byName.set(name, { name, code, description, operation: operationName });
+        continue;
+      }
+      if (first.code !== code) {
+        throw new Error(
+          `Module "${module.name}" defines the error ${name} with code "${first.code}" in ${first.operation} and code "${code}" in ${operationName}. Codegen generates one ${name} class per module, so give both the same code, or give one another name.`,
+        );
+      }
+      if (first.description !== description) {
+        warnings.push(
+          `Module "${module.name}" defines the error ${name} in ${first.operation} and ${operationName} with different descriptions; both throw the one ${name} class.`,
+        );
+      }
+    }
+  }
+  const errors: ModuleError[] = [...byName.values()].map(({ name, code }) => ({
+    name,
+    code,
+  }));
+  return { errors, warnings };
 }
 
-function errorClassTemplate(error: OperationErrorSpecification) {
-  const errorName = getErrorName(error);
-  if (!errorName) return;
+function getErrorCodeType(errors: ModuleError[]) {
+  const codes = [...new Set(errors.map(({ code }) => JSON.stringify(code)))];
+  return ts`export type ErrorCode = ${codes.join(" |\n")};`.raw;
+}
 
+function errorClassTemplate({ name, code }: ModuleError) {
   return ts`
-    export class ${errorName} extends Error implements ReducerError {
-      errorCode = "${errorName}" as ErrorCode;
-      constructor(message = "${errorName}") {
+    export class ${name} extends Error implements ReducerError {
+      errorCode = ${JSON.stringify(code)} as ErrorCode;
+      constructor(message = "${name}") {
         super(message);
       }
     }
   `.raw;
 }
 
-function getErrorClassImplementations(errors: OperationErrorSpecification[]) {
-  return errors
-    .map((error) => errorClassTemplate(error))
-    .filter(Boolean)
-    .join("\n\n");
-}
-
 function getErrorsImplementations(args: DocumentModelModuleFileMakerArgs) {
-  const errors = flatMap(args.module.operations, (o) => prop(o, "errors"));
+  const { errors } = resolveModuleErrors(args.module);
   if (!errors.length) return "";
 
-  const deduplicatedErrors = errors.reduce((acc, error) => {
-    if (!acc.some((e) => getErrorName(e) === getErrorName(error))) {
-      acc.push(error);
-    }
-    return acc;
-  }, new Array<OperationErrorSpecification>());
-
   return ts`
-    ${getErrorCodeType(deduplicatedErrors)}
+    ${getErrorCodeType(errors)}
 
     export interface ReducerError {
       errorCode: ErrorCode;
     }
 
-    ${getErrorClassImplementations(deduplicatedErrors)}
+    ${errors.map(errorClassTemplate).join("\n\n")}
   `.raw;
 }
 

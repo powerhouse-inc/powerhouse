@@ -20,7 +20,6 @@ import {
   type InlineConfig,
   type PluginOption,
 } from "vite";
-import { createHtmlPlugin } from "vite-plugin-html";
 import { connectOptimizeDeps } from "./dev-deps.js";
 import type { IConnectOptions } from "./types.js";
 import {
@@ -36,7 +35,7 @@ import { connectAppShellPlugin } from "./vite-plugins/app-shell.js";
 import {
   connectRouterChunkGroups,
   connectRoutes,
-  connectRoutesWatcher,
+  HOST_ROUTES_DIR,
   hasProjectAppLayout,
   ignoreBuildOutput,
   ignoreDotPhButRouteTree,
@@ -63,7 +62,7 @@ import {
   collectProjectPwaContribution,
   validateProjectPwaConfig,
 } from "./vite-plugins/pwa-packages.js";
-import { connectPwaPlugins } from "./vite-plugins/pwa.js";
+import { connectPwaPlugins, staticFilesIn } from "./vite-plugins/pwa.js";
 import { reactSelfHostPlugin } from "./vite-plugins/react-self-host.js";
 import { reactorWorkerDevPlugin } from "./vite-plugins/reactor-worker-dev.js";
 import { connectThemeBootPlugin } from "./vite-plugins/theme-boot.js";
@@ -313,12 +312,15 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const plugins: PluginOption[] = [
     tailwind(),
     react(),
-    createHtmlPlugin({
-      minify: false,
-      inject: {
-        tags: [...connectHtmlTags, ...devImportmapTag],
+    // Tags only: vite-plugin-html's dev history fallback served the shell for
+    // every navigation, a public/ file's too.
+    {
+      name: "ph-connect-html-tags",
+      transformIndexHtml: {
+        order: "pre",
+        handler: () => [...connectHtmlTags, ...devImportmapTag],
       },
-    }),
+    },
   ] as const;
 
   if (uploadSentrySourcemaps) {
@@ -458,6 +460,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       offlineEnabled,
       pwa: mergedPwa,
       brand: projectBrand,
+      staticFiles: staticFilesIn(join(options.dirname, "public")),
     });
   })();
 
@@ -493,7 +496,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const routesDir =
     resolveConnectRoutesDir(options.dirname, options.routes) ?? false;
-  const routes = connectRoutes(options.dirname, routesDir);
+  // Dev mounts hosts/connect/routes/ before it exists, so a folder added later shows without a restart.
+  const mountedRoutesDir =
+    routesDir ||
+    (mode === "development" && options.routes === undefined
+      ? join(options.dirname, HOST_ROUTES_DIR)
+      : false);
+  const routes = connectRoutes(options.dirname, mountedRoutesDir);
   const customShell = hasProjectAppLayout(routesDir || undefined);
   const hostStylesheet = hostStylesheetPath(options.dirname, routesDir);
 
@@ -520,7 +529,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
           "**/backup-documents/**",
           // Test coverage reports: rewritten by every test run.
           "**/coverage/**",
-          ignoreDotPhButRouteTree(options.dirname, routesDir),
+          ignoreDotPhButRouteTree(options.dirname, mountedRoutesDir),
           ignoreBuildOutput(options.dirname),
         ],
       },
@@ -556,7 +565,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: connectOptimizeDeps(
       options.dirname,
-      routesDir,
+      mountedRoutesDir,
       routes.include,
     ),
     plugins: [
@@ -572,16 +581,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       }),
       // Dev-only: rewrite the importmap to Vite's pre-bundled React so Connect
       // and CDN editors share one instance (build uses reactSelfHostPlugin).
-      devReactImportmapPlugin(options.dirname, routesDir),
+      devReactImportmapPlugin(options.dirname, mountedRoutesDir),
       // Dev-only: serve the reactor SharedWorker bundle (built lazily) at the
       // stable URL the tab probes; production builds emit it via
       // prebuildReactorWorker in `ph connect build`.
       reactorWorkerDevPlugin(options.dirname),
       // The project's routes beside Connect's; ahead of react().
       ...routes.plugins,
-      ...(options.routes === undefined && !routesDir
-        ? [connectRoutesWatcher(options.dirname)]
-        : []),
       ...plugins,
       // Externalize React so Connect + CDN editors share one instance via the
       // import map (reactSelfHostPlugin URLs); also rewrites external require().

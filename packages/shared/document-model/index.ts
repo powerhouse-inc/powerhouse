@@ -6,6 +6,8 @@ export * from "./auth-v1.js";
 export * from "./constants.js";
 export * from "./crypto.js";
 export * from "./denied.js";
+// By package path, so dist/document-model/dispatch.d.ts holds the declaration.
+export type * from "@powerhousedao/shared/document-model/dispatch";
 export * from "./document-schema.js";
 export * from "./document-type.js";
 export * from "./documents.js";

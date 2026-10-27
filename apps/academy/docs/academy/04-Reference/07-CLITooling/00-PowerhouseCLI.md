@@ -260,6 +260,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Access Token](#access-token)
 - [Inspect](#inspect)
 - [List](#list)
+- [Mcp](#mcp)
 - [Migrate](#migrate)
 - [Switchboard](#switchboard)
 - [Login](#login)
@@ -555,7 +556,7 @@ Generate a migration file
 
 
 ## Connect Routes
-Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against
+Generate .ph/connect-routes.gen.ts, the route tree hosts/connect/routes/ type-checks against, and fail if a route the package offers imports @powerhousedao/connect
 
 
 
@@ -584,6 +585,26 @@ connect.drives.defaultDrives in powerhouse.config.json - de-duplicated by
 URL, so configuring project drives does not cost you the Vetra drive.
 An explicit --default-drives-url is appended to that list (de-duplicated);
 it never replaces the Vetra drive.
+
+Every drive on the local Switchboard:
+Studio has no reactor of its own: it reads and writes on the local
+Switchboard (connect.instance.reactorClient "remote"), so it lists every
+drive there, such as one an agent adds through MCP, and a drive created in
+Studio lands there too. Not with --remote-drive, or when the project sets
+connect.instance.multiReactor or reactorClient itself.
+
+Preview drive app:
+Set vetra.previewDrive.app in powerhouse.config.json to the id of a drive
+app, and ph vetra --watch opens the Vetra Preview drive in that app: it sets
+the drive's app when it creates the drive and each time it starts. Without
+the field the drive keeps the app it has.
+
+One Vetra per project:
+A running Vetra is recorded in .ph/vetra-runtime.json (its pid and the
+Connect, Switchboard and MCP URLs); a second `ph vetra` prints those and
+exits. --restart stops the recorded Vetra first, then starts this one; the
+`ph mcp` launcher reconnects to it on its next tool call. Studio restarts
+by itself when powerhouse.config.json changes.
 
 
 
@@ -637,6 +658,9 @@ it never replaces the Vetra drive.
 
 **Default:** `false`
 **Logs** - Show additional logs - Usage: `--logs`
+
+**Default:** `false`
+**Restart** - Stop this project's running Vetra first (the pid in .ph/vetra-runtime.json), then start - Usage: `--restart`
 
 **Default:** `false`
 **Disable Connect** - Skip Connect initialization (only start switchboard and reactor) - Usage: `--disable-connect`
@@ -1057,6 +1081,42 @@ It reads the powerhouse.config.json file and shows the packages that are current
 - 2. Lists all installed Powerhouse packages
 - 3. Provides a clear overview of your project's dependencies
 - 4. Helps you manage and track your Powerhouse components
+
+
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Mcp
+
+Serve the project's reactor-mcp tools to a coding agent over stdio.
+
+Use it as the MCP server command in .mcp.json, .cursor/mcp.json and
+.gemini/settings.json. Tools are listed at once, without waiting for Vetra.
+The first tool call connects to the project's running Vetra (found through
+.ph/vetra-runtime.json), or starts `ph vetra --strictPort --watch` in the
+background and waits for it to be ready, reporting how the start goes as MCP
+progress notifications when the client sent a progressToken, else on stderr.
+Startup failures come back as tool errors carrying Vetra's output, which is
+also written to .ph/vetra.log.
+
+Beside reactor-mcp's tools it serves restartVetra, which stops the project's
+Vetra, starts it again and returns its URLs. When Vetra restarts some other
+way (`ph vetra --restart`), the next tool call connects to the new one.
+
+
+
+
+### Options
+**Project Dir** - Powerhouse project to serve. Defaults to the nearest directory above the working directory that holds powerhouse.config.json. - Usage: `--project-dir <str>`
+
+**Start Timeout** - Seconds to wait for Vetra to answer /ready after starting it on the first tool call - Usage: `--start-timeout <number>`
+
+**Default:** `120`
 
 
 

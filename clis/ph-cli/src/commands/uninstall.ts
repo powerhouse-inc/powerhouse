@@ -84,6 +84,13 @@ This command:
       throw error;
     }
 
+    // Skills of the removed packages leave with them.
+    const { syncPackageSkills } =
+      await import("@powerhousedao/codegen/file-builders");
+    for (const { path, action } of await syncPackageSkills(projectPath)) {
+      console.log(`  ${path}: ${action}`);
+    }
+
     try {
       console.log("⚙️ Updating styles.css file...");
       removeStylesImports(dependenciesWithVersions, projectPath);

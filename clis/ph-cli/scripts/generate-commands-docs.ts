@@ -18,6 +18,7 @@ import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
 import { list } from "../src/commands/list.js";
 import { login } from "../src/commands/login.js";
+import { mcp } from "../src/commands/mcp.js";
 import { migrate } from "../src/commands/migrate.js";
 import { phCli } from "../src/commands/ph-cli.js";
 import { switchboard } from "../src/commands/switchboard.js";
@@ -46,6 +47,7 @@ const commands = [
   { name: "access token", command: accessToken },
   { name: "inspect", command: inspect },
   { name: "list", command: list },
+  { name: "mcp", command: mcp },
   { name: "migrate", command: migrate },
   { name: "switchboard", command: switchboard },
   { name: "login", command: login },

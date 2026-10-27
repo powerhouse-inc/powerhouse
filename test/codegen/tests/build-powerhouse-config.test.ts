@@ -1,6 +1,9 @@
 import { buildPowerhouseConfigTemplate } from "@powerhousedao/codegen/templates";
 import { deriveProjectPorts } from "@powerhousedao/shared/clis/project-ports";
-import { DEFAULT_CONNECT_CONFIG } from "@powerhousedao/shared/connect";
+import {
+  connectConfigSchema,
+  DEFAULT_CONNECT_CONFIG,
+} from "@powerhousedao/shared/connect";
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/registry";
 import { describe, expect, test } from "bun:test";
 
@@ -64,7 +67,37 @@ describe("buildPowerhouseConfigTemplate", () => {
     // and with the same value inside `connect`. `ph vetra` and similar dev
     // consumers read the source file directly (no dist merge), so a missing
     // leaf surfaces as `undefined` at the consumer.
-    assertContainsLeaves(parsed.connect, DEFAULT_CONNECT_CONFIG);
+    const {
+      instance: _instance,
+      app: { cookieBanner: _cookieBanner, ...app } = {},
+      ...scaffolded
+    } = DEFAULT_CONNECT_CONFIG;
+    assertContainsLeaves(parsed.connect, { ...scaffolded, app });
+  });
+
+  test("leaves connect.instance out, so ph vetra picks Studio's reactor client", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as { connect: Plain };
+    expect(parsed.connect).not.toHaveProperty("instance");
+  });
+
+  test("lists connect.branding.favicon, null, beside the other branding keys", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as { connect: { branding: Plain } };
+    expect(Object.keys(parsed.connect.branding)).toEqual([
+      "appName",
+      "icon",
+      "favicon",
+      "loader",
+    ]);
+    expect(parsed.connect.branding.favicon).toBeNull();
+    expect(connectConfigSchema.safeParse(parsed.connect).success).toBe(true);
+  });
+
+  test("leaves connect.app.cookieBanner out, so ph vetra's Studio has no banner", async () => {
+    const out = await buildPowerhouseConfigTemplate({ name: NAME });
+    const parsed = JSON.parse(out) as { connect: { app: Plain } };
+    expect(parsed.connect.app).not.toHaveProperty("cookieBanner");
   });
 
   test("leaves connect.app.workflowsEnabled out, so Connect follows workflows.enabled", async () => {
