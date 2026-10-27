@@ -210,7 +210,7 @@ const PROTOCOL_ENV = new Set([
   "REACTOR_UNSUPPORTED_STORED_DOCUMENTS",
 ]);
 
-/** One env for the whole host; only its switchboard reads the reactor keys. */
+/** One env for the whole host; only switchboards read the reactor keys. */
 function envRule(env: HostEnv, members: Member[], report: Report): void {
   for (const key of Object.keys(env)) {
     const verdict = checkEnvKey(key);
