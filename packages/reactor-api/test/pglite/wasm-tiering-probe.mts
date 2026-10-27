@@ -8,21 +8,42 @@ const bytes = Uint8Array.from([
   12, 0, 11, 11, 11,
 ]);
 
-/** Best of three: nanoseconds per wasm-to-JS import call. */
-export function nsPerCall(): number {
+type Run = (n: number) => void;
+
+export type Comparison = { before: number; after: number };
+
+/** A fresh instance; it keeps the tiering budget in force when it was created. */
+export function importCaller(): Run {
   const instance = new WebAssembly.Instance(new WebAssembly.Module(bytes), {
     env: { f: () => {} },
   });
-  const run = instance.exports.run as (n: number) => void;
+  const run = instance.exports.run as Run;
   run(5000);
-  let best = Infinity;
-  for (let round = 0; round < 3; round++) {
-    const n = 5_000_000;
-    const start = process.hrtime.bigint();
-    run(n);
-    best = Math.min(best, Number(process.hrtime.bigint() - start) / n);
+  return run;
+}
+
+function nsPerCall(run: Run, n: number): number {
+  const start = process.hrtime.bigint();
+  run(n);
+  return Number(process.hrtime.bigint() - start) / n;
+}
+
+/** Fastest ns per call of each, over rounds that alternate between the two. */
+export function compare(before: Run, after: Run): Comparison {
+  let best = { before: Infinity, after: Infinity };
+  for (let round = 0; round < 20; round++) {
+    best = {
+      before: Math.min(best.before, nsPerCall(before, 500_000)),
+      after: Math.min(best.after, nsPerCall(after, 500_000)),
+    };
   }
   return best;
 }
 
-if (!isMainThread) parentPort?.postMessage(nsPerCall());
+// Worker side: a pre-flag instance, "ready", then a post-flag one on "go".
+if (!isMainThread && parentPort) {
+  const port = parentPort;
+  const before = importCaller();
+  port.once("message", () => port.postMessage(compare(before, importCaller())));
+  port.postMessage("ready");
+}
