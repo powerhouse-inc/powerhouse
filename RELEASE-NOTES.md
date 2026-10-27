@@ -254,14 +254,15 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 
 When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
 
-With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true` on switchboards; off by default), where every replica places its own writes by timestamp:
+With `documentDecisions` on (`REACTOR_DOCUMENT_DECISIONS=true`; off by default, and every replica that shares a document needs it, since each must place its own writes by timestamp):
 
 - A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
-- Operations on that same earliest timestamp still go by index. One execute batch's same-millisecond operations keep the sender's order, including when a catch-up splits the batch across loads, as long as the receiver has not reshuffled the first part. After such a reshuffle the rest of the batch falls back to the reshuffle's tie-break, action id, as before this change.
+- Operations on that same earliest timestamp still go by index, as before. A batch delivered whole keeps the sender's order. When a catch-up splits a same-millisecond batch across loads, the sender's order holds only while the receiver's index for the first part is below the sender's index for the rest; otherwise the rest falls back to the reshuffle's tie-break, action id, as before this change.
+- An execute batch whose actions are stamped out of order (for example `[a@100, b@90]`) is now stored in timestamp order (`b, a`), the order every peer places it in. Actions with equal timestamps keep their batch order.
 
 With `documentDecisions` off, loads decide exactly as before.
 
-**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before.
+**Trade-off:** with the flag on, a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. Where the old rule appended, such a load now costs a reshuffle. If that reshuffle moves more operations than `maxSkipThreshold` allows, for example a spoke holding over 1000 operations stamped after a long-delayed peer operation, the load fails with `EXCESSIVE_SHUFFLE` instead of appending. Same-millisecond ties between different authors are still decided by index, as before. An out-of-order execute batch now applies in timestamp order on its author too, so an action that depends on a later-stamped one in the same batch can fail there, as it already did on every peer.
 
 ---
 
