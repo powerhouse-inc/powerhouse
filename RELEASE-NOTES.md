@@ -248,6 +248,19 @@ A reactor with no signer stores the operations it synthesizes from `UNDO` and `R
 
 ---
 
+## 🚀 **Unreleased** — sync places a late operation by timestamp, not by the sender's index
+
+### 🔁 Replicas converge when a late operation arrives
+
+When a reactor loaded operations from a peer, it treated a local operation as preceding the batch whenever its local index was below the batch's lowest index on the peer. After reshuffles the two index spaces are unrelated (a switchboard can run hundreds of indexes ahead of a spoke). So a late operation stamped before a spoke's own newer ones was appended behind them, and the spoke's document differed from everyone else's for good.
+
+- A local operation stamped after the earliest incoming operation is now always treated as concurrent, and the load reshuffles it into timestamp order.
+- Only operations on that same earliest timestamp still go by index. One execute batch's same-millisecond operations, and a catch-up that splits such a batch across loads, keep the sender's order exactly.
+
+**Trade-off:** a peer batch whose earliest operation is stamped before local operations now reshuffles them, even when the sender's index was ahead. The cost is a reshuffle, counted against `maxSkipThreshold`, where the old rule appended. Same-millisecond ties between different authors are still decided by index, as before.
+
+---
+
 ## 🚀 **v6.0.0** — Jan–May 2026
 
 ### ✨ Highlights
