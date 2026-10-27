@@ -367,7 +367,6 @@ function isSelected(
 function addReason(
   option: HostOption,
   draft: HostDraft,
-  members: Member[],
   controller: boolean,
 ): string | undefined {
   const host = draft.envelope.host as unknown;
@@ -378,12 +377,6 @@ function addReason(
   if (!compound) return ADD_REASONS.single;
   if (option.value === "switchboard" && !controller) {
     return REASONS.noController;
-  }
-  if (
-    option.value === "switchboard" &&
-    members.some((m) => m.role === "switchboard")
-  ) {
-    return REASONS.oneSwitchboard;
   }
   if (option.setters.length === 0) {
     return option.value === "switchboard"
@@ -423,7 +416,7 @@ export function hostOptions(
     if (selected) return { ...option, selected, enabled: true };
     const ruled =
       option.group === "add"
-        ? addReason(option, draft, base.members, context.controller)
+        ? addReason(option, draft, context.controller)
         : option.group === "hotReload" && option.value === "off" && devHost
           ? HOT_RELOAD_REASONS.hostWide
           : undefined;

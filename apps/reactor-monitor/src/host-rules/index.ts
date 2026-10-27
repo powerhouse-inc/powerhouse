@@ -19,6 +19,8 @@ export {
   membersOf,
   nestedChildren,
   primaryBackendName,
+  switchboardSettings,
+  valueAt,
   type BackendMode,
   type Member,
   type MemberBackend,
@@ -42,6 +44,7 @@ export {
   FOLDER_REASONS,
   isContainedPath,
   parsePath,
+  SETTINGS_ELSEWHERE,
   type PolicyVerdict,
 } from "./policy.js";
 export {
@@ -65,5 +68,6 @@ export {
   shapeWording,
   validateDraft,
   workerCount,
+  workerSettings,
   type Validation,
 } from "./validate.js";

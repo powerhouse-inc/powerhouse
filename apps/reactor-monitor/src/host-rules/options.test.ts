@@ -260,11 +260,7 @@ describe("hostOptions", () => {
 });
 
 describe("adding and removing reactors", () => {
-  it("adds a switchboard only to a host that has none", () => {
-    const draft = { envelope: stack() };
-    expect(statuses(draft)("host:add:switchboard")).toEqual(
-      off(REASONS.oneSwitchboard),
-    );
+  it("adds a switchboard from its folder", () => {
     const connectOnly = {
       envelope: withSetters({
         [SB]: { $delete: true },
