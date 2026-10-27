@@ -322,7 +322,7 @@ export function applyOption(
 function isSelected(
   option: HostOption,
   members: Member[],
-  env: HostEnv,
+  env: Partial<HostEnv>,
 ): boolean {
   const member = members.find((candidate) => candidate.path === option.member);
   const backend = member?.backends.find(
