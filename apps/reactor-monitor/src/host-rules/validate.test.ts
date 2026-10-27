@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BARE, FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import { ladderFlags } from "./flags.js";
 import { FOLDER_REASONS } from "./policy.js";
-import type { HostRulesContext, MemberEnv } from "./schema.js";
+import type { HostRulesContext, HostEnv } from "./schema.js";
 import { applySetters } from "./setters.js";
 import {
   onOff,
@@ -34,7 +34,7 @@ function draft(
 
 function issues(
   envelope: HostExport,
-  env: MemberEnv = {},
+  env: HostEnv = {},
   context: HostRulesContext = FULL,
 ) {
   return validateDraft({ envelope, env }, context).issues.map(
@@ -63,29 +63,21 @@ describe("validateDraft", () => {
   });
 
   describe("env", () => {
-    it("refuses keys the monitor doesn't pass, per member", () => {
+    it("refuses keys the monitor doesn't pass", () => {
       expect(
-        issues(stack(), {
-          [SB]: { NODE_OPTIONS: "--x", LOG_LEVEL: "debug" },
-          "host.children.ghost": { LOG_LEVEL: "info" },
-        }),
+        issues(stack(), { NODE_OPTIONS: "--x", LOG_LEVEL: "debug" }),
       ).toEqual([
         [
           "env",
-          "host.children.ghost.env",
-          "There is no reactor here, so this environment is not used.",
-        ],
-        [
-          "env",
-          `${SB}.env.NODE_OPTIONS`,
+          `env.NODE_OPTIONS`,
           "NODE_OPTIONS loads code, so only the controller's config can set it.",
         ],
       ]);
     });
 
     it("refuses a worker count that isn't a number", () => {
-      expect(issues(stack(), { [SB]: { REACTOR_WORKERS: "lots" } })).toEqual([
-        ["env", `${SB}.env.REACTOR_WORKERS`, REASONS.workersValue],
+      expect(issues(stack(), { REACTOR_WORKERS: "lots" })).toEqual([
+        ["env", `env.REACTOR_WORKERS`, REASONS.workersValue],
       ]);
       expect([
         workerCount("0"),
@@ -98,17 +90,15 @@ describe("validateDraft", () => {
 
   describe("access control", () => {
     it("applies the ladder to flags from env", () => {
-      expect(
-        issues(stack(), { [SB]: { REACTOR_AUTH_GROUPS: "true" } }),
-      ).toEqual([
+      expect(issues(stack(), { REACTOR_AUTH_GROUPS: "true" })).toEqual([
         [
           "protocol",
-          `${SB}.env.REACTOR_AUTH_GROUPS`,
+          `env.REACTOR_AUTH_GROUPS`,
           "REACTOR_AUTH_GROUPS=true disagrees with the host's setting (false), so sb won't start.",
         ],
         [
           "ladder",
-          `${SB}.env.REACTOR_AUTH_GROUPS`,
+          `env.REACTOR_AUTH_GROUPS`,
           "Groups needs Permissions turned on, or sb won't start.",
         ],
       ]);
@@ -119,18 +109,16 @@ describe("validateDraft", () => {
         [`${SB_REACTOR}.protocol.featureFlags`]: ladderFlags(2),
         [`${UI_REACTOR}.protocol.featureFlags`]: ladderFlags(2),
       });
-      expect(
-        issues(envelope, { [SB]: { REACTOR_AUTH_ENFORCEMENT: "false" } }),
-      ).toEqual([
+      expect(issues(envelope, { REACTOR_AUTH_ENFORCEMENT: "false" })).toEqual([
         [
           "protocol",
-          `${SB}.env.REACTOR_AUTH_ENFORCEMENT`,
+          `env.REACTOR_AUTH_ENFORCEMENT`,
           "REACTOR_AUTH_ENFORCEMENT=false disagrees with the host's setting (true), so sb won't start.",
         ],
       ]);
-      expect(
-        issues(envelope, { [SB]: { REACTOR_AUTH_ENFORCEMENT: "true" } }),
-      ).toEqual([]);
+      expect(issues(envelope, { REACTOR_AUTH_ENFORCEMENT: "true" })).toEqual(
+        [],
+      );
     });
 
     it("applies the ladder to the protocol block", () => {
@@ -294,14 +282,14 @@ describe("validateDraft", () => {
   });
 
   describe("background workers", () => {
-    const workers = (count: string) => ({ [SB]: { REACTOR_WORKERS: count } });
+    const workers = (count: string) => ({ REACTOR_WORKERS: count });
 
     it("needs Postgres storage", () => {
       expect(issues(stack(), workers("2"))).toEqual([
-        ["workers", `${SB}.env.REACTOR_WORKERS`, REASONS.workersStorage],
+        ["workers", `env.REACTOR_WORKERS`, REASONS.workersStorage],
       ]);
       expect(issues(stack(), workers("auto"))).toEqual([
-        ["workers", `${SB}.env.REACTOR_WORKERS`, REASONS.workersStorage],
+        ["workers", `env.REACTOR_WORKERS`, REASONS.workersStorage],
       ]);
       expect(issues(stack(), workers("0"))).toEqual([]);
       expect(issues(draft(postgres), workers("2"))).toEqual([]);
@@ -327,7 +315,7 @@ describe("validateDraft", () => {
     it("can't run with hot reload", () => {
       expect(
         issues(draft(postgres), workers("2"), { ...FULL, verb: "dev" }),
-      ).toEqual([["workers", `${SB}.env.REACTOR_WORKERS`, REASONS.workersDev]]);
+      ).toEqual([["workers", `env.REACTOR_WORKERS`, REASONS.workersDev]]);
     });
 
     it("can't check signatures with permissions on and local credentials", () => {
@@ -338,31 +326,19 @@ describe("validateDraft", () => {
       });
       expect(
         issues(envelope, workers("2"), { ...FULL, renownSource: "self" }),
-      ).toEqual([
-        ["workers", `${SB}.env.REACTOR_WORKERS`, REASONS.workersTrust],
-      ]);
+      ).toEqual([["workers", `env.REACTOR_WORKERS`, REASONS.workersTrust]]);
       expect(issues(envelope, workers("2"))).toEqual([]);
     });
 
     it("holds the separate search thread to the same rules", () => {
-      const on = { [SB]: { REACTOR_PROJECTION_WORKER: "TRUE" } };
+      const on = { REACTOR_PROJECTION_WORKER: "TRUE" };
       expect(issues(stack(), on)).toEqual([
-        [
-          "workers",
-          `${SB}.env.REACTOR_PROJECTION_WORKER`,
-          REASONS.projectionStorage,
-        ],
+        ["workers", `env.REACTOR_PROJECTION_WORKER`, REASONS.projectionStorage],
       ]);
       expect(issues(draft(postgres), on, { ...FULL, verb: "dev" })).toEqual([
-        [
-          "workers",
-          `${SB}.env.REACTOR_PROJECTION_WORKER`,
-          REASONS.projectionDev,
-        ],
+        ["workers", `env.REACTOR_PROJECTION_WORKER`, REASONS.projectionDev],
       ]);
-      expect(
-        issues(stack(), { [SB]: { REACTOR_PROJECTION_WORKER: "0" } }),
-      ).toEqual([]);
+      expect(issues(stack(), { REACTOR_PROJECTION_WORKER: "0" })).toEqual([]);
     });
   });
 
@@ -400,8 +376,8 @@ describe("validateDraft", () => {
   describe("round 2", () => {
     it("reads worker env exactly as the switchboard does", () => {
       expect(workerCount("007")).toBeUndefined();
-      expect(issues(stack(), { [SB]: { REACTOR_WORKERS: "007" } })).toEqual([
-        ["env", `${SB}.env.REACTOR_WORKERS`, REASONS.workersValue],
+      expect(issues(stack(), { REACTOR_WORKERS: "007" })).toEqual([
+        ["env", `env.REACTOR_WORKERS`, REASONS.workersValue],
       ]);
       expect([
         onOff("Yes"),
@@ -410,41 +386,28 @@ describe("validateDraft", () => {
         onOff(undefined),
         onOff("maybe"),
       ]).toEqual([true, false, false, false, undefined]);
-      expect(
-        issues(stack(), { [SB]: { REACTOR_PROJECTION_WORKER: "maybe" } }),
-      ).toEqual([
-        ["env", `${SB}.env.REACTOR_PROJECTION_WORKER`, REASONS.projectionValue],
+      expect(issues(stack(), { REACTOR_PROJECTION_WORKER: "maybe" })).toEqual([
+        ["env", `env.REACTOR_PROJECTION_WORKER`, REASONS.projectionValue],
       ]);
-      expect(
-        issues(stack(), { [SB]: { REACTOR_PROJECTION_WORKER: "false" } }),
-      ).toEqual([]);
+      expect(issues(stack(), { REACTOR_PROJECTION_WORKER: "false" })).toEqual(
+        [],
+      );
     });
 
-    it("tells Connect env apart from switchboard env", () => {
-      expect(
-        issues(stack(), {
-          "host.children.ui": {
-            REACTOR_AUTH_GROUPS: "true",
-            REACTOR_WORKERS: "2",
-            REACTOR_PROJECTION_WORKER: "on",
-          },
-        }),
-      ).toEqual([
+    it("refuses switchboard env in a host without a switchboard", () => {
+      const env = {
+        REACTOR_AUTH_GROUPS: "true",
+        REACTOR_WORKERS: "2",
+        REACTOR_PROJECTION_WORKER: "on",
+      };
+      expect(issues(hostExport("connect"), env)).toEqual([
+        ["env", "env.REACTOR_WORKERS", REASONS.workersNoSwitchboard],
         [
           "env",
-          "host.children.ui.env.REACTOR_WORKERS",
-          REASONS.workersNotSwitchboard,
+          "env.REACTOR_PROJECTION_WORKER",
+          REASONS.projectionNoSwitchboard,
         ],
-        [
-          "env",
-          "host.children.ui.env.REACTOR_PROJECTION_WORKER",
-          REASONS.projectionNotSwitchboard,
-        ],
-        [
-          "env",
-          "host.children.ui.env.REACTOR_AUTH_GROUPS",
-          "ui doesn't read this; it takes it from the host's settings.",
-        ],
+        ["env", "env.REACTOR_AUTH_GROUPS", REASONS.envNoSwitchboard],
       ]);
     });
 
@@ -453,7 +416,7 @@ describe("validateDraft", () => {
         ...postgres,
         [`${SB_REACTOR}.placement.primary`]: "nope",
       });
-      expect(issues(envelope, { [SB]: { REACTOR_WORKERS: "2" } })).toEqual([
+      expect(issues(envelope, { REACTOR_WORKERS: "2" })).toEqual([
         [
           "storage",
           `${SB_REACTOR}.placement.primary`,
@@ -464,7 +427,7 @@ describe("validateDraft", () => {
 
     it("runs one switchboard per host, whatever its storage", () => {
       const message =
-        "A host can run only one switchboard. Its reactors share one process, so sb2 would share sb's database and settings.";
+        "A host can run only one switchboard for now. All its reactors share one process, so sb2 would use sb's database and settings.";
       const shared = draft({ "host.children.sb2": { host: "switchboard" } });
       expect(issues(shared)).toEqual([
         ["storage", "host.children.sb2", message],
@@ -485,27 +448,6 @@ describe("validateDraft", () => {
       expect(issues(ownFolder)).toEqual([
         ["storage", "host.children.sb2", message],
       ]);
-    });
-
-    it("refuses env that differs between members of one process", () => {
-      expect(
-        issues(stack(), {
-          [SB]: { LOG_LEVEL: "info" },
-          "host.children.ui": { LOG_LEVEL: "warn" },
-        }),
-      ).toEqual([
-        [
-          "env",
-          "host.children.ui.env.LOG_LEVEL",
-          "ui and sb set this differently, but they run in one process, so only one value can apply.",
-        ],
-      ]);
-      expect(
-        issues(stack(), {
-          [SB]: { LOG_LEVEL: "info" },
-          "host.children.ui": { LOG_LEVEL: "info" },
-        }),
-      ).toEqual([]);
     });
 
     it("keeps a switchboard's folders inside the project's .ph folder", () => {
@@ -557,7 +499,7 @@ describe("validateDraft", () => {
       },
     );
 
-    it("checks a storage folder taken from env against the member's env", () => {
+    it("checks a storage folder taken from env against the host's env", () => {
       const envelope = draft({
         [`${SB_REACTOR}.backends.main`]: {
           kind: "in-process",
@@ -565,17 +507,15 @@ describe("validateDraft", () => {
         },
       });
       const at = `${SB_REACTOR}.backends.main.storage.dataDir`;
-      expect(
-        issues(envelope, { [SB]: { REACTOR_DATA_DIR: ".ph/data" } }),
-      ).toEqual([]);
-      expect(
-        issues(envelope, { [SB]: { REACTOR_DATA_DIR: "/Users/me/repo" } }),
-      ).toEqual([["storage", at, FOLDER_REASONS.dataDir]]);
+      expect(issues(envelope, { REACTOR_DATA_DIR: ".ph/data" })).toEqual([]);
+      expect(issues(envelope, { REACTOR_DATA_DIR: "/Users/me/repo" })).toEqual([
+        ["storage", at, FOLDER_REASONS.dataDir],
+      ]);
       expect(issues(envelope)).toEqual([
         [
           "env",
           at,
-          "The storage folder comes from REACTOR_DATA_DIR, which isn't set for sb.",
+          "The storage folder comes from REACTOR_DATA_DIR, which isn't set in this host's environment.",
         ],
       ]);
       const optional = draft({
@@ -628,15 +568,13 @@ describe("validateDraft", () => {
 
   it("groups issues by path", () => {
     const result = validateDraft(
-      { envelope: stack(), env: { [SB]: { REACTOR_AUTH_GROUPS: "true" } } },
+      { envelope: stack(), env: { REACTOR_AUTH_GROUPS: "true" } },
       FULL,
     );
-    expect(Object.keys(result.byPath)).toEqual([
-      `${SB}.env.REACTOR_AUTH_GROUPS`,
-    ]);
+    expect(Object.keys(result.byPath)).toEqual([`env.REACTOR_AUTH_GROUPS`]);
     expect(
-      result.byPath[`${SB}.env.REACTOR_AUTH_GROUPS`].map((issue) => issue.rule),
+      result.byPath[`env.REACTOR_AUTH_GROUPS`].map((issue) => issue.rule),
     ).toEqual(["protocol", "ladder"]);
-    expect(result.issues[0].file).toBe("hosts/stack/host.js");
+    expect(result.issues[0].file).toBeUndefined();
   });
 });

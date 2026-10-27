@@ -52,9 +52,9 @@ export {
   RULES,
   setterSchema,
   type HostDraft,
+  type HostEnv,
   type HostRuleIssue,
   type HostRulesContext,
-  type MemberEnv,
   type RuleName,
   type Setter,
 } from "./schema.js";

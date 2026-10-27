@@ -9,6 +9,7 @@ import {
   hostOptionList,
   hostOptions,
   type OptionStatus,
+  WORKER_COUNTS,
 } from "./options.js";
 import { checkSetter } from "./policy.js";
 import type { HostDraft, HostRulesContext } from "./schema.js";
@@ -87,7 +88,7 @@ describe("hostOptions", () => {
   it("disables permissions that would stop background workers", () => {
     const draft = {
       envelope: withSetters(postgres),
-      env: { [SB]: { REACTOR_WORKERS: "2" } },
+      env: { REACTOR_WORKERS: "2" },
     };
     const status = statuses(draft, { ...FULL, renownSource: "self" });
     expect(status("host:access:1")).toEqual(ON);
@@ -95,10 +96,10 @@ describe("hostOptions", () => {
     expect(statuses(draft)("host:access:2")).toEqual(ON);
   });
 
-  it("disables an access level that a member's env contradicts", () => {
+  it("disables an access level that the host's env contradicts", () => {
     const draft = {
       envelope: stack(),
-      env: { [SB]: { REACTOR_AUTH_ENFORCEMENT: "false" } },
+      env: { REACTOR_AUTH_ENFORCEMENT: "false" },
     };
     expect(statuses(draft)("host:access:2")).toEqual(
       off(
@@ -108,7 +109,7 @@ describe("hostOptions", () => {
   });
 
   it("judges an option by the problems it adds, not the ones already there", () => {
-    const draft = { envelope: stack(), env: { [SB]: { NODE_OPTIONS: "--x" } } };
+    const draft = { envelope: stack(), env: { NODE_OPTIONS: "--x" } };
     expect(validateDraft(draft, FULL).issues).toHaveLength(1);
     expect(statuses(draft)("host:access:3")).toEqual(ON);
   });
@@ -145,40 +146,50 @@ describe("hostOptions", () => {
   });
 
   it("disables background workers until they can run", () => {
-    expect(statuses({ envelope: stack() })(`${SB}:workers:2`)).toEqual(
+    expect(statuses({ envelope: stack() })(`host:workers:2`)).toEqual(
       off(REASONS.workersStorage),
     );
-    expect(statuses({ envelope: stack() })(`${SB}:workers:0`)).toEqual(
-      SELECTED,
-    );
+    expect(statuses({ envelope: stack() })(`host:workers:0`)).toEqual(SELECTED);
     const pg = { envelope: withSetters(postgres) };
-    expect(statuses(pg)(`${SB}:workers:4`)).toEqual(ON);
-    expect(statuses(pg, { ...FULL, verb: "dev" })(`${SB}:workers:4`)).toEqual(
+    expect(statuses(pg)(`host:workers:4`)).toEqual(ON);
+    expect(statuses(pg, { ...FULL, verb: "dev" })(`host:workers:4`)).toEqual(
       off(REASONS.workersDev),
     );
-    expect(
-      statuses({ envelope: stack() })(`${SB}:projectionWorker:on`),
-    ).toEqual(off(REASONS.projectionStorage));
-    expect(statuses(pg)(`${SB}:projectionWorker:on`)).toEqual(ON);
+    expect(statuses({ envelope: stack() })(`host:projectionWorker:on`)).toEqual(
+      off(REASONS.projectionStorage),
+    );
+    expect(statuses(pg)(`host:projectionWorker:on`)).toEqual(ON);
   });
 
   it("selects workers and the search thread by what the switchboard reads", () => {
     const draft = {
       envelope: withSetters(postgres),
       env: {
-        [SB]: { REACTOR_WORKERS: " 2 ", REACTOR_PROJECTION_WORKER: "false" },
+        REACTOR_WORKERS: " 2 ",
+        REACTOR_PROJECTION_WORKER: "false",
       },
     };
     const status = statuses(draft);
-    expect(status(`${SB}:workers:2`)).toEqual(SELECTED);
-    expect(status(`${SB}:projectionWorker:off`)).toEqual(SELECTED);
-    expect(status(`${SB}:projectionWorker:on`)).toEqual(ON);
+    expect(status(`host:workers:2`)).toEqual(SELECTED);
+    expect(status(`host:projectionWorker:off`)).toEqual(SELECTED);
+    expect(status(`host:projectionWorker:on`)).toEqual(ON);
+  });
+
+  it("offers workers for the whole host, and only with a switchboard", () => {
+    const ids = (envelope: HostExport) =>
+      hostOptionList({ envelope })
+        .filter((candidate) => candidate.group === "workers")
+        .map((candidate) => [candidate.id, candidate.member]);
+    expect(ids(stack())).toEqual(
+      WORKER_COUNTS.map((count) => [`host:workers:${count}`, undefined]),
+    );
+    expect(ids(hostExport("connect"))).toEqual([]);
   });
 
   it("disables Postgres storage while workers need it", () => {
     const draft = {
       envelope: withSetters(postgres),
-      env: { [SB]: { REACTOR_WORKERS: "2" } },
+      env: { REACTOR_WORKERS: "2" },
     };
     expect(statuses(draft)(`${SB}:storage:main:path`)).toEqual(
       off(REASONS.workersStorage),
@@ -197,7 +208,7 @@ describe("hostOptions", () => {
     ).toEqual([{ path: `${SB}.runner.dev`, value: false }]);
     const withWorkers = {
       envelope: withSetters(postgres),
-      env: { [SB]: { REACTOR_WORKERS: "2" } },
+      env: { REACTOR_WORKERS: "2" },
     };
     expect(statuses(withWorkers)(`${SB}:hotReload:on`)).toEqual(
       off(HOT_RELOAD_REASONS.workers),
@@ -371,11 +382,11 @@ describe("option setters", () => {
   it("apply setters and env, and the result validates clean", () => {
     const draft = { envelope: withSetters(postgres) };
     let next = applyOption(draft, option(draft, "host:access:3")).draft;
-    next = applyOption(next, option(next, `${SB}:workers:2`)).draft;
-    expect(next.env).toEqual({ [SB]: { REACTOR_WORKERS: "2" } });
+    next = applyOption(next, option(next, `host:workers:2`)).draft;
+    expect(next.env).toEqual({ REACTOR_WORKERS: "2" });
     expect(validateDraft(next, FULL).issues).toEqual([]);
-    next = applyOption(next, option(next, `${SB}:workers:0`)).draft;
-    expect(next.env).toEqual({ [SB]: {} });
+    next = applyOption(next, option(next, `host:workers:0`)).draft;
+    expect(next.env).toEqual({});
   });
 
   it("refuse an option the policy forbids", () => {

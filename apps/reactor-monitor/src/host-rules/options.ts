@@ -5,9 +5,9 @@ import { checkSetter } from "./policy.js";
 import {
   hostRulesContextSchema,
   type HostDraft,
+  type HostEnv,
   type HostRuleIssue,
   type HostRulesContext,
-  type MemberEnv,
   type Setter,
 } from "./schema.js";
 import { applySetters } from "./setters.js";
@@ -23,7 +23,7 @@ export type OptionGroup =
   | "add";
 
 export type HostOption = {
-  /** Unique per draft: `<member path>:<group>:[<backend>:]<value>`. */
+  /** Unique per draft: `<member path or host>:<group>:[<backend>:]<value>`. */
   id: string;
   group: OptionGroup;
   value: string;
@@ -32,8 +32,8 @@ export type HostOption = {
   /** Envelope path of the backend the option changes. */
   backend?: string;
   setters: Setter[];
-  /** Env per member path; null removes the key. */
-  env?: Record<string, Record<string, string | null>>;
+  /** Keys of the host's env, which all its reactors share; null removes one. */
+  env?: Record<string, string | null>;
 };
 
 export type OptionStatus = HostOption & {
@@ -132,30 +132,28 @@ function switchboardOptions(member: Member): HostOption[] {
       setters: [{ path: `${member.path}.runner.dev`, value: on }],
     });
   }
-  for (const count of WORKER_COUNTS) {
-    options.push({
-      id: `${member.path}:workers:${count}`,
-      group: "workers",
-      value: String(count),
-      label: count === 0 ? "Off" : String(count),
-      member: member.path,
-      setters: [],
-      env: {
-        [member.path]: { REACTOR_WORKERS: count === 0 ? null : String(count) },
-      },
-    });
-  }
+  return options;
+}
+
+/** Set in the host's env, and read by its switchboard. */
+function envOptions(members: Member[]): HostOption[] {
+  if (!members.some((member) => member.role === "switchboard")) return [];
+  const options: HostOption[] = WORKER_COUNTS.map((count) => ({
+    id: `host:workers:${count}`,
+    group: "workers",
+    value: String(count),
+    label: count === 0 ? "Off" : String(count),
+    setters: [],
+    env: { REACTOR_WORKERS: count === 0 ? null : String(count) },
+  }));
   for (const on of [false, true]) {
     options.push({
-      id: `${member.path}:projectionWorker:${on ? "on" : "off"}`,
+      id: `host:projectionWorker:${on ? "on" : "off"}`,
       group: "projectionWorker",
       value: on ? "on" : "off",
       label: on ? "On" : "Off",
-      member: member.path,
       setters: [],
-      env: {
-        [member.path]: { REACTOR_PROJECTION_WORKER: on ? "true" : null },
-      },
+      env: { REACTOR_PROJECTION_WORKER: on ? "true" : null },
     });
   }
   return options;
@@ -287,24 +285,18 @@ export function hostOptionList(
   return [
     ...accessOptions(members),
     ...members.flatMap(memberOptions),
+    ...envOptions(members),
     addMemberOption(draft, members, "switchboard"),
     addMemberOption(draft, members, "connect"),
     addBrowserOption(members),
   ];
 }
 
-function applyEnv(
-  env: MemberEnv | undefined,
-  patch: HostOption["env"],
-): MemberEnv {
-  const next: MemberEnv = structuredClone(env ?? {});
-  for (const [member, keys] of Object.entries(patch ?? {})) {
-    const row = { ...next[member] };
-    for (const [key, value] of Object.entries(keys)) {
-      if (value === null) delete row[key];
-      else row[key] = value;
-    }
-    next[member] = row;
+function applyEnv(env: HostEnv | undefined, patch: HostOption["env"]): HostEnv {
+  const next: HostEnv = { ...env };
+  for (const [key, value] of Object.entries(patch ?? {})) {
+    if (value === null) delete next[key];
+    else next[key] = value;
   }
   return next;
 }
@@ -327,7 +319,11 @@ export function applyOption(
   };
 }
 
-function isSelected(option: HostOption, members: Member[]): boolean {
+function isSelected(
+  option: HostOption,
+  members: Member[],
+  env: HostEnv,
+): boolean {
   const member = members.find((candidate) => candidate.path === option.member);
   const backend = member?.backends.find(
     (candidate) => candidate.at === option.backend,
@@ -359,14 +355,10 @@ function isSelected(option: HostOption, members: Member[]): boolean {
       return backend?.kind === option.value;
     case "hotReload":
       return member?.dev === (option.value === "on");
-    case "workers": {
-      const raw = member?.env.REACTOR_WORKERS;
-      return workerCount(raw ?? "") === Number(option.value);
-    }
+    case "workers":
+      return workerCount(env.REACTOR_WORKERS ?? "") === Number(option.value);
     case "projectionWorker":
-      return (
-        onOff(member?.env.REACTOR_PROJECTION_WORKER) === (option.value === "on")
-      );
+      return onOff(env.REACTOR_PROJECTION_WORKER) === (option.value === "on");
     case "add":
       return false;
   }
@@ -427,7 +419,7 @@ export function hostOptions(
   const before = new Set(base.issues.map(issueKey));
   const devHost = hostVerb(draft.envelope, context) === "dev";
   return hostOptionList(draft, context).map((option): OptionStatus => {
-    const selected = isSelected(option, base.members);
+    const selected = isSelected(option, base.members, draft.env ?? {});
     if (selected) return { ...option, selected, enabled: true };
     const ruled =
       option.group === "add"

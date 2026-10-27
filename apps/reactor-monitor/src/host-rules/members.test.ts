@@ -115,17 +115,6 @@ describe("membersOf", () => {
     ]);
   });
 
-  it("hands each member its own env", () => {
-    const members = membersOf({
-      envelope: stack(),
-      env: { "host.children.sb": { REACTOR_WORKERS: "2" } },
-    });
-    expect(members.map((member) => member.env)).toEqual([
-      { REACTOR_WORKERS: "2" },
-      {},
-    ]);
-  });
-
   it("names the file a path lives in", () => {
     const envelope = stack();
     expect(fileOf(envelope, "host.children.sb.reactor")).toBe(
@@ -134,8 +123,6 @@ describe("membersOf", () => {
     expect(fileOf(envelope, "members.switchboard.reactor")).toBe(
       "hosts/switchboard/host.js",
     );
-    expect(fileOf(envelope, "host.children.sb.env.X")).toBe(
-      "hosts/stack/host.js",
-    );
+    expect(fileOf(envelope, "env.X")).toBeUndefined();
   });
 });

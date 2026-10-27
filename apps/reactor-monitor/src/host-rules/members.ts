@@ -33,7 +33,6 @@ export type Member = {
   /** Where that block lives (or would be written). */
   reactorAt: string;
   dev: boolean;
-  env: Record<string, string>;
   backends: MemberBackend[];
   /** placement.primary names no backend, so a switchboard ignores them all. */
   placementMissing: boolean;
@@ -127,11 +126,7 @@ export function hostVerb(
 }
 
 function member(
-  draft: HostDraft,
-  fields: Omit<
-    Member,
-    "role" | "dev" | "env" | "backends" | "placementMissing"
-  >,
+  fields: Omit<Member, "role" | "dev" | "backends" | "placementMissing">,
   verb: string,
 ): Member {
   const role = roleOf(fields.runner);
@@ -139,7 +134,6 @@ function member(
     ...fields,
     role,
     dev: verb === "dev" || fields.runner.dev === true,
-    env: draft.env?.[fields.path] ?? {},
     backends: backendsOf(role, fields.reactor, fields.reactorAt),
     placementMissing: placementMissing(fields.reactor),
   };
@@ -157,7 +151,6 @@ export function membersOf(
   if (!isRecord(host.children)) {
     return [
       member(
-        draft,
         {
           path: "host",
           key: envelope.name,
@@ -181,7 +174,6 @@ export function membersOf(
     const wrapped = wrapper.reactor !== undefined;
     return [
       member(
-        draft,
         {
           path: `host.children.${key}`,
           key,
@@ -220,9 +212,10 @@ export function nestedChildren(envelope: HostExport): string[] {
   });
 }
 
-/** The host file an envelope path lives in. */
-export function fileOf(envelope: HostExport, path: string): string {
+/** The host file an envelope path lives in; the host's env is in none. */
+export function fileOf(envelope: HostExport, path: string): string | undefined {
   const [root, folder] = path.split(".");
+  if (root === "env") return undefined;
   if (root === "members" && folder) return `hosts/${folder}/host.js`;
   return `hosts/${envelope.name}/host.js`;
 }

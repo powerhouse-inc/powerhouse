@@ -26,6 +26,7 @@ import { checkEnvKey, FOLDER_REASONS, isContainedPath } from "./policy.js";
 import {
   hostRulesContextSchema,
   type HostDraft,
+  type HostEnv,
   type HostRuleIssue,
   type HostRulesContext,
   type RuleName,
@@ -65,18 +66,20 @@ export const REASONS = {
   workersStorage:
     "Background workers need Postgres storage. The built-in database can't be shared between workers.",
   workersValue: "Background workers must be a whole number or auto.",
-  workersNotSwitchboard: "Only a switchboard runs background workers.",
+  workersNoSwitchboard:
+    "Only a switchboard runs background workers, and this host has none.",
   projectionDev:
     "Turn off hot reload to use a separate thread for search data.",
   projectionStorage:
     "A separate thread for search data needs Postgres storage. The built-in database can't be shared between threads.",
   projectionValue: "Turn the separate thread for search data on or off.",
-  projectionNotSwitchboard:
-    "Only a switchboard has a separate thread for search data.",
+  projectionNoSwitchboard:
+    "Only a switchboard has a separate thread for search data, and this host has none.",
+  envNoSwitchboard: "Only a switchboard reads this, and this host has none.",
   readModel:
     "The switchboard would keep all its data in the search and list data folder and ignore the storage chosen here. Remove that folder.",
   oneSwitchboard:
-    "A host can run only one switchboard. Its reactors share one process, so a second switchboard shares the first one's database and settings.",
+    "A host can run only one switchboard for now. All its reactors share one process, so a second switchboard would use the first one's database and settings.",
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
 } as const;
@@ -95,12 +98,16 @@ type Report = (
   hint?: string,
 ) => void;
 
-function envValue(member: Member, key: string): string | undefined {
-  return Object.hasOwn(member.env, key) ? member.env[key] : undefined;
+function envValue(env: HostEnv, key: string): string | undefined {
+  return Object.hasOwn(env, key) ? env[key] : undefined;
 }
 
-function envPath(member: Member, key: string): string {
-  return `${member.path}.env.${key}`;
+function envPath(key: string): string {
+  return `env.${key}`;
+}
+
+function hasSwitchboard(members: Member[]): boolean {
+  return members.some((member) => member.role === "switchboard");
 }
 
 /** File-relative paths from the shape check, rooted at the envelope. */
@@ -195,69 +202,49 @@ const PROTOCOL_ENV = new Set([
   "REACTOR_UNSUPPORTED_STORED_DOCUMENTS",
 ]);
 
-function envRule(draft: HostDraft, members: Member[], report: Report): void {
-  const paths = new Set(members.map((member) => member.path));
-  for (const path of Object.keys(draft.env ?? {})) {
-    if (!paths.has(path)) {
-      report(
-        "env",
-        `${path}.env`,
-        "There is no reactor here, so this environment is not used.",
-        path,
-      );
-    }
+/** One env for the whole host; only its switchboard reads the reactor keys. */
+function envRule(env: HostEnv, members: Member[], report: Report): void {
+  for (const key of Object.keys(env)) {
+    const verdict = checkEnvKey(key);
+    if (!verdict.ok) report("env", envPath(key), verdict.reason);
   }
-  for (const member of members) {
-    for (const key of Object.keys(member.env)) {
-      const verdict = checkEnvKey(key);
-      if (!verdict.ok) report("env", envPath(member, key), verdict.reason);
+  const workers = envValue(env, "REACTOR_WORKERS");
+  const projection = envValue(env, "REACTOR_PROJECTION_WORKER");
+  if (!hasSwitchboard(members)) {
+    if (workers !== undefined) {
+      report("env", envPath("REACTOR_WORKERS"), REASONS.workersNoSwitchboard);
     }
-    const workers = envValue(member, "REACTOR_WORKERS");
-    const projection = envValue(member, "REACTOR_PROJECTION_WORKER");
-    if (member.role !== "switchboard") {
-      if (workers !== undefined) {
-        report(
-          "env",
-          envPath(member, "REACTOR_WORKERS"),
-          REASONS.workersNotSwitchboard,
-        );
-      }
-      if (projection !== undefined) {
-        report(
-          "env",
-          envPath(member, "REACTOR_PROJECTION_WORKER"),
-          REASONS.projectionNotSwitchboard,
-        );
-      }
-      for (const key of Object.keys(member.env)) {
-        if (!PROTOCOL_ENV.has(key)) continue;
-        report(
-          "env",
-          envPath(member, key),
-          `${member.key} doesn't read this; it takes it from the host's settings.`,
-          key,
-        );
-      }
-      continue;
-    }
-    if (workers !== undefined && workerCount(workers) === undefined) {
-      report("env", envPath(member, "REACTOR_WORKERS"), REASONS.workersValue);
-    }
-    if (projection !== undefined && onOff(projection) === undefined) {
+    if (projection !== undefined) {
       report(
         "env",
-        envPath(member, "REACTOR_PROJECTION_WORKER"),
-        REASONS.projectionValue,
-        "1, true, on, yes, 0, false, off, no",
+        envPath("REACTOR_PROJECTION_WORKER"),
+        REASONS.projectionNoSwitchboard,
       );
     }
+    for (const key of Object.keys(env)) {
+      if (PROTOCOL_ENV.has(key)) {
+        report("env", envPath(key), REASONS.envNoSwitchboard);
+      }
+    }
+    return;
+  }
+  if (workers !== undefined && workerCount(workers) === undefined) {
+    report("env", envPath("REACTOR_WORKERS"), REASONS.workersValue);
+  }
+  if (projection !== undefined && onOff(projection) === undefined) {
+    report(
+      "env",
+      envPath("REACTOR_PROJECTION_WORKER"),
+      REASONS.projectionValue,
+      "1, true, on, yes, 0, false, off, no",
+    );
   }
 }
 
-function flagsOf(member: Member) {
+function flagsOf(member: Member, env: HostEnv) {
   return effectiveFlags(
     member.reactor?.protocol,
-    member.role === "switchboard" ? member.env : {},
+    member.role === "switchboard" ? env : {},
   );
 }
 
@@ -268,7 +255,7 @@ function declaredFlags(member: Member): string {
 }
 
 /** One access-control setting for the whole host; env cannot bend it. */
-function protocolRule(members: Member[], report: Report): void {
+function protocolRule(members: Member[], env: HostEnv, report: Report): void {
   if (members.length > 0) {
     const first = members[0];
     for (const member of members.slice(1)) {
@@ -286,11 +273,11 @@ function protocolRule(members: Member[], report: Report): void {
       member.reactor?.protocol as ReactorProtocol | undefined,
     );
     for (const [key, hostValue] of Object.entries(host)) {
-      const value = envValue(member, key);
+      const value = envValue(env, key);
       if (value === undefined || value === hostValue) continue;
       report(
         "protocol",
-        envPath(member, key),
+        envPath(key),
         `${key}=${value} disagrees with the host's setting (${hostValue}), so ${member.key} won't start.`,
       );
     }
@@ -301,15 +288,15 @@ function label(flags: readonly FeatureFlag[]): string {
   return flags.map((flag) => FLAG_LABELS[flag]).join(" and ");
 }
 
-function ladderRule(members: Member[], report: Report): void {
+function ladderRule(members: Member[], env: HostEnv, report: Report): void {
   for (const member of members) {
-    const { flags, fromEnv } = flagsOf(member);
+    const { flags, fromEnv } = flagsOf(member, env);
     for (const gap of ladderGaps(flags)) {
       const key = fromEnv[gap.flag];
       report(
         "ladder",
         key
-          ? envPath(member, key)
+          ? envPath(key)
           : `${member.reactorAt}.protocol.featureFlags.${gap.flag}`,
         `${FLAG_LABELS[gap.flag]} needs ${label(gap.missing)} turned on, or ${member.key} won't start.`,
       );
@@ -321,7 +308,7 @@ function ladderRule(members: Member[], report: Report): void {
  * A compound starts its members in one process: the switchboard's database
  * settings and env are process-wide, so a second switchboard shares the first's.
  */
-function processRule(members: Member[], report: Report): void {
+function oneSwitchboardRule(members: Member[], report: Report): void {
   const switchboards = members.filter(
     (member) => member.role === "switchboard",
   );
@@ -330,30 +317,14 @@ function processRule(members: Member[], report: Report): void {
     report(
       "storage",
       member.path,
-      `A host can run only one switchboard. Its reactors share one process, so ${member.key} would share ${first.key}'s database and settings.`,
+      `A host can run only one switchboard for now. All its reactors share one process, so ${member.key} would use ${first.key}'s database and settings.`,
     );
-  }
-  const seen = new Map<string, { member: Member; value: string }>();
-  for (const member of members) {
-    for (const [key, value] of Object.entries(member.env)) {
-      const earlier = seen.get(key);
-      if (!earlier) {
-        seen.set(key, { member, value });
-        continue;
-      }
-      if (earlier.value === value) continue;
-      report(
-        "env",
-        envPath(member, key),
-        `${member.key} and ${earlier.member.key} set this differently, but they run in one process, so only one value can apply.`,
-        key,
-      );
-    }
   }
 }
 
 function storageRule(
   members: Member[],
+  env: HostEnv,
   context: z.output<typeof hostRulesContextSchema>,
   report: Report,
 ): void {
@@ -391,12 +362,12 @@ function storageRule(
       const readModel = isRecord(backend.body.readModel)
         ? backend.body.readModel.url
         : undefined;
-      const dataDir = resolvedDataDir(member, storage.dataDir);
+      const dataDir = resolvedDataDir(env, storage.dataDir);
       if (dataDir.unset) {
         report(
           "env",
           `${at}.dataDir`,
-          `The storage folder comes from ${dataDir.unset}, which isn't set for ${member.key}.`,
+          `The storage folder comes from ${dataDir.unset}, which isn't set in this host's environment.`,
           dataDir.unset,
         );
       } else if (
@@ -430,9 +401,9 @@ function storageRule(
   }
 }
 
-/** A `$env` data dir read from the member's env, as `ph run` resolves it. */
+/** A `$env` data dir read from the host's env, as `ph run` resolves it. */
 function resolvedDataDir(
-  member: Member,
+  env: HostEnv,
   dataDir: unknown,
 ): { value?: string; unset?: string } {
   if (typeof dataDir === "string") return { value: dataDir };
@@ -445,7 +416,7 @@ function resolvedDataDir(
         ? operand.name
         : undefined;
   if (name === undefined) return {};
-  const value = envValue(member, name);
+  const value = envValue(env, name);
   if (value !== undefined) return { value };
   const optional = isRecord(operand) && operand.optional === true;
   return optional ? {} : { unset: name };
@@ -459,6 +430,7 @@ function sharedDb(member: Member): boolean {
 
 function workersRule(
   members: Member[],
+  env: HostEnv,
   context: z.output<typeof hostRulesContextSchema>,
   report: Report,
 ): void {
@@ -466,20 +438,20 @@ function workersRule(
     if (member.role !== "switchboard") continue;
     // A missing primary backend is reported once, as the placement.
     const unshared = !member.placementMissing && !sharedDb(member);
-    const count = workerCount(envValue(member, "REACTOR_WORKERS") ?? "");
+    const count = workerCount(envValue(env, "REACTOR_WORKERS") ?? "");
     if (count !== undefined && count > 0) {
-      const path = envPath(member, "REACTOR_WORKERS");
+      const path = envPath("REACTOR_WORKERS");
       if (unshared) report("workers", path, REASONS.workersStorage);
       if (member.dev) report("workers", path, REASONS.workersDev);
       if (
-        flagsOf(member).flags.authEnforcement &&
+        flagsOf(member, env).flags.authEnforcement &&
         context.renownSource === "self"
       ) {
         report("workers", path, REASONS.workersTrust);
       }
     }
-    if (onOff(envValue(member, "REACTOR_PROJECTION_WORKER")) === true) {
-      const path = envPath(member, "REACTOR_PROJECTION_WORKER");
+    if (onOff(envValue(env, "REACTOR_PROJECTION_WORKER")) === true) {
+      const path = envPath("REACTOR_PROJECTION_WORKER");
       if (unshared) report("workers", path, REASONS.projectionStorage);
       if (member.dev) report("workers", path, REASONS.projectionDev);
     }
@@ -493,27 +465,29 @@ export function validateDraft(
 ): Validation {
   const context = hostRulesContextSchema.parse(contextInput);
   const members = membersOf(draft, context);
+  const env = draft.env ?? {};
   const issues: HostRuleIssue[] = [];
   const seen = new Set<string>();
   const report: Report = (rule, path, message, hint) => {
     const id = `${path}\0${message}`;
     if (seen.has(id)) return;
     seen.add(id);
+    const file = fileOf(draft.envelope, path);
     issues.push({
       rule,
       path,
       message,
-      file: fileOf(draft.envelope, path),
+      ...(file === undefined ? {} : { file }),
       ...(hint === undefined ? {} : { hint }),
     });
   };
-  envRule(draft, members, report);
+  envRule(env, members, report);
   shapeRule(draft.envelope, report);
-  protocolRule(members, report);
-  ladderRule(members, report);
-  processRule(members, report);
-  storageRule(members, context, report);
-  workersRule(members, context, report);
+  protocolRule(members, env, report);
+  ladderRule(members, env, report);
+  oneSwitchboardRule(members, report);
+  storageRule(members, env, context, report);
+  workersRule(members, env, context, report);
   const byPath: Record<string, HostRuleIssue[]> = {};
   for (const issue of issues) (byPath[issue.path] ??= []).push(issue);
   return { members, issues, byPath };

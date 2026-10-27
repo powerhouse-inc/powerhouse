@@ -53,10 +53,10 @@ export const hostRulesContextSchema = z.object({
 });
 export type HostRulesContext = z.input<typeof hostRulesContextSchema>;
 
-/** Env per member, keyed by member path (`host` or `host.children.<key>`). */
-export type MemberEnv = Record<string, Record<string, string>>;
+/** The host's environment: its reactors run in one process and share it. */
+export type HostEnv = Record<string, string>;
 
-export type HostDraft = { envelope: HostExport; env?: MemberEnv };
+export type HostDraft = { envelope: HostExport; env?: HostEnv };
 
 export const RULES = [
   "setter",
@@ -72,7 +72,7 @@ export const RULES = [
 ] as const;
 export type RuleName = (typeof RULES)[number];
 
-/** `path` is an envelope path, or `<member>.env.<KEY>` for an env row. */
+/** `path` is an envelope path, or `env.<KEY>` for a key of the host's env. */
 export type HostRuleIssue = {
   rule: RuleName;
   path: string;
