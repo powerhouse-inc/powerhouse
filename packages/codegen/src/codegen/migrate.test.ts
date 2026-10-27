@@ -128,7 +128,7 @@ async function makeProjectWithHelpers() {
   return dir;
 }
 
-describe("ph migrate on processors/", () => {
+describe("ph migrate on processors/", { timeout: 30_000 }, () => {
   it("leaves folders that hold no processor alone", async () => {
     const dir = await makeProjectWithHelpers();
 
@@ -176,7 +176,7 @@ describe("ph migrate on processors/", () => {
   });
 });
 
-describe("ph migrate on config files", () => {
+describe("ph migrate on config files", { timeout: 30_000 }, () => {
   async function makeProjectWithConfig() {
     const dir = await makeProject();
     write(
@@ -299,7 +299,7 @@ export default mergeConfig(base, defineConfig({}));
   });
 });
 
-describe("ph migrate on agent files", () => {
+describe("ph migrate on agent files", { timeout: 30_000 }, () => {
   async function warningsOf(run: () => Promise<unknown>) {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {

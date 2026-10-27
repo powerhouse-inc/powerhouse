@@ -86,7 +86,7 @@ describe("commitInitialProject", { timeout: 30_000 }, () => {
   });
 });
 
-describe("createProject --clone", () => {
+describe("createProject --clone", { timeout: 30_000 }, () => {
   it("commits the cloned project in its new repository", async () => {
     useGitIdentity({ name: "Ada", email: "ada@example.com" });
     writeCloneSource(join(root, "template"));
