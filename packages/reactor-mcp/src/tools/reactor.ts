@@ -328,7 +328,9 @@ export const addActionsTool = {
           operationIndex: z
             .number()
             .optional()
-            .describe("Index of the operation the action was stored as"),
+            .describe(
+              "Index of the operation the action was stored as; for a counted UNDO or REDO on base-reducer 3, the last of its RETRACT rows",
+            ),
           error: actionErrorSchema.optional(),
         }),
       )
