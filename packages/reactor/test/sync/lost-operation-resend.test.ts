@@ -368,8 +368,8 @@ describe("a replica that lost a live operation of its own (#6)", () => {
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
   }, 30_000);
 
-  // BUG #6: B appends an older op from A as a predecessor; x stays unsent.
-  it.fails("converges after A writes an op older than x", async () => {
+  // B reshuffles the older op ahead of x, which re-sends x.
+  it("converges after A writes an op older than x", async () => {
     h = await buildHarness();
     const { id, base, x } = await damaged(h);
 
