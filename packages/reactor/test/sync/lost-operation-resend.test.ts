@@ -567,3 +567,42 @@ describe("losing a live row on current main (#6b)", () => {
     expect(await live(h.a, id)).toEqual(await live(h.b, id));
   }, 30_000);
 });
+
+describe("a sender's same-millisecond batches", () => {
+  let h: Harness | undefined;
+  afterEach(() => {
+    h?.a.reactor.kill();
+    h?.b.reactor.kill();
+    h = undefined;
+  });
+
+  // Action ids interleave across the batches; the receiver keeps A's order.
+  it("keep the sender's order across batches", async () => {
+    h = await buildHarness();
+    const drive = driveDocumentModelModule.utils.createDocument();
+    const id = drive.header.id;
+    await connect(h, id);
+    await h.a.client.create(drive);
+    await eventually(() =>
+      h!.b.reactor.get(id, { branch: "main" }).then(
+        () => true,
+        () => false,
+      ),
+    );
+    await quiesce(h, id);
+    const t = new Date(Date.now() + 1_000).toISOString();
+    const named = (actionId: string) => ({
+      ...driveDocumentModelModule.actions.setDriveName({ name: actionId }),
+      id: actionId,
+      timestampUtcMs: t,
+    });
+    await h.a.client.execute(id, "main", [named("m-1"), named("z-1")]);
+    await quiesce(h, id);
+    await h.a.client.execute(id, "main", [named("a-2"), named("n-2")]);
+    await quiesce(h, id);
+
+    const a = await live(h.a, id);
+    expect(a.slice(-4)).toEqual(["m-1", "z-1", "a-2", "n-2"]);
+    expect(await live(h.b, id)).toEqual(a);
+  }, 30_000);
+});
