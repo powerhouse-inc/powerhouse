@@ -20,10 +20,7 @@ This command:
     if (args.debug) {
       console.log(args);
     }
-    const { basePath, dbPath, migrate, migrateStatus, reset, yes } = args;
-    if (basePath) {
-      process.env.BASE_PATH = basePath;
-    }
+    const { dbPath, migrate, migrateStatus, reset, yes } = args;
 
     if (reset) {
       const { resetSwitchboardDatabase } =

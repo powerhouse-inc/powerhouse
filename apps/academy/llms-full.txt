@@ -1,6 +1,6 @@
 # Powerhouse Academy - Complete Documentation
 
-> Generated: 2026-10-27T16:08:02.492Z
+> Generated: 2026-10-27T19:14:13.245Z
 > Total Documents: 120
 > Source: https://academy.vetra.io/llms-full.txt
 
@@ -16129,7 +16129,7 @@ models, processors, and real-time updates.
 **Port** - Port to host the api - Usage: `--port <number>`
 
 **Default:** `4001`
-**Base Path** - base path for the API endpoints (sets the BASE_PATH environment variable) - Usage: `--base-path <str>`
+**Base Path** - base path for the API endpoints (overrides BASE_PATH) - Usage: `--base-path <str>`
 
 **Keypair Path** - path to custom keypair file for identity - Usage: `--keypair-path <str>`
 

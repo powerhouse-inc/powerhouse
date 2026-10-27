@@ -18,8 +18,7 @@ export const switchboardArgs = {
   basePath: option({
     type: optional(string),
     long: "base-path",
-    description:
-      "base path for the API endpoints (sets the BASE_PATH environment variable)",
+    description: "base path for the API endpoints (overrides BASE_PATH)",
   }),
   keypairPath: option({
     type: optional(string),

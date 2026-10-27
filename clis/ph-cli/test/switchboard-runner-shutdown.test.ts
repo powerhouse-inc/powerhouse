@@ -7,6 +7,10 @@ import {
   ReactorClientBuilder,
   type InProcessReactorClientModule,
 } from "@powerhousedao/reactor";
+import {
+  mergeSwitchboardConfig,
+  type SwitchboardConfigInput,
+} from "@powerhousedao/switchboard/config";
 import type * as SwitchboardServer from "@powerhousedao/switchboard/server";
 import type { ILogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,17 +29,21 @@ vi.mock("@powerhousedao/switchboard/server", async (importOriginal) => {
   const actual = await importOriginal<typeof SwitchboardServer>();
   return {
     ...actual,
-    startSwitchboard: (options: SwitchboardServer.StartServerOptions) =>
-      actual.startSwitchboard({
-        ...options,
-        dbPath: path.join(state.tempRoot, "read-model"),
-        identity: { keypairPath: path.join(state.tempRoot, "identity.json") },
-        disableLocalPackages: true,
-        packages: [],
-        workflows: { enabled: false },
-        fatalErrorShutdown: false,
-        logger: quietLogger(),
-      }),
+    startSwitchboard: (
+      config: SwitchboardConfigInput,
+      deps: SwitchboardServer.SwitchboardDeps = {},
+    ) =>
+      actual.startSwitchboard(
+        mergeSwitchboardConfig(config, {
+          storage: {
+            readModel: { url: path.join(state.tempRoot, "read-model") },
+          },
+          identity: { keypairPath: path.join(state.tempRoot, "identity.json") },
+          packages: { disableLocal: true, list: [] },
+          features: { workflows: false },
+        }),
+        { ...deps, fatalErrorShutdown: false, logger: quietLogger() },
+      ),
   };
 });
 
