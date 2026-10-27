@@ -128,9 +128,8 @@ function switchboardOptions(member: Member): HostOption[] {
       value: on ? "on" : "off",
       label: on ? "On" : "Off",
       member: member.path,
-      setters: [
-        { path: `${member.path}.runner.dev`, value: on ? true : DELETE },
-      ],
+      // false, not a delete: the wrapper's runner key-merges over the folder's.
+      setters: [{ path: `${member.path}.runner.dev`, value: on }],
     });
   }
   for (const count of WORKER_COUNTS) {
@@ -216,10 +215,7 @@ function folderFor(envelope: HostExport, role: "switchboard" | "connect") {
   });
 }
 
-/**
- * A new child of a compound. A second child of one folder gets its own
- * reactor block (with the host's protocol) so the two don't share a store.
- */
+/** A new child; a second Connect of one folder gets its own reactor block. */
 function addMemberOption(
   draft: HostDraft,
   members: Member[],
@@ -239,20 +235,16 @@ function addMemberOption(
   }
   const key = freshKey(Object.keys(host.children), role);
   const wrapper: Record<string, unknown> = { host: folder };
-  if (members.some((member) => member.folder === folder)) {
+  if (
+    role === "connect" &&
+    members.some((member) => member.folder === folder)
+  ) {
     const protocol = members[0]?.reactor?.protocol;
-    const backend =
-      role === "switchboard"
-        ? {
-            kind: "in-process",
-            storage: { kind: "path", dataDir: `.ph/${key}/reactor-storage` },
-          }
-        : { kind: "worker", storage: { kind: "idb" } };
     wrapper.reactor = {
       protocol: isRecord(protocol)
         ? structuredClone(protocol)
         : { featureFlags: effectiveFlags(undefined).flags },
-      backends: { main: backend },
+      backends: { main: { kind: "worker", storage: { kind: "idb" } } },
     };
   }
   option.setters = [{ path: `host.children.${key}`, value: wrapper as never }];
@@ -383,6 +375,7 @@ function isSelected(option: HostOption, members: Member[]): boolean {
 function addReason(
   option: HostOption,
   draft: HostDraft,
+  members: Member[],
   controller: boolean,
 ): string | undefined {
   const host = draft.envelope.host as unknown;
@@ -393,6 +386,12 @@ function addReason(
   if (!compound) return ADD_REASONS.single;
   if (option.value === "switchboard" && !controller) {
     return REASONS.noController;
+  }
+  if (
+    option.value === "switchboard" &&
+    members.some((m) => m.role === "switchboard")
+  ) {
+    return REASONS.oneSwitchboard;
   }
   if (option.setters.length === 0) {
     return option.value === "switchboard"
@@ -432,7 +431,7 @@ export function hostOptions(
     if (selected) return { ...option, selected, enabled: true };
     const ruled =
       option.group === "add"
-        ? addReason(option, draft, context.controller)
+        ? addReason(option, draft, base.members, context.controller)
         : option.group === "hotReload" && option.value === "off" && devHost
           ? HOT_RELOAD_REASONS.hostWide
           : undefined;

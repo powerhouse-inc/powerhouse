@@ -2,6 +2,7 @@ import type { HostExport } from "@powerhousedao/host-core/schema";
 import { describe, expect, it } from "vitest";
 import { BARE, FULL, hostExport, stack } from "./__fixtures__/hosts.js";
 import { ladderFlags } from "./flags.js";
+import { FOLDER_REASONS } from "./policy.js";
 import type { HostRulesContext, MemberEnv } from "./schema.js";
 import { applySetters } from "./setters.js";
 import {
@@ -457,44 +458,57 @@ describe("validateDraft", () => {
       ]);
     });
 
-    it("refuses two switchboards on one store", () => {
+    it("runs one switchboard per host, whatever its storage", () => {
+      const message =
+        "A host can run only one switchboard. Its reactors share one process, so sb2 would share sb's database and settings.";
       const shared = draft({ "host.children.sb2": { host: "switchboard" } });
       expect(issues(shared)).toEqual([
-        [
-          "storage",
-          "host.children.sb2",
-          "sb2 and sb share one set of reactor settings, so they would use the same database. Give sb2 its own.",
-        ],
+        ["storage", "host.children.sb2", message],
       ]);
-      const sameFolder = draft({
+      const ownFolder = draft({
         "host.children.sb2": {
           host: "switchboard",
           reactor: {
             backends: {
-              main: { kind: "in-process", storage: { kind: "path" } },
+              main: {
+                kind: "in-process",
+                storage: { kind: "path", dataDir: ".ph/sb2" },
+              },
             },
           },
         },
       });
-      expect(issues(sameFolder).filter(([rule]) => rule === "storage")).toEqual(
-        [
-          [
-            "storage",
-            "host.children.sb2",
-            "sb2 and sb would store in the same folder, which corrupts both. Give sb2 its own folder.",
-          ],
-        ],
-      );
+      expect(issues(ownFolder)).toEqual([
+        ["storage", "host.children.sb2", message],
+      ]);
     });
 
-    it("keeps a switchboard's folders inside the project", () => {
+    it("refuses env that differs between members of one process", () => {
+      expect(
+        issues(stack(), {
+          [SB]: { LOG_LEVEL: "info" },
+          "host.children.ui": { LOG_LEVEL: "warn" },
+        }),
+      ).toEqual([
+        [
+          "env",
+          "host.children.ui.env.LOG_LEVEL",
+          "ui and sb set this differently, but they run in one process, so only one value can apply.",
+        ],
+      ]);
+      expect(
+        issues(stack(), {
+          [SB]: { LOG_LEVEL: "info" },
+          "host.children.ui": { LOG_LEVEL: "info" },
+        }),
+      ).toEqual([]);
+    });
+
+    it("keeps a switchboard's folders inside the project's .ph folder", () => {
       const envelope = draft({
         [`${SB_REACTOR}.backends.main`]: {
           kind: "in-process",
-          storage: {
-            kind: "path",
-            dataDir: "/Users/someone/repo/.ph/reactor-storage",
-          },
+          storage: { kind: "path", dataDir: "src/data" },
           readModel: { url: "postgres://evil.example:5432/x" },
         },
       });
@@ -504,13 +518,36 @@ describe("validateDraft", () => {
       ).toEqual([
         [
           `${SB_REACTOR}.backends.main.storage.dataDir`,
-          "The storage folder has to be inside the project, like .ph/reactor-storage.",
-          "/Users/someone/repo/.ph/reactor-storage",
+          FOLDER_REASONS.dataDir,
+          "src/data",
         ],
         [
           `${SB_REACTOR}.backends.main.readModel.url`,
-          "The search and list data folder has to be inside the project. Its database can't be somewhere else.",
+          FOLDER_REASONS.readModel,
           "postgres://evil.example:5432/x",
+        ],
+      ]);
+    });
+
+    it("checks a storage folder taken from env against the member's env", () => {
+      const envelope = draft({
+        [`${SB_REACTOR}.backends.main`]: {
+          kind: "in-process",
+          storage: { kind: "path", dataDir: { $env: "REACTOR_DATA_DIR" } },
+        },
+      });
+      const at = `${SB_REACTOR}.backends.main.storage.dataDir`;
+      expect(
+        issues(envelope, { [SB]: { REACTOR_DATA_DIR: ".ph/data" } }),
+      ).toEqual([]);
+      expect(
+        issues(envelope, { [SB]: { REACTOR_DATA_DIR: "/Users/me/repo" } }),
+      ).toEqual([["storage", at, FOLDER_REASONS.dataDir]]);
+      expect(issues(envelope)).toEqual([
+        [
+          "env",
+          at,
+          "The storage folder comes from REACTOR_DATA_DIR, which isn't set for sb.",
         ],
       ]);
     });

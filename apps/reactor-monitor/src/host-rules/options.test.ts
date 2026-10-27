@@ -192,6 +192,9 @@ describe("hostOptions", () => {
     expect(option({ envelope: stack() }, `${SB}:hotReload:on`).setters).toEqual(
       [{ path: `${SB}.runner.dev`, value: true }],
     );
+    expect(
+      option({ envelope: stack() }, `${SB}:hotReload:off`).setters,
+    ).toEqual([{ path: `${SB}.runner.dev`, value: false }]);
     const withWorkers = {
       envelope: withSetters(postgres),
       env: { [SB]: { REACTOR_WORKERS: "2" } },
@@ -208,6 +211,16 @@ describe("hostOptions", () => {
     );
     const dev = { envelope: withSetters({ [`${SB}.runner.dev`]: true }) };
     expect(statuses(dev)(`${SB}:hotReload:off`)).toEqual(ON);
+    // The folder turns dev on; Off has to override it on the wrapper.
+    const folderDev = {
+      envelope: withSetters({ "members.switchboard.runner.dev": true }),
+    };
+    expect(statuses(folderDev)(`${SB}:hotReload:on`)).toEqual(SELECTED);
+    const turnedOff = applyOption(
+      folderDev,
+      option(folderDev, `${SB}:hotReload:off`),
+    ).draft;
+    expect(statuses(turnedOff)(`${SB}:hotReload:off`)).toEqual(SELECTED);
   });
 
   it("offers browser storage to in-browser reactors", () => {
@@ -236,31 +249,43 @@ describe("hostOptions", () => {
 });
 
 describe("adding and removing reactors", () => {
-  it("adds a second switchboard with a store of its own", () => {
+  it("adds a switchboard only to a host that has none", () => {
     const draft = { envelope: stack() };
-    expect(statuses(draft)("host:add:switchboard")).toEqual(ON);
-    const added = applyOption(draft, option(draft, "host:add:switchboard"));
-    expect(added.refused).toBeUndefined();
+    expect(statuses(draft)("host:add:switchboard")).toEqual(
+      off(REASONS.oneSwitchboard),
+    );
+    const connectOnly = {
+      envelope: withSetters({
+        [SB]: { $delete: true },
+        "members.switchboard": { $delete: true },
+      }),
+    };
+    expect(statuses(connectOnly)("host:add:switchboard")).toEqual(
+      off(ADD_REASONS.noSwitchboard),
+    );
+    const withFolder = { envelope: withSetters({ [SB]: { $delete: true } }) };
+    expect(statuses(withFolder)("host:add:switchboard")).toEqual(ON);
+    const added = applyOption(
+      withFolder,
+      option(withFolder, "host:add:switchboard"),
+    );
     expect(validateDraft(added.draft, FULL).issues).toEqual([]);
     expect(
       (added.draft.envelope.host as { children: Record<string, unknown> })
         .children.switchboard,
-    ).toEqual({
-      host: "switchboard",
-      reactor: {
-        protocol: (
-          stack().members.switchboard as { reactor: { protocol: unknown } }
-        ).reactor.protocol,
-        backends: {
-          main: {
-            kind: "in-process",
-            storage: {
-              kind: "path",
-              dataDir: ".ph/switchboard/reactor-storage",
-            },
-          },
-        },
-      },
+    ).toEqual({ host: "switchboard" });
+  });
+
+  it("gives a second Connect of one folder its own reactor block", () => {
+    const draft = { envelope: stack() };
+    const added = applyOption(draft, option(draft, "host:add:connect"));
+    expect(validateDraft(added.draft, FULL).issues).toEqual([]);
+    expect(
+      (added.draft.envelope.host as { children: Record<string, unknown> })
+        .children.connect,
+    ).toMatchObject({
+      host: "connect",
+      reactor: { backends: { main: { kind: "worker" } } },
     });
   });
 

@@ -75,6 +75,8 @@ export const REASONS = {
   projectionValue: "Turn the separate thread for search data on or off.",
   projectionNotSwitchboard:
     "Only a switchboard has a separate thread for search data.",
+  oneSwitchboard:
+    "A host can run only one switchboard. Its reactors share one process, so a second switchboard shares the first one's database and settings.",
   nested:
     "This reactor starts a group of reactors, which the monitor doesn't check yet.",
 } as const;
@@ -315,21 +317,39 @@ function ladderRule(members: Member[], report: Report): void {
   }
 }
 
-const DEFAULT_STORE = ".ph/reactor-storage";
-
-/** The folder a switchboard's own store lands in, if it is a known folder. */
-function storeFolder(member: Member): string | undefined {
-  const primary = member.backends.find((backend) => backend.primary);
-  if (primary && primary.storage !== undefined && primary.storage !== "path") {
-    return undefined;
+/**
+ * A compound starts its members in one process: the switchboard's database
+ * settings and env are process-wide, so a second switchboard shares the first's.
+ */
+function processRule(members: Member[], report: Report): void {
+  const switchboards = members.filter(
+    (member) => member.role === "switchboard",
+  );
+  const [first] = switchboards;
+  for (const member of switchboards.slice(1)) {
+    report(
+      "storage",
+      member.path,
+      `A host can run only one switchboard. Its reactors share one process, so ${member.key} would share ${first.key}'s database and settings.`,
+    );
   }
-  const storage =
-    primary && isRecord(primary.body.storage) ? primary.body.storage : {};
-  const dir = storage.dataDir;
-  if (dir === undefined) return DEFAULT_STORE;
-  return typeof dir === "string"
-    ? dir.replace(/^\.\//, "").replace(/\/+$/, "")
-    : undefined;
+  const seen = new Map<string, { member: Member; value: string }>();
+  for (const member of members) {
+    for (const [key, value] of Object.entries(member.env)) {
+      const earlier = seen.get(key);
+      if (!earlier) {
+        seen.set(key, { member, value });
+        continue;
+      }
+      if (earlier.value === value) continue;
+      report(
+        "env",
+        envPath(member, key),
+        `${member.key} and ${earlier.member.key} set this differently, but they run in one process, so only one value can apply.`,
+        key,
+      );
+    }
+  }
 }
 
 function storageRule(
@@ -337,36 +357,6 @@ function storageRule(
   context: z.output<typeof hostRulesContextSchema>,
   report: Report,
 ): void {
-  const switchboards = members.filter(
-    (member) => member.role === "switchboard",
-  );
-  switchboards.forEach((member, index) => {
-    const earlier = switchboards.slice(0, index);
-    const sharesBlock = earlier.find(
-      (other) => other.reactorAt === member.reactorAt,
-    );
-    if (sharesBlock) {
-      report(
-        "storage",
-        member.path,
-        `${member.key} and ${sharesBlock.key} share one set of reactor settings, so they would use the same database. Give ${member.key} its own.`,
-        member.reactorAt,
-      );
-      return;
-    }
-    const folder = storeFolder(member);
-    const sharesFolder = earlier.find(
-      (other) => folder !== undefined && storeFolder(other) === folder,
-    );
-    if (sharesFolder) {
-      report(
-        "storage",
-        member.path,
-        `${member.key} and ${sharesFolder.key} would store in the same folder, which corrupts both. Give ${member.key} its own folder.`,
-        folder,
-      );
-    }
-  });
   for (const member of members) {
     if (member.role === "switchboard" && !context.controller) {
       report("capability", member.path, REASONS.noController);
@@ -401,15 +391,23 @@ function storageRule(
       const readModel = isRecord(backend.body.readModel)
         ? backend.body.readModel.url
         : undefined;
-      if (
-        typeof storage.dataDir === "string" &&
-        !isContainedPath(storage.dataDir)
+      const dataDir = resolvedDataDir(member, storage.dataDir);
+      if (dataDir.unset) {
+        report(
+          "env",
+          `${at}.dataDir`,
+          `The storage folder comes from ${dataDir.unset}, which isn't set for ${member.key}.`,
+          dataDir.unset,
+        );
+      } else if (
+        dataDir.value !== undefined &&
+        !isContainedPath(dataDir.value)
       ) {
         report(
           "storage",
           `${at}.dataDir`,
           FOLDER_REASONS.dataDir,
-          storage.dataDir,
+          dataDir.value,
         );
       }
       if (typeof readModel === "string" && !isContainedPath(readModel)) {
@@ -429,6 +427,27 @@ function storageRule(
       }
     }
   }
+}
+
+/** A `$env` data dir read from the member's env, as `ph run` resolves it. */
+function resolvedDataDir(
+  member: Member,
+  dataDir: unknown,
+): { value?: string; unset?: string } {
+  if (typeof dataDir === "string") return { value: dataDir };
+  if (!isRecord(dataDir) || !Object.hasOwn(dataDir, "$env")) return {};
+  const operand = dataDir.$env;
+  const name =
+    typeof operand === "string"
+      ? operand
+      : isRecord(operand) && typeof operand.name === "string"
+        ? operand.name
+        : undefined;
+  if (name === undefined) return {};
+  const value = envValue(member, name);
+  if (value !== undefined) return { value };
+  const optional = isRecord(operand) && operand.optional === true;
+  return optional ? {} : { unset: name };
 }
 
 /** Why the switchboard's reactor database can't be shared, if it can't. */
@@ -497,6 +516,7 @@ export function validateDraft(
   shapeRule(draft.envelope, report);
   protocolRule(members, report);
   ladderRule(members, report);
+  processRule(members, report);
   storageRule(members, context, report);
   workersRule(members, context, report);
   const byPath: Record<string, HostRuleIssue[]> = {};
