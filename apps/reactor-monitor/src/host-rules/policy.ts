@@ -70,6 +70,7 @@ function matches(pattern: Pattern, rest: readonly string[]): boolean {
 
 const REMOTE_URL: Pattern = ["reactor", "backends", "*", "remote", "url"];
 const DATA_DIR: Pattern = ["reactor", "backends", "*", "storage", "dataDir"];
+const READ_MODEL: Pattern = ["reactor", "backends", "*", "readModel", "url"];
 
 /**
  * A folder under the project's `.ph/` or the instance's user data. Only those
@@ -88,6 +89,8 @@ export function isContainedPath(value: string): boolean {
 export const FOLDER_REASONS = {
   dataDir:
     "The storage folder has to be inside the project's .ph folder, like .ph/reactor-storage.",
+  readModel:
+    "The search data folder has to be inside the project's .ph folder, like .ph/read-storage.",
 } as const;
 
 function folderVerdict(value: unknown, reason: string): PolicyVerdict {
@@ -97,17 +100,37 @@ function folderVerdict(value: unknown, reason: string): PolicyVerdict {
     : { ok: false, reason };
 }
 
+/**
+ * The `config.switchboard` settings the monitor may write: the same ones its
+ * env allowlist passes (controller/api.ts), each in its per-switchboard home.
+ */
+const SWITCHBOARD_SETTABLE: Pattern[] = [
+  ["auth", "enabled"],
+  ["auth", "resolveIdentity"],
+  ["auth", "requireAuthenticatedCaller"],
+  ["auth", "admins"],
+  ["auth", "defaultProtection"],
+  ["auth", "attachmentReadsFollowDocumentPolicy"],
+  ["auth", "documentPermissions", "enabled"],
+  ["inspection", "**"],
+  ["workers", "**"],
+  ["features", "mcp"],
+  ["features", "documentModelSubgraphs"],
+].map((pattern) => ["config", "switchboard", ...pattern]);
+
 /** Leaf paths a value may be written at. */
 const SETTABLE: Pattern[] = [
   ["reactor", "protocol", "**"],
   ["reactor", "backends", "*", "kind"],
   ["reactor", "backends", "*", "storage", "kind"],
   ["reactor", "backends", "*", "storage", "dataDir"],
+  READ_MODEL,
   REMOTE_URL,
   ["reactor", "namespace"],
   ["reactor", "placement", "primary"],
   ["runner", "port"],
   ["runner", "dev"],
+  ...SWITCHBOARD_SETTABLE,
 ];
 
 const DELETABLE: Pattern[] = [
@@ -116,10 +139,67 @@ const DELETABLE: Pattern[] = [
   ["reactor", "backends", "*", "storage"],
   ["reactor", "backends", "*", "storage", "url"],
   ["reactor", "backends", "*", "readModel"],
-  // A switchboard keeps all its data there, so the builder only removes it.
-  ["reactor", "backends", "*", "readModel", "url"],
   ["reactor", "backends", "*", "remote"],
   ["reactor", "placement"],
+];
+
+const CODE_REASONS = {
+  plugins: "The monitor can't change plugins, because they load code.",
+  packages:
+    "The monitor can't change document-model packages, because they load code.",
+  drives:
+    "The monitor can't change drives, because remote drives reach other servers.",
+} as const;
+
+/**
+ * `config.switchboard` keys the switchboard runner refuses, and where each is
+ * set instead (ph-cli runners/member-config.ts memberSwitchboardConfigSchema).
+ */
+export const SETTINGS_ELSEWHERE: [Pattern, string][] = [
+  [
+    ["protocol", "**"],
+    "The switchboard won't start with access control in its own settings. Set it in the reactor settings instead.",
+  ],
+  [
+    ["storage", "reactor", "**"],
+    "The switchboard won't start with its storage in its own settings. Set it in the reactor settings instead.",
+  ],
+  [
+    ["storage", "readModel", "**"],
+    "The switchboard won't start with its search data folder in its own settings. Set it in the reactor settings instead.",
+  ],
+  [
+    ["packages", "dynamic"],
+    "The switchboard won't start with on-demand document models in its own settings. Set them in the reactor settings instead.",
+  ],
+  [
+    ["server", "port"],
+    "The switchboard won't start with a port in its own settings. Set its port instead.",
+  ],
+  [
+    ["server", "dev"],
+    "The switchboard won't start with hot reload in its own settings. Turn hot reload on or off instead.",
+  ],
+  [
+    ["logLevel"],
+    "The switchboard won't start with a log level in its own settings. Set it in the host's environment, where it applies to every reactor.",
+  ],
+  [
+    ["drive", "**"],
+    "The switchboard won't start with a drive in its own settings. Declare drives in the reactor settings instead.",
+  ],
+  [
+    ["remoteDrives", "**"],
+    "The switchboard won't start with remote drives in its own settings. Declare drives in the reactor settings instead.",
+  ],
+  [
+    ["features", "pluginHost"],
+    "The switchboard won't start with the plugin host in its own settings. Plugins turn it on.",
+  ],
+  [
+    ["processorConfig", "**"],
+    "The switchboard won't start with processor settings in its own settings.",
+  ],
 ];
 
 const DENIED_FAMILIES: [Pattern, string][] = [
@@ -127,27 +207,31 @@ const DENIED_FAMILIES: [Pattern, string][] = [
     ["runner", "module", "**"],
     "The monitor can't change which runner a reactor uses, because that loads other code.",
   ],
-  [
-    ["runner", "plugins", "**"],
-    "The monitor can't change plugins, because they load code.",
-  ],
-  [
-    ["reactor", "backends", "*", "packages", "**"],
-    "The monitor can't change document-model packages, because they load code.",
-  ],
+  [["runner", "plugins", "**"], CODE_REASONS.plugins],
+  [["reactor", "backends", "*", "packages", "**"], CODE_REASONS.packages],
   [
     ["reactor", "workflows", "**"],
     "The monitor can't turn workflows on or off, because that loads code.",
   ],
+  [["reactor", "drives", "**"], CODE_REASONS.drives],
+  [["config", "switchboard", "packages", "**"], CODE_REASONS.packages],
+  ...SETTINGS_ELSEWHERE.map(([pattern, reason]): [Pattern, string] => [
+    ["config", "switchboard", ...pattern],
+    reason,
+  ]),
   [
-    ["reactor", "drives", "**"],
-    "The monitor can't change drives, because remote drives reach other servers.",
-  ],
-  [
-    ["config", "**"],
-    "The monitor can't change runner config; each runner defines its own.",
+    ["config", "switchboard", "features", "workflows"],
+    "The monitor can't turn workflows on or off, because that loads code.",
   ],
 ];
+
+/** Runner config other than a switchboard's own settings. */
+const OTHER_CONFIG_REASON =
+  "The monitor can't change runner config; each runner defines its own.";
+
+function isOtherConfig(rest: readonly string[]): boolean {
+  return rest[0] === "config" && rest[1] !== "switchboard";
+}
 
 export type PolicyVerdict =
   | { ok: true }
@@ -209,7 +293,11 @@ function leafVerdict(
   if (matches(DATA_DIR, rest)) {
     return folderVerdict(value, FOLDER_REASONS.dataDir);
   }
+  if (matches(READ_MODEL, rest)) {
+    return folderVerdict(value, FOLDER_REASONS.readModel);
+  }
   if (SETTABLE.some((pattern) => matches(pattern, rest))) return OK;
+  if (isOtherConfig(rest)) return { ok: false, reason: OTHER_CONFIG_REASON };
   const hint = rest.join(".");
   return DELETABLE.some((pattern) => matches(pattern, rest))
     ? {
@@ -252,8 +340,9 @@ export function checkSetter(setter: Setter, envelope?: unknown): PolicyVerdict {
     for (const [pattern, reason] of DENIED_FAMILIES) {
       if (matches(pattern, rest)) return { ok: false, reason };
     }
-    return DELETABLE.some((pattern) => matches(pattern, rest))
-      ? OK
+    if (DELETABLE.some((pattern) => matches(pattern, rest))) return OK;
+    return isOtherConfig(rest)
+      ? { ok: false, reason: OTHER_CONFIG_REASON }
       : {
           ok: false,
           reason: "The monitor can't remove this setting.",

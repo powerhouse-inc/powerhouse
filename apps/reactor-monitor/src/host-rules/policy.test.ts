@@ -29,6 +29,13 @@ const SETTABLE: [string, unknown][] = [
   ["reactor.placement.primary", "main"],
   ["runner.port", 4001],
   ["runner.dev", true],
+  ["reactor.backends.main.readModel.url", ".ph/read-storage"],
+  ["config.switchboard.workers.executor.count", 2],
+  ["config.switchboard.workers", { projection: { enabled: true } }],
+  ["config.switchboard.inspection.callsPerMinute", 7],
+  ["config.switchboard.auth.admins", ["0xabc"]],
+  ["config.switchboard.auth.documentPermissions.enabled", true],
+  ["config.switchboard.features.mcp", false],
 ];
 
 const DELETE_ONLY = [
@@ -36,7 +43,6 @@ const DELETE_ONLY = [
   "reactor.backends.main.storage",
   "reactor.backends.main.storage.url",
   "reactor.backends.main.readModel",
-  "reactor.backends.main.readModel.url",
   "reactor.backends.main.remote",
   "reactor.placement",
 ];
@@ -174,9 +180,48 @@ describe("checkSetter", () => {
     ["host.children.k.reactor.drives", "drives"],
     ["host.config.apiKey", "runner config"],
     ["host.children.k.config", "runner config"],
+    ["host.config.switchboard.packages.registryUrl", "document-model packages"],
+    ["host.config.switchboard.packages.dynamic", "document-model packages"],
+    ["host.config.switchboard.features.workflows", "workflows"],
   ])("refuses the code-loading or network path %s", (path, message) => {
     expect(reason({ path, value: "x" })).toContain(message);
     expect(reason({ path, value: DELETE })).toContain(message);
+  });
+
+  it.each([
+    ["protocol.featureFlags.authGroups", "access control"],
+    ["storage.reactor.url", "its storage"],
+    ["storage.readModel", "search data folder"],
+    ["server.port", "Set its port instead"],
+    ["server.dev", "hot reload"],
+    ["logLevel", "host's environment"],
+  ])(
+    "sends config.switchboard.%s to where the switchboard reads it",
+    (key, message) => {
+      const path = `host.children.k.config.switchboard.${key}`;
+      expect(reason({ path, value: "x" })).toContain(message);
+      expect(reason({ path, value: DELETE })).toContain(message);
+      expect(reason({ path, value: "x" })).toContain("won't start");
+    },
+  );
+
+  it("refuses other switchboard settings, naming them only in the hint", () => {
+    expect(
+      checkSetter({
+        path: "host.config.switchboard.attachments.urlSigningSecret",
+        value: "s",
+      }),
+    ).toEqual({
+      ok: false,
+      reason: "The monitor can't change this setting.",
+      hint: "config.switchboard.attachments.urlSigningSecret",
+    });
+    expect(
+      reason({
+        path: "host.config.switchboard.auth.renown.source",
+        value: "self",
+      }),
+    ).toBe("The monitor can't change this setting.");
   });
 
   it.each([
@@ -228,7 +273,14 @@ describe("checkSetter", () => {
     ["reactor.backends.main.storage.dataDir", "${userData}/../x", false],
     ["reactor.backends.main.storage.dataDir", "C:\\data", false],
     ["reactor.backends.main.storage.dataDir", 42, false],
-    ["reactor.backends.main.readModel.url", ".ph/read-storage", false],
+    ["reactor.backends.main.readModel.url", ".ph/read-storage", true],
+    ["reactor.backends.main.readModel.url", "${userData}/read", true],
+    [
+      "reactor.backends.main.readModel.url",
+      "postgres://db.example/reactor",
+      false,
+    ],
+    ["reactor.backends.main.readModel.url", "../read", false],
   ])("keeps %s = %j inside the project: %s", (rest, value, ok) => {
     expect(
       checkSetter({ path: `host.${rest}`, value: value as Setter["value"] }).ok,
