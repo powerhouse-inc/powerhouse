@@ -4,11 +4,9 @@ if (!isDotenvDisabled()) dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
 import { DEFAULT_DRIVE_ICON } from "@powerhousedao/shared/clis";
+import { parseDriveType } from "./config/drive-type.js";
 import { parseForcePgVersion } from "./pglite-version.js";
-import type {
-  SwitchboardDriveDocumentType,
-  SwitchboardDriveInput,
-} from "./types.js";
+import type { SwitchboardDriveInput } from "./types.js";
 const phConfig = getConfig();
 const { switchboard } = phConfig;
 interface Config {
@@ -20,17 +18,6 @@ interface Config {
   migratePglite: boolean;
   forcePgVersion: 16 | 17 | null;
   drive: SwitchboardDriveInput;
-}
-
-function parseDriveType(
-  raw: string | undefined,
-): SwitchboardDriveDocumentType | undefined {
-  if (!raw) return undefined;
-  if (raw === "powerhouse/document-drive" || raw === "powerhouse/reactor-drive")
-    return raw;
-  throw new Error(
-    `Invalid PH_DEFAULT_DRIVE_TYPE: ${raw}. Expected "powerhouse/document-drive" or "powerhouse/reactor-drive".`,
-  );
 }
 
 export const config: Config = {

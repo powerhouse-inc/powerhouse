@@ -54,7 +54,7 @@ export function assertProjectionWorkerSupported(args: {
   if (issue) throw new Error(issue);
 }
 
-function parseOnOff(raw: string | undefined): boolean | undefined {
+export function parseOnOff(raw: string | undefined): boolean | undefined {
   if (raw === undefined || raw.trim() === "") {
     return undefined;
   }
