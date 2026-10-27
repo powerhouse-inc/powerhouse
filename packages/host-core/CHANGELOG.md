@@ -1,3 +1,25 @@
+## 6.2.3-dev.78 (2026-10-27)
+
+### 🚀 Features
+
+- **portle:** scaffold @powerhousedao/portle, the switchboard plugin that gates publication through Portle ([68ab561f7d](https://github.com/powerhouse-inc/powerhouse/commit/68ab561f7d))
+- **reactor-api,switchboard:** vacuum full policy knob, no forced rewrite under load by default ([d6dcbf5cd0](https://github.com/powerhouse-inc/powerhouse/commit/d6dcbf5cd0))
+- **host-core:** hostExportSchema (./schema) and exportHost ([33d9fd6436](https://github.com/powerhouse-inc/powerhouse/commit/33d9fd6436))
+
+### 🩹 Fixes
+
+- **registry:** a failed tarball write no longer records its attachment ([5d3ae94bd8](https://github.com/powerhouse-inc/powerhouse/commit/5d3ae94bd8))
+- **reactor-api:** the one-time VACUUM FULL is off by default; quiet and forced are opt-ins ([fd7c19e313](https://github.com/powerhouse-inc/powerhouse/commit/fd7c19e313))
+- **host-core:** hostExportSchema names the failing field and refuses unreached members; cover exportHost's validation ([4d0243cb11](https://github.com/powerhouse-inc/powerhouse/commit/4d0243cb11))
+- **host-core:** a compound wrapper may set a member's port to 0 ([1c9ce4624d](https://github.com/powerhouse-inc/powerhouse/commit/1c9ce4624d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Fable 5.1
+- Claude Opus 5.5
+- Wouter Kampmann
+
 ## 6.2.3-dev.77 (2026-10-26)
 
 This was a version bump only for @powerhousedao/host-core to align it with other projects, there were no code changes.
