@@ -82,7 +82,7 @@ describe("DocumentModelResolver", () => {
     );
 
     await expect(resolver.ensureModelLoaded("bad/type")).rejects.toThrow(
-      "Document model type previously failed to load: bad/type",
+      "Document model type previously failed to load: bad/type: Network error",
     );
 
     expect(loader.load).toHaveBeenCalledTimes(1);
