@@ -4,6 +4,7 @@ import {
   relationalDbIndexTemplate,
   relationalDbMigrationsTemplate,
   relationalDbProcessorTemplate,
+  relationalDbProcessorTestTemplate,
   relationalDbSchemaTemplate,
 } from "templates";
 import type { Project } from "ts-morph";
@@ -22,7 +23,7 @@ export async function tsMorphGenerateRelationalDbProcessor(
     dirPath,
   });
 
-  await makeProcessorFile({
+  const isNew = await makeProcessorFile({
     project,
     pascalCaseName,
     dirPath,
@@ -37,6 +38,16 @@ export async function tsMorphGenerateRelationalDbProcessor(
   });
 
   await makeMigrationsFile({ project, dirPath });
+
+  // Only a new processor: the starter test assumes the scaffold's table.
+  if (isNew) {
+    await makeProcessorTestFile({
+      project,
+      pascalCaseName,
+      dirPath,
+      documentType: documentTypes[0] ?? "powerhouse/document-drive",
+    });
+  }
 
   await makeSchemaFile({ project, dirPath });
 }
@@ -66,9 +77,10 @@ async function makeProcessorFile(v: {
     v.project,
     path.join(v.dirPath, "processor.ts"),
   );
-  if (alreadyExists) return;
+  if (alreadyExists) return false;
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
+  return true;
 }
 
 async function makeFactoryFile(v: {
@@ -104,6 +116,22 @@ async function makeMigrationsFile(v: { project: Project; dirPath: string }) {
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
     path.join(v.dirPath, "migrations.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeProcessorTestFile(v: {
+  project: Project;
+  pascalCaseName: string;
+  dirPath: string;
+  documentType: string;
+}) {
+  const template = relationalDbProcessorTestTemplate(v);
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "processor.test.ts"),
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);

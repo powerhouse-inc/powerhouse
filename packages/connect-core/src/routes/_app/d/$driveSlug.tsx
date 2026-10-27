@@ -2,6 +2,7 @@
 // declarations can name the types.
 import type { DriveLoaderOptions } from "@powerhousedao/connect-core/router";
 import {
+  coreRouteOptions,
   coreView,
   DRIVE_PENDING_MS,
   DrivePending,
@@ -10,7 +11,7 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 
 /** The drive layout's options: its loader and pending view. */
-export const options = {
+export const options = coreRouteOptions({
   loader: {
     handler: (options: DriveLoaderOptions) => loadDrive(options),
     // A reused match re-resolves before it shows; drives may have changed.
@@ -25,7 +26,7 @@ export const options = {
   // would hold their commit.
   pendingMinMs: 0,
   pendingComponent: DrivePending,
-};
+});
 
 // The drive app the drive names, else a directory listing, around the node route.
 export const Route = createFileRoute("/_app/d/$driveSlug")({

@@ -35,6 +35,9 @@
       "path": "../../packages/reactor"
     },
     {
+      "path": "../../packages/reactor-mcp"
+    },
+    {
       "path": "../../packages/renown"
     },
     {

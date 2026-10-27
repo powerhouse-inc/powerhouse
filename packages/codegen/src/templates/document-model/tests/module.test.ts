@@ -68,6 +68,8 @@ export function makeTestCaseForOperation(
 
         expect(${isPhDocumentOfTypeFunctionName}(updatedDocument)).toBe(true);
         expect(updatedDocument.operations.${scope}).toHaveLength(1);
+        // A rejected operation records its error; give it the state it needs.
+        expect(updatedDocument.operations.${scope}[0].error).toBeUndefined();
         expect(updatedDocument.operations.${scope}[0].action.type).toBe(
             "${constantCaseActionName}",
         );

@@ -2,6 +2,7 @@ import type { ConfigEntry, Manifest } from "@powerhousedao/shared";
 import { defaultManifest, fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { loadJsonFile } from "load-json-file";
+import { writeFile } from "node:fs/promises";
 import { join } from "path";
 import {
   concat,
@@ -13,14 +14,25 @@ import {
   prop,
   uniqueBy,
 } from "remeda";
-import { writeJsonFile } from "write-json-file";
+import { formatJson } from "utils";
+
+// Parsing puts keys in the schema's order, so a rewrite changes no key order.
+async function writeManifest(manifestPath: string, manifest: Manifest) {
+  await writeFile(
+    manifestPath,
+    await formatJson(
+      "powerhouse.manifest.json",
+      ManifestSchema.parse(manifest),
+    ),
+  );
+}
 
 export async function getOrCreateManifestFile(
   manifestPath: string,
 ): Promise<Manifest> {
   const hasManifestFile = await fileExists(manifestPath);
   if (!hasManifestFile) {
-    await writeJsonFile(manifestPath, defaultManifest, { indent: 2 });
+    await writeManifest(manifestPath, defaultManifest);
   }
   const manifestFile = await loadJsonFile(manifestPath);
   return ManifestSchema.parse(manifestFile);
@@ -77,11 +89,7 @@ export async function pruneManifestSection(
   const filtered = existing.filter((entry) => validSet.has(entry.id));
   // Skip the write when nothing changed.
   if (filtered.length === existing.length) return;
-  await writeJsonFile(
-    manifestPath,
-    { ...manifest, [kind]: filtered },
-    { indent: 2 },
-  );
+  await writeManifest(manifestPath, { ...manifest, [kind]: filtered });
 }
 
 /* Creates a powerhouse.manifest.json file, or updates an existing one with the data provided */
@@ -126,6 +134,6 @@ export async function createOrUpdateManifest(
       : {}),
     config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
-  await writeJsonFile(manifestPath, updatedManifest, { indent: 2 });
+  await writeManifest(manifestPath, updatedManifest);
   return updatedManifest;
 }

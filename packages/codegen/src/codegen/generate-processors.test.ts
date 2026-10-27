@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,7 +14,7 @@ const temporary: string[] = [];
 afterEach(() => {
   process.chdir(originalCwd);
   for (const dir of temporary.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10 });
   }
 });
 
@@ -61,12 +61,53 @@ function lint(root: string): Diagnostic[] {
     .diagnostics;
 }
 
-describe("generated processors", () => {
+// Each test runs codegen and lint on a project, slow on Windows runners.
+describe("generated processors", { timeout: 60_000 }, () => {
   it("lint without unused variables", async () => {
     const root = await makeProject();
 
     const unused = lint(root).filter((d) => d.code.includes("no-unused-vars"));
 
     expect(unused).toEqual([]);
+  });
+
+  it("give a relational processor a starter test that lints clean", async () => {
+    const root = await makeProject();
+
+    expect(
+      existsSync(
+        join(root, "processors/stock-relational-db/processor.test.ts"),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(join(root, "processors/stock-analytics/processor.test.ts")),
+    ).toBe(false);
+    const diagnostics = lint(root).filter((d) =>
+      d.filename.endsWith("processor.test.ts"),
+    );
+    expect(diagnostics).toEqual([]);
+  });
+
+  it("leave an existing processor without a starter test", async () => {
+    const root = await makeProject();
+    const testFile = join(
+      root,
+      "processors/stock-relational-db/processor.test.ts",
+    );
+    rmSync(testFile);
+
+    const project = buildTsMorphProject(root);
+    await generateProcessor(
+      {
+        processorName: "Stock relationalDb",
+        processorType: "relationalDb",
+        processorApps: ["switchboard", "connect"],
+        documentTypes: ["acme/stock-item"],
+      },
+      project,
+    );
+    await project.save();
+
+    expect(existsSync(testFile)).toBe(false);
   });
 });

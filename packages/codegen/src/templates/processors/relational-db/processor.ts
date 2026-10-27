@@ -26,8 +26,28 @@ export class ${v.pascalCaseName} extends RelationalDbProcessor<DB> {
         await this.deleteDocumentRows(documentId);
         continue;
       }
-      if (context.scope !== "global") continue;
+      // CREATE_DOCUMENT, in scope "document", comes before any global
+      // operation: a document that was only created still gets its row.
+      if (
+        operation.action.type !== "CREATE_DOCUMENT" &&
+        context.scope !== "global"
+      ) {
+        continue;
+      }
       // Write this operation's rows here, keyed by context.documentId.
+      await this.relationalDb
+        .insertInto("documents")
+        .values({
+          document_id: context.documentId,
+          document_type: context.documentType,
+          updated_at: operation.timestampUtcMs,
+        })
+        .onConflict((oc) =>
+          oc
+            .column("document_id")
+            .doUpdateSet({ updated_at: operation.timestampUtcMs }),
+        )
+        .execute();
     }
   }
 

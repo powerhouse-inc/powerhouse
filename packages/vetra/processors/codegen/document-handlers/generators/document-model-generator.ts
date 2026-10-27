@@ -17,9 +17,6 @@ import { minimalBackupDocument, warnSubgraphTypeConflicts } from "./utils.js";
 export class DocumentModelGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/document-model";
 
-  /**
-   * Parse and extract the global state from the serialized state string
-   */
   private extractGlobalState(
     input: CodegenInput,
   ): DocumentModelGlobalState | undefined {
@@ -30,22 +27,16 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     return fullState.global;
   }
 
-  /**
-   * Validate if this document model strand should be processed
-   */
-  shouldProcess(input: CodegenInput): boolean {
-    // First run base validation
-    if (!super.shouldProcess(input)) {
-      return false;
-    }
+  skipReason(input: CodegenInput): string | undefined {
+    const base = super.skipReason(input);
+    if (base) return base;
 
-    // Extract the global state from the full document state
     const globalState = this.extractGlobalState(input);
     if (!globalState) {
       logger.debug(
         `>>> No global state found for document model: ${input.documentId}`,
       );
-      return false;
+      return "The document model has no global state";
     }
 
     const validationResult = validateDocumentModelState(globalState);
@@ -56,57 +47,52 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       logger.info(
         `⚠️  Skipped code generation for '${globalState.name || input.documentId}' due to validation errors:\n${errorList}`,
       );
-      return false;
+      return `The document model is not ready for code generation:\n${errorList}`;
     }
 
     logger.info(
       `Document model ${globalState.name} is valid, proceeding with code generation`,
     );
-
-    return true;
+    return undefined;
   }
 
   async generate(input: CodegenInput): Promise<void> {
     const globalState = this.extractGlobalState(input);
     if (!globalState) {
-      logger.error(
-        `❌ No global state found for document model: ${input.documentId}`,
+      throw new Error(
+        `No global state found for document model: ${input.documentId}`,
       );
-      return;
     }
-    // Validation is already done in shouldProcess, so we can proceed directly
     logger.debug(
       `🔄 Starting code generation for document model: ${globalState.name}`,
     );
     try {
       await generateDocumentModel(globalState, this.project);
       await this.project.save();
-      logger.info(
-        `✅ Code generation completed successfully for: ${globalState.name}`,
-      );
-      await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
-
-      // Backup the document
-      const fullState = input.state as DocumentModelPHState;
-      const extension = globalState.extension?.replace(/^\.+|\.+$/g, "") || "";
-      await minimalBackupDocument(
-        {
-          documentId: input.documentId,
-          documentType: input.documentType,
-          branch: input.branch,
-          state: fullState,
-          name: globalState.name,
-        },
-        this.config.CURRENT_WORKING_DIR,
-        extension,
-      );
     } catch (error) {
       logger.error(
         `❌ Error during code generation for ${globalState.name}:`,
         error,
       );
-      // Don't throw - let codegen continue with other documents
-      return;
+      throw error;
     }
+    logger.info(
+      `✅ Code generation completed successfully for: ${globalState.name}`,
+    );
+    await warnSubgraphTypeConflicts(this.config.CURRENT_WORKING_DIR);
+
+    const fullState = input.state as DocumentModelPHState;
+    const extension = globalState.extension?.replace(/^\.+|\.+$/g, "") || "";
+    await minimalBackupDocument(
+      {
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: fullState,
+        name: globalState.name,
+      },
+      this.config.CURRENT_WORKING_DIR,
+      extension,
+    );
   }
 }

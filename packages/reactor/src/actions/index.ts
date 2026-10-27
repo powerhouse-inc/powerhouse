@@ -9,6 +9,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import {
   actions as documentActions,
+  generateActionId,
   generateId,
 } from "@powerhousedao/shared/document-model";
 
@@ -51,7 +52,7 @@ export function deleteDocumentAction(documentId: string): Action {
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "DELETE_DOCUMENT",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -80,7 +81,7 @@ export function addRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "ADD_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -106,7 +107,7 @@ export function updateRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "UPDATE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),
@@ -129,7 +130,7 @@ export function removeRelationshipAction(
   };
 
   return {
-    id: generateId(),
+    id: generateActionId(),
     type: "REMOVE_RELATIONSHIP",
     scope: "document",
     timestampUtcMs: new Date().toISOString(),

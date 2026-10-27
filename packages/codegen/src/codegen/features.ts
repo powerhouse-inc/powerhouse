@@ -89,10 +89,11 @@ export function detectFeatures(projectDir: string): Feature[] {
 // Idempotently adds the peer + dev deps required by `features` to the
 // project's package.json. Reuses the existing `document-model` pin as the
 // version anchor for new workspace peers so generated entries stay in sync
-// with whatever migrate last wrote. Returns the packages it added.
+// with whatever migrate last wrote. Returns the packages it added or moved.
 export async function syncFeatureDependencies(
   features: readonly Feature[],
   projectDir: string,
+  log: (message: string) => void = console.log,
 ): Promise<string[]> {
   if (features.length === 0) return [];
 
@@ -113,6 +114,25 @@ export async function syncFeatureDependencies(
   const devDependencies = {
     ...(packageJson.devDependencies ?? {}),
   } as Record<string, string>;
+  const dependencies = {
+    ...(packageJson.dependencies ?? {}),
+  } as Record<string, string>;
+
+  // A feature's packages are peers or dev pins, never runtime dependencies:
+  // the host provides them, so one in `dependencies` moves to the dev pin.
+  const moved: string[] = [];
+  for (const feature of features) {
+    const spec = FEATURE_DEPENDENCIES[feature];
+    for (const pkg of [
+      ...spec.peerVersioned,
+      ...Object.keys(spec.peerExternal),
+      ...spec.devVersioned,
+    ]) {
+      if (dependencies[pkg] === undefined) continue;
+      delete dependencies[pkg];
+      moved.push(pkg);
+    }
+  }
 
   const added: string[] = [];
   for (const feature of features) {
@@ -149,18 +169,33 @@ export async function syncFeatureDependencies(
     }
   }
 
-  if (added.length === 0) return [];
+  if (added.length === 0 && moved.length === 0) return [];
 
   // Spread, not a fixed key: a dev-only feature adds no peers, and an empty
   // peerDependencies block in a project that had none says nothing.
+  const { dependencies: _dependencies, ...rest } = packageJson;
   const updated = {
-    ...packageJson,
+    ...rest,
+    ...(Object.keys(dependencies).length > 0 ? { dependencies } : {}),
     ...(Object.keys(peerDependencies).length > 0
       ? { peerDependencies: sortByKey(peerDependencies) }
       : {}),
     devDependencies: sortByKey(devDependencies),
   } as PackageJson;
   await writePackage(projectDir, updated);
-  console.log(`Added peer/dev dependencies: ${added.join(", ")}`);
-  return added;
+  // Returned too: the lockfile records the move only after an install.
+  const changed = [...new Set([...added, ...moved])];
+  if (moved.length > 0) {
+    log(`Moved from dependencies to devDependencies: ${moved.join(", ")}`);
+  }
+  if (added.length === 0) return changed;
+  const specs = added.map((pkg) => {
+    const ranges = [
+      peerDependencies[pkg] && `peer ${peerDependencies[pkg]}`,
+      devDependencies[pkg] && `dev ${devDependencies[pkg]}`,
+    ].filter(Boolean);
+    return `${pkg} (${ranges.join(", ")})`;
+  });
+  log(`Added to package.json: ${specs.join(", ")}`);
+  return changed;
 }

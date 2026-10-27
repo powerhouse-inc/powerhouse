@@ -47,14 +47,17 @@ describe("ph-cli generate connect-routes", () => {
     expect(readFileSync(tree, "utf8")).toContain('"/_app/stats"');
   }, 60_000);
 
-  it("drops the tree once the routes are gone", async () => {
+  // Studio aliases the route tree to the file, so it stays, without the routes.
+  it("keeps only Connect's routes in the tree once the routes are gone", async () => {
     route("_app/stats.tsx", "/_app/stats");
     await run(generateConnectRoutesCmd, []);
     rmSync(join(fixture, "hosts"), { recursive: true });
 
     await run(generateConnectRoutesCmd, []);
 
-    expect(existsSync(tree)).toBe(false);
+    const text = readFileSync(tree, "utf8");
+    expect(text).not.toContain("/_app/stats");
+    expect(text).toContain('"/_app"');
   }, 60_000);
 
   it("writes nothing for a project without routes", async () => {

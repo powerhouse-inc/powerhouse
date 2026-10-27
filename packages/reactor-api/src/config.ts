@@ -6,10 +6,6 @@ import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import { SystemSubgraph } from "./graphql/system/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 
-export const config = {
-  basePath: process.env.BASE_PATH || "/",
-};
-
 export const DefaultCoreSubgraphs = [
   AnalyticsSubgraph,
   SystemSubgraph,
