@@ -232,7 +232,7 @@ describe("appRoute (same-origin publication)", () => {
     appRoute: {
       label: "app",
       apiTarget: "127.0.0.1:7540",
-      configFile: "D:/p/.ph/portle/public/powerhouse.config.json",
+      configPath: "/portle/public/powerhouse.config.json",
     },
   };
 
@@ -255,7 +255,7 @@ describe("appRoute (same-origin publication)", () => {
       );
     }
     expect(app).toContain(
-      'handle /powerhouse.config.json {\n\t\t\troot * "D:/p/.ph/portle/public"\n\t\t\tfile_server',
+      "\t\thandle /powerhouse.config.json {\n\t\t\trewrite * /portle/public/powerhouse.config.json\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
     expect(app).toContain(
       "\t\thandle {\n\t\t\treverse_proxy 127.0.0.1:2540\n\t\t}",
@@ -266,7 +266,7 @@ describe("appRoute (same-origin publication)", () => {
     );
   });
 
-  it("omits the config handle without a config file, and composes with the host rewrite", () => {
+  it("omits the config handle without a config path, and composes with the host rewrite", () => {
     const out = renderCaddyfile({
       ...withRoute,
       appRoute: { label: "app", apiTarget: "127.0.0.1:7540" },
@@ -286,6 +286,16 @@ describe("appRoute (same-origin publication)", () => {
     [
       "an injected api target",
       { appRoute: { label: "app", apiTarget: "x:1 }\nrespond 200" } },
+    ],
+    [
+      "an injected config path",
+      {
+        appRoute: {
+          label: "app",
+          apiTarget: "x:1",
+          configPath: "/p }\nrespond 200",
+        },
+      },
     ],
   ])("rejects %s", (_n, over) => {
     expect(() => renderCaddyfile({ ...caddyInput, ...over })).toThrow();

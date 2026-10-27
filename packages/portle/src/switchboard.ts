@@ -1,6 +1,10 @@
 import type { HostPlugin } from "@powerhousedao/host-core";
 import type { ISubgraph } from "@powerhousedao/reactor-api";
 import { bootGatePasses } from "./gate.js";
+import {
+  createPublicConfigHandler,
+  PUBLIC_CONFIG_PATH,
+} from "./public-config.js";
 import { PortleRunner, type PortleRunnerLike } from "./runner.js";
 import { projectRootOf, stateDirOf } from "./state.js";
 import {
@@ -65,7 +69,16 @@ function loggerOf(ctx: PortleHostContext): LoggerLike {
   };
 }
 
+/** The HTTP adapter's slice this plugin mounts on (reactor-api's `IHttpAdapter.mount`). */
+interface HttpMounter {
+  mount(
+    path: string,
+    handler: (request: Request) => Promise<Response>,
+  ): unknown;
+}
+
 export interface PortleHooks {
+  onHttpMounting: (ctx: PortleHostContext) => Promise<void>;
   onSubgraphsRegistering: (ctx: PortleHostContext) => Promise<void>;
   onDrivesReady: (ctx: PortleHostContext) => Promise<void>;
   onShutdown: (ctx: PortleHostContext) => Promise<void>;
@@ -85,10 +98,46 @@ export function createPortlePlugin(
         log.info(`[portle] ${msg} ${detail ? JSON.stringify(detail) : ""}`),
     }),
 ): HostPlugin<PortleHooks> {
+  /** One runner per host, built by whichever hook the host reaches first. */
+  const ensureRunner = (ctx: PortleHostContext): PortleRunnerLike => {
+    if (ctx.portle) return ctx.portle.runner;
+    const runner = makeRunner(
+      stateDirOf(projectRootOf(ctx.options)),
+      loggerOf(ctx),
+    );
+    ctx.portle = { runner };
+    return runner;
+  };
   return {
     name: PORTLE_PLUGIN_NAME,
     appliesTo: "switchboard",
     hooks: {
+      // The public runtime config: the app's own, rewritten to the public
+      // origin, read from the app when a browser asks (see public-config.ts).
+      // Mounted straight on the adapter, outside the authenticated-caller
+      // floor: the SPA fetches it before anyone is signed in, and it holds
+      // nothing the app does not already serve to the world.
+      onHttpMounting: async (ctx) => {
+        const api = ctx.api as { httpAdapter?: HttpMounter } | undefined;
+        if (!api?.httpAdapter) {
+          throw new Error(
+            "The portle plugin needs the switchboard's HTTP adapter at onHttpMounting; the host handed none.",
+          );
+        }
+        const runner = ensureRunner(ctx);
+        const log = loggerOf(ctx);
+        api.httpAdapter.mount(
+          PUBLIC_CONFIG_PATH,
+          createPublicConfigHandler({
+            source: () => runner.publicConfigSource(),
+            log: (msg, detail) =>
+              log.warn(
+                `[portle] ${msg} ${detail ? JSON.stringify(detail) : ""}`,
+              ),
+          }),
+        );
+        await Promise.resolve();
+      },
       onSubgraphsRegistering: async (ctx) => {
         const api = ctx.api as PortleApi | undefined;
         const registry = ctx.graphqlManager as SubgraphRegistry | undefined;
@@ -97,9 +146,7 @@ export function createPortlePlugin(
             "The portle plugin needs the switchboard's API and GraphQL manager at onSubgraphsRegistering; the host handed neither.",
           );
         }
-        const log = loggerOf(ctx);
-        const runner = makeRunner(stateDirOf(projectRootOf(ctx.options)), log);
-        ctx.portle = { runner };
+        const runner = ensureRunner(ctx);
         const registration = registry.registerSubgraphInstance(
           createPortleSubgraph({ api, runner }),
           "graphql",

@@ -65,6 +65,54 @@ describe("portle switchboard plugin", () => {
     expect(ctx.lateSubgraphs).toHaveLength(1);
   });
 
+  describe("the public-config route at onHttpMounting", () => {
+    const mounted = (ctx: PortleHostContext) => {
+      const mount = vi.fn();
+      ctx.api = { ...(ctx.api as object), httpAdapter: { mount } };
+      return mount;
+    };
+
+    it("mounts it on the adapter, builds the runner once, and answers from the runner's source", async () => {
+      const ctx = hostContext();
+      const mount = mounted(ctx);
+      const runner = fakeRunner();
+      const built: string[] = [];
+      const p = createPortlePlugin((stateDir) => {
+        built.push(stateDir);
+        return runner;
+      });
+      await p.hooks!.onHttpMounting!(ctx);
+      await p.hooks!.onSubgraphsRegistering!(ctx);
+      expect(built).toHaveLength(1);
+      expect(ctx.portle?.runner).toBe(runner);
+      expect(mount).toHaveBeenCalledWith(
+        "/portle/public/powerhouse.config.json",
+        expect.any(Function),
+      );
+      const handler = mount.mock.calls[0][1] as (
+        request: Request,
+      ) => Promise<Response>;
+      const ask = () =>
+        handler(new Request("http://sb/portle/public/powerhouse.config.json"));
+      expect((await ask()).status).toBe(404);
+      runner.source_ = {
+        appUrl: "http://127.0.0.1:1",
+        apiPort: "7540",
+        publicOrigin: "https://app.dev.sektar.be",
+      };
+      const refused = await ask();
+      expect(refused.status).toBe(502);
+      expect(ctx.warnings.at(-1)).toMatch(/public runtime config unavailable/);
+    });
+
+    it("names what is missing when the host hands no HTTP adapter", async () => {
+      const ctx = hostContext();
+      await expect(plugin.hooks!.onHttpMounting!(ctx)).rejects.toThrow(
+        /HTTP adapter/,
+      );
+    });
+  });
+
   it("names what is missing when the host hands no API or manager", async () => {
     const ctx = hostContext();
     delete ctx.api;

@@ -227,14 +227,14 @@ describe("PortleRunner", () => {
     expect(runner.wantsAutostart()).toBe(false);
   });
 
-  it("a seeded enrolment counts as enrolled, and render needs settings too", async () => {
+  it("a seeded enrolment counts as enrolled, and render needs settings too", () => {
     const { runner } = runnerWith();
     writeEnrollment(stateDir, {
       ...enrollment,
       acme: { ...enrollment.acme, caRootPem: "ROOT" },
     });
     expect(runner.status().enrolled).toBe(true);
-    await expect(runner.render()).rejects.toThrow(/not enrolled/);
+    expect(() => runner.render()).toThrow(/not enrolled/);
   });
 
   it("render alone writes the files, with the acme-dns fallback and the CA root when configured", async () => {
@@ -249,7 +249,7 @@ describe("PortleRunner", () => {
     });
     await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
     runner.configure({ dns01Mode: "acmedns" });
-    const out = await runner.render();
+    const out = runner.render();
     expect(out.caddyfile).toBe(join(stateDir, "Caddyfile"));
     const caddyfile = readFileSync(out.caddyfile, "utf8");
     expect(caddyfile).toContain("dns acmedns");
@@ -317,7 +317,7 @@ describe("PortleRunner: delegation and listen ports", () => {
     );
     expect(runner.status().settings?.listen).toEqual({ https: 443, http: 80 });
     runner.configure({ listen: { https: 8443, http: 8080 } });
-    const out = await runner.render();
+    const out = runner.render();
     const caddyfile = readFileSync(out.caddyfile, "utf8");
     expect(caddyfile).toContain("https_port 8443");
     expect(caddyfile).toContain("http_port 8080");
@@ -348,88 +348,35 @@ describe("PortleRunner: stop at a host shutdown", () => {
   });
 });
 
-describe("PortleRunner: same-origin runtime config", () => {
-  const servedConfig = JSON.stringify({
-    connect: {
-      drives: { defaultDrives: [{ url: "http://127.0.0.1:7540/d/sektar" }] },
-      plugins: [{ config: { drive: "http://localhost:7540/d/workflows" } }],
-      other: "http://127.0.0.1:2540/keep",
-    },
-  });
-  const routing = (configStatus = 200) =>
-    ((url: string | URL | Request) => {
-      const u =
-        typeof url === "string" ? url : url instanceof URL ? url.href : url.url;
-      if (u.endsWith("/powerhouse.config.json")) {
-        return Promise.resolve(
-          new Response(configStatus === 200 ? servedConfig : "nope", {
-            status: configStatus,
-          }),
-        );
-      }
-      return Promise.resolve(
-        new Response(JSON.stringify(enrollment), { status: 201 }),
-      );
-    }) as typeof fetch;
-
-  it("fetches the app's config, rewrites the switchboard origin to the public one, and serves it on the app label", async () => {
-    const log = vi.fn();
-    const { runner } = runnerWith({ fetchImpl: routing(), log });
+describe("PortleRunner: same-origin publication", () => {
+  it("routes the app label's config path to the switchboard's public-config route and says what that route rewrites", async () => {
+    const { runner } = runnerWith();
     await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
     runner.configure({
       appUpstream: "localhost:2540",
       upstreams: { api: "127.0.0.1:7540", app: "localhost:2540" },
     });
-    const out = await runner.render();
-    expect(out.publicConfig).toBe(
-      join(stateDir, "public", "powerhouse.config.json"),
-    );
-    const written = JSON.parse(readFileSync(out.publicConfig!, "utf8")) as {
-      connect: {
-        drives: { defaultDrives: { url: string }[] };
-        plugins: { config: { drive: string } }[];
-        other: string;
-      };
-    };
-    expect(written.connect.drives.defaultDrives[0].url).toBe(
-      "https://app.dev.sektar.be/d/sektar",
-    );
-    expect(written.connect.plugins[0].config.drive).toBe(
-      "https://app.dev.sektar.be/d/workflows",
-    );
-    expect(written.connect.other).toBe("http://127.0.0.1:2540/keep");
-    const caddyfile = readFileSync(out.caddyfile, "utf8");
-    expect(caddyfile).toContain("handle /graphql* {");
-    expect(caddyfile).toContain("handle /powerhouse.config.json {");
-    expect(log).toHaveBeenCalledWith(
-      "public runtime config rendered",
-      expect.objectContaining({ origin: "https://app.dev.sektar.be" }),
-    );
-  });
-
-  it("still splits the paths when the config cannot be fetched, and says so", async () => {
-    const log = vi.fn();
-    const { runner } = runnerWith({ fetchImpl: routing(503), log });
-    await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
-    runner.configure({
-      upstreams: { api: "127.0.0.1:7540", app: "localhost:2540" },
+    expect(runner.publicConfigSource()).toEqual({
+      appUrl: "http://localhost:2540",
+      apiPort: "7540",
+      publicOrigin: "https://app.dev.sektar.be",
     });
-    const out = await runner.render();
-    expect(out.publicConfig).toBeNull();
+    const out = runner.render();
     const caddyfile = readFileSync(out.caddyfile, "utf8");
     expect(caddyfile).toContain("handle /graphql* {");
-    expect(caddyfile).not.toContain("powerhouse.config.json");
-    expect(log).toHaveBeenCalledWith(
-      expect.stringMatching(/not rendered/),
-      expect.objectContaining({ error: "HTTP 503" }),
+    expect(caddyfile).toContain(
+      "\t\thandle /powerhouse.config.json {\n\t\t\trewrite * /portle/public/powerhouse.config.json\n\t\t\treverse_proxy 127.0.0.1:7540\n\t\t}",
     );
+    expect(existsSync(join(stateDir, "public"))).toBe(false);
   });
 
-  it("does nothing without both labels, or when switched off", async () => {
-    const { runner } = runnerWith({ fetchImpl: routing() });
+  it("has no source and splits nothing without both labels, when switched off, or before enrolment", async () => {
+    const { runner } = runnerWith();
+    expect(runner.publicConfigSource()).toBeNull();
     await runner.enrol({ controlPlaneUrl: "https://cp", token: "t" });
     runner.configure({ upstreams: { api: "127.0.0.1:7540" } });
-    expect((await runner.render()).publicConfig).toBeNull();
+    expect(runner.publicConfigSource()).toBeNull();
+    runner.render();
     expect(readFileSync(join(stateDir, "Caddyfile"), "utf8")).not.toContain(
       "handle /graphql*",
     );
@@ -437,9 +384,10 @@ describe("PortleRunner: same-origin runtime config", () => {
       upstreams: { api: "127.0.0.1:7540", app: "localhost:2540" },
       sameOrigin: false,
     });
-    expect((await runner.render()).publicConfig).toBeNull();
+    expect(runner.publicConfigSource()).toBeNull();
+    runner.render();
     expect(readFileSync(join(stateDir, "Caddyfile"), "utf8")).not.toContain(
-      "handle /graphql*",
+      "powerhouse.config.json",
     );
   });
 });

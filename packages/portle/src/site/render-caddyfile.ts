@@ -59,13 +59,14 @@ export interface CaddyRenderInput {
   rewriteHostHeader?: boolean | undefined;
   /**
    * Same-origin publication: on this label the switchboard's paths go to the
-   * API upstream and, when `configFile` is given, `/powerhouse.config.json`
-   * is served from it, so the SPA finds its backend on its own origin (no
+   * API upstream and, when `configPath` is given, `/powerhouse.config.json`
+   * is rewritten to that path on the API upstream (the switchboard's
+   * public-config route), so the SPA finds its backend on its own origin (no
    * cross-origin calls, no local-network prompt). Everything else on the
    * label goes to the label's own upstream.
    */
   appRoute?:
-    | { label: string; apiTarget: string; configFile?: string | undefined }
+    | { label: string; apiTarget: string; configPath?: string | undefined }
     | undefined;
 }
 
@@ -226,11 +227,11 @@ ${proxy(upstream, 1)}
 ${proxy(appRoute.apiTarget, 3)}
 		}`,
     );
-    const configHandle = appRoute.configFile
+    const configHandle = appRoute.configPath
       ? [
           `		handle /powerhouse.config.json {
-			root * ${q(appRoute.configFile.replace(/\\/g, "/").replace(/\/[^/]*$/, ""))}
-			file_server
+			rewrite * ${token(appRoute.configPath, "appRoute.configPath")}
+${proxy(appRoute.apiTarget, 3)}
 		}`,
         ]
       : [];
