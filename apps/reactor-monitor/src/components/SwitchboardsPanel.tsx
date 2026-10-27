@@ -8,7 +8,9 @@ import {
   type Project,
 } from "../controller/api.js";
 import {
+  backoffMs,
   ControllerRequestError,
+  errorMessage,
   type ControllerClient,
   type HostIssue,
 } from "../controller/client.js";
@@ -52,10 +54,6 @@ function envOf(rows: readonly EnvRow[]): Record<string, string> {
       .filter((row) => row.key.trim())
       .map((row) => [row.key.trim(), row.value]),
   );
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 function IssueTable({
@@ -318,7 +316,9 @@ function ControllerSection({
     logsRef.current = logs;
   });
   /** Instances this panel started: each attaches once it is running. */
-  const pending = useRef(new Set<string>());
+  const pending = useRef(new Map<string, number>());
+  /** Orders starts against list requests, so a stale list cannot forget a start. */
+  const ticks = useRef(0);
   const refresh = useRef<() => void>(() => undefined);
 
   useEffect(() => {
@@ -340,7 +340,7 @@ function ControllerSection({
         if (aborted()) return;
         setProject((current) => current || first);
       } catch (e) {
-        if (!aborted()) setError(messageOf(e));
+        if (!aborted()) setError(errorMessage(e));
       }
     })();
     return () => abort.abort();
@@ -358,7 +358,7 @@ function ControllerSection({
           listed.includes(current) ? current : (listed.at(0) ?? ""),
         );
       } catch (e) {
-        if (!abort.signal.aborted) setError(messageOf(e));
+        if (!abort.signal.aborted) setError(errorMessage(e));
       }
     })();
     return () => abort.abort();
@@ -369,6 +369,7 @@ function ControllerSection({
     let timer: ReturnType<typeof setTimeout> | undefined;
     let polling = false;
     let again = false;
+    let failures = 0;
 
     const pollLogs = async (listed: readonly Instance[]) => {
       const open = Object.entries(logsRef.current).filter(([id]) =>
@@ -401,29 +402,38 @@ function ControllerSection({
       polling = true;
       clearTimeout(timer);
       let changing = false;
+      let stale = false;
       try {
+        const issuedAt = ++ticks.current;
         const listed = await client.list();
         if (abort.signal.aborted) return;
+        failures = 0;
         setInstances(listed);
         setPollError("");
         managedRef.current.reconcile(listed);
-        for (const instance of listed) {
-          if (!pending.current.has(instance.id)) continue;
-          if (instance.status === "running") {
-            pending.current.delete(instance.id);
+        const byId = new Map(listed.map((instance) => [instance.id, instance]));
+        for (const [id, addedAt] of pending.current) {
+          const instance = byId.get(id);
+          if (!instance) {
+            if (addedAt < issuedAt) pending.current.delete(id);
+          } else if (instance.status === "running") {
+            pending.current.delete(id);
             managedRef.current.attach(instance);
           } else if (instance.status !== "starting") {
-            pending.current.delete(instance.id);
+            pending.current.delete(id);
           }
         }
         changing = listed.some((instance) => BUSY.has(instance.status));
         await pollLogs(listed);
       } catch (e) {
-        if (!abort.signal.aborted) setPollError(messageOf(e));
+        failures++;
+        stale = e instanceof ControllerRequestError && e.code === "bad_token";
+        if (!abort.signal.aborted) setPollError(errorMessage(e));
       } finally {
         polling = false;
       }
-      if (abort.signal.aborted) return;
+      // A refused token stays refused until the page reloads.
+      if (abort.signal.aborted || stale) return;
       if (again) {
         again = false;
         void poll();
@@ -431,7 +441,7 @@ function ControllerSection({
       }
       timer = setTimeout(
         () => void poll(),
-        changing ? pollMs.busy : pollMs.idle,
+        changing ? pollMs.busy : backoffMs(pollMs.idle, failures),
       );
     };
 
@@ -465,7 +475,7 @@ function ControllerSection({
       await action();
     } catch (e) {
       if (e instanceof ControllerRequestError && e.issues) setIssues(e.issues);
-      setError(messageOf(e));
+      setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -481,7 +491,7 @@ function ControllerSection({
     run(async () => {
       setIssues(undefined);
       const started = await client.start({ ...request, env: envOf(rows) });
-      pending.current.add(started.id);
+      pending.current.set(started.id, ++ticks.current);
       setInstances((previous) => [...previous, started]);
       refresh.current();
     });

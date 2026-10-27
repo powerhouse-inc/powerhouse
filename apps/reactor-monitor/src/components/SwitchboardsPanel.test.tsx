@@ -315,6 +315,25 @@ describe("SwitchboardsPanel", () => {
     await view.findByText("This project has no hosts/<name>/host.js.");
   });
 
+  it("stops polling once the controller refuses the token", async () => {
+    const list = vi.fn(() =>
+      Promise.reject(
+        new ControllerRequestError(
+          "bad_token",
+          "Wrong token. The controller restarted; reload the page.",
+          401,
+        ),
+      ),
+    );
+    const { client } = fakeClient({ list });
+    const view = render(
+      <SwitchboardsPanel managed={fakeManaged(client)} pollMs={POLL} />,
+    );
+    await view.findByText(/reload the page/);
+    await new Promise((resolve) => setTimeout(resolve, 10 * POLL.idle));
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
   it("offers to start the host an imported set came from", async () => {
     const fake = fakeClient();
     const view = render(
